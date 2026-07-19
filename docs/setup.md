@@ -1,0 +1,70 @@
+# Setup Instructions
+
+## Requirements
+
+- Node.js 22.11 or newer
+- pnpm 10.26.1
+- A Convex deployment
+- A Cloudflare Workers account for deployment
+- A Cloudflare Turnstile site
+- A Cloudflare KV namespace for auth rate limits
+
+## Local configuration
+
+Install dependencies and provision or select the Convex development deployment:
+
+```bash
+pnpm install
+pnpm exec convex dev --once
+```
+
+Create `.dev.vars` with the Worker-only configuration:
+
+```env
+VITE_CONVEX_URL=https://your-deployment.convex.cloud
+AUTH_GATEWAY_SECRET=replace-with-the-same-secret-used-in-convex
+TURNSTILE_SITE_KEY=0x...
+TURNSTILE_SECRET_KEY=0x...
+PLUGIN_CREDENTIAL_MASTER_KEY=base64-encoded-32-byte-key
+```
+
+Generate the plugin credential encryption key with `openssl rand -base64 32`.
+Keep the same key for the lifetime of the environment; replacing it makes
+existing encrypted plugin passwords unreadable.
+
+Initialize Convex Auth and set the same gateway secret on the Convex deployment:
+
+```bash
+pnpm dlx @convex-dev/auth
+pnpm exec convex env set AUTH_GATEWAY_SECRET "<same value as .dev.vars>"
+```
+
+Run Lynvo against the configured cloud Convex deployment:
+
+```bash
+pnpm run dev
+```
+
+Run Lynvo and Convex entirely locally:
+
+```bash
+pnpm run dev:local
+```
+
+`dev:local` creates an ignored `.dev.vars.local` from `.dev.vars` and replaces
+only `VITE_CONVEX_URL` with the local deployment URL from `.env.local`.
+
+## Production configuration
+
+Set every required Worker secret declared in `wrangler.jsonc` with Wrangler. Use the production Convex URL, the production Turnstile keys, the same `AUTH_GATEWAY_SECRET` value in both Convex and the Worker, and a separately generated `PLUGIN_CREDENTIAL_MASTER_KEY`.
+
+Create the `AUTH_RATE_LIMITS` KV namespace and replace the placeholder namespace ID in `wrangler.jsonc` before deployment.
+
+Deploy Convex before the Worker:
+
+```bash
+pnpm exec convex deploy
+pnpm run deploy
+```
+
+Convex is the application database. The Cloudflare Durable Object is used only for realtime connection coordination; its migration in `wrangler.jsonc` must remain.

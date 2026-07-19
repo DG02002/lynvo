@@ -1,0 +1,66 @@
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { nativeDirectLinkPlugin } from "~/lib/plugins/direct"
+
+const response = (status: number, contentType = "video/mp4") =>
+  new Response(null, {
+    status,
+    headers: {
+      "content-type": contentType,
+      "content-disposition": 'attachment; filename="movie.mp4"',
+    },
+  })
+
+describe("nativeDirectLinkPlugin", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("marks direct video links as range-supported when byte range returns 206", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response(206))
+
+    const links = await nativeDirectLinkPlugin.extract(
+      "https://cdn.example.com/movie.mp4"
+    )
+
+    expect(links).toEqual([
+      expect.objectContaining({
+        url: "https://cdn.example.com/movie.mp4",
+        label: "movie.mp4",
+        rangeRequest: "supported",
+      }),
+    ])
+  })
+
+  it("keeps direct video links when byte range returns 200 and marks them unsupported", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200))
+
+    const links = await nativeDirectLinkPlugin.extract(
+      "https://cdn.example.com/movie.mp4"
+    )
+
+    expect(links[0]).toEqual(
+      expect.objectContaining({
+        url: "https://cdn.example.com/movie.mp4",
+        label: "movie.mp4",
+        rangeRequest: "unsupported",
+      })
+    )
+  })
+
+  it("rejects non-video direct links", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200, "text/html"))
+
+    await expect(
+      nativeDirectLinkPlugin.extract("https://cdn.example.com/page")
+    ).rejects.toThrow("supported video format")
+  })
+
+  it("rejects unsupported file extensions before fetching", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    await expect(
+      nativeDirectLinkPlugin.extract("https://cdn.example.com/archive.zip")
+    ).rejects.toThrow("file type")
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})

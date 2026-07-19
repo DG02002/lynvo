@@ -1,0 +1,61 @@
+import type { Route } from "./+types/root"
+import "./app.css"
+import { csrfCookie } from "~/lib/csrf"
+import { getUserSession, responseWithSession } from "~/lib/auth"
+import "~/global"
+import { getServerEnv } from "~/lib/env.server"
+import { getThemeFromCookieHeader } from "~/lib/theme"
+import { AppProviders } from "./root/app-providers"
+export { ErrorBoundary } from "./root/error-boundary"
+export { Layout } from "./root/layout"
+
+export const links: Route.LinksFunction = () => [
+  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+  {
+    rel: "apple-touch-icon",
+    href: "/icons/brand/logo-180x180.png",
+    sizes: "180x180",
+    type: "image/png",
+  },
+  { rel: "manifest", href: "/site.webmanifest" },
+]
+
+export const loader = async (args: Route.LoaderArgs) => {
+  const request = args.request
+  const env = getServerEnv(args.context)
+  const cookieHeader = request.headers.get("Cookie")
+  const csrfToken =
+    (await csrfCookie.parse(cookieHeader)) || crypto.randomUUID()
+
+  const sessionResult = await getUserSession(request, env)
+  const convexUrl = env.VITE_CONVEX_URL
+
+  const data = {
+    user: sessionResult.user,
+    csrfToken,
+    convexUrl,
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY,
+    buildTime: __BUILD_TIME__,
+    initialTheme: getThemeFromCookieHeader(cookieHeader),
+  }
+
+  return responseWithSession(data, sessionResult, request, {
+    headers: {
+      "Set-Cookie": await csrfCookie.serialize(csrfToken),
+    },
+  })
+}
+
+const App = ({ loaderData }: Route.ComponentProps) => {
+  const { buildTime, convexUrl } = loaderData
+
+  return (
+    <AppProviders
+      convexUrl={convexUrl}
+      buildTime={buildTime}
+      user={loaderData.user}
+    />
+  )
+}
+
+export default App

@@ -1,0 +1,15 @@
+ignoredBuiltDependencies:
+  - esbuild
+  - sharp
+  - workerd
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+
+# minimumReleaseAge: 10080
+# trustPolicy: no-downgrade
+blockExoticSubdeps: true
+trustPolicyExclude:
+  - effect

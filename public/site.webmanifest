@@ -1,0 +1,32 @@
+{
+  "name": "Lynvo - Stream videos to your Android TV",
+  "short_name": "Lynvo",
+  "description": "The easiest way to stream videos to your Android TV. Remote control, intelligent link support, and seamless sync across devices.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/brand/logo-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/brand/logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/brand/logo-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["entertainment", "lifestyle"]
+}

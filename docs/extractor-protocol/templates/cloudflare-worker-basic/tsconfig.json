@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["src", "tests"]
+}

@@ -1,0 +1,151 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { createExtractionOrchestration } from "~/lib/extraction/orchestration"
+import { decideSavePresentation } from "~/lib/extraction/presentation"
+import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+
+const savedWorkerItem = (): RecentLinkViewItem => ({
+  url: "https://example.com/source",
+  timestamp: 1,
+  metadata: {
+    schemaVersion: 2,
+    source: { workerId: "worker-1", sourceName: "Worker Source" },
+    extraction: {
+      extractedLinks: [
+        {
+          id: "folder-1",
+          url: "https://worker.example/folder/1",
+          label: "Folder",
+          type: "folder",
+        },
+      ],
+    },
+    playback: { watchedUrls: [], watchedIds: [] },
+  },
+  extractedLinks: [
+    {
+      id: "folder-1",
+      url: "https://worker.example/folder/1",
+      label: "Folder",
+      type: "folder",
+    },
+  ],
+})
+
+const createTransport = () => ({
+  extract: vi.fn<ExtractionTransport["extract"]>(),
+  getMetadata: vi.fn<ExtractionTransport["getMetadata"]>(),
+})
+
+describe("extraction presentation", () => {
+  it("direct-saves one file and selects multiple or folder results", () => {
+    const file = { url: "https://cdn.example/one.mp4", label: "One" }
+    expect(decideSavePresentation([file])).toEqual({
+      kind: "directSave",
+      link: file,
+    })
+    expect(decideSavePresentation([file, { ...file, url: "two" }]).kind).toBe(
+      "selectionDialog"
+    )
+    expect(
+      decideSavePresentation([{ ...file, type: "folder" }]).kind
+    ).toBe("selectionDialog")
+    expect(decideSavePresentation([]).kind).toBe("error")
+  })
+})
+
+describe("extraction orchestration", () => {
+  const transport = createTransport()
+  const orchestration = createExtractionOrchestration(transport)
+
+  beforeEach(() => {
+    transport.extract.mockReset()
+    transport.getMetadata.mockReset()
+  })
+
+  it("prepares save metadata and propagates the saved worker identity", async () => {
+    transport.getMetadata.mockResolvedValue({
+      filename: "episode.mp4",
+      sourceName: "Metadata Source",
+    })
+    transport.extract.mockResolvedValue({
+      links: [{ url: "https://cdn.example/episode.mp4", label: "Episode" }],
+      meta: { pageTitle: "Episode Page", workerId: "worker-1" },
+    })
+    const metadata = await orchestration.getSourceMetadata(
+      "https://example.com/source",
+      [savedWorkerItem()]
+    )
+    const result = await orchestration.prepareSource({
+      targetUrl: "https://example.com/source",
+      recents: [savedWorkerItem()],
+      sourceMetadata: metadata,
+    })
+
+    expect(transport.extract).toHaveBeenCalledWith({
+      url: "https://example.com/source",
+      workerId: "worker-1",
+    })
+    expect(metadata).toEqual(expect.objectContaining({ workerId: "worker-1" }))
+    expect(result.mergedMeta).toEqual(
+      expect.objectContaining({
+        filename: "episode.mp4",
+        pageTitle: "Episode Page",
+        workerId: "worker-1",
+      })
+    )
+  })
+
+  it("routes refresh, mirror, and folder operations through the saved worker", async () => {
+    const item = savedWorkerItem()
+    const resolved: ExtractedLink[] = [
+      { url: "https://cdn.example/resolved.mp4", label: "Resolved" },
+    ]
+    transport.extract.mockResolvedValue({ links: resolved })
+
+    await orchestration.refreshSource(item)
+    await orchestration.resolveMirror(item, "https://worker.example/episode")
+    const expanded = await orchestration.expandFolder({
+      item,
+      linkId: "folder-1",
+      linkUrl: "https://worker.example/folder/1",
+    })
+
+    expect(transport.extract.mock.calls).toEqual([
+      [
+        {
+          url: "https://example.com/source",
+          workerId: "worker-1",
+        },
+      ],
+      [
+        {
+          url: "https://worker.example/episode",
+          workerId: "worker-1",
+          kind: "node",
+        },
+      ],
+      [
+        {
+          url: "https://worker.example/folder/1",
+          workerId: "worker-1",
+          kind: "node",
+        },
+      ],
+    ])
+    expect(expanded[0].children).toEqual(resolved)
+  })
+
+  it("preserves partial extraction results", async () => {
+    transport.getMetadata.mockResolvedValue({ filename: "source" })
+    transport.extract.mockResolvedValue({
+      links: [{ url: "https://cdn.example/available.mp4", label: "Available" }],
+    })
+
+    const result = await orchestration.prepareSource({
+      targetUrl: "https://example.com/new",
+      recents: [],
+    })
+
+    expect(result.presentation.kind).toBe("directSave")
+  })
+})

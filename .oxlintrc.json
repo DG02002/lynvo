@@ -1,0 +1,15 @@
+{
+  "ignorePatterns": ["app/components/ui/**"],
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "eqeqeq": "warn",
+    "no-var": "warn",
+    "prefer-const": "warn",
+    "curly": "warn",
+    "no-eval": "warn",
+    "no-implied-eval": "warn",
+    "@typescript-eslint/no-unused-vars": "warn"
+  }
+}

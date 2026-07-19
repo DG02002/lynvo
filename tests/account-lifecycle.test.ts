@@ -1,0 +1,108 @@
+import { describe, expect, it, vi } from "vitest"
+import {
+  deleteUserAccountData,
+  replacePasswordAndInvalidateOtherSessions,
+} from "../convex/accountLifecycle"
+import { USER_OWNED_STORAGE_TABLE_NAMES } from "../convex/storagePolicy"
+import { buildPlayerPreferencesPatch } from "../convex/userPreferences"
+
+describe("account lifecycle", () => {
+  it("replaces the password before invalidating other sessions", async () => {
+    const transitions: string[] = []
+    await replacePasswordAndInvalidateOtherSessions(
+      async () => transitions.push("password-replaced"),
+      async () => transitions.push("other-sessions-invalidated")
+    )
+    expect(transitions).toEqual([
+      "password-replaced",
+      "other-sessions-invalidated",
+    ])
+  })
+
+  it("does not invalidate sessions when password replacement fails", async () => {
+    const invalidate = vi.fn()
+    await expect(
+      replacePasswordAndInvalidateOtherSessions(async () => {
+        throw new Error("incorrect password")
+      }, invalidate)
+    ).rejects.toThrow("incorrect password")
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it("validates player preferences as one policy", () => {
+    expect(
+      buildPlayerPreferencesPatch({
+        rangeSupportedPlayerId: "vlc",
+        rangeUnsupportedPlayerId: "mx",
+      })
+    ).toEqual({
+      rangeSupportedPlayerId: "vlc",
+      rangeUnsupportedPlayerId: "mx",
+    })
+    expect(() =>
+      buildPlayerPreferencesPatch({ rangeSupportedPlayerId: "unknown" })
+    ).toThrow("Choose a supported player")
+  })
+
+  it("deletes only refresh tokens belonging to the target user's sessions", async () => {
+    const deletedIds: string[] = []
+    const documentsByTable = {
+      authSessions: [{ _id: "session-user-1", userId: "user-1" }],
+      authRefreshTokens: [
+        { _id: "token-user-1", sessionId: "session-user-1" },
+        { _id: "token-user-2", sessionId: "session-user-2" },
+      ],
+      links: [],
+      userWorkers: [],
+      userPluginDomains: [],
+      userPluginCredentials: [],
+      deviceCodes: [],
+      authAccounts: [],
+    }
+    const createQuery = (tableName: keyof typeof documentsByTable) => ({
+      withIndex: (
+        _indexName: string,
+        select: (queryBuilder: { eq: (_field: string, value: string) => unknown }) => unknown
+      ) => {
+        let selectedValue = ""
+        select({
+          eq: (_field, value) => {
+            selectedValue = value
+          },
+        })
+        return {
+          collect: async () =>
+            tableName === "authRefreshTokens"
+              ? documentsByTable.authRefreshTokens.filter(
+                  (token) => token.sessionId === selectedValue
+                )
+              : documentsByTable[tableName],
+        }
+      },
+      filter: () => ({ collect: async () => documentsByTable[tableName] }),
+    })
+    const context = {
+      db: {
+        query: createQuery,
+        get: async () => ({ _id: "user-1" }),
+        delete: async (id: string) => {
+          deletedIds.push(id)
+        },
+      },
+    }
+
+    await deleteUserAccountData(context as never, "user-1" as never)
+
+    expect(deletedIds).toContain("token-user-1")
+    expect(deletedIds).not.toContain("token-user-2")
+    expect(USER_OWNED_STORAGE_TABLE_NAMES).toEqual([
+      "links",
+      "userWorkers",
+      "userPluginDomains",
+      "userPluginCredentials",
+      "deviceCodes",
+      "authAccounts",
+      "authSessions",
+    ])
+  })
+})
