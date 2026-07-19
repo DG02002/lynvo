@@ -1,0 +1,33 @@
+{
+  "name": "@lynvo/official-extractor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --config wrangler.jsonc --env=\"\"",
+    "dev": "wrangler dev --config wrangler.jsonc --env local",
+    "deploy": "pnpm run check && pnpm run test && wrangler deploy --config wrangler.jsonc --env=\"\"",
+    "cf-typegen": "wrangler types --env-interface OfficialExtractorBindings",
+    "check": "pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
+    "fmt": "oxfmt src tests vitest.config.ts",
+    "fmt:check": "oxfmt src tests vitest.config.ts --check",
+    "lint": "oxlint src tests",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@lynvo/extractor-protocol": "workspace:*",
+    "cheerio": "catalog:",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.6",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

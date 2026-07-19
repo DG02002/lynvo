@@ -21,6 +21,8 @@ The global daily ceiling intentionally reserves most of the Workers Free daily
 allowance for authentication, settings, saved links, realtime connections, and
 other dynamic application traffic.
 
+The official extractor enforces its own finite global service capacity before upstream work and reports that service-credential usage through the extractor protocol. Lynvo separately keeps the per-account quotas above because the binding credential identifies Lynvo as a service, not an individual account.
+
 ## Reset every Lynvo account
 
 Run this from the repository root against the configured Convex deployment:

@@ -1,0 +1,238 @@
+import type {
+  ExtractorNode,
+  ExtractSuccessResponse,
+  HttpBasicAuth,
+} from "@lynvo/extractor-protocol"
+import { createBasicAuthorization } from "../auth"
+import {
+  BYTES_PER_KIBIBYTE,
+  FILE_SIZE_DECIMAL_PLACES,
+  GOOGLE_DRIVE_FOLDER_MIME_TYPE,
+  LEGACY_RESPONSE_PREFIX_LENGTH,
+  LEGACY_RESPONSE_SUFFIX_LENGTH,
+  UPSTREAM_TIMEOUT_MS,
+} from "../constants"
+import type { SourceAdapterOptions } from "../source-catalog"
+import { createSourceResponseMetadata } from "../source-catalog"
+import { assertSafeUpstreamUrl } from "../url-policy"
+import { isVideoFile } from "./video-file"
+
+export interface BhadooGoogleDriveItem {
+  id: string
+  name: string
+  mimeType: string
+  link?: string | null
+  size?: string
+}
+
+export interface BhadooGoogleDriveListResponse {
+  nextPageToken: string | null
+  curPageIndex: number
+  data?: { files?: BhadooGoogleDriveItem[] }
+  error?: { code?: number; message?: string }
+}
+
+const FILE_SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"]
+
+export const getBhadooPathFilename = (url: string | URL): string => {
+  const parsedUrl = typeof url === "string" ? new URL(url) : url
+  const finalSegment = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
+  return finalSegment ? decodeURIComponent(finalSegment) : "Google Drive Index"
+}
+
+export const formatBhadooFileSize = (size?: string): string | undefined => {
+  if (!size) {
+    return undefined
+  }
+  let value = Number(size)
+  if (!Number.isFinite(value) || value < 0) {
+    return undefined
+  }
+  let unitIndex = 0
+  while (
+    value >= BYTES_PER_KIBIBYTE &&
+    unitIndex < FILE_SIZE_UNITS.length - 1
+  ) {
+    value /= BYTES_PER_KIBIBYTE
+    unitIndex += 1
+  }
+  const formattedValue =
+    unitIndex === 0
+      ? String(value)
+      : value
+          .toFixed(FILE_SIZE_DECIMAL_PLACES)
+          .replace(/\.0+$|(?<=\.[0-9])0+$/, "")
+  return `${formattedValue} ${FILE_SIZE_UNITS[unitIndex]}`
+}
+
+export const createBhadooNodes = (
+  items: readonly BhadooGoogleDriveItem[],
+  folderUrl: URL
+): ExtractorNode[] =>
+  items.flatMap<ExtractorNode>((item) => {
+    if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
+      const pathname = folderUrl.pathname.endsWith("/")
+        ? folderUrl.pathname
+        : `${folderUrl.pathname}/`
+      const nodeUrl = new URL(folderUrl.origin)
+      nodeUrl.pathname = `${pathname}${item.name}/`
+      return [
+        {
+          kind: "resolvable" as const,
+          id: item.id,
+          label: item.name,
+          nodeUrl: nodeUrl.toString(),
+        },
+      ]
+    }
+    if (!isVideoFile(item.name)) {
+      return []
+    }
+    const playableUrl = item.link
+      ? new URL(item.link, folderUrl)
+      : new URL(
+          item.name,
+          folderUrl.toString().endsWith("/") ? folderUrl : `${folderUrl}/`
+        )
+    playableUrl.username = ""
+    playableUrl.password = ""
+    return [
+      {
+        kind: "playable" as const,
+        id: item.id,
+        label: item.name,
+        url: playableUrl.toString(),
+        ...(formatBhadooFileSize(item.size)
+          ? { size: formatBhadooFileSize(item.size) }
+          : {}),
+        status: "unknown" as const,
+      },
+    ]
+  })
+
+export const decodeLegacyBhadooResponse = (
+  encodedResponse: string
+): BhadooGoogleDriveListResponse => {
+  const reversedResponse = encodedResponse.split("").reverse().join("")
+  const base64Response = reversedResponse
+    .slice(LEGACY_RESPONSE_PREFIX_LENGTH)
+    .slice(0, -LEGACY_RESPONSE_SUFFIX_LENGTH)
+  const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
+    character.charCodeAt(0)
+  )
+  return JSON.parse(new TextDecoder().decode(responseBytes))
+}
+
+const createAuthorizationHeaders = (
+  basicAuth?: HttpBasicAuth
+): Record<string, string> =>
+  basicAuth
+    ? {
+        Authorization: createBasicAuthorization(
+          basicAuth.username,
+          basicAuth.password
+        ),
+      }
+    : {}
+
+const requestBhadooPage = async (
+  requestUrl: URL,
+  basicAuth: HttpBasicAuth | undefined,
+  pageToken: string,
+  pageIndex: number
+): Promise<BhadooGoogleDriveListResponse> => {
+  assertSafeUpstreamUrl(requestUrl.toString())
+  const authorizationHeaders = createAuthorizationHeaders(basicAuth)
+  const modernResponse = await fetch(requestUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authorizationHeaders },
+    body: JSON.stringify({
+      password: "",
+      page_token: pageToken,
+      page_index: pageIndex,
+    }),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  })
+  if (modernResponse.ok) {
+    const modernBody: unknown = await modernResponse.json()
+    if (typeof modernBody !== "object" || modernBody === null) {
+      throw new Error("Bhadoo Index returned malformed JSON.")
+    }
+    return modernBody as BhadooGoogleDriveListResponse
+  }
+
+  const legacyBody = new URLSearchParams({
+    password: "",
+    page_token: pageToken,
+    page_index: String(pageIndex),
+  })
+  const legacyResponse = await fetch(requestUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      ...authorizationHeaders,
+    },
+    body: legacyBody.toString(),
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  })
+  if (!legacyResponse.ok) {
+    throw new Error("Bhadoo Index upstream request failed.")
+  }
+  return decodeLegacyBhadooResponse(await legacyResponse.text())
+}
+
+export const extractBhadooGoogleDriveIndex = async ({
+  request,
+  targetUrl,
+  source,
+  publicAssetOrigin,
+}: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
+  const folderUrl = assertSafeUpstreamUrl(targetUrl)
+  folderUrl.username = ""
+  folderUrl.password = ""
+  const filename = getBhadooPathFilename(folderUrl)
+  if (isVideoFile(filename)) {
+    const playableUrl = new URL(folderUrl)
+    const actionValues = playableUrl.searchParams.getAll("a")
+    playableUrl.searchParams.delete("a")
+    actionValues
+      .filter((value) => value !== "view")
+      .forEach((value) => playableUrl.searchParams.append("a", value))
+    return {
+      source: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+      nodes: [
+        { kind: "playable", label: filename, url: playableUrl.toString() },
+      ],
+      extensions: {},
+    }
+  }
+
+  const nodes: ExtractorNode[] = []
+  let pageToken = ""
+  let pageIndex = 0
+  do {
+    const result = await requestBhadooPage(
+      folderUrl,
+      request.basicAuth,
+      pageToken,
+      pageIndex
+    )
+    if (result.error) {
+      throw new Error(
+        result.error.message || "Bhadoo Index rejected the request."
+      )
+    }
+    if (!Number.isInteger(result.curPageIndex)) {
+      throw new Error("Bhadoo Index returned a malformed page.")
+    }
+    nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
+    pageToken = result.nextPageToken ?? ""
+    pageIndex = result.curPageIndex + 1
+  } while (pageToken)
+
+  return {
+    source: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+    nodes,
+    extensions: {},
+  }
+}

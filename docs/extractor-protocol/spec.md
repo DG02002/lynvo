@@ -194,6 +194,8 @@ Auth:
 - `features.basicAuth`: whether Lynvo may forward structured HTTP Basic Auth credentials to this worker.
 - `extensions`: optional vendor namespace for non-core data.
 
+Under `extensions.lynvo.sources`, each source may declare optional `description`, HTTPS `homepage`, and `credential` capability metadata. A credential has `kind` (`domain-password` or `http-basic`), `scope` (`domain`), and `required` (boolean). These optional fields are backward-compatible protocol extensions and never contain credential values.
+
 ## Usage Response
 
 ```json

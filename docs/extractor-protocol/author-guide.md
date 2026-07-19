@@ -210,6 +210,8 @@ Example:
         {
           "id": "resolver-beta",
           "displayName": "Resolver Beta",
+          "description": "Resolves playable media from Resolver Beta deployments.",
+          "homepage": "https://resolver-beta.example",
           "iconUrl": "https://example.com/icons/resolver-beta.webp",
           "status": "active",
           "version": "1.2.3",
@@ -220,7 +222,12 @@ Example:
               "hostPatterns": ["*resolver-beta*"],
               "pathPatterns": ["/**"]
             }
-          ]
+          ],
+          "credential": {
+            "kind": "domain-password",
+            "scope": "domain",
+            "required": false
+          }
         }
       ]
     }
@@ -235,6 +242,8 @@ Lynvo displays these source icons in the external extractor settings table. This
 `routesToSourceId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
 `matchers` is optional but recommended. Lynvo uses it to show which source plugin is likely to handle a URL before extraction starts.
+
+`description`, `homepage`, and `credential` are optional source capability metadata. A credential `kind` is either `domain-password` or `http-basic`, its `scope` is `domain`, and `required` states whether every extraction needs it. These fields describe configuration requirements and must not contain credentials or UI layout instructions.
 
 Lynvo v1 does not define a live health endpoint. Source status is read from the manifest and refreshed when the user refreshes the worker manifest in settings. This keeps the protocol predictable and avoids polling every external worker.
 

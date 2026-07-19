@@ -146,12 +146,21 @@ export interface VerifyErrorResponse {
 export interface ExtractorSourceMetadata {
   id: string
   displayName: string
+  description?: string
+  homepage?: string
   iconUrl?: string
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
   routesToSourceId?: string
   hosts: string[]
   matchers?: ExtractorMatcher[]
+  credential?: ExtractorSourceCredential
+}
+
+export interface ExtractorSourceCredential {
+  kind: "domain-password" | "http-basic"
+  scope: "domain"
+  required: boolean
 }
 
 export interface LynvoManifestExtension {
@@ -306,12 +315,21 @@ export const verifyErrorSchema = z.object({
 export const extractorSourceMetadataSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
+  description: z.string().min(1).optional(),
+  homepage: z.url().startsWith("https://").optional(),
   iconUrl: iconUrlSchema.optional(),
   status: z.enum(["active", "maintenance", "degraded", "down"]).optional(),
   version: z.string().optional(),
   routesToSourceId: z.string().min(1).optional(),
   hosts: z.array(z.string()).default([]),
   matchers: z.array(matcherSchema).optional(),
+  credential: z
+    .object({
+      kind: z.enum(["domain-password", "http-basic"]),
+      scope: z.literal("domain"),
+      required: z.boolean(),
+    })
+    .optional(),
 })
 
 export const lynvoManifestExtensionSchema = z.object({
@@ -861,6 +879,33 @@ export const createExtractorRuntime = <Env>(
               "Password is required for this resource."
             ),
             401
+          )
+        }
+        if (message === "INVALID_PASSWORD") {
+          return jsonResponse(
+            createProtocolError(
+              "INVALID_PASSWORD",
+              "The supplied password was rejected."
+            ),
+            401
+          )
+        }
+        if (message === "RATE_LIMITED") {
+          return jsonResponse(
+            createProtocolError(
+              "RATE_LIMITED",
+              "Extractor capacity is exhausted for the current period."
+            ),
+            429
+          )
+        }
+        if (message === "UNSUPPORTED_URL") {
+          return jsonResponse(
+            createProtocolError(
+              "UNSUPPORTED_URL",
+              "The target URL is not supported."
+            ),
+            400
           )
         }
         return jsonResponse(

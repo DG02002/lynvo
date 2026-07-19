@@ -30,12 +30,12 @@
     "@hugeicons/react": "^1.1.9",
     "@lynvo/extractor-protocol": "workspace:*",
     "@tanstack/react-query": "^5.101.2",
-    "cheerio": "^1.2.0",
+    "cheerio": "catalog:",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "^1.42.3",
     "effect": "beta",
-    "hono": "^4.12.30",
+    "hono": "catalog:",
     "input-otp": "^1.4.2",
     "isbot": "^5.2.1",
     "next-themes": "^0.4.6",
@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.45.1",
-    "@cloudflare/workers-types": "^5.20260718.1",
+    "@cloudflare/workers-types": "catalog:",
     "@react-router/dev": "^8.2.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
@@ -62,13 +62,13 @@
     "@vitejs/plugin-react": "^6.0.3",
     "concurrently": "^10.0.3",
     "jsdom": "^29.1.1",
-    "oxfmt": "^0.59.0",
-    "oxlint": "^1.74.0",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.1",
     "typescript": "catalog:",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.112.0"
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   }
 }

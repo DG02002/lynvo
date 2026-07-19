@@ -13,8 +13,8 @@
     "sync:repos": "tsx scripts/sync-repos.ts"
   },
   "devDependencies": {
-    "oxfmt": "^0.59.0",
-    "oxlint": "^1.74.0",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "sharp": "catalog:",
     "tsx": "^4.23.1",
     "typescript": "catalog:"
