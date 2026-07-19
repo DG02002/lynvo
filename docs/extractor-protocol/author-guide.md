@@ -15,7 +15,7 @@ The protocol itself is framework-agnostic. Hono is the recommended reference sta
 Start with:
 
 - `compatibility-checklist.md` for the compatibility rules Lynvo expects.
-- `templates/cloudflare-worker-basic/` for a standalone external Worker example.
+- `examples/extractor-worker/` for the workspace example.
 
 ## Recommended Project Setup
 
@@ -79,9 +79,9 @@ Do not define a local protocol schema unless you are writing an adapter around `
 
 In this repository, use the local protocol package:
 
-```sh
-pnpm add @lynvo/extractor-protocol@file:../lynvo/packages/extractor-protocol
-```
+Inside this monorepo, declare `"@lynvo/extractor-protocol": "workspace:*"`.
+For a standalone repository, consume a published package version or package
+tarball; do not use a workspace reference outside this workspace.
 
 Use it for:
 

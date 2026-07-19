@@ -12,8 +12,6 @@ import {
 } from "~/components/ui/accordion"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
-import { officialPlugins } from "~/features/site/settings/plugin-settings-data"
-import { PluginIcon } from "~/components/plugin-icon"
 import { faqs, privacyPoints } from "./home-content"
 
 const SectionIntro = ({
@@ -52,17 +50,13 @@ export const FeaturesSection = () => {
           />
 
           <div className="flex flex-col gap-8">
-            {officialPlugins.map((plugin) => (
-              <div key={plugin.id} className="flex items-center gap-5">
-                <PluginIcon icon={plugin.icon} className="size-14 rounded-lg" />
-                <div className="min-w-0">
-                  <p className="text-lg">{plugin.name}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {plugin.description}
-                  </p>
-                </div>
-              </div>
-            ))}
+            <div>
+              <p className="text-lg">Official extractor</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Use managed sources whose current capabilities are shown in
+                Settings from the official extractor manifest.
+              </p>
+            </div>
             <div>
               <p className="text-lg">External extractors</p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

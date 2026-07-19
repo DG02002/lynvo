@@ -2,8 +2,9 @@
 
 Lynvo separates extraction capacity into two independent resources:
 
-- Worker operations count network extraction work against the hosting platform.
-- Provider credits count calls to a paid or shared upstream proxy.
+- Lynvo account quotas reserve per-user capacity before an official binding call.
+- Extractor service capacity reserves global upstream capacity inside the
+  official Worker before source work begins.
 
 Official plugins use Lynvo-owned counters. External extractors expose and
 enforce their own finite counters through the mandatory authenticated

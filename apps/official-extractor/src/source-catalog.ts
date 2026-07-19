@@ -84,11 +84,14 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
 ]
 
 export const findOfficialSource = (
-  targetUrl: string
+  targetUrl: string,
+  sourceId?: string
 ): OfficialSourceDefinition | undefined =>
-  OFFICIAL_SOURCE_CATALOG.find((source) =>
-    matchExtractorUrl(targetUrl, source.matchers)
-  )
+  sourceId
+    ? OFFICIAL_SOURCE_CATALOG.find((source) => source.id === sourceId)
+    : OFFICIAL_SOURCE_CATALOG.find((source) =>
+        matchExtractorUrl(targetUrl, source.matchers)
+      )
 
 export const createOfficialManifest = (
   publicAssetOrigin: string
@@ -124,7 +127,7 @@ export const extractFromOfficialSource = async (
   targetUrl: string,
   publicAssetOrigin: string
 ): Promise<ExtractSuccessResponse> => {
-  const source = findOfficialSource(targetUrl)
+  const source = findOfficialSource(targetUrl, request.sourceId)
   if (!source) {
     throw new Error("UNSUPPORTED_URL")
   }

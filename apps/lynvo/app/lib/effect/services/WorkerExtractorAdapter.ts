@@ -108,11 +108,16 @@ export const getWorkerMetadata = Effect.fn(
 export const getExtractorMetadata = (
   manifest: ExtractorManifest,
   workerId: string,
-  targetUrl?: string
+  targetUrl?: string,
+  sourceId?: string
 ): MetadataResult => {
-  const source = targetUrl
-    ? getMatchedExtractorSource(manifest, targetUrl)
-    : undefined
+  const source = sourceId
+    ? getLynvoManifestExtension(manifest).sources?.find(
+        (candidate) => candidate.id === sourceId
+      )
+    : targetUrl
+      ? getMatchedExtractorSource(manifest, targetUrl)
+      : undefined
   const routeSourceId =
     source?.routesToSourceId ??
     (manifest.extractorId === "com.lynvo.plnkextractor" &&

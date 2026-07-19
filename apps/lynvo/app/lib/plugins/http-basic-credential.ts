@@ -25,16 +25,6 @@ export const parseHttpBasicCredential = (
   return { username: parsed.username, password: parsed.password }
 }
 
-export const applyHttpBasicCredential = (
-  sourceUrl: string,
-  credential: HttpBasicCredential
-) => {
-  const url = new URL(sourceUrl)
-  url.username = credential.username
-  url.password = credential.password
-  return url.toString()
-}
-
 export const extractHttpBasicCredential = (sourceUrl: string) => {
   const url = new URL(sourceUrl)
   if (!url.username && !url.password) {

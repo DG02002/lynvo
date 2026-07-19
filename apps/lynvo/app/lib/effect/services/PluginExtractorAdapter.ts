@@ -1,36 +1,12 @@
 import { Effect } from "effect"
-import { getPluginById, getPluginForUrl } from "../../../lib/plugins"
 import type { Plugin } from "../../../lib/plugins/types"
 import { fetchUrl } from "../../../lib/scraper"
-import { ConvexError, ExtractionError, ValidationError } from "../errors"
+import { ConvexError, ExtractionError } from "../errors"
 import type {
   ExtractionResult,
   MetadataOptions,
   MetadataResult,
 } from "./extractor-types"
-
-export const resolvePlugin = (
-  targetUrl: string
-): Effect.Effect<Plugin, ValidationError> =>
-  Effect.tryPromise({
-    try: () => getPluginForUrl(targetUrl),
-    catch: (cause) =>
-      new ValidationError({
-        message: `Failed to resolve plugin for URL: ${targetUrl}`,
-        details: cause,
-      }),
-  })
-
-export const resolvePluginById = (
-  pluginId: string
-): Effect.Effect<Plugin, ValidationError> => {
-  const plugin = getPluginById(pluginId)
-  return plugin
-    ? Effect.succeed(plugin)
-    : Effect.fail(
-        new ValidationError({ message: `Unknown plugin: ${pluginId}` })
-      )
-}
 
 export const extractFromPlugin = Effect.fn(
   "PluginExtractorAdapter.extractFromPlugin"

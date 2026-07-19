@@ -11,11 +11,9 @@ import {
 import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
 import { buildPluginCredentialDocument } from "../convex/pluginDomainLifecycle"
 import {
-  applyHttpBasicCredential,
   parseHttpBasicCredential,
   serializeHttpBasicCredential,
 } from "~/lib/plugins/http-basic-credential"
-import { createBhadooAuthenticatedRequest } from "~/lib/plugins/bhadoo-basic-auth"
 
 describe("Plugin Domain lifecycle", () => {
   it("normalizes duplicate domain spellings to one identity", () => {
@@ -55,24 +53,6 @@ describe("Plugin Domain lifecycle", () => {
       username: "allinone",
       password: "strange@115",
     })
-  })
-
-  it("applies stored HTTP Basic Auth credentials to an extraction URL", () => {
-    expect(
-      applyHttpBasicCredential("https://index.example.com/0:/folder", {
-        username: "allinone",
-        password: "strange@115",
-      })
-    ).toBe("https://allinone:strange%40115@index.example.com/0:/folder")
-  })
-
-  it("creates a Bhadoo authorization request without protocol runtime imports", () => {
-    const request = createBhadooAuthenticatedRequest(
-      "https://allinone:strange%40115@index.example.com/0:/"
-    )
-
-    expect(request.url.toString()).toBe("https://index.example.com/0:/")
-    expect(request.authorization).toBe("Basic YWxsaW5vbmU6c3RyYW5nZUAxMTU=")
   })
 
   it("builds Plugin Credentials from their owning Plugin Domain", () => {

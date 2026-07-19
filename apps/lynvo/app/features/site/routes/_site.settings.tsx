@@ -27,6 +27,7 @@ import {
   requireUserOrRedirect,
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
+import { loadOfficialPlugins } from "~/features/site/settings/official-plugin-catalog.server"
 
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
@@ -41,6 +42,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
   requireUserOrRedirect(sessionResult, pathname)
 
   const user = sessionResult.user!
+  const officialPlugins = await loadOfficialPlugins(env)
   return responseWithSession(
     {
       user: {
@@ -48,6 +50,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
         username: user.username,
         sid: user.sid,
       },
+      officialPlugins,
     },
     sessionResult,
     request
@@ -97,7 +100,7 @@ const getSettingsTabFromHash = (hash: string) => {
 }
 
 export default function Settings() {
-  const { user } = useLoaderData<typeof loader>()
+  const { user, officialPlugins } = useLoaderData<typeof loader>()
   const location = useLocation()
   const navigate = useNavigate()
   const [showActiveSessions, setShowActiveSessions] = React.useState(false)
@@ -199,7 +202,7 @@ export default function Settings() {
             <header className="pb-4">
               <h1 className="text-2xl font-normal tracking-tight">Plugins</h1>
             </header>
-            <PluginsSettings />
+            <PluginsSettings officialPlugins={officialPlugins} />
           </TabsContent>
 
           <TabsContent value="storage" className="flex flex-col">

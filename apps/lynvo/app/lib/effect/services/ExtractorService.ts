@@ -1,20 +1,11 @@
 import { Context, Effect, Layer } from "effect"
-import { getMatchedExtractorSource } from "@lynvo/extractor-protocol"
+import { getLynvoManifestExtension } from "@lynvo/extractor-protocol"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
 import { isSafeUrl } from "../../../lib/ssrf"
-import {
-  ConvexError,
-  ExtractionError,
-  UnauthorizedError,
-  ValidationError,
-} from "../errors"
-import {
-  extractFromPlugin,
-  getPluginMetadata,
-  resolvePlugin,
-  resolvePluginById,
-} from "./PluginExtractorAdapter"
+import { ConvexError, ExtractionError, ValidationError } from "../errors"
+import { extractFromPlugin, getPluginMetadata } from "./PluginExtractorAdapter"
+import { nativeDirectLinkPlugin } from "../../plugins/direct"
 import {
   extractFromWorker,
   getWorkerMetadata,
@@ -28,10 +19,7 @@ import type {
   MetadataResult,
 } from "./extractor-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
-import {
-  parseHttpBasicCredential,
-  applyHttpBasicCredential,
-} from "../../plugins/http-basic-credential"
+import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { CloudflareEnv } from "./CloudflareEnv"
 import {
   extractFromOfficial,
@@ -64,39 +52,9 @@ export class ExtractorService extends Context.Service<
       const credentialVault = yield* PluginCredentialVault
       const environment = yield* CloudflareEnv
 
-      const resolveUserPlugin = Effect.fn("ExtractorService.resolveUserPlugin")(
-        function* (targetUrl: string, accessToken: string | undefined) {
-          if (!accessToken) {
-            return yield* resolvePlugin(targetUrl)
-          }
-          const configuredDomain = yield* convex
-            .query(
-              api.pluginDomains.getByDomain,
-              { domain: getHostname(targetUrl) },
-              { accessToken }
-            )
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new ValidationError({
-                    message: error.message,
-                    details: error,
-                  })
-              )
-            )
-          if (configuredDomain) {
-            return yield* resolvePluginById(configuredDomain.pluginId)
-          }
-          return yield* resolvePlugin(targetUrl)
-        }
-      )
-
       const extract = Effect.fn("ExtractorService.extract")(function* (
         options: ExtractOptions
-      ): Effect.fn.Return<
-        ExtractionResult,
-        ExtractionError | ValidationError | UnauthorizedError
-      > {
+      ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
         const targetUrl = options.url
         if (!isSafeUrl(targetUrl)) {
           return yield* new ValidationError({
@@ -147,8 +105,27 @@ export class ExtractorService extends Context.Service<
             officialManifest._tag === "Some"
               ? officialManifest.value
               : undefined
+          const configuredDomain = yield* convex
+            .query(
+              api.pluginDomains.getByDomain,
+              { domain: getHostname(targetUrl) },
+              { accessToken: options.accessToken }
+            )
+            .pipe(
+              Effect.mapError(
+                (error) =>
+                  new ValidationError({
+                    message: error.message,
+                    details: error,
+                  })
+              )
+            )
           const source = manifest
-            ? getMatchedExtractorSource(manifest, targetUrl)
+            ? configuredDomain
+              ? getLynvoManifestExtension(manifest).sources?.find(
+                  (candidate) => candidate.id === configuredDomain.pluginId
+                )
+              : undefined
             : undefined
           if (options.workerId === OFFICIAL_EXTRACTOR_ID && !source) {
             return yield* new ValidationError({
@@ -220,92 +197,13 @@ export class ExtractorService extends Context.Service<
               environment,
               targetUrl,
               options.kind ?? "source",
-              { password, basicAuth },
+              { sourceId: source.id, password, basicAuth },
               options.requestId
             )
           }
         }
 
-        const plugin = yield* resolveUserPlugin(targetUrl, options.accessToken)
-        if (plugin.requiresAuth && !options.userId) {
-          return yield* new UnauthorizedError({
-            message: `${plugin.name} links only work for registered users.`,
-          })
-        }
-
-        let password: string | undefined
-        let authenticatedTargetUrl = targetUrl
-        if (plugin.credential && options.userId && options.accessToken) {
-          const domain = getHostname(targetUrl)
-          const encryptedCredential = yield* convex
-            .query(
-              api.pluginDomains.getCredentialByDomain,
-              { domain },
-              { accessToken: options.accessToken }
-            )
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new ExtractionError({
-                    message: error.message,
-                    url: targetUrl,
-                  })
-              )
-            )
-          if (
-            encryptedCredential &&
-            encryptedCredential.pluginId === plugin.credential.pluginId
-          ) {
-            const decryptedCredential = yield* credentialVault
-              .decrypt(encryptedCredential, {
-                userId: options.userId,
-                pluginId: plugin.credential.pluginId,
-                domain,
-              })
-              .pipe(
-                Effect.mapError(
-                  (error) =>
-                    new ExtractionError({
-                      message: error.message,
-                      url: targetUrl,
-                    })
-                )
-              )
-            if (plugin.credential.kind === "domain-password") {
-              password = decryptedCredential
-            } else {
-              authenticatedTargetUrl = applyHttpBasicCredential(
-                targetUrl,
-                parseHttpBasicCredential(decryptedCredential)
-              )
-            }
-          }
-        }
-
-        const meteredPluginId = getMeteredPluginId(plugin.id)
-        if (meteredPluginId && options.userId && options.accessToken) {
-          yield* convex
-            .mutation(
-              api.usage.consumeOfficialPlugin,
-              { pluginId: meteredPluginId },
-              { accessToken: options.accessToken }
-            )
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new ExtractionError({
-                    message: error.message,
-                    url: targetUrl,
-                  })
-              )
-            )
-        }
-
-        return yield* extractFromPlugin(
-          plugin,
-          authenticatedTargetUrl,
-          password
-        )
+        return yield* extractFromPlugin(nativeDirectLinkPlugin, targetUrl)
       })
 
       const getMetadata = Effect.fn("ExtractorService.getMetadata")(function* (
@@ -335,9 +233,15 @@ export class ExtractorService extends Context.Service<
             Effect.option
           )
           if (officialManifest._tag === "Some") {
+            const configuredDomain = yield* convex.query(
+              api.pluginDomains.getByDomain,
+              { domain: getHostname(options.url) },
+              { accessToken: options.accessToken }
+            )
             const metadata = getOfficialMetadata(
               officialManifest.value,
-              options.url
+              options.url,
+              configuredDomain?.pluginId
             )
             if (metadata) {
               return metadata
@@ -345,51 +249,7 @@ export class ExtractorService extends Context.Service<
           }
         }
 
-        const plugin = yield* resolveUserPlugin(
-          options.url,
-          options.accessToken
-        )
-        let metadataUrl = options.url
-        if (
-          plugin.credential?.kind === "http-basic" &&
-          options.userId &&
-          options.accessToken
-        ) {
-          const domain = getHostname(options.url)
-          const encryptedCredential = yield* convex.query(
-            api.pluginDomains.getCredentialByDomain,
-            { domain },
-            { accessToken: options.accessToken }
-          )
-          if (
-            encryptedCredential &&
-            encryptedCredential.pluginId === plugin.credential.pluginId
-          ) {
-            const decryptedCredential = yield* credentialVault
-              .decrypt(encryptedCredential, {
-                userId: options.userId,
-                pluginId: plugin.credential.pluginId,
-                domain,
-              })
-              .pipe(
-                Effect.mapError(
-                  (cause) =>
-                    new ConvexError({
-                      message: "Could not read plugin credentials",
-                      cause,
-                    })
-                )
-              )
-            metadataUrl = applyHttpBasicCredential(
-              options.url,
-              parseHttpBasicCredential(decryptedCredential)
-            )
-          }
-        }
-        return yield* getPluginMetadata(plugin, {
-          ...options,
-          url: metadataUrl,
-        })
+        return yield* getPluginMetadata(nativeDirectLinkPlugin, options)
       })
 
       return ExtractorService.of({ extract, getMetadata })

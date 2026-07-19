@@ -11,7 +11,6 @@ import {
 import { ValidationError } from "../../errors"
 import { PluginCredentialVault } from "../../services/plugin-credential-vault"
 import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
-import { probeBhadooDomain } from "../../../plugins/bhadoo-domain-probe"
 
 const validateDomain = (value: string) =>
   Effect.try({
@@ -56,18 +55,6 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const password = payload.username
             ? payload.password
             : parsedInput.password || payload.password
-          if (payload.pluginId === "bhadoo-google-drive-index") {
-            const status = yield* Effect.promise(() =>
-              probeBhadooDomain(parsedInput.url, username, password)
-            )
-            if (status === 401) {
-              return yield* new ValidationError({
-                message: username
-                  ? "The HTTP Basic Auth username or password is incorrect"
-                  : "This domain requires HTTP Basic Auth credentials",
-              })
-            }
-          }
           const credentialValue = username
             ? serializeHttpBasicCredential(username, password || "")
             : password || undefined

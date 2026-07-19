@@ -35,7 +35,7 @@ import {
 } from "~/components/ui/alert-dialog"
 import { ExternalWorkerTable } from "./external-worker-table"
 import { PluginIcon } from "~/components/plugin-icon"
-import { officialPlugins, type OfficialPlugin } from "./plugin-settings-data"
+import type { OfficialPlugin } from "./plugin-settings-data"
 import {
   SettingsPanel,
   SettingsList,
@@ -62,7 +62,11 @@ export interface ExtractorWorker {
 const EMPTY_WORKERS: ExtractorWorker[] = []
 const EMPTY_DOMAINS: PluginDomain[] = []
 
-export function PluginsSettings() {
+export function PluginsSettings({
+  officialPlugins,
+}: {
+  officialPlugins: OfficialPlugin[] | null
+}) {
   const workers = useQuery(api.userWorkers.list, {}) ?? EMPTY_WORKERS
   const domains =
     (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
@@ -150,7 +154,14 @@ export function PluginsSettings() {
           description="Plugins maintained by Lynvo for compatible third-party projects."
         />
         <SettingsList>
-          {officialPlugins.map((plugin) => {
+          {officialPlugins === null && (
+            <SettingsRow>
+              <p className="text-sm text-muted-foreground">
+                Official extractor metadata is currently unavailable.
+              </p>
+            </SettingsRow>
+          )}
+          {(officialPlugins ?? []).map((plugin) => {
             const pluginDomains = domainsByPlugin[plugin.id] || []
             const isDomainsExpanded = expandedPluginIds.has(plugin.id)
             return (

@@ -1,8 +1,9 @@
 # How Lynvo Consumes External Extractor Metadata
 
-Lynvo treats every external extractor as a worker that publishes metadata through
-the protocol. Lynvo does not need source-specific code for Resolver Beta,
-File Source Delta, or any other plugin.
+Lynvo treats every out-of-process extractor as a worker that publishes metadata
+through the protocol. An extractor may be the first-party managed official
+Worker reached through a private Service Binding or a user-provided Worker
+reached through HTTPS.
 
 ```mermaid
 flowchart LR
@@ -17,7 +18,9 @@ flowchart LR
 
 ## Manifest Metadata
 
-The manifest is Lynvo's durable source of extractor identity.
+The validated manifest is Lynvo's source of extractor identity. User Worker
+manifests are stored at registration; the managed official manifest is resolved
+through the binding and reused within the request.
 
 Lynvo reads:
 

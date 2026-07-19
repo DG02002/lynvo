@@ -1,5 +1,5 @@
 import {
-  getMatchedExtractorSource,
+  getLynvoManifestExtension,
   type ExtractorManifest,
 } from "@lynvo/extractor-protocol"
 import { Effect } from "effect"
@@ -45,11 +45,23 @@ export const getOfficialManifest = Effect.fn(
 
 export const getOfficialMetadata = (
   manifest: ExtractorManifest,
-  targetUrl: string
-): MetadataResult | undefined =>
-  getMatchedExtractorSource(manifest, targetUrl)
-    ? getExtractorMetadata(manifest, OFFICIAL_EXTRACTOR_ID, targetUrl)
+  targetUrl: string,
+  sourceId?: string
+): MetadataResult | undefined => {
+  const source = sourceId
+    ? getLynvoManifestExtension(manifest).sources?.find(
+        (candidate) => candidate.id === sourceId
+      )
     : undefined
+  return source
+    ? getExtractorMetadata(
+        manifest,
+        OFFICIAL_EXTRACTOR_ID,
+        targetUrl,
+        source.id
+      )
+    : undefined
+}
 
 export const extractFromOfficial = Effect.fn(
   "OfficialExtractorAdapter.extractFromOfficial"
@@ -58,6 +70,7 @@ export const extractFromOfficial = Effect.fn(
   targetUrl: string,
   kind: "source" | "node",
   credentials: {
+    sourceId: string
     password?: string
     basicAuth?: { username: string; password: string }
   },

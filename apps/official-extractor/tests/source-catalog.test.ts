@@ -14,12 +14,15 @@ describe("official source catalog", () => {
     expect(extension.sources?.map((source) => source.id)).toEqual(
       OFFICIAL_SOURCE_CATALOG.map((source) => source.id)
     )
-    expect(findOfficialSource("https://drive.example/0:/Shows/")?.id).toBe(
-      "bhadoo-google-drive-index"
-    )
-    expect(findOfficialSource("https://index.example/Shows/")?.id).toBe(
-      "onedrive-index"
-    )
+    expect(
+      findOfficialSource(
+        "https://drive.example/0:/Shows/",
+        "bhadoo-google-drive-index"
+      )?.id
+    ).toBe("bhadoo-google-drive-index")
+    expect(
+      findOfficialSource("https://index.example/Shows/", "onedrive-index")?.id
+    ).toBe("onedrive-index")
   })
 
   it("publishes only valid public WebP icon URLs", () => {

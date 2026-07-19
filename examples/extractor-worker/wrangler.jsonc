@@ -1,0 +1,7 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lynvo-example-extractor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-19",
+  "workers_dev": false
+}

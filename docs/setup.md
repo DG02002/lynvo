@@ -26,6 +26,7 @@ AUTH_GATEWAY_SECRET=replace-with-the-same-secret-used-in-convex
 TURNSTILE_SITE_KEY=0x...
 TURNSTILE_SECRET_KEY=0x...
 PLUGIN_CREDENTIAL_MASTER_KEY=base64-encoded-32-byte-key
+OFFICIAL_EXTRACTOR_API_KEY=shared-private-binding-secret
 ```
 
 Generate the plugin credential encryption key with `openssl rand -base64 32`.
@@ -45,6 +46,12 @@ Run Lynvo against the configured cloud Convex deployment:
 pnpm run dev
 ```
 
+The Cloudflare Vite plugin starts `apps/official-extractor` as an auxiliary
+Worker and routes official extraction through `OFFICIAL_EXTRACTOR`. Use
+`pnpm --filter @lynvo/official-extractor dev` only when developing that Worker
+through its own local URL. Put the same ignored `OFFICIAL_EXTRACTOR_API_KEY` in
+both Workers' local secret files.
+
 Run Lynvo and Convex entirely locally:
 
 ```bash
@@ -60,11 +67,16 @@ Set every required Worker secret declared in `apps/lynvo/wrangler.jsonc` with Wr
 
 Create the `AUTH_RATE_LIMITS` KV namespace and replace the placeholder namespace ID in `apps/lynvo/wrangler.jsonc` before deployment.
 
-Deploy Convex before the Worker:
+Deploy the private official Worker first, then Convex, then Lynvo:
 
 ```bash
+pnpm --filter @lynvo/official-extractor deploy
 pnpm --filter @lynvo/app exec convex deploy
 pnpm run deploy:lynvo
 ```
+
+Before deployment, run both Wrangler dry-runs. The official Worker has
+`workers_dev` disabled and must have no public route. Verify the Cloudflare
+account and exact binding target before any real deploy.
 
 Convex is the application database. The Cloudflare Durable Object is used only for realtime connection coordination; its migration in `apps/lynvo/wrangler.jsonc` must remain.

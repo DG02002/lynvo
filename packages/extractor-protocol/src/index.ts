@@ -92,6 +92,7 @@ export interface NodeInput {
 
 export interface ExtractRequest {
   input: SourceInput | NodeInput
+  sourceId?: string
   password?: string
   basicAuth?: HttpBasicAuth
 }
@@ -408,6 +409,7 @@ export const nodeInputSchema = z.object({
 
 export const extractRequestSchema = z.object({
   input: z.discriminatedUnion("kind", [sourceInputSchema, nodeInputSchema]),
+  sourceId: z.string().min(1).optional(),
   password: z.string().optional(),
   basicAuth: z
     .object({
@@ -437,12 +439,14 @@ const jsonResponse = (value: unknown, status = 200): Response =>
 export const createSourceExtractRequest = (
   sourceUrl: string,
   password?: string,
-  basicAuth?: HttpBasicAuth
+  basicAuth?: HttpBasicAuth,
+  sourceId?: string
 ): ExtractRequest => ({
   input: {
     kind: "source",
     sourceUrl,
   },
+  ...(sourceId ? { sourceId } : {}),
   ...(password ? { password } : {}),
   ...(basicAuth ? { basicAuth } : {}),
 })
@@ -450,12 +454,14 @@ export const createSourceExtractRequest = (
 export const createNodeExtractRequest = (
   nodeUrl: string,
   password?: string,
-  basicAuth?: HttpBasicAuth
+  basicAuth?: HttpBasicAuth,
+  sourceId?: string
 ): ExtractRequest => ({
   input: {
     kind: "node",
     nodeUrl,
   },
+  ...(sourceId ? { sourceId } : {}),
   ...(password ? { password } : {}),
   ...(basicAuth ? { basicAuth } : {}),
 })

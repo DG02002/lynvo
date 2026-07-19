@@ -30,6 +30,7 @@ export interface ExtractorClientOptions {
 }
 
 export interface ExtractorRequestOptions extends ExtractorClientOptions {
+  sourceId?: string
   password?: string
   basicAuth?: HttpBasicAuth
 }
@@ -227,12 +228,14 @@ export class ExtractorProtocolClient {
         ? createSourceExtractRequest(
             targetUrl,
             options.password,
-            options.basicAuth
+            options.basicAuth,
+            options.sourceId
           )
         : createNodeExtractRequest(
             targetUrl,
             options.password,
-            options.basicAuth
+            options.basicAuth,
+            options.sourceId
           )
     const response = await this.request(
       "/extract",

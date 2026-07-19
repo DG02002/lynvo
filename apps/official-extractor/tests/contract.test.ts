@@ -55,6 +55,7 @@ describe("official extractor protocol routes", () => {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({
+        sourceId: "bhadoo-google-drive-index",
         input: {
           kind: "source",
           sourceUrl: "https://drive.example/0:/Movies/example.mkv?a=view",

@@ -19,3 +19,16 @@ _Avoid_: source domain, scraper domain
 **Plugin Credential**:
 An encrypted, user-owned secret attached to one Plugin Domain and used only by the server during extraction.
 _Avoid_: saved password, link password
+
+**Official Extractor**:
+The server-owned, out-of-process Worker that implements Lynvo's supported
+OneDrive and Bhadoo sources.
+
+**Official Extractor Binding**:
+The private Cloudflare Service Binding from Lynvo to the Official Extractor.
+It is not a public endpoint and its bearer secret never reaches the browser.
+
+**Extractor Source**:
+A source implementation declared by a validated extractor manifest. Source ids
+remain stable across deployments and own operational metadata such as status,
+version, matchers, and credential requirements.
