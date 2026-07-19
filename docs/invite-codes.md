@@ -8,7 +8,7 @@ The invite generation endpoint is protected by an `ADMIN_SECRET`.
 
 ### Local Development
 
-The secret is stored in `.dev.vars`:
+The secret is stored in `apps/lynvo/.dev.vars`:
 
 ```env
 ADMIN_SECRET="replace-with-a-random-secret"
@@ -21,7 +21,7 @@ Do not use both files at once in the same project root.
 To set the secret in production (Cloudflare Workers), run:
 
 ```bash
-npx wrangler secret put ADMIN_SECRET
+pnpm --filter @lynvo/app exec wrangler secret put ADMIN_SECRET
 ```
 
 When prompted, paste the secret value (e.g., the one generated above or a new secure string).

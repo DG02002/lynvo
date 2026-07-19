@@ -1,12 +1,21 @@
-ignoredBuiltDependencies:
-  - esbuild
-  - sharp
-  - workerd
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "examples/*"
+
+sharedWorkspaceLockfile: true
+saveWorkspaceProtocol: rolling
 
 allowBuilds:
   esbuild: true
+  msgpackr-extract: true
   sharp: true
   workerd: true
+
+catalog:
+  sharp: ^0.35.3
+  typescript: ^6.0.3
+  zod: ^4.4.3
 
 # minimumReleaseAge: 10080
 # trustPolicy: no-downgrade

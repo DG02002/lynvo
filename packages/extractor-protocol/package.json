@@ -18,12 +18,13 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "check": "pnpm run typecheck",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "typescript": "^6.0.3"
+    "typescript": "catalog:"
   }
 }

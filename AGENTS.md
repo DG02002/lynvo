@@ -36,9 +36,9 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 ## Shadcn Components
 
-- MUST: Treat files under `app/components/ui/` as read-only generated primitives.
-- MUST: Do not edit `app/components/ui/` during feature work, including to fix lint or type errors. Report errors originating there instead.
-- MUST: Build feature behavior by composing primitives from outside `app/components/ui/`.
+- MUST: Treat files under `apps/lynvo/app/components/ui/` as read-only generated primitives.
+- MUST: Do not edit `apps/lynvo/app/components/ui/` during feature work, including to fix lint or type errors. Report errors originating there instead.
+- MUST: Build feature behavior by composing primitives from outside `apps/lynvo/app/components/ui/`.
 
 ## Vendored Repositories
 

@@ -23,10 +23,10 @@ other dynamic application traffic.
 
 ## Reset every Lynvo account
 
-Run this from the `lynvo` directory against the configured Convex deployment:
+Run this from the repository root against the configured Convex deployment:
 
 ```bash
-pnpm usage:reset
+pnpm --filter @lynvo/app usage:reset
 ```
 
 The reset advances a global usage epoch. Existing counter rows remain available

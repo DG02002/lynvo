@@ -118,8 +118,8 @@ dist
 .pnp.*
 
 # React Router
-/.react-router/
-/build/
+.react-router/
+build/
 
 # Cloudflare
 .mf
@@ -146,6 +146,10 @@ testlinks.md
 !scripts/**
 !docs/extractor-protocol/templates/cloudflare-worker-basic/scripts/
 !docs/extractor-protocol/templates/cloudflare-worker-basic/scripts/**
+!apps/lynvo/app/lib/
+!apps/lynvo/app/lib/**
+!apps/lynvo/scripts/
+!apps/lynvo/scripts/**
 
 # Keep OS metadata ignored after source-directory exceptions
 .DS_Store
