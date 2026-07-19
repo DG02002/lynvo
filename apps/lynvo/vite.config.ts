@@ -31,7 +31,14 @@ export default defineConfig({
   },
   plugins: [
     wranglerTypesWatcher(),
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    cloudflare({
+      viteEnvironment: { name: "ssr" },
+      auxiliaryWorkers: [
+        {
+          configPath: "../official-extractor/wrangler.jsonc",
+        },
+      ],
+    }),
     tailwindcss(),
     reactRouter(),
   ],

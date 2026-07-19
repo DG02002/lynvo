@@ -63,8 +63,8 @@ describe("extractFromWorker", () => {
       )
     )
 
-    const request = fetchMock.mock.calls[0][1]
-    expect(JSON.parse(String(request?.body))).toEqual({
+    const request = fetchMock.mock.calls[0][0]
+    expect(await request.json()).toEqual({
       input: {
         kind: "source",
         sourceUrl: "https://source.example/title",

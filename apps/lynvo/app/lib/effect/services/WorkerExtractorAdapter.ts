@@ -1,12 +1,10 @@
 import { Effect } from "effect"
 import {
-  createNodeExtractRequest,
-  createSourceExtractRequest,
-  extractSuccessSchema,
   getLynvoManifestExtension,
   getMatchedExtractorSource,
   manifestSchema,
-  usageResponseSchema,
+  type ExtractSuccessResponse,
+  type ExtractorManifest,
 } from "@lynvo/extractor-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl, mapNodeToExtractedLink } from "../../../lib/worker-utils"
@@ -21,50 +19,36 @@ import type {
   RegisteredWorker,
 } from "./extractor-types"
 import { isWorkerUsable } from "./worker-verification-status"
+import {
+  ExtractorProtocolClient,
+  ExtractorProtocolClientError,
+  HttpExtractorTransport,
+} from "../../extraction/extractor-protocol-client"
+
+const createWorkerClient = (worker: RegisteredWorker) =>
+  new ExtractorProtocolClient(new HttpExtractorTransport(worker.baseUrl))
+
+const workerError = (cause: unknown, url: string): ExtractionError =>
+  new ExtractionError({
+    message:
+      cause instanceof ExtractorProtocolClientError
+        ? cause.code
+        : "TEMPORARY_FAILURE",
+    url,
+  })
 
 export const getWorkerUsage = Effect.fn(
   "WorkerExtractorAdapter.getWorkerUsage"
 )(function* (worker: RegisteredWorker) {
-  const response = yield* Effect.tryPromise({
-    try: () =>
-      fetch(`${worker.baseUrl.replace(/\/$/, "")}/usage`, {
-        headers: { Authorization: `Bearer ${worker.apiKey}` },
-      }),
-    catch: (cause) =>
-      new ExtractionError({
-        message:
-          cause instanceof Error
-            ? cause.message
-            : "Worker usage request failed",
-        url: worker.baseUrl,
-      }),
+  const usage = yield* Effect.tryPromise({
+    try: () => createWorkerClient(worker).getUsage({ apiKey: worker.apiKey }),
+    catch: (cause) => workerError(cause, worker.baseUrl),
   })
-  if (!response.ok) {
-    return yield* new ExtractionError({
-      message: `Worker usage request failed with HTTP ${response.status}`,
-      url: worker.baseUrl,
-    })
-  }
-  const value = yield* Effect.tryPromise({
-    try: () => response.json(),
-    catch: () =>
-      new ExtractionError({
-        message: "Worker returned malformed usage JSON",
-        url: worker.baseUrl,
-      }),
-  })
-  const usage = usageResponseSchema.safeParse(value)
-  if (!usage.success) {
-    return yield* new ExtractionError({
-      message: "Worker usage response does not match protocol v1",
-      url: worker.baseUrl,
-    })
-  }
   const manifest = yield* decodeWorkerManifest(worker.manifest)
   return {
     workerId: worker._id,
     name: manifest?.displayName ?? worker.baseUrl,
-    metrics: usage.data.metrics,
+    metrics: usage.metrics,
   }
 })
 
@@ -118,6 +102,14 @@ export const getWorkerMetadata = Effect.fn(
   if (!manifest) {
     return undefined
   }
+  return getExtractorMetadata(manifest, worker._id, targetUrl)
+})
+
+export const getExtractorMetadata = (
+  manifest: ExtractorManifest,
+  workerId: string,
+  targetUrl?: string
+): MetadataResult => {
   const source = targetUrl
     ? getMatchedExtractorSource(manifest, targetUrl)
     : undefined
@@ -150,9 +142,9 @@ export const getWorkerMetadata = Effect.fn(
     ...(routeSource?.iconUrl
       ? { routeSourceIconUrl: routeSource.iconUrl }
       : {}),
-    workerId: worker._id,
+    workerId,
   }
-})
+}
 
 export const extractFromWorker = Effect.fn(
   "WorkerExtractorAdapter.extractFromWorker"
@@ -168,61 +160,32 @@ export const extractFromWorker = Effect.fn(
   const basicAuth = manifest?.features.basicAuth
     ? extractedAuth.basicAuth
     : undefined
-  const response = yield* Effect.tryPromise({
+  const client = createWorkerClient(worker)
+  const resultValue = yield* Effect.tryPromise({
     try: () =>
-      fetch(`${worker.baseUrl.replace(/\/$/, "")}/extract`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${worker.apiKey}`,
-          ...(requestId ? { "x-request-id": requestId } : {}),
-        },
-        body: JSON.stringify(
-          kind === "node"
-            ? createNodeExtractRequest(extractedAuth.url, password, basicAuth)
-            : createSourceExtractRequest(extractedAuth.url, password, basicAuth)
-        ),
-      }),
-    catch: (cause) =>
-      new ExtractionError({
-        message:
-          cause instanceof Error ? cause.message : "Worker request failed",
-        url: targetUrl,
-      }),
+      kind === "node"
+        ? client.extractNode(extractedAuth.url, {
+            apiKey: worker.apiKey,
+            password,
+            basicAuth,
+            requestId,
+          })
+        : client.extractSource(extractedAuth.url, {
+            apiKey: worker.apiKey,
+            password,
+            basicAuth,
+            requestId,
+          }),
+    catch: (cause) => workerError(cause, targetUrl),
   })
+  return mapExtractorResult(resultValue, worker._id)
+})
 
-  if (!response.ok) {
-    const message = yield* Effect.tryPromise({
-      try: () => response.text(),
-      catch: () =>
-        new ExtractionError({
-          message: "Worker extraction failed",
-          url: targetUrl,
-        }),
-    })
-    return yield* new ExtractionError({
-      message: message || "Worker extraction failed",
-      url: targetUrl,
-    })
-  }
-
-  const json = yield* Effect.tryPromise({
-    try: () => response.json(),
-    catch: () =>
-      new ExtractionError({
-        message: "Worker returned malformed JSON",
-        url: targetUrl,
-      }),
-  })
-
-  const parsed = extractSuccessSchema.safeParse(json)
-  if (!parsed.success) {
-    return yield* new ExtractionError({
-      message: "Worker response does not match protocol v1",
-      url: targetUrl,
-    })
-  }
-  const result = normalizeExtractorText(parsed.data)
+export const mapExtractorResult = (
+  resultValue: ExtractSuccessResponse,
+  workerId: string
+): ExtractionResult => {
+  const result = normalizeExtractorText(resultValue)
 
   return {
     links: result.nodes.map(mapNodeToExtractedLink),
@@ -241,7 +204,7 @@ export const extractFromWorker = Effect.fn(
         : {}),
       ...(result.source.audio ? { audio: result.source.audio } : {}),
       schemaVersion: 2,
-      workerId: worker._id,
+      workerId,
     },
   }
-})
+}

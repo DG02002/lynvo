@@ -8,7 +8,7 @@ import {
 import type { RegisteredWorker } from "~/lib/effect/services/extractor-types"
 
 const createManifest = (
-  sourceIconUrl = "https://icons.example/resolver-beta.svg"
+  sourceIconUrl = "https://icons.example/resolver-beta.webp"
 ) => ({
   protocolVersion: "1.0",
   extractorId: "com.example.extractor",
@@ -24,6 +24,8 @@ const createManifest = (
           id: "resolver-beta",
           displayName: "Resolver Beta",
           iconUrl: sourceIconUrl,
+          status: "active",
+          version: "1.0.0",
           hosts: ["resolver-beta.example"],
         },
       ],
@@ -82,24 +84,21 @@ describe("worker registration", () => {
           sources: [
             {
               id: "resolver-beta",
-              iconUrl: "https://icons.example/resolver-beta.svg",
+              iconUrl: "https://icons.example/resolver-beta.webp",
             },
           ],
         },
       },
     })
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/manifest")
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/verify", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer secret",
-      },
-    })
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/usage", {
-      headers: {
-        Authorization: "Bearer secret",
-      },
-    })
+    const requests = fetchMock.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://extractor.example/manifest",
+      "https://extractor.example/verify",
+      "https://extractor.example/usage",
+    ])
+    expect(requests[1].method).toBe("POST")
+    expect(requests[1].headers.get("Authorization")).toBe("Bearer secret")
+    expect(requests[2].headers.get("Authorization")).toBe("Bearer secret")
   })
 
   it("rejects duplicate workers before making network requests", async () => {
@@ -172,7 +171,7 @@ describe("worker registration", () => {
         })
       )
     ).rejects.toMatchObject({
-      message: "Worker source plugin metadata is invalid.",
+      message: "Worker manifest does not match protocol v1.",
     })
   })
 
@@ -200,17 +199,17 @@ describe("worker registration", () => {
     expect(JSON.parse(refresh.manifestValue)).toMatchObject({
       extractorId: "com.example.extractor",
     })
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/manifest")
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/verify", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer stored-secret",
-      },
-    })
-    expect(fetchMock).toHaveBeenCalledWith("https://extractor.example/usage", {
-      headers: {
-        Authorization: "Bearer stored-secret",
-      },
-    })
+    const requests = fetchMock.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.url)).toEqual([
+      "https://extractor.example/manifest",
+      "https://extractor.example/verify",
+      "https://extractor.example/usage",
+    ])
+    expect(requests[1].headers.get("Authorization")).toBe(
+      "Bearer stored-secret"
+    )
+    expect(requests[2].headers.get("Authorization")).toBe(
+      "Bearer stored-secret"
+    )
   })
 })

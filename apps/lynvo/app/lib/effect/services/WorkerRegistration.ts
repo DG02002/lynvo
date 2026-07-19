@@ -1,12 +1,10 @@
 import { Effect } from "effect"
+import type { ExtractorManifest } from "@lynvo/extractor-protocol"
 import {
-  isSupportedProtocolVersion,
-  manifestSchema,
-  parseLynvoManifestExtension,
-  validateUsageContract,
-  usageResponseSchema,
-  type ExtractorManifest,
-} from "@lynvo/extractor-protocol"
+  ExtractorProtocolClient,
+  ExtractorProtocolClientError,
+  HttpExtractorTransport,
+} from "../../extraction/extractor-protocol-client"
 import { WorkerRegistrationError } from "../errors"
 import type { RegisteredWorker } from "./extractor-types"
 
@@ -47,13 +45,11 @@ export const normalizeWorkerBaseUrl = Effect.fn(
       message: "Worker base URL must be a valid URL.",
     })
   }
-
   if (url.protocol !== "https:" && url.hostname !== "localhost") {
     return yield* new WorkerRegistrationError({
       message: "Worker base URL must use HTTPS.",
     })
   }
-
   url.pathname = url.pathname.replace(/\/+$/, "")
   url.search = ""
   url.hash = ""
@@ -65,10 +61,11 @@ const ensureUniqueWorker = Effect.fn("WorkerRegistration.ensureUniqueWorker")(
     existingWorkers: ReadonlyArray<RegisteredWorker>,
     baseUrl: string
   ): Effect.fn.Return<void, WorkerRegistrationError> {
-    const duplicate = existingWorkers.some(
-      (worker) => worker.baseUrl.replace(/\/$/, "") === baseUrl
-    )
-    if (duplicate) {
+    if (
+      existingWorkers.some(
+        (worker) => worker.baseUrl.replace(/\/$/, "") === baseUrl
+      )
+    ) {
       return yield* new WorkerRegistrationError({
         message: "This extractor worker is already registered.",
       })
@@ -76,152 +73,56 @@ const ensureUniqueWorker = Effect.fn("WorkerRegistration.ensureUniqueWorker")(
   }
 )
 
-const fetchJson = Effect.fn("WorkerRegistration.fetchJson")(function* (
-  url: string,
+const registrationError = (
+  cause: unknown,
+  operation: "manifest" | "verify" | "usage"
+): WorkerRegistrationError => {
+  if (cause instanceof ExtractorProtocolClientError) {
+    if (operation === "verify" && cause.status === 401) {
+      return new WorkerRegistrationError({
+        message: "API key verification failed.",
+      })
+    }
+    if (operation === "usage" && cause.status) {
+      return new WorkerRegistrationError({
+        message: `Worker usage verification failed with HTTP ${cause.status}.`,
+      })
+    }
+    return new WorkerRegistrationError({
+      message:
+        operation === "manifest"
+          ? "Worker manifest does not match protocol v1."
+          : `Worker ${operation} response does not match protocol v1.`,
+      details: cause.code,
+    })
+  }
+  return new WorkerRegistrationError({
+    message: `Worker ${operation} request failed.`,
+  })
+}
+
+const prepareWorker = Effect.fn("WorkerRegistration.prepareWorker")(function* (
+  baseUrl: string,
+  apiKey: string,
   requestId?: string
-): Effect.fn.Return<unknown, WorkerRegistrationError> {
-  const response = yield* Effect.tryPromise({
-    try: () =>
-      requestId
-        ? fetch(url, { headers: { "x-request-id": requestId } })
-        : fetch(url),
-    catch: (error) =>
-      new WorkerRegistrationError({
-        message: `Worker request failed: ${error instanceof Error ? error.message : String(error)}`,
-      }),
+): Effect.fn.Return<PreparedWorkerRefresh, WorkerRegistrationError> {
+  const client = new ExtractorProtocolClient(
+    new HttpExtractorTransport(baseUrl)
+  )
+  const manifest = yield* Effect.tryPromise({
+    try: () => client.getManifest({ requestId }),
+    catch: (cause) => registrationError(cause, "manifest"),
   })
-
-  if (!response.ok) {
-    return yield* new WorkerRegistrationError({
-      message: `Worker request failed with HTTP ${response.status}.`,
-    })
-  }
-
-  return yield* Effect.tryPromise({
-    try: () => response.json(),
-    catch: (error) =>
-      new WorkerRegistrationError({
-        message: `Worker returned malformed JSON: ${error instanceof Error ? error.message : String(error)}`,
-      }),
+  yield* Effect.tryPromise({
+    try: () => client.verify({ apiKey, requestId }),
+    catch: (cause) => registrationError(cause, "verify"),
   })
+  yield* Effect.tryPromise({
+    try: () => client.getUsage({ apiKey, requestId }),
+    catch: (cause) => registrationError(cause, "usage"),
+  })
+  return { manifest, manifestValue: JSON.stringify(manifest) }
 })
-
-const fetchWorkerManifest = Effect.fn("WorkerRegistration.fetchWorkerManifest")(
-  function* (
-    baseUrl: string,
-    requestId?: string
-  ): Effect.fn.Return<ExtractorManifest, WorkerRegistrationError> {
-    const manifestJson = yield* fetchJson(`${baseUrl}/manifest`, requestId)
-    const parsedManifest = manifestSchema.safeParse(manifestJson)
-    if (!parsedManifest.success) {
-      return yield* new WorkerRegistrationError({
-        message: "Worker manifest does not match protocol v1.",
-        details: parsedManifest.error.message,
-      })
-    }
-
-    if (
-      typeof manifestJson !== "object" ||
-      manifestJson === null ||
-      !("usage" in manifestJson)
-    ) {
-      return yield* new WorkerRegistrationError({
-        message: "Worker manifest must declare the mandatory /usage endpoint.",
-      })
-    }
-
-    if (!isSupportedProtocolVersion(parsedManifest.data.protocolVersion)) {
-      return yield* new WorkerRegistrationError({
-        message: `Worker protocol version ${parsedManifest.data.protocolVersion} is not supported.`,
-      })
-    }
-
-    try {
-      parseLynvoManifestExtension(parsedManifest.data)
-    } catch (error) {
-      return yield* new WorkerRegistrationError({
-        message: "Worker source plugin metadata is invalid.",
-        details: error instanceof Error ? error.message : String(error),
-      })
-    }
-
-    return parsedManifest.data
-  }
-)
-
-const verifyWorkerApiKey = Effect.fn("WorkerRegistration.verifyWorkerApiKey")(
-  function* (
-    baseUrl: string,
-    apiKey: string,
-    requestId?: string
-  ): Effect.fn.Return<void, WorkerRegistrationError> {
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        fetch(`${baseUrl}/verify`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            ...(requestId ? { "x-request-id": requestId } : {}),
-          },
-        }),
-      catch: (error) =>
-        new WorkerRegistrationError({
-          message: `Worker verification request failed: ${error instanceof Error ? error.message : String(error)}`,
-        }),
-    })
-
-    if (!response.ok) {
-      return yield* new WorkerRegistrationError({
-        message:
-          response.status === 401
-            ? "API key verification failed."
-            : `Worker verification failed with HTTP ${response.status}.`,
-      })
-    }
-  }
-)
-
-const verifyWorkerUsage = Effect.fn("WorkerRegistration.verifyWorkerUsage")(
-  function* (
-    baseUrl: string,
-    apiKey: string,
-    requestId?: string
-  ): Effect.fn.Return<void, WorkerRegistrationError> {
-    const response = yield* Effect.tryPromise({
-      try: () =>
-        fetch(`${baseUrl}/usage`, {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            ...(requestId ? { "x-request-id": requestId } : {}),
-          },
-        }),
-      catch: (error) =>
-        new WorkerRegistrationError({
-          message: `Worker usage request failed: ${error instanceof Error ? error.message : String(error)}`,
-        }),
-    })
-    if (!response.ok) {
-      return yield* new WorkerRegistrationError({
-        message: `Worker usage verification failed with HTTP ${response.status}.`,
-      })
-    }
-    const value = yield* Effect.tryPromise({
-      try: () => response.json(),
-      catch: () =>
-        new WorkerRegistrationError({
-          message: "Worker returned malformed usage JSON.",
-        }),
-    })
-    const parsed = usageResponseSchema.safeParse(value)
-    const contract = validateUsageContract(value)
-    if (!parsed.success || !contract.ok) {
-      return yield* new WorkerRegistrationError({
-        message: "Worker usage response does not match protocol v1.",
-        details: contract.issues.map((issue) => issue.message).join(" "),
-      })
-    }
-  }
-)
 
 export const prepareWorkerRegistration = Effect.fn(
   "WorkerRegistration.prepareWorkerRegistration"
@@ -230,16 +131,8 @@ export const prepareWorkerRegistration = Effect.fn(
 ): Effect.fn.Return<PreparedWorkerRegistration, WorkerRegistrationError> {
   const baseUrl = yield* normalizeWorkerBaseUrl(input.baseUrl)
   yield* ensureUniqueWorker(input.existingWorkers, baseUrl)
-  const manifest = yield* fetchWorkerManifest(baseUrl, input.requestId)
-  yield* verifyWorkerApiKey(baseUrl, input.apiKey, input.requestId)
-  yield* verifyWorkerUsage(baseUrl, input.apiKey, input.requestId)
-
-  return {
-    baseUrl,
-    apiKey: input.apiKey,
-    manifest,
-    manifestValue: JSON.stringify(manifest),
-  }
+  const prepared = yield* prepareWorker(baseUrl, input.apiKey, input.requestId)
+  return { baseUrl, apiKey: input.apiKey, ...prepared }
 })
 
 export const prepareWorkerRefresh = Effect.fn(
@@ -248,12 +141,5 @@ export const prepareWorkerRefresh = Effect.fn(
   input: WorkerRefreshInput
 ): Effect.fn.Return<PreparedWorkerRefresh, WorkerRegistrationError> {
   const baseUrl = yield* normalizeWorkerBaseUrl(input.worker.baseUrl)
-  const manifest = yield* fetchWorkerManifest(baseUrl, input.requestId)
-  yield* verifyWorkerApiKey(baseUrl, input.worker.apiKey, input.requestId)
-  yield* verifyWorkerUsage(baseUrl, input.worker.apiKey, input.requestId)
-
-  return {
-    manifest,
-    manifestValue: JSON.stringify(manifest),
-  }
+  return yield* prepareWorker(baseUrl, input.worker.apiKey, input.requestId)
 })

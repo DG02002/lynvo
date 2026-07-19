@@ -14,7 +14,7 @@ const createRuntime = (env: Env) => {
   const applicationLayer = Layer.mergeAll(
     AuthSessionService.layer,
     ExtractorService.layer
-  ).pipe(Layer.provide(infrastructureLayer))
+  ).pipe(Layer.provide(Layer.merge(environmentLayer, infrastructureLayer)))
 
   return ManagedRuntime.make(
     Layer.mergeAll(environmentLayer, infrastructureLayer, applicationLayer)

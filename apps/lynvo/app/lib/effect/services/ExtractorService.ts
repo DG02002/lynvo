@@ -1,4 +1,5 @@
 import { Context, Effect, Layer } from "effect"
+import { getMatchedExtractorSource } from "@lynvo/extractor-protocol"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
 import { isSafeUrl } from "../../../lib/ssrf"
@@ -28,9 +29,16 @@ import type {
 } from "./extractor-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import {
-  applyHttpBasicCredential,
   parseHttpBasicCredential,
+  applyHttpBasicCredential,
 } from "../../plugins/http-basic-credential"
+import { CloudflareEnv } from "./CloudflareEnv"
+import {
+  extractFromOfficial,
+  getOfficialManifest,
+  getOfficialMetadata,
+} from "./OfficialExtractorAdapter"
+import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
 
 const getHostname = (value: string): string => new URL(value).hostname
 
@@ -54,6 +62,7 @@ export class ExtractorService extends Context.Service<
     Effect.gen(function* () {
       const convex = yield* ConvexService
       const credentialVault = yield* PluginCredentialVault
+      const environment = yield* CloudflareEnv
 
       const resolveUserPlugin = Effect.fn("ExtractorService.resolveUserPlugin")(
         function* (targetUrl: string, accessToken: string | undefined) {
@@ -94,13 +103,6 @@ export class ExtractorService extends Context.Service<
             message: "Invalid or unsafe URL",
           })
         }
-        const plugin = yield* resolveUserPlugin(targetUrl, options.accessToken)
-        if (plugin.requiresAuth && !options.userId) {
-          return yield* new UnauthorizedError({
-            message: `${plugin.name} links only work for registered users.`,
-          })
-        }
-
         if (options.userId && options.accessToken) {
           const workers = yield* convex
             .query(
@@ -131,11 +133,104 @@ export class ExtractorService extends Context.Service<
               options.requestId
             )
           }
-          if (options.workerId) {
+          if (options.workerId && options.workerId !== OFFICIAL_EXTRACTOR_ID) {
             return yield* new ValidationError({
               message: "The saved extractor worker is unavailable.",
             })
           }
+
+          const officialManifest = yield* getOfficialManifest(
+            environment,
+            options.requestId
+          ).pipe(Effect.option)
+          const manifest =
+            officialManifest._tag === "Some"
+              ? officialManifest.value
+              : undefined
+          const source = manifest
+            ? getMatchedExtractorSource(manifest, targetUrl)
+            : undefined
+          if (options.workerId === OFFICIAL_EXTRACTOR_ID && !source) {
+            return yield* new ValidationError({
+              message: "The saved extractor worker is unavailable.",
+            })
+          }
+          if (source) {
+            let password: string | undefined
+            let basicAuth: { username: string; password: string } | undefined
+            if (source.credential) {
+              const domain = getHostname(targetUrl)
+              const encryptedCredential = yield* convex
+                .query(
+                  api.pluginDomains.getCredentialByDomain,
+                  { domain },
+                  { accessToken: options.accessToken }
+                )
+                .pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new ExtractionError({
+                        message: error.message,
+                        url: targetUrl,
+                      })
+                  )
+                )
+              if (encryptedCredential?.pluginId === source.id) {
+                const credential = yield* credentialVault
+                  .decrypt(encryptedCredential, {
+                    userId: options.userId,
+                    pluginId: source.id,
+                    domain,
+                  })
+                  .pipe(
+                    Effect.mapError(
+                      (error) =>
+                        new ExtractionError({
+                          message: error.message,
+                          url: targetUrl,
+                        })
+                    )
+                  )
+                if (source.credential.kind === "domain-password") {
+                  password = credential
+                } else {
+                  basicAuth = parseHttpBasicCredential(credential)
+                }
+              }
+            }
+            const meteredSourceId = getMeteredPluginId(source.id)
+            if (meteredSourceId) {
+              yield* convex
+                .mutation(
+                  api.usage.consumeOfficialPlugin,
+                  { pluginId: meteredSourceId },
+                  { accessToken: options.accessToken }
+                )
+                .pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new ExtractionError({
+                        message: error.message,
+                        url: targetUrl,
+                      })
+                  )
+                )
+            }
+            return yield* extractFromOfficial(
+              environment,
+              targetUrl,
+              options.kind ?? "source",
+              { password, basicAuth },
+              options.requestId
+            )
+          }
+        }
+
+        const plugin = yield* resolveUserPlugin(targetUrl, options.accessToken)
+        if (plugin.requiresAuth && !options.userId) {
+          return yield* new UnauthorizedError({
+            message: `${plugin.name} links only work for registered users.`,
+          })
         }
 
         let password: string | undefined
@@ -231,6 +326,19 @@ export class ExtractorService extends Context.Service<
           const worker = yield* selectWorker(workers, options.url)
           if (worker) {
             const metadata = yield* getWorkerMetadata(worker, options.url)
+            if (metadata) {
+              return metadata
+            }
+          }
+
+          const officialManifest = yield* getOfficialManifest(environment).pipe(
+            Effect.option
+          )
+          if (officialManifest._tag === "Some") {
+            const metadata = getOfficialMetadata(
+              officialManifest.value,
+              options.url
+            )
             if (metadata) {
               return metadata
             }
