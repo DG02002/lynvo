@@ -68,7 +68,9 @@ export default defineSchema({
   authVerifiers: defineTable({
     sessionId: v.optional(v.id("authSessions")),
     signature: v.optional(v.string()),
-  }).index("signature", ["signature"]),
+  })
+    .index("signature", ["signature"])
+    .index("sessionId", ["sessionId"]),
 
   authRateLimits: defineTable({
     identifier: v.string(),

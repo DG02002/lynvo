@@ -1,0 +1,245 @@
+// @vitest-environment edge-runtime
+
+import { internal } from "../convex/_generated/api"
+import {
+  ACCOUNT_INACTIVITY_LIMIT_MS,
+  CLEANUP_USER_PAGE_SIZE,
+  DAY_MS,
+  RECENT_LINKS_MAX_COUNT,
+} from "../convex/constants"
+import {
+  calculateAppOwnedStorageUsage,
+  getUserStorageLedger,
+} from "../convex/storagePolicy"
+import { createConvexTest, insertTestUser } from "./convex-test-harness"
+
+describe("bounded lifecycle cleanup", () => {
+  it("deletes every indexed account child, preserves another user, and retries", async () => {
+    const convex = createConvexTest()
+    const target = await insertTestUser(convex, "delete-target")
+    const preserved = await insertTestUser(convex, "delete-preserved")
+    await convex.run(async (context) => {
+      const now = Date.now()
+      const domainId = await context.db.insert("userPluginDomains", {
+        userId: target.userId,
+        domain: "target.example",
+        pluginId: "direct",
+      })
+      await context.db.insert("userPluginCredentials", {
+        userId: target.userId,
+        pluginDomainId: domainId,
+        pluginId: "direct",
+        domain: "target.example",
+        ciphertext: "encrypted",
+        nonce: "nonce",
+        algorithm: "AES-256-GCM",
+        keyVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+      })
+      for (let index = 0; index < RECENT_LINKS_MAX_COUNT; index += 1) {
+        await context.db.insert("links", {
+          userId: target.userId,
+          url: `https://target.example/link/${index}`,
+          createdAt: now + index,
+          updatedAt: now + index,
+        })
+      }
+      await context.db.insert("userWorkers", {
+        userId: target.userId,
+        baseUrl: "https://worker.target.example",
+        apiKey: "key",
+        manifest: "{}",
+        enabled: true,
+        priority: 1,
+        verificationStatus: "verified",
+        createdAt: now,
+        updatedAt: now,
+      })
+      await context.db.insert("deviceCodes", {
+        code: "TARGET01",
+        pollSecretDigest: "digest",
+        status: "authorized",
+        deviceName: "Target device",
+        userId: target.userId,
+        expiresAt: now + DAY_MS,
+        createdAt: now,
+      })
+      await context.db.insert("remoteCommands", {
+        userId: target.userId,
+        targetSessionId: target.sessionId,
+        command: "play",
+        payload: "{}",
+        createdAt: now,
+        expiresAt: now + DAY_MS,
+      })
+      await context.db.insert("usageCounters", {
+        ownerKey: `user:${target.userId}`,
+        metricId: "test",
+        periodKey: "2026-07",
+        epoch: 0,
+        used: 1,
+      })
+      await context.db.insert("authRefreshTokens", {
+        sessionId: target.sessionId,
+        expirationTime: now + DAY_MS,
+      })
+      await context.db.insert("authVerifiers", {
+        sessionId: target.sessionId,
+        signature: "target-signature",
+      })
+      const accountId = await context.db.insert("authAccounts", {
+        userId: target.userId,
+        provider: "credentials",
+        providerAccountId: "delete-target",
+      })
+      await context.db.insert("authVerificationCodes", {
+        accountId,
+        provider: "credentials",
+        code: "target-code",
+        expirationTime: now + DAY_MS,
+      })
+      const usage = await calculateAppOwnedStorageUsage(context, target.userId)
+      await context.db.insert("userStorageLedgers", {
+        userId: target.userId,
+        schemaVersion: 1,
+        ...usage,
+        updatedAt: now,
+      })
+    })
+
+    await convex.mutation(internal.users.deleteUserData, {
+      userId: target.userId,
+    })
+    await expect(
+      convex.mutation(internal.users.deleteUserData, {
+        userId: target.userId,
+      })
+    ).resolves.toEqual({ success: true })
+    const result = await convex.run(async (context) => ({
+      target: await context.db.get(target.userId),
+      preserved: await context.db.get(preserved.userId),
+      targetLinks: await context.db
+        .query("links")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", target.userId)
+        )
+        .collect(),
+      preservedSessions: await context.db
+        .query("authSessions")
+        .withIndex("userId", (queryBuilder) =>
+          queryBuilder.eq("userId", preserved.userId)
+        )
+        .collect(),
+    }))
+    expect(result.target).toBeNull()
+    expect(result.targetLinks).toEqual([])
+    expect(result.preserved).not.toBeNull()
+    expect(result.preservedSessions).toHaveLength(1)
+  })
+
+  it("drains inactive accounts one scheduled transaction at a time", async () => {
+    vi.useFakeTimers()
+    const log = vi.spyOn(console, "info").mockImplementation(() => {})
+    const now = Date.UTC(2026, 6, 22)
+    vi.setSystemTime(now)
+    const convex = createConvexTest()
+    const first = await insertTestUser(convex, "inactive-first")
+    const second = await insertTestUser(convex, "inactive-second")
+    const active = await insertTestUser(convex, "still-active")
+    await convex.run(async (context) => {
+      const inactiveAt = now - ACCOUNT_INACTIVITY_LIMIT_MS - 1
+      await context.db.patch(first.userId, { lastActiveAt: inactiveAt })
+      await context.db.patch(second.userId, { lastActiveAt: inactiveAt })
+      await context.db.patch(active.userId, { lastActiveAt: now })
+    })
+
+    const firstBatch = await convex.mutation(
+      internal.users.cleanupInactiveUsers,
+      {}
+    )
+    expect(firstBatch).toEqual({ processedUsers: 1, continued: true })
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
+    const remaining = await convex.run(async (context) => ({
+      first: await context.db.get(first.userId),
+      second: await context.db.get(second.userId),
+      active: await context.db.get(active.userId),
+    }))
+    expect(remaining.first).toBeNull()
+    expect(remaining.second).toBeNull()
+    expect(remaining.active).not.toBeNull()
+    expect(log).toHaveBeenCalledWith(
+      "maintenance.cleanup_complete",
+      expect.objectContaining({
+        job: "inactive_accounts",
+        processedUsers: 2,
+        continued: false,
+        errorClass: null,
+      })
+    )
+    expect(JSON.stringify(log.mock.calls)).not.toContain("inactive-first")
+    log.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it("paginates retention cleanup and reconciles each user ledger", async () => {
+    vi.useFakeTimers()
+    const now = Date.UTC(2026, 6, 22)
+    vi.setSystemTime(now)
+    const convex = createConvexTest()
+    const users = await Promise.all([
+      insertTestUser(convex, "retention-first"),
+      insertTestUser(convex, "retention-second"),
+      insertTestUser(convex, "retention-third"),
+    ])
+    await convex.run(async (context) => {
+      for (const user of users) {
+        await context.db.patch(user.userId, { storageRetentionDays: 7 })
+        await context.db.insert("links", {
+          userId: user.userId,
+          url: `https://${user.userId}.example/expired`,
+          createdAt: now - 8 * DAY_MS,
+          updatedAt: now - 8 * DAY_MS,
+        })
+        await context.db.insert("links", {
+          userId: user.userId,
+          url: `https://${user.userId}.example/live`,
+          createdAt: now,
+          updatedAt: now,
+        })
+        const usage = await calculateAppOwnedStorageUsage(
+          context,
+          user.userId
+        )
+        await context.db.insert("userStorageLedgers", {
+          userId: user.userId,
+          schemaVersion: 1,
+          ...usage,
+          updatedAt: now,
+        })
+      }
+    })
+
+    await convex.mutation(internal.links.cleanupExpiredRecentCards, {
+      paginationOpts: { cursor: null, numItems: CLEANUP_USER_PAGE_SIZE },
+    })
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
+    for (const user of users) {
+      const result = await convex.run(async (context) => ({
+        links: await context.db
+          .query("links")
+          .withIndex("by_userId", (queryBuilder) =>
+            queryBuilder.eq("userId", user.userId)
+          )
+          .collect(),
+        ledger: await getUserStorageLedger(context, user.userId),
+        inventory: await calculateAppOwnedStorageUsage(context, user.userId),
+      }))
+      expect(result.links.map((link) => link.url)).toEqual([
+        `https://${user.userId}.example/live`,
+      ])
+      expect(result.ledger).toMatchObject(result.inventory)
+    }
+    vi.useRealTimers()
+  })
+})

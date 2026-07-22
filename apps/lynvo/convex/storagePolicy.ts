@@ -21,17 +21,6 @@ export const STORAGE_DOMAIN_NAMES = [
   "deviceCodes",
 ]
 
-export const USER_OWNED_STORAGE_TABLE_NAMES = [
-  "links",
-  "userWorkers",
-  "userPluginDomains",
-  "userPluginCredentials",
-  "deviceCodes",
-  "authAccounts",
-  "authSessions",
-  "userStorageLedgers",
-] as const
-
 declare global {
   interface AppOwnedStorageUsage {
     profileBytes: number

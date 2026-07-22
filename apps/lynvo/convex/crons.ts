@@ -1,5 +1,6 @@
 import { cronJobs } from "convex/server"
 import { internal } from "./_generated/api"
+import { CLEANUP_USER_PAGE_SIZE } from "./constants"
 
 const crons = cronJobs()
 
@@ -19,13 +20,17 @@ crons.interval(
 crons.interval(
   "cleanup expired recent cards",
   { hours: 24 },
-  internal.links.cleanupExpiredRecentCards
+  internal.links.cleanupExpiredRecentCards,
+  {
+    paginationOpts: { cursor: null, numItems: CLEANUP_USER_PAGE_SIZE },
+  }
 )
 
 crons.interval(
   "delete inactive users",
   { hours: 24 },
-  internal.users.cleanupInactiveUsers
+  internal.users.cleanupInactiveUsers,
+  {}
 )
 
 export default crons

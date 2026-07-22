@@ -3,7 +3,6 @@ import {
   deleteUserAccountData,
   replacePasswordAndInvalidateOtherSessions,
 } from "../convex/accountLifecycle"
-import { USER_OWNED_STORAGE_TABLE_NAMES } from "../convex/storagePolicy"
 import { buildPlayerPreferencesPatch } from "../convex/userPreferences"
 
 describe("account lifecycle", () => {
@@ -52,12 +51,17 @@ describe("account lifecycle", () => {
         { _id: "token-user-1", sessionId: "session-user-1" },
         { _id: "token-user-2", sessionId: "session-user-2" },
       ],
+      authVerifiers: [],
+      authVerificationCodes: [],
       links: [],
       userWorkers: [],
       userPluginDomains: [],
       userPluginCredentials: [],
       deviceCodes: [],
       authAccounts: [],
+      remoteCommands: [],
+      usageCounters: [],
+      userStorageLedgers: [],
     }
     const createQuery = (tableName: keyof typeof documentsByTable) => ({
       withIndex: (
@@ -71,7 +75,7 @@ describe("account lifecycle", () => {
           },
         })
         return {
-          collect: async () =>
+          take: async () =>
             tableName === "authRefreshTokens"
               ? documentsByTable.authRefreshTokens.filter(
                   (token) => token.sessionId === selectedValue
@@ -79,7 +83,6 @@ describe("account lifecycle", () => {
               : documentsByTable[tableName],
         }
       },
-      filter: () => ({ collect: async () => documentsByTable[tableName] }),
     })
     const context = {
       db: {
@@ -95,15 +98,5 @@ describe("account lifecycle", () => {
 
     expect(deletedIds).toContain("token-user-1")
     expect(deletedIds).not.toContain("token-user-2")
-    expect(USER_OWNED_STORAGE_TABLE_NAMES).toEqual([
-      "links",
-      "userWorkers",
-      "userPluginDomains",
-      "userPluginCredentials",
-      "deviceCodes",
-      "authAccounts",
-      "authSessions",
-      "userStorageLedgers",
-    ])
   })
 })

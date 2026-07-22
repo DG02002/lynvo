@@ -1,5 +1,7 @@
 import { internalMutation, mutation, query } from "./_generated/server"
+import { paginationOptsValidator } from "convex/server"
 import { v } from "convex/values"
+import { internal } from "./_generated/api"
 import { getAuthenticatedUserId } from "./authentication"
 import {
   assertRecentLinkMutation,
@@ -8,7 +10,7 @@ import {
   getUserRetentionDays,
   recordStorageDeletion,
 } from "./storagePolicy"
-import { RECENT_LINKS_MAX_COUNT } from "./constants"
+import { CLEANUP_USER_PAGE_SIZE, RECENT_LINKS_MAX_COUNT } from "./constants"
 
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
@@ -150,23 +152,46 @@ export const updateMeta = mutation({
 })
 
 export const cleanupExpiredRecentCards = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    paginationOpts: paginationOptsValidator,
+    processedUsers: v.optional(v.number()),
+    deletedLinks: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     const now = Date.now()
-    const users = await ctx.db.query("users").collect()
-    let deletedLinks = 0
-
-    const deletedLinkCounts = await Promise.all(
-      users.map(async (user) => {
-        return await cleanupExpiredRecentLinks(ctx, user._id, now)
-      })
-    )
-    deletedLinks = deletedLinkCounts.reduce(
-      (totalDeletedLinks, deletedLinkCount) =>
-        totalDeletedLinks + deletedLinkCount,
-      0
-    )
-
-    return { deletedLinks }
+    const startedAt = args.startedAt ?? now
+    const users = await ctx.db.query("users").paginate(args.paginationOpts)
+    const user = users.page[0]
+    const deletedInBatch = user
+      ? await cleanupExpiredRecentLinks(ctx, user._id, now)
+      : 0
+    const processedUsers = (args.processedUsers ?? 0) + (user ? 1 : 0)
+    const deletedLinks = (args.deletedLinks ?? 0) + deletedInBatch
+    if (!users.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.links.cleanupExpiredRecentCards,
+        {
+          paginationOpts: {
+            cursor: users.continueCursor,
+            numItems: CLEANUP_USER_PAGE_SIZE,
+          },
+          processedUsers,
+          deletedLinks,
+          startedAt,
+        }
+      )
+      return { processedUsers, deletedLinks, continued: true }
+    }
+    console.info("maintenance.cleanup_complete", {
+      job: "recent_links_retention",
+      processedUsers,
+      deletedLinks,
+      continued: false,
+      durationMs: now - startedAt,
+      errorClass: null,
+    })
+    return { processedUsers, deletedLinks, continued: false }
   },
 })

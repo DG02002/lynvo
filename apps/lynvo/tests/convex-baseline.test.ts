@@ -189,7 +189,13 @@ describe("Convex function boundaries", () => {
 
     expectTypeOf(api.links).not.toHaveProperty("cleanupExpiredRecentCards")
     await expect(
-      convex.mutation(internal.links.cleanupExpiredRecentCards)
-    ).resolves.toEqual({ deletedLinks: 0 })
+      convex.mutation(internal.links.cleanupExpiredRecentCards, {
+        paginationOpts: { cursor: null, numItems: 1 },
+      })
+    ).resolves.toEqual({
+      continued: false,
+      deletedLinks: 0,
+      processedUsers: 0,
+    })
   })
 })

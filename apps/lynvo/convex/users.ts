@@ -401,13 +401,29 @@ export const deleteUserData = internalMutation({
 })
 
 export const cleanupInactiveUsers = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const deletedUsers = await cleanupInactiveUserAccounts(ctx, Date.now())
-
-    console.info("security.inactive_users_deleted", {
-      count: deletedUsers,
+  args: {
+    processedUsers: v.optional(v.number()),
+    startedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    const startedAt = args.startedAt ?? now
+    const deletedUsers = await cleanupInactiveUserAccounts(ctx, now)
+    const processedUsers = (args.processedUsers ?? 0) + deletedUsers
+    if (deletedUsers > 0) {
+      await ctx.scheduler.runAfter(0, internal.users.cleanupInactiveUsers, {
+        processedUsers,
+        startedAt,
+      })
+      return { processedUsers, continued: true }
+    }
+    console.info("maintenance.cleanup_complete", {
+      job: "inactive_accounts",
+      processedUsers,
+      continued: false,
+      durationMs: now - startedAt,
+      errorClass: null,
     })
-    return { deleted: deletedUsers }
+    return { processedUsers, continued: false }
   },
 })
