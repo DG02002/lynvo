@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import { getAuthenticatedUserId } from "./authentication"
-import { assertStorageMutation } from "./storagePolicy"
+import { assertStorageMutation, recordStorageDeletion } from "./storagePolicy"
 
 export const list = query({
   args: {},
@@ -91,6 +91,7 @@ export const deleteById = mutation({
       throw new Error("Extractor not found or no longer available")
     }
 
+    await recordStorageDeletion(ctx, userId, existing)
     await ctx.db.delete(existing._id)
     return { success: true }
   },

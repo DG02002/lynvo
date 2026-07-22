@@ -88,6 +88,19 @@ export default defineSchema({
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_url", ["userId", "url"]),
 
+  userStorageLedgers: defineTable({
+    userId: v.id("users"),
+    schemaVersion: v.number(),
+    profileBytes: v.number(),
+    recentLinkBytes: v.number(),
+    workerBytes: v.number(),
+    pluginDomainBytes: v.number(),
+    pluginCredentialBytes: v.number(),
+    savedLinkCount: v.number(),
+    totalEnforcedBytes: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   userWorkers: defineTable({
     userId: v.id("users"),
     baseUrl: v.string(),

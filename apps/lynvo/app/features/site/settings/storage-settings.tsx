@@ -80,7 +80,7 @@ export function StorageSettings() {
     )
   }
 
-  const usagePercent = (usage.estimatedBytes / usage.storageLimitBytes) * 100
+  const usagePercent = (usage.enforcedBytes / usage.storageLimitBytes) * 100
   const progressPercent = Math.min(usagePercent, 100)
 
   const handleRetentionChange = async (value: string | null) => {
@@ -144,10 +144,15 @@ export function StorageSettings() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2 px-2">
           <span className="text-sm font-normal text-foreground">
-            {formatBytes(usage.estimatedBytes)} of{" "}
+            {formatBytes(usage.enforcedBytes)} of{" "}
             {formatBytes(usage.storageLimitBytes)} used
           </span>
           <Progress value={progressPercent} />
+          <span className="text-xs text-muted-foreground">
+            App-managed storage is quota-enforced. Authentication and device
+            records use an additional estimated{" "}
+            {formatBytes(usage.operationalBytes)}.
+          </span>
         </div>
 
         <SettingsList>

@@ -103,6 +103,7 @@ describe("account lifecycle", () => {
       "deviceCodes",
       "authAccounts",
       "authSessions",
+      "userStorageLedgers",
     ])
   })
 })

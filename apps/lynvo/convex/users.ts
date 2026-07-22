@@ -35,8 +35,12 @@ import {
 import {
   deleteExpiredRecentLinks,
   getExpiredRecentLinks,
-  getStorageUsage as calculateCurrentStorageUsage,
+  calculateAppOwnedStorageUsage,
+  assertStorageMutation,
+  getOperationalStorageBytes,
+  getUserStorageLedger,
   normalizeRetentionDays,
+  recordStorageDeletion,
 } from "./storagePolicy"
 import { buildPlayerPreferencesPatch } from "./userPreferences"
 
@@ -97,6 +101,14 @@ export const updatePlayerPreferences = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
+    const user = await ctx.db.get(userId)
+    if (!user) {
+      throw new Error("Authentication required")
+    }
+    await assertStorageMutation(ctx, userId, user, {
+      ...user,
+      ...buildPlayerPreferencesPatch(args),
+    })
     await ctx.db.patch(userId, buildPlayerPreferencesPatch(args))
     return { success: true }
   },
@@ -110,6 +122,10 @@ export const updateStorageRetentionDays = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = normalizeRetentionDays(args.days)
+    const user = await ctx.db.get(userId)
+    if (!user) {
+      throw new Error("Authentication required")
+    }
     let deletedLinks = 0
 
     if (args.deleteExpiredLinks) {
@@ -121,6 +137,10 @@ export const updateStorageRetentionDays = mutation({
       )
     }
 
+    await assertStorageMutation(ctx, userId, user, {
+      ...user,
+      storageRetentionDays: retentionDays,
+    })
     await ctx.db.patch(userId, { storageRetentionDays: retentionDays })
     return { success: true, deletedLinks }
   },
@@ -154,7 +174,10 @@ export const clearRecentCards = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect()
 
-    await Promise.all(links.map((link) => ctx.db.delete(link._id)))
+    for (const link of links) {
+      await recordStorageDeletion(ctx, userId, link)
+      await ctx.db.delete(link._id)
+    }
 
     return { success: true, deletedLinks: links.length }
   },
@@ -193,14 +216,31 @@ export const getStorageUsage = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
-    const [user, storageUsage] = await Promise.all([
+    const [user, existingLedger, authBytes] = await Promise.all([
       ctx.db.get(userId),
-      calculateCurrentStorageUsage(ctx, userId),
+      getUserStorageLedger(ctx, userId),
+      getOperationalStorageBytes(ctx, userId),
     ])
+    const ledger =
+      existingLedger ?? (await calculateAppOwnedStorageUsage(ctx, userId))
     const retentionDays = user?.storageRetentionDays ?? DEFAULT_RETENTION_DAYS
+    const pluginDomainBytes =
+      ledger.pluginDomainBytes + ledger.pluginCredentialBytes
 
     return {
-      ...storageUsage,
+      estimatedBytes: ledger.totalEnforcedBytes + authBytes,
+      enforcedBytes: ledger.totalEnforcedBytes,
+      operationalBytes: authBytes,
+      linkBytes: ledger.recentLinkBytes,
+      workerBytes: ledger.workerBytes,
+      pluginDomainBytes,
+      authBytes,
+      profileBytes: ledger.profileBytes,
+      savedLinkCount: ledger.savedLinkCount,
+      averageLinkBytes:
+        ledger.savedLinkCount > 0
+          ? Math.round(ledger.recentLinkBytes / ledger.savedLinkCount)
+          : 0,
       storageLimitBytes: USER_STORAGE_LIMIT_BYTES,
       storageWarningBytes: USER_STORAGE_WARNING_BYTES,
       recentCardLimitBytes: RECENT_LINK_LIMIT_BYTES,

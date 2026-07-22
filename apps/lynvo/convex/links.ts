@@ -6,6 +6,7 @@ import {
   cleanupExpiredRecentLinks,
   getRetentionCutoff,
   getUserRetentionDays,
+  recordStorageDeletion,
 } from "./storagePolicy"
 import { RECENT_LINKS_MAX_COUNT } from "./constants"
 
@@ -113,6 +114,7 @@ export const deleteById = mutation({
       throw new Error("Link not found or no longer available")
     }
 
+    await recordStorageDeletion(ctx, userId, existing)
     await ctx.db.delete(existing._id)
     return { success: true }
   },

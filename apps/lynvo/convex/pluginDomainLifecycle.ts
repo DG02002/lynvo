@@ -1,7 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
 import { normalizePluginDomain } from "../app/lib/plugin-domain"
-import { assertStorageMutation } from "./storagePolicy"
+import { assertStorageMutation, recordStorageDeletion } from "./storagePolicy"
 
 declare global {
   interface EncryptedCredentialInput {
@@ -129,6 +129,7 @@ export const upsertPluginDomain = async (
   })
 
   if (isReassignment && existingCredential) {
+    await recordStorageDeletion(ctx, userId, existingCredential)
     await ctx.db.delete(existingCredential._id)
   }
   if (input.credential) {
@@ -176,6 +177,7 @@ export const deletePluginCredential = async (
   )
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
+    await recordStorageDeletion(ctx, userId, credential)
     await ctx.db.delete(credential._id)
   }
 }
@@ -192,7 +194,9 @@ export const deletePluginDomain = async (
   )
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
+    await recordStorageDeletion(ctx, userId, credential)
     await ctx.db.delete(credential._id)
   }
+  await recordStorageDeletion(ctx, userId, pluginDomain)
   await ctx.db.delete(pluginDomain._id)
 }

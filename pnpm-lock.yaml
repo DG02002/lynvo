@@ -71,6 +71,9 @@ importers:
       '@convex-dev/auth':
         specifier: ^0.0.94
         version: 0.0.94(@auth/core@0.41.2)(convex@1.42.3(react@19.2.7))(react@19.2.7)
+      '@convex-dev/migrations':
+        specifier: ^0.3.5
+        version: 0.3.5(convex-helpers@0.1.120(@standard-schema/spec@1.1.0)(convex@1.42.3(react@19.2.7))(hono@4.12.31)(react@19.2.7)(typescript@6.0.3)(zod@4.4.3))(convex@1.42.3(react@19.2.7))
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -542,6 +545,12 @@ packages:
     peerDependenciesMeta:
       react:
         optional: true
+
+  '@convex-dev/migrations@0.3.5':
+    resolution: {integrity: sha512-vj5qjY5XB8laX9WvvxeIFZe8sNW8DGvJ5cPo1zvpjJzYnPLqs5C+VG9HP6sSkEW2QGhsfYOZv56FUNkHiLe1wA==}
+    peerDependencies:
+      convex: ^1.35.0
+      convex-helpers: ^0.1.115
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -2186,6 +2195,28 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-helpers@0.1.120:
+    resolution: {integrity: sha512-FPqtmN/10uoxmmhVq0ViNi08AnmHKT/eU1R8+ohmPZoHfg8noZEZCltApY/ASDdhq92o0kLZETggzBvMfHJDLQ==}
+    hasBin: true
+    peerDependencies:
+      '@standard-schema/spec': ^1.0.0
+      convex: ^1.32.0
+      hono: ^4.0.5
+      react: ^17.0.2 || ^18.0.0 || ^19.0.0
+      typescript: ^5.5 || ^6.0.0
+      zod: ^3.25.0 || ^4.0.0
+    peerDependenciesMeta:
+      '@standard-schema/spec':
+        optional: true
+      hono:
+        optional: true
+      react:
+        optional: true
+      typescript:
+        optional: true
+      zod:
+        optional: true
 
   convex-test@0.0.54:
     resolution: {integrity: sha512-C0v2SQcuxrELAJRNzE6fQ686XDPor7UFoC22jcoJXeCRqhLo8ZIMZ4jyUHoo1UdAL2enCb0AbiprCVpLDN8u9Q==}
@@ -4261,6 +4292,11 @@ snapshots:
     optionalDependencies:
       react: 19.2.7
 
+  '@convex-dev/migrations@0.3.5(convex-helpers@0.1.120(@standard-schema/spec@1.1.0)(convex@1.42.3(react@19.2.7))(hono@4.12.31)(react@19.2.7)(typescript@6.0.3)(zod@4.4.3))(convex@1.42.3(react@19.2.7))':
+    dependencies:
+      convex: 1.42.3(react@19.2.7)
+      convex-helpers: 0.1.120(@standard-schema/spec@1.1.0)(convex@1.42.3(react@19.2.7))(hono@4.12.31)(react@19.2.7)(typescript@6.0.3)(zod@4.4.3)
+
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
@@ -5526,6 +5562,16 @@ snapshots:
   content-type@2.0.0: {}
 
   convert-source-map@2.0.0: {}
+
+  convex-helpers@0.1.120(@standard-schema/spec@1.1.0)(convex@1.42.3(react@19.2.7))(hono@4.12.31)(react@19.2.7)(typescript@6.0.3)(zod@4.4.3):
+    dependencies:
+      convex: 1.42.3(react@19.2.7)
+    optionalDependencies:
+      '@standard-schema/spec': 1.1.0
+      hono: 4.12.31
+      react: 19.2.7
+      typescript: 6.0.3
+      zod: 4.4.3
 
   convex-test@0.0.54(convex@1.42.3(react@19.2.7)):
     dependencies:

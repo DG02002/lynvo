@@ -18,6 +18,7 @@ import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as links from "../links.js";
+import type * as migrations from "../migrations.js";
 import type * as passwordCrypto from "../passwordCrypto.js";
 import type * as pluginDomainLifecycle from "../pluginDomainLifecycle.js";
 import type * as pluginDomains from "../pluginDomains.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   http: typeof http;
   links: typeof links;
+  migrations: typeof migrations;
   passwordCrypto: typeof passwordCrypto;
   pluginDomainLifecycle: typeof pluginDomainLifecycle;
   pluginDomains: typeof pluginDomains;
@@ -82,4 +84,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: {
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
+};

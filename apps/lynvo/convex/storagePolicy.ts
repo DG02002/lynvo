@@ -6,6 +6,8 @@ import {
   RECENT_LINK_LIMIT_BYTES,
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
+  STORAGE_LEDGER_SCHEMA_VERSION,
+  OPERATIONAL_STORAGE_DOCUMENT_LIMIT,
 } from "./constants"
 
 export const STORAGE_DOMAIN_NAMES = [
@@ -27,12 +29,29 @@ export const USER_OWNED_STORAGE_TABLE_NAMES = [
   "deviceCodes",
   "authAccounts",
   "authSessions",
+  "userStorageLedgers",
 ] as const
+
+declare global {
+  interface AppOwnedStorageUsage {
+    profileBytes: number
+    recentLinkBytes: number
+    workerBytes: number
+    pluginDomainBytes: number
+    pluginCredentialBytes: number
+    savedLinkCount: number
+    totalEnforcedBytes: number
+  }
+}
 
 const encoder = new TextEncoder()
 
 export const byteLength = (value: unknown) =>
-  encoder.encode(JSON.stringify(value)).length
+  encoder.encode(
+    JSON.stringify(value, (key, nestedValue) =>
+      key === "_id" || key === "_creationTime" ? undefined : nestedValue
+    )
+  ).length
 
 const sumDocumentBytes = (documents: unknown[] | undefined) =>
   documents?.reduce<number>(
@@ -146,6 +165,191 @@ export const getStorageUsage = async (
   })
 }
 
+export const calculateAppOwnedStorageUsage = async (
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users">
+): Promise<AppOwnedStorageUsage> => {
+  const [user, recentLinks, workers, pluginDomains, pluginCredentials] =
+    await Promise.all([
+      ctx.db.get(userId),
+      ctx.db
+        .query("links")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", userId)
+        )
+        .collect(),
+      ctx.db
+        .query("userWorkers")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", userId)
+        )
+        .collect(),
+      ctx.db
+        .query("userPluginDomains")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", userId)
+        )
+        .collect(),
+      ctx.db
+        .query("userPluginCredentials")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", userId)
+        )
+        .collect(),
+    ])
+  const profileBytes = user ? byteLength(user) : 0
+  const recentLinkBytes = sumDocumentBytes(recentLinks)
+  const workerBytes = sumDocumentBytes(workers)
+  const pluginDomainBytes = sumDocumentBytes(pluginDomains)
+  const pluginCredentialBytes = sumDocumentBytes(pluginCredentials)
+  return {
+    profileBytes,
+    recentLinkBytes,
+    workerBytes,
+    pluginDomainBytes,
+    pluginCredentialBytes,
+    savedLinkCount: recentLinks.length,
+    totalEnforcedBytes:
+      profileBytes +
+      recentLinkBytes +
+      workerBytes +
+      pluginDomainBytes +
+      pluginCredentialBytes,
+  }
+}
+
+export const getUserStorageLedger = async (
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users">
+) =>
+  await ctx.db
+    .query("userStorageLedgers")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .unique()
+
+export const getOperationalStorageBytes = async (
+  ctx: QueryCtx,
+  userId: Id<"users">
+) => {
+  const [authSessions, authAccounts, deviceCodes] = await Promise.all([
+    ctx.db
+      .query("authSessions")
+      .withIndex("userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+      .take(OPERATIONAL_STORAGE_DOCUMENT_LIMIT),
+    ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (queryBuilder) =>
+        queryBuilder.eq("userId", userId)
+      )
+      .take(OPERATIONAL_STORAGE_DOCUMENT_LIMIT),
+    ctx.db
+      .query("deviceCodes")
+      .withIndex("by_userId", (queryBuilder) =>
+        queryBuilder.eq("userId", userId)
+      )
+      .take(OPERATIONAL_STORAGE_DOCUMENT_LIMIT),
+  ])
+  return (
+    sumDocumentBytes(authSessions) +
+    sumDocumentBytes(authAccounts) +
+    sumDocumentBytes(deviceCodes)
+  )
+}
+
+export const upsertUserStorageLedger = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  usage: AppOwnedStorageUsage,
+  updatedAt: number
+) => {
+  const existing = await getUserStorageLedger(ctx, userId)
+  const document = {
+    userId,
+    schemaVersion: STORAGE_LEDGER_SCHEMA_VERSION,
+    ...usage,
+    updatedAt,
+  }
+  if (existing) {
+    await ctx.db.replace(existing._id, document)
+    return existing._id
+  }
+  return await ctx.db.insert("userStorageLedgers", document)
+}
+
+const getStorageDomain = (document: unknown) => {
+  if (!document || typeof document !== "object") {
+    return "profileBytes" as const
+  }
+  if ("ciphertext" in document) {
+    return "pluginCredentialBytes" as const
+  }
+  if ("baseUrl" in document) {
+    return "workerBytes" as const
+  }
+  if ("url" in document) {
+    return "recentLinkBytes" as const
+  }
+  if ("domain" in document && "pluginId" in document) {
+    return "pluginDomainBytes" as const
+  }
+  return "profileBytes" as const
+}
+
+const getOrCreateStorageLedger = async (
+  ctx: MutationCtx,
+  userId: Id<"users">
+) => {
+  const existing = await getUserStorageLedger(ctx, userId)
+  if (existing) {
+    return existing
+  }
+  const user = await ctx.db.get(userId)
+  const profileBytes = user ? byteLength(user) : 0
+  const usage = {
+    profileBytes,
+    recentLinkBytes: 0,
+    workerBytes: 0,
+    pluginDomainBytes: 0,
+    pluginCredentialBytes: 0,
+    savedLinkCount: 0,
+    totalEnforcedBytes: profileBytes,
+  }
+  const ledgerId = await upsertUserStorageLedger(ctx, userId, usage, Date.now())
+  const ledger = await ctx.db.get(ledgerId)
+  if (!ledger) {
+    throw new Error("Storage ledger initialization failed")
+  }
+  return ledger
+}
+
+export const applyStorageMutation = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  currentDocument: unknown | undefined,
+  nextDocument: unknown | undefined
+) => {
+  const ledger = await getOrCreateStorageLedger(ctx, userId)
+  const domain = getStorageDomain(nextDocument ?? currentDocument)
+  const currentBytes = currentDocument ? byteLength(currentDocument) : 0
+  const nextBytes = nextDocument ? byteLength(nextDocument) : 0
+  const deltaBytes = nextBytes - currentBytes
+  const totalEnforcedBytes = ledger.totalEnforcedBytes + deltaBytes
+  assertStorageGrowth(totalEnforcedBytes, deltaBytes)
+  const savedLinkCount =
+    domain === "recentLinkBytes"
+      ? ledger.savedLinkCount +
+        (currentDocument ? 0 : 1) -
+        (nextDocument ? 0 : 1)
+      : ledger.savedLinkCount
+  await ctx.db.patch(ledger._id, {
+    [domain]: ledger[domain] + deltaBytes,
+    savedLinkCount,
+    totalEnforcedBytes,
+    updatedAt: Date.now(),
+  })
+  return totalEnforcedBytes
+}
+
 export const projectStorageBytes = (
   currentStorageBytes: number,
   currentDocumentBytes: number,
@@ -172,20 +376,14 @@ export const assertStorageMutation = async (
   currentDocument: unknown | undefined,
   nextDocument: unknown
 ) => {
-  const currentDocumentBytes = currentDocument ? byteLength(currentDocument) : 0
-  const nextDocumentBytes = byteLength(nextDocument)
-  const storageUsage = await getStorageUsage(ctx, userId)
-  const projectedStorageBytes = projectStorageBytes(
-    storageUsage.estimatedBytes,
-    currentDocumentBytes,
-    nextDocumentBytes
-  )
-  assertStorageGrowth(
-    projectedStorageBytes,
-    nextDocumentBytes - currentDocumentBytes
-  )
-  return projectedStorageBytes
+  return await applyStorageMutation(ctx, userId, currentDocument, nextDocument)
 }
+
+export const recordStorageDeletion = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  currentDocument: unknown
+) => await applyStorageMutation(ctx, userId, currentDocument, undefined)
 
 export const assertRecentLinkSize = (recentLinkBytes: number) => {
   if (recentLinkBytes > RECENT_LINK_LIMIT_BYTES) {
@@ -260,9 +458,10 @@ export const deleteExpiredRecentLinks = async (
     retentionDays,
     now
   )
-  await Promise.all(
-    expiredRecentLinks.map((recentLink) => ctx.db.delete(recentLink._id))
-  )
+  for (const recentLink of expiredRecentLinks) {
+    await recordStorageDeletion(ctx, userId, recentLink)
+    await ctx.db.delete(recentLink._id)
+  }
   return expiredRecentLinks.length
 }
 

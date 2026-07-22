@@ -5,7 +5,10 @@ import {
   ACTIVITY_UPDATE_INTERVAL_MS,
   INACTIVE_ACCOUNT_CLEANUP_BATCH_SIZE,
 } from "./constants"
-import { USER_OWNED_STORAGE_TABLE_NAMES } from "./storagePolicy"
+import {
+  assertStorageMutation,
+  USER_OWNED_STORAGE_TABLE_NAMES,
+} from "./storagePolicy"
 
 export const replacePasswordAndInvalidateOtherSessions = async (
   replacePassword: () => Promise<unknown>,
@@ -91,7 +94,7 @@ export const deleteUserAccountData = async (
         )
         .collect()
       await Promise.all(
-        documents.map((document) => ctx.db.delete(document._id))
+        (documents ?? []).map((document) => ctx.db.delete(document._id))
       )
     })
   )
@@ -130,6 +133,10 @@ export const touchUserActivity = async (
 ) => {
   const user = await ctx.db.get(userId)
   if (user && now - user.lastActiveAt > ACTIVITY_UPDATE_INTERVAL_MS) {
+    await assertStorageMutation(ctx, userId, user, {
+      ...user,
+      lastActiveAt: now,
+    })
     await ctx.db.patch(user._id, { lastActiveAt: now })
   }
   if (!sessionId) {
