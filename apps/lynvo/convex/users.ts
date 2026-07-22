@@ -58,6 +58,26 @@ export const getMe = query({
   },
 })
 
+export const getSessionUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const sessionId = await getAuthSessionId(ctx)
+    if (!sessionId) {
+      throw new Error("Authentication session required")
+    }
+    const user = await ctx.db.get(userId)
+    if (!user) {
+      return null
+    }
+    return {
+      id: user._id,
+      username: user.username,
+      sessionId,
+    }
+  },
+})
+
 export const getPlayerPreferences = query({
   args: {},
   handler: async (ctx) => {

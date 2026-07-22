@@ -13,6 +13,6 @@ export const TvAuthorizeSchema = Schema.Struct({
 
 export const RemoteCommandSchema = Schema.Struct({
   target_session_id: Schema.String,
-  command: Schema.String,
+  command: Schema.Literals(["play", "pause"]),
   data: Schema.optional(Schema.Unknown),
 })

@@ -5,14 +5,11 @@ import React, {
   useMemo,
   useReducer,
 } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import { getClientSessionId } from "~/features/links/realtime-client"
 import { realtimeReducer, type RealtimeStatus } from "./realtime/reducer"
 import { openRealtimeSocket } from "./realtime/socket"
 
 type RealtimeContextValue = {
   status: RealtimeStatus
-  clientSessionId: string
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(
@@ -26,8 +23,6 @@ export function RealtimeProvider({
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
 }) {
-  const queryClient = useQueryClient()
-  const clientSessionId = useMemo(() => getClientSessionId(), [])
   const [state, dispatch] = useReducer(realtimeReducer, {
     status: user ? "connecting" : "disabled",
   })
@@ -45,13 +40,10 @@ export function RealtimeProvider({
       return
     }
 
-    return openRealtimeSocket({ user, clientSessionId, queryClient, dispatch })
-  }, [clientSessionId, queryClient, user])
+    return openRealtimeSocket({ dispatch })
+  }, [user])
 
-  const value = useMemo(
-    () => ({ status: state.status, clientSessionId }),
-    [clientSessionId, state.status]
-  )
+  const value = useMemo(() => ({ status: state.status }), [state.status])
 
   return (
     <RealtimeContext.Provider value={value}>

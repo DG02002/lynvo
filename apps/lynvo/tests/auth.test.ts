@@ -105,8 +105,9 @@ describe("AuthSessionService", () => {
         ConvexService.of({
           query: () =>
             Effect.succeed({
-              _id: "users:123",
+              id: "users:123",
               username: "darshan",
+              sessionId: "authSessions:456",
             }),
           mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
         })
@@ -115,7 +116,7 @@ describe("AuthSessionService", () => {
     expect(result.user).toEqual({
       id: "users:123",
       username: "darshan",
-      sid: "valid-token",
+      sid: "authSessions:456",
     })
     expect(result.accessToken).toBe("valid-token")
   })

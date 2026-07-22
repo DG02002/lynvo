@@ -37,7 +37,7 @@ export class AuthSessionService extends Context.Service<
         }
 
         const user = yield* convex
-          .query(api.users.getMe, {}, { accessToken })
+          .query(api.users.getSessionUser, {}, { accessToken })
           .pipe(
             Effect.catch((error) =>
               Effect.logWarning("Convex Auth session validation failed", {
@@ -52,9 +52,9 @@ export class AuthSessionService extends Context.Service<
 
         return {
           user: {
-            id: user._id,
+            id: user.id,
             username: user.username,
-            sid: accessToken,
+            sid: user.sessionId,
           },
           accessToken,
         }

@@ -4,9 +4,8 @@ import {
   retrieveAccount,
   convexAuth,
 } from "@convex-dev/auth/server"
-import type { GenericId } from "convex/values"
 import type { DataModel } from "./_generated/dataModel"
-import { api } from "./_generated/api"
+import { internal } from "./_generated/api"
 import {
   normalizeUsername,
   validatePassword,
@@ -80,16 +79,17 @@ const credentialsProvider = ConvexCredentials<DataModel>({
 
     if (flow === "device") {
       const code = requireString(params.code, "Code is required")
-      const record = await ctx.runQuery(api.tv.getAuthorizedCode, {
+      const pollSecret = requireString(
+        params.pollSecret,
+        "Polling secret is required"
+      )
+      const record = await ctx.runMutation(internal.tv.consumeAuthorizedCode, {
         code,
+        pollSecret,
+        now: Date.now(),
       })
-      if (!record) {
-        console.info("security.qr_exchange_failed", { reason: "not_approved" })
-        throw new Error("Code not approved")
-      }
-      await ctx.runMutation(api.tv.consumeCode, { code })
       console.info("security.qr_exchanged")
-      return { userId: record.userId as GenericId<"users"> }
+      return { userId: record.userId }
     }
 
     const username = requireString(params.username, "Username is required")

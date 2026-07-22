@@ -8,7 +8,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
     HttpApiEndpoint.post("send", "/send", {
       payload: Schema.Struct({
         target_session_id: Schema.String,
-        command: Schema.String,
+        command: Schema.Literals(["play", "pause"]),
         data: Schema.optional(Schema.Unknown),
       }),
       success: Schema.Struct({ success: Schema.Boolean }),

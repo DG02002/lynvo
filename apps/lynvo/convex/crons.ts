@@ -3,11 +3,11 @@ import { internal } from "./_generated/api"
 
 const crons = cronJobs()
 
-// Run cleanupOldCommands every 5 minutes to delete unread commands
 crons.interval(
-  "cleanup old commands",
+  "cleanup expired remote commands",
   { minutes: 5 },
-  internal.commands.cleanupOldCommands
+  internal.commands.cleanupExpired,
+  {}
 )
 
 crons.interval(

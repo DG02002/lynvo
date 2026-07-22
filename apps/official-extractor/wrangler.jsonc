@@ -30,6 +30,9 @@
       "vars": {
         "PUBLIC_ASSET_ORIGIN": "http://localhost:5173"
       },
+      "secrets": {
+        "required": ["OFFICIAL_EXTRACTOR_API_KEY"]
+      },
       "durable_objects": {
         "bindings": [
           {

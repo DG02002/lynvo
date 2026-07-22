@@ -7,6 +7,7 @@ import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 import { api } from "../../../convex/_generated/api"
+import { useExpiryClock } from "./use-expiry-clock"
 
 interface TvAuthProps {
   user?: { username: string } | null
@@ -22,6 +23,8 @@ export default function TvAuth({ user }: TvAuthProps) {
     code.length === 8 ? { code } : "skip"
   )
   const authorize = useMutation(api.tv.authorizeCode)
+  const hasExpired = useExpiryClock(codeRecord?.expiresAt)
+  const canApprove = codeRecord?.status === "pending" && !hasExpired
   const [loading, setLoading] = React.useState(false)
   const [success, setSuccess] = React.useState(false)
 
@@ -45,7 +48,7 @@ export default function TvAuth({ user }: TvAuthProps) {
 
   const heading = success
     ? "Device signed in"
-    : codeRecord
+    : canApprove
       ? `Sign in ${codeRecord.deviceName}?`
       : "Match the code on your device"
 
@@ -62,7 +65,7 @@ export default function TvAuth({ user }: TvAuthProps) {
               </p>
             ) : (
               <p className="text-balance text-lg text-muted-foreground">
-                {codeRecord
+                {canApprove
                   ? `You are signed in as ${user?.username}. Confirm only if the code on the other device is ${code}.`
                   : "The code is invalid or expired."}
               </p>
@@ -74,7 +77,7 @@ export default function TvAuth({ user }: TvAuthProps) {
               <Button
                 type="button"
                 className="h-13.5 w-full"
-                disabled={!codeRecord || loading}
+                disabled={!canApprove || loading}
                 onClick={() => void handleAuthorize()}
               >
                 {loading ? "Signing in…" : "Sign in this device"}

@@ -8,6 +8,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Refresh01Icon } from "@hugeicons/core-free-icons"
 import { api } from "../../../convex/_generated/api"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
+import { createDeviceCode } from "./device-code"
+import { useExpiryClock } from "./use-expiry-clock"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -44,14 +46,19 @@ export function TvSignInQr() {
     | { convexUrl?: string }
     | undefined
   const convexUrl = rootData?.convexUrl ?? ""
-  const generateCode = useMutation(api.tv.generateCode)
   const setCurrentSessionDevice = useMutation(api.users.setCurrentSessionDevice)
   const [code, setCode] = React.useState<string | null>(null)
+  const [pollSecret, setPollSecret] = React.useState<string | null>(null)
+  const [expiresAt, setExpiresAt] = React.useState<number | undefined>()
   const codeRef = React.useRef<string | null>(null)
   const [deviceName, setDeviceName] = React.useState("")
   const [hasError, setHasError] = React.useState(false)
   const [isGenerating, setIsGenerating] = React.useState(true)
-  const status = useQuery(api.tv.getStatus, code ? { code } : "skip")
+  const status = useQuery(
+    api.tv.getStatus,
+    code && pollSecret ? { code, pollSecret } : "skip"
+  )
+  const hasExpired = useExpiryClock(expiresAt)
   const hasSignedInRef = React.useRef(false)
   const origin = React.useSyncExternalStore(
     () => () => {},
@@ -65,8 +72,10 @@ export function TvSignInQr() {
     hasSignedInRef.current = false
     try {
       const nextDeviceName = detectDeviceName()
-      const result = await generateCode({ deviceName: nextDeviceName })
+      const result = await createDeviceCode(nextDeviceName)
       setCode(result.code)
+      setPollSecret(result.pollSecret)
+      setExpiresAt(result.expiresAt)
       codeRef.current = result.code
       setDeviceName(result.deviceName)
       setIsGenerating(false)
@@ -74,7 +83,7 @@ export function TvSignInQr() {
       setHasError(true)
       setIsGenerating(false)
     }
-  }, [generateCode])
+  }, [])
 
   React.useEffect(() => {
     void fetchCode()
@@ -95,6 +104,7 @@ export function TvSignInQr() {
           {
             flow: "device",
             code: currentCode,
+            pollSecret: pollSecret ?? "",
           }
         )
         if (!result.signingIn) {
@@ -111,15 +121,17 @@ export function TvSignInQr() {
         setHasError(true)
       })
     }
-  }, [convexUrl, deviceName, setCurrentSessionDevice, status])
+  }, [convexUrl, deviceName, pollSecret, setCurrentSessionDevice, status])
 
   let phase: Phase = "loading"
   if (hasError) {
     phase = "error"
   } else if (isGenerating) {
     phase = "loading"
-  } else if (status?.status === "expired") {
+  } else if (hasExpired) {
     phase = "expired"
+  } else if (status?.status === "invalid" || status?.status === "consumed") {
+    phase = "error"
   } else if (status?.status === "authorized" || hasSignedInRef.current) {
     phase = "approved"
   } else if (status?.status === "pending" || (code && !status)) {

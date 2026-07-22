@@ -146,6 +146,7 @@ export default defineSchema({
 
   deviceCodes: defineTable({
     code: v.string(),
+    pollSecretDigest: v.string(),
     status: v.union(
       v.literal("pending"),
       v.literal("authorized"),
@@ -160,10 +161,18 @@ export default defineSchema({
     .index("by_expiresAt", ["expiresAt"])
     .index("by_userId", ["userId"]),
 
-  commands: defineTable({
-    targetSessionId: v.string(),
-    command: v.string(),
+  remoteCommands: defineTable({
+    userId: v.id("users"),
+    targetSessionId: v.id("authSessions"),
+    command: v.union(v.literal("play"), v.literal("pause")),
     payload: v.string(),
     createdAt: v.number(),
-  }).index("by_targetSessionId_createdAt", ["targetSessionId", "createdAt"]),
+    expiresAt: v.number(),
+  })
+    .index("by_userId_targetSessionId_createdAt", [
+      "userId",
+      "targetSessionId",
+      "createdAt",
+    ])
+    .index("by_expiresAt", ["expiresAt"]),
 })

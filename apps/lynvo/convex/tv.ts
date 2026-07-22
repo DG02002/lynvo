@@ -1,72 +1,113 @@
-import { internalMutation, mutation, query } from "./_generated/server"
 import { v } from "convex/values"
+import { internal } from "./_generated/api"
+import { internalMutation, mutation, query } from "./_generated/server"
 import { getAuthenticatedUserId } from "./authentication"
+import { verifyDeviceCodePreflightToken } from "./authGateway"
+import { DEVICE_CODE_CLEANUP_BATCH_SIZE, DEVICE_CODE_TTL_MS } from "./constants"
 
-const CODE_TTL_MS = 10 * 60 * 1000
+declare const process: {
+  env: {
+    AUTH_GATEWAY_SECRET?: string
+  }
+}
 
 const generateNumericCode = () =>
   Math.floor(10000000 + Math.random() * 90000000).toString()
 
+const bytesToHex = (bytes: Uint8Array) =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
+
+const digestPollSecret = async (pollSecret: string) =>
+  bytesToHex(
+    new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(pollSecret)
+      )
+    )
+  )
+
+const generatePollSecret = () => {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return bytesToHex(bytes)
+}
+
 export const generateCode = mutation({
   args: {
     deviceName: v.string(),
+    preflightToken: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (context, arguments_) => {
+    const secret = process.env.AUTH_GATEWAY_SECRET
+    if (!secret) {
+      throw new Error("Auth gateway is not configured")
+    }
+    await verifyDeviceCodePreflightToken(arguments_.preflightToken, secret)
     const now = Date.now()
-    const deviceName = args.deviceName.trim().slice(0, 80) || "Unknown Device"
+    const deviceName =
+      arguments_.deviceName.trim().slice(0, 80) || "Unknown Device"
     let code = generateNumericCode()
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const existing = await ctx.db
+      const existing = await context.db
         .query("deviceCodes")
-        .withIndex("by_code", (q) => q.eq("code", code))
+        .withIndex("by_code", (queryBuilder) => queryBuilder.eq("code", code))
         .unique()
       if (!existing) {
         break
       }
       code = generateNumericCode()
     }
-    const expiresAt = now + CODE_TTL_MS
-    await ctx.db.insert("deviceCodes", {
+    const pollSecret = generatePollSecret()
+    const expiresAt = now + DEVICE_CODE_TTL_MS
+    await context.db.insert("deviceCodes", {
       code,
+      pollSecretDigest: await digestPollSecret(pollSecret),
       status: "pending",
       deviceName,
       expiresAt,
       createdAt: now,
     })
     console.info("security.qr_code_generated")
-    return { code, expiresAt, deviceName }
+    return { code, pollSecret, expiresAt, deviceName }
   },
 })
 
 export const getStatus = query({
-  args: { code: v.string() },
-  handler: async (ctx, args) => {
-    const record = await ctx.db
+  args: { code: v.string(), pollSecret: v.string() },
+  handler: async (context, arguments_) => {
+    const record = await context.db
       .query("deviceCodes")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
       .unique()
-    if (!record) {
-      return { status: "invalid" as const }
-    }
-    if (Date.now() > record.expiresAt) {
-      return { status: "expired" as const }
+    if (
+      !record ||
+      record.pollSecretDigest !==
+        (await digestPollSecret(arguments_.pollSecret))
+    ) {
+      return { status: "invalid" }
     }
     return {
       status: record.status,
       deviceName: record.deviceName,
+      expiresAt: record.expiresAt,
     }
   },
 })
 
 export const getCodeForApproval = query({
   args: { code: v.string() },
-  handler: async (ctx, args) => {
-    await getAuthenticatedUserId(ctx)
-    const record = await ctx.db
+  handler: async (context, arguments_) => {
+    await getAuthenticatedUserId(context)
+    const record = await context.db
       .query("deviceCodes")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
       .unique()
-    if (!record || Date.now() > record.expiresAt) {
+    if (!record) {
       return null
     }
     return {
@@ -79,22 +120,22 @@ export const getCodeForApproval = query({
 })
 
 export const authorizeCode = mutation({
-  args: {
-    code: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
-    const record = await ctx.db
+  args: { code: v.string() },
+  handler: async (context, arguments_) => {
+    const userId = await getAuthenticatedUserId(context)
+    const record = await context.db
       .query("deviceCodes")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
       .unique()
     if (!record) {
       throw new Error("Enter the code shown on the device")
     }
-    if (record.status !== "pending" || Date.now() > record.expiresAt) {
+    if (record.status !== "pending" || Date.now() >= record.expiresAt) {
       throw new Error("This code was used or has expired. Generate a new code.")
     }
-    await ctx.db.patch(record._id, {
+    await context.db.patch("deviceCodes", record._id, {
       status: "authorized",
       userId,
     })
@@ -103,56 +144,50 @@ export const authorizeCode = mutation({
   },
 })
 
-export const getAuthorizedCode = query({
-  args: { code: v.string() },
-  handler: async (ctx, args) => {
-    const record = await ctx.db
+export const consumeAuthorizedCode = internalMutation({
+  args: {
+    code: v.string(),
+    pollSecret: v.string(),
+    now: v.number(),
+  },
+  handler: async (context, arguments_) => {
+    const record = await context.db
       .query("deviceCodes")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
       .unique()
     if (
       !record ||
       record.status !== "authorized" ||
       !record.userId ||
-      Date.now() > record.expiresAt
+      arguments_.now >= record.expiresAt ||
+      record.pollSecretDigest !==
+        (await digestPollSecret(arguments_.pollSecret))
     ) {
-      return null
-    }
-    return {
-      _id: record._id,
-      userId: record.userId,
-      deviceName: record.deviceName,
-    }
-  },
-})
-
-export const consumeCode = mutation({
-  args: { code: v.string() },
-  handler: async (ctx, args) => {
-    const record = await ctx.db
-      .query("deviceCodes")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
-      .unique()
-    if (!record || record.status !== "authorized") {
       throw new Error("Approve this code on the signed-in device")
     }
-    await ctx.db.patch(record._id, { status: "consumed" })
+    await context.db.patch("deviceCodes", record._id, { status: "consumed" })
     console.info("security.qr_code_exchanged", { userId: record.userId })
-    return {
-      success: true,
-      deviceName: record.deviceName,
-    }
+    return { userId: record.userId, deviceName: record.deviceName }
   },
 })
 
 export const cleanupExpiredCodes = internalMutation({
   args: {},
-  handler: async (ctx) => {
-    const expired = await ctx.db
+  handler: async (context) => {
+    const expiredCodes = await context.db
       .query("deviceCodes")
-      .withIndex("by_expiresAt", (q) => q.lt("expiresAt", Date.now()))
-      .collect()
-    await Promise.all(expired.map((record) => ctx.db.delete(record._id)))
-    return { deleted: expired.length }
+      .withIndex("by_expiresAt", (queryBuilder) =>
+        queryBuilder.lt("expiresAt", Date.now())
+      )
+      .take(DEVICE_CODE_CLEANUP_BATCH_SIZE)
+    await Promise.all(
+      expiredCodes.map((record) => context.db.delete("deviceCodes", record._id))
+    )
+    if (expiredCodes.length === DEVICE_CODE_CLEANUP_BATCH_SIZE) {
+      await context.scheduler.runAfter(0, internal.tv.cleanupExpiredCodes, {})
+    }
+    return { deleted: expiredCodes.length }
   },
 })

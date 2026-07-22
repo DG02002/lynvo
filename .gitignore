@@ -144,8 +144,6 @@ testlinks.md
 !app/lib/**
 !scripts/
 !scripts/**
-!docs/extractor-protocol/templates/cloudflare-worker-basic/scripts/
-!docs/extractor-protocol/templates/cloudflare-worker-basic/scripts/**
 !apps/lynvo/app/lib/
 !apps/lynvo/app/lib/**
 !apps/lynvo/scripts/
@@ -153,3 +151,4 @@ testlinks.md
 
 # Keep OS metadata ignored after source-directory exceptions
 .DS_Store
+temp/

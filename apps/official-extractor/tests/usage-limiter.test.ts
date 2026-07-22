@@ -24,15 +24,12 @@ const requestAt = (
 
 describe("usage limiter", () => {
   beforeEach(async () => {
-    const timestampMs = Date.UTC(2026, 6, 19)
-    const usage = await requestAt("/usage", timestampMs)
-    const body = await usage.json<{ metrics: Array<{ used: number }> }>()
-    for (let index = 0; index < body.metrics[0].used; index += 1) {
-      await requestAt("/settle", timestampMs, {
-        method: "POST",
-        body: JSON.stringify({ succeeded: false }),
-      })
-    }
+    await runInDurableObject<OfficialExtractorUsageLimiter, void>(
+      getStub(),
+      (_instance, state) => {
+        state.storage.sql.exec("DELETE FROM usage_counters")
+      }
+    )
   })
 
   it("reserves concurrent capacity without losing increments", async () => {

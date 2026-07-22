@@ -6,6 +6,11 @@ export interface AuthPreflightPayload {
   readonly exp: number
 }
 
+export interface DeviceCodePreflightPayload {
+  readonly purpose: "deviceCode"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -41,10 +46,7 @@ const hmacKey = (secret: string) =>
     ["verify"]
   )
 
-export const verifyAuthPreflightToken = async (
-  token: string,
-  secret: string
-): Promise<AuthPreflightPayload> => {
+const verifyGatewayToken = async (token: string, secret: string) => {
   const [encodedPayload, encodedSignature] = token.split(".")
   if (!encodedPayload || !encodedSignature) {
     throw new Error("Invalid auth preflight token")
@@ -59,10 +61,20 @@ export const verifyAuthPreflightToken = async (
     throw new Error("Invalid auth preflight token")
   }
 
-  const payload = JSON.parse(
-    decoder.decode(base64UrlToBytes(encodedPayload))
-  ) as Partial<AuthPreflightPayload>
+  return JSON.parse(decoder.decode(base64UrlToBytes(encodedPayload))) as unknown
+}
+
+export const verifyAuthPreflightToken = async (
+  token: string,
+  secret: string
+): Promise<AuthPreflightPayload> => {
+  const payload = await verifyGatewayToken(token, secret)
   if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("flow" in payload) ||
+    !("normalizedUsername" in payload) ||
+    !("exp" in payload) ||
     (payload.flow !== "signUp" && payload.flow !== "signIn") ||
     typeof payload.normalizedUsername !== "string" ||
     typeof payload.exp !== "number" ||
@@ -75,4 +87,23 @@ export const verifyAuthPreflightToken = async (
     normalizedUsername: payload.normalizedUsername,
     exp: payload.exp,
   }
+}
+
+export const verifyDeviceCodePreflightToken = async (
+  token: string,
+  secret: string
+): Promise<DeviceCodePreflightPayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "deviceCode" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired device code preflight token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
 }

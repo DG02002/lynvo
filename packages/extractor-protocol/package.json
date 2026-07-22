@@ -5,6 +5,7 @@
   "description": "Lynvo external extractor protocol schemas, runtime helpers, and metadata utilities.",
   "files": [
     "dist",
+    "docs",
     "README.md"
   ],
   "type": "module",

@@ -16,6 +16,11 @@ import { cloudflareContext } from "../app/lib/router-context"
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
 import {
+  DEVICE_CODE_CREATION_RATE_LIMIT,
+  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  DEVICE_CODE_PREFLIGHT_TTL_MS,
+} from "../convex/constants"
+import {
   addRequestContext,
   requestLogging,
   type RequestLoggingEnvironment,
@@ -41,6 +46,10 @@ interface AuthPreflightRequest {
 interface AuthSignInRequest {
   readonly provider?: string
   readonly params?: Record<string, string>
+}
+
+interface DeviceCodeRequest {
+  readonly deviceName?: string
 }
 
 type AuthEnv = Env & {
@@ -210,6 +219,65 @@ app.post("/api/auth/preflight", async (context) => {
     turnstile: { verified: true },
   })
   return context.json({ preflightToken })
+})
+
+app.post("/api/auth/tv/code", async (context) => {
+  addRequestContext(context, { operation: "device_code_create" })
+  if (!isSameOriginRequest(context.req.raw)) {
+    return context.json(
+      { error: "You do not have access to this request." },
+      403
+    )
+  }
+  const env = context.env as AuthEnv
+  let payload: DeviceCodeRequest
+  try {
+    const body: unknown = await context.req.json()
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      !("deviceName" in body) ||
+      typeof body.deviceName !== "string"
+    ) {
+      return context.json({ error: "Send a valid request." }, 400)
+    }
+    payload = { deviceName: body.deviceName }
+  } catch {
+    return context.json({ error: "Send a valid request." }, 400)
+  }
+  const allowed = await rateLimit(
+    env,
+    `auth:device-code:${clientIp(context.req.raw)}`,
+    DEVICE_CODE_CREATION_RATE_LIMIT,
+    DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
+  )
+  if (!allowed) {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.json({ error: "Too many attempts. Try again later." }, 429)
+  }
+  if (!env.AUTH_GATEWAY_SECRET) {
+    addRequestContext(context, {
+      configuration_error: "missing_auth_gateway_secret",
+    })
+    return context.json(
+      { error: "Sign-in is unavailable. Try again later." },
+      500
+    )
+  }
+  const preflightToken = await signAuthPreflightToken(
+    {
+      purpose: "deviceCode",
+      exp: Date.now() + DEVICE_CODE_PREFLIGHT_TTL_MS,
+    },
+    env.AUTH_GATEWAY_SECRET
+  )
+  const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
+  const result = await convex.mutation(api.tv.generateCode, {
+    deviceName: payload.deviceName ?? "Unknown Device",
+    preflightToken,
+  })
+  addRequestContext(context, { rate_limit: { allowed: true } })
+  return context.json(result)
 })
 
 app.post("/api/auth/sign-in", async (context) => {

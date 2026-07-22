@@ -5,20 +5,6 @@ import { UnauthorizedError, CsrfError, ConvexError } from "../../errors"
 
 export class TvGroup extends HttpApiGroup.make("tv")
   .add(
-    HttpApiEndpoint.post("code", "/tv/code", {
-      payload: Schema.Struct({
-        deviceName: Schema.String,
-      }),
-      success: Schema.Unknown,
-      error: ConvexError,
-    }),
-    HttpApiEndpoint.get("poll", "/tv/poll", {
-      query: Schema.Struct({
-        code: Schema.String,
-      }),
-      success: Schema.Unknown,
-      error: ConvexError,
-    }),
     HttpApiEndpoint.post("authorize", "/tv/authorize", {
       payload: Schema.Struct({
         code: Schema.String,

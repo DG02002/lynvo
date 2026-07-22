@@ -14,6 +14,16 @@ It provides:
 
 External extractor workers in this workspace can import this local package instead of copying Lynvo schemas. It is private and does not require npm publishing.
 
+Documentation:
+
+- [Protocol specification](docs/spec.md)
+- [Extractor author guide](docs/author-guide.md)
+- [Compatibility checklist](docs/compatibility-checklist.md)
+- [Metadata flow](docs/metadata-flow.md)
+
+See [`examples/extractor-worker`](../../examples/extractor-worker/) for the
+minimal tested workspace implementation.
+
 Useful test helpers:
 
 - `validateExtractorManifestContract(value)`

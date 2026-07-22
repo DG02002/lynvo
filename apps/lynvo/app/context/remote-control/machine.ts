@@ -30,12 +30,6 @@ declare global {
   }
 
   interface RemotePollResponse {
-    commands?: Array<{
-      id?: string
-      command: string
-      payload: string | unknown | null
-      createdAt?: number
-    }>
     controlledBy?: string | null
     controllerName?: string | null
     controllingDevices?: RemoteDevice[]
@@ -104,6 +98,12 @@ declare global {
     disconnect: () => Promise<void>
     disconnectReceiver: () => Promise<void>
     send: (command: string, payload?: unknown) => Promise<void>
+    receiveCommand: (
+      command: string,
+      payload: unknown,
+      createdAt: number,
+      id: string
+    ) => boolean
     setRealtimeStatus: (status: string) => void
     receiveRealtime: (
       event: RemoteRealtimeEvent,
@@ -197,7 +197,7 @@ export const createRemoteControlMachine = ({
       createdAt !== undefined &&
       now - createdAt > REMOTE_COMMAND_STALE_AFTER_MS
     ) {
-      return
+      return false
     }
     for (const [processedId, processedAt] of processedCommands) {
       if (now - processedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
@@ -209,13 +209,14 @@ export const createRemoteControlMachine = ({
       processedCommands.has(commandId) ||
       state.lastCommand?.id === commandId
     ) {
-      return
+      return false
     }
     publish({
       ...state,
       lastCommand: { id: commandId, command, payload, receivedAt: now },
     })
     publishOutcome({ type: "command-received", command })
+    return true
   }
 
   const syncDevices = (nextDevices: RemoteDevice[]) => {
@@ -325,6 +326,8 @@ export const createRemoteControlMachine = ({
         throw error
       }
     },
+    receiveCommand: (command, payload, createdAt, id) =>
+      receiveCommand(command, parsePayload(payload), createdAt, id),
     setRealtimeStatus: (realtimeStatus) => {
       if (state.realtimeStatus !== realtimeStatus) {
         publish({ ...state, realtimeStatus })
@@ -363,14 +366,6 @@ export const createRemoteControlMachine = ({
         syncDevices([])
       }
       disconnectMissingTarget(data.activeTargets)
-      for (const command of data.commands ?? []) {
-        receiveCommand(
-          command.command,
-          parsePayload(command.payload),
-          command.createdAt,
-          command.id
-        )
-      }
     },
     acknowledgeCommand: (commandId) => {
       if (state.lastCommand?.id !== commandId) {

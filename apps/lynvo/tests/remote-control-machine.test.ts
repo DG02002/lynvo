@@ -9,7 +9,7 @@ const createHarness = ({
   storedDeviceName?: string | null
 } = {}) => {
   let now = 1_000_000
-  let pollResponse: RemotePollResponse = { commands: [] }
+  let pollResponse: RemotePollResponse = {}
   let intervalCallback = () => undefined
   const transport = {
     connect: vi.fn(async () => undefined),
@@ -107,30 +107,25 @@ describe("remote-control machine", () => {
 
   it("deduplicates replayed commands and rejects stale commands", async () => {
     const harness = createHarness()
-    harness.setPollResponse({
-      commands: [
-        { id: "command-1", command: "play", payload: '{"url":"one"}' },
-      ],
-    })
-    await harness.machine.poll()
+    harness.machine.receiveCommand(
+      "play",
+      '{"url":"one"}',
+      1_000_000,
+      "command-1"
+    )
     const firstCommand = harness.machine.getSnapshot().lastCommand
     expect(firstCommand?.payload).toEqual({ url: "one" })
     harness.machine.acknowledgeCommand(firstCommand!.id)
-    await harness.machine.poll()
+    harness.machine.receiveCommand(
+      "play",
+      '{"url":"one"}',
+      1_000_000,
+      "command-1"
+    )
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
 
     harness.setNow(2_000_000)
-    harness.setPollResponse({
-      commands: [
-        {
-          id: "stale",
-          command: "play",
-          payload: null,
-          createdAt: 1_000_000,
-        },
-      ],
-    })
-    await harness.machine.poll()
+    harness.machine.receiveCommand("play", null, 1_000_000, "stale")
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
 
@@ -145,14 +140,14 @@ describe("remote-control machine", () => {
       { id: "phone-1", name: "Phone" },
     ])
 
-    harness.setPollResponse({ commands: [] })
+    harness.setPollResponse({})
     await harness.machine.poll()
     expect(harness.machine.getSnapshot().controlledBy).toBe("phone-1")
   })
 
   it("clears a target that disappears without requiring a network disconnect", async () => {
     const harness = createHarness({ storedSessionId: "tv-1" })
-    harness.setPollResponse({ commands: [], activeTargets: [] })
+    harness.setPollResponse({ activeTargets: [] })
     await harness.machine.poll()
     expect(harness.machine.getSnapshot().activeSessionId).toBeNull()
     expect(harness.persistence.clear).toHaveBeenCalled()

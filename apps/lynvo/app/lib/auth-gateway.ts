@@ -6,6 +6,11 @@ export interface AuthPreflightPayload {
   readonly exp: number
 }
 
+export interface DeviceCodePreflightPayload {
+  readonly purpose: "deviceCode"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 
 const base64UrlEncode = (bytes: Uint8Array): string => {
@@ -29,7 +34,7 @@ const hmacKey = (secret: string) =>
   )
 
 export const signAuthPreflightToken = async (
-  payload: AuthPreflightPayload,
+  payload: AuthPreflightPayload | DeviceCodePreflightPayload,
   secret: string
 ): Promise<string> => {
   const encodedPayload = base64UrlEncode(

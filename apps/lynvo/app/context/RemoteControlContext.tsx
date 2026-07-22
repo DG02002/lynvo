@@ -4,11 +4,16 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useSyncExternalStore,
 } from "react"
+import { useMutation, useQuery } from "convex/react"
 import { toast } from "sonner"
+import { api } from "../../convex/_generated/api"
+import type { Id } from "../../convex/_generated/dataModel"
 import { useRealtime } from "~/context/RealtimeContext"
 import { remoteApi } from "./remote-control/api"
+import { processPendingRemoteCommands } from "./remote-control/commands"
 import { useRemoteRealtimeEvents } from "./remote-control/events"
 import { createRemoteControlMachine } from "./remote-control/machine"
 import { remoteControlPersistence } from "./remote-control/storage"
@@ -48,6 +53,12 @@ export const RemoteControlProvider = ({
   user: { id: string; sessionId?: string } | null
 }) => {
   const realtime = useRealtime()
+  const pendingCommands = useQuery(
+    api.commands.listForCurrentSession,
+    user ? {} : "skip"
+  )
+  const acknowledgeCommand = useMutation(api.commands.acknowledge)
+  const processedCommandIds = useRef(new Set<Id<"remoteCommands">>())
   const machine = useMemo(
     () =>
       createRemoteControlMachine({
@@ -104,6 +115,18 @@ export const RemoteControlProvider = ({
     [machine, user?.sessionId]
   )
   useRemoteRealtimeEvents(receiveRealtime)
+
+  useEffect(() => {
+    if (!pendingCommands) {
+      return
+    }
+    void processPendingRemoteCommands({
+      pendingCommands,
+      processedCommandIds: processedCommandIds.current,
+      machine,
+      acknowledge: (id) => acknowledgeCommand({ id }),
+    }).catch(console.error)
+  }, [acknowledgeCommand, machine, pendingCommands])
 
   const value = useMemo<RemoteControlContextValue>(
     () => ({

@@ -13,6 +13,6 @@ export const tvAuthorizeSchema = z.object({
 
 export const remoteCommandSchema = z.object({
   target_session_id: z.string().uuid("Invalid session ID"),
-  command: z.string().min(1, "Command is required"),
+  command: z.enum(["play", "pause"]),
   data: z.unknown().optional(),
 })

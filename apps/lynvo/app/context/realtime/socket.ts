@@ -1,15 +1,6 @@
-import type { QueryClient } from "@tanstack/react-query"
 import type { RealtimeAction } from "./reducer"
 
-interface RealtimeUser {
-  id: string
-  sessionId?: string
-}
-
 interface OpenRealtimeSocketOptions {
-  user: RealtimeUser
-  clientSessionId: string
-  queryClient: QueryClient
   dispatch: React.Dispatch<RealtimeAction>
 }
 
@@ -28,30 +19,11 @@ const websocketUrl = () => {
   return url.toString()
 }
 
-const handleRealtimeMessage = ({
-  event,
-  user,
-  clientSessionId,
-  queryClient,
-}: {
-  event: MessageEvent
-  user: RealtimeUser
-  clientSessionId: string
-  queryClient: QueryClient
-}) => {
+const handleRealtimeMessage = (event: MessageEvent) => {
   try {
     const message = JSON.parse(String(event.data)) as {
       type: string
       payload?: Record<string, unknown>
-    }
-
-    if (message.type === "links.changed") {
-      if (message.payload?.sourceSessionId !== clientSessionId) {
-        void queryClient.invalidateQueries({
-          queryKey: ["links", user.id],
-        })
-      }
-      return
     }
 
     if (message.type === "remote.event") {
@@ -66,12 +38,7 @@ const handleRealtimeMessage = ({
   }
 }
 
-export const openRealtimeSocket = ({
-  user,
-  clientSessionId,
-  queryClient,
-  dispatch,
-}: OpenRealtimeSocketOptions) => {
+export const openRealtimeSocket = ({ dispatch }: OpenRealtimeSocketOptions) => {
   let socket: WebSocket | null = null
   let closed = false
   let reconnectTimer: number | undefined
@@ -91,7 +58,7 @@ export const openRealtimeSocket = ({
   }
 
   const handleMessage = (event: MessageEvent) => {
-    handleRealtimeMessage({ event, user, clientSessionId, queryClient })
+    handleRealtimeMessage(event)
   }
 
   const removeSocketListeners = () => {

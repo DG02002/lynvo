@@ -8,20 +8,6 @@ import { api } from "../../../../../convex/_generated/api"
 
 export const TvHandlers = HttpApiBuilder.group(Api, "tv", (handlers) =>
   handlers
-    .handle("code", ({ payload }) =>
-      Effect.gen(function* () {
-        const convex = yield* ConvexService
-        return yield* convex.mutation(api.tv.generateCode, {
-          deviceName: payload.deviceName,
-        })
-      })
-    )
-    .handle("poll", ({ query }) =>
-      Effect.gen(function* () {
-        const convex = yield* ConvexService
-        return yield* convex.query(api.tv.getStatus, { code: query.code })
-      })
-    )
     .handle("authorize", ({ payload }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
