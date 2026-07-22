@@ -12,6 +12,14 @@ import { WorkerRegistrationError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
 import { getWorkerUsage } from "../../services/WorkerExtractorAdapter"
 import { WORKER_VERIFICATION_STATUS } from "../../services/worker-verification-status"
+import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { signCredentialReadToken } from "../../../../lib/auth-gateway"
+import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../../convex/constants"
+
+const createCredentialReadToken = (secret: string) =>
+  Effect.promise(() =>
+    signCredentialReadToken(secret, Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS)
+  )
 
 export const WorkersHandlers = HttpApiBuilder.group(
   Api,
@@ -40,9 +48,13 @@ export const WorkersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
+          const serviceToken = yield* createCredentialReadToken(
+            environment.AUTH_GATEWAY_SECRET
+          )
           const workers = yield* convex.query(
-            api.userWorkers.list,
-            {},
+            api.userWorkers.listForService,
+            { serviceToken },
             { accessToken: user.accessToken }
           )
           return yield* Effect.all(
@@ -98,14 +110,18 @@ export const WorkersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "extractor_worker_create",
             user_id: user.id,
           })
+          const serviceToken = yield* createCredentialReadToken(
+            environment.AUTH_GATEWAY_SECRET
+          )
           const existingWorkers = yield* convex.query(
-            api.userWorkers.list,
-            {},
+            api.userWorkers.listForService,
+            { serviceToken },
             { accessToken: user.accessToken }
           )
           const registration = yield* prepareWorkerRegistration({
@@ -157,15 +173,19 @@ export const WorkersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "extractor_worker_refresh",
             user_id: user.id,
             worker_id: params.workerId,
           })
+          const serviceToken = yield* createCredentialReadToken(
+            environment.AUTH_GATEWAY_SECRET
+          )
           const workers = yield* convex.query(
-            api.userWorkers.list,
-            {},
+            api.userWorkers.listForService,
+            { serviceToken },
             { accessToken: user.accessToken }
           )
           const worker = workers.find((entry) => entry._id === params.workerId)

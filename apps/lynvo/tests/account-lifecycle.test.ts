@@ -87,8 +87,8 @@ describe("account lifecycle", () => {
     const context = {
       db: {
         query: createQuery,
-        get: async () => ({ _id: "user-1" }),
-        delete: async (id: string) => {
+        get: async (_tableName: string, _id: string) => ({ _id: "user-1" }),
+        delete: async (_tableName: string, id: string) => {
           deletedIds.push(id)
         },
       },

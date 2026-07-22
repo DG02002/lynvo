@@ -34,6 +34,7 @@ const generatePollSecret = () => {
 }
 
 export const generateCode = mutation({
+  returns: v.any(),
   args: {
     deviceName: v.string(),
     preflightToken: v.string(),
@@ -74,6 +75,7 @@ export const generateCode = mutation({
 })
 
 export const getStatus = query({
+  returns: v.any(),
   args: { code: v.string(), pollSecret: v.string() },
   handler: async (context, arguments_) => {
     const record = await context.db
@@ -98,6 +100,7 @@ export const getStatus = query({
 })
 
 export const getCodeForApproval = query({
+  returns: v.any(),
   args: { code: v.string() },
   handler: async (context, arguments_) => {
     await getAuthenticatedUserId(context)
@@ -120,6 +123,7 @@ export const getCodeForApproval = query({
 })
 
 export const authorizeCode = mutation({
+  returns: v.any(),
   args: { code: v.string() },
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedUserId(context)

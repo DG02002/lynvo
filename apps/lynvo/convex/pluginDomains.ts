@@ -9,6 +9,11 @@ import {
   setPluginCredential,
   upsertPluginDomain,
 } from "./pluginDomainLifecycle"
+import { verifyCredentialReadToken } from "./authGateway"
+
+declare const process: {
+  env: { AUTH_GATEWAY_SECRET?: string }
+}
 
 const encryptedCredentialValidator = v.object({
   ciphertext: v.string(),
@@ -17,7 +22,35 @@ const encryptedCredentialValidator = v.object({
   keyVersion: v.number(),
 })
 
+const pluginDomainFields = {
+  _id: v.id("userPluginDomains"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  domain: v.string(),
+  pluginId: v.string(),
+}
+
+const pluginDomainValidator = v.object(pluginDomainFields)
+
+const pluginCredentialValidator = v.object({
+  _id: v.id("userPluginCredentials"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  pluginDomainId: v.id("userPluginDomains"),
+  pluginId: v.string(),
+  domain: v.string(),
+  ciphertext: v.string(),
+  nonce: v.string(),
+  algorithm: v.literal("AES-256-GCM"),
+  keyVersion: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+
 export const list = query({
+  returns: v.array(
+    v.object({ ...pluginDomainFields, hasCredential: v.boolean() })
+  ),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -46,6 +79,7 @@ export const list = query({
 })
 
 export const getById = query({
+  returns: v.union(v.null(), pluginDomainValidator),
   args: { id: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -54,6 +88,7 @@ export const getById = query({
 })
 
 export const getByDomain = query({
+  returns: v.union(v.null(), pluginDomainValidator),
   args: { domain: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -68,10 +103,16 @@ export const getByDomain = query({
   },
 })
 
-export const getCredentialByDomain = query({
-  args: { domain: v.string() },
+export const getCredentialByDomainForService = query({
+  returns: v.union(v.null(), pluginCredentialValidator),
+  args: { domain: v.string(), serviceToken: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
+    const secret = process.env.AUTH_GATEWAY_SECRET
+    if (!secret) {
+      throw new Error("Credential service is not configured")
+    }
+    await verifyCredentialReadToken(args.serviceToken, secret)
     return await ctx.db
       .query("userPluginCredentials")
       .withIndex("by_userId_domain", (queryBuilder) =>
@@ -84,6 +125,7 @@ export const getCredentialByDomain = query({
 })
 
 export const create = mutation({
+  returns: v.id("userPluginDomains"),
   args: {
     domain: v.string(),
     pluginId: v.string(),
@@ -96,6 +138,7 @@ export const create = mutation({
 })
 
 export const setCredential = mutation({
+  returns: v.null(),
   args: { id: v.string(), credential: encryptedCredentialValidator },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -104,6 +147,7 @@ export const setCredential = mutation({
 })
 
 export const deleteCredential = mutation({
+  returns: v.null(),
   args: { id: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -112,6 +156,7 @@ export const deleteCredential = mutation({
 })
 
 export const deleteById = mutation({
+  returns: v.object({ success: v.boolean() }),
   args: { id: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)

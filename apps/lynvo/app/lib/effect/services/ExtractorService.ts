@@ -27,6 +27,8 @@ import {
   getOfficialMetadata,
 } from "./OfficialExtractorAdapter"
 import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
+import { signCredentialReadToken } from "../../../lib/auth-gateway"
+import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 
 const getHostname = (value: string): string => new URL(value).hostname
 
@@ -62,10 +64,16 @@ export class ExtractorService extends Context.Service<
           })
         }
         if (options.userId && options.accessToken) {
+          const serviceToken = yield* Effect.promise(() =>
+            signCredentialReadToken(
+              environment.AUTH_GATEWAY_SECRET,
+              Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
+            )
+          )
           const workers = yield* convex
             .query(
-              api.userWorkers.list,
-              {},
+              api.userWorkers.listForService,
+              { serviceToken },
               { accessToken: options.accessToken }
             )
             .pipe(
@@ -139,8 +147,8 @@ export class ExtractorService extends Context.Service<
               const domain = getHostname(targetUrl)
               const encryptedCredential = yield* convex
                 .query(
-                  api.pluginDomains.getCredentialByDomain,
-                  { domain },
+                  api.pluginDomains.getCredentialByDomainForService,
+                  { domain, serviceToken },
                   { accessToken: options.accessToken }
                 )
                 .pipe(
@@ -216,9 +224,15 @@ export class ExtractorService extends Context.Service<
         }
 
         if (options.userId && options.accessToken) {
+          const serviceToken = yield* Effect.promise(() =>
+            signCredentialReadToken(
+              environment.AUTH_GATEWAY_SECRET,
+              Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
+            )
+          )
           const workers = yield* convex.query(
-            api.userWorkers.list,
-            {},
+            api.userWorkers.listForService,
+            { serviceToken },
             { accessToken: options.accessToken }
           )
           const worker = yield* selectWorker(workers, options.url)

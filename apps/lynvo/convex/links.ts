@@ -14,6 +14,7 @@ import { CLEANUP_USER_PAGE_SIZE, RECENT_LINKS_MAX_COUNT } from "./constants"
 
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
+  returns: v.any(),
   args: { timeBucket: v.number() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -40,6 +41,7 @@ export const list = query({
 // Create a new link or update title/meta if the URL already exists.
 // Enforces per-card, per-user storage, and retention limits.
 export const createOrUpdate = mutation({
+  returns: v.any(),
   args: {
     url: v.string(),
     title: v.optional(v.string()),
@@ -66,7 +68,7 @@ export const createOrUpdate = mutation({
         updatedAt: now,
       }
       await assertRecentLinkMutation(ctx, userId, existing, nextDoc)
-      await ctx.db.patch(existing._id, {
+      await ctx.db.patch("links", existing._id, {
         title: args.title ?? existing.title,
         meta: args.meta ?? existing.meta,
         updatedAt: now,
@@ -95,7 +97,7 @@ export const createOrUpdate = mutation({
         : undefined
     await assertRecentLinkMutation(ctx, userId, oldestRecentLink, newDoc)
     if (oldestRecentLink) {
-      await ctx.db.delete(oldestRecentLink._id)
+      await ctx.db.delete("links", oldestRecentLink._id)
     }
 
     return await ctx.db.insert("links", newDoc)
@@ -104,26 +106,28 @@ export const createOrUpdate = mutation({
 
 // Delete a link by ID
 export const deleteById = mutation({
+  returns: v.any(),
   args: {
     id: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const linkId = ctx.db.normalizeId("links", args.id)
-    const existing = linkId ? await ctx.db.get(linkId) : null
+    const existing = linkId ? await ctx.db.get("links", linkId) : null
 
     if (!existing || existing.userId !== userId) {
       throw new Error("Link not found or no longer available")
     }
 
     await recordStorageDeletion(ctx, userId, existing)
-    await ctx.db.delete(existing._id)
+    await ctx.db.delete("links", existing._id)
     return { success: true }
   },
 })
 
 // Update metadata for a link
 export const updateMeta = mutation({
+  returns: v.any(),
   args: {
     id: v.string(),
     meta: v.string(), // JSON string
@@ -131,7 +135,7 @@ export const updateMeta = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const linkId = ctx.db.normalizeId("links", args.id)
-    const existing = linkId ? await ctx.db.get(linkId) : null
+    const existing = linkId ? await ctx.db.get("links", linkId) : null
 
     if (!existing || existing.userId !== userId) {
       throw new Error("Link not found or no longer available")
@@ -143,7 +147,7 @@ export const updateMeta = mutation({
     }
     await assertRecentLinkMutation(ctx, userId, existing, nextDoc)
 
-    await ctx.db.patch(existing._id, {
+    await ctx.db.patch("links", existing._id, {
       meta: args.meta,
       updatedAt: Date.now(),
     })

@@ -2,19 +2,65 @@ import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import { getAuthenticatedUserId } from "./authentication"
 import { assertStorageMutation, recordStorageDeletion } from "./storagePolicy"
+import { verifyCredentialReadToken } from "./authGateway"
+
+declare const process: {
+  env: { AUTH_GATEWAY_SECRET?: string }
+}
+
+const workerFields = {
+  _id: v.id("userWorkers"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  baseUrl: v.string(),
+  manifest: v.string(),
+  enabled: v.boolean(),
+  priority: v.number(),
+  verificationStatus: v.string(),
+  lastVerifiedAt: v.optional(v.number()),
+  lastManifestRefreshAt: v.optional(v.number()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+}
+
+const publicWorkerValidator = v.object(workerFields)
+const serviceWorkerValidator = v.object({ ...workerFields, apiKey: v.string() })
+const successValidator = v.object({ success: v.boolean() })
 
 export const list = query({
+  returns: v.array(publicWorkerValidator),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
-    return await ctx.db
+    const workers = await ctx.db
       .query("userWorkers")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect()
+    return workers.map(({ apiKey: _apiKey, ...worker }) => worker)
+  },
+})
+
+export const listForService = query({
+  returns: v.array(serviceWorkerValidator),
+  args: { serviceToken: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const secret = process.env.AUTH_GATEWAY_SECRET
+    if (!secret) {
+      throw new Error("Credential service is not configured")
+    }
+    await verifyCredentialReadToken(args.serviceToken, secret)
+    return await ctx.db
+      .query("userWorkers")
+      .withIndex("by_userId", (queryBuilder) =>
+        queryBuilder.eq("userId", userId)
+      )
       .collect()
   },
 })
 
 export const create = mutation({
+  returns: v.id("userWorkers"),
   args: {
     baseUrl: v.string(),
     apiKey: v.string(),
@@ -43,6 +89,7 @@ export const create = mutation({
 })
 
 export const update = mutation({
+  returns: successValidator,
   args: {
     id: v.string(),
     baseUrl: v.optional(v.string()),
@@ -57,7 +104,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const workerId = ctx.db.normalizeId("userWorkers", args.id)
-    const existing = workerId ? await ctx.db.get(workerId) : null
+    const existing = workerId ? await ctx.db.get("userWorkers", workerId) : null
 
     if (!existing || existing.userId !== userId) {
       throw new Error("Extractor not found or no longer available")
@@ -70,7 +117,7 @@ export const update = mutation({
       updatedAt: Date.now(),
     }
     await assertStorageMutation(ctx, userId, existing, nextDoc)
-    await ctx.db.patch(existing._id, {
+    await ctx.db.patch("userWorkers", existing._id, {
       ...updates,
       updatedAt: nextDoc.updatedAt,
     })
@@ -79,20 +126,21 @@ export const update = mutation({
 })
 
 export const deleteById = mutation({
+  returns: successValidator,
   args: {
     id: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const workerId = ctx.db.normalizeId("userWorkers", args.id)
-    const existing = workerId ? await ctx.db.get(workerId) : null
+    const existing = workerId ? await ctx.db.get("userWorkers", workerId) : null
 
     if (!existing || existing.userId !== userId) {
       throw new Error("Extractor not found or no longer available")
     }
 
     await recordStorageDeletion(ctx, userId, existing)
-    await ctx.db.delete(existing._id)
+    await ctx.db.delete("userWorkers", existing._id)
     return { success: true }
   },
 })

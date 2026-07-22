@@ -32,6 +32,7 @@ const assertPayloadSize = (payload: string) => {
 }
 
 export const enqueue = mutation({
+  returns: v.any(),
   args: {
     targetSessionId: v.id("authSessions"),
     command: remoteCommandValidator,
@@ -61,6 +62,7 @@ export const enqueue = mutation({
 })
 
 export const listForCurrentSession = query({
+  returns: v.any(),
   args: {},
   handler: async (context) => {
     const userId = await getAuthenticatedUserId(context)
@@ -76,6 +78,7 @@ export const listForCurrentSession = query({
 })
 
 export const acknowledge = mutation({
+  returns: v.any(),
   args: { id: v.id("remoteCommands") },
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedUserId(context)

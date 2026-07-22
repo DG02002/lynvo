@@ -83,7 +83,9 @@ const incrementCounter = async (
   current: Doc<"usageCounters"> | null
 ) => {
   if (current) {
-    await ctx.db.patch(current._id, { used: current.used + 1 })
+    await ctx.db.patch("usageCounters", current._id, {
+      used: current.used + 1,
+    })
     return current.used + 1
   }
   await ctx.db.insert("usageCounters", {
@@ -97,6 +99,7 @@ const incrementCounter = async (
 }
 
 export const consumeOfficialPlugin = mutation({
+  returns: v.any(),
   args: {
     pluginId: v.union(
       v.literal("bhadoo-google-drive-index"),
@@ -162,6 +165,7 @@ export const consumeOfficialPlugin = mutation({
 })
 
 export const getUsage = query({
+  returns: v.any(),
   args: { timeBucket: v.number() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -222,7 +226,7 @@ export const resetAll = internalMutation({
   handler: async (ctx) => {
     const current = await ctx.db.query("usageEpochs").first()
     if (current) {
-      await ctx.db.patch(current._id, {
+      await ctx.db.patch("usageEpochs", current._id, {
         epoch: current.epoch + 1,
         updatedAt: Date.now(),
       })

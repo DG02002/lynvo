@@ -18,7 +18,9 @@ export const getAuthorizedPluginDomainById = async (
   domainIdValue: string
 ) => {
   const domainId = ctx.db.normalizeId("userPluginDomains", domainIdValue)
-  const domain = domainId ? await ctx.db.get(domainId) : null
+  const domain = domainId
+    ? await ctx.db.get("userPluginDomains", domainId)
+    : null
   if (!domain || domain.userId !== userId) {
     throw new Error("Plugin domain not found")
   }
@@ -79,7 +81,11 @@ const replaceCredential = async (
     credentialDocument
   )
   if (existingCredential) {
-    await ctx.db.replace(existingCredential._id, credentialDocument)
+    await ctx.db.replace(
+      "userPluginCredentials",
+      existingCredential._id,
+      credentialDocument
+    )
     return existingCredential._id
   }
   return await ctx.db.insert("userPluginCredentials", credentialDocument)
@@ -110,7 +116,7 @@ export const upsertPluginDomain = async (
       pluginDomainDocument
     )
     if (input.credential) {
-      const pluginDomain = await ctx.db.get(pluginDomainId)
+      const pluginDomain = await ctx.db.get("userPluginDomains", pluginDomainId)
       if (!pluginDomain) {
         throw new Error("Plugin domain creation failed")
       }
@@ -123,14 +129,14 @@ export const upsertPluginDomain = async (
   const isReassignment = existingDomain.pluginId !== input.pluginId
   const nextDomain = { ...existingDomain, pluginId: input.pluginId, domain }
   await assertStorageMutation(ctx, userId, existingDomain, nextDomain)
-  await ctx.db.patch(existingDomain._id, {
+  await ctx.db.patch("userPluginDomains", existingDomain._id, {
     pluginId: input.pluginId,
     domain,
   })
 
   if (isReassignment && existingCredential) {
     await recordStorageDeletion(ctx, userId, existingCredential)
-    await ctx.db.delete(existingCredential._id)
+    await ctx.db.delete("userPluginCredentials", existingCredential._id)
   }
   if (input.credential) {
     await replaceCredential(
@@ -178,7 +184,7 @@ export const deletePluginCredential = async (
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
     await recordStorageDeletion(ctx, userId, credential)
-    await ctx.db.delete(credential._id)
+    await ctx.db.delete("userPluginCredentials", credential._id)
   }
 }
 
@@ -195,8 +201,8 @@ export const deletePluginDomain = async (
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
     await recordStorageDeletion(ctx, userId, credential)
-    await ctx.db.delete(credential._id)
+    await ctx.db.delete("userPluginCredentials", credential._id)
   }
   await recordStorageDeletion(ctx, userId, pluginDomain)
-  await ctx.db.delete(pluginDomain._id)
+  await ctx.db.delete("userPluginDomains", pluginDomain._id)
 }

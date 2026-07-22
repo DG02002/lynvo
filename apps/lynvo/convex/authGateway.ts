@@ -11,6 +11,11 @@ export interface DeviceCodePreflightPayload {
   readonly exp: number
 }
 
+export interface CredentialReadPayload {
+  readonly purpose: "credentialRead"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -104,6 +109,25 @@ export const verifyDeviceCodePreflightToken = async (
     payload.exp < Date.now()
   ) {
     throw new Error("Expired device code preflight token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
+}
+
+export const verifyCredentialReadToken = async (
+  token: string,
+  secret: string
+): Promise<CredentialReadPayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "credentialRead" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired credential read token")
   }
   return { purpose: payload.purpose, exp: payload.exp }
 }

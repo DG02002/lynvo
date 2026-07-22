@@ -45,7 +45,7 @@ const deleteSessionRefreshTokens = async (
       throw new Error("Account data exceeds the synchronous deletion limit")
     }
     for (const refreshToken of refreshTokens) {
-      await ctx.db.delete(refreshToken._id)
+      await ctx.db.delete("authRefreshTokens", refreshToken._id)
     }
   }
 }
@@ -65,7 +65,7 @@ const deleteSessionVerifiers = async (
       throw new Error("Account data exceeds the synchronous deletion limit")
     }
     for (const verifier of verifiers) {
-      await ctx.db.delete(verifier._id)
+      await ctx.db.delete("authVerifiers", verifier._id)
     }
   }
 }
@@ -85,7 +85,7 @@ const deleteAccountVerificationCodes = async (
       throw new Error("Account data exceeds the synchronous deletion limit")
     }
     for (const verificationCode of verificationCodes) {
-      await ctx.db.delete(verificationCode._id)
+      await ctx.db.delete("authVerificationCodes", verificationCode._id)
     }
   }
 }
@@ -99,13 +99,13 @@ export const revokeUserSession = async (
   if (sessionId === currentSessionId) {
     throw new Error("Use sign out for the current session")
   }
-  const session = await ctx.db.get(sessionId)
+  const session = await ctx.db.get("authSessions", sessionId)
   if (!session || session.userId !== userId) {
     throw new Error("Session not found")
   }
   await deleteSessionRefreshTokens(ctx, [sessionId])
   await deleteSessionVerifiers(ctx, [sessionId])
-  await ctx.db.delete(sessionId)
+  await ctx.db.delete("authSessions", sessionId)
 }
 
 export const revokeAllUserSessions = async (
@@ -121,7 +121,9 @@ export const revokeAllUserSessions = async (
     ctx,
     sessions.map((session) => session._id)
   )
-  await Promise.all(sessions.map((session) => ctx.db.delete(session._id)))
+  await Promise.all(
+    sessions.map((session) => ctx.db.delete("authSessions", session._id))
+  )
 }
 
 export const deleteUserAccountData = async (
@@ -228,39 +230,39 @@ export const deleteUserAccountData = async (
     authAccounts.map((account) => account._id)
   )
   for (const link of links) {
-    await ctx.db.delete(link._id)
+    await ctx.db.delete("links", link._id)
   }
   for (const worker of workers) {
-    await ctx.db.delete(worker._id)
+    await ctx.db.delete("userWorkers", worker._id)
   }
   for (const credential of pluginCredentials) {
-    await ctx.db.delete(credential._id)
+    await ctx.db.delete("userPluginCredentials", credential._id)
   }
   for (const domain of pluginDomains) {
-    await ctx.db.delete(domain._id)
+    await ctx.db.delete("userPluginDomains", domain._id)
   }
   for (const code of deviceCodes) {
-    await ctx.db.delete(code._id)
+    await ctx.db.delete("deviceCodes", code._id)
   }
   for (const account of authAccounts) {
-    await ctx.db.delete(account._id)
+    await ctx.db.delete("authAccounts", account._id)
   }
   for (const command of remoteCommands) {
-    await ctx.db.delete(command._id)
+    await ctx.db.delete("remoteCommands", command._id)
   }
   for (const counter of usageCounters) {
-    await ctx.db.delete(counter._id)
+    await ctx.db.delete("usageCounters", counter._id)
   }
   for (const ledger of storageLedgers) {
-    await ctx.db.delete(ledger._id)
+    await ctx.db.delete("userStorageLedgers", ledger._id)
   }
   for (const session of sessions) {
-    await ctx.db.delete(session._id)
+    await ctx.db.delete("authSessions", session._id)
   }
 
-  const user = await ctx.db.get(userId)
+  const user = await ctx.db.get("users", userId)
   if (user) {
-    await ctx.db.delete(user._id)
+    await ctx.db.delete("users", user._id)
   }
 }
 
@@ -289,23 +291,23 @@ export const touchUserActivity = async (
   sessionId: Id<"authSessions"> | null,
   now: number
 ) => {
-  const user = await ctx.db.get(userId)
+  const user = await ctx.db.get("users", userId)
   if (user && now - user.lastActiveAt > ACTIVITY_UPDATE_INTERVAL_MS) {
     await assertStorageMutation(ctx, userId, user, {
       ...user,
       lastActiveAt: now,
     })
-    await ctx.db.patch(user._id, { lastActiveAt: now })
+    await ctx.db.patch("users", user._id, { lastActiveAt: now })
   }
   if (!sessionId) {
     return
   }
-  const session = await ctx.db.get(sessionId)
+  const session = await ctx.db.get("authSessions", sessionId)
   if (
     session &&
     (!session.lastActiveAt ||
       now - session.lastActiveAt > ACTIVITY_UPDATE_INTERVAL_MS)
   ) {
-    await ctx.db.patch(session._id, { lastActiveAt: now })
+    await ctx.db.patch("authSessions", session._id, { lastActiveAt: now })
   }
 }

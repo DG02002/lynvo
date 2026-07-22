@@ -25,6 +25,7 @@ export const DEVICE_CODE_PREFLIGHT_TTL_MS = 2 * 60 * 1000
 export const DEVICE_CODE_CLEANUP_BATCH_SIZE = 100
 export const DEVICE_CODE_CREATION_RATE_LIMIT = 5
 export const DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS = 10 * 60
+export const CREDENTIAL_READ_TOKEN_TTL_MS = 2 * 60 * 1000
 export const OFFICIAL_PLUGIN_MONTHLY_EXTRACTION_LIMITS = {
   "bhadoo-google-drive-index": 50,
   "onedrive-index": 50,

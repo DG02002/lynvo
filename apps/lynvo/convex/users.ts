@@ -55,14 +55,16 @@ const assertCurrentUser = async (ctx: {
 }
 
 export const getMe = query({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
-    return await ctx.db.get(userId)
+    return await ctx.db.get("users", userId)
   },
 })
 
 export const getSessionUser = query({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -70,7 +72,7 @@ export const getSessionUser = query({
     if (!sessionId) {
       throw new Error("Authentication session required")
     }
-    const user = await ctx.db.get(userId)
+    const user = await ctx.db.get("users", userId)
     if (!user) {
       return null
     }
@@ -83,10 +85,11 @@ export const getSessionUser = query({
 })
 
 export const getPlayerPreferences = query({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
-    const user = await ctx.db.get(userId)
+    const user = await ctx.db.get("users", userId)
     return {
       rangeSupportedPlayerId: user?.rangeSupportedPlayerId,
       rangeUnsupportedPlayerId: user?.rangeUnsupportedPlayerId,
@@ -95,13 +98,14 @@ export const getPlayerPreferences = query({
 })
 
 export const updatePlayerPreferences = mutation({
+  returns: v.any(),
   args: {
     rangeSupportedPlayerId: v.optional(v.string()),
     rangeUnsupportedPlayerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
-    const user = await ctx.db.get(userId)
+    const user = await ctx.db.get("users", userId)
     if (!user) {
       throw new Error("Authentication required")
     }
@@ -109,12 +113,13 @@ export const updatePlayerPreferences = mutation({
       ...user,
       ...buildPlayerPreferencesPatch(args),
     })
-    await ctx.db.patch(userId, buildPlayerPreferencesPatch(args))
+    await ctx.db.patch("users", userId, buildPlayerPreferencesPatch(args))
     return { success: true }
   },
 })
 
 export const updateStorageRetentionDays = mutation({
+  returns: v.any(),
   args: {
     days: v.number(),
     deleteExpiredLinks: v.optional(v.boolean()),
@@ -122,7 +127,7 @@ export const updateStorageRetentionDays = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = normalizeRetentionDays(args.days)
-    const user = await ctx.db.get(userId)
+    const user = await ctx.db.get("users", userId)
     if (!user) {
       throw new Error("Authentication required")
     }
@@ -141,12 +146,15 @@ export const updateStorageRetentionDays = mutation({
       ...user,
       storageRetentionDays: retentionDays,
     })
-    await ctx.db.patch(userId, { storageRetentionDays: retentionDays })
+    await ctx.db.patch("users", userId, {
+      storageRetentionDays: retentionDays,
+    })
     return { success: true, deletedLinks }
   },
 })
 
 export const previewStorageRetentionDays = query({
+  returns: v.any(),
   args: {
     days: v.number(),
     timeBucket: v.number(),
@@ -166,6 +174,7 @@ export const previewStorageRetentionDays = query({
 })
 
 export const clearRecentCards = mutation({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -176,7 +185,7 @@ export const clearRecentCards = mutation({
 
     for (const link of links) {
       await recordStorageDeletion(ctx, userId, link)
-      await ctx.db.delete(link._id)
+      await ctx.db.delete("links", link._id)
     }
 
     return { success: true, deletedLinks: links.length }
@@ -184,6 +193,7 @@ export const clearRecentCards = mutation({
 })
 
 export const touchActivity = mutation({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -194,6 +204,7 @@ export const touchActivity = mutation({
 })
 
 export const listSessions = query({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -213,11 +224,12 @@ export const listSessions = query({
 })
 
 export const getStorageUsage = query({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
     const [user, existingLedger, authBytes] = await Promise.all([
-      ctx.db.get(userId),
+      ctx.db.get("users", userId),
       getUserStorageLedger(ctx, userId),
       getOperationalStorageBytes(ctx, userId),
     ])
@@ -253,13 +265,14 @@ export const getStorageUsage = query({
 })
 
 export const renameSession = mutation({
+  returns: v.any(),
   args: {
     sessionId: v.id("authSessions"),
     deviceName: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
-    const session = await ctx.db.get(args.sessionId)
+    const session = await ctx.db.get("authSessions", args.sessionId)
     if (!session || session.userId !== userId) {
       throw new Error("Session not found")
     }
@@ -267,12 +280,13 @@ export const renameSession = mutation({
     if (!deviceName) {
       throw new Error("Device name is required")
     }
-    await ctx.db.patch(session._id, { deviceName })
+    await ctx.db.patch("authSessions", session._id, { deviceName })
     return { success: true }
   },
 })
 
 export const setCurrentSessionDevice = mutation({
+  returns: v.any(),
   args: {
     deviceName: v.string(),
   },
@@ -286,7 +300,7 @@ export const setCurrentSessionDevice = mutation({
     if (!deviceName) {
       throw new Error("Device name is required")
     }
-    await ctx.db.patch(sessionId, {
+    await ctx.db.patch("authSessions", sessionId, {
       deviceName,
       lastActiveAt: Date.now(),
     })
@@ -295,6 +309,7 @@ export const setCurrentSessionDevice = mutation({
 })
 
 export const revokeSession = mutation({
+  returns: v.any(),
   args: {
     sessionId: v.id("authSessions"),
   },
@@ -307,6 +322,7 @@ export const revokeSession = mutation({
 })
 
 export const revokeAllSessions = mutation({
+  returns: v.any(),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -316,6 +332,7 @@ export const revokeAllSessions = mutation({
 })
 
 export const changePassword = action({
+  returns: v.any(),
   args: {
     currentPassword: v.string(),
     newPassword: v.string(),
@@ -361,6 +378,7 @@ export const changePassword = action({
 })
 
 export const deleteAccount = action({
+  returns: v.any(),
   args: {
     confirmUsername: v.string(),
   },
@@ -386,7 +404,7 @@ export const getUserForAuthAction = internalQuery({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId)
+    return await ctx.db.get("users", args.userId)
   },
 })
 

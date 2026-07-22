@@ -99,7 +99,7 @@ export const getStorageUsage = async (
     authAccounts,
     deviceCodes,
   ] = await Promise.all([
-    ctx.db.get(userId),
+    ctx.db.get("users", userId),
     ctx.db
       .query("links")
       .withIndex("by_userId", (queryBuilder) =>
@@ -160,7 +160,7 @@ export const calculateAppOwnedStorageUsage = async (
 ): Promise<AppOwnedStorageUsage> => {
   const [user, recentLinks, workers, pluginDomains, pluginCredentials] =
     await Promise.all([
-      ctx.db.get(userId),
+      ctx.db.get("users", userId),
       ctx.db
         .query("links")
         .withIndex("by_userId", (queryBuilder) =>
@@ -259,7 +259,7 @@ export const upsertUserStorageLedger = async (
     updatedAt,
   }
   if (existing) {
-    await ctx.db.replace(existing._id, document)
+    await ctx.db.replace("userStorageLedgers", existing._id, document)
     return existing._id
   }
   return await ctx.db.insert("userStorageLedgers", document)
@@ -292,7 +292,7 @@ const getOrCreateStorageLedger = async (
   if (existing) {
     return existing
   }
-  const user = await ctx.db.get(userId)
+  const user = await ctx.db.get("users", userId)
   const profileBytes = user ? byteLength(user) : 0
   const usage = {
     profileBytes,
@@ -304,7 +304,7 @@ const getOrCreateStorageLedger = async (
     totalEnforcedBytes: profileBytes,
   }
   const ledgerId = await upsertUserStorageLedger(ctx, userId, usage, Date.now())
-  const ledger = await ctx.db.get(ledgerId)
+  const ledger = await ctx.db.get("userStorageLedgers", ledgerId)
   if (!ledger) {
     throw new Error("Storage ledger initialization failed")
   }
@@ -330,7 +330,7 @@ export const applyStorageMutation = async (
         (currentDocument ? 0 : 1) -
         (nextDocument ? 0 : 1)
       : ledger.savedLinkCount
-  await ctx.db.patch(ledger._id, {
+  await ctx.db.patch("userStorageLedgers", ledger._id, {
     [domain]: ledger[domain] + deltaBytes,
     savedLinkCount,
     totalEnforcedBytes,
@@ -416,7 +416,7 @@ export const getUserRetentionDays = async (
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">
 ) => {
-  const user = await ctx.db.get(userId)
+  const user = await ctx.db.get("users", userId)
   return user?.storageRetentionDays ?? DEFAULT_RETENTION_DAYS
 }
 
@@ -449,7 +449,7 @@ export const deleteExpiredRecentLinks = async (
   )
   for (const recentLink of expiredRecentLinks) {
     await recordStorageDeletion(ctx, userId, recentLink)
-    await ctx.db.delete(recentLink._id)
+    await ctx.db.delete("links", recentLink._id)
   }
   return expiredRecentLinks.length
 }
