@@ -162,10 +162,10 @@ export const consumeOfficialPlugin = mutation({
 })
 
 export const getUsage = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { timeBucket: v.number() },
+  handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
-    const timestamp = Date.now()
+    const timestamp = args.timeBucket
     const daily = getDailyPeriod(timestamp)
     const monthly = getMonthlyPeriod(timestamp)
     const epoch = await getEpoch(ctx)

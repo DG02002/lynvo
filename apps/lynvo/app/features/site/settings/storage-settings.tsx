@@ -29,6 +29,7 @@ import {
   SettingsRowInfo,
 } from "./settings-layout"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
@@ -53,6 +54,7 @@ const formatBytes = (bytes: number) => {
 }
 
 export function StorageSettings() {
+  const timeBucket = useMinuteTimeBucket()
   const convex = useConvex()
   const usage = useQuery(api.users.getStorageUsage, {})
   const updateRetentionDays = useMutation(api.users.updateStorageRetentionDays)
@@ -88,6 +90,7 @@ export function StorageSettings() {
     const days = Number(value)
     const preview = await convex.query(api.users.previewStorageRetentionDays, {
       days,
+      timeBucket,
     })
     if (preview.expiredLinkCount > 0) {
       setPendingRetention({ days, expiredLinkCount: preview.expiredLinkCount })

@@ -7,21 +7,30 @@ import {
   getRetentionCutoff,
   getUserRetentionDays,
 } from "./storagePolicy"
+import { RECENT_LINKS_MAX_COUNT } from "./constants"
 
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { timeBucket: v.number() },
+  handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = await getUserRetentionDays(ctx, userId)
-    const cutoff = getRetentionCutoff(Date.now(), retentionDays)
-    return await ctx.db
+    const cutoff = getRetentionCutoff(args.timeBucket, retentionDays)
+    const links = await ctx.db
       .query("links")
       .withIndex("by_userId_createdAt", (q) =>
         q.eq("userId", userId).gte("createdAt", cutoff)
       )
       .order("desc")
-      .collect()
+      .take(RECENT_LINKS_MAX_COUNT)
+    return links.map((link) => ({
+      _id: link._id,
+      url: link.url,
+      title: link.title,
+      meta: link.meta,
+      createdAt: link.createdAt,
+      updatedAt: link.updatedAt,
+    }))
   },
 })
 
@@ -70,9 +79,22 @@ export const createOrUpdate = mutation({
       createdAt: now,
       updatedAt: now,
     }
-    await assertRecentLinkMutation(ctx, userId, undefined, newDoc)
+    const retainedLinks = await ctx.db
+      .query("links")
+      .withIndex("by_userId_createdAt", (queryBuilder) =>
+        queryBuilder.eq("userId", userId)
+      )
+      .order("asc")
+      .take(RECENT_LINKS_MAX_COUNT)
+    const oldestRecentLink =
+      retainedLinks.length === RECENT_LINKS_MAX_COUNT
+        ? retainedLinks[0]
+        : undefined
+    await assertRecentLinkMutation(ctx, userId, oldestRecentLink, newDoc)
+    if (oldestRecentLink) {
+      await ctx.db.delete(oldestRecentLink._id)
+    }
 
-    // Insert new link
     return await ctx.db.insert("links", newDoc)
   },
 })

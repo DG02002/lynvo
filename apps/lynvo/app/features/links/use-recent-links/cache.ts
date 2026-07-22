@@ -1,4 +1,5 @@
 import type { RecentLinkViewItem } from "~/features/links/types"
+import { RECENT_LINKS_MAX_COUNT } from "../../../../convex/constants"
 import {
   toRecentLinkViewItem,
   toSavedLinkDTO,
@@ -8,7 +9,7 @@ import {
   type SavedLink,
 } from "~/features/links/links.mapper"
 
-export const RECENTS_MAX_LIMIT = 100
+export const RECENTS_MAX_LIMIT = RECENT_LINKS_MAX_COUNT
 export const RECENTS_KEY = "sl2jp:recents:v1"
 const SYNCED_RECENTS_KEY_PREFIX = "sl2jp:recents:sync:v1:"
 

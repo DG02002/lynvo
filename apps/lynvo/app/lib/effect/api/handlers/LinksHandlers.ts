@@ -4,6 +4,7 @@ import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
 import { api } from "../../../../../convex/_generated/api"
+import { getDailyTimeBucket } from "../../../use-coarse-time-bucket"
 
 export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
   handlers
@@ -13,7 +14,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const user = yield* CurrentUser
         return yield* convex.query(
           api.links.list,
-          {},
+          { timeBucket: getDailyTimeBucket(Date.now()) },
           {
             accessToken: user.accessToken,
           }

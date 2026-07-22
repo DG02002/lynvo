@@ -1,14 +1,17 @@
 import { useEffect, useMemo } from "react"
 import { useQuery as useConvexQuery } from "convex/react"
-import type { Doc } from "../../../../convex/_generated/dataModel"
+import type { FunctionReturnType } from "convex/server"
 import { api } from "../../../../convex/_generated/api"
+import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { writeLinksCache, type LinksCache } from "./cache"
 import {
   normalizeLinkMetadata,
   type SavedLink,
 } from "~/features/links/links.mapper"
 
-const convexLinkToSavedLink = (link: Doc<"links">): SavedLink => ({
+type RecentLinkResult = FunctionReturnType<typeof api.links.list>[number]
+
+const convexLinkToSavedLink = (link: RecentLinkResult): SavedLink => ({
   id: link._id,
   url: link.url,
   title: link.title,
@@ -21,7 +24,8 @@ export function useRecentLinksQuery(
   userId: string | undefined,
   cachedLinks: LinksCache | undefined
 ) {
-  const links = useConvexQuery(api.links.list, userId ? {} : "skip")
+  const timeBucket = useDailyTimeBucket()
+  const links = useConvexQuery(api.links.list, userId ? { timeBucket } : "skip")
 
   const liveLinks = useMemo<LinksCache | undefined>(() => {
     if (!links) {

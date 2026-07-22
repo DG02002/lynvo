@@ -2,6 +2,7 @@ import * as React from "react"
 import { useQuery } from "convex/react"
 import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
+import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
 import { client } from "~/lib/effect/api/client"
@@ -45,7 +46,8 @@ const UsageLoading = () => (
 )
 
 export const UsageSettings = () => {
-  const officialUsage = useQuery(api.usage.getUsage, {})
+  const timeBucket = useDailyTimeBucket()
+  const officialUsage = useQuery(api.usage.getUsage, { timeBucket })
   const [externalUsage, setExternalUsage] = React.useState<
     readonly ExternalWorkerUsage[] | undefined
   >()

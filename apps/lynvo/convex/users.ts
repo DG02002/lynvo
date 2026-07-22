@@ -129,6 +129,7 @@ export const updateStorageRetentionDays = mutation({
 export const previewStorageRetentionDays = query({
   args: {
     days: v.number(),
+    timeBucket: v.number(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -137,7 +138,7 @@ export const previewStorageRetentionDays = query({
       ctx,
       userId,
       retentionDays,
-      Date.now()
+      args.timeBucket
     )
 
     return { expiredLinkCount: expiredLinks.length }
