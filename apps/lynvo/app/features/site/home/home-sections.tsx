@@ -1,14 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  ArrowUpRight01Icon,
   CheckmarkCircle02Icon,
   SmartPhone01Icon,
   Tv01Icon,
 } from "@hugeicons/core-free-icons"
-import { Link } from "react-router"
-import { buttonVariants } from "~/components/ui/button"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
-import { authPaths, sitePaths } from "~/lib/paths"
 import { cn } from "~/lib/utils"
 import { privacyPoints } from "./home-content"
 
@@ -136,74 +132,36 @@ export const FeaturesSection = () => {
 
 export const PlanSection = () => {
   return (
-    <section className="relative overflow-hidden py-24 md:py-32">
-      <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-24">
-        <div className="flex max-w-2xl flex-col items-start gap-6">
-          <span className="text-sm text-muted-foreground">Plans</span>
-          <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-5xl lg:text-6xl">
-            Start free. See exactly what’s included.
-          </h2>
-          <p className="max-w-xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Lynvo currently has one Free plan for saving, extracting, syncing,
-            and playing supported links. Review every allowance before you
-            start.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to={authPaths.createAccount}
-              viewTransition
-              className={buttonVariants({ size: "lg" })}
-            >
-              Get Free
-              <HugeiconsIcon
-                icon={ArrowUpRight01Icon}
-                strokeWidth={2}
-                data-icon="inline-end"
-              />
-            </Link>
-            <Link
-              to={sitePaths.pricing}
-              viewTransition
-              className={buttonVariants({ variant: "outline", size: "lg" })}
-            >
-              View plan details
-            </Link>
-          </div>
-        </div>
+    <section className="relative overflow-hidden py-32 md:py-48">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-30 dark:opacity-20">
+        <div className="h-[30rem] w-[30rem] rounded-full bg-primary/20 blur-[120px]" />
+      </div>
 
-        <div className="flex flex-col border-y border-border">
-          <div className="flex items-end justify-between gap-6 py-6">
-            <div className="flex flex-col gap-1">
-              <span className="text-sm text-muted-foreground">
-                Available now
-              </span>
-              <span className="text-2xl text-foreground">Free</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl tracking-tight text-foreground">
-                ₹0
-              </span>
-              <span className="text-sm text-muted-foreground">/ month</span>
-            </div>
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-16 px-6 text-center">
+        <h2 className="text-balance text-6xl font-normal tracking-[-0.04em] text-foreground md:text-8xl">
+          Free Forever.
+        </h2>
+
+        <div className="grid w-full max-w-4xl grid-cols-1 gap-12 sm:grid-cols-3">
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-2xl text-foreground">3MB Storage</span>
+            <span className="text-sm text-muted-foreground text-center">
+              More than enough capacity for thousands of video links.
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border py-6">
-            <div className="flex flex-col gap-1">
-              <span className="text-lg text-foreground">3 MB</span>
-              <span className="text-sm text-muted-foreground">
-                Account storage
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-lg text-foreground">100</span>
-              <span className="text-sm text-muted-foreground">Saved links</span>
-            </div>
-            <div className="col-span-2 flex flex-col gap-1">
-              <span className="text-lg text-foreground">Included</span>
-              <span className="text-sm leading-relaxed text-muted-foreground">
-                Real-time sync, Android playback, remote control, official
-                sources, and external extractors.
-              </span>
-            </div>
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-2xl text-foreground">Real-time sync</span>
+            <span className="text-sm text-muted-foreground text-center">
+              Add a link on your phone, see it on your TV instantly.
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-2xl text-foreground">
+              Across Android devices
+            </span>
+            <span className="text-sm text-muted-foreground text-center">
+              Works flawlessly on Android TV, phones, and tablets.
+            </span>
           </div>
         </div>
       </div>
