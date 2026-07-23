@@ -3,8 +3,8 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
   ArrowRight02Icon,
+  EllipsisIcon,
   Folder01Icon,
-  MoreVerticalCircle01Icon,
   PackageSearchIcon,
   PlayIcon,
   Shield01Icon,
@@ -219,8 +219,8 @@ const DemoLibraryItem = ({ item }: { item: HomeDemoItem }) => (
         </span>
       )}
       <HugeiconsIcon
-        icon={MoreVerticalCircle01Icon}
-        className="size-5 shrink-0 text-foreground"
+        icon={EllipsisIcon}
+        className="size-6 shrink-0 text-foreground"
       />
       {item.isFolder && (
         <HugeiconsIcon
