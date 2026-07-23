@@ -1,61 +1,212 @@
-import { Link } from "react-router"
+import {
+  ArrowDown01Icon,
+  ArrowLeft02Icon,
+  ArrowRight02Icon,
+} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Fragment, useLayoutEffect, useRef, useState } from "react"
+import { useSearchParams } from "react-router"
 import type { Route } from "./+types/_site.changelog"
 import { Badge } from "~/components/ui/badge"
-import { buttonVariants } from "~/components/ui/button"
+import { Button } from "~/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import { Separator } from "~/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
 
-interface ChangelogEntry {
-  id: string
+export interface ChangelogEntry {
+  type: ChangelogType
   date: string
+  dateTime: string
   title: string
-  category: "Product" | "Extractors" | "Platform"
-  summary: string
-  changes: string[]
+  category: "Product" | "Extractor" | "Platform"
+  description: string
 }
+
+type ChangelogType = "general" | "extractor" | "platform"
+type ChangelogTab = ChangelogType | "all"
+type SortOrder = "newest" | "oldest"
+
+const INITIAL_ENTRY_COUNT = 5
+const ENTRY_BATCH_SIZE = 5
 
 const changelogEntries: ChangelogEntry[] = [
   {
-    id: "product",
-    date: "July 23, 2026",
-    title: "New product resources",
-    category: "Product",
-    summary:
-      "Lynvo now has dedicated product documentation, plan details, usage policies, and a public changelog.",
-    changes: [
-      "Added Lynvo Docs with an external extractor implementation guide",
-      "Published transparent Free plan allowances and reset rules",
-      "Added Usage Policies for responsible use and external extractor safety",
-      "Made product resources available from the site navigation",
-    ],
-  },
-  {
-    id: "extractors",
-    date: "July 2026",
-    title: "External extractor protocol",
-    category: "Extractors",
-    summary:
-      "Compatible external workers can now integrate through a small, authenticated JSON protocol.",
-    changes: [
-      "Added manifest, verification, usage, and extraction endpoints",
-      "Added staged extraction for lazy folders and playable nodes",
-      "Added finite extractor-owned usage reporting",
-      "Published a tested Cloudflare Worker reference implementation",
-    ],
-  },
-  {
-    id: "platform",
-    date: "July 2026",
-    title: "Usage visibility and account controls",
+    type: "platform",
+    date: "Jul 22, 2026",
+    dateTime: "2026-07-22",
+    title: "Platform foundation",
     category: "Platform",
-    summary:
-      "Account and extractor capacity are easier to understand and manage.",
-    changes: [
-      "Separated official Lynvo allowances from external extractor capacity",
-      "Added source-specific monthly usage limits",
-      "Improved external worker configuration and manifest refresh controls",
-    ],
+    description:
+      "Improved reliability at scale with transactional storage accounting, bounded recent-link subscriptions, and limited lifecycle cleanup work per scheduled run.",
+  },
+  {
+    type: "extractor",
+    date: "Jul 19, 2026",
+    dateTime: "2026-07-19",
+    title: "Official extractor",
+    category: "Extractor",
+    description:
+      "Moved supported sources to Lynvo's managed extractor, with Bhadoo Google Drive and OneDrive index support, source discovery, and per-source usage limits.",
+  },
+  {
+    type: "general",
+    date: "Jul 19, 2026",
+    dateTime: "2026-07-19",
+    title: "Product launch",
+    category: "Product",
+    description:
+      "Launched link saving and folder browsing, playback in supported desktop and TV players, and remote control between signed-in devices.",
   },
 ]
+
+const changelogTypes = new Set<ChangelogType>([
+  "general",
+  "extractor",
+  "platform",
+])
+
+const getSelectedTab = (value: string | null): ChangelogTab =>
+  value && changelogTypes.has(value as ChangelogType)
+    ? (value as ChangelogType)
+    : "all"
+
+const ChangelogDescription = ({
+  description,
+  id,
+}: {
+  description: string
+  id: string
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const descriptionRef = useRef<HTMLParagraphElement>(null)
+
+  useLayoutEffect(() => {
+    if (isExpanded) {
+      return
+    }
+
+    const element = descriptionRef.current
+    if (!element) {
+      return
+    }
+
+    const measureOverflow = () => {
+      setIsOverflowing(element.scrollHeight > element.clientHeight + 1)
+    }
+
+    measureOverflow()
+
+    if (typeof ResizeObserver === "undefined") {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(measureOverflow)
+    resizeObserver.observe(element)
+
+    return () => resizeObserver.disconnect()
+  }, [description, isExpanded])
+
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <p
+        ref={descriptionRef}
+        id={id}
+        className={cn(
+          "text-sm leading-6 text-muted-foreground text-pretty",
+          !isExpanded && "line-clamp-3"
+        )}
+      >
+        {description}
+      </p>
+      {isOverflowing ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="-ml-3 bg-transparent hover:bg-transparent"
+          aria-controls={id}
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? "Show less" : "Show more"}
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            strokeWidth={2}
+            data-icon="inline-end"
+          />
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_ENTRY_COUNT)
+  const visibleEntries = entries.slice(0, visibleCount)
+  const hasMoreEntries = visibleCount < entries.length
+
+  return (
+    <div className="flex flex-col">
+      {visibleEntries.map((entry, index) => {
+        const entryKey = `${entry.dateTime}-${entry.title}`
+
+        return (
+          <Fragment key={entryKey}>
+            <article className="grid gap-6 py-10 md:grid-cols-[12rem_1fr] md:gap-12 md:py-14">
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-sm font-medium">{entry.category}</p>
+                <time
+                  dateTime={entry.dateTime}
+                  className="text-xs text-muted-foreground tabular-nums"
+                >
+                  {entry.date}
+                </time>
+                <Badge
+                  className="h-7 bg-lime-950 px-3 text-sm text-lime-200"
+                  aria-label="General availability"
+                >
+                  GA
+                </Badge>
+              </div>
+              <div className="flex max-w-3xl flex-col gap-3">
+                <h3 className="text-base font-medium text-balance">
+                  {entry.title}
+                </h3>
+                <ChangelogDescription
+                  id={`description-${entryKey.replaceAll(" ", "-")}`}
+                  description={entry.description}
+                />
+              </div>
+            </article>
+            {index < visibleEntries.length - 1 ? (
+              <Separator className="bg-foreground/20" />
+            ) : null}
+          </Fragment>
+        )
+      })}
+      {hasMoreEntries ? (
+        <Button
+          type="button"
+          size="lg"
+          className="mt-8 self-center"
+          onClick={() =>
+            setVisibleCount((current) => current + ENTRY_BATCH_SIZE)
+          }
+        >
+          Load more
+        </Button>
+      ) : null}
+    </div>
+  )
+}
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -69,92 +220,114 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function Changelog() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest")
+  const selectedTab = getSelectedTab(searchParams.get("type"))
+  const sortedEntries = [...changelogEntries].sort((left, right) => {
+    const dateComparison = left.dateTime.localeCompare(right.dateTime)
+    return sortOrder === "newest" ? -dateComparison : dateComparison
+  })
+
+  const handleTabChange = (value: string | number) => {
+    const nextTab = value as ChangelogTab
+    setSearchParams(nextTab === "all" ? {} : { type: nextTab })
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
       <header className="flex max-w-3xl flex-col gap-5">
         <h1 className="text-4xl font-normal tracking-tight text-balance md:text-6xl">
-          Lynvo changelog
+          Changelog
         </h1>
-        <p className="text-lg leading-8 text-muted-foreground">
-          Product releases, extractor improvements, and the details behind what
-          changed.
-        </p>
-        <nav aria-label="Changelog categories" className="flex flex-wrap gap-2">
-          <a
-            href="#all-updates"
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            All updates
-          </a>
-          <a
-            href="#product"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            Product
-          </a>
-          <a
-            href="#extractors"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            Extractors
-          </a>
-          <a
-            href="#platform"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            Platform
-          </a>
-        </nav>
       </header>
 
-      <section id="all-updates" className="mt-16">
-        <h2 className="sr-only">All updates</h2>
-        <div className="flex flex-col">
-          {changelogEntries.map((entry) => (
-            <article
-              key={`${entry.date}-${entry.title}`}
-              id={entry.id}
-              className="grid scroll-mt-24 gap-6 border-t py-12 first:border-t-0 md:grid-cols-[11rem_1fr] md:gap-10"
+      <Tabs
+        value={selectedTab}
+        onValueChange={handleTabChange}
+        className="mt-10 gap-8"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <TabsList
+            variant="line"
+            aria-label="Changelog categories"
+            className="gap-6 p-0 md:gap-8"
+          >
+            <TabsTrigger
+              value="all"
+              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
             >
-              <div className="flex flex-row items-center gap-3 md:flex-col md:items-start">
-                <time className="text-sm text-muted-foreground">
-                  {entry.date}
-                </time>
-                <Badge variant="outline">{entry.category}</Badge>
-              </div>
-              <div className="flex max-w-2xl flex-col gap-5">
-                <h3 className="text-2xl font-normal tracking-tight md:text-3xl">
-                  {entry.title}
-                </h3>
-                <p className="leading-7 text-muted-foreground">
-                  {entry.summary}
-                </p>
-                <ul className="flex list-disc flex-col gap-2 pl-5 text-sm leading-6">
-                  {entry.changes.map((change) => (
-                    <li key={change}>{change}</li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+              All updates
+            </TabsTrigger>
+            <TabsTrigger
+              value="general"
+              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+            >
+              Product
+            </TabsTrigger>
+            <TabsTrigger
+              value="extractor"
+              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+            >
+              Extractor
+            </TabsTrigger>
+            <TabsTrigger
+              value="platform"
+              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+            >
+              Platform
+            </TabsTrigger>
+          </TabsList>
 
-      <aside className="mt-8 flex flex-col items-start gap-4 rounded-xl bg-muted/40 p-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="font-medium">External extractor guide</p>
-          <p className="text-sm text-muted-foreground">
-            Follow the implementation guide and protocol contract.
-          </p>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="ghost" size="sm" />}
+            >
+              Sort
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                strokeWidth={2}
+                data-icon="inline-end"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup
+                value={sortOrder}
+                onValueChange={(value) => setSortOrder(value as SortOrder)}
+              >
+                <DropdownMenuRadioItem
+                  value="newest"
+                  aria-label="Newest to oldest"
+                >
+                  <span>Newest</span>
+                  <HugeiconsIcon icon={ArrowRight02Icon} strokeWidth={2} />
+                  <span>Oldest</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem
+                  value="oldest"
+                  aria-label="Oldest to newest"
+                >
+                  <span>Oldest</span>
+                  <HugeiconsIcon icon={ArrowLeft02Icon} strokeWidth={2} />
+                  <span>Newest</span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <Link
-          to="/docs"
-          viewTransition
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
-          Read the docs
-        </Link>
-      </aside>
+
+        <section aria-label="Changelog updates">
+          <TabsContent value="all">
+            <ChangelogList entries={sortedEntries} />
+          </TabsContent>
+          {Array.from(changelogTypes).map((type) => (
+            <TabsContent key={type} value={type}>
+              <ChangelogList
+                entries={sortedEntries.filter((entry) => entry.type === type)}
+              />
+            </TabsContent>
+          ))}
+        </section>
+      </Tabs>
     </main>
   )
 }
