@@ -1,11 +1,9 @@
 import { z } from "zod"
 
-export const realtimeMessageSchema = z
-  .object({
-    type: z.string().min(1),
-    payload: z.record(z.string(), z.unknown()).optional(),
-  })
-  .strip()
+export const realtimeMessageSchema = z.object({
+  type: z.string().min(1),
+  payload: z.record(z.string(), z.unknown()).optional(),
+})
 
 export type RealtimeMessage = z.infer<typeof realtimeMessageSchema>
 

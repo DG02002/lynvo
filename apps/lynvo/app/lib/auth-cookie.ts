@@ -1,10 +1,4 @@
 import { Schema } from "effect"
-import {
-  AUTH_SESSION_COOKIE_NAME,
-  AUTH_SESSION_MAX_AGE_SECONDS,
-  AUTH_TRANSACTION_COOKIE_NAME,
-  AUTH_TRANSACTION_MAX_AGE_SECONDS,
-} from "./constants"
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -110,23 +104,3 @@ export const normalizeReturnTo = (value: string | undefined): string => {
   }
   return value
 }
-
-const cookieAttributes = (request: Request, maxAgeSeconds: number): string => {
-  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : ""
-  return `Path=/; HttpOnly${secure}; SameSite=Lax; Max-Age=${maxAgeSeconds}`
-}
-
-export const makeSessionCookie = (request: Request, value: string): string =>
-  `${AUTH_SESSION_COOKIE_NAME}=${encodeURIComponent(value)}; ${cookieAttributes(request, AUTH_SESSION_MAX_AGE_SECONDS)}`
-
-export const clearSessionCookie = (request: Request): string =>
-  `${AUTH_SESSION_COOKIE_NAME}=; ${cookieAttributes(request, 0)}`
-
-export const makeAuthTransactionCookie = (
-  request: Request,
-  value: string
-): string =>
-  `${AUTH_TRANSACTION_COOKIE_NAME}=${encodeURIComponent(value)}; ${cookieAttributes(request, AUTH_TRANSACTION_MAX_AGE_SECONDS)}`
-
-export const clearAuthTransactionCookie = (request: Request): string =>
-  `${AUTH_TRANSACTION_COOKIE_NAME}=; ${cookieAttributes(request, 0)}`

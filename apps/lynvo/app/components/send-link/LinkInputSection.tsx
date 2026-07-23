@@ -88,7 +88,7 @@ export function LinkInputSection({
       </div>
 
       {error && (
-        <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
             variant={isExistingLinkWarning ? "default" : "destructive"}
             className={cn(

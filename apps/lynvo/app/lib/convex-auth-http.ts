@@ -15,16 +15,21 @@ export async function signInWithConvexAuthHttp(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, params }),
   })
+  if (!response.ok) {
+    const errorValue: unknown = await response.json()
+    const errorResult = authSignInResponseSchema.safeParse(errorValue)
+    throw new Error(
+      errorResult.success
+        ? (errorResult.data.error ?? "Authentication failed")
+        : "Authentication failed"
+    )
+  }
   const responseValue: unknown = await response.json()
   const parsed = authSignInResponseSchema.safeParse(responseValue)
   if (!parsed.success) {
     throw new Error("Authentication returned an invalid response")
   }
   const result = parsed.data
-  if (!response.ok) {
-    throw new Error(result.error ?? "Authentication failed")
-  }
-
   if (result.tokens) {
     cookieSyncedAuthStorage.setItem(jwtStorageKey, result.tokens.token)
     cookieSyncedAuthStorage.setItem(

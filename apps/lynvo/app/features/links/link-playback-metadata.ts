@@ -53,20 +53,3 @@ export const withResolvedMirrors = (
     },
   }
 }
-
-export const withNewPlayableItems = (
-  metadata: unknown,
-  newPlayableItemUrls: string[]
-): LinkMetadataV2 => {
-  const normalized = normalizeLinkMetadata(metadata)
-  return {
-    ...normalized,
-    playback: {
-      ...normalized.playback,
-      newPlayableItemUrls: mergeUnique(
-        normalized.playback.newPlayableItemUrls,
-        newPlayableItemUrls
-      ),
-    },
-  }
-}

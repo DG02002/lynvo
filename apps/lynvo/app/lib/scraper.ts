@@ -95,7 +95,7 @@ export async function fetchUrl(
       let body = null
       let $ = null
 
-      if (method === "GET") {
+      if (response.ok && method === "GET") {
         const contentType = response.headers.get("content-type") || ""
         const contentLength = response.headers.get("content-length")
 

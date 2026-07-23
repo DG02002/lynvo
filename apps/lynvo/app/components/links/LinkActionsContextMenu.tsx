@@ -15,11 +15,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import {
-  PLAYER_DEFINITIONS,
-  PlayerOption,
-  type PlayerDefinition,
-} from "~/lib/player-utils"
+import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
+import { PlayerOption } from "~/components/player-option"
 
 interface LinkActionsDotMenuProps {
   onCopyLink: () => void

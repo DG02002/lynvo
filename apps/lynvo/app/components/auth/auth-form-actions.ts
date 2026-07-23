@@ -16,13 +16,23 @@ export const authPreflight = async (payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
-  const result = authPreflightResponseSchema.safeParse(await response.json())
+  if (!response.ok) {
+    const errorValue: unknown = await response.json()
+    const errorResult = authPreflightResponseSchema.safeParse(errorValue)
+    throw new Error(
+      errorResult.success
+        ? (errorResult.data.error ?? "Authentication failed")
+        : "Authentication failed"
+    )
+  }
+  const responseValue: unknown = await response.json()
+  const result = authPreflightResponseSchema.safeParse(responseValue)
   if (!result.success) {
     throw new Error("Authentication returned an invalid response")
   }
   const data = result.data
 
-  if (!response.ok || !data.preflightToken) {
+  if (!data.preflightToken) {
     throw new Error(data.error ?? "Authentication failed")
   }
 

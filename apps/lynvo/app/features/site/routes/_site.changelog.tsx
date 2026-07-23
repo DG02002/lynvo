@@ -223,7 +223,7 @@ export default function Changelog() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest")
   const selectedTab = getSelectedTab(searchParams.get("type"))
-  const sortedEntries = [...changelogEntries].sort((left, right) => {
+  const sortedEntries = changelogEntries.toSorted((left, right) => {
     const dateComparison = left.dateTime.localeCompare(right.dateTime)
     return sortOrder === "newest" ? -dateComparison : dateComparison
   })

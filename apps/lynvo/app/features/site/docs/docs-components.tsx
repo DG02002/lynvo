@@ -7,6 +7,21 @@ import type { MDXComponents } from "mdx/types.js"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
 
+const copyWithTextArea = (code: string) => {
+  const textArea = document.createElement("textarea")
+  textArea.value = code
+  textArea.style.cssText = "position:fixed;left:-9999px;top:0"
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+  const didCopy = document.execCommand("copy")
+  textArea.remove()
+
+  if (!didCopy) {
+    throw new Error("Clipboard copy failed")
+  }
+}
+
 export function DocSection({
   id,
   children,
@@ -65,21 +80,6 @@ export function CodeBlock({
 
     clearTimeout(resetTimerRef.current)
     resetTimerRef.current = setTimeout(() => setCopyState("idle"), 2000)
-  }
-
-  const copyWithTextArea = (code: string) => {
-    const textArea = document.createElement("textarea")
-    textArea.value = code
-    textArea.style.cssText = "position:fixed;left:-9999px;top:0"
-    document.body.appendChild(textArea)
-    textArea.focus()
-    textArea.select()
-    const didCopy = document.execCommand("copy")
-    textArea.remove()
-
-    if (!didCopy) {
-      throw new Error("Clipboard copy failed")
-    }
   }
 
   return (

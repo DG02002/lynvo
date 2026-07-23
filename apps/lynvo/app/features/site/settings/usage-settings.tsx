@@ -30,6 +30,17 @@ interface UsageListItem {
   fallback: "extractor" | "source"
 }
 
+const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+})
+const RESET_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+})
+
 const monthlyExtractions = (metrics: readonly UsageMetric[]) =>
   metrics.filter(
     (metric) => metric.period === "monthly" && metric.unit === "extractions"
@@ -44,8 +55,7 @@ const totalMetrics = (metrics: readonly UsageMetric[]): UsageTotal =>
     { used: 0, limit: 0 }
   )
 
-const formatCount = (value: number): string =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
+const formatCount = (value: number): string => COUNT_FORMATTER.format(value)
 
 const formatCompactCount = (value: number): string =>
   Number.isInteger(value) && value >= 0 && value < 10
@@ -53,16 +63,14 @@ const formatCompactCount = (value: number): string =>
     : formatCount(value)
 
 const formatResetDate = (resetsAt?: string): string | undefined => {
-  if (!resetsAt) return undefined
+  if (!resetsAt) {
+    return undefined
+  }
   const date = new Date(resetsAt)
-  if (Number.isNaN(date.getTime())) return undefined
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date)
+  if (Number.isNaN(date.getTime())) {
+    return undefined
+  }
+  return RESET_DATE_FORMATTER.format(date)
 }
 
 const UsageSummary = ({
@@ -183,13 +191,11 @@ export const UsageSettings = ({
       monthlyExtractions(worker.metrics)
     ) ?? []
   const officialResetAt = officialMetrics
-    .map((metric) => metric.resetsAt)
-    .filter(Boolean)
-    .sort()[0]
+    .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
+    .toSorted()[0]
   const externalResetAt = externalMetrics
-    .map((metric) => metric.resetsAt)
-    .filter(Boolean)
-    .sort()[0]
+    .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
+    .toSorted()[0]
 
   const officialItems: UsageListItem[] = officialMetrics
     .map((metric) => {
@@ -279,15 +285,17 @@ export const UsageSettings = ({
                   total={item.total}
                 />
               ))}
-              {externalUsage
-                ?.filter((worker) => worker.error)
-                .map((worker) => (
-                  <SettingsRow key={worker.workerId} className="py-2">
-                    <span className="text-sm text-destructive">
-                      {worker.name} usage verification failed.
-                    </span>
-                  </SettingsRow>
-                ))}
+              {externalUsage?.flatMap((worker) =>
+                worker.error
+                  ? [
+                      <SettingsRow key={worker.workerId} className="py-2">
+                        <span className="text-sm text-destructive">
+                          {worker.name} usage verification failed.
+                        </span>
+                      </SettingsRow>,
+                    ]
+                  : []
+              )}
               {externalItems.length === 0 && !externalUsageFailed && (
                 <SettingsRow className="py-2">
                   <span className="text-sm text-muted-foreground">

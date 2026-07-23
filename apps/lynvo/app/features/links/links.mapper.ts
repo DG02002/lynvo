@@ -9,11 +9,7 @@ export {
   normalizeLinkMetadata,
   toLegacyMeta,
 } from "./link-metadata-normalization"
-export {
-  withNewPlayableItems,
-  withResolvedMirrors,
-  withWatchedUrl,
-} from "./link-playback-metadata"
+export { withResolvedMirrors, withWatchedUrl } from "./link-playback-metadata"
 export {
   toRecentLinkViewItem,
   toRecentLinkViewModel,

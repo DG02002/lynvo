@@ -1,5 +1,3 @@
-import { cn } from "~/lib/utils"
-
 export type PlayerId = "just" | "vlc" | "mpv" | "mx" | "mx-tv"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
 
@@ -42,25 +40,6 @@ export const PLAYER_DEFINITIONS: readonly PlayerDefinition[] = [
     iconUrl: "/icons/players/mx-tv.webp",
   },
 ] as const
-
-export function PlayerOption({
-  player,
-  className,
-}: {
-  player: PlayerDefinition
-  className?: string
-}) {
-  return (
-    <>
-      <img
-        src={player.iconUrl}
-        alt=""
-        className={cn("size-5 rounded-sm object-cover shrink-0", className)}
-      />
-      {player.name}
-    </>
-  )
-}
 
 export const DEFAULT_RANGE_PLAYER_ID: PlayerId = "just"
 export const DEFAULT_NON_RANGE_PLAYER_ID: PlayerId = "vlc"
@@ -205,7 +184,7 @@ export const openInSpecificPlayer = async (
   ) {
     launchIntentViaAnchor(intent)
   } else {
-    window.open(targetUrl, "_blank")
+    window.open(targetUrl, "_blank", "noopener,noreferrer")
   }
 
   return { expectsNavigation: true, player }

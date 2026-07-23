@@ -129,7 +129,9 @@ export function PluginsSettings({
 
   const domainsByPlugin = React.useMemo(() => {
     return domains.reduce<Record<string, PluginDomain[]>>((acc, domain) => {
-      acc[domain.pluginId] = [...(acc[domain.pluginId] || []), domain]
+      const pluginDomains = acc[domain.pluginId] || []
+      pluginDomains.push(domain)
+      acc[domain.pluginId] = pluginDomains
       return acc
     }, {})
   }, [domains])
@@ -144,6 +146,20 @@ export function PluginsSettings({
 
   const handleUsernameInputChange = (pluginId: string, value: string) => {
     setUsernameInputs((current) => ({ ...current, [pluginId]: value }))
+  }
+
+  const handlePasswordProtectedInputChange = (
+    pluginId: string,
+    value: boolean
+  ) => {
+    if (!value) {
+      handleUsernameInputChange(pluginId, "")
+      handlePasswordInputChange(pluginId, "")
+    }
+    setPasswordProtectedInputs((current) => ({
+      ...current,
+      [pluginId]: value,
+    }))
   }
 
   return (
@@ -210,13 +226,7 @@ export function PluginsSettings({
                           handlePasswordInputChange(plugin.id, value)
                         }
                         onPasswordProtectedChange={(value) =>
-                          setPasswordProtectedInputs((current) => {
-                            if (!value) {
-                              handleUsernameInputChange(plugin.id, "")
-                              handlePasswordInputChange(plugin.id, "")
-                            }
-                            return { ...current, [plugin.id]: value }
-                          })
+                          handlePasswordProtectedInputChange(plugin.id, value)
                         }
                         onSubmit={(event) => handleAddDomain(event, plugin.id)}
                         onAdded={() =>
@@ -565,9 +575,8 @@ export const ExternalExtractorsSection = ({
               className="mt-2 flex flex-col gap-4"
             >
               <FieldGroup className="gap-4">
-                <form.Field
-                  name="baseUrl"
-                  children={(field) => {
+                <form.Field name="baseUrl">
+                  {(field) => {
                     const isInvalid =
                       field.state.meta.isTouched && !field.state.meta.isValid
                     return (
@@ -596,10 +605,9 @@ export const ExternalExtractorsSection = ({
                       </Field>
                     )
                   }}
-                />
-                <form.Field
-                  name="apiKey"
-                  children={(field) => {
+                </form.Field>
+                <form.Field name="apiKey">
+                  {(field) => {
                     const isInvalid =
                       field.state.meta.isTouched && !field.state.meta.isValid
                     return (
@@ -629,7 +637,7 @@ export const ExternalExtractorsSection = ({
                       </Field>
                     )
                   }}
-                />
+                </form.Field>
               </FieldGroup>
               {registrationError ? (
                 <Alert variant="destructive">
@@ -637,14 +645,13 @@ export const ExternalExtractorsSection = ({
                 </Alert>
               ) : null}
               <DialogFooter className="mt-2">
-                <form.Subscribe
-                  selector={(state) => state.isSubmitting}
-                  children={(isSubmitting) => (
+                <form.Subscribe selector={(state) => state.isSubmitting}>
+                  {(isSubmitting) => (
                     <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "Adding…" : "Add worker"}
                     </Button>
                   )}
-                />
+                </form.Subscribe>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -693,12 +700,15 @@ const PluginCredentialEditor = ({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setIsSaving(true)
-    const didSave = await onSave(domain._id, password, username || undefined)
-    setIsSaving(false)
-    if (didSave) {
-      setPassword("")
-      setUsername("")
-      setIsEditing(false)
+    try {
+      const didSave = await onSave(domain._id, password, username || undefined)
+      if (didSave) {
+        setPassword("")
+        setUsername("")
+        setIsEditing(false)
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 

@@ -13,6 +13,52 @@ import { useExpiryClock } from "./use-expiry-clock"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
+interface TvSignInState {
+  code: string | null
+  pollSecret: string | null
+  expiresAt?: number
+  deviceName: string
+  hasError: boolean
+  isGenerating: boolean
+}
+
+interface TvSignInAction {
+  kind: "generating" | "generated" | "failed"
+  code?: string
+  pollSecret?: string
+  expiresAt?: number
+  deviceName?: string
+}
+
+const INITIAL_TV_SIGN_IN_STATE: TvSignInState = {
+  code: null,
+  pollSecret: null,
+  deviceName: "",
+  hasError: false,
+  isGenerating: true,
+}
+
+const reduceTvSignInState = (
+  state: TvSignInState,
+  action: TvSignInAction
+): TvSignInState => {
+  switch (action.kind) {
+    case "generating":
+      return { ...state, hasError: false, isGenerating: true }
+    case "generated":
+      return {
+        code: action.code ?? null,
+        pollSecret: action.pollSecret ?? null,
+        expiresAt: action.expiresAt,
+        deviceName: action.deviceName ?? "",
+        hasError: false,
+        isGenerating: false,
+      }
+    case "failed":
+      return { ...state, hasError: true, isGenerating: false }
+  }
+}
+
 const detectDeviceName = () => {
   if (typeof navigator === "undefined") {
     return "Unknown Device"
@@ -47,13 +93,13 @@ export function TvSignInQr() {
     | undefined
   const convexUrl = rootData?.convexUrl ?? ""
   const setCurrentSessionDevice = useMutation(api.users.setCurrentSessionDevice)
-  const [code, setCode] = React.useState<string | null>(null)
-  const [pollSecret, setPollSecret] = React.useState<string | null>(null)
-  const [expiresAt, setExpiresAt] = React.useState<number | undefined>()
+  const [state, dispatch] = React.useReducer(
+    reduceTvSignInState,
+    INITIAL_TV_SIGN_IN_STATE
+  )
+  const { code, pollSecret, expiresAt, deviceName, hasError, isGenerating } =
+    state
   const codeRef = React.useRef<string | null>(null)
-  const [deviceName, setDeviceName] = React.useState("")
-  const [hasError, setHasError] = React.useState(false)
-  const [isGenerating, setIsGenerating] = React.useState(true)
   const status = useQuery(
     api.tv.getStatus,
     code && pollSecret ? { code, pollSecret } : "skip"
@@ -67,21 +113,21 @@ export function TvSignInQr() {
   )
 
   const fetchCode = React.useCallback(async () => {
-    setIsGenerating(true)
-    setHasError(false)
+    dispatch({ kind: "generating" })
     hasSignedInRef.current = false
     try {
       const nextDeviceName = detectDeviceName()
       const result = await createDeviceCode(nextDeviceName)
-      setCode(result.code)
-      setPollSecret(result.pollSecret)
-      setExpiresAt(result.expiresAt)
       codeRef.current = result.code
-      setDeviceName(result.deviceName)
-      setIsGenerating(false)
+      dispatch({
+        kind: "generated",
+        code: result.code,
+        pollSecret: result.pollSecret,
+        expiresAt: result.expiresAt,
+        deviceName: result.deviceName,
+      })
     } catch {
-      setHasError(true)
-      setIsGenerating(false)
+      dispatch({ kind: "failed" })
     }
   }, [])
 
@@ -118,7 +164,7 @@ export function TvSignInQr() {
           })
         }, 250)
       })().catch(() => {
-        setHasError(true)
+        dispatch({ kind: "failed" })
       })
     }
   }, [convexUrl, deviceName, pollSecret, setCurrentSessionDevice, status])

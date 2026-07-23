@@ -35,12 +35,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe("ExtractorProtocolClient", () => {
   it.each([
-    [
-      "HTTP",
-      (transport: ExtractorTransport) =>
-        new HttpExtractorTransport("https://worker.example"),
-      true,
-    ],
+    ["HTTP", () => new HttpExtractorTransport("https://worker.example"), true],
     [
       "service binding",
       (transport: ExtractorTransport) =>
@@ -66,7 +61,9 @@ describe("ExtractorProtocolClient", () => {
               })
         },
       }
-      if (rewritesOrigin) vi.stubGlobal("fetch", transport.fetch)
+      if (rewritesOrigin) {
+        vi.stubGlobal("fetch", transport.fetch)
+      }
       const client = new ExtractorProtocolClient(createTransport(transport))
 
       await client.getManifest({ requestId: "request-1" })

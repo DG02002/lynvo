@@ -19,11 +19,17 @@ export async function validateCSRF(request: Request, formData?: FormData) {
     const host = request.headers.get("Host")
 
     if (origin) {
+      if (!URL.canParse(origin)) {
+        return false
+      }
       const originUrl = new URL(origin)
       if (originUrl.host !== host) {
         return false
       }
     } else if (referer) {
+      if (!URL.canParse(referer)) {
+        return false
+      }
       const refererUrl = new URL(referer)
       if (refererUrl.host !== host) {
         return false

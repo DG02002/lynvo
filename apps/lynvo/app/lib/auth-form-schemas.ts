@@ -30,27 +30,24 @@ const accountPasswordSchema = z.string().superRefine((password, context) => {
   }
 })
 
-export const signInSchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, "Username is required.")
-      .max(USERNAME_MAX_LENGTH, "Invalid username or password."),
-    password: z
-      .string()
-      .min(1, "Password is required.")
-      .max(PASSWORD_MAX_LENGTH, "Invalid username or password."),
-  })
-  .strict()
+export const signInSchema = z.strictObject({
+  username: z
+    .string()
+    .trim()
+    .min(1, "Username is required.")
+    .max(USERNAME_MAX_LENGTH, "Invalid username or password."),
+  password: z
+    .string()
+    .min(1, "Password is required.")
+    .max(PASSWORD_MAX_LENGTH, "Invalid username or password."),
+})
 
 export const signUpSchema = z
-  .object({
+  .strictObject({
     username: accountUsernameSchema,
     password: accountPasswordSchema,
     confirmPassword: z.string(),
   })
-  .strict()
   .superRefine((value, context) => {
     const independentPasswordErrors = new Set(
       getPasswordValidationErrors(value.password)
@@ -70,12 +67,11 @@ export const signUpSchema = z
   })
 
 export const changePasswordSchema = z
-  .object({
+  .strictObject({
     oldPassword: z.string().min(1, "Old password is required."),
     newPassword: accountPasswordSchema,
     confirmPassword: z.string(),
   })
-  .strict()
   .superRefine((value, context) => {
     if (value.newPassword !== value.confirmPassword) {
       addFieldError(context, "confirmPassword", "Passwords do not match.")

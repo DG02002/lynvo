@@ -91,6 +91,12 @@ const settingsTabs = [
 ] as const
 
 const DEFAULT_SETTINGS_TAB = "general"
+const subscribeToHash = (onStoreChange: () => void) => {
+  window.addEventListener("hashchange", onStoreChange)
+  return () => window.removeEventListener("hashchange", onStoreChange)
+}
+const getHashSnapshot = () => window.location.hash
+const getServerHashSnapshot = () => ""
 
 const getSettingsTabFromHash = (hash: string) => {
   const hashValue = hash.slice(1)
@@ -104,20 +110,18 @@ export default function Settings() {
   const location = useLocation()
   const navigate = useNavigate()
   const [showActiveSessions, setShowActiveSessions] = React.useState(false)
-  const [isClient, setIsClient] = React.useState(false)
-  const activeTab = isClient
-    ? getSettingsTabFromHash(location.hash)
-    : DEFAULT_SETTINGS_TAB
+  const hash = React.useSyncExternalStore(
+    subscribeToHash,
+    getHashSnapshot,
+    getServerHashSnapshot
+  )
+  const activeTab = getSettingsTabFromHash(hash)
 
   React.useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  React.useEffect(() => {
-    if (isClient && location.hash !== `#${activeTab}`) {
+    if (location.hash !== `#${activeTab}`) {
       navigate({ hash: activeTab }, { replace: true })
     }
-  }, [activeTab, isClient, location.hash, navigate])
+  }, [activeTab, location.hash, navigate])
 
   const handleTabChange = (tab: string) => {
     setShowActiveSessions(false)

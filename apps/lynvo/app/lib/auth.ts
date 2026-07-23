@@ -1,4 +1,5 @@
 import { data, redirect } from "react-router"
+import { Effect } from "effect"
 import { AuthSessionService } from "./effect/services/AuthSessionService"
 import { getRuntime } from "./effect/runtime"
 
@@ -38,7 +39,9 @@ export const getUserSession = async (
   env: Env
 ): Promise<SessionResult> => {
   const result = await getRuntime(env).runPromise(
-    AuthSessionService.use((authSession) => authSession.getSession(request))
+    Effect.flatMap(AuthSessionService, (authSession) =>
+      authSession.getSession(request)
+    )
   )
   return {
     user: result.user

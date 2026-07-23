@@ -18,10 +18,10 @@ const policyLinks = [
 const footerLinkClassName =
   "text-sm text-foreground transition-opacity hover:opacity-70"
 
-export function Footer() {
-  const openCookiePreferences = () =>
-    window.dispatchEvent(new Event(OPEN_COOKIE_PREFERENCES_EVENT))
+const openCookiePreferences = () =>
+  window.dispatchEvent(new Event(OPEN_COOKIE_PREFERENCES_EVENT))
 
+export function Footer() {
   return (
     <footer data-site-footer className="border-t bg-background">
       <div className="mx-auto max-w-6xl px-4 md:px-8">

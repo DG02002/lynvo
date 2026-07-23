@@ -57,7 +57,7 @@ export default function Docs() {
       let lastSectionTop: number | undefined
 
       for (const [index, section] of documentationSections.entries()) {
-        const element = document.querySelector<HTMLElement>(section.href)
+        const element = document.getElementById(section.href.slice(1))
         if (!element) {
           continue
         }

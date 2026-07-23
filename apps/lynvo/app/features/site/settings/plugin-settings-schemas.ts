@@ -22,11 +22,9 @@ const workerUrlSchema = z
       })
   )
 
-export const externalWorkerSchema = z
-  .object({
-    baseUrl: workerUrlSchema,
-    apiKey: z.string().max(WORKER_API_KEY_MAX_LENGTH, "API key is too long."),
-  })
-  .strict()
+export const externalWorkerSchema = z.strictObject({
+  baseUrl: workerUrlSchema,
+  apiKey: z.string().max(WORKER_API_KEY_MAX_LENGTH, "API key is too long."),
+})
 
 export type ExternalWorkerFormValues = z.infer<typeof externalWorkerSchema>

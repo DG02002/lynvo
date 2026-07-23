@@ -14,32 +14,3 @@ export function getCsrfToken() {
   }
   return ""
 }
-
-export function getDeviceName(userAgentStr?: string) {
-  let ua = ""
-  if (userAgentStr) {
-    ua = userAgentStr
-  } else if (typeof navigator !== "undefined") {
-    ua = navigator.userAgent
-  }
-
-  if (ua.includes("iPhone")) {
-    return "iPhone"
-  }
-  if (ua.includes("iPad")) {
-    return "iPad"
-  }
-  if (ua.includes("Mac OS")) {
-    return "Mac"
-  }
-  if (ua.includes("Windows")) {
-    return "Windows PC"
-  }
-  if (ua.includes("Android")) {
-    return "Android Device"
-  }
-  if (ua.includes("Linux")) {
-    return "Linux PC"
-  }
-  return "Unknown Device"
-}

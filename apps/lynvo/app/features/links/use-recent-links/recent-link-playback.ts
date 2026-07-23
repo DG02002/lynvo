@@ -1,10 +1,6 @@
-import {
-  withNewPlayableItems,
-  withWatchedUrl,
-} from "~/features/links/links.mapper"
+import { withWatchedUrl } from "~/features/links/links.mapper"
 import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
-import { extractionOrchestration } from "~/lib/extraction/orchestration"
+import type { RecentLinkViewItem } from "~/features/links/types"
 import { createUpdatedItemFromMetadata } from "./recent-link-items"
 
 export const createWatchedLinkItem = (
@@ -16,59 +12,6 @@ export const createWatchedLinkItem = (
   }
 
   const metadata = withWatchedUrl(getRecentLinkViewItemMetadata(item), linkUrl)
-  return createUpdatedItemFromMetadata(item, metadata)
-}
-
-export const fetchExtractedLinks = async (itemUrl: string) => {
-  return await extractionOrchestration.refreshSource({
-    url: itemUrl,
-    timestamp: Date.now(),
-  })
-}
-
-const getNewPlayableItemUrls = (
-  previousLinks: ExtractedLink[],
-  nextLinks: ExtractedLink[]
-) => {
-  const previousPlayableItemUrls = new Set<string>()
-  for (const previousLink of previousLinks) {
-    if (previousLink.type === "file") {
-      previousPlayableItemUrls.add(previousLink.url)
-    }
-  }
-
-  const newPlayableItemUrls: string[] = []
-  for (const nextLink of nextLinks) {
-    if (
-      nextLink.type === "file" &&
-      !previousPlayableItemUrls.has(nextLink.url)
-    ) {
-      newPlayableItemUrls.push(nextLink.url)
-    }
-  }
-  return newPlayableItemUrls
-}
-
-export const createSoftRefreshedItem = (
-  item: RecentLinkViewItem,
-  nextLinks: ExtractedLink[]
-) => {
-  const previousMetadata = getRecentLinkViewItemMetadata(item)
-  const newPlayableItemUrls = getNewPlayableItemUrls(
-    previousMetadata.extraction?.extractedLinks ?? [],
-    nextLinks
-  )
-
-  const metadataWithNewPlayableItems =
-    newPlayableItemUrls.length > 0
-      ? withNewPlayableItems(previousMetadata, newPlayableItemUrls)
-      : previousMetadata
-
-  const metadata = {
-    ...metadataWithNewPlayableItems,
-    playback: { ...metadataWithNewPlayableItems.playback, resolvedMirrors: {} },
-  }
-
   return createUpdatedItemFromMetadata(item, metadata)
 }
 

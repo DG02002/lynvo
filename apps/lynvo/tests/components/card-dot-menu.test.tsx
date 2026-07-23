@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { CardDotMenu } from "~/components/links/CardDotMenu"
+import {
+  DraftCardDotMenu,
+  RecentLinkCardDotMenu,
+} from "~/components/links/CardDotMenu"
 import { readDraft, writeDraft } from "~/components/links/DraftManager"
 import type { LinkCardActions } from "~/features/links/link-card-actions"
 import type { ExtractedLink } from "~/features/links/types"
@@ -35,7 +38,7 @@ describe("CardDotMenu", () => {
     writeDraft(draftUrl, [], {})
 
     render(
-      <CardDotMenu
+      <DraftCardDotMenu
         item={{
           url: draftUrl,
           timestamp: Date.now(),
@@ -43,7 +46,6 @@ describe("CardDotMenu", () => {
           isDraft: true,
         }}
         actions={actions}
-        isDraft
         showRemove
       />
     )
@@ -64,7 +66,7 @@ describe("CardDotMenu", () => {
       extractedLinks: [],
     }
     const { rerender } = render(
-      <CardDotMenu item={item} actions={actions} showRemove />
+      <RecentLinkCardDotMenu item={item} actions={actions} showRemove />
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Open menu" }))
@@ -72,7 +74,12 @@ describe("CardDotMenu", () => {
     expect(actions.hardRefresh).toHaveBeenCalledWith(item.url)
 
     rerender(
-      <CardDotMenu item={item} actions={actions} showRemove isRefreshing />
+      <RecentLinkCardDotMenu
+        item={item}
+        actions={actions}
+        showRemove
+        isRefreshing
+      />
     )
 
     expect(
@@ -89,7 +96,7 @@ describe("CardDotMenu", () => {
     }
 
     render(
-      <CardDotMenu
+      <RecentLinkCardDotMenu
         item={{
           url: "https://cdn.example.com/video.mp4",
           timestamp: Date.now(),

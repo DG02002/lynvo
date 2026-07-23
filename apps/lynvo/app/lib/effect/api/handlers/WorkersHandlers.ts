@@ -58,50 +58,53 @@ export const WorkersHandlers = HttpApiBuilder.group(
             { accessToken: user.accessToken }
           )
           return yield* Effect.all(
-            workers
-              .filter((worker) => worker.enabled)
-              .map((worker) =>
-                getWorkerUsage(worker).pipe(
-                  Effect.tap(() =>
-                    worker.verificationStatus ===
-                    WORKER_VERIFICATION_STATUS.verified
-                      ? Effect.void
-                      : convex.mutation(
-                          api.userWorkers.update,
-                          {
-                            id: worker._id,
-                            verificationStatus:
-                              WORKER_VERIFICATION_STATUS.verified,
-                            lastVerifiedAt: Date.now(),
-                          },
-                          { accessToken: user.accessToken }
-                        )
-                  ),
-                  Effect.catch((error) =>
-                    Effect.gen(function* () {
-                      if (
-                        worker.verificationStatus !==
-                        WORKER_VERIFICATION_STATUS.down
-                      ) {
-                        yield* convex.mutation(
-                          api.userWorkers.update,
-                          {
-                            id: worker._id,
-                            verificationStatus: WORKER_VERIFICATION_STATUS.down,
-                          },
-                          { accessToken: user.accessToken }
-                        )
-                      }
-                      return {
-                        workerId: worker._id,
-                        name: worker.baseUrl,
-                        metrics: [],
-                        error: error.message,
-                      }
-                    })
-                  )
-                )
-              ),
+            workers.flatMap((worker) =>
+              worker.enabled
+                ? [
+                    getWorkerUsage(worker).pipe(
+                      Effect.tap(() =>
+                        worker.verificationStatus ===
+                        WORKER_VERIFICATION_STATUS.verified
+                          ? Effect.void
+                          : convex.mutation(
+                              api.userWorkers.update,
+                              {
+                                id: worker._id,
+                                verificationStatus:
+                                  WORKER_VERIFICATION_STATUS.verified,
+                                lastVerifiedAt: Date.now(),
+                              },
+                              { accessToken: user.accessToken }
+                            )
+                      ),
+                      Effect.catch((error) =>
+                        Effect.gen(function* () {
+                          if (
+                            worker.verificationStatus !==
+                            WORKER_VERIFICATION_STATUS.down
+                          ) {
+                            yield* convex.mutation(
+                              api.userWorkers.update,
+                              {
+                                id: worker._id,
+                                verificationStatus:
+                                  WORKER_VERIFICATION_STATUS.down,
+                              },
+                              { accessToken: user.accessToken }
+                            )
+                          }
+                          return {
+                            workerId: worker._id,
+                            name: worker.baseUrl,
+                            metrics: [],
+                            error: error.message,
+                          }
+                        })
+                      )
+                    ),
+                  ]
+                : []
+            ),
             { concurrency: "unbounded" }
           )
         })

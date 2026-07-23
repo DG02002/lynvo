@@ -15,7 +15,10 @@ import {
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import { CardDotMenu } from "~/components/links/CardDotMenu"
+import {
+  DraftCardDotMenu,
+  RecentLinkCardDotMenu,
+} from "~/components/links/CardDotMenu"
 import { LinkActionsDotMenu } from "~/components/links/LinkActionsContextMenu"
 import { Spinner } from "~/components/ui/spinner"
 import type { LinkCardActions } from "~/features/links/link-card-actions"
@@ -126,47 +129,46 @@ const FolderTree = ({
     folderLinks: ExtractedLink[],
     parentPath: FolderLevel[]
   ) =>
-    folderLinks
-      .filter(
-        (link) => link.type === "folder" && link.workerNodeKind !== "resolvable"
-      )
-      .map((link) => {
-        const linkKey = getLinkKey(link)
-        const path = [...parentPath, { id: linkKey, label: link.label }]
-        const isCurrent = folderPath.at(-1)?.id === linkKey
-        const isInPath = folderPath.some((folder) => folder.id === linkKey)
+    folderLinks.flatMap((link) => {
+      if (link.type !== "folder" || link.workerNodeKind === "resolvable") {
+        return []
+      }
+      const linkKey = getLinkKey(link)
+      const path = [...parentPath, { id: linkKey, label: link.label }]
+      const isCurrent = folderPath.at(-1)?.id === linkKey
+      const isInPath = folderPath.some((folder) => folder.id === linkKey)
 
-        return (
-          <div key={linkKey} className="flex min-w-0 flex-col gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-auto min-h-9 w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-                isCurrent && "bg-accent text-accent-foreground"
-              )}
-              aria-current={isCurrent ? "page" : undefined}
-              data-folder-state={getFolderVisualState(link, isInPath)}
-              onClick={() => onSelectFolder(link, path)}
-            >
-              <HugeiconsIcon
-                icon={ArrowRight01Icon}
-                className={cn("shrink-0", isInPath && "rotate-90")}
-              />
-              <HugeiconsIcon
-                icon={getFolderIcon(link, isInPath)}
-                className="shrink-0"
-              />
-              <span className="min-w-0 flex-1 break-words">{link.label}</span>
-            </Button>
-            {link.children?.some((child) => child.type === "folder") && (
-              <div className="ml-5 flex min-w-0 flex-col gap-1">
-                {renderFolders(link.children, path)}
-              </div>
+      return [
+        <div key={linkKey} className="flex min-w-0 flex-col gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-auto min-h-9 w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
+              isCurrent && "bg-accent text-accent-foreground"
             )}
-          </div>
-        )
-      })
+            aria-current={isCurrent ? "page" : undefined}
+            data-folder-state={getFolderVisualState(link, isInPath)}
+            onClick={() => onSelectFolder(link, path)}
+          >
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              className={cn("shrink-0", isInPath && "rotate-90")}
+            />
+            <HugeiconsIcon
+              icon={getFolderIcon(link, isInPath)}
+              className="shrink-0"
+            />
+            <span className="min-w-0 flex-1 break-words">{link.label}</span>
+          </Button>
+          {link.children?.some((child) => child.type === "folder") && (
+            <div className="ml-5 flex min-w-0 flex-col gap-1">
+              {renderFolders(link.children, path)}
+            </div>
+          )}
+        </div>,
+      ]
+    })
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
@@ -213,7 +215,7 @@ const FinderEmptyState = ({
       <h1 className="min-w-0 flex-1 line-clamp-2 break-words text-base font-normal md:text-xl">
         {getItemTitle(item)}
       </h1>
-      <CardDotMenu
+      <RecentLinkCardDotMenu
         item={item}
         actions={actions}
         showRemove
@@ -507,7 +509,7 @@ const FinderBrowser = ({
             {getItemTitle(item)}
           </h1>
         </div>
-        <CardDotMenu
+        <RecentLinkCardDotMenu
           item={item}
           actions={actions}
           showRemove
@@ -771,14 +773,23 @@ export const SaveListBrowser = ({
                     {formatPlayableExpiry(directLink.expiry)}
                   </span>
                 )}
-                <CardDotMenu
-                  item={item}
-                  actions={actions}
-                  isDraft={item.isDraft}
-                  playableLink={directLink}
-                  showRemove
-                  isRefreshing={isExtracting}
-                />
+                {item.isDraft ? (
+                  <DraftCardDotMenu
+                    item={item}
+                    actions={actions}
+                    playableLink={directLink}
+                    showRemove
+                    isRefreshing={isExtracting}
+                  />
+                ) : (
+                  <RecentLinkCardDotMenu
+                    item={item}
+                    actions={actions}
+                    playableLink={directLink}
+                    showRemove
+                    isRefreshing={isExtracting}
+                  />
+                )}
                 {!directLink && !isExtracting && (
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}

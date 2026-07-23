@@ -13,12 +13,8 @@ export const RemoteSessionList = ({
   activeSessionId: string | null
   onSelect: (session: RemoteSession) => void
 }) => {
-  const visibleSessions = sessions.reduce<RemoteSession[]>(
-    (nextSessions, session) =>
-      session.id === activeSessionId
-        ? nextSessions
-        : [...nextSessions, session],
-    []
+  const visibleSessions = sessions.filter(
+    (session) => session.id !== activeSessionId
   )
 
   return (
@@ -47,7 +43,7 @@ export const RemoteSessionList = ({
               onClick={() => onSelect(session)}
               className="group flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <div className="flex size-9 items-center justify-center rounded-full bg-secondary text-foreground group-hover:bg-background group-hover:shadow-sm transition-all">
+              <div className="flex size-9 items-center justify-center rounded-full bg-secondary text-foreground transition-[background-color,box-shadow] group-hover:bg-background group-hover:shadow-sm">
                 <HugeiconsIcon icon={ComputerIcon} className="size-5" />
               </div>
               <div className="flex-1 overflow-hidden">

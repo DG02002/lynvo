@@ -1,6 +1,6 @@
 import type { Route } from "./+types/root"
 import { initLogger } from "evlog"
-import { evlog, useLogger } from "evlog/react-router"
+import { evlog, useLogger as getRequestLogger } from "evlog/react-router"
 import "./app.css"
 import { csrfCookie } from "~/lib/csrf"
 import { getUserSession, responseWithSession } from "~/lib/auth"
@@ -29,7 +29,7 @@ export const links: Route.LinksFunction = () => [
 ]
 
 export const loader = async (args: Route.LoaderArgs) => {
-  useLogger().set({ route: "root" })
+  getRequestLogger().set({ route: "root" })
   const request = args.request
   const env = getServerEnv(args.context)
   const cookieHeader = request.headers.get("Cookie")

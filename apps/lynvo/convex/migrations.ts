@@ -31,8 +31,10 @@ export const backfillUserStorageLedgers = migrations.define({
   table: "users",
   batchSize: 10,
   migrateOne: async (ctx, user) => {
-    const usage = await calculateAppOwnedStorageUsage(ctx, user._id)
-    const ledger = await getUserStorageLedger(ctx, user._id)
+    const [usage, ledger] = await Promise.all([
+      calculateAppOwnedStorageUsage(ctx, user._id),
+      getUserStorageLedger(ctx, user._id),
+    ])
     if (ledger && doesLedgerMatch(ledger, usage)) {
       return
     }

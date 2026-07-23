@@ -2,11 +2,9 @@ import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { z } from "zod"
 
-const versionResponseSchema = z
-  .object({
-    buildTime: z.string().min(1),
-  })
-  .strip()
+const versionResponseSchema = z.object({
+  buildTime: z.string().min(1),
+})
 
 type VersionWatcherProps = {
   buildTime: string

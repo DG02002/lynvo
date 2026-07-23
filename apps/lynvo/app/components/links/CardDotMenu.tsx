@@ -24,34 +24,35 @@ import { Spinner } from "~/components/ui/spinner"
 import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
 import { RemoveRecentAlertDialog } from "./remove-recent-alert-dialog"
 import type { LinkCardActions } from "~/features/links/link-card-actions"
-import {
-  openInSpecificPlayer,
-  PLAYER_DEFINITIONS,
-  PlayerOption,
-} from "~/lib/player-utils"
+import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { deleteDraft } from "./DraftManager"
 
 interface CardDotMenuProps {
   item: RecentLinkViewItem
   actions: LinkCardActions
-  isDraft?: boolean
   showRemove?: boolean
   onRemoved?: () => void
   playableLink?: ExtractedLink
   isRefreshing?: boolean
 }
 
-export function CardDotMenu({
+interface CardDotMenuContentProps extends CardDotMenuProps {
+  variant: "draft" | "recent-link"
+}
+
+const CardDotMenuContent = ({
   item,
   actions,
-  isDraft = false,
+  variant,
   showRemove = false,
   onRemoved,
   playableLink,
   isRefreshing = false,
-}: CardDotMenuProps) {
+}: CardDotMenuContentProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
+  const isDraft = variant === "draft"
   const handleCopyLink = async () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -185,3 +186,11 @@ export function CardDotMenu({
     </>
   )
 }
+
+export const DraftCardDotMenu = (props: CardDotMenuProps) => (
+  <CardDotMenuContent {...props} variant="draft" />
+)
+
+export const RecentLinkCardDotMenu = (props: CardDotMenuProps) => (
+  <CardDotMenuContent {...props} variant="recent-link" />
+)

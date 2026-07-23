@@ -39,8 +39,10 @@ export const enqueue = mutation({
     payload: v.string(),
   },
   handler: async (context, arguments_) => {
-    const userId = await getAuthenticatedUserId(context)
-    await getAuthenticatedSession(context)
+    const [userId] = await Promise.all([
+      getAuthenticatedUserId(context),
+      getAuthenticatedSession(context),
+    ])
     assertPayloadSize(arguments_.payload)
     const targetSession = await context.db.get(
       "authSessions",
@@ -65,8 +67,10 @@ export const listForCurrentSession = query({
   returns: v.any(),
   args: {},
   handler: async (context) => {
-    const userId = await getAuthenticatedUserId(context)
-    const sessionId = await getAuthenticatedSession(context)
+    const [userId, sessionId] = await Promise.all([
+      getAuthenticatedUserId(context),
+      getAuthenticatedSession(context),
+    ])
     return await context.db
       .query("remoteCommands")
       .withIndex("by_userId_targetSessionId_createdAt", (queryBuilder) =>
@@ -81,8 +85,10 @@ export const acknowledge = mutation({
   returns: v.any(),
   args: { id: v.id("remoteCommands") },
   handler: async (context, arguments_) => {
-    const userId = await getAuthenticatedUserId(context)
-    const sessionId = await getAuthenticatedSession(context)
+    const [userId, sessionId] = await Promise.all([
+      getAuthenticatedUserId(context),
+      getAuthenticatedSession(context),
+    ])
     const command = await context.db.get("remoteCommands", arguments_.id)
     if (
       !command ||

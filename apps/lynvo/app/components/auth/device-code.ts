@@ -5,9 +5,11 @@ export const createDeviceCode = async (deviceName: string) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ deviceName }),
   })
+  if (!response.ok) {
+    throw new Error("Unable to create a device code")
+  }
   const result: unknown = await response.json()
   if (
-    !response.ok ||
     typeof result !== "object" ||
     result === null ||
     !("code" in result) ||
