@@ -13,16 +13,16 @@ allowBuilds:
   workerd: true
 
 catalog:
-  "@cloudflare/workers-types": ^5.20260719.1
+  "@cloudflare/workers-types": ^5.20260723.1
   cheerio: ^1.2.0
   hono: ^4.12.31
-  oxfmt: ^0.59.0
-  oxlint: ^1.74.0
+  oxfmt: ^0.60.0
+  oxlint: ^1.75.0
   sharp: ^0.35.3
-  typescript: ^6.0.3
+  typescript: ^7.0.2
   vite: ^8.1.5
   vitest: ^4.1.10
-  wrangler: ^4.112.0
+  wrangler: ^4.113.0
   zod: ^4.4.3
 
 # minimumReleaseAge: 10080

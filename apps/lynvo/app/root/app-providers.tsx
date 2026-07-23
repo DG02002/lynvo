@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes"
 import { RemoteControlProvider } from "~/context/RemoteControlContext"
 import { RealtimeProvider } from "~/context/RealtimeContext"
 import { VersionWatcher } from "~/components/VersionWatcher"
+import { Toaster } from "~/components/ui/sonner"
 import { cookieSyncedAuthStorage } from "~/lib/convex-auth-storage"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
@@ -64,6 +65,7 @@ export const AppProviders = ({
               {children ?? <Outlet />}
             </RemoteControlProvider>
           </RealtimeProvider>
+          <Toaster />
         </ThemeProvider>
       </QueryClientProvider>
     </ConvexAuthProvider>

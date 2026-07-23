@@ -1,10 +1,12 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
+import { Alert, AlertDescription } from "~/components/ui/alert"
 import { Spinner } from "~/components/ui/spinner"
 import { Field, FieldError, FieldGroup, FieldSet } from "~/components/field"
 import { FloatingLabel } from "~/components/FloatingLabel"
 import { LynvoLink } from "~/components/LynvoLink"
+import { cn } from "~/lib/utils"
 import { policyPaths } from "~/lib/paths"
 
 const controlWidthClass = "mx-auto w-full max-w-sm"
@@ -25,14 +27,16 @@ export interface AuthTextFieldProps {
   label: string
   value: string
   type?: string
-  error?: string | null
+  errors?: Array<{ message?: string } | undefined>
   onChange: (value: string) => void
+  onBlur?: () => void
 }
 
 export interface AuthSubmitButtonProps {
   isSubmitting: boolean
   submitText: string
   submittingText: string
+  className?: string
 }
 
 export const AuthControl = ({ children }: { children: ReactNode }) => (
@@ -45,22 +49,32 @@ export const AuthTextField = ({
   label,
   value,
   type,
-  error,
+  errors,
   onChange,
+  onBlur,
 }: AuthTextFieldProps) => (
   <AuthControl>
-    <Field>
+    <Field data-invalid={Boolean(errors?.length)}>
       <FloatingLabel
         id={id}
         name={name}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         label={label}
-        aria-invalid={Boolean(error)}
+        aria-invalid={Boolean(errors?.length)}
       />
-      <FieldError errors={error ? [{ message: error }] : []} />
+      <FieldError errors={errors} />
     </Field>
+  </AuthControl>
+)
+
+export const AuthFormAlert = ({ message }: { message: string }) => (
+  <AuthControl>
+    <Alert variant="destructive">
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   </AuthControl>
 )
 
@@ -68,12 +82,13 @@ export const AuthSubmitButton = ({
   isSubmitting,
   submitText,
   submittingText,
+  className,
 }: AuthSubmitButtonProps) => (
   <AuthControl>
     <Button
       type="submit"
       size="lg"
-      className="h-13.5 w-full"
+      className={cn("h-13.5 w-full", className)}
       disabled={isSubmitting}
     >
       {isSubmitting && <Spinner className="mr-2 size-4" />}

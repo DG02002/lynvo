@@ -1,13 +1,15 @@
 import * as React from "react"
+import { useForm } from "@tanstack/react-form"
 import { useLocation, useRouteLoaderData } from "react-router"
 import { toast } from "sonner"
 import { Turnstile, type TurnstileHandle } from "~/components/turnstile"
 import { authCopy } from "~/features/auth/auth.copy"
 import { authPaths } from "~/lib/paths"
-import { validatePassword, validateUsername } from "~/lib/auth-policy"
+import { signUpSchema } from "~/lib/auth-form-schemas"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import {
   AuthControl,
+  AuthFormAlert,
   AuthFormShell,
   AuthSubmitButton,
   AuthTextField,
@@ -25,82 +27,65 @@ export function SignupForm() {
     | { convexUrl?: string }
     | undefined
   const convexUrl = rootData?.convexUrl ?? ""
-  const [username, setUsername] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [confirmPassword, setConfirmPassword] = React.useState("")
   const turnstileTokenRef = React.useRef<string | null>(null)
   if (turnstileTokenRef.current === null) {
     turnstileTokenRef.current = initialTurnstileToken()
   }
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [errors, setErrors] = React.useState<{
-    username?: string
-    password?: string
-    confirmPassword?: string
-  }>({})
+  const [accountCreationError, setAccountCreationError] = React.useState<
+    string | null
+  >(null)
   const turnstileRef = React.useRef<TurnstileHandle>(null)
 
-  const validate = () => {
-    const nextErrors: typeof errors = {}
-    const usernameError = validateUsername(username)
-    if (usernameError) {
-      nextErrors.username = usernameError
-    }
-    const passwordError = validatePassword(password, username)
-    if (passwordError) {
-      nextErrors.password = passwordError
-    }
-    if (password !== confirmPassword) {
-      nextErrors.confirmPassword = "Passwords do not match."
-    }
-    setErrors(nextErrors)
-    return Object.keys(nextErrors).length === 0
-  }
-
-  const handleSubmit = async () => {
-    if (!validate()) {
-      return
-    }
-    if (!turnstileTokenRef.current) {
-      toast.error("Complete the security check.")
-      return
-    }
-    setIsSubmitting(true)
-    try {
-      const preflightToken = await authPreflight({
-        flow: "signUp",
-        username,
-        turnstileToken: turnstileTokenRef.current,
-      })
-      const result = await withTimeout(
-        signInWithConvexAuthHttp(convexUrl, "credentials", {
-          flow: "signUp",
-          username,
-          password,
-          preflightToken,
-        }),
-        12_000,
-        "Convex sign-in timed out."
-      )
-      if (!result.signingIn) {
-        throw new Error(
-          "Unable to create the account. Check the details and try again."
-        )
+  const form = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+      confirmPassword: "",
+    },
+    validators: {
+      onSubmit: signUpSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setAccountCreationError(null)
+      if (!turnstileTokenRef.current) {
+        toast.error("Complete the security check.")
+        return
       }
-      toast.success("Account created")
-      redirectAfterAuth()
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Unable to create the account. Check the details and try again."
-      )
-      turnstileRef.current?.reset()
-      turnstileTokenRef.current = initialTurnstileToken()
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+
+      try {
+        const preflightToken = await authPreflight({
+          flow: "signUp",
+          username: value.username,
+          turnstileToken: turnstileTokenRef.current,
+        })
+        const result = await withTimeout(
+          signInWithConvexAuthHttp(convexUrl, "credentials", {
+            flow: "signUp",
+            username: value.username,
+            password: value.password,
+            preflightToken,
+          }),
+          12_000,
+          "Convex sign-in timed out."
+        )
+        if (!result.signingIn) {
+          throw new Error(
+            "Unable to create the account. Check the details and try again."
+          )
+        }
+        toast.success("Account created")
+        redirectAfterAuth()
+      } catch (error) {
+        setAccountCreationError(
+          error instanceof Error
+            ? error.message
+            : "Unable to create the account. Check the details and try again."
+        )
+        turnstileRef.current?.reset()
+        turnstileTokenRef.current = initialTurnstileToken()
+      }
+    },
+  })
 
   return (
     <AuthFormShell
@@ -109,33 +94,60 @@ export function SignupForm() {
       switchPrompt={authCopy.signup.switchPrompt}
       switchLinkText={authCopy.signup.switchLink}
       switchTo={`${authPaths.signIn}${location.search}`}
-      onSubmit={() => void handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
     >
-      <AuthTextField
-        id="username"
+      <form.Field
         name="username"
-        value={username}
-        onChange={setUsername}
-        label="Username"
-        error={errors.username}
+        children={(field) => (
+          <AuthTextField
+            id={field.name}
+            name={field.name}
+            value={field.state.value}
+            onChange={(value) => {
+              setAccountCreationError(null)
+              field.handleChange(value)
+            }}
+            onBlur={field.handleBlur}
+            label="Username"
+            errors={field.state.meta.errors}
+          />
+        )}
       />
-      <AuthTextField
-        id="password"
+      <form.Field
         name="password"
-        type="password"
-        value={password}
-        onChange={setPassword}
-        label="Password"
-        error={errors.password}
+        children={(field) => (
+          <AuthTextField
+            id={field.name}
+            name={field.name}
+            type="password"
+            value={field.state.value}
+            onChange={(value) => {
+              setAccountCreationError(null)
+              field.handleChange(value)
+            }}
+            onBlur={field.handleBlur}
+            label="Password"
+            errors={field.state.meta.errors}
+          />
+        )}
       />
-      <AuthTextField
-        id="confirmPassword"
+      <form.Field
         name="confirmPassword"
-        type="password"
-        value={confirmPassword}
-        onChange={setConfirmPassword}
-        label="Confirm Password"
-        error={errors.confirmPassword}
+        children={(field) => (
+          <AuthTextField
+            id={field.name}
+            name={field.name}
+            type="password"
+            value={field.state.value}
+            onChange={(value) => {
+              setAccountCreationError(null)
+              field.handleChange(value)
+            }}
+            onBlur={field.handleBlur}
+            label="Confirm Password"
+            errors={field.state.meta.errors}
+          />
+        )}
       />
       <AuthControl>
         <Turnstile
@@ -145,10 +157,18 @@ export function SignupForm() {
           }}
         />
       </AuthControl>
-      <AuthSubmitButton
-        isSubmitting={isSubmitting}
-        submitText={authCopy.signup.submitButton}
-        submittingText={authCopy.signup.submittingButton}
+      {accountCreationError ? (
+        <AuthFormAlert message={accountCreationError} />
+      ) : null}
+      <form.Subscribe
+        selector={(state) => state.isSubmitting}
+        children={(isSubmitting) => (
+          <AuthSubmitButton
+            isSubmitting={isSubmitting}
+            submitText={authCopy.signup.submitButton}
+            submittingText={authCopy.signup.submittingButton}
+          />
+        )}
       />
     </AuthFormShell>
   )

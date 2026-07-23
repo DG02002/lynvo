@@ -1,15 +1,17 @@
 import * as React from "react"
+import { useForm } from "@tanstack/react-form"
 import { useLocation, useRouteLoaderData } from "react-router"
 import { Button } from "~/components/ui/button"
 import { toast } from "sonner"
 import { Turnstile, type TurnstileHandle } from "~/components/turnstile"
 import { authCopy } from "~/features/auth/auth.copy"
 import { authPaths } from "~/lib/paths"
-import { validateUsername } from "~/lib/auth-policy"
+import { signInSchema } from "~/lib/auth-form-schemas"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import {
   AuthControl,
   AuthDivider,
+  AuthFormAlert,
   AuthFormShell,
   AuthSubmitButton,
   AuthTextField,
@@ -26,56 +28,58 @@ export function SignInForm() {
     | { convexUrl?: string }
     | undefined
   const convexUrl = rootData?.convexUrl ?? ""
-  const [username, setUsername] = React.useState("")
-  const [password, setPassword] = React.useState("")
   const turnstileTokenRef = React.useRef<string | null>(null)
   if (turnstileTokenRef.current === null) {
     turnstileTokenRef.current = initialTurnstileToken()
   }
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [usernameError, setUsernameError] = React.useState<string | null>(null)
+  const [authenticationError, setAuthenticationError] = React.useState<
+    string | null
+  >(null)
   const turnstileRef = React.useRef<TurnstileHandle>(null)
 
-  const handleSubmit = async () => {
-    const nextUsernameError = validateUsername(username)
-    setUsernameError(nextUsernameError)
-    if (nextUsernameError) {
-      return
-    }
-    if (!password) {
-      toast.error("Password is required.")
-      return
-    }
-    if (!turnstileTokenRef.current) {
-      toast.error("Complete the security check.")
-      return
-    }
-    setIsSubmitting(true)
-    try {
-      const preflightToken = await authPreflight({
-        flow: "signIn",
-        username,
-        turnstileToken: turnstileTokenRef.current,
-      })
-      const result = await signInWithConvexAuthHttp(convexUrl, "credentials", {
-        flow: "signIn",
-        username,
-        password,
-        preflightToken,
-      })
-      if (!result.signingIn) {
-        throw new Error("Invalid username or password.")
+  const form = useForm({
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+    validators: {
+      onSubmit: signInSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setAuthenticationError(null)
+      if (!turnstileTokenRef.current) {
+        toast.error("Complete the security check.")
+        return
       }
-      toast.success("Signed in")
-      redirectAfterAuth()
-    } catch {
-      toast.error("Invalid username or password.")
-      turnstileRef.current?.reset()
-      turnstileTokenRef.current = initialTurnstileToken()
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+
+      try {
+        const preflightToken = await authPreflight({
+          flow: "signIn",
+          username: value.username,
+          turnstileToken: turnstileTokenRef.current,
+        })
+        const result = await signInWithConvexAuthHttp(
+          convexUrl,
+          "credentials",
+          {
+            flow: "signIn",
+            username: value.username,
+            password: value.password,
+            preflightToken,
+          }
+        )
+        if (!result.signingIn) {
+          throw new Error("Invalid username or password.")
+        }
+        toast.success("Signed in")
+        redirectAfterAuth()
+      } catch {
+        setAuthenticationError("Invalid username or password.")
+        turnstileRef.current?.reset()
+        turnstileTokenRef.current = initialTurnstileToken()
+      }
+    },
+  })
 
   return (
     <AuthFormShell
@@ -84,23 +88,42 @@ export function SignInForm() {
       switchPrompt={authCopy.signin.switchPrompt}
       switchLinkText={authCopy.signin.switchLink}
       switchTo={`${authPaths.createAccount}${location.search}`}
-      onSubmit={() => void handleSubmit()}
+      onSubmit={() => void form.handleSubmit()}
     >
-      <AuthTextField
-        id="username"
+      <form.Field
         name="username"
-        value={username}
-        onChange={setUsername}
-        label="Username"
-        error={usernameError}
+        children={(field) => (
+          <AuthTextField
+            id={field.name}
+            name={field.name}
+            value={field.state.value}
+            onChange={(value) => {
+              setAuthenticationError(null)
+              field.handleChange(value)
+            }}
+            onBlur={field.handleBlur}
+            label="Username"
+            errors={field.state.meta.errors}
+          />
+        )}
       />
-      <AuthTextField
-        id="password"
+      <form.Field
         name="password"
-        type="password"
-        value={password}
-        onChange={setPassword}
-        label="Password"
+        children={(field) => (
+          <AuthTextField
+            id={field.name}
+            name={field.name}
+            type="password"
+            value={field.state.value}
+            onChange={(value) => {
+              setAuthenticationError(null)
+              field.handleChange(value)
+            }}
+            onBlur={field.handleBlur}
+            label="Password"
+            errors={field.state.meta.errors}
+          />
+        )}
       />
       <AuthControl>
         <Turnstile
@@ -110,10 +133,18 @@ export function SignInForm() {
           }}
         />
       </AuthControl>
-      <AuthSubmitButton
-        isSubmitting={isSubmitting}
-        submitText={authCopy.signin.submitButton}
-        submittingText={authCopy.signin.submittingButton}
+      {authenticationError ? (
+        <AuthFormAlert message={authenticationError} />
+      ) : null}
+      <form.Subscribe
+        selector={(state) => state.isSubmitting}
+        children={(isSubmitting) => (
+          <AuthSubmitButton
+            isSubmitting={isSubmitting}
+            submitText={authCopy.signin.submitButton}
+            submittingText={authCopy.signin.submittingButton}
+          />
+        )}
       />
       <AuthDivider />
       <AuthControl>
