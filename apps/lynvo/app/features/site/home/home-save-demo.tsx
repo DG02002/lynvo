@@ -13,12 +13,9 @@ import { NewBadge } from "~/components/save-list/new-badge"
 import { Spinner } from "~/components/ui/spinner"
 import {
   HOME_DEMO_BROWSER_URL,
-  HOME_DEMO_CLIPBOARD_HOLD_MS,
   HOME_DEMO_CLIPBOARD_URL,
   HOME_DEMO_FINAL_STEP,
-  HOME_DEMO_INITIAL_DELAY_MS,
-  HOME_DEMO_RESET_INTERVAL_MS,
-  HOME_DEMO_STEP_INTERVAL_MS,
+  HOME_DEMO_STEP_DELAYS_MS,
   REDUCED_MOTION_MEDIA_QUERY,
 } from "./home-demo-constants"
 
@@ -86,14 +83,7 @@ export const HomeSaveDemo = () => {
       return
     }
 
-    const delay =
-      step === 0
-        ? HOME_DEMO_INITIAL_DELAY_MS
-        : step === 3
-          ? HOME_DEMO_CLIPBOARD_HOLD_MS
-          : step === HOME_DEMO_FINAL_STEP
-            ? HOME_DEMO_RESET_INTERVAL_MS
-            : HOME_DEMO_STEP_INTERVAL_MS
+    const delay = HOME_DEMO_STEP_DELAYS_MS[step]
     const nextStep = step === HOME_DEMO_FINAL_STEP ? 0 : step + 1
     const timeout = window.setTimeout(() => setStep(nextStep), delay)
 
@@ -202,9 +192,6 @@ export const HomeSaveDemo = () => {
           </svg>
         </div>
       </div>
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        A link becomes a synced item in seconds
-      </p>
     </div>
   )
 }

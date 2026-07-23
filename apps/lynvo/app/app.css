@@ -146,8 +146,8 @@
   opacity: 0;
   transform: translate3d(0, 0, 0) scale(0.94);
   transition:
-    top 700ms var(--ease-in-out-strong),
-    left 700ms var(--ease-in-out-strong),
+    top 900ms var(--ease-in-out-strong),
+    left 900ms var(--ease-in-out-strong),
     opacity 180ms var(--ease-out-strong),
     transform 140ms var(--ease-out-strong);
   will-change: top, left, transform, opacity;

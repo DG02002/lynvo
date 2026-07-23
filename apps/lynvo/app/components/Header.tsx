@@ -32,7 +32,7 @@ export function Header() {
         <LogoLink variant="text-only" size="sm" />
         <nav
           aria-label="Primary navigation"
-          className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 text-sm md:flex"
+          className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-sm md:flex"
         >
           <Link
             to={sitePaths.docs}
