@@ -13,6 +13,7 @@ import { NewBadge } from "~/components/save-list/new-badge"
 import { Spinner } from "~/components/ui/spinner"
 import {
   HOME_DEMO_BROWSER_URL,
+  HOME_DEMO_CLIPBOARD_HOLD_MS,
   HOME_DEMO_CLIPBOARD_URL,
   HOME_DEMO_FINAL_STEP,
   HOME_DEMO_INITIAL_DELAY_MS,
@@ -88,18 +89,20 @@ export const HomeSaveDemo = () => {
     const delay =
       step === 0
         ? HOME_DEMO_INITIAL_DELAY_MS
-        : step === HOME_DEMO_FINAL_STEP
-          ? HOME_DEMO_RESET_INTERVAL_MS
-          : HOME_DEMO_STEP_INTERVAL_MS
+        : step === 3
+          ? HOME_DEMO_CLIPBOARD_HOLD_MS
+          : step === HOME_DEMO_FINAL_STEP
+            ? HOME_DEMO_RESET_INTERVAL_MS
+            : HOME_DEMO_STEP_INTERVAL_MS
     const nextStep = step === HOME_DEMO_FINAL_STEP ? 0 : step + 1
     const timeout = window.setTimeout(() => setStep(nextStep), delay)
 
     return () => window.clearTimeout(timeout)
   }, [isReducedMotion, step])
 
-  const isClipboardOpen = step >= 2 && step < 4
-  const isLinkPasted = step >= 4
-  const isSaving = step === 4
+  const isClipboardOpen = step >= 3 && step < 5
+  const isLinkPasted = step >= 5
+  const isSaving = step === 5
   const isItemCreated = step >= HOME_DEMO_FINAL_STEP
 
   return (
@@ -128,7 +131,7 @@ export const HomeSaveDemo = () => {
           <div className="relative z-20 mx-auto mb-8 flex w-full flex-col gap-4">
             <div
               aria-hidden={!isClipboardOpen}
-              className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              className={`home-demo-clipboard-reveal grid transition-[grid-template-rows,opacity,transform,filter] duration-500 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] translate-y-0 opacity-100 blur-0" : "grid-rows-[0fr] -translate-y-1 opacity-0 blur-[4px]"}`}
             >
               <div className="min-h-0 overflow-hidden">
                 <div className="w-full rounded-md px-1 py-2 text-left">
@@ -141,7 +144,7 @@ export const HomeSaveDemo = () => {
 
             <div className="relative">
               <div
-                className={`flex h-13.5 w-full items-center rounded-full border-2 bg-muted/30 px-5 pr-14 text-left transition-colors ${step >= 1 && step < 4 ? "border-blue-500" : "border-default-medium"}`}
+                className={`flex h-13.5 w-full items-center rounded-full border-2 bg-muted/30 px-5 pr-14 text-left transition-colors ${step >= 1 && step < 5 ? "border-blue-500" : "border-default-medium"}`}
               >
                 <span
                   className={
