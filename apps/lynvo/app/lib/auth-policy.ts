@@ -39,49 +39,57 @@ const WEAK_PASSWORD_PATTERNS = [
 export const normalizeUsername = (username: string) =>
   username.trim().toLowerCase()
 
-export const validateUsername = (username: string): string | null => {
+export const getUsernameValidationErrors = (username: string) => {
+  const errors: string[] = []
   const normalized = normalizeUsername(username)
   if (normalized.length < USERNAME_MIN_LENGTH) {
-    return `Username must be at least ${USERNAME_MIN_LENGTH} characters.`
+    errors.push(`Username must be at least ${USERNAME_MIN_LENGTH} characters.`)
+  } else if (normalized.length > USERNAME_MAX_LENGTH) {
+    errors.push(`Username must be at most ${USERNAME_MAX_LENGTH} characters.`)
+  } else if (!USERNAME_PATTERN.test(normalized)) {
+    errors.push(
+      "Username can only use letters, numbers, underscore, and hyphen."
+    )
+  } else if (RESERVED_USERNAMES.has(normalized)) {
+    errors.push("This username is reserved.")
   }
-  if (normalized.length > USERNAME_MAX_LENGTH) {
-    return `Username must be at most ${USERNAME_MAX_LENGTH} characters.`
+  return errors
+}
+
+export const validateUsername = (username: string): string | null =>
+  getUsernameValidationErrors(username)[0] ?? null
+
+export const getPasswordValidationErrors = (
+  password: string,
+  username?: string
+): string[] => {
+  const errors: string[] = []
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
+  } else if (password.length > PASSWORD_MAX_LENGTH) {
+    errors.push(`Password must be at most ${PASSWORD_MAX_LENGTH} characters.`)
   }
-  if (!USERNAME_PATTERN.test(normalized)) {
-    return "Username can only use letters, numbers, underscore, and hyphen."
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Password must include an uppercase letter.")
   }
-  if (RESERVED_USERNAMES.has(normalized)) {
-    return "This username is reserved."
+  if (!/[a-z]/.test(password)) {
+    errors.push("Password must include a lowercase letter.")
   }
-  return null
+  const lower = password.toLowerCase()
+  const normalizedUsername = username ? normalizeUsername(username) : ""
+  if (normalizedUsername && lower.includes(normalizedUsername)) {
+    errors.push("Password cannot contain your username.")
+  }
+  if (/(.)\1{5,}/.test(password)) {
+    errors.push("Password is too repetitive.")
+  }
+  if (WEAK_PASSWORD_PATTERNS.includes(lower)) {
+    errors.push("Password is too common.")
+  }
+  return errors
 }
 
 export const validatePassword = (
   password: string,
   username?: string
-): string | null => {
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`
-  }
-  if (password.length > PASSWORD_MAX_LENGTH) {
-    return `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`
-  }
-  if (!/[A-Z]/.test(password)) {
-    return "Password must include an uppercase letter."
-  }
-  if (!/[a-z]/.test(password)) {
-    return "Password must include a lowercase letter."
-  }
-  const lower = password.toLowerCase()
-  const normalizedUsername = username ? normalizeUsername(username) : ""
-  if (normalizedUsername && lower.includes(normalizedUsername)) {
-    return "Password cannot contain your username."
-  }
-  if (/(.)\1{5,}/.test(password)) {
-    return "Password is too repetitive."
-  }
-  if (WEAK_PASSWORD_PATTERNS.includes(lower)) {
-    return "Password is too common."
-  }
-  return null
-}
+): string | null => getPasswordValidationErrors(password, username)[0] ?? null

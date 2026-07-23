@@ -43,8 +43,8 @@
   "services": [
     {
       "binding": "OFFICIAL_EXTRACTOR",
-      "service": "lynvo-official-extractor"
-    }
+      "service": "lynvo-official-extractor",
+    },
   ],
   "vars": {
     "ENVIRONMENT": "production",
@@ -83,9 +83,8 @@
       "services": [
         {
           "binding": "OFFICIAL_EXTRACTOR",
-          "service": "lynvo-official-extractor",
-          "environment": "local"
-        }
+          "service": "lynvo-official-extractor-local",
+        },
       ],
       "vars": {
         "ENVIRONMENT": "development",

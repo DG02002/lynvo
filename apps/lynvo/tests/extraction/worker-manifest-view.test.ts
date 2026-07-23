@@ -22,7 +22,7 @@ describe("getWorkerManifestView", () => {
     expect(view.hosts).toBe("example.com")
   })
 
-  it("exposes external worker source plugin icons from Lynvo manifest extensions", () => {
+  it("exposes extractor source icons from Lynvo manifest extensions", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
@@ -60,7 +60,7 @@ describe("getWorkerManifestView", () => {
     ])
   })
 
-  it("matches source plugin metadata using source matchers", () => {
+  it("matches extractor source metadata using source matchers", () => {
     const manifest = {
       protocolVersion: "1.0" as const,
       extractorId: "com.example.extractor",
@@ -100,7 +100,7 @@ describe("getWorkerManifestView", () => {
     expect(source?.displayName).toBe("Resolver Beta")
   })
 
-  it("upgrades stale source icons and fills missing worker icon URLs", () => {
+  it("upgrades PNG source icons without inventing missing icon URLs", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
@@ -115,19 +115,18 @@ describe("getWorkerManifestView", () => {
               {
                 id: "first-source",
                 displayName: "First source",
-                iconUrl: "http://localhost:8788/icons/plugins/first-source.png",
+                iconUrl: "http://localhost:8788/icons/sources/first-source.png",
               },
               { id: "second-source", displayName: "Second source" },
             ],
           },
         },
-      }),
-      "http://localhost:8788/"
+      })
     )
 
     expect(view.sources.map((source) => source.iconUrl)).toEqual([
-      "http://localhost:8788/icons/plugins/first-source.webp",
-      "http://localhost:8788/icons/plugins/second-source.webp",
+      "http://localhost:8788/icons/sources/first-source.webp",
+      undefined,
     ])
   })
 })

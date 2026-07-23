@@ -18,7 +18,7 @@ export const authCopy = {
     switchLink: "Create an account",
   },
   nav: {
-    signIn: "Sign In",
-    signUp: "Create an account",
+    signIn: "Log in",
+    signUp: "Sign up for free",
   },
 }

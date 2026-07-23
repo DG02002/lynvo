@@ -28,10 +28,10 @@ const CONFIG = {
   },
 }
 
-const targetArg = process.argv[2] ?? "public/icons/plugins"
+const targetArg = process.argv[2] ?? "public/icons/players"
 const targetDir = path.resolve(process.cwd(), targetArg)
 const cacheDir = path.resolve(process.cwd(), ".cache/image-optimizer")
-const cacheFile = path.join(cacheDir, "plugin-icons.json")
+const cacheFile = path.join(cacheDir, "images.json")
 
 const hashBuffer = (buffer) => createHash("sha256").update(buffer).digest("hex")
 const cacheKeyFor = (filePath) => path.relative(process.cwd(), filePath)

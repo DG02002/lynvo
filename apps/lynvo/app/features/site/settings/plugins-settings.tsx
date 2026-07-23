@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useForm } from "@tanstack/react-form"
 import { useQuery } from "convex/react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -13,6 +14,8 @@ import { api } from "../../../../convex/_generated/api"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Checkbox } from "~/components/ui/checkbox"
+import { Alert, AlertDescription } from "~/components/ui/alert"
+import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
 import {
   Dialog,
   DialogContent,
@@ -43,6 +46,10 @@ import {
   SectionHeading,
 } from "./settings-layout"
 import { usePluginSettingsActions } from "./use-plugin-settings-actions"
+import {
+  externalWorkerSchema,
+  type ExternalWorkerFormValues,
+} from "./plugin-settings-schemas"
 
 export interface PluginDomain {
   _id: string
@@ -71,8 +78,6 @@ export function PluginsSettings({
   const domains =
     (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
     EMPTY_DOMAINS
-  const [baseUrl, setBaseUrl] = React.useState("")
-  const [apiKey, setApiKey] = React.useState("")
   const [domainInputs, setDomainInputs] = React.useState<
     Record<string, string>
   >({})
@@ -92,7 +97,6 @@ export function PluginsSettings({
   const automaticallyRefreshedWorkerIds = React.useRef(new Set<string>())
 
   const {
-    isAdding,
     addingDomainFor,
     domainErrors,
     handleAddDomain,
@@ -104,10 +108,6 @@ export function PluginsSettings({
     handleRefreshWorker,
     handleToggleWorker,
   } = usePluginSettingsActions({
-    baseUrl,
-    apiKey,
-    setBaseUrl,
-    setApiKey,
     domainInputs,
     setDomainInputs,
     passwordInputs,
@@ -272,13 +272,8 @@ export function PluginsSettings({
 
       <ExternalExtractorsSection
         workers={workers}
-        baseUrl={baseUrl}
-        apiKey={apiKey}
-        isAdding={isAdding}
         isAddWorkerOpen={isAddWorkerOpen}
         onAddWorkerOpenChange={setIsAddWorkerOpen}
-        onBaseUrlChange={setBaseUrl}
-        onApiKeyChange={setApiKey}
         onAddWorker={handleAddWorker}
         onDeleteWorker={handleDeleteWorker}
         onRefreshWorker={handleRefreshWorker}
@@ -487,113 +482,189 @@ const PluginDomainList = ({
 
 interface ExternalExtractorsSectionProps {
   workers: ExtractorWorker[]
-  baseUrl: string
-  apiKey: string
-  isAdding: boolean
   isAddWorkerOpen: boolean
   onAddWorkerOpenChange: (open: boolean) => void
-  onBaseUrlChange: (value: string) => void
-  onApiKeyChange: (value: string) => void
-  onAddWorker: (event: React.FormEvent) => Promise<void>
+  onAddWorker: (value: ExternalWorkerFormValues) => Promise<string | null>
   onDeleteWorker: (workerId: string) => Promise<void>
   onRefreshWorker: (workerId: string) => Promise<void>
   onToggleWorker: (workerId: string, enabled: boolean) => Promise<void>
 }
 
-const ExternalExtractorsSection = ({
+export const ExternalExtractorsSection = ({
   workers,
-  baseUrl,
-  apiKey,
-  isAdding,
   isAddWorkerOpen,
   onAddWorkerOpenChange,
-  onBaseUrlChange,
-  onApiKeyChange,
   onAddWorker,
   onDeleteWorker,
   onRefreshWorker,
   onToggleWorker,
-}: ExternalExtractorsSectionProps) => (
-  <div className="flex flex-col gap-3">
-    <div className="flex items-center justify-between">
-      <SectionHeading title="External extractors" />
-      <Dialog open={isAddWorkerOpen} onOpenChange={onAddWorkerOpenChange}>
-        <DialogTrigger
-          render={<Button variant="ghost" size="icon" className="size-8" />}
+}: ExternalExtractorsSectionProps) => {
+  const [registrationError, setRegistrationError] = React.useState<
+    string | null
+  >(null)
+  const form = useForm({
+    defaultValues: {
+      baseUrl: "",
+      apiKey: "",
+    },
+    validators: {
+      onSubmit: externalWorkerSchema,
+    },
+    onSubmit: async ({ value }) => {
+      setRegistrationError(null)
+      const error = await onAddWorker(value)
+      if (error) {
+        setRegistrationError(error)
+        return
+      }
+      form.reset()
+      onAddWorkerOpenChange(false)
+    },
+  })
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <SectionHeading
+          title="External extractors"
+          description="Extractors you add and manage independently from Lynvo."
+        />
+        <Dialog
+          open={isAddWorkerOpen}
+          onOpenChange={(open) => {
+            setRegistrationError(null)
+            onAddWorkerOpenChange(open)
+          }}
         >
-          <HugeiconsIcon icon={Add01Icon} />
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="font-normal">
-              Add custom extractor worker
-            </DialogTitle>
-            <DialogDescription>
-              Enter the base URL and API key for your custom worker.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            onSubmit={async (event) => {
-              await onAddWorker(event)
-              onAddWorkerOpenChange(false)
-            }}
-            className="mt-2 flex flex-col gap-4"
+          <DialogTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                aria-label="Add external extractor"
+              />
+            }
           >
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="external-worker-base-url"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Base URL
-              </label>
-              <Input
-                id="external-worker-base-url"
-                value={baseUrl}
-                onChange={(event) => onBaseUrlChange(event.target.value)}
-                placeholder="https://worker.example.com"
-                className="h-10 rounded-xl px-3"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="external-worker-api-key"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                API Key
-              </label>
-              <Input
-                id="external-worker-api-key"
-                value={apiKey}
-                onChange={(event) => onApiKeyChange(event.target.value)}
-                placeholder="Your secret key"
-                type="password"
-                className="h-10 rounded-xl px-3"
-              />
-            </div>
-            <DialogFooter className="mt-2">
-              <Button type="submit" disabled={isAdding}>
-                {isAdding ? "Adding…" : "Add worker"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <HugeiconsIcon icon={Add01Icon} />
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="font-normal">
+                Add custom extractor worker
+              </DialogTitle>
+              <DialogDescription>
+                Enter the base URL and API key for your custom worker.
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                void form.handleSubmit()
+              }}
+              className="mt-2 flex flex-col gap-4"
+            >
+              <FieldGroup className="gap-4">
+                <form.Field
+                  name="baseUrl"
+                  children={(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid
+                    return (
+                      <Field data-invalid={isInvalid} className="gap-1.5">
+                        <FieldLabel
+                          htmlFor="external-worker-base-url"
+                          className="text-xs font-medium text-muted-foreground"
+                        >
+                          Base URL
+                        </FieldLabel>
+                        <Input
+                          id="external-worker-base-url"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) => {
+                            setRegistrationError(null)
+                            field.handleChange(event.target.value)
+                          }}
+                          placeholder="https://worker.example.com"
+                          className="h-10 rounded-xl px-3"
+                          aria-invalid={isInvalid}
+                        />
+                        {isInvalid ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )
+                  }}
+                />
+                <form.Field
+                  name="apiKey"
+                  children={(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid
+                    return (
+                      <Field data-invalid={isInvalid} className="gap-1.5">
+                        <FieldLabel
+                          htmlFor="external-worker-api-key"
+                          className="text-xs font-medium text-muted-foreground"
+                        >
+                          API Key
+                        </FieldLabel>
+                        <Input
+                          id="external-worker-api-key"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) => {
+                            setRegistrationError(null)
+                            field.handleChange(event.target.value)
+                          }}
+                          placeholder="Your secret key"
+                          type="password"
+                          className="h-10 rounded-xl px-3"
+                          aria-invalid={isInvalid}
+                        />
+                        {isInvalid ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )
+                  }}
+                />
+              </FieldGroup>
+              {registrationError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{registrationError}</AlertDescription>
+                </Alert>
+              ) : null}
+              <DialogFooter className="mt-2">
+                <form.Subscribe
+                  selector={(state) => state.isSubmitting}
+                  children={(isSubmitting) => (
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "Adding…" : "Add worker"}
+                    </Button>
+                  )}
+                />
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {workers.length > 0 ? (
+        <ExternalWorkerTable
+          workers={workers}
+          onDeleteWorker={onDeleteWorker}
+          onRefreshWorker={onRefreshWorker}
+          onToggleWorker={onToggleWorker}
+        />
+      ) : (
+        <p className="py-1 text-sm text-muted-foreground">
+          No custom extractor workers configured.
+        </p>
+      )}
     </div>
-    {workers.length > 0 ? (
-      <ExternalWorkerTable
-        workers={workers}
-        onDeleteWorker={onDeleteWorker}
-        onRefreshWorker={onRefreshWorker}
-        onToggleWorker={onToggleWorker}
-      />
-    ) : (
-      <p className="py-1 text-sm text-muted-foreground">
-        No custom extractor workers configured.
-      </p>
-    )}
-  </div>
-)
+  )
+}
 
 interface PluginCredentialEditorProps {
   domain: PluginDomain

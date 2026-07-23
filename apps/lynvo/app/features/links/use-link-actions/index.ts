@@ -73,7 +73,7 @@ export function useLinkActions({
     softRefresh: handleSoftRefresh,
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
-    setAsCurrent: recentLinks.setEpisodeAsCurrent,
+    setAsCurrent: recentLinks.setPlayableItemAsCurrent,
   }
   const { isSaving, handleSave, confirmSelection, saveSelectionDraft } =
     useSaveActions({

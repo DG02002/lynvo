@@ -1,40 +1,15 @@
+import type { AuditableLogger } from "evlog"
+import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { Context, MiddlewareHandler } from "hono"
-import { logger } from "./logger"
-
-export interface RequestEvent extends Record<string, unknown> {
-  event: "request_completed"
-  service: "lynvo"
-  environment: string
-  service_version: string
-  commit_hash: string
-  region: string
-  instance_id: string
-  request_id: string
-  timestamp: string
-  method: string
-  path: string
-}
 
 interface RequestLoggingVariables {
-  requestEvent: RequestEvent
+  log: AuditableLogger
+  requestId: string
 }
 
 export interface RequestLoggingEnvironment {
   Bindings: Env
   Variables: RequestLoggingVariables
-}
-
-const serializeError = (error: unknown): Record<string, string> => ({
-  type: error instanceof Error ? error.name : "UnknownError",
-  message: error instanceof Error ? error.message : String(error),
-})
-
-const emitRequestEvent = (event: RequestEvent): void => {
-  if (event.outcome === "server_error") {
-    logger.error(event)
-    return
-  }
-  logger.info(event)
 }
 
 const incomingRequestId = (request: Request): string | undefined => {
@@ -46,54 +21,39 @@ export const addRequestContext = (
   context: Context<RequestLoggingEnvironment>,
   fields: Record<string, unknown>
 ): void => {
-  Object.assign(context.get("requestEvent"), fields)
+  context.get("log")?.set(fields)
 }
 
-export const requestLogging =
-  (): MiddlewareHandler<RequestLoggingEnvironment> => async (context, next) => {
-    const startedAt = Date.now()
+export const requestLogging = (
+  options?: EvlogHonoOptions
+): MiddlewareHandler<RequestLoggingEnvironment> => {
+  const evlogMiddleware = evlog(options)
+
+  return async (context, next) => {
     const request = context.req.raw
     const requestId = incomingRequestId(request) ?? crypto.randomUUID()
     const cloudflareRay = request.headers.get("cf-ray")
-    const event: RequestEvent = {
-      event: "request_completed",
-      service: "lynvo",
-      environment: import.meta.env.DEV
-        ? "development"
-        : (context.env.ENVIRONMENT ?? "production"),
-      service_version: context.env.SERVICE_VERSION ?? "development",
-      commit_hash: context.env.COMMIT_HASH ?? "unknown",
-      region: cloudflareRay?.split("-")[1] ?? "unknown",
-      instance_id: context.env.CF_VERSION_METADATA?.id ?? "development",
-      request_id: requestId,
-      timestamp: new Date().toISOString(),
-      method: request.method,
-      path: new URL(request.url).pathname,
-      host: new URL(request.url).hostname,
-      cloudflare_ray: cloudflareRay,
-      client_country: request.headers.get("cf-ipcountry") ?? "unknown",
-      user_agent: request.headers.get("user-agent"),
-      content_length: request.headers.get("content-length"),
-    }
-    context.set("requestEvent", event)
+
+    context.set("requestId", requestId)
     context.header("x-request-id", requestId)
 
-    try {
+    await evlogMiddleware(context, async () => {
+      context.get("log").set({
+        environment: import.meta.env.DEV
+          ? "development"
+          : (context.env.ENVIRONMENT ?? "production"),
+        service_version: context.env.SERVICE_VERSION ?? "development",
+        commit_hash: context.env.COMMIT_HASH ?? "unknown",
+        region: cloudflareRay?.split("-")[1] ?? "unknown",
+        instance_id: context.env.CF_VERSION_METADATA?.id ?? "development",
+        request_id: requestId,
+        host: new URL(request.url).hostname,
+        cloudflare_ray: cloudflareRay,
+        client_country: request.headers.get("cf-ipcountry") ?? "unknown",
+        user_agent: request.headers.get("user-agent"),
+        content_length: request.headers.get("content-length"),
+      })
       await next()
-      event.status_code = context.res.status
-      event.outcome =
-        context.res.status >= 500
-          ? "server_error"
-          : context.res.status >= 400
-            ? "client_error"
-            : "success"
-    } catch (error) {
-      event.status_code = 500
-      event.outcome = "server_error"
-      event.error = serializeError(error)
-      throw error
-    } finally {
-      event.duration_ms = Date.now() - startedAt
-      emitRequestEvent(event)
-    }
+    })
   }
+}

@@ -39,7 +39,7 @@ declare global {
     refreshSource: (item: RecentLinkViewItem) => Promise<ExtractedLink[]>
     resolveMirror: (
       item: RecentLinkViewItem | undefined,
-      episodeUrl: string
+      lazyItemUrl: string
     ) => Promise<ExtractedLink[]>
     resolveFolder: (options: {
       folderUrl: string
@@ -119,8 +119,8 @@ export const createExtractionOrchestration = (
       })
       return result.links
     },
-    resolveMirror: async (item, episodeUrl) =>
-      (await extractSavedItemNode(item, episodeUrl)).links,
+    resolveMirror: async (item, lazyItemUrl) =>
+      (await extractSavedItemNode(item, lazyItemUrl)).links,
     resolveFolder: async ({ folderUrl, workerId }) =>
       await extractFolder(folderUrl, workerId),
     expandFolder: async ({ item, linkId, linkUrl }) => {

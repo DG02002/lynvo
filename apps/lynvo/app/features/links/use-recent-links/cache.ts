@@ -8,6 +8,11 @@ import {
   toLegacyMeta,
   type SavedLink,
 } from "~/features/links/links.mapper"
+import {
+  linksCacheEnvelopeSchema,
+  storedRecentLinkSchema,
+  storedSavedLinkSchema,
+} from "~/features/links/storage-schemas"
 
 export const RECENTS_MAX_LIMIT = RECENT_LINKS_MAX_COUNT
 export const RECENTS_KEY = "sl2jp:recents:v1"
@@ -42,11 +47,15 @@ export function readLinksCache(userId?: string): LinksCache | undefined {
       return undefined
     }
     const parsed: unknown = JSON.parse(raw)
-    if (isRecord(parsed) && Array.isArray(parsed.results)) {
+    const result = linksCacheEnvelopeSchema.safeParse(parsed)
+    if (result.success) {
       return {
-        results: parsed.results.map(toSavedLink),
-        version: optionalNumber(parsed.version) ?? 0,
-        etag: optionalString(parsed.etag) ?? "",
+        results: result.data.results.flatMap((value) => {
+          const savedLink = storedSavedLinkSchema.safeParse(value)
+          return savedLink.success ? [toSavedLink(savedLink.data)] : []
+        }),
+        version: result.data.version,
+        etag: result.data.etag,
       }
     }
   } catch (error) {
@@ -96,7 +105,7 @@ function toSavedLink(value: unknown): SavedLink {
     title: optionalString(value.title),
     created_at: optionalNumber(value.created_at) ?? 0,
     updated_at: optionalNumber(value.updated_at),
-    meta: value.meta as any,
+    meta: normalizeLinkMetadata(value.meta),
     extractedLinks: undefined,
   })
 }
@@ -110,14 +119,21 @@ export function readLocalRecents(): RecentLinkViewItem[] {
     if (!savedRecents) {
       return []
     }
-    const parsed = JSON.parse(savedRecents)
+    const parsed: unknown = JSON.parse(savedRecents)
     if (!Array.isArray(parsed)) {
       return []
     }
-    return parsed.map((item: RecentLinkViewItem) => ({
-      ...item,
-      extractedLinks: undefined,
-    }))
+    return parsed.flatMap((value) => {
+      const item = storedRecentLinkSchema.safeParse(value)
+      return item.success
+        ? [
+            {
+              ...item.data,
+              extractedLinks: undefined,
+            } as RecentLinkViewItem,
+          ]
+        : []
+    })
   } catch (error) {
     console.error("Unable to read recent links", error)
     localStorage.removeItem(RECENTS_KEY)

@@ -1,11 +1,14 @@
 import * as React from "react"
+import { Link01Icon } from "@hugeicons/core-free-icons"
 import { useQuery } from "convex/react"
 import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
-import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
+import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
 import { client } from "~/lib/effect/api/client"
+import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
+import type { OfficialPlugin } from "./plugin-settings-data"
 import {
   SectionHeading,
   SettingsList,
@@ -13,28 +16,120 @@ import {
   SettingsRow,
 } from "./settings-layout"
 
-const formatValue = (value: number): string =>
+interface UsageTotal {
+  used: number
+  limit: number
+}
+
+interface UsageListItem {
+  key: string
+  name: string
+  total: UsageTotal
+  icon?: OfficialPlugin["icon"]
+  iconUrl?: string
+  fallback: "extractor" | "source"
+}
+
+const monthlyExtractions = (metrics: readonly UsageMetric[]) =>
+  metrics.filter(
+    (metric) => metric.period === "monthly" && metric.unit === "extractions"
+  )
+
+const totalMetrics = (metrics: readonly UsageMetric[]): UsageTotal =>
+  metrics.reduce(
+    (total, metric) => ({
+      used: total.used + metric.used,
+      limit: total.limit + metric.limit,
+    }),
+    { used: 0, limit: 0 }
+  )
+
+const formatCount = (value: number): string =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
 
-const UsageMetricRow = ({ metric }: { metric: UsageMetric }) => {
-  const progress = Math.min((metric.used / metric.limit) * 100, 100)
-  const remaining = Math.max(metric.limit - metric.used, 0)
+const formatCompactCount = (value: number): string =>
+  Number.isInteger(value) && value >= 0 && value < 10
+    ? String(value).padStart(2, "0")
+    : formatCount(value)
+
+const formatResetDate = (resetsAt?: string): string | undefined => {
+  if (!resetsAt) return undefined
+  const date = new Date(resetsAt)
+  if (Number.isNaN(date.getTime())) return undefined
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date)
+}
+
+const UsageSummary = ({
+  label,
+  total,
+  resetsAt,
+}: {
+  label: string
+  total: UsageTotal
+  resetsAt?: string
+}) => {
+  const usedPercent =
+    total.limit > 0 ? Math.min((total.used / total.limit) * 100, 100) : 0
+  const remainingPercent = Math.max(Math.round(100 - usedPercent), 0)
+  const resetDate = formatResetDate(resetsAt)
+
   return (
-    <SettingsRow className="flex-col items-stretch gap-3">
+    <div className="flex flex-col gap-3 py-4">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-sm text-foreground">{metric.label}</span>
-        <span className="shrink-0 text-sm text-muted-foreground">
-          {formatValue(remaining)} {metric.unit} remaining
+        <h2 className="text-base font-normal text-foreground">
+          Monthly usage limit
+        </h2>
+        <span className="shrink-0 text-base font-normal text-foreground">
+          {remainingPercent}% remaining
         </span>
       </div>
-      <Progress value={progress} aria-label={`${metric.label} usage`} />
-      <span className="text-xs text-muted-foreground">
-        {formatValue(metric.used)} of {formatValue(metric.limit)} {metric.unit}{" "}
-        used {metric.period}
-      </span>
-    </SettingsRow>
+      <Progress
+        value={remainingPercent}
+        aria-label={`${label} monthly extraction usage remaining`}
+      />
+      {resetDate && (
+        <span className="text-sm text-muted-foreground">
+          Resets {resetDate}
+        </span>
+      )}
+    </div>
   )
 }
+
+const UsageItem = ({
+  icon,
+  iconUrl,
+  fallback,
+  name,
+  total,
+}: {
+  icon?: OfficialPlugin["icon"]
+  iconUrl?: string
+  fallback: "extractor" | "source"
+  name: string
+  total: UsageTotal
+}) => (
+  <SettingsRow className="py-2">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <PluginIcon
+        icon={icon}
+        iconUrl={iconUrl}
+        fallback={fallback}
+        className="size-6"
+      />
+      <span className="truncate text-sm text-foreground">{name}</span>
+    </div>
+    <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+      {formatCompactCount(total.used)}/{formatCount(total.limit)}
+    </span>
+  </SettingsRow>
+)
 
 const UsageLoading = () => (
   <SettingsList>
@@ -45,7 +140,11 @@ const UsageLoading = () => (
   </SettingsList>
 )
 
-export const UsageSettings = () => {
+export const UsageSettings = ({
+  officialPlugins,
+}: {
+  officialPlugins: OfficialPlugin[]
+}) => {
   const timeBucket = useDailyTimeBucket()
   const officialUsage = useQuery(api.usage.getUsage, { timeBucket })
   const [externalUsage, setExternalUsage] = React.useState<
@@ -64,6 +163,7 @@ export const UsageSettings = () => {
       () => {
         if (isCurrent) {
           setExternalUsageFailed(true)
+          setExternalUsage([])
         }
       }
     )
@@ -72,78 +172,138 @@ export const UsageSettings = () => {
     }
   }, [])
 
+  const officialMetrics = officialUsage
+    ? monthlyExtractions(officialUsage.metrics)
+    : []
+  const availableExternalUsage = externalUsage?.filter(
+    (worker) => !worker.error
+  )
+  const externalMetrics =
+    availableExternalUsage?.flatMap((worker) =>
+      monthlyExtractions(worker.metrics)
+    ) ?? []
+  const officialResetAt = officialMetrics
+    .map((metric) => metric.resetsAt)
+    .filter(Boolean)
+    .sort()[0]
+  const externalResetAt = externalMetrics
+    .map((metric) => metric.resetsAt)
+    .filter(Boolean)
+    .sort()[0]
+
+  const officialItems: UsageListItem[] = officialMetrics
+    .map((metric) => {
+      const plugin = officialPlugins.find(
+        (candidate) => candidate.id === metric.sourceId
+      )
+      const isDirect = metric.sourceId === "direct"
+      return {
+        key: metric.id,
+        icon: isDirect ? { hugeIcon: Link01Icon } : plugin?.icon,
+        fallback: "source" as const,
+        name: plugin?.name ?? metric.label.replace(/\s+extractions$/i, ""),
+        total: { used: metric.used, limit: metric.limit },
+        sortOrder: isDirect ? 0 : 1,
+      }
+    })
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+
+  const externalItems: UsageListItem[] =
+    externalUsage?.flatMap((worker) =>
+      worker.error
+        ? []
+        : monthlyExtractions(worker.metrics).map((metric) => {
+            const source = worker.sources?.find(
+              (candidate) => candidate.id === metric.sourceId
+            )
+            return {
+              key: `${worker.workerId}:${metric.id}`,
+              iconUrl: source?.iconUrl,
+              fallback: "source" as const,
+              name:
+                source?.name ?? metric.label.replace(/\s+extractions$/i, ""),
+              total: { used: metric.used, limit: metric.limit },
+            }
+          })
+    ) ?? []
+  const isLoading = officialUsage === undefined || externalUsage === undefined
+
   return (
     <div className="flex flex-col gap-7">
-      <SettingsPanel>
-        <SectionHeading
-          title="Official plugins"
-          description="Usage is enforced by Lynvo for extraction work performed by official plugins."
-        />
-        {officialUsage ? (
-          <SettingsList>
-            {officialUsage.metrics.map((metric) => (
-              <UsageMetricRow key={metric.id} metric={metric} />
-            ))}
-          </SettingsList>
-        ) : (
-          <UsageLoading />
-        )}
-      </SettingsPanel>
+      {isLoading ? (
+        <UsageLoading />
+      ) : (
+        <>
+          <SettingsPanel className="gap-4">
+            <SectionHeading
+              title="Official extractor"
+              description="Monthly extraction usage shared across official plugins."
+            />
+            <UsageSummary
+              label="Official extractor"
+              total={totalMetrics(officialMetrics)}
+              resetsAt={officialResetAt}
+            />
+            <SettingsList>
+              {officialItems.map((item) => (
+                <UsageItem
+                  key={item.key}
+                  icon={item.icon}
+                  iconUrl={item.iconUrl}
+                  fallback={item.fallback}
+                  name={item.name}
+                  total={item.total}
+                />
+              ))}
+            </SettingsList>
+          </SettingsPanel>
 
-      <SettingsPanel>
-        <SectionHeading
-          title="External extractors"
-          description="Each extractor defines and enforces the limits attached to your saved API credential."
-        />
-        {externalUsageFailed ? (
-          <SettingsList>
-            <SettingsRow>
-              <span className="text-sm text-destructive">
-                External extractor usage is temporarily unavailable.
-              </span>
-            </SettingsRow>
-          </SettingsList>
-        ) : externalUsage === undefined ? (
-          <UsageLoading />
-        ) : externalUsage.length === 0 ? (
-          <SettingsList>
-            <SettingsRow>
-              <span className="text-sm text-muted-foreground">
-                No enabled external extractors.
-              </span>
-            </SettingsRow>
-          </SettingsList>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {externalUsage.map((worker) => (
-              <div key={worker.workerId} className="flex flex-col gap-2">
-                <h3 className="text-sm font-medium text-foreground">
-                  {worker.name}
-                </h3>
-                {worker.error ? (
-                  <SettingsList>
-                    <SettingsRow>
-                      <span className="text-sm text-destructive">
-                        Usage verification failed. Refresh this extractor from
-                        Plugins settings.
-                      </span>
-                    </SettingsRow>
-                  </SettingsList>
-                ) : (
-                  <SettingsList>
-                    {worker.metrics.map((metric) => (
-                      <UsageMetricRow
-                        key={`${worker.workerId}:${metric.id}`}
-                        metric={metric}
-                      />
-                    ))}
-                  </SettingsList>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </SettingsPanel>
+          <SettingsPanel className="gap-4">
+            <SectionHeading
+              title="External extractors"
+              description="Monthly extraction usage shared across enabled external plugins."
+            />
+            <UsageSummary
+              label="External extractors"
+              total={totalMetrics(externalMetrics)}
+              resetsAt={externalResetAt}
+            />
+            <SettingsList>
+              {externalItems.map((item) => (
+                <UsageItem
+                  key={item.key}
+                  icon={item.icon}
+                  iconUrl={item.iconUrl}
+                  fallback={item.fallback}
+                  name={item.name}
+                  total={item.total}
+                />
+              ))}
+              {externalUsage
+                ?.filter((worker) => worker.error)
+                .map((worker) => (
+                  <SettingsRow key={worker.workerId} className="py-2">
+                    <span className="text-sm text-destructive">
+                      {worker.name} usage verification failed.
+                    </span>
+                  </SettingsRow>
+                ))}
+              {externalItems.length === 0 && !externalUsageFailed && (
+                <SettingsRow className="py-2">
+                  <span className="text-sm text-muted-foreground">
+                    No enabled external extractors.
+                  </span>
+                </SettingsRow>
+              )}
+            </SettingsList>
+          </SettingsPanel>
+        </>
+      )}
+      {externalUsageFailed && (
+        <p className="text-sm text-destructive">
+          External extractor usage is temporarily unavailable.
+        </p>
+      )}
     </div>
   )
 }

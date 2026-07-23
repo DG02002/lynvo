@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { toast } from "sonner"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import type { ExternalWorkerFormValues } from "./plugin-settings-schemas"
 
 interface MutationResult {
   success: boolean
@@ -140,10 +141,6 @@ const handleRefreshWorker = async (workerId: string, showFeedback = true) => {
 }
 
 export const usePluginSettingsActions = ({
-  baseUrl,
-  apiKey,
-  setBaseUrl,
-  setApiKey,
   domainInputs,
   setDomainInputs,
   passwordInputs,
@@ -152,10 +149,6 @@ export const usePluginSettingsActions = ({
   setUsernameInputs,
   setPasswordProtectedInputs,
 }: {
-  baseUrl: string
-  apiKey: string
-  setBaseUrl: (value: string) => void
-  setApiKey: (value: string) => void
   domainInputs: Record<string, string>
   setDomainInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
   passwordInputs: Record<string, string>
@@ -170,7 +163,6 @@ export const usePluginSettingsActions = ({
     React.SetStateAction<Record<string, boolean>>
   >
 }) => {
-  const [isAdding, setIsAdding] = React.useState(false)
   const [addingDomainFor, setAddingDomainFor] = React.useState<string | null>(
     null
   )
@@ -225,14 +217,11 @@ export const usePluginSettingsActions = ({
     }
   }
 
-  const handleAddWorker = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setIsAdding(true)
-
+  const handleAddWorker = async (value: ExternalWorkerFormValues) => {
     try {
       const data = await Effect.runPromise(
         client.workers.create({
-          payload: { baseUrl, apiKey },
+          payload: value,
         })
       )
       if (
@@ -242,18 +231,17 @@ export const usePluginSettingsActions = ({
           "Unable to add extractor. Check its details and try again."
         )
       ) {
-        setBaseUrl("")
-        setApiKey("")
+        return null
       }
+      return "Unable to add extractor. Check its details and try again."
     } catch (error) {
-      toast.error(getErrorMessage(error))
-    } finally {
-      setIsAdding(false)
+      const message = getErrorMessage(error)
+      toast.error(message)
+      return message
     }
   }
 
   return {
-    isAdding,
     addingDomainFor,
     domainErrors,
     handleAddDomain,

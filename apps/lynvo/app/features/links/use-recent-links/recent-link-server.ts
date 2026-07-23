@@ -1,4 +1,5 @@
 import type { LinkMetadataV2, MetaData } from "~/features/links/types"
+import { metadataSchema } from "~/features/links/storage-schemas"
 
 export type CreateRecentLink = (input: {
   url: string
@@ -42,7 +43,8 @@ export const fetchMetaInternal = async (
       }
     )
     if (response.ok) {
-      return (await response.json()) as MetaData
+      const result = metadataSchema.safeParse(await response.json())
+      return result.success ? result.data : {}
     }
   } catch (error) {
     console.warn("Unable to fetch link metadata", error)

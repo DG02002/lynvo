@@ -15,12 +15,12 @@ export interface LinkCardActions {
   hardRefresh: (url: string) => void
   expandMirror: (
     itemUrl: string,
-    episodeUrl: string,
+    lazyItemUrl: string,
     bypassCache?: boolean
   ) => Promise<ExtractedLink[] | null>
   setAsCurrent: (
     itemUrl: string,
-    episodeUrl: string,
-    folderEpisodeUrls: string[]
+    lazyItemUrl: string,
+    folderItemUrls: string[]
   ) => void
 }

@@ -55,18 +55,20 @@ describe("LinkInputSection", () => {
   it("shows a routed source without exposing the plugin version", () => {
     const { container } = render(
       <LinkInputSection
-        url="https://hubdrive.example/file"
+        url="https://extractor-source-alpha.example/file"
         setUrl={vi.fn()}
         onSave={vi.fn()}
         isSaving
         extractionPreview={{
           meta: {
-            sourceName: "HubDrive",
-            sourceIconUrl: "https://extractor.example/icons/hubdrive.webp",
+            sourceName: "Extractor Source Alpha",
+            sourceIconUrl:
+              "https://extractor.example/icons/extractor-source-alpha.webp",
             sourceVersion: "1.1.0",
-            pluginName: "PlnkExtractor",
-            routeSourceName: "HubCloud",
-            routeSourceIconUrl: "https://extractor.example/icons/hubcloud.webp",
+            pluginName: "Example Extractor",
+            routeSourceName: "Extractor Source Beta",
+            routeSourceIconUrl:
+              "https://extractor.example/icons/extractor-source-beta.webp",
           },
         }}
         error={null}
@@ -74,17 +76,19 @@ describe("LinkInputSection", () => {
       />
     )
 
-    expect(screen.getByText("HubDrive")).toBeVisible()
+    expect(screen.getByText("Extractor Source Alpha")).toBeVisible()
     expect(screen.getByLabelText("Routes to")).toBeVisible()
-    expect(screen.getByText("HubCloud")).toBeVisible()
-    expect(screen.getByText("PlnkExtractor")).toBeVisible()
-    expect(screen.getByText(/^from/)).toHaveTextContent("from PlnkExtractor")
+    expect(screen.getByText("Extractor Source Beta")).toBeVisible()
+    expect(screen.getByText("Example Extractor")).toBeVisible()
+    expect(screen.getByText(/^from/)).toHaveTextContent(
+      "from Example Extractor"
+    )
     expect(screen.queryByText(/1\.1\.0/)).not.toBeInTheDocument()
     expect(
       Array.from(container.querySelectorAll("img"), (image) => image.src)
     ).toEqual([
-      "https://extractor.example/icons/hubdrive.webp",
-      "https://extractor.example/icons/hubcloud.webp",
+      "https://extractor.example/icons/extractor-source-alpha.webp",
+      "https://extractor.example/icons/extractor-source-beta.webp",
     ])
   })
 })

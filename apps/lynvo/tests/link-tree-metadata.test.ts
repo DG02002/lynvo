@@ -5,28 +5,31 @@ describe("attachResolvedChildren", () => {
   it("updates a nested node without mutating the source tree", () => {
     const source = [
       {
-        id: "season",
-        url: "https://example.com/season",
-        label: "Season",
+        id: "folder",
+        url: "https://example.com/folder",
+        label: "Folder",
         type: "folder" as const,
         children: [
           {
-            id: "episode",
-            url: "https://example.com/episode",
-            label: "Episode",
+            id: "playable-item",
+            url: "https://example.com/playable-item",
+            label: "Playable Item",
             type: "folder" as const,
           },
         ],
       },
     ]
     const resolvedChildren = [
-      { url: "https://cdn.example/episode.mp4", label: "Episode file" },
+      {
+        url: "https://cdn.example/playable-item.mp4",
+        label: "Playable Item file",
+      },
     ]
 
     const result = attachResolvedChildren({
       links: source,
-      linkId: "episode",
-      linkUrl: "https://example.com/episode",
+      linkId: "playable-item",
+      linkUrl: "https://example.com/playable-item",
       resolvedChildren,
     })
 

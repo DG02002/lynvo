@@ -23,7 +23,7 @@ describe("links mapper legacy normalization", () => {
         pluginName: "Plugin",
         pluginIcon: "icon.png",
         password: "secret",
-        badge: "1080p",
+        badge: "Variant Alpha",
         extractedLinks: [
           { id: "a", url: "https://a.test", label: "A", watched: true },
           {
@@ -42,7 +42,7 @@ describe("links mapper legacy normalization", () => {
     expect(metadata.source.pluginName).toBe("Plugin")
     expect(metadata.source.pluginIcon).toBe("icon.png")
     expect(metadata.source.password).toBeUndefined()
-    expect(metadata.source.badge).toBe("1080p")
+    expect(metadata.source.badge).toBe("Variant Alpha")
     expect(metadata.playback.watchedUrls).toEqual([
       "https://a.test",
       "https://b.test",
@@ -167,7 +167,7 @@ describe("save-flow metadata preservation", () => {
         sourceId: "resolver-beta",
         sourceName: "Resolver Beta",
         sourceIconUrl:
-          "https://worker.example/icons/plugins/resolver-beta.webp",
+          "https://worker.example/icons/sources/resolver-beta.webp",
         sourceStatus: "active",
         sourceVersion: "1.0.0",
       },
@@ -179,7 +179,7 @@ describe("save-flow metadata preservation", () => {
     )
 
     expect(merged.sourceIconUrl).toBe(
-      "https://worker.example/icons/plugins/resolver-beta.webp"
+      "https://worker.example/icons/sources/resolver-beta.webp"
     )
     expect(merged.sourceStatus).toBe("active")
     expect(merged.sourceVersion).toBe("1.0.0")

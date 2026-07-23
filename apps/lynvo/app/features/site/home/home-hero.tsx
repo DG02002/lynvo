@@ -5,8 +5,6 @@ import {
   PackageSearchIcon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
-import { Link } from "react-router"
-import { Button } from "~/components/ui/button"
 import { NewBadge } from "~/components/save-list/new-badge"
 import {
   InputGroup,
@@ -14,13 +12,8 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import { authPaths } from "~/lib/paths"
 
-interface HomeHeroProps {
-  isSignedIn: boolean
-}
-
-export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
+export const HomeHero = () => {
   return (
     <section className="relative flex min-h-[90vh] w-full flex-col items-center justify-center overflow-hidden bg-background px-0 pt-32 pb-20 lg:pt-36">
       {/* Vercel-style ambient glow */}
@@ -39,16 +32,6 @@ export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
             in the Android player that fits the link—on Android TV, phone, or
             tablet.
           </p>
-
-          {!isSignedIn && (
-            <div className="t-stagger-line t-stagger-line--4 mt-4 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
-              <Link to={authPaths.createAccount} viewTransition>
-                <Button size="lg" className="w-full sm:w-auto">
-                  Start saving links
-                </Button>
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* Static save preview: intentionally has no clipboard or form access. */}
@@ -60,7 +43,7 @@ export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
             <div className="overflow-hidden">
               <div className="w-full rounded-md px-1 py-2 text-left">
                 <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-6000 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
-                  https://example.com/1080p.mp4
+                  https://media.example/playable-item.mp4
                 </span>
               </div>
             </div>
@@ -101,7 +84,7 @@ export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block line-clamp-3 break-words text-sm md:text-lg">
-                    Big Buck Bunny - 1080p
+                    Playable Item Alpha
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     Direct video
@@ -115,10 +98,10 @@ export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block line-clamp-3 break-words text-sm md:text-lg">
-                    Big Buck Bunny — 4K
+                    Playable Item Beta
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    HubCloud
+                    Extractor Source Beta
                   </span>
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground">
@@ -133,10 +116,10 @@ export const HomeHero = ({ isSignedIn }: HomeHeroProps) => {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block line-clamp-3 break-words text-sm md:text-lg">
-                    Open Movie Archive Directory
+                    Open Collection Directory
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    Open Movie Archive
+                    Open Collection
                   </span>
                 </span>
                 <NewBadge />

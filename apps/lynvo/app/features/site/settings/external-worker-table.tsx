@@ -1,8 +1,8 @@
 import * as React from "react"
 import {
   ArrowDown01Icon,
-  BoundingBoxIcon,
   Delete02Icon,
+  LinkSquare02Icon,
   MoreHorizontalIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
@@ -42,7 +42,7 @@ const ExternalWorkerRow = ({
   onToggleWorker,
 }: ExternalWorkerRowProps) => {
   const [isExpanded, setIsExpanded] = React.useState(true)
-  const manifest = getWorkerManifestView(worker.manifest, worker.baseUrl)
+  const manifest = getWorkerManifestView(worker.manifest)
   const sourceListId = `external-worker-sources-${worker._id}`
   const isDown = worker.verificationStatus === WORKER_VERIFICATION_STATUS.down
   const isUsable = isWorkerUsable(worker)
@@ -50,10 +50,11 @@ const ExternalWorkerRow = ({
   return (
     <div className="flex flex-col">
       <SettingsRow className="gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <HugeiconsIcon
-            icon={BoundingBoxIcon}
-            className="size-6 shrink-0 text-foreground"
+        <div className="-ml-1 flex min-w-0 items-center gap-3">
+          <PluginIcon
+            iconUrl={manifest.icon ?? undefined}
+            fallback="extractor"
+            className="size-10 text-foreground"
           />
           <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -145,20 +146,34 @@ const ExternalWorkerRow = ({
           className="ml-9 divide-y divide-border border-t border-border"
         >
           {manifest.sources.map((source) => (
-            <div
-              key={source.id}
-              className="flex min-h-14 items-center justify-between gap-3 py-2"
-            >
+            <SettingsRow key={source.id} className="gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <PluginIcon iconUrl={source.iconUrl} className="size-8" />
-                <div className="flex min-w-0 items-baseline gap-2">
+                <PluginIcon
+                  iconUrl={source.iconUrl}
+                  fallback="source"
+                  className="size-10"
+                />
+                <div className="flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-sm text-foreground">
                     {source.displayName}
                   </span>
-                  {source.hosts[0] && (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {source.hosts[0]}
-                    </span>
+                  {(source.homepage || source.hosts[0]) && (
+                    <a
+                      href={
+                        source.homepage ??
+                        `https://${source.hosts[0] as string}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`View upstream project for ${source.displayName}`}
+                      title="View upstream project"
+                      className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <HugeiconsIcon
+                        icon={LinkSquare02Icon}
+                        className="size-4"
+                      />
+                    </a>
                   )}
                 </div>
               </div>
@@ -175,7 +190,7 @@ const ExternalWorkerRow = ({
                   </span>
                 )}
               </div>
-            </div>
+            </SettingsRow>
           ))}
         </div>
       )}

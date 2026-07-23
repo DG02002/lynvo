@@ -10,7 +10,7 @@ export {
   toLegacyMeta,
 } from "./link-metadata-normalization"
 export {
-  withNewEpisodes,
+  withNewPlayableItems,
   withResolvedMirrors,
   withWatchedUrl,
 } from "./link-playback-metadata"

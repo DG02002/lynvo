@@ -182,40 +182,40 @@ const SaveListUiTestRoute = () => {
       },
       softRefresh: (url) => recordEvent(`Refresh: ${url}`),
       hardRefresh: (url) => recordEvent(`Re-select: ${url}`),
-      expandMirror: async (_, episodeUrl) => {
+      expandMirror: async (_, lazyItemUrl) => {
         setExtractingItems((currentItems) =>
-          new Set(currentItems).add(episodeUrl)
+          new Set(currentItems).add(lazyItemUrl)
         )
         await new Promise((resolve) =>
           setTimeout(resolve, TEST_MIRROR_RESOLUTION_DELAY_MS)
         )
         setExtractingItems((currentItems) => {
           const nextItems = new Set(currentItems)
-          nextItems.delete(episodeUrl)
+          nextItems.delete(lazyItemUrl)
           return nextItems
         })
-        recordEvent(`Resolve mirrors: ${episodeUrl}`)
-        if (episodeUrl.includes("resolution-failure")) {
+        recordEvent(`Resolve mirrors: ${lazyItemUrl}`)
+        if (lazyItemUrl.includes("resolution-failure")) {
           return null
         }
         const mirrors: ExtractedLink[] = [
           {
-            id: `${episodeUrl}-fsl`,
-            url: `${episodeUrl}/fsl`,
-            label: "Play from FSL Server",
+            id: `${lazyItemUrl}-route-alpha`,
+            url: `${lazyItemUrl}/route-alpha`,
+            label: "Play from Source Route Alpha",
             type: "file",
             status: "up",
           },
           {
-            id: `${episodeUrl}-s3`,
-            url: `${episodeUrl}/s3`,
-            label: "Play from S3 Server",
+            id: `${lazyItemUrl}-route-beta`,
+            url: `${lazyItemUrl}/route-beta`,
+            label: "Play from Source Route Beta Server",
             type: "file",
             status: "up",
           },
           {
-            id: `${episodeUrl}-cf-down`,
-            url: `${episodeUrl}/cf-down`,
+            id: `${lazyItemUrl}-route-gamma`,
+            url: `${lazyItemUrl}/route-gamma`,
             label: "Play from CF Server (404)",
             type: "file",
             status: "down",
@@ -223,8 +223,8 @@ const SaveListUiTestRoute = () => {
         ]
         return mirrors
       },
-      setAsCurrent: (_, episodeUrl) =>
-        recordEvent(`Set current: ${episodeUrl}`),
+      setAsCurrent: (_, lazyItemUrl) =>
+        recordEvent(`Set current: ${lazyItemUrl}`),
     }),
     []
   )

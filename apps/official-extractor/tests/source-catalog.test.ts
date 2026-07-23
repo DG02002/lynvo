@@ -16,24 +16,41 @@ describe("official source catalog", () => {
     )
     expect(
       findOfficialSource(
-        "https://drive.example/0:/Shows/",
+        "https://drive.example/0:/Collections/",
         "bhadoo-google-drive-index"
       )?.id
     ).toBe("bhadoo-google-drive-index")
     expect(
-      findOfficialSource("https://index.example/Shows/", "onedrive-index")?.id
+      findOfficialSource("https://index.example/Collections/", "onedrive-index")
+        ?.id
     ).toBe("onedrive-index")
   })
 
-  it("publishes only valid public WebP icon URLs", () => {
+  it("publishes only owned public WebP icon URLs", () => {
     const extension = getLynvoManifestExtension(
       createOfficialManifest("http://localhost:5173")
     )
-    for (const source of extension.sources ?? []) {
-      expect(source.iconUrl).toMatch(
-        /^http:\/\/localhost:5173\/icons\/plugins\/.+\.webp$/
+    const bhadooSource = extension.sources?.find(
+      (source) => source.id === "bhadoo-google-drive-index"
+    )
+    expect(bhadooSource?.hasIcon).toBe(false)
+    expect(bhadooSource?.iconUrl).toBeUndefined()
+    expect(
+      extension.sources?.find((source) => source.id === "onedrive-index")
+    ).toMatchObject({
+      hasIcon: true,
+      iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
+    })
+  })
+
+  it("omits source icons when no public asset origin is configured", () => {
+    const extension = getLynvoManifestExtension(createOfficialManifest())
+
+    expect(
+      extension.sources?.every(
+        (source) => source.hasIcon === false && source.iconUrl === undefined
       )
-    }
+    ).toBe(true)
   })
 
   it("does not import application implementation modules", () => {

@@ -48,6 +48,18 @@ export const getWorkerUsage = Effect.fn(
   return {
     workerId: worker._id,
     name: manifest?.displayName ?? worker.baseUrl,
+    ...(manifest?.iconUrl ? { iconUrl: manifest.iconUrl } : {}),
+    ...(manifest
+      ? {
+          sources: (getLynvoManifestExtension(manifest).sources ?? []).map(
+            (source) => ({
+              id: source.id,
+              name: source.displayName,
+              ...(source.iconUrl ? { iconUrl: source.iconUrl } : {}),
+            })
+          ),
+        }
+      : {}),
     metrics: usage.metrics,
   }
 })
@@ -118,12 +130,7 @@ export const getExtractorMetadata = (
     : targetUrl
       ? getMatchedExtractorSource(manifest, targetUrl)
       : undefined
-  const routeSourceId =
-    source?.routesToSourceId ??
-    (manifest.extractorId === "com.lynvo.plnkextractor" &&
-    source?.id === "hubdrive"
-      ? "hubcloud"
-      : undefined)
+  const routeSourceId = source?.routesToSourceId
   const routeSource = routeSourceId
     ? getLynvoManifestExtension(manifest).sources?.find(
         (candidate) => candidate.id === routeSourceId

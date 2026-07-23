@@ -38,7 +38,7 @@ export const withWatchedUrl = (
 
 export const withResolvedMirrors = (
   metadata: unknown,
-  episodeUrl: string,
+  lazyItemUrl: string,
   mirrors: ExtractedLink[]
 ): LinkMetadataV2 => {
   const normalized = normalizeLinkMetadata(metadata)
@@ -48,22 +48,25 @@ export const withResolvedMirrors = (
       ...normalized.playback,
       resolvedMirrors: {
         ...normalized.playback.resolvedMirrors,
-        [episodeUrl]: mirrors,
+        [lazyItemUrl]: mirrors,
       },
     },
   }
 }
 
-export const withNewEpisodes = (
+export const withNewPlayableItems = (
   metadata: unknown,
-  newEpisodeUrls: string[]
+  newPlayableItemUrls: string[]
 ): LinkMetadataV2 => {
   const normalized = normalizeLinkMetadata(metadata)
   return {
     ...normalized,
     playback: {
       ...normalized.playback,
-      newEpisodes: mergeUnique(normalized.playback.newEpisodes, newEpisodeUrls),
+      newPlayableItemUrls: mergeUnique(
+        normalized.playback.newPlayableItemUrls,
+        newPlayableItemUrls
+      ),
     },
   }
 }

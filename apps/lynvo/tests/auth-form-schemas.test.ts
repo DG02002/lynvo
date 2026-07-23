@@ -45,9 +45,22 @@ describe("authentication form schemas", () => {
 
     expect(getFieldErrors(result)).toEqual({
       username: ["This username is reserved."],
-      password: ["Password must be at least 11 characters."],
+      password: [
+        "Password must be at least 11 characters.",
+        "Password must include an uppercase letter.",
+      ],
       confirmPassword: ["Passwords do not match."],
     })
+  })
+
+  it("rejects unknown form fields explicitly", () => {
+    expect(
+      signInSchema.safeParse({
+        username: "admintest",
+        password: "existing-password",
+        unexpected: true,
+      }).success
+    ).toBe(false)
   })
 
   it("validates password changes and matching confirmation", () => {

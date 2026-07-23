@@ -58,7 +58,7 @@ describe("official extractor protocol routes", () => {
         sourceId: "bhadoo-google-drive-index",
         input: {
           kind: "source",
-          sourceUrl: "https://drive.example/0:/Movies/example.mkv?a=view",
+          sourceUrl: "https://drive.example/0:/Collections/example.mkv?a=view",
         },
       }),
     })

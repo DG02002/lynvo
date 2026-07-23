@@ -9,7 +9,7 @@ import {
   createUpdatedItemWithLinks,
 } from "./recent-link-items"
 import {
-  createCurrentEpisodeItem,
+  createCurrentPlayableItem,
   createWatchedLinkItem,
 } from "./recent-link-playback"
 import { buildRecentLinkViewItem, showSaveError } from "./recent-link-add"
@@ -90,14 +90,14 @@ export const useRecentLinksMutations = (
   )
 
   const cacheResolvedMirrors = useCallback(
-    (itemUrl: string, episodeUrl: string, mirrors: ExtractedLink[]) => {
+    (itemUrl: string, lazyItemUrl: string, mirrors: ExtractedLink[]) => {
       persistWithoutWaiting(
         persistence.update(itemUrl, (item) =>
           createUpdatedItemFromMetadata(
             item,
             withResolvedMirrors(
               getRecentLinkViewItemMetadata(item),
-              episodeUrl,
+              lazyItemUrl,
               mirrors
             )
           )
@@ -137,11 +137,11 @@ export const useRecentLinksMutations = (
     [persistence]
   )
 
-  const setEpisodeAsCurrent = useCallback(
-    (itemUrl: string, episodeUrl: string, folderEpisodeUrls: string[]) => {
+  const setPlayableItemAsCurrent = useCallback(
+    (itemUrl: string, lazyItemUrl: string, folderItemUrls: string[]) => {
       persistWithoutWaiting(
         persistence.update(itemUrl, (item) =>
-          createCurrentEpisodeItem(item, episodeUrl, folderEpisodeUrls)
+          createCurrentPlayableItem(item, lazyItemUrl, folderItemUrls)
         )
       )
     },
@@ -156,6 +156,6 @@ export const useRecentLinksMutations = (
     markLinkAsWatched,
     cacheResolvedMirrors,
     removeLink,
-    setEpisodeAsCurrent,
+    setPlayableItemAsCurrent,
   }
 }

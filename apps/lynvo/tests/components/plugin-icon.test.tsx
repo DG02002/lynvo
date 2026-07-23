@@ -4,12 +4,32 @@ import { describe, expect, it } from "vitest"
 import { PluginIcon } from "~/components/plugin-icon"
 
 describe("PluginIcon", () => {
-  it("renders Hugeicons for built-in plugins", () => {
+  it("renders explicitly provided Hugeicons", () => {
     const { container } = render(
       <PluginIcon icon={{ hugeIcon: GoogleDriveIcon }} className="size-8" />
     )
 
     expect(container.querySelector("svg")).not.toBeNull()
+    expect(container.querySelector("img")).toBeNull()
+  })
+
+  it("renders the extractor fallback when a manifest has no icon", () => {
+    const { container } = render(
+      <PluginIcon fallback="extractor" className="size-8" />
+    )
+
+    expect(
+      container.querySelector('[data-icon-fallback="extractor"]')
+    ).not.toBeNull()
+    expect(container.querySelector("img")).toBeNull()
+  })
+
+  it("renders the source fallback when source metadata has no icon", () => {
+    const { container } = render(<PluginIcon className="size-8" />)
+
+    expect(
+      container.querySelector('[data-icon-fallback="source"]')
+    ).not.toBeNull()
     expect(container.querySelector("img")).toBeNull()
   })
 

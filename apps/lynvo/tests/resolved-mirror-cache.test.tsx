@@ -5,11 +5,11 @@ import type { RecentLinkViewItem } from "~/features/links/types"
 
 describe("resolved mirror cache", () => {
   it("returns persisted mirrors without calling the extractor again", async () => {
-    const episodeUrl = "https://resolver.example/episode-one"
+    const lazyItemUrl = "https://resolver.example/playable-item-one"
     const mirrors = [
       {
-        url: "https://cdn.example/episode-one.mp4",
-        label: "Play episode one",
+        url: "https://cdn.example/playable-item-one.mp4",
+        label: "Play playable-item one",
         type: "file" as const,
       },
     ]
@@ -23,7 +23,7 @@ describe("resolved mirror cache", () => {
         playback: {
           watchedUrls: [],
           watchedIds: [],
-          resolvedMirrors: { [episodeUrl]: mirrors },
+          resolvedMirrors: { [lazyItemUrl]: mirrors },
         },
       },
     }
@@ -44,7 +44,7 @@ describe("resolved mirror cache", () => {
 
     let resolved
     await act(async () => {
-      resolved = await result.current.handleMirrorExpand(item.url, episodeUrl)
+      resolved = await result.current.handleMirrorExpand(item.url, lazyItemUrl)
     })
 
     expect(resolved).toEqual(mirrors)
@@ -53,7 +53,7 @@ describe("resolved mirror cache", () => {
   })
 
   it("bypasses persisted mirrors when refresh is requested", async () => {
-    const episodeUrl = "https://resolver.example/episode-one"
+    const lazyItemUrl = "https://resolver.example/playable-item-one"
     const cachedMirrors = [
       {
         url: "https://cdn.example/cached.mp4",
@@ -71,7 +71,7 @@ describe("resolved mirror cache", () => {
         playback: {
           watchedUrls: [],
           watchedIds: [],
-          resolvedMirrors: { [episodeUrl]: cachedMirrors },
+          resolvedMirrors: { [lazyItemUrl]: cachedMirrors },
         },
       },
     }
@@ -90,7 +90,7 @@ describe("resolved mirror cache", () => {
     )
 
     await expect(
-      act(() => result.current.handleMirrorExpand(item.url, episodeUrl, true))
+      act(() => result.current.handleMirrorExpand(item.url, lazyItemUrl, true))
     ).rejects.toThrow("cache bypass reached extractor boundary")
 
     expect(runWithExtractingItem).toHaveBeenCalledOnce()

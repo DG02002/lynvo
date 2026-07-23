@@ -166,21 +166,21 @@ describe("LinkSelectionDialog", () => {
         onOpenChange={onOpenChange}
         links={[
           {
-            id: "episode-one",
-            url: "https://cdn.example.com/episode-one.mkv",
-            label: "Episode One",
+            id: "playable-item-one",
+            url: "https://cdn.example.com/playable-item-one.mkv",
+            label: "Playable Item One",
             type: "file",
           },
           {
-            id: "episode-two",
-            url: "https://cdn.example.com/episode-two.mkv",
-            label: "Episode Two",
+            id: "playable-item-two",
+            url: "https://cdn.example.com/playable-item-two.mkv",
+            label: "Playable Item Two",
             type: "file",
           },
         ]}
         onConfirm={vi.fn()}
         onSaveDraft={onSaveDraft}
-        preSelectedIds={["episode-one"]}
+        preSelectedIds={["playable-item-one"]}
       />
     )
 

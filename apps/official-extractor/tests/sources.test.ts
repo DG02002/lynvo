@@ -20,23 +20,23 @@ describe("Bhadoo source adapter", () => {
       [
         {
           id: "folder-1",
-          name: "Season 1",
+          name: "Folder 1",
           mimeType: "application/vnd.google-apps.folder",
         },
         {
           id: "file-1",
-          name: "episode.mkv",
+          name: "playable-item.mkv",
           mimeType: "video/x-matroska",
           size: "492077810",
           link: "/download.aspx?file=signed",
         },
         { id: "image-1", name: "poster.jpg", mimeType: "image/jpeg" },
       ],
-      new URL("https://drive.example/0:/Shows/")
+      new URL("https://drive.example/0:/Collections/")
     )
     expect(nodes).toMatchObject([
-      { kind: "resolvable", label: "Season 1" },
-      { kind: "playable", label: "episode.mkv", size: "469.28 MB" },
+      { kind: "resolvable", label: "Folder 1" },
+      { kind: "playable", label: "playable-item.mkv", size: "469.28 MB" },
     ])
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
   })
@@ -72,17 +72,17 @@ describe("OneDrive source adapter", () => {
   it("maps folders and video files while skipping unrelated files", () => {
     const nodes = createOneDriveNodes(
       [
-        { id: "folder-1", name: "Season 1", folder: {} },
-        { id: "file-1", name: "episode.mp4", file: {} },
+        { id: "folder-1", name: "Folder 1", folder: {} },
+        { id: "file-1", name: "playable-item.mp4", file: {} },
         { id: "image-1", name: "cover.jpg", file: {} },
       ],
-      "/Shows",
+      "/Collections",
       "https://index.example",
       "token"
     )
     expect(nodes).toMatchObject([
-      { kind: "resolvable", label: "Season 1" },
-      { kind: "playable", label: "episode.mp4" },
+      { kind: "resolvable", label: "Folder 1" },
+      { kind: "playable", label: "playable-item.mp4" },
     ])
   })
 
@@ -94,7 +94,9 @@ describe("OneDrive source adapter", () => {
             props: {
               pageProps: {
                 folder: {
-                  value: [{ id: "file-1", name: "episode.mp4", file: {} }],
+                  value: [
+                    { id: "file-1", name: "playable-item.mp4", file: {} },
+                  ],
                 },
               },
             },
@@ -104,10 +106,13 @@ describe("OneDrive source adapter", () => {
     )
     const result = await extractOneDriveIndex({
       request: {
-        input: { kind: "source", sourceUrl: "https://index.example/Shows" },
+        input: {
+          kind: "source",
+          sourceUrl: "https://index.example/Collections",
+        },
         password: "domain-password",
       },
-      targetUrl: "https://index.example/Shows",
+      targetUrl: "https://index.example/Collections",
       source,
       publicAssetOrigin: "https://lynvo.example",
     })

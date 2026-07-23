@@ -1,5 +1,12 @@
 import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
+import { z } from "zod"
+
+const versionResponseSchema = z
+  .object({
+    buildTime: z.string().min(1),
+  })
+  .strip()
 
 type VersionWatcherProps = {
   buildTime: string
@@ -16,7 +23,11 @@ export function VersionWatcher({ buildTime }: VersionWatcherProps) {
       if (!response.ok) {
         throw new Error("Unable to check the current version")
       }
-      return (await response.json()) as { buildTime?: string }
+      const result = versionResponseSchema.safeParse(await response.json())
+      if (!result.success) {
+        throw new Error("The version endpoint returned an invalid response")
+      }
+      return result.data
     },
     refetchInterval: 60_000,
     retry: false,

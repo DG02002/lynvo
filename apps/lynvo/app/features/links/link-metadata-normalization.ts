@@ -88,7 +88,7 @@ export const normalizeLinkMetadata = (
         watchedFromLinks.watchedIds
       ),
       resolvedMirrors: existingV2?.playback?.resolvedMirrors ?? {},
-      newEpisodes: existingV2?.playback?.newEpisodes ?? [],
+      newPlayableItemUrls: existingV2?.playback?.newPlayableItemUrls ?? [],
     },
   }
 }

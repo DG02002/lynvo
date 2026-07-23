@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { RemoteSession } from "./types"
+import { remoteSessionsResponseSchema } from "./schemas"
 
 export const useRemoteSessions = () => {
   const [sessions, setSessions] = useState<RemoteSession[]>([])
@@ -10,8 +11,8 @@ export const useRemoteSessions = () => {
     try {
       const res = await fetch("/api/sessions")
       if (res.ok) {
-        const data = (await res.json()) as { sessions: RemoteSession[] }
-        setSessions(data.sessions || [])
+        const result = remoteSessionsResponseSchema.safeParse(await res.json())
+        setSessions(result.success ? result.data.sessions : [])
       }
     } catch (error) {
       console.error("Unable to fetch remote sessions", error)

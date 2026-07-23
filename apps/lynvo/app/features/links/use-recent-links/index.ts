@@ -125,7 +125,7 @@ export const useRecentLinks = () => {
     markWatched: mutations.markLinkAsWatched,
     cacheResolvedMirrors: mutations.cacheResolvedMirrors,
     removeLink: mutations.removeLink,
-    setEpisodeAsCurrent: mutations.setEpisodeAsCurrent,
+    setPlayableItemAsCurrent: mutations.setPlayableItemAsCurrent,
   }
 
   return {

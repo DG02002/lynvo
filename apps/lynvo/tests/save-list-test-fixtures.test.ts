@@ -40,7 +40,7 @@ describe("save-list UI test fixtures", () => {
     ).toBe(false)
   })
 
-  it("includes Source Alpha episodes that resolve Resolver Beta mirrors on click", () => {
+  it("includes Source Alpha playable items that resolve Resolver Beta mirrors on click", () => {
     const mirrorItem = createSaveListTestItems().find(
       (item) => item.id === "source-alpha-mirrors"
     )

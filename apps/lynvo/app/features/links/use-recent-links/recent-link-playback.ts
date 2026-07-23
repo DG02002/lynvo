@@ -1,4 +1,7 @@
-import { withNewEpisodes, withWatchedUrl } from "~/features/links/links.mapper"
+import {
+  withNewPlayableItems,
+  withWatchedUrl,
+} from "~/features/links/links.mapper"
 import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
@@ -23,24 +26,27 @@ export const fetchExtractedLinks = async (itemUrl: string) => {
   })
 }
 
-const getNewEpisodeUrls = (
+const getNewPlayableItemUrls = (
   previousLinks: ExtractedLink[],
   nextLinks: ExtractedLink[]
 ) => {
-  const previousEpisodeUrls = new Set<string>()
+  const previousPlayableItemUrls = new Set<string>()
   for (const previousLink of previousLinks) {
     if (previousLink.type === "file") {
-      previousEpisodeUrls.add(previousLink.url)
+      previousPlayableItemUrls.add(previousLink.url)
     }
   }
 
-  const newEpisodeUrls: string[] = []
+  const newPlayableItemUrls: string[] = []
   for (const nextLink of nextLinks) {
-    if (nextLink.type === "file" && !previousEpisodeUrls.has(nextLink.url)) {
-      newEpisodeUrls.push(nextLink.url)
+    if (
+      nextLink.type === "file" &&
+      !previousPlayableItemUrls.has(nextLink.url)
+    ) {
+      newPlayableItemUrls.push(nextLink.url)
     }
   }
-  return newEpisodeUrls
+  return newPlayableItemUrls
 }
 
 export const createSoftRefreshedItem = (
@@ -48,37 +54,37 @@ export const createSoftRefreshedItem = (
   nextLinks: ExtractedLink[]
 ) => {
   const previousMetadata = getRecentLinkViewItemMetadata(item)
-  const newEpisodeUrls = getNewEpisodeUrls(
+  const newPlayableItemUrls = getNewPlayableItemUrls(
     previousMetadata.extraction?.extractedLinks ?? [],
     nextLinks
   )
 
-  const metadataWithNewEpisodes =
-    newEpisodeUrls.length > 0
-      ? withNewEpisodes(previousMetadata, newEpisodeUrls)
+  const metadataWithNewPlayableItems =
+    newPlayableItemUrls.length > 0
+      ? withNewPlayableItems(previousMetadata, newPlayableItemUrls)
       : previousMetadata
 
   const metadata = {
-    ...metadataWithNewEpisodes,
-    playback: { ...metadataWithNewEpisodes.playback, resolvedMirrors: {} },
+    ...metadataWithNewPlayableItems,
+    playback: { ...metadataWithNewPlayableItems.playback, resolvedMirrors: {} },
   }
 
   return createUpdatedItemFromMetadata(item, metadata)
 }
 
-export const createCurrentEpisodeItem = (
+export const createCurrentPlayableItem = (
   item: RecentLinkViewItem,
-  episodeUrl: string,
-  folderEpisodeUrls: string[]
+  lazyItemUrl: string,
+  folderItemUrls: string[]
 ) => {
-  const episodeIndex = folderEpisodeUrls.indexOf(episodeUrl)
-  if (episodeIndex === -1) {
+  const playableItemIndex = folderItemUrls.indexOf(lazyItemUrl)
+  if (playableItemIndex === -1) {
     return undefined
   }
 
   const previousMetadata = getRecentLinkViewItemMetadata(item)
-  const watchedToMark = folderEpisodeUrls.slice(0, episodeIndex)
-  const unwatchedToUnmark = folderEpisodeUrls.slice(episodeIndex)
+  const watchedToMark = folderItemUrls.slice(0, playableItemIndex)
+  const unwatchedToUnmark = folderItemUrls.slice(playableItemIndex)
   const currentWatched = new Set(previousMetadata.playback?.watchedUrls ?? [])
 
   for (const url of watchedToMark) {

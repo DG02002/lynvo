@@ -14,7 +14,7 @@ export interface WorkerManifestView {
 
 const parseWorkerManifest = (value: string): ExtractorManifest | null => {
   try {
-    const parsed = JSON.parse(value)
+    const parsed: unknown = JSON.parse(value)
     const result = manifestSchema.safeParse(parsed)
     return result.success ? result.data : null
   } catch {
@@ -23,8 +23,7 @@ const parseWorkerManifest = (value: string): ExtractorManifest | null => {
 }
 
 export const getWorkerManifestView = (
-  manifestValue: string,
-  workerBaseUrl?: string
+  manifestValue: string
 ): WorkerManifestView => {
   const manifest = parseWorkerManifest(manifestValue)
   const extension = manifest ? getLynvoManifestExtension(manifest) : undefined
@@ -38,11 +37,7 @@ export const getWorkerManifestView = (
     hosts,
     sources: (extension?.sources ?? []).map((source) => ({
       ...source,
-      iconUrl:
-        source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp") ||
-        (workerBaseUrl
-          ? `${workerBaseUrl.replace(/\/$/, "")}/icons/plugins/${encodeURIComponent(source.id)}.webp`
-          : undefined),
+      iconUrl: source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
     })),
   }
 }

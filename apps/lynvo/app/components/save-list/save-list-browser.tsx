@@ -87,12 +87,6 @@ const getResolvableSourceName = (
   if (link.sourceName) {
     return link.sourceName
   }
-  if (
-    URL.canParse(link.url) &&
-    new URL(link.url).hostname.toLowerCase().includes("hubcloud")
-  ) {
-    return "HubCloud"
-  }
   const view = toRecentLinkViewModel(item)
   return view.sourceName || view.pluginName || item.url
 }

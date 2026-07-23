@@ -26,7 +26,7 @@ export const useRefreshActions = ({
   updateRecentLinks: (url: string, links: ExtractedLink[]) => void
   cacheResolvedMirrors: (
     itemUrl: string,
-    episodeUrl: string,
+    lazyItemUrl: string,
     mirrors: ExtractedLink[]
   ) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
@@ -95,32 +95,32 @@ export const useRefreshActions = ({
   const handleMirrorExpand = useCallback(
     async (
       itemUrl: string,
-      episodeUrl: string,
+      lazyItemUrl: string,
       bypassCache = false
     ): Promise<ExtractedLink[] | null> => {
-      if (effects.isExtracting(episodeUrl)) {
+      if (effects.isExtracting(lazyItemUrl)) {
         return null
       }
 
       const item = recents.find((recentItem) => recentItem.url === itemUrl)
       const cachedMirrors = item
         ? getRecentLinkViewItemMetadata(item).playback.resolvedMirrors?.[
-            episodeUrl
+            lazyItemUrl
           ]
         : undefined
       if (cachedMirrors && !bypassCache) {
         return cachedMirrors
       }
 
-      return effects.runExtracting(episodeUrl, async () => {
+      return effects.runExtracting(lazyItemUrl, async () => {
         const mirrors = await expandMirrorLinks({
           itemUrl,
-          episodeUrl,
+          lazyItemUrl,
           recents,
           effects,
         })
         if (mirrors) {
-          cacheResolvedMirrors(itemUrl, episodeUrl, mirrors)
+          cacheResolvedMirrors(itemUrl, lazyItemUrl, mirrors)
         }
         return mirrors
       })

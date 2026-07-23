@@ -6,41 +6,41 @@
   "workers_dev": false,
   "observability": { "enabled": true },
   "vars": {
-    "PUBLIC_ASSET_ORIGIN": "https://lynvo.example"
+    "PUBLIC_ASSET_ORIGIN": "",
   },
   "secrets": {
-    "required": ["OFFICIAL_EXTRACTOR_API_KEY"]
+    "required": ["OFFICIAL_EXTRACTOR_API_KEY"],
   },
   "durable_objects": {
     "bindings": [
       {
         "name": "OFFICIAL_EXTRACTOR_USAGE_LIMITER",
-        "class_name": "OfficialExtractorUsageLimiter"
-      }
-    ]
+        "class_name": "OfficialExtractorUsageLimiter",
+      },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["OfficialExtractorUsageLimiter"]
-    }
+      "new_sqlite_classes": ["OfficialExtractorUsageLimiter"],
+    },
   ],
   "env": {
     "local": {
       "vars": {
-        "PUBLIC_ASSET_ORIGIN": "http://localhost:5173"
+        "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/official-extractor-assets",
       },
       "secrets": {
-        "required": ["OFFICIAL_EXTRACTOR_API_KEY"]
+        "required": ["OFFICIAL_EXTRACTOR_API_KEY"],
       },
       "durable_objects": {
         "bindings": [
           {
             "name": "OFFICIAL_EXTRACTOR_USAGE_LIMITER",
-            "class_name": "OfficialExtractorUsageLimiter"
-          }
-        ]
-      }
-    }
-  }
+            "class_name": "OfficialExtractorUsageLimiter",
+          },
+        ],
+      },
+    },
+  },
 }

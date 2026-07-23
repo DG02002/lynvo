@@ -67,13 +67,13 @@ export const hardRefreshLink = async ({
 
 export const expandMirrorLinks = async ({
   itemUrl,
-  episodeUrl,
+  lazyItemUrl,
   recents,
   effects,
 }: MirrorExpandOptions): Promise<ExtractedLink[] | null> => {
   try {
     const item = recents.find((recentItem) => recentItem.url === itemUrl)
-    return await extractionOrchestration.resolveMirror(item, episodeUrl)
+    return await extractionOrchestration.resolveMirror(item, lazyItemUrl)
   } catch (error) {
     console.error(error)
     effects.showMirrorError()

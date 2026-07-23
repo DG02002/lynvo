@@ -12,8 +12,7 @@ export interface ExtractedLink {
   watched?: boolean
   size?: string // Human readable size (e.g. "1.5 GB")
   sourceName?: string
-  season?: string // Season name if part of a series
-  selectable?: boolean // false for non-checkable folders (season parents)
+  selectable?: boolean // false for non-checkable containers
   /**
    * Internal marker used by the extraction decision layer to distinguish
    * worker node kinds after they have been mapped to the user-facing
@@ -42,8 +41,8 @@ export interface LinkMetadataV2 {
   playback: {
     watchedUrls: string[]
     watchedIds: string[]
-    resolvedMirrors?: Record<string, ExtractedLink[]> // episodeUrl → mirrors
-    newEpisodes?: string[] // episode URLs flagged as "New"
+    resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
+    newPlayableItemUrls?: string[] // playable item URLs flagged as "New"
   }
 }
 

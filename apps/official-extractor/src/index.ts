@@ -1,17 +1,27 @@
 import { Hono } from "hono"
-import { createExtractorRuntime } from "@lynvo/extractor-protocol"
+import { createError, initLogger } from "evlog"
+import { evlog, type EvlogVariables } from "evlog/hono"
+import {
+  createExtractorRuntime,
+  extractErrorSchema,
+  extractRequestSchema,
+  extractSuccessSchema,
+} from "@lynvo/extractor-protocol"
 import { validateBearerCredential } from "./auth"
 import {
   createOfficialManifest,
   extractFromOfficialSource,
 } from "./source-catalog"
-import { logRequestEvent } from "./logger"
 import {
   OfficialExtractorUsageLimiter,
   readUsage,
   reserveUsage,
   settleUsage,
 } from "./usage-limiter"
+
+initLogger({
+  env: { service: "lynvo-official-extractor" },
+})
 
 const runtime = createExtractorRuntime<OfficialExtractorBindings>({
   manifest: ({ env }) => createOfficialManifest(env.PUBLIC_ASSET_ORIGIN),
@@ -25,7 +35,12 @@ const runtime = createExtractorRuntime<OfficialExtractorBindings>({
   extract: async ({ request, targetUrl, env }) => {
     const didReserve = await reserveUsage(env)
     if (!didReserve) {
-      throw new Error("RATE_LIMITED")
+      throw createError({
+        message: "RATE_LIMITED",
+        status: 429,
+        why: "The extractor has no remaining capacity for this period.",
+        fix: "Retry after the usage window resets.",
+      })
     }
 
     let didSucceed = false
@@ -36,44 +51,74 @@ const runtime = createExtractorRuntime<OfficialExtractorBindings>({
         env.PUBLIC_ASSET_ORIGIN
       )
       didSucceed = true
-      logRequestEvent({
-        requestId: crypto.randomUUID(),
-        operation: "extract",
-        sourceId: result.source.sourceId,
-        targetHost: new URL(targetUrl).hostname,
-        inputKind: request.input.kind,
-        resultNodeCount: result.nodes.length,
-      })
       return result
     } finally {
       await settleUsage(env, didSucceed)
     }
   },
-  onError: (error, { request }) => {
-    const message = error instanceof Error ? error.message : "TEMPORARY_FAILURE"
-    logRequestEvent({
-      requestId: request.headers.get("cf-ray") ?? crypto.randomUUID(),
-      operation: "extract",
-      sourceId: undefined,
-      errorCode: message,
-    })
-  },
+  onError: () => {},
 })
 
-const app = new Hono<{ Bindings: OfficialExtractorBindings }>()
+interface OfficialExtractorEnvironment extends EvlogVariables {
+  Bindings: OfficialExtractorBindings
+}
 
-app.get("/manifest", (context) =>
-  runtime.handleManifest(context.req.raw, context.env)
-)
-app.post("/verify", (context) =>
-  runtime.handleVerify(context.req.raw, context.env)
-)
-app.get("/usage", (context) =>
-  runtime.handleUsage(context.req.raw, context.env)
-)
-app.post("/extract", (context) =>
-  runtime.handleExtract(context.req.raw, context.env)
-)
+const app = new Hono<OfficialExtractorEnvironment>()
+
+app.use("*", evlog())
+
+app.get("/manifest", (context) => {
+  context.get("log").set({ operation: "manifest" })
+  return runtime.handleManifest(context.req.raw, context.env)
+})
+app.post("/verify", (context) => {
+  context.get("log").set({ operation: "verify" })
+  return runtime.handleVerify(context.req.raw, context.env)
+})
+app.get("/usage", (context) => {
+  context.get("log").set({ operation: "usage" })
+  return runtime.handleUsage(context.req.raw, context.env)
+})
+app.post("/extract", async (context) => {
+  const requestBody = await context.req.raw
+    .clone()
+    .json()
+    .catch(() => undefined)
+  const parsedRequest = extractRequestSchema.safeParse(requestBody)
+  const targetUrl = parsedRequest.success
+    ? parsedRequest.data.input.kind === "source"
+      ? parsedRequest.data.input.sourceUrl
+      : parsedRequest.data.input.nodeUrl
+    : undefined
+  context.get("log").set({
+    operation: "extract",
+    extraction: {
+      input_kind: parsedRequest.success
+        ? parsedRequest.data.input.kind
+        : "invalid",
+      target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
+    },
+  })
+  const response = await runtime.handleExtract(context.req.raw, context.env)
+  const responseBody = await response
+    .clone()
+    .json()
+    .catch(() => undefined)
+  const success = extractSuccessSchema.safeParse(responseBody)
+  const failure = extractErrorSchema.safeParse(responseBody)
+  context.get("log").set({
+    extraction: {
+      input_kind: parsedRequest.success
+        ? parsedRequest.data.input.kind
+        : "invalid",
+      target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
+      node_count: success.success ? success.data.nodes.length : undefined,
+      source_id: success.success ? success.data.source.sourceId : undefined,
+      error_code: failure.success ? failure.data.error.code : undefined,
+    },
+  })
+  return response
+})
 app.notFound(() =>
   Response.json(
     {

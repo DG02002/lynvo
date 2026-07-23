@@ -24,34 +24,32 @@ describe("Plugin Domain lifecycle", () => {
   })
 
   it("accepts a Bhadoo Workers hostname", () => {
-    expect(
-      normalizePluginDomain(
-        "https://rapid-fire-allinone.mrstrange.workers.dev/0:/"
-      )
-    ).toBe("rapid-fire-allinone.mrstrange.workers.dev")
+    expect(normalizePluginDomain("https://source-alpha.example/0:/")).toBe(
+      "source-alpha.example"
+    )
   })
 
   it("extracts encoded HTTP Basic Auth credentials from a domain URL", () => {
     expect(
       parsePluginDomainInput(
-        "https://allinone:strange%40115@index.example.com/0:/"
+        "https://source-user:source%40secret@index.example.com/0:/"
       )
     ).toEqual({
       url: "https://index.example.com/0:/",
-      username: "allinone",
-      password: "strange@115",
+      username: "source-user",
+      password: "source@secret",
     })
   })
 
   it("serializes an HTTP Basic Auth username and password for encryption", () => {
     const encryptedValue = serializeHttpBasicCredential(
-      "allinone",
-      "strange@115"
+      "source-user",
+      "source@secret"
     )
 
     expect(parseHttpBasicCredential(encryptedValue)).toEqual({
-      username: "allinone",
-      password: "strange@115",
+      username: "source-user",
+      password: "source@secret",
     })
   })
 

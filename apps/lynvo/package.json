@@ -38,6 +38,7 @@
     "clsx": "^2.1.1",
     "convex": "^1.42.3",
     "effect": "beta",
+    "evlog": "^2.22.3",
     "hono": "catalog:",
     "input-otp": "^1.4.2",
     "isbot": "^5.2.1",

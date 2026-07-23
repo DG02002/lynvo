@@ -6,13 +6,13 @@ import type { RecentLinkViewItem } from "~/features/links/types"
 describe("draft selection", () => {
   it("opens the stored draft tree without running extraction again", async () => {
     const item: RecentLinkViewItem = {
-      url: "https://gd.rickgrimesflix.workers.dev/0:/SH3LBY/",
+      url: "https://source-alpha.example/folder-alpha/",
       timestamp: 1,
       isDraft: true,
       extractedLinks: [
         {
           id: "stored-file",
-          url: "https://gd.rickgrimesflix.workers.dev/0:/SH3LBY/file.mkv",
+          url: "https://source-alpha.example/folder-alpha/file.mkv",
           label: "file.mkv",
           type: "file",
         },

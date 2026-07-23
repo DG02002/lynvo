@@ -59,4 +59,21 @@ describe("DraftManager", () => {
 
     expect(readDraft("https://example.com")).toBeNull()
   })
+
+  it("removes malformed draft storage instead of trusting parsed JSON", () => {
+    localStorage.setItem(
+      "lynvo:drafts:v1",
+      JSON.stringify({
+        corrupted: {
+          links: "not-an-array",
+          meta: {},
+          originalUrl: "https://example.com",
+          expiresAt: Date.now() + 60_000,
+        },
+      })
+    )
+
+    expect(readDraft("https://example.com")).toBeNull()
+    expect(localStorage.getItem("lynvo:drafts:v1")).toBeNull()
+  })
 })

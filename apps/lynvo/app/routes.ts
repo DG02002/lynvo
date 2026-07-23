@@ -15,6 +15,9 @@ export default [
     route("settings", "features/site/routes/_site.settings.tsx"),
     route("privacy", "features/site/routes/_site.privacy.tsx"),
     route("terms", "features/site/routes/_site.terms.tsx"),
+    route("docs", "features/site/routes/_site.docs.tsx"),
+    route("changelog", "features/site/routes/_site.changelog.tsx"),
+    route("pricing", "features/site/routes/_site.pricing.tsx"),
     route(
       "policies/privacy-policy",
       "features/site/routes/_site.policies.privacy-policy.tsx"
@@ -22,6 +25,10 @@ export default [
     route(
       "policies/terms-of-use",
       "features/site/routes/_site.policies.terms-of-use.tsx"
+    ),
+    route(
+      "policies/usage-policy",
+      "features/site/routes/_site.policies.usage-policy.tsx"
     ),
   ]),
 

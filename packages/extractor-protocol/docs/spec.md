@@ -42,9 +42,9 @@ Example:
 1. User submits a `source-alpha` URL.
 2. Lynvo selects one matching worker.
 3. The worker returns a tree with lazy nodes.
-4. User clicks an episode node.
+4. User clicks an lazy item node.
 5. Lynvo calls the same worker again with only that clicked node target.
-6. The worker resolves it further and returns the next result, such as final `FLS` and `S3` playable links.
+6. The worker resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
 
 ## Protocol Rules
 
@@ -152,6 +152,7 @@ Auth:
   "protocolVersion": "1.0",
   "extractorId": "com.example.lynvo.source-alpha",
   "displayName": "Example source-alpha Extractor",
+  "hasIcon": true,
   "iconUrl": "https://example.com/icon.webp",
   "homepage": "https://example.com",
   "auth": {
@@ -184,7 +185,8 @@ Auth:
 - `protocolVersion`: required string. Lynvo must enforce compatibility at add-time and refresh-time.
 - `extractorId`: required stable identifier. Do not use `displayName` as the stable id.
 - `displayName`: required human-readable name.
-- `iconUrl`: optional HTTPS URL only.
+- `hasIcon`: optional boolean. When present, `true` requires `iconUrl`; `false` forbids it.
+- `iconUrl`: optional HTTPS URL only. Existing manifests may omit `hasIcon`; Lynvo infers it from this field.
 - `homepage`: optional HTTPS URL.
 - `auth.type`: required. v1 supports only `bearer`.
 - `usage.endpoint`: required and must be `/usage`.
@@ -325,25 +327,25 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
   "nodes": [
     {
       "kind": "group",
-      "id": "season-1",
-      "label": "Season 1",
+      "id": "folder-1",
+      "label": "Folder 1",
       "badge": "S01",
       "selectable": false,
       "children": [
         {
           "kind": "group",
-          "id": "season-1-1080p",
-          "label": "1080p HEVC",
+          "id": "folder-1-Variant Alpha",
+          "label": "Variant Alpha",
           "badge": "8 EP",
           "selectable": true,
           "children": [
             {
               "kind": "resolvable",
               "id": "ep-1",
-              "label": "S01E01",
+              "label": "Playable Item Alpha",
               "nodeUrl": "https://example.com/redirector-zeta-step",
               "size": "1.4 GB",
-              "badge": "1080p HEVC"
+              "badge": "Variant Alpha"
             }
           ]
         }
@@ -366,16 +368,16 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
   "nodes": [
     {
       "kind": "playable",
-      "id": "fsl",
-      "label": "Play from FSL",
-      "url": "https://example.com/fsl.m3u8",
+      "id": "route-alpha",
+      "label": "Play from Source Route Alpha",
+      "url": "https://example.com/route-alpha.m3u8",
       "status": "up"
     },
     {
       "kind": "playable",
-      "id": "s3",
-      "label": "Play from S3",
-      "url": "https://example.com/s3.m3u8",
+      "id": "route-beta",
+      "label": "Play from Source Route Beta",
+      "url": "https://example.com/route-beta.m3u8",
       "status": "up"
     }
   ]
@@ -397,7 +399,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 {
   "kind": "group",
   "id": "folder-1",
-  "label": "Season 1",
+  "label": "Folder 1",
   "badge": "S01",
   "selectable": false,
   "children": []
@@ -416,17 +418,17 @@ Rules:
 {
   "kind": "resolvable",
   "id": "ep-1",
-  "label": "Episode 1",
+  "label": "Lazy Item 1",
   "nodeUrl": "https://example.com/intermediate-step",
   "resourceId": "opaque-id-optional",
-  "badge": "1080p"
+  "badge": "Variant Alpha"
 }
 ```
 
 Rules:
 
 - must contain `nodeUrl` or `resourceId`
-- may represent an episode, redirector, container page, or any intermediate target
+- may represent an lazy item, redirector, container page, or any intermediate target
 - must be resolvable by the same worker
 
 ### Playable Node
@@ -434,10 +436,10 @@ Rules:
 ```json
 {
   "kind": "playable",
-  "id": "fsl",
-  "label": "Play from FSL",
+  "id": "route-alpha",
+  "label": "Play from Source Route Alpha",
   "url": "https://example.com/final-file-or-stream",
-  "badge": "FSL",
+  "badge": "Source Route Alpha",
   "size": "1.4 GB",
   "expiry": 1767225600000,
   "status": "up"

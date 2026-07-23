@@ -52,7 +52,7 @@ export interface SoftRefreshOptions {
 
 export interface MirrorExpandOptions {
   itemUrl: string
-  episodeUrl: string
+  lazyItemUrl: string
   recents: RecentLinkViewItem[]
   effects: RefreshFlowEffects
 }

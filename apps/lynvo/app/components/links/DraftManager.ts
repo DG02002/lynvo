@@ -1,15 +1,14 @@
 import { useEffect } from "react"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
+import {
+  draftsSchema,
+  type StoredDraft,
+} from "~/features/links/storage-schemas"
 
 const DRAFTS_KEY = "lynvo:drafts:v1"
 const DRAFT_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
 
-export interface Draft {
-  links: ExtractedLink[]
-  meta: MetaData
-  originalUrl: string
-  expiresAt: number
-}
+export interface Draft extends StoredDraft {}
 
 function encodeUrlForKey(url: string): string {
   return btoa(encodeURIComponent(url))
@@ -21,7 +20,13 @@ function readRawDrafts(): Record<string, Draft> | null {
     if (!raw) {
       return null
     }
-    return JSON.parse(raw) as Record<string, Draft>
+    const parsed: unknown = JSON.parse(raw)
+    const result = draftsSchema.safeParse(parsed)
+    if (!result.success) {
+      localStorage.removeItem(DRAFTS_KEY)
+      return null
+    }
+    return result.data
   } catch {
     return null
   }

@@ -46,9 +46,9 @@ describe("extraction presentation", () => {
     expect(decideSavePresentation([file, { ...file, url: "two" }]).kind).toBe(
       "selectionDialog"
     )
-    expect(
-      decideSavePresentation([{ ...file, type: "folder" }]).kind
-    ).toBe("selectionDialog")
+    expect(decideSavePresentation([{ ...file, type: "folder" }]).kind).toBe(
+      "selectionDialog"
+    )
     expect(decideSavePresentation([]).kind).toBe("error")
   })
 })
@@ -64,12 +64,17 @@ describe("extraction orchestration", () => {
 
   it("prepares save metadata and propagates the saved worker identity", async () => {
     transport.getMetadata.mockResolvedValue({
-      filename: "episode.mp4",
+      filename: "playable-item.mp4",
       sourceName: "Metadata Source",
     })
     transport.extract.mockResolvedValue({
-      links: [{ url: "https://cdn.example/episode.mp4", label: "Episode" }],
-      meta: { pageTitle: "Episode Page", workerId: "worker-1" },
+      links: [
+        {
+          url: "https://cdn.example/playable-item.mp4",
+          label: "Playable Item",
+        },
+      ],
+      meta: { pageTitle: "Playable Item Page", workerId: "worker-1" },
     })
     const metadata = await orchestration.getSourceMetadata(
       "https://example.com/source",
@@ -88,8 +93,8 @@ describe("extraction orchestration", () => {
     expect(metadata).toEqual(expect.objectContaining({ workerId: "worker-1" }))
     expect(result.mergedMeta).toEqual(
       expect.objectContaining({
-        filename: "episode.mp4",
-        pageTitle: "Episode Page",
+        filename: "playable-item.mp4",
+        pageTitle: "Playable Item Page",
         workerId: "worker-1",
       })
     )
@@ -103,7 +108,10 @@ describe("extraction orchestration", () => {
     transport.extract.mockResolvedValue({ links: resolved })
 
     await orchestration.refreshSource(item)
-    await orchestration.resolveMirror(item, "https://worker.example/episode")
+    await orchestration.resolveMirror(
+      item,
+      "https://worker.example/playable-item"
+    )
     const expanded = await orchestration.expandFolder({
       item,
       linkId: "folder-1",
@@ -119,7 +127,7 @@ describe("extraction orchestration", () => {
       ],
       [
         {
-          url: "https://worker.example/episode",
+          url: "https://worker.example/playable-item",
           workerId: "worker-1",
           kind: "node",
         },

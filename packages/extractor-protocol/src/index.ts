@@ -11,6 +11,7 @@ export interface ExtractorManifest {
   protocolVersion: "1.0"
   extractorId: string
   displayName: string
+  hasIcon?: boolean
   iconUrl?: string
   homepage?: string
   auth: {
@@ -149,6 +150,7 @@ export interface ExtractorSourceMetadata {
   displayName: string
   description?: string
   homepage?: string
+  hasIcon?: boolean
   iconUrl?: string
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
@@ -266,6 +268,7 @@ export const manifestSchema = z.object({
   protocolVersion: z.literal("1.0"),
   extractorId: z.string().min(1),
   displayName: z.string().min(1),
+  hasIcon: z.boolean().optional(),
   iconUrl: iconUrlSchema.optional(),
   homepage: z.url().startsWith("https://").optional(),
   auth: z.object({
@@ -318,6 +321,7 @@ export const extractorSourceMetadataSchema = z.object({
   displayName: z.string().min(1),
   description: z.string().min(1).optional(),
   homepage: z.url().startsWith("https://").optional(),
+  hasIcon: z.boolean().optional(),
   iconUrl: iconUrlSchema.optional(),
   status: z.enum(["active", "maintenance", "degraded", "down"]).optional(),
   version: z.string().optional(),
@@ -643,6 +647,14 @@ export const validateExtractorManifestContract = (
       issue("iconUrl", "Use a direct HTTPS WebP URL for extractor icons.")
     )
   }
+  if (manifest.hasIcon === true && !manifest.iconUrl) {
+    issues.push(issue("iconUrl", "Provide iconUrl when hasIcon is true."))
+  }
+  if (manifest.hasIcon === false && manifest.iconUrl) {
+    issues.push(
+      issue("hasIcon", "Set hasIcon to true when iconUrl is present.")
+    )
+  }
 
   if (!extension.sources || extension.sources.length === 0) {
     issues.push(
@@ -659,6 +671,19 @@ export const validateExtractorManifestContract = (
 
     if (source.iconUrl && !source.iconUrl.endsWith(".webp")) {
       issues.push(issue(`${basePath}.iconUrl`, "Use a direct HTTPS WebP URL."))
+    }
+    if (source.hasIcon === true && !source.iconUrl) {
+      issues.push(
+        issue(`${basePath}.iconUrl`, "Provide iconUrl when hasIcon is true.")
+      )
+    }
+    if (source.hasIcon === false && source.iconUrl) {
+      issues.push(
+        issue(
+          `${basePath}.hasIcon`,
+          "Set hasIcon to true when iconUrl is present."
+        )
+      )
     }
     if (!source.status) {
       issues.push(

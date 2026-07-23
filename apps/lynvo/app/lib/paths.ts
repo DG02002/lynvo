@@ -6,10 +6,14 @@ export const authPaths = {
 } as const
 
 export const sitePaths = {
+  changelog: "/changelog",
+  docs: "/docs",
+  pricing: "/pricing",
   settings: "/settings",
 } as const
 
 export const policyPaths = {
   privacyPolicy: "/policies/privacy-policy",
   termsOfUse: "/policies/terms-of-use",
+  usagePolicy: "/policies/usage-policy",
 } as const

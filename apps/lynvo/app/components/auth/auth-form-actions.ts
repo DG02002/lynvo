@@ -1,3 +1,5 @@
+import { authPreflightResponseSchema } from "~/lib/auth-gateway-schemas"
+
 export type AuthPreflightFlow = "signIn" | "signUp"
 
 export const initialTurnstileToken = () =>
@@ -14,10 +16,11 @@ export const authPreflight = async (payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   })
-  const data = (await response.json()) as {
-    preflightToken?: string
-    error?: string
+  const result = authPreflightResponseSchema.safeParse(await response.json())
+  if (!result.success) {
+    throw new Error("Authentication returned an invalid response")
   }
+  const data = result.data
 
   if (!response.ok || !data.preflightToken) {
     throw new Error(data.error ?? "Authentication failed")
@@ -45,7 +48,28 @@ export const withTimeout = async <T>(
   }
 }
 
+export const getSafeRedirectPath = (
+  redirect: string | null,
+  origin: string
+) => {
+  if (!redirect) {
+    return "/save"
+  }
+  try {
+    const destination = new URL(redirect, origin)
+    if (destination.origin !== origin || !redirect.startsWith("/")) {
+      return "/save"
+    }
+    return `${destination.pathname}${destination.search}${destination.hash}`
+  } catch {
+    return "/save"
+  }
+}
+
 export const redirectAfterAuth = () => {
   const params = new URLSearchParams(window.location.search)
-  window.location.href = params.get("redirect") || "/save"
+  window.location.href = getSafeRedirectPath(
+    params.get("redirect"),
+    window.location.origin
+  )
 }

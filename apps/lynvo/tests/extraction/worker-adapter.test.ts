@@ -85,23 +85,23 @@ describe("extractFromWorker", () => {
             extractorId: "com.example.extractor&amp;stable",
             displayName: "Example &amp; Extractor",
             sourceId: "source&amp;stable",
-            sourceName: "Movies &amp; Shows",
-            pageTitle: "I&#039;m Not Afraid (2026)",
+            sourceName: "Source &amp; Collection",
+            pageTitle: "Source Title Alpha",
             audio: "Hindi &amp; English",
           },
           nodes: [
             {
               kind: "group",
-              id: "season&amp;stable",
-              label: "Season &amp; Specials",
+              id: "folder&amp;stable",
+              label: "Folder &amp; Specials",
               badge: "New &amp; Updated",
               size: "1 &amp; 2 GB",
               sourceName: "Source &amp; Mirror",
               children: [
                 {
                   kind: "playable",
-                  id: "episode&amp;stable",
-                  label: "Tom &amp; Jerry",
+                  id: "playable-item&amp;stable",
+                  label: "Playable Item Alpha",
                   url: "https://media.example/video?token=a&amp;b",
                 },
               ],
@@ -130,19 +130,19 @@ describe("extractFromWorker", () => {
     expect(result.meta).toMatchObject({
       pluginName: "Example & Extractor",
       sourceId: "source&amp;stable",
-      sourceName: "Movies & Shows",
-      pageTitle: "I'm Not Afraid (2026)",
+      sourceName: "Source & Collection",
+      pageTitle: "Source Title Alpha",
       audio: "Hindi & English",
     })
     expect(result.links[0]).toMatchObject({
-      id: "season&amp;stable",
-      label: "Season & Specials",
+      id: "folder&amp;stable",
+      label: "Folder & Specials",
       size: "1 & 2 GB",
       sourceName: "Source & Mirror",
       children: [
         {
-          id: "episode&amp;stable",
-          label: "Tom & Jerry",
+          id: "playable-item&amp;stable",
+          label: "Playable Item Alpha",
           url: "https://media.example/video?token=a&amp;b",
         },
       ],
@@ -161,23 +161,25 @@ describe("extractFromWorker", () => {
             extractorId: "com.example.extractor",
             displayName: "Example Extractor",
             auth: { type: "bearer" },
-            matchers: [{ hosts: ["hubdrive.example"] }],
+            matchers: [{ hosts: ["extractor-source-alpha.example"] }],
             features: {},
             extensions: {
               lynvo: {
                 sources: [
                   {
-                    id: "hubdrive",
-                    displayName: "HubDrive",
-                    iconUrl: "https://extractor.example/icons/hubdrive.webp",
-                    routesToSourceId: "hubcloud",
-                    hosts: ["hubdrive.example"],
+                    id: "extractor-source-alpha",
+                    displayName: "Extractor Source Alpha",
+                    iconUrl:
+                      "https://extractor.example/icons/extractor-source-alpha.webp",
+                    routesToSourceId: "extractor-source-beta",
+                    hosts: ["extractor-source-alpha.example"],
                   },
                   {
-                    id: "hubcloud",
-                    displayName: "HubCloud",
-                    iconUrl: "https://extractor.example/icons/hubcloud.webp",
-                    hosts: ["hubcloud.example"],
+                    id: "extractor-source-beta",
+                    displayName: "Extractor Source Beta",
+                    iconUrl:
+                      "https://extractor.example/icons/extractor-source-beta.webp",
+                    hosts: ["extractor-source-beta.example"],
                   },
                 ],
               },
@@ -186,61 +188,15 @@ describe("extractFromWorker", () => {
           enabled: true,
           priority: 0,
         },
-        "https://hubdrive.example/file"
+        "https://extractor-source-alpha.example/file"
       )
     )
 
     expect(metadata).toMatchObject({
-      sourceName: "HubDrive",
-      routeSourceName: "HubCloud",
-      routeSourceIconUrl: "https://extractor.example/icons/hubcloud.webp",
-    })
-  })
-
-  it("backfills the HubDrive route from an older stored manifest", async () => {
-    const metadata = await Effect.runPromise(
-      getWorkerMetadata(
-        {
-          _id: "worker-one",
-          baseUrl: "https://extractor.example",
-          apiKey: "secret",
-          manifest: JSON.stringify({
-            protocolVersion: "1.0",
-            extractorId: "com.lynvo.plnkextractor",
-            displayName: "PlnkExtractor",
-            auth: { type: "bearer" },
-            matchers: [{ hosts: ["hubdrive.example"] }],
-            features: {},
-            extensions: {
-              lynvo: {
-                sources: [
-                  {
-                    id: "hubdrive",
-                    displayName: "HubDrive",
-                    iconUrl: "https://extractor.example/icons/hubdrive.webp",
-                    hosts: ["hubdrive.example"],
-                  },
-                  {
-                    id: "hubcloud",
-                    displayName: "HubCloud",
-                    iconUrl: "https://extractor.example/icons/hubcloud.webp",
-                    hosts: ["hubcloud.example"],
-                  },
-                ],
-              },
-            },
-          }),
-          enabled: true,
-          priority: 0,
-        },
-        "https://hubdrive.example/file"
-      )
-    )
-
-    expect(metadata).toMatchObject({
-      sourceName: "HubDrive",
-      routeSourceName: "HubCloud",
-      routeSourceIconUrl: "https://extractor.example/icons/hubcloud.webp",
+      sourceName: "Extractor Source Alpha",
+      routeSourceName: "Extractor Source Beta",
+      routeSourceIconUrl:
+        "https://extractor.example/icons/extractor-source-beta.webp",
     })
   })
 
@@ -258,14 +214,14 @@ describe("extractFromWorker", () => {
           nodes: [
             {
               kind: "group",
-              id: "season-one",
-              label: "Season one",
+              id: "folder-one",
+              label: "Folder one",
               children: [
                 {
                   kind: "resolvable",
-                  id: "episode-one",
-                  label: "Episode one",
-                  nodeUrl: "https://source.example/episode-one",
+                  id: "playable-item-one",
+                  label: "Playable Item one",
+                  nodeUrl: "https://source.example/playable-item-one",
                 },
               ],
             },

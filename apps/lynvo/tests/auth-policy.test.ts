@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  getPasswordValidationErrors,
   normalizeUsername,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
@@ -75,4 +76,11 @@ describe("shared authentication policy", () => {
       expect(validatePassword(password, username)).toBe(expectedError)
     }
   )
+
+  it("collects every actionable password error for form validation", () => {
+    expect(getPasswordValidationErrors("weak")).toEqual([
+      `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+      "Password must include an uppercase letter.",
+    ])
+  })
 })

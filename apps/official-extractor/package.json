@@ -5,7 +5,8 @@
   "scripts": {
     "build": "wrangler deploy --dry-run --config wrangler.jsonc --env=\"\"",
     "dev": "wrangler dev --config wrangler.jsonc --env local",
-    "deploy": "pnpm run check && pnpm run test && wrangler deploy --config wrangler.jsonc --env=\"\"",
+    "deploy": "pnpm run images:optimize && pnpm run check && pnpm run test && wrangler deploy --config wrangler.jsonc --env=\"\"",
+    "images:optimize": "node scripts/optimize-images.mjs public/icons/sources",
     "cf-typegen": "wrangler types --env-interface OfficialExtractorBindings",
     "check": "pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
     "fmt": "oxfmt src tests vitest.config.ts",
@@ -18,6 +19,7 @@
   "dependencies": {
     "@lynvo/extractor-protocol": "workspace:*",
     "cheerio": "catalog:",
+    "evlog": "^2.22.3",
     "hono": "catalog:"
   },
   "devDependencies": {
@@ -25,6 +27,7 @@
     "@cloudflare/workers-types": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "sharp": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",

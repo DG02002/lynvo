@@ -17,67 +17,67 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       draftExpiresAt: timestamp + TEST_DRAFT_LIFETIME_MS,
       meta: {
         pluginName: "Spencerwooo's Onedrive Vercel Index",
-        pluginIcon: "/icons/plugins/onedrive-index.webp",
+        pluginIcon: "/icons/sources/onedrive-index.webp",
         sourceName: "Spencerwooo's Onedrive Vercel Index",
         pageTitle: "Example Show — choose files to save",
-        audio: "English AAC 5.1",
+        audio: "Audio Alpha",
         workerId: "ui-test-onedrive-worker",
         extractedLinks: [
           {
-            id: "draft-season-one",
-            url: "https://media.example/selection-draft/season-one",
-            label: "Season 1 — 1080p",
+            id: "draft-folder-one",
+            url: "https://media.example/selection-draft/folder-one",
+            label: "Folder 1 — Variant Alpha",
             type: "folder",
             selectable: true,
             children: [
               {
                 id: "draft-option-one",
-                url: "https://media.example/selection-draft/season-one/episode-one.mkv",
-                label: "Example.Show.S01E01.1080p.mkv",
+                url: "https://media.example/selection-draft/folder-one/playable-item-one.mkv",
+                label: "Example.Show.item-01.Variant Alpha.mkv",
                 type: "file",
                 size: "1.2 GB",
               },
               {
                 id: "draft-option-two",
-                url: "https://media.example/selection-draft/season-one/episode-two.mkv",
-                label: "Example.Show.S01E02.1080p.mkv",
+                url: "https://media.example/selection-draft/folder-one/playable-item-two.mkv",
+                label: "Example.Show.item-02.Variant Alpha.mkv",
                 type: "file",
                 size: "1.3 GB",
               },
               {
                 id: "draft-option-three",
-                url: "https://media.example/selection-draft/season-one/episode-three.mkv",
-                label: "Example.Show.S01E03.1080p.mkv",
+                url: "https://media.example/selection-draft/folder-one/playable-item-three.mkv",
+                label: "Example.Show.item-03.Variant Alpha.mkv",
                 type: "file",
                 size: "1.1 GB",
               },
             ],
           },
           {
-            id: "draft-season-two",
-            url: "https://media.example/selection-draft/season-two",
-            label: "Season 2 — 2160p",
+            id: "draft-folder-two",
+            url: "https://media.example/selection-draft/folder-two",
+            label: "Folder 2 — Variant Beta",
             type: "folder",
             selectable: true,
             children: [
               {
                 id: "draft-option-four",
-                url: "https://media.example/selection-draft/season-two/episode-one.mkv",
-                label: "Example.Show.S02E01.2160p.DDP5.1.mkv",
+                url: "https://media.example/selection-draft/folder-two/playable-item-one.mkv",
+                label: "Example.Show.item-04.Variant Beta.Audio Beta.mkv",
                 type: "file",
                 size: "4.8 GB",
               },
               {
                 id: "draft-option-five",
-                url: "https://media.example/selection-draft/season-two/episode-two.mkv",
-                label: "Example.Show.S02E02.2160p.DDP5.1.mkv",
+                url: "https://media.example/selection-draft/folder-two/playable-item-two.mkv",
+                label: "Example.Show.item-05.Variant Beta.Audio Beta.mkv",
                 type: "file",
                 size: "4.6 GB",
               },
               {
                 id: "draft-option-six",
-                url: "https://media.example/selection-draft/season-two/episode-three.mkv",
-                label: "Example.Show.S02E03.2160p.DDP5.1.mkv",
+                url: "https://media.example/selection-draft/folder-two/playable-item-three.mkv",
+                label: "Example.Show.item-06.Variant Beta.Audio Beta.mkv",
                 type: "file",
                 size: "5.0 GB",
               },
@@ -129,35 +129,35 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
         extraction: {
           extractedLinks: [
             {
-              id: "season-one",
-              url: "https://media.example/library/season-one",
-              label: "Season One",
+              id: "folder-one",
+              url: "https://media.example/library/folder-one",
+              label: "Folder One",
               type: "folder",
               children: [
                 {
-                  id: "watched-episode",
-                  url: "https://media.example/library/season-one/episode-one.mp4",
-                  label: "Episode 1 — Watched file with a size",
+                  id: "watched-playable-item",
+                  url: "https://media.example/library/folder-one/playable-item-one.mp4",
+                  label: "Playable Item 1 — Watched file with a size",
                   type: "file",
                   size: "780 MB",
                 },
                 {
-                  id: "long-episode",
-                  url: "https://media.example/library/season-one/episode-with-a-very-long-name.mp4",
+                  id: "long-playable-item",
+                  url: "https://media.example/library/folder-one/playable-item-with-a-very-long-name.mp4",
                   label:
-                    "Episode 2 — A deliberately long filename that wraps across multiple lines and keeps every trailing action aligned",
+                    "Playable Item 2 — A deliberately long filename that wraps across multiple lines and keeps every trailing action aligned",
                   type: "file",
                   size: "1.1 GB",
                 },
                 {
                   id: "nested-folder",
-                  url: "https://media.example/library/season-one/extras",
+                  url: "https://media.example/library/folder-one/extras",
                   label: "Extras",
                   type: "folder",
                   children: [
                     {
                       id: "nested-file",
-                      url: "https://media.example/library/season-one/extras/interview.mp4",
+                      url: "https://media.example/library/folder-one/extras/interview.mp4",
                       label: "Cast interview.mp4",
                       type: "file",
                       size: "240 MB",
@@ -170,7 +170,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
         },
         playback: {
           watchedUrls: [
-            "https://media.example/library/season-one/episode-one.mp4",
+            "https://media.example/library/folder-one/playable-item-one.mp4",
           ],
           watchedIds: [],
         },
@@ -259,56 +259,58 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
     },
     {
       id: "source-alpha-mirrors",
-      url: "https://source-alpha.example/example-series-series-season-1",
+      url: "https://source-alpha.example/example-collection-collection-folder-1",
       timestamp,
-      title: "Source Alpha series with resolved Resolver Beta mirrors",
+      title: "Source Alpha collection with resolved Resolver Beta mirrors",
       metadata: {
         schemaVersion: 2,
         source: {
           pluginName: "Example Extractor",
           sourceName: "Source Alpha",
           sourceIconUrl:
-            "https://extractor.example/icons/plugins/source-alpha.webp",
+            "https://extractor.example/icons/sources/source-alpha.webp",
           workerId: "ui-test-source-alpha-worker",
-          audio: "Hindi DD5.1 + English AAC 5.1",
+          audio: "Hindi DD5.1 + Audio Alpha",
         },
         extraction: {
           extractedLinks: [
             {
-              id: "source-alpha-season-one",
-              url: "https://source-alpha.example/series/season-one",
-              label: "Season 1",
+              id: "source-alpha-folder-one",
+              url: "https://source-alpha.example/collection/folder-one",
+              label: "Folder 1",
               type: "folder",
               selectable: false,
               children: [
                 {
-                  id: "source-alpha-season-one-2160p",
-                  url: "https://source-alpha.example/series/season-one/2160p",
-                  label: "2160p 10bit",
+                  id: "source-alpha-folder-one-Variant Beta",
+                  url: "https://source-alpha.example/collection/folder-one/Variant Beta",
+                  label: "Variant Beta",
                   type: "folder",
                   selectable: true,
                   children: [
                     {
-                      id: "source-alpha-s01e01",
-                      url: "https://resolver-beta.example/s01e01",
-                      label: "Example.Series.S01E01.2160p.10bit.mkv",
+                      id: "source-alpha-item-01",
+                      url: "https://resolver-beta.example/item-01",
+                      label:
+                        "Example.Collection.item-01.Variant Beta.Variant Beta.mkv",
                       type: "folder",
                       size: "5.8 GB",
                       workerNodeKind: "resolvable",
                     },
                     {
-                      id: "source-alpha-s01e02",
-                      url: "https://resolver-beta.example/s01e02",
-                      label: "Example.Series.S01E02.2160p.10bit.mkv",
+                      id: "source-alpha-item-02",
+                      url: "https://resolver-beta.example/item-02",
+                      label:
+                        "Example.Collection.item-02.Variant Beta.Variant Beta.mkv",
                       type: "folder",
                       size: "6.1 GB",
                       workerNodeKind: "resolvable",
                     },
                     {
-                      id: "source-alpha-s01e03-failure",
+                      id: "source-alpha-item-03-failure",
                       url: "https://resolver-beta.example/resolution-failure",
                       label:
-                        "Example.Series.S01E03.2160p.10bit.Resolve-Failure.mkv",
+                        "Example.Collection.item-03.Variant Beta.Variant Beta.Resolve-Failure.mkv",
                       type: "folder",
                       size: "5.9 GB",
                       workerNodeKind: "resolvable",

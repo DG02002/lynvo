@@ -7,12 +7,12 @@ import {
 } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  Database01Icon,
   Activity03Icon,
+  HardDriveIcon,
   Key01Icon,
   PlayIcon,
+  Plug02Icon,
   Settings01Icon,
-  ThreeDScaleIcon,
 } from "@hugeicons/core-free-icons"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { GeneralSettings } from "~/features/site/settings/general-settings"
@@ -71,7 +71,7 @@ const settingsTabs = [
   {
     value: "plugins",
     label: "Plugins",
-    icon: ThreeDScaleIcon,
+    icon: Plug02Icon,
   },
   {
     value: "usage",
@@ -81,7 +81,7 @@ const settingsTabs = [
   {
     value: "storage",
     label: "Storage",
-    icon: Database01Icon,
+    icon: HardDriveIcon,
   },
   {
     value: "player",
@@ -219,7 +219,7 @@ export default function Settings() {
                 Track extraction usage within service limits.
               </p>
             </header>
-            <UsageSettings />
+            <UsageSettings officialPlugins={officialPlugins ?? []} />
           </TabsContent>
 
           <TabsContent value="player" className="flex flex-col">

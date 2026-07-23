@@ -20,7 +20,7 @@ export interface SourceAdapterOptions {
   request: ExtractRequest
   targetUrl: string
   source: OfficialSourceDefinition
-  publicAssetOrigin: string
+  publicAssetOrigin?: string
 }
 
 export interface OfficialSourceDefinition {
@@ -28,7 +28,7 @@ export interface OfficialSourceDefinition {
   displayName: string
   description: string
   homepage: string
-  iconPath: string
+  iconPath?: string
   status: "active" | "maintenance" | "degraded" | "down"
   version: string
   matchers: ExtractorMatcher[]
@@ -61,7 +61,6 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
     description:
       "Extracts playable files and lazy folders from Bhadoo Google Drive Index deployments.",
     homepage: "https://gitlab.com/GoogleDriveIndex/Google-Drive-Index",
-    iconPath: "/icons/plugins/bhadoo-google-drive-index.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
     matchers: bhadooMatchers,
@@ -74,7 +73,7 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
     description:
       "Extracts playable files and lazy folders from OneDrive Vercel Index deployments.",
     homepage: "https://github.com/spencerwooo/onedrive-vercel-index",
-    iconPath: "/icons/plugins/onedrive-index.webp",
+    iconPath: "/icons/sources/onedrive-index.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
     matchers: oneDriveMatchers,
@@ -94,11 +93,12 @@ export const findOfficialSource = (
       )
 
 export const createOfficialManifest = (
-  publicAssetOrigin: string
+  publicAssetOrigin?: string
 ): ExtractorManifest => ({
   protocolVersion: "1.0",
   extractorId: EXTRACTOR_ID,
   displayName: EXTRACTOR_NAME,
+  hasIcon: false,
   homepage: "https://lynvo.example",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
@@ -111,7 +111,10 @@ export const createOfficialManifest = (
         displayName: source.displayName,
         description: source.description,
         homepage: source.homepage,
-        iconUrl: `${publicAssetOrigin}${source.iconPath}`,
+        hasIcon: Boolean(publicAssetOrigin && source.iconPath),
+        ...(publicAssetOrigin && source.iconPath
+          ? { iconUrl: `${publicAssetOrigin}${source.iconPath}` }
+          : {}),
         status: source.status,
         version: source.version,
         hosts: source.matchers.flatMap((matcher) => matcher.hosts),
@@ -125,7 +128,7 @@ export const createOfficialManifest = (
 export const extractFromOfficialSource = async (
   request: ExtractRequest,
   targetUrl: string,
-  publicAssetOrigin: string
+  publicAssetOrigin?: string
 ): Promise<ExtractSuccessResponse> => {
   const source = findOfficialSource(targetUrl, request.sourceId)
   if (!source) {
@@ -136,13 +139,15 @@ export const extractFromOfficialSource = async (
 
 export const createSourceResponseMetadata = (
   source: OfficialSourceDefinition,
-  publicAssetOrigin: string,
+  publicAssetOrigin?: string,
   pageTitle?: string
 ): ExtractSuccessResponse["source"] => ({
   extractorId: EXTRACTOR_ID,
   displayName: EXTRACTOR_NAME,
   sourceId: source.id,
   sourceName: source.displayName,
-  sourceIconUrl: `${publicAssetOrigin}${source.iconPath}`,
+  ...(publicAssetOrigin && source.iconPath
+    ? { sourceIconUrl: `${publicAssetOrigin}${source.iconPath}` }
+    : {}),
   ...(pageTitle ? { pageTitle } : {}),
 })

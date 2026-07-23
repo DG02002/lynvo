@@ -9,7 +9,7 @@ export const GuestNavActions = () => (
     <Link
       to={authPaths.signIn}
       viewTransition
-      className={cn(buttonVariants({ variant: "ghost" }), "px-4")}
+      className={cn(buttonVariants({ variant: "default" }), "px-4")}
     >
       {authCopy.nav.signIn}
     </Link>
@@ -17,7 +17,7 @@ export const GuestNavActions = () => (
       to={authPaths.createAccount}
       viewTransition
       className={cn(
-        buttonVariants({ variant: "default" }),
+        buttonVariants({ variant: "outline" }),
         "hidden px-4 sm:inline-flex"
       )}
     >

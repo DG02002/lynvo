@@ -185,20 +185,20 @@ The manifest is not the place for:
 
 ### Icons
 
-External extractors should provide an `iconUrl` when they have a stable HTTPS icon. Lynvo displays that icon in the external extractor settings table and may reuse it anywhere extractor identity is shown.
+External extractors should publish `hasIcon` explicitly. Set it to `true` and provide `iconUrl` when a stable HTTPS icon exists. Set it to `false` and omit `iconUrl` when Lynvo should render its extractor fallback.
 
 Recommended:
 
 - serve a small square WebP icon
 - use an HTTPS URL
 - keep the image stable after users register the worker
-- omit `iconUrl` in local HTTP development if you do not have an HTTPS asset URL
+- set `hasIcon` to `false` and omit `iconUrl` when no public asset URL exists
 
-If the icon is served by the worker itself, expose it as a static asset such as `/icons/plugins/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
+If the icon is served by the worker itself, expose it as a static asset such as `/icons/sources/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
 
-### Source Plugin Icons
+### Extractor Source Icons
 
-If one worker supports multiple source plugins, publish those source identities under `extensions.lynvo.sources`.
+If one worker supports multiple Extractor Sources, publish those identities under `extensions.lynvo.sources`.
 
 Example:
 
@@ -212,6 +212,7 @@ Example:
           "displayName": "Resolver Beta",
           "description": "Resolves playable media from Resolver Beta deployments.",
           "homepage": "https://resolver-beta.example",
+          "hasIcon": true,
           "iconUrl": "https://example.com/icons/resolver-beta.webp",
           "status": "active",
           "version": "1.2.3",
@@ -235,13 +236,13 @@ Example:
 }
 ```
 
-Lynvo displays these source icons in the external extractor settings table. This is distinct from the top-level worker `iconUrl`.
+Lynvo displays these source icons in the external extractor settings table. Set source `hasIcon` to `false` and omit `iconUrl` to request Lynvo's source fallback. This is distinct from the top-level extractor icon.
 
 `status` is optional and may be `active`, `maintenance`, `degraded`, or `down`. `version` is optional and should describe the worker's source-specific adapter version, not the upstream site's version.
 
 `routesToSourceId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
-`matchers` is optional but recommended. Lynvo uses it to show which source plugin is likely to handle a URL before extraction starts.
+`matchers` is optional but recommended. Lynvo uses it to show which Extractor Source is likely to handle a URL before extraction starts.
 
 `description`, `homepage`, and `credential` are optional source capability metadata. A credential `kind` is either `domain-password` or `http-basic`, its `scope` is `domain`, and `required` states whether every extraction needs it. These fields describe configuration requirements and must not contain credentials or UI layout instructions.
 
@@ -275,8 +276,8 @@ Lynvo expects staged extraction.
 
 Example:
 
-1. `source-alpha` page returns season and episode nodes.
-2. Episode node carries a lazy `nodeUrl`.
+1. `source-alpha` page returns folder and lazy item nodes.
+2. Lazy Item node carries a lazy `nodeUrl`.
 3. Lynvo calls `POST /extract` again with that `nodeUrl`.
 4. The worker resolves the next step.
 5. If the next step is final, return playable nodes.
@@ -305,12 +306,12 @@ Do not return raw implementation details unless you place them under `extensions
 The protocol has three wire-level node kinds. Product terms such as “direct
 link,” “container,” “folder,” and “lazy folder” map onto those kinds as follows:
 
-| Product item | Protocol kind | Important fields |
-| --- | --- | --- |
-| Direct playable link | `playable` | `url` |
-| Display-only container | `group` | `selectable: false`, `children` |
-| Selectable folder | `group` | `selectable: true`, `children` |
-| Lazy folder | `resolvable` | `nodeUrl` and/or `resourceId` |
+| Product item           | Protocol kind | Important fields                |
+| ---------------------- | ------------- | ------------------------------- |
+| Direct playable link   | `playable`    | `url`                           |
+| Display-only container | `group`       | `selectable: false`, `children` |
+| Selectable folder      | `group`       | `selectable: true`, `children`  |
+| Lazy folder            | `resolvable`  | `nodeUrl` and/or `resourceId`   |
 
 Import `ExtractorNode` so TypeScript checks copyable implementations against
 the shared contract.
@@ -325,10 +326,10 @@ import type { ExtractorNode } from "@lynvo/extractor-protocol"
 
 const directLink = {
   kind: "playable",
-  id: "movie-primary",
-  label: "Movie — 1080p",
-  url: "https://media.example.com/movie.mp4",
-  badge: "1080p",
+  id: "playable-item-primary",
+  label: "Playable Item — Variant Alpha",
+  url: "https://media.example.com/playable-item.mp4",
+  badge: "Variant Alpha",
   size: "1.4 GB",
   status: "up",
 } satisfies ExtractorNode
@@ -340,11 +341,11 @@ A container is a display-only grouping. Lynvo renders its children, but the
 container itself is not a selectable extraction target.
 
 ```ts
-const seasonContainer = {
+const folderContainer = {
   kind: "group",
-  id: "season-1",
-  label: "Season 1",
-  badge: "10 episodes",
+  id: "folder-1",
+  label: "Folder 1",
+  badge: "10 playable items",
   selectable: false,
   children: [directLink],
 } satisfies ExtractorNode
@@ -358,10 +359,10 @@ with `selectable: true`. Its current children must be included in the response.
 ```ts
 const selectableFolder = {
   kind: "group",
-  id: "movies-folder",
-  label: "Movies",
+  id: "playable-items-folder",
+  label: "Collections",
   selectable: true,
-  children: [seasonContainer],
+  children: [folderContainer],
 } satisfies ExtractorNode
 ```
 
@@ -376,9 +377,9 @@ request.
 const lazyFolder = {
   kind: "resolvable",
   id: "shows-folder",
-  label: "Shows",
+  label: "Collections",
   badge: "Open folder",
-  nodeUrl: "https://source.example.com/0:/Shows/",
+  nodeUrl: "https://source.example.com/0:/Collections/",
   resourceId: "folder_shows_v1",
 } satisfies ExtractorNode
 ```
@@ -389,7 +390,7 @@ When the user opens that lazy folder, Lynvo sends another extraction request:
 {
   "input": {
     "kind": "node",
-    "nodeUrl": "https://source.example.com/0:/Shows/",
+    "nodeUrl": "https://source.example.com/0:/Collections/",
     "resourceId": "folder_shows_v1"
   }
 }
@@ -499,7 +500,7 @@ const runtime = createExtractorRuntime({
     const url = new URL(request.url)
     const iconUrl =
       url.protocol === "https:"
-        ? `${url.origin}/icons/plugins/source.webp`
+        ? `${url.origin}/icons/sources/source.webp`
         : undefined
 
     return {

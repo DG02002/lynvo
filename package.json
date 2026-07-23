@@ -9,7 +9,7 @@
     "dev:local": "pnpm --filter @lynvo/app dev:local",
     "test": "pnpm -r --if-present run test --run",
     "deploy:lynvo": "pnpm --filter @lynvo/app deploy",
-    "images:optimize": "node scripts/optimize-plugin-icons.mjs apps/lynvo/public/icons/plugins && node scripts/optimize-plugin-icons.mjs apps/lynvo/public/icons/players",
+    "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
     "sync:repos": "tsx scripts/sync-repos.ts",
     "secrets:local": "node scripts/ensure-official-extractor-local-secret.mjs"
   },

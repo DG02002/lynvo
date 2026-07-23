@@ -17,6 +17,12 @@ declare global {
   interface ExternalWorkerUsage {
     workerId: string
     name: string
+    iconUrl?: string
+    sources?: readonly {
+      id: string
+      name: string
+      iconUrl?: string
+    }[]
     metrics: readonly UsageMetric[]
     error?: string
   }

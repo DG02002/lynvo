@@ -6,7 +6,7 @@ const response = (status: number, contentType = "video/mp4") =>
     status,
     headers: {
       "content-type": contentType,
-      "content-disposition": 'attachment; filename="movie.mp4"',
+      "content-disposition": 'attachment; filename="playable-item.mp4"',
     },
   })
 
@@ -19,13 +19,13 @@ describe("nativeDirectLinkPlugin", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(206))
 
     const links = await nativeDirectLinkPlugin.extract(
-      "https://cdn.example.com/movie.mp4"
+      "https://cdn.example.com/playable-item.mp4"
     )
 
     expect(links).toEqual([
       expect.objectContaining({
-        url: "https://cdn.example.com/movie.mp4",
-        label: "movie.mp4",
+        url: "https://cdn.example.com/playable-item.mp4",
+        label: "playable-item.mp4",
         rangeRequest: "supported",
       }),
     ])
@@ -35,13 +35,13 @@ describe("nativeDirectLinkPlugin", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200))
 
     const links = await nativeDirectLinkPlugin.extract(
-      "https://cdn.example.com/movie.mp4"
+      "https://cdn.example.com/playable-item.mp4"
     )
 
     expect(links[0]).toEqual(
       expect.objectContaining({
-        url: "https://cdn.example.com/movie.mp4",
-        label: "movie.mp4",
+        url: "https://cdn.example.com/playable-item.mp4",
+        label: "playable-item.mp4",
         rangeRequest: "unsupported",
       })
     )

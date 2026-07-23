@@ -23,6 +23,16 @@ const UsageMetricSchema = Schema.Struct({
 const WorkerUsageSchema = Schema.Struct({
   workerId: Schema.String,
   name: Schema.String,
+  iconUrl: Schema.optional(Schema.String),
+  sources: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        id: Schema.String,
+        name: Schema.String,
+        iconUrl: Schema.optional(Schema.String),
+      })
+    )
+  ),
   metrics: Schema.Array(UsageMetricSchema),
   error: Schema.optional(Schema.String),
 })

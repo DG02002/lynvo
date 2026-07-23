@@ -33,6 +33,6 @@ export const OFFICIAL_PLUGIN_MONTHLY_EXTRACTION_LIMITS = {
 } as const
 export const OFFICIAL_PLUGIN_DISPLAY_NAMES = {
   "bhadoo-google-drive-index": "Bhadoo’s Google Drive Index",
-  "onedrive-index": "OneDrive Index",
+  "onedrive-index": "Spencerwooo's OneDrive Vercel Index",
   direct: "Direct links",
 } as const

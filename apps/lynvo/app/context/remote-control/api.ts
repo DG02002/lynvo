@@ -1,4 +1,5 @@
 import { getCsrfToken } from "~/lib/utils"
+import { remotePollResponseSchema } from "./schemas"
 
 export const remoteApi = {
   connect: async (targetSessionId: string) => {
@@ -52,6 +53,11 @@ export const remoteApi = {
     if (!res.ok) {
       throw new Error("Unable to check the remote session")
     }
-    return res.json() as Promise<RemotePollResponse>
+    const value: unknown = await res.json()
+    const parsed = remotePollResponseSchema.safeParse(value)
+    if (!parsed.success) {
+      throw new Error("The remote session returned an invalid response")
+    }
+    return parsed.data
   },
 }

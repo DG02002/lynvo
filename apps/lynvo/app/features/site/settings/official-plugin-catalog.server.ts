@@ -32,7 +32,11 @@ export const loadOfficialPlugins = async (
         ...(source.version ? { version: source.version } : {}),
       })
     )
-  } catch {
+  } catch (error) {
+    console.error({
+      event: "official_extractor_manifest_load_failed",
+      error,
+    })
     return null
   }
 }

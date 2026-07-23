@@ -1,10 +1,11 @@
-import { useRouteLoaderData, useNavigate } from "react-router"
+import { Link, useRouteLoaderData, useNavigate } from "react-router"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { LogoLink } from "~/components/logo"
 import { useState } from "react"
 import { GuestNavActions } from "./header/GuestNavActions"
 import { LogoutDialog } from "./header/LogoutDialog"
 import { UserNavActions } from "./header/UserNavActions"
+import { sitePaths } from "~/lib/paths"
 
 export function Header() {
   const navigate = useNavigate()
@@ -27,10 +28,34 @@ export function Header() {
 
   return (
     <header data-site-header className="fixed top-0 z-50 w-full bg-background">
-      <div className="mx-auto max-w-5xl flex h-16 items-center justify-between px-4 md:px-8">
-        <div className="flex items-center gap-4 md:gap-6">
-          <LogoLink variant="text-only" size="sm" />
-        </div>
+      <div className="relative mx-auto flex h-16 max-w-5xl items-center justify-between px-4 md:px-8">
+        <LogoLink variant="text-only" size="sm" />
+        <nav
+          aria-label="Primary navigation"
+          className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 text-sm md:flex"
+        >
+          <Link
+            to={sitePaths.docs}
+            viewTransition
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Docs
+          </Link>
+          <Link
+            to={sitePaths.changelog}
+            viewTransition
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Changelog
+          </Link>
+          <Link
+            to={sitePaths.pricing}
+            viewTransition
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Plans
+          </Link>
+        </nav>
         <div className="flex items-center gap-2">
           {user ? (
             <>

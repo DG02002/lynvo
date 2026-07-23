@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { initLogger } from "evlog"
 import { DurableObject } from "cloudflare:workers"
 import { createRequestHandler, RouterContextProvider } from "react-router"
 import { Context, Effect } from "effect"
@@ -12,6 +13,12 @@ import { RequestEventService } from "../app/lib/effect/services/request-event-se
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
 import { signAuthPreflightToken } from "../app/lib/auth-gateway"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
+import {
+  authPreflightRequestSchema,
+  authSignInRequestSchema,
+  deviceCodeRequestSchema,
+  turnstileVerificationResponseSchema,
+} from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
@@ -31,26 +38,13 @@ const reactRouterHandler = createRequestHandler(
   import.meta.env.MODE
 )
 
+initLogger({
+  env: { service: "lynvo" },
+})
+
 const app = new Hono<RequestLoggingEnvironment>()
 
-app.use("*", requestLogging())
-
-type AuthFlow = "signUp" | "signIn"
-
-interface AuthPreflightRequest {
-  readonly flow?: AuthFlow
-  readonly username?: string
-  readonly turnstileToken?: string
-}
-
-interface AuthSignInRequest {
-  readonly provider?: string
-  readonly params?: Record<string, string>
-}
-
-interface DeviceCodeRequest {
-  readonly deviceName?: string
-}
+app.use("/api/*", requestLogging())
 
 type AuthEnv = Env & {
   readonly AUTH_GATEWAY_SECRET?: string
@@ -123,16 +117,15 @@ const verifyTurnstile = async (
   if (!response.ok) {
     return false
   }
-  const result = (await response.json()) as {
-    success?: boolean
-    hostname?: string
-  }
-  if (!result.success) {
+  const result = turnstileVerificationResponseSchema.safeParse(
+    await response.json()
+  )
+  if (!result.success || !result.data.success) {
     return false
   }
-  if (result.hostname) {
+  if (result.data.hostname) {
     const expected = new URL(request.url).hostname
-    return result.hostname === expected || expected === "localhost"
+    return result.data.hostname === expected || expected === "localhost"
   }
   return true
 }
@@ -164,9 +157,15 @@ app.post("/api/auth/preflight", async (context) => {
     )
   }
   const env = context.env as AuthEnv
-  let payload: AuthPreflightRequest
+  let payload
   try {
-    payload = (await context.req.json()) as AuthPreflightRequest
+    const result = authPreflightRequestSchema.safeParse(
+      await context.req.json()
+    )
+    if (!result.success) {
+      return context.json({ error: "Send a valid request." }, 400)
+    }
+    payload = result.data
   } catch {
     return context.json({ error: "Send a valid request." }, 400)
   }
@@ -230,18 +229,13 @@ app.post("/api/auth/tv/code", async (context) => {
     )
   }
   const env = context.env as AuthEnv
-  let payload: DeviceCodeRequest
+  let payload
   try {
-    const body: unknown = await context.req.json()
-    if (
-      typeof body !== "object" ||
-      body === null ||
-      !("deviceName" in body) ||
-      typeof body.deviceName !== "string"
-    ) {
+    const result = deviceCodeRequestSchema.safeParse(await context.req.json())
+    if (!result.success) {
       return context.json({ error: "Send a valid request." }, 400)
     }
-    payload = { deviceName: body.deviceName }
+    payload = result.data
   } catch {
     return context.json({ error: "Send a valid request." }, 400)
   }
@@ -288,14 +282,15 @@ app.post("/api/auth/sign-in", async (context) => {
       403
     )
   }
-  let payload: AuthSignInRequest
+  let payload
   try {
-    payload = (await context.req.json()) as AuthSignInRequest
+    const result = authSignInRequestSchema.safeParse(await context.req.json())
+    if (!result.success) {
+      return context.json({ error: "Send a valid request." }, 400)
+    }
+    payload = result.data
   } catch {
     return context.json({ error: "Send a valid request." }, 400)
-  }
-  if (payload.provider !== "credentials" || !payload.params) {
-    return context.json({ error: "Start sign-in again." }, 400)
   }
   const flow = payload.params.flow
   try {
@@ -368,7 +363,7 @@ app.all("/api/*", async (context) => {
     Context.add(ExtractorService, services[2]),
     Context.add(PluginCredentialVault, services[3]),
     Context.add(RequestEventService, {
-      requestId: context.get("requestEvent").request_id,
+      requestId: context.get("requestId"),
       add: (fields) => addRequestContext(context, fields),
     })
   )

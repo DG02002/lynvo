@@ -8,12 +8,23 @@ const worker = {
   baseUrl: "http://localhost:8788",
   manifest: JSON.stringify({
     protocolVersion: "1.0",
-    extractorId: "com.lynvo.plnkextractor",
-    displayName: "PlnkExtractor",
+    extractorId: "com.example.extractor",
+    displayName: "Example Extractor",
     auth: { type: "bearer" },
     matchers: [{ hosts: ["example.com"] }],
     features: {},
-    extensions: {},
+    extensions: {
+      lynvo: {
+        sources: [
+          {
+            id: "source-alpha",
+            displayName: "Source Alpha",
+            homepage: "https://source-alpha.example/project",
+            hosts: ["source-alpha.example"],
+          },
+        ],
+      },
+    },
   }),
   enabled: true,
   verificationStatus: "down",
@@ -32,9 +43,21 @@ describe("ExternalWorkerTable", () => {
 
     expect(screen.getByText("Down")).toBeInTheDocument()
     const availabilitySwitch = screen.getByRole("switch", {
-      name: "PlnkExtractor is down",
+      name: "Example Extractor is down",
     })
     expect(availabilitySwitch).toHaveAttribute("aria-disabled", "true")
     expect(availabilitySwitch).not.toBeChecked()
+    expect(
+      document.querySelector('[data-icon-fallback="extractor"]')
+    ).not.toBeNull()
+    expect(
+      document.querySelector('[data-icon-fallback="source"]')
+    ).not.toBeNull()
+    expect(
+      screen.getByRole("link", {
+        name: "View upstream project for Source Alpha",
+      })
+    ).toHaveAttribute("href", "https://source-alpha.example/project")
+    expect(screen.queryByText("source-alpha.example")).not.toBeInTheDocument()
   })
 })

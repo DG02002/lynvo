@@ -6,13 +6,13 @@ describe("mapNodeToExtractedLink", () => {
   it("maps group nodes to folder links", () => {
     const node: WorkerNode = {
       kind: "group",
-      id: "season-1",
-      label: "Season 1",
+      id: "folder-1",
+      label: "Folder 1",
       children: [
         {
           kind: "playable",
           id: "ep-1",
-          label: "Episode 1",
+          label: "Playable Item 1",
           url: "https://cdn.example/file.mp4",
         },
       ],
@@ -28,8 +28,8 @@ describe("mapNodeToExtractedLink", () => {
   it("maps playable nodes to direct file links", () => {
     const node: WorkerNode = {
       kind: "playable",
-      id: "fsl",
-      label: "Play from FSL",
+      id: "route-alpha",
+      label: "Play from Source Route Alpha",
       url: "https://cdn.example/file.m3u8",
       size: "1.4 GB",
     }
@@ -45,10 +45,10 @@ describe("mapNodeToExtractedLink", () => {
     const node: WorkerNode = {
       kind: "resolvable",
       id: "ep-1",
-      label: "Episode 1",
+      label: "Playable Item 1",
       nodeUrl: "https://worker.example/node/1",
       size: "1.1 GB",
-      sourceName: "HubCloud",
+      sourceName: "Extractor Source Beta",
     }
 
     const link = mapNodeToExtractedLink(node)
@@ -56,7 +56,7 @@ describe("mapNodeToExtractedLink", () => {
     expect(link.type).toBe("folder")
     expect(link.workerNodeKind).toBe("resolvable")
     expect(link.url).toBe("https://worker.example/node/1")
-    expect(link.sourceName).toBe("HubCloud")
+    expect(link.sourceName).toBe("Extractor Source Beta")
   })
 
   it("does not persist source-supplied presentation badges", () => {

@@ -1,9 +1,9 @@
 import { z } from "zod"
 import {
+  getPasswordValidationErrors,
+  getUsernameValidationErrors,
   PASSWORD_MAX_LENGTH,
   USERNAME_MAX_LENGTH,
-  validatePassword,
-  validateUsername,
 } from "./auth-policy"
 
 const addFieldError = (
@@ -18,33 +18,50 @@ const addFieldError = (
   })
 }
 
-export const signInSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, "Username is required.")
-    .max(USERNAME_MAX_LENGTH, "Invalid username or password."),
-  password: z
-    .string()
-    .min(1, "Password is required.")
-    .max(PASSWORD_MAX_LENGTH, "Invalid username or password."),
+const accountUsernameSchema = z.string().superRefine((username, context) => {
+  for (const message of getUsernameValidationErrors(username)) {
+    context.addIssue({ code: "custom", message })
+  }
 })
+
+const accountPasswordSchema = z.string().superRefine((password, context) => {
+  for (const message of getPasswordValidationErrors(password)) {
+    context.addIssue({ code: "custom", message })
+  }
+})
+
+export const signInSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .min(1, "Username is required.")
+      .max(USERNAME_MAX_LENGTH, "Invalid username or password."),
+    password: z
+      .string()
+      .min(1, "Password is required.")
+      .max(PASSWORD_MAX_LENGTH, "Invalid username or password."),
+  })
+  .strict()
 
 export const signUpSchema = z
   .object({
-    username: z.string(),
-    password: z.string(),
+    username: accountUsernameSchema,
+    password: accountPasswordSchema,
     confirmPassword: z.string(),
   })
+  .strict()
   .superRefine((value, context) => {
-    const usernameError = validateUsername(value.username)
-    if (usernameError) {
-      addFieldError(context, "username", usernameError)
-    }
-
-    const passwordError = validatePassword(value.password, value.username)
-    if (passwordError) {
-      addFieldError(context, "password", passwordError)
+    const independentPasswordErrors = new Set(
+      getPasswordValidationErrors(value.password)
+    )
+    for (const message of getPasswordValidationErrors(
+      value.password,
+      value.username
+    )) {
+      if (!independentPasswordErrors.has(message)) {
+        addFieldError(context, "password", message)
+      }
     }
 
     if (value.password !== value.confirmPassword) {
@@ -55,15 +72,11 @@ export const signUpSchema = z
 export const changePasswordSchema = z
   .object({
     oldPassword: z.string().min(1, "Old password is required."),
-    newPassword: z.string(),
+    newPassword: accountPasswordSchema,
     confirmPassword: z.string(),
   })
+  .strict()
   .superRefine((value, context) => {
-    const passwordError = validatePassword(value.newPassword, "")
-    if (passwordError) {
-      addFieldError(context, "newPassword", passwordError)
-    }
-
     if (value.newPassword !== value.confirmPassword) {
       addFieldError(context, "confirmPassword", "Passwords do not match.")
     }

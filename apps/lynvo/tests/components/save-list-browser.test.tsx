@@ -30,16 +30,16 @@ describe("SaveListBrowser", () => {
     })
     const resolvedLinks: ExtractedLink[] = [
       {
-        id: "mission-impossible",
-        url: "https://index.example.com/0:/Movies/Mission%20Impossible/",
-        label: "Mission Impossible",
+        id: "folder-alpha",
+        url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
+        label: "Folder Alpha",
         type: "folder",
         childrenResolved: true,
         children: [
           {
-            id: "movie-1",
-            url: "https://index.example.com/0:/Movies/Mission%20Impossible/movie.mkv",
-            label: "movie.mkv",
+            id: "playable-item-1",
+            url: "https://index.example.com/0:/Collections/Folder%20Alpha/playable-item.mkv",
+            label: "playable-item.mkv",
             type: "file",
           },
         ],
@@ -47,17 +47,17 @@ describe("SaveListBrowser", () => {
     ]
     const expandFolder = vi.fn().mockResolvedValue(resolvedLinks)
     const item: RecentLinkViewItem = {
-      url: "https://index.example.com/0:/Movies/",
+      url: "https://index.example.com/0:/Collections/",
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 2,
-        source: { sourceName: "Bhadoo’s Google Drive Index" },
+        source: { sourceName: "Extractor Source Alpha" },
         extraction: {
           extractedLinks: [
             {
-              id: "mission-impossible",
-              url: "https://index.example.com/0:/Movies/Mission%20Impossible/",
-              label: "Mission Impossible",
+              id: "folder-alpha",
+              url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
+              label: "Folder Alpha",
               type: "folder",
             },
           ],
@@ -79,7 +79,7 @@ describe("SaveListBrowser", () => {
     )
 
     const folderButtons = screen.getAllByRole("button", {
-      name: /Mission Impossible/,
+      name: /Folder Alpha/,
     })
     expect(folderButtons).toHaveLength(2)
     expect(
@@ -92,81 +92,39 @@ describe("SaveListBrowser", () => {
     await waitFor(() =>
       expect(expandFolder).toHaveBeenCalledWith(
         item.url,
-        "mission-impossible",
-        "https://index.example.com/0:/Movies/Mission%20Impossible/"
+        "folder-alpha",
+        "https://index.example.com/0:/Collections/Folder%20Alpha/"
       )
     )
-    expect(await screen.findByText("movie.mkv")).toBeVisible()
+    expect(await screen.findByText("playable-item.mkv")).toBeVisible()
     expect(
-      screen.getByRole("button", { name: /Mission Impossible/ })
+      screen.getByRole("button", { name: /Folder Alpha/ })
     ).toHaveAttribute("data-folder-state", "open")
-  })
-
-  it("backfills HubCloud attribution for legacy resolvable nodes", () => {
-    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
-      configurable: true,
-      value: vi.fn(),
-    })
-    const item: RecentLinkViewItem = {
-      url: "https://4khdhub.one/example-series-123",
-      timestamp: Date.now(),
-      metadata: {
-        schemaVersion: 2,
-        source: { sourceName: "4kHDHub" },
-        extraction: {
-          extractedLinks: [
-            {
-              id: "legacy-hubcloud-node",
-              url: "https://hubcloud.cx/drive/example",
-              label: "Episode One",
-              type: "folder",
-              workerNodeKind: "resolvable",
-            },
-          ],
-        },
-        playback: { watchedUrls: [], watchedIds: [] },
-      },
-    }
-
-    render(
-      <SaveListBrowser
-        items={[item]}
-        selectedItemUrl={item.url}
-        onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
-        extractingItems={new Set()}
-        highlightedId={null}
-        isHydrating={false}
-      />
-    )
-
-    expect(screen.getByText("HubCloud")).toBeVisible()
-    expect(screen.queryByText("4kHDHub")).not.toBeInTheDocument()
   })
 
   it("shows a single resolvable container directly on the save page", async () => {
     const onSelectedItemUrlChange = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([
       {
-        url: "https://files.example/fsl",
-        label: "Play from FSL Server",
+        url: "https://files.example/route-alpha",
+        label: "Play from Source Route Alpha",
         type: "file",
         size: "1.2 GB",
       },
     ])
     const item: RecentLinkViewItem = {
-      id: "hubcloud-item",
-      url: "https://hubcloud.cx/drive/example",
+      id: "extractor-source-beta-item",
+      url: "https://extractor-source-beta.cx/drive/example",
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 2,
-        source: { sourceName: "HubCloud" },
+        source: { sourceName: "Extractor Source Beta" },
         extraction: {
           extractedLinks: [
             {
-              id: "hubcloud-container",
-              url: "https://hubcloud.cx/drive/example",
-              label: "Movie.Name.2026.mkv",
+              id: "extractor-source-beta-container",
+              url: "https://extractor-source-beta.cx/drive/example",
+              label: "Playable Item Alpha.mkv",
               type: "folder",
               workerNodeKind: "resolvable",
             },
@@ -188,16 +146,20 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: /Movie.Name.2026.mkv/ }))
+    fireEvent.click(
+      screen.getByRole("button", { name: /Playable Item Alpha.mkv/ })
+    )
 
-    expect(await screen.findByText("Play from FSL Server")).toBeVisible()
-    expect(screen.getByText("HubCloud")).toBeVisible()
+    expect(
+      await screen.findByText("Play from Source Route Alpha")
+    ).toBeVisible()
+    expect(screen.getByText("Extractor Source Beta")).toBeVisible()
     expect(screen.getByText("1.2 GB")).toBeVisible()
     expect(onSelectedItemUrlChange).not.toHaveBeenCalled()
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
   })
 
-  it("resolves a Resolver Beta episode inline with loading and watched feedback", async () => {
+  it("resolves a Resolver Beta playable-item inline with loading and watched feedback", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
       value: vi.fn(),
@@ -207,18 +169,18 @@ describe("SaveListBrowser", () => {
     const markWatched = vi.fn()
     const item: RecentLinkViewItem = {
       id: "resolver-beta-item",
-      url: "https://source-alpha.example/series",
+      url: "https://source-alpha.example/collection",
       timestamp: Date.now(),
-      title: "Source Alpha series",
+      title: "Source Alpha collection",
       metadata: {
         schemaVersion: 2,
         source: { sourceName: "Source Alpha" },
         extraction: {
           extractedLinks: [
             {
-              id: "episode-one",
-              url: "https://resolver-beta.example/episode-one",
-              label: "Episode One",
+              id: "playable-item-one",
+              url: "https://resolver-beta.example/playable-item-one",
+              label: "Playable Item One",
               type: "folder",
               workerNodeKind: "resolvable",
             },
@@ -242,10 +204,10 @@ describe("SaveListBrowser", () => {
             ),
           }))
         },
-        expandMirror: async (_, episodeUrl) => {
+        expandMirror: async (_, lazyItemUrl) => {
           resolutionCount += 1
           setExtractingItems((currentItems) =>
-            new Set(currentItems).add(episodeUrl)
+            new Set(currentItems).add(lazyItemUrl)
           )
           await new Promise<void>((resolve) => {
             finishResolution = resolve
@@ -253,17 +215,17 @@ describe("SaveListBrowser", () => {
           setExtractingItems(new Set())
           return [
             {
-              url: `${episodeUrl}/fsl`,
-              label: "Play from FSL Server",
+              url: `${lazyItemUrl}/route-alpha`,
+              label: "Play from Source Route Alpha",
               type: "file",
             },
             {
-              url: `${episodeUrl}/s3`,
-              label: "Play from S3 Server",
+              url: `${lazyItemUrl}/route-beta`,
+              label: "Play from Source Route Beta Server",
               type: "file",
             },
             {
-              url: `${episodeUrl}/cf-down`,
+              url: `${lazyItemUrl}/route-gamma`,
               label: "Play from CF Server (404)",
               type: "file",
               status: "down",
@@ -286,33 +248,45 @@ describe("SaveListBrowser", () => {
     }
 
     render(<Harness />)
-    const episodeButton = screen.getByRole("button", { name: /Episode One/ })
-    fireEvent.click(episodeButton)
+    const playableItemButton = screen.getByRole("button", {
+      name: /Playable Item One/,
+    })
+    fireEvent.click(playableItemButton)
 
     expect(await screen.findByRole("status", { name: "Loading" })).toBeVisible()
-    expect(episodeButton).toHaveAttribute("data-resolution-state", "resolving")
+    expect(playableItemButton).toHaveAttribute(
+      "data-resolution-state",
+      "resolving"
+    )
     expect(markWatched).toHaveBeenCalledWith(
       item.url,
-      "https://resolver-beta.example/episode-one"
+      "https://resolver-beta.example/playable-item-one"
     )
 
     finishResolution?.()
 
     await waitFor(() => {
-      expect(screen.getByText("Play from FSL Server")).toBeInTheDocument()
-      expect(screen.getByText("Play from S3 Server")).toBeInTheDocument()
+      expect(
+        screen.getByText("Play from Source Route Alpha")
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText("Play from Source Route Beta Server")
+      ).toBeInTheDocument()
     })
-    expect(screen.queryByText("FSL")).not.toBeInTheDocument()
-    expect(screen.queryByText("S3")).not.toBeInTheDocument()
+    expect(screen.queryByText("Source Route Alpha")).not.toBeInTheDocument()
+    expect(screen.queryByText("Source Route Beta")).not.toBeInTheDocument()
     expect(
       screen.queryByText("Play from CF Server (404)")
     ).not.toBeInTheDocument()
     expect(markWatched).toHaveBeenCalledWith(
       item.url,
-      "https://resolver-beta.example/episode-one"
+      "https://resolver-beta.example/playable-item-one"
     )
-    expect(episodeButton).toHaveClass("bg-sky-500/15")
-    expect(episodeButton).toHaveAttribute("data-resolution-state", "expanded")
+    expect(playableItemButton).toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).toHaveAttribute(
+      "data-resolution-state",
+      "expanded"
+    )
     expect(
       screen.getAllByRole("button", { name: "Open link menu" })
     ).toHaveLength(2)
@@ -320,13 +294,20 @@ describe("SaveListBrowser", () => {
       screen.getByRole("button", { name: "Open resolvable item menu" })
     ).toBeInTheDocument()
 
-    fireEvent.click(episodeButton)
+    fireEvent.click(playableItemButton)
     await waitFor(() => {
-      expect(screen.queryByText("Play from FSL Server")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("Play from Source Route Alpha")
+      ).not.toBeInTheDocument()
     })
-    expect(episodeButton).toHaveAttribute("data-resolution-state", "collapsed")
-    fireEvent.click(episodeButton)
-    expect(await screen.findByText("Play from FSL Server")).toBeVisible()
+    expect(playableItemButton).toHaveAttribute(
+      "data-resolution-state",
+      "collapsed"
+    )
+    fireEvent.click(playableItemButton)
+    expect(
+      await screen.findByText("Play from Source Route Alpha")
+    ).toBeVisible()
     expect(resolutionCount).toBe(1)
   })
 
@@ -341,9 +322,9 @@ describe("SaveListBrowser", () => {
         extraction: {
           extractedLinks: [
             {
-              id: "failed-episode",
+              id: "failed-playable-item",
               url: "https://resolver-beta.example/resolution-failure",
-              label: "Episode Resolution Failure",
+              label: "Playable Item Resolution Failure",
               type: "folder",
               workerNodeKind: "resolvable",
             },
@@ -368,18 +349,18 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const failedEpisodeButton = screen.getByRole("button", {
-      name: /Episode Resolution Failure/,
+    const failedPlayableItemButton = screen.getByRole("button", {
+      name: /Playable Item Resolution Failure/,
     })
-    fireEvent.click(failedEpisodeButton)
+    fireEvent.click(failedPlayableItemButton)
 
     await waitFor(() => {
-      expect(failedEpisodeButton).toHaveAttribute(
+      expect(failedPlayableItemButton).toHaveAttribute(
         "data-resolution-state",
         "failed"
       )
     })
-    expect(failedEpisodeButton).toHaveClass("bg-destructive/15")
+    expect(failedPlayableItemButton).toHaveClass("bg-destructive/15")
     expect(markWatched).toHaveBeenCalledWith(
       item.url,
       "https://resolver-beta.example/resolution-failure"

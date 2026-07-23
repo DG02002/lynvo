@@ -70,7 +70,7 @@ export function StorageSettings() {
   if (!usage) {
     return (
       <SettingsPanel>
-        <div className="flex flex-col gap-2 px-2">
+        <div className="flex flex-col gap-2">
           <span className="text-sm font-normal text-muted-foreground">
             Loading storage usage
           </span>
@@ -142,7 +142,7 @@ export function StorageSettings() {
   return (
     <SettingsPanel>
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2 px-2">
+        <div className="flex flex-col gap-2">
           <span className="text-sm font-normal text-foreground">
             {formatBytes(usage.enforcedBytes)} of{" "}
             {formatBytes(usage.storageLimitBytes)} used

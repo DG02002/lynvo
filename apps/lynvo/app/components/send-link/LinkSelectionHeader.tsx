@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { AudioWave01Icon, Folder02Icon } from "@hugeicons/core-free-icons"
+import { AudioWave01Icon } from "@hugeicons/core-free-icons"
 import { DialogHeader, DialogTitle } from "~/components/ui/dialog"
 import { PluginIcon } from "~/components/plugin-icon"
 
@@ -32,20 +32,11 @@ export const LinkSelectionHeader = ({
     <DialogHeader className="z-10 min-w-0 border-b bg-popover p-4 pb-4 text-left md:p-8 md:pb-6 flex flex-col gap-2">
       {(pluginIcon || pluginName) && (
         <div className="mb-4 flex min-w-0 items-center gap-3">
-          {pluginIcon || pluginName === "Bhadoo’s Google Drive Index" ? (
-            <PluginIcon
-              iconUrl={pluginIcon}
-              pluginName={pluginName}
-              className="size-12 md:size-16"
-            />
-          ) : (
-            <div className="size-12 md:size-16 flex items-center justify-center shrink-0">
-              <HugeiconsIcon
-                icon={Folder02Icon}
-                className="size-6 md:size-8 text-primary"
-              />
-            </div>
-          )}
+          <PluginIcon
+            iconUrl={pluginIcon}
+            fallback="source"
+            className="size-12 md:size-16"
+          />
           <div className="flex min-w-0 flex-col">
             {pluginName && (
               <span className="truncate text-2xl font-normal leading-none">

@@ -4,15 +4,9 @@ import {
   SmartPhone01Icon,
   Tv01Icon,
 } from "@hugeicons/core-free-icons"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "~/components/ui/accordion"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
-import { faqs, privacyPoints } from "./home-content"
+import { privacyPoints } from "./home-content"
 
 const SectionIntro = ({
   title,
@@ -220,36 +214,6 @@ export const AndroidTvSetupSection = () => (
       >
         Install TV Bro from Google Play
       </a>
-    </div>
-  </section>
-)
-
-export const FaqSection = () => (
-  <section className="py-24 md:py-32">
-    <div className="mx-auto flex max-w-3xl flex-col gap-12 px-6">
-      <div className="flex flex-col items-center text-center">
-        <SectionIntro
-          title="Questions about Lynvo"
-          description="Quick answers about supported Android devices, video players, links, and privacy."
-          centered
-        />
-      </div>
-      <Accordion className="w-full overflow-visible rounded-none border-0">
-        {faqs.map((faq) => (
-          <AccordionItem
-            key={faq.value}
-            value={faq.value}
-            className="border-border/50 data-open:bg-transparent"
-          >
-            <AccordionTrigger className="py-6 text-left text-lg font-normal">
-              {faq.question}
-            </AccordionTrigger>
-            <AccordionContent className="text-base leading-relaxed text-muted-foreground pb-6">
-              {faq.answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
     </div>
   </section>
 )

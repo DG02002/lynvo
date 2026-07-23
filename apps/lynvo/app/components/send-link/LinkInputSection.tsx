@@ -161,7 +161,9 @@ export function LinkInputSection({
                 extractionPreview.meta.sourceIconUrl ||
                 extractionPreview.meta.pluginIcon
               }
-              pluginName={extractionPreview.meta.pluginName}
+              fallback={
+                extractionPreview.meta.sourceName ? "source" : "extractor"
+              }
               className="size-4 rounded-sm ring-1 ring-black/10 dark:ring-white/10"
             />
             <span className="font-medium text-foreground">
@@ -186,13 +188,11 @@ export function LinkInputSection({
                 >
                   <HugeiconsIcon icon={Route01Icon} className="size-4" />
                 </span>
-                {extractionPreview.meta.routeSourceIconUrl && (
-                  <img
-                    src={extractionPreview.meta.routeSourceIconUrl}
-                    alt=""
-                    className="size-4 rounded-sm ring-1 ring-black/10 dark:ring-white/10"
-                  />
-                )}
+                <PluginIcon
+                  iconUrl={extractionPreview.meta.routeSourceIconUrl}
+                  fallback="source"
+                  className="size-4 rounded-sm ring-1 ring-black/10 dark:ring-white/10"
+                />
                 <span className="font-medium text-foreground">
                   {extractionPreview.meta.routeSourceName}
                 </span>

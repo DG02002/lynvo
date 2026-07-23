@@ -1,4 +1,5 @@
 import type { RealtimeAction } from "./reducer"
+import { parseRealtimeMessage } from "./message-schema"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
@@ -20,21 +21,19 @@ const websocketUrl = () => {
 }
 
 const handleRealtimeMessage = (event: MessageEvent) => {
-  try {
-    const message = JSON.parse(String(event.data)) as {
-      type: string
-      payload?: Record<string, unknown>
-    }
+  const message = parseRealtimeMessage(String(event.data))
 
-    if (message.type === "remote.event") {
-      window.dispatchEvent(
-        new CustomEvent("lynvo:remote-event", {
-          detail: message.payload,
-        })
-      )
-    }
-  } catch (error) {
-    console.error("Unable to read the real-time message", error)
+  if (!message) {
+    console.error("Unable to read the real-time message")
+    return
+  }
+
+  if (message.type === "remote.event") {
+    window.dispatchEvent(
+      new CustomEvent("lynvo:remote-event", {
+        detail: message.payload,
+      })
+    )
   }
 }
 

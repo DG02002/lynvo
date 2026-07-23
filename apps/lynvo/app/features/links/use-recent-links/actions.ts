@@ -11,13 +11,13 @@ export interface RecentLinksActions {
   markWatched: (itemUrl: string, linkUrl: string) => void
   cacheResolvedMirrors: (
     itemUrl: string,
-    episodeUrl: string,
+    lazyItemUrl: string,
     mirrors: ExtractedLink[]
   ) => void
   removeLink: (itemUrl: string, linkKey: string, linkUrl: string) => void
-  setEpisodeAsCurrent: (
+  setPlayableItemAsCurrent: (
     itemUrl: string,
-    episodeUrl: string,
-    folderEpisodeUrls: string[]
+    lazyItemUrl: string,
+    folderItemUrls: string[]
   ) => void
 }
