@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
+  ArrowRight01Icon,
   ArrowRight02Icon,
-  ClipboardPasteIcon,
   Folder01Icon,
-  LockIcon,
+  MoreVerticalCircle01Icon,
   PackageSearchIcon,
   PlayIcon,
+  Shield01Icon,
 } from "@hugeicons/core-free-icons"
 import { NewBadge } from "~/components/save-list/new-badge"
+import { Spinner } from "~/components/ui/spinner"
 import {
   HOME_DEMO_BROWSER_URL,
   HOME_DEMO_CLIPBOARD_URL,
@@ -25,7 +27,8 @@ interface HomeDemoItem {
   detail: string
   meta?: string
   isNew?: boolean
-  accent?: boolean
+  isWatched?: boolean
+  isFolder?: boolean
 }
 
 const HOME_DEMO_ITEMS: HomeDemoItem[] = [
@@ -33,7 +36,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
     icon: PlayIcon,
     title: "Midnight Relay — Episode 06 · 1080p",
     detail: "Direct video",
-    accent: true,
+    isWatched: true,
   },
   {
     icon: PackageSearchIcon,
@@ -46,6 +49,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
     title: "Northstar Files — Season 01",
     detail: "Open collection",
     meta: "8 items",
+    isFolder: true,
   },
 ]
 
@@ -54,7 +58,6 @@ const CREATED_HOME_DEMO_ITEM: HomeDemoItem = {
   title: "Aurora Station — Episode 03 · 1080p",
   detail: "Saved just now",
   isNew: true,
-  accent: true,
 }
 
 export const HomeSaveDemo = () => {
@@ -95,7 +98,8 @@ export const HomeSaveDemo = () => {
   }, [isReducedMotion, step])
 
   const isClipboardOpen = step >= 2 && step < 4
-  const isLinkPasted = step >= 3
+  const isLinkPasted = step >= 4
+  const isSaving = step === 4
   const isItemCreated = step >= HOME_DEMO_FINAL_STEP
 
   return (
@@ -113,19 +117,32 @@ export const HomeSaveDemo = () => {
           </div>
 
           <div className="mx-auto flex h-8 w-full max-w-md items-center justify-center gap-2 rounded-[9px] bg-background/80 px-3 text-xs text-muted-foreground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)] dark:bg-black/35 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-            <HugeiconsIcon icon={LockIcon} className="size-3.5" />
+            <HugeiconsIcon icon={Shield01Icon} className="size-3.5" />
             <span className="truncate">{HOME_DEMO_BROWSER_URL}</span>
           </div>
 
-          <span className="hidden min-w-14 text-right text-xs text-muted-foreground sm:block">
-            Lynvo
-          </span>
+          <span className="hidden min-w-14 sm:block" aria-hidden="true" />
         </div>
 
-        <div className="relative p-4 sm:p-7">
-          <div className="relative z-20 mx-auto mb-6 flex w-full flex-col gap-3">
+        <div className="relative px-4 py-7 sm:px-8 sm:py-10">
+          <div className="relative z-20 mx-auto mb-8 flex w-full flex-col gap-4">
+            <div
+              aria-hidden={!isClipboardOpen}
+              className={`grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div className="w-full rounded-md px-1 py-2 text-left">
+                  <span className="shimmer shimmer-color-blue-500/60 shimmer-duration-6000 shimmer-spread-24 block max-w-full truncate text-base font-normal text-primary">
+                    {HOME_DEMO_CLIPBOARD_URL}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="relative">
-              <div className="flex h-13.5 w-full items-center rounded-full bg-muted/35 px-5 pr-14 text-left shadow-[inset_0_0_0_1px_rgba(0,0,0,0.09),0_1px_2px_rgba(0,0,0,0.03)] transition-[box-shadow,background-color] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]">
+              <div
+                className={`flex h-13.5 w-full items-center rounded-full border-2 bg-muted/30 px-5 pr-14 text-left transition-colors ${step >= 1 && step < 4 ? "border-blue-500" : "border-default-medium"}`}
+              >
                 <span
                   className={
                     isLinkPasted
@@ -133,42 +150,27 @@ export const HomeSaveDemo = () => {
                       : "text-sm text-muted-foreground sm:text-base"
                   }
                 >
-                  {isLinkPasted
-                    ? HOME_DEMO_CLIPBOARD_URL
-                    : "Paste a video link"}
+                  {isLinkPasted ? HOME_DEMO_CLIPBOARD_URL : "Paste link"}
                 </span>
               </div>
 
               <span
                 className={`absolute top-1.25 right-1.25 flex size-11 items-center justify-center rounded-full bg-foreground text-background transition-opacity ${isLinkPasted ? "opacity-100" : "opacity-35"}`}
               >
-                <HugeiconsIcon
-                  icon={ArrowRight02Icon}
-                  strokeWidth={2}
-                  className="size-6"
-                />
+                {isSaving ? (
+                  <Spinner className="size-6" />
+                ) : (
+                  <HugeiconsIcon
+                    icon={ArrowRight02Icon}
+                    strokeWidth={2}
+                    className="size-6"
+                  />
+                )}
               </span>
-
-              <div
-                className={`home-demo-clipboard absolute top-[calc(100%+0.5rem)] left-3 z-30 flex w-[min(24rem,calc(100%-1.5rem))] items-center gap-3 rounded-[14px] bg-popover p-3 text-left shadow-[0_10px_30px_-8px_rgba(0,0,0,0.28),0_0_0_1px_rgba(0,0,0,0.08)] transition-[opacity,transform,filter] dark:shadow-[0_16px_36px_-10px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.12)] ${isClipboardOpen ? "pointer-events-auto translate-y-0 scale-100 opacity-100 blur-0" : "pointer-events-none -translate-y-1 scale-[0.97] opacity-0 blur-[4px]"}`}
-                aria-hidden={!isClipboardOpen}
-              >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-[9px] bg-muted">
-                  <HugeiconsIcon icon={ClipboardPasteIcon} className="size-5" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-xs text-muted-foreground">
-                    From clipboard
-                  </span>
-                  <span className="block truncate text-sm">
-                    aurora-station-1080p.mp4
-                  </span>
-                </span>
-              </div>
             </div>
           </div>
 
-          <div className="flex flex-col overflow-hidden rounded-[12px] bg-background shadow-[0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
+          <section className="border-t">
             <div
               className={`home-demo-created-item grid transition-[grid-template-rows,opacity] ${isItemCreated ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
               aria-hidden={!isItemCreated}
@@ -180,7 +182,7 @@ export const HomeSaveDemo = () => {
             {HOME_DEMO_ITEMS.map((item) => (
               <DemoLibraryItem key={item.title} item={item} />
             ))}
-          </div>
+          </section>
 
           <svg
             className="home-demo-cursor pointer-events-none absolute z-40 h-7 w-7 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]"
@@ -205,23 +207,37 @@ export const HomeSaveDemo = () => {
 }
 
 const DemoLibraryItem = ({ item }: { item: HomeDemoItem }) => (
-  <div
-    className={`flex min-h-20 w-full items-center gap-3 px-4 py-4 shadow-[inset_0_-1px_rgba(0,0,0,0.07)] last:shadow-none dark:shadow-[inset_0_-1px_rgba(255,255,255,0.08)] ${item.accent ? "bg-sky-500/10" : ""}`}
-  >
-    <span className="flex size-11 shrink-0 items-center justify-center rounded-[9px] bg-muted/70 text-foreground">
-      <HugeiconsIcon icon={item.icon} className="size-5" />
-    </span>
-    <span className="min-w-0 flex-1">
-      <span className="block truncate text-sm sm:text-base">{item.title}</span>
-      <span className="block truncate text-xs text-muted-foreground">
-        {item.detail}
+  <div className="border-b last:border-b-0">
+    <div
+      className={`flex min-h-24 w-full items-center gap-3 px-4 py-6 ${item.isWatched ? "bg-sky-500/15" : ""}`}
+    >
+      <span className="flex size-14 shrink-0 items-center justify-center text-foreground">
+        <HugeiconsIcon icon={item.icon} />
       </span>
-    </span>
-    {item.meta && (
-      <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
-        {item.meta}
+      <span className="min-w-0 flex-1">
+        <span className="block line-clamp-3 break-words text-sm font-normal md:text-lg">
+          {item.title}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {item.detail}
+        </span>
       </span>
-    )}
-    {item.isNew && <NewBadge />}
+      {item.isNew && <NewBadge />}
+      {item.meta && (
+        <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
+          {item.meta}
+        </span>
+      )}
+      <HugeiconsIcon
+        icon={MoreVerticalCircle01Icon}
+        className="size-5 shrink-0 text-foreground"
+      />
+      {item.isFolder && (
+        <HugeiconsIcon
+          icon={ArrowRight01Icon}
+          className="shrink-0 text-foreground"
+        />
+      )}
+    </div>
   </div>
 )
