@@ -13,6 +13,7 @@ export const sitePaths = {
 } as const
 
 export const policyPaths = {
+  cookiePolicy: "/policies/cookie-policy",
   privacyPolicy: "/policies/privacy-policy",
   termsOfUse: "/policies/terms-of-use",
   usagePolicy: "/policies/usage-policy",

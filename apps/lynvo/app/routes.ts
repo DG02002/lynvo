@@ -19,6 +19,10 @@ export default [
     route("changelog", "features/site/routes/_site.changelog.tsx"),
     route("pricing", "features/site/routes/_site.pricing.tsx"),
     route(
+      "policies/cookie-policy",
+      "features/site/routes/_site.policies.cookie-policy.tsx"
+    ),
+    route(
       "policies/privacy-policy",
       "features/site/routes/_site.policies.privacy-policy.tsx"
     ),

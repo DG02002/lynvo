@@ -1,5 +1,6 @@
 import { Link } from "react-router"
 import { policyPaths, sitePaths } from "~/lib/paths"
+import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
 const productLinks = [
   { label: "Docs", to: sitePaths.docs },
@@ -10,6 +11,7 @@ const productLinks = [
 const policyLinks = [
   { label: "Terms of Use", to: policyPaths.termsOfUse },
   { label: "Privacy Policy", to: policyPaths.privacyPolicy },
+  { label: "Cookie Policy", to: policyPaths.cookiePolicy },
   { label: "Usage Policy", to: policyPaths.usagePolicy },
 ] as const
 
@@ -17,6 +19,9 @@ const footerLinkClassName =
   "text-sm text-foreground transition-opacity hover:opacity-70"
 
 export function Footer() {
+  const openCookiePreferences = () =>
+    window.dispatchEvent(new Event(OPEN_COOKIE_PREFERENCES_EVENT))
+
   return (
     <footer data-site-footer className="border-t bg-background">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
@@ -43,6 +48,15 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <button
+                  type="button"
+                  className={footerLinkClassName}
+                  onClick={openCookiePreferences}
+                >
+                  Cookie Preferences
+                </button>
+              </li>
             </ul>
           </nav>
 

@@ -26,4 +26,11 @@ declare global {
     metrics: readonly UsageMetric[]
     error?: string
   }
+
+  interface CookiePreferences {
+    analytics: boolean
+    marketingMeasurement: boolean
+    personalizedMarketing: boolean
+    version: number
+  }
 }
