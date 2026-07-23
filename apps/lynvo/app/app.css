@@ -287,6 +287,43 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-top: 0;
 }
 
+.docs-content :not(pre) > code {
+  border-radius: calc(var(--radius) * 0.6);
+  background: var(--muted);
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875em;
+}
+
+.docs-content .shiki {
+  background-color: transparent !important;
+}
+
+.docs-content .shiki code {
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .docs-content .shiki,
+.dark .docs-content .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+.docs-content .shiki .line {
+  display: block;
+  min-height: 1.5rem;
+}
+
+.docs-content .shiki .line.highlighted {
+  margin-inline: -1rem;
+  border-left: 2px solid var(--foreground);
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  padding-inline: calc(1rem - 2px) 1rem;
+}
+
 @layer utilities {
   .ease-out-strong {
     transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);

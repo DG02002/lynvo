@@ -1,4 +1,4 @@
-import { Link, useRouteLoaderData, useNavigate } from "react-router"
+import { NavLink, useRouteLoaderData, useNavigate } from "react-router"
 import { useAuthActions } from "@convex-dev/auth/react"
 import { LogoLink } from "~/components/logo"
 import { useState } from "react"
@@ -34,27 +34,39 @@ export function Header() {
           aria-label="Primary navigation"
           className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-sm md:flex"
         >
-          <Link
+          <NavLink
             to={sitePaths.docs}
             viewTransition
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className={({ isActive }) =>
+              isActive
+                ? "font-medium text-foreground"
+                : "text-muted-foreground transition-colors hover:text-foreground"
+            }
           >
             Docs
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to={sitePaths.changelog}
             viewTransition
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className={({ isActive }) =>
+              isActive
+                ? "font-medium text-foreground"
+                : "text-muted-foreground transition-colors hover:text-foreground"
+            }
           >
             Changelog
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to={sitePaths.pricing}
             viewTransition
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className={({ isActive }) =>
+              isActive
+                ? "font-medium text-foreground"
+                : "text-muted-foreground transition-colors hover:text-foreground"
+            }
           >
             Plans
-          </Link>
+          </NavLink>
         </nav>
         <div className="flex items-center gap-2">
           {user ? (

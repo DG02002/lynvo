@@ -1,0 +1,757 @@
+<DocSection id="overview">
+
+## Build and connect an external extractor
+
+This guide takes you from an empty Cloudflare Worker to a deployed extractor connected in Lynvo. You will create a Hono project, implement protocol version `1.0`, add a source adapter, enforce usage limits, test every response, and connect the Worker in Lynvo Settings.
+
+An external extractor is an HTTPS service that converts supported URLs into normalized media nodes. Lynvo owns registration, routing, saved state, and playback. Your Worker owns source matching, extraction, staged resolution, authentication, and finite usage enforcement.
+
+Build the integration in this order:
+
+1. Create the Worker and configure its production secret
+2. Implement the four protocol endpoints and validate every JSON boundary
+3. Add source adapters that return playable, container, folder, or lazy nodes
+4. Reserve, settle, and report finite usage
+5. Test the contract, deploy the Worker, and connect it to Lynvo
+
+<DocsNote title="Protocol contract">
+
+The endpoint tables, JSON schemas, and stated invariants define protocol version `1.0`. The `@lynvo/extractor-protocol` package is not public, so this guide implements the contract directly with Hono and Zod. Validate incoming requests and outgoing responses against these schemas.
+
+</DocsNote>
+
+</DocSection>
+
+<DocSection id="prerequisites">
+
+## Prepare your development environment
+
+Install the tools and create the accounts required for local development and deployment:
+
+- Node.js and pnpm
+- A Cloudflare account with Wrangler access
+- A Lynvo account for the final connection test
+- One source website you are authorized to access and extract
+
+Your Worker must expose a stable HTTPS origin after deployment. It must never require a browser session or browser cookies from Lynvo.
+
+</DocSection>
+
+<DocSection id="create-worker">
+
+## Create a Hono Cloudflare Worker
+
+Create a Worker-first Hono project. An extractor does not need a React frontend.
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm create hono@latest my-lynvo-extractor \
+  --template cloudflare-workers \
+  --install \
+  --pm pnpm
+
+cd my-lynvo-extractor
+pnpm add zod
+```
+
+</CodeBlock>
+
+Configure Wrangler with a current compatibility date and Worker observability.
+
+<CodeBlock label="wrangler.jsonc">
+
+```jsonc
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-lynvo-extractor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "observability": {
+    "enabled": true
+  }
+}
+```
+
+</CodeBlock>
+
+Run the generated Worker locally:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm dev
+```
+
+</CodeBlock>
+
+Wrangler prints the local origin. The default is usually `http://localhost:8787`, but you must use the origin shown in your terminal.
+
+</DocSection>
+
+<DocSection id="protocol-version">
+
+## Implement protocol version 1.0
+
+Lynvo external extractors use protocol version `1.0` over HTTPS and JSON. Version `1.0` defines four endpoints:
+
+| Method | Route | Authentication | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/manifest` | Public | Declares identity, matchers, features, and sources |
+| `POST` | `/verify` | Bearer | Verifies the API key and Worker readiness |
+| `GET` | `/usage` | Bearer | Reports finite enforced usage metrics |
+| `POST` | `/extract` | Bearer | Resolves a source URL or lazy node |
+
+Use `Content-Type: application/json` for JSON responses. Return protocol error envelopes instead of unstructured error strings.
+
+</DocSection>
+
+<DocSection id="authentication">
+
+## Configure bearer authentication
+
+Lynvo sends one Worker API key in the `Authorization` header. Validate it before usage reservation or upstream network work.
+
+Define the Cloudflare environment and a reusable authentication function:
+
+<CodeBlock label="src/auth.ts">
+
+```ts
+export interface Env {
+  EXTRACTOR_API_KEY: string
+}
+
+export const isAuthorized = (
+  request: Request,
+  env: Env,
+): boolean =>
+  request.headers.get("Authorization") ===
+  `Bearer ${env.EXTRACTOR_API_KEY}`
+```
+
+</CodeBlock>
+
+Store the production key as a Cloudflare secret:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm wrangler secret put EXTRACTOR_API_KEY
+```
+
+</CodeBlock>
+
+Use `.dev.vars` for local development. Keep this file out of version control.
+
+<CodeBlock label=".dev.vars">
+
+```dotenv
+EXTRACTOR_API_KEY=your_local_extractor_api_key_here
+```
+
+</CodeBlock>
+
+The bearer key authenticates Lynvo to your Worker. Source-side HTTP Basic Auth uses the separate `basicAuth` request field.
+
+</DocSection>
+
+<DocSection id="manifest">
+
+## Define the public manifest
+
+The manifest lets Lynvo validate compatibility and route URLs without sending them to every Worker. Keep `extractorId` stable after anyone connects the Worker.
+
+<CodeBlock label="src/manifest.ts">
+
+```ts {2,5,8-12}
+export const manifest = {
+  protocolVersion: "1.0",
+  extractorId: "com.example.my-extractor",
+  displayName: "My Extractor",
+  hasIcon: false,
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [{
+    hosts: ["media.example.com"],
+    pathPatterns: ["/watch/**"],
+    schemes: ["https"],
+  }],
+  features: {
+    password: false,
+    lazyNodes: true,
+    basicAuth: false,
+  },
+  extensions: {},
+} as const
+```
+
+</CodeBlock>
+
+Manifest fields follow these rules:
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `protocolVersion` | Yes | Must equal `"1.0"` |
+| `extractorId` | Yes | Stable namespaced identifier |
+| `displayName` | Yes | Human-readable Worker name |
+| `hasIcon` | No | `true` requires `iconUrl`; `false` forbids it |
+| `iconUrl` | No | Direct HTTPS image URL |
+| `homepage` | No | HTTPS project URL |
+| `auth.type` | Yes | Must equal `"bearer"` |
+| `usage.endpoint` | Yes | Must equal `"/usage"` |
+| `matchers` | Yes | Non-empty array |
+| `features` | Yes | Declares password, lazy node, and Basic Auth support |
+| `extensions` | No | Namespaced non-core metadata |
+
+Each matcher requires `hosts`. `hostPatterns` and `pathPatterns` accept `*` within one segment and `**` across segments. `schemes` defaults to `["https"]`.
+
+</DocSection>
+
+<DocSection id="sources">
+
+## Add a source adapter
+
+One external Worker can support several source websites. Treat each website as a source adapter with its own matchers, metadata, and extraction function.
+
+Define a source catalog so manifest metadata and request dispatch use the same records:
+
+<CodeBlock label="src/sources/catalog.ts">
+
+```ts {1-8}
+export const sources = [{
+  id: "example-media",
+  displayName: "Example Media",
+  status: "active" as const,
+  version: "1.0.0",
+  hosts: ["media.example.com"],
+  matchers: [{
+    hosts: ["media.example.com"],
+    pathPatterns: ["/watch/**"],
+    schemes: ["https"],
+  }],
+}]
+```
+
+</CodeBlock>
+
+Publish user-visible sources under `extensions.lynvo.sources`:
+
+<CodeBlock label="src/manifest.ts">
+
+```ts {4-6}
+export const manifest = {
+  // Core manifest fields
+  matchers: sources.flatMap((source) => source.matchers),
+  extensions: {
+    lynvo: { sources },
+  },
+}
+```
+
+</CodeBlock>
+
+Source metadata supports these fields:
+
+| Field | Purpose |
+| --- | --- |
+| `id` | Stable source identifier |
+| `displayName` | Name shown by Lynvo |
+| `description` | Short source capability summary |
+| `homepage` | HTTPS source project page |
+| `hasIcon` and `iconUrl` | Source-specific WebP icon |
+| `status` | `active`, `maintenance`, `degraded`, or `down` |
+| `version` | Your adapter version |
+| `routesToSourceId` | Downstream source in the same manifest |
+| `hosts` and `matchers` | URLs handled by the adapter |
+| `credential` | Domain password or HTTP Basic Auth capability |
+
+Add a source by completing four changes:
+
+1. Create the adapter module
+2. Add one catalog record
+3. Add a direct HTTPS WebP icon when available
+4. Add supported, unsupported, and failure fixtures
+
+Do not add source-specific conditions to the Hono route layer.
+
+</DocSection>
+
+<DocSection id="request-schema">
+
+## Validate extraction requests
+
+`POST /extract` accepts a source URL or a lazy-node follow-up. Zod can reject malformed bodies before your adapter runs.
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {3-11}
+import { z } from "zod"
+
+const sourceInput = z.object({
+  kind: z.literal("source"),
+  sourceUrl: z.string(),
+})
+
+const nodeInput = z.object({
+  kind: z.literal("node"),
+  nodeUrl: z.string(),
+  resourceId: z.string().optional(),
+})
+```
+
+</CodeBlock>
+
+Add optional source selection and credential fields to the request envelope:
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {2,4-8}
+export const extractRequestSchema = z.object({
+  input: z.discriminatedUnion("kind", [
+    sourceInput,
+    nodeInput,
+  ]),
+  sourceId: z.string().min(1).optional(),
+  password: z.string().optional(),
+  basicAuth: z.object({
+    username: z.string(),
+    password: z.string(),
+  }).optional(),
+})
+```
+
+</CodeBlock>
+
+A source extraction request uses `sourceUrl`:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "input": {
+    "kind": "source",
+    "sourceUrl": "https://media.example.com/watch/123"
+  }
+}
+```
+
+</CodeBlock>
+
+A lazy follow-up uses the `nodeUrl` returned by the same Worker:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "sourceId": "example-media",
+  "input": {
+    "kind": "node",
+    "nodeUrl": "https://media.example.com/folders/bonus",
+    "resourceId": "bonus_v1"
+  }
+}
+```
+
+</CodeBlock>
+
+</DocSection>
+
+<DocSection id="node-schema">
+
+## Return normalized node types
+
+Protocol `1.0` has three wire-level node kinds. Product concepts map to them as follows:
+
+| Product item | Protocol kind | Required fields |
+| --- | --- | --- |
+| Direct playable item | `playable` | `label`, `url` |
+| Display-only container | `group` | `label`, `children` |
+| Selectable folder | `group` | `label`, `selectable: true`, `children` |
+| Lazy folder | `resolvable` | `label`, `nodeUrl` |
+
+### Return a direct playable item
+
+Use `playable` only when the URL can go directly to a media player.
+
+<CodeBlock label="Playable node">
+
+```ts {2,5}
+const directItem = {
+  kind: "playable",
+  id: "episode-1",
+  label: "Episode 1",
+  url: "https://cdn.example.com/episode-1.mp4",
+  badge: "1080p",
+  size: "1.4 GB",
+  expiry: 1767225600000,
+  status: "up",
+}
+```
+
+</CodeBlock>
+
+`status` may be `up`, `down`, or `unknown`. `expiry` is an optional Unix timestamp in milliseconds.
+
+### Return a display-only container
+
+Use a non-selectable group to organize child nodes.
+
+<CodeBlock label="Container node">
+
+```ts {2,6}
+const seasonContainer = {
+  kind: "group",
+  id: "season-1",
+  label: "Season 1",
+  selectable: false,
+  children: [directItem],
+}
+```
+
+</CodeBlock>
+
+### Return a selectable folder
+
+Set `selectable` to `true` when Lynvo may select the group as a folder target.
+
+<CodeBlock label="Folder node">
+
+```ts {2,5}
+const selectableFolder = {
+  kind: "group",
+  id: "all-seasons",
+  label: "All seasons",
+  selectable: true,
+  children: [seasonContainer],
+}
+```
+
+</CodeBlock>
+
+### Return a lazy folder
+
+Use `resolvable` when the Worker should load the folder after it is opened.
+
+<CodeBlock label="Lazy folder node">
+
+```ts {2,6}
+const lazyFolder = {
+  kind: "resolvable",
+  id: "bonus-content",
+  label: "Bonus content",
+  badge: "Open folder",
+  nodeUrl: "https://media.example.com/folders/bonus",
+  resourceId: "bonus_v1",
+}
+```
+
+</CodeBlock>
+
+The same Worker must resolve every `nodeUrl` it emits. Never include credentials in `nodeUrl`, `resourceId`, labels, or metadata.
+
+</DocSection>
+
+<DocSection id="success-schema">
+
+## Return a successful extraction response
+
+Every successful extraction returns source metadata, an array of normalized nodes, and an extensions object.
+
+<CodeBlock label="Successful response">
+
+```json {2-7,9-15}
+{
+  "source": {
+    "extractorId": "com.example.my-extractor",
+    "displayName": "My Extractor",
+    "sourceId": "example-media",
+    "sourceName": "Example Media",
+    "pageTitle": "Example collection"
+  },
+  "nodes": [
+    {
+      "kind": "playable",
+      "id": "episode-1",
+      "label": "Episode 1",
+      "url": "https://cdn.example.com/episode-1.mp4"
+    }
+  ],
+  "extensions": {}
+}
+```
+
+</CodeBlock>
+
+The `source` object supports:
+
+| Field | Required | Purpose |
+| --- | --- | --- |
+| `extractorId` | Yes | Matches the manifest |
+| `displayName` | Yes | Extractor display name |
+| `iconUrl` | No | Extractor icon |
+| `sourceId` | No | Matches a declared source |
+| `sourceName` | No | Source display name |
+| `sourceIconUrl` | No | Source icon |
+| `pageTitle` | No | Extracted page title |
+| `audio` | No | Audio-language summary |
+
+Lynvo owns layout, watched state, saved selection, playback state, and mirror caching. Do not return UI instructions.
+
+</DocSection>
+
+<DocSection id="usage-schema">
+
+## Define and enforce usage limits
+
+Every connected credential must have at least one finite usage metric. The Worker must enforce the same limits it reports.
+
+Define the response schema:
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {3-11}
+export const usageResponseSchema = z.object({
+  metrics: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    used: z.number().nonnegative().finite(),
+    limit: z.number().positive().finite(),
+    unit: z.string().min(1),
+    period: z.enum(["daily", "monthly"]),
+    resetsAt: z.string().datetime(),
+    sourceId: z.string().min(1).optional(),
+  })).min(1),
+})
+```
+
+</CodeBlock>
+
+Return one record for each independently enforced limit:
+
+<CodeBlock label="GET /usage">
+
+```json {3-11}
+{
+  "metrics": [
+    {
+      "id": "extract-requests",
+      "label": "Extract requests",
+      "used": 84,
+      "limit": 1000,
+      "unit": "requests",
+      "period": "monthly",
+      "resetsAt": "2026-08-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+</CodeBlock>
+
+Each metric must satisfy these invariants:
+
+- `id` is unique within the response
+- `limit` is positive and finite
+- `used` is non-negative, finite, and no greater than `limit`
+- `period` is `daily` or `monthly`
+- `resetsAt` is an ISO 8601 timestamp
+- `sourceId` identifies a source-specific allowance
+
+Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before the adapter performs upstream work. Return `RATE_LIMITED` when no capacity remains. Settle the reservation after the adapter finishes, and release it when your accounting policy does not charge failed work.
+
+<DocsNote title="Usage is authoritative">
+
+Do not report one allowance while enforcing another. Lynvo renders the metrics returned by your Worker and does not own third-party accounting.
+
+</DocsNote>
+
+</DocSection>
+
+<DocSection id="error-schema">
+
+## Return structured protocol errors
+
+Return an error code that Lynvo can act on and a message safe for display. Do not expose stack traces, cookies, secret values, or internal network details.
+
+<CodeBlock label="Error response">
+
+```json {2-7}
+{
+  "ok": false,
+  "error": {
+    "code": "PASSWORD_REQUIRED",
+    "message": "This source requires a content password.",
+    "retryAfterSeconds": 60
+  },
+  "extensions": {}
+}
+```
+
+</CodeBlock>
+
+Protocol version `1.0` defines these error codes:
+
+| Code | Use when |
+| --- | --- |
+| `UNSUPPORTED_URL` | No source matcher accepts the URL |
+| `AUTH_INVALID` | The Worker bearer key is rejected |
+| `AUTH_REQUIRED` | Required source credentials are missing |
+| `RATE_LIMITED` | A finite usage limit is exhausted |
+| `TEMPORARY_FAILURE` | A later retry may succeed |
+| `PERMANENT_FAILURE` | The source cannot complete the request |
+| `PASSWORD_REQUIRED` | A content password is required |
+| `INVALID_PASSWORD` | The supplied content password failed |
+| `NODE_EXPIRED` | A lazy node target is no longer valid |
+| `PROTOCOL_MISMATCH` | A request or response violates the contract |
+| `BAD_REQUEST` | The JSON body or route input is malformed |
+
+</DocSection>
+
+<DocSection id="routes">
+
+## Wire the Hono routes
+
+Keep the route layer limited to authentication, validation, usage reservation, adapter dispatch, and response serialization.
+
+<CodeBlock label="src/index.ts">
+
+```ts {7-10}
+import { Hono } from "hono"
+import { isAuthorized, type Env } from "./auth"
+import { manifest } from "./manifest"
+
+const app = new Hono<{ Bindings: Env }>()
+
+app.get("/manifest", (c) => c.json(manifest))
+app.post("/verify", (c) =>
+  isAuthorized(c.req.raw, c.env)
+    ? c.json({ ok: true })
+    : protocolError(c, "AUTH_INVALID", 401))
+```
+
+</CodeBlock>
+
+Apply the same bearer check to usage and extraction:
+
+<CodeBlock label="src/index.ts">
+
+```ts {1-4,7-11}
+app.get("/usage", async (c) => {
+  if (!isAuthorized(c.req.raw, c.env)) {
+    return protocolError(c, "AUTH_INVALID", 401)
+  }
+  return c.json(await readUsage(c.env))
+})
+
+app.post("/extract", async (c) => {
+  if (!isAuthorized(c.req.raw, c.env)) {
+    return protocolError(c, "AUTH_INVALID", 401)
+  }
+  return handleExtract(c)
+})
+
+export default app
+```
+
+</CodeBlock>
+
+`handleExtract` must parse `extractRequestSchema`, confirm a matcher accepts the target URL, reserve usage, dispatch to the matching source, validate the response, and settle usage.
+
+</DocSection>
+
+<DocSection id="testing">
+
+## Test the protocol contract
+
+Test the Worker in the Cloudflare Workers runtime when possible. Cover successful responses and every boundary that can reject a request.
+
+Start the Worker and inspect the public manifest:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm dev
+curl http://localhost:8787/manifest
+```
+
+</CodeBlock>
+
+Verify the local bearer key:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl -X POST http://localhost:8787/verify \
+  -H "Authorization: Bearer your_local_extractor_api_key_here"
+```
+
+</CodeBlock>
+
+Test a source extraction:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl -X POST http://localhost:8787/extract \
+  -H "Authorization: Bearer your_local_extractor_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"input":{"kind":"source","sourceUrl":"https://media.example.com/watch/123"}}'
+```
+
+</CodeBlock>
+
+Your automated contract suite should cover:
+
+- Public valid manifest and protocol version
+- Missing, invalid, and valid bearer credentials
+- Finite usage response and unique metric IDs
+- Supported and unsupported source URLs
+- Playable, group, selectable folder, and lazy folder nodes
+- Lazy-node follow-up through the same Worker
+- Password-required and invalid-password flows
+- Malformed JSON and invalid request shapes
+- Exhausted usage before upstream work starts
+- Safe temporary and permanent failure responses
+
+</DocSection>
+
+<DocSection id="deployment">
+
+## Deploy the Worker
+
+Run your quality checks before every deployment:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm test
+pnpm typecheck
+pnpm wrangler deploy
+```
+
+</CodeBlock>
+
+Call all four endpoints at the deployed HTTPS origin. Confirm the production secret works and the manifest contains only production URLs.
+
+Use bounded upstream requests, reject unsupported hosts, and record structured logs without credentials. Keep the deployment origin stable after users connect it.
+
+</DocSection>
+
+<DocSection id="connect">
+
+## Connect the Worker to Lynvo
+
+Add the Worker after its production contract checks pass:
+
+1. Open **Settings** in Lynvo
+2. Find **External extractors**
+3. Select **Add external extractor**
+4. Enter the deployed origin in **Base URL**
+5. Enter the production bearer key in **API Key**
+6. Select **Add worker**
+
+Lynvo fetches `GET /manifest`, checks protocol version `1.0`, calls `POST /verify`, and stores the Worker only when both responses pass validation.
+
+Test one URL for every declared source. Open one lazy folder to confirm that Lynvo sends the follow-up to the same Worker.
+
+</DocSection>

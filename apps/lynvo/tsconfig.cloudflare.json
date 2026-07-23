@@ -13,7 +13,7 @@
     "composite": true,
     "strict": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["vite/client", "@cloudflare/workers-types"],
+    "types": ["vite/client", "@cloudflare/workers-types", "mdx"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
