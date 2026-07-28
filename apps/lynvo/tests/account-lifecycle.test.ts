@@ -62,11 +62,14 @@ describe("account lifecycle", () => {
       remoteCommands: [],
       usageCounters: [],
       userStorageLedgers: [],
+      accountCapacity: [],
     }
     const createQuery = (tableName: keyof typeof documentsByTable) => ({
       withIndex: (
         _indexName: string,
-        select: (queryBuilder: { eq: (_field: string, value: string) => unknown }) => unknown
+        select: (queryBuilder: {
+          eq: (_field: string, value: string) => unknown
+        }) => unknown
       ) => {
         let selectedValue = ""
         select({

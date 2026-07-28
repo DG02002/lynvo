@@ -23,6 +23,12 @@ export default defineSchema({
     .index("by_normalizedUsername", ["normalizedUsername"])
     .index("by_lastActiveAt", ["lastActiveAt"]),
 
+  accountCapacity: defineTable({
+    key: v.literal("global"),
+    registeredAccounts: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   authSessions: defineTable({
     userId: v.id("users"),
     expirationTime: v.number(),

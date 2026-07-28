@@ -6,6 +6,7 @@ import {
   ACTIVITY_UPDATE_INTERVAL_MS,
   CLEANUP_USER_PAGE_SIZE,
 } from "./constants"
+import { releaseAccountCapacity } from "./accountCapacity"
 import { assertStorageMutation } from "./storagePolicy"
 
 export const replacePasswordAndInvalidateOtherSessions = async (
@@ -263,6 +264,7 @@ export const deleteUserAccountData = async (
   const user = await ctx.db.get("users", userId)
   if (user) {
     await ctx.db.delete("users", user._id)
+    await releaseAccountCapacity(ctx)
   }
 }
 

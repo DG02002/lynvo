@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountCapacity from "../accountCapacity.js";
 import type * as accountLifecycle from "../accountLifecycle.js";
 import type * as auth from "../auth.js";
 import type * as authGateway from "../authGateway.js";
@@ -36,6 +37,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountCapacity: typeof accountCapacity;
   accountLifecycle: typeof accountLifecycle;
   auth: typeof auth;
   authGateway: typeof authGateway;

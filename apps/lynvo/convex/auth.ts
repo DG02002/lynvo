@@ -120,21 +120,28 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         console.info("security.signup_rejected", { reason: passwordError })
         throw new Error(passwordError)
       }
+      await ctx.runMutation(internal.accountCapacity.reserve, {})
       const now = Date.now()
-      const created = await createAccount(ctx, {
-        provider: "credentials",
-        account: { id: normalizedUsername, secret: password },
-        profile: {
-          email: syntheticEmail(normalizedUsername),
-          name: username,
-          username,
-          normalizedUsername,
-          createdAt: now,
-          lastActiveAt: now,
-        },
-        shouldLinkViaEmail: false,
-        shouldLinkViaPhone: false,
-      })
+      let created
+      try {
+        created = await createAccount(ctx, {
+          provider: "credentials",
+          account: { id: normalizedUsername, secret: password },
+          profile: {
+            email: syntheticEmail(normalizedUsername),
+            name: username,
+            username,
+            normalizedUsername,
+            createdAt: now,
+            lastActiveAt: now,
+          },
+          shouldLinkViaEmail: false,
+          shouldLinkViaPhone: false,
+        })
+      } catch (error) {
+        await ctx.runMutation(internal.accountCapacity.release, {})
+        throw error
+      }
       console.info("security.signup_success", { userId: created.user._id })
       return { userId: created.user._id }
     }

@@ -139,7 +139,7 @@ export const PlanSection = () => {
 
       <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-16 px-6 text-center">
         <h2 className="text-balance text-6xl font-normal tracking-[-0.04em] text-foreground md:text-8xl">
-          Free Forever.
+          Free Limited Time.
         </h2>
 
         <div className="grid w-full max-w-4xl grid-cols-1 gap-12 sm:grid-cols-3">
