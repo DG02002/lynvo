@@ -33,4 +33,21 @@ declare global {
     personalizedMarketing: boolean
     version: number
   }
+
+  interface DocumentationChapter {
+    slug: string
+    navLabel: string
+    title: string
+    description: string
+  }
+
+  interface DocumentationChapterGroup {
+    group: string
+    chapters: readonly DocumentationChapter[]
+  }
+
+  interface DocsChapterProps {
+    slug: string
+    children: import("react").ReactNode
+  }
 }

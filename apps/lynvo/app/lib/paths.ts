@@ -6,8 +6,10 @@ export const authPaths = {
 } as const
 
 export const sitePaths = {
+  about: "/about",
   changelog: "/changelog",
   docs: "/docs",
+  helpCenter: "/help-center",
   pricing: "/pricing",
   settings: "/settings",
 } as const

@@ -1,207 +1,273 @@
-import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router"
+import { Link, useParams } from "react-router"
 
 import type { Route } from "./+types/_site.docs"
-import { buttonVariants } from "~/components/ui/button"
 import DocsContent from "~/features/site/docs/external-extractors.mdx"
-import { docsComponents } from "~/features/site/docs/docs-components"
+import { createDocsComponents } from "~/features/site/docs/docs-components"
 import { cn } from "~/lib/utils"
 
-const documentationSections = [
-  { href: "#overview", label: "Build an extractor" },
-  { href: "#prerequisites", label: "Prerequisites" },
-  { href: "#create-worker", label: "Create the Worker" },
-  { href: "#protocol-version", label: "Protocol version 1.0" },
-  { href: "#authentication", label: "Authentication" },
-  { href: "#manifest", label: "Manifest schema" },
-  { href: "#sources", label: "Source adapters" },
-  { href: "#request-schema", label: "Request schema" },
-  { href: "#node-schema", label: "Node schema" },
-  { href: "#success-schema", label: "Success schema" },
-  { href: "#usage-schema", label: "Usage limits" },
-  { href: "#error-schema", label: "Error schema" },
-  { href: "#routes", label: "Hono routes" },
-  { href: "#testing", label: "Contract tests" },
-  { href: "#deployment", label: "Deploy" },
-  { href: "#connect", label: "Connect to Lynvo" },
-] as const
+const documentationGroups: readonly DocumentationChapterGroup[] = [
+  {
+    group: "Getting started",
+    chapters: [
+      {
+        slug: "introduction",
+        navLabel: "Introduction",
+        title: "External extractors",
+        description:
+          "Learn what an external extractor does and how it works with Lynvo.",
+      },
+      {
+        slug: "what-is-an-extractor",
+        navLabel: "What Is an Extractor?",
+        title: "What is an extractor?",
+        description:
+          "Understand the service that connects Lynvo to source-specific plugins.",
+      },
+      {
+        slug: "what-is-a-plugin",
+        navLabel: "What Is a Plugin?",
+        title: "What is a plugin?",
+        description:
+          "Learn how a plugin recognizes one source and converts its pages into media nodes.",
+      },
+      {
+        slug: "prerequisites",
+        navLabel: "Prerequisites",
+        title: "Prepare your development environment",
+        description:
+          "Install the tools and create the accounts you need before building an extractor.",
+      },
+      {
+        slug: "create-worker",
+        navLabel: "Create a Worker",
+        title: "Create a Hono Cloudflare Worker",
+        description:
+          "Create the Worker project, configure Wrangler, and run it locally.",
+      },
+    ],
+  },
+  {
+    group: "Build with an agent",
+    chapters: [
+      {
+        slug: "agent-prompt",
+        navLabel: "Generate the Boilerplate",
+        title: "Generate an extractor Worker with an agent",
+        description:
+          "Copy this prompt into a coding agent to create the shared Worker before adding source plugins.",
+      },
+    ],
+  },
+  {
+    group: "Build an extractor",
+    chapters: [
+      {
+        slug: "protocol-overview",
+        navLabel: "Protocol Overview",
+        title: "Implement protocol version 1.0",
+        description:
+          "Understand the four endpoints that connect an external extractor to Lynvo.",
+      },
+      {
+        slug: "authentication",
+        navLabel: "Authentication",
+        title: "Configure bearer authentication",
+        description:
+          "Protect extractor requests with a Worker API key and Cloudflare secrets.",
+      },
+      {
+        slug: "manifest",
+        navLabel: "Manifest",
+        title: "Define the public manifest",
+        description:
+          "Declare your extractor’s identity, supported URLs, and capabilities.",
+      },
+      {
+        slug: "source-adapters",
+        navLabel: "Source Adapters",
+        title: "Add a source adapter",
+        description:
+          "Organize source-specific matching and extraction without coupling it to your routes.",
+      },
+      {
+        slug: "hono-routes",
+        navLabel: "Hono Routes",
+        title: "Wire the Hono routes",
+        description:
+          "Connect authentication, validation, usage enforcement, and extraction to the protocol endpoints.",
+      },
+    ],
+  },
+  {
+    group: "Protocol reference",
+    chapters: [
+      {
+        slug: "extraction-requests",
+        navLabel: "Extraction Requests",
+        title: "Validate extraction requests",
+        description:
+          "Validate source URLs, lazy nodes, source selection, and credentials.",
+      },
+      {
+        slug: "media-nodes",
+        navLabel: "Media Nodes",
+        title: "Return normalized media nodes",
+        description:
+          "Represent playable items, folders, groups, and lazy nodes in Lynvo.",
+      },
+      {
+        slug: "success-responses",
+        navLabel: "Success Responses",
+        title: "Return successful extraction responses",
+        description:
+          "Return normalized nodes with the source metadata Lynvo needs.",
+      },
+      {
+        slug: "usage-limits",
+        navLabel: "Usage Limits",
+        title: "Define and enforce usage limits",
+        description:
+          "Report finite usage and prevent concurrent requests from exceeding a limit.",
+      },
+      {
+        slug: "errors",
+        navLabel: "Errors",
+        title: "Return structured protocol errors",
+        description:
+          "Return stable error codes that Lynvo can display or act on.",
+      },
+    ],
+  },
+  {
+    group: "Test and deploy",
+    chapters: [
+      {
+        slug: "testing",
+        navLabel: "Testing",
+        title: "Test the protocol contract",
+        description:
+          "Verify every endpoint, response schema, and failure case before deployment.",
+      },
+      {
+        slug: "deployment",
+        navLabel: "Deployment",
+        title: "Deploy the Worker",
+        description:
+          "Publish the extractor and verify its production manifest and authentication.",
+      },
+      {
+        slug: "connect",
+        navLabel: "Connect to Lynvo",
+        title: "Connect the Worker to Lynvo",
+        description:
+          "Add the deployed Worker in Lynvo Settings and confirm its sources.",
+      },
+    ],
+  },
+]
 
-export function meta(_: Route.MetaArgs) {
+const documentationPages = documentationGroups.flatMap(
+  (documentationGroup) => documentationGroup.chapters
+)
+
+export function meta({ params }: Route.MetaArgs) {
+  const activePage =
+    documentationPages.find(
+      (documentationPage) => documentationPage.slug === params["*"]
+    ) ?? documentationPages[0]
+
   return [
-    { title: "Build an external extractor | Lynvo Docs" },
-    {
-      name: "description",
-      content:
-        "Create, test, deploy, and connect a Lynvo-compatible external extractor using Hono and Cloudflare Workers.",
-    },
+    { title: `${activePage.title} | Lynvo Docs` },
+    { name: "description", content: activePage.description },
     { name: "contentType", content: "Tutorial" },
   ]
 }
 
 export default function Docs() {
-  const sectionNavRef = useRef<HTMLElement>(null)
-  const progressBarRef = useRef<HTMLSpanElement>(null)
-  const activeIndicatorRef = useRef<HTMLSpanElement>(null)
-  const [activeSection, setActiveSection] = useState<string>(
-    documentationSections[0].href
-  )
-
-  useEffect(() => {
-    let frameId = 0
-
-    const updateActiveSection = () => {
-      frameId = 0
-      const activationLine = Math.min(window.innerHeight * 0.3, 180)
-      let nextActiveSection: string = documentationSections[0].href
-      let firstSectionTop: number | undefined
-      let lastSectionTop: number | undefined
-
-      for (const [index, section] of documentationSections.entries()) {
-        const element = document.getElementById(section.href.slice(1))
-        if (!element) {
-          continue
-        }
-
-        const sectionTop = element.getBoundingClientRect().top
-        if (index === 0) {
-          firstSectionTop = sectionTop
-        }
-        if (index === documentationSections.length - 1) {
-          lastSectionTop = sectionTop
-        }
-        if (sectionTop <= activationLine) {
-          nextActiveSection = section.href
-        }
-      }
-
-      if (
-        progressBarRef.current &&
-        firstSectionTop !== undefined &&
-        lastSectionTop !== undefined
-      ) {
-        const sectionRange = lastSectionTop - firstSectionTop
-        const progress =
-          sectionRange === 0
-            ? 0
-            : Math.min(
-                Math.max((activationLine - firstSectionTop) / sectionRange, 0),
-                1
-              )
-        progressBarRef.current.style.transform = `scaleY(${progress})`
-      }
-
-      const activeLink =
-        sectionNavRef.current?.querySelector<HTMLAnchorElement>(
-          `a[href="${nextActiveSection}"]`
-        )
-      if (activeIndicatorRef.current && activeLink) {
-        activeIndicatorRef.current.style.height = `${activeLink.offsetHeight}px`
-        activeIndicatorRef.current.style.transform = `translateY(${activeLink.offsetTop}px)`
-      }
-
-      setActiveSection(nextActiveSection)
-    }
-
-    const scheduleUpdate = () => {
-      if (frameId === 0) {
-        frameId = window.requestAnimationFrame(updateActiveSection)
-      }
-    }
-
-    updateActiveSection()
-    document.addEventListener("scroll", scheduleUpdate, {
-      capture: true,
-      passive: true,
-    })
-    window.addEventListener("resize", scheduleUpdate)
-
-    return () => {
-      document.removeEventListener("scroll", scheduleUpdate, true)
-      window.removeEventListener("resize", scheduleUpdate)
-      window.cancelAnimationFrame(frameId)
-    }
-  }, [])
+  const params = useParams()
+  const activePage =
+    documentationPages.find(
+      (documentationPage) => documentationPage.slug === params["*"]
+    ) ?? documentationPages[0]
+  const pageDocsComponents = createDocsComponents(activePage.slug)
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 md:px-8">
-      <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_14rem]">
-        <article className="min-w-0">
-          <header className="flex flex-col gap-5 border-b pb-10">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Docs</span>
-              <span aria-hidden="true">/</span>
-              <span>External extractors</span>
-            </div>
-            <h1 className="text-4xl font-normal tracking-tight text-balance md:text-5xl">
-              Build an external extractor
-            </h1>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Create a Hono Cloudflare Worker that implements Lynvo protocol
-              version 1.0.
-            </p>
-          </header>
+    <main className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8">
+      <nav
+        aria-label="Documentation"
+        className="mb-8 flex gap-2 overflow-x-auto border-b pb-4 lg:hidden"
+      >
+        {documentationPages.map((documentationPage) => (
+          <Link
+            key={documentationPage.slug}
+            to={`/docs/${documentationPage.slug}`}
+            aria-current={
+              documentationPage.slug === activePage.slug ? "page" : undefined
+            }
+            className={cn(
+              "shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors",
+              documentationPage.slug === activePage.slug
+                ? "bg-muted font-medium text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {documentationPage.navLabel}
+          </Link>
+        ))}
+      </nav>
 
-          <div className="docs-content flex flex-col gap-16 py-12">
-            <DocsContent components={docsComponents} />
-          </div>
-
-          <footer className="flex flex-col items-start gap-4 border-t py-10 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-medium">Connect the Worker</p>
-              <p className="text-sm text-muted-foreground">
-                Add the deployed origin and bearer key in Lynvo Settings.
-              </p>
-            </div>
-            <Link
-              to="/settings"
-              viewTransition
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              Open settings
-            </Link>
-          </footer>
-        </article>
-
+      <div className="grid items-start gap-14 lg:grid-cols-[16rem_minmax(0,48rem)]">
         <aside className="hidden lg:block">
           <nav
-            ref={sectionNavRef}
-            aria-label="On this page"
-            className="relative sticky top-24 flex flex-col gap-3 pl-5 text-sm"
+            aria-label="Documentation"
+            className="sticky top-24 flex flex-col gap-7"
           >
-            <span
-              aria-hidden="true"
-              className="absolute inset-y-0 left-0 w-px overflow-hidden bg-border"
-            >
-              <span
-                ref={progressBarRef}
-                className="block h-full origin-top scale-y-0 bg-muted-foreground/50 transition-transform duration-150 ease-out motion-reduce:transition-none"
-              />
-            </span>
-            <span
-              ref={activeIndicatorRef}
-              aria-hidden="true"
-              className="absolute top-0 -left-px z-10 w-0.5 rounded-full bg-foreground transition-[transform,height] duration-200 ease-out motion-reduce:transition-none"
-            />
-            <p className="font-medium">On this page</p>
-            {documentationSections.map((section) => (
-              <a
-                key={section.href}
-                href={section.href}
-                aria-current={
-                  activeSection === section.href ? "location" : undefined
-                }
-                className={cn(
-                  "transition-colors hover:text-foreground",
-                  activeSection === section.href
-                    ? "font-medium text-foreground"
-                    : "text-muted-foreground"
-                )}
+            {documentationGroups.map((documentationGroup) => (
+              <div
+                key={documentationGroup.group}
+                className="flex flex-col gap-1"
               >
-                {section.label}
-              </a>
+                <p className="mb-1 px-3 text-sm font-medium">
+                  {documentationGroup.group}
+                </p>
+                {documentationGroup.chapters.map((documentationPage) => (
+                  <Link
+                    key={documentationPage.slug}
+                    to={`/docs/${documentationPage.slug}`}
+                    aria-current={
+                      documentationPage.slug === activePage.slug
+                        ? "page"
+                        : undefined
+                    }
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-sm transition-colors",
+                      documentationPage.slug === activePage.slug
+                        ? "bg-muted font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    )}
+                  >
+                    {documentationPage.navLabel}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
         </aside>
+
+        <article className="min-w-0">
+          <header className="flex flex-col gap-4 border-b pb-9">
+            <h1 className="text-4xl font-normal tracking-tight text-balance md:text-5xl">
+              {activePage.title}
+            </h1>
+            <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+              {activePage.description}
+            </p>
+          </header>
+
+          <div className="docs-content flex flex-col gap-16 py-10">
+            <DocsContent components={pageDocsComponents} />
+          </div>
+        </article>
       </div>
     </main>
   )

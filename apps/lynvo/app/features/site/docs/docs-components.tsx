@@ -206,3 +206,11 @@ export const docsComponents: MDXComponents = {
   th: (props) => <th {...props} className="border-b px-4 py-3 font-medium" />,
   td: (props) => <td {...props} className="border-b px-4 py-3 align-top" />,
 }
+
+export const createDocsComponents = (
+  activeChapterSlug: string
+): MDXComponents => ({
+  ...docsComponents,
+  Chapter: ({ slug, children }: DocsChapterProps) =>
+    slug === activeChapterSlug ? children : null,
+})

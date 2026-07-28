@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Disallow: /account
+Disallow: /auth/
+Disallow: /save
+Disallow: /settings
+Disallow: /tv
+Disallow: /ui-test-list

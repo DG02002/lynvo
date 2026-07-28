@@ -96,14 +96,14 @@ export const CookieConsent = () => {
       {!hasSavedPreferences && (
         <section
           aria-label="Cookie consent"
-          className="fixed inset-x-0 bottom-0 z-40 bg-zinc-900/85 px-5 py-7 text-white backdrop-blur-xl sm:px-8 sm:py-8"
+          className="fixed inset-x-0 bottom-0 z-40 bg-background/70 px-5 py-7 text-foreground shadow-[0_-16px_48px_-24px_rgba(0,0,0,0.2)] backdrop-blur-xl dark:shadow-[0_-16px_48px_-24px_rgba(0,0,0,0.8)] sm:px-8 sm:py-8"
         >
           <div className="mx-auto flex max-w-[96rem] flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
             <div className="max-w-4xl">
-              <h2 className="text-base font-medium text-balance">
+              <h2 className="text-base font-normal text-balance">
                 We use cookies
               </h2>
-              <p className="mt-3 text-xs leading-5 text-zinc-300 text-pretty sm:text-sm sm:leading-6">
+              <p className="mt-3 text-xs leading-5 text-muted-foreground text-pretty">
                 We use cookies to help this site function, keep your account
                 secure, remember preferences, and—if enabled—support analytics
                 and marketing. Visit{" "}
@@ -129,7 +129,8 @@ export const CookieConsent = () => {
               <Button
                 type="button"
                 size="lg"
-                className="h-10 bg-white/15 px-5 text-sm text-white hover:bg-white/20 active:scale-[0.96] sm:h-12"
+                variant="secondary"
+                className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={() => setIsDialogOpen(true)}
               >
                 Manage Cookies
@@ -137,7 +138,8 @@ export const CookieConsent = () => {
               <Button
                 type="button"
                 size="lg"
-                className="h-10 bg-white/15 px-5 text-sm text-white hover:bg-white/20 active:scale-[0.96] sm:h-12"
+                variant="secondary"
+                className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={rejectNonEssential}
               >
                 Reject non-essential
@@ -145,7 +147,8 @@ export const CookieConsent = () => {
               <Button
                 type="button"
                 size="lg"
-                className="h-10 bg-white/15 px-5 text-sm text-white hover:bg-white/20 active:scale-[0.96] sm:h-12"
+                variant="secondary"
+                className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={acceptAll}
               >
                 Accept all
@@ -158,14 +161,14 @@ export const CookieConsent = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent
           showCloseButton={false}
-          className="flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl flex-col gap-0 overflow-hidden rounded-2xl bg-black p-0 text-white ring-1 ring-white/10 sm:max-w-xl"
+          className="flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl flex-col gap-0 overflow-hidden rounded-2xl bg-popover p-0 text-popover-foreground ring-1 ring-foreground/10 sm:max-w-xl"
         >
           <div className="overflow-y-auto px-5 pt-6 pb-4 sm:px-7 sm:pt-7">
             <DialogHeader className="gap-3 text-left">
               <DialogTitle className="text-xl leading-tight font-normal text-balance">
                 Cookie Preferences
               </DialogTitle>
-              <DialogDescription className="max-w-3xl text-sm leading-6 text-zinc-300 text-pretty">
+              <DialogDescription className="max-w-3xl text-sm leading-6 text-muted-foreground text-pretty">
                 Websites and apps use cookies and other identifiers to store and
                 retrieve information on your device. Some of this information
                 may be shared with service providers for the purposes you
@@ -173,7 +176,7 @@ export const CookieConsent = () => {
                 change them anytime.{" "}
                 <Link
                   to={policyPaths.cookiePolicy}
-                  className="text-zinc-200 underline underline-offset-4 hover:text-white"
+                  className="text-foreground underline underline-offset-4 hover:text-foreground/75"
                 >
                   Learn more
                 </Link>
@@ -186,13 +189,13 @@ export const CookieConsent = () => {
                   checked
                   disabled
                   aria-label="Strictly necessary cookies are always enabled"
-                  className="mt-0.5 border-white bg-white text-black disabled:opacity-100 data-checked:border-white data-checked:bg-white dark:data-checked:bg-white"
+                  className="mt-0.5 disabled:opacity-100"
                 />
                 <span>
-                  <span className="block text-sm text-white">
+                  <span className="block text-sm text-foreground">
                     Strictly necessary
                   </span>
-                  <span className="mt-1.5 block text-sm leading-6 text-zinc-400">
+                  <span className="mt-1.5 block text-sm leading-6 text-muted-foreground">
                     These cookies are required for the site to work and can’t be
                     turned off. They support essential functions like security,
                     user authentication, and customer support.
@@ -208,13 +211,13 @@ export const CookieConsent = () => {
                       updatePreference(option.key, checked)
                     }
                     aria-label={option.label}
-                    className="mt-0.5 border-zinc-500 bg-transparent text-black data-checked:border-white data-checked:bg-white dark:data-checked:bg-white"
+                    className="mt-0.5"
                   />
                   <span>
-                    <span className="block text-sm text-white">
+                    <span className="block text-sm text-foreground">
                       {option.label}
                     </span>
-                    <span className="mt-1.5 block text-sm leading-6 text-zinc-400">
+                    <span className="mt-1.5 block text-sm leading-6 text-muted-foreground">
                       {option.description}
                     </span>
                   </span>
@@ -226,7 +229,7 @@ export const CookieConsent = () => {
           <div className="px-5 pt-3 pb-5 sm:px-7 sm:pb-7">
             <Button
               type="button"
-              className="h-10 w-full bg-white text-sm font-normal text-black hover:bg-zinc-200 active:scale-[0.96]"
+              className="h-10 w-full text-sm font-normal active:scale-[0.96]"
               onClick={() => persistPreferences(preferences)}
             >
               Done

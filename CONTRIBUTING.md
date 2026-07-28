@@ -110,6 +110,9 @@ pnpm dev
 # Lynvo, auxiliary official extractor, and Convex watcher using .env.local
 pnpm dev:local
 
+# Same local stack, exposed to other devices on the local network
+pnpm dev:local --host
+
 # Official extractor by itself for standalone debugging
 pnpm --filter @lynvo/official-extractor dev
 

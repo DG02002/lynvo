@@ -21,9 +21,6 @@ catalogs:
     oxlint:
       specifier: ^1.75.0
       version: 1.75.0
-    sharp:
-      specifier: ^0.35.3
-      version: 0.35.3
     typescript:
       specifier: ^7.0.2
       version: 7.0.2

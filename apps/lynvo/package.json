@@ -5,7 +5,7 @@
   "scripts": {
     "build": "react-router build",
     "clean": "rm -rf build .react-router",
-    "dev:local": "convex dev --start 'node scripts/prepare-local-dev-vars.mjs && CLOUDFLARE_ENV=local react-router dev'",
+    "dev:local": "node scripts/start-local-dev.mjs",
     "dev": "react-router dev",
     "dev:cloud": "react-router dev",
     "preview": "pnpm run build && vite preview",

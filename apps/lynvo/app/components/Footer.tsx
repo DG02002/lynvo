@@ -2,11 +2,17 @@ import { Link } from "react-router"
 import { policyPaths, sitePaths } from "~/lib/paths"
 import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
-const productLinks = [
-  { label: "Docs", to: sitePaths.docs },
-  { label: "Changelog", to: sitePaths.changelog },
-  { label: "Pricing", to: sitePaths.pricing },
+const supportLinks = [
+  { label: "Help Center", to: sitePaths.helpCenter },
 ] as const
+
+const companyLinks = [
+  { label: "About Us", to: sitePaths.about },
+  { label: "Pricing", to: sitePaths.pricing },
+  { label: "Changelog", to: sitePaths.changelog },
+] as const
+
+const developerLinks = [{ label: "Docs", to: sitePaths.docs }] as const
 
 const policyLinks = [
   { label: "Terms of Use", to: policyPaths.termsOfUse },
@@ -21,86 +27,69 @@ const footerLinkClassName =
 const openCookiePreferences = () =>
   window.dispatchEvent(new Event(OPEN_COOKIE_PREFERENCES_EVENT))
 
+const FooterLinkGroup = ({
+  heading,
+  headingId,
+  links,
+}: {
+  heading: string
+  headingId: string
+  links: readonly { label: string; to: string }[]
+}) => (
+  <nav aria-labelledby={headingId} className="flex flex-col items-start gap-5">
+    <h2 id={headingId} className="text-sm font-normal text-muted-foreground">
+      {heading}
+    </h2>
+    <ul className="flex flex-col items-start gap-4">
+      {links.map((link) => (
+        <li key={link.to}>
+          <Link to={link.to} viewTransition className={footerLinkClassName}>
+            {link.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)
+
 export function Footer() {
   return (
-    <footer data-site-footer className="border-t bg-background">
+    <footer data-site-footer className="bg-background">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
-        <div className="mx-auto grid max-w-md grid-cols-2 gap-x-16 pt-16 md:pt-20">
-          <nav
-            aria-labelledby="footer-product-heading"
-            className="flex flex-col items-center gap-5 text-center"
-          >
-            <h2
-              id="footer-product-heading"
-              className="text-sm font-normal text-muted-foreground"
-            >
-              Lynvo
-            </h2>
-            <ul className="flex flex-col items-center gap-4">
-              {productLinks.map((link) => (
-                <li key={link.to}>
-                  <Link
-                    to={link.to}
-                    viewTransition
-                    className={footerLinkClassName}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <button
-                  type="button"
-                  className={footerLinkClassName}
-                  onClick={openCookiePreferences}
-                >
-                  Cookie Preferences
-                </button>
-              </li>
-            </ul>
-          </nav>
-
-          <nav
-            aria-labelledby="footer-policies-heading"
-            className="flex flex-col items-center gap-5 text-center"
-          >
-            <h2
-              id="footer-policies-heading"
-              className="text-sm font-normal text-muted-foreground"
-            >
-              Policies
-            </h2>
-            <ul className="flex flex-col items-center gap-4">
-              {policyLinks.map((link) => (
-                <li key={link.to}>
-                  <Link
-                    to={link.to}
-                    viewTransition
-                    className={footerLinkClassName}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-16 sm:grid-cols-4 md:pt-20">
+          <FooterLinkGroup
+            heading="Support"
+            headingId="footer-support-heading"
+            links={supportLinks}
+          />
+          <FooterLinkGroup
+            heading="Company"
+            headingId="footer-company-heading"
+            links={companyLinks}
+          />
+          <FooterLinkGroup
+            heading="Developers"
+            headingId="footer-developers-heading"
+            links={developerLinks}
+          />
+          <FooterLinkGroup
+            heading="Terms & Policies"
+            headingId="footer-policies-heading"
+            links={policyLinks}
+          />
         </div>
       </div>
 
-      <Link
-        to="/"
-        viewTransition
-        aria-label="Lynvo home"
-        className="mx-auto mt-16 mb-12 flex max-w-[96rem] justify-center overflow-hidden md:mt-20 md:mb-16"
-      >
-        <span className="block shrink-0 -translate-x-[0.025em] pb-[0.08em] text-[clamp(10rem,36vw,34rem)] leading-[0.72] font-light tracking-[-0.05em] text-foreground">
-          Lynvo
-        </span>
-      </Link>
-
-      <div className="border-t px-4 py-5 md:px-8">
-        <p className="text-center text-sm text-muted-foreground">
-          Lynvo © 2026
+      <div className="mt-16 px-4 pt-5 pb-10 md:mt-20 md:px-8 md:pb-12">
+        <p className="flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+          <span>Lynvo © 2026</span>
+          <button
+            type="button"
+            className="underline underline-offset-4 hover:text-foreground"
+            onClick={openCookiePreferences}
+          >
+            Manage Cookies
+          </button>
         </p>
       </div>
     </footer>

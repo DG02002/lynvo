@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { SaveIcon } from "@hugeicons/core-free-icons"
+import { FolderLibraryIcon } from "@hugeicons/core-free-icons"
 import { Link } from "react-router"
 import { buttonVariants } from "~/components/ui/button-variants"
 import { RemotePlayButton } from "~/components/RemotePlayButton"
@@ -26,7 +26,7 @@ export const UserNavActions = ({
         "gap-2 px-2 sm:px-4 text-foreground rounded-full"
       )}
     >
-      <HugeiconsIcon icon={SaveIcon} className="size-4" />
+      <HugeiconsIcon icon={FolderLibraryIcon} className="size-4" />
       <span className="hidden text-base font-normal sm:inline">Save</span>
     </Link>
 
