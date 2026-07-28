@@ -39,6 +39,14 @@ declare global {
     navLabel: string
     title: string
     description: string
+    contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
+    headings: readonly DocumentationHeading[]
+  }
+
+  interface DocumentationHeading {
+    id: string
+    label: string
+    level?: 3
   }
 
   interface DocumentationChapterGroup {

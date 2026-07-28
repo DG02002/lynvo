@@ -1,7 +1,7 @@
-import { CodesandboxIcon } from "@hugeicons/core-free-icons"
+import { ThreeDViewIcon } from "@hugeicons/core-free-icons"
 
 export interface PluginIconSource {
-  hugeIcon?: typeof CodesandboxIcon
+  hugeIcon?: typeof ThreeDViewIcon
   url?: string
 }
 

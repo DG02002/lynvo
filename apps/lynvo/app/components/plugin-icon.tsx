@@ -1,6 +1,6 @@
 import {
-  CodesandboxIcon,
   GeometricShapes01Icon,
+  ThreeDViewIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { cn } from "~/lib/utils"
@@ -43,7 +43,7 @@ export const PluginIcon = ({
 
   return (
     <HugeiconsIcon
-      icon={fallback === "extractor" ? CodesandboxIcon : GeometricShapes01Icon}
+      icon={fallback === "extractor" ? ThreeDViewIcon : GeometricShapes01Icon}
       className={cn("shrink-0 text-foreground", className)}
       aria-hidden="true"
       data-icon-fallback={fallback}

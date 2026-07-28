@@ -4,6 +4,7 @@ import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
 const supportLinks = [
   { label: "Help Center", to: sitePaths.helpCenter },
+  { label: "Android TV Setup", to: sitePaths.androidTvSetup },
 ] as const
 
 const companyLinks = [

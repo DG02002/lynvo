@@ -5,3 +5,5 @@ export const OFFICIAL_EXTRACTOR_ID = "official:dev.lynvo.official-extractor"
 export const COOKIE_PREFERENCES_STORAGE_KEY = "lynvo:cookie-preferences"
 export const COOKIE_PREFERENCES_VERSION = 1
 export const OPEN_COOKIE_PREFERENCES_EVENT = "lynvo:open-cookie-preferences"
+export const DOCS_SCROLL_OFFSET_PX = 112
+export const DOCS_SCROLL_END_TOLERANCE_PX = 2

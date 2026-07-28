@@ -4,7 +4,9 @@ import {
   SmartPhone01Icon,
   Tv01Icon,
 } from "@hugeicons/core-free-icons"
+import { Link } from "react-router"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import { sitePaths } from "~/lib/paths"
 import { cn } from "~/lib/utils"
 import { privacyPoints } from "./home-content"
 
@@ -206,14 +208,23 @@ export const AndroidTvSetupSection = () => (
         description="Open Lynvo in TV Bro, a web browser designed for televisions and remote controls."
         centered
       />
-      <a
-        href="https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser"
-        target="_blank"
-        rel="noreferrer"
-        className="text-primary underline underline-offset-4"
-      >
-        Install TV Bro from Google Play
-      </a>
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+        <Link
+          to={sitePaths.androidTvSetup}
+          viewTransition
+          className="text-primary underline underline-offset-4"
+        >
+          Set up Lynvo on Android TV
+        </Link>
+        <a
+          href="https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser"
+          target="_blank"
+          rel="noreferrer"
+          className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          Install TV Bro
+        </a>
+      </div>
     </div>
   </section>
 )

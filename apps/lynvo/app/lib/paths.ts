@@ -7,6 +7,7 @@ export const authPaths = {
 
 export const sitePaths = {
   about: "/about",
+  androidTvSetup: "/docs/android-tv",
   changelog: "/changelog",
   docs: "/docs",
   helpCenter: "/help-center",
