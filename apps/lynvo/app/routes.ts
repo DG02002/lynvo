@@ -17,6 +17,7 @@ export default [
     route("terms", "features/site/routes/_site.terms.tsx"),
     route("about", "features/site/routes/_site.about.tsx"),
     route("help-center", "features/site/routes/_site.help-center.tsx"),
+    route("docs/markdown/*", "features/site/routes/_site.docs-markdown.ts"),
     route("docs/*", "features/site/routes/_site.docs.tsx"),
     route("changelog", "features/site/routes/_site.changelog.tsx"),
     route("pricing", "features/site/routes/_site.pricing.tsx"),

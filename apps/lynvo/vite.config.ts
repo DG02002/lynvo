@@ -5,10 +5,15 @@ import rehypeShikiFromHighlighter from "@shikijs/rehype/core"
 import { transformerMetaHighlight } from "@shikijs/transformers"
 import tailwindcss from "@tailwindcss/vite"
 import remarkGfm from "remark-gfm"
+import remarkFrontmatter from "remark-frontmatter"
+import remarkMdxFrontmatter from "remark-mdx-frontmatter"
 import { createHighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 import { defineConfig, type ViteDevServer } from "vite"
-import { exec } from "node:child_process"
+import { exec, execFileSync } from "node:child_process"
+import { statSync } from "node:fs"
+import { readFile } from "node:fs/promises"
+import { dirname, resolve } from "node:path"
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
@@ -23,6 +28,62 @@ const docsHighlighter = await createHighlighterCore({
     import("@shikijs/langs/dotenv"),
   ],
   engine: createJavaScriptRegexEngine(),
+})
+
+const docsRaw = () => ({
+  name: "docs-raw",
+  enforce: "pre" as const,
+  resolveId(source: string, importer: string | undefined) {
+    if (!importer) {
+      return
+    }
+
+    const query = ["?docs-raw", "?docs-last-modified"].find((candidate) =>
+      source.endsWith(candidate)
+    )
+    if (!query) {
+      return
+    }
+
+    const sourcePath = source.slice(0, -query.length)
+    const filePath = sourcePath.startsWith("/")
+      ? sourcePath
+      : resolve(dirname(importer), sourcePath)
+
+    return `\0${query.slice(1)}:${filePath}`
+  },
+  async load(id: string) {
+    if (id.startsWith("\0docs-last-modified:")) {
+      const filePath = id.slice("\0docs-last-modified:".length)
+      let lastModified = ""
+
+      try {
+        lastModified = execFileSync(
+          "git",
+          ["log", "-1", "--format=%cs", "--", filePath],
+          {
+            cwd: dirname(filePath),
+            encoding: "utf8",
+          }
+        ).trim()
+      } catch {
+        // Git metadata may not be available in packaged build environments.
+      }
+
+      if (!lastModified) {
+        lastModified = statSync(filePath).mtime.toISOString().slice(0, 10)
+      }
+
+      return `export default ${JSON.stringify(lastModified)}`
+    }
+
+    if (!id.startsWith("\0docs-raw:")) {
+      return
+    }
+
+    const content = await readFile(id.slice("\0docs-raw:".length), "utf8")
+    return `export default ${JSON.stringify(content)}`
+  },
 })
 
 function wranglerTypesWatcher() {
@@ -51,10 +112,14 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   plugins: [
+    docsRaw(),
     {
-      enforce: "pre",
       ...mdx({
-        remarkPlugins: [remarkGfm],
+        remarkPlugins: [
+          remarkGfm,
+          remarkFrontmatter,
+          [remarkMdxFrontmatter, { name: "frontmatter" }],
+        ],
         rehypePlugins: [
           [
             rehypeShikiFromHighlighter,

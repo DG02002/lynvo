@@ -34,13 +34,20 @@ declare global {
     version: number
   }
 
-  interface DocumentationChapter {
+  interface DocumentationPage {
     slug: string
+    url: string
+    markdownUrl: string
     navLabel: string
     title: string
     description: string
     contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
+    lastModified: string
     headings: readonly DocumentationHeading[]
+    rawContent: string
+    Content: import("react").LazyExoticComponent<
+      DocumentationMdxModule["default"]
+    >
   }
 
   interface DocumentationHeading {
@@ -51,11 +58,32 @@ declare global {
 
   interface DocumentationChapterGroup {
     group: string
-    chapters: readonly DocumentationChapter[]
+    pages: readonly DocumentationPage[]
   }
 
-  interface DocsChapterProps {
-    slug: string
-    children: import("react").ReactNode
+  interface DocumentationPageContext {
+    page: DocumentationPage
+    groups: readonly DocumentationChapterGroup[]
+    previous?: DocumentationPage
+    next?: DocumentationPage
+  }
+
+  interface DocumentationFrontmatter {
+    title: string
+    description: string
+    navLabel: string
+    contentType: "Tutorial" | "How-to" | "Reference" | "Conceptual"
+  }
+
+  interface DocumentationMdxModule {
+    default: import("react").ComponentType<{
+      components?: import("mdx/types.js").MDXComponents
+    }>
+    frontmatter: DocumentationFrontmatter
+  }
+
+  interface DocumentationMetaGroup {
+    title: string
+    pages: readonly string[]
   }
 }

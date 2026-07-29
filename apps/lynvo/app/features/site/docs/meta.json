@@ -1,0 +1,12 @@
+{
+  "groups": [
+    {
+      "title": "Using Lynvo",
+      "pages": ["android-tv"]
+    },
+    {
+      "title": "External extractors",
+      "pages": ["extractor"]
+    }
+  ]
+}

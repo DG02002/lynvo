@@ -299,6 +299,7 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 .docs-content .shiki code {
+  counter-reset: docs-code-line;
   display: flex;
   flex-direction: column;
 }
@@ -313,8 +314,19 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 .docs-content .shiki .line {
+  counter-increment: docs-code-line;
   display: block;
   min-height: 1.5rem;
+}
+
+.docs-content .shiki .line::before {
+  display: inline-block;
+  width: 2.25rem;
+  padding-right: 1rem;
+  color: var(--muted-foreground);
+  content: counter(docs-code-line);
+  text-align: right;
+  user-select: none;
 }
 
 .docs-content .shiki .line.highlighted {
