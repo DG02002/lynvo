@@ -1,0 +1,52 @@
+<DocSection id="routes">
+
+## Wire the Hono routes
+
+Keep the route layer limited to authentication, validation, usage reservation, adapter dispatch, and response serialization.
+
+<CodeBlock label="src/index.ts">
+
+```ts {7-10}
+import { Hono } from "hono"
+import { isAuthorized, type Env } from "./auth"
+import { manifest } from "./manifest"
+
+const app = new Hono<{ Bindings: Env }>()
+
+app.get("/manifest", (c) => c.json(manifest))
+app.post("/verify", (c) =>
+  isAuthorized(c.req.raw, c.env)
+    ? c.json({ ok: true })
+    : protocolError(c, "AUTH_INVALID", 401)
+)
+```
+
+</CodeBlock>
+
+Apply the same bearer check to usage and extraction:
+
+<CodeBlock label="src/index.ts">
+
+```ts {1-4,7-11}
+app.get("/usage", async (c) => {
+  if (!isAuthorized(c.req.raw, c.env)) {
+    return protocolError(c, "AUTH_INVALID", 401)
+  }
+  return c.json(await readUsage(c.env))
+})
+
+app.post("/extract", async (c) => {
+  if (!isAuthorized(c.req.raw, c.env)) {
+    return protocolError(c, "AUTH_INVALID", 401)
+  }
+  return handleExtract(c)
+})
+
+export default app
+```
+
+</CodeBlock>
+
+`handleExtract` must parse `extractRequestSchema`, confirm a matcher accepts the target URL, reserve usage, dispatch to the matching source, validate the response, and settle usage.
+
+</DocSection>

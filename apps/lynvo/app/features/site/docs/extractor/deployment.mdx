@@ -1,0 +1,21 @@
+<DocSection id="deployment">
+
+## Deploy the Worker
+
+Run your quality checks before every deployment:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm test
+pnpm typecheck
+pnpm wrangler deploy
+```
+
+</CodeBlock>
+
+Call all four endpoints at the deployed HTTPS origin. Confirm the production secret works and the manifest contains only production URLs.
+
+Use bounded upstream requests, reject unsupported hosts, and record structured logs without credentials. Keep the deployment origin stable after users connect it.
+
+</DocSection>

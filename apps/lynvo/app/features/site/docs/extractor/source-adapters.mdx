@@ -1,0 +1,72 @@
+<DocSection id="sources">
+
+## Add a source adapter
+
+One external Worker can support several source websites. Treat each website as a source adapter with its own matchers, metadata, and extraction function.
+
+Define a source catalog so manifest metadata and request dispatch use the same records:
+
+<CodeBlock label="src/sources/catalog.ts">
+
+```ts {1-8}
+export const sources = [
+  {
+    id: "example-media",
+    displayName: "Example Media",
+    status: "active" as const,
+    version: "1.0.0",
+    hosts: ["media.example.com"],
+    matchers: [
+      {
+        hosts: ["media.example.com"],
+        pathPatterns: ["/watch/**"],
+        schemes: ["https"],
+      },
+    ],
+  },
+]
+```
+
+</CodeBlock>
+
+Publish user-visible sources under `extensions.lynvo.sources`:
+
+<CodeBlock label="src/manifest.ts">
+
+```ts {4-6}
+export const manifest = {
+  // Core manifest fields
+  matchers: sources.flatMap((source) => source.matchers),
+  extensions: {
+    lynvo: { sources },
+  },
+}
+```
+
+</CodeBlock>
+
+Source metadata supports these fields:
+
+| Field                   | Purpose                                        |
+| ----------------------- | ---------------------------------------------- |
+| `id`                    | Stable source identifier                       |
+| `displayName`           | Name shown by Lynvo                            |
+| `description`           | Short source capability summary                |
+| `homepage`              | HTTPS source project page                      |
+| `hasIcon` and `iconUrl` | Source-specific WebP icon                      |
+| `status`                | `active`, `maintenance`, `degraded`, or `down` |
+| `version`               | Your adapter version                           |
+| `routesToSourceId`      | Downstream source in the same manifest         |
+| `hosts` and `matchers`  | URLs handled by the adapter                    |
+| `credential`            | Domain password or HTTP Basic Auth capability  |
+
+Add a source by completing four changes:
+
+1. Create the adapter module
+2. Add one catalog record
+3. Add a direct HTTPS WebP icon when available
+4. Add supported, unsupported, and failure fixtures
+
+Do not add source-specific conditions to the Hono route layer.
+
+</DocSection>

@@ -363,14 +363,6 @@ export const docsComponents: MDXComponents = {
   td: (props) => <td {...props} className="border-b px-4 py-3 align-top" />,
 }
 
-export const createDocsComponents = (
-  activeChapterSlug: string
-): MDXComponents => ({
-  ...docsComponents,
-  Chapter: ({ slug, children }: DocsChapterProps) =>
-    slug === activeChapterSlug ? children : null,
-})
-
 export const createAndroidTvDocsComponents = (): MDXComponents => ({
   ...docsComponents,
   a: AndroidTvExternalLink,

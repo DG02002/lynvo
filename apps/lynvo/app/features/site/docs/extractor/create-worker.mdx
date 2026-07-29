@@ -1,0 +1,51 @@
+<DocSection id="create-worker">
+
+## Create a Hono Cloudflare Worker
+
+Create a Worker-first Hono project. An extractor does not need a React frontend.
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm create hono@latest my-lynvo-extractor \
+  --template cloudflare-workers \
+  --install \
+  --pm pnpm
+
+cd my-lynvo-extractor
+pnpm add zod
+```
+
+</CodeBlock>
+
+Configure Wrangler with a current compatibility date and Worker observability.
+
+<CodeBlock label="wrangler.jsonc">
+
+```jsonc
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-lynvo-extractor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-23",
+  "observability": {
+    "enabled": true,
+  },
+}
+```
+
+</CodeBlock>
+
+Run the generated Worker locally:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm dev
+```
+
+</CodeBlock>
+
+Wrangler prints the local origin. The default is usually `http://localhost:8787`, but you must use the origin shown in your terminal.
+
+</DocSection>

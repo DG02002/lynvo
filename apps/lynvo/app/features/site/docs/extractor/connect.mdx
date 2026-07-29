@@ -1,0 +1,18 @@
+<DocSection id="connect">
+
+## Connect the Worker to Lynvo
+
+Add the Worker after its production contract checks pass:
+
+1. Open **Settings** in Lynvo
+2. Find **External extractors**
+3. Select **Add external extractor**
+4. Enter the deployed origin in **Base URL**
+5. Enter the production bearer key in **API Key**
+6. Select **Add worker**
+
+Lynvo fetches `GET /manifest`, checks protocol version `1.0`, calls `POST /verify`, and stores the Worker only when both responses pass validation.
+
+Test one URL for every declared source. Open one lazy folder to confirm that Lynvo sends the follow-up to the same Worker.
+
+</DocSection>

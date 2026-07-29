@@ -1,0 +1,23 @@
+<DocSection id="overview">
+
+## Build and connect an external extractor
+
+This guide takes you from an empty Cloudflare Worker to a deployed extractor connected in Lynvo. You will create a Hono project, implement protocol version `1.0`, add a source adapter, enforce usage limits, test every response, and connect the Worker in Lynvo Settings.
+
+An external extractor is an HTTPS service that converts supported URLs into normalized media nodes. Lynvo owns registration, routing, saved state, and playback. Your Worker owns source matching, extraction, staged resolution, authentication, and finite usage enforcement.
+
+Build the integration in this order:
+
+1. Create the Worker and configure its production secret
+2. Implement the four protocol endpoints and validate every JSON boundary
+3. Add source adapters that return playable, container, folder, or lazy nodes
+4. Reserve, settle, and report finite usage
+5. Test the contract, deploy the Worker, and connect it to Lynvo
+
+<DocsNote title="Protocol contract">
+
+The endpoint tables, JSON schemas, and stated invariants define protocol version `1.0`. The `@lynvo/extractor-protocol` package is not public, so this guide implements the contract directly with Hono and Zod. Validate incoming requests and outgoing responses against these schemas.
+
+</DocsNote>
+
+</DocSection>

@@ -1,0 +1,55 @@
+<DocSection id="testing">
+
+## Test the protocol contract
+
+Test the Worker in the Cloudflare Workers runtime when possible. Cover successful responses and every boundary that can reject a request.
+
+Start the Worker and inspect the public manifest:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm dev
+curl http://localhost:8787/manifest
+```
+
+</CodeBlock>
+
+Verify the local bearer key:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl -X POST http://localhost:8787/verify \
+  -H "Authorization: Bearer your_local_extractor_api_key_here"
+```
+
+</CodeBlock>
+
+Test a source extraction:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl -X POST http://localhost:8787/extract \
+  -H "Authorization: Bearer your_local_extractor_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"input":{"kind":"source","sourceUrl":"https://media.example.com/watch/123"}}'
+```
+
+</CodeBlock>
+
+Your automated contract suite should cover:
+
+- Public valid manifest and protocol version
+- Missing, invalid, and valid bearer credentials
+- Finite usage response and unique metric IDs
+- Supported and unsupported source URLs
+- Playable, group, selectable folder, and lazy folder nodes
+- Lazy-node follow-up through the same Worker
+- Password-required and invalid-password flows
+- Malformed JSON and invalid request shapes
+- Exhausted usage before upstream work starts
+- Safe temporary and permanent failure responses
+
+</DocSection>

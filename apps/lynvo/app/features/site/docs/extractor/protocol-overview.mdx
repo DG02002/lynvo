@@ -1,0 +1,16 @@
+<DocSection id="protocol-version">
+
+## Implement protocol version 1.0
+
+Lynvo external extractors use protocol version `1.0` over HTTPS and JSON. Version `1.0` defines four endpoints:
+
+| Method | Route       | Authentication | Purpose                                            |
+| ------ | ----------- | -------------- | -------------------------------------------------- |
+| `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and sources |
+| `POST` | `/verify`   | Bearer         | Verifies the API key and Worker readiness          |
+| `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
+| `POST` | `/extract`  | Bearer         | Resolves a source URL or lazy node                 |
+
+Use `Content-Type: application/json` for JSON responses. Return protocol error envelopes instead of unstructured error strings.
+
+</DocSection>

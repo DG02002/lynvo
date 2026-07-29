@@ -1,0 +1,27 @@
+<DocSection id="what-is-an-extractor">
+
+## The extractor is the service Lynvo connects to
+
+An extractor is a deployed HTTPS service that translates source pages into data Lynvo understands. Lynvo sends a URL to the extractor, and the extractor returns normalized media nodes for files, folders, groups, or content that must be resolved later.
+
+The extractor is the boundary between Lynvo and your source integrations. It owns the behavior shared by every plugin:
+
+- The public manifest at `GET /manifest`
+- Bearer authentication for protected endpoints
+- URL routing to the correct plugin
+- Request and response validation
+- Finite usage limits
+- Protocol error responses
+- Deployment, logs, and operational status
+
+Lynvo owns the interface around that service. It registers the extractor, selects it for matching URLs, saves extracted nodes, tracks playback state, and sends media to a player.
+
+One extractor can contain one plugin or several plugins. You deploy and connect the extractor once, then publish each plugin in the extractor manifest.
+
+<DocsNote title="Direct media links">
+
+Lynvo handles direct media URLs without an extractor. Use an extractor when a source page must be authenticated, parsed, traversed, or converted into playable links.
+
+</DocsNote>
+
+</DocSection>

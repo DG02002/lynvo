@@ -1,0 +1,94 @@
+<DocSection id="node-schema">
+
+## Return normalized node types
+
+Protocol `1.0` has three wire-level node kinds. Product concepts map to them as follows:
+
+| Product item           | Protocol kind | Required fields                         |
+| ---------------------- | ------------- | --------------------------------------- |
+| Direct playable item   | `playable`    | `label`, `url`                          |
+| Display-only container | `group`       | `label`, `children`                     |
+| Selectable folder      | `group`       | `label`, `selectable: true`, `children` |
+| Lazy folder            | `resolvable`  | `label`, `nodeUrl`                      |
+
+### Return a direct playable item
+
+Use `playable` only when the URL can go directly to a media player.
+
+<CodeBlock label="Playable node">
+
+```ts {2,5}
+const directItem = {
+  kind: "playable",
+  id: "episode-1",
+  label: "Episode 1",
+  url: "https://cdn.example.com/episode-1.mp4",
+  badge: "1080p",
+  size: "1.4 GB",
+  expiry: 1767225600000,
+  status: "up",
+}
+```
+
+</CodeBlock>
+
+`status` may be `up`, `down`, or `unknown`. `expiry` is an optional Unix timestamp in milliseconds.
+
+### Return a display-only container
+
+Use a non-selectable group to organize child nodes.
+
+<CodeBlock label="Container node">
+
+```ts {2,6}
+const seasonContainer = {
+  kind: "group",
+  id: "season-1",
+  label: "Season 1",
+  selectable: false,
+  children: [directItem],
+}
+```
+
+</CodeBlock>
+
+### Return a selectable folder
+
+Set `selectable` to `true` when Lynvo may select the group as a folder target.
+
+<CodeBlock label="Folder node">
+
+```ts {2,5}
+const selectableFolder = {
+  kind: "group",
+  id: "all-seasons",
+  label: "All seasons",
+  selectable: true,
+  children: [seasonContainer],
+}
+```
+
+</CodeBlock>
+
+### Return a lazy folder
+
+Use `resolvable` when the Worker should load the folder after it is opened.
+
+<CodeBlock label="Lazy folder node">
+
+```ts {2,6}
+const lazyFolder = {
+  kind: "resolvable",
+  id: "bonus-content",
+  label: "Bonus content",
+  badge: "Open folder",
+  nodeUrl: "https://media.example.com/folders/bonus",
+  resourceId: "bonus_v1",
+}
+```
+
+</CodeBlock>
+
+The same Worker must resolve every `nodeUrl` it emits. Never include credentials in `nodeUrl`, `resourceId`, labels, or metadata.
+
+</DocSection>

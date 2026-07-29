@@ -1,0 +1,71 @@
+<DocSection id="usage-schema">
+
+## Define and enforce usage limits
+
+Every connected credential must have at least one finite usage metric. The Worker must enforce the same limits it reports.
+
+Define the response schema:
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {3-11}
+export const usageResponseSchema = z.object({
+  metrics: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        label: z.string().min(1),
+        used: z.number().nonnegative().finite(),
+        limit: z.number().positive().finite(),
+        unit: z.string().min(1),
+        period: z.enum(["daily", "monthly"]),
+        resetsAt: z.string().datetime(),
+        sourceId: z.string().min(1).optional(),
+      })
+    )
+    .min(1),
+})
+```
+
+</CodeBlock>
+
+Return one record for each independently enforced limit:
+
+<CodeBlock label="GET /usage">
+
+```json {3-11}
+{
+  "metrics": [
+    {
+      "id": "extract-requests",
+      "label": "Extract requests",
+      "used": 84,
+      "limit": 1000,
+      "unit": "requests",
+      "period": "monthly",
+      "resetsAt": "2026-08-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+</CodeBlock>
+
+Each metric must satisfy these invariants:
+
+- `id` is unique within the response
+- `limit` is positive and finite
+- `used` is non-negative, finite, and no greater than `limit`
+- `period` is `daily` or `monthly`
+- `resetsAt` is an ISO 8601 timestamp
+- `sourceId` identifies a source-specific allowance
+
+Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before the adapter performs upstream work. Return `RATE_LIMITED` when no capacity remains. Settle the reservation after the adapter finishes, and release it when your accounting policy does not charge failed work.
+
+<DocsNote title="Usage is authoritative">
+
+Do not report one allowance while enforcing another. Lynvo renders the metrics returned by your Worker and does not own third-party accounting.
+
+</DocsNote>
+
+</DocSection>

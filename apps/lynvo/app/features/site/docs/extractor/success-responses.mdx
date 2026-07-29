@@ -1,0 +1,47 @@
+<DocSection id="success-schema">
+
+## Return a successful extraction response
+
+Every successful extraction returns source metadata, an array of normalized nodes, and an extensions object.
+
+<CodeBlock label="Successful response">
+
+```json {2-7,9-15}
+{
+  "source": {
+    "extractorId": "com.example.my-extractor",
+    "displayName": "My Extractor",
+    "sourceId": "example-media",
+    "sourceName": "Example Media",
+    "pageTitle": "Example collection"
+  },
+  "nodes": [
+    {
+      "kind": "playable",
+      "id": "episode-1",
+      "label": "Episode 1",
+      "url": "https://cdn.example.com/episode-1.mp4"
+    }
+  ],
+  "extensions": {}
+}
+```
+
+</CodeBlock>
+
+The `source` object supports:
+
+| Field           | Required | Purpose                   |
+| --------------- | -------- | ------------------------- |
+| `extractorId`   | Yes      | Matches the manifest      |
+| `displayName`   | Yes      | Extractor display name    |
+| `iconUrl`       | No       | Extractor icon            |
+| `sourceId`      | No       | Matches a declared source |
+| `sourceName`    | No       | Source display name       |
+| `sourceIconUrl` | No       | Source icon               |
+| `pageTitle`     | No       | Extracted page title      |
+| `audio`         | No       | Audio-language summary    |
+
+Lynvo owns layout, watched state, saved selection, playback state, and mirror caching. Do not return UI instructions.
+
+</DocSection>

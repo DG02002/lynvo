@@ -4,7 +4,6 @@ import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
 const supportLinks = [
   { label: "Help Center", to: sitePaths.helpCenter },
-  { label: "Android TV Setup", to: sitePaths.androidTvSetup },
 ] as const
 
 const companyLinks = [
@@ -13,7 +12,11 @@ const companyLinks = [
   { label: "Changelog", to: sitePaths.changelog },
 ] as const
 
-const developerLinks = [{ label: "Docs", to: sitePaths.docs }] as const
+const docsLinks = [
+  { label: "Docs", to: sitePaths.docs },
+  { label: "Android TV Setup", to: sitePaths.androidTvSetup },
+  { label: "External Extractor", to: "/docs/extractor" },
+] as const
 
 const policyLinks = [
   { label: "Terms of Use", to: policyPaths.termsOfUse },
@@ -69,9 +72,9 @@ export function Footer() {
             links={companyLinks}
           />
           <FooterLinkGroup
-            heading="Developers"
-            headingId="footer-developers-heading"
-            links={developerLinks}
+            heading="Docs"
+            headingId="footer-docs-heading"
+            links={docsLinks}
           />
           <FooterLinkGroup
             heading="Terms & Policies"

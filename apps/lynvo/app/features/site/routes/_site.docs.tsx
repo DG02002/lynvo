@@ -11,7 +11,7 @@ import { Link, useParams } from "react-router"
 import type { Route } from "./+types/_site.docs"
 import {
   createAndroidTvDocsComponents,
-  createDocsComponents,
+  docsComponents,
 } from "~/features/site/docs/docs-components"
 import {
   DOCS_SCROLL_END_TOLERANCE_PX,
@@ -22,9 +22,61 @@ import { cn } from "~/lib/utils"
 const AndroidTvDocsContent = lazy(
   () => import("~/features/site/docs/android-tv.mdx")
 )
-const ExtractorDocsContent = lazy(
-  () => import("~/features/site/docs/external-extractors.mdx")
-)
+
+const extractorDocsContentBySlug = {
+  extractor: lazy(() => import("~/features/site/docs/extractor/extractor.mdx")),
+  "what-is-an-extractor": lazy(
+    () => import("~/features/site/docs/extractor/what-is-an-extractor.mdx")
+  ),
+  "what-is-a-plugin": lazy(
+    () => import("~/features/site/docs/extractor/what-is-a-plugin.mdx")
+  ),
+  "agent-prompt": lazy(
+    () => import("~/features/site/docs/extractor/agent-prompt.mdx")
+  ),
+  prerequisites: lazy(
+    () => import("~/features/site/docs/extractor/prerequisites.mdx")
+  ),
+  "create-worker": lazy(
+    () => import("~/features/site/docs/extractor/create-worker.mdx")
+  ),
+  "protocol-overview": lazy(
+    () => import("~/features/site/docs/extractor/protocol-overview.mdx")
+  ),
+  authentication: lazy(
+    () => import("~/features/site/docs/extractor/authentication.mdx")
+  ),
+  manifest: lazy(() => import("~/features/site/docs/extractor/manifest.mdx")),
+  "source-adapters": lazy(
+    () => import("~/features/site/docs/extractor/source-adapters.mdx")
+  ),
+  "extraction-requests": lazy(
+    () => import("~/features/site/docs/extractor/extraction-requests.mdx")
+  ),
+  "media-nodes": lazy(
+    () => import("~/features/site/docs/extractor/media-nodes.mdx")
+  ),
+  "success-responses": lazy(
+    () => import("~/features/site/docs/extractor/success-responses.mdx")
+  ),
+  "usage-limits": lazy(
+    () => import("~/features/site/docs/extractor/usage-limits.mdx")
+  ),
+  errors: lazy(() => import("~/features/site/docs/extractor/errors.mdx")),
+  "hono-routes": lazy(
+    () => import("~/features/site/docs/extractor/hono-routes.mdx")
+  ),
+  testing: lazy(() => import("~/features/site/docs/extractor/testing.mdx")),
+  deployment: lazy(
+    () => import("~/features/site/docs/extractor/deployment.mdx")
+  ),
+  connect: lazy(() => import("~/features/site/docs/extractor/connect.mdx")),
+} as const
+
+const isExtractorDocsSlug = (
+  slug: string
+): slug is keyof typeof extractorDocsContentBySlug =>
+  slug in extractorDocsContentBySlug
 
 const androidTvDocumentationGroups: readonly DocumentationChapterGroup[] = [
   {
@@ -56,8 +108,8 @@ const extractorDocumentationGroups: readonly DocumentationChapterGroup[] = [
     group: "Getting started",
     chapters: [
       {
-        slug: "introduction",
-        navLabel: "Introduction",
+        slug: "extractor",
+        navLabel: "Extractor",
         title: "External extractors",
         description:
           "Learn what an external extractor does and how it works with Lynvo.",
@@ -403,7 +455,7 @@ const documentationCards = [
   {
     title: "Extractor",
     description: "Build extractors that support your media sources.",
-    to: "/docs/introduction",
+    to: "/docs/extractor",
     icon: ThreeDViewIcon,
   },
 ] as const
@@ -599,10 +651,12 @@ export default function Docs() {
   )
   const ActiveDocsContent = isAndroidTvDocumentation
     ? AndroidTvDocsContent
-    : ExtractorDocsContent
+    : isExtractorDocsSlug(activePage.slug)
+      ? extractorDocsContentBySlug[activePage.slug]
+      : extractorDocsContentBySlug.extractor
   const pageDocsComponents = isAndroidTvDocumentation
     ? createAndroidTvDocsComponents()
-    : createDocsComponents(activePage.slug)
+    : docsComponents
 
   return (
     <main className="mx-auto w-full max-w-[90rem] px-4 py-8 md:px-8">
