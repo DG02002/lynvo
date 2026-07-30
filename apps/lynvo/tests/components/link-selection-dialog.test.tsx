@@ -126,16 +126,27 @@ describe("LinkSelectionDialog", () => {
         onOpenChange={vi.fn()}
         links={[]}
         onConfirm={vi.fn()}
+        pluginIcon="https://extractor.example/plugin.webp"
+        pluginName="Example Plugin"
         pageTitle="The Midnight Romance in Hagwon (2024)"
         audioInfo="Hindi| English| Korean"
       />
     )
 
+    expect(screen.getByText("Example Plugin")).toHaveClass(
+      "text-lg",
+      "md:text-xl",
+      "leading-tight"
+    )
+    expect(screen.getByText("Example Plugin")).not.toHaveClass("leading-none")
+    expect(
+      document.querySelector('img[src="https://extractor.example/plugin.webp"]')
+    ).toHaveClass("size-10", "md:size-12")
     expect(
       screen.getByRole("heading", {
         name: "The Midnight Romance in Hagwon (2024)",
       })
-    ).toHaveClass("text-xl", "sm:text-2xl")
+    ).toHaveClass("text-base", "sm:text-lg")
     expect(screen.getByText("Hindi, English, Korean")).toBeVisible()
     expect(screen.queryByText(/Audio:/)).not.toBeInTheDocument()
   })

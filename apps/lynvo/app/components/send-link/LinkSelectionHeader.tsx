@@ -35,11 +35,11 @@ export const LinkSelectionHeader = ({
           <PluginIcon
             iconUrl={pluginIcon}
             fallback="source"
-            className="size-12 md:size-16"
+            className="size-10 md:size-12"
           />
           <div className="flex min-w-0 flex-col">
             {pluginName && (
-              <span className="truncate text-2xl font-normal leading-none">
+              <span className="truncate text-lg font-normal leading-tight md:text-xl">
                 {pluginName}
               </span>
             )}
@@ -54,7 +54,7 @@ export const LinkSelectionHeader = ({
       )}
 
       {pageTitle && (
-        <DialogTitle className="line-clamp-2 text-xl font-normal leading-tight text-foreground sm:text-2xl">
+        <DialogTitle className="line-clamp-2 text-base font-normal leading-tight text-foreground sm:text-lg">
           {pageTitle}
         </DialogTitle>
       )}
