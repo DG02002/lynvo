@@ -58,6 +58,7 @@ export const getPluginMetadata = Effect.fn(
 
   return {
     filename,
+    sourceId: plugin.id,
     pluginName: plugin.name,
     ...(plugin.icon.url ? { pluginIcon: plugin.icon.url } : {}),
   }

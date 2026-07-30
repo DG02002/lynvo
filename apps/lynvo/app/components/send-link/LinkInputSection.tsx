@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight02Icon,
   AlertCircleIcon,
+  Link01Icon,
   Route01Icon,
 } from "@hugeicons/core-free-icons"
 
@@ -157,6 +158,11 @@ export function LinkInputSection({
           <div className="flex items-center gap-2">
             <span>Using</span>
             <PluginIcon
+              icon={
+                extractionPreview.meta.sourceId === "direct-link"
+                  ? { hugeIcon: Link01Icon }
+                  : undefined
+              }
               iconUrl={
                 extractionPreview.meta.sourceIconUrl ||
                 extractionPreview.meta.pluginIcon
@@ -164,7 +170,11 @@ export function LinkInputSection({
               fallback={
                 extractionPreview.meta.sourceName ? "source" : "extractor"
               }
-              className="size-4 rounded-sm ring-1 ring-black/10 dark:ring-white/10"
+              className={cn(
+                "size-4",
+                extractionPreview.meta.sourceId === "direct-link" &&
+                  "text-foreground"
+              )}
             />
             <span className="font-medium text-foreground">
               {extractionPreview.meta.sourceName ||
@@ -191,7 +201,7 @@ export function LinkInputSection({
                 <PluginIcon
                   iconUrl={extractionPreview.meta.routeSourceIconUrl}
                   fallback="source"
-                  className="size-4 rounded-sm ring-1 ring-black/10 dark:ring-white/10"
+                  className="size-4"
                 />
                 <span className="font-medium text-foreground">
                   {extractionPreview.meta.routeSourceName}

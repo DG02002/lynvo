@@ -91,4 +91,32 @@ describe("LinkInputSection", () => {
       "https://extractor.example/icons/extractor-source-beta.webp",
     ])
   })
+
+  it("shows the Direct Link plugin icon without an icon card effect", () => {
+    const { container } = render(
+      <LinkInputSection
+        url="https://media.example/video.mp4"
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving
+        extractionPreview={{
+          meta: {
+            sourceId: "direct-link",
+            pluginName: "Direct Link",
+          },
+        }}
+        error={null}
+        setError={vi.fn()}
+      />
+    )
+
+    const helperRow = screen.getByText("Using").parentElement
+    const icon = helperRow?.querySelector("svg")
+
+    expect(icon).not.toHaveAttribute("data-icon-fallback")
+    expect(icon).not.toHaveClass("ring-1")
+    expect(icon).toHaveClass("text-foreground")
+    expect(icon).not.toHaveClass("text-muted-foreground")
+    expect(container.querySelector("img")).not.toBeInTheDocument()
+  })
 })
