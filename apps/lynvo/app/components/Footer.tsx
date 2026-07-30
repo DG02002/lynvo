@@ -72,8 +72,8 @@ export function Footer() {
             links={companyLinks}
           />
           <FooterLinkGroup
-            heading="Docs"
-            headingId="footer-docs-heading"
+            heading="Learn"
+            headingId="footer-learn-heading"
             links={docsLinks}
           />
           <FooterLinkGroup
