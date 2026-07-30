@@ -657,17 +657,13 @@ export const ExternalExtractorsSection = ({
           </DialogContent>
         </Dialog>
       </div>
-      {workers.length > 0 ? (
+      {workers.length > 0 && (
         <ExternalWorkerTable
           workers={workers}
           onDeleteWorker={onDeleteWorker}
           onRefreshWorker={onRefreshWorker}
           onToggleWorker={onToggleWorker}
         />
-      ) : (
-        <p className="py-1 text-sm text-muted-foreground">
-          No custom extractor workers configured.
-        </p>
       )}
     </div>
   )

@@ -296,12 +296,16 @@ export const setCurrentSessionDevice = mutation({
     if (!sessionId) {
       throw new Error("Session not found")
     }
+    const session = await ctx.db.get("authSessions", sessionId)
+    if (!session) {
+      throw new Error("Session not found")
+    }
     const deviceName = args.deviceName.trim().slice(0, 80)
     if (!deviceName) {
       throw new Error("Device name is required")
     }
     await ctx.db.patch("authSessions", sessionId, {
-      deviceName,
+      ...(session.deviceName ? {} : { deviceName }),
       lastActiveAt: Date.now(),
     })
     return { success: true }

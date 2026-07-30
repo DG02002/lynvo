@@ -264,47 +264,42 @@ export const UsageSettings = ({
             </SettingsList>
           </SettingsPanel>
 
-          <SettingsPanel className="gap-4">
-            <SectionHeading
-              title="External extractors"
-              description="Monthly extraction usage shared across enabled external plugins."
-            />
-            <UsageSummary
-              label="External extractors"
-              total={totalMetrics(externalMetrics)}
-              resetsAt={externalResetAt}
-            />
-            <SettingsList>
-              {externalItems.map((item) => (
-                <UsageItem
-                  key={item.key}
-                  icon={item.icon}
-                  iconUrl={item.iconUrl}
-                  fallback={item.fallback}
-                  name={item.name}
-                  total={item.total}
-                />
-              ))}
-              {externalUsage?.flatMap((worker) =>
-                worker.error
-                  ? [
-                      <SettingsRow key={worker.workerId} className="py-2">
-                        <span className="text-sm text-destructive">
-                          {worker.name} usage verification failed.
-                        </span>
-                      </SettingsRow>,
-                    ]
-                  : []
-              )}
-              {externalItems.length === 0 && !externalUsageFailed && (
-                <SettingsRow className="py-2">
-                  <span className="text-sm text-muted-foreground">
-                    No enabled external extractors.
-                  </span>
-                </SettingsRow>
-              )}
-            </SettingsList>
-          </SettingsPanel>
+          {externalItems.length > 0 && (
+            <SettingsPanel className="gap-4">
+              <SectionHeading
+                title="External extractors"
+                description="Monthly extraction usage shared across enabled external plugins."
+              />
+              <UsageSummary
+                label="External extractors"
+                total={totalMetrics(externalMetrics)}
+                resetsAt={externalResetAt}
+              />
+              <SettingsList>
+                {externalItems.map((item) => (
+                  <UsageItem
+                    key={item.key}
+                    icon={item.icon}
+                    iconUrl={item.iconUrl}
+                    fallback={item.fallback}
+                    name={item.name}
+                    total={item.total}
+                  />
+                ))}
+                {externalUsage?.flatMap((worker) =>
+                  worker.error
+                    ? [
+                        <SettingsRow key={worker.workerId} className="py-2">
+                          <span className="text-sm text-destructive">
+                            {worker.name} usage verification failed.
+                          </span>
+                        </SettingsRow>,
+                      ]
+                    : []
+                )}
+              </SettingsList>
+            </SettingsPanel>
+          )}
         </>
       )}
       {externalUsageFailed && (

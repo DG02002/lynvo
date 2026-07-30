@@ -1,6 +1,7 @@
 import * as React from "react"
 import {
   type LoaderFunctionArgs,
+  redirect,
   useLoaderData,
   useLocation,
   useNavigate,
@@ -28,6 +29,12 @@ import {
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import { loadOfficialPlugins } from "~/features/site/settings/official-plugin-catalog.server"
+import {
+  getLegacySettingsPath,
+  getSettingsPath,
+  parseSettingsRoute,
+  type SettingsTab,
+} from "~/features/site/settings/settings-route"
 
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
@@ -40,9 +47,16 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
 
   const pathname = new URL(request.url).pathname
   requireUserOrRedirect(sessionResult, pathname)
+  const settingsRoute = parseSettingsRoute(
+    args.params.section,
+    args.params.subview
+  )
+  if (!settingsRoute) {
+    throw redirect("/settings")
+  }
 
   const user = sessionResult.user!
-  const officialPlugins = await loadOfficialPlugins(env)
+  const officialPlugins = await loadOfficialPlugins(env, request.url)
   return responseWithSession(
     {
       user: {
@@ -51,6 +65,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
         sid: user.sid,
       },
       officialPlugins,
+      ...settingsRoute,
     },
     sessionResult,
     request
@@ -90,42 +105,21 @@ const settingsTabs = [
   },
 ] as const
 
-const DEFAULT_SETTINGS_TAB = "general"
-const subscribeToHash = (onStoreChange: () => void) => {
-  window.addEventListener("hashchange", onStoreChange)
-  return () => window.removeEventListener("hashchange", onStoreChange)
-}
-const getHashSnapshot = () => window.location.hash
-const getServerHashSnapshot = () => ""
-
-const getSettingsTabFromHash = (hash: string) => {
-  const hashValue = hash.slice(1)
-  return settingsTabs.some((item) => item.value === hashValue)
-    ? hashValue
-    : DEFAULT_SETTINGS_TAB
-}
-
 export default function Settings() {
-  const { user, officialPlugins } = useLoaderData<typeof loader>()
+  const { user, officialPlugins, activeTab, showActiveSessions } =
+    useLoaderData<typeof loader>()
   const location = useLocation()
   const navigate = useNavigate()
-  const [showActiveSessions, setShowActiveSessions] = React.useState(false)
-  const hash = React.useSyncExternalStore(
-    subscribeToHash,
-    getHashSnapshot,
-    getServerHashSnapshot
-  )
-  const activeTab = getSettingsTabFromHash(hash)
 
   React.useEffect(() => {
-    if (location.hash !== `#${activeTab}`) {
-      navigate({ hash: activeTab }, { replace: true })
+    const legacyPath = getLegacySettingsPath(location.hash)
+    if (legacyPath) {
+      navigate(legacyPath, { replace: true })
     }
-  }, [activeTab, location.hash, navigate])
+  }, [location.hash, navigate])
 
   const handleTabChange = (tab: string) => {
-    setShowActiveSessions(false)
-    navigate({ hash: tab })
+    navigate(getSettingsPath(tab as SettingsTab))
   }
 
   return (
@@ -198,7 +192,15 @@ export default function Settings() {
             <SecuritySettings
               user={user}
               showActiveSessions={showActiveSessions}
-              onShowActiveSessionsChange={setShowActiveSessions}
+              onShowActiveSessionsChange={(show) =>
+                navigate(
+                  getSettingsPath(
+                    "security",
+                    show ? "active-sessions" : undefined
+                  ),
+                  show ? undefined : { replace: true }
+                )
+              }
             />
           </TabsContent>
 

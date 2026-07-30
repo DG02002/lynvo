@@ -5,8 +5,27 @@ import {
 } from "~/lib/extraction/extractor-protocol-client"
 import type { OfficialPlugin } from "./plugin-settings-data"
 
+export const resolveOfficialPluginIconUrl = (
+  iconUrl: string,
+  requestUrl: string
+) => {
+  const icon = new URL(iconUrl)
+  if (
+    icon.hostname !== "localhost" &&
+    icon.hostname !== "127.0.0.1" &&
+    icon.hostname !== "[::1]"
+  ) {
+    return iconUrl
+  }
+
+  const requestOrigin = new URL(requestUrl).origin
+  return new URL(`${icon.pathname}${icon.search}${icon.hash}`, requestOrigin)
+    .href
+}
+
 export const loadOfficialPlugins = async (
-  environment: Env
+  environment: Env,
+  requestUrl: string
 ): Promise<OfficialPlugin[] | null> => {
   try {
     const manifest = await new ExtractorProtocolClient(
@@ -18,7 +37,9 @@ export const loadOfficialPlugins = async (
         name: source.displayName,
         sourceUrl:
           source.homepage ?? manifest.homepage ?? "https://lynvo.example",
-        icon: source.iconUrl ? { url: source.iconUrl } : {},
+        icon: source.iconUrl
+          ? { url: resolveOfficialPluginIconUrl(source.iconUrl, requestUrl) }
+          : {},
         description: source.description ?? "Official extractor source.",
         supportsDomains: Boolean(source.credential),
         domainRequired:

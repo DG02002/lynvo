@@ -8,6 +8,7 @@ import { authPaths } from "~/lib/paths"
 import { signUpSchema } from "~/lib/auth-form-schemas"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { getBrowserDeviceName } from "~/lib/device-name"
 import {
   AuthControl,
   AuthFormAlert,
@@ -65,6 +66,7 @@ export function SignupForm() {
             username: value.username,
             password: value.password,
             preflightToken,
+            deviceName: getBrowserDeviceName(),
           }),
           12_000,
           "Convex sign-in timed out."

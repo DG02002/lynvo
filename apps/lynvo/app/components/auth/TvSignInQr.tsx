@@ -1,7 +1,7 @@
 import * as React from "react"
 import { QRCodeCanvas } from "qrcode.react"
 import { useRouteLoaderData } from "react-router"
-import { useMutation, useQuery } from "convex/react"
+import { useQuery } from "convex/react"
 import { Spinner } from "~/components/ui/spinner"
 import { Button } from "~/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -11,6 +11,7 @@ import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import { createDeviceCode } from "./device-code"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { getBrowserDeviceName } from "~/lib/device-name"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -75,40 +76,11 @@ const reduceTvSignInState = (
   }
 }
 
-const detectDeviceName = () => {
-  if (typeof navigator === "undefined") {
-    return "Unknown Device"
-  }
-  const ua = navigator.userAgent
-  const browser = ua.includes("Firefox")
-    ? "Firefox"
-    : ua.includes("Edg")
-      ? "Edge"
-      : ua.includes("Chrome")
-        ? "Chrome"
-        : ua.includes("Safari")
-          ? "Safari"
-          : "Browser"
-  const os = ua.includes("Android")
-    ? "Android"
-    : ua.includes("iPhone") || ua.includes("iPad")
-      ? "iOS"
-      : ua.includes("Mac")
-        ? "macOS"
-        : ua.includes("Windows")
-          ? "Windows"
-          : ua.includes("Linux")
-            ? "Linux"
-            : "Device"
-  return `${browser} on ${os}`
-}
-
 export function TvSignInQr() {
   const rootData = useRouteLoaderData("root") as
     | { convexUrl?: string }
     | undefined
   const convexUrl = rootData?.convexUrl ?? ""
-  const setCurrentSessionDevice = useMutation(api.users.setCurrentSessionDevice)
   const [state, dispatch] = React.useReducer(
     reduceTvSignInState,
     INITIAL_TV_SIGN_IN_STATE
@@ -139,7 +111,7 @@ export function TvSignInQr() {
     dispatch({ kind: "generating" })
     hasSignedInRef.current = false
     try {
-      const nextDeviceName = detectDeviceName()
+      const nextDeviceName = getBrowserDeviceName()
       const result = await createDeviceCode(nextDeviceName)
       codeRef.current = result.code
       dispatch({
@@ -180,6 +152,7 @@ export function TvSignInQr() {
             flow: "device",
             code: currentCode,
             pollSecret: pollSecret ?? "",
+            deviceName,
           }
         )
         if (!result.signingIn) {
@@ -187,11 +160,7 @@ export function TvSignInQr() {
             "Unable to sign in this device. Generate a new code and try again."
           )
         }
-        window.setTimeout(() => {
-          void setCurrentSessionDevice({ deviceName }).finally(() => {
-            window.location.href = "/save?device_setup=true"
-          })
-        }, 250)
+        window.location.href = "/save?device_setup=true"
       })().catch((error) => {
         dispatch({
           kind: "failed",
@@ -202,7 +171,7 @@ export function TvSignInQr() {
         })
       })
     }
-  }, [convexUrl, deviceName, pollSecret, setCurrentSessionDevice, status])
+  }, [convexUrl, deviceName, pollSecret, status])
 
   let phase: Phase = "loading"
   if (hasError) {

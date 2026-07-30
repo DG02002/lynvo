@@ -26,6 +26,14 @@ const ExternalExtractorsHarness = ({
 }
 
 describe("ExternalExtractorsSection", () => {
+  it("does not render an empty-state message when no workers are configured", () => {
+    render(<ExternalExtractorsHarness onAddWorker={vi.fn()} />)
+
+    expect(
+      screen.queryByText("No custom extractor workers configured.")
+    ).not.toBeInTheDocument()
+  })
+
   it("validates and submits an external extractor form", async () => {
     const onAddWorker = vi.fn().mockResolvedValue(null)
     render(<ExternalExtractorsHarness onAddWorker={onAddWorker} />)

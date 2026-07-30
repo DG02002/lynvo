@@ -12,7 +12,10 @@ export default [
     route("save", "features/links/routes/_site.save.tsx"),
     route("ui-test-list", "features/links/routes/_site.ui-test-list.tsx"),
     route("account", "features/site/routes/_site.account.tsx"),
-    route("settings", "features/site/routes/_site.settings.tsx"),
+    route(
+      "settings/:section?/:subview?",
+      "features/site/routes/_site.settings.tsx"
+    ),
     route("privacy", "features/site/routes/_site.privacy.tsx"),
     route("terms", "features/site/routes/_site.terms.tsx"),
     route("about", "features/site/routes/_site.about.tsx"),

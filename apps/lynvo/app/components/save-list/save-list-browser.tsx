@@ -4,11 +4,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  Archive04Icon,
   DashboardSquare03Icon,
   Folder01Icon,
   Folder02Icon,
   FolderSymlinkIcon,
-  Link01Icon,
   PackageIcon,
   PackageOpenIcon,
   PackageSearchIcon,
@@ -665,8 +665,8 @@ export const SaveListBrowser = ({
     return (
       <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
         <HugeiconsIcon
-          icon={Link01Icon}
-          className="size-7 text-muted-foreground"
+          icon={Archive04Icon}
+          className="size-7 text-foreground"
         />
         <div className="flex flex-col gap-1">
           <p className="font-medium">No saved links</p>

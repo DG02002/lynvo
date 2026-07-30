@@ -1,13 +1,38 @@
-import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  ArrowLeft01Icon,
-  LaptopIcon,
-  SmartPhone01Icon,
-} from "@hugeicons/core-free-icons"
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+import { ArrowLeft01Icon, SmartPhone02Icon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { SettingsList, SettingsRow } from "./settings-layout"
+
+const LaptopMinimalIcon = [
+  [
+    "rect",
+    {
+      width: "18",
+      height: "12",
+      x: "3",
+      y: "4",
+      rx: "2",
+      stroke: "currentColor",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "1.5",
+      key: "0",
+    },
+  ],
+  [
+    "path",
+    {
+      d: "M2 20h20",
+      stroke: "currentColor",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      strokeWidth: "1.5",
+      key: "1",
+    },
+  ],
+] as const satisfies IconSvgElement
 
 export interface UserSession {
   id: string
@@ -64,7 +89,7 @@ export const ActiveSessionsView = ({
       >
         <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
       </Button>
-      <h2 className="text-2xl font-semibold tracking-tight">Active sessions</h2>
+      <h2 className="text-2xl font-normal tracking-tight">Active sessions</h2>
     </div>
 
     <p className="text-sm text-muted-foreground leading-relaxed">
@@ -78,7 +103,7 @@ export const ActiveSessionsView = ({
         const isMobile = /iphone|ipad|android|pixel|phone/i.test(
           session.deviceName
         )
-        const DeviceIcon = isMobile ? SmartPhone01Icon : LaptopIcon
+        const DeviceIcon = isMobile ? SmartPhone02Icon : LaptopMinimalIcon
         const clientName = getSessionClientName(session.deviceName, isMobile)
 
         return (
@@ -98,7 +123,7 @@ export const ActiveSessionsView = ({
                   {session.isCurrent && (
                     <Badge
                       variant="secondary"
-                      className="uppercase text-[9px] font-semibold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground rounded-full"
+                      className="uppercase text-[9px] font-semibold tracking-wider px-2 py-0.5 bg-muted text-foreground rounded-full"
                     >
                       Current Session
                     </Badge>
@@ -142,7 +167,7 @@ export const ActiveSessionsView = ({
       </div>
       <Button
         variant="outline"
-        className="rounded-full border-destructive text-destructive hover:bg-destructive/10 px-5 shrink-0 self-start sm:self-center"
+        className="rounded-full border-destructive bg-transparent text-destructive hover:bg-transparent hover:text-destructive px-5 shrink-0 self-start sm:self-center"
         onClick={onRevokeAllSessions}
         disabled={busy === "revokeAll"}
       >

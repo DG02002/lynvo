@@ -417,9 +417,15 @@ app.post("/api/auth/sign-in", async (context) => {
       provider: payload.provider,
       params: payload.params,
     })
+    const tokens = (result as { tokens?: { token?: string } }).tokens
+    const deviceName = payload.params.deviceName?.trim().slice(0, 80)
+    if (tokens?.token && deviceName) {
+      client.setAuth(tokens.token)
+      await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
+    }
     addRequestContext(context, {
       auth_flow: flow,
-      has_tokens: Boolean((result as { tokens?: unknown }).tokens),
+      has_tokens: Boolean(tokens),
     })
     return context.json(result)
   } catch (error) {
