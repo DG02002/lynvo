@@ -64,14 +64,46 @@ This command connects the checkout to the selected Convex project, creates
 the Convex client types. Keep `.env.local`; both `convex dev` and
 `pnpm dev:local` use the selected deployment from that file.
 
-Initialize Convex Auth, then create a random gateway secret and store the same
-value in Convex and `apps/lynvo/.dev.vars`:
+Initialize Convex Auth from the app directory:
 
 ```sh
-pnpm dlx @convex-dev/auth
-openssl rand -base64 32
-pnpm --filter @lynvo/app exec convex env set AUTH_GATEWAY_SECRET "<generated value>"
+cd apps/lynvo
+pnpx @convex-dev/auth
+cd ../..
 ```
+
+Use `http://localhost:5173` for `SITE_URL` unless you changed the local web
+server port. The initializer configures these values on the selected
+development deployment:
+
+- `SITE_URL`: browser-facing Lynvo URL
+- `JWT_PRIVATE_KEY`: private signing key
+- `JWKS`: public JSON Web Key Set
+
+The initializer detects the existing `convex/auth.config.ts`, `convex/auth.ts`,
+and `convex/http.ts` files. Do not replace their customized implementations.
+Confirm each file already satisfies the initializer prompt, then continue.
+
+Verify the deployment contains all three keys without copying their values:
+
+```sh
+pnpm --filter @lynvo/app exec convex env list | sed 's/=.*/=<redacted>/'
+```
+
+Keep `JWT_PRIVATE_KEY` and `JWKS` in the Convex deployment environment. Do not
+add them to `.dev.vars`; that file configures the Cloudflare Worker and cannot
+configure Convex functions.
+
+Create a random gateway secret and store the same value in Convex and
+`apps/lynvo/.dev.vars`:
+
+```sh
+openssl rand -base64 32
+pnpm --filter @lynvo/app exec convex env set AUTH_GATEWAY_SECRET
+```
+
+Paste the generated value when the Convex CLI prompts for it. Add the same
+value to `.dev.vars` in the next section.
 
 Run `convex dev --once` again whenever you want to push and validate Convex
 changes without leaving the watcher running.
@@ -94,6 +126,10 @@ encrypted Plugin Credentials unreadable.
 
 Use the gateway secret generated in the previous section as
 `AUTH_GATEWAY_SECRET`. Copy `VITE_CONVEX_URL` from `apps/lynvo/.env.local`.
+
+Use unquoted values for URLs and ordinary single-line values. Use `""` for an
+intentionally empty value. Quote values that contain spaces, `#`, or leading
+or trailing whitespace.
 
 `pnpm dev` starts the Lynvo web application and the official extractor as an
 auxiliary Worker, using the Convex URL in `.dev.vars`. `pnpm dev:local` starts
@@ -155,6 +191,7 @@ Before deployment:
 
 - Replace the placeholder `AUTH_RATE_LIMITS` KV namespace id in `apps/lynvo/wrangler.jsonc`.
 - Configure the production Convex URL and Turnstile values.
+- Choose the production Lynvo URL before initializing production Convex Auth.
 - Use the same `AUTH_GATEWAY_SECRET` in Lynvo and Convex.
 - Generate a production-only `PLUGIN_CREDENTIAL_MASTER_KEY` and retain it securely.
 - Set `OFFICIAL_EXTRACTOR_API_KEY` independently on both Workers with the same value.
@@ -171,19 +208,34 @@ Deployment requires explicit authorization. Never deploy as part of routine
 implementation or verification.
 
 1. Run `wrangler whoami` and verify the intended Cloudflare account.
-2. Set required secrets independently for both Workers.
-3. Provision the official extractor usage-limiter Durable Object migration.
-4. Deploy `@lynvo/official-extractor` first.
-5. Validate `/manifest`, `/verify`, `/usage`, and `/extract` in a controlled environment.
-6. Deploy Convex schema and functions.
-7. Deploy `@lynvo/app` with `OFFICIAL_EXTRACTOR` bound to the exact target.
-8. Smoke-test through Lynvo, inspect both Workers' logs and counters, and record version IDs.
+2. Configure the official extractor secret and usage-limiter Durable Object migration.
+3. Deploy `@lynvo/official-extractor` first.
+4. Validate `/manifest`, `/verify`, `/usage`, and `/extract` in a controlled environment.
+5. Deploy the Convex schema and functions to create or update the production deployment.
+6. Run the Convex Auth initializer with `--prod` from `apps/lynvo`.
+7. Generate a production gateway secret and set the same value in Convex and Lynvo.
+8. Configure the remaining Lynvo Worker secrets and production Convex URL.
+9. Confirm production contains `SITE_URL`, `JWT_PRIVATE_KEY`, `JWKS`, and `AUTH_GATEWAY_SECRET`.
+10. Deploy `@lynvo/app` with `OFFICIAL_EXTRACTOR` bound to the exact target.
+11. Smoke-test account creation, sign-in, TV sign-in, extraction, logs, and counters.
 
 ```sh
 pnpm --filter @lynvo/official-extractor deploy
 pnpm --filter @lynvo/app exec convex deploy
+cd apps/lynvo
+pnpx @convex-dev/auth --prod
+cd ../..
+openssl rand -base64 32
+pnpm --filter @lynvo/app exec convex env set --prod AUTH_GATEWAY_SECRET
+pnpm --filter @lynvo/app exec convex env list --prod | sed 's/=.*/=<redacted>/'
 pnpm deploy:lynvo
 ```
+
+Enter the production Lynvo URL when the Auth initializer asks for `SITE_URL`.
+Paste the generated gateway secret when the Convex CLI prompts for it, then set
+the same value as the Lynvo Worker’s `AUTH_GATEWAY_SECRET`. Generate separate
+Auth keys for development and production. Never copy `JWT_PRIVATE_KEY` between
+deployments.
 
 For rollback, restore the recorded Lynvo Worker version before removing or
 rolling back a target version it still expects. Do not restore the deleted
