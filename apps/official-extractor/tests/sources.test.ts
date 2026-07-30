@@ -9,6 +9,16 @@ import {
   createOneDriveNodes,
   extractOneDriveIndex,
 } from "../src/sources/onedrive-index"
+import {
+  createGoogleDriveDownloadUrl,
+  createGoogleDrivePublicFolderNodes,
+  extractGoogleDriveFolderId,
+  extractGoogleDriveFileId,
+  extractGoogleDrivePublicFile,
+  extractGoogleDrivePublicFolder,
+  fetchGoogleDrivePublicFileMetadata,
+  parseGoogleDrivePublicFolderItems,
+} from "../src/sources/google-drive-public-files"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -67,7 +77,7 @@ describe("Bhadoo source adapter", () => {
 })
 
 describe("OneDrive source adapter", () => {
-  const source = OFFICIAL_SOURCE_CATALOG[1]
+  const source = OFFICIAL_SOURCE_CATALOG[2]
 
   it("maps folders and video files while skipping unrelated files", () => {
     const nodes = createOneDriveNodes(
@@ -120,5 +130,183 @@ describe("OneDrive source adapter", () => {
     expect(fetchSpy.mock.calls[0][1]?.headers).toHaveProperty(
       "od-protected-token"
     )
+  })
+})
+
+describe("Google Drive public files source adapter", () => {
+  const source = OFFICIAL_SOURCE_CATALOG[1]
+  const folderItem = [
+    "folder-id",
+    ["parent-id"],
+    "Nested folder",
+    "application/vnd.google-apps.folder",
+  ]
+  const videoItem = [
+    "video-id",
+    ["parent-id"],
+    "Root video.mkv",
+    "video/x-matroska",
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    1105713,
+  ]
+  const unrelatedItem = [
+    "document-id",
+    ["parent-id"],
+    "Notes.txt",
+    "text/plain",
+  ]
+
+  const createFolderHtml = (): string => {
+    const payload = JSON.stringify([[folderItem, videoItem, unrelatedItem]])
+      .split("")
+      .map(
+        (character) =>
+          `\\x${character.charCodeAt(0).toString(16).padStart(2, "0")}`
+      )
+      .join("")
+    return `<title>Public tests – Google Drive</title><script>window['_DRIVE_ivd'] = '${payload}';</script>`
+  }
+
+  it("extracts a file ID and creates the direct download URL", () => {
+    const fileId = extractGoogleDriveFileId(
+      "https://drive.google.com/file/d/1AbCdEfGh123/view?usp=sharing"
+    )
+
+    expect(fileId).toBe("1AbCdEfGh123")
+    expect(createGoogleDriveDownloadUrl(fileId)).toBe(
+      "https://drive.usercontent.google.com/download?id=1AbCdEfGh123&export=download&confirm=t"
+    )
+  })
+
+  it("rejects folder links and lookalike domains", () => {
+    expect(() =>
+      extractGoogleDriveFileId(
+        "https://drive.google.com/drive/folders/1AbCdEfGh123"
+      )
+    ).toThrow("UNSUPPORTED_URL")
+    expect(() =>
+      extractGoogleDriveFileId(
+        "https://drive.google.com.example/file/d/1AbCdEfGh123/view"
+      )
+    ).toThrow("UNSUPPORTED_URL")
+  })
+
+  it("parses public folders into lazy folders and playable root files", () => {
+    expect(
+      extractGoogleDriveFolderId(
+        "https://drive.google.com/drive/folders/folder-id?usp=sharing"
+      )
+    ).toBe("folder-id")
+
+    const items = parseGoogleDrivePublicFolderItems(createFolderHtml())
+    expect(createGoogleDrivePublicFolderNodes(items)).toEqual([
+      {
+        kind: "resolvable",
+        id: "folder-id",
+        label: "Nested folder",
+        nodeUrl: "https://drive.google.com/drive/folders/folder-id",
+      },
+      {
+        kind: "playable",
+        id: "video-id",
+        label: "Root video.mkv",
+        url: "https://drive.usercontent.google.com/download?id=video-id&export=download&confirm=t",
+        size: "1.05 MB",
+        status: "unknown",
+      },
+    ])
+  })
+
+  it("extracts a public folder page without Google authentication", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(createFolderHtml(), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      })
+    )
+
+    const result = await extractGoogleDrivePublicFolder({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://drive.google.com/drive/folders/parent-id",
+        },
+      },
+      targetUrl: "https://drive.google.com/drive/folders/parent-id",
+      source,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result.source.pageTitle).toBe("Public tests")
+    expect(result.nodes).toHaveLength(2)
+  })
+
+  it("rejects folder pages without the public listing payload", () => {
+    expect(() =>
+      parseGoogleDrivePublicFolderItems("<html>Sign in</html>")
+    ).toThrow("Google Drive folder is not publicly accessible.")
+  })
+
+  it("returns one playable direct-download node", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Disposition": 'attachment; filename="example-video.mkv"',
+          "Content-Range": "bytes 0-0/1105713",
+        },
+      })
+    )
+    const result = await extractGoogleDrivePublicFile({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl:
+            "https://drive.google.com/file/d/1AbCdEfGh123/view?usp=sharing",
+        },
+      },
+      targetUrl:
+        "https://drive.google.com/file/d/1AbCdEfGh123/view?usp=sharing",
+      source,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result.nodes).toEqual([
+      {
+        kind: "playable",
+        id: "1AbCdEfGh123",
+        label: "example-video.mkv",
+        url: "https://drive.usercontent.google.com/download?id=1AbCdEfGh123&export=download&confirm=t",
+        size: "1.05 MB",
+        status: "unknown",
+      },
+    ])
+  })
+
+  it("classifies an HTML download response as Google Drive rate limiting", async () => {
+    const response = new Response("<html>quota exceeded</html>", {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    })
+    if (!response.body) {
+      throw new Error("Expected the test response to have a body.")
+    }
+    const cancel = vi.spyOn(response.body, "cancel")
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
+
+    await expect(
+      fetchGoogleDrivePublicFileMetadata(
+        "https://drive.usercontent.google.com/download?id=file-id"
+      )
+    ).rejects.toThrow(
+      "Google Drive file is rate-limited. Try again in 24 hours."
+    )
+    expect(cancel).toHaveBeenCalledOnce()
   })
 })

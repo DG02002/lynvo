@@ -29,11 +29,13 @@ export const DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS = 10 * 60
 export const CREDENTIAL_READ_TOKEN_TTL_MS = 2 * 60 * 1000
 export const OFFICIAL_PLUGIN_MONTHLY_EXTRACTION_LIMITS = {
   "bhadoo-google-drive-index": 50,
+  "google-drive-public-files": 50,
   "onedrive-index": 50,
   direct: 200,
 } as const
 export const OFFICIAL_PLUGIN_DISPLAY_NAMES = {
   "bhadoo-google-drive-index": "Bhadoo’s Google Drive Index",
+  "google-drive-public-files": "Google Drive Public Files",
   "onedrive-index": "Spencerwooo's OneDrive Vercel Index",
   direct: "Direct links",
 } as const

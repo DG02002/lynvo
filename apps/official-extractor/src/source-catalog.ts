@@ -10,10 +10,12 @@ import {
   BHADOO_SOURCE_ID,
   EXTRACTOR_ID,
   EXTRACTOR_NAME,
+  GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID,
   ONEDRIVE_SOURCE_ID,
   SOURCE_IMPLEMENTATION_VERSION,
 } from "./constants"
 import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-index"
+import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
 
 export interface SourceAdapterOptions {
@@ -32,7 +34,7 @@ export interface OfficialSourceDefinition {
   status: "active" | "maintenance" | "degraded" | "down"
   version: string
   matchers: ExtractorMatcher[]
-  credential: ExtractorSourceCredential
+  credential?: ExtractorSourceCredential
   extract: (options: SourceAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
@@ -54,6 +56,14 @@ const oneDriveMatchers: ExtractorMatcher[] = [
   },
 ]
 
+const googleDrivePublicFileMatchers: ExtractorMatcher[] = [
+  {
+    hosts: ["drive.google.com"],
+    pathPatterns: ["/file/d/**", "/drive/folders/**"],
+    schemes: ["https"],
+  },
+]
+
 export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
   {
     id: BHADOO_SOURCE_ID,
@@ -66,6 +76,18 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
     matchers: bhadooMatchers,
     credential: { kind: "http-basic", scope: "domain", required: false },
     extract: extractBhadooGoogleDriveIndex,
+  },
+  {
+    id: GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID,
+    displayName: "Google Drive Public Files",
+    description:
+      "Extracts public Google Drive files and folders shared with anyone who has the link.",
+    homepage: "https://drive.google.com",
+    iconPath: "/icons/sources/google-drive-public-files.webp",
+    status: "active",
+    version: SOURCE_IMPLEMENTATION_VERSION,
+    matchers: googleDrivePublicFileMatchers,
+    extract: extractGoogleDrivePublicLink,
   },
   {
     id: ONEDRIVE_SOURCE_ID,
@@ -119,7 +141,7 @@ export const createOfficialManifest = (
         version: source.version,
         hosts: source.matchers.flatMap((matcher) => matcher.hosts),
         matchers: source.matchers,
-        credential: source.credential,
+        ...(source.credential ? { credential: source.credential } : {}),
       })),
     },
   },

@@ -48,6 +48,9 @@ const getOfficialPluginDisplayName = (pluginId: string): string => {
   if (pluginId === "onedrive-index") {
     return OFFICIAL_PLUGIN_DISPLAY_NAMES[pluginId]
   }
+  if (pluginId === "google-drive-public-files") {
+    return OFFICIAL_PLUGIN_DISPLAY_NAMES[pluginId]
+  }
   return OFFICIAL_PLUGIN_DISPLAY_NAMES.direct
 }
 
@@ -103,6 +106,7 @@ export const consumeOfficialPlugin = mutation({
   args: {
     pluginId: v.union(
       v.literal("bhadoo-google-drive-index"),
+      v.literal("google-drive-public-files"),
       v.literal("onedrive-index"),
       v.literal("direct")
     ),

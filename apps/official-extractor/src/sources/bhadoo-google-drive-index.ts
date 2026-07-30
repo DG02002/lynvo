@@ -5,8 +5,6 @@ import type {
 } from "@lynvo/extractor-protocol"
 import { createBasicAuthorization } from "../auth"
 import {
-  BYTES_PER_KIBIBYTE,
-  FILE_SIZE_DECIMAL_PLACES,
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   LEGACY_RESPONSE_PREFIX_LENGTH,
   LEGACY_RESPONSE_SUFFIX_LENGTH,
@@ -16,6 +14,7 @@ import type { SourceAdapterOptions } from "../source-catalog"
 import { createSourceResponseMetadata } from "../source-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
+import { formatFileSize } from "./file-size"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -32,8 +31,6 @@ export interface BhadooGoogleDriveListResponse {
   error?: { code?: number; message?: string }
 }
 
-const FILE_SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"]
-
 export const getBhadooPathFilename = (url: string | URL): string => {
   const parsedUrl = typeof url === "string" ? new URL(url) : url
   const finalSegment = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
@@ -41,28 +38,7 @@ export const getBhadooPathFilename = (url: string | URL): string => {
 }
 
 export const formatBhadooFileSize = (size?: string): string | undefined => {
-  if (!size) {
-    return undefined
-  }
-  let value = Number(size)
-  if (!Number.isFinite(value) || value < 0) {
-    return undefined
-  }
-  let unitIndex = 0
-  while (
-    value >= BYTES_PER_KIBIBYTE &&
-    unitIndex < FILE_SIZE_UNITS.length - 1
-  ) {
-    value /= BYTES_PER_KIBIBYTE
-    unitIndex += 1
-  }
-  const formattedValue =
-    unitIndex === 0
-      ? String(value)
-      : value
-          .toFixed(FILE_SIZE_DECIMAL_PLACES)
-          .replace(/\.0+$|(?<=\.[0-9])0+$/, "")
-  return `${formattedValue} ${FILE_SIZE_UNITS[unitIndex]}`
+  return formatFileSize(size)
 }
 
 export const createBhadooNodes = (

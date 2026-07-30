@@ -20,11 +20,13 @@ export const loadOfficialPlugins = async (
           source.homepage ?? manifest.homepage ?? "https://lynvo.example",
         icon: source.iconUrl ? { url: source.iconUrl } : {},
         description: source.description ?? "Official extractor source.",
-        supportsDomains: true,
+        supportsDomains: Boolean(source.credential),
         domainRequired:
           source.credential?.kind === "http-basic"
             ? "Add the source domain. Optional HTTP Basic Auth credentials are encrypted when saved."
-            : "Add the source domain. Optional domain passwords are encrypted when saved.",
+            : source.credential
+              ? "Add the source domain. Optional domain passwords are encrypted when saved."
+              : "",
         ...(source.credential
           ? { credentialKind: source.credential.kind }
           : {}),

@@ -1,6 +1,8 @@
 import {
   getLynvoManifestExtension,
+  matchExtractorUrl,
   type ExtractorManifest,
+  type ExtractorSourceMetadata,
 } from "@lynvo/extractor-protocol"
 import { Effect } from "effect"
 import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
@@ -48,11 +50,7 @@ export const getOfficialMetadata = (
   targetUrl: string,
   sourceId?: string
 ): MetadataResult | undefined => {
-  const source = sourceId
-    ? getLynvoManifestExtension(manifest).sources?.find(
-        (candidate) => candidate.id === sourceId
-      )
-    : undefined
+  const source = findOfficialManifestSource(manifest, targetUrl, sourceId)
   return source
     ? getExtractorMetadata(
         manifest,
@@ -61,6 +59,21 @@ export const getOfficialMetadata = (
         source.id
       )
     : undefined
+}
+
+export const findOfficialManifestSource = (
+  manifest: ExtractorManifest,
+  targetUrl: string,
+  sourceId?: string
+): ExtractorSourceMetadata | undefined => {
+  const sources = getLynvoManifestExtension(manifest).sources ?? []
+  return sourceId
+    ? sources.find((candidate) => candidate.id === sourceId)
+    : sources.find(
+        (candidate) =>
+          candidate.credential === undefined &&
+          matchExtractorUrl(targetUrl, candidate.matchers ?? [])
+      )
 }
 
 export const extractFromOfficial = Effect.fn(

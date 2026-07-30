@@ -1,6 +1,7 @@
 export const EXTRACTOR_ID = "dev.lynvo.official-extractor"
 export const EXTRACTOR_NAME = "Lynvo Official Extractor"
 export const BHADOO_SOURCE_ID = "bhadoo-google-drive-index"
+export const GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID = "google-drive-public-files"
 export const ONEDRIVE_SOURCE_ID = "onedrive-index"
 export const SOURCE_IMPLEMENTATION_VERSION = "1.0.0"
 export const GLOBAL_DAILY_OPERATION_LIMIT = 20_000
@@ -15,6 +16,8 @@ export const LEGACY_RESPONSE_SUFFIX_LENGTH = 20
 export const ONEDRIVE_FETCH_RETRIES = 3
 export const ONEDRIVE_FETCH_RETRY_DELAY_MS = 2_000
 export const UPSTREAM_TIMEOUT_MS = 10_000
+export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES = 2 * 1024 * 1024
+export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS = 2_000
 export const PRIVATE_IPV4_PATTERNS = [
   /^127\./,
   /^10\./,

@@ -24,6 +24,14 @@ describe("official source catalog", () => {
       findOfficialSource("https://index.example/Collections/", "onedrive-index")
         ?.id
     ).toBe("onedrive-index")
+    expect(
+      findOfficialSource("https://drive.google.com/file/d/1AbCdEfGh123/view")
+        ?.id
+    ).toBe("google-drive-public-files")
+    expect(
+      findOfficialSource("https://drive.google.com/drive/folders/1AbCdEfGh123")
+        ?.id
+    ).toBe("google-drive-public-files")
   })
 
   it("publishes only owned public WebP icon URLs", () => {
@@ -40,6 +48,15 @@ describe("official source catalog", () => {
     ).toMatchObject({
       hasIcon: true,
       iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
+    })
+    expect(
+      extension.sources?.find(
+        (source) => source.id === "google-drive-public-files"
+      )
+    ).toMatchObject({
+      hasIcon: true,
+      iconUrl:
+        "http://localhost:5173/icons/sources/google-drive-public-files.webp",
     })
   })
 

@@ -1,5 +1,4 @@
 import { Context, Effect, Layer } from "effect"
-import { getLynvoManifestExtension } from "@lynvo/extractor-protocol"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
 import { isSafeUrl } from "../../../lib/ssrf"
@@ -23,6 +22,7 @@ import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { CloudflareEnv } from "./CloudflareEnv"
 import {
   extractFromOfficial,
+  findOfficialManifestSource,
   getOfficialManifest,
   getOfficialMetadata,
 } from "./OfficialExtractorAdapter"
@@ -35,6 +35,7 @@ const getHostname = (value: string): string => new URL(value).hostname
 const getMeteredPluginId = (pluginId: string) => {
   if (
     pluginId === "bhadoo-google-drive-index" ||
+    pluginId === "google-drive-public-files" ||
     pluginId === "onedrive-index" ||
     pluginId === "direct"
   ) {
@@ -129,11 +130,11 @@ export class ExtractorService extends Context.Service<
               )
             )
           const source = manifest
-            ? configuredDomain
-              ? getLynvoManifestExtension(manifest).sources?.find(
-                  (candidate) => candidate.id === configuredDomain.pluginId
-                )
-              : undefined
+            ? findOfficialManifestSource(
+                manifest,
+                targetUrl,
+                configuredDomain?.pluginId
+              )
             : undefined
           if (options.workerId === OFFICIAL_EXTRACTOR_ID && !source) {
             return yield* new ValidationError({
