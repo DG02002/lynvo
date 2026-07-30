@@ -1,7 +1,11 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../Middleware"
-import { UnauthorizedError, CsrfError, ConvexError } from "../../errors"
+import {
+  UnauthorizedApiError,
+  CsrfApiError,
+  ConvexApiError,
+} from "../../errors"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
   .add(
@@ -12,7 +16,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
         data: Schema.optional(Schema.Unknown),
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)

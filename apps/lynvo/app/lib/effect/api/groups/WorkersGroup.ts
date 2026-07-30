@@ -2,11 +2,11 @@ import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../Middleware"
 import {
-  UnauthorizedError,
-  CsrfError,
-  ValidationError,
-  WorkerRegistrationError,
-  ConvexError,
+  UnauthorizedApiError,
+  CsrfApiError,
+  ValidationApiError,
+  WorkerRegistrationApiError,
+  ConvexApiError,
 } from "../../errors"
 
 const UsageMetricSchema = Schema.Struct({
@@ -41,11 +41,11 @@ export class WorkersGroup extends HttpApiGroup.make("workers")
   .add(
     HttpApiEndpoint.get("list", "/", {
       success: Schema.Array(Schema.Unknown),
-      error: [UnauthorizedError, ConvexError],
+      error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.get("usage", "/usage", {
       success: Schema.Array(WorkerUsageSchema),
-      error: [UnauthorizedError, ConvexError],
+      error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
@@ -54,11 +54,11 @@ export class WorkersGroup extends HttpApiGroup.make("workers")
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
-        WorkerRegistrationError,
-        ValidationError,
-        UnauthorizedError,
-        ConvexError,
-        CsrfError,
+        WorkerRegistrationApiError,
+        ValidationApiError,
+        UnauthorizedApiError,
+        ConvexApiError,
+        CsrfApiError,
       ],
     }),
     HttpApiEndpoint.post("toggle", "/:workerId/toggle", {
@@ -69,7 +69,7 @@ export class WorkersGroup extends HttpApiGroup.make("workers")
         enabled: Schema.Boolean,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("refresh", "/:workerId/refresh", {
       params: {
@@ -77,10 +77,10 @@ export class WorkersGroup extends HttpApiGroup.make("workers")
       },
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
-        WorkerRegistrationError,
-        UnauthorizedError,
-        ConvexError,
-        CsrfError,
+        WorkerRegistrationApiError,
+        UnauthorizedApiError,
+        ConvexApiError,
+        CsrfApiError,
       ],
     }),
     HttpApiEndpoint.delete("delete", "/:workerId", {
@@ -88,7 +88,7 @@ export class WorkersGroup extends HttpApiGroup.make("workers")
         workerId: Schema.String,
       },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)

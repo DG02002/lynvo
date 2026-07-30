@@ -1,4 +1,5 @@
 import { authPreflightResponseSchema } from "~/lib/auth-gateway-schemas"
+import { readApiResponseError } from "~/lib/api-errors"
 
 export type AuthPreflightFlow = "signIn" | "signUp"
 
@@ -17,13 +18,7 @@ export const authPreflight = async (payload: {
     body: JSON.stringify(payload),
   })
   if (!response.ok) {
-    const errorValue: unknown = await response.json()
-    const errorResult = authPreflightResponseSchema.safeParse(errorValue)
-    throw new Error(
-      errorResult.success
-        ? (errorResult.data.error ?? "Authentication failed")
-        : "Authentication failed"
-    )
+    throw await readApiResponseError(response, "Authentication failed")
   }
   const responseValue: unknown = await response.json()
   const result = authPreflightResponseSchema.safeParse(responseValue)
@@ -31,10 +26,6 @@ export const authPreflight = async (payload: {
     throw new Error("Authentication returned an invalid response")
   }
   const data = result.data
-
-  if (!data.preflightToken) {
-    throw new Error(data.error ?? "Authentication failed")
-  }
 
   return data.preflightToken
 }

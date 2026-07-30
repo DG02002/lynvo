@@ -27,13 +27,13 @@ describe("getSaveErrorMessage", () => {
     )
   })
 
-  it("preserves meaningful errors while hiding technical details", () => {
+  it("only preserves explicitly trusted errors", () => {
     expect(
       getUserFacingErrorMessage(
         new Error("Username does not match."),
         "Account update failed."
       )
-    ).toBe("Username does not match.")
+    ).toBe("Account update failed.")
     expect(
       getUserFacingErrorMessage(
         new Error("ResponseError at GET /api/workers"),

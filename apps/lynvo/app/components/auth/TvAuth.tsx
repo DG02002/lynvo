@@ -8,6 +8,7 @@ import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 import { api } from "../../../convex/_generated/api"
 import { useExpiryClock } from "./use-expiry-clock"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 interface TvAuthProps {
   user?: { username: string } | null
@@ -39,7 +40,10 @@ export default function TvAuth({ user }: TvAuthProps) {
       toast.success("Device signed in")
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Something went wrong."
+        getUserFacingErrorMessage(
+          error,
+          "Unable to approve this device. Try again."
+        )
       )
     } finally {
       setLoading(false)

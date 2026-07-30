@@ -1,10 +1,10 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
-  ExtractionError,
-  ValidationError,
-  UnauthorizedError,
-  ConvexError,
+  ExtractionApiError,
+  ValidationApiError,
+  UnauthorizedApiError,
+  ConvexApiError,
 } from "../../errors"
 
 export class ExtractorGroup extends HttpApiGroup.make("extractor")
@@ -16,14 +16,14 @@ export class ExtractorGroup extends HttpApiGroup.make("extractor")
         kind: Schema.optional(Schema.String),
       }),
       success: Schema.Unknown,
-      error: [ExtractionError, ValidationError, UnauthorizedError],
+      error: [ExtractionApiError, ValidationApiError, UnauthorizedApiError],
     }),
     HttpApiEndpoint.get("getMetadata", "/meta", {
       query: Schema.Struct({
         url: Schema.String,
       }),
       success: Schema.Unknown,
-      error: [ValidationError, ConvexError],
+      error: [ValidationApiError, ConvexApiError],
     })
   )
   .prefix("/api") {}

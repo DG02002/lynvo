@@ -1,3 +1,6 @@
+import { readApiResponseError } from "~/lib/api-errors"
+import { deviceCodeResponseSchema } from "~/lib/auth-gateway-schemas"
+
 export const createDeviceCode = async (deviceName: string) => {
   const response = await fetch("/api/auth/tv/code", {
     method: "POST",
@@ -6,27 +9,15 @@ export const createDeviceCode = async (deviceName: string) => {
     body: JSON.stringify({ deviceName }),
   })
   if (!response.ok) {
-    throw new Error("Unable to create a device code")
+    throw await readApiResponseError(
+      response,
+      "Unable to create a device code."
+    )
   }
   const result: unknown = await response.json()
-  if (
-    typeof result !== "object" ||
-    result === null ||
-    !("code" in result) ||
-    !("pollSecret" in result) ||
-    !("expiresAt" in result) ||
-    !("deviceName" in result) ||
-    typeof result.code !== "string" ||
-    typeof result.pollSecret !== "string" ||
-    typeof result.expiresAt !== "number" ||
-    typeof result.deviceName !== "string"
-  ) {
-    throw new Error("Unable to create a device code")
+  const parsed = deviceCodeResponseSchema.safeParse(result)
+  if (!parsed.success) {
+    throw new Error("Unable to create a device code.")
   }
-  return {
-    code: result.code,
-    pollSecret: result.pollSecret,
-    expiresAt: result.expiresAt,
-    deviceName: result.deviceName,
-  }
+  return parsed.data
 }

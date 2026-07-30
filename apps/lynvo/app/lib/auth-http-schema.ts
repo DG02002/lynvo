@@ -10,7 +10,6 @@ export const authSignInResponseSchema = z.object({
     .optional(),
   redirect: z.string().min(1).optional(),
   started: z.boolean().optional(),
-  error: z.string().min(1).optional(),
 })
 
 export type AuthSignInResponse = z.infer<typeof authSignInResponseSchema>

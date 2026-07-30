@@ -7,6 +7,7 @@ import { authCopy } from "~/features/auth/auth.copy"
 import { authPaths } from "~/lib/paths"
 import { signUpSchema } from "~/lib/auth-form-schemas"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import {
   AuthControl,
   AuthFormAlert,
@@ -77,9 +78,10 @@ export function SignupForm() {
         redirectAfterAuth()
       } catch (error) {
         setAccountCreationError(
-          error instanceof Error
-            ? error.message
-            : "Unable to create the account. Check the details and try again."
+          getUserFacingErrorMessage(
+            error,
+            "Account setup is temporarily unavailable. Try again later."
+          )
         )
         turnstileRef.current?.reset()
         turnstileTokenRef.current = initialTurnstileToken()

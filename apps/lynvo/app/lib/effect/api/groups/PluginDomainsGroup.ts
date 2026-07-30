@@ -2,18 +2,18 @@ import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../Middleware"
 import {
-  UnauthorizedError,
-  CsrfError,
-  ConvexError,
-  CredentialVaultError,
-  ValidationError,
+  UnauthorizedApiError,
+  CsrfApiError,
+  ConvexApiError,
+  CredentialVaultApiError,
+  ValidationApiError,
 } from "../../errors"
 
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
   .add(
     HttpApiEndpoint.get("list", "/", {
       success: Schema.Array(Schema.Unknown),
-      error: [UnauthorizedError, ConvexError],
+      error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
@@ -24,11 +24,11 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
-        UnauthorizedError,
-        CsrfError,
-        ConvexError,
-        CredentialVaultError,
-        ValidationError,
+        UnauthorizedApiError,
+        CsrfApiError,
+        ConvexApiError,
+        CredentialVaultApiError,
+        ValidationApiError,
       ],
     }),
     HttpApiEndpoint.patch("setCredential", "/:domainId/credential", {
@@ -39,24 +39,24 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
-        UnauthorizedError,
-        CsrfError,
-        ConvexError,
-        CredentialVaultError,
-        ValidationError,
+        UnauthorizedApiError,
+        CsrfApiError,
+        ConvexApiError,
+        CredentialVaultApiError,
+        ValidationApiError,
       ],
     }),
     HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,
       },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)

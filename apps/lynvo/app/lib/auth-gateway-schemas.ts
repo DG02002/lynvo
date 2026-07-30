@@ -17,9 +17,15 @@ export const deviceCodeRequestSchema = z.strictObject({
   deviceName: z.string().trim().min(1).max(256),
 })
 
-export const authPreflightResponseSchema = z.object({
-  preflightToken: z.string().min(1).optional(),
-  error: z.string().min(1).optional(),
+export const authPreflightResponseSchema = z.strictObject({
+  preflightToken: z.string().min(1),
+})
+
+export const deviceCodeResponseSchema = z.strictObject({
+  code: z.string().min(1),
+  pollSecret: z.string().min(1),
+  expiresAt: z.number(),
+  deviceName: z.string().min(1),
 })
 
 export const turnstileVerificationResponseSchema = z.object({

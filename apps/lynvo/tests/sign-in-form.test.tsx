@@ -24,9 +24,13 @@ describe("sign-in form", () => {
         })
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "Authentication failed" }), {
-          status: 400,
-        })
+        new Response(
+          JSON.stringify({
+            code: "invalid_credentials",
+            error: "Invalid username or password.",
+          }),
+          { status: 401 }
+        )
       )
     vi.stubGlobal("fetch", fetchMock)
 
@@ -52,5 +56,52 @@ describe("sign-in form", () => {
       await screen.findByText("Invalid username or password.")
     ).toBeVisible()
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not present a server failure as invalid credentials", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ preflightToken: "verified" }), {
+          status: 200,
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: "service_unavailable",
+            error: "Sign-in is temporarily unavailable. Try again later.",
+          }),
+          { status: 503 }
+        )
+      )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const router = createMemoryRouter([
+      {
+        id: "root",
+        path: "/",
+        loader: () => ({ convexUrl: "" }),
+        element: <SignInForm />,
+      },
+    ])
+    render(<RouterProvider router={router} />)
+
+    fireEvent.change(await screen.findByLabelText("Username"), {
+      target: { value: "admintest" },
+    })
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "existing-password" },
+    })
+    fireEvent.submit(screen.getByRole("form", { name: "Sign in form" }))
+
+    expect(
+      await screen.findByText(
+        "Sign-in is temporarily unavailable. Try again later."
+      )
+    ).toBeVisible()
+    expect(
+      screen.queryByText("Invalid username or password.")
+    ).not.toBeInTheDocument()
   })
 })

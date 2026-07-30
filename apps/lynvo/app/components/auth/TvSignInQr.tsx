@@ -10,6 +10,7 @@ import { api } from "../../../convex/_generated/api"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import { createDeviceCode } from "./device-code"
 import { useExpiryClock } from "./use-expiry-clock"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -19,6 +20,7 @@ interface TvSignInState {
   expiresAt?: number
   deviceName: string
   hasError: boolean
+  errorMessage: string | null
   isGenerating: boolean
 }
 
@@ -28,6 +30,7 @@ interface TvSignInAction {
   pollSecret?: string
   expiresAt?: number
   deviceName?: string
+  errorMessage?: string
 }
 
 const INITIAL_TV_SIGN_IN_STATE: TvSignInState = {
@@ -35,6 +38,7 @@ const INITIAL_TV_SIGN_IN_STATE: TvSignInState = {
   pollSecret: null,
   deviceName: "",
   hasError: false,
+  errorMessage: null,
   isGenerating: true,
 }
 
@@ -44,7 +48,12 @@ const reduceTvSignInState = (
 ): TvSignInState => {
   switch (action.kind) {
     case "generating":
-      return { ...state, hasError: false, isGenerating: true }
+      return {
+        ...state,
+        hasError: false,
+        errorMessage: null,
+        isGenerating: true,
+      }
     case "generated":
       return {
         code: action.code ?? null,
@@ -52,10 +61,17 @@ const reduceTvSignInState = (
         expiresAt: action.expiresAt,
         deviceName: action.deviceName ?? "",
         hasError: false,
+        errorMessage: null,
         isGenerating: false,
       }
     case "failed":
-      return { ...state, hasError: true, isGenerating: false }
+      return {
+        ...state,
+        hasError: true,
+        errorMessage:
+          action.errorMessage ?? "Device sign-in failed. Try again.",
+        isGenerating: false,
+      }
   }
 }
 
@@ -97,8 +113,15 @@ export function TvSignInQr() {
     reduceTvSignInState,
     INITIAL_TV_SIGN_IN_STATE
   )
-  const { code, pollSecret, expiresAt, deviceName, hasError, isGenerating } =
-    state
+  const {
+    code,
+    pollSecret,
+    expiresAt,
+    deviceName,
+    hasError,
+    errorMessage,
+    isGenerating,
+  } = state
   const codeRef = React.useRef<string | null>(null)
   const status = useQuery(
     api.tv.getStatus,
@@ -126,8 +149,14 @@ export function TvSignInQr() {
         expiresAt: result.expiresAt,
         deviceName: result.deviceName,
       })
-    } catch {
-      dispatch({ kind: "failed" })
+    } catch (error) {
+      dispatch({
+        kind: "failed",
+        errorMessage: getUserFacingErrorMessage(
+          error,
+          "Unable to create a device code. Try again."
+        ),
+      })
     }
   }, [])
 
@@ -163,8 +192,14 @@ export function TvSignInQr() {
             window.location.href = "/save?device_setup=true"
           })
         }, 250)
-      })().catch(() => {
-        dispatch({ kind: "failed" })
+      })().catch((error) => {
+        dispatch({
+          kind: "failed",
+          errorMessage: getUserFacingErrorMessage(
+            error,
+            "Unable to sign in this device. Generate a new code and try again."
+          ),
+        })
       })
     }
   }, [convexUrl, deviceName, pollSecret, setCurrentSessionDevice, status])
@@ -195,7 +230,11 @@ export function TvSignInQr() {
   if (phase === "expired" || phase === "error") {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-destructive">Code expired or could not load.</p>
+        <p className="text-destructive">
+          {phase === "expired"
+            ? "Code expired. Generate a new code."
+            : (errorMessage ?? "Device sign-in failed. Try again.")}
+        </p>
         <Button onClick={() => void fetchCode()} variant="outline" size="sm">
           <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" /> Retry
         </Button>

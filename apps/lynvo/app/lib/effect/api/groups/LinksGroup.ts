@@ -1,13 +1,17 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../Middleware"
-import { UnauthorizedError, CsrfError, ConvexError } from "../../errors"
+import {
+  UnauthorizedApiError,
+  CsrfApiError,
+  ConvexApiError,
+} from "../../errors"
 
 export class LinksGroup extends HttpApiGroup.make("links")
   .add(
     HttpApiEndpoint.get("list", "/", {
       success: Schema.Array(Schema.Unknown),
-      error: [UnauthorizedError, ConvexError],
+      error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
@@ -16,14 +20,14 @@ export class LinksGroup extends HttpApiGroup.make("links")
         meta: Schema.optional(Schema.Unknown),
       }),
       success: Schema.Unknown,
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:linkId", {
       params: {
         linkId: Schema.String,
       },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("updateMeta", "/:linkId/meta", {
       params: {
@@ -33,7 +37,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
         meta: Schema.Unknown,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)

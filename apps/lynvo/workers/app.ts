@@ -1,4 +1,4 @@
-import { Hono } from "hono"
+import { Hono, type Context as HonoContext } from "hono"
 import { initLogger } from "evlog"
 import { DurableObject } from "cloudflare:workers"
 import { createRequestHandler, RouterContextProvider } from "react-router"
@@ -12,6 +12,8 @@ import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
 import { signAuthPreflightToken } from "../app/lib/auth-gateway"
+import { classifyAuthSignInError } from "../app/lib/auth-errors"
+import { createApiErrorResponse } from "../app/lib/api-errors"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
   authPreflightRequestSchema,
@@ -51,6 +53,15 @@ type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITS?: KVNamespace
   readonly TURNSTILE_SECRET_KEY?: string
 }
+
+const requestApiError = (
+  context: HonoContext<RequestLoggingEnvironment>,
+  error: Parameters<typeof createApiErrorResponse>[0]
+) =>
+  createApiErrorResponse({
+    ...error,
+    requestId: context.get("requestId"),
+  })
 
 const isSameOriginRequest = (request: Request): boolean => {
   const origin = request.headers.get("Origin")
@@ -152,7 +163,11 @@ app.post("/api/auth/preflight", async (context) => {
   addRequestContext(context, { operation: "auth_preflight" })
   if (!isSameOriginRequest(context.req.raw)) {
     return context.json(
-      { error: "You do not have access to this request." },
+      requestApiError(context, {
+        code: "forbidden",
+        error: "You do not have access to this request.",
+        retryable: false,
+      }),
       403
     )
   }
@@ -163,11 +178,25 @@ app.post("/api/auth/preflight", async (context) => {
       await context.req.json()
     )
     if (!result.success) {
-      return context.json({ error: "Send a valid request." }, 400)
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_request",
+          error: "Send a valid request.",
+          retryable: false,
+        }),
+        400
+      )
     }
     payload = result.data
   } catch {
-    return context.json({ error: "Send a valid request." }, 400)
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Send a valid request.",
+        retryable: false,
+      }),
+      400
+    )
   }
   const flow = payload.flow
   addRequestContext(context, { auth_flow: flow })
@@ -175,7 +204,14 @@ app.post("/api/auth/preflight", async (context) => {
   const normalizedUsername = normalizeUsername(username)
   const usernameError = validateUsername(username)
   if ((flow !== "signUp" && flow !== "signIn") || usernameError) {
-    return context.json({ error: usernameError ?? "Start sign-in again." }, 400)
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: usernameError ?? "Start sign-in again.",
+        retryable: false,
+      }),
+      400
+    )
   }
   const ip = clientIp(context.req.raw)
   const rateKey =
@@ -185,7 +221,14 @@ app.post("/api/auth/preflight", async (context) => {
   const allowed = await rateLimit(env, rateKey, flow === "signUp" ? 5 : 10, 600)
   if (!allowed) {
     addRequestContext(context, { rate_limit: { allowed: false } })
-    return context.json({ error: "Too many attempts. Try again later." }, 429)
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many attempts. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
   }
   const turnstileOk = await verifyTurnstile(
     env,
@@ -194,15 +237,26 @@ app.post("/api/auth/preflight", async (context) => {
   )
   if (!turnstileOk) {
     addRequestContext(context, { turnstile: { verified: false } })
-    return context.json({ error: "Complete the security check." }, 400)
+    return context.json(
+      requestApiError(context, {
+        code: "security_check_required",
+        error: "Complete the security check.",
+        retryable: true,
+      }),
+      400
+    )
   }
   if (!env.AUTH_GATEWAY_SECRET) {
     addRequestContext(context, {
       configuration_error: "missing_auth_gateway_secret",
     })
     return context.json(
-      { error: "Sign-in is unavailable. Try again later." },
-      500
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Sign-in is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
     )
   }
   const preflightToken = await signAuthPreflightToken(
@@ -224,7 +278,11 @@ app.post("/api/auth/tv/code", async (context) => {
   addRequestContext(context, { operation: "device_code_create" })
   if (!isSameOriginRequest(context.req.raw)) {
     return context.json(
-      { error: "You do not have access to this request." },
+      requestApiError(context, {
+        code: "forbidden",
+        error: "You do not have access to this request.",
+        retryable: false,
+      }),
       403
     )
   }
@@ -233,11 +291,25 @@ app.post("/api/auth/tv/code", async (context) => {
   try {
     const result = deviceCodeRequestSchema.safeParse(await context.req.json())
     if (!result.success) {
-      return context.json({ error: "Send a valid request." }, 400)
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_request",
+          error: "Send a valid request.",
+          retryable: false,
+        }),
+        400
+      )
     }
     payload = result.data
   } catch {
-    return context.json({ error: "Send a valid request." }, 400)
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Send a valid request.",
+        retryable: false,
+      }),
+      400
+    )
   }
   const allowed = await rateLimit(
     env,
@@ -247,38 +319,70 @@ app.post("/api/auth/tv/code", async (context) => {
   )
   if (!allowed) {
     addRequestContext(context, { rate_limit: { allowed: false } })
-    return context.json({ error: "Too many attempts. Try again later." }, 429)
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many attempts. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
   }
   if (!env.AUTH_GATEWAY_SECRET) {
     addRequestContext(context, {
       configuration_error: "missing_auth_gateway_secret",
     })
     return context.json(
-      { error: "Sign-in is unavailable. Try again later." },
-      500
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Sign-in is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
     )
   }
-  const preflightToken = await signAuthPreflightToken(
-    {
-      purpose: "deviceCode",
-      exp: Date.now() + DEVICE_CODE_PREFLIGHT_TTL_MS,
-    },
-    env.AUTH_GATEWAY_SECRET
-  )
-  const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
-  const result = await convex.mutation(api.tv.generateCode, {
-    deviceName: payload.deviceName ?? "Unknown Device",
-    preflightToken,
-  })
-  addRequestContext(context, { rate_limit: { allowed: true } })
-  return context.json(result)
+  try {
+    const preflightToken = await signAuthPreflightToken(
+      {
+        purpose: "deviceCode",
+        exp: Date.now() + DEVICE_CODE_PREFLIGHT_TTL_MS,
+      },
+      env.AUTH_GATEWAY_SECRET
+    )
+    const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
+    const result = await convex.mutation(api.tv.generateCode, {
+      deviceName: payload.deviceName ?? "Unknown Device",
+      preflightToken,
+    })
+    addRequestContext(context, { rate_limit: { allowed: true } })
+    return context.json(result)
+  } catch (error) {
+    addRequestContext(context, {
+      error: {
+        type: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+      },
+    })
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Device sign-in is temporarily unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
 })
 
 app.post("/api/auth/sign-in", async (context) => {
   addRequestContext(context, { operation: "auth_sign_in" })
   if (!isSameOriginRequest(context.req.raw)) {
     return context.json(
-      { error: "You do not have access to this request." },
+      requestApiError(context, {
+        code: "forbidden",
+        error: "You do not have access to this request.",
+        retryable: false,
+      }),
       403
     )
   }
@@ -286,11 +390,25 @@ app.post("/api/auth/sign-in", async (context) => {
   try {
     const result = authSignInRequestSchema.safeParse(await context.req.json())
     if (!result.success) {
-      return context.json({ error: "Send a valid request." }, 400)
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_request",
+          error: "Send a valid request.",
+          retryable: false,
+        }),
+        400
+      )
     }
     payload = result.data
   } catch {
-    return context.json({ error: "Send a valid request." }, 400)
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Send a valid request.",
+        retryable: false,
+      }),
+      400
+    )
   }
   const flow = payload.params.flow
   try {
@@ -305,16 +423,22 @@ app.post("/api/auth/sign-in", async (context) => {
     })
     return context.json(result)
   } catch (error) {
+    const authError = classifyAuthSignInError(error, flow)
     addRequestContext(context, {
       auth_flow: flow,
+      auth_error_code: authError.code,
       error: {
         type: error instanceof Error ? error.name : "UnknownError",
         message: error instanceof Error ? error.message : String(error),
       },
     })
     return context.json(
-      { error: "Unable to sign in. Check the details and try again." },
-      400
+      requestApiError(context, {
+        code: authError.code,
+        error: authError.error,
+        retryable: authError.retryable,
+      }),
+      authError.status
     )
   }
 })

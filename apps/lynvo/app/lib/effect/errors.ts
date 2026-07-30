@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { HttpApiSchema } from "effect/unstable/httpapi"
 
 export class ConvexError extends Schema.TaggedErrorClass<ConvexError>()(
   "ConvexError",
@@ -77,3 +78,26 @@ export class CredentialVaultError extends Schema.TaggedErrorClass<CredentialVaul
     cause: Schema.optional(Schema.Unknown),
   }
 ) {}
+
+export const ConvexApiError = ConvexError.pipe(HttpApiSchema.status(503))
+export const WorkosApiError = WorkosError.pipe(HttpApiSchema.status(502))
+export const AuthTransactionApiError = AuthTransactionError.pipe(
+  HttpApiSchema.status(503)
+)
+export const ExtractionApiError = ExtractionError.pipe(
+  HttpApiSchema.status(422)
+)
+export const ValidationApiError = ValidationError.pipe(
+  HttpApiSchema.status(400)
+)
+export const UnauthorizedApiError = UnauthorizedError.pipe(
+  HttpApiSchema.status(401)
+)
+export const NotFoundApiError = NotFoundError.pipe(HttpApiSchema.status(404))
+export const CsrfApiError = CsrfError.pipe(HttpApiSchema.status(403))
+export const WorkerRegistrationApiError = WorkerRegistrationError.pipe(
+  HttpApiSchema.status(422)
+)
+export const CredentialVaultApiError = CredentialVaultError.pipe(
+  HttpApiSchema.status(503)
+)

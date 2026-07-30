@@ -1,28 +1,35 @@
-const TECHNICAL_ERROR_PATTERN =
-  /decode error|encode error|\/api\/|http\.(method|url|status)|fiberfailure|responseerror|requesterror|schema\.js|effect\/dist/i
+import { ApiResponseError } from "./api-errors"
 
-const getErrorText = (error: unknown): string | undefined => {
-  if (error instanceof Error) {
-    return error.message
+const taggedErrorMessage = (error: unknown): string | undefined => {
+  if (typeof error !== "object" || error === null || !("_tag" in error)) {
+    return undefined
   }
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    typeof error.message === "string"
-  ) {
-    return error.message
+
+  switch (error._tag) {
+    case "UnauthorizedError":
+      return "Session expired. Sign in again."
+    case "CsrfError":
+      return "Your security session expired. Refresh the page and try again."
+    case "ValidationError":
+    case "WorkerRegistrationError":
+      return "message" in error && typeof error.message === "string"
+        ? error.message
+        : undefined
+    case "ExtractionError":
+      return "Unable to extract links from this URL. Check the link and try again."
+    default:
+      return undefined
   }
-  return undefined
 }
 
 export const getUserFacingErrorMessage = (
   error: unknown,
   fallback: string
 ): string => {
-  const message = getErrorText(error)?.trim()
-  if (!message || TECHNICAL_ERROR_PATTERN.test(message)) {
-    return fallback
+  if (error instanceof ApiResponseError) {
+    const reference = error.requestId ? ` Reference: ${error.requestId}` : ""
+    return `${error.message}${reference}`
   }
-  return message
+
+  return taggedErrorMessage(error)?.trim() || fallback
 }

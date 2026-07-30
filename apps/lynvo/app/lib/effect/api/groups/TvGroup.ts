@@ -1,7 +1,11 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../Middleware"
-import { UnauthorizedError, CsrfError, ConvexError } from "../../errors"
+import {
+  UnauthorizedApiError,
+  CsrfApiError,
+  ConvexApiError,
+} from "../../errors"
 
 export class TvGroup extends HttpApiGroup.make("tv")
   .add(
@@ -10,7 +14,7 @@ export class TvGroup extends HttpApiGroup.make("tv")
         code: Schema.String,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedError, CsrfError, ConvexError],
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
       .middleware(WebAuth)
       .middleware(CsrfMiddleware),
@@ -19,7 +23,7 @@ export class TvGroup extends HttpApiGroup.make("tv")
         code: Schema.String,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: ConvexError,
+      error: ConvexApiError,
     })
   )
   .prefix("/api/auth") {}
