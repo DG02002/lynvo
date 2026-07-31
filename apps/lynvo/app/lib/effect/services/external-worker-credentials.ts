@@ -105,7 +105,10 @@ export const decryptExternalWorker = Effect.fn(
   environment: Env,
   userId: string,
   worker: Worker
-): Effect.fn.Return<Worker & { readonly apiKey: string }, CredentialVaultError> {
+): Effect.fn.Return<
+  Worker & { readonly apiKey: string },
+  CredentialVaultError
+> {
   if (
     !worker.apiKeyCiphertext ||
     !worker.apiKeyNonce ||

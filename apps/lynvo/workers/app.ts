@@ -575,10 +575,7 @@ app.delete("/api/auth/session", async (context) => {
       403
     )
   }
-  const sessionId = getCookieValue(
-    context.req.raw,
-    WORKER_SESSION_COOKIE_NAME
-  )
+  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   if (sessionId) {
     try {
       const response = await context.env.WORKER_AUTH_SESSION.getByName(
@@ -617,10 +614,7 @@ app.post("/api/auth/session/refresh", async (context) => {
       403
     )
   }
-  const sessionId = getCookieValue(
-    context.req.raw,
-    WORKER_SESSION_COOKIE_NAME
-  )
+  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   if (!sessionId) {
     return context.json(
       requestApiError(context, {

@@ -45,16 +45,18 @@ export const list = query({
       .query("userWorkers")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect()
-    return workers.filter((worker) => worker.credentialStatus === "ready").map(
-      ({
-        apiKeyCiphertext: _apiKeyCiphertext,
-        apiKeyNonce: _apiKeyNonce,
-        apiKeyAlgorithm: _apiKeyAlgorithm,
-        apiKeyVersion: _apiKeyVersion,
-        credentialStatus: _credentialStatus,
-        ...worker
-      }) => worker
-    )
+    return workers
+      .filter((worker) => worker.credentialStatus === "ready")
+      .map(
+        ({
+          apiKeyCiphertext: _apiKeyCiphertext,
+          apiKeyNonce: _apiKeyNonce,
+          apiKeyAlgorithm: _apiKeyAlgorithm,
+          apiKeyVersion: _apiKeyVersion,
+          credentialStatus: _credentialStatus,
+          ...worker
+        }) => worker
+      )
   },
 })
 

@@ -150,9 +150,8 @@ export class WorkerAuthSession implements DurableObject {
       return new Response(null, { status: 204 })
     }
     if (request.method === "GET") {
-      const storedSession = await this.state.storage.get<StoredSession>(
-        SESSION_STORAGE_KEY
-      )
+      const storedSession =
+        await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
       const nowParameter = url.searchParams.get("nowMs")
       const nowMs = nowParameter ? Number(nowParameter) : Date.now()
       if (

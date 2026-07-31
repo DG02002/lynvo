@@ -133,7 +133,10 @@ export class ExternalWorkerCredentialVault implements DurableObject {
       } satisfies EncryptedExternalWorkerCredential)
     }
     if (pathname === "/decrypt") {
-      if (!("credential" in payload) || !isEncryptedCredential(payload.credential)) {
+      if (
+        !("credential" in payload) ||
+        !isEncryptedCredential(payload.credential)
+      ) {
         return new Response(null, { status: 400 })
       }
       try {

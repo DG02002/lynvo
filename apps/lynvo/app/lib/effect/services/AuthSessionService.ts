@@ -43,9 +43,10 @@ export class AuthSessionService extends Context.Service<
         const workerAccessToken = opaqueSessionId
           ? yield* Effect.tryPromise({
               try: async () => {
-                const response = await environment.WORKER_AUTH_SESSION.getByName(
-                  opaqueSessionId
-                ).fetch("https://session.internal/session")
+                const response =
+                  await environment.WORKER_AUTH_SESSION.getByName(
+                    opaqueSessionId
+                  ).fetch("https://session.internal/session")
                 if (!response.ok) {
                   return undefined
                 }

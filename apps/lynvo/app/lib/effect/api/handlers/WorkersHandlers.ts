@@ -70,7 +70,8 @@ export const WorkersHandlers = HttpApiBuilder.group(
             storedWorkers
           ).pipe(
             Effect.mapError(
-              (error) => new ConvexError({ message: error.message, cause: error })
+              (error) =>
+                new ConvexError({ message: error.message, cause: error })
             )
           )
           return yield* Effect.all(
@@ -149,8 +150,7 @@ export const WorkersHandlers = HttpApiBuilder.group(
             storedWorkers
           ).pipe(
             Effect.mapError(
-              (error) =>
-                new WorkerRegistrationError({ message: error.message })
+              (error) => new WorkerRegistrationError({ message: error.message })
             )
           )
           if (existingWorkers.length >= EXTERNAL_WORKER_REGISTRATION_LIMIT) {
@@ -256,8 +256,7 @@ export const WorkersHandlers = HttpApiBuilder.group(
             storedWorkers
           ).pipe(
             Effect.mapError(
-              (error) =>
-                new WorkerRegistrationError({ message: error.message })
+              (error) => new WorkerRegistrationError({ message: error.message })
             )
           )
           const worker = workers.find((entry) => entry._id === params.workerId)
