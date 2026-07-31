@@ -27,6 +27,51 @@ declare global {
     error?: string
   }
 
+  interface UsageReadLynvoResult {
+    metrics: readonly UsageMetric[]
+  }
+
+  interface UsageReadAdapters {
+    readLynvo: (timeBucket: number) => Promise<UsageReadLynvoResult>
+    readCustom: () => Promise<readonly CustomPluginServerUsage[]>
+  }
+
+  interface UsageReadInput {
+    lynvoPlugins: readonly import("./features/site/settings/plugin-settings-data").LynvoPlugin[]
+    timeBucket: number
+  }
+
+  interface UsageReadTotal {
+    used: number
+    limit: number
+  }
+
+  interface UsageReadEntry {
+    key: string
+    name: string
+    used: number
+    limit: number
+    icon?: import("./lib/plugin-icons").PluginIconSource
+    iconUrl?: string
+    iconKind: "hidden" | "plugin-server" | "source" | "direct"
+  }
+
+  interface UsageReadSection {
+    total: UsageReadTotal
+    resetsAt?: string
+    entries: readonly UsageReadEntry[]
+    failures: readonly string[]
+  }
+
+  interface UsageReadSnapshot {
+    lynvo: UsageReadSection
+    custom: UsageReadSection
+  }
+
+  interface UsageReadModule {
+    read: (input: UsageReadInput) => Promise<UsageReadSnapshot>
+  }
+
   interface CookiePreferences {
     analytics: boolean
     marketingMeasurement: boolean

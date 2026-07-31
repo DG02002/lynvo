@@ -119,4 +119,13 @@ export const SettingsHandlers = HttpApiBuilder.group(
           })
         })
       )
+      .handle("getLynvoUsage", ({ query }) =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          return yield* convex.query(api.usage.getUsage, query, {
+            accessToken: user.accessToken,
+          })
+        })
+      )
 )

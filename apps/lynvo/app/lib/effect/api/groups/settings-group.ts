@@ -6,6 +6,7 @@ import {
   CsrfApiError,
   UnauthorizedApiError,
 } from "../../errors"
+import { LynvoUsageSchema } from "../usage-schemas"
 
 const PlayerIdSchema = Schema.Literals(["just", "vlc", "mpv", "mx"])
 
@@ -100,6 +101,11 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
       payload: Schema.Struct({ confirmUsername: Schema.String }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.get("getLynvoUsage", "/usage", {
+      query: Schema.Struct({ timeBucket: Schema.NumberFromString }),
+      success: LynvoUsageSchema,
+      error: [UnauthorizedApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)
