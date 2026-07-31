@@ -1,13 +1,12 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
 import { useNavigate, type LoaderFunctionArgs } from "react-router"
-import { useAction } from "convex/react"
+import { Effect } from "effect"
 import { toast } from "sonner"
 import { FieldGroup, FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/LynvoLink"
 import { changePasswordSchema } from "~/lib/auth-form-schemas"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { api } from "../../../../convex/_generated/api"
 import { getUserSession, requireUserOrRedirect } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import {
@@ -16,6 +15,7 @@ import {
   AuthPolicyLinks,
   AuthTextField,
 } from "~/components/auth/auth-form-parts"
+import { client } from "~/lib/effect/api/client"
 
 export function meta() {
   return [{ title: "Change your password | Lynvo" }]
@@ -31,7 +31,6 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
 
 export default function NewPassword() {
   const navigate = useNavigate()
-  const changePassword = useAction(api.users.changePassword)
   const [passwordChangeError, setPasswordChangeError] = React.useState<
     string | null
   >(null)
@@ -47,10 +46,14 @@ export default function NewPassword() {
     onSubmit: async ({ value }) => {
       setPasswordChangeError(null)
       try {
-        await changePassword({
-          currentPassword: value.oldPassword,
-          newPassword: value.newPassword,
-        })
+        await Effect.runPromise(
+          client.settings.changePassword({
+            payload: {
+              currentPassword: value.oldPassword,
+              newPassword: value.newPassword,
+            },
+          })
+        )
         toast.success("Password changed")
         navigate("/settings", { viewTransition: true })
       } catch (error) {

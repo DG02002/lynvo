@@ -106,6 +106,14 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
       query: Schema.Struct({ timeBucket: Schema.NumberFromString }),
       success: LynvoUsageSchema,
       error: [UnauthorizedApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.patch("changePassword", "/security/password", {
+      payload: Schema.Struct({
+        currentPassword: Schema.String,
+        newPassword: Schema.String,
+      }),
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)
