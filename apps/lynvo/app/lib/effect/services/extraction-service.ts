@@ -22,7 +22,6 @@ import type {
   MetadataResult,
 } from "./extraction-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
-import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { CloudflareEnv } from "./CloudflareEnv"
 import {
   discoverLynvoPlugin,
@@ -36,6 +35,7 @@ import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
+import { resolvePluginCredential } from "./plugin-credential-resolution"
 
 const getHostname = (value: string): string => new URL(value).hostname
 
@@ -136,57 +136,22 @@ export class ExtractionService extends Context.Service<
                 source = discoveredSource
               }
             }
-            let password: string | undefined
-            let basicAuth =
-              source?.credential?.kind === "http-basic"
-                ? routeInput.basicAuth
-                : undefined
-            if (source?.credential && !basicAuth) {
-              const domain = getHostname(targetUrl)
-              const encryptedCredential = yield* convex
-                .query(
-                  api.pluginDomains.getCredentialByDomainForService,
-                  { domain, pluginServerId: pluginServer._id, serviceToken },
-                  { accessToken: options.accessToken }
-                )
-                .pipe(
-                  Effect.mapError(
-                    (error) =>
-                      new ExtractionError({
-                        message: error.message,
-                        url: targetUrl,
-                      })
-                  )
-                )
-              if (encryptedCredential?.pluginId === source.id) {
-                const credential = yield* credentialVault
-                  .decrypt(encryptedCredential, {
-                    userId: options.userId,
-                    pluginServerId: pluginServer._id,
-                    pluginId: source.id,
-                    domain,
-                  })
-                  .pipe(
-                    Effect.mapError(
-                      (error) =>
-                        new ExtractionError({
-                          message: error.message,
-                          url: targetUrl,
-                        })
-                    )
-                  )
-                if (source.credential.kind === "domain-password") {
-                  password = credential
-                } else {
-                  basicAuth = parseHttpBasicCredential(credential)
-                }
-              }
-            }
+            const credentials = source
+              ? yield* resolvePluginCredential(convex, credentialVault, {
+                  targetUrl,
+                  userId: options.userId,
+                  accessToken: options.accessToken,
+                  serviceToken,
+                  pluginServerId: pluginServer._id,
+                  plugin: source,
+                  inlineBasicAuth: routeInput.basicAuth,
+                })
+              : {}
             return yield* extractFromCustomPluginServer(
               pluginServer,
               targetUrl,
               options.kind ?? "source",
-              { pluginId: source?.id, password, basicAuth },
+              { pluginId: source?.id, ...credentials },
               options.requestId
             )
           }
@@ -255,56 +220,19 @@ export class ExtractionService extends Context.Service<
             })
           }
           if (source) {
-            let password: string | undefined
-            let basicAuth: { username: string; password: string } | undefined =
-              source.credential?.kind === "http-basic"
-                ? routeInput.basicAuth
-                : undefined
-            if (source.credential) {
-              const domain = getHostname(targetUrl)
-              const encryptedCredential = yield* convex
-                .query(
-                  api.pluginDomains.getCredentialByDomainForService,
-                  {
-                    domain,
-                    pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-                    serviceToken,
-                  },
-                  { accessToken: options.accessToken }
-                )
-                .pipe(
-                  Effect.mapError(
-                    (error) =>
-                      new ExtractionError({
-                        message: error.message,
-                        url: targetUrl,
-                      })
-                  )
-                )
-              if (!basicAuth && encryptedCredential?.pluginId === source.id) {
-                const credential = yield* credentialVault
-                  .decrypt(encryptedCredential, {
-                    userId: options.userId,
-                    pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-                    pluginId: source.id,
-                    domain,
-                  })
-                  .pipe(
-                    Effect.mapError(
-                      (error) =>
-                        new ExtractionError({
-                          message: error.message,
-                          url: targetUrl,
-                        })
-                    )
-                  )
-                if (source.credential.kind === "domain-password") {
-                  password = credential
-                } else {
-                  basicAuth = parseHttpBasicCredential(credential)
-                }
+            const credentials = yield* resolvePluginCredential(
+              convex,
+              credentialVault,
+              {
+                targetUrl,
+                userId: options.userId,
+                accessToken: options.accessToken,
+                serviceToken,
+                pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+                plugin: source,
+                inlineBasicAuth: routeInput.basicAuth,
               }
-            }
+            )
             const meteredSourceId = getMeteredPluginId(source.id)
             if (meteredSourceId) {
               yield* convex
@@ -327,7 +255,7 @@ export class ExtractionService extends Context.Service<
               environment,
               targetUrl,
               options.kind ?? "source",
-              { pluginId: source.id, password, basicAuth },
+              { pluginId: source.id, ...credentials },
               options.requestId
             )
           }
