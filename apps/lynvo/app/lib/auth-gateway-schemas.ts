@@ -35,13 +35,6 @@ export const turnstileVerificationResponseSchema = z.object({
   action: z.string(),
 })
 
-export const workerSessionStateSchema = z.strictObject({
-  accessToken: z.string().min(1),
-  refreshToken: z.string().min(1),
-  createdAt: z.number(),
-  expiresAt: z.number(),
-})
-
 export const refreshedAuthTokensSchema = z.object({
   tokens: z
     .strictObject({

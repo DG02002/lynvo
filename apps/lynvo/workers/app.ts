@@ -16,6 +16,8 @@ import { classifyAuthSignInError } from "../app/lib/auth-errors"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
 import { getCookieValue } from "../app/lib/auth-cookie"
+import { createAuthSessionModule } from "./auth-session"
+import { SESSION_IDLE_TIMEOUT_MS } from "./constants"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
   authPreflightRequestSchema,
@@ -23,7 +25,6 @@ import {
   deviceCodeRequestSchema,
   refreshedAuthTokensSchema,
   turnstileVerificationResponseSchema,
-  workerSessionStateSchema,
 } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
 import { ConvexHttpClient } from "convex/browser"
@@ -55,10 +56,6 @@ const app = new Hono<RequestLoggingEnvironment>()
 
 const TURNSTILE_HOSTNAME = "lynvo.dg02002.workers.dev"
 const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
-const SESSION_ABSOLUTE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1_000
-const SESSION_IDLE_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1_000
-const SESSION_COOKIE_MAX_AGE_SECONDS = SESSION_ABSOLUTE_LIFETIME_MS / 1_000
-
 app.use("*", async (context, next) => {
   await next()
   context.res.headers.set("Strict-Transport-Security", "max-age=31536000")
@@ -499,24 +496,15 @@ app.post("/api/auth/sign-in", async (context) => {
     if (tokens?.token && tokens.refreshToken) {
       const sessionId = crypto.randomUUID()
       const createdAt = Date.now()
-      let sessionResponse: Response
-      try {
-        sessionResponse = await context.env.WORKER_AUTH_SESSION.getByName(
-          sessionId
-        ).fetch("https://session.internal/session", {
-          method: "POST",
-          body: JSON.stringify({
-            accessToken: tokens.token,
-            refreshToken: tokens.refreshToken,
-            createdAt,
-            expiresAt: createdAt + SESSION_ABSOLUTE_LIFETIME_MS,
-            idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
-          }),
-        })
-      } catch {
-        sessionResponse = new Response(null, { status: 503 })
-      }
-      if (!sessionResponse.ok) {
+      const sessionResult = await createAuthSessionModule(
+        context.env.WORKER_AUTH_SESSION
+      ).create({
+        sessionId,
+        accessToken: tokens.token,
+        refreshToken: tokens.refreshToken,
+        nowMs: createdAt,
+      })
+      if (sessionResult.kind === "unavailable") {
         return context.json(
           requestApiError(context, {
             code: "service_unavailable",
@@ -526,10 +514,7 @@ app.post("/api/auth/sign-in", async (context) => {
           503
         )
       }
-      context.header(
-        "Set-Cookie",
-        `${WORKER_SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE_SECONDS}`
-      )
+      context.header("Set-Cookie", sessionResult.cookie)
       addRequestContext(context, {
         auth_flow: flow,
         has_tokens: true,
@@ -576,15 +561,10 @@ app.delete("/api/auth/session", async (context) => {
     )
   }
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
+  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   if (sessionId) {
-    try {
-      const response = await context.env.WORKER_AUTH_SESSION.getByName(
-        sessionId
-      ).fetch("https://session.internal/session", { method: "DELETE" })
-      if (!response.ok) {
-        throw new Error("Session revocation failed")
-      }
-    } catch {
+    const sessionResult = await authSession.revoke(sessionId)
+    if (sessionResult.kind === "unavailable") {
       return context.json(
         requestApiError(context, {
           code: "service_unavailable",
@@ -594,11 +574,10 @@ app.delete("/api/auth/session", async (context) => {
         503
       )
     }
+    context.header("Set-Cookie", sessionResult.cookie)
+  } else {
+    context.header("Set-Cookie", authSession.expireCookie())
   }
-  context.header(
-    "Set-Cookie",
-    `${WORKER_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-  )
   return context.body(null, 204)
 })
 
@@ -626,11 +605,10 @@ app.post("/api/auth/session/refresh", async (context) => {
     )
   }
   const sessionStub = context.env.WORKER_AUTH_SESSION.getByName(sessionId)
+  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   try {
-    const sessionResponse = await sessionStub.fetch(
-      "https://session.internal/session"
-    )
-    if (!sessionResponse.ok) {
+    const sessionResult = await authSession.read(sessionId)
+    if (sessionResult.kind === "expired") {
       return context.json(
         requestApiError(context, {
           code: "invalid_credentials",
@@ -640,7 +618,10 @@ app.post("/api/auth/session/refresh", async (context) => {
         401
       )
     }
-    const session = workerSessionStateSchema.parse(await sessionResponse.json())
+    if (sessionResult.kind === "unavailable") {
+      throw new Error("Session read failed")
+    }
+    const session = sessionResult.session
     const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
     const refreshed = refreshedAuthTokensSchema.parse(
       await client.action(api.auth.signIn, {

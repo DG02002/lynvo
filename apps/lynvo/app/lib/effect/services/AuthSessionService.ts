@@ -7,6 +7,7 @@ import {
 } from "../../constants"
 import { getCookieValue } from "../../auth-cookie"
 import { CloudflareEnv } from "./CloudflareEnv"
+import { createAuthSessionModule } from "../../../../workers/auth-session"
 
 export interface SessionUser {
   readonly id: string
@@ -43,19 +44,11 @@ export class AuthSessionService extends Context.Service<
         const workerAccessToken = opaqueSessionId
           ? yield* Effect.tryPromise({
               try: async () => {
-                const response =
-                  await environment.WORKER_AUTH_SESSION.getByName(
-                    opaqueSessionId
-                  ).fetch("https://session.internal/session")
-                if (!response.ok) {
-                  return undefined
-                }
-                const payload: unknown = await response.json()
-                return typeof payload === "object" &&
-                  payload !== null &&
-                  "accessToken" in payload &&
-                  typeof payload.accessToken === "string"
-                  ? payload.accessToken
+                const result = await createAuthSessionModule(
+                  environment.WORKER_AUTH_SESSION
+                ).read(opaqueSessionId)
+                return result.kind === "active"
+                  ? result.session.accessToken
                   : undefined
               },
               catch: () => undefined,
