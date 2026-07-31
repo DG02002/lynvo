@@ -14,6 +14,7 @@ const companyLinks = [
 
 const docsLinks = [
   { label: "Docs", to: sitePaths.docs },
+  { label: "Plugins", to: sitePaths.plugins },
   { label: "Android TV Setup", to: sitePaths.androidTvSetup },
   { label: "External Extractor", to: "/docs/extractor" },
 ] as const

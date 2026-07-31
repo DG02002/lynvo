@@ -11,6 +11,7 @@ export const sitePaths = {
   changelog: "/changelog",
   docs: "/docs",
   helpCenter: "/help-center",
+  plugins: "/plugins",
   pricing: "/pricing",
   settings: "/settings",
 } as const
