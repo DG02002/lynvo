@@ -15,7 +15,7 @@ export const STORAGE_RETENTION_DAY_OPTIONS = [7, 30, 90, 180]
 export const ACTIVITY_UPDATE_INTERVAL_MS = DAY_MS * 7
 export const ACCOUNT_DELETION_DOCUMENT_LIMIT = 1000
 export const CLEANUP_USER_PAGE_SIZE = 1
-export const USER_DAILY_OFFICIAL_EXTRACTION_LIMIT = 100
+export const USER_DAILY_OFFICIAL_EXTRACTION_LIMIT = 15
 export const GLOBAL_DAILY_OFFICIAL_EXTRACTION_LIMIT = 20_000
 export const REMOTE_COMMAND_TTL_MS = 5 * 60 * 1000
 export const REMOTE_COMMAND_MAX_PAYLOAD_BYTES = 16 * 1024
@@ -27,15 +27,4 @@ export const DEVICE_CODE_CLEANUP_BATCH_SIZE = 100
 export const DEVICE_CODE_CREATION_RATE_LIMIT = 5
 export const DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS = 10 * 60
 export const CREDENTIAL_READ_TOKEN_TTL_MS = 2 * 60 * 1000
-export const OFFICIAL_PLUGIN_MONTHLY_EXTRACTION_LIMITS = {
-  "bhadoo-google-drive-index": 50,
-  "google-drive-public-files": 50,
-  "onedrive-index": 50,
-  direct: 200,
-} as const
-export const OFFICIAL_PLUGIN_DISPLAY_NAMES = {
-  "bhadoo-google-drive-index": "Bhadoo’s Google Drive Index",
-  "google-drive-public-files": "Google Drive Public Files",
-  "onedrive-index": "Spencerwooo's OneDrive Vercel Index",
-  direct: "Direct links",
-} as const
+export const USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT = 200

@@ -65,6 +65,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
         sid: user.sid,
       },
       officialPlugins,
+      requestOrigin: new URL(request.url).origin,
       ...settingsRoute,
     },
     sessionResult,
@@ -106,8 +107,13 @@ const settingsTabs = [
 ] as const
 
 export default function Settings() {
-  const { user, officialPlugins, activeTab, showActiveSessions } =
-    useLoaderData<typeof loader>()
+  const {
+    user,
+    officialPlugins,
+    requestOrigin,
+    activeTab,
+    showActiveSessions,
+  } = useLoaderData<typeof loader>()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -208,7 +214,10 @@ export default function Settings() {
             <header className="pb-4">
               <h1 className="text-2xl font-normal tracking-tight">Plugins</h1>
             </header>
-            <PluginsSettings officialPlugins={officialPlugins} />
+            <PluginsSettings
+              officialPlugins={officialPlugins}
+              requestOrigin={requestOrigin}
+            />
           </TabsContent>
 
           <TabsContent value="storage" className="flex flex-col">

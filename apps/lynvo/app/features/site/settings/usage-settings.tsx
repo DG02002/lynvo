@@ -27,6 +27,7 @@ interface UsageListItem {
   total: UsageTotal
   icon?: OfficialPlugin["icon"]
   iconUrl?: string
+  hideIcon?: boolean
   fallback: "extractor" | "source"
 }
 
@@ -44,6 +45,11 @@ const RESET_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
 const monthlyExtractions = (metrics: readonly UsageMetric[]) =>
   metrics.filter(
     (metric) => metric.period === "monthly" && metric.unit === "extractions"
+  )
+
+const dailyExtractions = (metrics: readonly UsageMetric[]) =>
+  metrics.filter(
+    (metric) => metric.period === "daily" && metric.unit === "extractions"
   )
 
 const totalMetrics = (metrics: readonly UsageMetric[]): UsageTotal =>
@@ -113,24 +119,28 @@ const UsageSummary = ({
 const UsageItem = ({
   icon,
   iconUrl,
+  hideIcon,
   fallback,
   name,
   total,
 }: {
   icon?: OfficialPlugin["icon"]
   iconUrl?: string
+  hideIcon?: boolean
   fallback: "extractor" | "source"
   name: string
   total: UsageTotal
 }) => (
   <SettingsRow className="py-2">
     <div className="flex min-w-0 items-center gap-2.5">
-      <PluginIcon
-        icon={icon}
-        iconUrl={iconUrl}
-        fallback={fallback}
-        className="size-6"
-      />
+      {!hideIcon && (
+        <PluginIcon
+          icon={icon}
+          iconUrl={iconUrl}
+          fallback={fallback}
+          className="size-6"
+        />
+      )}
       <span className="truncate text-sm text-foreground">{name}</span>
     </div>
     <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
@@ -183,6 +193,9 @@ export const UsageSettings = ({
   const officialMetrics = officialUsage
     ? monthlyExtractions(officialUsage.metrics)
     : []
+  const officialDailyMetrics = officialUsage
+    ? dailyExtractions(officialUsage.metrics)
+    : []
   const availableExternalUsage = externalUsage?.filter(
     (worker) => !worker.error
   )
@@ -197,19 +210,23 @@ export const UsageSettings = ({
     .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
     .toSorted()[0]
 
-  const officialItems: UsageListItem[] = officialMetrics
+  const officialItems: UsageListItem[] = officialDailyMetrics
     .map((metric) => {
       const plugin = officialPlugins.find(
         (candidate) => candidate.id === metric.sourceId
       )
       const isDirect = metric.sourceId === "direct"
+      const isDailyLimit = metric.id === "official-worker-operations"
       return {
         key: metric.id,
         icon: isDirect ? { hugeIcon: Link01Icon } : plugin?.icon,
-        fallback: "source" as const,
-        name: plugin?.name ?? metric.label.replace(/\s+extractions$/i, ""),
+        hideIcon: isDailyLimit,
+        fallback: isDailyLimit ? ("extractor" as const) : ("source" as const),
+        name: isDailyLimit
+          ? "Daily extraction limit"
+          : (plugin?.name ?? metric.label.replace(/\s+extractions$/i, "")),
         total: { used: metric.used, limit: metric.limit },
-        sortOrder: isDirect ? 0 : 1,
+        sortOrder: isDailyLimit ? 0 : isDirect ? 1 : 2,
       }
     })
     .sort((left, right) => left.sortOrder - right.sortOrder)
@@ -222,12 +239,17 @@ export const UsageSettings = ({
             const source = worker.sources?.find(
               (candidate) => candidate.id === metric.sourceId
             )
+            const isSharedExtractorMetric = !metric.sourceId
             return {
               key: `${worker.workerId}:${metric.id}`,
-              iconUrl: source?.iconUrl,
-              fallback: "source" as const,
-              name:
-                source?.name ?? metric.label.replace(/\s+extractions$/i, ""),
+              iconUrl: source?.iconUrl ?? worker.iconUrl,
+              fallback: isSharedExtractorMetric
+                ? ("extractor" as const)
+                : ("source" as const),
+              name: isSharedExtractorMetric
+                ? worker.name
+                : (source?.name ??
+                  metric.label.replace(/\s+extractions$/i, "")),
               total: { used: metric.used, limit: metric.limit },
             }
           })
@@ -242,8 +264,8 @@ export const UsageSettings = ({
         <>
           <SettingsPanel className="gap-4">
             <SectionHeading
-              title="Official extractor"
-              description="Monthly extraction usage shared across official plugins."
+              title="Official extractions"
+              description="One monthly allowance shared across all official plugins and direct links, with a separate daily safety limit."
             />
             <UsageSummary
               label="Official extractor"
@@ -256,6 +278,7 @@ export const UsageSettings = ({
                   key={item.key}
                   icon={item.icon}
                   iconUrl={item.iconUrl}
+                  hideIcon={item.hideIcon}
                   fallback={item.fallback}
                   name={item.name}
                   total={item.total}
@@ -281,6 +304,7 @@ export const UsageSettings = ({
                     key={item.key}
                     icon={item.icon}
                     iconUrl={item.iconUrl}
+                    hideIcon={item.hideIcon}
                     fallback={item.fallback}
                     name={item.name}
                     total={item.total}

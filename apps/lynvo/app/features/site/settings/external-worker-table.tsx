@@ -30,6 +30,7 @@ import { SettingsList, SettingsRow } from "./settings-layout"
 
 interface ExternalWorkerRowProps {
   worker: ExtractorWorker
+  requestOrigin: string
   onDeleteWorker: (workerId: string) => void
   onRefreshWorker: (workerId: string) => void
   onToggleWorker: (workerId: string, currentEnabled: boolean) => void
@@ -37,12 +38,13 @@ interface ExternalWorkerRowProps {
 
 const ExternalWorkerRow = ({
   worker,
+  requestOrigin,
   onDeleteWorker,
   onRefreshWorker,
   onToggleWorker,
 }: ExternalWorkerRowProps) => {
   const [isExpanded, setIsExpanded] = React.useState(true)
-  const manifest = getWorkerManifestView(worker.manifest)
+  const manifest = getWorkerManifestView(worker.manifest, requestOrigin)
   const sourceListId = `external-worker-sources-${worker._id}`
   const isDown = worker.verificationStatus === WORKER_VERIFICATION_STATUS.down
   const isUsable = isWorkerUsable(worker)
@@ -200,11 +202,13 @@ const ExternalWorkerRow = ({
 
 export const ExternalWorkerTable = ({
   workers,
+  requestOrigin,
   onDeleteWorker,
   onRefreshWorker,
   onToggleWorker,
 }: {
   workers: ExtractorWorker[]
+  requestOrigin: string
   onDeleteWorker: (workerId: string) => void
   onRefreshWorker: (workerId: string) => void
   onToggleWorker: (workerId: string, currentEnabled: boolean) => void
@@ -214,6 +218,7 @@ export const ExternalWorkerTable = ({
       <ExternalWorkerRow
         key={worker._id}
         worker={worker}
+        requestOrigin={requestOrigin}
         onDeleteWorker={onDeleteWorker}
         onRefreshWorker={onRefreshWorker}
         onToggleWorker={onToggleWorker}

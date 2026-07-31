@@ -7,9 +7,9 @@ export const pricingFaqs = [
   },
   {
     value: "official-operation",
-    question: "What counts as an official extraction operation?",
+    question: "What counts as an official extraction?",
     answer:
-      "Lynvo counts an operation after accepting an official extraction request and reserving capacity. Browsing Lynvo, opening Settings, and using an external extractor do not use this allowance.",
+      "Lynvo counts one use after accepting an official extraction request. The monthly allowance is shared across all official plugins and direct links. Browsing Lynvo, opening Settings, and using an external extractor do not use this allowance.",
   },
   {
     value: "limit-reached",

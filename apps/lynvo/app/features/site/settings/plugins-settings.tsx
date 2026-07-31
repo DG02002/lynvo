@@ -73,8 +73,10 @@ const EMPTY_DOMAINS: PluginDomain[] = []
 
 export function PluginsSettings({
   officialPlugins,
+  requestOrigin,
 }: {
   officialPlugins: OfficialPlugin[] | null
+  requestOrigin: string
 }) {
   const workers = useQuery(api.userWorkers.list, {}) ?? EMPTY_WORKERS
   const domains = (
@@ -285,6 +287,7 @@ export function PluginsSettings({
 
       <ExternalExtractorsSection
         workers={workers}
+        requestOrigin={requestOrigin}
         isAddWorkerOpen={isAddWorkerOpen}
         onAddWorkerOpenChange={setIsAddWorkerOpen}
         onAddWorker={handleAddWorker}
@@ -495,6 +498,7 @@ const PluginDomainList = ({
 
 interface ExternalExtractorsSectionProps {
   workers: ExtractorWorker[]
+  requestOrigin: string
   isAddWorkerOpen: boolean
   onAddWorkerOpenChange: (open: boolean) => void
   onAddWorker: (value: ExternalWorkerFormValues) => Promise<string | null>
@@ -505,6 +509,7 @@ interface ExternalExtractorsSectionProps {
 
 export const ExternalExtractorsSection = ({
   workers,
+  requestOrigin,
   isAddWorkerOpen,
   onAddWorkerOpenChange,
   onAddWorker,
@@ -663,6 +668,7 @@ export const ExternalExtractorsSection = ({
       {workers.length > 0 && (
         <ExternalWorkerTable
           workers={workers}
+          requestOrigin={requestOrigin}
           onDeleteWorker={onDeleteWorker}
           onRefreshWorker={onRefreshWorker}
           onToggleWorker={onToggleWorker}

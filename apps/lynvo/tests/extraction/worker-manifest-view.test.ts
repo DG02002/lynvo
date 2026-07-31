@@ -129,4 +129,33 @@ describe("getWorkerManifestView", () => {
       undefined,
     ])
   })
+
+  it("resolves loopback source icons through the current LAN host", () => {
+    const view = getWorkerManifestView(
+      JSON.stringify({
+        protocolVersion: "1.0",
+        extractorId: "com.lynvo.plnkextractor",
+        displayName: "PlnkExtractor",
+        auth: { type: "bearer" },
+        matchers: [{ hosts: ["example.com"] }],
+        features: {},
+        extensions: {
+          lynvo: {
+            sources: [
+              {
+                id: "hubcloud",
+                displayName: "HubCloud",
+                iconUrl: "http://localhost:8788/icons/sources/hubcloud.webp",
+              },
+            ],
+          },
+        },
+      }),
+      "http://192.168.1.3:5173"
+    )
+
+    expect(view.sources[0]?.iconUrl).toBe(
+      "http://192.168.1.3:8788/icons/sources/hubcloud.webp"
+    )
+  })
 })

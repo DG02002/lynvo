@@ -22,8 +22,30 @@ const parseWorkerManifest = (value: string): ExtractorManifest | null => {
   }
 }
 
+const resolveExternalWorkerIconUrl = (
+  iconUrl: string | undefined,
+  requestOrigin?: string
+): string | undefined => {
+  if (!iconUrl || !requestOrigin) {
+    return iconUrl
+  }
+
+  const icon = new URL(iconUrl)
+  if (
+    icon.hostname !== "localhost" &&
+    icon.hostname !== "127.0.0.1" &&
+    icon.hostname !== "[::1]"
+  ) {
+    return iconUrl
+  }
+
+  icon.hostname = new URL(requestOrigin).hostname
+  return icon.href
+}
+
 export const getWorkerManifestView = (
-  manifestValue: string
+  manifestValue: string,
+  requestOrigin?: string
 ): WorkerManifestView => {
   const manifest = parseWorkerManifest(manifestValue)
   const extension = manifest ? getLynvoManifestExtension(manifest) : undefined
@@ -33,11 +55,15 @@ export const getWorkerManifestView = (
 
   return {
     name: manifest?.displayName || manifest?.extractorId || "Unknown",
-    icon: manifest?.iconUrl || null,
+    icon:
+      resolveExternalWorkerIconUrl(manifest?.iconUrl, requestOrigin) ?? null,
     hosts,
     sources: (extension?.sources ?? []).map((source) => ({
       ...source,
-      iconUrl: source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
+      iconUrl: resolveExternalWorkerIconUrl(
+        source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
+        requestOrigin
+      ),
     })),
   }
 }

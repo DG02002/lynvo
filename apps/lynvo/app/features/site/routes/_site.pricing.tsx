@@ -1,7 +1,13 @@
-import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowUpRight01Icon,
+  Link01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { ComponentProps } from "react"
 import { Link } from "react-router"
 import type { Route } from "./+types/_site.pricing"
+import { PluginIcon } from "~/components/plugin-icon"
 import { buttonVariants } from "~/components/ui/button"
 import {
   Card,
@@ -39,36 +45,70 @@ const planCardDescriptionClassName = "text-sm text-foreground"
 const planCardBodyTextClassName =
   "max-w-md text-sm leading-6 text-muted-foreground"
 
+interface PlanDetail {
+  feature: string
+  allowance: string
+  icon?: ComponentProps<typeof PluginIcon>["icon"]
+}
+
 const planDetailSections = [
   {
     title: "Account",
     details: [
-      ["Price", "₹0 per month"],
-      ["Account storage", "3 MB"],
-      ["Saved links", "Up to 100"],
-      ["Maximum saved-link record", "1 MB"],
-      ["Default saved-link retention", "90 days"],
-      ["Inactive account deletion", "After 90 days"],
+      { feature: "Price", allowance: "₹0 per month" },
+      { feature: "Account storage", allowance: "3 MB" },
+      { feature: "Saved links", allowance: "Up to 100" },
+      { feature: "Maximum saved-link record", allowance: "1 MB" },
+      { feature: "Default saved-link retention", allowance: "90 days" },
+      { feature: "Inactive account deletion", allowance: "After 90 days" },
     ],
   },
   {
     title: "Official extraction",
     details: [
-      ["Official operations", "100 per day"],
-      ["Bhadoo’s Google Drive Index", "50 per month"],
-      ["Spencerwooo's OneDrive Vercel Index", "50 per month"],
-      ["Direct links", "200 per month"],
+      {
+        feature: "Official extractions",
+        allowance: "200 per month, shared",
+      },
+      { feature: "Daily extraction limit", allowance: "15 per day" },
+      {
+        feature: "Direct links",
+        allowance: "Included",
+        icon: { hugeIcon: Link01Icon },
+      },
+      {
+        feature: "Bhadoo’s Google Drive Index",
+        allowance: "Included",
+        icon: {},
+      },
+      {
+        feature: "Google Drive Public Files",
+        allowance: "Included",
+        icon: {
+          url: "/official-extractor-assets/icons/sources/google-drive-public-files.webp",
+        },
+      },
+      {
+        feature: "Spencerwooo's OneDrive Vercel Index",
+        allowance: "Included",
+        icon: {
+          url: "/official-extractor-assets/icons/sources/onedrive-index.webp",
+        },
+      },
     ],
   },
   {
     title: "Plugins and devices",
     details: [
-      ["External extractor allowance", "Set by each extractor"],
-      ["Real-time sync", "Included"],
-      ["Remote playback control", "Included"],
+      {
+        feature: "External extractor allowance",
+        allowance: "Set by each extractor",
+      },
+      { feature: "Real-time sync", allowance: "Included" },
+      { feature: "Remote playback control", allowance: "Included" },
     ],
   },
-]
+] satisfies { title: string; details: PlanDetail[] }[]
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -171,7 +211,7 @@ export default function Pricing() {
         </header>
 
         <div className="mt-12">
-          <div className="sticky top-16 z-20 grid grid-cols-[60%_40%] items-end bg-background/95 py-4 backdrop-blur supports-backdrop-filter:bg-background/80">
+          <div className="sticky top-16 z-20 grid grid-cols-[60%_40%] items-end bg-background py-4">
             <div aria-hidden="true" />
             <div className="flex flex-col items-start gap-3">
               <span className="text-lg">Free</span>
@@ -210,10 +250,19 @@ export default function Pricing() {
                     {section.title}
                   </TableCell>
                 </TableRow>
-                {section.details.map(([feature, allowance]) => (
+                {section.details.map(({ feature, allowance, icon }) => (
                   <TableRow key={feature} className="hover:bg-transparent">
                     <TableCell className="px-0 py-5 font-medium whitespace-normal">
-                      {feature}
+                      <span className="flex items-center gap-2.5">
+                        {icon && (
+                          <PluginIcon
+                            icon={icon}
+                            fallback="source"
+                            className="size-6"
+                          />
+                        )}
+                        <span>{feature}</span>
+                      </span>
                     </TableCell>
                     <TableCell className="px-0 py-5 whitespace-normal text-muted-foreground">
                       {allowance}

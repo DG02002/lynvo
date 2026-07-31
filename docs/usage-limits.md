@@ -12,11 +12,10 @@ enforce their own finite counters through the mandatory authenticated
 
 ## Current official limits
 
-- 100 official extraction operations per account per UTC day.
+- 200 official extractions per account per UTC month, shared across all
+  official plugins and direct links.
+- 15 official extractions per account per UTC day.
 - 20,000 official extraction operations globally per UTC day.
-- 50 Bhadoo Google Drive Index extractions per account per month.
-- 50 OneDrive Index extractions per account per month.
-- 200 direct-link extractions per account per month.
 
 The global daily ceiling intentionally reserves most of the Workers Free daily
 allowance for authentication, settings, saved links, realtime connections, and

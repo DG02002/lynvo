@@ -35,6 +35,7 @@ describe("ExternalWorkerTable", () => {
     render(
       <ExternalWorkerTable
         workers={[worker]}
+        requestOrigin="http://localhost:5173"
         onDeleteWorker={vi.fn()}
         onRefreshWorker={vi.fn()}
         onToggleWorker={vi.fn()}

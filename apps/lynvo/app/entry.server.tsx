@@ -2,6 +2,7 @@ import type { EntryContext, RouterContextProvider } from "react-router"
 import { ServerRouter } from "react-router"
 import { isbot } from "isbot"
 import { renderToReadableStream } from "react-dom/server"
+import { createContentSecurityPolicy } from "~/lib/content-security-policy"
 
 export default async function handleRequest(
   request: Request,
@@ -43,12 +44,9 @@ export default async function handleRequest(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), payment=(), usb=(), vr=(), accelerometer=(), gyroscope=(), magnetometer=()"
   )
-  const convexDevelopmentSources = import.meta.env.DEV
-    ? " http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
-    : ""
   responseHeaders.set(
     "Content-Security-Policy",
-    `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: http://localhost:* http://127.0.0.1:*; connect-src 'self' https://challenges.cloudflare.com https://*.convex.cloud wss://*.convex.cloud${convexDevelopmentSources};`
+    createContentSecurityPolicy(request.url, import.meta.env.DEV)
   )
   responseHeaders.set(
     "Strict-Transport-Security",
