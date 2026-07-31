@@ -1,7 +1,7 @@
 import * as React from "react"
-import { useConvex, useMutation, useQuery } from "convex/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Effect } from "effect"
 import { toast } from "sonner"
-import { api } from "../../../../convex/_generated/api"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +34,9 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
+import { client } from "~/lib/effect/api/client"
+
+const STORAGE_USAGE_QUERY_KEY = ["settings", "storage"]
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -55,10 +58,11 @@ const formatBytes = (bytes: number) => {
 
 export function StorageSettings() {
   const timeBucket = useMinuteTimeBucket()
-  const convex = useConvex()
-  const usage = useQuery(api.users.getStorageUsage, {})
-  const updateRetentionDays = useMutation(api.users.updateStorageRetentionDays)
-  const clearRecentCards = useMutation(api.users.clearRecentCards)
+  const queryClient = useQueryClient()
+  const { data: usage } = useQuery({
+    queryKey: STORAGE_USAGE_QUERY_KEY,
+    queryFn: () => Effect.runPromise(client.settings.getStorageUsage()),
+  })
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
   const [isClearingRecentCards, setIsClearingRecentCards] =
     React.useState(false)
@@ -88,10 +92,11 @@ export function StorageSettings() {
       return
     }
     const days = Number(value)
-    const preview = await convex.query(api.users.previewStorageRetentionDays, {
-      days,
-      timeBucket,
-    })
+    const preview = await Effect.runPromise(
+      client.settings.previewStorageRetention({
+        query: { days, timeBucket },
+      })
+    )
     if (preview.expiredLinkCount > 0) {
       setPendingRetention({ days, expiredLinkCount: preview.expiredLinkCount })
       return
@@ -105,7 +110,12 @@ export function StorageSettings() {
   ) => {
     setIsUpdatingRetention(true)
     try {
-      const result = await updateRetentionDays({ days, deleteExpiredLinks })
+      const result = await Effect.runPromise(
+        client.settings.updateStorageRetention({
+          payload: { days, deleteExpiredLinks },
+        })
+      )
+      await queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_QUERY_KEY })
       toast.success(
         result.deletedLinks > 0
           ? `Auto-delete period updated. Removed ${result.deletedLinks} old saved links.`
@@ -127,7 +137,8 @@ export function StorageSettings() {
   const handleClearRecentCards = async () => {
     setIsClearingRecentCards(true)
     try {
-      const result = await clearRecentCards({})
+      const result = await Effect.runPromise(client.settings.clearRecentLinks())
+      await queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_QUERY_KEY })
       toast.success(
         result.deletedLinks > 0
           ? `Removed ${result.deletedLinks} saved links.`

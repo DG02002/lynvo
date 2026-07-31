@@ -8,6 +8,7 @@ import { PluginDomainsHandlers } from "./handlers/PluginDomainsHandlers"
 import { ExtractionHandlers } from "./handlers/extraction-handlers"
 import { TvHandlers } from "./handlers/TvHandlers"
 import { RemoteHandlers } from "./handlers/RemoteHandlers"
+import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./Middleware"
 import { validateCSRF } from "../../csrf"
 import { AuthSessionService } from "../services/AuthSessionService"
@@ -88,7 +89,8 @@ const HandlersLive = Layer.mergeAll(
   PluginDomainsHandlers,
   ExtractionHandlers,
   TvHandlers,
-  RemoteHandlers
+  RemoteHandlers,
+  SettingsHandlers
 )
 
 const ApiRoutes = HttpApiBuilder.layer(Api).pipe(

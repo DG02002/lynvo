@@ -1,7 +1,7 @@
 import * as React from "react"
-import { useMutation, useQuery } from "convex/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Effect } from "effect"
 import { toast } from "sonner"
-import { api } from "../../../../convex/_generated/api"
 import {
   Select,
   SelectContent,
@@ -27,10 +27,27 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
+import { client } from "~/lib/effect/api/client"
+
+const PLAYER_PREFERENCES_QUERY_KEY = ["settings", "player"]
 
 export function PlayerSettings() {
-  const cloudPreferences = useQuery(api.users.getPlayerPreferences, {})
-  const updateCloudPreferences = useMutation(api.users.updatePlayerPreferences)
+  const queryClient = useQueryClient()
+  const { data: cloudPreferences } = useQuery({
+    queryKey: PLAYER_PREFERENCES_QUERY_KEY,
+    queryFn: () => Effect.runPromise(client.settings.getPlayerPreferences()),
+  })
+  const updateCloudPreferences = async (preferences: {
+    rangeSupportedPlayerId?: PlayerId
+    rangeUnsupportedPlayerId?: PlayerId
+  }) => {
+    await Effect.runPromise(
+      client.settings.updatePlayerPreferences({ payload: preferences })
+    )
+    await queryClient.invalidateQueries({
+      queryKey: PLAYER_PREFERENCES_QUERY_KEY,
+    })
+  }
   const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
     React.useState<PlayerId>(
       () => getPlayerPreferences().rangeSupportedPlayerId
@@ -71,7 +88,7 @@ export function PlayerSettings() {
     void updateCloudPreferences(localPreferences).catch(() => {
       toast.error("Player settings couldn’t be saved. Try again.")
     })
-  }, [cloudPreferences, updateCloudPreferences])
+  }, [cloudPreferences])
 
   const handleRangeSupportedChange = (playerId: PlayerId) => {
     setRangeSupportedPlayerId(playerId)
