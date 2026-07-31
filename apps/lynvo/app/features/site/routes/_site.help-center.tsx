@@ -80,7 +80,7 @@ export const meta = (_: Route.MetaArgs) => [
 ]
 
 const HelpCenter = () => (
-  <main className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
+  <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-12">
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Support</p>
@@ -127,7 +127,7 @@ const HelpCenter = () => (
         ))}
       </section>
     </div>
-  </main>
+  </div>
 )
 
 export default HelpCenter

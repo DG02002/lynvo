@@ -57,7 +57,7 @@ export const DocsDocumentLayout = ({
   context: DocumentationPageContext
   children: ReactNode
 }) => (
-  <main className="mx-auto w-full max-w-[96rem] px-4 py-6 md:px-8 lg:py-0">
+  <div className="mx-auto w-full max-w-[96rem] px-4 py-6 md:px-8 lg:py-0">
     <DocsMobileNavigation context={context} />
 
     <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,44rem)] lg:justify-center xl:grid-cols-[16rem_minmax(0,44rem)_14rem]">
@@ -112,5 +112,5 @@ export const DocsDocumentLayout = ({
         <DocsTableOfContents headings={context.page.headings} />
       </aside>
     </div>
-  </main>
+  </div>
 )

@@ -22,7 +22,7 @@ const documentationCards = [
 ] as const
 
 export const DocsLanding = () => (
-  <main className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8 md:py-20">
+  <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8 md:py-20">
     <div className="flex flex-col gap-12">
       <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <p className="text-sm">Documentation</p>
@@ -71,5 +71,5 @@ export const DocsLanding = () => (
         ))}
       </section>
     </div>
-  </main>
+  </div>
 )

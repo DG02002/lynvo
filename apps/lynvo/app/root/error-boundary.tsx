@@ -22,6 +22,21 @@ export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
     <main className="pt-16 p-4 container mx-auto">
       <h1>{message}</h1>
       <p>{details}</p>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <a
+          href="/"
+          className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
+        >
+          Go home
+        </a>
+        <button
+          type="button"
+          className="rounded-md border border-border px-4 py-2"
+          onClick={() => window.location.reload()}
+        >
+          Try again
+        </button>
+      </div>
       {stack && (
         <pre className="w-full p-4 overflow-x-auto">
           <code>{stack}</code>

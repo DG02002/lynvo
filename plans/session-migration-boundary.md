@@ -16,8 +16,10 @@ responses.
    remain.
 2. Add parallel Worker sign-in, refresh, session-read, and logout endpoints using
    `HttpOnly; Secure; SameSite=Lax; Path=/` cookies.
-   Sign-in dual-issuance, Worker session reads, logout, and revocation
-   propagation are implemented. Refresh and rotation remain.
+   Sign-in dual-issuance, Worker session reads, logout, revocation propagation,
+   and a token-rotating refresh endpoint are implemented. Automatic refresh is
+   intentionally deferred until legacy browser refresh-token consumers are
+   removed so two clients cannot race the same rotation family.
 3. Keep the current browser-token path available while behavioral parity is
    verified; do not silently sign users out.
    The legacy path remains because authenticated Convex subscriptions have not

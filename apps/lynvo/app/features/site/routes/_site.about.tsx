@@ -13,7 +13,7 @@ export const meta = (_: Route.MetaArgs) => [
 ]
 
 const About = () => (
-  <main className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
+  <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
     <article className="mx-auto flex w-full max-w-2xl flex-col gap-10 font-normal">
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Company</p>
@@ -152,7 +152,7 @@ const About = () => (
         <p className="text-base text-foreground">— Darshan Gangani</p>
       </footer>
     </article>
-  </main>
+  </div>
 )
 
 export default About

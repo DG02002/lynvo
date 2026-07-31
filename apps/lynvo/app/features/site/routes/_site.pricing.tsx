@@ -123,7 +123,7 @@ export function meta(_: Route.MetaArgs) {
 
 export default function Pricing() {
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8 md:py-24">
+    <div className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8 md:py-24">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <p className="text-sm">Lynvo</p>
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
@@ -305,6 +305,6 @@ export default function Pricing() {
       </section>
 
       <PricingFaq />
-    </main>
+    </div>
   )
 }

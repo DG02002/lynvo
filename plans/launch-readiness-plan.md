@@ -192,8 +192,11 @@ Acceptance tests:
    of using unbounded concurrency.
 4. Add canonical URLs, Open Graph/Twitter metadata, and `sitemap.xml` using the
    production origin; keep private routes `noindex`.
-5. Remove nested `<main>` landmarks from child routes, improve the root error
+5. [ ] Remove nested `<main>` landmarks from child routes, improve the root error
    boundary with recovery navigation, and run keyboard/screen-reader checks.
+   Nested site-route landmarks are removed and covered by rendered-route
+   behavior. The root error boundary now provides home and retry recovery
+   controls. Live assistive-technology checks remain.
 6. Replace Effect-internal `Date.now()` calls with an injected clock/DateTime
    service where behavior depends on time. Keep Effect services/layers at I/O
    boundaries and React components at rendering boundaries.

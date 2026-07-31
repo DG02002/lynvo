@@ -234,7 +234,7 @@ export default function Changelog() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
+    <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
       <header className="flex max-w-3xl flex-col gap-5">
         <h1 className="text-4xl font-normal tracking-tight text-balance md:text-6xl">
           Changelog
@@ -328,6 +328,6 @@ export default function Changelog() {
           ))}
         </section>
       </Tabs>
-    </main>
+    </div>
   )
 }

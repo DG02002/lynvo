@@ -21,7 +21,9 @@ import {
   authPreflightRequestSchema,
   authSignInRequestSchema,
   deviceCodeRequestSchema,
+  refreshedAuthTokensSchema,
   turnstileVerificationResponseSchema,
+  workerSessionStateSchema,
 } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
 import { ConvexHttpClient } from "convex/browser"
@@ -601,6 +603,86 @@ app.delete("/api/auth/session", async (context) => {
     `${WORKER_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
   )
   return context.body(null, 204)
+})
+
+app.post("/api/auth/session/refresh", async (context) => {
+  addRequestContext(context, { operation: "auth_session_refresh" })
+  if (!isSameOriginRequest(context.req.raw)) {
+    return context.json(
+      requestApiError(context, {
+        code: "forbidden",
+        error: "You do not have access to this request.",
+        retryable: false,
+      }),
+      403
+    )
+  }
+  const sessionId = getCookieValue(
+    context.req.raw,
+    WORKER_SESSION_COOKIE_NAME
+  )
+  if (!sessionId) {
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_credentials",
+        error: "Your session has expired.",
+        retryable: false,
+      }),
+      401
+    )
+  }
+  const sessionStub = context.env.WORKER_AUTH_SESSION.getByName(sessionId)
+  try {
+    const sessionResponse = await sessionStub.fetch(
+      "https://session.internal/session"
+    )
+    if (!sessionResponse.ok) {
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_credentials",
+          error: "Your session has expired.",
+          retryable: false,
+        }),
+        401
+      )
+    }
+    const session = workerSessionStateSchema.parse(await sessionResponse.json())
+    const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+    const refreshed = refreshedAuthTokensSchema.parse(
+      await client.action(api.auth.signIn, {
+        refreshToken: session.refreshToken,
+      })
+    )
+    if (!refreshed.tokens) {
+      throw new Error("Session refresh returned no tokens")
+    }
+    const replaceResponse = await sessionStub.fetch(
+      "https://session.internal/session",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          accessToken: refreshed.tokens.token,
+          refreshToken: refreshed.tokens.refreshToken,
+          createdAt: session.createdAt,
+          expiresAt: session.expiresAt,
+          idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+        }),
+      }
+    )
+    if (!replaceResponse.ok) {
+      throw new Error("Session token replacement failed")
+    }
+    return context.body(null, 204)
+  } catch {
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Session refresh is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
 })
 
 app.get("/api/realtime", async (context) => {

@@ -12,7 +12,7 @@ export function PolicyLayout({
   children,
 }: PolicyLayoutProps) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
+    <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
       <article className="mx-auto flex w-full max-w-2xl flex-col gap-10 font-normal [&_strong]:font-normal">
         <header className="flex flex-col items-center gap-4 text-center">
           <p className="text-sm">Updated: {updatedAt}</p>
@@ -25,7 +25,7 @@ export function PolicyLayout({
 
         {children}
       </article>
-    </main>
+    </div>
   )
 }
 

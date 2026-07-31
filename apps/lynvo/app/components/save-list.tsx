@@ -40,7 +40,7 @@ const SaveList = () => {
   useSaveListFullscreen(Boolean(selectedItemUrl))
 
   return (
-    <main
+    <div
       className={cn(
         "mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col gap-6 overflow-x-hidden px-4 py-8 md:px-8 md:py-12",
         selectedItemUrl &&
@@ -93,7 +93,7 @@ const SaveList = () => {
         onAdd={pluginDomainDialog.add}
         onDismiss={pluginDomainDialog.dismiss}
       />
-    </main>
+    </div>
   )
 }
 

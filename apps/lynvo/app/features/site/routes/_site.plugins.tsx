@@ -35,7 +35,7 @@ const Plugins = () => {
   const { officialPlugins } = useLoaderData<typeof loader>()
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
+    <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
           Official plugins
@@ -95,7 +95,7 @@ const Plugins = () => {
           </TableBody>
         </Table>
       </section>
-    </main>
+    </div>
   )
 }
 
