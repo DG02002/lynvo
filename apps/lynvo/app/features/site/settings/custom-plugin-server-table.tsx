@@ -214,7 +214,7 @@ export const CustomPluginServerTable = ({
   onRefreshPluginServer,
   onTogglePluginServer,
 }: {
-  pluginServers: CustomPluginServer[]
+  pluginServers: readonly CustomPluginServer[]
   requestOrigin: string
   onDeletePluginServer: (pluginServerId: string) => void
   onRefreshPluginServer: (pluginServerId: string) => void

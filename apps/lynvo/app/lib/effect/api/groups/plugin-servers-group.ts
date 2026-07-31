@@ -37,10 +37,25 @@ const PluginServerUsageSchema = Schema.Struct({
   error: Schema.optional(Schema.String),
 })
 
+const CustomPluginServerSchema = Schema.Struct({
+  _id: Schema.String,
+  _creationTime: Schema.Number,
+  userId: Schema.String,
+  baseUrl: Schema.String,
+  manifest: Schema.String,
+  enabled: Schema.Boolean,
+  priority: Schema.Number,
+  verificationStatus: Schema.String,
+  lastVerifiedAt: Schema.optional(Schema.Number),
+  lastManifestRefreshAt: Schema.optional(Schema.Number),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(Schema.Unknown),
+      success: Schema.Array(CustomPluginServerSchema),
       error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.get("usage", "/usage", {

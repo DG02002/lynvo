@@ -1,10 +1,12 @@
 import * as React from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { toast } from "sonner"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+import { invalidatePluginSettings } from "./plugin-settings-queries"
 
 interface MutationResult {
   success: boolean
@@ -221,6 +223,7 @@ export const usePluginSettingsActions = ({
     React.SetStateAction<Record<string, boolean>>
   >
 }) => {
+  const queryClient = useQueryClient()
   const [addingDomainFor, setAddingDomainFor] = React.useState<string | null>(
     null
   )
@@ -256,6 +259,7 @@ export const usePluginSettingsActions = ({
           "Unable to add domain. Check it and try again."
         )
       ) {
+        await invalidatePluginSettings(queryClient)
         setDomainInputs((current) => ({ ...current, [pluginId]: "" }))
         setPasswordInputs((current) => ({ ...current, [pluginId]: "" }))
         setUsernameInputs((current) => ({ ...current, [pluginId]: "" }))
@@ -283,12 +287,53 @@ export const usePluginSettingsActions = ({
     addingDomainFor,
     domainErrors,
     handleAddDomain,
-    handleDeleteDomain,
-    handleSetDomainCredential,
-    handleDeleteDomainCredential,
-    handleAddPluginServer,
-    handleDeletePluginServer,
-    handleTogglePluginServer,
-    handleRefreshPluginServer,
+    handleDeleteDomain: async (domainId: string) => {
+      await handleDeleteDomain(domainId)
+      await invalidatePluginSettings(queryClient)
+    },
+    handleSetDomainCredential: async (
+      domainId: string,
+      password: string,
+      username?: string
+    ) => {
+      const didSave = await handleSetDomainCredential(
+        domainId,
+        password,
+        username
+      )
+      if (didSave) {
+        await invalidatePluginSettings(queryClient)
+      }
+      return didSave
+    },
+    handleDeleteDomainCredential: async (domainId: string) => {
+      await handleDeleteDomainCredential(domainId)
+      await invalidatePluginSettings(queryClient)
+    },
+    handleAddPluginServer: async (value: CustomPluginServerFormValues) => {
+      const error = await handleAddPluginServer(value)
+      if (!error) {
+        await invalidatePluginSettings(queryClient)
+      }
+      return error
+    },
+    handleDeletePluginServer: async (pluginServerId: string) => {
+      await handleDeletePluginServer(pluginServerId)
+      await invalidatePluginSettings(queryClient)
+    },
+    handleTogglePluginServer: async (
+      pluginServerId: string,
+      currentEnabled: boolean
+    ) => {
+      await handleTogglePluginServer(pluginServerId, currentEnabled)
+      await invalidatePluginSettings(queryClient)
+    },
+    handleRefreshPluginServer: async (
+      pluginServerId: string,
+      showFeedback = true
+    ) => {
+      await handleRefreshPluginServer(pluginServerId, showFeedback)
+      await invalidatePluginSettings(queryClient)
+    },
   }
 }

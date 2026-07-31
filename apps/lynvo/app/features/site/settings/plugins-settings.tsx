@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
-import { useQuery } from "convex/react"
+import { useQuery } from "@tanstack/react-query"
+import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -10,7 +11,6 @@ import {
   Link01Icon,
   LinkSquare02Icon,
 } from "@hugeicons/core-free-icons"
-import { api } from "../../../../convex/_generated/api"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Checkbox } from "~/components/ui/checkbox"
@@ -51,6 +51,11 @@ import {
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+import { client } from "~/lib/effect/api/client"
+import {
+  PLUGIN_DOMAINS_QUERY_KEY,
+  PLUGIN_SERVERS_QUERY_KEY,
+} from "./plugin-settings-queries"
 
 export interface PluginDomain {
   _id: string
@@ -68,8 +73,8 @@ export interface CustomPluginServer {
   verificationStatus: string
 }
 
-const EMPTY_PLUGIN_SERVERS: CustomPluginServer[] = []
-const EMPTY_DOMAINS: PluginDomain[] = []
+const EMPTY_PLUGIN_SERVERS: readonly CustomPluginServer[] = []
+const EMPTY_DOMAINS: readonly PluginDomain[] = []
 
 export function PluginsSettings({
   lynvoPlugins,
@@ -78,12 +83,17 @@ export function PluginsSettings({
   lynvoPlugins: LynvoPlugin[] | null
   requestOrigin: string
 }) {
-  const pluginServers =
-    useQuery(api.userPluginServers.list, {}) ?? EMPTY_PLUGIN_SERVERS
-  const domains = (
-    (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
-    EMPTY_DOMAINS
-  ).filter((domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID)
+  const { data: pluginServers = EMPTY_PLUGIN_SERVERS } = useQuery({
+    queryKey: PLUGIN_SERVERS_QUERY_KEY,
+    queryFn: () => Effect.runPromise(client.pluginServers.list()),
+  })
+  const { data: allDomains = EMPTY_DOMAINS } = useQuery({
+    queryKey: PLUGIN_DOMAINS_QUERY_KEY,
+    queryFn: () => Effect.runPromise(client.pluginDomains.list({})),
+  })
+  const domains = allDomains.filter(
+    (domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID
+  )
   const [domainInputs, setDomainInputs] = React.useState<
     Record<string, string>
   >({})
@@ -508,7 +518,7 @@ const PluginDomainList = ({
 )
 
 interface CustomPluginServersSectionProps {
-  pluginServers: CustomPluginServer[]
+  pluginServers: readonly CustomPluginServer[]
   requestOrigin: string
   isAddPluginServerOpen: boolean
   onAddPluginServerOpenChange: (open: boolean) => void
