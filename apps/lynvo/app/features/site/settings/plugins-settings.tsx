@@ -46,6 +46,7 @@ import {
   SectionHeading,
 } from "./settings-layout"
 import { usePluginSettingsActions } from "./use-plugin-settings-actions"
+import { usePluginSettingsInteraction } from "./plugin-settings-interaction"
 import {
   customPluginServerSchema,
   type CustomPluginServerFormValues,
@@ -75,6 +76,12 @@ export interface CustomPluginServer {
 
 const EMPTY_PLUGIN_SERVERS: readonly CustomPluginServer[] = []
 const EMPTY_DOMAINS: readonly PluginDomain[] = []
+const EMPTY_DOMAIN_DRAFT = {
+  domain: "",
+  username: "",
+  password: "",
+  isCredentialEnabled: false,
+}
 
 export function PluginsSettings({
   lynvoPlugins,
@@ -94,18 +101,6 @@ export function PluginsSettings({
   const domains = allDomains.filter(
     (domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID
   )
-  const [domainInputs, setDomainInputs] = React.useState<
-    Record<string, string>
-  >({})
-  const [passwordInputs, setPasswordInputs] = React.useState<
-    Record<string, string>
-  >({})
-  const [usernameInputs, setUsernameInputs] = React.useState<
-    Record<string, string>
-  >({})
-  const [passwordProtectedInputs, setPasswordProtectedInputs] = React.useState<
-    Record<string, boolean>
-  >({})
   const [isAddPluginServerOpen, setIsAddPluginServerOpen] =
     React.useState(false)
   const [expandedPluginIds, setExpandedPluginIds] = React.useState(
@@ -114,9 +109,6 @@ export function PluginsSettings({
   const automaticallyRefreshedPluginServerIds = React.useRef(new Set<string>())
 
   const {
-    addingDomainFor,
-    domainErrors,
-    handleAddDomain,
     handleDeleteDomain,
     handleSetDomainCredential,
     handleDeleteDomainCredential,
@@ -124,15 +116,9 @@ export function PluginsSettings({
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleTogglePluginServer,
-  } = usePluginSettingsActions({
-    domainInputs,
-    setDomainInputs,
-    passwordInputs,
-    setPasswordInputs,
-    usernameInputs,
-    setUsernameInputs,
-    setPasswordProtectedInputs,
-  })
+  } = usePluginSettingsActions()
+  const { domainDrafts, domainOperations, updateDomainDraft, addDomain } =
+    usePluginSettingsInteraction()
 
   React.useEffect(() => {
     for (const pluginServer of pluginServers) {
@@ -152,32 +138,6 @@ export function PluginsSettings({
       return acc
     }, {})
   }, [domains])
-
-  const handleDomainInputChange = (pluginId: string, value: string) => {
-    setDomainInputs((current) => ({ ...current, [pluginId]: value }))
-  }
-
-  const handlePasswordInputChange = (pluginId: string, value: string) => {
-    setPasswordInputs((current) => ({ ...current, [pluginId]: value }))
-  }
-
-  const handleUsernameInputChange = (pluginId: string, value: string) => {
-    setUsernameInputs((current) => ({ ...current, [pluginId]: value }))
-  }
-
-  const handlePasswordProtectedInputChange = (
-    pluginId: string,
-    value: boolean
-  ) => {
-    if (!value) {
-      handleUsernameInputChange(pluginId, "")
-      handlePasswordInputChange(pluginId, "")
-    }
-    setPasswordProtectedInputs((current) => ({
-      ...current,
-      [pluginId]: value,
-    }))
-  }
 
   return (
     <SettingsPanel className="gap-8">
@@ -206,6 +166,8 @@ export function PluginsSettings({
           {(lynvoPlugins ?? []).map((plugin) => {
             const pluginDomains = domainsByPlugin[plugin.id] || []
             const isDomainsExpanded = expandedPluginIds.has(plugin.id)
+            const draft = domainDrafts[plugin.id] ?? EMPTY_DOMAIN_DRAFT
+            const operation = domainOperations[plugin.id]
             return (
               <div key={plugin.id} className="flex flex-col">
                 <SettingsRow>
@@ -234,27 +196,30 @@ export function PluginsSettings({
                     <div className="flex shrink-0 items-center gap-1">
                       <AddPluginDomainDialog
                         plugin={plugin}
-                        domain={domainInputs[plugin.id] || ""}
-                        username={usernameInputs[plugin.id] || ""}
-                        password={passwordInputs[plugin.id] || ""}
-                        isPasswordProtected={Boolean(
-                          passwordProtectedInputs[plugin.id]
-                        )}
-                        error={domainErrors[plugin.id]}
-                        isAdding={addingDomainFor === plugin.id}
+                        domain={draft.domain}
+                        username={draft.username}
+                        password={draft.password}
+                        isPasswordProtected={draft.isCredentialEnabled}
+                        error={operation?.error}
+                        isAdding={operation?.status === "pending"}
                         onDomainChange={(value) =>
-                          handleDomainInputChange(plugin.id, value)
+                          updateDomainDraft(plugin.id, { domain: value })
                         }
                         onUsernameChange={(value) =>
-                          handleUsernameInputChange(plugin.id, value)
+                          updateDomainDraft(plugin.id, { username: value })
                         }
                         onPasswordChange={(value) =>
-                          handlePasswordInputChange(plugin.id, value)
+                          updateDomainDraft(plugin.id, { password: value })
                         }
                         onPasswordProtectedChange={(value) =>
-                          handlePasswordProtectedInputChange(plugin.id, value)
+                          updateDomainDraft(plugin.id, {
+                            isCredentialEnabled: value,
+                          })
                         }
-                        onSubmit={(event) => handleAddDomain(event, plugin.id)}
+                        onSubmit={async (event) => {
+                          event.preventDefault()
+                          return await addDomain(plugin.id)
+                        }}
                         onAdded={() =>
                           setExpandedPluginIds((current) =>
                             new Set(current).add(plugin.id)

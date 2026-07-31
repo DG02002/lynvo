@@ -1,11 +1,9 @@
-import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { toast } from "sonner"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { invalidatePluginSettings } from "./plugin-settings-queries"
 
 interface MutationResult {
@@ -200,93 +198,10 @@ const handleRefreshPluginServer = async (
   }
 }
 
-export const usePluginSettingsActions = ({
-  domainInputs,
-  setDomainInputs,
-  passwordInputs,
-  setPasswordInputs,
-  usernameInputs,
-  setUsernameInputs,
-  setPasswordProtectedInputs,
-}: {
-  domainInputs: Record<string, string>
-  setDomainInputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  passwordInputs: Record<string, string>
-  setPasswordInputs: React.Dispatch<
-    React.SetStateAction<Record<string, string>>
-  >
-  usernameInputs: Record<string, string>
-  setUsernameInputs: React.Dispatch<
-    React.SetStateAction<Record<string, string>>
-  >
-  setPasswordProtectedInputs: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >
-}) => {
+export const usePluginSettingsActions = () => {
   const queryClient = useQueryClient()
-  const [addingDomainFor, setAddingDomainFor] = React.useState<string | null>(
-    null
-  )
-  const [domainErrors, setDomainErrors] = React.useState<
-    Record<string, string | undefined>
-  >({})
-
-  const handleAddDomain = async (event: React.FormEvent, pluginId: string) => {
-    event.preventDefault()
-    const domain = domainInputs[pluginId]?.trim()
-    if (!domain) {
-      return false
-    }
-    setDomainErrors((current) => ({ ...current, [pluginId]: undefined }))
-    setAddingDomainFor(pluginId)
-
-    try {
-      const data = await Effect.runPromise(
-        client.pluginDomains.create({
-          payload: {
-            domain,
-            pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-            pluginId,
-            username: usernameInputs[pluginId] || undefined,
-            password: passwordInputs[pluginId] || undefined,
-          },
-        })
-      )
-      if (
-        showMutationToast(
-          data,
-          "Plugin domain added",
-          "Unable to add domain. Check it and try again."
-        )
-      ) {
-        await invalidatePluginSettings(queryClient)
-        setDomainInputs((current) => ({ ...current, [pluginId]: "" }))
-        setPasswordInputs((current) => ({ ...current, [pluginId]: "" }))
-        setUsernameInputs((current) => ({ ...current, [pluginId]: "" }))
-        setPasswordProtectedInputs((current) => ({
-          ...current,
-          [pluginId]: false,
-        }))
-        return true
-      }
-      return false
-    } catch (error) {
-      const message = getErrorMessage(
-        error,
-        "The domain couldn’t be added. Check it and try again."
-      )
-      setDomainErrors((current) => ({ ...current, [pluginId]: message }))
-      toast.error(message)
-      return false
-    } finally {
-      setAddingDomainFor(null)
-    }
-  }
 
   return {
-    addingDomainFor,
-    domainErrors,
-    handleAddDomain,
     handleDeleteDomain: async (domainId: string) => {
       await handleDeleteDomain(domainId)
       await invalidatePluginSettings(queryClient)
