@@ -20,30 +20,16 @@ import type {
 } from "./extraction-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import { CloudflareEnv } from "./CloudflareEnv"
-import {
-  extractFromLynvoPluginServer,
-  getLynvoPluginServerMetadata,
-} from "./lynvo-plugin-server-adapter"
+import { getLynvoPluginServerMetadata } from "./lynvo-plugin-server-adapter"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
-import { resolvePluginCredential } from "./plugin-credential-resolution"
 import { selectLynvoRoute } from "./lynvo-route-selection"
 import { selectCustomRoute } from "./custom-route-selection"
-
-const getMeteredPluginId = (pluginId: string) => {
-  if (
-    pluginId === "bhadoo-google-drive-index" ||
-    pluginId === "google-drive-public-files" ||
-    pluginId === "onedrive-index" ||
-    pluginId === "direct"
-  ) {
-    return pluginId
-  }
-  return undefined
-}
+import { executeLynvoRoute } from "./lynvo-route-execution"
+import { resolvePluginCredential } from "./plugin-credential-resolution"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
@@ -152,44 +138,20 @@ export class ExtractionService extends Context.Service<
             })
           }
           if (lynvoRoute) {
-            const source = lynvoRoute.plugin
-            const credentials = yield* resolvePluginCredential(
+            return yield* executeLynvoRoute(
               convex,
               credentialVault,
+              environment,
+              lynvoRoute,
               {
                 targetUrl,
                 userId: options.userId,
                 accessToken: options.accessToken,
                 serviceToken,
-                pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-                plugin: source,
+                requestId: options.requestId,
+                kind: options.kind ?? "source",
                 inlineBasicAuth: routeInput.basicAuth,
               }
-            )
-            const meteredSourceId = getMeteredPluginId(source.id)
-            if (meteredSourceId) {
-              yield* convex
-                .mutation(
-                  api.usage.consumeLynvoPlugin,
-                  { pluginId: meteredSourceId },
-                  { accessToken: options.accessToken }
-                )
-                .pipe(
-                  Effect.mapError(
-                    (error) =>
-                      new ExtractionError({
-                        message: error.message,
-                        url: targetUrl,
-                      })
-                  )
-                )
-            }
-            return yield* extractFromLynvoPluginServer(
-              environment,
-              targetUrl,
-              options.kind ?? "source",
-              { pluginId: source.id, ...credentials },
-              options.requestId
             )
           }
         }
@@ -248,7 +210,13 @@ export class ExtractionService extends Context.Service<
             requestId: options.requestId,
             kind: "source",
             inlineBasicAuth: routeInput.basicAuth,
-          })
+          }).pipe(
+            Effect.mapError((error) =>
+              error._tag === "ExtractionError"
+                ? new ConvexError({ message: error.message, cause: error })
+                : error
+            )
+          )
           if (lynvoRoute) {
             const metadata = getLynvoPluginServerMetadata(
               lynvoRoute.manifest,

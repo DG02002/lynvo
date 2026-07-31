@@ -6,7 +6,7 @@ import type {
 import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import { ValidationError } from "../errors"
+import { ExtractionError, ValidationError } from "../errors"
 import type { ConvexServiceShape } from "./ConvexService"
 import {
   discoverLynvoPlugin,
@@ -34,16 +34,14 @@ export const selectLynvoRoute = Effect.fn(
   convex: ConvexServiceShape,
   environment: Env,
   options: SelectLynvoRouteOptions
-): Effect.fn.Return<LynvoRouteSelection | undefined, ValidationError> {
-  const manifestAttempt = yield* getLynvoPluginServerManifest(
+): Effect.fn.Return<
+  LynvoRouteSelection | undefined,
+  ExtractionError | ValidationError
+> {
+  const manifest = yield* getLynvoPluginServerManifest(
     environment,
     options.requestId
-  ).pipe(Effect.option)
-  if (manifestAttempt._tag === "None") {
-    return undefined
-  }
-
-  const manifest = manifestAttempt.value
+  )
   const configuredDomain = yield* convex
     .query(
       api.pluginDomains.getByDomain,
@@ -65,18 +63,14 @@ export const selectLynvoRoute = Effect.fn(
     options.pluginId ?? configuredDomain?.pluginId
   )
   if (!plugin && manifest.features.discovery && options.kind === "source") {
-    const discoveryAttempt = yield* discoverLynvoPlugin(
+    const discovery = yield* discoverLynvoPlugin(
       environment,
       options.targetUrl,
       options.inlineBasicAuth,
       options.requestId
-    ).pipe(Effect.option)
-    if (discoveryAttempt._tag === "Some" && discoveryAttempt.value.matched) {
-      plugin = findLynvoPlugin(
-        manifest,
-        options.targetUrl,
-        discoveryAttempt.value.pluginId
-      )
+    )
+    if (discovery.matched) {
+      plugin = findLynvoPlugin(manifest, options.targetUrl, discovery.pluginId)
     }
   }
   return plugin ? { manifest, plugin } : undefined

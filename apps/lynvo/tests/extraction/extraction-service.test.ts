@@ -4,6 +4,7 @@ import { ConvexService } from "~/lib/effect/services/ConvexService"
 import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
 import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+import { ConvexError as AppConvexError } from "~/lib/effect/errors"
 
 const environment = {
   AUTH_GATEWAY_SECRET: "test-auth-gateway-secret",
@@ -372,5 +373,164 @@ describe("Extraction interface routing", () => {
 
     expect(extractionPluginIds).toEqual(["chosen"])
     fetchMock.mockRestore()
+  })
+
+  it("does not use direct media when Lynvo route loading fails", async () => {
+    const directMediaFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () =>
+        Response.json({ unexpected: "direct media fallback" })
+      )
+    const environmentWithUnavailableLynvo = {
+      ...environment,
+      LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+      LYNVO_PLUGIN_SERVER: {
+        fetch: async () =>
+          Response.json(
+            {
+              ok: false,
+              error: { code: "TEMPORARY_FAILURE", message: "Unavailable" },
+              extensions: {},
+            },
+            { status: 503 }
+          ),
+      },
+    } as Env
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithUnavailableLynvo),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => Effect.succeed([]),
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await expect(
+      Effect.runPromise(
+        ExtractionService.use((service) =>
+          service.extract({
+            url: "https://source.example/video",
+            requestId: "lynvo-route-failure",
+            userId: "user-1",
+            accessToken: "access-token",
+          })
+        ).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "TEMPORARY_FAILURE",
+    })
+    expect(directMediaFetch).not.toHaveBeenCalled()
+    directMediaFetch.mockRestore()
+  })
+
+  it("stops a metered Lynvo route when quota consumption fails", async () => {
+    let pluginExtractionCount = 0
+    const directMediaFetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () =>
+        Response.json({ unexpected: "direct media fallback" })
+      )
+    const environmentWithLynvo = {
+      ...environment,
+      LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+      LYNVO_PLUGIN_SERVER: {
+        fetch: async (request: Request) => {
+          if (!request.url.endsWith("/manifest")) {
+            pluginExtractionCount += 1
+          }
+          return Response.json({
+            protocolVersion: "1.0",
+            pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+            displayName: "Lynvo",
+            auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
+            matchers: [{ hosts: ["metered.example"] }],
+            features: {},
+            extensions: {
+              lynvo: {
+                plugins: [
+                  {
+                    id: "direct",
+                    displayName: "Metered",
+                    status: "active",
+                    version: "1.0.0",
+                    hosts: ["metered.example"],
+                    matchers: [{ hosts: ["metered.example"] }],
+                  },
+                ],
+              },
+            },
+          })
+        },
+      },
+    } as Env
+    let queryCount = 0
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithLynvo),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => {
+                queryCount += 1
+                return Effect.succeed(queryCount === 1 ? [] : undefined)
+              },
+              mutation: () =>
+                Effect.fail(
+                  new AppConvexError({ message: "Daily quota reached" })
+                ),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await expect(
+      Effect.runPromise(
+        ExtractionService.use((service) =>
+          service.extract({
+            url: "https://metered.example/video",
+            requestId: "metered-route",
+            userId: "user-1",
+            accessToken: "access-token",
+          })
+        ).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "Daily quota reached",
+    })
+    expect(pluginExtractionCount).toBe(0)
+    expect(directMediaFetch).not.toHaveBeenCalled()
+    directMediaFetch.mockRestore()
   })
 })
