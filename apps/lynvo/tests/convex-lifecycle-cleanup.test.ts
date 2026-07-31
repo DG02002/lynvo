@@ -79,6 +79,91 @@ describe("bounded lifecycle cleanup", () => {
     vi.useRealTimers()
   })
 
+  it("rechecks completed stages before finalizing an interrupted erasure", async () => {
+    vi.useFakeTimers()
+    const convex = createConvexTest()
+    const target = await insertTestUser(convex, "delete-recheck")
+    await convex.mutation(internal.users.deleteUserData, {
+      userId: target.userId,
+    })
+    const lateDocumentIds = await convex.run(async (context) => {
+      const progress = await context.db
+        .query("accountErasures")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", target.userId)
+        )
+        .unique()
+      if (!progress) {
+        throw new Error("Expected account erasure progress")
+      }
+      await context.db.patch("accountErasures", progress._id, {
+        stage: "finalize",
+      })
+      const linkId = await context.db.insert("links", {
+        userId: target.userId,
+        url: "https://interrupted.example/late",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      })
+      const accountId = await context.db.insert("authAccounts", {
+        userId: target.userId,
+        provider: "credentials",
+        providerAccountId: "delete-recheck",
+      })
+      const verificationCodeId = await context.db.insert(
+        "authVerificationCodes",
+        {
+          accountId,
+          provider: "credentials",
+          code: "late-code",
+          expirationTime: Date.now() + DAY_MS,
+        }
+      )
+      const refreshTokenId = await context.db.insert("authRefreshTokens", {
+        sessionId: target.sessionId,
+        expirationTime: Date.now() + DAY_MS,
+      })
+      const verifierId = await context.db.insert("authVerifiers", {
+        sessionId: target.sessionId,
+        signature: "late-signature",
+      })
+      return {
+        linkId,
+        accountId,
+        verificationCodeId,
+        refreshTokenId,
+        verifierId,
+      }
+    })
+
+    await convex.mutation(internal.accountErasure.process, {
+      userId: target.userId,
+    })
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
+
+    const result = await convex.run(async (context) => ({
+      user: await context.db.get(target.userId),
+      link: await context.db.get(lateDocumentIds.linkId),
+      account: await context.db.get(lateDocumentIds.accountId),
+      verificationCode: await context.db.get(
+        lateDocumentIds.verificationCodeId
+      ),
+      refreshToken: await context.db.get(lateDocumentIds.refreshTokenId),
+      verifier: await context.db.get(lateDocumentIds.verifierId),
+      session: await context.db.get(target.sessionId),
+    }))
+    expect(result).toEqual({
+      user: null,
+      link: null,
+      account: null,
+      verificationCode: null,
+      refreshToken: null,
+      verifier: null,
+      session: null,
+    })
+    vi.useRealTimers()
+  })
+
   it("deletes every indexed account child, preserves another user, and retries", async () => {
     vi.useFakeTimers()
     const convex = createConvexTest()

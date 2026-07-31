@@ -156,7 +156,92 @@ const deleteSessionBatch = async (
   await scheduleContinuation(ctx, progress.userId)
 }
 
+const getIncompleteStage = async (
+  ctx: MutationCtx,
+  userId: Id<"users">
+): Promise<Doc<"accountErasures">["stage"] | null> => {
+  const links = await ctx.db
+    .query("links")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (links.length > 0) {
+    return "links"
+  }
+  const pluginCredentials = await ctx.db
+    .query("userPluginCredentials")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (pluginCredentials.length > 0) {
+    return "pluginCredentials"
+  }
+  const pluginDomains = await ctx.db
+    .query("userPluginDomains")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (pluginDomains.length > 0) {
+    return "pluginDomains"
+  }
+  const pluginServers = await ctx.db
+    .query("userPluginServers")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (pluginServers.length > 0) {
+    return "pluginServers"
+  }
+  const deviceCodes = await ctx.db
+    .query("deviceCodes")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (deviceCodes.length > 0) {
+    return "deviceCodes"
+  }
+  const remoteCommands = await ctx.db
+    .query("remoteCommands")
+    .withIndex("by_userId_targetSessionId_createdAt", (queryBuilder) =>
+      queryBuilder.eq("userId", userId)
+    )
+    .take(1)
+  if (remoteCommands.length > 0) {
+    return "remoteCommands"
+  }
+  const usageCounters = await ctx.db
+    .query("usageCounters")
+    .withIndex("by_owner_metric_period_epoch", (queryBuilder) =>
+      queryBuilder.eq("ownerKey", `user:${userId}`)
+    )
+    .take(1)
+  if (usageCounters.length > 0) {
+    return "usageCounters"
+  }
+  const storageLedgers = await ctx.db
+    .query("userStorageLedgers")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  if (storageLedgers.length > 0) {
+    return "storageLedgers"
+  }
+  const accounts = await ctx.db
+    .query("authAccounts")
+    .withIndex("userIdAndProvider", (queryBuilder) =>
+      queryBuilder.eq("userId", userId)
+    )
+    .take(1)
+  if (accounts.length > 0) {
+    return "accounts"
+  }
+  const sessions = await ctx.db
+    .query("authSessions")
+    .withIndex("userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .take(1)
+  return sessions.length > 0 ? "sessions" : null
+}
+
 const finalize = async (ctx: MutationCtx, progress: Doc<"accountErasures">) => {
+  const incompleteStage = await getIncompleteStage(ctx, progress.userId)
+  if (incompleteStage) {
+    await advance(ctx, progress, incompleteStage)
+    return
+  }
   const user = await ctx.db.get("users", progress.userId)
   if (user) {
     await ctx.db.delete("users", user._id)
