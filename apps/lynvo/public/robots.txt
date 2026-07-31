@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /
 
+Sitemap: https://lynvo.dg02002.workers.dev/sitemap.xml
+
 Disallow: /account
 Disallow: /auth/
 Disallow: /save

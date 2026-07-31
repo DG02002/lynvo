@@ -6,6 +6,8 @@ import {
 } from "@react-router/dev/routes"
 
 export default [
+  route("sitemap.xml", "features/site/routes/sitemap.ts"),
+
   // Site layout wrapping the pages
   layout("features/site/routes/_site.tsx", [
     index("features/site/routes/_site._index.tsx"),

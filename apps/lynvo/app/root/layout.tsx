@@ -9,6 +9,7 @@ import {
 import type * as React from "react"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 import type { loader } from "../root"
+import { RouteSeoMetadata } from "./route-seo-metadata"
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const loaderData = useRouteLoaderData<typeof loader>("root")
@@ -36,6 +37,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         {turnstileSiteKey && (
           <meta name="turnstile-site-key" content={turnstileSiteKey} />
         )}
+        <RouteSeoMetadata />
         <Meta />
         <Links />
       </head>

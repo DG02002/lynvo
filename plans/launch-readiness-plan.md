@@ -190,8 +190,8 @@ Acceptance tests:
    approval attempts.
 3. [x] Bound external-worker usage fan-out and cap saved registrations instead
    of using unbounded concurrency.
-4. Add canonical URLs, Open Graph/Twitter metadata, and `sitemap.xml` using the
-   production origin; keep private routes `noindex`.
+4. [x] Add canonical URLs, Open Graph/Twitter metadata, and `sitemap.xml` using
+   the production origin; keep private routes `noindex`.
 5. [ ] Remove nested `<main>` landmarks from child routes, improve the root error
    boundary with recovery navigation, and run keyboard/screen-reader checks.
    Nested site-route landmarks are removed and covered by rendered-route
