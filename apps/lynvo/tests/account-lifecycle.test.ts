@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import {
-  deleteUserAccountData,
-  replacePasswordAndInvalidateOtherSessions,
-} from "../convex/accountLifecycle"
+import { replacePasswordAndInvalidateOtherSessions } from "../convex/accountLifecycle"
 import { buildPlayerPreferencesPatch } from "../convex/userPreferences"
 
 describe("account lifecycle", () => {
@@ -41,65 +38,5 @@ describe("account lifecycle", () => {
     expect(() =>
       buildPlayerPreferencesPatch({ rangeSupportedPlayerId: "unknown" })
     ).toThrow("Choose a supported player")
-  })
-
-  it("deletes only refresh tokens belonging to the target user's sessions", async () => {
-    const deletedIds: string[] = []
-    const documentsByTable = {
-      authSessions: [{ _id: "session-user-1", userId: "user-1" }],
-      authRefreshTokens: [
-        { _id: "token-user-1", sessionId: "session-user-1" },
-        { _id: "token-user-2", sessionId: "session-user-2" },
-      ],
-      authVerifiers: [],
-      authVerificationCodes: [],
-      links: [],
-      userPluginServers: [],
-      userPluginDomains: [],
-      userPluginCredentials: [],
-      deviceCodes: [],
-      authAccounts: [],
-      remoteCommands: [],
-      usageCounters: [],
-      userStorageLedgers: [],
-      accountCapacity: [],
-    }
-    const createQuery = (tableName: keyof typeof documentsByTable) => ({
-      withIndex: (
-        _indexName: string,
-        select: (queryBuilder: {
-          eq: (_field: string, value: string) => unknown
-        }) => unknown
-      ) => {
-        let selectedValue = ""
-        select({
-          eq: (_field, value) => {
-            selectedValue = value
-          },
-        })
-        return {
-          take: async () =>
-            tableName === "authRefreshTokens"
-              ? documentsByTable.authRefreshTokens.filter(
-                  (token) => token.sessionId === selectedValue
-                )
-              : documentsByTable[tableName],
-        }
-      },
-    })
-    const context = {
-      db: {
-        query: createQuery,
-        get: async (_tableName: string, _id: string) => ({ _id: "user-1" }),
-        delete: async (_tableName: string, id: string) => {
-          deletedIds.push(id)
-        },
-      },
-    }
-
-    await deleteUserAccountData(context as never, "user-1" as never)
-
-    expect(deletedIds).toContain("token-user-1")
-    expect(deletedIds).not.toContain("token-user-2")
   })
 })

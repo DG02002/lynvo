@@ -45,6 +45,7 @@ describe("account capacity", () => {
   })
 
   it("makes a slot available after an account is deleted", async () => {
+    vi.useFakeTimers()
     const convex = createConvexTest()
     const deleted = await insertTestUser(convex, "capacity-release")
     await convex.run(async (context) => {
@@ -57,6 +58,10 @@ describe("account capacity", () => {
     await convex.mutation(internal.users.deleteUserData, {
       userId: deleted.userId,
     })
+    await convex.mutation(internal.users.deleteUserData, {
+      userId: deleted.userId,
+    })
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
     await convex.run(async (context) => {
       await reserveAccountCapacity(context)
     })
@@ -71,5 +76,6 @@ describe("account capacity", () => {
           .unique()
     )
     expect(capacity?.registeredAccounts).toBe(MAX_REGISTERED_ACCOUNTS)
+    vi.useRealTimers()
   })
 })

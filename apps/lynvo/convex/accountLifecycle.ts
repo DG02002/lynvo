@@ -2,12 +2,12 @@ import type { Id } from "./_generated/dataModel"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
-  ACCOUNT_DELETION_DOCUMENT_LIMIT,
   ACTIVITY_UPDATE_INTERVAL_MS,
   CLEANUP_USER_PAGE_SIZE,
+  SESSION_REVOCATION_DOCUMENT_LIMIT,
 } from "./constants"
-import { releaseAccountCapacity } from "./accountCapacity"
 import { assertStorageMutation } from "./storagePolicy"
+import { initiateAccountErasure } from "./accountErasure"
 
 export const replacePasswordAndInvalidateOtherSessions = async (
   replacePassword: () => Promise<unknown>,
@@ -24,8 +24,8 @@ const getUserSessions = async (
   const sessions = await ctx.db
     .query("authSessions")
     .withIndex("userId", (queryBuilder) => queryBuilder.eq("userId", userId))
-    .take(ACCOUNT_DELETION_DOCUMENT_LIMIT)
-  if (sessions.length === ACCOUNT_DELETION_DOCUMENT_LIMIT) {
+    .take(SESSION_REVOCATION_DOCUMENT_LIMIT)
+  if (sessions.length === SESSION_REVOCATION_DOCUMENT_LIMIT) {
     throw new Error("Account data exceeds the synchronous deletion limit")
   }
   return sessions
@@ -41,8 +41,8 @@ const deleteSessionRefreshTokens = async (
       .withIndex("sessionId", (queryBuilder) =>
         queryBuilder.eq("sessionId", sessionId)
       )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT)
-    if (refreshTokens.length === ACCOUNT_DELETION_DOCUMENT_LIMIT) {
+      .take(SESSION_REVOCATION_DOCUMENT_LIMIT)
+    if (refreshTokens.length === SESSION_REVOCATION_DOCUMENT_LIMIT) {
       throw new Error("Account data exceeds the synchronous deletion limit")
     }
     for (const refreshToken of refreshTokens) {
@@ -61,32 +61,12 @@ const deleteSessionVerifiers = async (
       .withIndex("sessionId", (queryBuilder) =>
         queryBuilder.eq("sessionId", sessionId)
       )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT)
-    if (verifiers.length === ACCOUNT_DELETION_DOCUMENT_LIMIT) {
+      .take(SESSION_REVOCATION_DOCUMENT_LIMIT)
+    if (verifiers.length === SESSION_REVOCATION_DOCUMENT_LIMIT) {
       throw new Error("Account data exceeds the synchronous deletion limit")
     }
     for (const verifier of verifiers) {
       await ctx.db.delete("authVerifiers", verifier._id)
-    }
-  }
-}
-
-const deleteAccountVerificationCodes = async (
-  ctx: MutationCtx,
-  accountIds: Array<Id<"authAccounts">>
-) => {
-  for (const accountId of accountIds) {
-    const verificationCodes = await ctx.db
-      .query("authVerificationCodes")
-      .withIndex("accountId", (queryBuilder) =>
-        queryBuilder.eq("accountId", accountId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT)
-    if (verificationCodes.length === ACCOUNT_DELETION_DOCUMENT_LIMIT) {
-      throw new Error("Account data exceeds the synchronous deletion limit")
-    }
-    for (const verificationCode of verificationCodes) {
-      await ctx.db.delete("authVerificationCodes", verificationCode._id)
     }
   }
 }
@@ -129,148 +109,18 @@ export const revokeAllUserSessions = async (
 
 export const deleteUserAccountData = async (
   ctx: MutationCtx,
-  userId: Id<"users">
+  userId: Id<"users">,
+  trigger: "manual" | "inactive" = "manual",
+  cleanup?: { processedUsers: number; startedAt: number }
 ) => {
-  const sessions = await getUserSessions(ctx, userId)
-  await deleteSessionRefreshTokens(
-    ctx,
-    sessions.map((session) => session._id)
-  )
-  await deleteSessionVerifiers(
-    ctx,
-    sessions.map((session) => session._id)
-  )
-  const ownerKey = `user:${userId}`
-  const [
-    links,
-    pluginServers,
-    pluginDomains,
-    pluginCredentials,
-    deviceCodes,
-    authAccounts,
-    remoteCommands,
-    usageCounters,
-    storageLedgers,
-  ] = await Promise.all([
-    ctx.db
-      .query("links")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("userPluginServers")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("userPluginDomains")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("userPluginCredentials")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("deviceCodes")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("authAccounts")
-      .withIndex("userIdAndProvider", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("remoteCommands")
-      .withIndex("by_userId_targetSessionId_createdAt", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("usageCounters")
-      .withIndex("by_owner_metric_period_epoch", (queryBuilder) =>
-        queryBuilder.eq("ownerKey", ownerKey)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-    ctx.db
-      .query("userStorageLedgers")
-      .withIndex("by_userId", (queryBuilder) =>
-        queryBuilder.eq("userId", userId)
-      )
-      .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
-  ])
-  const ownedCollections = [
-    links,
-    pluginServers,
-    pluginDomains,
-    pluginCredentials,
-    deviceCodes,
-    authAccounts,
-    remoteCommands,
-    usageCounters,
-    storageLedgers,
-    sessions,
-  ]
-  if (
-    ownedCollections.some(
-      (documents) => documents.length === ACCOUNT_DELETION_DOCUMENT_LIMIT
-    )
-  ) {
-    throw new Error("Account data exceeds the synchronous deletion limit")
-  }
-  await deleteAccountVerificationCodes(
-    ctx,
-    authAccounts.map((account) => account._id)
-  )
-  for (const link of links) {
-    await ctx.db.delete("links", link._id)
-  }
-  for (const pluginServer of pluginServers) {
-    await ctx.db.delete("userPluginServers", pluginServer._id)
-  }
-  for (const credential of pluginCredentials) {
-    await ctx.db.delete("userPluginCredentials", credential._id)
-  }
-  for (const domain of pluginDomains) {
-    await ctx.db.delete("userPluginDomains", domain._id)
-  }
-  for (const code of deviceCodes) {
-    await ctx.db.delete("deviceCodes", code._id)
-  }
-  for (const account of authAccounts) {
-    await ctx.db.delete("authAccounts", account._id)
-  }
-  for (const command of remoteCommands) {
-    await ctx.db.delete("remoteCommands", command._id)
-  }
-  for (const counter of usageCounters) {
-    await ctx.db.delete("usageCounters", counter._id)
-  }
-  for (const ledger of storageLedgers) {
-    await ctx.db.delete("userStorageLedgers", ledger._id)
-  }
-  for (const session of sessions) {
-    await ctx.db.delete("authSessions", session._id)
-  }
-
-  const user = await ctx.db.get("users", userId)
-  if (user) {
-    await ctx.db.delete("users", user._id)
-    await releaseAccountCapacity(ctx)
-  }
+  return await initiateAccountErasure(ctx, userId, trigger, cleanup)
 }
 
 export const cleanupInactiveUserAccounts = async (
   ctx: MutationCtx,
-  now: number
+  now: number,
+  processedUsers: number,
+  startedAt: number
 ) => {
   const cutoff = now - ACCOUNT_INACTIVITY_LIMIT_MS
   const inactiveUsers = await ctx.db
@@ -283,7 +133,10 @@ export const cleanupInactiveUserAccounts = async (
   if (!inactiveUser || inactiveUser.lastActiveAt >= cutoff) {
     return 0
   }
-  await deleteUserAccountData(ctx, inactiveUser._id)
+  await deleteUserAccountData(ctx, inactiveUser._id, "inactive", {
+    processedUsers: processedUsers + 1,
+    startedAt,
+  })
   return 1
 }
 

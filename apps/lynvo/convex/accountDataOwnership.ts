@@ -1,0 +1,20 @@
+export const ACCOUNT_DATA_OWNERSHIP = {
+  erased: [
+    "users",
+    "authSessions",
+    "authAccounts",
+    "authRefreshTokens",
+    "authVerificationCodes",
+    "authVerifiers",
+    "links",
+    "userStorageLedgers",
+    "userPluginServers",
+    "userPluginDomains",
+    "userPluginCredentials",
+    "usageCounters",
+    "deviceCodes",
+    "remoteCommands",
+  ],
+  operational: ["accountErasures", "authRateLimits"],
+  global: ["accountCapacity", "usageEpochs"],
+}

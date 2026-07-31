@@ -17,11 +17,33 @@ export default defineSchema({
     storageRetentionDays: v.optional(v.number()),
     createdAt: v.number(),
     lastActiveAt: v.number(),
+    erasurePendingAt: v.optional(v.number()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
     .index("by_normalizedUsername", ["normalizedUsername"])
     .index("by_lastActiveAt", ["lastActiveAt"]),
+
+  accountErasures: defineTable({
+    userId: v.id("users"),
+    stage: v.union(
+      v.literal("links"),
+      v.literal("pluginCredentials"),
+      v.literal("pluginDomains"),
+      v.literal("pluginServers"),
+      v.literal("deviceCodes"),
+      v.literal("remoteCommands"),
+      v.literal("usageCounters"),
+      v.literal("storageLedgers"),
+      v.literal("accounts"),
+      v.literal("sessions"),
+      v.literal("finalize")
+    ),
+    trigger: v.union(v.literal("manual"), v.literal("inactive")),
+    startedAt: v.number(),
+    cleanupProcessedUsers: v.optional(v.number()),
+    cleanupStartedAt: v.optional(v.number()),
+  }).index("by_userId", ["userId"]),
 
   accountCapacity: defineTable({
     key: v.literal("global"),

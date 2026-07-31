@@ -28,6 +28,35 @@ const listTypeScriptFiles = (directory) =>
   })
 
 const failures = []
+const schemaSource = readFileSync(join(CONVEX_DIRECTORY, "schema.ts"), "utf8")
+const ownershipSource = readFileSync(
+  join(CONVEX_DIRECTORY, "accountDataOwnership.ts"),
+  "utf8"
+)
+const schemaTables = new Set(
+  Array.from(
+    schemaSource.matchAll(/^\s+(\w+): defineTable/gm),
+    (match) => match[1]
+  )
+)
+const classifiedTables = new Set(
+  Array.from(ownershipSource.matchAll(/"(\w+)"/g), (match) => match[1])
+)
+
+for (const tableName of schemaTables) {
+  if (!classifiedTables.has(tableName)) {
+    failures.push(
+      `convex/schema.ts: unclassified account data table ${tableName}`
+    )
+  }
+}
+for (const tableName of classifiedTables) {
+  if (!schemaTables.has(tableName)) {
+    failures.push(
+      `convex/accountDataOwnership.ts: unknown classified table ${tableName}`
+    )
+  }
+}
 
 for (const file of listTypeScriptFiles(CONVEX_DIRECTORY)) {
   if (!statSync(file).isFile()) {

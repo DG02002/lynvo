@@ -434,13 +434,14 @@ export const cleanupInactiveUsers = internalMutation({
   handler: async (ctx, args) => {
     const now = Date.now()
     const startedAt = args.startedAt ?? now
-    const deletedUsers = await cleanupInactiveUserAccounts(ctx, now)
+    const deletedUsers = await cleanupInactiveUserAccounts(
+      ctx,
+      now,
+      args.processedUsers ?? 0,
+      startedAt
+    )
     const processedUsers = (args.processedUsers ?? 0) + deletedUsers
     if (deletedUsers > 0) {
-      await ctx.scheduler.runAfter(0, internal.users.cleanupInactiveUsers, {
-        processedUsers,
-        startedAt,
-      })
       return { processedUsers, continued: true }
     }
     console.info("maintenance.cleanup_complete", {

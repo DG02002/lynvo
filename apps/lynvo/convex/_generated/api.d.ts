@@ -9,6 +9,7 @@
  */
 
 import type * as accountCapacity from "../accountCapacity.js";
+import type * as accountErasure from "../accountErasure.js";
 import type * as accountLifecycle from "../accountLifecycle.js";
 import type * as auth from "../auth.js";
 import type * as authGateway from "../authGateway.js";
@@ -38,6 +39,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accountCapacity: typeof accountCapacity;
+  accountErasure: typeof accountErasure;
   accountLifecycle: typeof accountLifecycle;
   auth: typeof auth;
   authGateway: typeof authGateway;

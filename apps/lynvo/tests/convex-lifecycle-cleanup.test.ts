@@ -2,6 +2,7 @@
 
 import { internal } from "../convex/_generated/api"
 import {
+  ACCOUNT_ERASURE_BATCH_SIZE,
   ACCOUNT_INACTIVITY_LIMIT_MS,
   CLEANUP_USER_PAGE_SIZE,
   DAY_MS,
@@ -14,7 +15,52 @@ import {
 import { createConvexTest, insertTestUser } from "./convex-test-harness"
 
 describe("bounded lifecycle cleanup", () => {
+  it("resumes account erasure across bounded transactions", async () => {
+    vi.useFakeTimers()
+    const convex = createConvexTest()
+    const target = await insertTestUser(convex, "delete-batched")
+    await convex.run(async (context) => {
+      for (let index = 0; index < ACCOUNT_ERASURE_BATCH_SIZE + 1; index += 1) {
+        await context.db.insert("links", {
+          userId: target.userId,
+          url: `https://batched.example/${index}`,
+          createdAt: index,
+          updatedAt: index,
+        })
+      }
+    })
+
+    await convex.mutation(internal.users.deleteUserData, {
+      userId: target.userId,
+    })
+    const initiated = await convex.run(async (context) => ({
+      user: await context.db.get(target.userId),
+      progress: await context.db
+        .query("accountErasures")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", target.userId)
+        )
+        .unique(),
+    }))
+    expect(initiated.user).not.toBeNull()
+    expect(initiated.progress).not.toBeNull()
+
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
+    const completed = await convex.run(async (context) => ({
+      user: await context.db.get(target.userId),
+      progress: await context.db
+        .query("accountErasures")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", target.userId)
+        )
+        .unique(),
+    }))
+    expect(completed).toEqual({ user: null, progress: null })
+    vi.useRealTimers()
+  })
+
   it("deletes every indexed account child, preserves another user, and retries", async () => {
+    vi.useFakeTimers()
     const convex = createConvexTest()
     const target = await insertTestUser(convex, "delete-target")
     const preserved = await insertTestUser(convex, "delete-preserved")
@@ -122,6 +168,7 @@ describe("bounded lifecycle cleanup", () => {
         userId: target.userId,
       })
     ).resolves.toEqual({ success: true })
+    await convex.finishAllScheduledFunctions(vi.runAllTimers)
     const result = await convex.run(async (context) => ({
       target: await context.db.get(target.userId),
       preserved: await context.db.get(preserved.userId),
@@ -142,6 +189,7 @@ describe("bounded lifecycle cleanup", () => {
     expect(result.targetLinks).toEqual([])
     expect(result.preserved).not.toBeNull()
     expect(result.preservedSessions).toHaveLength(1)
+    vi.useRealTimers()
   })
 
   it("drains inactive accounts one scheduled transaction at a time", async () => {
