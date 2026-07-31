@@ -9,12 +9,12 @@ const supportLinks = [
 const companyLinks = [
   { label: "About Us", to: sitePaths.about },
   { label: "Pricing", to: sitePaths.pricing },
+  { label: "Plugins", to: sitePaths.plugins },
   { label: "Changelog", to: sitePaths.changelog },
 ] as const
 
 const docsLinks = [
   { label: "Docs", to: sitePaths.docs },
-  { label: "Plugins", to: sitePaths.plugins },
   { label: "Android TV Setup", to: sitePaths.androidTvSetup },
   { label: "External Extractor", to: "/docs/extractor" },
 ] as const

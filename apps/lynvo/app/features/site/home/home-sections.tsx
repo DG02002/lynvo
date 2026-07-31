@@ -1,13 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  CheckmarkCircle02Icon,
-  SmartPhone01Icon,
-  Tv01Icon,
-} from "@hugeicons/core-free-icons"
-import { Link } from "react-router"
-import { sitePaths } from "~/lib/paths"
+import { SmartPhone01Icon, Tv01Icon } from "@hugeicons/core-free-icons"
 import { cn } from "~/lib/utils"
-import { privacyPoints } from "./home-content"
 import { PlayerCardSwap } from "./player-card-swap"
 
 const SectionIntro = ({
@@ -157,61 +150,3 @@ export const PlanSection = () => {
     </section>
   )
 }
-
-export const PrivacySection = () => (
-  <section className="py-24 md:py-32">
-    <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:gap-24">
-      <div className="flex flex-col gap-6">
-        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] md:text-5xl lg:text-6xl">
-          No Lynvo app on your device.
-        </h2>
-        <p className="text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Lynvo runs in your browser, so there is no Lynvo app taking up space
-          or running on your Android device. When you press play, Lynvo sends
-          the playable link directly to a supported video player you already
-          installed, such as Just Player or VLC.
-        </p>
-      </div>
-      <div className="flex flex-col divide-y divide-border border-y border-border">
-        {privacyPoints.map((point) => (
-          <div key={point} className="flex items-center gap-4 py-6">
-            <HugeiconsIcon
-              icon={CheckmarkCircle02Icon}
-              className="size-6 shrink-0 text-muted-foreground"
-            />
-            <span className="text-lg">{point}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-)
-
-export const AndroidTvSetupSection = () => (
-  <section className="py-24 md:py-32">
-    <div className="mx-auto flex max-w-3xl flex-col items-center gap-10 px-6 text-center">
-      <SectionIntro
-        title="Open Lynvo on Android TV."
-        description="Open Lynvo in TV Bro, a web browser designed for televisions and remote controls."
-        centered
-      />
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
-        <Link
-          to={sitePaths.androidTvSetup}
-          viewTransition
-          className="text-primary underline underline-offset-4"
-        >
-          Set up Lynvo on Android TV
-        </Link>
-        <a
-          href="https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser"
-          target="_blank"
-          rel="noreferrer"
-          className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
-        >
-          Install TV Bro
-        </a>
-      </div>
-    </div>
-  </section>
-)

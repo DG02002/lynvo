@@ -5,8 +5,6 @@ import {
   ExtractionSection,
   PlayerSection,
   PlanSection,
-  PrivacySection,
-  AndroidTvSetupSection,
 } from "~/features/site/home/home-sections"
 
 export function meta(_: Route.MetaArgs) {
@@ -28,8 +26,6 @@ export default function Home() {
       <PlanSection />
       <ExtractionSection />
       <AndroidScreensSection />
-      <PrivacySection />
-      <AndroidTvSetupSection />
     </div>
   )
 }
