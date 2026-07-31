@@ -1,7 +1,5 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
-import { useQuery } from "@tanstack/react-query"
-import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -45,37 +43,21 @@ import {
   SettingsRow,
   SectionHeading,
 } from "./settings-layout"
-import { usePluginSettingsActions } from "./use-plugin-settings-actions"
-import { usePluginSettingsInteraction } from "./plugin-settings-interaction"
+import {
+  usePluginSettingsInteraction,
+  type CustomPluginServer,
+  type PluginDomain,
+} from "./plugin-settings-interaction"
 import {
   customPluginServerSchema,
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
-import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
-import { client } from "~/lib/effect/api/client"
-import {
-  PLUGIN_DOMAINS_QUERY_KEY,
-  PLUGIN_SERVERS_QUERY_KEY,
-} from "./plugin-settings-queries"
 
-export interface PluginDomain {
-  _id: string
-  pluginServerId: string
-  pluginId: string
-  domain: string
-  hasCredential: boolean
-}
+export type {
+  CustomPluginServer,
+  PluginDomain,
+} from "./plugin-settings-interaction"
 
-export interface CustomPluginServer {
-  _id: string
-  baseUrl: string
-  manifest: string
-  enabled: boolean
-  verificationStatus: string
-}
-
-const EMPTY_PLUGIN_SERVERS: readonly CustomPluginServer[] = []
-const EMPTY_DOMAINS: readonly PluginDomain[] = []
 const EMPTY_DOMAIN_DRAFT = {
   domain: "",
   username: "",
@@ -90,25 +72,14 @@ export function PluginsSettings({
   lynvoPlugins: LynvoPlugin[] | null
   requestOrigin: string
 }) {
-  const { data: pluginServers = EMPTY_PLUGIN_SERVERS } = useQuery({
-    queryKey: PLUGIN_SERVERS_QUERY_KEY,
-    queryFn: () => Effect.runPromise(client.pluginServers.list()),
-  })
-  const { data: allDomains = EMPTY_DOMAINS } = useQuery({
-    queryKey: PLUGIN_DOMAINS_QUERY_KEY,
-    queryFn: () => Effect.runPromise(client.pluginDomains.list({})),
-  })
-  const domains = allDomains.filter(
-    (domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID
-  )
   const [isAddPluginServerOpen, setIsAddPluginServerOpen] =
     React.useState(false)
   const [expandedPluginIds, setExpandedPluginIds] = React.useState(
     new Set<string>()
   )
-  const automaticallyRefreshedPluginServerIds = React.useRef(new Set<string>())
-
   const {
+    pluginServers,
+    domains,
     handleDeleteDomain,
     handleSetDomainCredential,
     handleDeleteDomainCredential,
@@ -116,19 +87,11 @@ export function PluginsSettings({
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleTogglePluginServer,
-  } = usePluginSettingsActions()
-  const { domainDrafts, domainOperations, updateDomainDraft, addDomain } =
-    usePluginSettingsInteraction()
-
-  React.useEffect(() => {
-    for (const pluginServer of pluginServers) {
-      if (automaticallyRefreshedPluginServerIds.current.has(pluginServer._id)) {
-        continue
-      }
-      automaticallyRefreshedPluginServerIds.current.add(pluginServer._id)
-      void handleRefreshPluginServer(pluginServer._id, false)
-    }
-  }, [handleRefreshPluginServer, pluginServers])
+    domainDrafts,
+    domainOperations,
+    updateDomainDraft,
+    addDomain,
+  } = usePluginSettingsInteraction()
 
   const domainsByPlugin = React.useMemo(() => {
     return domains.reduce<Record<string, PluginDomain[]>>((acc, domain) => {
@@ -735,7 +698,16 @@ const PluginCredentialEditor = ({
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+          <Dialog
+            open={isEditing}
+            onOpenChange={(open) => {
+              setIsEditing(open)
+              if (!open) {
+                setUsername("")
+                setPassword("")
+              }
+            }}
+          >
             <DialogTrigger
               render={
                 <Button

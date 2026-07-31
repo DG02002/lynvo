@@ -25,7 +25,7 @@ import {
   PLUGIN_SERVER_VERIFICATION_STATUS,
 } from "~/lib/effect/services/plugin-server-verification-status"
 import { getPluginServerManifestView } from "./plugin-server-manifest"
-import type { CustomPluginServer } from "./plugins-settings"
+import type { CustomPluginServer } from "./plugin-settings-interaction"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
 interface CustomPluginServerRowProps {
