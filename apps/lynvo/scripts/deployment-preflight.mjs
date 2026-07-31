@@ -3,13 +3,13 @@ import { readFile } from "node:fs/promises"
 const lynvoConfigPath = process.argv[2]
   ? new URL(`file://${process.argv[2]}`)
   : new URL("../wrangler.jsonc", import.meta.url)
-const officialConfigPath = process.argv[3]
+const lynvoPluginServerConfigPath = process.argv[3]
   ? new URL(`file://${process.argv[3]}`)
   : new URL("../../lynvo-plugin-server/wrangler.jsonc", import.meta.url)
 
-const [lynvoConfig, officialConfig] = await Promise.all([
+const [lynvoConfig, lynvoPluginServerConfig] = await Promise.all([
   readFile(lynvoConfigPath, "utf8"),
-  readFile(officialConfigPath, "utf8"),
+  readFile(lynvoPluginServerConfigPath, "utf8"),
 ])
 
 const requiredLynvoFragments = [
@@ -29,7 +29,7 @@ const requiredLynvoFragments = [
   '"PLUGIN_CREDENTIAL_MASTER_KEY"',
   '"LYNVO_PLUGIN_SERVER_API_KEY"',
 ]
-const requiredOfficialFragments = [
+const requiredLynvoPluginServerFragments = [
   '"name": "lynvo-plugin-server"',
   '"workers_dev": false',
   '"name": "LYNVO_PLUGIN_SERVER_USAGE_LIMITER"',
@@ -52,9 +52,12 @@ const sessionKeyDeclarationCount =
 
 if (
   hasMissingFragment(lynvoConfig, requiredLynvoFragments) ||
-  hasMissingFragment(officialConfig, requiredOfficialFragments) ||
+  hasMissingFragment(
+    lynvoPluginServerConfig,
+    requiredLynvoPluginServerFragments
+  ) ||
   hasPlaceholder(lynvoConfig) ||
-  hasPlaceholder(officialConfig) ||
+  hasPlaceholder(lynvoPluginServerConfig) ||
   limiterBindingCount !== 2 ||
   sessionBindingCount !== 2 ||
   credentialVaultBindingCount !== 2 ||

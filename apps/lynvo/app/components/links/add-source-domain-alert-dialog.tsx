@@ -46,7 +46,7 @@ export function AddSourceDomainAlertDialog({
             {suggestion?.pluginName}. Add this site so Lynvo can load its links
             faster next time.
             {suggestion?.username
-              ? " Your sign-in details will be stored securely for this site."
+              ? " Your login details will be stored securely for this site."
               : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>

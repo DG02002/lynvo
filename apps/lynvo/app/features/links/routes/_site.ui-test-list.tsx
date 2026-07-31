@@ -250,7 +250,7 @@ const SaveListUiTestRoute = () => {
               Empty list
             </Button>
             <Button variant="outline" onClick={toggleIsHydrating}>
-              {isHydrating ? "Stop loading" : "Loading state"}
+              {isHydrating ? "Stop loading" : "Show loading state"}
             </Button>
             <Button
               variant="outline"

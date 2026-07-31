@@ -13,7 +13,7 @@ The ordered collection of Recent Links shown on the Save page.
 _Avoid_: recents, history
 
 **Plugin Domain**:
-A normalized hostname that a user has assigned to an official extraction plugin.
+A normalized hostname that a user has assigned to a Lynvo Plugin.
 _Avoid_: source domain, scraper domain
 
 **Plugin Credential**:
@@ -27,7 +27,7 @@ A deployed service that runs one or more Plugins and follows the Plugin Server P
 A Plugin Server connected and managed by a Lynvo user.
 
 **Lynvo Plugin Server**:
-The Plugin Server managed by Lynvo for its official Plugins.
+The Plugin Server managed by Lynvo for Lynvo Plugins.
 
 **Lynvo Plugin Server Binding**:
 The private connection from Lynvo to the Lynvo Plugin Server.

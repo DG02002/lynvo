@@ -14,7 +14,7 @@ playable links that can be saved and opened again later.
 
 ## Plugin Servers
 
-Lynvo’s official Plugins run in the private, separately deployed Lynvo Plugin
+Lynvo Plugins run in the private, separately deployed Lynvo Plugin
 Server. Custom Plugin Servers use the same versioned protocol over HTTPS.
 This keeps source-specific parsing outside the main application while giving
 every Plugin Server the same request, response, metadata, and error contract.

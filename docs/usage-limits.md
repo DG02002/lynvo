@@ -2,20 +2,20 @@
 
 Lynvo separates extraction capacity into two independent resources:
 
-- Lynvo account quotas reserve per-user capacity before an official binding call.
+- Lynvo account quotas reserve per-user capacity before a Lynvo Plugin Server binding call.
 - Lynvo Plugin Server capacity reserves global upstream capacity before Source
   work begins.
 
-Official Plugins use Lynvo-owned counters. Custom Plugin Servers expose and
+Lynvo Plugins use Lynvo-owned counters. Custom Plugin Servers expose and
 enforce their own finite counters through the mandatory authenticated
 `GET /usage` protocol endpoint.
 
-## Current official limits
+## Current Lynvo Plugin limits
 
-- 200 official extractions per account per UTC month, shared across all
-  official plugins and direct links.
-- 15 official extractions per account per UTC day.
-- 20,000 official extraction operations globally per UTC day.
+- 200 Lynvo Plugin extractions per account per UTC month, shared across all
+  Lynvo Plugins and direct links.
+- 15 Lynvo Plugin extractions per account per UTC day.
+- 20,000 Lynvo Plugin extraction operations globally per UTC day.
 
 The global daily ceiling intentionally reserves most of the Workers Free daily
 allowance for authentication, settings, saved links, realtime connections, and

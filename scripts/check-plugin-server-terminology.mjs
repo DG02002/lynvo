@@ -1,10 +1,19 @@
 import { execFileSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { join, relative } from "node:path"
 
 const GENERATED_OR_IMMUTABLE_PATHS = new Set([
   "apps/lynvo/worker-configuration.d.ts",
   "apps/lynvo-plugin-server/worker-configuration.d.ts",
   "scripts/check-plugin-server-terminology.mjs",
+  "docs/POLICY-WRITING-FINDINGS.md",
+])
+const IGNORED_DIRECTORIES = new Set([
+  ".git",
+  ".wrangler",
+  "coverage",
+  "dist",
+  "node_modules",
 ])
 
 const TEXT_FILE_PATTERN =
@@ -18,9 +27,12 @@ const FORBIDDEN_TERMS = [
   /\buserWorkers\b/,
   /\bworkerId\b/,
   /\/api\/workers\b/,
+  /\bofficial plugins?\b/i,
+  /\bofficial sources?\b/i,
+  /\bofficial workers?\b/i,
 ]
 
-const trackedFiles = execFileSync(
+const lynvoFiles = execFileSync(
   "git",
   ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
   { encoding: "utf8" }
@@ -32,13 +44,35 @@ const trackedFiles = execFileSync(
   .filter((path) => !path.startsWith("plans/"))
   .filter((path) => !GENERATED_OR_IMMUTABLE_PATHS.has(path))
 
+const collectTextFiles = (directory, root = directory) =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) {
+      return IGNORED_DIRECTORIES.has(entry.name)
+        ? []
+        : collectTextFiles(path, root)
+    }
+    return TEXT_FILE_PATTERN.test(entry.name)
+      ? [{ path, displayPath: `../${relative(root, path)}` }]
+      : []
+  })
+
+const plnkDirectory = "../plnk-plugin-server"
+const plnkFiles = existsSync(plnkDirectory)
+  ? collectTextFiles(plnkDirectory)
+  : []
+const files = [
+  ...lynvoFiles.map((path) => ({ path, displayPath: path })),
+  ...plnkFiles,
+]
+
 const failures = []
 
-for (const path of trackedFiles) {
+for (const { path, displayPath } of files) {
   const lines = readFileSync(path, "utf8").split("\n")
   for (const [lineIndex, line] of lines.entries()) {
     if (FORBIDDEN_TERMS.some((pattern) => pattern.test(line))) {
-      failures.push(`${path}:${lineIndex + 1}:${line.trim()}`)
+      failures.push(`${displayPath}:${lineIndex + 1}:${line.trim()}`)
     }
   }
 }

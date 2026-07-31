@@ -59,7 +59,7 @@ export const generateCode = mutation({
     await verifyDeviceCodePreflightToken(arguments_.preflightToken, secret)
     const now = Date.now()
     const deviceName =
-      arguments_.deviceName.trim().slice(0, 80) || "Unknown Device"
+      arguments_.deviceName.trim().slice(0, 80) || "Unknown device"
     let code: string | undefined
     for (
       let attempt = 0;

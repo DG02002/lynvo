@@ -246,7 +246,7 @@ app.post("/api/auth/preflight", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "invalid_request",
-        error: usernameError ?? "Start sign-in again.",
+        error: usernameError ?? "Start login again.",
         retryable: false,
       }),
       400
@@ -270,7 +270,7 @@ app.post("/api/auth/preflight", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Sign-in is unavailable. Try again later.",
+        error: "Login is unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -311,7 +311,7 @@ app.post("/api/auth/preflight", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Sign-in is unavailable. Try again later.",
+        error: "Login is unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -382,7 +382,7 @@ app.post("/api/auth/tv/code", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Sign-in is unavailable. Try again later.",
+        error: "Login is unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -406,7 +406,7 @@ app.post("/api/auth/tv/code", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Sign-in is unavailable. Try again later.",
+        error: "Login is unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -422,7 +422,7 @@ app.post("/api/auth/tv/code", async (context) => {
     )
     const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
     const result = await convex.mutation(api.tv.generateCode, {
-      deviceName: payload.deviceName ?? "Unknown Device",
+      deviceName: payload.deviceName ?? "Unknown device",
       preflightToken,
     })
     addRequestContext(context, { rate_limit: { allowed: true } })
@@ -437,7 +437,7 @@ app.post("/api/auth/tv/code", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Device sign-in is temporarily unavailable. Try again later.",
+        error: "Device login is temporarily unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -520,7 +520,7 @@ app.post("/api/auth/sign-in", async (context) => {
         return context.json(
           requestApiError(context, {
             code: "service_unavailable",
-            error: "Sign-in is unavailable. Try again later.",
+            error: "Login is unavailable. Try again later.",
             retryable: true,
           }),
           503

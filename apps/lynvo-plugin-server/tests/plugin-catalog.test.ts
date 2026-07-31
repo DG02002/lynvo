@@ -1,57 +1,55 @@
 import { describe, expect, it } from "vitest"
 import {
-  OFFICIAL_SOURCE_CATALOG,
-  createOfficialManifest,
-  findOfficialSource,
-} from "../src/source-catalog"
+  LYNVO_PLUGIN_CATALOG,
+  createLynvoPluginServerManifest,
+  findLynvoPlugin,
+} from "../src/plugin-catalog"
 import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
 
-describe("official source catalog", () => {
-  it("generates manifest source metadata and dispatch from one catalog", () => {
-    const manifest = createOfficialManifest("https://lynvo.example")
+describe("Lynvo plugin catalog", () => {
+  it("generates manifest plugin metadata and dispatch from one catalog", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
     const extension = getLynvoManifestExtension(manifest)
 
-    expect(extension.plugins?.map((source) => source.id)).toEqual(
-      OFFICIAL_SOURCE_CATALOG.map((source) => source.id)
+    expect(extension.plugins?.map((plugin) => plugin.id)).toEqual(
+      LYNVO_PLUGIN_CATALOG.map((plugin) => plugin.id)
     )
     expect(
-      findOfficialSource(
+      findLynvoPlugin(
         "https://drive.example/0:/Collections/",
         "bhadoo-google-drive-index"
       )?.id
     ).toBe("bhadoo-google-drive-index")
     expect(
-      findOfficialSource("https://index.example/Collections/", "onedrive-index")
+      findLynvoPlugin("https://index.example/Collections/", "onedrive-index")
         ?.id
     ).toBe("onedrive-index")
     expect(
-      findOfficialSource("https://drive.google.com/file/d/1AbCdEfGh123/view")
-        ?.id
+      findLynvoPlugin("https://drive.google.com/file/d/1AbCdEfGh123/view")?.id
     ).toBe("google-drive-public-files")
     expect(
-      findOfficialSource("https://drive.google.com/drive/folders/1AbCdEfGh123")
-        ?.id
+      findLynvoPlugin("https://drive.google.com/drive/folders/1AbCdEfGh123")?.id
     ).toBe("google-drive-public-files")
   })
 
   it("publishes only owned public WebP icon URLs", () => {
     const extension = getLynvoManifestExtension(
-      createOfficialManifest("http://localhost:5173")
+      createLynvoPluginServerManifest("http://localhost:5173")
     )
-    const bhadooSource = extension.plugins?.find(
-      (source) => source.id === "bhadoo-google-drive-index"
+    const bhadooPlugin = extension.plugins?.find(
+      (plugin) => plugin.id === "bhadoo-google-drive-index"
     )
-    expect(bhadooSource?.hasIcon).toBe(false)
-    expect(bhadooSource?.iconUrl).toBeUndefined()
+    expect(bhadooPlugin?.hasIcon).toBe(false)
+    expect(bhadooPlugin?.iconUrl).toBeUndefined()
     expect(
-      extension.plugins?.find((source) => source.id === "onedrive-index")
+      extension.plugins?.find((plugin) => plugin.id === "onedrive-index")
     ).toMatchObject({
       hasIcon: true,
       iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
     })
     expect(
       extension.plugins?.find(
-        (source) => source.id === "google-drive-public-files"
+        (plugin) => plugin.id === "google-drive-public-files"
       )
     ).toMatchObject({
       hasIcon: true,
@@ -61,11 +59,13 @@ describe("official source catalog", () => {
   })
 
   it("omits source icons when no public asset origin is configured", () => {
-    const extension = getLynvoManifestExtension(createOfficialManifest())
+    const extension = getLynvoManifestExtension(
+      createLynvoPluginServerManifest()
+    )
 
     expect(
       extension.plugins?.every(
-        (source) => source.hasIcon === false && source.iconUrl === undefined
+        (plugin) => plugin.hasIcon === false && plugin.iconUrl === undefined
       )
     ).toBe(true)
   })

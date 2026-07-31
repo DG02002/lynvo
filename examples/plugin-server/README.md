@@ -1,7 +1,7 @@
 # Example Lynvo Plugin Server
 
 This is the minimal tested implementation of a Lynvo-compatible Plugin Server.
-It is intentionally independent of Lynvo's official Plugins.
+It is intentionally independent of Lynvo Plugins.
 
 ```sh
 pnpm --filter @lynvo/example-plugin-server check

@@ -10,8 +10,8 @@ import {
   EXTRACTION_NODE_LIMIT,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
-import type { SourceAdapterOptions } from "../source-catalog"
-import { createSourceResponseMetadata } from "../source-catalog"
+import type { PluginAdapterOptions } from "../plugin-catalog"
+import { createPluginResponseMetadata } from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import {
@@ -239,9 +239,9 @@ const fetchOneDrivePage = async (
 export const extractOneDriveIndex = async ({
   request,
   targetUrl,
-  source,
+  plugin,
   publicAssetOrigin,
-}: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
+}: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   const parsedUrl = assertSafeUpstreamUrl(targetUrl)
   const path = decodeURIComponent(parsedUrl.pathname)
   const password = request.password ?? ""
@@ -302,7 +302,7 @@ export const extractOneDriveIndex = async ({
     parsedUrl.pathname.split("/").filter(Boolean).at(-1) ?? "OneDrive Index"
   )
   return {
-    plugin: createSourceResponseMetadata(source, publicAssetOrigin, pageTitle),
+    plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, pageTitle),
     nodes,
     extensions: {},
   }

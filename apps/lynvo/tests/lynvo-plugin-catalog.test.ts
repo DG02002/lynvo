@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { resolveOfficialPluginIconUrl } from "~/features/site/settings/official-plugin-catalog.server"
+import { resolveLynvoPluginIconUrl } from "~/features/site/settings/lynvo-plugin-catalog.server"
 
-describe("official plugin catalog icon URLs", () => {
+describe("Lynvo plugin catalog icon URLs", () => {
   it("uses the request origin for development icons published on loopback", () => {
     expect(
-      resolveOfficialPluginIconUrl(
+      resolveLynvoPluginIconUrl(
         "http://localhost:5173/lynvo-plugin-server-assets/icons/sources/onedrive-index.webp",
         "http://192.168.1.3:5173/settings"
       )
@@ -12,7 +12,7 @@ describe("official plugin catalog icon URLs", () => {
       "http://192.168.1.3:5173/lynvo-plugin-server-assets/icons/sources/onedrive-index.webp"
     )
     expect(
-      resolveOfficialPluginIconUrl(
+      resolveLynvoPluginIconUrl(
         "http://localhost:5173/lynvo-plugin-server-assets/icons/sources/google-drive-public-files.webp",
         "http://192.168.1.3:5173/settings#plugins"
       )
@@ -23,7 +23,7 @@ describe("official plugin catalog icon URLs", () => {
 
   it("preserves externally hosted icon URLs", () => {
     expect(
-      resolveOfficialPluginIconUrl(
+      resolveLynvoPluginIconUrl(
         "https://cdn.lynvo.example/icons/sources/onedrive-index.webp",
         "https://lynvo.example/settings"
       )

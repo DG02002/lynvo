@@ -215,7 +215,7 @@ export const listSessions = query({
       .collect()
     return sessions.map((session) => ({
       id: session._id,
-      deviceName: session.deviceName ?? "Unknown Device",
+      deviceName: session.deviceName ?? "Unknown device",
       lastActiveAt: session.lastActiveAt ?? session._creationTime,
       createdAt: session._creationTime,
       isCurrent: session._id === currentSessionId,

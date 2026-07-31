@@ -48,7 +48,7 @@ Never commit `.dev.vars`, `.env`, credentials, test links, `plans/`,
 
 ## Create and connect a Convex project
 
-1. Sign in to the [Convex dashboard](https://dashboard.convex.dev/) and create
+1. Log in to the [Convex dashboard](https://dashboard.convex.dev/) and create
    an account if you do not have one.
 2. Log the Convex CLI into that account. If this checkout already has an
    anonymous local deployment, the CLI offers to link it to your account.
@@ -204,7 +204,7 @@ Before deployment:
 - Use the same `AUTH_GATEWAY_SECRET` in Lynvo and Convex.
 - Generate a production-only `PLUGIN_CREDENTIAL_MASTER_KEY` and retain it securely.
 - Set `LYNVO_PLUGIN_SERVER_API_KEY` independently on both Workers with the same value.
-- Confirm the official Worker has `workers_dev` disabled and no public route.
+- Confirm the Lynvo Plugin Server has `workers_dev` disabled and no public route.
 - Confirm `LYNVO_PLUGIN_SERVER` targets the intended Worker in the same Cloudflare account.
 
 Convex is the application database. Lynvo’s Durable Object coordinates realtime
@@ -226,7 +226,7 @@ implementation or verification.
 8. Configure the remaining Lynvo Worker secrets and production Convex URL.
 9. Confirm production contains `SITE_URL`, `JWT_PRIVATE_KEY`, `JWKS`, and `AUTH_GATEWAY_SECRET`.
 10. Deploy `@lynvo/app` with `LYNVO_PLUGIN_SERVER` bound to the exact target.
-11. Smoke-test account creation, sign-in, TV sign-in, extraction, logs, and counters.
+11. Smoke-test account creation, login, TV login, extraction, logs, and counters.
 
 ```sh
 pnpm --filter @lynvo/lynvo-plugin-server deploy

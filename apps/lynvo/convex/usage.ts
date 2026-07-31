@@ -10,9 +10,9 @@ import {
 } from "./_generated/server"
 import { getAuthenticatedUserId } from "./authentication"
 import {
-  GLOBAL_DAILY_OFFICIAL_EXTRACTION_LIMIT,
-  USER_DAILY_OFFICIAL_EXTRACTION_LIMIT,
-  USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT,
+  GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
+  USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
+  USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
 } from "./constants"
 
 const DAILY_USAGE_PERIOD = "daily" as const
@@ -92,7 +92,7 @@ const incrementCounter = async (
   return USAGE_COUNTER_INITIAL_VALUE
 }
 
-export const consumeOfficialPlugin = mutation({
+export const consumeLynvoPlugin = mutation({
   returns: v.any(),
   args: {
     pluginId: v.union(
@@ -136,20 +136,22 @@ export const consumeOfficialPlugin = mutation({
     const monthlyUsed = monthlyCounter?.used ?? 0
     if (
       !usageLimitsDisabled &&
-      (userDaily?.used ?? 0) >= USER_DAILY_OFFICIAL_EXTRACTION_LIMIT
+      (userDaily?.used ?? 0) >= USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
     ) {
-      throw new ConvexError("Daily official extraction limit reached.")
+      throw new ConvexError("Daily Lynvo Plugin extraction limit reached.")
     }
-    if ((globalDaily?.used ?? 0) >= GLOBAL_DAILY_OFFICIAL_EXTRACTION_LIMIT) {
+    if (
+      (globalDaily?.used ?? 0) >= GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
+    ) {
       throw new ConvexError(
-        "Official extraction capacity is unavailable until tomorrow."
+        "Lynvo Plugin extraction capacity is unavailable until tomorrow."
       )
     }
     if (
       !usageLimitsDisabled &&
-      monthlyUsed >= USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT
+      monthlyUsed >= USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
     ) {
-      throw new ConvexError("Monthly official extraction limit reached.")
+      throw new ConvexError("Monthly Lynvo Plugin extraction limit reached.")
     }
     const [, dailyUsed, currentMonthlyUsed] = await Promise.all([
       incrementCounter(
@@ -217,18 +219,18 @@ export const getUsage = query({
       metrics: [
         {
           id: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-          label: "Daily official extractions",
+          label: "Daily Lynvo Plugin extractions",
           used: dailyCounter?.used ?? 0,
-          limit: USER_DAILY_OFFICIAL_EXTRACTION_LIMIT,
+          limit: USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
           unit: "extractions",
           period: DAILY_USAGE_PERIOD,
           resetsAt: new Date(daily.resetsAt).toISOString(),
         },
         {
           id: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-          label: "Official extractions",
+          label: "Lynvo Plugin extractions",
           used: monthlyUsed,
-          limit: USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT,
+          limit: USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
           unit: "extractions",
           period: MONTHLY_USAGE_PERIOD,
           resetsAt: new Date(monthly.resetsAt).toISOString(),

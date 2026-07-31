@@ -9,10 +9,10 @@ import {
 } from "@lynvo/plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
 import {
-  createOfficialManifest,
-  discoverOfficialSource,
-  extractFromOfficialSource,
-} from "./source-catalog"
+  createLynvoPluginServerManifest,
+  discoverLynvoPlugin,
+  extractWithLynvoPlugin,
+} from "./plugin-catalog"
 import {
   LynvoPluginServerUsageLimiter,
   readUsage,
@@ -25,7 +25,8 @@ initLogger({
 })
 
 const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
-  manifest: ({ env }) => createOfficialManifest(env.PUBLIC_ASSET_ORIGIN),
+  manifest: ({ env }) =>
+    createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN),
   auth: {
     validate: ({ request, env }) => {
       const apiKey = env.LYNVO_PLUGIN_SERVER_API_KEY
@@ -33,7 +34,7 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
     },
   },
   usage: ({ env }) => readUsage(env),
-  discover: ({ targetUrl }) => discoverOfficialSource(targetUrl),
+  discover: ({ targetUrl }) => discoverLynvoPlugin(targetUrl),
   extract: async ({ request, targetUrl, env }) => {
     const reservation = await reserveUsage(env)
     if (!reservation.reserved) {
@@ -47,7 +48,7 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
 
     let didSucceed = false
     try {
-      const result = await extractFromOfficialSource(
+      const result = await extractWithLynvoPlugin(
         request,
         targetUrl,
         env.PUBLIC_ASSET_ORIGIN

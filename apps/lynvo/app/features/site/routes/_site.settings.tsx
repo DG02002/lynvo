@@ -28,7 +28,7 @@ import {
   requireUserOrRedirect,
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
-import { loadOfficialPlugins } from "~/features/site/settings/official-plugin-catalog.server"
+import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
 import {
   getLegacySettingsPath,
   getSettingsPath,
@@ -56,7 +56,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
   }
 
   const user = sessionResult.user!
-  const officialPlugins = await loadOfficialPlugins(env, request.url)
+  const lynvoPlugins = await loadLynvoPlugins(env, request.url)
   return responseWithSession(
     {
       user: {
@@ -64,7 +64,7 @@ export async function loader(args: LoaderFunctionArgs): Promise<any> {
         username: user.username,
         sid: user.sid,
       },
-      officialPlugins,
+      lynvoPlugins,
       requestOrigin: new URL(request.url).origin,
       ...settingsRoute,
     },
@@ -107,13 +107,8 @@ const settingsTabs = [
 ] as const
 
 export default function Settings() {
-  const {
-    user,
-    officialPlugins,
-    requestOrigin,
-    activeTab,
-    showActiveSessions,
-  } = useLoaderData<typeof loader>()
+  const { user, lynvoPlugins, requestOrigin, activeTab, showActiveSessions } =
+    useLoaderData<typeof loader>()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -215,7 +210,7 @@ export default function Settings() {
               <h1 className="text-2xl font-normal tracking-tight">Plugins</h1>
             </header>
             <PluginsSettings
-              officialPlugins={officialPlugins}
+              lynvoPlugins={lynvoPlugins}
               requestOrigin={requestOrigin}
             />
           </TabsContent>
@@ -234,7 +229,7 @@ export default function Settings() {
                 Track extraction usage within service limits.
               </p>
             </header>
-            <UsageSettings officialPlugins={officialPlugins ?? []} />
+            <UsageSettings lynvoPlugins={lynvoPlugins ?? []} />
           </TabsContent>
 
           <TabsContent value="player" className="flex flex-col">

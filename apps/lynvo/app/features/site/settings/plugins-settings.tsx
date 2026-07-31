@@ -38,7 +38,7 @@ import {
 } from "~/components/ui/alert-dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
-import type { OfficialPlugin } from "./plugin-settings-data"
+import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   SettingsPanel,
   SettingsList,
@@ -72,10 +72,10 @@ const EMPTY_PLUGIN_SERVERS: CustomPluginServer[] = []
 const EMPTY_DOMAINS: PluginDomain[] = []
 
 export function PluginsSettings({
-  officialPlugins,
+  lynvoPlugins,
   requestOrigin,
 }: {
-  officialPlugins: OfficialPlugin[] | null
+  lynvoPlugins: LynvoPlugin[] | null
   requestOrigin: string
 }) {
   const pluginServers =
@@ -173,11 +173,11 @@ export function PluginsSettings({
     <SettingsPanel className="gap-8">
       <div className="flex flex-col gap-3">
         <SectionHeading
-          title="Official plugins"
+          title="Lynvo plugins"
           description="Plugins maintained by Lynvo for supported Sources."
         />
         <SettingsList>
-          {officialPlugins === null && (
+          {lynvoPlugins === null && (
             <SettingsRow>
               <div className="flex flex-col items-start gap-2">
                 <p className="text-sm text-muted-foreground">
@@ -193,7 +193,7 @@ export function PluginsSettings({
               </div>
             </SettingsRow>
           )}
-          {(officialPlugins ?? []).map((plugin) => {
+          {(lynvoPlugins ?? []).map((plugin) => {
             const pluginDomains = domainsByPlugin[plugin.id] || []
             const isDomainsExpanded = expandedPluginIds.has(plugin.id)
             return (
@@ -311,7 +311,7 @@ export function PluginsSettings({
 }
 
 interface AddPluginDomainDialogProps {
-  plugin: OfficialPlugin
+  plugin: LynvoPlugin
   domain: string
   username: string
   password: string
@@ -467,7 +467,7 @@ const AddPluginDomainDialog = ({
 }
 
 interface PluginDomainListProps {
-  plugin: OfficialPlugin
+  plugin: LynvoPlugin
   domains: PluginDomain[]
   onSaveCredential: (
     domainId: string,

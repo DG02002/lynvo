@@ -205,14 +205,12 @@ export class ExtractionService extends Context.Service<
             })
           }
 
-          const officialManifest = yield* getLynvoPluginServerManifest(
+          const lynvoManifest = yield* getLynvoPluginServerManifest(
             environment,
             options.requestId
           ).pipe(Effect.option)
           const manifest =
-            officialManifest._tag === "Some"
-              ? officialManifest.value
-              : undefined
+            lynvoManifest._tag === "Some" ? lynvoManifest.value : undefined
           const configuredDomain = yield* convex
             .query(
               api.pluginDomains.getByDomain,
@@ -317,7 +315,7 @@ export class ExtractionService extends Context.Service<
             if (meteredSourceId) {
               yield* convex
                 .mutation(
-                  api.usage.consumeOfficialPlugin,
+                  api.usage.consumeLynvoPlugin,
                   { pluginId: meteredSourceId },
                   { accessToken: options.accessToken }
                 )
@@ -389,10 +387,10 @@ export class ExtractionService extends Context.Service<
             }
           }
 
-          const officialManifest = yield* getLynvoPluginServerManifest(
+          const lynvoManifest = yield* getLynvoPluginServerManifest(
             environment
           ).pipe(Effect.option)
-          if (officialManifest._tag === "Some") {
+          if (lynvoManifest._tag === "Some") {
             const extractedAuth = extractHttpBasicCredential(options.url)
             const configuredDomain = yield* convex.query(
               api.pluginDomains.getByDomain,
@@ -403,11 +401,11 @@ export class ExtractionService extends Context.Service<
               { accessToken: options.accessToken }
             )
             let metadata = getLynvoPluginServerMetadata(
-              officialManifest.value,
+              lynvoManifest.value,
               extractedAuth.url,
               configuredDomain?.pluginId
             )
-            if (!metadata && officialManifest.value.features.discovery) {
+            if (!metadata && lynvoManifest.value.features.discovery) {
               const discovery = yield* discoverLynvoPlugin(
                 environment,
                 extractedAuth.url,
@@ -416,7 +414,7 @@ export class ExtractionService extends Context.Service<
               ).pipe(Effect.option)
               if (discovery._tag === "Some" && discovery.value.matched) {
                 metadata = getLynvoPluginServerMetadata(
-                  officialManifest.value,
+                  lynvoManifest.value,
                   extractedAuth.url,
                   discovery.value.pluginId
                 )

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { OFFICIAL_SOURCE_CATALOG } from "../src/source-catalog"
+import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
 import {
   createBhadooNodes,
   extractBhadooGoogleDriveIndex,
@@ -23,7 +23,7 @@ import {
 afterEach(() => vi.restoreAllMocks())
 
 describe("Bhadoo source adapter", () => {
-  const source = OFFICIAL_SOURCE_CATALOG[0]
+  const plugin = LYNVO_PLUGIN_CATALOG[0]
 
   it("maps folders and playable files to protocol-native nodes", () => {
     const nodes = createBhadooNodes(
@@ -69,7 +69,7 @@ describe("Bhadoo source adapter", () => {
         basicAuth: { username: "viewer", password: "secret" },
       },
       targetUrl: "https://drive.example/0:/",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
     const calledRequest = fetchSpy.mock.calls[0]
@@ -104,7 +104,7 @@ describe("Bhadoo source adapter", () => {
         },
       },
       targetUrl: "https://drive.example/0:/fake-video.mkv/",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
 
@@ -132,7 +132,7 @@ describe("Bhadoo source adapter", () => {
           input: { kind: "source", sourceUrl: "https://drive.example/0:/" },
         },
         targetUrl: "https://drive.example/0:/",
-        source,
+        plugin,
         publicAssetOrigin: "https://lynvo.example",
       })
     ).rejects.toThrow("repeated a continuation token")
@@ -140,7 +140,7 @@ describe("Bhadoo source adapter", () => {
 })
 
 describe("OneDrive source adapter", () => {
-  const source = OFFICIAL_SOURCE_CATALOG[2]
+  const plugin = LYNVO_PLUGIN_CATALOG[2]
 
   it("maps folders and video files while skipping unrelated files", () => {
     const nodes = createOneDriveNodes(
@@ -190,7 +190,7 @@ describe("OneDrive source adapter", () => {
         password: "domain-password",
       },
       targetUrl: "https://index.example/Collections",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
     expect(result.nodes).toMatchObject([{ kind: "playable" }])
@@ -232,7 +232,7 @@ describe("OneDrive source adapter", () => {
         },
       },
       targetUrl: "https://index.example/Collections",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
 
@@ -259,7 +259,7 @@ describe("OneDrive source adapter", () => {
           },
         },
         targetUrl: "https://index.example/Collections",
-        source,
+        plugin,
         publicAssetOrigin: "https://lynvo.example",
       })
     ).rejects.toThrow("response exceeded its byte limit")
@@ -283,7 +283,7 @@ describe("OneDrive source adapter", () => {
           },
         },
         targetUrl: "https://index.example/Collections",
-        source,
+        plugin,
         publicAssetOrigin: "https://lynvo.example",
       })
     ).rejects.toThrow()
@@ -293,7 +293,7 @@ describe("OneDrive source adapter", () => {
 })
 
 describe("Google Drive public files source adapter", () => {
-  const source = OFFICIAL_SOURCE_CATALOG[1]
+  const plugin = LYNVO_PLUGIN_CATALOG[1]
   const folderItem = [
     "folder-id",
     ["parent-id"],
@@ -400,7 +400,7 @@ describe("Google Drive public files source adapter", () => {
         },
       },
       targetUrl: "https://drive.google.com/drive/folders/parent-id",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
 
@@ -434,7 +434,7 @@ describe("Google Drive public files source adapter", () => {
       },
       targetUrl:
         "https://drive.google.com/file/d/1AbCdEfGh123/view?usp=sharing",
-      source,
+      plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
 

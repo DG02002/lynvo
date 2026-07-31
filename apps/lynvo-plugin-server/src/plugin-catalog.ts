@@ -19,14 +19,14 @@ import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-ind
 import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
 
-export interface SourceAdapterOptions {
+export interface PluginAdapterOptions {
   request: ExtractRequest
   targetUrl: string
-  source: OfficialSourceDefinition
+  plugin: LynvoPluginDefinition
   publicAssetOrigin?: string
 }
 
-export interface OfficialSourceDefinition {
+export interface LynvoPluginDefinition {
   id: string
   displayName: string
   description: string
@@ -37,7 +37,7 @@ export interface OfficialSourceDefinition {
   matchers: PluginServerMatcher[]
   credential?: PluginCredential
   discovery?: { confidence: "pattern" | "verified" }
-  extract: (options: SourceAdapterOptions) => Promise<ExtractSuccessResponse>
+  extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
 const bhadooMatchers: PluginServerMatcher[] = [
@@ -66,7 +66,7 @@ const googleDrivePublicFileMatchers: PluginServerMatcher[] = [
   },
 ]
 
-export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
+export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
   {
     id: BHADOO_SOURCE_ID,
     displayName: "Bhadoo’s Google Drive Index",
@@ -107,17 +107,17 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
   },
 ]
 
-export const findOfficialSource = (
+export const findLynvoPlugin = (
   targetUrl: string,
   pluginId?: string
-): OfficialSourceDefinition | undefined =>
+): LynvoPluginDefinition | undefined =>
   pluginId
-    ? OFFICIAL_SOURCE_CATALOG.find((source) => source.id === pluginId)
-    : OFFICIAL_SOURCE_CATALOG.find((source) =>
-        matchPluginServerUrl(targetUrl, source.matchers)
+    ? LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.id === pluginId)
+    : LYNVO_PLUGIN_CATALOG.find((plugin) =>
+        matchPluginServerUrl(targetUrl, plugin.matchers)
       )
 
-export const createOfficialManifest = (
+export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string
 ): PluginServerManifest => ({
   protocolVersion: "1.0",
@@ -127,7 +127,7 @@ export const createOfficialManifest = (
   homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
-  matchers: OFFICIAL_SOURCE_CATALOG.flatMap((source) => source.matchers),
+  matchers: LYNVO_PLUGIN_CATALOG.flatMap((plugin) => plugin.matchers),
   features: {
     password: true,
     lazyNodes: true,
@@ -136,62 +136,62 @@ export const createOfficialManifest = (
   },
   extensions: {
     lynvo: {
-      plugins: OFFICIAL_SOURCE_CATALOG.map((source) => ({
-        id: source.id,
-        displayName: source.displayName,
-        description: source.description,
-        homepage: source.homepage,
-        hasIcon: Boolean(publicAssetOrigin && source.iconPath),
-        ...(publicAssetOrigin && source.iconPath
-          ? { iconUrl: `${publicAssetOrigin}${source.iconPath}` }
+      plugins: LYNVO_PLUGIN_CATALOG.map((plugin) => ({
+        id: plugin.id,
+        displayName: plugin.displayName,
+        description: plugin.description,
+        homepage: plugin.homepage,
+        hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
+        ...(publicAssetOrigin && plugin.iconPath
+          ? { iconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
           : {}),
-        status: source.status,
-        version: source.version,
-        hosts: source.matchers.flatMap((matcher) => matcher.hosts),
-        matchers: source.matchers,
-        ...(source.credential ? { credential: source.credential } : {}),
+        status: plugin.status,
+        version: plugin.version,
+        hosts: plugin.matchers.flatMap((matcher) => matcher.hosts),
+        matchers: plugin.matchers,
+        ...(plugin.credential ? { credential: plugin.credential } : {}),
       })),
     },
   },
 })
 
-export const discoverOfficialSource = (targetUrl: string): DiscoverResponse => {
-  const source = OFFICIAL_SOURCE_CATALOG.find(
+export const discoverLynvoPlugin = (targetUrl: string): DiscoverResponse => {
+  const plugin = LYNVO_PLUGIN_CATALOG.find(
     (candidate) =>
       candidate.discovery && matchPluginServerUrl(targetUrl, candidate.matchers)
   )
-  return source?.discovery
+  return plugin?.discovery
     ? {
         matched: true,
-        pluginId: source.id,
-        confidence: source.discovery.confidence,
+        pluginId: plugin.id,
+        confidence: plugin.discovery.confidence,
       }
     : { matched: false }
 }
 
-export const extractFromOfficialSource = async (
+export const extractWithLynvoPlugin = async (
   request: ExtractRequest,
   targetUrl: string,
   publicAssetOrigin?: string
 ): Promise<ExtractSuccessResponse> => {
-  const source = findOfficialSource(targetUrl, request.pluginId)
-  if (!source) {
+  const plugin = findLynvoPlugin(targetUrl, request.pluginId)
+  if (!plugin) {
     throw new Error("UNSUPPORTED_URL")
   }
-  return source.extract({ request, targetUrl, source, publicAssetOrigin })
+  return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
 }
 
-export const createSourceResponseMetadata = (
-  source: OfficialSourceDefinition,
+export const createPluginResponseMetadata = (
+  plugin: LynvoPluginDefinition,
   publicAssetOrigin?: string,
   pageTitle?: string
 ): ExtractSuccessResponse["plugin"] => ({
   pluginServerId: PLUGIN_SERVER_ID,
   displayName: PLUGIN_SERVER_NAME,
-  pluginId: source.id,
-  pluginName: source.displayName,
-  ...(publicAssetOrigin && source.iconPath
-    ? { pluginIconUrl: `${publicAssetOrigin}${source.iconPath}` }
+  pluginId: plugin.id,
+  pluginName: plugin.displayName,
+  ...(publicAssetOrigin && plugin.iconPath
+    ? { pluginIconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
     : {}),
   ...(pageTitle ? { pageTitle } : {}),
 })

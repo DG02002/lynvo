@@ -3,9 +3,9 @@ import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,
 } from "~/lib/extraction/plugin-server-client"
-import type { OfficialPlugin } from "./plugin-settings-data"
+import type { LynvoPlugin } from "./plugin-settings-data"
 
-export const resolveOfficialPluginIconUrl = (
+export const resolveLynvoPluginIconUrl = (
   iconUrl: string,
   requestUrl: string
 ) => {
@@ -23,38 +23,38 @@ export const resolveOfficialPluginIconUrl = (
     .href
 }
 
-export const loadOfficialPlugins = async (
+export const loadLynvoPlugins = async (
   environment: Env,
   requestUrl: string
-): Promise<OfficialPlugin[] | null> => {
+): Promise<LynvoPlugin[] | null> => {
   try {
     const manifest = await new PluginServerClient(
       new ServiceBindingPluginServerTransport(environment.LYNVO_PLUGIN_SERVER)
     ).getManifest({ apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY })
     return (getLynvoManifestExtension(manifest).plugins ?? []).map(
-      (source) => ({
-        id: source.id,
-        name: source.displayName,
+      (plugin) => ({
+        id: plugin.id,
+        name: plugin.displayName,
         sourceUrl:
-          source.homepage ??
+          plugin.homepage ??
           manifest.homepage ??
           "https://lynvo.dg02002.workers.dev",
-        icon: source.iconUrl
-          ? { url: resolveOfficialPluginIconUrl(source.iconUrl, requestUrl) }
+        icon: plugin.iconUrl
+          ? { url: resolveLynvoPluginIconUrl(plugin.iconUrl, requestUrl) }
           : {},
-        description: source.description ?? "Lynvo Plugin Server source.",
-        supportsDomains: Boolean(source.credential),
+        description: plugin.description ?? "Lynvo Plugin Server plugin.",
+        supportsDomains: Boolean(plugin.credential),
         domainRequired:
-          source.credential?.kind === "http-basic"
+          plugin.credential?.kind === "http-basic"
             ? "Add the source domain. Optional HTTP Basic Auth credentials are encrypted when saved."
-            : source.credential
+            : plugin.credential
               ? "Add the source domain. Optional domain passwords are encrypted when saved."
               : "",
-        ...(source.credential
-          ? { credentialKind: source.credential.kind }
+        ...(plugin.credential
+          ? { credentialKind: plugin.credential.kind }
           : {}),
-        ...(source.status ? { status: source.status } : {}),
-        ...(source.version ? { version: source.version } : {}),
+        ...(plugin.status ? { status: plugin.status } : {}),
+        ...(plugin.version ? { version: plugin.version } : {}),
       })
     )
   } catch (error) {

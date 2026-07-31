@@ -130,7 +130,10 @@ export const directMediaAdapter: DirectMediaAdapter = {
         }
         throw error
       }
-      throw new Error(String(error) || "Unable to valid link")
+      throw new Error(
+        String(error) ||
+          "The link couldn’t be validated. Check it and try again."
+      )
     }
   },
 

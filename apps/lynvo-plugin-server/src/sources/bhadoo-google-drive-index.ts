@@ -12,8 +12,8 @@ import {
   LEGACY_RESPONSE_SUFFIX_LENGTH,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
-import type { SourceAdapterOptions } from "../source-catalog"
-import { createSourceResponseMetadata } from "../source-catalog"
+import type { PluginAdapterOptions } from "../plugin-catalog"
+import { createPluginResponseMetadata } from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
@@ -168,9 +168,9 @@ const requestBhadooPage = async (
 export const extractBhadooGoogleDriveIndex = async ({
   request,
   targetUrl,
-  source,
+  plugin,
   publicAssetOrigin,
-}: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
+}: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   const folderUrl = assertSafeUpstreamUrl(targetUrl)
   folderUrl.username = ""
   folderUrl.password = ""
@@ -183,7 +183,7 @@ export const extractBhadooGoogleDriveIndex = async ({
       .filter((value) => value !== "view")
       .forEach((value) => playableUrl.searchParams.append("a", value))
     return {
-      plugin: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+      plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, filename),
       nodes: [
         { kind: "playable", label: filename, url: playableUrl.toString() },
       ],
@@ -232,7 +232,7 @@ export const extractBhadooGoogleDriveIndex = async ({
   } while (pageToken)
 
   return {
-    plugin: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+    plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, filename),
     nodes,
     extensions: {},
   }

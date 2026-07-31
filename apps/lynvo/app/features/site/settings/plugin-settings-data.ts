@@ -1,6 +1,6 @@
 import type { PluginIconSource } from "~/lib/plugin-icons"
 
-export interface OfficialPlugin {
+export interface LynvoPlugin {
   id: string
   name: string
   sourceUrl: string

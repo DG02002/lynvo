@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { resolveMetadataIconUrls } from "~/lib/extraction/metadata-icon-urls"
 
 describe("resolveMetadataIconUrls", () => {
-  it("uses the current LAN origin for official icons published on loopback", () => {
+  it("uses the current LAN origin for Lynvo Plugin icons published on loopback", () => {
     expect(
       resolveMetadataIconUrls(
         {

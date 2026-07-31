@@ -3,8 +3,8 @@ import type {
   MediaNode,
   ExtractSuccessResponse,
 } from "@lynvo/plugin-server-protocol"
-import type { SourceAdapterOptions } from "../source-catalog"
-import { createSourceResponseMetadata } from "../source-catalog"
+import type { PluginAdapterOptions } from "../plugin-catalog"
+import { createPluginResponseMetadata } from "../plugin-catalog"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES,
@@ -187,9 +187,9 @@ export const createGoogleDrivePublicFolderNodes = (
 
 export const extractGoogleDrivePublicFolder = async ({
   targetUrl,
-  source,
+  plugin,
   publicAssetOrigin,
-}: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
+}: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   extractGoogleDriveFolderId(targetUrl)
   const response = await fetchValidatedUpstream(targetUrl, {})
   if (!response.ok) {
@@ -224,7 +224,7 @@ export const extractGoogleDrivePublicFolder = async ({
       .text()
       .replace(/\s+[–-]\s+Google Drive$/, "") || "Google Drive folder"
   return {
-    plugin: createSourceResponseMetadata(source, publicAssetOrigin, title),
+    plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, title),
     nodes: createGoogleDrivePublicFolderNodes(
       parseGoogleDrivePublicFolderItems(html)
     ),
@@ -234,15 +234,15 @@ export const extractGoogleDrivePublicFolder = async ({
 
 export const extractGoogleDrivePublicFile = async ({
   targetUrl,
-  source,
+  plugin,
   publicAssetOrigin,
-}: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
+}: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   const fileId = extractGoogleDriveFileId(targetUrl)
   const downloadUrl = createGoogleDriveDownloadUrl(fileId)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
   return {
-    plugin: createSourceResponseMetadata(
-      source,
+    plugin: createPluginResponseMetadata(
+      plugin,
       publicAssetOrigin,
       metadata.filename
     ),
@@ -261,7 +261,7 @@ export const extractGoogleDrivePublicFile = async ({
 }
 
 export const extractGoogleDrivePublicLink = (
-  options: SourceAdapterOptions
+  options: PluginAdapterOptions
 ): Promise<ExtractSuccessResponse> =>
   GOOGLE_DRIVE_FOLDER_PATH_PATTERN.test(new URL(options.targetUrl).pathname)
     ? extractGoogleDrivePublicFolder(options)

@@ -2,20 +2,18 @@ import { readFile, readdir } from "node:fs/promises"
 import { extname, join } from "node:path"
 
 const COPY_DIRECTORIES = [
-  "apps/lynvo/app/components/auth",
-  "apps/lynvo/app/components/remote-play",
-  "apps/lynvo/app/features/auth",
+  "apps/lynvo/app",
+  "apps/lynvo/convex",
+  "apps/lynvo/tests",
+  "apps/lynvo/workers",
+  "docs",
 ]
-const COPY_FILES = [
-  "apps/lynvo/app/components/RemotePlayButton.tsx",
-  "apps/lynvo/app/context/RemoteControlContext.tsx",
-  "apps/lynvo/app/context/remote-control/machine.ts",
-  "apps/lynvo/app/lib/auth-errors.ts",
-  "apps/lynvo/app/lib/auth-form-schemas.ts",
-  "apps/lynvo/app/lib/device-name.ts",
-]
-const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"])
+const COPY_FILES = ["CONTRIBUTING.md"]
+const IGNORED_DIRECTORIES = new Set(["_generated"])
+const SOURCE_EXTENSIONS = new Set([".md", ".mdx", ".ts", ".tsx"])
 const FORBIDDEN_COPY_PATTERNS = [
+  { label: "Sign-in", pattern: /\bSign-in\b/g },
+  { label: "sign-in details", pattern: /\bsign-in details\b/g },
   { label: "Sign in", pattern: /\bSign in\b/g },
   { label: "Sign In", pattern: /\bSign In\b/g },
   { label: "Log In", pattern: /\bLog In\b/g },
@@ -29,7 +27,10 @@ const collectSourceFiles = async (directory) => {
     entries.map(async (entry) => {
       const path = join(directory, entry.name)
       if (entry.isDirectory()) {
-        return collectSourceFiles(path)
+        return IGNORED_DIRECTORIES.has(entry.name) ||
+          path === "apps/lynvo/app/components/ui"
+          ? []
+          : collectSourceFiles(path)
       }
       return SOURCE_EXTENSIONS.has(extname(entry.name)) ? [path] : []
     })
@@ -53,7 +54,7 @@ for (const sourceFile of sourceFiles) {
     }
   }
   lines.forEach((lineText, lineIndex) => {
-    if (/Loading[^…"'`}]*["'`}]/.test(lineText)) {
+    if (/["'`]Loading(?![^"'`]*…)[^"'`]*["'`]/.test(lineText)) {
       failures.push(
         `${sourceFile}:${lineIndex + 1}: loading labels must end with an ellipsis`
       )

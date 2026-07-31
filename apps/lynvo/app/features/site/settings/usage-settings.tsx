@@ -8,7 +8,7 @@ import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
 import { client } from "~/lib/effect/api/client"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
-import type { OfficialPlugin } from "./plugin-settings-data"
+import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   SectionHeading,
   SettingsList,
@@ -25,7 +25,7 @@ interface UsageListItem {
   key: string
   name: string
   total: UsageTotal
-  icon?: OfficialPlugin["icon"]
+  icon?: LynvoPlugin["icon"]
   iconUrl?: string
   hideIcon?: boolean
   fallback: "plugin-server" | "source"
@@ -124,7 +124,7 @@ const UsageItem = ({
   name,
   total,
 }: {
-  icon?: OfficialPlugin["icon"]
+  icon?: LynvoPlugin["icon"]
   iconUrl?: string
   hideIcon?: boolean
   fallback: "plugin-server" | "source"
@@ -159,12 +159,12 @@ const UsageLoading = () => (
 )
 
 export const UsageSettings = ({
-  officialPlugins,
+  lynvoPlugins,
 }: {
-  officialPlugins: OfficialPlugin[]
+  lynvoPlugins: LynvoPlugin[]
 }) => {
   const timeBucket = useDailyTimeBucket()
-  const officialUsage = useQuery(api.usage.getUsage, { timeBucket })
+  const lynvoUsage = useQuery(api.usage.getUsage, { timeBucket })
   const [externalUsage, setExternalUsage] = React.useState<
     readonly CustomPluginServerUsage[] | undefined
   >()
@@ -190,11 +190,9 @@ export const UsageSettings = ({
     }
   }, [])
 
-  const officialMetrics = officialUsage
-    ? monthlyExtractions(officialUsage.metrics)
-    : []
-  const officialDailyMetrics = officialUsage
-    ? dailyExtractions(officialUsage.metrics)
+  const lynvoMetrics = lynvoUsage ? monthlyExtractions(lynvoUsage.metrics) : []
+  const lynvoDailyMetrics = lynvoUsage
+    ? dailyExtractions(lynvoUsage.metrics)
     : []
   const availableExternalUsage = externalUsage?.filter(
     (pluginServer) => !pluginServer.error
@@ -203,16 +201,16 @@ export const UsageSettings = ({
     availableExternalUsage?.flatMap((pluginServer) =>
       monthlyExtractions(pluginServer.metrics)
     ) ?? []
-  const officialResetAt = officialMetrics
+  const lynvoResetAt = lynvoMetrics
     .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
     .toSorted()[0]
   const externalResetAt = externalMetrics
     .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
     .toSorted()[0]
 
-  const officialItems: UsageListItem[] = officialDailyMetrics
+  const lynvoItems: UsageListItem[] = lynvoDailyMetrics
     .map((metric) => {
-      const plugin = officialPlugins.find(
+      const plugin = lynvoPlugins.find(
         (candidate) => candidate.id === metric.pluginId
       )
       const isDirect = metric.pluginId === "direct"
@@ -256,7 +254,7 @@ export const UsageSettings = ({
             }
           })
     ) ?? []
-  const isLoading = officialUsage === undefined || externalUsage === undefined
+  const isLoading = lynvoUsage === undefined || externalUsage === undefined
 
   return (
     <div className="flex flex-col gap-7">
@@ -271,11 +269,11 @@ export const UsageSettings = ({
             />
             <UsageSummary
               label="Lynvo Plugin Server"
-              total={totalMetrics(officialMetrics)}
-              resetsAt={officialResetAt}
+              total={totalMetrics(lynvoMetrics)}
+              resetsAt={lynvoResetAt}
             />
             <SettingsList>
-              {officialItems.map((item) => (
+              {lynvoItems.map((item) => (
                 <UsageItem
                   key={item.key}
                   icon={item.icon}

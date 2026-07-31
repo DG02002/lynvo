@@ -20,13 +20,13 @@ describe("API errors", () => {
     expect(
       createApiErrorResponse({
         code: "service_unavailable",
-        error: "Sign-in is temporarily unavailable. Try again later.",
+        error: "Login is temporarily unavailable. Try again later.",
         retryable: true,
         requestId: "request-123",
       })
     ).toEqual({
       code: "service_unavailable",
-      error: "Sign-in is temporarily unavailable. Try again later.",
+      error: "Login is temporarily unavailable. Try again later.",
       retryable: true,
       requestId: "request-123",
     })
