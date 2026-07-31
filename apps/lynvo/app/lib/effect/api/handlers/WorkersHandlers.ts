@@ -8,18 +8,25 @@ import {
   prepareWorkerRegistration,
 } from "../../services/WorkerRegistration"
 import { api } from "../../../../../convex/_generated/api"
-import { WorkerRegistrationError } from "../../errors"
+import { ConvexError, WorkerRegistrationError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
 import { getWorkerUsage } from "../../services/WorkerExtractorAdapter"
 import { WORKER_VERIFICATION_STATUS } from "../../services/worker-verification-status"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { signCredentialReadToken } from "../../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../../convex/constants"
+import {
+  decryptExternalWorkers,
+  encryptExternalWorkerApiKey,
+} from "../../services/external-worker-credentials"
 
 const createCredentialReadToken = (secret: string) =>
   Effect.promise(() =>
     signCredentialReadToken(secret, Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS)
   )
+
+const EXTERNAL_WORKER_USAGE_CONCURRENCY = 3
+const EXTERNAL_WORKER_REGISTRATION_LIMIT = 5
 
 export const WorkersHandlers = HttpApiBuilder.group(
   Api,
@@ -52,10 +59,19 @@ export const WorkersHandlers = HttpApiBuilder.group(
           const serviceToken = yield* createCredentialReadToken(
             environment.AUTH_GATEWAY_SECRET
           )
-          const workers = yield* convex.query(
+          const storedWorkers = yield* convex.query(
             api.userWorkers.listForService,
             { serviceToken },
             { accessToken: user.accessToken }
+          )
+          const workers = yield* decryptExternalWorkers(
+            environment,
+            user.id,
+            storedWorkers
+          ).pipe(
+            Effect.mapError(
+              (error) => new ConvexError({ message: error.message, cause: error })
+            )
           )
           return yield* Effect.all(
             workers.flatMap((worker) =>
@@ -105,7 +121,7 @@ export const WorkersHandlers = HttpApiBuilder.group(
                   ]
                 : []
             ),
-            { concurrency: "unbounded" }
+            { concurrency: EXTERNAL_WORKER_USAGE_CONCURRENCY }
           )
         })
       )
@@ -122,11 +138,26 @@ export const WorkersHandlers = HttpApiBuilder.group(
           const serviceToken = yield* createCredentialReadToken(
             environment.AUTH_GATEWAY_SECRET
           )
-          const existingWorkers = yield* convex.query(
+          const storedWorkers = yield* convex.query(
             api.userWorkers.listForService,
             { serviceToken },
             { accessToken: user.accessToken }
           )
+          const existingWorkers = yield* decryptExternalWorkers(
+            environment,
+            user.id,
+            storedWorkers
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new WorkerRegistrationError({ message: error.message })
+            )
+          )
+          if (existingWorkers.length >= EXTERNAL_WORKER_REGISTRATION_LIMIT) {
+            return yield* new WorkerRegistrationError({
+              message: "You have reached the saved extractor limit.",
+            })
+          }
           const registration = yield* prepareWorkerRegistration({
             baseUrl: payload.baseUrl,
             apiKey: payload.apiKey,
@@ -134,17 +165,45 @@ export const WorkersHandlers = HttpApiBuilder.group(
             requestId: requestEvent.requestId,
           })
 
-          yield* convex.mutation(
-            api.userWorkers.create,
+          const workerId = yield* convex.mutation(
+            api.userWorkers.createPending,
             {
               baseUrl: registration.baseUrl,
-              apiKey: registration.apiKey,
               manifest: registration.manifestValue,
               enabled: true,
               priority: 0,
               verificationStatus: WORKER_VERIFICATION_STATUS.verified,
             },
             { accessToken: user.accessToken }
+          )
+          yield* Effect.gen(function* () {
+            const encryptedCredential = yield* encryptExternalWorkerApiKey(
+              environment,
+              user.id,
+              workerId,
+              registration.apiKey
+            )
+            yield* convex.mutation(
+              api.userWorkers.finalizeEncryptedCredential,
+              { id: workerId, ...encryptedCredential },
+              { accessToken: user.accessToken }
+            )
+          }).pipe(
+            Effect.catch((error) =>
+              convex
+                .mutation(
+                  api.userWorkers.deleteById,
+                  { id: workerId },
+                  { accessToken: user.accessToken }
+                )
+                .pipe(
+                  Effect.andThen(
+                    Effect.fail(
+                      new WorkerRegistrationError({ message: error.message })
+                    )
+                  )
+                )
+            )
           )
 
           return { success: true }
@@ -186,10 +245,20 @@ export const WorkersHandlers = HttpApiBuilder.group(
           const serviceToken = yield* createCredentialReadToken(
             environment.AUTH_GATEWAY_SECRET
           )
-          const workers = yield* convex.query(
+          const storedWorkers = yield* convex.query(
             api.userWorkers.listForService,
             { serviceToken },
             { accessToken: user.accessToken }
+          )
+          const workers = yield* decryptExternalWorkers(
+            environment,
+            user.id,
+            storedWorkers
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new WorkerRegistrationError({ message: error.message })
+            )
           )
           const worker = workers.find((entry) => entry._id === params.workerId)
           if (!worker) {

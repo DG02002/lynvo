@@ -1,8 +1,12 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
-import { AUTH_JWT_COOKIE_NAME } from "../../constants"
+import {
+  AUTH_JWT_COOKIE_NAME,
+  WORKER_SESSION_COOKIE_NAME,
+} from "../../constants"
 import { getCookieValue } from "../../auth-cookie"
+import { CloudflareEnv } from "./CloudflareEnv"
 
 export interface SessionUser {
   readonly id: string
@@ -27,11 +31,37 @@ export class AuthSessionService extends Context.Service<
     AuthSessionService,
     Effect.gen(function* () {
       const convex = yield* ConvexService
+      const environment = yield* CloudflareEnv
 
       const getSession = Effect.fn("AuthSessionService.getSession")(function* (
         request: Request
       ): Effect.fn.Return<SessionResult> {
-        const accessToken = getCookieValue(request, AUTH_JWT_COOKIE_NAME)
+        const opaqueSessionId = getCookieValue(
+          request,
+          WORKER_SESSION_COOKIE_NAME
+        )
+        const workerAccessToken = opaqueSessionId
+          ? yield* Effect.tryPromise({
+              try: async () => {
+                const response = await environment.WORKER_AUTH_SESSION.getByName(
+                  opaqueSessionId
+                ).fetch("https://session.internal/session")
+                if (!response.ok) {
+                  return undefined
+                }
+                const payload: unknown = await response.json()
+                return typeof payload === "object" &&
+                  payload !== null &&
+                  "accessToken" in payload &&
+                  typeof payload.accessToken === "string"
+                  ? payload.accessToken
+                  : undefined
+              },
+              catch: () => undefined,
+            }).pipe(Effect.catch(() => Effect.succeed(undefined)))
+          : undefined
+        const accessToken =
+          workerAccessToken ?? getCookieValue(request, AUTH_JWT_COOKIE_NAME)
         if (!accessToken) {
           return { user: null }
         }

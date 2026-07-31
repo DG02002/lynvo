@@ -5,6 +5,7 @@ import { useState } from "react"
 import { GuestNavActions } from "./header/GuestNavActions"
 import { LogoutDialog } from "./header/LogoutDialog"
 import { UserNavActions } from "./header/UserNavActions"
+import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
 
 export function Header() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await signOut()
+      await signOutWithWorkerSession(signOut)
       navigate("/", { viewTransition: true })
     } catch (error) {
       console.error("Logout failed:", error)

@@ -6,7 +6,10 @@ import {
   getCookieValue,
   normalizeReturnTo,
 } from "../app/lib/auth-cookie"
-import { AUTH_JWT_COOKIE_NAME } from "../app/lib/constants"
+import {
+  AUTH_JWT_COOKIE_NAME,
+  WORKER_SESSION_COOKIE_NAME,
+} from "../app/lib/constants"
 import {
   normalizeUsername,
   validatePassword,
@@ -14,6 +17,7 @@ import {
 } from "../app/lib/auth-policy"
 import { AuthSessionService } from "../app/lib/effect/services/AuthSessionService"
 import { ConvexService } from "../app/lib/effect/services/ConvexService"
+import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
 
 const runSession = (
   request: Request,
@@ -22,7 +26,22 @@ const runSession = (
   Effect.runPromise(
     AuthSessionService.use((service) => service.getSession(request)).pipe(
       Effect.provide(AuthSessionService.layer),
-      Effect.provide(convexLayer)
+      Effect.provide(convexLayer),
+      Effect.provide(
+        Layer.succeed(CloudflareEnv, {
+          WORKER_AUTH_SESSION: {
+            getByName: () => ({
+              fetch: async () =>
+                Response.json({
+                  accessToken: "opaque-session-access-token",
+                  refreshToken: "server-only-refresh-token",
+                  createdAt: 1,
+                  expiresAt: Date.now() + 60_000,
+                }),
+            }),
+          },
+        } as Env)
+      )
     )
   )
 
@@ -38,9 +57,9 @@ describe("auth policy", () => {
   it("validates the configured password policy", () => {
     expect(validatePassword("Password123!", "darshan")).toBeTruthy()
     expect(validatePassword("Darshan123!xxx", "darshan")).toBeTruthy()
-    expect(validatePassword("StrongPass!!!", "darshan")).toBeNull()
-    expect(validatePassword("strongpass123!", "darshan")).toBeTruthy()
-    expect(validatePassword("Strongpassword", "darshan")).toBeNull()
+    expect(validatePassword("StrongPassphrase!!!", "darshan")).toBeNull()
+    expect(validatePassword("strongpassphrase123!", "darshan")).toBeNull()
+    expect(validatePassword("StrongpasswordLong", "darshan")).toBeNull()
   })
 })
 
@@ -119,5 +138,30 @@ describe("AuthSessionService", () => {
       sid: "authSessions:456",
     })
     expect(result.accessToken).toBe("valid-token")
+  })
+
+  it("resolves an opaque Worker session without exposing the refresh token", async () => {
+    const result = await runSession(
+      new Request("https://lynvo.test", {
+        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
+      }),
+      Layer.succeed(
+        ConvexService,
+        ConvexService.of({
+          query: (_query, _args, options) =>
+            options?.accessToken === "opaque-session-access-token"
+              ? Effect.succeed({
+                  id: "users:123",
+                  username: "darshan",
+                  sessionId: "authSessions:456",
+                })
+              : Effect.die(new Error("Unexpected access token")),
+          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
+        })
+      )
+    )
+    expect(result.accessToken).toBe("opaque-session-access-token")
+    expect(result).not.toHaveProperty("refreshToken")
+    expect(result.user?.username).toBe("darshan")
   })
 })

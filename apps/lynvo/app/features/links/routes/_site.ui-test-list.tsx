@@ -1,5 +1,4 @@
 import { useMemo, useReducer } from "react"
-import type { Route } from "./+types/_site.ui-test-list"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
 import { Button } from "~/components/ui/button"
@@ -13,9 +12,7 @@ import { TEST_MIRROR_RESOLUTION_DELAY_MS } from "~/features/links/testing/consta
 import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
 import { createSaveListTestItems } from "~/features/links/testing/save-list-test-fixtures"
 
-export const meta = (_: Route.MetaArgs) => [
-  { title: "Save List UI Test | Lynvo" },
-]
+export const meta = () => [{ title: "Save List UI Test | Lynvo" }]
 
 export const loader = () => ({
   user: {

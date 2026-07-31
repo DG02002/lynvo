@@ -45,10 +45,7 @@ describe("authentication form schemas", () => {
 
     expect(getFieldErrors(result)).toEqual({
       username: ["This username is reserved."],
-      password: [
-        "Password must be at least 11 characters.",
-        "Password must include an uppercase letter.",
-      ],
+      password: ["Password must be at least 15 characters."],
       confirmPassword: ["Passwords do not match."],
     })
   })
@@ -66,8 +63,8 @@ describe("authentication form schemas", () => {
   it("validates password changes and matching confirmation", () => {
     const result = changePasswordSchema.safeParse({
       oldPassword: "",
-      newPassword: "StrongPassword",
-      confirmPassword: "StrongPassword",
+      newPassword: "StrongPasswordLong",
+      confirmPassword: "StrongPasswordLong",
     })
     expect(result.success).toBe(false)
     if (result.success) {

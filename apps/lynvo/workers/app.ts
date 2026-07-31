@@ -14,6 +14,8 @@ import { handler as apiHandler } from "../app/lib/effect/api/Server"
 import { signAuthPreflightToken } from "../app/lib/auth-gateway"
 import { classifyAuthSignInError } from "../app/lib/auth-errors"
 import { createApiErrorResponse } from "../app/lib/api-errors"
+import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
+import { getCookieValue } from "../app/lib/auth-cookie"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
   authPreflightRequestSchema,
@@ -34,6 +36,9 @@ import {
   requestLogging,
   type RequestLoggingEnvironment,
 } from "./request-logging"
+export { AuthRateLimiter } from "./auth-rate-limiter"
+export { ExternalWorkerCredentialVault } from "./external-worker-credential-vault"
+export { WorkerAuthSession } from "./worker-auth-session"
 
 const reactRouterHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -46,11 +51,29 @@ initLogger({
 
 const app = new Hono<RequestLoggingEnvironment>()
 
+const TURNSTILE_HOSTNAME = "lynvo.dg02002.workers.dev"
+const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
+const SESSION_ABSOLUTE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1_000
+const SESSION_IDLE_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1_000
+const SESSION_COOKIE_MAX_AGE_SECONDS = SESSION_ABSOLUTE_LIFETIME_MS / 1_000
+
+app.use("*", async (context, next) => {
+  await next()
+  context.res.headers.set("Strict-Transport-Security", "max-age=31536000")
+  context.res.headers.set("X-Content-Type-Options", "nosniff")
+  context.res.headers.set("X-Frame-Options", "DENY")
+  context.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+  context.res.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=()"
+  )
+})
+
 app.use("/api/*", requestLogging())
 
 type AuthEnv = Env & {
   readonly AUTH_GATEWAY_SECRET?: string
-  readonly AUTH_RATE_LIMITS?: KVNamespace
+  readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
   readonly TURNSTILE_SECRET_KEY?: string
 }
 
@@ -85,28 +108,36 @@ const rateLimit = async (
   key: string,
   limit: number,
   windowSeconds: number
-): Promise<boolean> => {
-  if (import.meta.env.DEV) {
-    return true
+): Promise<"allowed" | "limited" | "unavailable"> => {
+  const limiter = env.AUTH_RATE_LIMITER
+  if (!limiter) {
+    return env.ENVIRONMENT === "production" ? "unavailable" : "allowed"
   }
-  const store = env.AUTH_RATE_LIMITS
-  if (!store) {
-    return true
+  try {
+    const response = await limiter
+      .getByName(key)
+      .fetch("https://auth-rate-limiter/attempt", {
+        method: "POST",
+        body: JSON.stringify({
+          limit,
+          nowMs: Date.now(),
+          windowMs: windowSeconds * 1_000,
+        }),
+      })
+    if (response.status === 200) {
+      return "allowed"
+    }
+    return response.status === 429 ? "limited" : "unavailable"
+  } catch {
+    return "unavailable"
   }
-  const current = Number((await store.get(key)) ?? "0")
-  if (current >= limit) {
-    return false
-  }
-  await store.put(key, String(current + 1), {
-    expirationTtl: windowSeconds,
-  })
-  return true
 }
 
 const verifyTurnstile = async (
   env: AuthEnv,
   request: Request,
-  token: string | undefined
+  token: string | undefined,
+  expectedAction: "lynvo-sign-in" | "lynvo-sign-up"
 ): Promise<boolean> => {
   if (import.meta.env.DEV && token === "dev-token") {
     return true
@@ -118,27 +149,33 @@ const verifyTurnstile = async (
   form.set("secret", env.TURNSTILE_SECRET_KEY)
   form.set("response", token)
   form.set("remoteip", clientIp(request))
-  const response = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      body: form,
-    }
-  )
+  let response
+  try {
+    response = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        body: form,
+        signal: AbortSignal.timeout(TURNSTILE_SITEVERIFY_TIMEOUT_MS),
+      }
+    )
+  } catch {
+    return false
+  }
   if (!response.ok) {
     return false
   }
   const result = turnstileVerificationResponseSchema.safeParse(
     await response.json()
   )
-  if (!result.success || !result.data.success) {
+  if (
+    !result.success ||
+    !result.data.success ||
+    result.data.action !== expectedAction
+  ) {
     return false
   }
-  if (result.data.hostname) {
-    const expected = new URL(request.url).hostname
-    return result.data.hostname === expected || expected === "localhost"
-  }
-  return true
+  return result.data.hostname === TURNSTILE_HOSTNAME
 }
 
 app.onError((error, context) => {
@@ -218,8 +255,26 @@ app.post("/api/auth/preflight", async (context) => {
     flow === "signUp"
       ? `auth:signup:${ip}`
       : `auth:signin:${ip}:${normalizedUsername}`
-  const allowed = await rateLimit(env, rateKey, flow === "signUp" ? 5 : 10, 600)
-  if (!allowed) {
+  const rateLimitResult = await rateLimit(
+    env,
+    rateKey,
+    flow === "signUp" ? 5 : 10,
+    600
+  )
+  if (rateLimitResult === "unavailable") {
+    addRequestContext(context, {
+      configuration_error: "auth_rate_limiter_unavailable",
+    })
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Sign-in is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  if (rateLimitResult === "limited") {
     addRequestContext(context, { rate_limit: { allowed: false } })
     return context.json(
       requestApiError(context, {
@@ -233,7 +288,8 @@ app.post("/api/auth/preflight", async (context) => {
   const turnstileOk = await verifyTurnstile(
     env,
     context.req.raw,
-    payload.turnstileToken
+    payload.turnstileToken,
+    flow === "signUp" ? "lynvo-sign-up" : "lynvo-sign-in"
   )
   if (!turnstileOk) {
     addRequestContext(context, { turnstile: { verified: false } })
@@ -311,13 +367,26 @@ app.post("/api/auth/tv/code", async (context) => {
       400
     )
   }
-  const allowed = await rateLimit(
+  const rateLimitResult = await rateLimit(
     env,
     `auth:device-code:${clientIp(context.req.raw)}`,
     DEVICE_CODE_CREATION_RATE_LIMIT,
     DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
   )
-  if (!allowed) {
+  if (rateLimitResult === "unavailable") {
+    addRequestContext(context, {
+      configuration_error: "auth_rate_limiter_unavailable",
+    })
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Sign-in is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  if (rateLimitResult === "limited") {
     addRequestContext(context, { rate_limit: { allowed: false } })
     return context.json(
       requestApiError(context, {
@@ -417,11 +486,54 @@ app.post("/api/auth/sign-in", async (context) => {
       provider: payload.provider,
       params: payload.params,
     })
-    const tokens = (result as { tokens?: { token?: string } }).tokens
+    const tokens = (
+      result as { tokens?: { token?: string; refreshToken?: string } }
+    ).tokens
     const deviceName = payload.params.deviceName?.trim().slice(0, 80)
     if (tokens?.token && deviceName) {
       client.setAuth(tokens.token)
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
+    }
+    if (tokens?.token && tokens.refreshToken) {
+      const sessionId = crypto.randomUUID()
+      const createdAt = Date.now()
+      let sessionResponse: Response
+      try {
+        sessionResponse = await context.env.WORKER_AUTH_SESSION.getByName(
+          sessionId
+        ).fetch("https://session.internal/session", {
+          method: "POST",
+          body: JSON.stringify({
+            accessToken: tokens.token,
+            refreshToken: tokens.refreshToken,
+            createdAt,
+            expiresAt: createdAt + SESSION_ABSOLUTE_LIFETIME_MS,
+            idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+          }),
+        })
+      } catch {
+        sessionResponse = new Response(null, { status: 503 })
+      }
+      if (!sessionResponse.ok) {
+        return context.json(
+          requestApiError(context, {
+            code: "service_unavailable",
+            error: "Sign-in is unavailable. Try again later.",
+            retryable: true,
+          }),
+          503
+        )
+      }
+      context.header(
+        "Set-Cookie",
+        `${WORKER_SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE_SECONDS}`
+      )
+      addRequestContext(context, {
+        auth_flow: flow,
+        has_tokens: true,
+        worker_session_created: true,
+      })
+      return context.json(result)
     }
     addRequestContext(context, {
       auth_flow: flow,
@@ -449,6 +561,48 @@ app.post("/api/auth/sign-in", async (context) => {
   }
 })
 
+app.delete("/api/auth/session", async (context) => {
+  addRequestContext(context, { operation: "auth_session_revoke" })
+  if (!isSameOriginRequest(context.req.raw)) {
+    return context.json(
+      requestApiError(context, {
+        code: "forbidden",
+        error: "You do not have access to this request.",
+        retryable: false,
+      }),
+      403
+    )
+  }
+  const sessionId = getCookieValue(
+    context.req.raw,
+    WORKER_SESSION_COOKIE_NAME
+  )
+  if (sessionId) {
+    try {
+      const response = await context.env.WORKER_AUTH_SESSION.getByName(
+        sessionId
+      ).fetch("https://session.internal/session", { method: "DELETE" })
+      if (!response.ok) {
+        throw new Error("Session revocation failed")
+      }
+    } catch {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "Sign-out is unavailable. Try again later.",
+          retryable: true,
+        }),
+        503
+      )
+    }
+  }
+  context.header(
+    "Set-Cookie",
+    `${WORKER_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
+  )
+  return context.body(null, 204)
+})
+
 app.get("/api/realtime", async (context) => {
   addRequestContext(context, {
     operation: "realtime_connect",
@@ -473,6 +627,45 @@ app.get("/api/realtime", async (context) => {
   return context.env.USER_REALTIME_ROOM.getByName(session.user.id).fetch(
     request
   )
+})
+
+app.use("/api/auth/tv/authorize", async (context, next) => {
+  const session = await getSession(context.req.raw, context.env)
+  if (!session.user) {
+    return next()
+  }
+  const rateLimitResult = await rateLimit(
+    context.env,
+    `auth:tv-approval:${clientIp(context.req.raw)}:${session.user.id}`,
+    10,
+    600
+  )
+  if (rateLimitResult === "unavailable") {
+    addRequestContext(context, {
+      configuration_error: "auth_rate_limiter_unavailable",
+    })
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Device approval is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  if (rateLimitResult === "limited") {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many attempts. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
+  }
+  addRequestContext(context, { rate_limit: { allowed: true } })
+  return next()
 })
 
 app.all("/api/*", async (context) => {

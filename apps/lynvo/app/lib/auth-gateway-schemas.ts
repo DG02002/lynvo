@@ -1,11 +1,12 @@
 import { z } from "zod"
 
 const AUTH_GATEWAY_STRING_MAX_LENGTH = 4_096
+const TURNSTILE_TOKEN_MAX_LENGTH = 2_048
 
 export const authPreflightRequestSchema = z.strictObject({
   flow: z.enum(["signIn", "signUp"]),
   username: z.string().max(AUTH_GATEWAY_STRING_MAX_LENGTH),
-  turnstileToken: z.string().max(AUTH_GATEWAY_STRING_MAX_LENGTH),
+  turnstileToken: z.string().max(TURNSTILE_TOKEN_MAX_LENGTH),
 })
 
 export const authSignInRequestSchema = z.strictObject({
@@ -30,5 +31,6 @@ export const deviceCodeResponseSchema = z.strictObject({
 
 export const turnstileVerificationResponseSchema = z.object({
   success: z.boolean(),
-  hostname: z.string().optional(),
+  hostname: z.string(),
+  action: z.string(),
 })

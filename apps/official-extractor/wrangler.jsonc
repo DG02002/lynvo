@@ -6,7 +6,7 @@
   "workers_dev": false,
   "observability": { "enabled": true },
   "vars": {
-    "PUBLIC_ASSET_ORIGIN": "",
+    "PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/official-extractor-assets",
   },
   "secrets": {
     "required": ["OFFICIAL_EXTRACTOR_API_KEY"],

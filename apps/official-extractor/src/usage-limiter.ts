@@ -12,6 +12,7 @@ export interface UsageCounterRow {
 
 export interface UsageReservationResult {
   reserved: boolean
+  periodKey: string
 }
 
 const currentPeriodKey = (timestampMs: number): string =>
@@ -76,6 +77,7 @@ export class OfficialExtractorUsageLimiter {
     if (pathname === "/reserve" && request.method === "POST") {
       return Response.json({
         reserved: this.reserve(periodKey),
+        periodKey,
       } satisfies UsageReservationResult)
     }
     if (pathname === "/settle" && request.method === "POST") {
@@ -84,9 +86,11 @@ export class OfficialExtractorUsageLimiter {
         typeof body === "object" &&
         body !== null &&
         "succeeded" in body &&
+        "periodKey" in body &&
+        typeof body.periodKey === "string" &&
         body.succeeded === false
       ) {
-        this.release(periodKey)
+        this.release(body.periodKey)
       }
       return new Response(null, { status: 204 })
     }
@@ -123,23 +127,24 @@ const getUsageLimiterStub = (
 
 export const reserveUsage = async (
   env: OfficialExtractorBindings
-): Promise<boolean> => {
+): Promise<UsageReservationResult> => {
   const response = await getUsageLimiterStub(env).fetch(
     "https://usage.internal/reserve",
     { method: "POST" }
   )
   const result: UsageReservationResult = await response.json()
-  return result.reserved
+  return result
 }
 
 export const settleUsage = async (
   env: OfficialExtractorBindings,
-  succeeded: boolean
+  succeeded: boolean,
+  periodKey: string
 ): Promise<void> => {
   await getUsageLimiterStub(env).fetch("https://usage.internal/settle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ succeeded }),
+    body: JSON.stringify({ succeeded, periodKey }),
   })
 }
 

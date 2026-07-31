@@ -26,6 +26,29 @@ const digestPollSecret = async (pollSecret: string) =>
   )
 
 describe("device authorization", () => {
+  it("generates fixed-width codes without Math.random", async () => {
+    const gatewaySecret = "test-cryptographic-device-code-secret"
+    vi.stubEnv("AUTH_GATEWAY_SECRET", gatewaySecret)
+    const convex = createConvexTest()
+    const preflightToken = await signAuthPreflightToken(
+      { purpose: "deviceCode", exp: Date.now() + DEVICE_CODE_TTL_MS },
+      gatewaySecret
+    )
+    const randomSpy = vi
+      .spyOn(Math, "random")
+      .mockImplementation(() => {
+        throw new Error("Math.random must not generate authentication codes")
+      })
+
+    const generated = await convex.mutation(api.tv.generateCode, {
+      deviceName: "Test TV",
+      preflightToken,
+    })
+    expect(generated.code).toMatch(/^\d{8}$/)
+    randomSpy.mockRestore()
+    vi.unstubAllEnvs()
+  })
+
   it("requires a valid gateway preflight and polling secret", async () => {
     const gatewaySecret = "test-device-code-gateway-secret"
     vi.stubEnv("AUTH_GATEWAY_SECRET", gatewaySecret)

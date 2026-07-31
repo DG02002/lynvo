@@ -36,7 +36,9 @@ export const loadOfficialPlugins = async (
         id: source.id,
         name: source.displayName,
         sourceUrl:
-          source.homepage ?? manifest.homepage ?? "https://lynvo.example",
+          source.homepage ??
+          manifest.homepage ??
+          "https://lynvo.dg02002.workers.dev",
         icon: source.iconUrl
           ? { url: resolveOfficialPluginIconUrl(source.iconUrl, requestUrl) }
           : {},

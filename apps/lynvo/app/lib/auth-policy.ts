@@ -1,6 +1,6 @@
 export const USERNAME_MIN_LENGTH = 6
 export const USERNAME_MAX_LENGTH = 30
-export const PASSWORD_MIN_LENGTH = 11
+export const PASSWORD_MIN_LENGTH = 15
 export const PASSWORD_MAX_LENGTH = 128
 
 const USERNAME_PATTERN = /^[a-z0-9_-]+$/
@@ -68,12 +68,6 @@ export const getPasswordValidationErrors = (
     errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
   } else if (password.length > PASSWORD_MAX_LENGTH) {
     errors.push(`Password must be at most ${PASSWORD_MAX_LENGTH} characters.`)
-  }
-  if (!/[A-Z]/.test(password)) {
-    errors.push("Password must include an uppercase letter.")
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push("Password must include a lowercase letter.")
   }
   const lower = password.toLowerCase()
   const normalizedUsername = username ? normalizeUsername(username) : ""

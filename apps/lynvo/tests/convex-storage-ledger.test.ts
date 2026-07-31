@@ -45,13 +45,19 @@ describe("Convex storage ledger", () => {
     expect(afterDelete.ledger).toMatchObject(afterDelete.inventory)
     expect(afterDelete.ledger?.savedLinkCount).toBe(0)
 
-    const workerId = await client.mutation(api.userWorkers.create, {
+    const workerId = await client.mutation(api.userWorkers.createPending, {
       baseUrl: "https://worker.ledger.example",
-      apiKey: "secret",
       manifest: "{}",
       enabled: true,
       priority: 1,
       verificationStatus: "verified",
+    })
+    await client.mutation(api.userWorkers.finalizeEncryptedCredential, {
+      id: workerId,
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM",
+      apiKeyVersion: 1,
     })
     await client.mutation(api.userWorkers.update, {
       id: workerId,

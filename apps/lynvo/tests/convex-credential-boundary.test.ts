@@ -19,22 +19,29 @@ describe("Convex credential boundary", () => {
     vi.unstubAllEnvs()
   })
 
-  it("redacts worker API keys from browser queries", async () => {
+  it("redacts encrypted worker credentials from browser queries", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "worker-boundary-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
-    await client.mutation(api.userWorkers.create, {
+    const workerId = await client.mutation(api.userWorkers.createPending, {
       baseUrl: "https://worker.example",
-      apiKey: "worker-secret",
       manifest: "{}",
       enabled: true,
       priority: 0,
       verificationStatus: "verified",
     })
+    await client.mutation(api.userWorkers.finalizeEncryptedCredential, {
+      id: workerId,
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM",
+      apiKeyVersion: 1,
+    })
 
     const publicWorkers = await client.query(api.userWorkers.list, {})
     expect(publicWorkers).toHaveLength(1)
     expect(publicWorkers[0]).not.toHaveProperty("apiKey")
+    expect(publicWorkers[0]).not.toHaveProperty("apiKeyCiphertext")
 
     const serviceToken = await signCredentialReadToken(
       TEST_GATEWAY_SECRET,
@@ -43,7 +50,13 @@ describe("Convex credential boundary", () => {
     const serviceWorkers = await client.query(api.userWorkers.listForService, {
       serviceToken,
     })
-    expect(serviceWorkers[0]?.apiKey).toBe("worker-secret")
+    expect(serviceWorkers[0]).toMatchObject({
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM",
+      apiKeyVersion: 1,
+    })
+    expect(serviceWorkers[0]).not.toHaveProperty("apiKey")
   })
 
   it("rejects service credential reads without a valid signature", async () => {

@@ -10,7 +10,6 @@ export default [
   layout("features/site/routes/_site.tsx", [
     index("features/site/routes/_site._index.tsx"),
     route("save", "features/links/routes/_site.save.tsx"),
-    route("ui-test-list", "features/links/routes/_site.ui-test-list.tsx"),
     route("account", "features/site/routes/_site.account.tsx"),
     route(
       "settings/:section?/:subview?",

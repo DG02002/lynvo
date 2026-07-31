@@ -82,7 +82,7 @@ const planDetailSections = [
         icon: {},
       },
       {
-        feature: "Google Drive Public Files",
+        feature: "Google Drive Public Folders & Files",
         allowance: "Included",
         icon: {
           url: "/official-extractor-assets/icons/sources/google-drive-public-files.webp",

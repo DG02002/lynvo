@@ -196,6 +196,8 @@ command.
 
 Before deployment:
 
+- Use `https://lynvo.dg02002.workers.dev` as the production Lynvo URL and
+  Convex Auth `SITE_URL`.
 - Replace the placeholder `AUTH_RATE_LIMITS` KV namespace id in `apps/lynvo/wrangler.jsonc`.
 - Configure the production Convex URL and Turnstile values.
 - Choose the production Lynvo URL before initializing production Convex Auth.

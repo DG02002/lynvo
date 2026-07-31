@@ -50,7 +50,11 @@ describe("bounded lifecycle cleanup", () => {
       await context.db.insert("userWorkers", {
         userId: target.userId,
         baseUrl: "https://worker.target.example",
-        apiKey: "key",
+        apiKeyCiphertext: "ciphertext",
+        apiKeyNonce: "nonce",
+        apiKeyAlgorithm: "AES-256-GCM",
+        apiKeyVersion: 1,
+        credentialStatus: "ready",
         manifest: "{}",
         enabled: true,
         priority: 1,

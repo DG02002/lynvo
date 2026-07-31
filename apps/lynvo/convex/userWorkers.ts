@@ -24,7 +24,16 @@ const workerFields = {
 }
 
 const publicWorkerValidator = v.object(workerFields)
-const serviceWorkerValidator = v.object({ ...workerFields, apiKey: v.string() })
+const encryptedApiKeyFields = {
+  apiKeyCiphertext: v.string(),
+  apiKeyNonce: v.string(),
+  apiKeyAlgorithm: v.literal("AES-256-GCM"),
+  apiKeyVersion: v.number(),
+}
+const serviceWorkerValidator = v.object({
+  ...workerFields,
+  ...encryptedApiKeyFields,
+})
 const successValidator = v.object({ success: v.boolean() })
 
 export const list = query({
@@ -36,7 +45,16 @@ export const list = query({
       .query("userWorkers")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .collect()
-    return workers.map(({ apiKey: _apiKey, ...worker }) => worker)
+    return workers.filter((worker) => worker.credentialStatus === "ready").map(
+      ({
+        apiKeyCiphertext: _apiKeyCiphertext,
+        apiKeyNonce: _apiKeyNonce,
+        apiKeyAlgorithm: _apiKeyAlgorithm,
+        apiKeyVersion: _apiKeyVersion,
+        credentialStatus: _credentialStatus,
+        ...worker
+      }) => worker
+    )
   },
 })
 
@@ -50,20 +68,47 @@ export const listForService = query({
       throw new Error("Credential service is not configured")
     }
     await verifyCredentialReadToken(args.serviceToken, secret)
-    return await ctx.db
+    const workers = await ctx.db
       .query("userWorkers")
       .withIndex("by_userId", (queryBuilder) =>
         queryBuilder.eq("userId", userId)
       )
       .collect()
+    return workers.flatMap((worker) =>
+      worker.credentialStatus === "ready" &&
+      worker.apiKeyCiphertext &&
+      worker.apiKeyNonce &&
+      worker.apiKeyAlgorithm &&
+      worker.apiKeyVersion !== undefined
+        ? [
+            {
+              _id: worker._id,
+              _creationTime: worker._creationTime,
+              userId: worker.userId,
+              baseUrl: worker.baseUrl,
+              manifest: worker.manifest,
+              enabled: worker.enabled,
+              priority: worker.priority,
+              verificationStatus: worker.verificationStatus,
+              lastVerifiedAt: worker.lastVerifiedAt,
+              lastManifestRefreshAt: worker.lastManifestRefreshAt,
+              createdAt: worker.createdAt,
+              updatedAt: worker.updatedAt,
+              apiKeyCiphertext: worker.apiKeyCiphertext,
+              apiKeyNonce: worker.apiKeyNonce,
+              apiKeyAlgorithm: worker.apiKeyAlgorithm,
+              apiKeyVersion: worker.apiKeyVersion,
+            },
+          ]
+        : []
+    )
   },
 })
 
-export const create = mutation({
+export const createPending = mutation({
   returns: v.id("userWorkers"),
   args: {
     baseUrl: v.string(),
-    apiKey: v.string(),
     manifest: v.string(),
     enabled: v.boolean(),
     priority: v.number(),
@@ -74,12 +119,8 @@ export const create = mutation({
     const now = Date.now()
     const newDoc = {
       userId,
-      baseUrl: args.baseUrl,
-      apiKey: args.apiKey,
-      manifest: args.manifest,
-      enabled: args.enabled,
-      priority: args.priority,
-      verificationStatus: args.verificationStatus,
+      ...args,
+      credentialStatus: "pending" as const,
       createdAt: now,
       updatedAt: now,
     }
@@ -88,12 +129,48 @@ export const create = mutation({
   },
 })
 
+export const finalizeEncryptedCredential = mutation({
+  returns: successValidator,
+  args: {
+    id: v.string(),
+    apiKeyCiphertext: v.string(),
+    apiKeyNonce: v.string(),
+    apiKeyAlgorithm: v.literal("AES-256-GCM"),
+    apiKeyVersion: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const workerId = ctx.db.normalizeId("userWorkers", args.id)
+    const existing = workerId ? await ctx.db.get("userWorkers", workerId) : null
+    if (
+      !existing ||
+      existing.userId !== userId ||
+      existing.credentialStatus !== "pending"
+    ) {
+      throw new Error("Extractor credential cannot be finalized")
+    }
+    const { id: _id, ...credential } = args
+    const nextDoc = {
+      ...existing,
+      ...credential,
+      credentialStatus: "ready" as const,
+      updatedAt: Date.now(),
+    }
+    await assertStorageMutation(ctx, userId, existing, nextDoc)
+    await ctx.db.patch("userWorkers", existing._id, {
+      ...credential,
+      credentialStatus: "ready",
+      updatedAt: nextDoc.updatedAt,
+    })
+    return { success: true }
+  },
+})
+
 export const update = mutation({
   returns: successValidator,
   args: {
     id: v.string(),
     baseUrl: v.optional(v.string()),
-    apiKey: v.optional(v.string()),
     manifest: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
     priority: v.optional(v.number()),

@@ -43,7 +43,12 @@ describe("usage limiter", () => {
       await Promise.all(
         reservations.map((response) => response.json<{ reserved: boolean }>())
       )
-    ).toEqual(Array.from({ length: 20 }, () => ({ reserved: true })))
+    ).toEqual(
+      Array.from({ length: 20 }, () => ({
+        reserved: true,
+        periodKey: "2026-07-19",
+      }))
+    )
 
     const response = await requestAt("/usage", timestampMs)
     const usage = await response.json<{ metrics: Array<{ used: number }> }>()
@@ -52,14 +57,47 @@ describe("usage limiter", () => {
 
   it("releases failed reservations", async () => {
     const timestampMs = Date.UTC(2026, 6, 19)
-    await requestAt("/reserve", timestampMs, { method: "POST" })
+    const reservationResponse = await requestAt("/reserve", timestampMs, {
+      method: "POST",
+    })
+    const reservation = await reservationResponse.json<{ periodKey: string }>()
     await requestAt("/settle", timestampMs, {
       method: "POST",
-      body: JSON.stringify({ succeeded: false }),
+      body: JSON.stringify({
+        succeeded: false,
+        periodKey: reservation.periodKey,
+      }),
     })
     const response = await requestAt("/usage", timestampMs)
     const usage = await response.json<{ metrics: Array<{ used: number }> }>()
     expect(usage.metrics[0].used).toBe(0)
+  })
+
+  it("releases a failed reservation from its original UTC period", async () => {
+    const beforeMidnight = Date.UTC(2026, 6, 19, 23, 59, 59)
+    const afterMidnight = Date.UTC(2026, 6, 20, 0, 0, 1)
+    const reservationResponse = await requestAt("/reserve", beforeMidnight, {
+      method: "POST",
+    })
+    const reservation = await reservationResponse.json<{
+      reserved: boolean
+      periodKey: string
+    }>()
+
+    expect(reservation).toEqual({ reserved: true, periodKey: "2026-07-19" })
+    await requestAt("/settle", afterMidnight, {
+      method: "POST",
+      body: JSON.stringify({
+        succeeded: false,
+        periodKey: reservation.periodKey,
+      }),
+    })
+
+    const originalPeriodResponse = await requestAt("/usage", beforeMidnight)
+    const originalPeriod = await originalPeriodResponse.json<{
+      metrics: Array<{ used: number }>
+    }>()
+    expect(originalPeriod.metrics[0].used).toBe(0)
   })
 
   it("rejects reservations at the finite limit", async () => {
@@ -80,7 +118,10 @@ describe("usage limiter", () => {
     const response = await requestAt("/reserve", timestampMs, {
       method: "POST",
     })
-    expect(await response.json()).toEqual({ reserved: false })
+    expect(await response.json()).toEqual({
+      reserved: false,
+      periodKey: "2026-07-19",
+    })
   })
 
   it("uses independent UTC daily periods", async () => {

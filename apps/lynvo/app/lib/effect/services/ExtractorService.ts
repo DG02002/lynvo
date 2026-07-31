@@ -33,6 +33,7 @@ import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
 import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
+import { decryptExternalWorkers } from "./external-worker-credentials"
 
 const getHostname = (value: string): string => new URL(value).hostname
 
@@ -76,7 +77,7 @@ export class ExtractorService extends Context.Service<
               Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
             )
           )
-          const workers = yield* convex
+          const storedWorkers = yield* convex
             .query(
               api.userWorkers.listForService,
               { serviceToken },
@@ -91,6 +92,19 @@ export class ExtractorService extends Context.Service<
                   })
               )
             )
+          const workers = yield* decryptExternalWorkers(
+            environment,
+            options.userId,
+            storedWorkers
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new ValidationError({
+                  message: error.message,
+                  details: error,
+                })
+            )
+          )
           const worker = yield* selectWorker(
             workers,
             targetUrl,
@@ -344,10 +358,20 @@ export class ExtractorService extends Context.Service<
               Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
             )
           )
-          const workers = yield* convex.query(
+          const storedWorkers = yield* convex.query(
             api.userWorkers.listForService,
             { serviceToken },
             { accessToken: options.accessToken }
+          )
+          const workers = yield* decryptExternalWorkers(
+            environment,
+            options.userId,
+            storedWorkers
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new ConvexError({ message: error.message, cause: error })
+            )
           )
           const worker = yield* selectWorker(workers, options.url)
           if (worker) {

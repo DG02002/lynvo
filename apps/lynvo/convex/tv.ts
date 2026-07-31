@@ -11,8 +11,20 @@ declare const process: {
   }
 }
 
-const generateNumericCode = () =>
-  Math.floor(10000000 + Math.random() * 90000000).toString()
+const DEVICE_CODE_MINIMUM = 10_000_000
+const DEVICE_CODE_RANGE = 90_000_000
+const UINT32_RANGE = 0x1_0000_0000
+const DEVICE_CODE_RANDOM_LIMIT =
+  Math.floor(UINT32_RANGE / DEVICE_CODE_RANGE) * DEVICE_CODE_RANGE
+const DEVICE_CODE_COLLISION_ATTEMPTS = 5
+
+const generateNumericCode = () => {
+  const randomValue = new Uint32Array(1)
+  do {
+    crypto.getRandomValues(randomValue)
+  } while (randomValue[0] >= DEVICE_CODE_RANDOM_LIMIT)
+  return (DEVICE_CODE_MINIMUM + (randomValue[0] % DEVICE_CODE_RANGE)).toString()
+}
 
 const bytesToHex = (bytes: Uint8Array) =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
@@ -48,16 +60,26 @@ export const generateCode = mutation({
     const now = Date.now()
     const deviceName =
       arguments_.deviceName.trim().slice(0, 80) || "Unknown Device"
-    let code = generateNumericCode()
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    let code: string | undefined
+    for (
+      let attempt = 0;
+      attempt < DEVICE_CODE_COLLISION_ATTEMPTS;
+      attempt += 1
+    ) {
+      const candidate = generateNumericCode()
       const existing = await context.db
         .query("deviceCodes")
-        .withIndex("by_code", (queryBuilder) => queryBuilder.eq("code", code))
+        .withIndex("by_code", (queryBuilder) =>
+          queryBuilder.eq("code", candidate)
+        )
         .unique()
       if (!existing) {
+        code = candidate
         break
       }
-      code = generateNumericCode()
+    }
+    if (!code) {
+      throw new Error("Unable to allocate a device code")
     }
     const pollSecret = generatePollSecret()
     const expiresAt = now + DEVICE_CODE_TTL_MS

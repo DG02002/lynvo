@@ -35,8 +35,8 @@ const runtime = createExtractorRuntime<OfficialExtractorBindings>({
   usage: ({ env }) => readUsage(env),
   discover: ({ targetUrl }) => discoverOfficialSource(targetUrl),
   extract: async ({ request, targetUrl, env }) => {
-    const didReserve = await reserveUsage(env)
-    if (!didReserve) {
+    const reservation = await reserveUsage(env)
+    if (!reservation.reserved) {
       throw createError({
         message: "RATE_LIMITED",
         status: 429,
@@ -55,7 +55,7 @@ const runtime = createExtractorRuntime<OfficialExtractorBindings>({
       didSucceed = true
       return result
     } finally {
-      await settleUsage(env, didSucceed)
+      await settleUsage(env, didSucceed, reservation.periodKey)
     }
   },
   onError: () => {},

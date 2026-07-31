@@ -59,17 +59,21 @@ describe("shared authentication policy", () => {
       "",
       `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`,
     ],
-    ["lowercaseonly", "", "Password must include an uppercase letter."],
-    ["UPPERCASEONLY", "", "Password must include a lowercase letter."],
+    ["lowercaseonlylong", "", null],
+    ["UPPERCASEONLYLONG", "", null],
     [
       "DarshanSecurePass",
       " Darshan ",
       "Password cannot contain your username.",
     ],
-    ["AaaaaaaSecure", "", "Password is too repetitive."],
-    ["Password123!", "", "Password is too common."],
-    ["StrongPassword", "", null],
-    ["StrongPass!!!", "darshan", null],
+    ["AaaaaaaaaaaaaaSecure", "", "Password is too repetitive."],
+    [
+      "Password123!",
+      "",
+      `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+    ],
+    ["StrongPasswordLong", "", null],
+    ["StrongPassphrase!!!", "darshan", null],
   ])(
     "validates password policy for %#",
     (password, username, expectedError) => {
@@ -80,7 +84,12 @@ describe("shared authentication policy", () => {
   it("collects every actionable password error for form validation", () => {
     expect(getPasswordValidationErrors("weak")).toEqual([
       `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
-      "Password must include an uppercase letter.",
     ])
+  })
+
+  it("continues to block common passwords independently of length", () => {
+    expect(getPasswordValidationErrors("Password123!")).toContain(
+      "Password is too common."
+    )
   })
 })

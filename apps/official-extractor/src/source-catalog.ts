@@ -82,7 +82,7 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
   },
   {
     id: GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID,
-    displayName: "Google Drive Public Files",
+    displayName: "Google Drive Public Folders & Files",
     description:
       "Extracts public Google Drive files and folders shared with anyone who has the link.",
     homepage: "https://drive.google.com",
@@ -124,7 +124,7 @@ export const createOfficialManifest = (
   extractorId: EXTRACTOR_ID,
   displayName: EXTRACTOR_NAME,
   hasIcon: false,
-  homepage: "https://lynvo.example",
+  homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
   matchers: OFFICIAL_SOURCE_CATALOG.flatMap((source) => source.matchers),

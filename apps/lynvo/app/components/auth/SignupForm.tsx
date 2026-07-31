@@ -85,6 +85,7 @@ export function SignupForm() {
             "Account setup is temporarily unavailable. Try again later."
           )
         )
+      } finally {
         turnstileRef.current?.reset()
         turnstileTokenRef.current = initialTurnstileToken()
       }
@@ -155,6 +156,7 @@ export function SignupForm() {
       />
       <AuthControl>
         <Turnstile
+          action="lynvo-sign-up"
           ref={turnstileRef}
           onVerify={(token) => {
             turnstileTokenRef.current = token

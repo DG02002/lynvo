@@ -7,6 +7,7 @@ declare global {
         element: HTMLElement,
         options: {
           sitekey: string
+          action: string
           theme?: "auto" | "light" | "dark"
           size?: "normal" | "compact" | "flexible"
           callback: (token: string) => void
@@ -25,6 +26,7 @@ export interface TurnstileHandle {
 }
 
 interface TurnstileProps {
+  action: "lynvo-sign-in" | "lynvo-sign-up"
   onVerify: (token: string) => void
   onError?: () => void
   ref?: React.Ref<TurnstileHandle>
@@ -56,7 +58,12 @@ const getTurnstileSiteKey = () => {
   )
 }
 
-export const Turnstile = ({ onVerify, onError, ref }: TurnstileProps) => {
+export const Turnstile = ({
+  action,
+  onVerify,
+  onError,
+  ref,
+}: TurnstileProps) => {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const widgetIdRef = React.useRef<string | null>(null)
   const siteKey = getTurnstileSiteKey()
@@ -92,11 +99,23 @@ export const Turnstile = ({ onVerify, onError, ref }: TurnstileProps) => {
       }
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        action,
         theme: "auto",
         size: "flexible",
         callback: onVerify,
-        "error-callback": onError,
-        "expired-callback": () => onVerify(""),
+        "error-callback": () => {
+          onVerify("")
+          if (widgetIdRef.current) {
+            window.turnstile?.reset(widgetIdRef.current)
+          }
+          onError?.()
+        },
+        "expired-callback": () => {
+          onVerify("")
+          if (widgetIdRef.current) {
+            window.turnstile?.reset(widgetIdRef.current)
+          }
+        },
       })
     }
     const interval = window.setInterval(render, 100)
@@ -109,12 +128,15 @@ export const Turnstile = ({ onVerify, onError, ref }: TurnstileProps) => {
       }
       widgetIdRef.current = null
     }
-  }, [siteKey, onVerify, onError])
+  }, [action, siteKey, onVerify, onError])
 
   if (import.meta.env.DEV) {
     return (
       <div className="flex flex-col gap-2 py-2">
-        <div className="rounded border border-dashed border-muted-foreground/50 p-2 text-center text-xs text-muted-foreground">
+        <div
+          className="rounded border border-dashed border-muted-foreground/50 p-2 text-center text-xs text-muted-foreground"
+          data-turnstile-action={action}
+        >
           Turnstile bypassed in dev mode
         </div>
       </div>
@@ -128,7 +150,7 @@ export const Turnstile = ({ onVerify, onError, ref }: TurnstileProps) => {
   return (
     <div className="flex flex-col gap-2 py-2">
       <span className="text-sm">Let us know you&apos;re human</span>
-      <div ref={containerRef} />
+      <div ref={containerRef} data-turnstile-action={action} />
     </div>
   )
 }

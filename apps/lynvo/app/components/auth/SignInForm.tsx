@@ -83,6 +83,7 @@ export function SignInForm() {
             "Sign-in is temporarily unavailable. Try again later."
           )
         )
+      } finally {
         turnstileRef.current?.reset()
         turnstileTokenRef.current = initialTurnstileToken()
       }
@@ -135,6 +136,7 @@ export function SignInForm() {
       />
       <AuthControl>
         <Turnstile
+          action="lynvo-sign-in"
           ref={turnstileRef}
           onVerify={(token) => {
             turnstileTokenRef.current = token

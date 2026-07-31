@@ -5,6 +5,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "lynvo",
+  "workers_dev": true,
   "compatibility_date": "2026-06-29",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/app.ts",
@@ -14,27 +15,42 @@
   "durable_objects": {
     "bindings": [
       {
+        "name": "AUTH_RATE_LIMITER",
+        "class_name": "AuthRateLimiter",
+      },
+      {
+        "name": "WORKER_AUTH_SESSION",
+        "class_name": "WorkerAuthSession",
+      },
+      {
+        "name": "EXTERNAL_WORKER_CREDENTIAL_VAULT",
+        "class_name": "ExternalWorkerCredentialVault",
+      },
+      {
         "name": "USER_REALTIME_ROOM",
         "class_name": "UserRealtimeRoom",
       },
     ],
   },
-  "kv_namespaces": [
-    {
-      "binding": "AUTH_RATE_LIMITS",
-      "id": "REPLACE_WITH_AUTH_RATE_LIMITS_KV_NAMESPACE_ID",
-    },
-  ],
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["UserRealtimeRoom"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["AuthRateLimiter", "WorkerAuthSession"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["ExternalWorkerCredentialVault"],
     },
   ],
   "secrets": {
     "required": [
       "VITE_CONVEX_URL",
       "AUTH_GATEWAY_SECRET",
+      "AUTH_SESSION_MASTER_KEY",
       "TURNSTILE_SECRET_KEY",
       "PLUGIN_CREDENTIAL_MASTER_KEY",
       "OFFICIAL_EXTRACTOR_API_KEY",
@@ -50,7 +66,7 @@
     "ENVIRONMENT": "production",
     "SERVICE_VERSION": "0.1.0",
     "COMMIT_HASH": "unknown",
-    "TURNSTILE_SITE_KEY": "",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEC1SvszqvkGdIr2",
   },
   "env": {
     "local": {
@@ -60,21 +76,28 @@
       "durable_objects": {
         "bindings": [
           {
+            "name": "AUTH_RATE_LIMITER",
+            "class_name": "AuthRateLimiter",
+          },
+          {
+            "name": "WORKER_AUTH_SESSION",
+            "class_name": "WorkerAuthSession",
+          },
+          {
+            "name": "EXTERNAL_WORKER_CREDENTIAL_VAULT",
+            "class_name": "ExternalWorkerCredentialVault",
+          },
+          {
             "name": "USER_REALTIME_ROOM",
             "class_name": "UserRealtimeRoom",
           },
         ],
       },
-      "kv_namespaces": [
-        {
-          "binding": "AUTH_RATE_LIMITS",
-          "id": "REPLACE_WITH_AUTH_RATE_LIMITS_KV_NAMESPACE_ID",
-        },
-      ],
       "secrets": {
         "required": [
           "VITE_CONVEX_URL",
           "AUTH_GATEWAY_SECRET",
+          "AUTH_SESSION_MASTER_KEY",
           "TURNSTILE_SECRET_KEY",
           "PLUGIN_CREDENTIAL_MASTER_KEY",
           "OFFICIAL_EXTRACTOR_API_KEY",

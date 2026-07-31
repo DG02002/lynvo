@@ -6,6 +6,7 @@ import {
   ServiceBindingExtractorTransport,
   type ExtractorTransport,
 } from "~/lib/extraction/extractor-protocol-client"
+import { EXTRACTOR_REQUEST_TIMEOUT_MS } from "~/lib/constants"
 
 const manifest = {
   protocolVersion: "1.0",
@@ -34,6 +35,10 @@ const manifest = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("ExtractorProtocolClient", () => {
+  it("allows the Official Extractor to finish its bounded retry budget", () => {
+    expect(EXTRACTOR_REQUEST_TIMEOUT_MS).toBeGreaterThan(45_000)
+  })
+
   it.each([
     ["HTTP", () => new HttpExtractorTransport("https://worker.example"), true],
     [

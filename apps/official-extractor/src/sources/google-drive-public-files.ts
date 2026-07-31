@@ -9,8 +9,11 @@ import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES,
   GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS,
-  UPSTREAM_TIMEOUT_MS,
 } from "../constants"
+import {
+  fetchValidatedUpstream,
+  readBoundedUpstreamText,
+} from "../upstream-response"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
 
@@ -79,9 +82,8 @@ const getContentDispositionFilename = (
 export const fetchGoogleDrivePublicFileMetadata = async (
   downloadUrl: string
 ): Promise<GoogleDrivePublicFileMetadata> => {
-  const response = await fetch(downloadUrl, {
+  const response = await fetchValidatedUpstream(downloadUrl, {
     headers: { Range: "bytes=0-0" },
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   })
   if (isHtmlResponse(response)) {
     await response.body?.cancel()
@@ -189,9 +191,7 @@ export const extractGoogleDrivePublicFolder = async ({
   publicAssetOrigin,
 }: SourceAdapterOptions): Promise<ExtractSuccessResponse> => {
   extractGoogleDriveFolderId(targetUrl)
-  const response = await fetch(targetUrl, {
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-  })
+  const response = await fetchValidatedUpstream(targetUrl, {})
   if (!response.ok) {
     throw new Error("Google Drive folder is not publicly accessible.")
   }
@@ -203,7 +203,15 @@ export const extractGoogleDrivePublicFolder = async ({
     await response.body?.cancel()
     throw new Error("Google Drive public folder response is too large.")
   }
-  const html = await response.text()
+  const html = await readBoundedUpstreamText(response).catch((error) => {
+    if (
+      error instanceof Error &&
+      error.message === "Upstream response exceeded its byte limit."
+    ) {
+      throw new Error("Google Drive public folder response is too large.")
+    }
+    throw error
+  })
   if (
     new TextEncoder().encode(html).byteLength >
     GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES

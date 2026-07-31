@@ -6,15 +6,22 @@ import type {
 import { createBasicAuthorization } from "../auth"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
+  EXTRACTION_ELAPSED_TIME_LIMIT_MS,
+  EXTRACTION_NODE_LIMIT,
   LEGACY_RESPONSE_PREFIX_LENGTH,
   LEGACY_RESPONSE_SUFFIX_LENGTH,
-  UPSTREAM_TIMEOUT_MS,
+  PAGINATION_PAGE_LIMIT,
 } from "../constants"
 import type { SourceAdapterOptions } from "../source-catalog"
 import { createSourceResponseMetadata } from "../source-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
+import {
+  fetchValidatedUpstream,
+  readBoundedUpstreamJson,
+  readBoundedUpstreamText,
+} from "../upstream-response"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -120,7 +127,7 @@ const requestBhadooPage = async (
 ): Promise<BhadooGoogleDriveListResponse> => {
   assertSafeUpstreamUrl(requestUrl.toString())
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const modernResponse = await fetch(requestUrl, {
+  const modernResponse = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authorizationHeaders },
     body: JSON.stringify({
@@ -128,10 +135,9 @@ const requestBhadooPage = async (
       page_token: pageToken,
       page_index: pageIndex,
     }),
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   })
   if (modernResponse.ok) {
-    const modernBody: unknown = await modernResponse.json()
+    const modernBody: unknown = await readBoundedUpstreamJson(modernResponse)
     if (typeof modernBody !== "object" || modernBody === null) {
       throw new Error("Bhadoo Index returned malformed JSON.")
     }
@@ -143,19 +149,20 @@ const requestBhadooPage = async (
     page_token: pageToken,
     page_index: String(pageIndex),
   })
-  const legacyResponse = await fetch(requestUrl, {
+  const legacyResponse = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
       ...authorizationHeaders,
     },
     body: legacyBody.toString(),
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   })
   if (!legacyResponse.ok) {
     throw new Error("Bhadoo Index upstream request failed.")
   }
-  return decodeLegacyBhadooResponse(await legacyResponse.text())
+  return decodeLegacyBhadooResponse(
+    await readBoundedUpstreamText(legacyResponse)
+  )
 }
 
 export const extractBhadooGoogleDriveIndex = async ({
@@ -185,9 +192,23 @@ export const extractBhadooGoogleDriveIndex = async ({
   }
 
   const nodes: ExtractorNode[] = []
+  const seenTokens = new Set<string>()
+  const startedAtMs = Date.now()
   let pageToken = ""
   let pageIndex = 0
   do {
+    if (
+      pageIndex >= PAGINATION_PAGE_LIMIT ||
+      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
+    ) {
+      throw new Error("Bhadoo Index pagination exceeded its limit.")
+    }
+    if (pageToken && seenTokens.has(pageToken)) {
+      throw new Error("Bhadoo Index repeated a continuation token.")
+    }
+    if (pageToken) {
+      seenTokens.add(pageToken)
+    }
     const result = await requestBhadooPage(
       folderUrl,
       request.basicAuth,
@@ -203,6 +224,9 @@ export const extractBhadooGoogleDriveIndex = async ({
       throw new Error("Bhadoo Index returned a malformed page.")
     }
     nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
+    if (nodes.length > EXTRACTION_NODE_LIMIT) {
+      throw new Error("Bhadoo Index returned too many nodes.")
+    }
     pageToken = result.nextPageToken ?? ""
     pageIndex = result.curPageIndex + 1
   } while (pageToken)

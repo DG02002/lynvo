@@ -14,6 +14,7 @@ import {
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
+import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
 
 type SettingsUser = {
   id: string
@@ -50,7 +51,7 @@ export function SecuritySettings({
     setBusy("revokeAll")
     try {
       await revokeAllSessions()
-      await signOut()
+      await signOutWithWorkerSession(signOut)
       window.location.href = "/"
     } catch (error) {
       toast.error(
@@ -73,7 +74,7 @@ export function SecuritySettings({
     setBusy("delete")
     try {
       await deleteAccount({ confirmUsername: deleteConfirmUsername })
-      await signOut()
+      await signOutWithWorkerSession(signOut)
       toast.success("Account deleted")
       window.location.href = "/"
     } catch (error) {

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Link } from "react-router"
-import { useMutation, useQuery } from "convex/react"
+import { useQuery } from "convex/react"
+import { Effect } from "effect"
 import { Button } from "~/components/ui/button"
 import { toast } from "sonner"
 import { FieldSet } from "~/components/field"
@@ -9,6 +10,7 @@ import { authPaths, policyPaths } from "~/lib/paths"
 import { api } from "../../../convex/_generated/api"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { client } from "~/lib/effect/api/client"
 
 interface TvAuthProps {
   user?: { username: string } | null
@@ -23,7 +25,6 @@ export default function TvAuth({ user }: TvAuthProps) {
     api.tv.getCodeForApproval,
     code.length === 8 ? { code } : "skip"
   )
-  const authorize = useMutation(api.tv.authorizeCode)
   const hasExpired = useExpiryClock(codeRecord?.expiresAt)
   const canApprove = codeRecord?.status === "pending" && !hasExpired
   const [loading, setLoading] = React.useState(false)
@@ -35,7 +36,7 @@ export default function TvAuth({ user }: TvAuthProps) {
     }
     setLoading(true)
     try {
-      await authorize({ code })
+      await Effect.runPromise(client.tv.authorize({ payload: { code } }))
       setSuccess(true)
       toast.success("Device signed in")
     } catch (error) {

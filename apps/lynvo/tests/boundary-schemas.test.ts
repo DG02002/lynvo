@@ -107,6 +107,35 @@ describe("HTTP and realtime boundaries", () => {
     ).toBe(false)
   })
 
+  it("enforces the Turnstile token protocol boundary", () => {
+    const request = {
+      flow: "signIn",
+      username: "darshan",
+      turnstileToken: "t".repeat(2_048),
+    }
+
+    expect(authPreflightRequestSchema.safeParse(request).success).toBe(true)
+    expect(
+      authPreflightRequestSchema.safeParse({
+        ...request,
+        turnstileToken: `${request.turnstileToken}t`,
+      }).success
+    ).toBe(false)
+    expect(
+      turnstileVerificationResponseSchema.safeParse({
+        success: true,
+        hostname: "lynvo.dg02002.workers.dev",
+        action: "lynvo-sign-in",
+      }).success
+    ).toBe(true)
+    expect(
+      turnstileVerificationResponseSchema.safeParse({
+        success: true,
+        hostname: "lynvo.dg02002.workers.dev",
+      }).success
+    ).toBe(false)
+  })
+
   it("requires complete token pairs in auth responses", () => {
     expect(
       authSignInResponseSchema.safeParse({
@@ -153,7 +182,11 @@ describe("HTTP and realtime boundaries", () => {
       }).success
     ).toBe(false)
     expect(
-      turnstileVerificationResponseSchema.safeParse({ success: true }).success
+      turnstileVerificationResponseSchema.safeParse({
+        success: true,
+        hostname: "lynvo.dg02002.workers.dev",
+        action: "lynvo-sign-in",
+      }).success
     ).toBe(true)
     expect(
       turnstileVerificationResponseSchema.safeParse({ success: "yes" }).success

@@ -1,6 +1,7 @@
 export const AUTH_JWT_COOKIE_NAME = "__convexAuthJWT_lynvo"
+export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
 export const EXTRACTOR_INTERNAL_ORIGIN = "https://extractor.internal"
-export const EXTRACTOR_REQUEST_TIMEOUT_MS = 10_000
+export const EXTRACTOR_REQUEST_TIMEOUT_MS = 50_000
 export const OFFICIAL_EXTRACTOR_ID = "official:dev.lynvo.official-extractor"
 export const COOKIE_PREFERENCES_STORAGE_KEY = "lynvo:cookie-preferences"
 export const COOKIE_PREFERENCES_VERSION = 1

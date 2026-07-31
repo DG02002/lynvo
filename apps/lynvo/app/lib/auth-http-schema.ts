@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 export const authSignInResponseSchema = z.object({
+  signingIn: z.boolean().optional(),
   tokens: z
     .strictObject({
       token: z.string().min(1),

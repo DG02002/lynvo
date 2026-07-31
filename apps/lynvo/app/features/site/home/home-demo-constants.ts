@@ -4,5 +4,5 @@ export const HOME_DEMO_STEP_DELAYS_MS = [
 ]
 export const HOME_DEMO_CLIPBOARD_URL =
   "https://video.example/aurora-station-1080p.mp4"
-export const HOME_DEMO_BROWSER_URL = "lynvo.app/save"
+export const HOME_DEMO_BROWSER_URL = "lynvo.dg02002.workers.dev/save"
 export const REDUCED_MOTION_MEDIA_QUERY = "(prefers-reduced-motion: reduce)"

@@ -34,7 +34,7 @@ export async function signInWithConvexAuthHttp(
   }
 
   return {
-    signingIn: Boolean(result.tokens),
+    signingIn: result.signingIn ?? Boolean(result.tokens),
     redirect: result.redirect ? new URL(result.redirect) : undefined,
     started: result.started,
   }

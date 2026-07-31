@@ -1,32 +1,33 @@
 packages:
-  - "apps/*"
-  - "packages/*"
-  - "examples/*"
-
-sharedWorkspaceLockfile: true
-saveWorkspaceProtocol: rolling
+  - apps/*
+  - packages/*
+  - examples/*
 
 allowBuilds:
   esbuild: true
   msgpackr-extract: true
+  msw: true
   sharp: true
   workerd: true
 
+blockExoticSubdeps: true
+
 catalog:
-  "@cloudflare/workers-types": ^5.20260723.1
+  '@cloudflare/workers-types': ^5.20260731.1
   cheerio: ^1.2.0
-  hono: ^4.12.31
-  oxfmt: ^0.60.0
-  oxlint: ^1.75.0
+  hono: ^4.12.32
+  oxfmt: ^0.61.0
+  oxlint: ^1.76.0
   sharp: ^0.35.3
   typescript: ^7.0.2
-  vite: ^8.1.5
+  vite: ^8.2.0
   vitest: ^4.1.10
-  wrangler: ^4.113.0
+  wrangler: ^4.116.0
   zod: ^4.4.3
 
-# minimumReleaseAge: 10080
-# trustPolicy: no-downgrade
-blockExoticSubdeps: true
+saveWorkspaceProtocol: rolling
+
+sharedWorkspaceLockfile: true
+
 trustPolicyExclude:
   - effect

@@ -80,7 +80,7 @@ describe("Bhadoo source adapter", () => {
   })
 
   it("treats a trailing-slash video filename as an index folder", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({
         nextPageToken: null,
         curPageIndex: 0,
@@ -115,6 +115,27 @@ describe("Bhadoo source adapter", () => {
         resolutionKind: "folder",
       },
     ])
+  })
+
+  it("rejects a repeated Bhadoo continuation token", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({
+        nextPageToken: "repeated-token",
+        curPageIndex: 0,
+        data: { files: [] },
+      })
+    )
+
+    await expect(
+      extractBhadooGoogleDriveIndex({
+        request: {
+          input: { kind: "source", sourceUrl: "https://drive.example/0:/" },
+        },
+        targetUrl: "https://drive.example/0:/",
+        source,
+        publicAssetOrigin: "https://lynvo.example",
+      })
+    ).rejects.toThrow("repeated a continuation token")
   })
 })
 
@@ -176,6 +197,98 @@ describe("OneDrive source adapter", () => {
     expect(fetchSpy.mock.calls[0][1]?.headers).toHaveProperty(
       "od-protected-token"
     )
+  })
+
+  it("continues the pagination token embedded in the initial page", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          '<script id="__NEXT_DATA__" type="application/json">' +
+            JSON.stringify({
+              props: {
+                pageProps: {
+                  folder: { value: [] },
+                  next: "initial-continuation",
+                },
+              },
+            }) +
+            "</script>"
+        )
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          folder: {
+            value: [{ id: "continued", name: "continued.mp4", file: {} }],
+          },
+        })
+      )
+
+    const result = await extractOneDriveIndex({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://index.example/Collections",
+        },
+      },
+      targetUrl: "https://index.example/Collections",
+      source,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result.nodes).toMatchObject([{ label: "continued.mp4" }])
+    expect(String(fetchSpy.mock.calls[1][0])).toContain(
+      "next=initial-continuation"
+    )
+  })
+
+  it("rejects oversized upstream response bodies", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response("oversized", {
+          headers: { "Content-Length": String(2 * 1024 * 1024 + 1) },
+        })
+    )
+
+    await expect(
+      extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections",
+          },
+        },
+        targetUrl: "https://index.example/Collections",
+        source,
+        publicAssetOrigin: "https://lynvo.example",
+      })
+    ).rejects.toThrow("response exceeded its byte limit")
+  })
+
+  it("validates every redirect before following it", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { Location: "http://127.0.0.1/private" },
+        })
+    )
+
+    await expect(
+      extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections",
+          },
+        },
+        targetUrl: "https://index.example/Collections",
+        source,
+        publicAssetOrigin: "https://lynvo.example",
+      })
+    ).rejects.toThrow()
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy.mock.calls[0][1]?.redirect).toBe("manual")
   })
 })
 

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { SignInForm } from "~/components/auth/SignInForm"
+import { SignupForm } from "~/components/auth/SignupForm"
 
 vi.mock("sonner", () => ({
   toast: {
@@ -13,6 +14,37 @@ vi.mock("sonner", () => ({
 describe("sign-in form", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it("renders stable Turnstile actions for each authentication flow", async () => {
+    const signInRouter = createMemoryRouter([
+      {
+        id: "root",
+        path: "/",
+        loader: () => ({ convexUrl: "" }),
+        element: <SignInForm />,
+      },
+    ])
+    const renderedSignIn = render(<RouterProvider router={signInRouter} />)
+
+    expect(
+      await screen.findByText("Turnstile bypassed in dev mode")
+    ).toHaveAttribute("data-turnstile-action", "lynvo-sign-in")
+    renderedSignIn.unmount()
+
+    const signUpRouter = createMemoryRouter([
+      {
+        id: "root",
+        path: "/",
+        loader: () => ({ convexUrl: "" }),
+        element: <SignupForm />,
+      },
+    ])
+    render(<RouterProvider router={signUpRouter} />)
+
+    expect(
+      await screen.findByText("Turnstile bypassed in dev mode")
+    ).toHaveAttribute("data-turnstile-action", "lynvo-sign-up")
   })
 
   it("renders invalid credentials as a persistent form alert", async () => {

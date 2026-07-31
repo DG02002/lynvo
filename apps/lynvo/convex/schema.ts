@@ -112,7 +112,11 @@ export default defineSchema({
   userWorkers: defineTable({
     userId: v.id("users"),
     baseUrl: v.string(),
-    apiKey: v.string(),
+    apiKeyCiphertext: v.optional(v.string()),
+    apiKeyNonce: v.optional(v.string()),
+    apiKeyAlgorithm: v.optional(v.literal("AES-256-GCM")),
+    apiKeyVersion: v.optional(v.number()),
+    credentialStatus: v.union(v.literal("pending"), v.literal("ready")),
     manifest: v.string(),
     enabled: v.boolean(),
     priority: v.number(),
