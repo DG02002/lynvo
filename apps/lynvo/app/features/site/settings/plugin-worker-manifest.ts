@@ -1,21 +1,21 @@
 import {
   getLynvoManifestExtension,
-  manifestSchema,
-  type ExtractorSourceMetadata,
-  type ExtractorManifest,
-} from "@lynvo/extractor-protocol"
+  pluginServerManifestSchema,
+  type PluginMetadata,
+  type PluginServerManifest,
+} from "@lynvo/plugin-server-protocol"
 
 export interface WorkerManifestView {
   name: string
   icon: string | null
   hosts: string
-  sources: ExtractorSourceMetadata[]
+  plugins: PluginMetadata[]
 }
 
-const parseWorkerManifest = (value: string): ExtractorManifest | null => {
+const parseWorkerManifest = (value: string): PluginServerManifest | null => {
   try {
     const parsed: unknown = JSON.parse(value)
-    const result = manifestSchema.safeParse(parsed)
+    const result = pluginServerManifestSchema.safeParse(parsed)
     return result.success ? result.data : null
   } catch {
     return null
@@ -54,11 +54,11 @@ export const getWorkerManifestView = (
     "None"
 
   return {
-    name: manifest?.displayName || manifest?.extractorId || "Unknown",
+    name: manifest?.displayName || manifest?.pluginServerId || "Unknown",
     icon:
       resolveExternalWorkerIconUrl(manifest?.iconUrl, requestOrigin) ?? null,
     hosts,
-    sources: (extension?.sources ?? []).map((source) => ({
+    plugins: (extension?.plugins ?? []).map((source) => ({
       ...source,
       iconUrl: resolveExternalWorkerIconUrl(
         source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),

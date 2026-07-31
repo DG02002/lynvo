@@ -30,8 +30,8 @@ describe("extractFromWorker", () => {
   it("forwards structured Basic Auth only to workers that declare support", async () => {
     const fetchMock = vi.fn(async () =>
       Response.json({
-        source: {
-          extractorId: "com.example.extractor",
+        plugin: {
+          pluginServerId: "com.example.extractor",
           displayName: "Example Extractor",
         },
         nodes: [],
@@ -48,7 +48,7 @@ describe("extractFromWorker", () => {
           apiKey: "secret",
           manifest: JSON.stringify({
             protocolVersion: "1.0",
-            extractorId: "com.example.extractor",
+            pluginServerId: "com.example.extractor",
             displayName: "Example Extractor",
             auth: { type: "bearer" },
             matchers: [{ hosts: ["source.example"] }],
@@ -81,11 +81,11 @@ describe("extractFromWorker", () => {
       "fetch",
       vi.fn(async () =>
         Response.json({
-          source: {
-            extractorId: "com.example.extractor&amp;stable",
+          plugin: {
+            pluginServerId: "com.example.extractor&amp;stable",
             displayName: "Example &amp; Extractor",
-            sourceId: "source&amp;stable",
-            sourceName: "Source &amp; Collection",
+            pluginId: "source&amp;stable",
+            pluginName: "Source &amp; Collection",
             pageTitle: "Source Title Alpha",
             audio: "Hindi &amp; English",
           },
@@ -129,7 +129,7 @@ describe("extractFromWorker", () => {
 
     expect(result.meta).toMatchObject({
       pluginName: "Example & Extractor",
-      sourceId: "source&amp;stable",
+      pluginId: "source&amp;stable",
       sourceName: "Source & Collection",
       pageTitle: "Source Title Alpha",
       audio: "Hindi & English",
@@ -158,20 +158,20 @@ describe("extractFromWorker", () => {
           apiKey: "secret",
           manifest: JSON.stringify({
             protocolVersion: "1.0",
-            extractorId: "com.example.extractor",
+            pluginServerId: "com.example.extractor",
             displayName: "Example Extractor",
             auth: { type: "bearer" },
             matchers: [{ hosts: ["extractor-source-alpha.example"] }],
             features: {},
             extensions: {
               lynvo: {
-                sources: [
+                plugins: [
                   {
                     id: "extractor-source-alpha",
                     displayName: "Extractor Source Alpha",
                     iconUrl:
                       "https://extractor.example/icons/extractor-source-alpha.webp",
-                    routesToSourceId: "extractor-source-beta",
+                    routesToPluginId: "extractor-source-beta",
                     hosts: ["extractor-source-alpha.example"],
                   },
                   {
@@ -205,11 +205,11 @@ describe("extractFromWorker", () => {
       "fetch",
       vi.fn(async () =>
         Response.json({
-          source: {
-            extractorId: "com.example.extractor",
+          plugin: {
+            pluginServerId: "com.example.extractor",
             displayName: "Example Extractor",
-            sourceId: "source-alpha",
-            sourceName: "Source Alpha",
+            pluginId: "source-alpha",
+            pluginName: "Source Alpha",
           },
           nodes: [
             {
@@ -248,7 +248,7 @@ describe("extractFromWorker", () => {
 
     expect(result.meta).toEqual({
       pluginName: "Example Extractor",
-      sourceId: "source-alpha",
+      pluginId: "source-alpha",
       sourceName: "Source Alpha",
       schemaVersion: 2,
       workerId: "worker-one",
@@ -265,7 +265,7 @@ describe("selectWorker", () => {
       apiKey: "secret",
       manifest: JSON.stringify({
         protocolVersion: "1.0",
-        extractorId: "com.example.extractor",
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
         auth: { type: "bearer" },
         matchers: [{ hosts: ["source.example"] }],

@@ -24,7 +24,7 @@ A plugin should own:
 
 A plugin should not implement bearer authentication, protocol routes, global usage enforcement, or Lynvo interface behavior. Keep those concerns in the extractor shell so every plugin follows the same contract.
 
-Register every user-visible plugin under `extensions.lynvo.sources`. Lynvo reads this catalog to show the plugin in Settings and route supported URLs to the extractor.
+Register every user-visible plugin under `extensions.lynvo.plugins`. Lynvo reads this catalog to show the plugin in Settings and route supported URLs to the extractor.
 
 ### How extractors and plugins fit together
 

@@ -37,7 +37,7 @@ handlers. Build a reusable extractor shell where developers can add plugins
 later.
 
 Implement Lynvo external extractor protocol version 1.0 over HTTPS and JSON.
-The private @lynvo/extractor-protocol package is not available outside the
+The private @lynvo/plugin-server-protocol package is not available outside the
 Lynvo monorepo, so define and test the required schemas locally.
 
 Create these endpoints:
@@ -69,19 +69,19 @@ plugin.
 
 The manifest must include:
 - protocolVersion: "1.0"
-- A stable namespaced extractorId
+- A stable namespaced pluginServerId
 - A human-readable displayName
 - auth.type: "bearer"
 - usage.endpoint: "/usage"
 - Non-empty matchers derived from the plugin catalog
 - features for password, lazyNodes, and basicAuth
-- extensions.lynvo.sources derived from the plugin catalog
+- extensions.lynvo.plugins derived from the plugin catalog
 
 Model extraction input as either:
 - A source URL with kind: "source" and sourceUrl
 - A lazy-node request with kind: "node", nodeUrl, and optional resourceId
 
-Support optional sourceId, password, and basicAuth credentials. Never place
+Support optional pluginId, password, and basicAuth credentials. Never place
 credentials in a target URL, response, manifest, or log.
 
 Support these media node kinds:
@@ -94,8 +94,8 @@ thumbnail, size, MIME type, quality, duration, subtitles, audio tracks,
 headers, and expiry when applicable. Validate URLs and recursive child nodes.
 
 A successful extraction response must include:
-- source.extractorId and source.displayName
-- Optional sourceId, sourceName, sourceIconUrl, pageTitle, and audio summary
+- source.pluginServerId and source.displayName
+- Optional pluginId, sourceName, sourceIconUrl, pageTitle, and audio summary
 - A non-empty nodes array
 - An extensions object
 

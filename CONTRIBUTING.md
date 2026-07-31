@@ -7,7 +7,7 @@ workspace.
 
 - `apps/lynvo`: product application and direct-link extraction core.
 - `apps/official-extractor`: private managed OneDrive and Bhadoo Worker.
-- `packages/extractor-protocol`: shared schemas, runtime, specification, and author guide.
+- `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
 - `examples/extractor-worker`: minimal compatible Worker used by root CI.
 - `docs/usage-limits.md`: account and extractor capacity policy.
 - `docs/apple-HIG/`: design and writing references used by contributors.
@@ -261,7 +261,7 @@ Configure each project with the directory that owns its Wrangler configuration:
 | Official extractor | `/apps/official-extractor` | `pnpm deploy`  |
 
 Keep the Workers as separate build targets even though they share one atomic
-repository. Include `packages/extractor-protocol/**`, the root lockfile, and
+repository. Include `packages/plugin-server-protocol/**`, the root lockfile, and
 workspace configuration in both projects' build watch paths because protocol
 or dependency changes can affect both Workers. Include each app's own path only
 for changes specific to that Worker.
@@ -273,7 +273,7 @@ extra configuration.
 ## Specialized references
 
 - [Usage limits](docs/usage-limits.md)
-- [Protocol package and documentation](packages/extractor-protocol/README.md)
+- [Protocol package and documentation](packages/plugin-server-protocol/README.md)
 - [Project terminology](CONTEXT.md)
 - [Typography reference](<docs/apple-HIG/Typography - Apple HIG.md>)
 - [Writing reference](<docs/apple-HIG/Writing - Apple HIG.md>)

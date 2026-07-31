@@ -1,8 +1,8 @@
 import { load } from "cheerio"
 import type {
-  ExtractorNode,
+  MediaNode,
   ExtractSuccessResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import type { SourceAdapterOptions } from "../source-catalog"
 import { createSourceResponseMetadata } from "../source-catalog"
 import {
@@ -155,8 +155,8 @@ export const parseGoogleDrivePublicFolderItems = (
 
 export const createGoogleDrivePublicFolderNodes = (
   items: readonly GoogleDrivePublicFolderItem[]
-): ExtractorNode[] =>
-  items.flatMap<ExtractorNode>((item) => {
+): MediaNode[] =>
+  items.flatMap<MediaNode>((item) => {
     if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
       return [
         {
@@ -224,7 +224,7 @@ export const extractGoogleDrivePublicFolder = async ({
       .text()
       .replace(/\s+[–-]\s+Google Drive$/, "") || "Google Drive folder"
   return {
-    source: createSourceResponseMetadata(source, publicAssetOrigin, title),
+    plugin: createSourceResponseMetadata(source, publicAssetOrigin, title),
     nodes: createGoogleDrivePublicFolderNodes(
       parseGoogleDrivePublicFolderItems(html)
     ),
@@ -241,7 +241,7 @@ export const extractGoogleDrivePublicFile = async ({
   const downloadUrl = createGoogleDriveDownloadUrl(fileId)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
   return {
-    source: createSourceResponseMetadata(
+    plugin: createSourceResponseMetadata(
       source,
       publicAssetOrigin,
       metadata.filename

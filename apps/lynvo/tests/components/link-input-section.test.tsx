@@ -101,7 +101,7 @@ describe("LinkInputSection", () => {
         isSaving
         extractionPreview={{
           meta: {
-            sourceId: "direct-link",
+            pluginId: "direct-link",
             pluginName: "Direct Link",
           },
         }}

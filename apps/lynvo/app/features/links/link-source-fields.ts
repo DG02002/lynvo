@@ -10,7 +10,7 @@ export interface LinkSourceFields {
   rangeRequest?: "supported" | "unsupported" | "unknown"
   pluginName?: string
   pluginIcon?: string
-  sourceId?: string
+  pluginId?: string
   sourceName?: string
   sourceIconUrl?: string
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"
@@ -76,7 +76,7 @@ export const getLinkSourceFields = (
   rangeRequest: getRangeRequest(metadata.source),
   pluginName: getSourceString(metadata.source, "pluginName"),
   pluginIcon: getSourceString(metadata.source, "pluginIcon"),
-  sourceId: getSourceString(metadata.source, "sourceId"),
+  pluginId: getSourceString(metadata.source, "pluginId"),
   sourceName: getSourceString(metadata.source, "sourceName"),
   sourceIconUrl: getSourceString(metadata.source, "sourceIconUrl"),
   sourceStatus: getSourceStatus(metadata.source),

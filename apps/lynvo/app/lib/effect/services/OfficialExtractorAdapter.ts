@@ -1,10 +1,10 @@
 import {
   getLynvoManifestExtension,
-  matchExtractorUrl,
-  type ExtractorManifest,
-  type ExtractorSourceMetadata,
+  matchPluginServerUrl,
+  type PluginServerManifest,
+  type PluginMetadata,
   type HttpBasicAuth,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import { Effect } from "effect"
 import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
 import {
@@ -66,11 +66,11 @@ export const discoverOfficialSource = Effect.fn(
 })
 
 export const getOfficialMetadata = (
-  manifest: ExtractorManifest,
+  manifest: PluginServerManifest,
   targetUrl: string,
-  sourceId?: string
+  pluginId?: string
 ): MetadataResult | undefined => {
-  const source = findOfficialManifestSource(manifest, targetUrl, sourceId)
+  const source = findOfficialManifestSource(manifest, targetUrl, pluginId)
   return source
     ? getExtractorMetadata(
         manifest,
@@ -82,17 +82,17 @@ export const getOfficialMetadata = (
 }
 
 export const findOfficialManifestSource = (
-  manifest: ExtractorManifest,
+  manifest: PluginServerManifest,
   targetUrl: string,
-  sourceId?: string
-): ExtractorSourceMetadata | undefined => {
-  const sources = getLynvoManifestExtension(manifest).sources ?? []
-  return sourceId
-    ? sources.find((candidate) => candidate.id === sourceId)
+  pluginId?: string
+): PluginMetadata | undefined => {
+  const sources = getLynvoManifestExtension(manifest).plugins ?? []
+  return pluginId
+    ? sources.find((candidate) => candidate.id === pluginId)
     : sources.find(
         (candidate) =>
           candidate.credential === undefined &&
-          matchExtractorUrl(targetUrl, candidate.matchers ?? [])
+          matchPluginServerUrl(targetUrl, candidate.matchers ?? [])
       )
 }
 
@@ -103,7 +103,7 @@ export const extractFromOfficial = Effect.fn(
   targetUrl: string,
   kind: "source" | "node",
   credentials: {
-    sourceId: string
+    pluginId: string
     password?: string
     basicAuth?: { username: string; password: string }
   },

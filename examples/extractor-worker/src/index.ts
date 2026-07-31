@@ -1,11 +1,11 @@
 import {
-  createExtractorRuntime,
-  type ExtractorManifest,
-} from "@lynvo/extractor-protocol"
+  createPluginServerRuntime,
+  type PluginServerManifest,
+} from "@lynvo/plugin-server-protocol"
 
-export const manifest: ExtractorManifest = {
+export const manifest: PluginServerManifest = {
   protocolVersion: "1.0",
-  extractorId: "dev.lynvo.example-extractor",
+  pluginServerId: "dev.lynvo.example-extractor",
   displayName: "Example Extractor",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
@@ -13,7 +13,7 @@ export const manifest: ExtractorManifest = {
   features: { password: false, lazyNodes: false },
   extensions: {
     lynvo: {
-      sources: [
+      plugins: [
         {
           id: "example-media",
           displayName: "Example Media",
@@ -28,16 +28,16 @@ export const manifest: ExtractorManifest = {
 
 type ExampleEnvironment = Record<string, never>
 
-const runtime = createExtractorRuntime<ExampleEnvironment>({
+const runtime = createPluginServerRuntime<ExampleEnvironment>({
   manifest,
   auth: { validate: ({ request }) => request.headers.get("authorization") === "Bearer example-secret" },
   usage: () => ({ metrics: [] }),
   extract: ({ targetUrl }) => ({
-    source: {
-      extractorId: manifest.extractorId,
+    plugin: {
+      pluginServerId: manifest.pluginServerId,
       displayName: manifest.displayName,
-      sourceId: "example-media",
-      sourceName: "Example Media",
+      pluginId: "example-media",
+      pluginName: "Example Media",
     },
     nodes: [{ kind: "playable", label: "Example video", url: targetUrl }],
     extensions: {},

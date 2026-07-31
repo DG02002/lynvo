@@ -30,8 +30,8 @@ export const getRecentLinkViewItemSourceId = (
   if (!item) {
     return undefined
   }
-  const sourceId = getRecentLinkViewItemMetadata(item).source.sourceId
-  return typeof sourceId === "string" ? sourceId : undefined
+  const pluginId = getRecentLinkViewItemMetadata(item).source.pluginId
+  return typeof pluginId === "string" ? pluginId : undefined
 }
 
 export const getRecentLinkViewItemMetadata = (

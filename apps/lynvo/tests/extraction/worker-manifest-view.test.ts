@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getMatchedExtractorSource } from "@lynvo/extractor-protocol"
+import { getMatchedPlugin } from "@lynvo/plugin-server-protocol"
 import { getWorkerManifestView } from "~/features/site/settings/plugin-worker-manifest"
 
 describe("getWorkerManifestView", () => {
@@ -7,7 +7,7 @@ describe("getWorkerManifestView", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
-        extractorId: "com.example.extractor",
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
         iconUrl: "https://extractor.example/icon.svg",
         auth: { type: "bearer" },
@@ -26,14 +26,14 @@ describe("getWorkerManifestView", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
-        extractorId: "com.example.extractor",
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
         auth: { type: "bearer" },
         matchers: [{ hosts: ["resolver-beta.example"], pathPatterns: ["/**"] }],
         features: { password: true, lazyNodes: true },
         extensions: {
           lynvo: {
-            sources: [
+            plugins: [
               {
                 id: "resolver-beta",
                 displayName: "Resolver Beta",
@@ -48,7 +48,7 @@ describe("getWorkerManifestView", () => {
       })
     )
 
-    expect(view.sources).toEqual([
+    expect(view.plugins).toEqual([
       {
         id: "resolver-beta",
         displayName: "Resolver Beta",
@@ -63,7 +63,7 @@ describe("getWorkerManifestView", () => {
   it("matches extractor source metadata using source matchers", () => {
     const manifest = {
       protocolVersion: "1.0" as const,
-      extractorId: "com.example.extractor",
+      pluginServerId: "com.example.extractor",
       displayName: "Example Extractor",
       auth: { type: "bearer" as const },
       matchers: [
@@ -72,7 +72,7 @@ describe("getWorkerManifestView", () => {
       features: { password: true, lazyNodes: true },
       extensions: {
         lynvo: {
-          sources: [
+          plugins: [
             {
               id: "resolver-beta",
               displayName: "Resolver Beta",
@@ -92,7 +92,7 @@ describe("getWorkerManifestView", () => {
       },
     }
 
-    const source = getMatchedExtractorSource(
+    const source = getMatchedPlugin(
       manifest,
       "https://new-resolver-beta-host.example/file"
     )
@@ -104,14 +104,14 @@ describe("getWorkerManifestView", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
-        extractorId: "com.example.extractor",
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
         auth: { type: "bearer" },
         matchers: [{ hosts: ["example.com"] }],
         features: {},
         extensions: {
           lynvo: {
-            sources: [
+            plugins: [
               {
                 id: "first-source",
                 displayName: "First source",
@@ -124,7 +124,7 @@ describe("getWorkerManifestView", () => {
       })
     )
 
-    expect(view.sources.map((source) => source.iconUrl)).toEqual([
+    expect(view.plugins.map((source) => source.iconUrl)).toEqual([
       "http://localhost:8788/icons/sources/first-source.webp",
       undefined,
     ])
@@ -134,14 +134,14 @@ describe("getWorkerManifestView", () => {
     const view = getWorkerManifestView(
       JSON.stringify({
         protocolVersion: "1.0",
-        extractorId: "com.lynvo.plnkextractor",
+        pluginServerId: "com.lynvo.plnkextractor",
         displayName: "PlnkExtractor",
         auth: { type: "bearer" },
         matchers: [{ hosts: ["example.com"] }],
         features: {},
         extensions: {
           lynvo: {
-            sources: [
+            plugins: [
               {
                 id: "hubcloud",
                 displayName: "HubCloud",
@@ -154,7 +154,7 @@ describe("getWorkerManifestView", () => {
       "http://192.168.1.3:5173"
     )
 
-    expect(view.sources[0]?.iconUrl).toBe(
+    expect(view.plugins[0]?.iconUrl).toBe(
       "http://192.168.1.3:8788/icons/sources/hubcloud.webp"
     )
   })

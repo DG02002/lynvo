@@ -31,7 +31,7 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
   rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
   pluginName: z.string().optional(),
   pluginIcon: z.string().optional(),
-  sourceId: z.string().optional(),
+  pluginId: z.string().optional(),
   sourceName: z.string().optional(),
   sourceIconUrl: z.string().optional(),
   sourceStatus: z

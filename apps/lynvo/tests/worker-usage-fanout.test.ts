@@ -8,7 +8,7 @@ let queryCount = 0
 
 const manifest = JSON.stringify({
   protocolVersion: "1.0",
-  extractorId: "com.example.extractor",
+  pluginServerId: "com.example.extractor",
   displayName: "Example",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },

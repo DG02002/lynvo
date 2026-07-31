@@ -9,14 +9,14 @@ contentType: Reference
 
 ## Define the public manifest
 
-The manifest lets Lynvo validate compatibility and route URLs without sending them to every Worker. Keep `extractorId` stable after anyone connects the Worker.
+The manifest lets Lynvo validate compatibility and route URLs without sending them to every Worker. Keep `pluginServerId` stable after anyone connects the Worker.
 
 <CodeBlock label="src/manifest.ts">
 
 ```ts {2,5,8-12}
 export const manifest = {
   protocolVersion: "1.0",
-  extractorId: "com.example.my-extractor",
+  pluginServerId: "com.example.my-extractor",
   displayName: "My Extractor",
   hasIcon: false,
   auth: { type: "bearer" },
@@ -44,7 +44,7 @@ Manifest fields follow these rules:
 | Field             | Required | Rule                                                 |
 | ----------------- | -------- | ---------------------------------------------------- |
 | `protocolVersion` | Yes      | Must equal `"1.0"`                                   |
-| `extractorId`     | Yes      | Stable namespaced identifier                         |
+| `pluginServerId`     | Yes      | Stable namespaced identifier                         |
 | `displayName`     | Yes      | Human-readable Worker name                           |
 | `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it        |
 | `iconUrl`         | No       | Direct HTTPS image URL                               |

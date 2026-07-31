@@ -1,12 +1,12 @@
 import {
-  matchExtractorUrl,
-  type ExtractorManifest,
-  type ExtractorMatcher,
-  type ExtractorSourceCredential,
+  matchPluginServerUrl,
+  type PluginServerManifest,
+  type PluginServerMatcher,
+  type PluginCredential,
   type ExtractSuccessResponse,
   type ExtractRequest,
   type DiscoverResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import {
   BHADOO_SOURCE_ID,
   EXTRACTOR_ID,
@@ -34,13 +34,13 @@ export interface OfficialSourceDefinition {
   iconPath?: string
   status: "active" | "maintenance" | "degraded" | "down"
   version: string
-  matchers: ExtractorMatcher[]
-  credential?: ExtractorSourceCredential
+  matchers: PluginServerMatcher[]
+  credential?: PluginCredential
   discovery?: { confidence: "pattern" | "verified" }
   extract: (options: SourceAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
-const bhadooMatchers: ExtractorMatcher[] = [
+const bhadooMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.example.invalid"],
     hostPatterns: ["*"],
@@ -49,7 +49,7 @@ const bhadooMatchers: ExtractorMatcher[] = [
   },
 ]
 
-const oneDriveMatchers: ExtractorMatcher[] = [
+const oneDriveMatchers: PluginServerMatcher[] = [
   {
     hosts: ["onedrive.example.invalid"],
     hostPatterns: ["*"],
@@ -58,7 +58,7 @@ const oneDriveMatchers: ExtractorMatcher[] = [
   },
 ]
 
-const googleDrivePublicFileMatchers: ExtractorMatcher[] = [
+const googleDrivePublicFileMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.google.com"],
     pathPatterns: ["/file/d/**", "/drive/folders/**"],
@@ -109,19 +109,19 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
 
 export const findOfficialSource = (
   targetUrl: string,
-  sourceId?: string
+  pluginId?: string
 ): OfficialSourceDefinition | undefined =>
-  sourceId
-    ? OFFICIAL_SOURCE_CATALOG.find((source) => source.id === sourceId)
+  pluginId
+    ? OFFICIAL_SOURCE_CATALOG.find((source) => source.id === pluginId)
     : OFFICIAL_SOURCE_CATALOG.find((source) =>
-        matchExtractorUrl(targetUrl, source.matchers)
+        matchPluginServerUrl(targetUrl, source.matchers)
       )
 
 export const createOfficialManifest = (
   publicAssetOrigin?: string
-): ExtractorManifest => ({
+): PluginServerManifest => ({
   protocolVersion: "1.0",
-  extractorId: EXTRACTOR_ID,
+  pluginServerId: EXTRACTOR_ID,
   displayName: EXTRACTOR_NAME,
   hasIcon: false,
   homepage: "https://lynvo.dg02002.workers.dev",
@@ -136,7 +136,7 @@ export const createOfficialManifest = (
   },
   extensions: {
     lynvo: {
-      sources: OFFICIAL_SOURCE_CATALOG.map((source) => ({
+      plugins: OFFICIAL_SOURCE_CATALOG.map((source) => ({
         id: source.id,
         displayName: source.displayName,
         description: source.description,
@@ -158,12 +158,12 @@ export const createOfficialManifest = (
 export const discoverOfficialSource = (targetUrl: string): DiscoverResponse => {
   const source = OFFICIAL_SOURCE_CATALOG.find(
     (candidate) =>
-      candidate.discovery && matchExtractorUrl(targetUrl, candidate.matchers)
+      candidate.discovery && matchPluginServerUrl(targetUrl, candidate.matchers)
   )
   return source?.discovery
     ? {
         matched: true,
-        sourceId: source.id,
+        pluginId: source.id,
         confidence: source.discovery.confidence,
       }
     : { matched: false }
@@ -174,7 +174,7 @@ export const extractFromOfficialSource = async (
   targetUrl: string,
   publicAssetOrigin?: string
 ): Promise<ExtractSuccessResponse> => {
-  const source = findOfficialSource(targetUrl, request.sourceId)
+  const source = findOfficialSource(targetUrl, request.pluginId)
   if (!source) {
     throw new Error("UNSUPPORTED_URL")
   }
@@ -185,13 +185,13 @@ export const createSourceResponseMetadata = (
   source: OfficialSourceDefinition,
   publicAssetOrigin?: string,
   pageTitle?: string
-): ExtractSuccessResponse["source"] => ({
-  extractorId: EXTRACTOR_ID,
+): ExtractSuccessResponse["plugin"] => ({
+  pluginServerId: EXTRACTOR_ID,
   displayName: EXTRACTOR_NAME,
-  sourceId: source.id,
-  sourceName: source.displayName,
+  pluginId: source.id,
+  pluginName: source.displayName,
   ...(publicAssetOrigin && source.iconPath
-    ? { sourceIconUrl: `${publicAssetOrigin}${source.iconPath}` }
+    ? { pluginIconUrl: `${publicAssetOrigin}${source.iconPath}` }
     : {}),
   ...(pageTitle ? { pageTitle } : {}),
 })

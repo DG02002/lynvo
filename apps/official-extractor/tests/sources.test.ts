@@ -404,7 +404,7 @@ describe("Google Drive public files source adapter", () => {
       publicAssetOrigin: "https://lynvo.example",
     })
 
-    expect(result.source.pageTitle).toBe("Public tests")
+    expect(result.plugin.pageTitle).toBe("Public tests")
     expect(result.nodes).toHaveLength(2)
   })
 

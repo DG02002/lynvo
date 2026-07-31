@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest"
 import {
-  validateExtractorManifestContract,
+  validatePluginServerManifestContract,
   validateExtractSuccessContract,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import worker, { manifest } from "../src/index"
 
 const environment = {}
 
 describe("example extractor contract", () => {
   it("publishes a valid manifest", () => {
-    expect(validateExtractorManifestContract(manifest)).toEqual({
+    expect(validatePluginServerManifestContract(manifest)).toEqual({
       ok: true,
       issues: [],
     })

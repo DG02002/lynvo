@@ -25,7 +25,7 @@ describe("Bhadoo save flow", () => {
     const sanitizedUrl = "https://index.example.com/0:/Movies/"
     const meta = {
       filename: "Movies",
-      sourceId: "bhadoo-google-drive-index",
+      pluginId: "bhadoo-google-drive-index",
       sourceName: "Bhadoo Google Drive Index",
       sourceCredentialKind: "http-basic" as const,
       workerId: "official-extractor",

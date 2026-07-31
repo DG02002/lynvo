@@ -1,8 +1,8 @@
 {
-  "name": "@lynvo/extractor-protocol",
+  "name": "@lynvo/plugin-server-protocol",
   "version": "0.1.0",
   "private": true,
-  "description": "Lynvo external extractor protocol schemas, runtime helpers, and metadata utilities.",
+  "description": "Lynvo Custom Plugin Server protocol schemas, runtime helpers, and metadata utilities.",
   "files": [
     "dist",
     "docs",

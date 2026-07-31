@@ -1,37 +1,37 @@
-# External Extractor Compatibility Checklist
+# Custom Plugin Server Compatibility Checklist
 
-Use this before registering an external extractor worker in Lynvo.
+Use this before registering an Custom Plugin Server in Lynvo.
 
 ## Ownership Boundary
 
-- Lynvo defines the protocol and renders worker-provided metadata.
-- The external extractor owns its plugin logic, deployment, icons, status, and versions.
+- Lynvo defines the protocol and renders Plugin Server-provided metadata.
+- The Custom Plugin Server owns its plugin logic, deployment, icons, status, and versions.
 - Do not add source-specific code to Lynvo for Resolver Beta, File Source Delta, or similar services.
 
 ## Required Endpoints
 
-- `GET /manifest` returns the extractor manifest.
+- `GET /manifest` returns the Plugin Server Manifest.
 - `POST /verify` validates the bearer token Lynvo will use.
 - `GET /usage` returns authenticated finite usage metrics for the bearer credential.
 - `POST /extract` returns protocol nodes for a source URL or lazy node.
-- Workers advertising `features.discovery` implement authenticated
+- Plugin Servers advertising `features.discovery` implement authenticated
   `POST /discover` and return a stable source id with pattern or verified
   confidence.
 
 ## Manifest Rules
 
 - `protocolVersion` is `1.0`.
-- `extractorId` is stable and namespaced, for example `com.example.extractor`.
+- `pluginServerId` is stable and namespaced, for example `com.example.plugin-server`.
 - `displayName` is human readable.
 - `auth.type` is `bearer`.
-- `matchers` declare the URLs the worker can handle.
+- `matchers` declare the URLs the Plugin Server can handle.
 - `features.password`, `features.lazyNodes`, and `features.basicAuth` describe supported behavior.
 - `usage.endpoint` is `/usage`.
-- Workers declaring `features.basicAuth` receive source credentials in `request.basicAuth`, never in the target URL.
+- Plugin Servers declaring `features.basicAuth` receive Source credentials in `request.basicAuth`, never in the target URL.
 
 ## Source / Plugin Metadata
 
-Declare each user-visible plugin under `extensions.lynvo.sources`.
+Declare each user-visible plugin under `extensions.lynvo.plugins`.
 
 Each source should include:
 
@@ -45,16 +45,16 @@ Each source should include:
 ## Icon Rules
 
 - Use direct WebP URLs, not favicon proxy URLs.
-- Serve icons from the extractor worker or its own CDN.
+- Serve icons from the Plugin Server or its own CDN.
 - Keep icons small; the shared optimizer resizes WebP icons to fit within 256x256.
 - Run image optimization as part of deploy, not as a one-off manual step.
 
 ## Contract Tests
 
-External extractors should validate:
+Custom Plugin Servers should validate:
 
 - Manifest schema.
-- Source/plugin metadata.
+- Plugin metadata.
 - Direct WebP icon URLs.
 - Duplicate source ids.
 - Extract response schema.
@@ -62,8 +62,8 @@ External extractors should validate:
 
 The shared local helpers are:
 
-- `validateExtractorManifestContract(value)`
+- `validatePluginServerManifestContract(value)`
 - `validateExtractSuccessContract(value)`
 
-See [`examples/extractor-worker/tests/contract.test.ts`](../../../examples/extractor-worker/tests/contract.test.ts)
+See [`examples/plugin-server/tests/contract.test.ts`](../../../examples/plugin-server/tests/contract.test.ts)
 for the workspace contract-test example.

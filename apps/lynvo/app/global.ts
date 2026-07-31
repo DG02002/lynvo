@@ -11,14 +11,14 @@ declare global {
     unit: string
     period: "daily" | "monthly"
     resetsAt: string
-    sourceId?: string
+    pluginId?: string
   }
 
   interface ExternalWorkerUsage {
     workerId: string
     name: string
     iconUrl?: string
-    sources?: readonly {
+    plugins?: readonly {
       id: string
       name: string
       iconUrl?: string

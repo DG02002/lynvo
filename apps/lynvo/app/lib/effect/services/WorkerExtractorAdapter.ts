@@ -1,13 +1,13 @@
 import { Effect } from "effect"
 import {
   getLynvoManifestExtension,
-  getMatchedExtractorSource,
-  manifestSchema,
+  getMatchedPlugin,
+  pluginServerManifestSchema,
   type ExtractSuccessResponse,
-  type ExtractorManifest,
-  type ExtractorSourceMetadata,
+  type PluginServerManifest,
+  type PluginMetadata,
   type HttpBasicAuth,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl, mapNodeToExtractedLink } from "../../../lib/worker-utils"
 import {
@@ -53,7 +53,7 @@ export const getWorkerUsage = Effect.fn(
     ...(manifest?.iconUrl ? { iconUrl: manifest.iconUrl } : {}),
     ...(manifest
       ? {
-          sources: (getLynvoManifestExtension(manifest).sources ?? []).map(
+          plugins: (getLynvoManifestExtension(manifest).plugins ?? []).map(
             (source) => ({
               id: source.id,
               name: source.displayName,
@@ -75,7 +75,7 @@ export const decodeWorkerManifest = Effect.fn(
   if (json === undefined) {
     return undefined
   }
-  const parsed = manifestSchema.safeParse(json)
+  const parsed = pluginServerManifestSchema.safeParse(json)
   return parsed.success ? parsed.data : undefined
 })
 
@@ -124,15 +124,15 @@ export const getWorkerSource = Effect.fn(
 )(function* (
   worker: RegisteredWorker,
   targetUrl: string,
-  sourceId?: string
-): Effect.fn.Return<ExtractorSourceMetadata | undefined> {
+  pluginId?: string
+): Effect.fn.Return<PluginMetadata | undefined> {
   const manifest = yield* decodeWorkerManifest(worker.manifest)
   return manifest
-    ? sourceId
-      ? getLynvoManifestExtension(manifest).sources?.find(
-          (source) => source.id === sourceId
+    ? pluginId
+      ? getLynvoManifestExtension(manifest).plugins?.find(
+          (source) => source.id === pluginId
         )
-      : getMatchedExtractorSource(manifest, targetUrl)
+      : getMatchedPlugin(manifest, targetUrl)
     : undefined
 })
 
@@ -160,21 +160,21 @@ export const discoverWorkerSource = Effect.fn(
 })
 
 export const getExtractorMetadata = (
-  manifest: ExtractorManifest,
+  manifest: PluginServerManifest,
   workerId: string,
   targetUrl?: string,
-  sourceId?: string
+  pluginId?: string
 ): MetadataResult => {
-  const source = sourceId
-    ? getLynvoManifestExtension(manifest).sources?.find(
-        (candidate) => candidate.id === sourceId
+  const source = pluginId
+    ? getLynvoManifestExtension(manifest).plugins?.find(
+        (candidate) => candidate.id === pluginId
       )
     : targetUrl
-      ? getMatchedExtractorSource(manifest, targetUrl)
+      ? getMatchedPlugin(manifest, targetUrl)
       : undefined
-  const routeSourceId = source?.routesToSourceId
+  const routeSourceId = source?.routesToPluginId
   const routeSource = routeSourceId
-    ? getLynvoManifestExtension(manifest).sources?.find(
+    ? getLynvoManifestExtension(manifest).plugins?.find(
         (candidate) => candidate.id === routeSourceId
       )
     : undefined
@@ -183,7 +183,7 @@ export const getExtractorMetadata = (
     filename: "",
     pluginName: decodeExtractorText(manifest.displayName),
     ...(manifest.iconUrl ? { pluginIcon: manifest.iconUrl } : {}),
-    ...(source?.id ? { sourceId: source.id } : {}),
+    ...(source?.id ? { pluginId: source.id } : {}),
     ...(source?.displayName
       ? { sourceName: decodeExtractorText(source.displayName) }
       : {}),
@@ -212,7 +212,7 @@ export const extractFromWorker = Effect.fn(
   credentials?: {
     password?: string
     basicAuth?: HttpBasicAuth
-    sourceId?: string
+    pluginId?: string
   },
   requestId?: string
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
@@ -229,14 +229,14 @@ export const extractFromWorker = Effect.fn(
             apiKey: worker.apiKey,
             password: credentials?.password,
             basicAuth,
-            sourceId: credentials?.sourceId,
+            pluginId: credentials?.pluginId,
             requestId,
           })
         : client.extractSource(extractedAuth.url, {
             apiKey: worker.apiKey,
             password: credentials?.password,
             basicAuth,
-            sourceId: credentials?.sourceId,
+            pluginId: credentials?.pluginId,
             requestId,
           }),
     catch: (cause) => workerError(cause, targetUrl),
@@ -253,19 +253,19 @@ export const mapExtractorResult = (
   return {
     links: result.nodes.map(mapNodeToExtractedLink),
     meta: {
-      pluginName: result.source.displayName || result.source.extractorId,
-      ...(result.source.iconUrl ? { pluginIcon: result.source.iconUrl } : {}),
-      ...(result.source.sourceId ? { sourceId: result.source.sourceId } : {}),
-      ...(result.source.sourceName
-        ? { sourceName: result.source.sourceName }
+      pluginName: result.plugin.displayName || result.plugin.pluginServerId,
+      ...(result.plugin.iconUrl ? { pluginIcon: result.plugin.iconUrl } : {}),
+      ...(result.plugin.pluginId ? { pluginId: result.plugin.pluginId } : {}),
+      ...(result.plugin.pluginName
+        ? { sourceName: result.plugin.pluginName }
         : {}),
-      ...(result.source.sourceIconUrl
-        ? { sourceIconUrl: result.source.sourceIconUrl }
+      ...(result.plugin.pluginIconUrl
+        ? { sourceIconUrl: result.plugin.pluginIconUrl }
         : {}),
-      ...(result.source.pageTitle
-        ? { pageTitle: result.source.pageTitle }
+      ...(result.plugin.pageTitle
+        ? { pageTitle: result.plugin.pageTitle }
         : {}),
-      ...(result.source.audio ? { audio: result.source.audio } : {}),
+      ...(result.plugin.audio ? { audio: result.plugin.audio } : {}),
       schemaVersion: 2,
       workerId,
     },

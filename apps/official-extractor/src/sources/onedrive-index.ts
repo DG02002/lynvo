@@ -1,8 +1,8 @@
 import { load } from "cheerio"
 import type {
-  ExtractorNode,
+  MediaNode,
   ExtractSuccessResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import {
   ONEDRIVE_FETCH_RETRIES,
   ONEDRIVE_FETCH_RETRY_DELAY_MS,
@@ -89,8 +89,8 @@ export const createOneDriveNodes = (
   currentPath: string,
   origin: string,
   hashedPassword: string
-): ExtractorNode[] =>
-  items.flatMap<ExtractorNode>((item) => {
+): MediaNode[] =>
+  items.flatMap<MediaNode>((item) => {
     if (item.folder) {
       const nextPath = currentPath.endsWith("/")
         ? currentPath + item.name
@@ -159,8 +159,8 @@ const fetchOneDrivePage = async (
   hashedPassword: string,
   initialToken = "",
   startedAtMs = Date.now()
-): Promise<ExtractorNode[]> => {
-  const nodes: ExtractorNode[] = []
+): Promise<MediaNode[]> => {
+  const nodes: MediaNode[] = []
   const seenTokens = new Set<string>()
   let nextToken = initialToken
   let pageCount = 0
@@ -249,7 +249,7 @@ export const extractOneDriveIndex = async ({
   const headers = hashedPassword
     ? { "od-protected-token": hashedPassword }
     : undefined
-  let nodes: ExtractorNode[] | undefined
+  let nodes: MediaNode[] | undefined
   const startedAtMs = Date.now()
 
   const initialResponse = await fetchOneDrive(parsedUrl.toString(), { headers })
@@ -302,7 +302,7 @@ export const extractOneDriveIndex = async ({
     parsedUrl.pathname.split("/").filter(Boolean).at(-1) ?? "OneDrive Index"
   )
   return {
-    source: createSourceResponseMetadata(source, publicAssetOrigin, pageTitle),
+    plugin: createSourceResponseMetadata(source, publicAssetOrigin, pageTitle),
     nodes,
     extensions: {},
   }

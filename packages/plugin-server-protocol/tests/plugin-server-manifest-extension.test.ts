@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   getLynvoManifestExtension,
-  manifestSchema,
+  pluginServerManifestSchema,
   resolvableNodeSchema,
-  validateExtractorManifestContract,
+  validatePluginServerManifestContract,
 } from "../src/index"
 
 describe("Lynvo manifest source credentials", () => {
@@ -19,9 +19,9 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("accepts backward-compatible source capability metadata", () => {
-    const manifest = manifestSchema.parse({
+    const manifest = pluginServerManifestSchema.parse({
       protocolVersion: "1.0",
-      extractorId: "dev.lynvo.test",
+      pluginServerId: "dev.lynvo.test",
       displayName: "Test",
       hasIcon: false,
       auth: { type: "bearer" },
@@ -30,7 +30,7 @@ describe("Lynvo manifest source credentials", () => {
       features: { password: true, lazyNodes: true, basicAuth: true },
       extensions: {
         lynvo: {
-          sources: [
+          plugins: [
             {
               id: "source",
               displayName: "Source",
@@ -49,7 +49,7 @@ describe("Lynvo manifest source credentials", () => {
       },
     })
 
-    expect(getLynvoManifestExtension(manifest).sources?.[0]).toMatchObject({
+    expect(getLynvoManifestExtension(manifest).plugins?.[0]).toMatchObject({
       description: "A source adapter.",
       homepage: "https://example.com",
       hasIcon: false,
@@ -62,35 +62,35 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("rejects explicit icon capabilities that disagree with iconUrl", () => {
-    const manifest = manifestSchema.parse({
+    const manifest = pluginServerManifestSchema.parse({
       protocolVersion: "1.0",
-      extractorId: "dev.lynvo.test",
+      pluginServerId: "dev.lynvo.test",
       displayName: "Test",
       hasIcon: true,
       auth: { type: "bearer" },
       usage: { endpoint: "/usage" },
       matchers: [{ hosts: ["example.com"] }],
       features: {},
-      extensions: { lynvo: { sources: [] } },
+      extensions: { lynvo: { plugins: [] } },
     })
 
-    expect(validateExtractorManifestContract(manifest).issues).toContainEqual({
+    expect(validatePluginServerManifestContract(manifest).issues).toContainEqual({
       path: "iconUrl",
       message: "Provide iconUrl when hasIcon is true.",
     })
   })
 
   it("keeps the new fields optional for existing manifests", () => {
-    const manifest = manifestSchema.parse({
+    const manifest = pluginServerManifestSchema.parse({
       protocolVersion: "1.0",
-      extractorId: "dev.lynvo.test",
+      pluginServerId: "dev.lynvo.test",
       displayName: "Test",
       auth: { type: "bearer" },
       usage: { endpoint: "/usage" },
       matchers: [{ hosts: ["example.com"] }],
       features: {},
-      extensions: { lynvo: { sources: [] } },
+      extensions: { lynvo: { plugins: [] } },
     })
-    expect(getLynvoManifestExtension(manifest)).toEqual({ sources: [] })
+    expect(getLynvoManifestExtension(manifest)).toEqual({ plugins: [] })
   })
 })

@@ -1,31 +1,31 @@
-# Lynvo Extractor Worker Author Guide
+# Lynvo Plugin Server Author Guide
 
 ## Goal
 
-This guide explains how to build a Lynvo-compatible external extractor worker.
+This guide explains how to build a Lynvo-compatible Custom Plugin Server.
 
 The recommended stack is:
 
 - Cloudflare Workers
 - Hono
-- the local `@lynvo/extractor-protocol` contract package
+- the local `@lynvo/plugin-server-protocol` contract package
 
-The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@lynvo/extractor-protocol` package; extractor workers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another worker.
+The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@lynvo/plugin-server-protocol` package; Plugin Servers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another Plugin Server.
 
 Start with:
 
 - `compatibility-checklist.md` for the compatibility rules Lynvo expects.
-- `examples/extractor-worker/` for the workspace example.
+- `examples/plugin-server/` for the workspace example.
 
 ## Recommended Project Setup
 
-Cloudflare currently documents a Hono full-stack starter based on the `create cloudflare` CLI and a Vite React template. That is useful when you want a full-stack app, but Lynvo extractor workers do not need a React frontend by default.
+Cloudflare currently documents a Hono full-stack starter based on the `create cloudflare` CLI and a Vite React template. That is useful when you want a full-stack app, but Lynvo Plugin Servers do not need a React frontend by default.
 
-For extractor workers, prefer a minimal Worker-first Hono project rather than scaffolding a UI you do not need.
+For Plugin Servers, prefer a minimal Worker-first Hono project rather than scaffolding a UI you do not need.
 
 Use the Cloudflare docs as the authoritative source for current Hono scaffolding options:
 
-- Hono on Cloudflare Workers:
+- Hono on Cloudflare Plugin Servers:
   [Cloudflare Hono docs](https://developers.cloudflare.com/workers/framework-guides/web-apps/more-web-frameworks/hono/)
 - Workers best practices:
   [Cloudflare Workers best practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/)
@@ -34,7 +34,7 @@ Use the Cloudflare docs as the authoritative source for current Hono scaffolding
 
 ## Design Constraints
 
-Your worker should be:
+Your Plugin Server should be:
 
 - stateless from Lynvo’s perspective
 - JSON-only at the Lynvo seam
@@ -53,7 +53,7 @@ Lynvo will not send:
 - browser cookies
 - UI instructions
 - playback state
-- worker-specific mode names
+- Plugin-specific mode names
 
 ## Suggested File Shape
 
@@ -61,7 +61,7 @@ Lynvo will not send:
 src/
   index.ts
   auth.ts
-  extractors/
+  plugins/
     source-alpha.ts
     resolver-beta.ts
     source-epsilon.ts
@@ -71,15 +71,15 @@ Recommended module responsibilities:
 
 - `index.ts`: Hono app and route wiring
 - `auth.ts`: bearer key validation
-- `extractors/*`: source-specific extraction logic
+- `plugins/*`: Source-specific extraction logic
 
-Do not define a local protocol schema unless you are writing an adapter around `@lynvo/extractor-protocol`. Local copies drift and make the worker harder to trust.
+Do not define a local protocol schema unless you are writing an adapter around `@lynvo/plugin-server-protocol`. Local copies drift and make the Plugin Server harder to trust.
 
 ## Protocol Package
 
 In this repository, use the local protocol package:
 
-Inside this monorepo, declare `"@lynvo/extractor-protocol": "workspace:*"`.
+Inside this monorepo, declare `"@lynvo/plugin-server-protocol": "workspace:*"`.
 For a standalone repository, consume a published package version or package
 tarball; do not use a workspace reference outside this workspace.
 
@@ -87,12 +87,12 @@ Use it for:
 
 - validating `POST /extract` bodies with `extractRequestSchema`
 - building structured errors with `createProtocolError`
-- serving protocol routes with `createExtractorRuntime`
+- serving protocol routes with `createPluginServerRuntime`
 - declaring manifest data with the exported interfaces
-- testing routing with `matchExtractorUrl`
-- returning nodes with the exported `ExtractorNode` shapes
+- testing routing with `matchPluginServerUrl`
+- returning nodes with the exported `MediaNode` shapes
 
-This keeps the extractor worker’s public interface small and stable. This does not require publishing to npm. Your worker can have as much source-specific implementation as it needs behind that interface, but Lynvo should only see the protocol.
+This keeps the Plugin Server’s public interface small and stable. This does not require publishing to npm. Your Plugin Server can have as much Source-specific implementation as it needs behind that interface, but Lynvo should only see the protocol.
 
 ## Suggested Runtime Configuration
 
@@ -109,7 +109,7 @@ Cloudflare currently documents that:
 - `nodejs_compat` requires a compatibility date of `2024-09-23` or later
 - it enables built-in Node APIs plus Wrangler polyfills
 
-Do not enable it by reflex. Many extractors can stay on pure web-standard APIs:
+Do not enable it by reflex. Many Plugin Servers can stay on pure web-standard APIs:
 
 - `fetch`
 - `URL`
@@ -119,7 +119,7 @@ Do not enable it by reflex. Many extractors can stay on pure web-standard APIs:
 - `WebSocket`
 - Web Crypto
 
-That usually leads to smaller and simpler workers.
+That usually leads to smaller and simpler Plugin Servers.
 
 ## Secrets and Configuration
 
@@ -132,8 +132,8 @@ Follow Cloudflare best practices:
 Suggested secrets and variables:
 
 - `LYNVO_API_KEYS` or similar server-side auth material
-- upstream helper endpoints if your worker needs them
-- optional feature flags for experimental extractor behavior
+- upstream helper endpoints if your Plugin Server needs them
+- optional feature flags for experimental Plugin behavior
 
 ## Hono Structure
 
@@ -163,7 +163,7 @@ Do not:
 
 - accept API keys in query strings
 - rely on browser cookies
-- expose worker API keys to clients
+- expose Plugin Server API keys to clients
 
 ## Manifest Guidance
 
@@ -172,7 +172,7 @@ The manifest is public. Keep it simple and stable.
 Recommended contents:
 
 - protocol version
-- extractor id
+- Plugin Server id
 - display metadata
 - HTTPS icon URL
 - auth type
@@ -187,20 +187,20 @@ The manifest is not the place for:
 
 ### Icons
 
-External extractors should publish `hasIcon` explicitly. Set it to `true` and provide `iconUrl` when a stable HTTPS icon exists. Set it to `false` and omit `iconUrl` when Lynvo should render its extractor fallback.
+Custom Plugin Servers should publish `hasIcon` explicitly. Set it to `true` and provide `iconUrl` when a stable HTTPS icon exists. Set it to `false` and omit `iconUrl` when Lynvo should render its Plugin Server fallback.
 
 Recommended:
 
 - serve a small square WebP icon
 - use an HTTPS URL
-- keep the image stable after users register the worker
+- keep the image stable after users register the Plugin Server
 - set `hasIcon` to `false` and omit `iconUrl` when no public asset URL exists
 
-If the icon is served by the worker itself, expose it as a static asset such as `/icons/sources/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
+If the icon is served by the Plugin Server itself, expose it as a static asset such as `/icons/sources/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
 
-### Extractor Source Icons
+### Plugin Icons
 
-If one worker supports multiple Extractor Sources, publish those identities under `extensions.lynvo.sources`.
+If one Plugin Server supports multiple Plugins, publish those identities under `extensions.lynvo.plugins`.
 
 Example:
 
@@ -238,17 +238,17 @@ Example:
 }
 ```
 
-Lynvo displays these source icons in the external extractor settings table. Set source `hasIcon` to `false` and omit `iconUrl` to request Lynvo's source fallback. This is distinct from the top-level extractor icon.
+Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Set Plugin `hasIcon` to `false` and omit `iconUrl` to request Lynvo's Plugin fallback. This is distinct from the top-level Plugin Server icon.
 
-`status` is optional and may be `active`, `maintenance`, `degraded`, or `down`. `version` is optional and should describe the worker's source-specific adapter version, not the upstream site's version.
+`status` is optional and may be `active`, `maintenance`, `degraded`, or `down`. `version` is optional and should describe the Plugin Server's source-specific adapter version, not the upstream site's version.
 
-`routesToSourceId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
+`routesToPluginId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
-`matchers` is optional but recommended. Lynvo uses it to show which Extractor Source is likely to handle a URL before extraction starts.
+`matchers` is optional but recommended. Lynvo uses it to show which Plugin is likely to handle a URL before extraction starts.
 
 `description`, `homepage`, and `credential` are optional source capability metadata. A credential `kind` is either `domain-password` or `http-basic`, its `scope` is `domain`, and `required` states whether every extraction needs it. These fields describe configuration requirements and must not contain credentials or UI layout instructions.
 
-Lynvo v1 does not define a live health endpoint. Source status is read from the manifest and refreshed when the user refreshes the worker manifest in settings. This keeps the protocol predictable and avoids polling every external worker.
+Lynvo v1 does not define a live health endpoint. Source status is read from the manifest and refreshed when the user refreshes the Plugin Server Manifest in settings. This keeps the protocol predictable and avoids polling every Custom Plugin Server.
 
 ## Extract Handler Guidance
 
@@ -281,15 +281,15 @@ Example:
 1. `source-alpha` page returns folder and lazy item nodes.
 2. Lazy Item node carries a lazy `nodeUrl`.
 3. Lynvo calls `POST /extract` again with that `nodeUrl`.
-4. The worker resolves the next step.
+4. The Plugin Server resolves the next step.
 5. If the next step is final, return playable nodes.
 6. If the next step is still intermediate, return more resolvable nodes.
 
 This means:
 
-- your worker owns the entire source-specific chain
-- Lynvo does not chain between different workers
-- any lazy node you emit must be resolvable by the same worker
+- your Plugin Server owns the entire source-specific chain
+- Lynvo does not chain between different Plugin Servers
+- any lazy node you emit must be resolvable by the same Plugin Server
 
 ## Normalization Rules
 
@@ -315,7 +315,7 @@ link,” “container,” “folder,” and “lazy folder” map onto those kin
 | Selectable folder      | `group`       | `selectable: true`, `children`  |
 | Lazy folder            | `resolvable`  | `nodeUrl` and/or `resourceId`   |
 
-Import `ExtractorNode` so TypeScript checks copyable implementations against
+Import `MediaNode` so TypeScript checks copyable implementations against
 the shared contract.
 
 ### Direct link item
@@ -324,7 +324,7 @@ Use `playable` only for a final URL Lynvo can send to a player. Do not use it
 for an HTML page that still needs resolution.
 
 ```ts
-import type { ExtractorNode } from "@lynvo/extractor-protocol"
+import type { MediaNode } from "@lynvo/plugin-server-protocol"
 
 const directLink = {
   kind: "playable",
@@ -334,7 +334,7 @@ const directLink = {
   badge: "Variant Alpha",
   size: "1.4 GB",
   status: "up",
-} satisfies ExtractorNode
+} satisfies MediaNode
 ```
 
 ### Container item
@@ -350,7 +350,7 @@ const folderContainer = {
   badge: "10 playable items",
   selectable: false,
   children: [directLink],
-} satisfies ExtractorNode
+} satisfies MediaNode
 ```
 
 ### Folder item
@@ -365,14 +365,14 @@ const selectableFolder = {
   label: "Collections",
   selectable: true,
   children: [folderContainer],
-} satisfies ExtractorNode
+} satisfies MediaNode
 ```
 
 ### Lazy folder item
 
 Use `resolvable` when the folder is intentionally not expanded yet. `nodeUrl`
 is a server-side follow-up target, while `resourceId` is an optional opaque
-identifier your Worker can use. The same Worker must handle the later node
+identifier your Plugin Server can use. The same Plugin Server must handle the later node
 request.
 
 ```ts
@@ -384,7 +384,7 @@ const lazyFolder = {
   nodeUrl: "https://source.example.com/0:/Collections/",
   resourceId: "folder_shows_v1",
   resolutionKind: "folder",
-} satisfies ExtractorNode
+} satisfies MediaNode
 ```
 
 When the user opens that lazy folder, Lynvo sends another extraction request:
@@ -414,7 +414,7 @@ You may return minimal source metadata:
 
 - `displayName`
 - `iconUrl`
-- `sourceId`
+- `pluginId`
 - `sourceName`
 - `sourceIconUrl`
 - `pageTitle`
@@ -442,11 +442,11 @@ Use `TEMPORARY_FAILURE` when retrying later might succeed.
 
 Use `PERMANENT_FAILURE` when the source is broken in a non-retryable way.
 
-Use `UNSUPPORTED_URL` only when the URL is outside the worker’s supported scope.
+Use `UNSUPPORTED_URL` only when the URL is outside the Plugin Server’s supported scope.
 
 ## Performance Guidance
 
-External workers may run on Cloudflare free plans. Design with that in mind.
+Custom Plugin Servers may run on Cloudflare free plans. Design with that in mind.
 
 Prefer:
 
@@ -456,11 +456,11 @@ Prefer:
 - deduplication of repeated mirror probes
 - avoiding large client bundles or unnecessary dependencies
 
-Do not hard-code operational timing assumptions from Lynvo into the worker.
+Do not hard-code operational timing assumptions from Lynvo into the Plugin Server.
 
 ## Security Guidance
 
-Treat worker display metadata as untrusted input on the Lynvo side, and design responsibly on the worker side too.
+Treat Plugin Server display metadata as untrusted input on the Lynvo side, and design responsibly on the Plugin Server side too.
 
 Recommended:
 
@@ -487,7 +487,7 @@ If you use Cloudflare-native testing, prefer running tests in the Workers runtim
 
 ```ts
 import { Hono } from "hono"
-import { createExtractorRuntime } from "@lynvo/extractor-protocol"
+import { createPluginServerRuntime } from "@lynvo/plugin-server-protocol"
 
 const app = new Hono()
 
@@ -503,7 +503,7 @@ const sources = [
   },
 ]
 
-const runtime = createExtractorRuntime({
+const runtime = createPluginServerRuntime({
   manifest: ({ request }) => {
     const url = new URL(request.url)
     const iconUrl =
@@ -513,8 +513,8 @@ const runtime = createExtractorRuntime({
 
     return {
       protocolVersion: "1.0",
-      extractorId: "com.example.lynvo.extractor",
-      displayName: "Example Extractor",
+      pluginServerId: "com.example.lynvo.plugin-server",
+      displayName: "Example Plugin Server",
       ...(iconUrl ? { iconUrl } : {}),
       auth: { type: "bearer" },
       matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
@@ -532,9 +532,9 @@ const runtime = createExtractorRuntime({
     if (request.input.kind === "source") {
       return {
         source: {
-          extractorId: "com.example.lynvo.extractor",
-          displayName: "Example Extractor",
-          sourceId: "example-source",
+          pluginServerId: "com.example.lynvo.plugin-server",
+          displayName: "Example Plugin Server",
+          pluginId: "example-source",
           sourceName: "Example Source",
           sourceIconUrl: "https://example.com/icons/source.webp",
         },
@@ -552,9 +552,9 @@ const runtime = createExtractorRuntime({
 
     return {
       source: {
-        extractorId: "com.example.lynvo.extractor",
-        displayName: "Example Extractor",
-        sourceId: "example-source",
+        pluginServerId: "com.example.lynvo.plugin-server",
+        displayName: "Example Plugin Server",
+        pluginId: "example-source",
         sourceName: "Example Source",
         sourceIconUrl: "https://example.com/icons/source.webp",
       },
@@ -580,14 +580,14 @@ export default app
 
 ## Final Advice
 
-Keep the worker deep and the interface narrow.
+Keep the Plugin Server deep and the interface narrow.
 
 That means:
 
 - one public manifest
 - one auth check
 - one extract seam
-- staged resolution entirely inside the worker
+- staged resolution entirely inside the Plugin Server
 - normalized output only
 
-If your worker requires Lynvo-specific branching outside this contract, the design is drifting in the wrong direction.
+If your Plugin Server requires Lynvo-specific branching outside this contract, the design is drifting in the wrong direction.

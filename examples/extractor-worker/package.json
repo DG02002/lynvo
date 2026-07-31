@@ -8,7 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@lynvo/extractor-protocol": "workspace:*"
+    "@lynvo/plugin-server-protocol": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

@@ -5,18 +5,18 @@ import {
   extractErrorSchema,
   extractSuccessSchema,
   isSupportedProtocolVersion,
-  manifestSchema,
+  pluginServerManifestSchema,
   usageResponseSchema,
-  validateExtractorManifestContract,
+  validatePluginServerManifestContract,
   validateUsageContract,
   verifyErrorSchema,
   verifySuccessSchema,
   type ExtractSuccessResponse,
   type DiscoverResponse,
-  type ExtractorManifest,
+  type PluginServerManifest,
   type HttpBasicAuth,
   type UsageResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import {
   EXTRACTOR_INTERNAL_ORIGIN,
   EXTRACTOR_REQUEST_TIMEOUT_MS,
@@ -32,7 +32,7 @@ export interface ExtractorClientOptions {
 }
 
 export interface ExtractorRequestOptions extends ExtractorClientOptions {
-  sourceId?: string
+  pluginId?: string
   password?: string
   basicAuth?: HttpBasicAuth
 }
@@ -166,14 +166,14 @@ export class ExtractorProtocolClient {
 
   getManifest = async (
     options: ExtractorClientOptions = {}
-  ): Promise<ExtractorManifest> => {
+  ): Promise<PluginServerManifest> => {
     const response = await this.request("/manifest", { method: "GET" }, options)
     const value = await parseJson(response)
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    const parsed = manifestSchema.safeParse(value)
-    const contract = validateExtractorManifestContract(value)
+    const parsed = pluginServerManifestSchema.safeParse(value)
+    const contract = validatePluginServerManifestContract(value)
     if (
       !parsed.success ||
       !contract.ok ||
@@ -261,13 +261,13 @@ export class ExtractorProtocolClient {
             targetUrl,
             options.password,
             options.basicAuth,
-            options.sourceId
+            options.pluginId
           )
         : createNodeExtractRequest(
             targetUrl,
             options.password,
             options.basicAuth,
-            options.sourceId
+            options.pluginId
           )
     const response = await this.request(
       "/extract",

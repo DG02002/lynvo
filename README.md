@@ -31,6 +31,6 @@ resolution without persisting extraction credentials.
 ## Project information
 
 - [Contributing and operating Lynvo](CONTRIBUTING.md)
-- [Extractor protocol](packages/extractor-protocol/README.md)
+- [Extractor protocol](packages/plugin-server-protocol/README.md)
 - [Usage-limit policy](docs/usage-limits.md)
 - [Project terminology](CONTEXT.md)

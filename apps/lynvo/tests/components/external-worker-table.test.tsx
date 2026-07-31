@@ -8,7 +8,7 @@ const worker = {
   baseUrl: "http://localhost:8788",
   manifest: JSON.stringify({
     protocolVersion: "1.0",
-    extractorId: "com.example.extractor",
+    pluginServerId: "com.example.extractor",
     displayName: "Example Extractor",
     auth: { type: "bearer" },
     matchers: [{ hosts: ["example.com"] }],

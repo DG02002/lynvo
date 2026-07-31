@@ -27,7 +27,7 @@ export const usageResponseSchema = z.object({
         unit: z.string().min(1),
         period: z.enum(["daily", "monthly"]),
         resetsAt: z.string().datetime(),
-        sourceId: z.string().min(1).optional(),
+        pluginId: z.string().min(1).optional(),
       })
     )
     .min(1),
@@ -65,7 +65,7 @@ Each metric must satisfy these invariants:
 - `used` is non-negative, finite, and no greater than `limit`
 - `period` is `daily` or `monthly`
 - `resetsAt` is an ISO 8601 timestamp
-- `sourceId` identifies a source-specific allowance
+- `pluginId` identifies a source-specific allowance
 
 Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before the adapter performs upstream work. Return `RATE_LIMITED` when no capacity remains. Settle the reservation after the adapter finishes, and release it when your accounting policy does not charge failed work.
 

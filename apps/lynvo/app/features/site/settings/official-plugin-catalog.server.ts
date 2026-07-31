@@ -1,4 +1,4 @@
-import { getLynvoManifestExtension } from "@lynvo/extractor-protocol"
+import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
 import {
   ExtractorProtocolClient,
   ServiceBindingExtractorTransport,
@@ -31,7 +31,7 @@ export const loadOfficialPlugins = async (
     const manifest = await new ExtractorProtocolClient(
       new ServiceBindingExtractorTransport(environment.OFFICIAL_EXTRACTOR)
     ).getManifest({ apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY })
-    return (getLynvoManifestExtension(manifest).sources ?? []).map(
+    return (getLynvoManifestExtension(manifest).plugins ?? []).map(
       (source) => ({
         id: source.id,
         name: source.displayName,

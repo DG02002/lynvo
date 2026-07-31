@@ -56,7 +56,7 @@ export interface MetaData {
   rangeRequest?: "supported" | "unsupported" | "unknown"
   pluginName?: string
   pluginIcon?: string
-  sourceId?: string
+  pluginId?: string
   sourceName?: string
   sourceIconUrl?: string
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"
@@ -84,7 +84,7 @@ export interface RecentLinkViewItem {
   meta?: MetaData
   pluginName?: string
   pluginIcon?: string
-  sourceId?: string
+  pluginId?: string
   sourceName?: string
   sourceIconUrl?: string
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"

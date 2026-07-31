@@ -1,13 +1,13 @@
 import * as cheerio from "cheerio"
 import type {
-  ExtractorNode,
+  MediaNode,
   ExtractSuccessResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 
 export const decodeExtractorText = (value: string): string =>
   cheerio.load(value, undefined, false).text()
 
-const normalizeNodeText = (node: ExtractorNode): ExtractorNode => ({
+const normalizeNodeText = (node: MediaNode): MediaNode => ({
   ...node,
   label: decodeExtractorText(node.label),
   ...(node.badge ? { badge: decodeExtractorText(node.badge) } : {}),
@@ -24,17 +24,17 @@ export const normalizeExtractorText = (
   result: ExtractSuccessResponse
 ): ExtractSuccessResponse => ({
   ...result,
-  source: {
-    ...result.source,
-    displayName: decodeExtractorText(result.source.displayName),
-    ...(result.source.sourceName
-      ? { sourceName: decodeExtractorText(result.source.sourceName) }
+  plugin: {
+    ...result.plugin,
+    displayName: decodeExtractorText(result.plugin.displayName),
+    ...(result.plugin.pluginName
+      ? { pluginName: decodeExtractorText(result.plugin.pluginName) }
       : {}),
-    ...(result.source.pageTitle
-      ? { pageTitle: decodeExtractorText(result.source.pageTitle) }
+    ...(result.plugin.pageTitle
+      ? { pageTitle: decodeExtractorText(result.plugin.pageTitle) }
       : {}),
-    ...(result.source.audio
-      ? { audio: decodeExtractorText(result.source.audio) }
+    ...(result.plugin.audio
+      ? { audio: decodeExtractorText(result.plugin.audio) }
       : {}),
   },
   nodes: result.nodes.map(normalizeNodeText),

@@ -1,8 +1,8 @@
 import type {
-  ExtractorNode,
+  MediaNode,
   ExtractSuccessResponse,
   HttpBasicAuth,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import { createBasicAuthorization } from "../auth"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
@@ -51,8 +51,8 @@ export const formatBhadooFileSize = (size?: string): string | undefined => {
 export const createBhadooNodes = (
   items: readonly BhadooGoogleDriveItem[],
   folderUrl: URL
-): ExtractorNode[] =>
-  items.flatMap<ExtractorNode>((item) => {
+): MediaNode[] =>
+  items.flatMap<MediaNode>((item) => {
     if (item.mimeType === GOOGLE_DRIVE_FOLDER_MIME_TYPE) {
       const pathname = folderUrl.pathname.endsWith("/")
         ? folderUrl.pathname
@@ -183,7 +183,7 @@ export const extractBhadooGoogleDriveIndex = async ({
       .filter((value) => value !== "view")
       .forEach((value) => playableUrl.searchParams.append("a", value))
     return {
-      source: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+      plugin: createSourceResponseMetadata(source, publicAssetOrigin, filename),
       nodes: [
         { kind: "playable", label: filename, url: playableUrl.toString() },
       ],
@@ -191,7 +191,7 @@ export const extractBhadooGoogleDriveIndex = async ({
     }
   }
 
-  const nodes: ExtractorNode[] = []
+  const nodes: MediaNode[] = []
   const seenTokens = new Set<string>()
   const startedAtMs = Date.now()
   let pageToken = ""
@@ -232,7 +232,7 @@ export const extractBhadooGoogleDriveIndex = async ({
   } while (pageToken)
 
   return {
-    source: createSourceResponseMetadata(source, publicAssetOrigin, filename),
+    plugin: createSourceResponseMetadata(source, publicAssetOrigin, filename),
     nodes,
     extensions: {},
   }

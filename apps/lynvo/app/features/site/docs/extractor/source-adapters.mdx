@@ -36,7 +36,7 @@ export const sources = [
 
 </CodeBlock>
 
-Publish user-visible sources under `extensions.lynvo.sources`:
+Publish user-visible sources under `extensions.lynvo.plugins`:
 
 <CodeBlock label="src/manifest.ts">
 
@@ -63,7 +63,7 @@ Source metadata supports these fields:
 | `hasIcon` and `iconUrl` | Source-specific WebP icon                      |
 | `status`                | `active`, `maintenance`, `degraded`, or `down` |
 | `version`               | Your adapter version                           |
-| `routesToSourceId`      | Downstream source in the same manifest         |
+| `routesToPluginId`      | Downstream source in the same manifest         |
 | `hosts` and `matchers`  | URLs handled by the adapter                    |
 | `credential`            | Domain password or HTTP Basic Auth capability  |
 

@@ -17,7 +17,7 @@ declare global {
     extract: (request: {
       url: string
       workerId?: string
-      sourceId?: string
+      pluginId?: string
       kind?: "source" | "node"
     }) => Promise<{ links: ExtractedLink[]; meta?: MetaData }>
     getMetadata: (request: { url: string }) => Promise<MetaData>
@@ -48,7 +48,7 @@ declare global {
     resolveFolder: (options: {
       folderUrl: string
       workerId?: string
-      sourceId?: string
+      pluginId?: string
     }) => Promise<ExtractedLink[]>
     expandFolder: (options: {
       item: RecentLinkViewItem
@@ -84,20 +84,20 @@ export const createExtractionOrchestration = (
     return await transport.extract({
       url,
       workerId,
-      sourceId: getSavedSourceId(item),
+      pluginId: getSavedSourceId(item),
       kind: workerId ? "node" : undefined,
     })
   }
   const extractFolder = async (
     folderUrl: string,
     workerId?: string,
-    sourceId?: string
+    pluginId?: string
   ) =>
     (
       await transport.extract({
         url: folderUrl,
         workerId,
-        sourceId,
+        pluginId,
         kind: workerId ? "node" : undefined,
       })
     ).links
@@ -130,14 +130,14 @@ export const createExtractionOrchestration = (
       const result = await transport.extract({
         url: item.url,
         workerId: getSavedWorkerId(item),
-        sourceId: getSavedSourceId(item),
+        pluginId: getSavedSourceId(item),
       })
       return result.links
     },
     resolveMirror: async (item, lazyItemUrl) =>
       (await extractSavedItemNode(item, lazyItemUrl)).links,
-    resolveFolder: async ({ folderUrl, workerId, sourceId }) =>
-      await extractFolder(folderUrl, workerId, sourceId),
+    resolveFolder: async ({ folderUrl, workerId, pluginId }) =>
+      await extractFolder(folderUrl, workerId, pluginId),
     expandFolder: async ({ item, linkId, linkUrl }) => {
       const resolvedChildren = await extractFolder(
         linkUrl,

@@ -213,9 +213,9 @@ export const UsageSettings = ({
   const officialItems: UsageListItem[] = officialDailyMetrics
     .map((metric) => {
       const plugin = officialPlugins.find(
-        (candidate) => candidate.id === metric.sourceId
+        (candidate) => candidate.id === metric.pluginId
       )
-      const isDirect = metric.sourceId === "direct"
+      const isDirect = metric.pluginId === "direct"
       const isDailyLimit = metric.id === "official-worker-operations"
       return {
         key: metric.id,
@@ -236,10 +236,10 @@ export const UsageSettings = ({
       worker.error
         ? []
         : monthlyExtractions(worker.metrics).map((metric) => {
-            const source = worker.sources?.find(
-              (candidate) => candidate.id === metric.sourceId
+            const source = worker.plugins?.find(
+              (candidate) => candidate.id === metric.pluginId
             )
-            const isSharedExtractorMetric = !metric.sourceId
+            const isSharedExtractorMetric = !metric.pluginId
             return {
               key: `${worker.workerId}:${metric.id}`,
               iconUrl: source?.iconUrl ?? worker.iconUrl,

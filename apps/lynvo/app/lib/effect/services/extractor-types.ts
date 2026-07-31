@@ -11,7 +11,7 @@ export interface ExtractOptions {
   readonly url: string
   readonly requestId: string
   readonly workerId?: string
-  readonly sourceId?: string
+  readonly pluginId?: string
   readonly kind?: "source" | "node"
   readonly userId?: string
   readonly accessToken?: string
@@ -34,7 +34,7 @@ export interface MetadataResult {
   readonly filename: string
   readonly pluginName: string
   readonly pluginIcon?: string
-  readonly sourceId?: string
+  readonly pluginId?: string
   readonly sourceName?: string
   readonly sourceIconUrl?: string
   readonly sourceStatus?: "active" | "maintenance" | "degraded" | "down"

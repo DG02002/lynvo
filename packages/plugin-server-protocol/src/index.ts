@@ -1,15 +1,15 @@
 import { z } from "zod"
 
-export interface ExtractorMatcher {
+export interface PluginServerMatcher {
   hosts: string[]
   hostPatterns?: string[]
   pathPatterns?: string[]
   schemes?: string[]
 }
 
-export interface ExtractorManifest {
+export interface PluginServerManifest {
   protocolVersion: "1.0"
-  extractorId: string
+  pluginServerId: string
   displayName: string
   hasIcon?: boolean
   iconUrl?: string
@@ -20,7 +20,7 @@ export interface ExtractorManifest {
   usage: {
     endpoint: "/usage"
   }
-  matchers: ExtractorMatcher[]
+  matchers: PluginServerMatcher[]
   features: {
     password: boolean
     lazyNodes: boolean
@@ -38,7 +38,7 @@ export interface UsageMetric {
   unit: string
   period: "daily" | "monthly"
   resetsAt: string
-  sourceId?: string
+  pluginId?: string
 }
 
 export interface UsageResponse {
@@ -53,7 +53,7 @@ export interface GroupNode {
   size?: string
   sourceName?: string
   selectable?: boolean
-  children: ExtractorNode[]
+  children: MediaNode[]
 }
 
 export interface ResolvableNode {
@@ -80,7 +80,7 @@ export interface PlayableNode {
   status?: "up" | "down" | "unknown"
 }
 
-export type ExtractorNode = GroupNode | ResolvableNode | PlayableNode
+export type MediaNode = GroupNode | ResolvableNode | PlayableNode
 
 export interface SourceInput {
   kind: "source"
@@ -95,7 +95,7 @@ export interface NodeInput {
 
 export interface ExtractRequest {
   input: SourceInput | NodeInput
-  sourceId?: string
+  pluginId?: string
   password?: string
   basicAuth?: HttpBasicAuth
 }
@@ -111,17 +111,17 @@ export interface ExtractedHttpBasicAuth {
 }
 
 export interface ExtractSuccessResponse {
-  source: {
-    extractorId: string
+  plugin: {
+    pluginServerId: string
     displayName: string
     iconUrl?: string
-    sourceId?: string
-    sourceName?: string
-    sourceIconUrl?: string
+    pluginId?: string
+    pluginName?: string
+    pluginIconUrl?: string
     pageTitle?: string
     audio?: string
   }
-  nodes: ExtractorNode[]
+  nodes: MediaNode[]
   extensions: Record<string, unknown>
 }
 
@@ -156,11 +156,11 @@ export type DiscoverResponse =
   | { matched: false }
   | {
       matched: true
-      sourceId: string
+      pluginId: string
       confidence: "pattern" | "verified"
     }
 
-export interface ExtractorSourceMetadata {
+export interface PluginMetadata {
   id: string
   displayName: string
   description?: string
@@ -169,20 +169,20 @@ export interface ExtractorSourceMetadata {
   iconUrl?: string
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
-  routesToSourceId?: string
+  routesToPluginId?: string
   hosts: string[]
-  matchers?: ExtractorMatcher[]
-  credential?: ExtractorSourceCredential
+  matchers?: PluginServerMatcher[]
+  credential?: PluginCredential
 }
 
-export interface ExtractorSourceCredential {
+export interface PluginCredential {
   kind: "domain-password" | "http-basic"
   scope: "domain"
   required: boolean
 }
 
 export interface LynvoManifestExtension {
-  sources?: ExtractorSourceMetadata[]
+  plugins?: PluginMetadata[]
 }
 
 export interface ContractIssue {
@@ -195,51 +195,51 @@ export interface ContractValidationResult {
   issues: ContractIssue[]
 }
 
-export interface ExtractorRuntimeContext<Env> {
+export interface PluginServerRuntimeContext<Env> {
   request: Request
   env: Env
 }
 
-export interface ExtractorRuntimeAuth<Env> {
+export interface PluginServerRuntimeAuth<Env> {
   validate: (
-    context: ExtractorRuntimeContext<Env>
+    context: PluginServerRuntimeContext<Env>
   ) => Promise<boolean> | boolean
 }
 
-export interface ExtractorRuntimeExtractOptions<Env> {
+export interface PluginServerRuntimeExtractOptions<Env> {
   request: ExtractRequest
   targetUrl: string
   env: Env
 }
 
-export interface ExtractorRuntimeDiscoverOptions<Env> {
+export interface PluginServerRuntimeDiscoverOptions<Env> {
   request: DiscoverRequest
   targetUrl: string
   env: Env
 }
 
-export type ExtractorRuntimeManifest<Env> =
-  | ExtractorManifest
+export type PluginServerRuntimeManifest<Env> =
+  | PluginServerManifest
   | ((
-      context: ExtractorRuntimeContext<Env>
-    ) => Promise<ExtractorManifest> | ExtractorManifest)
+      context: PluginServerRuntimeContext<Env>
+    ) => Promise<PluginServerManifest> | PluginServerManifest)
 
-export interface ExtractorRuntimeOptions<Env> {
-  manifest: ExtractorRuntimeManifest<Env>
-  auth: ExtractorRuntimeAuth<Env>
+export interface PluginServerRuntimeOptions<Env> {
+  manifest: PluginServerRuntimeManifest<Env>
+  auth: PluginServerRuntimeAuth<Env>
   extract: (
-    options: ExtractorRuntimeExtractOptions<Env>
+    options: PluginServerRuntimeExtractOptions<Env>
   ) => Promise<ExtractSuccessResponse> | ExtractSuccessResponse
   discover?: (
-    options: ExtractorRuntimeDiscoverOptions<Env>
+    options: PluginServerRuntimeDiscoverOptions<Env>
   ) => Promise<DiscoverResponse> | DiscoverResponse
   usage: (
-    context: ExtractorRuntimeContext<Env>
+    context: PluginServerRuntimeContext<Env>
   ) => Promise<UsageResponse> | UsageResponse
-  onError?: (error: unknown, context: ExtractorRuntimeContext<Env>) => void
+  onError?: (error: unknown, context: PluginServerRuntimeContext<Env>) => void
 }
 
-export interface ExtractorRuntime<Env> {
+export interface PluginServerRuntime<Env> {
   handleManifest: (request: Request, env: Env) => Promise<Response>
   handleVerify: (request: Request, env: Env) => Promise<Response>
   handleUsage: (request: Request, env: Env) => Promise<Response>
@@ -273,7 +273,7 @@ export const isSupportedProtocolVersion = (
 ): version is SupportedProtocolVersion =>
   (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(version)
 
-export const matcherSchema = z.object({
+export const pluginServerMatcherSchema = z.object({
   hosts: z.array(z.string()).min(1),
   hostPatterns: z.array(z.string()).optional(),
   pathPatterns: z.array(z.string()).optional(),
@@ -289,9 +289,9 @@ const iconUrlSchema = z.url().refine((value) => {
   )
 }, "Icon URLs must use HTTPS, except on loopback development hosts")
 
-export const manifestSchema = z.object({
+export const pluginServerManifestSchema = z.object({
   protocolVersion: z.literal("1.0"),
-  extractorId: z.string().min(1),
+  pluginServerId: z.string().min(1),
   displayName: z.string().min(1),
   hasIcon: z.boolean().optional(),
   iconUrl: iconUrlSchema.optional(),
@@ -305,7 +305,7 @@ export const manifestSchema = z.object({
     })
     .optional()
     .default({ endpoint: "/usage" }),
-  matchers: z.array(matcherSchema).min(1),
+  matchers: z.array(pluginServerMatcherSchema).min(1),
   features: z.object({
     password: z.boolean().optional().default(false),
     lazyNodes: z.boolean().optional().default(false),
@@ -323,7 +323,7 @@ export const usageMetricSchema = z.object({
   unit: z.string().min(1),
   period: z.enum(["daily", "monthly"]),
   resetsAt: z.iso.datetime(),
-  sourceId: z.string().min(1).optional(),
+  pluginId: z.string().min(1).optional(),
 })
 
 export const usageResponseSchema = z.object({
@@ -356,12 +356,12 @@ export const discoverResponseSchema = z.discriminatedUnion("matched", [
   z.object({ matched: z.literal(false) }),
   z.object({
     matched: z.literal(true),
-    sourceId: z.string().min(1),
+    pluginId: z.string().min(1),
     confidence: z.enum(["pattern", "verified"]),
   }),
 ])
 
-export const extractorSourceMetadataSchema = z.object({
+export const pluginMetadataSchema = z.object({
   id: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string().min(1).optional(),
@@ -370,9 +370,9 @@ export const extractorSourceMetadataSchema = z.object({
   iconUrl: iconUrlSchema.optional(),
   status: z.enum(["active", "maintenance", "degraded", "down"]).optional(),
   version: z.string().optional(),
-  routesToSourceId: z.string().min(1).optional(),
+  routesToPluginId: z.string().min(1).optional(),
   hosts: z.array(z.string()).default([]),
-  matchers: z.array(matcherSchema).optional(),
+  matchers: z.array(pluginServerMatcherSchema).optional(),
   credential: z
     .object({
       kind: z.enum(["domain-password", "http-basic"]),
@@ -382,8 +382,8 @@ export const extractorSourceMetadataSchema = z.object({
     .optional(),
 })
 
-export const lynvoManifestExtensionSchema = z.object({
-  sources: z.array(extractorSourceMetadataSchema).optional().default([]),
+export const lynvoPluginCatalogSchema = z.object({
+  plugins: z.array(pluginMetadataSchema).optional().default([]),
 })
 
 const baseNodeFields = {
@@ -394,7 +394,7 @@ const baseNodeFields = {
   sourceName: z.string().optional(),
 }
 
-export const nodeSchema: z.ZodType<ExtractorNode> = z.lazy(() =>
+export const mediaNodeSchema: z.ZodType<MediaNode> = z.lazy(() =>
   z.union([groupNodeSchema, resolvableNodeSchema, playableNodeSchema])
 )
 
@@ -402,7 +402,7 @@ export const groupNodeSchema = z.object({
   ...baseNodeFields,
   kind: z.literal("group"),
   selectable: z.boolean().optional().default(false),
-  children: nodeSchema.array(),
+  children: mediaNodeSchema.array(),
 }) as z.ZodType<GroupNode>
 
 export const resolvableNodeSchema = z.object({
@@ -422,17 +422,17 @@ export const playableNodeSchema = z.object({
 }) as z.ZodType<PlayableNode>
 
 export const extractSuccessSchema = z.object({
-  source: z.object({
-    extractorId: z.string(),
+  plugin: z.object({
+    pluginServerId: z.string(),
     displayName: z.string(),
     iconUrl: iconUrlSchema.optional(),
-    sourceId: z.string().optional(),
-    sourceName: z.string().optional(),
-    sourceIconUrl: iconUrlSchema.optional(),
+    pluginId: z.string().optional(),
+    pluginName: z.string().optional(),
+    pluginIconUrl: iconUrlSchema.optional(),
     pageTitle: z.string().optional(),
     audio: z.string().optional(),
   }),
-  nodes: z.array(nodeSchema),
+  nodes: z.array(mediaNodeSchema),
   extensions: z.record(z.string(), z.unknown()).optional().default({}),
 })
 
@@ -459,7 +459,7 @@ export const nodeInputSchema = z.object({
 
 export const extractRequestSchema = z.object({
   input: z.discriminatedUnion("kind", [sourceInputSchema, nodeInputSchema]),
-  sourceId: z.string().min(1).optional(),
+  pluginId: z.string().min(1).optional(),
   password: z.string().optional(),
   basicAuth: z
     .object({
@@ -490,13 +490,13 @@ export const createSourceExtractRequest = (
   sourceUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
-  sourceId?: string
+  pluginId?: string
 ): ExtractRequest => ({
   input: {
     kind: "source",
     sourceUrl,
   },
-  ...(sourceId ? { sourceId } : {}),
+  ...(pluginId ? { pluginId } : {}),
   ...(password ? { password } : {}),
   ...(basicAuth ? { basicAuth } : {}),
 })
@@ -505,13 +505,13 @@ export const createNodeExtractRequest = (
   nodeUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
-  sourceId?: string
+  pluginId?: string
 ): ExtractRequest => ({
   input: {
     kind: "node",
     nodeUrl,
   },
-  ...(sourceId ? { sourceId } : {}),
+  ...(pluginId ? { pluginId } : {}),
   ...(password ? { password } : {}),
   ...(basicAuth ? { basicAuth } : {}),
 })
@@ -562,9 +562,9 @@ const patternToExpression = (
   return new RegExp(`^${expression}$`, "i")
 }
 
-export const matchExtractorUrl = (
+export const matchPluginServerUrl = (
   targetUrl: string,
-  matchers: readonly ExtractorMatcher[]
+  matchers: readonly PluginServerMatcher[]
 ): boolean => {
   try {
     const parsed = new URL(targetUrl)
@@ -612,28 +612,28 @@ export const getExtractTargetUrl = (request: ExtractRequest): string =>
     : request.input.nodeUrl
 
 export const getLynvoManifestExtension = (
-  manifest: ExtractorManifest
+  manifest: PluginServerManifest
 ): LynvoManifestExtension => {
-  const result = lynvoManifestExtensionSchema.safeParse(
+  const result = lynvoPluginCatalogSchema.safeParse(
     manifest.extensions["lynvo"]
   )
-  return result.success ? result.data : { sources: [] }
+  return result.success ? result.data : { plugins: [] }
 }
 
 export const parseLynvoManifestExtension = (
-  manifest: ExtractorManifest
+  manifest: PluginServerManifest
 ): LynvoManifestExtension =>
   manifest.extensions["lynvo"] === undefined
-    ? { sources: [] }
-    : lynvoManifestExtensionSchema.parse(manifest.extensions["lynvo"])
+    ? { plugins: [] }
+    : lynvoPluginCatalogSchema.parse(manifest.extensions["lynvo"])
 
-export const getMatchedExtractorSource = (
-  manifest: ExtractorManifest,
+export const getMatchedPlugin = (
+  manifest: PluginServerManifest,
   targetUrl: string
-): ExtractorSourceMetadata | undefined => {
+): PluginMetadata | undefined => {
   const extension = getLynvoManifestExtension(manifest)
-  return extension.sources?.find((source) => {
-    if (source.matchers && matchExtractorUrl(targetUrl, source.matchers)) {
+  return extension.plugins?.find((source) => {
+    if (source.matchers && matchPluginServerUrl(targetUrl, source.matchers)) {
       return true
     }
 
@@ -653,12 +653,12 @@ const issue = (path: string, message: string): ContractIssue => ({
   message,
 })
 
-export const validateExtractorManifestContract = (
+export const validatePluginServerManifestContract = (
   value: unknown
 ): ContractValidationResult => {
   const didDeclareUsage =
     typeof value === "object" && value !== null && "usage" in value
-  const parsed = manifestSchema.safeParse(value)
+  const parsed = pluginServerManifestSchema.safeParse(value)
   if (!parsed.success) {
     return {
       ok: false,
@@ -670,7 +670,7 @@ export const validateExtractorManifestContract = (
 
   const manifest = parsed.data
   const issues: ContractIssue[] = []
-  const sourceIds = new Set<string>()
+  const pluginIds = new Set<string>()
   const extension = getLynvoManifestExtension(manifest)
 
   if (!didDeclareUsage) {
@@ -679,18 +679,18 @@ export const validateExtractorManifestContract = (
     )
   }
 
-  if (!manifest.extractorId.includes(".")) {
+  if (!manifest.pluginServerId.includes(".")) {
     issues.push(
       issue(
-        "extractorId",
-        "Use a stable namespaced id such as com.example.extractor to avoid collisions."
+        "pluginServerId",
+        "Use a stable namespaced id such as com.example.plugin-server to avoid collisions."
       )
     )
   }
 
   if (manifest.iconUrl && !manifest.iconUrl.endsWith(".webp")) {
     issues.push(
-      issue("iconUrl", "Use a direct HTTPS WebP URL for extractor icons.")
+      issue("iconUrl", "Use a direct HTTPS WebP URL for Plugin Server icons.")
     )
   }
   if (manifest.hasIcon === true && !manifest.iconUrl) {
@@ -702,18 +702,18 @@ export const validateExtractorManifestContract = (
     )
   }
 
-  if (!extension.sources || extension.sources.length === 0) {
+  if (!extension.plugins || extension.plugins.length === 0) {
     issues.push(
-      issue("extensions.lynvo.sources", "Declare at least one source/plugin.")
+      issue("extensions.lynvo.plugins", "Declare at least one Plugin.")
     )
   }
 
-  extension.sources?.forEach((source, index) => {
-    const basePath = `extensions.lynvo.sources.${index}`
-    if (sourceIds.has(source.id)) {
+  extension.plugins?.forEach((source, index) => {
+    const basePath = `extensions.lynvo.plugins.${index}`
+    if (pluginIds.has(source.id)) {
       issues.push(issue(`${basePath}.id`, `Duplicate source id: ${source.id}`))
     }
-    sourceIds.add(source.id)
+    pluginIds.add(source.id)
 
     if (source.iconUrl && !source.iconUrl.endsWith(".webp")) {
       issues.push(issue(`${basePath}.iconUrl`, "Use a direct HTTPS WebP URL."))
@@ -741,7 +741,7 @@ export const validateExtractorManifestContract = (
     }
     if (!source.version) {
       issues.push(
-        issue(`${basePath}.version`, "Declare a source/plugin version.")
+        issue(`${basePath}.version`, "Declare a Plugin version.")
       )
     }
     if (
@@ -779,23 +779,23 @@ export const validateExtractSuccessContract = (
   const issues: ContractIssue[] = []
   const result = parsed.data
 
-  if (result.source.iconUrl && !result.source.iconUrl.endsWith(".webp")) {
+  if (result.plugin.iconUrl && !result.plugin.iconUrl.endsWith(".webp")) {
     issues.push(
       issue(
-        "source.iconUrl",
-        "Use a direct HTTPS WebP URL for extractor icons."
+        "plugin.iconUrl",
+        "Use a direct HTTPS WebP URL for Plugin Server icons."
       )
     )
   }
 
   if (
-    result.source.sourceIconUrl &&
-    !result.source.sourceIconUrl.endsWith(".webp")
+    result.plugin.pluginIconUrl &&
+    !result.plugin.pluginIconUrl.endsWith(".webp")
   ) {
     issues.push(
       issue(
-        "source.sourceIconUrl",
-        "Use a direct HTTPS WebP URL for source/plugin icons."
+        "plugin.pluginIconUrl",
+        "Use a direct HTTPS WebP URL for Plugin icons."
       )
     )
   }
@@ -838,18 +838,18 @@ export const validateUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
-export const createExtractorRuntime = <Env>(
-  options: ExtractorRuntimeOptions<Env>
-): ExtractorRuntime<Env> => {
+export const createPluginServerRuntime = <Env>(
+  options: PluginServerRuntimeOptions<Env>
+): PluginServerRuntime<Env> => {
   const resolveManifest = async (
     request: Request,
     env: Env
-  ): Promise<ExtractorManifest> => {
+  ): Promise<PluginServerManifest> => {
     const value =
       typeof options.manifest === "function"
         ? await options.manifest({ request, env })
         : options.manifest
-    return manifestSchema.parse(value)
+    return pluginServerManifestSchema.parse(value)
   }
 
   const authenticate = async (
@@ -886,7 +886,7 @@ export const createExtractorRuntime = <Env>(
         return jsonResponse(
           createProtocolError(
             "PROTOCOL_MISMATCH",
-            "Extractor returned invalid usage metrics."
+            "Plugin Server returned invalid usage metrics."
           ),
           500
         )
@@ -902,7 +902,7 @@ export const createExtractorRuntime = <Env>(
         return jsonResponse(
           createProtocolError(
             "UNSUPPORTED_URL",
-            "This extractor does not support source discovery."
+            "This Plugin Server does not support source discovery."
           ),
           404
         )
@@ -937,7 +937,7 @@ export const createExtractorRuntime = <Env>(
           : jsonResponse(
               createProtocolError(
                 "PROTOCOL_MISMATCH",
-                "Extractor returned an invalid discovery response."
+                "Plugin Server returned an invalid discovery response."
               ),
               500
             )
@@ -975,11 +975,11 @@ export const createExtractorRuntime = <Env>(
 
       const targetUrl = getExtractTargetUrl(parsed.data)
       const manifest = await resolveManifest(request, env)
-      if (!matchExtractorUrl(targetUrl, manifest.matchers)) {
+      if (!matchPluginServerUrl(targetUrl, manifest.matchers)) {
         return jsonResponse(
           createProtocolError(
             "UNSUPPORTED_URL",
-            `Unsupported URL by this worker: ${targetUrl}`
+            `Unsupported URL by this Plugin Server: ${targetUrl}`
           ),
           400
         )
@@ -996,7 +996,7 @@ export const createExtractorRuntime = <Env>(
           return jsonResponse(
             createProtocolError(
               "PROTOCOL_MISMATCH",
-              "Extractor returned an invalid response."
+              "Plugin Server returned an invalid response."
             ),
             500
           )
@@ -1027,7 +1027,7 @@ export const createExtractorRuntime = <Env>(
           return jsonResponse(
             createProtocolError(
               "RATE_LIMITED",
-              "Extractor capacity is exhausted for the current period."
+              "Plugin Server capacity is exhausted for the current period."
             ),
             429
           )

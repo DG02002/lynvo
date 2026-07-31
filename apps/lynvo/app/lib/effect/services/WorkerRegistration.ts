@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { ExtractorManifest } from "@lynvo/extractor-protocol"
+import type { PluginServerManifest } from "@lynvo/plugin-server-protocol"
 import {
   ExtractorProtocolClient,
   ExtractorProtocolClientError,
@@ -18,7 +18,7 @@ export interface WorkerRegistrationInput {
 export interface PreparedWorkerRegistration {
   readonly baseUrl: string
   readonly apiKey: string
-  readonly manifest: ExtractorManifest
+  readonly manifest: PluginServerManifest
   readonly manifestValue: string
 }
 
@@ -28,7 +28,7 @@ export interface WorkerRefreshInput {
 }
 
 export interface PreparedWorkerRefresh {
-  readonly manifest: ExtractorManifest
+  readonly manifest: PluginServerManifest
   readonly manifestValue: string
 }
 

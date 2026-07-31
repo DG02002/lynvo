@@ -10,7 +10,7 @@ const savedWorkerItem = (): RecentLinkViewItem => ({
     schemaVersion: 2,
     source: {
       workerId: "worker-1",
-      sourceId: "bhadoo-google-drive-index",
+      pluginId: "bhadoo-google-drive-index",
       sourceName: "Worker Source",
     },
     extraction: {
@@ -136,14 +136,14 @@ describe("extraction orchestration", () => {
         {
           url: "https://example.com/source",
           workerId: "worker-1",
-          sourceId: "bhadoo-google-drive-index",
+          pluginId: "bhadoo-google-drive-index",
         },
       ],
       [
         {
           url: "https://worker.example/playable-item",
           workerId: "worker-1",
-          sourceId: "bhadoo-google-drive-index",
+          pluginId: "bhadoo-google-drive-index",
           kind: "node",
         },
       ],
@@ -151,7 +151,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://worker.example/folder/1",
           workerId: "worker-1",
-          sourceId: "bhadoo-google-drive-index",
+          pluginId: "bhadoo-google-drive-index",
           kind: "node",
         },
       ],

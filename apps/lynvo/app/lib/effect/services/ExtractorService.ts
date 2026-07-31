@@ -114,7 +114,7 @@ export class ExtractorService extends Context.Service<
             let source = yield* getWorkerSource(
               worker,
               targetUrl,
-              options.sourceId
+              options.pluginId
             )
             const discoveryAttempt =
               (options.kind ?? "source") === "source"
@@ -133,7 +133,7 @@ export class ExtractorService extends Context.Service<
               const discoveredSource = yield* getWorkerSource(
                 worker,
                 targetUrl,
-                discovery.sourceId
+                discovery.pluginId
               )
               if (discoveredSource) {
                 source = discoveredSource
@@ -189,7 +189,7 @@ export class ExtractorService extends Context.Service<
               worker,
               targetUrl,
               options.kind ?? "source",
-              { sourceId: source?.id, password, basicAuth },
+              { pluginId: source?.id, password, basicAuth },
               options.requestId
             )
           }
@@ -229,7 +229,7 @@ export class ExtractorService extends Context.Service<
             ? findOfficialManifestSource(
                 manifest,
                 targetUrl,
-                options.sourceId ?? configuredDomain?.pluginId
+                options.pluginId ?? configuredDomain?.pluginId
               )
             : undefined
           if (
@@ -251,7 +251,7 @@ export class ExtractorService extends Context.Service<
               source = findOfficialManifestSource(
                 manifest,
                 targetUrl,
-                discovery.sourceId
+                discovery.pluginId
               )
             }
           }
@@ -333,7 +333,7 @@ export class ExtractorService extends Context.Service<
               environment,
               targetUrl,
               options.kind ?? "source",
-              { sourceId: source.id, password, basicAuth },
+              { pluginId: source.id, password, basicAuth },
               options.requestId
             )
           }
@@ -410,7 +410,7 @@ export class ExtractorService extends Context.Service<
                 metadata = getOfficialMetadata(
                   officialManifest.value,
                   extractedAuth.url,
-                  discovery.value.sourceId
+                  discovery.value.pluginId
                 )
               }
             }

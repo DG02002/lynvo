@@ -2,11 +2,11 @@ import { Hono } from "hono"
 import { createError, initLogger } from "evlog"
 import { evlog, type EvlogVariables } from "evlog/hono"
 import {
-  createExtractorRuntime,
+  createPluginServerRuntime,
   extractErrorSchema,
   extractRequestSchema,
   extractSuccessSchema,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
 import {
   createOfficialManifest,
@@ -24,7 +24,7 @@ initLogger({
   env: { service: "lynvo-official-extractor" },
 })
 
-const runtime = createExtractorRuntime<OfficialExtractorBindings>({
+const runtime = createPluginServerRuntime<OfficialExtractorBindings>({
   manifest: ({ env }) => createOfficialManifest(env.PUBLIC_ASSET_ORIGIN),
   auth: {
     validate: ({ request, env }) => {
@@ -119,7 +119,7 @@ app.post("/extract", async (context) => {
         : "invalid",
       target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
       node_count: success.success ? success.data.nodes.length : undefined,
-      source_id: success.success ? success.data.source.sourceId : undefined,
+      plugin_id: success.success ? success.data.plugin.pluginId : undefined,
       error_code: failure.success ? failure.data.error.code : undefined,
     },
   })

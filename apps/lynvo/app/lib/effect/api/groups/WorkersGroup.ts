@@ -17,14 +17,14 @@ const UsageMetricSchema = Schema.Struct({
   unit: Schema.String,
   period: Schema.Literals(["daily", "monthly"]),
   resetsAt: Schema.String,
-  sourceId: Schema.optional(Schema.String),
+  pluginId: Schema.optional(Schema.String),
 })
 
 const WorkerUsageSchema = Schema.Struct({
   workerId: Schema.String,
   name: Schema.String,
   iconUrl: Schema.optional(Schema.String),
-  sources: Schema.optional(
+  plugins: Schema.optional(
     Schema.Array(
       Schema.Struct({
         id: Schema.String,

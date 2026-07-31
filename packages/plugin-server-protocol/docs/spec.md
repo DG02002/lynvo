@@ -1,4 +1,4 @@
-# Lynvo Extractor Worker Protocol v1
+# Lynvo Plugin Server Protocol v1
 
 ## Status
 
@@ -7,24 +7,24 @@
 - Transport: `HTTPS + JSON`
 - Recommended runtime: Cloudflare Workers
 - Recommended framework: Hono
-- Protocol scope: external staged extractors
+- Protocol scope: staged extraction by Plugin Servers
 - Out of scope: Lynvo direct-link core flow
 
 ## Goal
 
-Lynvo supports user-provided external extractor workers. A worker accepts a source URL or a previously emitted lazy node target, resolves it in stages, and returns normalized extraction data that Lynvo can render.
+Lynvo supports user-provided Custom Plugin Servers. A Plugin Server accepts a source URL or a previously emitted lazy node target, resolves it in stages, and returns normalized extraction data that Lynvo can render.
 
 Lynvo owns:
 
 - routing
-- worker registration and verification
-- worker credential storage
+- Plugin Server registration and verification
+- Plugin Server credential storage
 - response validation
 - UI rendering
 - playback behavior
 - saved-item state
 
-Workers own:
+Plugin Servers own:
 
 - source-specific matching declarations
 - source-specific extraction logic
@@ -40,46 +40,46 @@ Extraction is stage-based.
 Example:
 
 1. User submits a `source-alpha` URL.
-2. Lynvo selects one matching worker.
-3. The worker returns a tree with lazy nodes.
+2. Lynvo selects one matching Plugin Server.
+3. The Plugin Server returns a tree with lazy nodes.
 4. User clicks an lazy item node.
-5. Lynvo calls the same worker again with only that clicked node target.
-6. The worker resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
+5. Lynvo calls the same Plugin Server again with only that clicked node target.
+6. The Plugin Server resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
 
 ## Protocol Rules
 
 ### Ownership
 
 - Lynvo defines the protocol.
-- Workers must adapt to the Lynvo contract.
-- Lynvo must not add worker-specific protocol exceptions.
+- Plugin Servers must adapt to the Lynvo contract.
+- Lynvo must not add Plugin-specific protocol exceptions.
 
 ### Routing
 
-- Lynvo routes locally using the cached worker manifest.
-- A worker manifest must declare machine-readable matchers.
-- Lynvo must not broadcast user URLs to all workers for capability checks.
+- Lynvo routes locally using the cached Plugin Server Manifest.
+- A Plugin Server Manifest must declare machine-readable matchers.
+- Lynvo must not broadcast user URLs to all Plugin Servers for capability checks.
 
-### Worker Affinity
+### Plugin Server Affinity
 
-- Once a saved item is created, Lynvo must persist the originating worker entry id.
-- Refresh and lazy follow-up must use that same worker first.
-- If the original worker is unavailable, Lynvo should fail closed and only offer explicit user-triggered re-routing from the original top-level source URL.
+- Once a saved item is created, Lynvo must persist the originating Plugin Server entry id.
+- Refresh and lazy follow-up must use that same Plugin Server first.
+- If the original Plugin Server is unavailable, Lynvo should fail closed and only offer explicit user-triggered re-routing from the original top-level source URL.
 
 ### Lazy Resolution Invariant
 
-- Any lazy node emitted by a worker must be resolvable by that same worker.
-- Lynvo must not hand worker-emitted lazy node targets to another worker automatically.
+- Any lazy node emitted by a Plugin Server must be resolvable by that same Plugin Server.
+- Lynvo must not hand Plugin Server-emitted lazy node targets to another Plugin Server automatically.
 
 ### Data Ownership
 
-Workers may return:
+Plugin Servers may return:
 
 - normalized nodes
 - minimal source metadata needed for UI
 - structured errors
 
-Workers must not return or control:
+Plugin Servers must not return or control:
 
 - watched state
 - saved selection state
@@ -89,10 +89,10 @@ Workers must not return or control:
 
 ### Security
 
-- Worker API keys are server-side only.
+- Plugin Server API keys are server-side only.
 - Browsers must talk only to Lynvo.
-- Lynvo must call workers from server-side routes.
-- Worker display metadata is untrusted input.
+- Lynvo must call Plugin Servers from server-side routes.
+- Plugin Server display metadata is untrusted input.
 
 ## Endpoints
 
@@ -103,7 +103,7 @@ Purpose:
 - declare protocol compatibility
 - declare auth scheme
 - declare routing matchers
-- declare worker display metadata and features
+- declare Plugin Server display metadata and features
 
 Auth:
 
@@ -114,8 +114,8 @@ Auth:
 Purpose:
 
 - verify API key
-- verify worker reachability
-- verify worker readiness against this protocol
+- verify Plugin Server reachability
+- verify Plugin Server readiness against this protocol
 
 Auth:
 
@@ -137,9 +137,9 @@ Auth:
 
 Purpose:
 
-- let an extractor identify a source implementation without teaching Lynvo
+- let an Plugin Server identify a source implementation without teaching Lynvo
   source-specific URL or HTML signatures
-- return a stable `sourceId` and either `pattern` or `verified` confidence
+- return a stable `pluginId` and either `pattern` or `verified` confidence
 - decline unsupported URLs with `{ "matched": false }`
 
 This endpoint is optional and must be advertised with
@@ -155,7 +155,7 @@ Auth:
 Purpose:
 
 - report every finite usage metric attached to the bearer credential
-- expose daily Worker-operation and monthly provider/source capacity independently
+- expose daily Plugin Server operation and monthly provider/source capacity independently
 - allow Lynvo to render authoritative usage without owning third-party accounting
 
 Auth:
@@ -167,8 +167,8 @@ Auth:
 ```json
 {
   "protocolVersion": "1.0",
-  "extractorId": "com.example.lynvo.source-alpha",
-  "displayName": "Example source-alpha Extractor",
+  "pluginServerId": "com.example.lynvo.source-alpha",
+  "displayName": "Example source-alpha Plugin Server",
   "hasIcon": true,
   "iconUrl": "https://example.com/icon.webp",
   "homepage": "https://example.com",
@@ -200,7 +200,7 @@ Auth:
 ### Manifest Field Rules
 
 - `protocolVersion`: required string. Lynvo must enforce compatibility at add-time and refresh-time.
-- `extractorId`: required stable identifier. Do not use `displayName` as the stable id.
+- `pluginServerId`: required stable identifier. Do not use `displayName` as the stable id.
 - `displayName`: required human-readable name.
 - `hasIcon`: optional boolean. When present, `true` requires `iconUrl`; `false` forbids it.
 - `iconUrl`: optional HTTPS URL only. Existing manifests may omit `hasIcon`; Lynvo infers it from this field.
@@ -208,12 +208,12 @@ Auth:
 - `auth.type`: required. v1 supports only `bearer`.
 - `usage.endpoint`: required and must be `/usage`.
 - `matchers`: required non-empty array.
-- `features.password`: whether the worker may return `PASSWORD_REQUIRED`.
-- `features.lazyNodes`: whether the worker may return lazy resolvable nodes.
-- `features.basicAuth`: whether Lynvo may forward structured HTTP Basic Auth credentials to this worker.
+- `features.password`: whether the Plugin Server may return `PASSWORD_REQUIRED`.
+- `features.lazyNodes`: whether the Plugin Server may return lazy resolvable nodes.
+- `features.basicAuth`: whether Lynvo may forward structured HTTP Basic Auth credentials to this Plugin Server.
 - `extensions`: optional vendor namespace for non-core data.
 
-Under `extensions.lynvo.sources`, each source may declare optional `description`, HTTPS `homepage`, and `credential` capability metadata. A credential has `kind` (`domain-password` or `http-basic`), `scope` (`domain`), and `required` (boolean). These optional fields are backward-compatible protocol extensions and never contain credential values.
+Under `extensions.lynvo.plugins`, each source may declare optional `description`, HTTPS `homepage`, and `credential` capability metadata. A credential has `kind` (`domain-password` or `http-basic`), `scope` (`domain`), and `required` (boolean). These optional fields are backward-compatible protocol extensions and never contain credential values.
 
 ## Usage Response
 
@@ -221,8 +221,8 @@ Under `extensions.lynvo.sources`, each source may declare optional `description`
 {
   "metrics": [
     {
-      "id": "worker-operations",
-      "label": "Extractor operations",
+      "id": "plugin-server-operations",
+      "label": "Plugin Server operations",
       "used": 7,
       "limit": 100,
       "unit": "operations",
@@ -235,7 +235,7 @@ Under `extensions.lynvo.sources`, each source may declare optional `description`
 
 Every metric requires a unique id, a finite positive limit, non-negative usage,
 a human-readable label and unit, a daily or monthly period, and an ISO reset
-timestamp. Source-specific metrics include `sourceId`. Workers must enforce the
+timestamp. Source-specific metrics include `pluginId`. Plugin Servers must enforce the
 reported limits and return `RATE_LIMITED` from `/extract` when capacity is
 exhausted.
 
@@ -244,7 +244,7 @@ exhausted.
 Lynvo should rank matches using:
 
 1. matcher specificity
-2. user-configured worker priority
+2. Custom Plugin Server priority
 3. stable deterministic tie-break
 
 Each matcher may contain:
@@ -326,8 +326,8 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - `resourceId` is optional in v1.
 - `password` is optional and attempt-scoped.
 - `basicAuth` is optional and contains `username` and `password` for source-side HTTP Basic Auth.
-- Lynvo removes URL userinfo before forwarding a target and sends `basicAuth` only when the worker declares `features.basicAuth`.
-- The worker bearer token authenticates Lynvo to the worker; `basicAuth` authenticates the worker to the source. They are separate credentials.
+- Lynvo removes URL userinfo before forwarding a target and sends `basicAuth` only when the Plugin Server declares `features.basicAuth`.
+- The Plugin Server bearer token authenticates Lynvo to the Plugin Server; `basicAuth` authenticates the Plugin Server to the source. They are separate credentials.
 - Lynvo should not send the original top-level source URL on lazy follow-up requests.
 
 ## Extract Success Response Schema
@@ -335,8 +335,8 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 ```json
 {
   "source": {
-    "extractorId": "com.example.lynvo.source-alpha",
-    "displayName": "Example source-alpha Extractor",
+    "pluginServerId": "com.example.lynvo.source-alpha",
+    "displayName": "Example source-alpha Plugin Server",
     "iconUrl": "https://example.com/icon.webp",
     "pageTitle": "Example Title",
     "audio": "Hindi + English"
@@ -378,8 +378,8 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 ```json
 {
   "source": {
-    "extractorId": "com.example.lynvo.resolver-beta",
-    "displayName": "Example Resolver Beta Extractor",
+    "pluginServerId": "com.example.lynvo.resolver-beta",
+    "displayName": "Example Resolver Beta Plugin Server",
     "iconUrl": "https://example.com/icon.webp"
   },
   "nodes": [
@@ -447,7 +447,7 @@ Rules:
 
 - must contain `nodeUrl` or `resourceId`
 - may represent an lazy item, redirector, container page, or any intermediate target
-- must be resolvable by the same worker
+- must be resolvable by the same Plugin Server
 - may set `resolutionKind` to `folder` for lazy folder contents or `mirrors`
   for alternative playable routes; omission remains backward-compatible and is
   interpreted as `mirrors` by Lynvo
@@ -471,7 +471,7 @@ Rules:
 
 - `url` is required
 - Lynvo renders these as final playable actions
-- worker returns data only; Lynvo owns presentation
+- Plugin Server returns data only; Lynvo owns presentation
 
 ## Error Response Schema
 
@@ -504,8 +504,8 @@ Rules:
 ### Error Handling Rules
 
 - Lynvo should map the error code to a user-friendly message.
-- Lynvo may also show the worker error code and raw worker message as secondary debug detail.
-- Worker error strings must not be the primary UX contract.
+- Lynvo may also show the Plugin Server error code and raw Plugin Server message as secondary debug detail.
+- Plugin Server error strings must not be the primary UX contract.
 
 ## Validation Rules
 
@@ -523,22 +523,22 @@ Validation policy:
 
 ## Registration Flow
 
-1. User enters worker base URL and API key.
+1. User enters Plugin Server base URL and API key.
 2. Lynvo fetches `GET /manifest`.
 3. Lynvo validates the manifest and checks `protocolVersion`.
 4. Lynvo calls `POST /verify` with `Authorization: Bearer <apiKey>`.
-5. Lynvo saves the worker only if both steps succeed.
+5. Lynvo saves the Plugin Server only if both steps succeed.
 
 ## Refresh Flow
 
 - Lynvo should support manual refresh from settings.
 - Lynvo should also refresh manifests automatically in the background.
 - If a refreshed manifest remains protocol-compatible, Lynvo should apply it automatically and record the change.
-- If the refreshed manifest is protocol-incompatible, Lynvo should disable or mark the worker unsupported.
+- If the refreshed manifest is protocol-incompatible, Lynvo should disable or mark the Plugin Server unsupported.
 
 ## Storage Model Inside Lynvo
 
-For each user worker entry, Lynvo should persist:
+For each Custom Plugin Server entry, Lynvo should persist:
 
 - base URL
 - API key
@@ -552,7 +552,7 @@ For each user worker entry, Lynvo should persist:
 For each saved extracted item, Lynvo should persist:
 
 - original source URL
-- originating worker entry id
+- originating Plugin Server entry id
 - normalized extraction data
 - Lynvo-owned playback state
 
@@ -560,7 +560,7 @@ For each saved extracted item, Lynvo should persist:
 
 The protocol intentionally does not define fixed timeout numbers.
 
-Cloudflare Workers constraints and pricing plans change over time. Worker authors should design for:
+Cloudflare Workers constraints and pricing plans change over time. Plugin Server authors should design for:
 
 - low CPU usage
 - limited subrequests
@@ -570,8 +570,8 @@ Lynvo deployments may still enforce their own operational request budgets.
 
 ## Non-Goals
 
-- browser-to-worker direct calls
-- UI instructions from workers
-- worker-managed playback state
+- browser-to-Plugin Server direct calls
+- UI instructions from Plugin Servers
+- Plugin Server-managed playback state
 - framework-specific protocol behavior
-- WebSocket or SSE transport between Lynvo and the worker
+- WebSocket or SSE transport between Lynvo and the Plugin Server

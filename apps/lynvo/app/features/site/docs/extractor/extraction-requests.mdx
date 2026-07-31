@@ -37,7 +37,7 @@ Add optional source selection and credential fields to the request envelope:
 ```ts {2,4-8}
 export const extractRequestSchema = z.object({
   input: z.discriminatedUnion("kind", [sourceInput, nodeInput]),
-  sourceId: z.string().min(1).optional(),
+  pluginId: z.string().min(1).optional(),
   password: z.string().optional(),
   basicAuth: z
     .object({
@@ -71,7 +71,7 @@ A lazy follow-up uses the `nodeUrl` returned by the same Worker:
 
 ```json
 {
-  "sourceId": "example-media",
+  "pluginId": "example-media",
   "input": {
     "kind": "node",
     "nodeUrl": "https://media.example.com/folders/bonus",

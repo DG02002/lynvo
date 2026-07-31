@@ -1,11 +1,11 @@
 import type { ExtractedLink } from "~/features/links/types"
-import { matchExtractorUrl } from "@lynvo/extractor-protocol"
+import { matchPluginServerUrl } from "@lynvo/plugin-server-protocol"
 import type { WorkerMatcher, WorkerNode } from "./effect/extractor-schema"
 
 export const matchUrl = (
   targetUrl: string,
   matchers: ReadonlyArray<WorkerMatcher>
-): boolean => matchExtractorUrl(targetUrl, matchers)
+): boolean => matchPluginServerUrl(targetUrl, matchers)
 
 export const mapNodeToExtractedLink = (node: WorkerNode): ExtractedLink => {
   if (node.kind === "group") {

@@ -1,10 +1,10 @@
 import { SELF } from "cloudflare:test"
 import { describe, expect, it } from "vitest"
 import {
-  validateExtractorManifestContract,
+  validatePluginServerManifestContract,
   validateExtractSuccessContract,
   validateUsageContract,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 
 const authenticatedHeaders = {
   Authorization: "Bearer test-api-key",
@@ -17,7 +17,7 @@ describe("official extractor protocol routes", () => {
     const manifest: unknown = await response.json()
 
     expect(response.status).toBe(200)
-    expect(validateExtractorManifestContract(manifest)).toEqual({
+    expect(validatePluginServerManifestContract(manifest)).toEqual({
       ok: true,
       issues: [],
     })
@@ -62,7 +62,7 @@ describe("official extractor protocol routes", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       matched: true,
-      sourceId: "bhadoo-google-drive-index",
+      pluginId: "bhadoo-google-drive-index",
       confidence: "pattern",
     })
   })
@@ -83,7 +83,7 @@ describe("official extractor protocol routes", () => {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({
-        sourceId: "bhadoo-google-drive-index",
+        pluginId: "bhadoo-google-drive-index",
         input: {
           kind: "source",
           sourceUrl: "https://drive.example/0:/Collections/example.mkv?a=view",
@@ -98,7 +98,7 @@ describe("official extractor protocol routes", () => {
       issues: [],
     })
     expect(result).toMatchObject({
-      source: { sourceId: "bhadoo-google-drive-index" },
+      plugin: { pluginId: "bhadoo-google-drive-index" },
       nodes: [{ kind: "playable", label: "example.mkv" }],
     })
   })

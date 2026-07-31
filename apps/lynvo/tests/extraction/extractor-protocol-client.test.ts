@@ -10,7 +10,7 @@ import { EXTRACTOR_REQUEST_TIMEOUT_MS } from "~/lib/constants"
 
 const manifest = {
   protocolVersion: "1.0",
-  extractorId: "com.example.extractor",
+  pluginServerId: "com.example.extractor",
   displayName: "Example",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
@@ -18,7 +18,7 @@ const manifest = {
   features: { basicAuth: true },
   extensions: {
     lynvo: {
-      sources: [
+      plugins: [
         {
           id: "example",
           displayName: "Example",
@@ -57,8 +57,8 @@ describe("ExtractorProtocolClient", () => {
           return request.url.endsWith("/manifest")
             ? Response.json(manifest)
             : Response.json({
-                source: {
-                  extractorId: "com.example.extractor",
+                plugin: {
+                  pluginServerId: "com.example.extractor",
                   displayName: "Example",
                 },
                 nodes: [],
@@ -118,7 +118,7 @@ describe("ExtractorProtocolClient", () => {
         requests.push(request.clone())
         return Response.json({
           matched: true,
-          sourceId: "example",
+          pluginId: "example",
           confidence: "verified",
         })
       },
@@ -131,7 +131,7 @@ describe("ExtractorProtocolClient", () => {
       })
     ).resolves.toEqual({
       matched: true,
-      sourceId: "example",
+      pluginId: "example",
       confidence: "verified",
     })
     expect(await requests[0].json()).toEqual({

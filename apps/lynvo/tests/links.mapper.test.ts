@@ -111,7 +111,7 @@ describe("save-flow metadata preservation", () => {
     const metadata = normalizeLinkMetadata({
       pluginName: "Example Extractor",
       pluginIcon: "https://worker.example/icon.svg",
-      sourceId: "resolver-beta",
+      pluginId: "resolver-beta",
       sourceName: "Resolver Beta",
       sourceIconUrl: "https://icons.example/resolver-beta.svg",
       sourceStatus: "active",
@@ -130,7 +130,7 @@ describe("save-flow metadata preservation", () => {
     )
     const view = toRecentLinkViewModel(item)
 
-    expect(metadata.source.sourceId).toBe("resolver-beta")
+    expect(metadata.source.pluginId).toBe("resolver-beta")
     expect(metadata.source.sourceName).toBe("Resolver Beta")
     expect(metadata.source.sourceIconUrl).toBe(
       "https://icons.example/resolver-beta.svg"
@@ -164,7 +164,7 @@ describe("save-flow metadata preservation", () => {
     const merged = mergeDefinedMeta(
       {
         pluginName: "Example Extractor",
-        sourceId: "resolver-beta",
+        pluginId: "resolver-beta",
         sourceName: "Resolver Beta",
         sourceIconUrl:
           "https://worker.example/icons/sources/resolver-beta.webp",
@@ -172,7 +172,7 @@ describe("save-flow metadata preservation", () => {
         sourceVersion: "1.0.0",
       },
       {
-        sourceId: "resolver-beta",
+        pluginId: "resolver-beta",
         sourceName: "Resolver Beta",
         sourceIconUrl: undefined,
       }

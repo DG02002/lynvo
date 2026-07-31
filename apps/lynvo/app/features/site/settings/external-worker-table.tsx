@@ -116,7 +116,7 @@ const ExternalWorkerRow = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {manifest.sources.length > 0 && (
+          {manifest.plugins.length > 0 && (
             <Button
               variant="ghost"
               size="icon"
@@ -142,12 +142,12 @@ const ExternalWorkerRow = ({
         </div>
       </SettingsRow>
 
-      {manifest.sources.length > 0 && isExpanded && (
+      {manifest.plugins.length > 0 && isExpanded && (
         <div
           id={sourceListId}
           className="ml-9 divide-y divide-border border-t border-border"
         >
-          {manifest.sources.map((source) => (
+          {manifest.plugins.map((source) => (
             <SettingsRow key={source.id} className="gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <PluginIcon

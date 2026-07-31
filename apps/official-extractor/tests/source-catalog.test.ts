@@ -4,14 +4,14 @@ import {
   createOfficialManifest,
   findOfficialSource,
 } from "../src/source-catalog"
-import { getLynvoManifestExtension } from "@lynvo/extractor-protocol"
+import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
 
 describe("official source catalog", () => {
   it("generates manifest source metadata and dispatch from one catalog", () => {
     const manifest = createOfficialManifest("https://lynvo.example")
     const extension = getLynvoManifestExtension(manifest)
 
-    expect(extension.sources?.map((source) => source.id)).toEqual(
+    expect(extension.plugins?.map((source) => source.id)).toEqual(
       OFFICIAL_SOURCE_CATALOG.map((source) => source.id)
     )
     expect(
@@ -38,19 +38,19 @@ describe("official source catalog", () => {
     const extension = getLynvoManifestExtension(
       createOfficialManifest("http://localhost:5173")
     )
-    const bhadooSource = extension.sources?.find(
+    const bhadooSource = extension.plugins?.find(
       (source) => source.id === "bhadoo-google-drive-index"
     )
     expect(bhadooSource?.hasIcon).toBe(false)
     expect(bhadooSource?.iconUrl).toBeUndefined()
     expect(
-      extension.sources?.find((source) => source.id === "onedrive-index")
+      extension.plugins?.find((source) => source.id === "onedrive-index")
     ).toMatchObject({
       hasIcon: true,
       iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
     })
     expect(
-      extension.sources?.find(
+      extension.plugins?.find(
         (source) => source.id === "google-drive-public-files"
       )
     ).toMatchObject({
@@ -64,7 +64,7 @@ describe("official source catalog", () => {
     const extension = getLynvoManifestExtension(createOfficialManifest())
 
     expect(
-      extension.sources?.every(
+      extension.plugins?.every(
         (source) => source.hasIcon === false && source.iconUrl === undefined
       )
     ).toBe(true)

@@ -104,7 +104,7 @@ export function useLinkActions({
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,
           workerId: selectionDialogState.meta.workerId,
-          sourceId: selectionDialogState.meta.sourceId,
+          pluginId: selectionDialogState.meta.pluginId,
         })
         setSelectionDialogState((currentState) =>
           currentState.originalUrl === originalUrl

@@ -159,7 +159,7 @@ export function LinkInputSection({
             <span>Using</span>
             <PluginIcon
               icon={
-                extractionPreview.meta.sourceId === "direct-link"
+                extractionPreview.meta.pluginId === "direct-link"
                   ? { hugeIcon: Link01Icon }
                   : undefined
               }
@@ -172,7 +172,7 @@ export function LinkInputSection({
               }
               className={cn(
                 "size-4",
-                extractionPreview.meta.sourceId === "direct-link" &&
+                extractionPreview.meta.pluginId === "direct-link" &&
                   "text-foreground"
               )}
             />

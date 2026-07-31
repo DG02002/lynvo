@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 import {
-  createExtractorRuntime,
+  createPluginServerRuntime,
   isSupportedProtocolVersion,
   type ExtractSuccessResponse,
-} from "@lynvo/extractor-protocol"
+} from "@lynvo/plugin-server-protocol"
 
 interface TestEnv {
   validApiKey: string
@@ -22,10 +22,10 @@ const createRequest = (body: unknown, apiKey = "secret") =>
 const createRuntime = (
   extract: () => ExtractSuccessResponse | Promise<ExtractSuccessResponse>
 ) =>
-  createExtractorRuntime<TestEnv>({
+  createPluginServerRuntime<TestEnv>({
     manifest: {
       protocolVersion: "1.0",
-      extractorId: "com.example.extractor",
+      pluginServerId: "com.example.extractor",
       displayName: "Example Extractor",
       auth: { type: "bearer" },
       usage: { endpoint: "/usage" },
@@ -53,7 +53,7 @@ const createRuntime = (
     }),
   })
 
-describe("createExtractorRuntime", () => {
+describe("createPluginServerRuntime", () => {
   it("declares supported protocol versions", () => {
     expect(isSupportedProtocolVersion("1.0")).toBe(true)
     expect(isSupportedProtocolVersion("2.0")).toBe(false)
@@ -61,8 +61,8 @@ describe("createExtractorRuntime", () => {
 
   it("serves a validated manifest", async () => {
     const runtime = createRuntime(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [],
@@ -78,14 +78,14 @@ describe("createExtractorRuntime", () => {
     expect(response.status).toBe(200)
     expect(json).toMatchObject({
       protocolVersion: "1.0",
-      extractorId: "com.example.extractor",
+      pluginServerId: "com.example.extractor",
     })
   })
 
   it("verifies bearer auth", async () => {
     const runtime = createRuntime(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [],
@@ -117,8 +117,8 @@ describe("createExtractorRuntime", () => {
 
   it("serves authenticated finite usage metrics", async () => {
     const runtime = createRuntime(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [],
@@ -139,8 +139,8 @@ describe("createExtractorRuntime", () => {
 
   it("extracts matching URLs", async () => {
     const runtime = createRuntime(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [
@@ -169,8 +169,8 @@ describe("createExtractorRuntime", () => {
 
   it("rejects invalid JSON bodies", async () => {
     const runtime = createRuntime(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [],
@@ -194,8 +194,8 @@ describe("createExtractorRuntime", () => {
 
   it("rejects unsupported URLs before calling extract", async () => {
     const extract = vi.fn(() => ({
-      source: {
-        extractorId: "com.example.extractor",
+      plugin: {
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
       },
       nodes: [],
@@ -221,10 +221,10 @@ describe("createExtractorRuntime", () => {
   })
 
   it("returns protocol mismatch when extract returns invalid output", async () => {
-    const runtime = createExtractorRuntime<TestEnv>({
+    const runtime = createPluginServerRuntime<TestEnv>({
       manifest: {
         protocolVersion: "1.0",
-        extractorId: "com.example.extractor",
+        pluginServerId: "com.example.extractor",
         displayName: "Example Extractor",
         auth: { type: "bearer" },
         usage: { endpoint: "/usage" },
@@ -235,8 +235,8 @@ describe("createExtractorRuntime", () => {
       auth: { validate: () => true },
       extract: () =>
         ({
-          source: {
-            extractorId: "com.example.extractor",
+          plugin: {
+            pluginServerId: "com.example.extractor",
             displayName: "Example Extractor",
           },
           nodes: [{ kind: "playable", id: "bad", label: "Bad" }],

@@ -11,7 +11,7 @@ const createManifest = (
   sourceIconUrl = "https://icons.example/resolver-beta.webp"
 ) => ({
   protocolVersion: "1.0",
-  extractorId: "com.example.extractor",
+  pluginServerId: "com.example.extractor",
   displayName: "Example Extractor",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
@@ -19,7 +19,7 @@ const createManifest = (
   features: { password: true, lazyNodes: true },
   extensions: {
     lynvo: {
-      sources: [
+      plugins: [
         {
           id: "resolver-beta",
           displayName: "Resolver Beta",
@@ -78,10 +78,10 @@ describe("worker registration", () => {
 
     expect(registration.baseUrl).toBe("https://extractor.example")
     expect(JSON.parse(registration.manifestValue)).toMatchObject({
-      extractorId: "com.example.extractor",
+      pluginServerId: "com.example.extractor",
       extensions: {
         lynvo: {
-          sources: [
+          plugins: [
             {
               id: "resolver-beta",
               iconUrl: "https://icons.example/resolver-beta.webp",
@@ -197,7 +197,7 @@ describe("worker registration", () => {
     )
 
     expect(JSON.parse(refresh.manifestValue)).toMatchObject({
-      extractorId: "com.example.extractor",
+      pluginServerId: "com.example.extractor",
     })
     const requests = fetchMock.mock.calls.map(([request]) => request)
     expect(requests.map((request) => request.url)).toEqual([
