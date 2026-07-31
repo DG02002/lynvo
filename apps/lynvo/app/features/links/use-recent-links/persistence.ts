@@ -30,7 +30,7 @@ declare global {
     read: () => RecentLinkViewItem[]
   }
 
-  interface ConvexRecentLinksAdapterOptions {
+  interface ServerRecentLinksAdapterOptions {
     read: () => RecentLinkViewItem[]
     create: (item: RecentLinkViewItem) => Promise<string>
     update: (item: RecentLinkViewItem) => Promise<void>
@@ -76,13 +76,13 @@ export const createLocalRecentLinksAdapter = ({
   }
 }
 
-export const createConvexRecentLinksAdapter = ({
+export const createServerRecentLinksAdapter = ({
   read,
   create,
   update,
   delete: deleteItem,
   clear,
-}: ConvexRecentLinksAdapterOptions): RecentLinksPersistenceAdapter => ({
+}: ServerRecentLinksAdapterOptions): RecentLinksPersistenceAdapter => ({
   list: async () => read(),
   add: async (item) => ({ ...item, id: await create(item) }),
   update: async (item) => {

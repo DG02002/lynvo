@@ -1,15 +1,13 @@
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import type { PropsWithChildren } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useRecentLinks } from "~/features/links/use-recent-links"
 import type { LinkMetadata } from "~/features/links/types"
 
-const { routeLoaderDataMock, convexQueryMock, convexMutationMock } = vi.hoisted(
-  () => ({
-    routeLoaderDataMock: vi.fn(),
-    convexQueryMock: vi.fn(),
-    convexMutationMock: vi.fn(() => vi.fn()),
-  })
-)
+const { routeLoaderDataMock } = vi.hoisted(() => ({
+  routeLoaderDataMock: vi.fn(),
+}))
 
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>()
@@ -18,11 +16,6 @@ vi.mock("react-router", async (importOriginal) => {
     useRouteLoaderData: routeLoaderDataMock,
   }
 })
-
-vi.mock("convex/react", () => ({
-  useQuery: convexQueryMock,
-  useMutation: convexMutationMock,
-}))
 
 const metadata = (label: string): LinkMetadata => ({
   schemaVersion: 3,
@@ -85,6 +78,15 @@ function installLocalStorage() {
   return storage
 }
 
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
 describe("useRecentLinks", () => {
   let storage: Storage
 
@@ -92,8 +94,9 @@ describe("useRecentLinks", () => {
     storage = installLocalStorage()
     vi.clearAllMocks()
     routeLoaderDataMock.mockReturnValue({ user: { sub: "user-1" } })
-    convexQueryMock.mockReturnValue(undefined)
-    convexMutationMock.mockReturnValue(vi.fn())
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () => new Promise(() => undefined)
+    )
   })
 
   it("hydrates signed-in recents from cache once while waiting for Convex", () => {
@@ -108,7 +111,9 @@ describe("useRecentLinks", () => {
     const { getItem, setItem } = storage
     vi.mocked(setItem).mockClear()
 
-    const { result } = renderHook(() => useRecentLinks())
+    const { result } = renderHook(() => useRecentLinks(), {
+      wrapper: createWrapper(),
+    })
 
     expect(result.current.recents).toHaveLength(1)
     expect(result.current.recents[0].title).toBe("Cached link")
@@ -118,7 +123,7 @@ describe("useRecentLinks", () => {
     expect(setItem).not.toHaveBeenCalled()
   })
 
-  it("updates cached recents only when Convex returns live links", async () => {
+  it("updates cached recents when the Worker returns live links", async () => {
     storage.setItem(
       "sl2jp:recents:sync:v1:user-1",
       JSON.stringify({
@@ -130,23 +135,27 @@ describe("useRecentLinks", () => {
     const { setItem } = storage
     vi.mocked(setItem).mockClear()
 
-    const { result, rerender } = renderHook(() => useRecentLinks())
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          {
+            _id: "link-live",
+            url: "https://example.com/live",
+            title: "Live link",
+            meta: JSON.stringify(metadata("live-file")),
+            createdAt: 200,
+            updatedAt: 250,
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    )
+
+    const { result } = renderHook(() => useRecentLinks(), {
+      wrapper: createWrapper(),
+    })
 
     expect(result.current.recents[0].title).toBe("Cached link")
-
-    convexQueryMock.mockReturnValue([
-      {
-        _id: "link-live",
-        _creationTime: 200,
-        userId: "user-1",
-        url: "https://example.com/live",
-        title: "Live link",
-        meta: JSON.stringify(metadata("live-file")),
-        createdAt: 200,
-        updatedAt: 250,
-      },
-    ])
-    rerender()
 
     await waitFor(() => {
       expect(result.current.recents[0].title).toBe("Live link")
@@ -154,6 +163,57 @@ describe("useRecentLinks", () => {
     expect(setItem).toHaveBeenCalledWith(
       "sl2jp:recents:sync:v1:user-1",
       expect.stringContaining("Live link")
+    )
+  })
+
+  it("creates authenticated recents through the Worker", async () => {
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const request = input instanceof Request ? input : undefined
+      const method = request?.method ?? init?.method ?? "GET"
+      if (method === "POST") {
+        return new Response(JSON.stringify("link-worker"), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      }
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    })
+    const { result } = renderHook(() => useRecentLinks(), {
+      wrapper: createWrapper(),
+    })
+
+    let createdId: string | undefined
+    await act(async () => {
+      createdId = await result.current.actions.add(
+        "https://example.com/worker",
+        { title: "Worker link" }
+      )
+    })
+
+    expect(createdId).toBe("link-worker")
+    const createCall = vi.mocked(fetch).mock.calls.find(([input, init]) => {
+      const requestMethod = input instanceof Request ? input.method : undefined
+      return (requestMethod ?? init?.method) === "POST"
+    })
+    if (!createCall) {
+      throw new Error("Expected a Worker create request")
+    }
+    const [input, init] = createCall
+    const requestUrl = input instanceof Request ? input.url : String(input)
+    const requestBody =
+      input instanceof Request ? input.clone().body : init?.body
+    if (!requestBody) {
+      throw new Error("Expected a JSON request body")
+    }
+    expect(requestUrl).toContain("/api/links")
+    await expect(new Response(requestBody).json()).resolves.toEqual(
+      expect.objectContaining({
+        url: "https://example.com/worker",
+        title: "Worker link",
+      })
     )
   })
 
@@ -173,7 +233,9 @@ describe("useRecentLinks", () => {
       JSON.stringify({ results: [cacheEntry], version: 100, etag: "100" })
     )
     routeLoaderDataMock.mockReturnValue({ user: null })
-    const { result, rerender } = renderHook(() => useRecentLinks())
+    const { result, rerender } = renderHook(() => useRecentLinks(), {
+      wrapper: createWrapper(),
+    })
 
     expect(result.current.recents.map(({ title }) => title)).toEqual([
       "Anonymous link",
@@ -200,7 +262,9 @@ describe("useRecentLinks", () => {
     storage.setItem("sl2jp:recents:v1", "not-json")
     routeLoaderDataMock.mockReturnValue({ user: null })
 
-    const { result } = renderHook(() => useRecentLinks())
+    const { result } = renderHook(() => useRecentLinks(), {
+      wrapper: createWrapper(),
+    })
 
     expect(result.current.recents).toEqual([])
     expect(storage.getItem("sl2jp:recents:v1")).toBeNull()

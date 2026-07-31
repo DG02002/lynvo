@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
-import { useMutation } from "convex/react"
+import { Effect } from "effect"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
-import { api } from "../../../../convex/_generated/api"
+import { client } from "~/lib/effect/api/client"
 import {
   linksToRecentLinkViewItems,
   readLinksCache,
@@ -16,7 +16,7 @@ import { useRecentLinksPaginationAndSort } from "./pagination"
 import { useDraftRecentLinks } from "./drafts"
 import type { RecentLinksActions } from "./actions"
 import {
-  createConvexRecentLinksAdapter,
+  createServerRecentLinksAdapter,
   createLocalRecentLinksAdapter,
   createRecentLinksPersistence,
 } from "./persistence"
@@ -35,10 +35,6 @@ export const useRecentLinks = () => {
     [cachedLinks?.results, userId]
   )
   const linksQuery = useRecentLinksQuery(userId, cachedLinks)
-  const createLink = useMutation(api.links.createOrUpdate)
-  const deleteLink = useMutation(api.links.deleteById)
-  const clearLinks = useMutation(api.users.clearRecentCards)
-  const updateLinkMeta = useMutation(api.links.updateMeta)
 
   const createRecentLink = useCallback(
     async (item: (typeof cachedItems)[number]) =>
@@ -47,34 +43,40 @@ export const useRecentLinks = () => {
         title: item.title ?? item.url,
         metadata: item.metadata!,
         createLink: ({ url, title, metadata }) =>
-          createLink({ url, title, meta: JSON.stringify(metadata) }),
+          Effect.runPromise(
+            client.links.create({ payload: { url, title, meta: metadata } })
+          ),
       }),
-    [createLink]
+    []
   )
   const updateRecentLink = useCallback(
     async (item: (typeof cachedItems)[number]) => {
       if (!item.id || !item.metadata) {
         return
       }
-      await updateLinkMeta({
-        id: item.id,
-        meta: JSON.stringify(structuredClone(item.metadata)),
-      })
+      await Effect.runPromise(
+        client.links.updateMeta({
+          params: { linkId: item.id },
+          payload: { meta: structuredClone(item.metadata) },
+        })
+      )
     },
-    [updateLinkMeta]
+    []
   )
 
   const persistence = useMemo(() => {
     const adapter = userId
-      ? createConvexRecentLinksAdapter({
+      ? createServerRecentLinksAdapter({
           read: () => cachedItems,
           create: createRecentLink,
           update: updateRecentLink,
           delete: async (id) => {
-            await deleteLink({ id })
+            await Effect.runPromise(
+              client.links.delete({ params: { linkId: id } })
+            )
           },
           clear: async () => {
-            await clearLinks({})
+            await Effect.runPromise(client.settings.clearRecentLinks())
           },
         })
       : createLocalRecentLinksAdapter({
@@ -84,14 +86,7 @@ export const useRecentLinks = () => {
           read: readLocalRecents,
         })
     return createRecentLinksPersistence(adapter, cachedItems)
-  }, [
-    cachedItems,
-    clearLinks,
-    createRecentLink,
-    deleteLink,
-    updateRecentLink,
-    userId,
-  ])
+  }, [cachedItems, createRecentLink, updateRecentLink, userId])
 
   useEffect(() => {
     persistence.load().catch((error) => console.error(error))

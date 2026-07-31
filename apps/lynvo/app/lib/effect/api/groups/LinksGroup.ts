@@ -7,10 +7,19 @@ import {
   ConvexApiError,
 } from "../../errors"
 
+const RecentLinkSchema = Schema.Struct({
+  _id: Schema.String,
+  url: Schema.String,
+  title: Schema.optional(Schema.String),
+  meta: Schema.optional(Schema.String),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
+})
+
 export class LinksGroup extends HttpApiGroup.make("links")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(Schema.Unknown),
+      success: Schema.Array(RecentLinkSchema),
       error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
@@ -19,7 +28,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
         title: Schema.optional(Schema.String),
         meta: Schema.optional(Schema.Unknown),
       }),
-      success: Schema.Unknown,
+      success: Schema.String,
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:linkId", {

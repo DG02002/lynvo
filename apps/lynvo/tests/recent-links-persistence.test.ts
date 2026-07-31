@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import type { RecentLinkViewItem } from "~/features/links/types"
 import {
-  createConvexRecentLinksAdapter,
+  createServerRecentLinksAdapter,
   createLocalRecentLinksAdapter,
   createRecentLinksPersistence,
 } from "~/features/links/use-recent-links/persistence"
@@ -54,10 +54,10 @@ describe("Recent Links persistence adapters", () => {
     )
   })
 
-  it("applies the common contract to Convex operations", async () => {
+  it("applies the common contract to server operations", async () => {
     let items: RecentLinkViewItem[] = []
     await runAdapterContract(() =>
-      createConvexRecentLinksAdapter({
+      createServerRecentLinksAdapter({
         read: () => items,
         create: async (nextItem) => {
           items = [nextItem, ...items.filter(({ url }) => url !== nextItem.url)]

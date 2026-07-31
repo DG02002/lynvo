@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react"
-import { useQuery as useConvexQuery } from "convex/react"
-import type { FunctionReturnType } from "convex/server"
-import { api } from "../../../../convex/_generated/api"
+import { useQuery } from "@tanstack/react-query"
+import { Effect } from "effect"
+import { client } from "~/lib/effect/api/client"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { writeLinksCache, type LinksCache } from "./cache"
 import {
@@ -9,9 +9,16 @@ import {
   type SavedLink,
 } from "~/features/links/links.mapper"
 
-type RecentLinkResult = FunctionReturnType<typeof api.links.list>[number]
+interface RecentLinkResult {
+  _id: string
+  url: string
+  title?: string
+  meta?: string
+  createdAt: number
+  updatedAt: number
+}
 
-const convexLinkToSavedLink = (link: RecentLinkResult): SavedLink => ({
+const serverLinkToSavedLink = (link: RecentLinkResult): SavedLink => ({
   id: link._id,
   url: link.url,
   title: link.title,
@@ -25,7 +32,11 @@ export function useRecentLinksQuery(
   cachedLinks: LinksCache | undefined
 ) {
   const timeBucket = useDailyTimeBucket()
-  const links = useConvexQuery(api.links.list, userId ? { timeBucket } : "skip")
+  const { data: links, isPending } = useQuery({
+    queryKey: ["recent-links", userId, timeBucket],
+    queryFn: () => Effect.runPromise(client.links.list()),
+    enabled: Boolean(userId),
+  })
 
   const liveLinks = useMemo<LinksCache | undefined>(() => {
     if (!links) {
@@ -37,7 +48,7 @@ export function useRecentLinksQuery(
       0
     )
     return {
-      results: links.map(convexLinkToSavedLink),
+      results: links.map(serverLinkToSavedLink),
       version,
       etag: String(version),
     }
@@ -54,6 +65,6 @@ export function useRecentLinksQuery(
   return {
     data: liveLinks ?? cachedLinks,
     isLive: Boolean(liveLinks),
-    isLoading: Boolean(userId && links === undefined && !cachedLinks),
+    isLoading: Boolean(userId && isPending && !cachedLinks),
   }
 }
