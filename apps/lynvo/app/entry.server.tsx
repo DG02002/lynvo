@@ -3,6 +3,19 @@ import { ServerRouter } from "react-router"
 import { isbot } from "isbot"
 import { renderToReadableStream } from "react-dom/server"
 import { createContentSecurityPolicy } from "~/lib/content-security-policy"
+import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
+
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes))
+
+const getThemeBootstrapHash = async () =>
+  toBase64(
+    new Uint8Array(
+      await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(THEME_BOOTSTRAP_SCRIPT)
+      )
+    )
+  )
 
 export default async function handleRequest(
   request: Request,
@@ -13,10 +26,13 @@ export default async function handleRequest(
 ) {
   let shellRendered = false
   const userAgent = request.headers.get("user-agent")
+  const cspNonce = crypto.randomUUID()
+  const themeBootstrapHash = await getThemeBootstrapHash()
 
   const body = await renderToReadableStream(
-    <ServerRouter context={routerContext} url={request.url} />,
+    <ServerRouter context={routerContext} url={request.url} nonce={cspNonce} />,
     {
+      nonce: cspNonce,
       onError(error: unknown) {
         responseStatusCode = 500
         // Log streaming rendering errors from inside the shell.  Don't log
@@ -46,7 +62,12 @@ export default async function handleRequest(
   )
   responseHeaders.set(
     "Content-Security-Policy",
-    createContentSecurityPolicy(request.url, import.meta.env.DEV)
+    createContentSecurityPolicy(
+      request.url,
+      import.meta.env.DEV,
+      cspNonce,
+      themeBootstrapHash
+    )
   )
   responseHeaders.set(
     "Strict-Transport-Security",

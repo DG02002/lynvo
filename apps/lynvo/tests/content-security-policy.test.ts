@@ -15,9 +15,15 @@ describe("createContentSecurityPolicy", () => {
   it("does not allow the request host over HTTP in production", () => {
     const policy = createContentSecurityPolicy(
       "https://app.lynvo.example/settings/plugins",
-      false
+      false,
+      "request-nonce"
     )
 
     expect(policy).not.toContain("http://app.lynvo.example:*")
+    expect(policy).toContain("script-src 'self' 'nonce-request-nonce'")
+    expect(policy.match(/script-src[^;]+/)?.[0]).not.toContain(
+      "'unsafe-inline'"
+    )
+    expect(policy).not.toContain("'unsafe-eval'")
   })
 })

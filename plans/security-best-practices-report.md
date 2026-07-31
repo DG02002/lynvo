@@ -30,7 +30,10 @@ SEC-002 now has a tested server-side session Durable Object, and SEC-003 has a
 tested context-bound encryption Durable Object plus deployment preflight; the
 browser/session cutover and persisted-row migration are not complete.
 The session widening path now covers encrypted storage, opaque-cookie sign-in,
-session reads, idle/absolute expiry, logout, and revocation. The external-worker
+session reads, idle/absolute expiry, logout, and revocation. Production document
+scripts now use a per-response nonce, with the constant theme bootstrap allowed
+by hash; production `unsafe-eval` and script `unsafe-inline` are removed. The
+external-worker
 schema now accepts versioned ciphertext alongside the legacy plaintext field.
 New registrations use a credential-free pending row followed by context-bound
 Worker encryption and ciphertext finalization; Worker service reads decrypt

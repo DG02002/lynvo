@@ -37,8 +37,11 @@ responses.
 
 1. Remove refresh credentials from browser storage and responses.
 2. Remove legacy cookie/local-storage readers after the compatibility window.
-3. Replace inline/eval CSP allowances with nonce or hash-based scripts after
-   React Router hydration is verified under the new session boundary.
+3. [x] Replace inline/eval CSP allowances with nonce or hash-based scripts.
+   Production documents now generate a per-response nonce for React streaming
+   and React Router scripts, and authorize the constant theme bootstrap by its
+   SHA-256 hash. Development retains the allowances required by the Vite dev
+   runtime. Live browser hydration verification remains an external check.
 
 ## External requirements
 
