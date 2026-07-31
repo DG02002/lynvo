@@ -7,10 +7,7 @@ import {
   getDirectMediaMetadata,
 } from "./direct-media-adapter"
 import { directMediaAdapter } from "../../plugins/direct-media-adapter"
-import {
-  extractFromCustomPluginServer,
-  getCustomPluginServerMetadata,
-} from "./custom-plugin-server-adapter"
+import { getCustomPluginServerMetadata } from "./custom-plugin-server-adapter"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -29,7 +26,7 @@ import { prepareExtractionRouteInput } from "./extraction-route-input"
 import { selectLynvoRoute } from "./lynvo-route-selection"
 import { selectCustomRoute } from "./custom-route-selection"
 import { executeLynvoRoute } from "./lynvo-route-execution"
-import { resolvePluginCredential } from "./plugin-credential-resolution"
+import { executeCustomRoute } from "./custom-route-execution"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
@@ -91,25 +88,19 @@ export class ExtractionService extends Context.Service<
             inlineBasicAuth: routeInput.basicAuth,
           })
           if (customRoute) {
-            const pluginServer = customRoute.pluginServer
-            const source = customRoute.plugin
-            const credentials = source
-              ? yield* resolvePluginCredential(convex, credentialVault, {
-                  targetUrl,
-                  userId: options.userId,
-                  accessToken: options.accessToken,
-                  serviceToken,
-                  pluginServerId: pluginServer._id,
-                  plugin: source,
-                  inlineBasicAuth: routeInput.basicAuth,
-                })
-              : {}
-            return yield* extractFromCustomPluginServer(
-              pluginServer,
-              targetUrl,
-              options.kind ?? "source",
-              { pluginId: source?.id, ...credentials },
-              options.requestId
+            return yield* executeCustomRoute(
+              convex,
+              credentialVault,
+              customRoute,
+              {
+                targetUrl,
+                userId: options.userId,
+                accessToken: options.accessToken,
+                serviceToken,
+                requestId: options.requestId,
+                kind: options.kind ?? "source",
+                inlineBasicAuth: routeInput.basicAuth,
+              }
             )
           }
           if (

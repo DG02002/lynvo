@@ -533,4 +533,123 @@ describe("Extraction interface routing", () => {
     expect(directMediaFetch).not.toHaveBeenCalled()
     directMediaFetch.mockRestore()
   })
+
+  it("does not invoke a Custom Plugin without its required credential", async () => {
+    let pluginExtractionCount = 0
+    const manifest = JSON.stringify({
+      protocolVersion: "1.0",
+      pluginServerId: "dev.example.protected",
+      displayName: "Protected Custom",
+      auth: { type: "bearer" },
+      usage: { endpoint: "/usage" },
+      matchers: [{ hosts: ["protected-custom.example"] }],
+      features: {},
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "protected-custom",
+              displayName: "Protected Custom",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["protected-custom.example"],
+              credential: {
+                kind: "domain-password",
+                scope: "domain",
+                required: true,
+              },
+            },
+          ],
+        },
+      },
+    })
+    const storedPluginServer = {
+      _id: "protected-custom-server",
+      _creationTime: 1,
+      userId: "user-1",
+      baseUrl: "https://protected-plugin-server.example",
+      manifest,
+      enabled: true,
+      priority: 1,
+      verificationStatus: "verified",
+      createdAt: 1,
+      updatedAt: 1,
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM" as const,
+      apiKeyVersion: 1,
+    }
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => {
+        pluginExtractionCount += 1
+        return Response.json({
+          plugin: {
+            pluginServerId: "dev.example.protected",
+            displayName: "Protected Custom",
+          },
+          nodes: [],
+          extensions: {},
+        })
+      })
+    const environmentWithCustom = {
+      ...environment,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () => Response.json({ apiKey: "custom-api-key" }),
+        }),
+      },
+    } as Env
+    let queryCount = 0
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithCustom),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => {
+                queryCount += 1
+                return Effect.succeed(
+                  queryCount === 1 ? [storedPluginServer] : undefined
+                )
+              },
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await expect(
+      Effect.runPromise(
+        ExtractionService.use((service) =>
+          service.extract({
+            url: "https://protected-custom.example/video",
+            requestId: "required-custom-credential",
+            pluginServerId: "protected-custom-server",
+            pluginId: "protected-custom",
+            userId: "user-1",
+            accessToken: "access-token",
+          })
+        ).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "Required Plugin credential is unavailable.",
+    })
+    expect(pluginExtractionCount).toBe(0)
+    fetchMock.mockRestore()
+  })
 })

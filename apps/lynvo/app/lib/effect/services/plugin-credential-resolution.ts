@@ -62,6 +62,12 @@ export const resolvePluginCredential = Effect.fn(
       )
     )
   if (encryptedCredential?.pluginId !== options.plugin.id) {
+    if (options.plugin.credential.required) {
+      return yield* new ExtractionError({
+        message: "Required Plugin credential is unavailable.",
+        url: options.targetUrl,
+      })
+    }
     return {}
   }
 
