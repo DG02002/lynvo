@@ -116,13 +116,19 @@ export const getCustomPluginServerMetadata = Effect.fn(
   "CustomPluginServerAdapter.getCustomPluginServerMetadata"
 )(function* (
   pluginServer: RegisteredPluginServer,
-  targetUrl?: string
+  targetUrl?: string,
+  pluginId?: string
 ): Effect.fn.Return<MetadataResult | undefined> {
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   if (!manifest) {
     return undefined
   }
-  return getPluginServerMetadata(manifest, pluginServer._id, targetUrl)
+  return getPluginServerMetadata(
+    manifest,
+    pluginServer._id,
+    targetUrl,
+    pluginId
+  )
 })
 
 export const getCustomPlugin = Effect.fn(

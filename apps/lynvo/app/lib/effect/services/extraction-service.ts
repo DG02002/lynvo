@@ -8,11 +8,8 @@ import {
 } from "./direct-media-adapter"
 import { directMediaAdapter } from "../../plugins/direct-media-adapter"
 import {
-  discoverCustomPlugin,
   extractFromCustomPluginServer,
-  getCustomPlugin,
   getCustomPluginServerMetadata,
-  selectCustomPluginServer,
 } from "./custom-plugin-server-adapter"
 import type {
   ExtractionResult,
@@ -34,6 +31,7 @@ import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import { selectLynvoRoute } from "./lynvo-route-selection"
+import { selectCustomRoute } from "./custom-route-selection"
 
 const getMeteredPluginId = (pluginId: string) => {
   if (
@@ -98,40 +96,17 @@ export class ExtractionService extends Context.Service<
                 })
             )
           )
-          const pluginServer = yield* selectCustomPluginServer(
-            pluginServers,
+          const customRoute = yield* selectCustomRoute(pluginServers, {
             targetUrl,
-            options.pluginServerId
-          )
-          if (pluginServer) {
-            let source = yield* getCustomPlugin(
-              pluginServer,
-              targetUrl,
-              options.pluginId
-            )
-            const discoveryAttempt =
-              (options.kind ?? "source") === "source"
-                ? yield* discoverCustomPlugin(
-                    pluginServer,
-                    targetUrl,
-                    routeInput.basicAuth,
-                    options.requestId
-                  ).pipe(Effect.option)
-                : undefined
-            const discovery =
-              discoveryAttempt?._tag === "Some"
-                ? discoveryAttempt.value
-                : undefined
-            if (discovery?.matched) {
-              const discoveredSource = yield* getCustomPlugin(
-                pluginServer,
-                targetUrl,
-                discovery.pluginId
-              )
-              if (discoveredSource) {
-                source = discoveredSource
-              }
-            }
+            requestId: options.requestId,
+            pluginServerId: options.pluginServerId,
+            pluginId: options.pluginId,
+            kind: options.kind ?? "source",
+            inlineBasicAuth: routeInput.basicAuth,
+          })
+          if (customRoute) {
+            const pluginServer = customRoute.pluginServer
+            const source = customRoute.plugin
             const credentials = source
               ? yield* resolvePluginCredential(convex, credentialVault, {
                   targetUrl,
@@ -250,14 +225,17 @@ export class ExtractionService extends Context.Service<
                 new ConvexError({ message: error.message, cause: error })
             )
           )
-          const pluginServer = yield* selectCustomPluginServer(
-            pluginServers,
-            targetUrl
-          )
-          if (pluginServer) {
+          const customRoute = yield* selectCustomRoute(pluginServers, {
+            targetUrl,
+            requestId: options.requestId,
+            kind: "source",
+            inlineBasicAuth: routeInput.basicAuth,
+          })
+          if (customRoute) {
             const metadata = yield* getCustomPluginServerMetadata(
-              pluginServer,
-              targetUrl
+              customRoute.pluginServer,
+              targetUrl,
+              customRoute.plugin?.id
             )
             if (metadata) {
               return metadata

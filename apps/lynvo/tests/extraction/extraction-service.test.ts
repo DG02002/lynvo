@@ -251,4 +251,126 @@ describe("Extraction interface routing", () => {
 
     expect(manifestRequestIds).toEqual(["metadata-route-request"])
   })
+
+  it("keeps an explicitly selected Custom Plugin during discovery", async () => {
+    const extractionPluginIds: Array<string | undefined> = []
+    const manifest = JSON.stringify({
+      protocolVersion: "1.0",
+      pluginServerId: "dev.example.custom",
+      displayName: "Custom",
+      auth: { type: "bearer" },
+      usage: { endpoint: "/usage" },
+      matchers: [{ hosts: ["custom.example"] }],
+      features: { discovery: true },
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "chosen",
+              displayName: "Chosen",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["custom.example"],
+            },
+            {
+              id: "discovered",
+              displayName: "Discovered",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["custom.example"],
+            },
+          ],
+        },
+      },
+    })
+    const storedPluginServer = {
+      _id: "custom-server",
+      _creationTime: 1,
+      userId: "user-1",
+      baseUrl: "https://plugin-server.example",
+      manifest,
+      enabled: true,
+      priority: 1,
+      verificationStatus: "verified",
+      createdAt: 1,
+      updatedAt: 1,
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM" as const,
+      apiKeyVersion: 1,
+    }
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const request = new Request(input, init)
+        if (request.url.endsWith("/discover")) {
+          return Response.json({
+            matched: true,
+            pluginId: "discovered",
+            confidence: "verified",
+          })
+        }
+        const body = await request.json<{
+          pluginId?: string
+        }>()
+        extractionPluginIds.push(body.pluginId)
+        return Response.json({
+          plugin: {
+            pluginServerId: "dev.example.custom",
+            displayName: "Custom",
+          },
+          nodes: [],
+          extensions: {},
+        })
+      })
+    const environmentWithCustom = {
+      ...environment,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () => Response.json({ apiKey: "custom-api-key" }),
+        }),
+      },
+    } as Env
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithCustom),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => Effect.succeed([storedPluginServer]),
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.extract({
+          url: "https://custom.example/video",
+          requestId: "explicit-custom-plugin",
+          pluginServerId: "custom-server",
+          pluginId: "chosen",
+          userId: "user-1",
+          accessToken: "access-token",
+        })
+      ).pipe(Effect.provide(layer))
+    )
+
+    expect(extractionPluginIds).toEqual(["chosen"])
+    fetchMock.mockRestore()
+  })
 })
