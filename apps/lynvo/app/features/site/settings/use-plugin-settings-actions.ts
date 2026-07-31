@@ -68,6 +68,33 @@ const handleDeletePluginServer = async (pluginServerId: string) => {
   }
 }
 
+const handleAddPluginServer = async (value: CustomPluginServerFormValues) => {
+  try {
+    const data = await Effect.runPromise(
+      client.pluginServers.create({
+        payload: value,
+      })
+    )
+    if (
+      showMutationToast(
+        data,
+        "Plugin server added",
+        "Unable to add plugin server. Check its details and try again."
+      )
+    ) {
+      return null
+    }
+    return "Unable to add plugin server. Check its details and try again."
+  } catch (error) {
+    const message = getErrorMessage(
+      error,
+      "The Plugin Server couldn’t be added. Check its details and try again."
+    )
+    toast.error(message)
+    return message
+  }
+}
+
 const handleSetDomainCredential = async (
   domainId: string,
   password: string,
@@ -249,33 +276,6 @@ export const usePluginSettingsActions = ({
       return false
     } finally {
       setAddingDomainFor(null)
-    }
-  }
-
-  const handleAddPluginServer = async (value: CustomPluginServerFormValues) => {
-    try {
-      const data = await Effect.runPromise(
-        client.pluginServers.create({
-          payload: value,
-        })
-      )
-      if (
-        showMutationToast(
-          data,
-          "Plugin server added",
-          "Unable to add plugin server. Check its details and try again."
-        )
-      ) {
-        return null
-      }
-      return "Unable to add plugin server. Check its details and try again."
-    } catch (error) {
-      const message = getErrorMessage(
-        error,
-        "The Plugin Server couldn’t be added. Check its details and try again."
-      )
-      toast.error(message)
-      return message
     }
   }
 

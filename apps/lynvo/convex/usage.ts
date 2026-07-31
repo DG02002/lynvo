@@ -200,20 +200,22 @@ export const getUsage = query({
     const monthly = getMonthlyPeriod(timestamp)
     const epoch = await getEpoch(ctx)
     const ownerKey = `user:${userId}`
-    const dailyCounter = await getCounter(
-      ctx,
-      ownerKey,
-      LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-      daily.key,
-      epoch
-    )
-    const monthlyCounter = await getCounter(
-      ctx,
-      ownerKey,
-      LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-      monthly.key,
-      epoch
-    )
+    const [dailyCounter, monthlyCounter] = await Promise.all([
+      getCounter(
+        ctx,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        daily.key,
+        epoch
+      ),
+      getCounter(
+        ctx,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+        monthly.key,
+        epoch
+      ),
+    ])
     const monthlyUsed = monthlyCounter?.used ?? 0
     return {
       metrics: [

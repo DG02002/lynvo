@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 
 const PLAYER_PREVIEWS: Partial<Record<string, string>> = {
@@ -75,7 +75,10 @@ const opacityForSlot = (slot: Slot) =>
 
 export const PlayerCardSwap = () => {
   const cardRefs = useRef<Array<HTMLElement | null>>([])
-  const orderRef = useRef(PLAYER_DEFINITIONS.map((_, index) => index))
+  const [initialOrder] = useState(() =>
+    PLAYER_DEFINITIONS.map((_, index) => index)
+  )
+  const orderRef = useRef(initialOrder)
   const timerRef = useRef<number | undefined>(undefined)
   const runningRef = useRef(false)
   const pausedRef = useRef(false)
@@ -250,10 +253,9 @@ export const PlayerCardSwap = () => {
   }
 
   return (
-    <div
+    <ul
       className="player-card-swap"
       aria-label="Supported Android player previews"
-      role="list"
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocus={pause}
@@ -263,12 +265,11 @@ export const PlayerCardSwap = () => {
         const preview = PLAYER_PREVIEWS[player.id]
 
         return (
-          <article
+          <li
             key={player.id}
             ref={(element) => {
               cardRefs.current[index] = element
             }}
-            role="listitem"
             className="player-card-swap__card"
             style={{
               transform: transformForSlot(
@@ -308,9 +309,9 @@ export const PlayerCardSwap = () => {
                 {player.name}
               </span>
             </div>
-          </article>
+          </li>
         )
       })}
-    </div>
+    </ul>
   )
 }

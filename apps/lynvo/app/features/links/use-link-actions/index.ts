@@ -127,6 +127,7 @@ export function useLinkActions({
       }
     },
     [
+      selectionDialogState.meta.pluginId,
       selectionDialogState.meta.pluginServerId,
       selectionDialogState.originalUrl,
       setSelectionDialogState,
