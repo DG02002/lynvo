@@ -33,8 +33,7 @@ The session widening path now covers encrypted storage, opaque-cookie sign-in,
 session reads, idle/absolute expiry, logout, and revocation. Production document
 scripts now use a per-response nonce, with the constant theme bootstrap allowed
 by hash; production `unsafe-eval` and script `unsafe-inline` are removed. The
-external-worker
-schema now accepts versioned ciphertext alongside the legacy plaintext field.
+external-worker schema now accepts only versioned ciphertext.
 New registrations use a credential-free pending row followed by context-bound
 Worker encryption and ciphertext finalization; Worker service reads decrypt
 only after authenticated ownership checks. The plaintext schema field, write

@@ -5,7 +5,7 @@ Date: July 31, 2026
 Production origin: `https://lynvo.dg02002.workers.dev`
 
 Current verdict: **no-go until Phase 0 and Phase 1 are complete**. The repository
-itself is healthy: 303 tests pass, all checks pass, both production builds pass,
+itself is healthy: 347 tests pass, all checks pass, all production builds pass,
 the production dependency audit is clean, and no common committed-secret pattern
 was found.
 
@@ -185,7 +185,8 @@ Acceptance tests:
 
 ## Phase 2 — Prelaunch quality and policy work
 
-1. Update the no-MFA password policy to the current OWASP length/blocklist model.
+1. [x] Update the no-MFA password policy to the current OWASP length/blocklist
+   model.
 2. [x] Generate TV approval codes with Web Crypto, assert uniqueness, and limit
    approval attempts.
 3. [x] Bound external-worker usage fan-out and cap saved registrations instead
