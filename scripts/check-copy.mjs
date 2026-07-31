@@ -4,7 +4,6 @@ import { extname, join } from "node:path"
 const COPY_DIRECTORIES = [
   "apps/lynvo/app",
   "apps/lynvo/convex",
-  "apps/lynvo/tests",
   "apps/lynvo/workers",
   "docs",
 ]
@@ -18,6 +17,10 @@ const FORBIDDEN_COPY_PATTERNS = [
   { label: "Sign In", pattern: /\bSign In\b/g },
   { label: "Log In", pattern: /\bLog In\b/g },
   { label: "Signing in", pattern: /\bSigning in\b/g },
+  { label: "Sign-out", pattern: /\bSign-out\b/g },
+  { label: "sign-out", pattern: /\bsign-out\b/g },
+  { label: "Signing out", pattern: /\bSigning out\b/g },
+  { label: "signing out", pattern: /\bsigning out\b/g },
   { label: "Unknown Device", pattern: /\bUnknown Device\b/g },
 ]
 

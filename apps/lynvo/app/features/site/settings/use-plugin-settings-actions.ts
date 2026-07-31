@@ -24,8 +24,8 @@ const showMutationToast = (
   return false
 }
 
-const getErrorMessage = (error: unknown) =>
-  getUserFacingErrorMessage(error, "Something went wrong. Please try again.")
+const getErrorMessage = (error: unknown, fallback: string) =>
+  getUserFacingErrorMessage(error, fallback)
 
 const handleDeleteDomain = async (domainId: string) => {
   try {
@@ -40,7 +40,9 @@ const handleDeleteDomain = async (domainId: string) => {
       "Unable to remove domain. Try again."
     )
   } catch (error) {
-    toast.error(getErrorMessage(error))
+    toast.error(
+      getErrorMessage(error, "The domain couldn’t be removed. Try again.")
+    )
   }
 }
 
@@ -57,7 +59,12 @@ const handleDeletePluginServer = async (pluginServerId: string) => {
       "Unable to delete plugin server. Try again."
     )
   } catch (error) {
-    toast.error(getErrorMessage(error))
+    toast.error(
+      getErrorMessage(
+        error,
+        "The Plugin Server couldn’t be deleted. Try again."
+      )
+    )
   }
 }
 
@@ -79,7 +86,12 @@ const handleSetDomainCredential = async (
       "Unable to save plugin password. Try again."
     )
   } catch (error) {
-    toast.error(getErrorMessage(error))
+    toast.error(
+      getErrorMessage(
+        error,
+        "The Plugin password couldn’t be saved. Try again."
+      )
+    )
     return false
   }
 }
@@ -95,7 +107,12 @@ const handleDeleteDomainCredential = async (domainId: string) => {
       "Unable to remove plugin password. Try again."
     )
   } catch (error) {
-    toast.error(getErrorMessage(error))
+    toast.error(
+      getErrorMessage(
+        error,
+        "The Plugin password couldn’t be removed. Try again."
+      )
+    )
   }
 }
 
@@ -116,7 +133,12 @@ const handleTogglePluginServer = async (
       toast.success("Plugin server enabled")
     }
   } catch (error) {
-    toast.error(getErrorMessage(error))
+    toast.error(
+      getErrorMessage(
+        error,
+        "The Plugin Server couldn’t be updated. Try again."
+      )
+    )
   }
 }
 
@@ -139,7 +161,12 @@ const handleRefreshPluginServer = async (
     }
   } catch (error) {
     if (showFeedback) {
-      toast.error(getErrorMessage(error))
+      toast.error(
+        getErrorMessage(
+          error,
+          "The Plugin Server couldn’t be refreshed. Try again."
+        )
+      )
     }
   }
 }
@@ -213,7 +240,10 @@ export const usePluginSettingsActions = ({
       }
       return false
     } catch (error) {
-      const message = getErrorMessage(error)
+      const message = getErrorMessage(
+        error,
+        "The domain couldn’t be added. Check it and try again."
+      )
       setDomainErrors((current) => ({ ...current, [pluginId]: message }))
       toast.error(message)
       return false
@@ -240,7 +270,10 @@ export const usePluginSettingsActions = ({
       }
       return "Unable to add plugin server. Check its details and try again."
     } catch (error) {
-      const message = getErrorMessage(error)
+      const message = getErrorMessage(
+        error,
+        "The Plugin Server couldn’t be added. Check its details and try again."
+      )
       toast.error(message)
       return message
     }

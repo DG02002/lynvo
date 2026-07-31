@@ -588,7 +588,7 @@ app.delete("/api/auth/session", async (context) => {
       return context.json(
         requestApiError(context, {
           code: "service_unavailable",
-          error: "Sign-out is unavailable. Try again later.",
+          error: "Logout is temporarily unavailable. Try again later.",
           retryable: true,
         }),
         503

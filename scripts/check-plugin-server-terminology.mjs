@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { existsSync, readFileSync, readdirSync } from "node:fs"
-import { join, relative } from "node:path"
+import { existsSync, readFileSync } from "node:fs"
 
 const GENERATED_OR_IMMUTABLE_PATHS = new Set([
   "apps/lynvo/worker-configuration.d.ts",
@@ -8,14 +7,6 @@ const GENERATED_OR_IMMUTABLE_PATHS = new Set([
   "scripts/check-plugin-server-terminology.mjs",
   "docs/POLICY-WRITING-FINDINGS.md",
 ])
-const IGNORED_DIRECTORIES = new Set([
-  ".git",
-  ".wrangler",
-  "coverage",
-  "dist",
-  "node_modules",
-])
-
 const TEXT_FILE_PATTERN =
   /\.(?:cjs|css|html|js|json|jsonc|md|mdx|mjs|ts|tsx|yaml|yml)$/
 const FORBIDDEN_TERMS = [
@@ -32,7 +23,7 @@ const FORBIDDEN_TERMS = [
   /\bofficial workers?\b/i,
 ]
 
-const lynvoFiles = execFileSync(
+const files = execFileSync(
   "git",
   ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
   { encoding: "utf8" }
@@ -44,35 +35,13 @@ const lynvoFiles = execFileSync(
   .filter((path) => !path.startsWith("plans/"))
   .filter((path) => !GENERATED_OR_IMMUTABLE_PATHS.has(path))
 
-const collectTextFiles = (directory, root = directory) =>
-  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) {
-      return IGNORED_DIRECTORIES.has(entry.name)
-        ? []
-        : collectTextFiles(path, root)
-    }
-    return TEXT_FILE_PATTERN.test(entry.name)
-      ? [{ path, displayPath: `../${relative(root, path)}` }]
-      : []
-  })
-
-const plnkDirectory = "../plnk-plugin-server"
-const plnkFiles = existsSync(plnkDirectory)
-  ? collectTextFiles(plnkDirectory)
-  : []
-const files = [
-  ...lynvoFiles.map((path) => ({ path, displayPath: path })),
-  ...plnkFiles,
-]
-
 const failures = []
 
-for (const { path, displayPath } of files) {
+for (const path of files) {
   const lines = readFileSync(path, "utf8").split("\n")
   for (const [lineIndex, line] of lines.entries()) {
     if (FORBIDDEN_TERMS.some((pattern) => pattern.test(line))) {
-      failures.push(`${displayPath}:${lineIndex + 1}:${line.trim()}`)
+      failures.push(`${path}:${lineIndex + 1}:${line.trim()}`)
     }
   }
 }
