@@ -64,10 +64,10 @@ describe("player-utils", () => {
 
   it("uses saved player preferences", () => {
     setRangeSupportedPlayer("mpv")
-    setRangeUnsupportedPlayer("mx-tv")
+    setRangeUnsupportedPlayer("mx")
 
     expect(selectPlayerForRangeCapability("supported").id).toBe("mpv")
-    expect(selectPlayerForRangeCapability("unsupported").id).toBe("mx-tv")
+    expect(selectPlayerForRangeCapability("unsupported").id).toBe("mx")
   })
 
   it("ignores invalid saved player preferences", () => {

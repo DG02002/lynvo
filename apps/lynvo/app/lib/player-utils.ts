@@ -1,4 +1,4 @@
-export type PlayerId = "just" | "vlc" | "mpv" | "mx" | "mx-tv"
+export type PlayerId = "just" | "vlc" | "mpv" | "mx"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
 
 export interface PlayerDefinition {
@@ -32,12 +32,6 @@ export const PLAYER_DEFINITIONS: readonly PlayerDefinition[] = [
     name: "MX Player",
     packageName: "com.mxtech.videoplayer.ad",
     iconUrl: "/icons/players/mx.webp",
-  },
-  {
-    id: "mx-tv",
-    name: "MX Player TV",
-    packageName: "com.mxtech.videoplayer.television",
-    iconUrl: "/icons/players/mx-tv.webp",
   },
 ] as const
 

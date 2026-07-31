@@ -1,4 +1,4 @@
-const PLAYER_IDS = ["just", "vlc", "mpv", "mx", "mx-tv"]
+const PLAYER_IDS = ["just", "vlc", "mpv", "mx"]
 
 export const normalizePlayerId = (playerId: string) => {
   if (!PLAYER_IDS.includes(playerId)) {
