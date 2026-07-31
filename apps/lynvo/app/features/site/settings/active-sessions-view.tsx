@@ -41,7 +41,7 @@ export interface UserSession {
 }
 
 interface ActiveSessionsViewProps {
-  sessions: UserSession[]
+  sessions: readonly UserSession[]
   busy: string | null
   onBack: () => void
   onRevokeSession: (sessionIndex: number) => Promise<void>

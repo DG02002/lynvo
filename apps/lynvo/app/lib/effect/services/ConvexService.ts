@@ -13,6 +13,11 @@ export interface ConvexRequestOptions {
 }
 
 export interface ConvexServiceShape {
+  readonly action: <Action extends FunctionReference<"action", "public">>(
+    actionReference: Action,
+    args: FunctionArgs<Action>,
+    options?: ConvexRequestOptions
+  ) => Effect.Effect<FunctionReturnType<Action>, ConvexError>
   readonly query: <Query extends FunctionReference<"query", "public">>(
     queryReference: Query,
     args: FunctionArgs<Query>,
@@ -69,7 +74,18 @@ export class ConvexService extends Context.Service<
           catch: convexFailure("mutation"),
         })
 
-      return ConvexService.of({ query, mutation })
+      const action: ConvexServiceShape["action"] = (
+        actionReference,
+        args,
+        options
+      ) =>
+        Effect.tryPromise({
+          try: () =>
+            makeClient(options?.accessToken).action(actionReference, args),
+          catch: convexFailure("action"),
+        })
+
+      return ConvexService.of({ action, query, mutation })
     })
   )
 }

@@ -315,12 +315,16 @@ export const setCurrentSessionDevice = mutation({
 export const revokeSession = mutation({
   returns: v.any(),
   args: {
-    sessionId: v.id("authSessions"),
+    sessionId: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const currentSessionId = await getAuthSessionId(ctx)
-    await revokeUserSession(ctx, userId, currentSessionId, args.sessionId)
+    const sessionId = ctx.db.normalizeId("authSessions", args.sessionId)
+    if (!sessionId) {
+      throw new Error("Session not found")
+    }
+    await revokeUserSession(ctx, userId, currentSessionId, sessionId)
     return { success: true }
   },
 })

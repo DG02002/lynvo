@@ -77,4 +77,46 @@ export const SettingsHandlers = HttpApiBuilder.group(
           )
         })
       )
+      .handle("listSessions", () =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          return yield* convex.query(
+            api.users.listSessions,
+            {},
+            { accessToken: user.accessToken }
+          )
+        })
+      )
+      .handle("revokeSession", ({ params }) =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          return yield* convex.mutation(
+            api.users.revokeSession,
+            { sessionId: params.sessionId },
+            { accessToken: user.accessToken }
+          )
+        })
+      )
+      .handle("revokeAllSessions", () =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          return yield* convex.mutation(
+            api.users.revokeAllSessions,
+            {},
+            { accessToken: user.accessToken }
+          )
+        })
+      )
+      .handle("deleteAccount", ({ payload }) =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          return yield* convex.action(api.users.deleteAccount, payload, {
+            accessToken: user.accessToken,
+          })
+        })
+      )
 )

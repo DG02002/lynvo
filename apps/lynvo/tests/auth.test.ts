@@ -106,6 +106,7 @@ describe("AuthSessionService", () => {
       Layer.succeed(
         ConvexService,
         ConvexService.of({
+          action: () => Effect.die(new Error("Unexpected Convex action")),
           query: () => Effect.die(new Error("Unexpected Convex query")),
           mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
         })
@@ -122,6 +123,7 @@ describe("AuthSessionService", () => {
       Layer.succeed(
         ConvexService,
         ConvexService.of({
+          action: () => Effect.die(new Error("Unexpected Convex action")),
           query: () =>
             Effect.succeed({
               id: "users:123",
@@ -148,6 +150,7 @@ describe("AuthSessionService", () => {
       Layer.succeed(
         ConvexService,
         ConvexService.of({
+          action: () => Effect.die(new Error("Unexpected Convex action")),
           query: (_query, _args, options) =>
             options?.accessToken === "opaque-session-access-token"
               ? Effect.succeed({

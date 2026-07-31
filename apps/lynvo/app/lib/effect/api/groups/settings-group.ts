@@ -34,6 +34,14 @@ const StorageUsageSchema = Schema.Struct({
   maxRetentionDays: Schema.Number,
 })
 
+const UserSessionSchema = Schema.Struct({
+  id: Schema.String,
+  deviceName: Schema.String,
+  lastActiveAt: Schema.Number,
+  createdAt: Schema.Number,
+  isCurrent: Schema.Boolean,
+})
+
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(
     HttpApiEndpoint.get("getPlayerPreferences", "/player", {
@@ -73,6 +81,24 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
         success: Schema.Boolean,
         deletedLinks: Schema.Number,
       }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.get("listSessions", "/security/sessions", {
+      success: Schema.Array(UserSessionSchema),
+      error: [UnauthorizedApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.delete("revokeSession", "/security/sessions/:sessionId", {
+      params: { sessionId: Schema.String },
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.delete("revokeAllSessions", "/security/sessions", {
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.delete("deleteAccount", "/security/account", {
+      payload: Schema.Struct({ confirmUsername: Schema.String }),
+      success: Schema.Struct({ success: Schema.Boolean }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )

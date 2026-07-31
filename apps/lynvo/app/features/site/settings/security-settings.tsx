@@ -1,10 +1,9 @@
 import * as React from "react"
-import { useAuthActions } from "@convex-dev/auth/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChevronRightIcon } from "@hugeicons/core-free-icons"
-import { useAction, useMutation, useQuery } from "convex/react"
 import { toast } from "sonner"
-import { api } from "../../../../convex/_generated/api"
 import {
   SettingsPanel,
   SettingsList,
@@ -14,7 +13,8 @@ import {
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
-import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
+import { revokeWorkerSession } from "~/lib/worker-auth-session-http"
+import { client } from "~/lib/effect/api/client"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,8 @@ type SettingsUser = {
   sid: string
 }
 
+const SECURITY_SESSIONS_QUERY_KEY = ["settings", "security", "sessions"]
+
 export function SecuritySettings({
   user,
   showActiveSessions,
@@ -40,11 +42,11 @@ export function SecuritySettings({
   showActiveSessions: boolean
   onShowActiveSessionsChange: (showActiveSessions: boolean) => void
 }) {
-  const { signOut } = useAuthActions()
-  const sessions = useQuery(api.users.listSessions, {}) || []
-  const revokeSession = useMutation(api.users.revokeSession)
-  const revokeAllSessions = useMutation(api.users.revokeAllSessions)
-  const deleteAccount = useAction(api.users.deleteAccount)
+  const queryClient = useQueryClient()
+  const { data: sessions = [] } = useQuery({
+    queryKey: SECURITY_SESSIONS_QUERY_KEY,
+    queryFn: () => Effect.runPromise(client.settings.listSessions()),
+  })
   const [deleteConfirmUsername, setDeleteConfirmUsername] = React.useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [revokeAllDialogOpen, setRevokeAllDialogOpen] = React.useState(false)
@@ -53,8 +55,8 @@ export function SecuritySettings({
   const handleRevokeAllSessions = async () => {
     setBusy("revokeAll")
     try {
-      await revokeAllSessions()
-      await signOutWithWorkerSession(signOut)
+      await Effect.runPromise(client.settings.revokeAllSessions())
+      await revokeWorkerSession()
       window.location.href = "/"
     } catch (error) {
       toast.error(
@@ -76,8 +78,12 @@ export function SecuritySettings({
     }
     setBusy("delete")
     try {
-      await deleteAccount({ confirmUsername: deleteConfirmUsername })
-      await signOutWithWorkerSession(signOut)
+      await Effect.runPromise(
+        client.settings.deleteAccount({
+          payload: { confirmUsername: deleteConfirmUsername },
+        })
+      )
+      await revokeWorkerSession()
       toast.success("Account deleted")
       window.location.href = "/"
     } catch (error) {
@@ -101,7 +107,14 @@ export function SecuritySettings({
           onBack={() => onShowActiveSessionsChange(false)}
           onRevokeSession={async (sessionIndex) => {
             try {
-              await revokeSession({ sessionId: sessions[sessionIndex].id })
+              await Effect.runPromise(
+                client.settings.revokeSession({
+                  params: { sessionId: sessions[sessionIndex].id },
+                })
+              )
+              await queryClient.invalidateQueries({
+                queryKey: SECURITY_SESSIONS_QUERY_KEY,
+              })
               toast.success("Session logged out")
             } catch (error) {
               toast.error(
