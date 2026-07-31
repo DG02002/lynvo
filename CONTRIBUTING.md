@@ -149,6 +149,9 @@ pnpm dev:local
 # Same local stack, exposed to other devices on the local network
 pnpm dev:local --host
 
+# Same local stack without per-account usage limits for plugin testing
+pnpm dev:local --host --no-usage
+
 # Official extractor by itself for standalone debugging
 pnpm --filter @lynvo/official-extractor dev
 
@@ -158,6 +161,10 @@ pnpm --filter @lynvo/app cf-typegen
 # Inspect dependency updates
 pnpm -r outdated
 ```
+
+Use `--no-usage` for repeated plugin testing without advancing account usage
+counters. Omit it to test the normal daily and monthly limits. The global
+extractor safety limit remains enabled in both modes.
 
 Workspace dependencies use `workspace:*`; shared third-party versions belong
 in the root `pnpm-workspace.yaml` catalog. Do not upgrade TypeScript beyond the

@@ -4,6 +4,7 @@ import {
   internalMutation,
   mutation,
   query,
+  env,
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server"
@@ -24,6 +25,8 @@ const LEGACY_OFFICIAL_MONTHLY_METRIC_IDS = [
   "official-plugin:onedrive-index",
   "official-plugin:direct",
 ] as const
+
+const areUsageLimitsDisabled = () => env.DISABLE_USAGE_LIMITS === "true"
 
 const getDailyPeriod = (timestamp: number) => {
   const now = new Date(timestamp)
@@ -106,6 +109,7 @@ export const consumeOfficialPlugin = mutation({
   },
   handler: async (ctx, _args) => {
     const userId = await getAuthenticatedUserId(ctx)
+    const usageLimitsDisabled = areUsageLimitsDisabled()
     const timestamp = Date.now()
     const daily = getDailyPeriod(timestamp)
     const monthly = getMonthlyPeriod(timestamp)
@@ -144,7 +148,10 @@ export const consumeOfficialPlugin = mutation({
         (total, counter) => total + (counter?.used ?? 0),
         0
       )
-    if ((userDaily?.used ?? 0) >= USER_DAILY_OFFICIAL_EXTRACTION_LIMIT) {
+    if (
+      !usageLimitsDisabled &&
+      (userDaily?.used ?? 0) >= USER_DAILY_OFFICIAL_EXTRACTION_LIMIT
+    ) {
       throw new ConvexError("Daily official extraction limit reached.")
     }
     if ((globalDaily?.used ?? 0) >= GLOBAL_DAILY_OFFICIAL_EXTRACTION_LIMIT) {
@@ -152,18 +159,13 @@ export const consumeOfficialPlugin = mutation({
         "Official extraction capacity is unavailable until tomorrow."
       )
     }
-    if (monthlyUsed >= USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT) {
+    if (
+      !usageLimitsDisabled &&
+      monthlyUsed >= USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT
+    ) {
       throw new ConvexError("Monthly official extraction limit reached.")
     }
-    const [dailyUsed, , currentMonthlyUsed] = await Promise.all([
-      incrementCounter(
-        ctx,
-        ownerKey,
-        "official-worker-operations",
-        daily.key,
-        epoch,
-        userDaily
-      ),
+    const [, dailyUsed, currentMonthlyUsed] = await Promise.all([
       incrementCounter(
         ctx,
         "global",
@@ -172,14 +174,26 @@ export const consumeOfficialPlugin = mutation({
         epoch,
         globalDaily
       ),
-      incrementCounter(
-        ctx,
-        ownerKey,
-        OFFICIAL_MONTHLY_METRIC_ID,
-        monthly.key,
-        epoch,
-        monthlyCounter
-      ),
+      !usageLimitsDisabled
+        ? incrementCounter(
+            ctx,
+            ownerKey,
+            "official-worker-operations",
+            daily.key,
+            epoch,
+            userDaily
+          )
+        : (userDaily?.used ?? 0),
+      !usageLimitsDisabled
+        ? incrementCounter(
+            ctx,
+            ownerKey,
+            OFFICIAL_MONTHLY_METRIC_ID,
+            monthly.key,
+            epoch,
+            monthlyCounter
+          )
+        : (monthlyCounter?.used ?? 0),
     ])
     return {
       dailyUsed,

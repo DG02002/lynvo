@@ -1,9 +1,33 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
+
+const disableUsageLimitsFlag = "--no-usage"
 
 const quoteShellArgument = (argument) =>
   `'${argument.replaceAll("'", "'\\''")}'`
 
-const reactRouterArguments = process.argv.slice(2).map(quoteShellArgument)
+const developmentArguments = process.argv.slice(2)
+const disableUsageLimits = developmentArguments.includes(disableUsageLimitsFlag)
+const reactRouterArguments = developmentArguments
+  .filter((argument) => argument !== disableUsageLimitsFlag)
+  .map(quoteShellArgument)
+
+const usageEnvironmentResult = spawnSync(
+  "pnpm",
+  [
+    "exec",
+    "convex",
+    "env",
+    "set",
+    "DISABLE_USAGE_LIMITS",
+    String(disableUsageLimits),
+  ],
+  { stdio: "inherit" }
+)
+
+if (usageEnvironmentResult.status !== 0) {
+  process.exitCode = usageEnvironmentResult.status ?? 1
+  process.exit()
+}
 const reactRouterCommand = [
   "node scripts/prepare-local-dev-vars.mjs",
   "&&",

@@ -23,6 +23,18 @@ other dynamic application traffic.
 
 The official extractor enforces its own finite global service capacity before upstream work and reports that service-credential usage through the extractor protocol. Lynvo separately keeps the per-account quotas above because the binding credential identifies Lynvo as a service, not an individual account.
 
+## Local development
+
+Start local development with account usage limits disabled:
+
+```bash
+pnpm dev:local --host --no-usage
+```
+
+Omit `--no-usage` to test the normal daily and monthly account quotas. The
+startup command updates only the configured development deployment. The global
+daily extractor safety limit always remains enabled.
+
 ## Reset every Lynvo account
 
 Run this from the repository root against the configured Convex deployment:

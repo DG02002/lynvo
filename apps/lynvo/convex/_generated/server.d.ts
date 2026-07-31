@@ -26,6 +26,7 @@ import type { DataModel } from "./dataModel.js";
  */
 type Env = {
   readonly AUTH_GATEWAY_SECRET: string | undefined;
+  readonly DISABLE_USAGE_LIMITS: string | undefined;
 };
 
 /**
