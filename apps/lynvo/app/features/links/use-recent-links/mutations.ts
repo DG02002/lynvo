@@ -30,7 +30,7 @@ export const useRecentLinksMutations = (
         }
       } catch {
         if (!silent) {
-          toast.error("Unable to delete the link. Try again.")
+          toast.error("The saved link couldn’t be removed. Try again.")
         }
       }
     },
@@ -42,7 +42,7 @@ export const useRecentLinksMutations = (
       await persistence.clear()
       toast.success("History cleared")
     } catch {
-      toast.error("Unable to clear history. Try again.")
+      toast.error("Saved-link history couldn’t be cleared. Try again.")
     }
   }, [persistence])
 

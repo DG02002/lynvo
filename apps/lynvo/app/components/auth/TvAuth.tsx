@@ -38,12 +38,12 @@ export default function TvAuth({ user }: TvAuthProps) {
     try {
       await Effect.runPromise(client.tv.authorize({ payload: { code } }))
       setSuccess(true)
-      toast.success("Device signed in")
+      toast.success("Device logged in")
     } catch (error) {
       toast.error(
         getUserFacingErrorMessage(
           error,
-          "Unable to approve this device. Try again."
+          "This device couldn’t be approved. Check the code, then try again."
         )
       )
     } finally {
@@ -52,9 +52,9 @@ export default function TvAuth({ user }: TvAuthProps) {
   }
 
   const heading = success
-    ? "Device signed in"
+    ? "Device logged in"
     : canApprove
-      ? `Sign in ${codeRecord.deviceName}?`
+      ? `Log in ${codeRecord.deviceName}?`
       : "Match the code on your device"
 
   return (
@@ -71,7 +71,7 @@ export default function TvAuth({ user }: TvAuthProps) {
             ) : (
               <p className="text-balance text-lg text-muted-foreground">
                 {canApprove
-                  ? `You are signed in as ${user?.username}. Confirm only if the code on the other device is ${code}.`
+                  ? `Logged in as ${user?.username}. Confirm only if the code on the other device is ${code}.`
                   : "The code is invalid or expired."}
               </p>
             )}
@@ -85,14 +85,14 @@ export default function TvAuth({ user }: TvAuthProps) {
                 disabled={!canApprove || loading}
                 onClick={() => void handleAuthorize()}
               >
-                {loading ? "Signing in…" : "Sign in this device"}
+                {loading ? "Logging in…" : "Log in this device"}
               </Button>
               <Button
                 variant="secondary"
                 className="h-13.5 w-full"
                 render={
                   <Link to={authPaths.signIn} viewTransition>
-                    Back to Log In
+                    Back to log in
                   </Link>
                 }
               />

@@ -1,7 +1,7 @@
 ---
 title: What is a Plugin Server?
-description: Understand the service that connects Lynvo to source-specific plugins.
-navLabel: What Is a Plugin Server?
+description: Understand the service that connects Lynvo to Source-specific Plugins.
+navLabel: What is a Plugin Server?
 contentType: Conceptual
 ---
 
@@ -9,13 +9,13 @@ contentType: Conceptual
 
 ## The Plugin Server is the service Lynvo connects to
 
-A Plugin Server is a deployed HTTPS service that translates source pages into data Lynvo understands. Lynvo sends a URL to the Plugin Server, and the Plugin Server returns normalized media nodes for files, folders, groups, or content that must be resolved later.
+A Plugin Server is a deployed HTTPS service that translates Source pages into data Lynvo understands. Lynvo sends a URL to the Plugin Server, and the Plugin Server returns normalized Media Nodes for files, folders, groups, or content that must be resolved later.
 
-The Plugin Server is the boundary between Lynvo and your source integrations. It owns the behavior shared by every plugin:
+The Plugin Server is the boundary between Lynvo and Source integrations. It owns the behavior shared by every Plugin:
 
 - The public manifest at `GET /manifest`
 - Bearer authentication for protected endpoints
-- URL routing to the correct plugin
+- URL routing to the correct Plugin
 - Request and response validation
 - Finite usage limits
 - Protocol error responses
@@ -23,11 +23,11 @@ The Plugin Server is the boundary between Lynvo and your source integrations. It
 
 Lynvo owns the interface around that service. It registers the Plugin Server, selects it for matching URLs, saves extracted nodes, tracks playback state, and sends media to a player.
 
-One Plugin Server can contain one plugin or several plugins. You deploy and connect the Plugin Server once, then publish each plugin in the Plugin Server Manifest.
+One Plugin Server can contain one Plugin or several Plugins. Deploy and connect the Plugin Server once, then publish each Plugin in the Plugin Server manifest.
 
 <DocsNote title="Direct media links">
 
-Lynvo handles direct media URLs without a Plugin Server. Use a Plugin Server when a source page must be authenticated, parsed, traversed, or converted into playable links.
+Lynvo handles Direct media URLs without a Plugin Server. Use a Plugin Server when a Source page must be authenticated, parsed, traversed, or converted into playable links.
 
 </DocsNote>
 

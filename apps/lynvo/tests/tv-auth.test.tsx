@@ -33,7 +33,7 @@ describe("TV approval route behavior", () => {
       </MemoryRouter>
     )
     fireEvent.click(
-      await screen.findByRole("button", { name: "Sign in this device" })
+      await screen.findByRole("button", { name: "Log in this device" })
     )
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())

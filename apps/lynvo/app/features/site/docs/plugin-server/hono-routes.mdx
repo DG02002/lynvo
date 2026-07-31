@@ -1,7 +1,7 @@
 ---
 title: Wire the Hono routes
-description: Connect authentication, validation, usage enforcement, and extraction to the protocol endpoints.
-navLabel: Hono Routes
+description: Connect authentication, validation, usage enforcement, and Extraction to the protocol endpoints.
+navLabel: Hono routes
 contentType: Tutorial
 ---
 
@@ -30,7 +30,7 @@ app.post("/verify", (c) =>
 
 </CodeBlock>
 
-Apply the same bearer check to usage and extraction:
+Apply the same bearer check to usage and Extraction:
 
 <CodeBlock label="src/index.ts">
 
@@ -54,6 +54,6 @@ export default app
 
 </CodeBlock>
 
-`handleExtract` must parse `extractRequestSchema`, confirm a matcher accepts the target URL, reserve usage, dispatch to the matching source, validate the response, and settle usage.
+`handleExtract` must parse `extractRequestSchema`, confirm a matcher accepts the target URL, reserve usage, dispatch to the matching Plugin, validate the response, and settle usage.
 
 </DocSection>

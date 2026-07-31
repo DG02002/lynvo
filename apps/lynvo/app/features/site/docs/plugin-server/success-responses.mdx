@@ -1,15 +1,15 @@
 ---
-title: Return successful extraction responses
-description: Return normalized nodes with the source metadata Lynvo needs.
-navLabel: Success Responses
+title: Return successful Extraction responses
+description: Return Media Nodes with the Source metadata Lynvo needs.
+navLabel: Success responses
 contentType: Reference
 ---
 
 <DocSection id="success-schema">
 
-## Return a successful extraction response
+## Return a successful Extraction response
 
-Every successful extraction returns source metadata, an array of normalized nodes, and an extensions object.
+Every successful Extraction returns Source metadata, an array of Media Nodes, and an extensions object.
 
 <CodeBlock label="Successful response">
 
@@ -43,12 +43,12 @@ The `source` object supports:
 | `pluginServerId` | Yes      | Matches the manifest       |
 | `displayName`    | Yes      | Plugin Server display name |
 | `iconUrl`        | No       | Plugin Server icon         |
-| `pluginId`       | No       | Matches a declared source  |
+| `pluginId`       | No       | Matches a declared Plugin  |
 | `sourceName`     | No       | Source display name        |
 | `sourceIconUrl`  | No       | Source icon                |
 | `pageTitle`      | No       | Extracted page title       |
 | `audio`          | No       | Audio-language summary     |
 
-Lynvo owns layout, watched state, saved selection, playback state, and mirror caching. Do not return UI instructions.
+Lynvo owns layout, watched state, saved selection, playback state, and link caching. Do not return interface instructions.
 
 </DocSection>

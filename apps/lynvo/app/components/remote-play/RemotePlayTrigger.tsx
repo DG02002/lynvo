@@ -20,8 +20,8 @@ export const RemotePlayTrigger = ({
     )}
     title={
       activeSessionId
-        ? `Connected to ${connectedDeviceName}`
-        : "Remote Play on device"
+        ? `Remote Play connected to ${connectedDeviceName || "unnamed device"}`
+        : "Set up or control Remote Play"
     }
   >
     <HugeiconsIcon icon={AirplayLineIcon} className="size-5" />

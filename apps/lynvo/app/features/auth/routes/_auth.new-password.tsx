@@ -57,7 +57,7 @@ export default function NewPassword() {
         setPasswordChangeError(
           getUserFacingErrorMessage(
             error,
-            "Unable to change the password. Try again."
+            "The password couldn’t be changed. Check the current password, then try again."
           )
         )
       }
@@ -81,7 +81,7 @@ export default function NewPassword() {
                 Change your password
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Enter a new password below to change your password
+                Enter the current password, then choose a new password.
               </p>
             </div>
             <FieldGroup className="gap-4">
@@ -98,7 +98,7 @@ export default function NewPassword() {
                       field.handleChange(value)
                     }}
                     onBlur={field.handleBlur}
-                    label="Old password"
+                    label="Current password"
                     errors={field.state.meta.errors}
                   />
                 )}
@@ -147,8 +147,8 @@ export default function NewPassword() {
                 children={(isSubmitting) => (
                   <AuthSubmitButton
                     isSubmitting={isSubmitting}
-                    submitText="Continue"
-                    submittingText="Changing…"
+                    submitText="Change password"
+                    submittingText="Changing password…"
                     className="mt-2"
                   />
                 )}

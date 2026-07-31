@@ -53,6 +53,6 @@ describe("browser device name", () => {
   })
 
   it("uses a safe fallback when no user agent is available", () => {
-    expect(getBrowserDeviceName("")).toBe("Unknown Device")
+    expect(getBrowserDeviceName("")).toBe("Unnamed device")
   })
 })

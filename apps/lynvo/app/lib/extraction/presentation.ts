@@ -24,7 +24,11 @@ export const decideSavePresentation = (
   links: ReadonlyArray<ExtractedLink>
 ): SavePresentation => {
   if (links.length === 0) {
-    return { kind: "error", message: "No links found on this page." }
+    return {
+      kind: "error",
+      message:
+        "This Source page doesn’t contain supported links. Try a different link.",
+    }
   }
 
   const hasFolder = links.some((link) => link.type === "folder")
@@ -38,5 +42,9 @@ export const decideSavePresentation = (
     return { kind: "directSave", link: directFiles[0] }
   }
 
-  return { kind: "error", message: "No playable links found on this page." }
+  return {
+    kind: "error",
+    message:
+      "Supported links were found, but none can be played. Try another Source page.",
+  }
 }

@@ -18,7 +18,7 @@ Return an error code that Lynvo can act on and a message safe for display. Do no
   "ok": false,
   "error": {
     "code": "PASSWORD_REQUIRED",
-    "message": "This source requires a content password.",
+    "message": "This Source requires a content password.",
     "retryAfterSeconds": 60
   },
   "extensions": {}
@@ -31,12 +31,12 @@ Protocol version `1.0` defines these error codes:
 
 | Code                | Use when                                    |
 | ------------------- | ------------------------------------------- |
-| `UNSUPPORTED_URL`   | No source matcher accepts the URL           |
+| `UNSUPPORTED_URL`   | No Source matcher accepts the URL           |
 | `AUTH_INVALID`      | The Plugin Server bearer key is rejected    |
-| `AUTH_REQUIRED`     | Required source credentials are missing     |
+| `AUTH_REQUIRED`     | Required Source credentials are missing     |
 | `RATE_LIMITED`      | A finite usage limit is exhausted           |
 | `TEMPORARY_FAILURE` | A later retry may succeed                   |
-| `PERMANENT_FAILURE` | The source cannot complete the request      |
+| `PERMANENT_FAILURE` | The Source cannot complete the request      |
 | `PASSWORD_REQUIRED` | A content password is required              |
 | `INVALID_PASSWORD`  | The supplied content password failed        |
 | `NODE_EXPIRED`      | A lazy node target is no longer valid       |

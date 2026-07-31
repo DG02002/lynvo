@@ -21,7 +21,7 @@ pnpm wrangler deploy
 
 </CodeBlock>
 
-Call all four endpoints at the deployed HTTPS origin. Confirm the production secret works and the manifest contains only production URLs.
+Call all four required endpoints at the deployed HTTPS origin. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
 
 Use bounded upstream requests, reject unsupported hosts, and record structured logs without credentials. Keep the deployment origin stable after users connect it.
 

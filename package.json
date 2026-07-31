@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
-    "check": "pnpm run check:terminology && pnpm -r --if-present run check",
+    "check": "pnpm run check:terminology && pnpm run check:copy && pnpm -r --if-present run check",
+    "check:copy": "node scripts/check-copy.mjs",
     "check:terminology": "node scripts/check-plugin-server-terminology.mjs",
     "dev": "pnpm --filter @lynvo/app dev",
     "dev:local": "pnpm --filter @lynvo/app dev:local",

@@ -9,7 +9,7 @@ import { getServerEnv } from "~/lib/env.server"
 import type { Route } from "./+types/_auth.tv"
 
 export function meta(_: Route.MetaArgs) {
-  return [{ title: "TV Sign In | Lynvo" }]
+  return [{ title: "TV login | Lynvo" }]
 }
 
 export async function loader(args: Route.LoaderArgs): Promise<any> {

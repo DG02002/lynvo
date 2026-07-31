@@ -3,15 +3,16 @@ import { isRouteErrorResponse } from "react-router"
 import type { Route } from "../+types/root"
 
 export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
-  let message = "Unable to load this page"
-  let details = "An unexpected error occurred."
+  let message = "Page couldn’t be loaded"
+  let details = "Try loading the page again."
   let stack: string | undefined
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error"
+    message =
+      error.status === 404 ? "Page not found" : "Page couldn’t be loaded"
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "The address may be incorrect, or the page may have moved."
         : error.statusText || details
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message
@@ -34,7 +35,7 @@ export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
           className="rounded-md border border-border px-4 py-2"
           onClick={() => window.location.reload()}
         >
-          Try again
+          Reload page
         </button>
       </div>
       {stack && (

@@ -69,7 +69,7 @@ export function SignupForm() {
             deviceName: getBrowserDeviceName(),
           }),
           12_000,
-          "Convex sign-in timed out."
+          "Account creation timed out. Try again."
         )
         if (!result.signingIn) {
           throw new Error(
@@ -96,6 +96,7 @@ export function SignupForm() {
     <AuthFormShell
       ariaLabel="Create an account form"
       heading={authCopy.signup.pageHeading}
+      subheading={authCopy.signup.pageSubheading}
       switchPrompt={authCopy.signup.switchPrompt}
       switchLinkText={authCopy.signup.switchLink}
       switchTo={`${authPaths.signIn}${location.search}`}
@@ -149,7 +150,7 @@ export function SignupForm() {
               field.handleChange(value)
             }}
             onBlur={field.handleBlur}
-            label="Confirm Password"
+            label="Confirm password"
             errors={field.state.meta.errors}
           />
         )}

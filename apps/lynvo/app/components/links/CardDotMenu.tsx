@@ -53,6 +53,7 @@ const CardDotMenuContent = ({
 }: CardDotMenuContentProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const isDraft = variant === "draft"
+  const itemLabel = item.title || item.url
   const handleCopyLink = async () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -92,16 +93,22 @@ const CardDotMenuContent = ({
               variant="ghost"
               size="icon"
               disabled={isRefreshing}
-              aria-label={isRefreshing ? "Re-selecting links" : "Open menu"}
+              aria-label={
+                isRefreshing
+                  ? `Reloading choices for ${itemLabel}`
+                  : `Open menu for ${itemLabel}`
+              }
               className="size-8 text-foreground shrink-0 hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground"
             >
               {isRefreshing ? (
-                <Spinner />
+                <Spinner aria-hidden="true" />
               ) : (
                 <HugeiconsIcon icon={EllipsisIcon} />
               )}
               <span className="sr-only">
-                {isRefreshing ? "Re-selecting links" : "Open menu"}
+                {isRefreshing
+                  ? `Reloading choices for ${itemLabel}`
+                  : `Open menu for ${itemLabel}`}
               </span>
             </Button>
           }
@@ -114,7 +121,7 @@ const CardDotMenuContent = ({
                 onClick={() => setIsRemoveDialogOpen(true)}
               >
                 <HugeiconsIcon icon={Delete02Icon} />
-                Remove Draft
+                Remove draft
               </DropdownMenuItem>
             </DropdownMenuGroup>
           ) : (
@@ -122,14 +129,14 @@ const CardDotMenuContent = ({
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={handleCopyLink}>
                   <HugeiconsIcon icon={CopyIcon} />
-                  Copy Source Link
+                  Copy Source link
                 </DropdownMenuItem>
                 {!playableLink && (
                   <DropdownMenuItem
                     onClick={() => actions.hardRefresh(item.url)}
                   >
                     <HugeiconsIcon icon={RefreshDotIcon} />
-                    Re-Select Links
+                    Reload link choices
                   </DropdownMenuItem>
                 )}
                 {playableLink && (
@@ -168,7 +175,7 @@ const CardDotMenuContent = ({
                       onClick={() => setIsRemoveDialogOpen(true)}
                     >
                       <HugeiconsIcon icon={Delete02Icon} />
-                      Remove
+                      Remove saved link
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </>

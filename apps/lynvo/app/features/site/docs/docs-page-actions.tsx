@@ -72,7 +72,7 @@ export const DocsPageActions = ({
       render={
         <a href={page.markdownUrl} target="_blank" rel="noreferrer">
           <MarkdownIcon />
-          <span>View as Markdown</span>
+          <span>View this page as Markdown</span>
         </a>
       }
     />

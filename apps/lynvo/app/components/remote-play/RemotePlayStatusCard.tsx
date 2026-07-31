@@ -20,7 +20,9 @@ export const RemotePlayStatusCard = ({
         <p className="text-xs font-medium text-primary uppercase tracking-wide">
           {label}
         </p>
-        <p className="font-semibold text-foreground">{deviceName}</p>
+        <p className="font-semibold text-foreground">
+          {deviceName || "Device name unavailable"}
+        </p>
       </div>
     </div>
     <Button
@@ -29,7 +31,7 @@ export const RemotePlayStatusCard = ({
       onClick={() => void onDisconnect()}
       className="text-destructive hover:text-destructive hover:bg-destructive"
     >
-      Disconnect
+      Disconnect Remote Play
     </Button>
   </div>
 )

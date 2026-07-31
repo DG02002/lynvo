@@ -84,26 +84,30 @@ export const RemoteControlProvider = ({
         if (outcome.type === "connected") {
           toast.success(`Connected to ${outcome.deviceName}.`)
         } else if (outcome.type === "connect-failed") {
-          toast.error("Unable to connect. Check both devices and try again.")
+          toast.error(
+            "Remote Play couldn’t connect. Keep Lynvo open on both devices, then try again."
+          )
         } else if (
           outcome.type === "disconnected" ||
           outcome.type === "receiver-disconnected"
         ) {
-          toast.info("Disconnected")
+          toast.info("Remote Play disconnected")
         } else if (outcome.type === "disconnect-failed") {
-          toast.error("Unable to disconnect. Try again.")
+          toast.error(
+            "Remote Play couldn’t disconnect. Check the connection, then try again."
+          )
         } else if (outcome.type === "send-failed") {
           toast.error(
-            "Unable to send the command. Check the connection and try again."
+            "The Remote Play command couldn’t be sent. Check the connection, then try again."
           )
         } else if (outcome.type === "receiver-connected") {
           toast.info(`Connected to ${outcome.deviceName}`)
         } else if (outcome.type === "receiver-ended") {
-          toast.info("Remote connection ended")
+          toast.info("Remote Play connection ended")
         } else if (outcome.command === "play") {
-          toast.info("Remote: Playing")
+          toast.info("Playing on the connected device")
         } else if (outcome.command === "pause") {
-          toast.info("Remote: Paused")
+          toast.info("Paused on the connected device")
         }
       }),
     [machine]

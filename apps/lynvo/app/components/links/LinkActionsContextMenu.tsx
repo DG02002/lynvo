@@ -19,12 +19,14 @@ import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 
 interface LinkActionsDotMenuProps {
+  itemLabel: string
   onCopyLink: () => void
   onOpenInPlayer: (player: PlayerDefinition) => void
   className?: string
 }
 
 export function LinkActionsDotMenu({
+  itemLabel,
   onCopyLink,
   onOpenInPlayer,
   className,
@@ -46,7 +48,7 @@ export function LinkActionsDotMenu({
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />
-            <span className="sr-only">Open link menu</span>
+            <span className="sr-only">Open menu for {itemLabel}</span>
           </Button>
         }
       />

@@ -35,11 +35,17 @@ export const signInSchema = z.strictObject({
     .string()
     .trim()
     .min(1, "Username is required.")
-    .max(USERNAME_MAX_LENGTH, "Invalid username or password."),
+    .max(
+      USERNAME_MAX_LENGTH,
+      "The username or password is incorrect. Check both fields, then try again."
+    ),
   password: z
     .string()
     .min(1, "Password is required.")
-    .max(PASSWORD_MAX_LENGTH, "Invalid username or password."),
+    .max(
+      PASSWORD_MAX_LENGTH,
+      "The username or password is incorrect. Check both fields, then try again."
+    ),
 })
 
 export const signUpSchema = z

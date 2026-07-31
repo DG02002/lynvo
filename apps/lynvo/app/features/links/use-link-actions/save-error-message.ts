@@ -10,11 +10,11 @@ const isTaggedSaveError = (error: unknown): error is TaggedSaveError =>
 
 export const getSaveErrorMessage = (error: unknown): string => {
   if (!isTaggedSaveError(error)) {
-    return "Unable to process this link. Try again."
+    return "The link couldn’t be opened. Check the link, then try again."
   }
 
   if (error._tag === "UnauthorizedError") {
-    return "Session expired. Sign in again."
+    return "The session expired. Log in, then save the link again."
   }
 
   if (error._tag === "ValidationError" && typeof error.message === "string") {
@@ -22,11 +22,11 @@ export const getSaveErrorMessage = (error: unknown): string => {
   }
 
   if (error._tag === "ExtractionError") {
-    return "Unable to extract links from this URL. Check the link and try again."
+    return "Links couldn’t be loaded from this address. Check the link, then try again."
   }
 
   return getUserFacingErrorMessage(
     error,
-    "Unable to process this link. Try again."
+    "The link couldn’t be opened. Check the link, then try again."
   )
 }

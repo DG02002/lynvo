@@ -27,12 +27,14 @@ import {
 } from "~/components/ui/alert-dialog"
 
 interface ResolvableLinkMenuProps {
+  itemLabel: string
   onCopyLink: () => void
   onRefresh: () => void
   onRemove: () => void
 }
 
 export const ResolvableLinkMenu = ({
+  itemLabel,
   onCopyLink,
   onRefresh,
   onRemove,
@@ -46,7 +48,7 @@ export const ResolvableLinkMenu = ({
           render={
             <Button variant="ghost" size="icon" className="size-9">
               <HugeiconsIcon icon={EllipsisIcon} />
-              <span className="sr-only">Open resolvable item menu</span>
+              <span className="sr-only">Open menu for {itemLabel}</span>
             </Button>
           }
         />
@@ -63,7 +65,7 @@ export const ResolvableLinkMenu = ({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onRefresh}>
               <HugeiconsIcon icon={Refresh01Icon} />
-              Refresh
+              Refresh playable links
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
@@ -73,7 +75,7 @@ export const ResolvableLinkMenu = ({
               onClick={() => setIsRemoveDialogOpen(true)}
             >
               <HugeiconsIcon icon={Delete02Icon} />
-              Remove
+              Remove saved item
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
@@ -101,7 +103,7 @@ export const ResolvableLinkMenu = ({
                 setIsRemoveDialogOpen(false)
               }}
             >
-              Remove
+              Remove saved item
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

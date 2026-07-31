@@ -28,8 +28,14 @@ describe("sign-in form", () => {
     const renderedSignIn = render(<RouterProvider router={signInRouter} />)
 
     expect(
-      await screen.findByText("Turnstile bypassed in dev mode")
-    ).toHaveAttribute("data-turnstile-action", "lynvo-sign-in")
+      await screen.findByText(
+        "Enter the username and password for the account."
+      )
+    ).toBeVisible()
+    expect(screen.getByText("Turnstile bypassed in dev mode")).toHaveAttribute(
+      "data-turnstile-action",
+      "lynvo-sign-in"
+    )
     renderedSignIn.unmount()
 
     const signUpRouter = createMemoryRouter([
@@ -43,8 +49,12 @@ describe("sign-in form", () => {
     render(<RouterProvider router={signUpRouter} />)
 
     expect(
-      await screen.findByText("Turnstile bypassed in dev mode")
-    ).toHaveAttribute("data-turnstile-action", "lynvo-sign-up")
+      await screen.findByText("Choose a username and password.")
+    ).toBeVisible()
+    expect(screen.getByText("Turnstile bypassed in dev mode")).toHaveAttribute(
+      "data-turnstile-action",
+      "lynvo-sign-up"
+    )
   })
 
   it("renders invalid credentials as a persistent form alert", async () => {
@@ -59,7 +69,8 @@ describe("sign-in form", () => {
         new Response(
           JSON.stringify({
             code: "invalid_credentials",
-            error: "Invalid username or password.",
+            error:
+              "The username or password is incorrect. Check both fields, then try again.",
           }),
           { status: 401 }
         )
@@ -82,10 +93,12 @@ describe("sign-in form", () => {
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "existing-password" },
     })
-    fireEvent.submit(screen.getByRole("form", { name: "Sign in form" }))
+    fireEvent.submit(screen.getByRole("form", { name: "Log in form" }))
 
     expect(
-      await screen.findByText("Invalid username or password.")
+      await screen.findByText(
+        "The username or password is incorrect. Check both fields, then try again."
+      )
     ).toBeVisible()
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
@@ -102,7 +115,7 @@ describe("sign-in form", () => {
         new Response(
           JSON.stringify({
             code: "service_unavailable",
-            error: "Sign-in is temporarily unavailable. Try again later.",
+            error: "Login is temporarily unavailable. Try again later.",
           }),
           { status: 503 }
         )
@@ -125,15 +138,17 @@ describe("sign-in form", () => {
     fireEvent.change(screen.getByLabelText("Password"), {
       target: { value: "existing-password" },
     })
-    fireEvent.submit(screen.getByRole("form", { name: "Sign in form" }))
+    fireEvent.submit(screen.getByRole("form", { name: "Log in form" }))
 
     expect(
       await screen.findByText(
-        "Sign-in is temporarily unavailable. Try again later."
+        "Login is temporarily unavailable. Try again later."
       )
     ).toBeVisible()
     expect(
-      screen.queryByText("Invalid username or password.")
+      screen.queryByText(
+        "The username or password is incorrect. Check both fields, then try again."
+      )
     ).not.toBeInTheDocument()
   })
 })

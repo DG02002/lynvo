@@ -146,7 +146,7 @@ export const LinkSelectionTreeItem = ({
             <span className="truncate">{link.size}</span>
           )}
           {isResolving ? (
-            <Spinner />
+            <Spinner aria-label={`Loading ${link.label}…`} />
           ) : canExpand ? (
             <HugeiconsIcon
               icon={ArrowRight01Icon}

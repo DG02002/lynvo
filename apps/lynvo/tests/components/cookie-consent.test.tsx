@@ -33,25 +33,25 @@ describe("CookieConsent", () => {
     expect(banner).toHaveClass("bg-background/70", "text-foreground")
     expect(banner).not.toHaveClass("bg-zinc-900/85", "text-white")
     expect(banner.className).not.toContain("0_-1px_0")
-    expect(screen.getByRole("heading", { name: "We use cookies" })).toHaveClass(
-      "font-normal"
-    )
     expect(
-      screen.getByText(/We use cookies to help this site function/)
+      screen.getByRole("heading", { name: "Lynvo uses cookies" })
+    ).toHaveClass("font-normal")
+    expect(
+      screen.getByText(/Lynvo uses cookies to operate this site/)
     ).toHaveClass("text-xs")
     expect(
-      screen.getByText(/We use cookies to help this site function/)
+      screen.getByText(/Lynvo uses cookies to operate this site/)
     ).not.toHaveClass("sm:text-sm")
 
     expect(
       screen.getByRole("button", {
-        name: "Accept all",
+        name: "Accept all cookies",
       })
     ).toHaveClass("bg-secondary", "text-secondary-foreground")
 
     fireEvent.click(
       screen.getAllByRole("button", {
-        name: "Manage Cookies",
+        name: "Manage cookies",
       })[0]
     )
 
@@ -62,5 +62,10 @@ describe("CookieConsent", () => {
     expect(screen.getByText("Strictly necessary")).toHaveClass(
       "text-foreground"
     )
+    expect(screen.getByRole("link", { name: "cookie policy" })).toHaveAttribute(
+      "href",
+      "/policies/cookie-policy"
+    )
+    expect(screen.queryByText("Learn more")).not.toBeInTheDocument()
   })
 })

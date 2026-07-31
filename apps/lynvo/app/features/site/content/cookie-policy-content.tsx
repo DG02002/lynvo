@@ -26,7 +26,7 @@ const cookieRows = [
     source: "Lynvo",
     name: "auth-transaction",
     duration: "10 minutes",
-    purpose: "Completing a sign-in transaction securely",
+    purpose: "Completing a login transaction securely",
   },
   {
     source: "Lynvo",
@@ -60,16 +60,15 @@ const browserStorageRows = [
 ] as const
 
 export const CookiePolicyContent = () => (
-  <PolicyLayout title="Cookie policy" updatedAt="July 23, 2026">
+  <PolicyLayout title="Cookie policy" updatedAt="July 31, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
-      This Cookie Policy explains how Lynvo uses cookies and similar
-      technologies in connection with the Service and how you can manage them.
-      It should be read with the{" "}
+      This cookie policy explains how Lynvo uses cookies and similar
+      technologies and how you can manage them. It should be read with the{" "}
       <Link
         to={policyPaths.privacyPolicy}
         className="underline underline-offset-4"
       >
-        Privacy Policy
+        privacy policy
       </Link>
       , which explains how Lynvo processes personal information more broadly.
     </p>
@@ -84,17 +83,17 @@ export const CookiePolicyContent = () => (
         This policy also uses the word “cookies” for similar browser
         technologies, including local storage and identifiers used by service
         providers. First-party cookies are set by Lynvo. Third-party cookies or
-        identifiers may be set by a provider that helps deliver or secure the
-        Service.
+        identifiers may be set by a service provider that helps deliver or
+        secure Lynvo.
       </p>
     </PolicySection>
 
     <PolicySection title="Necessary cookies">
       <p>
-        Necessary cookies are required to operate Lynvo. They support sign-in,
+        Necessary cookies are required to operate Lynvo. They support login,
         session continuity, request security, fraud and abuse prevention, and
         user-selected functionality. They cannot be disabled through Lynvo’s
-        cookie preferences because parts of the Service would no longer work.
+        cookie preferences because parts of Lynvo would no longer work.
       </p>
 
       <div className="my-6 overflow-x-auto">
@@ -134,7 +133,7 @@ export const CookiePolicyContent = () => (
     <PolicySection title="Similar browser storage">
       <p>
         Lynvo uses local browser storage for settings that do not need to be
-        sent with every web request. The main items are listed below.
+        sent with every web request. The table lists the main items.
       </p>
 
       <div className="my-6 overflow-x-auto">
@@ -168,7 +167,7 @@ export const CookiePolicyContent = () => (
       <p>
         Analytics cookies can help a service understand traffic, performance,
         and how visitors interact with its features. Lynvo does not currently
-        set non-essential analytics cookies. Selecting an analytics preference
+        set optional analytics cookies. Selecting an analytics preference
         records your choice but does not by itself install an analytics tool.
       </p>
       <p>
@@ -195,17 +194,18 @@ export const CookiePolicyContent = () => (
 
     <PolicySection title="Managing cookies">
       <p>
-        You can accept all optional categories, reject non-essential cookies, or
-        make category-by-category choices in Cookie Preferences. The Cookie
-        Preferences link in the footer lets you return to those settings at any
-        time.
+        You can select <strong>Accept all cookies</strong>, select{" "}
+        <strong>Reject optional cookies</strong>, or choose individual
+        categories in <strong>Cookie preferences</strong>. Select{" "}
+        <strong>Manage cookies</strong> in the footer to change these choices at
+        any time.
       </p>
       <p>
         Your choices are specific to the browser and device where you save them.
         You may need to choose again after clearing browser data, using another
         browser, or using another device. Your browser settings can also block
         or delete cookies and local storage. Blocking necessary storage may
-        prevent sign-in, security checks, appearance settings, or other features
+        prevent login, security checks, appearance settings, or other features
         from working correctly.
       </p>
     </PolicySection>
@@ -221,8 +221,8 @@ export const CookiePolicyContent = () => (
 
     <PolicySection title="Questions">
       <p>
-        Use the official contact method displayed by the Service if you have a
-        question about this Cookie Policy or Lynvo’s use of browser storage.
+        Use the official contact method displayed by Lynvo if you have a
+        question about this cookie policy or Lynvo’s use of browser storage.
       </p>
     </PolicySection>
   </PolicyLayout>

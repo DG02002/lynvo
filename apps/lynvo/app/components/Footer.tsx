@@ -3,11 +3,11 @@ import { policyPaths, sitePaths } from "~/lib/paths"
 import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
 const supportLinks = [
-  { label: "Help Center", to: sitePaths.helpCenter },
+  { label: "Help center", to: sitePaths.helpCenter },
 ] as const
 
 const companyLinks = [
-  { label: "About Us", to: sitePaths.about },
+  { label: "About Lynvo", to: sitePaths.about },
   { label: "Pricing", to: sitePaths.pricing },
   { label: "Plugins", to: sitePaths.plugins },
   { label: "Changelog", to: sitePaths.changelog },
@@ -15,15 +15,15 @@ const companyLinks = [
 
 const docsLinks = [
   { label: "Docs", to: sitePaths.docs },
-  { label: "Android TV Setup", to: sitePaths.androidTvSetup },
+  { label: "Set up Android TV", to: sitePaths.androidTvSetup },
   { label: "Plugin Server", to: "/docs/plugin-server" },
 ] as const
 
 const policyLinks = [
-  { label: "Terms of Use", to: policyPaths.termsOfUse },
-  { label: "Privacy Policy", to: policyPaths.privacyPolicy },
-  { label: "Cookie Policy", to: policyPaths.cookiePolicy },
-  { label: "Usage Policy", to: policyPaths.usagePolicy },
+  { label: "Terms of use", to: policyPaths.termsOfUse },
+  { label: "Privacy policy", to: policyPaths.privacyPolicy },
+  { label: "Cookie policy", to: policyPaths.cookiePolicy },
+  { label: "Usage policy", to: policyPaths.usagePolicy },
 ] as const
 
 const footerLinkClassName =
@@ -78,7 +78,7 @@ export function Footer() {
             links={docsLinks}
           />
           <FooterLinkGroup
-            heading="Terms & Policies"
+            heading="Terms and policies"
             headingId="footer-policies-heading"
             links={policyLinks}
           />
@@ -93,7 +93,7 @@ export function Footer() {
             className="underline underline-offset-4 hover:text-foreground"
             onClick={openCookiePreferences}
           >
-            Manage Cookies
+            Manage cookies
           </button>
         </p>
       </div>

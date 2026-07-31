@@ -151,7 +151,7 @@ export const HomeSaveDemo = () => {
                 className={`absolute top-1.25 right-1.25 flex size-11 items-center justify-center rounded-full bg-foreground text-background transition-opacity ${isLinkPasted ? "opacity-100" : "opacity-35"}`}
               >
                 {isSaving ? (
-                  <Spinner className="size-6" />
+                  <Spinner className="size-6" aria-label="Saving demo link…" />
                 ) : (
                   <HugeiconsIcon
                     icon={ArrowRight02Icon}

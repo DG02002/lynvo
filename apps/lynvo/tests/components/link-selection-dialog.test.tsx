@@ -92,7 +92,7 @@ describe("LinkSelectionDialog", () => {
         .every((checkbox) => checkbox.hasAttribute("data-checked"))
     ).toBe(true)
 
-    fireEvent.click(screen.getByRole("button", { name: "Save Selected" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save selected" }))
     expect(onConfirm).toHaveBeenCalledWith([
       expect.objectContaining({ id: "video-one" }),
       expect.objectContaining({ id: "video-two" }),
@@ -237,7 +237,9 @@ describe("LinkSelectionDialog", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close link selection" })
+    )
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
@@ -270,7 +272,7 @@ describe("LinkSelectionDialog", () => {
     )
 
     expect(onSaveDraft).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole("button", { name: "Save Draft" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }))
 
     expect(onSaveDraft).toHaveBeenCalledWith()
     expect(onOpenChange).toHaveBeenCalledWith(false)

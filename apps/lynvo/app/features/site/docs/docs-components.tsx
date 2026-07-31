@@ -209,7 +209,11 @@ export function CodeBlock({
         <button
           type="button"
           onClick={() => void copyCode()}
-          aria-label={copyState === "copied" ? "Code copied" : "Copy code"}
+          aria-label={
+            copyState === "copied"
+              ? `Copied ${label}`
+              : `Copy code from ${label}`
+          }
           className="relative flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground transition-[background-color,scale] duration-150 hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring active:scale-[0.96]"
         >
           <span className="relative size-3.5" aria-hidden="true">
@@ -234,10 +238,10 @@ export function CodeBlock({
           </span>
           <span aria-live="polite" className="sr-only">
             {copyState === "copied"
-              ? "Copied"
+              ? `${label} copied`
               : copyState === "error"
-                ? "Try again"
-                : "Copy"}
+                ? `${label} couldn’t be copied. Try again.`
+                : ""}
           </span>
         </button>
       </figcaption>
@@ -269,7 +273,7 @@ export const AndroidTvPlayerDefaults = () => (
     <div className="flex flex-col gap-1">
       <p className="font-medium">Recommended player defaults</p>
       <p className="text-sm leading-6 text-muted-foreground">
-        Lynvo selects a player based on the link’s resume support.
+        Lynvo selects a player based on whether the video supports seeking.
       </p>
     </div>
 
@@ -284,7 +288,7 @@ export const AndroidTvPlayerDefaults = () => (
           <span>Just (Video) Player</span>
         </div>
         <span className="text-sm text-muted-foreground">
-          Resume-supported links
+          Videos that support seeking
         </span>
       </div>
 
@@ -298,13 +302,13 @@ export const AndroidTvPlayerDefaults = () => (
           <span>VLC for Android</span>
         </div>
         <span className="text-sm text-muted-foreground">
-          Links without resume support
+          Videos that require standard playback
         </span>
       </div>
     </div>
 
     <p className="text-sm leading-6 text-muted-foreground">
-      Change either default in <strong>Settings</strong> after you sign in.
+      Change either default in <strong>Settings</strong> after you log in.
     </p>
   </section>
 )

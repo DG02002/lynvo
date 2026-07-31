@@ -1,21 +1,21 @@
 export const pricingFaqs = [
   {
     value: "storage-cap",
-    question: "Why does the Free plan have a 3 MB storage limit?",
+    question: "What counts toward the Free plan’s 3 MB storage limit?",
     answer:
-      "The limit helps keep the service reliable. It applies to Lynvo account records and metadata, not to the size of linked video files. A saved-link record can use up to 1 MB.",
+      "Saved links, folders, and playback details count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 1 MB, and the plan allows up to 100 saved links.",
   },
   {
     value: "official-operation",
-    question: "What counts as an Lynvo Plugin Server extraction?",
+    question: "What counts as a Lynvo Plugin Server request?",
     answer:
-      "Lynvo counts one use after accepting an Lynvo Plugin Server extraction request. The monthly allowance is shared across all official Plugins and direct links. Browsing Lynvo, opening Settings, and using an Custom Plugin Server do not use this allowance.",
+      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 15-request daily limit are shared across Lynvo Plugins and direct media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
   },
   {
     value: "limit-reached",
-    question: "What happens after an extraction limit is reached?",
+    question: "What happens after a Lynvo Plugin Server limit is reached?",
     answer:
-      "New Lynvo Plugin Server extraction requests covered by that limit remain unavailable until the limit resets. Saved links, settings, and Custom Plugin Servers remain available.",
+      "New Lynvo Plugin Server requests remain unavailable until the applicable daily or monthly limit resets. Saved links, Settings, and Custom Plugin Servers remain available.",
   },
   {
     value: "operating-systems",

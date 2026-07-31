@@ -1,6 +1,5 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { ArrowLeft01Icon, SmartPhone02Icon } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { SettingsList, SettingsRow } from "./settings-layout"
@@ -46,7 +45,7 @@ interface ActiveSessionsViewProps {
   busy: string | null
   onBack: () => void
   onRevokeSession: (sessionIndex: number) => Promise<void>
-  onRevokeAllSessions: () => Promise<void>
+  onRevokeAllSessions: () => void
 }
 
 const getSessionClientName = (deviceName: string, isMobile: boolean) => {
@@ -58,6 +57,9 @@ const getSessionClientName = (deviceName: string, isMobile: boolean) => {
     ? "Lynvo Android App"
     : "Lynvo iOS App"
 }
+
+const getSessionDeviceName = (deviceName: string) =>
+  deviceName.trim() || "Unnamed device"
 
 const formatSessionDate = (lastActiveAt: number) =>
   new Date(lastActiveAt)
@@ -93,9 +95,8 @@ export const ActiveSessionsView = ({
     </div>
 
     <p className="text-sm text-muted-foreground leading-relaxed">
-      Review recent sessions and trusted devices associated with your account.
-      Trusted devices can receive security prompts, like approving sign-ins or
-      unlocking your account.
+      Review devices logged in to the account. End any session that is no longer
+      recognized or needed.
     </p>
 
     <SettingsList>
@@ -118,14 +119,14 @@ export const ActiveSessionsView = ({
               <div className="min-w-0 flex flex-col gap-0.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-sm truncate">
-                    {session.deviceName}
+                    {getSessionDeviceName(session.deviceName)}
                   </span>
                   {session.isCurrent && (
                     <Badge
                       variant="secondary"
                       className="uppercase text-[9px] font-semibold tracking-wider px-2 py-0.5 bg-muted text-foreground rounded-full"
                     >
-                      Current Session
+                      Current session
                     </Badge>
                   )}
                 </div>
@@ -144,7 +145,6 @@ export const ActiveSessionsView = ({
                 className="rounded-full px-4 text-sm font-medium border-muted-foreground/30 hover:bg-muted/10 h-9 shrink-0"
                 onClick={async () => {
                   await onRevokeSession(sessionIndex)
-                  toast.success("Logged out device session")
                 }}
               >
                 Log out
@@ -161,8 +161,8 @@ export const ActiveSessionsView = ({
           Log out of all sessions
         </h3>
         <p className="text-sm text-muted-foreground leading-snug">
-          Log out of all active sessions across all devices, including your
-          current session. This may take up to 30 minutes.
+          End every active session, including this one. Session termination may
+          take up to 30 minutes.
         </p>
       </div>
       <Button

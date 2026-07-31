@@ -5,7 +5,7 @@ import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 
 export function meta() {
-  return [{ title: "Sign In with Another Device | Lynvo" }]
+  return [{ title: "Log in with another device | Lynvo" }]
 }
 
 export default function SignInWithAnotherDevice() {
@@ -16,7 +16,7 @@ export default function SignInWithAnotherDevice() {
           <div className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">
-              Scan to Sign In
+              Log in with another device
             </h1>
           </div>
 
@@ -30,7 +30,7 @@ export default function SignInWithAnotherDevice() {
               className="h-13.5 w-full"
               render={
                 <Link to={authPaths.signIn} viewTransition>
-                  Back to Log In
+                  Back to log in
                 </Link>
               }
             />

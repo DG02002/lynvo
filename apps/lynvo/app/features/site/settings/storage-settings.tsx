@@ -72,7 +72,7 @@ export function StorageSettings() {
       <SettingsPanel>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-normal text-muted-foreground">
-            Loading storage usage
+            Loading storage usage…
           </span>
           <Progress value={0} />
         </div>
@@ -108,13 +108,16 @@ export function StorageSettings() {
       const result = await updateRetentionDays({ days, deleteExpiredLinks })
       toast.success(
         result.deletedLinks > 0
-          ? `Auto-delete window updated. Removed ${result.deletedLinks} old recent cards.`
-          : "Auto-delete window updated"
+          ? `Auto-delete period updated. Removed ${result.deletedLinks} old saved links.`
+          : "Auto-delete period updated"
       )
       setPendingRetention(null)
     } catch (error) {
       toast.error(
-        getUserFacingErrorMessage(error, "Could not update auto-delete window")
+        getUserFacingErrorMessage(
+          error,
+          "The auto-delete period couldn’t be updated. Try again."
+        )
       )
     } finally {
       setIsUpdatingRetention(false)
@@ -127,12 +130,15 @@ export function StorageSettings() {
       const result = await clearRecentCards({})
       toast.success(
         result.deletedLinks > 0
-          ? `Removed ${result.deletedLinks} recent cards.`
-          : "No recent cards to remove"
+          ? `Removed ${result.deletedLinks} saved links.`
+          : "No saved links to remove"
       )
     } catch (error) {
       toast.error(
-        getUserFacingErrorMessage(error, "Could not remove recent cards")
+        getUserFacingErrorMessage(
+          error,
+          "Saved links couldn’t be removed. Try again."
+        )
       )
     } finally {
       setIsClearingRecentCards(false)
@@ -149,15 +155,15 @@ export function StorageSettings() {
           </span>
           <Progress value={progressPercent} />
           <span className="text-xs text-muted-foreground">
-            App-managed storage is quota-enforced. Authentication and device
-            records use an additional estimated{" "}
-            {formatBytes(usage.operationalBytes)}.
+            Saved links, folders, and playback details count toward this limit.
+            Account security and connected-device records use approximately{" "}
+            {formatBytes(usage.operationalBytes)} of additional storage.
           </span>
         </div>
 
         <SettingsList>
           <SettingsRow>
-            <SettingsRowInfo label="Auto-delete recent cards older than" />
+            <SettingsRowInfo label="Delete saved links after" />
             <Select
               value={String(usage.retentionDays)}
               onValueChange={handleRetentionChange}
@@ -197,11 +203,11 @@ export function StorageSettings() {
               <AlertDialogContent className="p-10">
                 <AlertDialogHeader className="place-items-center gap-4 w-full text-center">
                   <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-                    Clear history?
+                    Delete all saved links?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-                    This will remove all recent links from your history. This
-                    action cannot be undone.
+                    This permanently removes every saved link, folder, and
+                    playback detail from the account. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="flex flex-col gap-3 w-full mt-4">
@@ -209,7 +215,7 @@ export function StorageSettings() {
                     onClick={handleClearRecentCards}
                     className="w-full h-12 text-sm rounded-full"
                   >
-                    Clear History
+                    Delete all saved links
                   </AlertDialogAction>
                   <AlertDialogCancel
                     variant="outline"
@@ -237,10 +243,10 @@ export function StorageSettings() {
               Delete older links?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-              Changing auto-delete to {pendingRetention?.days} days will remove{" "}
-              {pendingRetention?.expiredLinkCount} older recent{" "}
-              {pendingRetention?.expiredLinkCount === 1 ? "card" : "cards"} from
-              your account. This action cannot be undone.
+              Changing auto-delete to {pendingRetention?.days} days will
+              permanently remove {pendingRetention?.expiredLinkCount} saved{" "}
+              {pendingRetention?.expiredLinkCount === 1 ? "link" : "links"}
+              from the account. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-3 w-full mt-4">
@@ -252,7 +258,7 @@ export function StorageSettings() {
               }}
               className="w-full h-12 text-sm rounded-full"
             >
-              Delete Older Links
+              Delete older links
             </AlertDialogAction>
             <AlertDialogCancel
               variant="outline"

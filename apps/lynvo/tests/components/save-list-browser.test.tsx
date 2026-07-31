@@ -149,7 +149,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Playable Item Alpha.mkv/ })
+      screen.getByText("Playable Item Alpha.mkv").closest("button")!
     )
 
     expect(
@@ -250,12 +250,16 @@ describe("SaveListBrowser", () => {
     }
 
     render(<Harness />)
-    const playableItemButton = screen.getByRole("button", {
-      name: /Playable Item One/,
-    })
+    const playableItemButton = screen
+      .getByText("Playable Item One")
+      .closest("button")!
     fireEvent.click(playableItemButton)
 
-    expect(await screen.findByRole("status", { name: "Loading" })).toBeVisible()
+    expect(
+      await screen.findByRole("status", {
+        name: "Loading playable links for Playable Item One…",
+      })
+    ).toBeVisible()
     expect(playableItemButton).toHaveAttribute(
       "data-resolution-state",
       "resolving"
@@ -290,10 +294,12 @@ describe("SaveListBrowser", () => {
       "expanded"
     )
     expect(
-      screen.getAllByRole("button", { name: "Open link menu" })
+      screen.getAllByRole("button", {
+        name: /Open menu for Play from Source Route/,
+      })
     ).toHaveLength(2)
     expect(
-      screen.getByRole("button", { name: "Open resolvable item menu" })
+      screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
 
     fireEvent.click(playableItemButton)
@@ -351,9 +357,9 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const failedPlayableItemButton = screen.getByRole("button", {
-      name: /Playable Item Resolution Failure/,
-    })
+    const failedPlayableItemButton = screen
+      .getByText("Playable Item Resolution Failure")
+      .closest("button")!
     fireEvent.click(failedPlayableItemButton)
 
     await waitFor(() => {
@@ -451,7 +457,7 @@ describe("SaveListBrowser", () => {
         Node.DOCUMENT_POSITION_FOLLOWING
       )
     ).toBe(true)
-    fireEvent.click(screen.getByRole("button", { name: /folder/i }))
+    fireEvent.click(screen.getByText("source.example").closest("button")!)
     expect(markWatched).toHaveBeenCalledWith(item.url, item.url)
   })
 
@@ -467,7 +473,9 @@ describe("SaveListBrowser", () => {
       <SaveListBrowser items={[]} isHydrating {...commonProps} />
     )
 
-    expect(screen.getByRole("status", { name: "Loading" })).toBeVisible()
+    expect(
+      screen.getByRole("status", { name: "Loading saved links…" })
+    ).toBeVisible()
 
     rerender(
       <SaveListBrowser items={[]} isHydrating={false} {...commonProps} />

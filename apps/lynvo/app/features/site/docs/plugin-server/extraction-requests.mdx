@@ -1,15 +1,15 @@
 ---
-title: Validate extraction requests
-description: Validate source URLs, lazy nodes, source selection, and credentials.
-navLabel: Extraction Requests
+title: Validate Extraction requests
+description: Validate Source URLs, lazy nodes, Plugin selection, and credentials.
+navLabel: Extraction requests
 contentType: Reference
 ---
 
 <DocSection id="request-schema">
 
-## Validate extraction requests
+## Validate Extraction requests
 
-`POST /extract` accepts a source URL or a lazy-node follow-up. Zod can reject malformed bodies before your adapter runs.
+`POST /extract` accepts a Source URL or a lazy-node follow-up request. Reject malformed bodies before the Plugin runs.
 
 <CodeBlock label="src/protocol.ts">
 
@@ -30,7 +30,7 @@ const nodeInput = z.object({
 
 </CodeBlock>
 
-Add optional source selection and credential fields to the request envelope:
+Add optional Plugin selection and credential fields to the request envelope:
 
 <CodeBlock label="src/protocol.ts">
 
@@ -50,7 +50,7 @@ export const extractRequestSchema = z.object({
 
 </CodeBlock>
 
-A source extraction request uses `sourceUrl`:
+A Source Extraction request uses `sourceUrl`:
 
 <CodeBlock label="POST /extract">
 

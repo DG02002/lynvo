@@ -35,8 +35,9 @@ export const PlayerSection = () => (
           Open links in a preferred player.
         </h2>
         <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Set different defaults for resume vs non-resume links. Lynvo
-          automatically opens the right app on your Android device.
+          Choose one player for videos that support seeking and another for
+          videos that must play from the beginning. Lynvo uses the matching
+          player on the Android device.
         </p>
       </div>
 
@@ -51,23 +52,23 @@ export const ExtractionSection = () => (
   <section className="relative overflow-hidden py-24 md:py-32">
     <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
       <SectionIntro
-        title="Extract supported links."
-        description="Use Lynvo's official Plugins for supported Sources, or connect a compatible Custom Plugin Server for other links."
+        title="Open supported links."
+        description="Use Plugins managed by Lynvo, or connect a compatible Custom Plugin Server for additional Sources."
       />
 
       <div className="flex flex-col gap-8">
         <div>
           <p className="text-lg">Lynvo Plugin Server</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Use managed sources whose current capabilities are shown in Settings
-            from the Lynvo Plugin Server manifest.
+            Open links from Sources supported by Lynvo-managed Plugins. Current
+            availability appears in Settings.
           </p>
         </div>
         <div>
-          <p className="text-lg">Custom plugin servers</p>
+          <p className="text-lg">Custom Plugin Servers</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Connect a compatible Plugin Server for Sources outside the official
-            Plugin list.
+            Connect a compatible Custom Plugin Server to add its Plugins and
+            supported Sources.
           </p>
         </div>
       </div>
@@ -91,7 +92,7 @@ export const AndroidScreensSection = () => (
           <div className="flex flex-col">
             <span className="text-lg text-foreground">Android TV</span>
             <span className="text-sm text-muted-foreground">
-              Lean-back remote optimized
+              Large controls designed for a TV remote
             </span>
           </div>
         </div>
@@ -101,9 +102,9 @@ export const AndroidScreensSection = () => (
             <HugeiconsIcon icon={SmartPhone01Icon} className="size-7" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg text-foreground">Phone & Tablet</span>
+            <span className="text-lg text-foreground">Phone and tablet</span>
             <span className="text-sm text-muted-foreground">
-              Touch-first progressive web app
+              Touch controls for Android phones and tablets
             </span>
           </div>
         </div>
@@ -121,20 +122,21 @@ export const PlanSection = () => {
 
       <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-16 px-6 text-center">
         <h2 className="text-balance text-6xl font-normal tracking-[-0.04em] text-foreground md:text-8xl">
-          Free Limited Time.
+          The Free plan is available now.
         </h2>
 
         <div className="grid w-full max-w-4xl grid-cols-1 gap-12 sm:grid-cols-3">
           <div className="flex flex-col items-center gap-3">
-            <span className="text-2xl text-foreground">3MB Storage</span>
+            <span className="text-2xl text-foreground">3 MB of storage</span>
             <span className="text-sm text-muted-foreground text-center">
-              More than enough capacity for thousands of video links.
+              Save up to 100 links, subject to the storage limit.
             </span>
           </div>
           <div className="flex flex-col items-center gap-3">
             <span className="text-2xl text-foreground">Real-time sync</span>
             <span className="text-sm text-muted-foreground text-center">
-              Add a link on your phone, see it on your TV instantly.
+              A link saved on one device appears in the library on connected
+              devices.
             </span>
           </div>
           <div className="flex flex-col items-center gap-3">
@@ -142,7 +144,7 @@ export const PlanSection = () => {
               Across Android devices
             </span>
             <span className="text-sm text-muted-foreground text-center">
-              Works flawlessly on Android TV, phones, and tablets.
+              Open supported links on Android TV, phones, and tablets.
             </span>
           </div>
         </div>

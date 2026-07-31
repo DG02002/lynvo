@@ -30,9 +30,10 @@ import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { cn } from "~/lib/utils"
 
 const freePlanFeatures = [
-  "Limited official extraction",
-  "Limited saved-link storage",
-  "Access to all official sources",
+  "200 Lynvo Plugin Server requests per month",
+  "15 Lynvo Plugin Server requests per day",
+  "3 MB of storage for up to 100 saved links",
+  "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
   "Android playback and remote control",
@@ -64,13 +65,13 @@ const planDetailSections = [
     ],
   },
   {
-    title: "Official extraction",
+    title: "Lynvo Plugin Server usage",
     details: [
       {
-        feature: "Official extractions",
-        allowance: "200 per month, shared",
+        feature: "Monthly requests",
+        allowance: "200, shared across Lynvo Plugins and direct media",
       },
-      { feature: "Daily extraction limit", allowance: "15 per day" },
+      { feature: "Daily requests", allowance: "15" },
       {
         feature: "Direct links",
         allowance: "Included",
@@ -116,7 +117,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "See the current Lynvo plan, included features, storage, and extraction limits.",
+        "See the current Lynvo plan, included features, storage, saved-link, and Plugin Server limits.",
     },
   ]
 }
@@ -142,7 +143,7 @@ export default function Pricing() {
           <CardHeader className={planCardHeaderClassName}>
             <CardTitle className={planCardTitleClassName}>Free</CardTitle>
             <CardDescription className={planCardDescriptionClassName}>
-              For saving, extracting, and playing supported links.
+              For saving and playing supported links on Android devices.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-8">
@@ -155,7 +156,7 @@ export default function Pricing() {
               viewTransition
               className={cn(buttonVariants({ size: "lg" }), "w-full")}
             >
-              Get Free
+              Create a free account
               <HugeiconsIcon
                 icon={ArrowUpRight01Icon}
                 strokeWidth={2}
@@ -220,7 +221,7 @@ export default function Pricing() {
                 viewTransition
                 className={buttonVariants({ size: "sm" })}
               >
-                Get Free
+                Create a free account
                 <HugeiconsIcon
                   icon={ArrowUpRight01Icon}
                   strokeWidth={2}
@@ -276,13 +277,15 @@ export default function Pricing() {
 
         <footer className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center text-sm italic leading-6 text-muted-foreground">
           <p>
-            Usage must remain reasonable and comply with the{" "}
+            The Free plan includes the storage, saved-link, daily, and monthly
+            limits listed on this page. Automated or abusive use may be
+            restricted under the{" "}
             <Link
               to={policyPaths.usagePolicy}
               viewTransition
               className="text-foreground underline underline-offset-4"
             >
-              Usage Policies
+              Usage policy
             </Link>
             .
           </p>

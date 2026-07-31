@@ -3,11 +3,11 @@ import { UsagePolicyContent } from "../content/usage-policy-content"
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Usage Policies | Lynvo" },
+    { title: "Usage policy | Lynvo" },
     {
       name: "description",
       content:
-        "Rules for responsible use of Lynvo, Lynvo Plugin Server extraction, Custom Plugin Servers, credentials, and shared capacity.",
+        "Rules for using Lynvo, Lynvo Plugin Server Extraction, Custom Plugin Servers, credentials, storage, and request allowances.",
     },
   ]
 }

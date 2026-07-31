@@ -39,6 +39,7 @@ interface SaveListBrowserProps {
   extractingItems: Set<string>
   highlightedId: string | null
   isHydrating: boolean
+  onAddLink?: () => void
 }
 
 interface FolderLevel {
@@ -276,6 +277,7 @@ const ResolvedMirrorRows = ({
         </Button>
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <LinkActionsDotMenu
+            itemLabel={mirror.label}
             onCopyLink={() => void navigator.clipboard.writeText(mirror.url)}
             onOpenInPlayer={(player) => {
               actions.markWatched(itemUrl, sourceLink.url)
@@ -382,7 +384,7 @@ const ResolvableContainerRow = ({
           )}
           {!link.watched && <NewBadge />}
           {isResolving ? (
-            <Spinner />
+            <Spinner aria-label={`Loading playable links for ${link.label}…`} />
           ) : mirrors.length > 0 ? (
             <HugeiconsIcon
               icon={ArrowRight01Icon}
@@ -395,6 +397,7 @@ const ResolvableContainerRow = ({
         </button>
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <ResolvableLinkMenu
+            itemLabel={link.label}
             onCopyLink={() => void navigator.clipboard.writeText(link.url)}
             onRefresh={() => {
               setMirrors([])
@@ -602,7 +605,7 @@ const FinderBrowser = ({
                       </span>
                     )}
                     {isResolving ? (
-                      <Spinner />
+                      <Spinner aria-label={`Loading ${link.label}…`} />
                     ) : isFolder ? (
                       <HugeiconsIcon
                         icon={ArrowRight01Icon}
@@ -613,6 +616,7 @@ const FinderBrowser = ({
                   {!isFolder && !isResolving && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
                       <LinkActionsDotMenu
+                        itemLabel={link.label}
                         onCopyLink={copyLink}
                         onOpenInPlayer={openLinkInPlayer}
                         className="size-9 shrink-0 text-foreground"
@@ -637,6 +641,7 @@ export const SaveListBrowser = ({
   extractingItems,
   highlightedId,
   isHydrating,
+  onAddLink,
 }: SaveListBrowserProps) => {
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
@@ -655,10 +660,12 @@ export const SaveListBrowser = ({
   if (isHydrating) {
     return (
       <div
-        className="flex min-h-56 items-center justify-center"
-        aria-label="Loading saved links"
+        className="flex min-h-56 items-center justify-center gap-2"
+        role="status"
+        aria-label="Loading saved links…"
       >
-        <Spinner />
+        <Spinner aria-hidden="true" />
+        <span>Loading saved links…</span>
       </div>
     )
   }
@@ -673,9 +680,14 @@ export const SaveListBrowser = ({
         <div className="flex flex-col gap-1">
           <p className="font-medium">No saved links</p>
           <p className="text-sm text-muted-foreground">
-            Paste a link above and it will appear here.
+            Add a link to save it for later.
           </p>
         </div>
+        {onAddLink && (
+          <Button variant="outline" onClick={onAddLink}>
+            Add a link
+          </Button>
+        )}
       </div>
     )
   }

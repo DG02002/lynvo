@@ -34,10 +34,14 @@ export const createRefreshFlowEffects = ({
   runExtracting: runWithExtractingItem,
   isExtracting: (itemKey) => extractingItems.has(itemKey),
   showRefreshSuccess: () => toast.success("Links refreshed"),
-  showNoLinks: () => toast.error("No links found"),
-  showRefreshError: () => toast.error("Unable to refresh links. Try again."),
+  showNoLinks: () =>
+    toast.error("No supported links are available. Try another Source page."),
+  showRefreshError: () =>
+    toast.error("The saved link couldn’t be refreshed. Try again."),
   showReselectError: () =>
-    toast.error("Unable to select links again. Try again."),
-  showMirrorError: () => toast.error("Unable to resolve mirrors. Try again."),
-  showOptionsError: () => toast.error("Unable to load options. Try again."),
+    toast.error("Link choices couldn’t be loaded. Try again."),
+  showMirrorError: () =>
+    toast.error("Playable links couldn’t be loaded. Try again."),
+  showOptionsError: () =>
+    toast.error("Playback options couldn’t be loaded. Try again."),
 })

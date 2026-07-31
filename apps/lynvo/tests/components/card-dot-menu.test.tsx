@@ -50,8 +50,10 @@ describe("CardDotMenu", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Open menu" }))
-    fireEvent.click(await screen.findByText("Remove Draft"))
+    fireEvent.click(
+      screen.getByRole("button", { name: `Open menu for ${draftUrl}` })
+    )
+    fireEvent.click(await screen.findByText("Remove draft"))
     fireEvent.click(await screen.findByRole("button", { name: "Remove" }))
 
     expect(readDraft(draftUrl)).toBeNull()
@@ -69,8 +71,10 @@ describe("CardDotMenu", () => {
       <RecentLinkCardDotMenu item={item} actions={actions} showRemove />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Open menu" }))
-    fireEvent.click(await screen.findByText("Re-Select Links"))
+    fireEvent.click(
+      screen.getByRole("button", { name: `Open menu for ${item.url}` })
+    )
+    fireEvent.click(await screen.findByText("Reload link choices"))
     expect(actions.hardRefresh).toHaveBeenCalledWith(item.url)
 
     rerender(
@@ -83,9 +87,8 @@ describe("CardDotMenu", () => {
     )
 
     expect(
-      screen.getByRole("button", { name: "Re-selecting links" })
+      screen.getByRole("button", { name: /Reloading choices for/ })
     ).toBeDisabled()
-    expect(screen.getByRole("status", { name: "Loading" })).toBeVisible()
   })
 
   it("does not offer refresh or re-selection for a direct saved link", async () => {
@@ -108,12 +111,16 @@ describe("CardDotMenu", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Open menu" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open menu for https://cdn.example.com/video.mp4",
+      })
+    )
 
     await waitFor(() => {
       expect(screen.getByText("Open in")).toBeInTheDocument()
     })
     expect(screen.queryByText("Refresh")).not.toBeInTheDocument()
-    expect(screen.queryByText("Re-Select Links")).not.toBeInTheDocument()
+    expect(screen.queryByText("Reload link choices")).not.toBeInTheDocument()
   })
 })

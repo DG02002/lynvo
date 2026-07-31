@@ -69,7 +69,7 @@ export function PlayerSettings() {
     }
 
     void updateCloudPreferences(localPreferences).catch(() => {
-      toast.error("Unable to sync player preferences. Try again.")
+      toast.error("Player settings couldn’t be saved. Try again.")
     })
   }, [cloudPreferences, updateCloudPreferences])
 
@@ -78,10 +78,10 @@ export function PlayerSettings() {
     setRangeSupportedPlayer(playerId)
     void updateCloudPreferences({ rangeSupportedPlayerId: playerId }).catch(
       () => {
-        toast.error("Unable to sync the player preference. Try again.")
+        toast.error("The player setting couldn’t be saved. Try again.")
       }
     )
-    toast.success("Resume-supported player updated")
+    toast.success("Seeking player updated")
   }
 
   const handleRangeUnsupportedChange = (playerId: PlayerId) => {
@@ -89,10 +89,10 @@ export function PlayerSettings() {
     setRangeUnsupportedPlayer(playerId)
     void updateCloudPreferences({ rangeUnsupportedPlayerId: playerId }).catch(
       () => {
-        toast.error("Unable to sync the player preference. Try again.")
+        toast.error("The player setting couldn’t be saved. Try again.")
       }
     )
-    toast.success("Non-resume player updated")
+    toast.success("Standard playback player updated")
   }
 
   const selectedRangeSupported = PLAYER_DEFINITIONS.find(
@@ -107,8 +107,8 @@ export function PlayerSettings() {
       <SettingsList>
         <SettingsRow>
           <SettingsRowInfo
-            label="Default player for resume-supported links"
-            description="Used when a video link supports byte-range requests and seeking."
+            label="Player for videos with seeking"
+            description="Used when a video can resume from a saved position or jump to another point."
           />
           <Select
             value={rangeSupportedPlayerId}
@@ -147,8 +147,8 @@ export function PlayerSettings() {
 
         <SettingsRow>
           <SettingsRowInfo
-            label="Default player for non-resume links"
-            description="Used when a video link plays normally but does not support byte-range resume."
+            label="Player for standard playback"
+            description="Used when a video must play from the beginning and cannot jump to another point."
           />
           <Select
             value={rangeUnsupportedPlayerId}

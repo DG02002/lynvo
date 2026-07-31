@@ -16,11 +16,14 @@ describe("LinkInputSection", () => {
       />
     )
 
-    expect(screen.getByText("Warning")).toBeVisible()
-    expect(screen.queryByText("Error")).not.toBeInTheDocument()
-    expect(screen.getByPlaceholderText("Paste link")).not.toHaveAttribute(
+    expect(screen.getByText("Link already saved")).toBeVisible()
+    expect(screen.getByLabelText("Link")).not.toHaveAttribute(
       "aria-invalid",
       "true"
+    )
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "placeholder",
+      "https://example.com/video"
     )
   })
 
@@ -77,7 +80,7 @@ describe("LinkInputSection", () => {
     )
 
     expect(screen.getByText("Source Alpha")).toBeVisible()
-    expect(screen.getByLabelText("Routes to")).toBeVisible()
+    expect(screen.getByLabelText("Routes to Source Beta")).toBeVisible()
     expect(screen.getByText("Source Beta")).toBeVisible()
     expect(screen.getByText("Example Plugin Server")).toBeVisible()
     expect(screen.getByText(/^from/)).toHaveTextContent(

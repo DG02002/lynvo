@@ -70,7 +70,8 @@ const reduceTvSignInState = (
         ...state,
         hasError: true,
         errorMessage:
-          action.errorMessage ?? "Device sign-in failed. Try again.",
+          action.errorMessage ??
+          "The device couldn’t log in. Generate a new code, then try again.",
         isGenerating: false,
       }
   }
@@ -126,7 +127,7 @@ export function TvSignInQr() {
         kind: "failed",
         errorMessage: getUserFacingErrorMessage(
           error,
-          "Unable to create a device code. Try again."
+          "The login code couldn’t be created. Try generating a new code."
         ),
       })
     }
@@ -157,7 +158,7 @@ export function TvSignInQr() {
         )
         if (!result.signingIn) {
           throw new Error(
-            "Unable to sign in this device. Generate a new code and try again."
+            "This device couldn’t log in. Generate a new code, then try again."
           )
         }
         window.location.href = "/save?device_setup=true"
@@ -166,7 +167,7 @@ export function TvSignInQr() {
           kind: "failed",
           errorMessage: getUserFacingErrorMessage(
             error,
-            "Unable to sign in this device. Generate a new code and try again."
+            "This device couldn’t log in. Generate a new code, then try again."
           ),
         })
       })
@@ -190,8 +191,12 @@ export function TvSignInQr() {
 
   if (phase === "loading") {
     return (
-      <div className="flex justify-center p-10">
+      <div
+        className="flex items-center justify-center gap-2 p-10"
+        role="status"
+      >
         <Spinner />
+        <span>Creating login code…</span>
       </div>
     )
   }
@@ -202,10 +207,12 @@ export function TvSignInQr() {
         <p className="text-destructive">
           {phase === "expired"
             ? "Code expired. Generate a new code."
-            : (errorMessage ?? "Device sign-in failed. Try again.")}
+            : (errorMessage ??
+              "The device couldn’t log in. Generate a new code, then try again.")}
         </p>
         <Button onClick={() => void fetchCode()} variant="outline" size="sm">
-          <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" /> Retry
+          <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" />
+          Generate new code
         </Button>
       </div>
     )
@@ -232,9 +239,11 @@ export function TvSignInQr() {
 
       <div className="flex flex-col gap-2 text-left">
         <p className="text-sm text-muted-foreground">
-          Or go to{" "}
-          <span className="font-mono font-bold text-foreground">/tv</span> and
-          enter:
+          Scan the QR code, or open{" "}
+          <span className="font-mono font-bold text-foreground">
+            {origin}/tv
+          </span>{" "}
+          on another device and enter this code:
         </p>
         <p className="font-mono text-3xl font-bold tracking-[0.2em] text-primary">
           {code}

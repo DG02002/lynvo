@@ -55,7 +55,7 @@ const supportOptions = [
   {
     title: "Telegram",
     description:
-      "Send us a private message for help with Lynvo or a general question.",
+      "Send Lynvo Support a private message for account help or general questions. Only the support team can view the conversation.",
     action: "Message on Telegram",
     href: TELEGRAM_SUPPORT_URL,
     logo: TelegramLogo,
@@ -63,7 +63,7 @@ const supportOptions = [
   {
     title: "GitHub Issues",
     description:
-      "Report a bug, request a feature, or follow a technical discussion publicly.",
+      "Report a bug or request a feature in a public post. Anyone can find and read the post, so don’t include personal or account information.",
     action: "Open a GitHub issue",
     href: GITHUB_ISSUES_URL,
     logo: GitHubLogo,
@@ -88,7 +88,7 @@ const HelpCenter = () => (
           How can we help?
         </h1>
         <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
-          Choose the support option that works best for you.
+          Choose a private message or a public post.
         </p>
       </header>
 

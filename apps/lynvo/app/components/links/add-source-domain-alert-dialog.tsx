@@ -58,7 +58,7 @@ export function AddSourceDomainAlertDialog({
           >
             {isAdding ? (
               <>
-                <Spinner />
+                <Spinner aria-hidden="true" />
                 Adding…
               </>
             ) : (

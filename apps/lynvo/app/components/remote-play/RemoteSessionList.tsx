@@ -1,17 +1,24 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ComputerIcon } from "@hugeicons/core-free-icons"
+import { Link } from "react-router"
+import { Button } from "~/components/ui/button"
+import { sitePaths } from "~/lib/paths"
 import type { RemoteSession } from "./types"
 
 export const RemoteSessionList = ({
   sessions,
   loading,
+  hasError,
   activeSessionId,
   onSelect,
+  onSearchAgain,
 }: {
   sessions: RemoteSession[]
   loading: boolean
+  hasError: boolean
   activeSessionId: string | null
   onSelect: (session: RemoteSession) => void
+  onSearchAgain: () => void
 }) => {
   const visibleSessions = sessions.filter(
     (session) => session.id !== activeSessionId
@@ -20,20 +27,41 @@ export const RemoteSessionList = ({
   return (
     <div className="px-2 pb-2">
       <h4 className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Active Sessions
+        Available devices
       </h4>
       <div className="flex flex-col gap-2">
         {loading ? (
           <div className="flex items-center gap-3 px-4 py-3">
             <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Searching…</p>
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="px-4 py-6 text-center">
-            <p className="text-sm text-muted-foreground">No devices found.</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Make sure your device is on the same network.
+            <p className="text-sm text-muted-foreground">
+              Searching for Remote Play devices…
             </p>
+          </div>
+        ) : hasError || sessions.length === 0 ? (
+          <div className="flex flex-col items-center px-4 py-6 text-center">
+            <p className="text-sm font-medium">
+              {hasError
+                ? "Device list couldn’t be loaded"
+                : "No Remote Play devices found"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {hasError
+                ? "Check the connection, then search again."
+                : "Connect this device and the TV to the same Wi-Fi network. Keep Lynvo open in TV Bro on the TV."}
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={onSearchAgain}>
+                Search again
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                render={<Link to={sitePaths.androidTvSetup} />}
+              >
+                Set up Remote Play
+              </Button>
+            </div>
           </div>
         ) : (
           visibleSessions.map((session) => (
@@ -48,7 +76,7 @@ export const RemoteSessionList = ({
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium leading-none truncate block">
-                  {session.device_name || "Unknown Device"}
+                  {session.device_name || "Unnamed device"}
                 </p>
               </div>
             </button>

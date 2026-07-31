@@ -3,7 +3,7 @@ import { TermsOfUseContent } from "../content/terms-of-use-content"
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Terms of Use | Lynvo" },
+    { title: "Terms of use | Lynvo" },
     {
       name: "description",
       content:

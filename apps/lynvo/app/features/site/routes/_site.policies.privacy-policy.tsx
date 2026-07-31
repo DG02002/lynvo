@@ -3,11 +3,11 @@ import { PrivacyPolicyContent } from "../content/privacy-policy-content"
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Privacy Policy | Lynvo" },
+    { title: "Privacy policy | Lynvo" },
     {
       name: "description",
       content:
-        "How Lynvo handles account data, saved links, sessions, plugins, retention, and account deletion.",
+        "How Lynvo handles account data, Recent Links, sessions, Plugins, retention, and account deletion.",
     },
   ]
 }

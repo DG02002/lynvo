@@ -8,14 +8,14 @@ import { Link } from "react-router"
 
 const documentationCards = [
   {
-    title: "Android TV Setup",
+    title: "Set up Android TV",
     description: "Set up Lynvo on Android TV with your phone.",
     to: "/docs/android-tv",
     icon: ModernTvIcon,
   },
   {
     title: "Plugin Server",
-    description: "Build a Plugin Server that supports your media Sources.",
+    description: "Build a Custom Plugin Server for supported media Sources.",
     to: "/docs/plugin-server",
     icon: ThreeDViewIcon,
   },
@@ -30,7 +30,7 @@ export const DocsLanding = () => (
           Lynvo for developers
         </h1>
         <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
-          Docs and resources to help you use, configure, and build with Lynvo.
+          Set up Lynvo on Android TV or build a Custom Plugin Server.
         </p>
       </header>
 

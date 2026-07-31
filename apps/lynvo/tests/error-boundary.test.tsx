@@ -9,7 +9,7 @@ describe("root error boundary", () => {
       "/"
     )
     expect(
-      screen.getByRole("button", { name: "Try again" })
+      screen.getByRole("button", { name: "Reload page" })
     ).toBeInTheDocument()
   })
 })

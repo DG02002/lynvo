@@ -27,31 +27,40 @@ const CustomPluginServersHarness = ({
 }
 
 describe("CustomPluginServersSection", () => {
-  it("does not render an empty-state message when no plugin servers are configured", () => {
+  it("provides an action when no Plugin Servers are connected", () => {
     render(<CustomPluginServersHarness onAddPluginServer={vi.fn()} />)
 
     expect(
-      screen.queryByText("No custom plugin servers configured.")
-    ).not.toBeInTheDocument()
+      screen.getByText("No Custom Plugin Servers are connected.")
+    ).toBeVisible()
+    expect(
+      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })
+    ).toHaveLength(2)
   })
 
   it("validates and submits a Custom Plugin Server form", async () => {
     const onAddPluginServer = vi.fn().mockResolvedValue(null)
     render(<CustomPluginServersHarness onAddPluginServer={onAddPluginServer} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Add plugin server" }))
-    fireEvent.click(screen.getByRole("button", { name: "Add plugin server" }))
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })[0]!
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
+    )
 
     expect(await screen.findByText("Base URL is required.")).toBeVisible()
     expect(onAddPluginServer).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText("Plugin server URL"), {
+    fireEvent.change(screen.getByLabelText("Custom Plugin Server URL"), {
       target: { value: "https://plugin-server.example.com" },
     })
-    fireEvent.change(screen.getByLabelText("Plugin server API key"), {
+    fireEvent.change(screen.getByLabelText("Custom Plugin Server API key"), {
       target: { value: "secret" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Add plugin server" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
+    )
 
     await waitFor(() => {
       expect(onAddPluginServer).toHaveBeenCalledWith({
@@ -62,7 +71,7 @@ describe("CustomPluginServersSection", () => {
     await waitFor(() => {
       expect(
         screen.queryByRole("heading", {
-          name: "Add plugin server",
+          name: "Add Custom Plugin Server",
         })
       ).not.toBeInTheDocument()
     })
@@ -74,17 +83,21 @@ describe("CustomPluginServersSection", () => {
       .mockResolvedValue("API key verification failed.")
     render(<CustomPluginServersHarness onAddPluginServer={onAddPluginServer} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "Add plugin server" }))
-    fireEvent.change(screen.getByLabelText("Plugin server URL"), {
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })[0]!
+    )
+    fireEvent.change(screen.getByLabelText("Custom Plugin Server URL"), {
       target: { value: "https://plugin-server.example.com" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Add plugin server" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
+    )
 
     expect(
       await screen.findByText("API key verification failed.")
     ).toBeVisible()
     expect(
-      screen.getByRole("heading", { name: "Add plugin server" })
+      screen.getByRole("heading", { name: "Add Custom Plugin Server" })
     ).toBeVisible()
   })
 })

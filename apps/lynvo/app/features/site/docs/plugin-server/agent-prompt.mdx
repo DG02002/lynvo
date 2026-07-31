@@ -1,7 +1,7 @@
 ---
 title: Generate a Plugin Server Worker with an agent
-description: Copy this prompt into a coding agent to create the shared Worker before adding source plugins.
-navLabel: Generate the Boilerplate
+description: Copy this prompt into a coding agent to create the shared Worker before adding Source Plugins.
+navLabel: Generate the boilerplate
 contentType: Tutorial
 ---
 
@@ -9,9 +9,9 @@ contentType: Tutorial
 
 ## Generate the external Worker boilerplate
 
-Paste this prompt into a coding agent from the directory where you want the project created. The agent should build the shared Plugin Server infrastructure, not a finished source plugin.
+Paste this prompt into a coding agent from the directory where you want the project created. The agent should build the shared Plugin Server infrastructure, not a finished Source Plugin.
 
-Before you run it, replace `your_organization_name` and `your_plugin_server_name`. You can keep the example plugin until the Plugin Server passes its contract tests.
+Before you run it, replace `your_organization_name` and `your_plugin_server_name`. You can keep the example Plugin until the Plugin Server passes its contract tests.
 
 <CodeBlock label="Agent prompt">
 
@@ -32,40 +32,43 @@ Use this stack:
 - Vitest
 - Wrangler configuration in wrangler.jsonc
 
-Do not build a frontend. Do not add source-specific scraping to the route
-handlers. Build a reusable Plugin Server shell where developers can add plugins
+Do not build a frontend. Do not add Source-specific scraping to the route
+handlers. Build a reusable Plugin Server shell where developers can add Plugins
 later.
 
 Implement Lynvo Custom Plugin Server protocol version 1.0 over HTTPS and JSON.
 The private @lynvo/plugin-server-protocol package is not available outside the
 Lynvo monorepo, so define and test the required schemas locally.
 
-Create these endpoints:
+Create these required endpoints:
 - GET /manifest: public
 - POST /verify: bearer authentication required
 - GET /usage: bearer authentication required
 - POST /extract: bearer authentication required
 
+Add POST /discover only if the manifest advertises features.discovery. Require
+bearer authentication and return a stable Plugin ID when a Source matches.
+
 Read the bearer key from PLUGIN_SERVER_API_KEY. Support .dev.vars locally and a
 Wrangler secret in production. Reject unauthorized requests before usage
 reservation or upstream network access.
 
-Design a plugin interface with:
+Design a Plugin interface with:
 - Stable id, displayName, version, and status
 - Optional description, homepage, and direct HTTPS WebP iconUrl
 - URL matchers for schemes, hosts, host patterns, and path patterns
 - Declared password, lazy-node, and HTTP Basic Auth capabilities
 - canHandle(input) for routing
-- extract(context) for source-specific extraction
+- extract(context) for Source-specific Extraction
 
-Create a plugin catalog as the single source of truth for manifest metadata
-and request dispatch. The Hono route layer must not contain source-specific
+Create a Plugin catalog as the single source of truth for manifest metadata
+and request dispatch. The Hono route layer must not contain Source-specific
 conditions.
 
-Add one clearly labeled example plugin for media.example.com. Keep it small
-and deterministic so a developer can replace it with a real plugin. Document
+Add one clearly labeled example Plugin for media.example.com. Keep it small
+and deterministic so a developer can replace it with a real Plugin. Document
 exactly which files belong to the shared Plugin Server and which belong to a
-plugin.
+Plugin.
 
 The manifest must include:
 - protocolVersion: "1.0"
@@ -73,18 +76,18 @@ The manifest must include:
 - A human-readable displayName
 - auth.type: "bearer"
 - usage.endpoint: "/usage"
-- Non-empty matchers derived from the plugin catalog
-- features for password, lazyNodes, and basicAuth
-- extensions.lynvo.plugins derived from the plugin catalog
+- Non-empty matchers derived from the Plugin catalog
+- features for password, lazyNodes, basicAuth, and optional discovery
+- extensions.lynvo.plugins derived from the Plugin catalog
 
-Model extraction input as either:
-- A source URL with kind: "source" and sourceUrl
+Model Extraction input as either:
+- A Source URL with kind: "source" and sourceUrl
 - A lazy-node request with kind: "node", nodeUrl, and optional resourceId
 
 Support optional pluginId, password, and basicAuth credentials. Never place
 credentials in a target URL, response, manifest, or log.
 
-Support these media node kinds:
+Support these Media Node kinds:
 - playable with label and URL
 - group with label, children, and optional selectable
 - resolvable with label, nodeUrl, and optional resourceId
@@ -93,7 +96,7 @@ Support optional node metadata used by Lynvo, including description,
 thumbnail, size, MIME type, quality, duration, subtitles, audio tracks,
 headers, and expiry when applicable. Validate URLs and recursive child nodes.
 
-A successful extraction response must include:
+A successful Extraction response must include:
 - source.pluginServerId and source.displayName
 - Optional pluginId, sourceName, sourceIconUrl, pageTitle, and audio summary
 - A non-empty nodes array
@@ -114,7 +117,7 @@ Return JSON protocol errors with a stable code and safe message. Implement:
 
 Implement finite usage reporting. GET /usage must return at least one metric
 with id, label, used, limit, unit, period, and resetsAt. Reserve capacity
-atomically before extraction, settle successful usage, and release failed
+atomically before Extraction, settle successful usage, and release failed
 reservations. Use a Cloudflare Durable Object when concurrency requires shared
 state. Do not use an in-memory counter as the production limiter.
 
@@ -135,10 +138,10 @@ Keep modules focused. Use a structure similar to:
 
 Add contract tests for:
 - Manifest schema and protocol version
-- Duplicate plugin IDs
-- Matcher and source metadata consistency
+- Duplicate Plugin IDs
+- Matcher and Source metadata consistency
 - Authentication on protected endpoints
-- Malformed extraction requests
+- Malformed Extraction requests
 - Supported and unsupported URLs
 - Every node kind
 - Success response validation
@@ -154,7 +157,7 @@ Add README instructions for:
 - Running tests and type checks
 - Deploying with Wrangler
 - Verifying all four production endpoints
-- Adding a new plugin without editing the route layer
+- Adding a new Plugin without editing the route layer
 - Connecting the deployed origin and bearer key in Lynvo Settings
 
 Use arrow functions, descriptive names, kebab-case files, and TypeScript
@@ -166,11 +169,11 @@ failures before finishing. At the end, report:
 1. The created file tree
 2. The commands that passed
 3. The environment variables and secrets still required
-4. The exact files a developer edits to add the first real plugin
+4. The exact files a developer edits to add the first real Plugin
 ```
 
 </CodeBlock>
 
-The generated Worker should run before you add a real source. Replace the example plugin one source at a time, and keep its supported, unsupported, and failure fixtures beside the plugin.
+The generated Worker should run before you add a real Source. Replace the example Plugin one Source at a time, and keep its supported, unsupported, and failure fixtures beside the Plugin.
 
 </DocSection>

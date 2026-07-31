@@ -72,7 +72,9 @@ export function SignInForm() {
           }
         )
         if (!result.signingIn) {
-          throw new Error("Invalid username or password.")
+          throw new Error(
+            "The username or password is incorrect. Check both fields, then try again."
+          )
         }
         toast.success("Signed in")
         redirectAfterAuth()
@@ -80,7 +82,7 @@ export function SignInForm() {
         setAuthenticationError(
           getUserFacingErrorMessage(
             error,
-            "Sign-in is temporarily unavailable. Try again later."
+            "Login is temporarily unavailable. Try again later."
           )
         )
       } finally {
@@ -92,8 +94,9 @@ export function SignInForm() {
 
   return (
     <AuthFormShell
-      ariaLabel="Sign in form"
+      ariaLabel="Log in form"
       heading={authCopy.signin.pageHeading}
+      subheading={authCopy.signin.pageSubheading}
       switchPrompt={authCopy.signin.switchPrompt}
       switchLinkText={authCopy.signin.switchLink}
       switchTo={`${authPaths.createAccount}${location.search}`}
@@ -163,7 +166,7 @@ export function SignInForm() {
           size="lg"
           className="h-13.5 w-full"
           nativeButton={false}
-          render={<a href={authPaths.signInWithAnotherDevice}>Use a QR Code</a>}
+          render={<a href={authPaths.signInWithAnotherDevice}>Use a QR code</a>}
         />
       </AuthControl>
     </AuthFormShell>

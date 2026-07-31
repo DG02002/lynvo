@@ -1,7 +1,7 @@
 ---
 title: Implement protocol version 1.0
-description: Understand the four endpoints that connect an Custom Plugin Server to Lynvo.
-navLabel: Protocol Overview
+description: Understand the four required endpoints and optional discovery endpoint that connect a Custom Plugin Server to Lynvo.
+navLabel: Protocol overview
 contentType: Reference
 ---
 
@@ -9,16 +9,16 @@ contentType: Reference
 
 ## Implement protocol version 1.0
 
-Lynvo Custom Plugin Servers use protocol version `1.0` over HTTPS and JSON. Version `1.0` defines four endpoints:
+Lynvo Custom Plugin Servers use Plugin Server Protocol version `1.0` over HTTPS and JSON. Version `1.0` defines four required endpoints and one optional discovery endpoint:
 
 | Method | Route       | Authentication | Purpose                                            |
 | ------ | ----------- | -------------- | -------------------------------------------------- |
-| `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and sources |
-| `POST` | `/discover` | Bearer         | Optionally identifies a source implementation      |
+| `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and Sources |
+| `POST` | `/discover` | Bearer         | Optionally identifies a Plugin for a Source URL    |
 | `POST` | `/verify`   | Bearer         | Verifies the API key and Plugin Server readiness   |
 | `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
-| `POST` | `/extract`  | Bearer         | Resolves a source URL or lazy node                 |
+| `POST` | `/extract`  | Bearer         | Resolves a Source URL or lazy node                 |
 
-Use `Content-Type: application/json` for JSON responses. Return protocol error envelopes instead of unstructured error strings.
+Implement `POST /discover` only when the manifest sets `features.discovery` to `true`. Use `Content-Type: application/json` for JSON responses. Return protocol error envelopes instead of unstructured error strings.
 
 </DocSection>

@@ -64,7 +64,7 @@ export const getBrowserDeviceName = (
   userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent
 ) => {
   if (!userAgent.trim()) {
-    return "Unknown Device"
+    return "Unnamed device"
   }
   return `${detectBrowser(userAgent)} on ${detectOperatingSystem(userAgent)}`
 }

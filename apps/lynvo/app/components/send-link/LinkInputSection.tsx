@@ -22,15 +22,25 @@ import type { ExtractionPreview } from "~/features/links/use-link-actions/action
 
 const sourceStatusMessage = (status: string | undefined) => {
   if (status === "maintenance") {
-    return "This source is marked as maintenance; extraction may be unreliable."
+    return "This Source is undergoing maintenance. Some links may be unavailable."
   }
   if (status === "degraded") {
-    return "This source is marked as degraded; extraction may be slower or incomplete."
+    return "This Source is responding slowly. Some links may be unavailable."
   }
   if (status === "down") {
-    return "This source is marked as down; extraction may fail."
+    return "This Source is temporarily unavailable. Try again later."
   }
   return undefined
+}
+
+const getErrorTitle = (error: string, isExistingLinkWarning: boolean) => {
+  if (isExistingLinkWarning) {
+    return "Link already saved"
+  }
+  if (error.toLowerCase().includes("supported")) {
+    return "Link not supported"
+  }
+  return "Link couldn’t be opened"
 }
 
 interface LinkInputSectionProps {
@@ -99,16 +109,20 @@ export function LinkInputSection({
           >
             <HugeiconsIcon icon={AlertCircleIcon} />
             <AlertTitle>
-              {isExistingLinkWarning ? "Warning" : "Error"}
+              {getErrorTitle(error, isExistingLinkWarning)}
             </AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         </div>
       )}
 
+      <label htmlFor="link-input" className="px-3 text-sm font-medium">
+        Link
+      </label>
       <InputGroup className="w-full h-13.5 rounded-full bg-muted/30 sm:flex-1 border-2 border-default-medium has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:border-blue-500 has-[[data-slot=input-group-control]:focus-visible]:ring-0">
         <InputGroupInput
-          placeholder="Paste link"
+          id="link-input"
+          placeholder="https://example.com/video"
           className="pl-5 text-base text-heading md:text-base"
           value={url}
           onChange={(e) => {
@@ -141,7 +155,7 @@ export function LinkInputSection({
             className="size-11 rounded-full"
           >
             {isSaving ? (
-              <Spinner className="size-6" />
+              <Spinner className="size-6" aria-label="Saving link…" />
             ) : (
               <HugeiconsIcon
                 icon={ArrowRight02Icon}
@@ -194,7 +208,7 @@ export function LinkInputSection({
               <>
                 <span
                   className="flex items-center text-muted-foreground"
-                  aria-label="Routes to"
+                  aria-label={`Routes to ${extractionPreview.meta.routeSourceName}`}
                 >
                   <HugeiconsIcon icon={Route01Icon} className="size-4" />
                 </span>

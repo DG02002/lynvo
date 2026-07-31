@@ -37,10 +37,10 @@ export function RemotePlayButton({
   const setOpen =
     setExternalOpen !== undefined ? setExternalOpen : setInternalOpen
 
-  const { sessions, loading, fetchSessions } = useRemoteSessions()
+  const { sessions, loading, hasError, fetchSessions } = useRemoteSessions()
 
   const handleDeviceSelect = (session: RemoteSession) => {
-    connectToSession(session.id, session.device_name || "Unknown Device")
+    connectToSession(session.id, session.device_name || "Unnamed device")
     setOpen(false)
   }
 
@@ -68,9 +68,10 @@ export function RemotePlayButton({
       )}
       <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-2 text-left">
-          <DialogTitle className="font-normal">Choose a device</DialogTitle>
+          <DialogTitle className="font-normal">Connect Remote Play</DialogTitle>
           <DialogDescription>
-            Open <strong>TV Bro</strong> on the TV to use remote play. Play.
+            Open Lynvo in <strong>TV Bro</strong> on the TV. Keep Lynvo open,
+            then choose the TV from the device list.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col p-2">
@@ -92,8 +93,10 @@ export function RemotePlayButton({
             <RemoteSessionList
               sessions={sessions}
               loading={loading}
+              hasError={hasError}
               activeSessionId={activeSessionId}
               onSelect={handleDeviceSelect}
+              onSearchAgain={() => void fetchSessions()}
             />
           )}
         </div>

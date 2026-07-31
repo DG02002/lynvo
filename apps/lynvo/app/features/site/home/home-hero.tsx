@@ -15,8 +15,8 @@ export const HomeHero = () => {
             Save it here. Watch it on Android.
           </h1>
           <p className="t-stagger-line t-stagger-line--3 mt-2 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Lynvo turns video links into a clean, synced library and opens them
-            in the Android player that fits the link—on Android TV, phone, or
+            Save supported video links in a library that stays in sync, then
+            open each video in the appropriate Android player on a TV, phone, or
             tablet.
           </p>
         </div>

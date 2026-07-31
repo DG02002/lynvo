@@ -6,12 +6,12 @@ describe("getSaveErrorMessage", () => {
   it("hides transport and decode implementation details", () => {
     expect(
       getSaveErrorMessage(new Error("Decode error (400 GET /api/extract)"))
-    ).toBe("Unable to process this link. Try again.")
+    ).toBe("The link couldn’t be opened. Check the link, then try again.")
   })
 
   it("keeps authentication and validation errors actionable", () => {
     expect(getSaveErrorMessage({ _tag: "UnauthorizedError" })).toBe(
-      "Session expired. Sign in again."
+      "The session expired. Log in, then save the link again."
     )
     expect(
       getSaveErrorMessage({
@@ -23,7 +23,7 @@ describe("getSaveErrorMessage", () => {
 
   it("uses a source-neutral extraction message", () => {
     expect(getSaveErrorMessage({ _tag: "ExtractionError" })).toBe(
-      "Unable to extract links from this URL. Check the link and try again."
+      "Links couldn’t be loaded from this address. Check the link, then try again."
     )
   })
 

@@ -23,19 +23,19 @@ const preferenceOptions = [
     key: "analytics",
     label: "Analytics cookies",
     description:
-      "These cookies help us understand how visitors interact with our site. They allow us to measure traffic and improve site performance.",
+      "These cookies help Lynvo measure site traffic and improve performance.",
   },
   {
     key: "marketingMeasurement",
     label: "Marketing measurement",
     description:
-      "These cookies help us measure the effectiveness of our marketing campaigns.",
+      "These cookies help Lynvo measure the effectiveness of marketing campaigns.",
   },
   {
     key: "personalizedMarketing",
     label: "Personalized marketing",
     description:
-      "These cookies help us personalize and measure Lynvo marketing on third-party platforms.",
+      "These cookies help Lynvo personalize and measure marketing on third-party platforms.",
   },
 ] as const
 
@@ -101,27 +101,27 @@ export const CookieConsent = () => {
           <div className="mx-auto flex max-w-[96rem] flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
             <div className="max-w-4xl">
               <h2 className="text-base font-normal text-balance">
-                We use cookies
+                Lynvo uses cookies
               </h2>
               <p className="mt-3 text-xs leading-5 text-muted-foreground text-pretty">
-                We use cookies to help this site function, keep your account
-                secure, remember preferences, and—if enabled—support analytics
-                and marketing. Visit{" "}
+                Lynvo uses cookies to operate this site, keep accounts secure,
+                and remember preferences. Optional cookies support analytics and
+                marketing when enabled. Select{" "}
                 <button
                   type="button"
                   className="underline underline-offset-4 transition-opacity hover:opacity-75"
                   onClick={() => setIsDialogOpen(true)}
                 >
-                  Manage Cookies
+                  Manage cookies
                 </button>{" "}
-                to change preferences anytime. View our{" "}
+                to change these choices at any time. Read the{" "}
                 <Link
                   to={policyPaths.cookiePolicy}
                   className="underline underline-offset-4 transition-opacity hover:opacity-75"
                 >
-                  Cookie Policy
+                  cookie policy
                 </Link>{" "}
-                for more info.
+                for details about how Lynvo uses cookies.
               </p>
             </div>
 
@@ -133,7 +133,7 @@ export const CookieConsent = () => {
                 className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={() => setIsDialogOpen(true)}
               >
-                Manage Cookies
+                Manage cookies
               </Button>
               <Button
                 type="button"
@@ -142,7 +142,7 @@ export const CookieConsent = () => {
                 className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={rejectNonEssential}
               >
-                Reject non-essential
+                Reject optional cookies
               </Button>
               <Button
                 type="button"
@@ -151,7 +151,7 @@ export const CookieConsent = () => {
                 className="h-10 px-5 text-sm active:scale-[0.96] sm:h-12"
                 onClick={acceptAll}
               >
-                Accept all
+                Accept all cookies
               </Button>
             </div>
           </div>
@@ -166,19 +166,19 @@ export const CookieConsent = () => {
           <div className="overflow-y-auto px-5 pt-6 pb-4 sm:px-7 sm:pt-7">
             <DialogHeader className="gap-3 text-left">
               <DialogTitle className="text-xl leading-tight font-normal text-balance">
-                Cookie Preferences
+                Cookie preferences
               </DialogTitle>
               <DialogDescription className="max-w-3xl text-sm leading-6 text-muted-foreground text-pretty">
-                Websites and apps use cookies and other identifiers to store and
-                retrieve information on your device. Some of this information
-                may be shared with service providers for the purposes you
-                enable. Use the tool below to manage your preferences. You can
-                change them anytime.{" "}
+                Choose which optional cookies Lynvo can use. Cookies and similar
+                identifiers store and retrieve information on this device. Lynvo
+                may share some information with service providers for the
+                purposes enabled here. Change these choices at any time. Read
+                the{" "}
                 <Link
                   to={policyPaths.cookiePolicy}
                   className="text-foreground underline underline-offset-4 hover:text-foreground/75"
                 >
-                  Learn more
+                  cookie policy
                 </Link>
               </DialogDescription>
             </DialogHeader>

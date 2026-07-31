@@ -359,7 +359,7 @@ export const createRemoteControlMachine = ({
         syncDevices([
           {
             id: data.controlledBy,
-            name: data.controllerName || "Unknown Device",
+            name: data.controllerName || "Unnamed device",
           },
         ])
       } else if (data.controlledBy === null) {

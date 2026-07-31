@@ -212,7 +212,7 @@ export function LinkSelectionDialog({
           }
         >
           <HugeiconsIcon icon={Cancel01Icon} />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Close link selection</span>
         </DialogClose>
         <LinkSelectionHeader
           pluginIcon={pluginIcon}
@@ -257,7 +257,7 @@ export function LinkSelectionDialog({
                 onClick={handleSaveDraft}
                 className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
               >
-                Save Draft
+                Save draft
               </Button>
             )}
             <Button
@@ -265,7 +265,7 @@ export function LinkSelectionDialog({
               disabled={selectedIds.size === 0}
               className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
             >
-              Save Selected
+              Save selected
             </Button>
           </div>
         </div>

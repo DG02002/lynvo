@@ -12,7 +12,8 @@ export const classifyAuthSignInError = (error: unknown, flow: string) => {
   ) {
     return Object.freeze({
       code: "invalid_credentials",
-      error: "Invalid username or password.",
+      error:
+        "The username or password is incorrect. Check both fields, then try again.",
       retryable: false,
       status: 401,
     })
@@ -21,7 +22,7 @@ export const classifyAuthSignInError = (error: unknown, flow: string) => {
   if (message.includes("TooManyFailedAttempts")) {
     return Object.freeze({
       code: "rate_limited",
-      error: "Too many attempts. Try again later.",
+      error: "Too many login attempts. Wait, then try again.",
       retryable: true,
       status: 429,
     })
@@ -40,8 +41,8 @@ export const classifyAuthSignInError = (error: unknown, flow: string) => {
     code: "service_unavailable",
     error:
       flow === "signUp"
-        ? "Account setup is temporarily unavailable. Try signing in again later."
-        : "Sign-in is temporarily unavailable. Try again later.",
+        ? "Account creation is temporarily unavailable. Try again later."
+        : "Login is temporarily unavailable. Try again later.",
     retryable: true,
     status: 503,
   })

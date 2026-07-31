@@ -174,14 +174,23 @@ export function PluginsSettings({
       <div className="flex flex-col gap-3">
         <SectionHeading
           title="Official plugins"
-          description="Plugins maintained by Lynvo for compatible third-party projects."
+          description="Plugins maintained by Lynvo for supported Sources."
         />
         <SettingsList>
           {officialPlugins === null && (
             <SettingsRow>
-              <p className="text-sm text-muted-foreground">
-                Lynvo Plugin Server metadata is currently unavailable.
-              </p>
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Lynvo Plugin Server details couldn’t be loaded.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                >
+                  Reload settings
+                </Button>
+              </div>
             </SettingsRow>
           )}
           {(officialPlugins ?? []).map((plugin) => {
@@ -551,8 +560,8 @@ export const CustomPluginServersSection = ({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <SectionHeading
-          title="Custom plugin servers"
-          description="Connect a plugin server to extract playable links from the sources its plugins support."
+          title="Custom Plugin Servers"
+          description="Connect a Custom Plugin Server to open links from the Sources its Plugins support."
         />
         <Dialog
           open={isAddPluginServerOpen}
@@ -567,7 +576,7 @@ export const CustomPluginServersSection = ({
                 variant="ghost"
                 size="icon"
                 className="size-8"
-                aria-label="Add plugin server"
+                aria-label="Add Custom Plugin Server"
               />
             }
           >
@@ -576,10 +585,10 @@ export const CustomPluginServersSection = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="font-normal">
-                Add plugin server
+                Add Custom Plugin Server
               </DialogTitle>
               <DialogDescription>
-                Enter the URL and API key for your custom plugin server.
+                Enter the URL and API key for the Custom Plugin Server.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -600,7 +609,7 @@ export const CustomPluginServersSection = ({
                           htmlFor="custom-plugin-server-base-url"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          Plugin server URL
+                          Custom Plugin Server URL
                         </FieldLabel>
                         <Input
                           id="custom-plugin-server-base-url"
@@ -631,7 +640,7 @@ export const CustomPluginServersSection = ({
                           htmlFor="custom-plugin-server-api-key"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          Plugin server API key
+                          Custom Plugin Server API key
                         </FieldLabel>
                         <Input
                           id="custom-plugin-server-api-key"
@@ -641,7 +650,7 @@ export const CustomPluginServersSection = ({
                             setRegistrationError(null)
                             field.handleChange(event.target.value)
                           }}
-                          placeholder="Your secret key"
+                          placeholder="Example: sk_live_…"
                           type="password"
                           className="h-10 rounded-xl px-3"
                           aria-invalid={isInvalid}
@@ -663,7 +672,7 @@ export const CustomPluginServersSection = ({
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Adding…" : "Add plugin server"}
+                      {isSubmitting ? "Adding…" : "Add Custom Plugin Server"}
                     </Button>
                   )}
                 </form.Subscribe>
@@ -672,6 +681,20 @@ export const CustomPluginServersSection = ({
           </DialogContent>
         </Dialog>
       </div>
+      {pluginServers.length === 0 && (
+        <div className="flex flex-col items-start gap-2 rounded-xl border p-4">
+          <p className="text-sm text-muted-foreground">
+            No Custom Plugin Servers are connected.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAddPluginServerOpenChange(true)}
+          >
+            Add Custom Plugin Server
+          </Button>
+        </div>
+      )}
       {pluginServers.length > 0 && (
         <CustomPluginServerTable
           pluginServers={pluginServers}

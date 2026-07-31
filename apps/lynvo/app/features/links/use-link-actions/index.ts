@@ -122,7 +122,7 @@ export function useLinkActions({
         return resolvedChildren
       } catch (error) {
         console.error(error)
-        toast.error("Unable to load this folder. Try again.")
+        toast.error("The folder couldn’t be opened. Try again.")
         return null
       }
     },

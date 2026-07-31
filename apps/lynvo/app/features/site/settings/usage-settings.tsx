@@ -266,8 +266,8 @@ export const UsageSettings = ({
         <>
           <SettingsPanel className="gap-4">
             <SectionHeading
-              title="Official extractions"
-              description="One monthly allowance shared across all official plugins and direct links, with a separate daily safety limit."
+              title="Lynvo Plugin Server usage"
+              description="One monthly allowance shared across Lynvo Plugins and direct media, plus a separate daily limit."
             />
             <UsageSummary
               label="Lynvo Plugin Server"
@@ -292,11 +292,11 @@ export const UsageSettings = ({
           {externalItems.length > 0 && (
             <SettingsPanel className="gap-4">
               <SectionHeading
-                title="Custom plugin servers"
-                description="Monthly extraction usage shared across enabled custom plugin servers."
+                title="Custom Plugin Server usage"
+                description="Monthly requests shared across enabled Custom Plugin Servers."
               />
               <UsageSummary
-                label="Custom plugin servers"
+                label="Custom Plugin Servers"
                 total={totalMetrics(externalMetrics)}
                 resetsAt={externalResetAt}
               />
@@ -320,7 +320,7 @@ export const UsageSettings = ({
                           className="py-2"
                         >
                           <span className="text-sm text-destructive">
-                            {pluginServer.name} usage verification failed.
+                            Usage for {pluginServer.name} couldn’t be loaded.
                           </span>
                         </SettingsRow>,
                       ]
@@ -333,7 +333,8 @@ export const UsageSettings = ({
       )}
       {externalUsageFailed && (
         <p className="text-sm text-destructive">
-          Custom plugin server usage is temporarily unavailable.
+          Custom Plugin Server usage couldn’t be loaded. Check the connection,
+          then reload Settings.
         </p>
       )}
     </div>
