@@ -1,7 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
-import { isSafeUrl } from "../../../lib/ssrf"
 import { ConvexError, ExtractionError, ValidationError } from "../errors"
 import {
   extractDirectMedia,
@@ -35,8 +34,8 @@ import {
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
-import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
+import { prepareExtractionRouteInput } from "./extraction-route-input"
 
 const getHostname = (value: string): string => new URL(value).hostname
 
@@ -66,13 +65,8 @@ export class ExtractionService extends Context.Service<
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
       ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
-        const extractedAuth = extractHttpBasicCredential(options.url)
-        const targetUrl = extractedAuth.url
-        if (!isSafeUrl(targetUrl)) {
-          return yield* new ValidationError({
-            message: "Invalid or unsafe URL",
-          })
-        }
+        const routeInput = yield* prepareExtractionRouteInput(options.url)
+        const targetUrl = routeInput.targetUrl
         if (options.userId && options.accessToken) {
           const serviceToken = yield* Effect.promise(() =>
             signCredentialReadToken(
@@ -124,7 +118,7 @@ export class ExtractionService extends Context.Service<
                 ? yield* discoverCustomPlugin(
                     pluginServer,
                     targetUrl,
-                    extractedAuth.basicAuth,
+                    routeInput.basicAuth,
                     options.requestId
                   ).pipe(Effect.option)
                 : undefined
@@ -145,7 +139,7 @@ export class ExtractionService extends Context.Service<
             let password: string | undefined
             let basicAuth =
               source?.credential?.kind === "http-basic"
-                ? extractedAuth.basicAuth
+                ? routeInput.basicAuth
                 : undefined
             if (source?.credential && !basicAuth) {
               const domain = getHostname(targetUrl)
@@ -244,7 +238,7 @@ export class ExtractionService extends Context.Service<
             const discoveryAttempt = yield* discoverLynvoPlugin(
               environment,
               targetUrl,
-              extractedAuth.basicAuth,
+              routeInput.basicAuth,
               options.requestId
             ).pipe(Effect.option)
             const discovery =
@@ -264,7 +258,7 @@ export class ExtractionService extends Context.Service<
             let password: string | undefined
             let basicAuth: { username: string; password: string } | undefined =
               source.credential?.kind === "http-basic"
-                ? extractedAuth.basicAuth
+                ? routeInput.basicAuth
                 : undefined
             if (source.credential) {
               const domain = getHostname(targetUrl)
@@ -345,11 +339,8 @@ export class ExtractionService extends Context.Service<
       const getMetadata = Effect.fn("ExtractionService.getMetadata")(function* (
         options: MetadataOptions
       ): Effect.fn.Return<MetadataResult, ValidationError | ConvexError> {
-        if (!isSafeUrl(options.url)) {
-          return yield* new ValidationError({
-            message: "Invalid or unsafe URL",
-          })
-        }
+        const routeInput = yield* prepareExtractionRouteInput(options.url)
+        const targetUrl = routeInput.targetUrl
 
         if (options.userId && options.accessToken) {
           const serviceToken = yield* Effect.promise(() =>
@@ -375,12 +366,12 @@ export class ExtractionService extends Context.Service<
           )
           const pluginServer = yield* selectCustomPluginServer(
             pluginServers,
-            options.url
+            targetUrl
           )
           if (pluginServer) {
             const metadata = yield* getCustomPluginServerMetadata(
               pluginServer,
-              options.url
+              targetUrl
             )
             if (metadata) {
               return metadata
@@ -391,31 +382,30 @@ export class ExtractionService extends Context.Service<
             environment
           ).pipe(Effect.option)
           if (lynvoManifest._tag === "Some") {
-            const extractedAuth = extractHttpBasicCredential(options.url)
             const configuredDomain = yield* convex.query(
               api.pluginDomains.getByDomain,
               {
-                domain: getHostname(extractedAuth.url),
+                domain: getHostname(targetUrl),
                 pluginServerId: LYNVO_PLUGIN_SERVER_ID,
               },
               { accessToken: options.accessToken }
             )
             let metadata = getLynvoPluginServerMetadata(
               lynvoManifest.value,
-              extractedAuth.url,
+              targetUrl,
               configuredDomain?.pluginId
             )
             if (!metadata && lynvoManifest.value.features.discovery) {
               const discovery = yield* discoverLynvoPlugin(
                 environment,
-                extractedAuth.url,
-                extractedAuth.basicAuth,
+                targetUrl,
+                routeInput.basicAuth,
                 options.requestId
               ).pipe(Effect.option)
               if (discovery._tag === "Some" && discovery.value.matched) {
                 metadata = getLynvoPluginServerMetadata(
                   lynvoManifest.value,
-                  extractedAuth.url,
+                  targetUrl,
                   discovery.value.pluginId
                 )
               }
@@ -426,7 +416,10 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        return yield* getDirectMediaMetadata(directMediaAdapter, options)
+        return yield* getDirectMediaMetadata(directMediaAdapter, {
+          ...options,
+          url: targetUrl,
+        })
       })
 
       return ExtractionService.of({ extract, getMetadata })

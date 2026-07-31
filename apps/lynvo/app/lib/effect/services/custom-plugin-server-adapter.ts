@@ -3,20 +3,11 @@ import {
   getLynvoManifestExtension,
   getMatchedPlugin,
   pluginServerManifestSchema,
-  type ExtractSuccessResponse,
-  type PluginServerManifest,
   type PluginMetadata,
   type HttpBasicAuth,
 } from "@lynvo/plugin-server-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
-import {
-  matchUrl,
-  mapNodeToExtractedLink,
-} from "../../../lib/plugin-server-utils"
-import {
-  decodeExtractionText,
-  normalizeExtractionText,
-} from "../../extraction/extraction-text-normalization"
+import { matchUrl } from "../../../lib/plugin-server-utils"
 import { ExtractionError } from "../errors"
 import type {
   ExtractionResult,
@@ -29,6 +20,10 @@ import {
   PluginServerClientError,
   HttpPluginServerTransport,
 } from "../../extraction/plugin-server-client"
+import {
+  getPluginServerMetadata,
+  mapPluginServerExtractionResult,
+} from "./plugin-server-result-mapping"
 
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
@@ -170,50 +165,6 @@ export const discoverCustomPlugin = Effect.fn(
   })
 })
 
-export const getPluginServerMetadata = (
-  manifest: PluginServerManifest,
-  pluginServerId: string,
-  targetUrl?: string,
-  pluginId?: string
-): MetadataResult => {
-  const source = pluginId
-    ? getLynvoManifestExtension(manifest).plugins?.find(
-        (candidate) => candidate.id === pluginId
-      )
-    : targetUrl
-      ? getMatchedPlugin(manifest, targetUrl)
-      : undefined
-  const routeSourceId = source?.routesToPluginId
-  const routeSource = routeSourceId
-    ? getLynvoManifestExtension(manifest).plugins?.find(
-        (candidate) => candidate.id === routeSourceId
-      )
-    : undefined
-
-  return {
-    filename: "",
-    pluginName: decodeExtractionText(manifest.displayName),
-    ...(manifest.iconUrl ? { pluginIcon: manifest.iconUrl } : {}),
-    ...(source?.id ? { pluginId: source.id } : {}),
-    ...(source?.displayName
-      ? { sourceName: decodeExtractionText(source.displayName) }
-      : {}),
-    ...(source?.iconUrl ? { sourceIconUrl: source.iconUrl } : {}),
-    ...(source?.status ? { sourceStatus: source.status } : {}),
-    ...(source?.version ? { sourceVersion: source.version } : {}),
-    ...(source?.credential
-      ? { sourceCredentialKind: source.credential.kind }
-      : {}),
-    ...(routeSource?.displayName
-      ? { routeSourceName: decodeExtractionText(routeSource.displayName) }
-      : {}),
-    ...(routeSource?.iconUrl
-      ? { routeSourceIconUrl: routeSource.iconUrl }
-      : {}),
-    pluginServerId,
-  }
-}
-
 export const extractFromCustomPluginServer = Effect.fn(
   "CustomPluginServerAdapter.extractFromCustomPluginServer"
 )(function* (
@@ -252,33 +203,5 @@ export const extractFromCustomPluginServer = Effect.fn(
           }),
     catch: (cause) => customPluginServerError(cause, targetUrl),
   })
-  return mapExtractionResult(resultValue, pluginServer._id)
+  return mapPluginServerExtractionResult(resultValue, pluginServer._id)
 })
-
-export const mapExtractionResult = (
-  resultValue: ExtractSuccessResponse,
-  pluginServerId: string
-): ExtractionResult => {
-  const result = normalizeExtractionText(resultValue)
-
-  return {
-    links: result.nodes.map(mapNodeToExtractedLink),
-    meta: {
-      pluginName: result.plugin.displayName || result.plugin.pluginServerId,
-      ...(result.plugin.iconUrl ? { pluginIcon: result.plugin.iconUrl } : {}),
-      ...(result.plugin.pluginId ? { pluginId: result.plugin.pluginId } : {}),
-      ...(result.plugin.pluginName
-        ? { sourceName: result.plugin.pluginName }
-        : {}),
-      ...(result.plugin.pluginIconUrl
-        ? { sourceIconUrl: result.plugin.pluginIconUrl }
-        : {}),
-      ...(result.plugin.pageTitle
-        ? { pageTitle: result.plugin.pageTitle }
-        : {}),
-      ...(result.plugin.audio ? { audio: result.plugin.audio } : {}),
-      schemaVersion: 3,
-      pluginServerId,
-    },
-  }
-}

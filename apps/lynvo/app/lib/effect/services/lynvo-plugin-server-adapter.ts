@@ -16,8 +16,8 @@ import { ExtractionError } from "../errors"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   getPluginServerMetadata,
-  mapExtractionResult,
-} from "./custom-plugin-server-adapter"
+  mapPluginServerExtractionResult,
+} from "./plugin-server-result-mapping"
 
 const lynvoPluginServerError = (cause: unknown, url: string) =>
   new ExtractionError({
@@ -122,5 +122,5 @@ export const extractFromLynvoPluginServer = Effect.fn(
         : client.extractSource(targetUrl, options),
     catch: (cause) => lynvoPluginServerError(cause, targetUrl),
   })
-  return mapExtractionResult(result, LYNVO_PLUGIN_SERVER_ID)
+  return mapPluginServerExtractionResult(result, LYNVO_PLUGIN_SERVER_ID)
 })
