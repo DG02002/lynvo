@@ -652,4 +652,122 @@ describe("Extraction interface routing", () => {
     expect(pluginExtractionCount).toBe(0)
     fetchMock.mockRestore()
   })
+
+  it("does not hide Custom discovery failure with generic extraction", async () => {
+    let pluginExtractionCount = 0
+    const manifest = JSON.stringify({
+      protocolVersion: "1.0",
+      pluginServerId: "dev.example.discovery",
+      displayName: "Discovery Custom",
+      auth: { type: "bearer" },
+      usage: { endpoint: "/usage" },
+      matchers: [{ hosts: ["discovery-failure.example"] }],
+      features: { discovery: true },
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "other-host",
+              displayName: "Other Host",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["other.example"],
+              matchers: [{ hosts: ["other.example"] }],
+            },
+          ],
+        },
+      },
+    })
+    const storedPluginServer = {
+      _id: "discovery-custom-server",
+      _creationTime: 1,
+      userId: "user-1",
+      baseUrl: "https://discovery-plugin-server.example",
+      manifest,
+      enabled: true,
+      priority: 1,
+      verificationStatus: "verified",
+      createdAt: 1,
+      updatedAt: 1,
+      apiKeyCiphertext: "ciphertext",
+      apiKeyNonce: "nonce",
+      apiKeyAlgorithm: "AES-256-GCM" as const,
+      apiKeyVersion: 1,
+    }
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const request = new Request(input, init)
+        if (request.url.endsWith("/discover")) {
+          return Response.json(
+            {
+              ok: false,
+              error: { code: "TEMPORARY_FAILURE", message: "Unavailable" },
+              extensions: {},
+            },
+            { status: 503 }
+          )
+        }
+        pluginExtractionCount += 1
+        return Response.json({
+          plugin: {
+            pluginServerId: "dev.example.discovery",
+            displayName: "Discovery Custom",
+          },
+          nodes: [],
+          extensions: {},
+        })
+      })
+    const environmentWithCustom = {
+      ...environment,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () => Response.json({ apiKey: "custom-api-key" }),
+        }),
+      },
+    } as Env
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithCustom),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => Effect.succeed([storedPluginServer]),
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await expect(
+      Effect.runPromise(
+        ExtractionService.use((service) =>
+          service.extract({
+            url: "https://discovery-failure.example/video",
+            requestId: "custom-discovery-failure",
+            userId: "user-1",
+            accessToken: "access-token",
+          })
+        ).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "TEMPORARY_FAILURE",
+    })
+    expect(pluginExtractionCount).toBe(0)
+    fetchMock.mockRestore()
+  })
 })

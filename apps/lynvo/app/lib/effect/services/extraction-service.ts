@@ -1,6 +1,5 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
-import { api } from "../../../../convex/_generated/api"
 import { ConvexError, ExtractionError, ValidationError } from "../errors"
 import {
   extractDirectMedia,
@@ -18,15 +17,11 @@ import type {
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import { CloudflareEnv } from "./CloudflareEnv"
 import { getLynvoPluginServerMetadata } from "./lynvo-plugin-server-adapter"
-import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import { signCredentialReadToken } from "../../../lib/auth-gateway"
-import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
-import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
-import { selectLynvoRoute } from "./lynvo-route-selection"
-import { selectCustomRoute } from "./custom-route-selection"
 import { executeLynvoRoute } from "./lynvo-route-execution"
 import { executeCustomRoute } from "./custom-route-execution"
+import { loadAuthenticatedExtractionContext } from "./authenticated-extraction-context"
+import { selectExtractionRoute } from "./extraction-route-selection"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
@@ -45,31 +40,11 @@ export class ExtractionService extends Context.Service<
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
         if (options.userId && options.accessToken) {
-          const serviceToken = yield* Effect.promise(() =>
-            signCredentialReadToken(
-              environment.AUTH_GATEWAY_SECRET,
-              Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
-            )
-          )
-          const storedPluginServers = yield* convex
-            .query(
-              api.userPluginServers.listForService,
-              { serviceToken },
-              { accessToken: options.accessToken }
-            )
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new ValidationError({
-                    message: error.message,
-                    details: error,
-                  })
-              )
-            )
-          const pluginServers = yield* decryptCustomPluginServers(
+          const context = yield* loadAuthenticatedExtractionContext(
+            convex,
             environment,
             options.userId,
-            storedPluginServers
+            options.accessToken
           ).pipe(
             Effect.mapError(
               (error) =>
@@ -79,66 +54,47 @@ export class ExtractionService extends Context.Service<
                 })
             )
           )
-          const customRoute = yield* selectCustomRoute(pluginServers, {
-            targetUrl,
-            requestId: options.requestId,
-            pluginServerId: options.pluginServerId,
-            pluginId: options.pluginId,
-            kind: options.kind ?? "source",
-            inlineBasicAuth: routeInput.basicAuth,
-          })
-          if (customRoute) {
+          const route = yield* selectExtractionRoute(
+            convex,
+            environment,
+            context.pluginServers,
+            {
+              targetUrl,
+              accessToken: options.accessToken,
+              requestId: options.requestId,
+              pluginServerId: options.pluginServerId,
+              pluginId: options.pluginId,
+              extractionKind: options.kind ?? "source",
+              inlineBasicAuth: routeInput.basicAuth,
+            }
+          )
+          if (route.kind === "custom") {
             return yield* executeCustomRoute(
               convex,
               credentialVault,
-              customRoute,
+              route.route,
               {
                 targetUrl,
                 userId: options.userId,
                 accessToken: options.accessToken,
-                serviceToken,
+                serviceToken: context.serviceToken,
                 requestId: options.requestId,
                 kind: options.kind ?? "source",
                 inlineBasicAuth: routeInput.basicAuth,
               }
             )
           }
-          if (
-            options.pluginServerId &&
-            options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
-          ) {
-            return yield* new ValidationError({
-              message: "The saved Plugin Server is unavailable.",
-            })
-          }
-
-          const lynvoRoute = yield* selectLynvoRoute(convex, environment, {
-            targetUrl,
-            accessToken: options.accessToken,
-            requestId: options.requestId,
-            pluginId: options.pluginId,
-            kind: options.kind ?? "source",
-            inlineBasicAuth: routeInput.basicAuth,
-          })
-          if (
-            options.pluginServerId === LYNVO_PLUGIN_SERVER_ID &&
-            !lynvoRoute
-          ) {
-            return yield* new ValidationError({
-              message: "The saved Plugin Server is unavailable.",
-            })
-          }
-          if (lynvoRoute) {
+          if (route.kind === "lynvo") {
             return yield* executeLynvoRoute(
               convex,
               credentialVault,
               environment,
-              lynvoRoute,
+              route.route,
               {
                 targetUrl,
                 userId: options.userId,
                 accessToken: options.accessToken,
-                serviceToken,
+                serviceToken: context.serviceToken,
                 requestId: options.requestId,
                 kind: options.kind ?? "source",
                 inlineBasicAuth: routeInput.basicAuth,
@@ -157,62 +113,50 @@ export class ExtractionService extends Context.Service<
         const targetUrl = routeInput.targetUrl
 
         if (options.userId && options.accessToken) {
-          const serviceToken = yield* Effect.promise(() =>
-            signCredentialReadToken(
-              environment.AUTH_GATEWAY_SECRET,
-              Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
-            )
-          )
-          const storedPluginServers = yield* convex.query(
-            api.userPluginServers.listForService,
-            { serviceToken },
-            { accessToken: options.accessToken }
-          )
-          const pluginServers = yield* decryptCustomPluginServers(
+          const context = yield* loadAuthenticatedExtractionContext(
+            convex,
             environment,
             options.userId,
-            storedPluginServers
+            options.accessToken
           ).pipe(
             Effect.mapError(
               (error) =>
                 new ConvexError({ message: error.message, cause: error })
             )
           )
-          const customRoute = yield* selectCustomRoute(pluginServers, {
-            targetUrl,
-            requestId: options.requestId,
-            kind: "source",
-            inlineBasicAuth: routeInput.basicAuth,
-          })
-          if (customRoute) {
-            const metadata = yield* getCustomPluginServerMetadata(
-              customRoute.pluginServer,
+          const route = yield* selectExtractionRoute(
+            convex,
+            environment,
+            context.pluginServers,
+            {
               targetUrl,
-              customRoute.plugin?.id
-            )
-            if (metadata) {
-              return metadata
+              accessToken: options.accessToken,
+              requestId: options.requestId,
+              extractionKind: "source",
+              inlineBasicAuth: routeInput.basicAuth,
             }
-          }
-
-          const lynvoRoute = yield* selectLynvoRoute(convex, environment, {
-            targetUrl,
-            accessToken: options.accessToken,
-            requestId: options.requestId,
-            kind: "source",
-            inlineBasicAuth: routeInput.basicAuth,
-          }).pipe(
+          ).pipe(
             Effect.mapError((error) =>
               error._tag === "ExtractionError"
                 ? new ConvexError({ message: error.message, cause: error })
                 : error
             )
           )
-          if (lynvoRoute) {
-            const metadata = getLynvoPluginServerMetadata(
-              lynvoRoute.manifest,
+          if (route.kind === "custom") {
+            const metadata = yield* getCustomPluginServerMetadata(
+              route.route.pluginServer,
               targetUrl,
-              lynvoRoute.plugin.id
+              route.route.plugin?.id
+            )
+            if (metadata) {
+              return metadata
+            }
+          }
+          if (route.kind === "lynvo") {
+            const metadata = getLynvoPluginServerMetadata(
+              route.route.manifest,
+              targetUrl,
+              route.route.plugin.id
             )
             if (metadata) {
               return metadata

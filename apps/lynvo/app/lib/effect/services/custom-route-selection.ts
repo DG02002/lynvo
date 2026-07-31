@@ -3,6 +3,7 @@ import type {
   PluginMetadata,
 } from "@lynvo/plugin-server-protocol"
 import { Effect } from "effect"
+import { ExtractionError } from "../errors"
 import {
   discoverCustomPlugin,
   getCustomPlugin,
@@ -29,7 +30,7 @@ export const selectCustomRoute = Effect.fn(
 )(function* (
   pluginServers: ReadonlyArray<RegisteredPluginServer>,
   options: SelectCustomRouteOptions
-): Effect.fn.Return<CustomRouteSelection | undefined> {
+): Effect.fn.Return<CustomRouteSelection | undefined, ExtractionError> {
   const pluginServer = yield* selectCustomPluginServer(
     pluginServers,
     options.targetUrl,
@@ -45,17 +46,17 @@ export const selectCustomRoute = Effect.fn(
     options.pluginId
   )
   if (!plugin && !options.pluginId && options.kind === "source") {
-    const discoveryAttempt = yield* discoverCustomPlugin(
+    const discovery = yield* discoverCustomPlugin(
       pluginServer,
       options.targetUrl,
       options.inlineBasicAuth,
       options.requestId
-    ).pipe(Effect.option)
-    if (discoveryAttempt._tag === "Some" && discoveryAttempt.value?.matched) {
+    )
+    if (discovery?.matched) {
       plugin = yield* getCustomPlugin(
         pluginServer,
         options.targetUrl,
-        discoveryAttempt.value.pluginId
+        discovery.pluginId
       )
     }
   }
