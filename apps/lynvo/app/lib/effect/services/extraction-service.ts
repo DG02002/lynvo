@@ -24,10 +24,7 @@ import type {
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import { CloudflareEnv } from "./CloudflareEnv"
 import {
-  discoverLynvoPlugin,
   extractFromLynvoPluginServer,
-  findLynvoPlugin,
-  getLynvoPluginServerManifest,
   getLynvoPluginServerMetadata,
 } from "./lynvo-plugin-server-adapter"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
@@ -36,8 +33,7 @@ import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
-
-const getHostname = (value: string): string => new URL(value).hostname
+import { selectLynvoRoute } from "./lynvo-route-selection"
 
 const getMeteredPluginId = (pluginId: string) => {
   if (
@@ -164,62 +160,24 @@ export class ExtractionService extends Context.Service<
             })
           }
 
-          const lynvoManifest = yield* getLynvoPluginServerManifest(
-            environment,
-            options.requestId
-          ).pipe(Effect.option)
-          const manifest =
-            lynvoManifest._tag === "Some" ? lynvoManifest.value : undefined
-          const configuredDomain = yield* convex
-            .query(
-              api.pluginDomains.getByDomain,
-              {
-                domain: getHostname(targetUrl),
-                pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-              },
-              { accessToken: options.accessToken }
-            )
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new ValidationError({
-                    message: error.message,
-                    details: error,
-                  })
-              )
-            )
-          let source = manifest
-            ? findLynvoPlugin(
-                manifest,
-                targetUrl,
-                options.pluginId ?? configuredDomain?.pluginId
-              )
-            : undefined
+          const lynvoRoute = yield* selectLynvoRoute(convex, environment, {
+            targetUrl,
+            accessToken: options.accessToken,
+            requestId: options.requestId,
+            pluginId: options.pluginId,
+            kind: options.kind ?? "source",
+            inlineBasicAuth: routeInput.basicAuth,
+          })
           if (
-            !source &&
-            manifest?.features.discovery &&
-            (options.kind ?? "source") === "source"
+            options.pluginServerId === LYNVO_PLUGIN_SERVER_ID &&
+            !lynvoRoute
           ) {
-            const discoveryAttempt = yield* discoverLynvoPlugin(
-              environment,
-              targetUrl,
-              routeInput.basicAuth,
-              options.requestId
-            ).pipe(Effect.option)
-            const discovery =
-              discoveryAttempt._tag === "Some"
-                ? discoveryAttempt.value
-                : undefined
-            if (discovery?.matched) {
-              source = findLynvoPlugin(manifest, targetUrl, discovery.pluginId)
-            }
-          }
-          if (options.pluginServerId === LYNVO_PLUGIN_SERVER_ID && !source) {
             return yield* new ValidationError({
               message: "The saved Plugin Server is unavailable.",
             })
           }
-          if (source) {
+          if (lynvoRoute) {
+            const source = lynvoRoute.plugin
             const credentials = yield* resolvePluginCredential(
               convex,
               credentialVault,
@@ -306,38 +264,19 @@ export class ExtractionService extends Context.Service<
             }
           }
 
-          const lynvoManifest = yield* getLynvoPluginServerManifest(
-            environment
-          ).pipe(Effect.option)
-          if (lynvoManifest._tag === "Some") {
-            const configuredDomain = yield* convex.query(
-              api.pluginDomains.getByDomain,
-              {
-                domain: getHostname(targetUrl),
-                pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-              },
-              { accessToken: options.accessToken }
-            )
-            let metadata = getLynvoPluginServerMetadata(
-              lynvoManifest.value,
+          const lynvoRoute = yield* selectLynvoRoute(convex, environment, {
+            targetUrl,
+            accessToken: options.accessToken,
+            requestId: options.requestId,
+            kind: "source",
+            inlineBasicAuth: routeInput.basicAuth,
+          })
+          if (lynvoRoute) {
+            const metadata = getLynvoPluginServerMetadata(
+              lynvoRoute.manifest,
               targetUrl,
-              configuredDomain?.pluginId
+              lynvoRoute.plugin.id
             )
-            if (!metadata && lynvoManifest.value.features.discovery) {
-              const discovery = yield* discoverLynvoPlugin(
-                environment,
-                targetUrl,
-                routeInput.basicAuth,
-                options.requestId
-              ).pipe(Effect.option)
-              if (discovery._tag === "Some" && discovery.value.matched) {
-                metadata = getLynvoPluginServerMetadata(
-                  lynvoManifest.value,
-                  targetUrl,
-                  discovery.value.pluginId
-                )
-              }
-            }
             if (metadata) {
               return metadata
             }

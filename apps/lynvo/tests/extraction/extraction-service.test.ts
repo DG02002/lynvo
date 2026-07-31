@@ -172,4 +172,83 @@ describe("Extraction interface routing", () => {
       basicAuth: { username: "viewer", password: "secret" },
     })
   })
+
+  it("propagates the metadata request ID through Lynvo route selection", async () => {
+    const manifestRequestIds: Array<string | null> = []
+    const environmentWithLynvo = {
+      ...environment,
+      LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+      LYNVO_PLUGIN_SERVER: {
+        fetch: async (request: Request) => {
+          manifestRequestIds.push(request.headers.get("x-request-id"))
+          return Response.json({
+            protocolVersion: "1.0",
+            pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+            displayName: "Lynvo",
+            auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
+            matchers: [{ hosts: ["media.example"] }],
+            features: {},
+            extensions: {
+              lynvo: {
+                plugins: [
+                  {
+                    id: "media",
+                    displayName: "Media",
+                    status: "active",
+                    version: "1.0.0",
+                    hosts: ["media.example"],
+                    matchers: [{ hosts: ["media.example"] }],
+                  },
+                ],
+              },
+            },
+          })
+        },
+      },
+    } as Env
+    let queryCount = 0
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithLynvo),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => {
+                queryCount += 1
+                return Effect.succeed(queryCount === 1 ? [] : undefined)
+              },
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
+    )
+
+    await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.getMetadata({
+          url: "https://media.example/video",
+          requestId: "metadata-route-request",
+          userId: "user-1",
+          accessToken: "access-token",
+          env: environmentWithLynvo,
+        })
+      ).pipe(Effect.provide(layer))
+    )
+
+    expect(manifestRequestIds).toEqual(["metadata-route-request"])
+  })
 })
