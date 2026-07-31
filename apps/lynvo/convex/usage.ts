@@ -8,7 +8,10 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import {
   GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
   USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
@@ -103,7 +106,7 @@ export const consumeLynvoPlugin = mutation({
     ),
   },
   handler: async (ctx, _args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const usageLimitsDisabled = areUsageLimitsDisabled()
     const timestamp = Date.now()
     const daily = getDailyPeriod(timestamp)

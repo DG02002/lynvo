@@ -1,7 +1,10 @@
 import { v } from "convex/values"
 import { internal } from "./_generated/api"
 import { internalMutation, mutation, query } from "./_generated/server"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import { verifyDeviceCodePreflightToken } from "./authGateway"
 import { DEVICE_CODE_CLEANUP_BATCH_SIZE, DEVICE_CODE_TTL_MS } from "./constants"
 
@@ -148,7 +151,7 @@ export const authorizeCode = mutation({
   returns: v.any(),
   args: { code: v.string() },
   handler: async (context, arguments_) => {
-    const userId = await getAuthenticatedUserId(context)
+    const userId = await getAuthenticatedWritableUserId(context)
     const record = await context.db
       .query("deviceCodes")
       .withIndex("by_code", (queryBuilder) =>

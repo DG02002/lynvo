@@ -18,3 +18,14 @@ export const getAuthenticatedUserId = async (
   }
   return userId
 }
+
+export const getAuthenticatedWritableUserId = async (
+  context: AuthenticatedConvexContext & { readonly db: MutationCtx["db"] }
+) => {
+  const userId = await getAuthenticatedUserId(context)
+  const user = await context.db.get("users", userId)
+  if (!user || user.erasurePendingAt) {
+    throw new Error("Account erasure is in progress")
+  }
+  return userId
+}

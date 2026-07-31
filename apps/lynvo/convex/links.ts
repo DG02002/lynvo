@@ -2,7 +2,10 @@ import { internalMutation, mutation, query } from "./_generated/server"
 import { paginationOptsValidator } from "convex/server"
 import { v } from "convex/values"
 import { internal } from "./_generated/api"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import {
   assertRecentLinkMutation,
   cleanupExpiredRecentLinks,
@@ -48,7 +51,7 @@ export const createOrUpdate = mutation({
     meta: v.optional(v.string()), // JSON string
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const now = Date.now()
     await cleanupExpiredRecentLinks(ctx, userId, now)
 
@@ -111,7 +114,7 @@ export const deleteById = mutation({
     id: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
 
@@ -133,7 +136,7 @@ export const updateMeta = mutation({
     meta: v.string(), // JSON string
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
 

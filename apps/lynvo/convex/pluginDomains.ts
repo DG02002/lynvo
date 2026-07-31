@@ -1,6 +1,9 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import { normalizePluginDomain } from "../app/lib/plugin-domain"
 import {
   deletePluginCredential,
@@ -141,7 +144,7 @@ export const create = mutation({
     credential: v.optional(encryptedCredentialValidator),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     return await upsertPluginDomain(ctx, userId, args)
   },
 })
@@ -150,7 +153,7 @@ export const setCredential = mutation({
   returns: v.null(),
   args: { id: v.string(), credential: encryptedCredentialValidator },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     await setPluginCredential(ctx, userId, args.id, args.credential)
   },
 })
@@ -159,7 +162,7 @@ export const deleteCredential = mutation({
   returns: v.null(),
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     await deletePluginCredential(ctx, userId, args.id)
   },
 })
@@ -168,7 +171,7 @@ export const deleteById = mutation({
   returns: v.object({ success: v.boolean() }),
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     await deletePluginDomain(ctx, userId, args.id)
     return { success: true }
   },

@@ -1,6 +1,6 @@
 // @vitest-environment edge-runtime
 
-import { internal } from "../convex/_generated/api"
+import { api, internal } from "../convex/_generated/api"
 import {
   ACCOUNT_ERASURE_BATCH_SIZE,
   ACCOUNT_INACTIVITY_LIMIT_MS,
@@ -12,9 +12,29 @@ import {
   calculateAppOwnedStorageUsage,
   getUserStorageLedger,
 } from "../convex/storagePolicy"
-import { createConvexTest, insertTestUser } from "./convex-test-harness"
+import {
+  asAuthenticatedUser,
+  createConvexTest,
+  insertTestUser,
+} from "./convex-test-harness"
 
 describe("bounded lifecycle cleanup", () => {
+  it("rejects new user-owned writes after erasure starts", async () => {
+    const convex = createConvexTest()
+    const target = await insertTestUser(convex, "delete-pending")
+    const client = asAuthenticatedUser(convex, target.userId, target.sessionId)
+
+    await convex.mutation(internal.users.deleteUserData, {
+      userId: target.userId,
+    })
+
+    await expect(
+      client.mutation(api.links.createOrUpdate, {
+        url: "https://pending.example/new",
+      })
+    ).rejects.toThrow("Account erasure is in progress")
+  })
+
   it("resumes account erasure across bounded transactions", async () => {
     vi.useFakeTimers()
     const convex = createConvexTest()

@@ -14,7 +14,10 @@ import {
   retrieveAccount,
 } from "@convex-dev/auth/server"
 import { internal } from "./_generated/api"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import { validatePassword } from "../app/lib/auth-policy"
 import {
   DEFAULT_RETENTION_DAYS,
@@ -104,7 +107,7 @@ export const updatePlayerPreferences = mutation({
     rangeUnsupportedPlayerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const user = await ctx.db.get("users", userId)
     if (!user) {
       throw new Error("Authentication required")
@@ -125,7 +128,7 @@ export const updateStorageRetentionDays = mutation({
     deleteExpiredLinks: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const retentionDays = normalizeRetentionDays(args.days)
     const user = await ctx.db.get("users", userId)
     if (!user) {
@@ -177,7 +180,7 @@ export const clearRecentCards = mutation({
   returns: v.any(),
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const links = await ctx.db
       .query("links")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -196,7 +199,7 @@ export const touchActivity = mutation({
   returns: v.any(),
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const sessionId = await getAuthSessionId(ctx)
     await touchUserActivity(ctx, userId, sessionId, Date.now())
     return { success: true }
@@ -271,7 +274,7 @@ export const renameSession = mutation({
     deviceName: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const session = await ctx.db.get("authSessions", args.sessionId)
     if (!session || session.userId !== userId) {
       throw new Error("Session not found")
@@ -291,7 +294,7 @@ export const setCurrentSessionDevice = mutation({
     deviceName: v.string(),
   },
   handler: async (ctx, args) => {
-    await getAuthenticatedUserId(ctx)
+    await getAuthenticatedWritableUserId(ctx)
     const sessionId = await getAuthSessionId(ctx)
     if (!sessionId) {
       throw new Error("Session not found")
@@ -318,7 +321,7 @@ export const revokeSession = mutation({
     sessionId: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const currentSessionId = await getAuthSessionId(ctx)
     const sessionId = ctx.db.normalizeId("authSessions", args.sessionId)
     if (!sessionId) {
@@ -333,7 +336,7 @@ export const revokeAllSessions = mutation({
   returns: v.any(),
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     await revokeAllUserSessions(ctx, userId)
     return { success: true }
   },
@@ -353,6 +356,9 @@ export const changePassword = action({
     ])
     if (!user) {
       throw new Error("Authentication required")
+    }
+    if (user.erasurePendingAt) {
+      throw new Error("Account erasure is in progress")
     }
     const passwordError = validatePassword(args.newPassword, user.username)
     if (passwordError) {

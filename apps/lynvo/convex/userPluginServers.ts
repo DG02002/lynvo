@@ -1,6 +1,9 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import { assertStorageMutation, recordStorageDeletion } from "./storagePolicy"
 import { verifyCredentialReadToken } from "./authGateway"
 
@@ -118,7 +121,7 @@ export const createPending = mutation({
     verificationStatus: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const now = Date.now()
     const newDoc = {
       userId,
@@ -142,7 +145,7 @@ export const finalizeEncryptedCredential = mutation({
     apiKeyVersion: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const pluginServerId = ctx.db.normalizeId("userPluginServers", args.id)
     const existing = pluginServerId
       ? await ctx.db.get("userPluginServers", pluginServerId)
@@ -184,7 +187,7 @@ export const update = mutation({
     lastManifestRefreshAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const pluginServerId = ctx.db.normalizeId("userPluginServers", args.id)
     const existing = pluginServerId
       ? await ctx.db.get("userPluginServers", pluginServerId)
@@ -215,7 +218,7 @@ export const deleteById = mutation({
     id: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
+    const userId = await getAuthenticatedWritableUserId(ctx)
     const pluginServerId = ctx.db.normalizeId("userPluginServers", args.id)
     const existing = pluginServerId
       ? await ctx.db.get("userPluginServers", pluginServerId)

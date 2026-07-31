@@ -2,7 +2,10 @@ import { v } from "convex/values"
 import { getAuthSessionId } from "@convex-dev/auth/server"
 import { internal } from "./_generated/api"
 import { internalMutation, mutation, query } from "./_generated/server"
-import { getAuthenticatedUserId } from "./authentication"
+import {
+  getAuthenticatedUserId,
+  getAuthenticatedWritableUserId,
+} from "./authentication"
 import {
   REMOTE_COMMAND_CLEANUP_BATCH_SIZE,
   REMOTE_COMMAND_MAX_PAYLOAD_BYTES,
@@ -39,10 +42,8 @@ export const enqueue = mutation({
     payload: v.string(),
   },
   handler: async (context, arguments_) => {
-    const [userId] = await Promise.all([
-      getAuthenticatedUserId(context),
-      getAuthenticatedSession(context),
-    ])
+    const userId = await getAuthenticatedWritableUserId(context)
+    await getAuthenticatedSession(context)
     assertPayloadSize(arguments_.payload)
     const targetSession = await context.db.get(
       "authSessions",
@@ -85,10 +86,8 @@ export const acknowledge = mutation({
   returns: v.any(),
   args: { id: v.id("remoteCommands") },
   handler: async (context, arguments_) => {
-    const [userId, sessionId] = await Promise.all([
-      getAuthenticatedUserId(context),
-      getAuthenticatedSession(context),
-    ])
+    const userId = await getAuthenticatedWritableUserId(context)
+    const sessionId = await getAuthenticatedSession(context)
     const command = await context.db.get("remoteCommands", arguments_.id)
     if (
       !command ||
