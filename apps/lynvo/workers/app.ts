@@ -747,7 +747,35 @@ app.all("/api/*", async (context) => {
       add: (fields) => addRequestContext(context, fields),
     })
   )
-  return apiHandler(context.req.raw, effectContext)
+  const response = await apiHandler(context.req.raw, effectContext)
+  if (
+    context.req.method !== "DELETE" ||
+    context.req.path !== "/api/settings/security/account" ||
+    !response.ok
+  ) {
+    return response
+  }
+  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
+  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
+  const sessionResult = sessionId
+    ? await authSession.revoke(sessionId)
+    : undefined
+  const didRevokeSession = !sessionResult || sessionResult.kind === "revoked"
+  const headers = new Headers(response.headers)
+  headers.set(
+    "Set-Cookie",
+    sessionResult?.kind === "revoked"
+      ? sessionResult.cookie
+      : authSession.expireCookie()
+  )
+  addRequestContext(context, {
+    worker_session_revoked: didRevokeSession,
+  })
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
 })
 
 app.all("*", async (context) => {

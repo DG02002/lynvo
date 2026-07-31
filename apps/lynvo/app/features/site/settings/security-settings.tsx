@@ -83,7 +83,6 @@ export function SecuritySettings({
           payload: { confirmUsername: deleteConfirmUsername },
         })
       )
-      await revokeWorkerSession()
       toast.success("Account deleted")
       window.location.href = "/"
     } catch (error) {
