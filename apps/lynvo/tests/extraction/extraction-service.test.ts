@@ -165,13 +165,37 @@ describe("Extraction interface routing", () => {
     )
 
     expect(queryCount).toBe(2)
-    expect(
-      await pluginServerRequests
-        .find((request) => request.url.endsWith("/extract"))
-        ?.json()
-    ).toMatchObject({
-      basicAuth: { username: "viewer", password: "secret" },
-    })
+    queryCount = 0
+    await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.extract({
+          url: "https://viewer:secret@protected.example/video",
+          requestId: "inline-basic-auth-node",
+          pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+          pluginId: "protected",
+          kind: "node",
+          userId: "user-1",
+          accessToken: "access-token",
+        })
+      ).pipe(Effect.provide(layer))
+    )
+
+    expect(queryCount).toBe(2)
+    const extractionBodies = await Promise.all(
+      pluginServerRequests
+        .filter((request) => request.url.endsWith("/extract"))
+        .map((request) => request.json())
+    )
+    expect(extractionBodies).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({ kind: "source" }),
+        basicAuth: { username: "viewer", password: "secret" },
+      }),
+      expect.objectContaining({
+        input: expect.objectContaining({ kind: "node" }),
+        basicAuth: { username: "viewer", password: "secret" },
+      }),
+    ])
   })
 
   it("propagates the metadata request ID through Lynvo route selection", async () => {
@@ -370,6 +394,24 @@ describe("Extraction interface routing", () => {
         })
       ).pipe(Effect.provide(layer))
     )
+
+    await expect(
+      Effect.runPromise(
+        ExtractionService.use((service) =>
+          service.extract({
+            url: "https://custom.example/video",
+            requestId: "missing-custom-plugin",
+            pluginServerId: "custom-server",
+            pluginId: "missing",
+            userId: "user-1",
+            accessToken: "access-token",
+          })
+        ).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      _tag: "ValidationError",
+      message: "The saved Plugin is unavailable.",
+    })
 
     expect(extractionPluginIds).toEqual(["chosen"])
     fetchMock.mockRestore()

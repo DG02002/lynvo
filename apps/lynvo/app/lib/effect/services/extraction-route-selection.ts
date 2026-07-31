@@ -48,6 +48,11 @@ export const selectExtractionRoute = Effect.fn(
     inlineBasicAuth: options.inlineBasicAuth,
   })
   if (customRoute) {
+    if (options.pluginId && !customRoute.plugin) {
+      return yield* new ValidationError({
+        message: "The saved Plugin is unavailable.",
+      })
+    }
     return { kind: "custom", route: customRoute }
   }
   if (
