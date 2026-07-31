@@ -18,7 +18,7 @@ const requiredLynvoFragments = [
   '"TURNSTILE_SITE_KEY": "0x4AAAAAAEC1SvszqvkGdIr2"',
   '"name": "AUTH_RATE_LIMITER"',
   '"name": "WORKER_AUTH_SESSION"',
-  '"name": "EXTERNAL_WORKER_CREDENTIAL_VAULT"',
+  '"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"',
   '"name": "USER_REALTIME_ROOM"',
   '"binding": "LYNVO_PLUGIN_SERVER"',
   '"service": "lynvo-plugin-server"',
@@ -46,7 +46,7 @@ const limiterBindingCount =
 const sessionBindingCount =
   lynvoConfig.split('"name": "WORKER_AUTH_SESSION"').length - 1
 const credentialVaultBindingCount =
-  lynvoConfig.split('"name": "EXTERNAL_WORKER_CREDENTIAL_VAULT"').length - 1
+  lynvoConfig.split('"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"').length - 1
 const sessionKeyDeclarationCount =
   lynvoConfig.split('"AUTH_SESSION_MASTER_KEY"').length - 1
 

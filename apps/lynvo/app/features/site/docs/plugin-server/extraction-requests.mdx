@@ -1,0 +1,85 @@
+---
+title: Validate extraction requests
+description: Validate source URLs, lazy nodes, source selection, and credentials.
+navLabel: Extraction Requests
+contentType: Reference
+---
+
+<DocSection id="request-schema">
+
+## Validate extraction requests
+
+`POST /extract` accepts a source URL or a lazy-node follow-up. Zod can reject malformed bodies before your adapter runs.
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {3-11}
+import { z } from "zod"
+
+const sourceInput = z.object({
+  kind: z.literal("source"),
+  sourceUrl: z.string(),
+})
+
+const nodeInput = z.object({
+  kind: z.literal("node"),
+  nodeUrl: z.string(),
+  resourceId: z.string().optional(),
+})
+```
+
+</CodeBlock>
+
+Add optional source selection and credential fields to the request envelope:
+
+<CodeBlock label="src/protocol.ts">
+
+```ts {2,4-8}
+export const extractRequestSchema = z.object({
+  input: z.discriminatedUnion("kind", [sourceInput, nodeInput]),
+  pluginId: z.string().min(1).optional(),
+  password: z.string().optional(),
+  basicAuth: z
+    .object({
+      username: z.string(),
+      password: z.string(),
+    })
+    .optional(),
+})
+```
+
+</CodeBlock>
+
+A source extraction request uses `sourceUrl`:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "input": {
+    "kind": "source",
+    "sourceUrl": "https://media.example.com/watch/123"
+  }
+}
+```
+
+</CodeBlock>
+
+A lazy follow-up uses the `nodeUrl` returned by the same Plugin Server:
+
+<CodeBlock label="POST /extract">
+
+```json
+{
+  "pluginId": "example-media",
+  "input": {
+    "kind": "node",
+    "nodeUrl": "https://media.example.com/folders/bonus",
+    "resourceId": "bonus_v1"
+  }
+}
+```
+
+</CodeBlock>
+
+</DocSection>

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { externalWorkerSchema } from "~/features/site/settings/plugin-settings-schemas"
+import { customPluginServerSchema } from "~/features/site/settings/plugin-settings-schemas"
 
 const getFieldErrors = (value: unknown) => {
-  const result = externalWorkerSchema.safeParse(value)
+  const result = customPluginServerSchema.safeParse(value)
   expect(result.success).toBe(false)
   if (result.success) {
     return {}
@@ -12,32 +12,32 @@ const getFieldErrors = (value: unknown) => {
 }
 
 describe("plugin settings schemas", () => {
-  it("normalizes a valid external worker URL", () => {
+  it("normalizes a valid Custom Plugin Server URL", () => {
     expect(
-      externalWorkerSchema.parse({
-        baseUrl: "  https://worker.example.com  ",
+      customPluginServerSchema.parse({
+        baseUrl: "  https://plugin-server.example.com  ",
         apiKey: "secret",
       })
     ).toEqual({
-      baseUrl: "https://worker.example.com",
+      baseUrl: "https://plugin-server.example.com",
       apiKey: "secret",
     })
   })
 
-  it("allows HTTP only for localhost development workers", () => {
+  it("allows HTTP only for localhost development plugin servers", () => {
     expect(
-      externalWorkerSchema.safeParse({
+      customPluginServerSchema.safeParse({
         baseUrl: "http://localhost:8788",
         apiKey: "",
       }).success
     ).toBe(true)
     expect(
       getFieldErrors({
-        baseUrl: "http://worker.example.com",
+        baseUrl: "http://plugin-server.example.com",
         apiKey: "",
       })
     ).toEqual({
-      baseUrl: ["Worker base URL must use HTTPS."],
+      baseUrl: ["Plugin server base URL must use HTTPS."],
     })
   })
 
@@ -46,8 +46,8 @@ describe("plugin settings schemas", () => {
       baseUrl: ["Base URL is required."],
     })
     expect(
-      externalWorkerSchema.safeParse({
-        baseUrl: "https://worker.example.com",
+      customPluginServerSchema.safeParse({
+        baseUrl: "https://plugin-server.example.com",
         apiKey: "",
         enabled: true,
       }).success

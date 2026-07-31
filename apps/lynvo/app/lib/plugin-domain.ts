@@ -15,7 +15,7 @@ export interface SourceDomainSuggestion extends SourceUrlCandidate {
   pluginIconUrl?: string
   pluginId: string
   pluginName: string
-  workerId: string
+  pluginServerId: string
 }
 
 export const parsePluginDomainInput = (

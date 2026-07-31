@@ -4,7 +4,7 @@ import { useRefreshActions } from "~/features/links/use-link-actions/refresh-act
 import type { RecentLinkViewItem } from "~/features/links/types"
 
 describe("resolved mirror cache", () => {
-  it("returns persisted mirrors without calling the extractor again", async () => {
+  it("returns persisted mirrors without repeating extraction", async () => {
     const lazyItemUrl = "https://resolver.example/playable-item-one"
     const mirrors = [
       {
@@ -17,8 +17,8 @@ describe("resolved mirror cache", () => {
       url: "https://source.example/show",
       timestamp: 1,
       metadata: {
-        schemaVersion: 2,
-        source: { workerId: "worker-one" },
+        schemaVersion: 3,
+        source: { pluginServerId: "plugin-server-one" },
         extraction: { extractedLinks: [] },
         playback: {
           watchedUrls: [],
@@ -65,8 +65,8 @@ describe("resolved mirror cache", () => {
       url: "https://source.example/show",
       timestamp: 1,
       metadata: {
-        schemaVersion: 2,
-        source: { workerId: "worker-one" },
+        schemaVersion: 3,
+        source: { pluginServerId: "plugin-server-one" },
         extraction: { extractedLinks: [] },
         playback: {
           watchedUrls: [],
@@ -76,7 +76,7 @@ describe("resolved mirror cache", () => {
       },
     }
     const runWithExtractingItem = vi.fn(async () => {
-      throw new Error("cache bypass reached extractor boundary")
+      throw new Error("cache bypass reached Plugin Server boundary")
     })
     const { result } = renderHook(() =>
       useRefreshActions({
@@ -91,7 +91,7 @@ describe("resolved mirror cache", () => {
 
     await expect(
       act(() => result.current.handleMirrorExpand(item.url, lazyItemUrl, true))
-    ).rejects.toThrow("cache bypass reached extractor boundary")
+    ).rejects.toThrow("cache bypass reached Plugin Server boundary")
 
     expect(runWithExtractingItem).toHaveBeenCalledOnce()
   })

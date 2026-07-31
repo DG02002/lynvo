@@ -7,7 +7,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "Rules for responsible use of Lynvo, official extraction, external extractors, credentials, and shared capacity.",
+        "Rules for responsible use of Lynvo, Lynvo Plugin Server extraction, Custom Plugin Servers, credentials, and shared capacity.",
     },
   ]
 }

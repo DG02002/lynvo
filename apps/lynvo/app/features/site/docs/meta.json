@@ -5,8 +5,8 @@
       "pages": ["android-tv"]
     },
     {
-      "title": "External extractors",
-      "pages": ["extractor"]
+      "title": "Plugin Servers",
+      "pages": ["plugin-server"]
     }
   ]
 }

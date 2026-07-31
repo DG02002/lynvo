@@ -1,4 +1,4 @@
-import type { ExtractedLink, LinkMetadataV2 } from "./types"
+import type { ExtractedLink, LinkMetadata } from "./types"
 import { normalizeLinkMetadata } from "./link-metadata-normalization"
 import { mergeUnique } from "./link-tree-metadata"
 
@@ -25,7 +25,7 @@ export const applyWatchedState = (
 export const withWatchedUrl = (
   metadata: unknown,
   linkUrl: string
-): LinkMetadataV2 => {
+): LinkMetadata => {
   const normalized = normalizeLinkMetadata(metadata)
   return {
     ...normalized,
@@ -40,7 +40,7 @@ export const withResolvedMirrors = (
   metadata: unknown,
   lazyItemUrl: string,
   mirrors: ExtractedLink[]
-): LinkMetadataV2 => {
+): LinkMetadata => {
   const normalized = normalizeLinkMetadata(metadata)
   return {
     ...normalized,

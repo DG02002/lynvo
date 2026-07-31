@@ -35,11 +35,11 @@ export const PrivacyPolicyContent = () => (
         <li>
           <strong className="text-foreground">Settings:</strong> player
           preferences, saved-link retention choice, plugin domains, and enabled
-          external workers
+          Custom Plugin Servers
         </li>
         <li>
           <strong className="text-foreground">Credentials you add:</strong>
-          plugin domain passwords and external-worker API keys
+          Plugin Domain passwords and Plugin Server API keys
         </li>
         <li>
           <strong className="text-foreground">Session data:</strong> session
@@ -82,7 +82,7 @@ export const PrivacyPolicyContent = () => (
         <li>Save, organize, extract, and synchronize your links</li>
         <li>Open a playable link in the player you select</li>
         <li>Pair devices and deliver remote-play commands</li>
-        <li>Run plugins and external workers you configure</li>
+        <li>Run Plugins and Custom Plugin Servers you configure</li>
         <li>Enforce storage, rate, and abuse-prevention limits</li>
         <li>Diagnose failures and protect Lynvo from unauthorized use</li>
       </ul>
@@ -118,10 +118,10 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">
-            External workers you configure:
+            Custom Plugin Servers you configure:
           </strong>
-          the saved URL, worker API key, and extraction request needed to run
-          that worker
+          the saved URL, Plugin Server API key, and extraction request needed to
+          run that Plugin Server
         </li>
         <li>
           <strong className="text-foreground">
@@ -141,9 +141,9 @@ export const PrivacyPolicyContent = () => (
       <p>
         Lynvo hashes account passwords and doesn&apos;t store them as readable
         text. Lynvo encrypts plugin domain passwords with Advanced Encryption
-        Standard 256-bit Galois/Counter Mode (AES-256-GCM). External-worker API
-        keys are stored with your worker configuration and are sent to that
-        worker when Lynvo makes an authorized request.
+        Standard 256-bit Galois/Counter Mode (AES-256-GCM). Plugin Server API
+        keys are stored with your Plugin Server configuration and are sent to
+        that Plugin Server when Lynvo makes an authorized request.
       </p>
       <p>
         Lynvo uses access controls, request validation, rate limiting, and
@@ -192,9 +192,9 @@ export const PrivacyPolicyContent = () => (
         You can delete saved links, clear your history, revoke other sessions,
         or permanently delete your account in Settings. Account deletion removes
         the account, links, plugin configuration, stored plugin credentials,
-        worker configuration, pairing records, and sessions. Deleted data and
-        automatically deleted inactive accounts can&apos;t be recovered through
-        Lynvo.
+        Plugin Server configuration, pairing records, and sessions. Deleted data
+        and automatically deleted inactive accounts can&apos;t be recovered
+        through Lynvo.
       </p>
     </PolicySection>
 

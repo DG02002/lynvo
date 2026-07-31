@@ -14,9 +14,10 @@ describe("logout route", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(null, { status: 204 }))
-    const router = createMemoryRouter([
-      { path: "/auth/logout", element: <Logout /> },
-    ], { initialEntries: ["/auth/logout"] })
+    const router = createMemoryRouter(
+      [{ path: "/auth/logout", element: <Logout /> }],
+      { initialEntries: ["/auth/logout"] }
+    )
     render(<RouterProvider router={router} />)
 
     await waitFor(() => {

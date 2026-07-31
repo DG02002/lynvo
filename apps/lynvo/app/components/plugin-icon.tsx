@@ -9,7 +9,7 @@ import { getPluginIconSource, type PluginIconSource } from "~/lib/plugin-icons"
 interface PluginIconProps {
   icon?: PluginIconSource
   iconUrl?: string
-  fallback?: "extractor" | "source"
+  fallback?: "plugin-server" | "source"
   className?: string
 }
 
@@ -43,7 +43,9 @@ export const PluginIcon = ({
 
   return (
     <HugeiconsIcon
-      icon={fallback === "extractor" ? ThreeDViewIcon : GeometricShapes01Icon}
+      icon={
+        fallback === "plugin-server" ? ThreeDViewIcon : GeometricShapes01Icon
+      }
       className={cn("shrink-0 text-foreground", className)}
       aria-hidden="true"
       data-icon-fallback={fallback}

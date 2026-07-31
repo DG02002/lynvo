@@ -9,7 +9,7 @@ interface LinkSelectionHeaderProps {
   pageTitle?: string
   audioInfo?: string
   isDraftMode: boolean
-  workerId?: string
+  pluginServerId?: string
   workerName?: string
 }
 

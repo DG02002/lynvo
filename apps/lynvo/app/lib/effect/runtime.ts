@@ -2,7 +2,7 @@ import { Layer, ManagedRuntime } from "effect"
 import { AuthSessionService } from "./services/AuthSessionService"
 import { CloudflareEnv } from "./services/CloudflareEnv"
 import { ConvexService } from "./services/ConvexService"
-import { ExtractorService } from "./services/ExtractorService"
+import { ExtractionService } from "./services/extraction-service"
 import { PluginCredentialVault } from "./services/plugin-credential-vault"
 
 const createRuntime = (env: Env) => {
@@ -13,7 +13,7 @@ const createRuntime = (env: Env) => {
   ).pipe(Layer.provide(environmentLayer))
   const applicationLayer = Layer.mergeAll(
     AuthSessionService.layer,
-    ExtractorService.layer
+    ExtractionService.layer
   ).pipe(Layer.provide(Layer.merge(environmentLayer, infrastructureLayer)))
 
   return ManagedRuntime.make(

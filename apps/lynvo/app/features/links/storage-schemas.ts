@@ -17,7 +17,7 @@ export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
     size: z.string().optional(),
     sourceName: z.string().optional(),
     selectable: z.boolean().optional(),
-    workerNodeKind: z.enum(["group", "resolvable", "playable"]).optional(),
+    mediaNodeKind: z.enum(["group", "resolvable", "playable"]).optional(),
     resolutionKind: z.enum(["folder", "mirrors"]).optional(),
   })
 )
@@ -47,7 +47,7 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
   title: z.string().optional(),
   badge: z.string().optional(),
   schemaVersion: z.number().optional(),
-  workerId: z.string().optional(),
+  pluginServerId: z.string().optional(),
 })
 
 export const draftSchema = z.strictObject({

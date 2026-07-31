@@ -39,7 +39,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
   {
     icon: PackageSearchIcon,
     title: "The Glass Frontier — Chapter 12 · 1080p",
-    detail: "Cloud extractor",
+    detail: "Lynvo Plugin Server",
     meta: "2.4 GB",
   },
   {

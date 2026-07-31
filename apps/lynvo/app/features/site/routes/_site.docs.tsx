@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { data, isRouteErrorResponse, redirect, useParams } from "react-router"
+import { data, isRouteErrorResponse, useParams } from "react-router"
 
 import type { Route } from "./+types/_site.docs"
 import { docsComponents } from "~/features/site/docs/docs-components"
@@ -12,11 +12,6 @@ export const loader = ({ params }: Route.LoaderArgs) => {
 
   if (!requestedSlug) {
     return { slug: null }
-  }
-
-  const legacyRedirect = docsCatalog.getLegacyRedirect(requestedSlug)
-  if (legacyRedirect) {
-    return redirect(legacyRedirect, 301)
   }
 
   if (!docsCatalog.resolve(requestedSlug)) {
@@ -33,7 +28,7 @@ export const meta = ({ loaderData }: Route.MetaArgs) => {
       {
         name: "description",
         content:
-          "Choose a Lynvo guide for Android TV setup or external extractor development.",
+          "Choose a Lynvo guide for Android TV setup or Plugin Server development.",
       },
       { name: "contentType", content: "Landing" },
     ]

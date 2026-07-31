@@ -23,8 +23,8 @@
         "class_name": "WorkerAuthSession",
       },
       {
-        "name": "EXTERNAL_WORKER_CREDENTIAL_VAULT",
-        "class_name": "ExternalWorkerCredentialVault",
+        "name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
+        "class_name": "PluginServerCredentialVault",
       },
       {
         "name": "USER_REALTIME_ROOM",
@@ -43,7 +43,13 @@
     },
     {
       "tag": "v3",
+      // Immutable applied migration; v4 deletes this disposable legacy state.
       "new_sqlite_classes": ["ExternalWorkerCredentialVault"],
+    },
+    {
+      "tag": "v4",
+      "new_sqlite_classes": ["PluginServerCredentialVault"],
+      "deleted_classes": ["ExternalWorkerCredentialVault"],
     },
   ],
   "secrets": {
@@ -84,8 +90,8 @@
             "class_name": "WorkerAuthSession",
           },
           {
-            "name": "EXTERNAL_WORKER_CREDENTIAL_VAULT",
-            "class_name": "ExternalWorkerCredentialVault",
+            "name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
+            "class_name": "PluginServerCredentialVault",
           },
           {
             "name": "USER_REALTIME_ROOM",

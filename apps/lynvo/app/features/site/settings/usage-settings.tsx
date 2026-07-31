@@ -28,7 +28,7 @@ interface UsageListItem {
   icon?: OfficialPlugin["icon"]
   iconUrl?: string
   hideIcon?: boolean
-  fallback: "extractor" | "source"
+  fallback: "plugin-server" | "source"
 }
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
@@ -127,7 +127,7 @@ const UsageItem = ({
   icon?: OfficialPlugin["icon"]
   iconUrl?: string
   hideIcon?: boolean
-  fallback: "extractor" | "source"
+  fallback: "plugin-server" | "source"
   name: string
   total: UsageTotal
 }) => (
@@ -166,13 +166,13 @@ export const UsageSettings = ({
   const timeBucket = useDailyTimeBucket()
   const officialUsage = useQuery(api.usage.getUsage, { timeBucket })
   const [externalUsage, setExternalUsage] = React.useState<
-    readonly ExternalWorkerUsage[] | undefined
+    readonly CustomPluginServerUsage[] | undefined
   >()
   const [externalUsageFailed, setExternalUsageFailed] = React.useState(false)
 
   React.useEffect(() => {
     let isCurrent = true
-    void Effect.runPromise(client.workers.usage()).then(
+    void Effect.runPromise(client.pluginServers.usage()).then(
       (usage) => {
         if (isCurrent) {
           setExternalUsage(usage)
@@ -197,11 +197,11 @@ export const UsageSettings = ({
     ? dailyExtractions(officialUsage.metrics)
     : []
   const availableExternalUsage = externalUsage?.filter(
-    (worker) => !worker.error
+    (pluginServer) => !pluginServer.error
   )
   const externalMetrics =
-    availableExternalUsage?.flatMap((worker) =>
-      monthlyExtractions(worker.metrics)
+    availableExternalUsage?.flatMap((pluginServer) =>
+      monthlyExtractions(pluginServer.metrics)
     ) ?? []
   const officialResetAt = officialMetrics
     .flatMap((metric) => (metric.resetsAt ? [metric.resetsAt] : []))
@@ -216,12 +216,14 @@ export const UsageSettings = ({
         (candidate) => candidate.id === metric.pluginId
       )
       const isDirect = metric.pluginId === "direct"
-      const isDailyLimit = metric.id === "official-worker-operations"
+      const isDailyLimit = metric.id === "lynvo-plugin-server-operations"
       return {
         key: metric.id,
         icon: isDirect ? { hugeIcon: Link01Icon } : plugin?.icon,
         hideIcon: isDailyLimit,
-        fallback: isDailyLimit ? ("extractor" as const) : ("source" as const),
+        fallback: isDailyLimit
+          ? ("plugin-server" as const)
+          : ("source" as const),
         name: isDailyLimit
           ? "Daily extraction limit"
           : (plugin?.name ?? metric.label.replace(/\s+extractions$/i, "")),
@@ -232,23 +234,23 @@ export const UsageSettings = ({
     .sort((left, right) => left.sortOrder - right.sortOrder)
 
   const externalItems: UsageListItem[] =
-    externalUsage?.flatMap((worker) =>
-      worker.error
+    externalUsage?.flatMap((pluginServer) =>
+      pluginServer.error
         ? []
-        : monthlyExtractions(worker.metrics).map((metric) => {
-            const source = worker.plugins?.find(
+        : monthlyExtractions(pluginServer.metrics).map((metric) => {
+            const plugin = pluginServer.plugins?.find(
               (candidate) => candidate.id === metric.pluginId
             )
-            const isSharedExtractorMetric = !metric.pluginId
+            const isSharedPluginServerMetric = !metric.pluginId
             return {
-              key: `${worker.workerId}:${metric.id}`,
-              iconUrl: source?.iconUrl ?? worker.iconUrl,
-              fallback: isSharedExtractorMetric
-                ? ("extractor" as const)
+              key: `${pluginServer.pluginServerId}:${metric.id}`,
+              iconUrl: plugin?.iconUrl ?? pluginServer.iconUrl,
+              fallback: isSharedPluginServerMetric
+                ? ("plugin-server" as const)
                 : ("source" as const),
-              name: isSharedExtractorMetric
-                ? worker.name
-                : (source?.name ??
+              name: isSharedPluginServerMetric
+                ? pluginServer.name
+                : (plugin?.name ??
                   metric.label.replace(/\s+extractions$/i, "")),
               total: { used: metric.used, limit: metric.limit },
             }
@@ -290,11 +292,11 @@ export const UsageSettings = ({
           {externalItems.length > 0 && (
             <SettingsPanel className="gap-4">
               <SectionHeading
-                title="External extractors"
-                description="Monthly extraction usage shared across enabled external plugins."
+                title="Custom plugin servers"
+                description="Monthly extraction usage shared across enabled custom plugin servers."
               />
               <UsageSummary
-                label="External extractors"
+                label="Custom plugin servers"
                 total={totalMetrics(externalMetrics)}
                 resetsAt={externalResetAt}
               />
@@ -310,12 +312,15 @@ export const UsageSettings = ({
                     total={item.total}
                   />
                 ))}
-                {externalUsage?.flatMap((worker) =>
-                  worker.error
+                {externalUsage?.flatMap((pluginServer) =>
+                  pluginServer.error
                     ? [
-                        <SettingsRow key={worker.workerId} className="py-2">
+                        <SettingsRow
+                          key={pluginServer.pluginServerId}
+                          className="py-2"
+                        >
                           <span className="text-sm text-destructive">
-                            {worker.name} usage verification failed.
+                            {pluginServer.name} usage verification failed.
                           </span>
                         </SettingsRow>,
                       ]
@@ -328,7 +333,7 @@ export const UsageSettings = ({
       )}
       {externalUsageFailed && (
         <p className="text-sm text-destructive">
-          External extractor usage is temporarily unavailable.
+          Custom plugin server usage is temporarily unavailable.
         </p>
       )}
     </div>

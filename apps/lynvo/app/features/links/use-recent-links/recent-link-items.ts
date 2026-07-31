@@ -1,11 +1,11 @@
-import { createMetadataV2, toLegacyMeta } from "~/features/links/links.mapper"
+import { createLinkMetadata, toFlatMeta } from "~/features/links/links.mapper"
 import {
-  getRecentLinkViewItemLegacyMeta,
+  getRecentLinkViewItemFlatMeta,
   getRecentLinkViewItemMetadata,
 } from "~/features/links/link-metadata-accessors"
 import type {
   ExtractedLink,
-  LinkMetadataV2,
+  LinkMetadata,
   MetaData,
   RecentLinkViewItem,
 } from "~/features/links/types"
@@ -13,7 +13,7 @@ import type {
 export interface CreateRecentLinkViewItemOptions {
   targetUrl: string
   title: string
-  metadata: LinkMetadataV2
+  metadata: LinkMetadata
 }
 
 export interface CreateLinkUpdateOptions {
@@ -21,12 +21,12 @@ export interface CreateLinkUpdateOptions {
   links: ExtractedLink[]
 }
 
-const getSourceString = (metadata: LinkMetadataV2, key: string) => {
+const getSourceString = (metadata: LinkMetadata, key: string) => {
   const value = metadata.source[key]
   return typeof value === "string" ? value : undefined
 }
 
-const getSourceStatus = (metadata: LinkMetadataV2) => {
+const getSourceStatus = (metadata: LinkMetadata) => {
   const value = metadata.source.sourceStatus
   return value === "active" ||
     value === "maintenance" ||
@@ -48,7 +48,7 @@ export const createRecentLinkViewItem = ({
     updatedAt: Date.now(),
     hasFilename: Boolean(metadata.source.filename),
     metadata,
-    meta: toLegacyMeta(metadata),
+    meta: toFlatMeta(metadata),
     pluginName: getSourceString(metadata, "pluginName"),
     pluginIcon: getSourceString(metadata, "pluginIcon"),
     sourceName: getSourceString(metadata, "sourceName"),
@@ -61,11 +61,11 @@ export const createRecentLinkViewItem = ({
 
 export const createUpdatedItemFromMetadata = (
   item: RecentLinkViewItem,
-  metadata: LinkMetadataV2
+  metadata: LinkMetadata
 ): RecentLinkViewItem => ({
   ...item,
   metadata,
-  meta: toLegacyMeta(metadata),
+  meta: toFlatMeta(metadata),
   extractedLinks: metadata.extraction.extractedLinks,
 })
 
@@ -74,8 +74,8 @@ export const createUpdatedItemWithLinks = ({
   links,
 }: CreateLinkUpdateOptions) => {
   const previous = getRecentLinkViewItemMetadata(item)
-  const metadata = createMetadataV2({
-    meta: getRecentLinkViewItemLegacyMeta(item),
+  const metadata = createLinkMetadata({
+    meta: getRecentLinkViewItemFlatMeta(item),
     extractedLinks: links,
     previous,
   })

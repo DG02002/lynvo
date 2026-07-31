@@ -45,32 +45,35 @@ describe("Convex storage ledger", () => {
     expect(afterDelete.ledger).toMatchObject(afterDelete.inventory)
     expect(afterDelete.ledger?.savedLinkCount).toBe(0)
 
-    const workerId = await client.mutation(api.userWorkers.createPending, {
-      baseUrl: "https://worker.ledger.example",
-      manifest: "{}",
-      enabled: true,
-      priority: 1,
-      verificationStatus: "verified",
-    })
-    await client.mutation(api.userWorkers.finalizeEncryptedCredential, {
-      id: workerId,
+    const pluginServerId = await client.mutation(
+      api.userPluginServers.createPending,
+      {
+        baseUrl: "https://plugin-server.ledger.example",
+        manifest: "{}",
+        enabled: true,
+        priority: 1,
+        verificationStatus: "verified",
+      }
+    )
+    await client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
+      id: pluginServerId,
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
       apiKeyAlgorithm: "AES-256-GCM",
       apiKeyVersion: 1,
     })
-    await client.mutation(api.userWorkers.update, {
-      id: workerId,
+    await client.mutation(api.userPluginServers.update, {
+      id: pluginServerId,
       manifest: JSON.stringify({ name: "Larger manifest" }),
     })
-    await client.mutation(api.userWorkers.deleteById, { id: workerId })
+    await client.mutation(api.userPluginServers.deleteById, {
+      id: pluginServerId,
+    })
     const afterWorkerDelete = await convex.run(async (context) => ({
       ledger: await getUserStorageLedger(context, user.userId),
       inventory: await calculateAppOwnedStorageUsage(context, user.userId),
     }))
-    expect(afterWorkerDelete.ledger).toMatchObject(
-      afterWorkerDelete.inventory
-    )
+    expect(afterWorkerDelete.ledger).toMatchObject(afterWorkerDelete.inventory)
   })
 
   it("rolls back the ledger when a storage mutation is rejected", async () => {

@@ -63,8 +63,8 @@ export class CsrfError extends Schema.TaggedErrorClass<CsrfError>()(
   }
 ) {}
 
-export class WorkerRegistrationError extends Schema.TaggedErrorClass<WorkerRegistrationError>()(
-  "WorkerRegistrationError",
+export class PluginServerRegistrationError extends Schema.TaggedErrorClass<PluginServerRegistrationError>()(
+  "PluginServerRegistrationError",
   {
     message: Schema.String,
     details: Schema.optional(Schema.Unknown),
@@ -95,9 +95,8 @@ export const UnauthorizedApiError = UnauthorizedError.pipe(
 )
 export const NotFoundApiError = NotFoundError.pipe(HttpApiSchema.status(404))
 export const CsrfApiError = CsrfError.pipe(HttpApiSchema.status(403))
-export const WorkerRegistrationApiError = WorkerRegistrationError.pipe(
-  HttpApiSchema.status(422)
-)
+export const PluginServerRegistrationApiError =
+  PluginServerRegistrationError.pipe(HttpApiSchema.status(422))
 export const CredentialVaultApiError = CredentialVaultError.pipe(
   HttpApiSchema.status(503)
 )

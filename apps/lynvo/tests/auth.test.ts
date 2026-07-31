@@ -68,7 +68,7 @@ describe("auth transaction helpers", () => {
     const transaction = {
       codeVerifier: "verifier",
       state: "state",
-      returnTo: "/settings?tab=workers",
+      returnTo: "/settings?tab=plugin-servers",
     }
     const encrypted = await encryptAuthTransaction(
       transaction,

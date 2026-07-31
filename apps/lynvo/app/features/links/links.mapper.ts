@@ -4,10 +4,10 @@ export type {
   SavedLinkDTO,
 } from "./link-view-models"
 export {
-  createMetadataV2,
+  createLinkMetadata,
   mergeDefinedMeta,
   normalizeLinkMetadata,
-  toLegacyMeta,
+  toFlatMeta,
 } from "./link-metadata-normalization"
 export { withResolvedMirrors, withWatchedUrl } from "./link-playback-metadata"
 export {

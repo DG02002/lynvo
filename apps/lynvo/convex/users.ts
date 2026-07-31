@@ -244,7 +244,7 @@ export const getStorageUsage = query({
       enforcedBytes: ledger.totalEnforcedBytes,
       operationalBytes: authBytes,
       linkBytes: ledger.recentLinkBytes,
-      workerBytes: ledger.workerBytes,
+      pluginServerBytes: ledger.pluginServerBytes,
       pluginDomainBytes,
       authBytes,
       profileBytes: ledger.profileBytes,

@@ -1,0 +1,25 @@
+---
+title: Connect the Plugin Server to Lynvo
+description: Add the deployed Worker in Lynvo Settings and confirm its sources.
+navLabel: Connect to Lynvo
+contentType: Tutorial
+---
+
+<DocSection id="connect">
+
+## Connect the Plugin Server to Lynvo
+
+Add the Plugin Server after its production contract checks pass:
+
+1. Open **Settings** in Lynvo
+2. Find **Custom Plugin Servers**
+3. Select **Add Custom Plugin Server**
+4. Enter the deployed origin in **Base URL**
+5. Enter the production bearer key in **API Key**
+6. Select **Add worker**
+
+Lynvo fetches `GET /manifest`, checks protocol version `1.0`, calls `POST /verify`, and stores the Plugin Server only when both responses pass validation.
+
+Test one URL for every declared source. Open one lazy folder to confirm that Lynvo sends the follow-up to the same Plugin Server.
+
+</DocSection>

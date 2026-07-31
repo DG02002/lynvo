@@ -9,7 +9,7 @@ workspace.
 - `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
 - `examples/plugin-server`: minimal compatible Worker used by root CI.
-- `docs/usage-limits.md`: account and extractor capacity policy.
+- `docs/usage-limits.md`: account and Plugin Server capacity policy.
 - `docs/apple-HIG/`: design and writing references used by contributors.
 
 ## Prerequisites
@@ -164,7 +164,7 @@ pnpm -r outdated
 
 Use `--no-usage` for repeated plugin testing without advancing account usage
 counters. Omit it to test the normal daily and monthly limits. The global
-extractor safety limit remains enabled in both modes.
+extraction safety limit remains enabled in both modes.
 
 Workspace dependencies use `workspace:*`; shared third-party versions belong
 in the root `pnpm-workspace.yaml` catalog. Do not upgrade TypeScript beyond the
@@ -255,9 +255,9 @@ in-process Lynvo Plugin Servers as an emergency fallback.
 Connect the same Git repository to two separate Cloudflare Worker projects.
 Configure each project with the directory that owns its Wrangler configuration:
 
-| Worker project     | Root directory             | Deploy command |
-| ------------------ | -------------------------- | -------------- |
-| Lynvo              | `/apps/lynvo`              | `pnpm deploy`  |
+| Worker project      | Root directory              | Deploy command |
+| ------------------- | --------------------------- | -------------- |
+| Lynvo               | `/apps/lynvo`               | `pnpm deploy`  |
 | Lynvo Plugin Server | `/apps/lynvo-plugin-server` | `pnpm deploy`  |
 
 Keep the Workers as separate build targets even though they share one atomic

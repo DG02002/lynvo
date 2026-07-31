@@ -18,13 +18,8 @@ import {
 const DAILY_USAGE_PERIOD = "daily" as const
 const MONTHLY_USAGE_PERIOD = "monthly" as const
 const USAGE_COUNTER_INITIAL_VALUE = 1
-const OFFICIAL_MONTHLY_METRIC_ID = "official-extractions"
-const LEGACY_OFFICIAL_MONTHLY_METRIC_IDS = [
-  "official-plugin:bhadoo-google-drive-index",
-  "official-plugin:google-drive-public-files",
-  "official-plugin:onedrive-index",
-  "official-plugin:direct",
-] as const
+const LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID = "lynvo-plugin-server-operations"
+const LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID = "lynvo-plugin-server-extractions"
 
 const areUsageLimitsDisabled = () => env.DISABLE_USAGE_LIMITS === "true"
 
@@ -115,39 +110,30 @@ export const consumeOfficialPlugin = mutation({
     const monthly = getMonthlyPeriod(timestamp)
     const epoch = await getEpoch(ctx)
     const ownerKey = `user:${userId}`
-    const [userDaily, globalDaily, monthlyCounter, ...legacyMonthlyCounters] =
-      await Promise.all([
-        getCounter(
-          ctx,
-          ownerKey,
-          "official-worker-operations",
-          daily.key,
-          epoch
-        ),
-        getCounter(
-          ctx,
-          "global",
-          "official-worker-operations",
-          daily.key,
-          epoch
-        ),
-        getCounter(
-          ctx,
-          ownerKey,
-          OFFICIAL_MONTHLY_METRIC_ID,
-          monthly.key,
-          epoch
-        ),
-        ...LEGACY_OFFICIAL_MONTHLY_METRIC_IDS.map((metricId) =>
-          getCounter(ctx, ownerKey, metricId, monthly.key, epoch)
-        ),
-      ])
-    const monthlyUsed =
-      (monthlyCounter?.used ?? 0) +
-      legacyMonthlyCounters.reduce(
-        (total, counter) => total + (counter?.used ?? 0),
-        0
-      )
+    const [userDaily, globalDaily, monthlyCounter] = await Promise.all([
+      getCounter(
+        ctx,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        daily.key,
+        epoch
+      ),
+      getCounter(
+        ctx,
+        "global",
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        daily.key,
+        epoch
+      ),
+      getCounter(
+        ctx,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+        monthly.key,
+        epoch
+      ),
+    ])
+    const monthlyUsed = monthlyCounter?.used ?? 0
     if (
       !usageLimitsDisabled &&
       (userDaily?.used ?? 0) >= USER_DAILY_OFFICIAL_EXTRACTION_LIMIT
@@ -169,7 +155,7 @@ export const consumeOfficialPlugin = mutation({
       incrementCounter(
         ctx,
         "global",
-        "official-worker-operations",
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
         daily.key,
         epoch,
         globalDaily
@@ -178,7 +164,7 @@ export const consumeOfficialPlugin = mutation({
         ? incrementCounter(
             ctx,
             ownerKey,
-            "official-worker-operations",
+            LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
             daily.key,
             epoch,
             userDaily
@@ -188,7 +174,7 @@ export const consumeOfficialPlugin = mutation({
         ? incrementCounter(
             ctx,
             ownerKey,
-            OFFICIAL_MONTHLY_METRIC_ID,
+            LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
             monthly.key,
             epoch,
             monthlyCounter
@@ -197,12 +183,7 @@ export const consumeOfficialPlugin = mutation({
     ])
     return {
       dailyUsed,
-      monthlyUsed:
-        currentMonthlyUsed +
-        legacyMonthlyCounters.reduce(
-          (total, counter) => total + (counter?.used ?? 0),
-          0
-        ),
+      monthlyUsed: currentMonthlyUsed,
     }
   },
 })
@@ -220,26 +201,22 @@ export const getUsage = query({
     const dailyCounter = await getCounter(
       ctx,
       ownerKey,
-      "official-worker-operations",
+      LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
       daily.key,
       epoch
     )
-    const [monthlyCounter, ...legacyMonthlyCounters] = await Promise.all([
-      getCounter(ctx, ownerKey, OFFICIAL_MONTHLY_METRIC_ID, monthly.key, epoch),
-      ...LEGACY_OFFICIAL_MONTHLY_METRIC_IDS.map((metricId) =>
-        getCounter(ctx, ownerKey, metricId, monthly.key, epoch)
-      ),
-    ])
-    const monthlyUsed =
-      (monthlyCounter?.used ?? 0) +
-      legacyMonthlyCounters.reduce(
-        (total, counter) => total + (counter?.used ?? 0),
-        0
-      )
+    const monthlyCounter = await getCounter(
+      ctx,
+      ownerKey,
+      LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+      monthly.key,
+      epoch
+    )
+    const monthlyUsed = monthlyCounter?.used ?? 0
     return {
       metrics: [
         {
-          id: "official-worker-operations",
+          id: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
           label: "Daily official extractions",
           used: dailyCounter?.used ?? 0,
           limit: USER_DAILY_OFFICIAL_EXTRACTION_LIMIT,
@@ -248,7 +225,7 @@ export const getUsage = query({
           resetsAt: new Date(daily.resetsAt).toISOString(),
         },
         {
-          id: OFFICIAL_MONTHLY_METRIC_ID,
+          id: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
           label: "Official extractions",
           used: monthlyUsed,
           limit: USER_MONTHLY_OFFICIAL_EXTRACTION_LIMIT,

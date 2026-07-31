@@ -20,7 +20,7 @@ describe("storage policy", () => {
     expect(calculateStorageUsage({})).toEqual({
       estimatedBytes: 0,
       linkBytes: 0,
-      workerBytes: 0,
+      pluginServerBytes: 0,
       pluginDomainBytes: 0,
       authBytes: 0,
       profileBytes: 0,
@@ -31,7 +31,7 @@ describe("storage policy", () => {
     const inventory = {
       profile: [{ name: "Ada" }],
       recentLinks: [{ url: "https://example.com" }],
-      workers: [{ baseUrl: "https://worker.example" }],
+      pluginServers: [{ baseUrl: "https://plugin-server.example" }],
       pluginDomains: [{ domain: "example.com" }],
       pluginCredentials: [{ ciphertext: "secret" }],
       authSessions: [{ expirationTime: 10 }],

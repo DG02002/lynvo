@@ -26,8 +26,8 @@ import type * as pluginDomains from "../pluginDomains.js";
 import type * as storagePolicy from "../storagePolicy.js";
 import type * as tv from "../tv.js";
 import type * as usage from "../usage.js";
+import type * as userPluginServers from "../userPluginServers.js";
 import type * as userPreferences from "../userPreferences.js";
-import type * as userWorkers from "../userWorkers.js";
 import type * as users from "../users.js";
 
 import type {
@@ -55,8 +55,8 @@ declare const fullApi: ApiFromModules<{
   storagePolicy: typeof storagePolicy;
   tv: typeof tv;
   usage: typeof usage;
+  userPluginServers: typeof userPluginServers;
   userPreferences: typeof userPreferences;
-  userWorkers: typeof userWorkers;
   users: typeof users;
 }>;
 

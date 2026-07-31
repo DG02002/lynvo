@@ -9,7 +9,7 @@ import {
 import type { OpenSelectionDialogOptions } from "./action-types"
 import {
   getRecentLinkViewItemExtractedLinks,
-  getRecentLinkViewItemLegacyMeta,
+  getRecentLinkViewItemFlatMeta,
   getRecentLinkViewItemMetadata,
 } from "~/features/links/link-metadata-accessors"
 import { createRefreshFlowEffects } from "./refresh-flow-effects"
@@ -82,7 +82,7 @@ export const useRefreshActions = ({
           originalUrl: item.url,
           links:
             item.extractedLinks ?? getRecentLinkViewItemExtractedLinks(item),
-          meta: item.meta ?? getRecentLinkViewItemLegacyMeta(item),
+          meta: item.meta ?? getRecentLinkViewItemFlatMeta(item),
           isDraftMode: true,
         })
         return

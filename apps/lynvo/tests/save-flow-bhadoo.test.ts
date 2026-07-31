@@ -28,7 +28,7 @@ describe("Bhadoo save flow", () => {
       pluginId: "bhadoo-google-drive-index",
       sourceName: "Bhadoo Google Drive Index",
       sourceCredentialKind: "http-basic" as const,
-      workerId: "lynvo-plugin-server",
+      pluginServerId: "lynvo-plugin-server",
     }
     vi.spyOn(extractionOrchestration, "getSourceMetadata").mockResolvedValue(
       meta
@@ -74,7 +74,7 @@ describe("Bhadoo save flow", () => {
       sanitizedUrl,
       username: "source-user",
       password: "source@secret",
-      workerId: "lynvo-plugin-server",
+      pluginServerId: "lynvo-plugin-server",
     })
   })
 })

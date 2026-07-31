@@ -103,7 +103,7 @@ export function useLinkActions({
       try {
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,
-          workerId: selectionDialogState.meta.workerId,
+          pluginServerId: selectionDialogState.meta.pluginServerId,
           pluginId: selectionDialogState.meta.pluginId,
         })
         setSelectionDialogState((currentState) =>
@@ -127,7 +127,7 @@ export function useLinkActions({
       }
     },
     [
-      selectionDialogState.meta.workerId,
+      selectionDialogState.meta.pluginServerId,
       selectionDialogState.originalUrl,
       setSelectionDialogState,
     ]
@@ -162,7 +162,7 @@ export function useLinkActions({
           selectionDialogState.meta?.filename,
         audioInfo: selectionDialogState.meta?.audio,
         isDraftMode: selectionDialogState.isDraftMode,
-        workerId: selectionDialogState.meta?.workerId,
+        pluginServerId: selectionDialogState.meta?.pluginServerId,
       },
       confirmSelection,
       saveSelectionDraft,

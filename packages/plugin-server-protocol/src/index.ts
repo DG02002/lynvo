@@ -740,9 +740,7 @@ export const validatePluginServerManifestContract = (
       )
     }
     if (!source.version) {
-      issues.push(
-        issue(`${basePath}.version`, "Declare a Plugin version.")
-      )
+      issues.push(issue(`${basePath}.version`, "Declare a Plugin version."))
     }
     if (
       source.hosts.length === 0 &&

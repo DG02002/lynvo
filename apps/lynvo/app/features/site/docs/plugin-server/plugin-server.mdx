@@ -1,0 +1,30 @@
+---
+title: Custom Plugin Servers
+description: Learn what a Custom Plugin Server does and how it works with Lynvo.
+navLabel: Plugin Server
+contentType: Tutorial
+---
+
+<DocSection id="overview">
+
+## Build and connect a Custom Plugin Server
+
+This guide takes you from an empty Cloudflare Worker to a deployed Plugin Server connected in Lynvo. You will create a Hono project, implement Plugin Server Protocol version `1.0`, add a Plugin, enforce usage limits, test every response, and connect the Plugin Server in Lynvo Settings.
+
+A Custom Plugin Server is an HTTPS service that converts supported Source URLs into normalized Media Nodes. Lynvo owns registration, routing, saved state, and playback. Your Plugin Server owns Plugin matching, extraction, staged resolution, authentication, and finite usage enforcement.
+
+Build the integration in this order:
+
+1. Create the Plugin Server and configure its production secret
+2. Implement the four protocol endpoints and validate every JSON boundary
+3. Add Plugins that return playable, container, folder, or lazy Media Nodes
+4. Reserve, settle, and report finite usage
+5. Test the contract, deploy the Plugin Server, and connect it to Lynvo
+
+<DocsNote title="Protocol contract">
+
+The endpoint tables, JSON schemas, and stated invariants define protocol version `1.0`. The `@lynvo/plugin-server-protocol` package is not public, so this guide implements the contract directly with Hono and Zod. Validate incoming requests and outgoing responses against these schemas.
+
+</DocsNote>
+
+</DocSection>

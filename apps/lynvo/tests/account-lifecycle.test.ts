@@ -54,7 +54,7 @@ describe("account lifecycle", () => {
       authVerifiers: [],
       authVerificationCodes: [],
       links: [],
-      userWorkers: [],
+      userPluginServers: [],
       userPluginDomains: [],
       userPluginCredentials: [],
       deviceCodes: [],

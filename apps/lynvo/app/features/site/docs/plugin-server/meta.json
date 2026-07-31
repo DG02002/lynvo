@@ -1,0 +1,42 @@
+{
+  "groups": [
+    {
+      "title": "Getting started",
+      "pages": [
+        "plugin-server",
+        "what-is-a-plugin-server",
+        "what-is-a-plugin",
+        "prerequisites",
+        "create-plugin-server"
+      ]
+    },
+    {
+      "title": "Build with an agent",
+      "pages": ["agent-prompt"]
+    },
+    {
+      "title": "Build a Plugin Server",
+      "pages": [
+        "protocol-overview",
+        "authentication",
+        "manifest",
+        "plugins",
+        "hono-routes"
+      ]
+    },
+    {
+      "title": "Protocol reference",
+      "pages": [
+        "extraction-requests",
+        "media-nodes",
+        "success-responses",
+        "usage-limits",
+        "errors"
+      ]
+    },
+    {
+      "title": "Test and deploy",
+      "pages": ["testing", "deployment", "connect"]
+    }
+  ]
+}

@@ -109,10 +109,10 @@ const About = () => (
             with a TV remote.
           </p>
           <p>
-            Extractors made the experience more useful. Lynvo’s official sources
+            Plugins made the experience more useful. Lynvo’s official Plugins
             can resolve supported Bhadoo Google Drive Index and OneDrive Index
-            pages, while the external extractor protocol lets developers connect
-            other compatible sources.
+            pages, while the Plugin Server Protocol lets developers connect
+            other compatible Sources.
           </p>
           <p>
             Before Lynvo had its current name and identity, it was called

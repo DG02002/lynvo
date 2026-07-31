@@ -6,7 +6,7 @@ import { Context, Effect } from "effect"
 import { AuthSessionService } from "../app/lib/effect/services/AuthSessionService"
 import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
 import { ConvexService } from "../app/lib/effect/services/ConvexService"
-import { ExtractorService } from "../app/lib/effect/services/ExtractorService"
+import { ExtractionService } from "../app/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credential-vault"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
@@ -39,7 +39,7 @@ import {
   type RequestLoggingEnvironment,
 } from "./request-logging"
 export { AuthRateLimiter } from "./auth-rate-limiter"
-export { ExternalWorkerCredentialVault } from "./external-worker-credential-vault"
+export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
 
 const reactRouterHandler = createRequestHandler(
@@ -751,7 +751,7 @@ app.all("/api/*", async (context) => {
     Effect.all([
       AuthSessionService,
       ConvexService,
-      ExtractorService,
+      ExtractionService,
       PluginCredentialVault,
     ])
   )
@@ -759,7 +759,7 @@ app.all("/api/*", async (context) => {
     Context.add(CloudflareEnv, context.env),
     Context.add(AuthSessionService, services[0]),
     Context.add(ConvexService, services[1]),
-    Context.add(ExtractorService, services[2]),
+    Context.add(ExtractionService, services[2]),
     Context.add(PluginCredentialVault, services[3]),
     Context.add(RequestEventService, {
       requestId: context.get("requestId"),

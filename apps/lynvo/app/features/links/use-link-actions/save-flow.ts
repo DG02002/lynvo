@@ -73,7 +73,7 @@ export const saveLink = async ({
   const pluginDomainSuggestion: SourceDomainSuggestion | undefined =
     sourceCandidate &&
     mergedMeta.pluginId &&
-    mergedMeta.workerId &&
+    mergedMeta.pluginServerId &&
     mergedMeta.sourceCredentialKind
       ? {
           ...sourceCandidate,
@@ -83,7 +83,7 @@ export const saveLink = async ({
             mergedMeta.sourceName ??
             mergedMeta.pluginName ??
             mergedMeta.pluginId,
-          workerId: mergedMeta.workerId,
+          pluginServerId: mergedMeta.pluginServerId,
         }
       : undefined
 

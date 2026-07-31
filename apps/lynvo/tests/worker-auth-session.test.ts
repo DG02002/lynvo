@@ -18,7 +18,9 @@ class MemorySessionStorage {
 
 const TEST_SESSION_KEY = btoa("abcdef0123456789abcdef0123456789")
 
-const createSession = (environment = { AUTH_SESSION_MASTER_KEY: TEST_SESSION_KEY }) => {
+const createSession = (
+  environment = { AUTH_SESSION_MASTER_KEY: TEST_SESSION_KEY }
+) => {
   const storage = new MemorySessionStorage()
   return {
     session: new WorkerAuthSession(
@@ -47,8 +49,12 @@ describe("Worker authentication session HTTP behavior", () => {
       })
     )
     expect(createResponse.status).toBe(204)
-    expect(JSON.stringify(storage.inspect("session"))).not.toContain("access-token")
-    expect(JSON.stringify(storage.inspect("session"))).not.toContain("refresh-token")
+    expect(JSON.stringify(storage.inspect("session"))).not.toContain(
+      "access-token"
+    )
+    expect(JSON.stringify(storage.inspect("session"))).not.toContain(
+      "refresh-token"
+    )
 
     const response = await session.fetch(
       new Request("https://session.internal/session?nowMs=1500")

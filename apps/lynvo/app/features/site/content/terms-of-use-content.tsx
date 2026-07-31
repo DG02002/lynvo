@@ -120,18 +120,18 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="7. Plugins, workers, sources, and players">
+    <PolicySection title="7. Plugins, Plugin Servers, Sources, and players">
       <p>
         You may configure plugin domains, source credentials, and external
-        extraction workers. Only connect a worker you trust. A configured worker
-        may receive the URL, its API key, and request data needed to perform
-        extraction.
+        Custom Plugin Servers. Only connect a Plugin Server you trust. A
+        configured Plugin Server may receive the Source URL, its API key, and
+        request data needed to perform extraction.
       </p>
       <p>
         Source sites can change or remove files, require authorization, block
         requests, or return unsafe material. Android players may handle links
         differently. Lynvo doesn&apos;t endorse or guarantee third-party
-        services, files, plugins, workers, or players.
+        services, files, Plugins, Plugin Servers, or players.
       </p>
     </PolicySection>
 

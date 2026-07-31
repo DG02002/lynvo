@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { nativeDirectLinkPlugin } from "~/lib/plugins/direct"
+import { directMediaAdapter } from "~/lib/plugins/direct-media-adapter"
 
 const response = (status: number, contentType = "video/mp4") =>
   new Response(null, {
@@ -10,7 +10,7 @@ const response = (status: number, contentType = "video/mp4") =>
     },
   })
 
-describe("nativeDirectLinkPlugin", () => {
+describe("directMediaAdapter", () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -18,7 +18,7 @@ describe("nativeDirectLinkPlugin", () => {
   it("marks direct video links as range-supported when byte range returns 206", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(206))
 
-    const links = await nativeDirectLinkPlugin.extract(
+    const links = await directMediaAdapter.extract(
       "https://cdn.example.com/playable-item.mp4"
     )
 
@@ -34,7 +34,7 @@ describe("nativeDirectLinkPlugin", () => {
   it("keeps direct video links when byte range returns 200 and marks them unsupported", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200))
 
-    const links = await nativeDirectLinkPlugin.extract(
+    const links = await directMediaAdapter.extract(
       "https://cdn.example.com/playable-item.mp4"
     )
 
@@ -51,7 +51,7 @@ describe("nativeDirectLinkPlugin", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200, "text/html"))
 
     await expect(
-      nativeDirectLinkPlugin.extract("https://cdn.example.com/page")
+      directMediaAdapter.extract("https://cdn.example.com/page")
     ).rejects.toThrow("supported video format")
   })
 
@@ -59,7 +59,7 @@ describe("nativeDirectLinkPlugin", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
 
     await expect(
-      nativeDirectLinkPlugin.extract("https://cdn.example.com/archive.zip")
+      directMediaAdapter.extract("https://cdn.example.com/archive.zip")
     ).rejects.toThrow("file type")
     expect(fetchSpy).not.toHaveBeenCalled()
   })

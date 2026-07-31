@@ -101,7 +101,7 @@ export default defineSchema({
     schemaVersion: v.number(),
     profileBytes: v.number(),
     recentLinkBytes: v.number(),
-    workerBytes: v.number(),
+    pluginServerBytes: v.number(),
     pluginDomainBytes: v.number(),
     pluginCredentialBytes: v.number(),
     savedLinkCount: v.number(),
@@ -109,7 +109,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_userId", ["userId"]),
 
-  userWorkers: defineTable({
+  userPluginServers: defineTable({
     userId: v.id("users"),
     baseUrl: v.string(),
     apiKeyCiphertext: v.optional(v.string()),
@@ -129,18 +129,22 @@ export default defineSchema({
 
   userPluginDomains: defineTable({
     userId: v.id("users"),
-    workerId: v.string(),
+    pluginServerId: v.string(),
     domain: v.string(),
     pluginId: v.string(),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_domain", ["userId", "domain"])
-    .index("by_userId_workerId_domain", ["userId", "workerId", "domain"]),
+    .index("by_userId_pluginServerId_domain", [
+      "userId",
+      "pluginServerId",
+      "domain",
+    ]),
 
   userPluginCredentials: defineTable({
     userId: v.id("users"),
     pluginDomainId: v.id("userPluginDomains"),
-    workerId: v.string(),
+    pluginServerId: v.string(),
     pluginId: v.string(),
     domain: v.string(),
     ciphertext: v.string(),
@@ -153,7 +157,11 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_pluginDomainId", ["pluginDomainId"])
     .index("by_userId_domain", ["userId", "domain"])
-    .index("by_userId_workerId_domain", ["userId", "workerId", "domain"]),
+    .index("by_userId_pluginServerId_domain", [
+      "userId",
+      "pluginServerId",
+      "domain",
+    ]),
 
   usageCounters: defineTable({
     ownerKey: v.string(),

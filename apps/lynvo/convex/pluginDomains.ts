@@ -26,7 +26,7 @@ const pluginDomainFields = {
   _id: v.id("userPluginDomains"),
   _creationTime: v.number(),
   userId: v.id("users"),
-  workerId: v.string(),
+  pluginServerId: v.string(),
   domain: v.string(),
   pluginId: v.string(),
 }
@@ -38,7 +38,7 @@ const pluginCredentialValidator = v.object({
   _creationTime: v.number(),
   userId: v.id("users"),
   pluginDomainId: v.id("userPluginDomains"),
-  workerId: v.string(),
+  pluginServerId: v.string(),
   pluginId: v.string(),
   domain: v.string(),
   ciphertext: v.string(),
@@ -91,15 +91,15 @@ export const getById = query({
 
 export const getByDomain = query({
   returns: v.union(v.null(), pluginDomainValidator),
-  args: { domain: v.string(), workerId: v.string() },
+  args: { domain: v.string(), pluginServerId: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     return await ctx.db
       .query("userPluginDomains")
-      .withIndex("by_userId_workerId_domain", (queryBuilder) =>
+      .withIndex("by_userId_pluginServerId_domain", (queryBuilder) =>
         queryBuilder
           .eq("userId", userId)
-          .eq("workerId", args.workerId)
+          .eq("pluginServerId", args.pluginServerId)
           .eq("domain", normalizePluginDomain(args.domain))
       )
       .unique()
@@ -110,7 +110,7 @@ export const getCredentialByDomainForService = query({
   returns: v.union(v.null(), pluginCredentialValidator),
   args: {
     domain: v.string(),
-    workerId: v.string(),
+    pluginServerId: v.string(),
     serviceToken: v.string(),
   },
   handler: async (ctx, args) => {
@@ -122,10 +122,10 @@ export const getCredentialByDomainForService = query({
     await verifyCredentialReadToken(args.serviceToken, secret)
     return await ctx.db
       .query("userPluginCredentials")
-      .withIndex("by_userId_workerId_domain", (queryBuilder) =>
+      .withIndex("by_userId_pluginServerId_domain", (queryBuilder) =>
         queryBuilder
           .eq("userId", userId)
-          .eq("workerId", args.workerId)
+          .eq("pluginServerId", args.pluginServerId)
           .eq("domain", normalizePluginDomain(args.domain))
       )
       .unique()
@@ -136,7 +136,7 @@ export const create = mutation({
   returns: v.id("userPluginDomains"),
   args: {
     domain: v.string(),
-    workerId: v.string(),
+    pluginServerId: v.string(),
     pluginId: v.string(),
     credential: v.optional(encryptedCredentialValidator),
   },

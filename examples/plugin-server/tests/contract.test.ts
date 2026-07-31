@@ -7,7 +7,7 @@ import worker, { manifest } from "../src/index"
 
 const environment = {}
 
-describe("example extractor contract", () => {
+describe("example Plugin Server contract", () => {
   it("publishes a valid manifest", () => {
     expect(validatePluginServerManifestContract(manifest)).toEqual({
       ok: true,

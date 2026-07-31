@@ -1,0 +1,79 @@
+---
+title: Add a Plugin
+description: Organize Source-specific matching and extraction without coupling it to your routes.
+navLabel: Plugins
+contentType: Tutorial
+---
+
+<DocSection id="plugins">
+
+## Add a Plugin
+
+One Plugin Server can host several Plugins. Each Plugin supports a Source: a website, service, or URL pattern with its own matchers, metadata, and extraction function.
+
+Define a Plugin catalog so manifest metadata and request dispatch use the same records:
+
+<CodeBlock label="src/plugins/catalog.ts">
+
+```ts {1-8}
+export const plugins = [
+  {
+    id: "example-media",
+    displayName: "Example Media",
+    status: "active" as const,
+    version: "1.0.0",
+    hosts: ["media.example.com"],
+    matchers: [
+      {
+        hosts: ["media.example.com"],
+        pathPatterns: ["/watch/**"],
+        schemes: ["https"],
+      },
+    ],
+  },
+]
+```
+
+</CodeBlock>
+
+Publish user-visible sources under `extensions.lynvo.plugins`:
+
+<CodeBlock label="src/manifest.ts">
+
+```ts {4-6}
+export const manifest = {
+  // Core manifest fields
+  matchers: plugins.flatMap((plugin) => plugin.matchers),
+  extensions: {
+    lynvo: { plugins },
+  },
+}
+```
+
+</CodeBlock>
+
+Plugin metadata supports these fields:
+
+| Field                   | Purpose                                        |
+| ----------------------- | ---------------------------------------------- |
+| `id`                    | Stable Plugin identifier                       |
+| `displayName`           | Name shown by Lynvo                            |
+| `description`           | Short Plugin capability summary                |
+| `homepage`              | HTTPS Plugin project page                      |
+| `hasIcon` and `iconUrl` | Plugin-specific WebP icon                      |
+| `status`                | `active`, `maintenance`, `degraded`, or `down` |
+| `version`               | Your adapter version                           |
+| `routesToPluginId`      | Downstream Plugin in the same manifest         |
+| `hosts` and `matchers`  | Source URLs handled by the Plugin              |
+| `credential`            | Domain password or HTTP Basic Auth capability  |
+
+Add a Plugin by completing four changes:
+
+1. Create the Plugin module
+2. Add one catalog record
+3. Add a direct HTTPS WebP icon when available
+4. Add supported, unsupported, and failure fixtures
+
+Do not add Source-specific conditions to the Hono route layer.
+
+</DocSection>

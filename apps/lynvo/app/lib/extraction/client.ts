@@ -11,7 +11,7 @@ const resolveClientMetadataIconUrls = (metadata: MetaData) =>
 export const defaultExtractionClient: ExtractionTransport = {
   extract: async (query) => {
     const result = (await Effect.runPromise(
-      client.extractor.extract({ query })
+      client.extraction.extract({ query })
     )) as unknown as {
       links: ExtractedLink[]
       meta?: MetaData
@@ -25,7 +25,7 @@ export const defaultExtractionClient: ExtractionTransport = {
   },
   getMetadata: async (query) => {
     const metadata = (await Effect.runPromise(
-      client.extractor.getMetadata({ query })
+      client.extraction.getMetadata({ query })
     )) as MetaData
     return resolveClientMetadataIconUrls(metadata)
   },

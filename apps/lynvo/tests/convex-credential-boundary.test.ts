@@ -19,26 +19,29 @@ describe("Convex credential boundary", () => {
     vi.unstubAllEnvs()
   })
 
-  it("redacts encrypted worker credentials from browser queries", async () => {
+  it("redacts encrypted Plugin Server credentials from browser queries", async () => {
     const convex = createConvexTest()
-    const user = await insertTestUser(convex, "worker-boundary-user")
+    const user = await insertTestUser(convex, "plugin-server-boundary-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
-    const workerId = await client.mutation(api.userWorkers.createPending, {
-      baseUrl: "https://worker.example",
-      manifest: "{}",
-      enabled: true,
-      priority: 0,
-      verificationStatus: "verified",
-    })
-    await client.mutation(api.userWorkers.finalizeEncryptedCredential, {
-      id: workerId,
+    const pluginServerId = await client.mutation(
+      api.userPluginServers.createPending,
+      {
+        baseUrl: "https://plugin-server.example",
+        manifest: "{}",
+        enabled: true,
+        priority: 0,
+        verificationStatus: "verified",
+      }
+    )
+    await client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
+      id: pluginServerId,
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
       apiKeyAlgorithm: "AES-256-GCM",
       apiKeyVersion: 1,
     })
 
-    const publicWorkers = await client.query(api.userWorkers.list, {})
+    const publicWorkers = await client.query(api.userPluginServers.list, {})
     expect(publicWorkers).toHaveLength(1)
     expect(publicWorkers[0]).not.toHaveProperty("apiKey")
     expect(publicWorkers[0]).not.toHaveProperty("apiKeyCiphertext")
@@ -47,9 +50,12 @@ describe("Convex credential boundary", () => {
       TEST_GATEWAY_SECRET,
       Date.now() + 60_000
     )
-    const serviceWorkers = await client.query(api.userWorkers.listForService, {
-      serviceToken,
-    })
+    const serviceWorkers = await client.query(
+      api.userPluginServers.listForService,
+      {
+        serviceToken,
+      }
+    )
     expect(serviceWorkers[0]).toMatchObject({
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
@@ -65,7 +71,7 @@ describe("Convex credential boundary", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     await expect(
-      client.query(api.userWorkers.listForService, {
+      client.query(api.userPluginServers.listForService, {
         serviceToken: "invalid-token",
       })
     ).rejects.toThrow("Invalid auth preflight token")

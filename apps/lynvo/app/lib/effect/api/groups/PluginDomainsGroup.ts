@@ -17,7 +17,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
           _id: Schema.String,
           _creationTime: Schema.Number,
           userId: Schema.String,
-          workerId: Schema.String,
+          pluginServerId: Schema.String,
           domain: Schema.String,
           pluginId: Schema.String,
           hasCredential: Schema.Boolean,
@@ -28,7 +28,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
         domain: Schema.String,
-        workerId: Schema.String,
+        pluginServerId: Schema.String,
         pluginId: Schema.String,
         username: Schema.optional(Schema.String),
         password: Schema.optional(Schema.String),

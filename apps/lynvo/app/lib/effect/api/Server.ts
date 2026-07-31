@@ -3,9 +3,9 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http"
 import { Api } from "./Api"
 import { LinksHandlers } from "./handlers/LinksHandlers"
-import { WorkersHandlers } from "./handlers/WorkersHandlers"
+import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
 import { PluginDomainsHandlers } from "./handlers/PluginDomainsHandlers"
-import { ExtractorHandlers } from "./handlers/ExtractorHandlers"
+import { ExtractionHandlers } from "./handlers/extraction-handlers"
 import { TvHandlers } from "./handlers/TvHandlers"
 import { RemoteHandlers } from "./handlers/RemoteHandlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./Middleware"
@@ -84,9 +84,9 @@ const MiddlewaresLive = Layer.mergeAll(WebAuthLive, CsrfLive)
 
 const HandlersLive = Layer.mergeAll(
   LinksHandlers,
-  WorkersHandlers,
+  PluginServersHandlers,
   PluginDomainsHandlers,
-  ExtractorHandlers,
+  ExtractionHandlers,
   TvHandlers,
   RemoteHandlers
 )

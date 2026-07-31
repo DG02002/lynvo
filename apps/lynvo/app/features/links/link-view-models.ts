@@ -1,12 +1,12 @@
 import type {
   ExtractedLink,
-  LinkMetadataV2,
+  LinkMetadata,
   LinkResponse,
   RecentLinkViewItem,
 } from "./types"
 import {
   normalizeLinkMetadata,
-  toLegacyMeta,
+  toFlatMeta,
 } from "./link-metadata-normalization"
 import { applyWatchedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
@@ -18,7 +18,7 @@ export interface SavedLinkDTO {
   title?: string
   createdAt: number
   updatedAt: number
-  metadata: LinkMetadataV2
+  metadata: LinkMetadata
 }
 
 export type SavedLink = SavedLinkDTO
@@ -58,7 +58,7 @@ export const toRecentLinkViewItem = (dto: SavedLink): RecentLinkViewItem => {
     timestamp: dto.createdAt,
     updatedAt: dto.updatedAt,
     metadata: dto.metadata,
-    meta: toLegacyMeta(dto.metadata),
+    meta: toFlatMeta(dto.metadata),
     hasFilename: Boolean(dto.metadata.source.filename),
     pluginName: source.pluginName,
     pluginIcon: source.pluginIcon,

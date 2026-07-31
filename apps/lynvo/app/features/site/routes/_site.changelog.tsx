@@ -25,11 +25,11 @@ export interface ChangelogEntry {
   date: string
   dateTime: string
   title: string
-  category: "Product" | "Extractor" | "Platform"
+  category: "Product" | "Plugin Server" | "Platform"
   description: string
 }
 
-type ChangelogType = "general" | "extractor" | "platform"
+type ChangelogType = "general" | "plugin-server" | "platform"
 type ChangelogTab = ChangelogType | "all"
 type SortOrder = "newest" | "oldest"
 
@@ -47,13 +47,13 @@ const changelogEntries: ChangelogEntry[] = [
       "Improved reliability at scale with transactional storage accounting, bounded recent-link subscriptions, and limited lifecycle cleanup work per scheduled run.",
   },
   {
-    type: "extractor",
+    type: "plugin-server",
     date: "Jul 19, 2026",
     dateTime: "2026-07-19",
     title: "Lynvo Plugin Server",
-    category: "Extractor",
+    category: "Plugin Server",
     description:
-      "Moved supported sources to Lynvo's managed extractor, with Bhadoo Google Drive and OneDrive index support, source discovery, and per-source usage limits.",
+      "Moved supported sources to the Lynvo Plugin Server, with Bhadoo Google Drive and OneDrive index support, Plugin discovery, and per-Plugin usage limits.",
   },
   {
     type: "general",
@@ -68,7 +68,7 @@ const changelogEntries: ChangelogEntry[] = [
 
 const changelogTypes = new Set<ChangelogType>([
   "general",
-  "extractor",
+  "plugin-server",
   "platform",
 ])
 
@@ -214,7 +214,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "The latest Lynvo product updates, extractor protocol improvements, and platform changes.",
+        "The latest Lynvo product updates, Plugin Server Protocol improvements, and platform changes.",
     },
   ]
 }
@@ -265,10 +265,10 @@ export default function Changelog() {
               Product
             </TabsTrigger>
             <TabsTrigger
-              value="extractor"
+              value="plugin-server"
               className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
             >
-              Extractor
+              Plugin Server
             </TabsTrigger>
             <TabsTrigger
               value="platform"

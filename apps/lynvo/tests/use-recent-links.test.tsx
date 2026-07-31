@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useRecentLinks } from "~/features/links/use-recent-links"
-import type { LinkMetadataV2 } from "~/features/links/types"
+import type { LinkMetadata } from "~/features/links/types"
 
 const { routeLoaderDataMock, convexQueryMock, convexMutationMock } = vi.hoisted(
   () => ({
@@ -24,8 +24,8 @@ vi.mock("convex/react", () => ({
   useMutation: convexMutationMock,
 }))
 
-const metadata = (label: string): LinkMetadataV2 => ({
-  schemaVersion: 2,
+const metadata = (label: string): LinkMetadata => ({
+  schemaVersion: 3,
   source: {
     title: label,
   },

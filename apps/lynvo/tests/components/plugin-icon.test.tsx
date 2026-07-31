@@ -13,13 +13,13 @@ describe("PluginIcon", () => {
     expect(container.querySelector("img")).toBeNull()
   })
 
-  it("renders the extractor fallback when a manifest has no icon", () => {
+  it("renders the Plugin Server fallback when a manifest has no icon", () => {
     const { container } = render(
-      <PluginIcon fallback="extractor" className="size-8" />
+      <PluginIcon fallback="plugin-server" className="size-8" />
     )
 
     expect(
-      container.querySelector('[data-icon-fallback="extractor"]')
+      container.querySelector('[data-icon-fallback="plugin-server"]')
     ).not.toBeNull()
     expect(container.querySelector("img")).toBeNull()
   })
@@ -33,17 +33,17 @@ describe("PluginIcon", () => {
     expect(container.querySelector("img")).toBeNull()
   })
 
-  it("renders URL icons from PLNK and external manifests", () => {
+  it("renders URL icons from Custom Plugin Server manifests", () => {
     const { container } = render(
       <PluginIcon
-        icon={{ url: "https://extractor.example/icon.webp" }}
+        icon={{ url: "https://plugin-server.example/icon.webp" }}
         className="size-8"
       />
     )
 
     expect(container.querySelector("img")).toHaveAttribute(
       "src",
-      "https://extractor.example/icon.webp"
+      "https://plugin-server.example/icon.webp"
     )
   })
 })

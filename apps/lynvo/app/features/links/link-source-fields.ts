@@ -1,5 +1,5 @@
-import type { LinkMetadataV2 } from "./types"
-import { getMetadataWorkerId } from "./link-metadata-accessors"
+import type { LinkMetadata } from "./types"
+import { getMetadataPluginServerId } from "./link-metadata-accessors"
 
 export interface LinkSourceFields {
   filename?: string
@@ -20,11 +20,11 @@ export interface LinkSourceFields {
   pageTitle?: string
   title?: string
   badge?: string
-  workerId?: string
+  pluginServerId?: string
 }
 
 const getSourceString = (
-  source: LinkMetadataV2["source"] | undefined,
+  source: LinkMetadata["source"] | undefined,
   key: string
 ) => {
   const value = source?.[key]
@@ -32,21 +32,21 @@ const getSourceString = (
 }
 
 const getSourceNumber = (
-  source: LinkMetadataV2["source"] | undefined,
+  source: LinkMetadata["source"] | undefined,
   key: string
 ) => {
   const value = source?.[key]
   return typeof value === "number" ? value : undefined
 }
 
-const getRangeRequest = (source: LinkMetadataV2["source"] | undefined) => {
+const getRangeRequest = (source: LinkMetadata["source"] | undefined) => {
   const value = source?.rangeRequest
   return value === "supported" || value === "unsupported" || value === "unknown"
     ? value
     : undefined
 }
 
-const getSourceStatus = (source: LinkMetadataV2["source"] | undefined) => {
+const getSourceStatus = (source: LinkMetadata["source"] | undefined) => {
   const value = source?.sourceStatus
   return value === "active" ||
     value === "maintenance" ||
@@ -57,7 +57,7 @@ const getSourceStatus = (source: LinkMetadataV2["source"] | undefined) => {
 }
 
 const getSourceCredentialKind = (
-  source: LinkMetadataV2["source"] | undefined
+  source: LinkMetadata["source"] | undefined
 ) => {
   const value = source?.sourceCredentialKind
   return value === "domain-password" || value === "http-basic"
@@ -66,7 +66,7 @@ const getSourceCredentialKind = (
 }
 
 export const getLinkSourceFields = (
-  metadata: LinkMetadataV2
+  metadata: LinkMetadata
 ): LinkSourceFields => ({
   filename: getSourceString(metadata.source, "filename"),
   contentType: getSourceString(metadata.source, "contentType"),
@@ -86,5 +86,5 @@ export const getLinkSourceFields = (
   pageTitle: getSourceString(metadata.source, "pageTitle"),
   title: getSourceString(metadata.source, "title"),
   badge: getSourceString(metadata.source, "badge"),
-  workerId: getMetadataWorkerId(metadata),
+  pluginServerId: getMetadataPluginServerId(metadata),
 })

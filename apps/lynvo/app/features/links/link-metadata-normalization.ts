@@ -1,5 +1,4 @@
-import type { ExtractedLink, LinkMetadataV2, MetaData } from "./types"
-import { getMetadataWorkerId } from "./link-metadata-accessors"
+import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
 import { getLinkSourceFields } from "./link-source-fields"
 import {
   collectWatched,
@@ -7,18 +6,18 @@ import {
   stripWatchedFlags,
 } from "./link-tree-metadata"
 
-interface LegacyMetadata extends MetaData {
+interface ParsedMetadata extends MetaData {
   schemaVersion?: number
-  source?: Partial<LinkMetadataV2["source"]>
-  extraction?: Partial<LinkMetadataV2["extraction"]>
-  playback?: Partial<LinkMetadataV2["playback"]>
+  source?: Partial<LinkMetadata["source"]>
+  extraction?: Partial<LinkMetadata["extraction"]>
+  playback?: Partial<LinkMetadata["playback"]>
   extractedAt?: number
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
 
-const parseMetadata = (value: unknown): LegacyMetadata => {
+const parseMetadata = (value: unknown): ParsedMetadata => {
   if (!value) {
     return {}
   }
@@ -26,76 +25,79 @@ const parseMetadata = (value: unknown): LegacyMetadata => {
   if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value) as unknown
-      return isRecord(parsed) ? (parsed as LegacyMetadata) : {}
+      return isRecord(parsed) ? (parsed as ParsedMetadata) : {}
     } catch {
       return {}
     }
   }
 
-  return isRecord(value) ? (value as LegacyMetadata) : {}
+  return isRecord(value) ? (value as ParsedMetadata) : {}
 }
 
 export const normalizeLinkMetadata = (
   metadata: unknown,
   topLevelExtractedLinks?: ExtractedLink[]
-): LinkMetadataV2 => {
-  const legacy = parseMetadata(metadata)
-  const existingV2 = legacy.schemaVersion === 2 ? legacy : undefined
+): LinkMetadata => {
+  const parsed = parseMetadata(metadata)
+  const existing = parsed.schemaVersion === 3 ? parsed : undefined
   const extractedLinks =
-    existingV2?.extraction?.extractedLinks ??
-    legacy.extractedLinks ??
+    existing?.extraction?.extractedLinks ??
+    parsed.extractedLinks ??
     topLevelExtractedLinks ??
     []
   const watchedFromLinks = collectWatched(extractedLinks)
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     source: {
-      ...existingV2?.source,
-      pluginName: existingV2?.source?.pluginName ?? legacy.pluginName,
-      pluginIcon: existingV2?.source?.pluginIcon ?? legacy.pluginIcon,
-      pluginId: existingV2?.source?.pluginId ?? legacy.pluginId,
-      sourceName: existingV2?.source?.sourceName ?? legacy.sourceName,
-      sourceIconUrl: existingV2?.source?.sourceIconUrl ?? legacy.sourceIconUrl,
-      sourceStatus: existingV2?.source?.sourceStatus ?? legacy.sourceStatus,
-      sourceVersion: existingV2?.source?.sourceVersion ?? legacy.sourceVersion,
+      ...existing?.source,
+      pluginName: existing?.source?.pluginName ?? parsed.pluginName,
+      pluginIcon: existing?.source?.pluginIcon ?? parsed.pluginIcon,
+      pluginId: existing?.source?.pluginId ?? parsed.pluginId,
+      sourceName: existing?.source?.sourceName ?? parsed.sourceName,
+      sourceIconUrl: existing?.source?.sourceIconUrl ?? parsed.sourceIconUrl,
+      sourceStatus: existing?.source?.sourceStatus ?? parsed.sourceStatus,
+      sourceVersion: existing?.source?.sourceVersion ?? parsed.sourceVersion,
       sourceCredentialKind:
-        existingV2?.source?.sourceCredentialKind ?? legacy.sourceCredentialKind,
-      filename: existingV2?.source?.filename ?? legacy.filename,
-      contentType: existingV2?.source?.contentType ?? legacy.contentType,
-      contentLength: existingV2?.source?.contentLength ?? legacy.contentLength,
-      lastModified: existingV2?.source?.lastModified ?? legacy.lastModified,
-      acceptRanges: existingV2?.source?.acceptRanges ?? legacy.acceptRanges,
-      rangeRequest: existingV2?.source?.rangeRequest ?? legacy.rangeRequest,
-      pageTitle: existingV2?.source?.pageTitle ?? legacy.pageTitle,
-      title: existingV2?.source?.title ?? legacy.title,
-      badge: existingV2?.source?.badge ?? legacy.badge,
-      audio: existingV2?.source?.audio ?? legacy.audio,
-      workerId: getMetadataWorkerId(existingV2) ?? legacy.workerId,
+        existing?.source?.sourceCredentialKind ?? parsed.sourceCredentialKind,
+      filename: existing?.source?.filename ?? parsed.filename,
+      contentType: existing?.source?.contentType ?? parsed.contentType,
+      contentLength: existing?.source?.contentLength ?? parsed.contentLength,
+      lastModified: existing?.source?.lastModified ?? parsed.lastModified,
+      acceptRanges: existing?.source?.acceptRanges ?? parsed.acceptRanges,
+      rangeRequest: existing?.source?.rangeRequest ?? parsed.rangeRequest,
+      pageTitle: existing?.source?.pageTitle ?? parsed.pageTitle,
+      title: existing?.source?.title ?? parsed.title,
+      badge: existing?.source?.badge ?? parsed.badge,
+      audio: existing?.source?.audio ?? parsed.audio,
+      pluginServerId:
+        (typeof existing?.source?.pluginServerId === "string"
+          ? existing.source.pluginServerId
+          : undefined) ?? parsed.pluginServerId,
     },
     extraction: {
       extractedLinks: stripWatchedFlags(extractedLinks),
       extractedAt:
-        existingV2?.extraction?.extractedAt ??
-        legacy.extractedAt ??
+        existing?.extraction?.extractedAt ??
+        parsed.extractedAt ??
         (extractedLinks.length > 0 ? Date.now() : undefined),
     },
     playback: {
       watchedUrls: mergeUnique(
-        existingV2?.playback?.watchedUrls,
+        existing?.playback?.watchedUrls,
         watchedFromLinks.watchedUrls
       ),
       watchedIds: mergeUnique(
-        existingV2?.playback?.watchedIds,
+        existing?.playback?.watchedIds,
         watchedFromLinks.watchedIds
       ),
-      resolvedMirrors: existingV2?.playback?.resolvedMirrors ?? {},
-      newPlayableItemUrls: existingV2?.playback?.newPlayableItemUrls ?? [],
+      resolvedMirrors: existing?.playback?.resolvedMirrors ?? {},
+      newPlayableItemUrls: existing?.playback?.newPlayableItemUrls ?? [],
     },
   }
 }
 
-export const toLegacyMeta = (metadata: LinkMetadataV2): MetaData => {
+export const toFlatMeta = (metadata: LinkMetadata): MetaData => {
   const source = getLinkSourceFields(metadata)
   return {
     ...metadata.source,
@@ -118,7 +120,7 @@ export const toLegacyMeta = (metadata: LinkMetadataV2): MetaData => {
     pageTitle: source.pageTitle,
     title: source.title,
     badge: source.badge,
-    workerId: source.workerId,
+    pluginServerId: source.pluginServerId,
   }
 }
 
@@ -132,11 +134,11 @@ export const mergeDefinedMeta = (
   ),
 })
 
-export const createMetadataV2 = (input: {
+export const createLinkMetadata = (input: {
   meta?: MetaData
   extractedLinks?: ExtractedLink[]
-  previous?: LinkMetadataV2
-}): LinkMetadataV2 => {
+  previous?: LinkMetadata
+}): LinkMetadata => {
   const base = normalizeLinkMetadata(input.meta, input.extractedLinks)
   const definedBaseSource = Object.fromEntries(
     Object.entries(base.source).filter(([, value]) => value !== undefined)

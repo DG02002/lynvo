@@ -1,5 +1,5 @@
 import { toast } from "sonner"
-import { createMetadataV2 } from "~/features/links/links.mapper"
+import { createLinkMetadata } from "~/features/links/links.mapper"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 import { createRecentLinkViewItem, getRecentTitle } from "./recent-link-items"
 import { fetchMetaInternal } from "./recent-link-server"
@@ -15,7 +15,7 @@ export const buildRecentLinkViewItem = async ({
 }) => {
   const resolvedMeta = meta ?? (await fetchMetaInternal(targetUrl))
   const title = getRecentTitle(targetUrl, resolvedMeta)
-  const metadata = createMetadataV2({
+  const metadata = createLinkMetadata({
     meta: resolvedMeta,
     extractedLinks,
   })

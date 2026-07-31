@@ -11,7 +11,7 @@ const taggedErrorMessage = (error: unknown): string | undefined => {
     case "CsrfError":
       return "Your security session expired. Refresh the page and try again."
     case "ValidationError":
-    case "WorkerRegistrationError":
+    case "PluginServerRegistrationError":
       return "message" in error && typeof error.message === "string"
         ? error.message
         : undefined

@@ -50,8 +50,8 @@ describe("SaveListBrowser", () => {
       url: "https://index.example.com/0:/Collections/",
       timestamp: Date.now(),
       metadata: {
-        schemaVersion: 2,
-        source: { sourceName: "Extractor Source Alpha" },
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
         extraction: {
           extractedLinks: [
             {
@@ -59,7 +59,7 @@ describe("SaveListBrowser", () => {
               url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
               label: "Folder Alpha",
               type: "folder",
-              workerNodeKind: "resolvable",
+              mediaNodeKind: "resolvable",
               resolutionKind: "folder",
             },
           ],
@@ -115,20 +115,20 @@ describe("SaveListBrowser", () => {
       },
     ])
     const item: RecentLinkViewItem = {
-      id: "extractor-source-beta-item",
-      url: "https://extractor-source-beta.cx/drive/example",
+      id: "plugin-source-beta-item",
+      url: "https://plugin-source-beta.cx/drive/example",
       timestamp: Date.now(),
       metadata: {
-        schemaVersion: 2,
-        source: { sourceName: "Extractor Source Beta" },
+        schemaVersion: 3,
+        source: { sourceName: "Source Beta" },
         extraction: {
           extractedLinks: [
             {
-              id: "extractor-source-beta-container",
-              url: "https://extractor-source-beta.cx/drive/example",
+              id: "plugin-source-beta-container",
+              url: "https://plugin-source-beta.cx/drive/example",
               label: "Playable Item Alpha.mkv",
               type: "folder",
-              workerNodeKind: "resolvable",
+              mediaNodeKind: "resolvable",
             },
           ],
         },
@@ -155,7 +155,7 @@ describe("SaveListBrowser", () => {
     expect(
       await screen.findByText("Play from Source Route Alpha")
     ).toBeVisible()
-    expect(screen.getByText("Extractor Source Beta")).toBeVisible()
+    expect(screen.getByText("Source Beta")).toBeVisible()
     expect(screen.getByText("1.2 GB")).toBeVisible()
     expect(onSelectedItemUrlChange).not.toHaveBeenCalled()
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
@@ -175,7 +175,7 @@ describe("SaveListBrowser", () => {
       timestamp: Date.now(),
       title: "Source Alpha collection",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { sourceName: "Source Alpha" },
         extraction: {
           extractedLinks: [
@@ -184,7 +184,7 @@ describe("SaveListBrowser", () => {
               url: "https://resolver-beta.example/playable-item-one",
               label: "Playable Item One",
               type: "folder",
-              workerNodeKind: "resolvable",
+              mediaNodeKind: "resolvable",
             },
           ],
         },
@@ -319,7 +319,7 @@ describe("SaveListBrowser", () => {
       url: "https://source-alpha.example/failure",
       timestamp: Date.now(),
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { sourceName: "Source Alpha" },
         extraction: {
           extractedLinks: [
@@ -328,7 +328,7 @@ describe("SaveListBrowser", () => {
               url: "https://resolver-beta.example/resolution-failure",
               label: "Playable Item Resolution Failure",
               type: "folder",
-              workerNodeKind: "resolvable",
+              mediaNodeKind: "resolvable",
             },
           ],
         },
@@ -380,7 +380,7 @@ describe("SaveListBrowser", () => {
       url: "https://source.example/video",
       timestamp: Date.now(),
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { sourceName: "Direct Link" },
         extraction: { extractedLinks: [directLink] },
         playback: { watchedUrls: [directLink.url], watchedIds: [] },
@@ -413,7 +413,7 @@ describe("SaveListBrowser", () => {
       url: "https://source.example/folder",
       timestamp: Date.now(),
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { sourceName: "Folder source" },
         extraction: {
           extractedLinks: [

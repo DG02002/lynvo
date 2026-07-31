@@ -7,17 +7,17 @@ const savedWorkerItem = (): RecentLinkViewItem => ({
   url: "https://example.com/source",
   timestamp: 1,
   metadata: {
-    schemaVersion: 2,
+    schemaVersion: 3,
     source: {
-      workerId: "worker-1",
+      pluginServerId: "pluginServer-1",
       pluginId: "bhadoo-google-drive-index",
-      sourceName: "Worker Source",
+      sourceName: "Plugin Server Source",
     },
     extraction: {
       extractedLinks: [
         {
           id: "folder-1",
-          url: "https://worker.example/folder/1",
+          url: "https://pluginServer.example/folder/1",
           label: "Folder",
           type: "folder",
         },
@@ -28,7 +28,7 @@ const savedWorkerItem = (): RecentLinkViewItem => ({
   extractedLinks: [
     {
       id: "folder-1",
-      url: "https://worker.example/folder/1",
+      url: "https://pluginServer.example/folder/1",
       label: "Folder",
       type: "folder",
     },
@@ -58,7 +58,7 @@ describe("extraction presentation", () => {
         {
           ...file,
           type: "folder",
-          workerNodeKind: "resolvable",
+          mediaNodeKind: "resolvable",
         },
       ]).kind
     ).toBe("selectionDialog")
@@ -75,7 +75,7 @@ describe("extraction orchestration", () => {
     transport.getMetadata.mockReset()
   })
 
-  it("prepares save metadata and propagates the saved worker identity", async () => {
+  it("prepares save metadata and propagates the saved pluginServer identity", async () => {
     transport.getMetadata.mockResolvedValue({
       filename: "playable-item.mp4",
       sourceName: "Metadata Source",
@@ -87,7 +87,10 @@ describe("extraction orchestration", () => {
           label: "Playable Item",
         },
       ],
-      meta: { pageTitle: "Playable Item Page", workerId: "worker-1" },
+      meta: {
+        pageTitle: "Playable Item Page",
+        pluginServerId: "pluginServer-1",
+      },
     })
     const metadata = await orchestration.getSourceMetadata(
       "https://example.com/source",
@@ -101,19 +104,21 @@ describe("extraction orchestration", () => {
 
     expect(transport.extract).toHaveBeenCalledWith({
       url: "https://example.com/source",
-      workerId: "worker-1",
+      pluginServerId: "pluginServer-1",
     })
-    expect(metadata).toEqual(expect.objectContaining({ workerId: "worker-1" }))
+    expect(metadata).toEqual(
+      expect.objectContaining({ pluginServerId: "pluginServer-1" })
+    )
     expect(result.mergedMeta).toEqual(
       expect.objectContaining({
         filename: "playable-item.mp4",
         pageTitle: "Playable Item Page",
-        workerId: "worker-1",
+        pluginServerId: "pluginServer-1",
       })
     )
   })
 
-  it("routes refresh, mirror, and folder operations through the saved worker", async () => {
+  it("routes refresh, mirror, and folder operations through the saved pluginServer", async () => {
     const item = savedWorkerItem()
     const resolved: ExtractedLink[] = [
       { url: "https://cdn.example/resolved.mp4", label: "Resolved" },
@@ -123,34 +128,34 @@ describe("extraction orchestration", () => {
     await orchestration.refreshSource(item)
     await orchestration.resolveMirror(
       item,
-      "https://worker.example/playable-item"
+      "https://pluginServer.example/playable-item"
     )
     const expanded = await orchestration.expandFolder({
       item,
       linkId: "folder-1",
-      linkUrl: "https://worker.example/folder/1",
+      linkUrl: "https://pluginServer.example/folder/1",
     })
 
     expect(transport.extract.mock.calls).toEqual([
       [
         {
           url: "https://example.com/source",
-          workerId: "worker-1",
+          pluginServerId: "pluginServer-1",
           pluginId: "bhadoo-google-drive-index",
         },
       ],
       [
         {
-          url: "https://worker.example/playable-item",
-          workerId: "worker-1",
+          url: "https://pluginServer.example/playable-item",
+          pluginServerId: "pluginServer-1",
           pluginId: "bhadoo-google-drive-index",
           kind: "node",
         },
       ],
       [
         {
-          url: "https://worker.example/folder/1",
-          workerId: "worker-1",
+          url: "https://pluginServer.example/folder/1",
+          pluginServerId: "pluginServer-1",
           pluginId: "bhadoo-google-drive-index",
           kind: "node",
         },

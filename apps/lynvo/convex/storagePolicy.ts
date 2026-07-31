@@ -13,7 +13,7 @@ import {
 export const STORAGE_DOMAIN_NAMES = [
   "profile",
   "recentLinks",
-  "workers",
+  "pluginServers",
   "pluginDomains",
   "pluginCredentials",
   "authSessions",
@@ -25,7 +25,7 @@ declare global {
   interface AppOwnedStorageUsage {
     profileBytes: number
     recentLinkBytes: number
-    workerBytes: number
+    pluginServerBytes: number
     pluginDomainBytes: number
     pluginCredentialBytes: number
     savedLinkCount: number
@@ -51,7 +51,7 @@ const sumDocumentBytes = (documents: unknown[] | undefined) =>
 export const calculateStorageUsage = (inventory: {
   profile?: unknown[]
   recentLinks?: unknown[]
-  workers?: unknown[]
+  pluginServers?: unknown[]
   pluginDomains?: unknown[]
   pluginCredentials?: unknown[]
   authSessions?: unknown[]
@@ -60,7 +60,7 @@ export const calculateStorageUsage = (inventory: {
 }) => {
   const profileBytes = sumDocumentBytes(inventory.profile)
   const linkBytes = sumDocumentBytes(inventory.recentLinks)
-  const workerBytes = sumDocumentBytes(inventory.workers)
+  const pluginServerBytes = sumDocumentBytes(inventory.pluginServers)
   const pluginDomainBytes =
     sumDocumentBytes(inventory.pluginDomains) +
     sumDocumentBytes(inventory.pluginCredentials)
@@ -69,13 +69,13 @@ export const calculateStorageUsage = (inventory: {
     sumDocumentBytes(inventory.authAccounts) +
     sumDocumentBytes(inventory.deviceCodes)
   const estimatedBytes =
-    profileBytes + linkBytes + workerBytes + pluginDomainBytes + authBytes
+    profileBytes + linkBytes + pluginServerBytes + pluginDomainBytes + authBytes
   const savedLinkCount = inventory.recentLinks?.length ?? 0
 
   return {
     estimatedBytes,
     linkBytes,
-    workerBytes,
+    pluginServerBytes,
     pluginDomainBytes,
     authBytes,
     profileBytes,
@@ -92,7 +92,7 @@ export const getStorageUsage = async (
   const [
     user,
     recentLinks,
-    workers,
+    pluginServers,
     pluginDomains,
     pluginCredentials,
     authSessions,
@@ -107,7 +107,7 @@ export const getStorageUsage = async (
       )
       .collect(),
     ctx.db
-      .query("userWorkers")
+      .query("userPluginServers")
       .withIndex("by_userId", (queryBuilder) =>
         queryBuilder.eq("userId", userId)
       )
@@ -145,7 +145,7 @@ export const getStorageUsage = async (
   return calculateStorageUsage({
     profile: user ? [user] : [],
     recentLinks,
-    workers,
+    pluginServers,
     pluginDomains,
     pluginCredentials,
     authSessions,
@@ -158,7 +158,7 @@ export const calculateAppOwnedStorageUsage = async (
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">
 ): Promise<AppOwnedStorageUsage> => {
-  const [user, recentLinks, workers, pluginDomains, pluginCredentials] =
+  const [user, recentLinks, pluginServers, pluginDomains, pluginCredentials] =
     await Promise.all([
       ctx.db.get("users", userId),
       ctx.db
@@ -168,7 +168,7 @@ export const calculateAppOwnedStorageUsage = async (
         )
         .collect(),
       ctx.db
-        .query("userWorkers")
+        .query("userPluginServers")
         .withIndex("by_userId", (queryBuilder) =>
           queryBuilder.eq("userId", userId)
         )
@@ -188,20 +188,20 @@ export const calculateAppOwnedStorageUsage = async (
     ])
   const profileBytes = user ? byteLength(user) : 0
   const recentLinkBytes = sumDocumentBytes(recentLinks)
-  const workerBytes = sumDocumentBytes(workers)
+  const pluginServerBytes = sumDocumentBytes(pluginServers)
   const pluginDomainBytes = sumDocumentBytes(pluginDomains)
   const pluginCredentialBytes = sumDocumentBytes(pluginCredentials)
   return {
     profileBytes,
     recentLinkBytes,
-    workerBytes,
+    pluginServerBytes,
     pluginDomainBytes,
     pluginCredentialBytes,
     savedLinkCount: recentLinks.length,
     totalEnforcedBytes:
       profileBytes +
       recentLinkBytes +
-      workerBytes +
+      pluginServerBytes +
       pluginDomainBytes +
       pluginCredentialBytes,
   }
@@ -273,7 +273,7 @@ const getStorageDomain = (document: unknown) => {
     return "pluginCredentialBytes" as const
   }
   if ("baseUrl" in document) {
-    return "workerBytes" as const
+    return "pluginServerBytes" as const
   }
   if ("url" in document) {
     return "recentLinkBytes" as const
@@ -297,7 +297,7 @@ const getOrCreateStorageLedger = async (
   const usage = {
     profileBytes,
     recentLinkBytes: 0,
-    workerBytes: 0,
+    pluginServerBytes: 0,
     pluginDomainBytes: 0,
     pluginCredentialBytes: 0,
     savedLinkCount: 0,

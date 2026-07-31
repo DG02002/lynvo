@@ -15,10 +15,10 @@ export interface ExtractedLink {
   selectable?: boolean // false for non-checkable containers
   /**
    * Internal marker used by the extraction decision layer to distinguish
-   * worker node kinds after they have been mapped to the user-facing
+   * media node kinds after they have been mapped to the user-facing
    * folder/direct-file model. UI code must not rely on this field.
    */
-  workerNodeKind?: "group" | "resolvable" | "playable"
+  mediaNodeKind?: "group" | "resolvable" | "playable"
   resolutionKind?: "folder" | "mirrors"
 }
 
@@ -28,12 +28,12 @@ export interface LinkResponse {
   created_at: number
   updated_at?: number
   title?: string
-  meta?: MetaData | LinkMetadataV2 | string
+  meta?: MetaData | LinkMetadata | string
   extractedLinks?: ExtractedLink[]
 }
 
-export interface LinkMetadataV2 {
-  schemaVersion: 2
+export interface LinkMetadata {
+  schemaVersion: 3
   source: Record<string, unknown>
   extraction: {
     extractedLinks: ExtractedLink[]
@@ -70,7 +70,7 @@ export interface MetaData {
   title?: string
   badge?: string
   schemaVersion?: number
-  workerId?: string
+  pluginServerId?: string
 }
 
 export interface RecentLinkViewItem {
@@ -80,7 +80,7 @@ export interface RecentLinkViewItem {
   title?: string
   id?: string
   hasFilename?: boolean
-  metadata?: LinkMetadataV2
+  metadata?: LinkMetadata
   meta?: MetaData
   pluginName?: string
   pluginIcon?: string

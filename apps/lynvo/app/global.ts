@@ -14,8 +14,8 @@ declare global {
     pluginId?: string
   }
 
-  interface ExternalWorkerUsage {
-    workerId: string
+  interface CustomPluginServerUsage {
+    pluginServerId: string
     name: string
     iconUrl?: string
     plugins?: readonly {

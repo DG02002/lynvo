@@ -85,7 +85,7 @@ const SaveList = () => {
         pageTitle={selectionDialog.display.pageTitle}
         audioInfo={selectionDialog.display.audioInfo}
         isDraftMode={selectionDialog.display.isDraftMode}
-        workerId={selectionDialog.display.workerId}
+        pluginServerId={selectionDialog.display.pluginServerId}
       />
       <AddSourceDomainAlertDialog
         suggestion={pluginDomainDialog.suggestion}

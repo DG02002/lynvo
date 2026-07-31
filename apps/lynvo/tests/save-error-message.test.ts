@@ -36,9 +36,9 @@ describe("getSaveErrorMessage", () => {
     ).toBe("Account update failed.")
     expect(
       getUserFacingErrorMessage(
-        new Error("ResponseError at GET /api/workers"),
-        "Could not refresh extractors."
+        new Error("ResponseError at GET /api/plugin-servers"),
+        "Could not refresh Plugin Servers."
       )
-    ).toBe("Could not refresh extractors.")
+    ).toBe("Could not refresh Plugin Servers.")
   })
 })

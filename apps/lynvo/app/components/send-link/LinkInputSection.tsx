@@ -168,7 +168,7 @@ export function LinkInputSection({
                 extractionPreview.meta.pluginIcon
               }
               fallback={
-                extractionPreview.meta.sourceName ? "source" : "extractor"
+                extractionPreview.meta.sourceName ? "source" : "plugin-server"
               }
               className={cn(
                 "size-4",
@@ -179,7 +179,7 @@ export function LinkInputSection({
             <span className="font-medium text-foreground">
               {extractionPreview.meta.sourceName ||
                 extractionPreview.meta.pluginName ||
-                "local handler"}
+                "Direct media"}
             </span>
             {extractionPreview.meta.sourceName &&
               extractionPreview.meta.pluginName && (

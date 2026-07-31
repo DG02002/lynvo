@@ -88,7 +88,7 @@ describe("Plugin Domain lifecycle", () => {
       userId: "user-1" as never,
       pluginDomain: {
         _id: "domain-1" as never,
-        workerId: "worker-1",
+        pluginServerId: "plugin-server-1",
         pluginId: "onedrive-index",
         domain: "example.com",
       },
@@ -102,7 +102,7 @@ describe("Plugin Domain lifecycle", () => {
     expect(credentialDocument).toEqual({
       userId: "user-1",
       pluginDomainId: "domain-1",
-      workerId: "worker-1",
+      pluginServerId: "plugin-server-1",
       pluginId: "onedrive-index",
       domain: "example.com",
       ...credential,
@@ -114,14 +114,14 @@ describe("Plugin Domain lifecycle", () => {
   it("binds encryption context to owner, plugin, domain, and key version", () => {
     const context = {
       userId: "user-1",
-      workerId: "worker-1",
+      pluginServerId: "plugin-server-1",
       pluginId: "onedrive-index",
       domain: "example.com",
     }
     const encoder = new TextDecoder()
 
     expect(encoder.decode(createPluginCredentialAdditionalData(context))).toBe(
-      "user-1\u0000worker-1\u0000onedrive-index\u0000example.com\u00001"
+      "user-1\u0000plugin-server-1\u0000onedrive-index\u0000example.com\u00001"
     )
     expect(
       createPluginCredentialAdditionalData({ ...context, userId: "user-2" })
@@ -143,7 +143,7 @@ describe("Plugin Domain lifecycle", () => {
     )
     const context = {
       userId: "user-1",
-      workerId: "worker-1",
+      pluginServerId: "plugin-server-1",
       pluginId: "onedrive-index",
       domain: "example.com",
     }

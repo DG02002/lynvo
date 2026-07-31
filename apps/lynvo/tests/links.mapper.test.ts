@@ -4,20 +4,20 @@ import {
   toRecentLinkViewModel,
   toRecentLinkViewItem,
   toSavedLinkDTO,
-  createMetadataV2,
+  createLinkMetadata,
   mergeDefinedMeta,
 } from "../app/features/links/links.mapper"
 import type { LinkResponse } from "../app/features/links/types"
 
-describe("links mapper legacy normalization", () => {
+describe("links mapper metadata normalization", () => {
   it("handles invalid JSON metadata", () => {
     const metadata = normalizeLinkMetadata("not-json")
-    expect(metadata.schemaVersion).toBe(2)
+    expect(metadata.schemaVersion).toBe(3)
     expect(metadata.extraction.extractedLinks).toEqual([])
     expect(metadata.playback.watchedUrls).toEqual([])
   })
 
-  it("normalizes legacy meta strings and watched flags", () => {
+  it("normalizes flat meta strings and watched flags", () => {
     const metadata = normalizeLinkMetadata(
       JSON.stringify({
         pluginName: "Plugin",
@@ -54,14 +54,14 @@ describe("links mapper legacy normalization", () => {
     ).toBeUndefined()
   })
 
-  it("accepts top-level legacy extractedLinks", () => {
+  it("accepts top-level extractedLinks", () => {
     const metadata = normalizeLinkMetadata({}, [
       { id: "top", url: "https://top.test", label: "Top" },
     ])
     expect(metadata.extraction.extractedLinks).toHaveLength(1)
   })
 
-  it("preserves V2 metadata and derives watched view state", () => {
+  it("preserves current metadata and derives watched view state", () => {
     const row: LinkResponse = {
       id: "1",
       url: "https://page.test",
@@ -69,7 +69,7 @@ describe("links mapper legacy normalization", () => {
       created_at: 1,
       updated_at: 2,
       meta: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { pluginName: "Plugin", badge: "4K" },
         extraction: {
           extractedLinks: [{ id: "x", url: "https://x.test", label: "X" }],
@@ -86,37 +86,37 @@ describe("links mapper legacy normalization", () => {
 })
 
 describe("save-flow metadata preservation", () => {
-  it("preserves workerId and watched state when updating extracted links", () => {
+  it("preserves pluginServerId and watched state when updating extracted links", () => {
     const previous = normalizeLinkMetadata({
-      pluginName: "Worker",
-      workerId: "worker-1",
+      pluginName: "Plugin Server",
+      pluginServerId: "plugin-server-1",
       extractedLinks: [{ id: "old", url: "https://old.test", label: "Old" }],
     })
     previous.playback.watchedUrls = ["https://old.test"]
     previous.playback.watchedIds = ["old"]
 
-    const updated = createMetadataV2({
+    const updated = createLinkMetadata({
       extractedLinks: [{ id: "new", url: "https://new.test", label: "New" }],
       previous,
     })
 
     expect(
-      (updated.source as Record<string, string | undefined>).workerId
-    ).toBe("worker-1")
+      (updated.source as Record<string, string | undefined>).pluginServerId
+    ).toBe("plugin-server-1")
     expect(updated.playback.watchedUrls).toContain("https://old.test")
     expect(updated.playback.watchedIds).toContain("old")
   })
 
-  it("preserves worker source identity metadata", () => {
+  it("preserves Plugin Server source identity metadata", () => {
     const metadata = normalizeLinkMetadata({
-      pluginName: "Example Extractor",
-      pluginIcon: "https://worker.example/icon.svg",
+      pluginName: "Example Plugin Server",
+      pluginIcon: "https://plugin-server.example/icon.svg",
       pluginId: "resolver-beta",
       sourceName: "Resolver Beta",
       sourceIconUrl: "https://icons.example/resolver-beta.svg",
       sourceStatus: "active",
       sourceVersion: "1.0.0",
-      workerId: "worker-1",
+      pluginServerId: "plugin-server-1",
       extractedLinks: [{ id: "link", url: "https://cdn.test", label: "CDN" }],
     })
 
@@ -143,31 +143,31 @@ describe("save-flow metadata preservation", () => {
     expect(view.sourceVersion).toBe("1.0.0")
   })
 
-  it("preserves workerId from previous metadata when meta is omitted", () => {
+  it("preserves pluginServerId from previous metadata when meta is omitted", () => {
     const previous = normalizeLinkMetadata({
-      pluginName: "Worker",
-      workerId: "worker-1",
+      pluginName: "Plugin Server",
+      pluginServerId: "plugin-server-1",
       extractedLinks: [],
     })
 
-    const updated = createMetadataV2({
+    const updated = createLinkMetadata({
       extractedLinks: [{ url: "https://new.test", label: "New" }],
       previous,
     })
 
     expect(
-      (updated.source as Record<string, string | undefined>).workerId
-    ).toBe("worker-1")
+      (updated.source as Record<string, string | undefined>).pluginServerId
+    ).toBe("plugin-server-1")
   })
 
   it("does not erase manifest source metadata with undefined extraction metadata", () => {
     const merged = mergeDefinedMeta(
       {
-        pluginName: "Example Extractor",
+        pluginName: "Example Plugin Server",
         pluginId: "resolver-beta",
         sourceName: "Resolver Beta",
         sourceIconUrl:
-          "https://worker.example/icons/sources/resolver-beta.webp",
+          "https://plugin-server.example/icons/sources/resolver-beta.webp",
         sourceStatus: "active",
         sourceVersion: "1.0.0",
       },
@@ -179,7 +179,7 @@ describe("save-flow metadata preservation", () => {
     )
 
     expect(merged.sourceIconUrl).toBe(
-      "https://worker.example/icons/sources/resolver-beta.webp"
+      "https://plugin-server.example/icons/sources/resolver-beta.webp"
     )
     expect(merged.sourceStatus).toBe("active")
     expect(merged.sourceVersion).toBe("1.0.0")

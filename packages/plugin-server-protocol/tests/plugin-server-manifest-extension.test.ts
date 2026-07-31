@@ -74,7 +74,9 @@ describe("Lynvo manifest source credentials", () => {
       extensions: { lynvo: { plugins: [] } },
     })
 
-    expect(validatePluginServerManifestContract(manifest).issues).toContainEqual({
+    expect(
+      validatePluginServerManifestContract(manifest).issues
+    ).toContainEqual({
       path: "iconUrl",
       message: "Provide iconUrl when hasIcon is true.",
     })

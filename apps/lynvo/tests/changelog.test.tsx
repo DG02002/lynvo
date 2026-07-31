@@ -14,7 +14,7 @@ function CurrentLocation() {
 describe("Changelog", () => {
   it("reads the selected category from the URL", () => {
     render(
-      <MemoryRouter initialEntries={["/changelog?type=extractor"]}>
+      <MemoryRouter initialEntries={["/changelog?type=plugin-server"]}>
         <Changelog />
       </MemoryRouter>
     )
@@ -25,7 +25,7 @@ describe("Changelog", () => {
     expect(
       within(updates).queryByText("Product launch")
     ).not.toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: "Extractor" })).toHaveAttribute(
+    expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
       "aria-selected",
       "true"
     )
@@ -53,9 +53,9 @@ describe("Changelog", () => {
       within(updates).queryByText("Platform foundation")
     ).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("tab", { name: "Extractor" }))
+    fireEvent.click(screen.getByRole("tab", { name: "Plugin Server" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
-      "?type=extractor"
+      "?type=plugin-server"
     )
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(

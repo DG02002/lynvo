@@ -52,7 +52,7 @@ export const ExtractionSection = () => (
     <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
       <SectionIntro
         title="Extract supported links."
-        description="Use Lynvo's official plugins for supported sources, or connect your own compatible external extractor for other links."
+        description="Use Lynvo's official Plugins for supported Sources, or connect a compatible Custom Plugin Server for other links."
       />
 
       <div className="flex flex-col gap-8">
@@ -64,10 +64,10 @@ export const ExtractionSection = () => (
           </p>
         </div>
         <div>
-          <p className="text-lg">External extractors</p>
+          <p className="text-lg">Custom plugin servers</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Connect a Lynvo-compatible extractor worker for sources outside the
-            official plugin list.
+            Connect a compatible Plugin Server for Sources outside the official
+            Plugin list.
           </p>
         </div>
       </div>

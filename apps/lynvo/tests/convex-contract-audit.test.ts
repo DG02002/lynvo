@@ -5,7 +5,9 @@ import { join } from "node:path"
 
 describe("Convex contract audit", () => {
   it("rejects a one-argument database operation", () => {
-    const fixtureDirectory = mkdtempSync(join(tmpdir(), "lynvo-contract-audit-"))
+    const fixtureDirectory = mkdtempSync(
+      join(tmpdir(), "lynvo-contract-audit-")
+    )
     writeFileSync(
       join(fixtureDirectory, "unsafe.ts"),
       `export const unsafe = query({

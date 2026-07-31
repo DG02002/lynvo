@@ -3,9 +3,9 @@ import { RECENT_LINKS_MAX_COUNT } from "../../../../convex/constants"
 import {
   toRecentLinkViewItem,
   toSavedLinkDTO,
-  createMetadataV2,
+  createLinkMetadata,
   normalizeLinkMetadata,
-  toLegacyMeta,
+  toFlatMeta,
   type SavedLink,
 } from "~/features/links/links.mapper"
 import {
@@ -151,7 +151,7 @@ export function linksToRecentLinkViewItems(
       (p) => p.id === item.id || p.url === item.url
     )
     if (existing?.extractedLinks && (item.extractedLinks?.length ?? 0) === 0) {
-      const metadata = createMetadataV2({
+      const metadata = createLinkMetadata({
         meta: item.meta,
         extractedLinks: existing.extractedLinks,
         previous: item.metadata,
@@ -159,7 +159,7 @@ export function linksToRecentLinkViewItems(
       return {
         ...item,
         metadata,
-        meta: toLegacyMeta(metadata),
+        meta: toFlatMeta(metadata),
         extractedLinks: metadata.extraction.extractedLinks,
       }
     }

@@ -143,7 +143,7 @@ export const deleteUserAccountData = async (
   const ownerKey = `user:${userId}`
   const [
     links,
-    workers,
+    pluginServers,
     pluginDomains,
     pluginCredentials,
     deviceCodes,
@@ -159,7 +159,7 @@ export const deleteUserAccountData = async (
       )
       .take(ACCOUNT_DELETION_DOCUMENT_LIMIT),
     ctx.db
-      .query("userWorkers")
+      .query("userPluginServers")
       .withIndex("by_userId", (queryBuilder) =>
         queryBuilder.eq("userId", userId)
       )
@@ -209,7 +209,7 @@ export const deleteUserAccountData = async (
   ])
   const ownedCollections = [
     links,
-    workers,
+    pluginServers,
     pluginDomains,
     pluginCredentials,
     deviceCodes,
@@ -233,8 +233,8 @@ export const deleteUserAccountData = async (
   for (const link of links) {
     await ctx.db.delete("links", link._id)
   }
-  for (const worker of workers) {
-    await ctx.db.delete("userWorkers", worker._id)
+  for (const pluginServer of pluginServers) {
+    await ctx.db.delete("userPluginServers", pluginServer._id)
   }
   for (const credential of pluginCredentials) {
     await ctx.db.delete("userPluginCredentials", credential._id)

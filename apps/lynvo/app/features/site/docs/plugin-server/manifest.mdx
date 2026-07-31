@@ -1,0 +1,60 @@
+---
+title: Define the public manifest
+description: Declare your Plugin Server’s identity, supported URLs, and capabilities.
+navLabel: Manifest
+contentType: Reference
+---
+
+<DocSection id="manifest">
+
+## Define the public manifest
+
+The manifest lets Lynvo validate compatibility and route URLs without sending them to every Worker. Keep `pluginServerId` stable after anyone connects the Plugin Server.
+
+<CodeBlock label="src/manifest.ts">
+
+```ts {2,5,8-12}
+export const manifest = {
+  protocolVersion: "1.0",
+  pluginServerId: "com.example.my-plugin-server",
+  displayName: "My Plugin Server",
+  hasIcon: false,
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [
+    {
+      hosts: ["media.example.com"],
+      pathPatterns: ["/watch/**"],
+      schemes: ["https"],
+    },
+  ],
+  features: {
+    password: false,
+    lazyNodes: true,
+    basicAuth: false,
+  },
+  extensions: {},
+} as const
+```
+
+</CodeBlock>
+
+Manifest fields follow these rules:
+
+| Field             | Required | Rule                                                 |
+| ----------------- | -------- | ---------------------------------------------------- |
+| `protocolVersion` | Yes      | Must equal `"1.0"`                                   |
+| `pluginServerId`  | Yes      | Stable namespaced identifier                         |
+| `displayName`     | Yes      | Human-readable Plugin Server name                    |
+| `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it        |
+| `iconUrl`         | No       | Direct HTTPS image URL                               |
+| `homepage`        | No       | HTTPS project URL                                    |
+| `auth.type`       | Yes      | Must equal `"bearer"`                                |
+| `usage.endpoint`  | Yes      | Must equal `"/usage"`                                |
+| `matchers`        | Yes      | Non-empty array                                      |
+| `features`        | Yes      | Declares password, lazy node, and Basic Auth support |
+| `extensions`      | No       | Namespaced non-core metadata                         |
+
+Each matcher requires `hosts`. `hostPatterns` and `pathPatterns` accept `*` within one segment and `**` across segments. `schemes` defaults to `["https"]`.
+
+</DocSection>

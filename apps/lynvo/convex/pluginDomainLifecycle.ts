@@ -48,7 +48,7 @@ export const buildPluginCredentialDocument = ({
   userId: Id<"users">
   pluginDomain: Pick<
     Doc<"userPluginDomains">,
-    "_id" | "workerId" | "pluginId" | "domain"
+    "_id" | "pluginServerId" | "pluginId" | "domain"
   >
   credential: EncryptedCredentialInput
   existingCredential?: Doc<"userPluginCredentials">
@@ -56,7 +56,7 @@ export const buildPluginCredentialDocument = ({
 }) => ({
   userId,
   pluginDomainId: pluginDomain._id,
-  workerId: pluginDomain.workerId,
+  pluginServerId: pluginDomain.pluginServerId,
   pluginId: pluginDomain.pluginId,
   domain: pluginDomain.domain,
   ...credential,
@@ -100,7 +100,7 @@ export const upsertPluginDomain = async (
   userId: Id<"users">,
   input: {
     domain: string
-    workerId: string
+    pluginServerId: string
     pluginId: string
     credential?: EncryptedCredentialInput
   }
@@ -108,10 +108,10 @@ export const upsertPluginDomain = async (
   const domain = normalizePluginDomain(input.domain)
   const existingDomain = await ctx.db
     .query("userPluginDomains")
-    .withIndex("by_userId_workerId_domain", (queryBuilder) =>
+    .withIndex("by_userId_pluginServerId_domain", (queryBuilder) =>
       queryBuilder
         .eq("userId", userId)
-        .eq("workerId", input.workerId)
+        .eq("pluginServerId", input.pluginServerId)
         .eq("domain", domain)
     )
     .unique()
@@ -119,7 +119,7 @@ export const upsertPluginDomain = async (
   if (!existingDomain) {
     const pluginDomainDocument = {
       userId,
-      workerId: input.workerId,
+      pluginServerId: input.pluginServerId,
       domain,
       pluginId: input.pluginId,
     }

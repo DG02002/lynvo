@@ -21,7 +21,7 @@ const doesLedgerMatch = (
   ledger.schemaVersion === STORAGE_LEDGER_SCHEMA_VERSION &&
   ledger.profileBytes === usage.profileBytes &&
   ledger.recentLinkBytes === usage.recentLinkBytes &&
-  ledger.workerBytes === usage.workerBytes &&
+  ledger.pluginServerBytes === usage.pluginServerBytes &&
   ledger.pluginDomainBytes === usage.pluginDomainBytes &&
   ledger.pluginCredentialBytes === usage.pluginCredentialBytes &&
   ledger.savedLinkCount === usage.savedLinkCount &&

@@ -69,7 +69,7 @@ const isLazyFolder = (link: ExtractedLink) =>
   link.childrenResolved !== true
 
 const isMirrorResolvable = (link: ExtractedLink) =>
-  link.workerNodeKind === "resolvable" && link.resolutionKind !== "folder"
+  link.mediaNodeKind === "resolvable" && link.resolutionKind !== "folder"
 
 const getFolderVisualState = (link: ExtractedLink, isOpen: boolean) => {
   if (isOpen) {

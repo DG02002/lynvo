@@ -61,7 +61,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const credential = credentialValue
             ? yield* vault.encrypt(credentialValue, {
                 userId: user.id,
-                workerId: payload.workerId,
+                pluginServerId: payload.pluginServerId,
                 pluginId: payload.pluginId,
                 domain,
               })
@@ -70,7 +70,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
             api.pluginDomains.create,
             {
               domain,
-              workerId: payload.workerId,
+              pluginServerId: payload.pluginServerId,
               pluginId: payload.pluginId,
               credential,
             },
@@ -100,7 +100,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
             : password
           const credential = yield* vault.encrypt(credentialValue, {
             userId: user.id,
-            workerId: domain.workerId,
+            pluginServerId: domain.pluginServerId,
             pluginId: domain.pluginId,
             domain: domain.domain,
           })

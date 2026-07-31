@@ -5,8 +5,8 @@ import {
 
 export const manifest: PluginServerManifest = {
   protocolVersion: "1.0",
-  pluginServerId: "dev.lynvo.example-extractor",
-  displayName: "Example Extractor",
+  pluginServerId: "dev.lynvo.example-plugin-server",
+  displayName: "Example Plugin Server",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
   matchers: [{ hosts: ["media.example.com"] }],
@@ -30,7 +30,10 @@ type ExampleEnvironment = Record<string, never>
 
 const runtime = createPluginServerRuntime<ExampleEnvironment>({
   manifest,
-  auth: { validate: ({ request }) => request.headers.get("authorization") === "Bearer example-secret" },
+  auth: {
+    validate: ({ request }) =>
+      request.headers.get("authorization") === "Bearer example-secret",
+  },
   usage: () => ({ metrics: [] }),
   extract: ({ targetUrl }) => ({
     plugin: {

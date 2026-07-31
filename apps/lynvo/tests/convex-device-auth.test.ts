@@ -34,11 +34,9 @@ describe("device authorization", () => {
       { purpose: "deviceCode", exp: Date.now() + DEVICE_CODE_TTL_MS },
       gatewaySecret
     )
-    const randomSpy = vi
-      .spyOn(Math, "random")
-      .mockImplementation(() => {
-        throw new Error("Math.random must not generate authentication codes")
-      })
+    const randomSpy = vi.spyOn(Math, "random").mockImplementation(() => {
+      throw new Error("Math.random must not generate authentication codes")
+    })
 
     const generated = await convex.mutation(api.tv.generateCode, {
       deviceName: "Test TV",
@@ -193,14 +191,14 @@ describe("device authorization", () => {
       convex.mutation(internal.tv.cleanupExpiredCodes)
     ).resolves.toEqual({ deleted: DEVICE_CODE_CLEANUP_BATCH_SIZE })
     await expect(
-      convex.run(async (context) =>
-        await context.db.query("deviceCodes").collect()
+      convex.run(
+        async (context) => await context.db.query("deviceCodes").collect()
       )
     ).resolves.toHaveLength(1)
     await convex.finishAllScheduledFunctions(vi.runAllTimers)
     await expect(
-      convex.run(async (context) =>
-        await context.db.query("deviceCodes").collect()
+      convex.run(
+        async (context) => await context.db.query("deviceCodes").collect()
       )
     ).resolves.toHaveLength(0)
     vi.useRealTimers()

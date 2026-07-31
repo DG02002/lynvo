@@ -137,7 +137,7 @@ export const useSaveActions = ({
       const domains = await Effect.runPromise(client.pluginDomains.list({}))
       const isConfigured = domains.some(
         (domain) =>
-          domain.workerId === suggestion.workerId &&
+          domain.pluginServerId === suggestion.pluginServerId &&
           domain.pluginId === suggestion.pluginId &&
           domain.domain === suggestion.domain
       )
@@ -164,7 +164,7 @@ export const useSaveActions = ({
         client.pluginDomains.create({
           payload: {
             domain: pluginDomainSuggestion.domain,
-            workerId: pluginDomainSuggestion.workerId,
+            pluginServerId: pluginDomainSuggestion.pluginServerId,
             pluginId: pluginDomainSuggestion.pluginId,
             username: pluginDomainSuggestion.username,
             password: pluginDomainSuggestion.password,

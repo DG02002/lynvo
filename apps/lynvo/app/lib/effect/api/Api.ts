@@ -1,15 +1,15 @@
 import { HttpApi } from "effect/unstable/httpapi"
 import { LinksGroup } from "./groups/LinksGroup"
-import { WorkersGroup } from "./groups/WorkersGroup"
+import { PluginServersGroup } from "./groups/plugin-servers-group"
 import { PluginDomainsGroup } from "./groups/PluginDomainsGroup"
-import { ExtractorGroup } from "./groups/ExtractorGroup"
+import { ExtractionGroup } from "./groups/extraction-group"
 import { TvGroup } from "./groups/TvGroup"
 import { RemoteGroup } from "./groups/RemoteGroup"
 
 export class Api extends HttpApi.make("lynvo-api")
   .add(LinksGroup)
-  .add(WorkersGroup)
+  .add(PluginServersGroup)
   .add(PluginDomainsGroup)
-  .add(ExtractorGroup)
+  .add(ExtractionGroup)
   .add(TvGroup)
   .add(RemoteGroup) {}

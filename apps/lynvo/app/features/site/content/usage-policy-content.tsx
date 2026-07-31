@@ -3,9 +3,9 @@ import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
 export const UsagePolicyContent = () => (
   <PolicyLayout title="Usage policies" updatedAt="July 23, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
-      Lynvo helps you save, resolve, and play links through official and
-      external extractors. These policies explain the responsible and permitted
-      use of Lynvo, its infrastructure, and any extractor connected to it.
+      Lynvo helps you save, resolve, and play links through official and Custom
+      Plugin Servers. These policies explain the responsible and permitted use
+      of Lynvo, its infrastructure, and any Plugin Server connected to it.
     </p>
 
     <PolicySection title="1. Use content you are allowed to access">
@@ -22,7 +22,7 @@ export const UsagePolicyContent = () => (
     </PolicySection>
 
     <PolicySection title="2. Do not bypass protections">
-      <p>You may not use Lynvo or an external extractor to:</p>
+      <p>You may not use Lynvo or an Custom Plugin Server to:</p>
       <ul className="list-disc pl-6">
         <li>Bypass digital rights management or technical access controls</li>
         <li>
@@ -41,15 +41,15 @@ export const UsagePolicyContent = () => (
       </p>
       <p>
         You may not probe, disrupt, compromise, or gain unauthorized access to
-        Lynvo, its providers, connected extractors, source services, or another
-        user&apos;s account or data.
+        Lynvo, its providers, connected Plugin Servers, Source services, or
+        another user&apos;s account or data.
       </p>
     </PolicySection>
 
     <PolicySection title="4. Do not abuse capacity">
       <p>
         Do not automate requests in a way that degrades the Service, evade
-        account or extractor limits, create accounts to obtain additional
+        account or Plugin Server limits, create accounts to obtain additional
         quotas, resell access, or generate traffic that is excessive, deceptive,
         or unrelated to ordinary personal use.
       </p>
@@ -59,15 +59,16 @@ export const UsagePolicyContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="5. External extractor responsibilities">
+    <PolicySection title="5. Custom Plugin Server responsibilities">
       <p>
-        You are responsible for every external extractor you connect, operate,
-        or distribute. External extractors must use the Lynvo protocol honestly,
-        report finite usage accurately, authenticate protected endpoints,
-        validate inputs, and avoid exposing credentials or private data.
+        You are responsible for every Custom Plugin Server you connect, operate,
+        or distribute. Custom Plugin Servers must use the Lynvo protocol
+        honestly, report finite usage accurately, authenticate protected
+        endpoints, validate inputs, and avoid exposing credentials or private
+        data.
       </p>
       <p>
-        Do not configure an extractor that impersonates another service,
+        Do not configure a Plugin Server that impersonates another service,
         misrepresents supported sources, returns malicious links, or performs
         undisclosed actions.
       </p>
@@ -76,8 +77,8 @@ export const UsagePolicyContent = () => (
     <PolicySection title="6. Keep credentials secure">
       <p>
         Protect your Lynvo password, sessions, source credentials, and external
-        extractor API keys. Do not publish or share credentials, and revoke or
-        rotate them if you believe they have been exposed.
+        Plugin Server API keys. Do not publish or share credentials, and revoke
+        or rotate them if you believe they have been exposed.
       </p>
     </PolicySection>
 
@@ -93,8 +94,8 @@ export const UsagePolicyContent = () => (
     <PolicySection title="8. Reporting and policy changes">
       <p>
         Use the official contact method displayed by the Service to report
-        suspected abuse or an unsafe extractor. Include enough information for
-        the report to be reviewed without sharing passwords or API keys.
+        suspected abuse or an unsafe Plugin Server. Include enough information
+        for the report to be reviewed without sharing passwords or API keys.
       </p>
       <p>
         Lynvo may update these policies as the Service and its risks change. The

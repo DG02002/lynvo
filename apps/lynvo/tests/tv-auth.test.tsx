@@ -22,9 +22,9 @@ describe("TV approval route behavior", () => {
   })
 
   it("submits approval through the same-origin Worker boundary", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({ success: true }, { status: 200 })
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json({ success: true }, { status: 200 }))
     vi.stubGlobal("fetch", fetchMock)
 
     render(
@@ -38,7 +38,8 @@ describe("TV approval route behavior", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     const request = fetchMock.mock.calls[0][0]
-    const requestUrl = request instanceof Request ? request.url : String(request)
+    const requestUrl =
+      request instanceof Request ? request.url : String(request)
     expect(new URL(requestUrl, window.location.origin).pathname).toBe(
       "/api/auth/tv/authorize"
     )

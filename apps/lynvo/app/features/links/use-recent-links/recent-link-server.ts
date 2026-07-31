@@ -1,4 +1,4 @@
-import type { LinkMetadataV2, MetaData } from "~/features/links/types"
+import type { LinkMetadata, MetaData } from "~/features/links/types"
 import { metadataSchema } from "~/features/links/storage-schemas"
 
 export type CreateRecentLink = (input: {
@@ -60,7 +60,7 @@ export const createServerLink = async ({
 }: {
   targetUrl: string
   title: string
-  metadata: LinkMetadataV2
+  metadata: LinkMetadata
   createLink: CreateRecentLink
 }) => {
   const id = await createLink({

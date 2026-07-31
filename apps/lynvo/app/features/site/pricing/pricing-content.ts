@@ -7,15 +7,15 @@ export const pricingFaqs = [
   },
   {
     value: "official-operation",
-    question: "What counts as an official extraction?",
+    question: "What counts as an Lynvo Plugin Server extraction?",
     answer:
-      "Lynvo counts one use after accepting an official extraction request. The monthly allowance is shared across all official plugins and direct links. Browsing Lynvo, opening Settings, and using an external extractor do not use this allowance.",
+      "Lynvo counts one use after accepting an Lynvo Plugin Server extraction request. The monthly allowance is shared across all official Plugins and direct links. Browsing Lynvo, opening Settings, and using an Custom Plugin Server do not use this allowance.",
   },
   {
     value: "limit-reached",
     question: "What happens after an extraction limit is reached?",
     answer:
-      "New official extraction requests covered by that limit remain unavailable until the limit resets. Saved links, settings, and external extractors remain available.",
+      "New Lynvo Plugin Server extraction requests covered by that limit remain unavailable until the limit resets. Saved links, settings, and Custom Plugin Servers remain available.",
   },
   {
     value: "operating-systems",
@@ -27,7 +27,7 @@ export const pricingFaqs = [
     value: "links",
     question: "Which links can Lynvo save?",
     answer:
-      "Lynvo can save direct media links, links supported by an official source, and links handled by a configured external extractor.",
+      "Lynvo can save direct media links, links supported by an official Plugin, and links handled by a configured Custom Plugin Server.",
   },
   {
     value: "privacy",

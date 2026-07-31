@@ -33,7 +33,7 @@ const freePlanFeatures = [
   "Limited official extraction",
   "Limited saved-link storage",
   "Access to all official sources",
-  "External extractor support",
+  "Custom Plugin Server support",
   "Real-time sync",
   "Android playback and remote control",
 ]
@@ -101,8 +101,8 @@ const planDetailSections = [
     title: "Plugins and devices",
     details: [
       {
-        feature: "External extractor allowance",
-        allowance: "Set by each extractor",
+        feature: "Custom Plugin Server allowance",
+        allowance: "Set by each Plugin Server",
       },
       { feature: "Real-time sync", allowance: "Included" },
       { feature: "Remote playback control", allowance: "Included" },
@@ -287,7 +287,8 @@ export default function Pricing() {
             .
           </p>
           <p>
-            External extractor limits are set and enforced by each extractor.
+            Custom Plugin Server limits are set and enforced by each Plugin
+            Server.
           </p>
           <p>
             Plan limits may change as Lynvo develops. Material changes appear in

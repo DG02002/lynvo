@@ -38,9 +38,7 @@ describe("authenticated remote commands", () => {
     ).rejects.toThrow("UNAUTHORIZED")
     await expect(
       convex.query(api.commands.listForCurrentSession)
-    ).rejects.toThrow(
-      "UNAUTHORIZED"
-    )
+    ).rejects.toThrow("UNAUTHORIZED")
     await expect(
       convex.mutation(api.commands.acknowledge, { id: commandId })
     ).rejects.toThrow("UNAUTHORIZED")
@@ -68,11 +66,12 @@ describe("authenticated remote commands", () => {
   it("lists commands only for the current authenticated session", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "multi-session")
-    const secondSessionId = await convex.run(async (context) =>
-      await context.db.insert("authSessions", {
-        userId: user.userId,
-        expirationTime: Date.now() + REMOTE_COMMAND_TTL_MS,
-      })
+    const secondSessionId = await convex.run(
+      async (context) =>
+        await context.db.insert("authSessions", {
+          userId: user.userId,
+          expirationTime: Date.now() + REMOTE_COMMAND_TTL_MS,
+        })
     )
     const senderClient = asAuthenticatedUser(
       convex,
@@ -106,11 +105,12 @@ describe("authenticated remote commands", () => {
   it("prevents acknowledgement from another session", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "ack-owner")
-    const secondSessionId = await convex.run(async (context) =>
-      await context.db.insert("authSessions", {
-        userId: user.userId,
-        expirationTime: Date.now() + REMOTE_COMMAND_TTL_MS,
-      })
+    const secondSessionId = await convex.run(
+      async (context) =>
+        await context.db.insert("authSessions", {
+          userId: user.userId,
+          expirationTime: Date.now() + REMOTE_COMMAND_TTL_MS,
+        })
     )
     const senderClient = asAuthenticatedUser(
       convex,
@@ -136,14 +136,11 @@ describe("authenticated remote commands", () => {
       user.userId,
       user.sessionId
     )
-    const commandId = await authenticatedClient.mutation(
-      api.commands.enqueue,
-      {
-        targetSessionId: user.sessionId,
-        command: "play",
-        payload: "{}",
-      }
-    )
+    const commandId = await authenticatedClient.mutation(api.commands.enqueue, {
+      targetSessionId: user.sessionId,
+      command: "play",
+      payload: "{}",
+    })
 
     await expect(
       authenticatedClient.mutation(api.commands.acknowledge, { id: commandId })
@@ -238,14 +235,14 @@ describe("authenticated remote commands", () => {
       convex.mutation(internal.commands.cleanupExpired)
     ).resolves.toEqual({ deletedCount: REMOTE_COMMAND_CLEANUP_BATCH_SIZE })
     await expect(
-      convex.run(async (context) =>
-        await context.db.query("remoteCommands").collect()
+      convex.run(
+        async (context) => await context.db.query("remoteCommands").collect()
       )
     ).resolves.toHaveLength(1)
     await convex.finishAllScheduledFunctions(vi.runAllTimers)
     await expect(
-      convex.run(async (context) =>
-        await context.db.query("remoteCommands").collect()
+      convex.run(
+        async (context) => await context.db.query("remoteCommands").collect()
       )
     ).resolves.toHaveLength(0)
     vi.useRealTimers()

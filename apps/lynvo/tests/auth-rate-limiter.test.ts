@@ -63,9 +63,9 @@ describe("AuthRateLimiter Durable Object HTTP behavior", () => {
       Array.from({ length: 20 }, () => attempt(limiter, 100, 5))
     )
 
-    expect(responses.filter((response) => response.status === 200)).toHaveLength(
-      5
-    )
+    expect(
+      responses.filter((response) => response.status === 200)
+    ).toHaveLength(5)
     expect(
       responses.filter((response) => response.status === 429)
     ).toHaveLength(15)

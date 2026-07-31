@@ -14,9 +14,9 @@ const documentationCards = [
     icon: ModernTvIcon,
   },
   {
-    title: "Extractor",
-    description: "Build extractors that support your media sources.",
-    to: "/docs/extractor",
+    title: "Plugin Server",
+    description: "Build a Plugin Server that supports your media Sources.",
+    to: "/docs/plugin-server",
     icon: ThreeDViewIcon,
   },
 ] as const

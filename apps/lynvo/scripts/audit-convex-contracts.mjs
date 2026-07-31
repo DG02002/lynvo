@@ -12,7 +12,7 @@ const STRING_ID = /args:\s*\{[\s\S]*?\bid:\s*v\.string\(\)/g
 const STRING_ID_ALLOWLIST = new Set([
   "convex/links.ts",
   "convex/pluginDomains.ts",
-  "convex/userWorkers.ts",
+  "convex/userPluginServers.ts",
 ])
 
 const listTypeScriptFiles = (directory) =>

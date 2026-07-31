@@ -1,8 +1,8 @@
 import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
 import {
-  ExtractorProtocolClient,
-  ServiceBindingExtractorTransport,
-} from "~/lib/extraction/extractor-protocol-client"
+  PluginServerClient,
+  ServiceBindingPluginServerTransport,
+} from "~/lib/extraction/plugin-server-client"
 import type { OfficialPlugin } from "./plugin-settings-data"
 
 export const resolveOfficialPluginIconUrl = (
@@ -28,8 +28,8 @@ export const loadOfficialPlugins = async (
   requestUrl: string
 ): Promise<OfficialPlugin[] | null> => {
   try {
-    const manifest = await new ExtractorProtocolClient(
-      new ServiceBindingExtractorTransport(environment.LYNVO_PLUGIN_SERVER)
+    const manifest = await new PluginServerClient(
+      new ServiceBindingPluginServerTransport(environment.LYNVO_PLUGIN_SERVER)
     ).getManifest({ apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY })
     return (getLynvoManifestExtension(manifest).plugins ?? []).map(
       (source) => ({

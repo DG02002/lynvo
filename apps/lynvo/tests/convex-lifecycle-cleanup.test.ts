@@ -22,14 +22,14 @@ describe("bounded lifecycle cleanup", () => {
       const now = Date.now()
       const domainId = await context.db.insert("userPluginDomains", {
         userId: target.userId,
-        workerId: "worker-1",
+        pluginServerId: "plugin-server-1",
         domain: "target.example",
         pluginId: "direct",
       })
       await context.db.insert("userPluginCredentials", {
         userId: target.userId,
         pluginDomainId: domainId,
-        workerId: "worker-1",
+        pluginServerId: "plugin-server-1",
         pluginId: "direct",
         domain: "target.example",
         ciphertext: "encrypted",
@@ -47,9 +47,9 @@ describe("bounded lifecycle cleanup", () => {
           updatedAt: now + index,
         })
       }
-      await context.db.insert("userWorkers", {
+      await context.db.insert("userPluginServers", {
         userId: target.userId,
-        baseUrl: "https://worker.target.example",
+        baseUrl: "https://plugin-server.target.example",
         apiKeyCiphertext: "ciphertext",
         apiKeyNonce: "nonce",
         apiKeyAlgorithm: "AES-256-GCM",
@@ -213,10 +213,7 @@ describe("bounded lifecycle cleanup", () => {
           createdAt: now,
           updatedAt: now,
         })
-        const usage = await calculateAppOwnedStorageUsage(
-          context,
-          user.userId
-        )
+        const usage = await calculateAppOwnedStorageUsage(context, user.userId)
         await context.db.insert("userStorageLedgers", {
           userId: user.userId,
           schemaVersion: 1,

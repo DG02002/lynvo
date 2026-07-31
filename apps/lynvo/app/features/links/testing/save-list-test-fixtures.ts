@@ -21,7 +21,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
         sourceName: "Spencerwooo's Onedrive Vercel Index",
         pageTitle: "Example Show — choose files to save",
         audio: "Audio Alpha",
-        workerId: "ui-test-onedrive-worker",
+        pluginServerId: "ui-test-onedrive-plugin-server",
         extractedLinks: [
           {
             id: "draft-folder-one",
@@ -99,7 +99,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       timestamp,
       title: "Direct file",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { pluginName: "Direct Media", sourceName: "Direct Media" },
         extraction: {
           extractedLinks: [
@@ -124,7 +124,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       title:
         "A very long saved library title that checks wrapping without pushing the item menu off screen",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: { pluginName: "Library", sourceName: "Test Library" },
         extraction: {
           extractedLinks: [
@@ -182,7 +182,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       timestamp,
       title: "Multiple direct files without folders",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: {
           pluginName: "Multi File",
           sourceName: "Mixed downloads",
@@ -216,7 +216,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       timestamp,
       title: "Playable expiry test",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: {
           pluginName: "Direct Media",
           sourceName: "Temporary CDN test fixture",
@@ -243,7 +243,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       url: "https://fallback-title.example/path/video.mp4",
       timestamp,
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: {},
         extraction: {
           extractedLinks: [
@@ -263,13 +263,13 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
       timestamp,
       title: "Source Alpha collection with resolved Resolver Beta mirrors",
       metadata: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         source: {
-          pluginName: "Example Extractor",
+          pluginName: "Example Plugin Server",
           sourceName: "Source Alpha",
           sourceIconUrl:
-            "https://extractor.example/icons/sources/source-alpha.webp",
-          workerId: "ui-test-source-alpha-worker",
+            "https://plugin-server.example/icons/sources/source-alpha.webp",
+          pluginServerId: "ui-test-source-alpha-plugin-server",
           audio: "Hindi DD5.1 + Audio Alpha",
         },
         extraction: {
@@ -295,7 +295,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
                         "Example.Collection.item-01.Variant Beta.Variant Beta.mkv",
                       type: "folder",
                       size: "5.8 GB",
-                      workerNodeKind: "resolvable",
+                      mediaNodeKind: "resolvable",
                     },
                     {
                       id: "source-alpha-item-02",
@@ -304,7 +304,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
                         "Example.Collection.item-02.Variant Beta.Variant Beta.mkv",
                       type: "folder",
                       size: "6.1 GB",
-                      workerNodeKind: "resolvable",
+                      mediaNodeKind: "resolvable",
                     },
                     {
                       id: "source-alpha-item-03-failure",
@@ -313,7 +313,7 @@ export const createSaveListTestItems = (): RecentLinkViewItem[] => {
                         "Example.Collection.item-03.Variant Beta.Variant Beta.Resolve-Failure.mkv",
                       type: "folder",
                       size: "5.9 GB",
-                      workerNodeKind: "resolvable",
+                      mediaNodeKind: "resolvable",
                     },
                   ],
                 },

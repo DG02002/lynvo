@@ -1,0 +1,51 @@
+---
+title: Configure bearer authentication
+description: Protect Plugin Server requests with a Plugin server API key and Cloudflare secrets.
+navLabel: Authentication
+contentType: Tutorial
+---
+
+<DocSection id="authentication">
+
+## Configure bearer authentication
+
+Lynvo sends one Plugin server API key in the `Authorization` header. Validate it before usage reservation or upstream network work.
+
+Define the Cloudflare environment and a reusable authentication function:
+
+<CodeBlock label="src/auth.ts">
+
+```ts
+export interface Env {
+  PLUGIN_SERVER_API_KEY: string
+}
+
+export const isAuthorized = (request: Request, env: Env): boolean =>
+  request.headers.get("Authorization") === `Bearer ${env.PLUGIN_SERVER_API_KEY}`
+```
+
+</CodeBlock>
+
+Store the production key as a Cloudflare secret:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm wrangler secret put PLUGIN_SERVER_API_KEY
+```
+
+</CodeBlock>
+
+Use `.dev.vars` for local development. Keep this file out of version control.
+
+<CodeBlock label=".dev.vars">
+
+```dotenv
+PLUGIN_SERVER_API_KEY=your_local_plugin_server_api_key_here
+```
+
+</CodeBlock>
+
+The bearer key authenticates Lynvo to your Plugin Server. Source-side HTTP Basic Auth uses the separate `basicAuth` request field.
+
+</DocSection>

@@ -36,7 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog"
-import { ExternalWorkerTable } from "./external-worker-table"
+import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
 import type { OfficialPlugin } from "./plugin-settings-data"
 import {
@@ -47,20 +47,20 @@ import {
 } from "./settings-layout"
 import { usePluginSettingsActions } from "./use-plugin-settings-actions"
 import {
-  externalWorkerSchema,
-  type ExternalWorkerFormValues,
+  customPluginServerSchema,
+  type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 
 export interface PluginDomain {
   _id: string
-  workerId: string
+  pluginServerId: string
   pluginId: string
   domain: string
   hasCredential: boolean
 }
 
-export interface ExtractorWorker {
+export interface CustomPluginServer {
   _id: string
   baseUrl: string
   manifest: string
@@ -68,7 +68,7 @@ export interface ExtractorWorker {
   verificationStatus: string
 }
 
-const EMPTY_WORKERS: ExtractorWorker[] = []
+const EMPTY_PLUGIN_SERVERS: CustomPluginServer[] = []
 const EMPTY_DOMAINS: PluginDomain[] = []
 
 export function PluginsSettings({
@@ -78,11 +78,12 @@ export function PluginsSettings({
   officialPlugins: OfficialPlugin[] | null
   requestOrigin: string
 }) {
-  const workers = useQuery(api.userWorkers.list, {}) ?? EMPTY_WORKERS
+  const pluginServers =
+    useQuery(api.userPluginServers.list, {}) ?? EMPTY_PLUGIN_SERVERS
   const domains = (
     (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
     EMPTY_DOMAINS
-  ).filter((domain) => domain.workerId === LYNVO_PLUGIN_SERVER_ID)
+  ).filter((domain) => domain.pluginServerId === LYNVO_PLUGIN_SERVER_ID)
   const [domainInputs, setDomainInputs] = React.useState<
     Record<string, string>
   >({})
@@ -95,11 +96,12 @@ export function PluginsSettings({
   const [passwordProtectedInputs, setPasswordProtectedInputs] = React.useState<
     Record<string, boolean>
   >({})
-  const [isAddWorkerOpen, setIsAddWorkerOpen] = React.useState(false)
+  const [isAddPluginServerOpen, setIsAddPluginServerOpen] =
+    React.useState(false)
   const [expandedPluginIds, setExpandedPluginIds] = React.useState(
     new Set<string>()
   )
-  const automaticallyRefreshedWorkerIds = React.useRef(new Set<string>())
+  const automaticallyRefreshedPluginServerIds = React.useRef(new Set<string>())
 
   const {
     addingDomainFor,
@@ -108,10 +110,10 @@ export function PluginsSettings({
     handleDeleteDomain,
     handleSetDomainCredential,
     handleDeleteDomainCredential,
-    handleAddWorker,
-    handleDeleteWorker,
-    handleRefreshWorker,
-    handleToggleWorker,
+    handleAddPluginServer,
+    handleDeletePluginServer,
+    handleRefreshPluginServer,
+    handleTogglePluginServer,
   } = usePluginSettingsActions({
     domainInputs,
     setDomainInputs,
@@ -123,14 +125,14 @@ export function PluginsSettings({
   })
 
   React.useEffect(() => {
-    for (const worker of workers) {
-      if (automaticallyRefreshedWorkerIds.current.has(worker._id)) {
+    for (const pluginServer of pluginServers) {
+      if (automaticallyRefreshedPluginServerIds.current.has(pluginServer._id)) {
         continue
       }
-      automaticallyRefreshedWorkerIds.current.add(worker._id)
-      void handleRefreshWorker(worker._id, false)
+      automaticallyRefreshedPluginServerIds.current.add(pluginServer._id)
+      void handleRefreshPluginServer(pluginServer._id, false)
     }
-  }, [handleRefreshWorker, workers])
+  }, [handleRefreshPluginServer, pluginServers])
 
   const domainsByPlugin = React.useMemo(() => {
     return domains.reduce<Record<string, PluginDomain[]>>((acc, domain) => {
@@ -285,15 +287,15 @@ export function PluginsSettings({
         </SettingsList>
       </div>
 
-      <ExternalExtractorsSection
-        workers={workers}
+      <CustomPluginServersSection
+        pluginServers={pluginServers}
         requestOrigin={requestOrigin}
-        isAddWorkerOpen={isAddWorkerOpen}
-        onAddWorkerOpenChange={setIsAddWorkerOpen}
-        onAddWorker={handleAddWorker}
-        onDeleteWorker={handleDeleteWorker}
-        onRefreshWorker={handleRefreshWorker}
-        onToggleWorker={handleToggleWorker}
+        isAddPluginServerOpen={isAddPluginServerOpen}
+        onAddPluginServerOpenChange={setIsAddPluginServerOpen}
+        onAddPluginServer={handleAddPluginServer}
+        onDeletePluginServer={handleDeletePluginServer}
+        onRefreshPluginServer={handleRefreshPluginServer}
+        onTogglePluginServer={handleTogglePluginServer}
       />
     </SettingsPanel>
   )
@@ -496,27 +498,32 @@ const PluginDomainList = ({
   </div>
 )
 
-interface ExternalExtractorsSectionProps {
-  workers: ExtractorWorker[]
+interface CustomPluginServersSectionProps {
+  pluginServers: CustomPluginServer[]
   requestOrigin: string
-  isAddWorkerOpen: boolean
-  onAddWorkerOpenChange: (open: boolean) => void
-  onAddWorker: (value: ExternalWorkerFormValues) => Promise<string | null>
-  onDeleteWorker: (workerId: string) => Promise<void>
-  onRefreshWorker: (workerId: string) => Promise<void>
-  onToggleWorker: (workerId: string, enabled: boolean) => Promise<void>
+  isAddPluginServerOpen: boolean
+  onAddPluginServerOpenChange: (open: boolean) => void
+  onAddPluginServer: (
+    value: CustomPluginServerFormValues
+  ) => Promise<string | null>
+  onDeletePluginServer: (pluginServerId: string) => Promise<void>
+  onRefreshPluginServer: (pluginServerId: string) => Promise<void>
+  onTogglePluginServer: (
+    pluginServerId: string,
+    enabled: boolean
+  ) => Promise<void>
 }
 
-export const ExternalExtractorsSection = ({
-  workers,
+export const CustomPluginServersSection = ({
+  pluginServers,
   requestOrigin,
-  isAddWorkerOpen,
-  onAddWorkerOpenChange,
-  onAddWorker,
-  onDeleteWorker,
-  onRefreshWorker,
-  onToggleWorker,
-}: ExternalExtractorsSectionProps) => {
+  isAddPluginServerOpen,
+  onAddPluginServerOpenChange,
+  onAddPluginServer,
+  onDeletePluginServer,
+  onRefreshPluginServer,
+  onTogglePluginServer,
+}: CustomPluginServersSectionProps) => {
   const [registrationError, setRegistrationError] = React.useState<
     string | null
   >(null)
@@ -526,17 +533,17 @@ export const ExternalExtractorsSection = ({
       apiKey: "",
     },
     validators: {
-      onSubmit: externalWorkerSchema,
+      onSubmit: customPluginServerSchema,
     },
     onSubmit: async ({ value }) => {
       setRegistrationError(null)
-      const error = await onAddWorker(value)
+      const error = await onAddPluginServer(value)
       if (error) {
         setRegistrationError(error)
         return
       }
       form.reset()
-      onAddWorkerOpenChange(false)
+      onAddPluginServerOpenChange(false)
     },
   })
 
@@ -544,14 +551,14 @@ export const ExternalExtractorsSection = ({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <SectionHeading
-          title="External extractors"
-          description="Extractors you add and manage independently from Lynvo."
+          title="Custom plugin servers"
+          description="Connect a plugin server to extract playable links from the sources its plugins support."
         />
         <Dialog
-          open={isAddWorkerOpen}
+          open={isAddPluginServerOpen}
           onOpenChange={(open) => {
             setRegistrationError(null)
-            onAddWorkerOpenChange(open)
+            onAddPluginServerOpenChange(open)
           }}
         >
           <DialogTrigger
@@ -560,7 +567,7 @@ export const ExternalExtractorsSection = ({
                 variant="ghost"
                 size="icon"
                 className="size-8"
-                aria-label="Add external extractor"
+                aria-label="Add plugin server"
               />
             }
           >
@@ -569,10 +576,10 @@ export const ExternalExtractorsSection = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="font-normal">
-                Add custom extractor worker
+                Add plugin server
               </DialogTitle>
               <DialogDescription>
-                Enter the base URL and API key for your custom worker.
+                Enter the URL and API key for your custom plugin server.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -590,20 +597,20 @@ export const ExternalExtractorsSection = ({
                     return (
                       <Field data-invalid={isInvalid} className="gap-1.5">
                         <FieldLabel
-                          htmlFor="external-worker-base-url"
+                          htmlFor="custom-plugin-server-base-url"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          Base URL
+                          Plugin server URL
                         </FieldLabel>
                         <Input
-                          id="external-worker-base-url"
+                          id="custom-plugin-server-base-url"
                           value={field.state.value}
                           onBlur={field.handleBlur}
                           onChange={(event) => {
                             setRegistrationError(null)
                             field.handleChange(event.target.value)
                           }}
-                          placeholder="https://worker.example.com"
+                          placeholder="https://plugin-server.example.com"
                           className="h-10 rounded-xl px-3"
                           aria-invalid={isInvalid}
                         />
@@ -621,13 +628,13 @@ export const ExternalExtractorsSection = ({
                     return (
                       <Field data-invalid={isInvalid} className="gap-1.5">
                         <FieldLabel
-                          htmlFor="external-worker-api-key"
+                          htmlFor="custom-plugin-server-api-key"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          API Key
+                          Plugin server API key
                         </FieldLabel>
                         <Input
-                          id="external-worker-api-key"
+                          id="custom-plugin-server-api-key"
                           value={field.state.value}
                           onBlur={field.handleBlur}
                           onChange={(event) => {
@@ -656,7 +663,7 @@ export const ExternalExtractorsSection = ({
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Adding…" : "Add worker"}
+                      {isSubmitting ? "Adding…" : "Add plugin server"}
                     </Button>
                   )}
                 </form.Subscribe>
@@ -665,13 +672,13 @@ export const ExternalExtractorsSection = ({
           </DialogContent>
         </Dialog>
       </div>
-      {workers.length > 0 && (
-        <ExternalWorkerTable
-          workers={workers}
+      {pluginServers.length > 0 && (
+        <CustomPluginServerTable
+          pluginServers={pluginServers}
           requestOrigin={requestOrigin}
-          onDeleteWorker={onDeleteWorker}
-          onRefreshWorker={onRefreshWorker}
-          onToggleWorker={onToggleWorker}
+          onDeletePluginServer={onDeletePluginServer}
+          onRefreshPluginServer={onRefreshPluginServer}
+          onTogglePluginServer={onTogglePluginServer}
         />
       )}
     </div>

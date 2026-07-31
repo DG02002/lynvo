@@ -1,6 +1,6 @@
 import { lazy } from "react"
 
-import extractorMeta from "./extractor/meta.json"
+import pluginServerMeta from "./plugin-server/meta.json"
 import rootMeta from "./meta.json"
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
@@ -59,7 +59,9 @@ const getContentFileName = (path: string) =>
 
 const getContentSlug = (path: string) => {
   const relativePath = path.slice("./".length, -".mdx".length)
-  return relativePath === "extractor/extractor" ? "extractor" : relativePath
+  return relativePath === "plugin-server/plugin-server"
+    ? "plugin-server"
+    : relativePath
 }
 
 const getHeadings = (content: string): readonly DocumentationHeading[] => {
@@ -158,10 +160,10 @@ const createGroups = (
   }))
 
 const rootGroups = createGroups(rootMeta.groups)
-const extractorGroups = createGroups(extractorMeta.groups)
+const pluginServerGroups = createGroups(pluginServerMeta.groups)
 const orderedPages = [
   ...rootGroups[0].pages,
-  ...extractorGroups.flatMap((group) => group.pages),
+  ...pluginServerGroups.flatMap((group) => group.pages),
 ]
 
 if (orderedPages.length !== pagesBySlug.size) {
@@ -171,7 +173,7 @@ if (orderedPages.length !== pagesBySlug.size) {
 const getGroups = (
   page: DocumentationPage
 ): readonly DocumentationChapterGroup[] =>
-  page.slug === "android-tv" ? [rootGroups[0]] : extractorGroups
+  page.slug === "android-tv" ? [rootGroups[0]] : pluginServerGroups
 
 const getContext = (slug: string): DocumentationPageContext | undefined => {
   const page = pagesBySlug.get(slug)
@@ -192,13 +194,6 @@ const getContext = (slug: string): DocumentationPageContext | undefined => {
   }
 }
 
-const legacySlugs = new Set(
-  extractorGroups
-    .flatMap((group) => group.pages)
-    .filter((page) => page.slug !== "extractor")
-    .map((page) => page.slug.slice("extractor/".length))
-)
-
 for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
   const content = getRawContent(sourcePath)
   const markdownLinks = content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)
@@ -214,12 +209,7 @@ for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
       ? destinationPath.slice("/docs/".length)
       : sourceSlug
     const targetPage =
-      destinationPath === "/docs"
-        ? undefined
-        : (pagesBySlug.get(destinationSlug) ??
-          (legacySlugs.has(destinationSlug)
-            ? pagesBySlug.get(`extractor/${destinationSlug}`)
-            : undefined))
+      destinationPath === "/docs" ? undefined : pagesBySlug.get(destinationSlug)
 
     if (destinationPath !== "/docs" && !targetPage) {
       throw new Error(
@@ -241,7 +231,5 @@ for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
 
 export const docsCatalog = {
   resolve: getContext,
-  getLegacyRedirect: (slug: string) =>
-    legacySlugs.has(slug) ? `/docs/extractor/${slug}` : undefined,
   getMarkdown: (slug: string) => pagesBySlug.get(slug)?.rawContent,
 }

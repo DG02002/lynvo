@@ -28,16 +28,74 @@ describe("deployment preflight command", () => {
   })
 
   it.each([
-    ["placeholder", lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", "REPLACE_WITH_SITE_KEY"), officialConfig],
-    ["empty site key", lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", ""), officialConfig],
-    ["missing limiter", lynvoConfig.replace('"name": "AUTH_RATE_LIMITER"', '"name": "MISSING_LIMITER"'), officialConfig],
-    ["missing session binding", lynvoConfig.replace('"name": "WORKER_AUTH_SESSION"', '"name": "MISSING_SESSION"'), officialConfig],
-    ["missing credential vault binding", lynvoConfig.replace('"name": "EXTERNAL_WORKER_CREDENTIAL_VAULT"', '"name": "MISSING_CREDENTIAL_VAULT"'), officialConfig],
-    ["missing session key declaration", lynvoConfig.replace('"AUTH_SESSION_MASTER_KEY",', ""), officialConfig],
-    ["wrong service", lynvoConfig.replace('"service": "lynvo-plugin-server"', '"service": "wrong-extractor"'), officialConfig],
-    ["public extractor", lynvoConfig, officialConfig.replace('"workers_dev": false', '"workers_dev": true')],
-    ["wrong origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets", "https://wrong.example/assets")],
-    ["empty origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets", "")],
+    [
+      "placeholder",
+      lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", "REPLACE_WITH_SITE_KEY"),
+      officialConfig,
+    ],
+    [
+      "empty site key",
+      lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", ""),
+      officialConfig,
+    ],
+    [
+      "missing limiter",
+      lynvoConfig.replace(
+        '"name": "AUTH_RATE_LIMITER"',
+        '"name": "MISSING_LIMITER"'
+      ),
+      officialConfig,
+    ],
+    [
+      "missing session binding",
+      lynvoConfig.replace(
+        '"name": "WORKER_AUTH_SESSION"',
+        '"name": "MISSING_SESSION"'
+      ),
+      officialConfig,
+    ],
+    [
+      "missing credential vault binding",
+      lynvoConfig.replace(
+        '"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"',
+        '"name": "MISSING_CREDENTIAL_VAULT"'
+      ),
+      officialConfig,
+    ],
+    [
+      "missing session key declaration",
+      lynvoConfig.replace('"AUTH_SESSION_MASTER_KEY",', ""),
+      officialConfig,
+    ],
+    [
+      "wrong service",
+      lynvoConfig.replace(
+        '"service": "lynvo-plugin-server"',
+        '"service": "wrong-plugin-server"'
+      ),
+      officialConfig,
+    ],
+    [
+      "public Plugin Server",
+      lynvoConfig,
+      officialConfig.replace('"workers_dev": false', '"workers_dev": true'),
+    ],
+    [
+      "wrong origin",
+      lynvoConfig,
+      officialConfig.replace(
+        "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
+        "https://wrong.example/assets"
+      ),
+    ],
+    [
+      "empty origin",
+      lynvoConfig,
+      officialConfig.replace(
+        "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
+        ""
+      ),
+    ],
   ])("rejects %s configuration", (_name, lynvo, official) => {
     const result = runPreflight(lynvo, official)
     expect(result.status).not.toBe(0)

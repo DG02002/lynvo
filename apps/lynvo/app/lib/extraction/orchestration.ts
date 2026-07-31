@@ -6,7 +6,7 @@ import type {
 import { mergeDefinedMeta } from "~/features/links/links.mapper"
 import {
   getRecentLinkViewItemSourceId,
-  getRecentLinkViewItemWorkerId,
+  getRecentLinkViewItemPluginServerId,
 } from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { decideSavePresentation } from "./presentation"
@@ -16,7 +16,7 @@ declare global {
   interface ExtractionTransport {
     extract: (request: {
       url: string
-      workerId?: string
+      pluginServerId?: string
       pluginId?: string
       kind?: "source" | "node"
     }) => Promise<{ links: ExtractedLink[]; meta?: MetaData }>
@@ -47,7 +47,7 @@ declare global {
     ) => Promise<ExtractedLink[]>
     resolveFolder: (options: {
       folderUrl: string
-      workerId?: string
+      pluginServerId?: string
       pluginId?: string
     }) => Promise<ExtractedLink[]>
     expandFolder: (options: {
@@ -58,8 +58,8 @@ declare global {
   }
 }
 
-const getSavedWorkerId = (item: RecentLinkViewItem | undefined) =>
-  getRecentLinkViewItemWorkerId(item) || undefined
+const getSavedPluginServerId = (item: RecentLinkViewItem | undefined) =>
+  getRecentLinkViewItemPluginServerId(item) || undefined
 
 const getSavedSourceId = (item: RecentLinkViewItem | undefined) =>
   getRecentLinkViewItemSourceId(item) || undefined
@@ -73,32 +73,32 @@ export const createExtractionOrchestration = (
   ) => {
     const metadata = await transport.getMetadata({ url: targetUrl })
     const existingItem = recents.find((item) => item.url === targetUrl)
-    const workerId = getSavedWorkerId(existingItem)
-    return workerId ? { ...metadata, workerId } : metadata
+    const pluginServerId = getSavedPluginServerId(existingItem)
+    return pluginServerId ? { ...metadata, pluginServerId } : metadata
   }
   const extractSavedItemNode = async (
     item: RecentLinkViewItem | undefined,
     url: string
   ) => {
-    const workerId = getSavedWorkerId(item)
+    const pluginServerId = getSavedPluginServerId(item)
     return await transport.extract({
       url,
-      workerId,
+      pluginServerId,
       pluginId: getSavedSourceId(item),
-      kind: workerId ? "node" : undefined,
+      kind: pluginServerId ? "node" : undefined,
     })
   }
   const extractFolder = async (
     folderUrl: string,
-    workerId?: string,
+    pluginServerId?: string,
     pluginId?: string
   ) =>
     (
       await transport.extract({
         url: folderUrl,
-        workerId,
+        pluginServerId,
         pluginId,
-        kind: workerId ? "node" : undefined,
+        kind: pluginServerId ? "node" : undefined,
       })
     ).links
 
@@ -113,15 +113,20 @@ export const createExtractionOrchestration = (
       const metadata =
         sourceMetadata ?? (await getSourceMetadata(targetUrl, recents))
       const existingItem = recents.find((item) => item.url === targetUrl)
-      const workerId = getSavedWorkerId(existingItem)
-      const metadataWithWorker = workerId ? { ...metadata, workerId } : metadata
-      const extraction = await transport.extract({ url: targetUrl, workerId })
+      const pluginServerId = getSavedPluginServerId(existingItem)
+      const metadataWithPluginServer = pluginServerId
+        ? { ...metadata, pluginServerId }
+        : metadata
+      const extraction = await transport.extract({
+        url: targetUrl,
+        pluginServerId,
+      })
       const mergedMeta = mergeDefinedMeta(
-        mergeDefinedMeta(metadataWithWorker, existingMeta),
+        mergeDefinedMeta(metadataWithPluginServer, existingMeta),
         extraction.meta
       )
       return {
-        metadata: metadataWithWorker,
+        metadata: metadataWithPluginServer,
         mergedMeta,
         presentation: decideSavePresentation(extraction.links),
       }
@@ -129,19 +134,19 @@ export const createExtractionOrchestration = (
     refreshSource: async (item) => {
       const result = await transport.extract({
         url: item.url,
-        workerId: getSavedWorkerId(item),
+        pluginServerId: getSavedPluginServerId(item),
         pluginId: getSavedSourceId(item),
       })
       return result.links
     },
     resolveMirror: async (item, lazyItemUrl) =>
       (await extractSavedItemNode(item, lazyItemUrl)).links,
-    resolveFolder: async ({ folderUrl, workerId, pluginId }) =>
-      await extractFolder(folderUrl, workerId, pluginId),
+    resolveFolder: async ({ folderUrl, pluginServerId, pluginId }) =>
+      await extractFolder(folderUrl, pluginServerId, pluginId),
     expandFolder: async ({ item, linkId, linkUrl }) => {
       const resolvedChildren = await extractFolder(
         linkUrl,
-        getSavedWorkerId(item),
+        getSavedPluginServerId(item),
         getSavedSourceId(item)
       )
       return attachResolvedChildren({

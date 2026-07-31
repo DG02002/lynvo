@@ -342,7 +342,9 @@ const SaveListUiTestRoute = () => {
         }
         audioInfo={String(selectionMetadata?.source.audio ?? "") || undefined}
         isDraftMode={Boolean(selectionItem?.isDraft)}
-        workerId={String(selectionMetadata?.source.workerId ?? "") || undefined}
+        pluginServerId={
+          String(selectionMetadata?.source.pluginServerId ?? "") || undefined
+        }
       />
     </main>
   )

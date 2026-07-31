@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { toast } from "sonner"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import type { ExternalWorkerFormValues } from "./plugin-settings-schemas"
+import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 
 interface MutationResult {
@@ -44,17 +44,17 @@ const handleDeleteDomain = async (domainId: string) => {
   }
 }
 
-const handleDeleteWorker = async (workerId: string) => {
+const handleDeletePluginServer = async (pluginServerId: string) => {
   try {
     const data = await Effect.runPromise(
-      client.workers.delete({
-        params: { workerId },
+      client.pluginServers.delete({
+        params: { pluginServerId },
       })
     )
     showMutationToast(
       data,
-      "Worker deleted successfully",
-      "Unable to delete extractor. Try again."
+      "Plugin server deleted",
+      "Unable to delete plugin server. Try again."
     )
   } catch (error) {
     toast.error(getErrorMessage(error))
@@ -99,39 +99,42 @@ const handleDeleteDomainCredential = async (domainId: string) => {
   }
 }
 
-const handleToggleWorker = async (
-  workerId: string,
+const handleTogglePluginServer = async (
+  pluginServerId: string,
   currentEnabled: boolean
 ) => {
   try {
     const data = await Effect.runPromise(
-      client.workers.toggle({
-        params: { workerId },
+      client.pluginServers.toggle({
+        params: { pluginServerId },
         payload: { enabled: !currentEnabled },
       })
     )
     if (!data.success) {
-      toast.error("Unable to update extractor. Try again.")
+      toast.error("Unable to update plugin server. Try again.")
     } else if (!currentEnabled) {
-      toast.success("Worker enabled")
+      toast.success("Plugin server enabled")
     }
   } catch (error) {
     toast.error(getErrorMessage(error))
   }
 }
 
-const handleRefreshWorker = async (workerId: string, showFeedback = true) => {
+const handleRefreshPluginServer = async (
+  pluginServerId: string,
+  showFeedback = true
+) => {
   try {
     const data = await Effect.runPromise(
-      client.workers.refresh({
-        params: { workerId },
+      client.pluginServers.refresh({
+        params: { pluginServerId },
       })
     )
     if (showFeedback) {
       showMutationToast(
         data,
-        "Worker manifest refreshed",
-        "Unable to refresh extractor. Try again."
+        "Plugin server manifest refreshed",
+        "Unable to refresh plugin server. Try again."
       )
     }
   } catch (error) {
@@ -185,7 +188,7 @@ export const usePluginSettingsActions = ({
         client.pluginDomains.create({
           payload: {
             domain,
-            workerId: LYNVO_PLUGIN_SERVER_ID,
+            pluginServerId: LYNVO_PLUGIN_SERVER_ID,
             pluginId,
             username: usernameInputs[pluginId] || undefined,
             password: passwordInputs[pluginId] || undefined,
@@ -219,23 +222,23 @@ export const usePluginSettingsActions = ({
     }
   }
 
-  const handleAddWorker = async (value: ExternalWorkerFormValues) => {
+  const handleAddPluginServer = async (value: CustomPluginServerFormValues) => {
     try {
       const data = await Effect.runPromise(
-        client.workers.create({
+        client.pluginServers.create({
           payload: value,
         })
       )
       if (
         showMutationToast(
           data,
-          "Worker added successfully",
-          "Unable to add extractor. Check its details and try again."
+          "Plugin server added",
+          "Unable to add plugin server. Check its details and try again."
         )
       ) {
         return null
       }
-      return "Unable to add extractor. Check its details and try again."
+      return "Unable to add plugin server. Check its details and try again."
     } catch (error) {
       const message = getErrorMessage(error)
       toast.error(message)
@@ -250,9 +253,9 @@ export const usePluginSettingsActions = ({
     handleDeleteDomain,
     handleSetDomainCredential,
     handleDeleteDomainCredential,
-    handleAddWorker,
-    handleDeleteWorker,
-    handleToggleWorker,
-    handleRefreshWorker,
+    handleAddPluginServer,
+    handleDeletePluginServer,
+    handleTogglePluginServer,
+    handleRefreshPluginServer,
   }
 }

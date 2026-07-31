@@ -34,7 +34,7 @@ describe("save-list UI test fixtures", () => {
       flattenedLinks.some(
         (link) =>
           link.type === "folder" &&
-          link.workerNodeKind !== "resolvable" &&
+          link.mediaNodeKind !== "resolvable" &&
           link.children?.length === 0
       )
     ).toBe(false)
@@ -49,7 +49,7 @@ describe("save-list UI test fixtures", () => {
     )
 
     expect(
-      flattenedLinks.filter((link) => link.workerNodeKind === "resolvable")
+      flattenedLinks.filter((link) => link.mediaNodeKind === "resolvable")
     ).toHaveLength(3)
   })
 })

@@ -57,9 +57,7 @@ describe("remote-control machine", () => {
       storedSessionId: "stored-session",
       storedDeviceName: "Stored TV",
     })
-    expect(harness.machine.getSnapshot().activeSessionId).toBe(
-      "stored-session"
-    )
+    expect(harness.machine.getSnapshot().activeSessionId).toBe("stored-session")
 
     const freshHarness = createHarness()
     await freshHarness.machine.connect("tv-1", "Living Room")
@@ -98,7 +96,9 @@ describe("remote-control machine", () => {
     harness.machine.start()
     harness.machine.setRealtimeStatus("disconnected")
     harness.runInterval()
-    await vi.waitFor(() => expect(harness.transport.poll).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+    )
 
     harness.machine.setRealtimeStatus("connected")
     harness.runInterval()
