@@ -20,7 +20,9 @@ const PUBLIC_EXACT_PATHS = new Set([
 export const PUBLIC_SITEMAP_PATHS = [...PUBLIC_EXACT_PATHS, "/docs"]
 
 const normalizePathname = (pathname: string) => {
-  if (pathname === "/") return pathname
+  if (pathname === "/") {
+    return pathname
+  }
   return pathname.replace(/\/+$/, "")
 }
 
