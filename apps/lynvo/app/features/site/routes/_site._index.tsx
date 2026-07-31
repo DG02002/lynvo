@@ -1,7 +1,9 @@
 import type { Route } from "./+types/_site._index"
 import { HomeHero } from "~/features/site/home/home-hero"
 import {
-  FeaturesSection,
+  AndroidScreensSection,
+  ExtractionSection,
+  PlayerSection,
   PlanSection,
   PrivacySection,
   AndroidTvSetupSection,
@@ -22,8 +24,10 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col overflow-x-clip tabular-nums">
       <HomeHero />
-      <FeaturesSection />
+      <PlayerSection />
       <PlanSection />
+      <ExtractionSection />
+      <AndroidScreensSection />
       <PrivacySection />
       <AndroidTvSetupSection />
     </div>
