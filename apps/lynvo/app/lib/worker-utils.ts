@@ -31,6 +31,7 @@ export const mapNodeToExtractedLink = (node: WorkerNode): ExtractedLink => {
       type: "folder",
       selectable: true,
       workerNodeKind: "resolvable",
+      ...(node.resolutionKind ? { resolutionKind: node.resolutionKind } : {}),
     }
   }
   return {

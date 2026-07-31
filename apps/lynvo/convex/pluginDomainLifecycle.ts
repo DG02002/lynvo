@@ -46,13 +46,17 @@ export const buildPluginCredentialDocument = ({
   now,
 }: {
   userId: Id<"users">
-  pluginDomain: Pick<Doc<"userPluginDomains">, "_id" | "pluginId" | "domain">
+  pluginDomain: Pick<
+    Doc<"userPluginDomains">,
+    "_id" | "workerId" | "pluginId" | "domain"
+  >
   credential: EncryptedCredentialInput
   existingCredential?: Doc<"userPluginCredentials">
   now: number
 }) => ({
   userId,
   pluginDomainId: pluginDomain._id,
+  workerId: pluginDomain.workerId,
   pluginId: pluginDomain.pluginId,
   domain: pluginDomain.domain,
   ...credential,
@@ -96,6 +100,7 @@ export const upsertPluginDomain = async (
   userId: Id<"users">,
   input: {
     domain: string
+    workerId: string
     pluginId: string
     credential?: EncryptedCredentialInput
   }
@@ -103,13 +108,21 @@ export const upsertPluginDomain = async (
   const domain = normalizePluginDomain(input.domain)
   const existingDomain = await ctx.db
     .query("userPluginDomains")
-    .withIndex("by_userId_domain", (queryBuilder) =>
-      queryBuilder.eq("userId", userId).eq("domain", domain)
+    .withIndex("by_userId_workerId_domain", (queryBuilder) =>
+      queryBuilder
+        .eq("userId", userId)
+        .eq("workerId", input.workerId)
+        .eq("domain", domain)
     )
     .unique()
 
   if (!existingDomain) {
-    const pluginDomainDocument = { userId, domain, pluginId: input.pluginId }
+    const pluginDomainDocument = {
+      userId,
+      workerId: input.workerId,
+      domain,
+      pluginId: input.pluginId,
+    }
     await assertStorageMutation(ctx, userId, undefined, pluginDomainDocument)
     const pluginDomainId = await ctx.db.insert(
       "userPluginDomains",

@@ -40,6 +40,7 @@ export const ExtractorHandlers = HttpApiBuilder.group(
               input_kind: extractionKind(query.kind) ?? "source",
               target_host: new URL(query.url).hostname,
               worker_id_requested: query.workerId,
+              source_id_requested: query.sourceId,
             },
           })
 
@@ -47,6 +48,7 @@ export const ExtractorHandlers = HttpApiBuilder.group(
             url: query.url,
             requestId: requestEvent.requestId,
             workerId: query.workerId,
+            sourceId: query.sourceId,
             kind: extractionKind(query.kind),
             userId,
             accessToken: auth.accessToken,
@@ -56,6 +58,7 @@ export const ExtractorHandlers = HttpApiBuilder.group(
               input_kind: extractionKind(query.kind) ?? "source",
               target_host: new URL(query.url).hostname,
               worker_id_requested: query.workerId,
+              source_id_requested: query.sourceId,
               worker_id: result.meta?.workerId,
               source_id: result.meta?.sourceId,
               link_count: result.links.length,

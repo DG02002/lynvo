@@ -27,11 +27,6 @@ export const decideSavePresentation = (
     return { kind: "error", message: "No links found on this page." }
   }
 
-  const singleLink = links.length === 1 ? links[0] : undefined
-  if (singleLink?.workerNodeKind === "resolvable") {
-    return { kind: "directSave", link: singleLink }
-  }
-
   const hasFolder = links.some((link) => link.type === "folder")
   const directFiles = links.filter((link) => link.type !== "folder")
 

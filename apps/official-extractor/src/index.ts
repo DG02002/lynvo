@@ -10,6 +10,7 @@ import {
 import { validateBearerCredential } from "./auth"
 import {
   createOfficialManifest,
+  discoverOfficialSource,
   extractFromOfficialSource,
 } from "./source-catalog"
 import {
@@ -32,6 +33,7 @@ const runtime = createExtractorRuntime<OfficialExtractorBindings>({
     },
   },
   usage: ({ env }) => readUsage(env),
+  discover: ({ targetUrl }) => discoverOfficialSource(targetUrl),
   extract: async ({ request, targetUrl, env }) => {
     const didReserve = await reserveUsage(env)
     if (!didReserve) {
@@ -78,6 +80,10 @@ app.post("/verify", (context) => {
 app.get("/usage", (context) => {
   context.get("log").set({ operation: "usage" })
   return runtime.handleUsage(context.req.raw, context.env)
+})
+app.post("/discover", (context) => {
+  context.get("log").set({ operation: "discover" })
+  return runtime.handleDiscover(context.req.raw, context.env)
 })
 app.post("/extract", async (context) => {
   const requestBody = await context.req.raw

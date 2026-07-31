@@ -14,6 +14,9 @@ Use this before registering an external extractor worker in Lynvo.
 - `POST /verify` validates the bearer token Lynvo will use.
 - `GET /usage` returns authenticated finite usage metrics for the bearer credential.
 - `POST /extract` returns protocol nodes for a source URL or lazy node.
+- Workers advertising `features.discovery` implement authenticated
+  `POST /discover` and return a stable source id with pattern or verified
+  confidence.
 
 ## Manifest Rules
 

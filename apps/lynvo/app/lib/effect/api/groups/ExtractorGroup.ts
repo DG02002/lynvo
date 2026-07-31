@@ -13,6 +13,7 @@ export class ExtractorGroup extends HttpApiGroup.make("extractor")
       query: Schema.Struct({
         url: Schema.String,
         workerId: Schema.optional(Schema.String),
+        sourceId: Schema.optional(Schema.String),
         kind: Schema.optional(Schema.String),
       }),
       success: Schema.Unknown,

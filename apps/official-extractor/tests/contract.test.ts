@@ -50,6 +50,34 @@ describe("official extractor protocol routes", () => {
     expect(validateUsageContract(usage)).toEqual({ ok: true, issues: [] })
   })
 
+  it("discovers Bhadoo URLs without Lynvo knowing their URL pattern", async () => {
+    const response = await SELF.fetch("https://worker.example/discover", {
+      method: "POST",
+      headers: authenticatedHeaders,
+      body: JSON.stringify({
+        url: "https://unknown.example/0:/Collections/",
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      matched: true,
+      sourceId: "bhadoo-google-drive-index",
+      confidence: "pattern",
+    })
+  })
+
+  it("does not claim unrelated URLs during discovery", async () => {
+    const response = await SELF.fetch("https://worker.example/discover", {
+      method: "POST",
+      headers: authenticatedHeaders,
+      body: JSON.stringify({ url: "https://unknown.example/movies/" }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ matched: false })
+  })
+
   it("extracts a direct Bhadoo media node", async () => {
     const response = await SELF.fetch("https://worker.example/extract", {
       method: "POST",

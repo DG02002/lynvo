@@ -5,6 +5,7 @@ import type {
 } from "~/features/links/types"
 import type { SaveFlowEffects } from "./save-flow-effects"
 import type { RefreshFlowEffects } from "./refresh-flow-effects"
+import type { SourceDomainSuggestion } from "~/lib/plugin-domain"
 
 export interface OpenSelectionDialogOptions {
   originalUrl: string
@@ -12,6 +13,11 @@ export interface OpenSelectionDialogOptions {
   meta: MetaData
   existingItemId?: string
   isDraftMode?: boolean
+  pluginDomainSuggestion?: SourceDomainSuggestion
+}
+
+export interface SaveFlowResult {
+  pluginDomainSuggestion?: SourceDomainSuggestion
 }
 
 export interface ExtractionPreview {
@@ -42,6 +48,7 @@ export interface ConfirmSelectionOptions {
   ) => Promise<string | undefined>
   updateRecentLinks: (url: string, links: ExtractedLink[]) => void
   effects: SaveFlowEffects
+  pluginDomainSuggestion?: SourceDomainSuggestion
 }
 
 export interface SoftRefreshOptions {

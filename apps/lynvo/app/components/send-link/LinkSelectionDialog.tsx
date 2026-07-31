@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Dialog, DialogClose, DialogContent } from "~/components/ui/dialog"
 import { Button } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import type { ExtractedLink } from "~/features/links/types"
@@ -8,6 +9,7 @@ import { LinkSelectionHeader } from "./LinkSelectionHeader"
 import { LinkSelectionTree } from "./LinkSelectionTree"
 import {
   collectLinkAndDescendantIds,
+  collectSelectableLinkIds,
   collectSelectedLinks,
   isAllChildrenSelected,
 } from "./link-selection-utils"
@@ -55,6 +57,13 @@ export function LinkSelectionDialog({
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
     () => new Set(preSelectedIds)
   )
+  const selectableIds = React.useMemo(
+    () => collectSelectableLinkIds(links),
+    [links]
+  )
+  const isAllSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id))
+  const selectedCount = selectableIds.filter((id) => selectedIds.has(id)).length
 
   const [prevOpen, setPrevOpen] = React.useState(open)
   if (open !== prevOpen) {
@@ -139,6 +148,15 @@ export function LinkSelectionDialog({
     onOpenChange(false)
   }
 
+  const handleToggleSelectAll = () => {
+    setSelectedIds((currentSelectedIds) => {
+      if (selectableIds.every((id) => currentSelectedIds.has(id))) {
+        return new Set()
+      }
+      return new Set(selectableIds)
+    })
+  }
+
   const handleExpandFolder = React.useCallback(
     async (linkId: string, linkUrl: string) => {
       if (!onExpandFolder) {
@@ -215,23 +233,41 @@ export function LinkSelectionDialog({
           />
         </div>
 
-        <div className="z-10 flex flex-col sm:flex-row items-center justify-end gap-3 border-t bg-popover px-4 py-4 md:px-8 md:py-6">
-          {onSaveDraft && (
+        <div className="z-10 flex flex-col gap-3 border-t bg-popover px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-6">
+          {selectableIds.length > 0 && (
+            <div className="flex min-h-11 w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
+              <label className="grid cursor-pointer grid-cols-[1.25rem_auto] items-center gap-x-3 pl-2">
+                <span className="flex size-5 items-center justify-center">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={handleToggleSelectAll}
+                  />
+                </span>
+                <span className="text-sm font-medium">Select all</span>
+              </label>
+              <span className="text-sm tabular-nums text-muted-foreground">
+                {selectedCount} selected
+              </span>
+            </div>
+          )}
+          <div className="flex w-full flex-col gap-3 sm:ml-auto sm:w-auto sm:flex-row">
+            {onSaveDraft && (
+              <Button
+                variant="outline"
+                onClick={handleSaveDraft}
+                className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
+              >
+                Save Draft
+              </Button>
+            )}
             <Button
-              variant="outline"
-              onClick={handleSaveDraft}
+              onClick={handleConfirm}
+              disabled={selectedIds.size === 0}
               className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
             >
-              Save Draft
+              Save Selected
             </Button>
-          )}
-          <Button
-            onClick={handleConfirm}
-            disabled={selectedIds.size === 0}
-            className="w-full sm:w-auto h-12 px-6 rounded-full text-sm font-normal justify-center"
-          >
-            Save Selected
-          </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

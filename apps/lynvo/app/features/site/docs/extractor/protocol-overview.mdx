@@ -14,6 +14,7 @@ Lynvo external extractors use protocol version `1.0` over HTTPS and JSON. Versio
 | Method | Route       | Authentication | Purpose                                            |
 | ------ | ----------- | -------------- | -------------------------------------------------- |
 | `GET`  | `/manifest` | Public         | Declares identity, matchers, features, and sources |
+| `POST` | `/discover` | Bearer         | Optionally identifies a source implementation      |
 | `POST` | `/verify`   | Bearer         | Verifies the API key and Worker readiness          |
 | `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
 | `POST` | `/extract`  | Bearer         | Resolves a source URL or lazy node                 |

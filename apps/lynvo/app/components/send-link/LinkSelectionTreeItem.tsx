@@ -119,6 +119,7 @@ export const LinkSelectionTreeItem = ({
         >
           {isSelectable && (
             <Checkbox
+              aria-label={`Select ${link.label}`}
               checked={isSelected}
               onCheckedChange={handleCheckedChange}
               className="shrink-0"

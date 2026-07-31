@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Effect } from "effect"
 import { toast } from "sonner"
 import type {
   ExtractedLink,
@@ -11,6 +12,9 @@ import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import { createSaveFlowEffects } from "./save-flow-effects"
 import { getSaveErrorMessage } from "./save-error-message"
+import { client } from "~/lib/effect/api/client"
+import type { SourceDomainSuggestion } from "~/lib/plugin-domain"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 export const useSaveActions = ({
   url,
@@ -46,6 +50,9 @@ export const useSaveActions = ({
   setCurrentPage: (page: number) => void
 }) => {
   const [isSaving, setIsSaving] = useState(false)
+  const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
+  const [pluginDomainSuggestion, setPluginDomainSuggestion] =
+    useState<SourceDomainSuggestion | null>(null)
   const effects = createSaveFlowEffects({
     setError,
     setExtractionPreview,
@@ -64,13 +71,14 @@ export const useSaveActions = ({
     setIsSaving(true)
 
     try {
-      await saveLink({
+      const result = await saveLink({
         overrideUrl,
         currentUrl: url,
         recents,
         addRecent,
         effects,
       })
+      await offerPluginDomainSuggestion(result?.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
       effects.clearPreview()
@@ -83,9 +91,14 @@ export const useSaveActions = ({
   const confirmSelection = async (selectedLinks: ExtractedLink[]) => {
     setIsSaving(true)
     try {
-      const { originalUrl, meta, existingItemId } = selectionDialogState
+      const {
+        originalUrl,
+        meta,
+        existingItemId,
+        pluginDomainSuggestion: selectionSuggestion,
+      } = selectionDialogState
 
-      await confirmSelectedLinks({
+      const result = await confirmSelectedLinks({
         selectedLinks,
         originalUrl,
         meta,
@@ -93,7 +106,9 @@ export const useSaveActions = ({
         addRecent,
         updateRecentLinks,
         effects,
+        pluginDomainSuggestion: selectionSuggestion,
       })
+      await offerPluginDomainSuggestion(result.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
       effects.showError("Unable to save the selection. Try again.")
@@ -111,5 +126,75 @@ export const useSaveActions = ({
     closeSelectionDialog()
   }
 
-  return { isSaving, handleSave, confirmSelection, saveSelectionDraft }
+  async function offerPluginDomainSuggestion(
+    suggestion: SourceDomainSuggestion | undefined
+  ) {
+    if (!suggestion) {
+      return
+    }
+
+    try {
+      const domains = await Effect.runPromise(client.pluginDomains.list({}))
+      const isConfigured = domains.some(
+        (domain) =>
+          domain.workerId === suggestion.workerId &&
+          domain.pluginId === suggestion.pluginId &&
+          domain.domain === suggestion.domain
+      )
+      if (!isConfigured) {
+        setPluginDomainSuggestion(suggestion)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const dismissPluginDomainSuggestion = () => {
+    setPluginDomainSuggestion(null)
+  }
+
+  const addSuggestedPluginDomain = async () => {
+    if (!pluginDomainSuggestion || isAddingPluginDomain) {
+      return
+    }
+
+    setIsAddingPluginDomain(true)
+    try {
+      await Effect.runPromise(
+        client.pluginDomains.create({
+          payload: {
+            domain: pluginDomainSuggestion.domain,
+            workerId: pluginDomainSuggestion.workerId,
+            pluginId: pluginDomainSuggestion.pluginId,
+            username: pluginDomainSuggestion.username,
+            password: pluginDomainSuggestion.password,
+          },
+        })
+      )
+      toast.success(`${pluginDomainSuggestion.pluginName} domain added`)
+      setPluginDomainSuggestion(null)
+    } catch (error) {
+      toast.error(
+        getUserFacingErrorMessage(
+          error,
+          "Unable to add the plugin domain. Try again."
+        )
+      )
+    } finally {
+      setIsAddingPluginDomain(false)
+    }
+  }
+
+  return {
+    isSaving,
+    handleSave,
+    confirmSelection,
+    saveSelectionDraft,
+    pluginDomainDialog: {
+      suggestion: pluginDomainSuggestion,
+      isAdding: isAddingPluginDomain,
+      add: addSuggestedPluginDomain,
+      dismiss: dismissPluginDomainSuggestion,
+    },
+  }
 }

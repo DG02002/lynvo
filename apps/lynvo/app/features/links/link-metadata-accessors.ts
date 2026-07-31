@@ -24,6 +24,16 @@ export const getRecentLinkViewItemWorkerId = (
 ) =>
   item ? getMetadataWorkerId(getRecentLinkViewItemMetadata(item)) : undefined
 
+export const getRecentLinkViewItemSourceId = (
+  item: RecentLinkViewItem | undefined
+) => {
+  if (!item) {
+    return undefined
+  }
+  const sourceId = getRecentLinkViewItemMetadata(item).source.sourceId
+  return typeof sourceId === "string" ? sourceId : undefined
+}
+
 export const getRecentLinkViewItemMetadata = (
   item: RecentLinkViewItem
 ): LinkMetadataV2 =>

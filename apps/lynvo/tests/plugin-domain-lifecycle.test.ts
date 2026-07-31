@@ -3,6 +3,7 @@ import { Effect, Layer } from "effect"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
+  parseSourceUrlCandidate,
 } from "~/lib/plugin-domain"
 import {
   createPluginCredentialAdditionalData,
@@ -41,6 +42,29 @@ describe("Plugin Domain lifecycle", () => {
     })
   })
 
+  it("detects a Bhadoo index URL and removes credentials from its saved URL", () => {
+    expect(
+      parseSourceUrlCandidate(
+        "https://source-user:source%40secret@index.example.com/0:/Movies/"
+      )
+    ).toEqual({
+      domain: "index.example.com",
+      sanitizedUrl: "https://index.example.com/0:/Movies/",
+      username: "source-user",
+      password: "source@secret",
+    })
+  })
+
+  it("accepts any HTTPS source URL without classifying its implementation", () => {
+    expect(parseSourceUrlCandidate("https://example.com/movies/")).toEqual({
+      domain: "example.com",
+      sanitizedUrl: "https://example.com/movies/",
+    })
+    expect(
+      parseSourceUrlCandidate("http://example.com/0:/Movies/")
+    ).toBeUndefined()
+  })
+
   it("serializes an HTTP Basic Auth username and password for encryption", () => {
     const encryptedValue = serializeHttpBasicCredential(
       "source-user",
@@ -64,6 +88,7 @@ describe("Plugin Domain lifecycle", () => {
       userId: "user-1" as never,
       pluginDomain: {
         _id: "domain-1" as never,
+        workerId: "worker-1",
         pluginId: "onedrive-index",
         domain: "example.com",
       },
@@ -77,6 +102,7 @@ describe("Plugin Domain lifecycle", () => {
     expect(credentialDocument).toEqual({
       userId: "user-1",
       pluginDomainId: "domain-1",
+      workerId: "worker-1",
       pluginId: "onedrive-index",
       domain: "example.com",
       ...credential,
@@ -88,13 +114,14 @@ describe("Plugin Domain lifecycle", () => {
   it("binds encryption context to owner, plugin, domain, and key version", () => {
     const context = {
       userId: "user-1",
+      workerId: "worker-1",
       pluginId: "onedrive-index",
       domain: "example.com",
     }
     const encoder = new TextDecoder()
 
     expect(encoder.decode(createPluginCredentialAdditionalData(context))).toBe(
-      "user-1\u0000onedrive-index\u0000example.com\u00001"
+      "user-1\u0000worker-1\u0000onedrive-index\u0000example.com\u00001"
     )
     expect(
       createPluginCredentialAdditionalData({ ...context, userId: "user-2" })
@@ -116,6 +143,7 @@ describe("Plugin Domain lifecycle", () => {
     )
     const context = {
       userId: "user-1",
+      workerId: "worker-1",
       pluginId: "onedrive-index",
       domain: "example.com",
     }

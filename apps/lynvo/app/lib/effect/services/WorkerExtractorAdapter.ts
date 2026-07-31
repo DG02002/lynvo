@@ -5,6 +5,8 @@ import {
   manifestSchema,
   type ExtractSuccessResponse,
   type ExtractorManifest,
+  type ExtractorSourceMetadata,
+  type HttpBasicAuth,
 } from "@lynvo/extractor-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl, mapNodeToExtractedLink } from "../../../lib/worker-utils"
@@ -117,6 +119,46 @@ export const getWorkerMetadata = Effect.fn(
   return getExtractorMetadata(manifest, worker._id, targetUrl)
 })
 
+export const getWorkerSource = Effect.fn(
+  "WorkerExtractorAdapter.getWorkerSource"
+)(function* (
+  worker: RegisteredWorker,
+  targetUrl: string,
+  sourceId?: string
+): Effect.fn.Return<ExtractorSourceMetadata | undefined> {
+  const manifest = yield* decodeWorkerManifest(worker.manifest)
+  return manifest
+    ? sourceId
+      ? getLynvoManifestExtension(manifest).sources?.find(
+          (source) => source.id === sourceId
+        )
+      : getMatchedExtractorSource(manifest, targetUrl)
+    : undefined
+})
+
+export const discoverWorkerSource = Effect.fn(
+  "WorkerExtractorAdapter.discoverWorkerSource"
+)(function* (
+  worker: RegisteredWorker,
+  targetUrl: string,
+  basicAuth?: HttpBasicAuth,
+  requestId?: string
+) {
+  const manifest = yield* decodeWorkerManifest(worker.manifest)
+  if (!manifest?.features.discovery) {
+    return undefined
+  }
+  return yield* Effect.tryPromise({
+    try: () =>
+      createWorkerClient(worker).discover(targetUrl, {
+        apiKey: worker.apiKey,
+        basicAuth,
+        requestId,
+      }),
+    catch: (cause) => workerError(cause, targetUrl),
+  })
+})
+
 export const getExtractorMetadata = (
   manifest: ExtractorManifest,
   workerId: string,
@@ -148,6 +190,9 @@ export const getExtractorMetadata = (
     ...(source?.iconUrl ? { sourceIconUrl: source.iconUrl } : {}),
     ...(source?.status ? { sourceStatus: source.status } : {}),
     ...(source?.version ? { sourceVersion: source.version } : {}),
+    ...(source?.credential
+      ? { sourceCredentialKind: source.credential.kind }
+      : {}),
     ...(routeSource?.displayName
       ? { routeSourceName: decodeExtractorText(routeSource.displayName) }
       : {}),
@@ -164,13 +209,17 @@ export const extractFromWorker = Effect.fn(
   worker: RegisteredWorker,
   targetUrl: string,
   kind: "source" | "node",
-  password?: string,
+  credentials?: {
+    password?: string
+    basicAuth?: HttpBasicAuth
+    sourceId?: string
+  },
   requestId?: string
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const manifest = yield* decodeWorkerManifest(worker.manifest)
   const extractedAuth = extractHttpBasicCredential(targetUrl)
   const basicAuth = manifest?.features.basicAuth
-    ? extractedAuth.basicAuth
+    ? (extractedAuth.basicAuth ?? credentials?.basicAuth)
     : undefined
   const client = createWorkerClient(worker)
   const resultValue = yield* Effect.tryPromise({
@@ -178,14 +227,16 @@ export const extractFromWorker = Effect.fn(
       kind === "node"
         ? client.extractNode(extractedAuth.url, {
             apiKey: worker.apiKey,
-            password,
+            password: credentials?.password,
             basicAuth,
+            sourceId: credentials?.sourceId,
             requestId,
           })
         : client.extractSource(extractedAuth.url, {
             apiKey: worker.apiKey,
-            password,
+            password: credentials?.password,
             basicAuth,
+            sourceId: credentials?.sourceId,
             requestId,
           }),
     catch: (cause) => workerError(cause, targetUrl),

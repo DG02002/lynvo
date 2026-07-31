@@ -93,6 +93,7 @@ export const createOneDriveNodes = (
           id: item.id,
           label: item.name,
           nodeUrl: `${origin}${encodeOneDrivePath(nextPath)}`,
+          resolutionKind: "folder" as const,
         },
       ]
     }

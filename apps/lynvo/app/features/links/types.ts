@@ -19,6 +19,7 @@ export interface ExtractedLink {
    * folder/direct-file model. UI code must not rely on this field.
    */
   workerNodeKind?: "group" | "resolvable" | "playable"
+  resolutionKind?: "folder" | "mirrors"
 }
 
 export interface LinkResponse {
@@ -60,6 +61,7 @@ export interface MetaData {
   sourceIconUrl?: string
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"
   sourceVersion?: string
+  sourceCredentialKind?: "domain-password" | "http-basic"
   routeSourceName?: string
   routeSourceIconUrl?: string
   extractedLinks?: ExtractedLink[]

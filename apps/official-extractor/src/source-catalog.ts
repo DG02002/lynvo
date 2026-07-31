@@ -5,6 +5,7 @@ import {
   type ExtractorSourceCredential,
   type ExtractSuccessResponse,
   type ExtractRequest,
+  type DiscoverResponse,
 } from "@lynvo/extractor-protocol"
 import {
   BHADOO_SOURCE_ID,
@@ -35,6 +36,7 @@ export interface OfficialSourceDefinition {
   version: string
   matchers: ExtractorMatcher[]
   credential?: ExtractorSourceCredential
+  discovery?: { confidence: "pattern" | "verified" }
   extract: (options: SourceAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
@@ -75,6 +77,7 @@ export const OFFICIAL_SOURCE_CATALOG: OfficialSourceDefinition[] = [
     version: SOURCE_IMPLEMENTATION_VERSION,
     matchers: bhadooMatchers,
     credential: { kind: "http-basic", scope: "domain", required: false },
+    discovery: { confidence: "pattern" },
     extract: extractBhadooGoogleDriveIndex,
   },
   {
@@ -125,7 +128,12 @@ export const createOfficialManifest = (
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
   matchers: OFFICIAL_SOURCE_CATALOG.flatMap((source) => source.matchers),
-  features: { password: true, lazyNodes: true, basicAuth: true },
+  features: {
+    password: true,
+    lazyNodes: true,
+    basicAuth: true,
+    discovery: true,
+  },
   extensions: {
     lynvo: {
       sources: OFFICIAL_SOURCE_CATALOG.map((source) => ({
@@ -146,6 +154,20 @@ export const createOfficialManifest = (
     },
   },
 })
+
+export const discoverOfficialSource = (targetUrl: string): DiscoverResponse => {
+  const source = OFFICIAL_SOURCE_CATALOG.find(
+    (candidate) =>
+      candidate.discovery && matchExtractorUrl(targetUrl, candidate.matchers)
+  )
+  return source?.discovery
+    ? {
+        matched: true,
+        sourceId: source.id,
+        confidence: source.discovery.confidence,
+      }
+    : { matched: false }
+}
 
 export const extractFromOfficialSource = async (
   request: ExtractRequest,

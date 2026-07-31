@@ -4,6 +4,10 @@ import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { vibrateSaveStart, vibrateSaveSuccess } from "./save-feedback"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
 import type { ConfirmSelectionOptions, SaveLinkOptions } from "./action-types"
+import {
+  parseSourceUrlCandidate,
+  type SourceDomainSuggestion,
+} from "~/lib/plugin-domain"
 
 export const saveLink = async ({
   overrideUrl,
@@ -14,6 +18,8 @@ export const saveLink = async ({
 }: SaveLinkOptions) => {
   const rawUrl = overrideUrl ?? currentUrl
   const targetUrl = normalizeUrl(rawUrl || "")
+  const sourceCandidate = parseSourceUrlCandidate(targetUrl)
+  const savedUrl = sourceCandidate?.sanitizedUrl ?? targetUrl
 
   if (!targetUrl) {
     effects.showError("Please enter a URL.")
@@ -26,10 +32,10 @@ export const saveLink = async ({
   effects.clearError()
   effects.clearPreview()
 
-  const existingDraft = readDraft(targetUrl)
+  const existingDraft = readDraft(savedUrl)
   if (existingDraft) {
     effects.openSelection({
-      originalUrl: targetUrl,
+      originalUrl: savedUrl,
       links: existingDraft.links,
       meta: existingDraft.meta,
       isDraftMode: true,
@@ -37,9 +43,7 @@ export const saveLink = async ({
     return
   }
 
-  const existingItem = recents.find(
-    (recentItem) => recentItem.url === targetUrl
-  )
+  const existingItem = recents.find((recentItem) => recentItem.url === savedUrl)
   if (existingItem) {
     effects.showError("Link already exists on your account.")
     effects.focusRecent(existingItem.id || existingItem.url)
@@ -66,6 +70,22 @@ export const saveLink = async ({
       recents,
       sourceMetadata: metadata,
     })
+  const pluginDomainSuggestion: SourceDomainSuggestion | undefined =
+    sourceCandidate &&
+    mergedMeta.sourceId &&
+    mergedMeta.workerId &&
+    mergedMeta.sourceCredentialKind
+      ? {
+          ...sourceCandidate,
+          pluginIconUrl: mergedMeta.sourceIconUrl ?? mergedMeta.pluginIcon,
+          pluginId: mergedMeta.sourceId,
+          pluginName:
+            mergedMeta.sourceName ??
+            mergedMeta.pluginName ??
+            mergedMeta.sourceId,
+          workerId: mergedMeta.workerId,
+        }
+      : undefined
 
   if (presentation.kind === "error") {
     effects.showError(presentation.message)
@@ -75,19 +95,23 @@ export const saveLink = async ({
 
   if (presentation.kind === "selectionDialog") {
     effects.openSelection({
-      originalUrl: targetUrl,
+      originalUrl: savedUrl,
+      pluginDomainSuggestion,
       links: presentation.links,
       meta: mergedMeta,
     })
     return
   }
 
-  const newId = await addRecent(targetUrl, mergedMeta, [presentation.link])
-  effects.focusRecent(newId || targetUrl)
+  const newId = await addRecent(savedUrl, mergedMeta, [presentation.link])
+  effects.focusRecent(newId || savedUrl)
 
   effects.resetAfterSave()
   effects.clearPreview()
   vibrateSaveSuccess()
+  return {
+    pluginDomainSuggestion,
+  }
 }
 
 export const confirmSelectedLinks = async ({
@@ -98,6 +122,7 @@ export const confirmSelectedLinks = async ({
   addRecent,
   updateRecentLinks,
   effects,
+  pluginDomainSuggestion,
 }: ConfirmSelectionOptions) => {
   if (existingItemId) {
     updateRecentLinks(originalUrl, selectedLinks)
@@ -110,4 +135,5 @@ export const confirmSelectedLinks = async ({
   effects.closeSelection()
   effects.resetAfterSave()
   vibrateSaveSuccess()
+  return { pluginDomainSuggestion }
 }

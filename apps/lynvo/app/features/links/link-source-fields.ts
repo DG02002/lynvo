@@ -15,6 +15,7 @@ export interface LinkSourceFields {
   sourceIconUrl?: string
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"
   sourceVersion?: string
+  sourceCredentialKind?: "domain-password" | "http-basic"
   audio?: string
   pageTitle?: string
   title?: string
@@ -55,6 +56,15 @@ const getSourceStatus = (source: LinkMetadataV2["source"] | undefined) => {
     : undefined
 }
 
+const getSourceCredentialKind = (
+  source: LinkMetadataV2["source"] | undefined
+) => {
+  const value = source?.sourceCredentialKind
+  return value === "domain-password" || value === "http-basic"
+    ? value
+    : undefined
+}
+
 export const getLinkSourceFields = (
   metadata: LinkMetadataV2
 ): LinkSourceFields => ({
@@ -71,6 +81,7 @@ export const getLinkSourceFields = (
   sourceIconUrl: getSourceString(metadata.source, "sourceIconUrl"),
   sourceStatus: getSourceStatus(metadata.source),
   sourceVersion: getSourceString(metadata.source, "sourceVersion"),
+  sourceCredentialKind: getSourceCredentialKind(metadata.source),
   audio: getSourceString(metadata.source, "audio"),
   pageTitle: getSourceString(metadata.source, "pageTitle"),
   title: getSourceString(metadata.source, "title"),

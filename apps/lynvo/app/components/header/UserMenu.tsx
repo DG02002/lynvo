@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AirplayLineIcon,
-  Logout01Icon,
+  Logout05Icon,
   Settings01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons"
@@ -75,7 +75,7 @@ export const UserMenu = ({
             onClick={onLogout}
             className="w-full cursor-pointer"
           >
-            <HugeiconsIcon icon={Logout01Icon} />
+            <HugeiconsIcon icon={Logout05Icon} />
             <span>Log out</span>
           </button>
         }

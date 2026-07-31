@@ -18,6 +18,7 @@ export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
     sourceName: z.string().optional(),
     selectable: z.boolean().optional(),
     workerNodeKind: z.enum(["group", "resolvable", "playable"]).optional(),
+    resolutionKind: z.enum(["folder", "mirrors"]).optional(),
   })
 )
 
@@ -37,6 +38,7 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
     .enum(["active", "maintenance", "degraded", "down"])
     .optional(),
   sourceVersion: z.string().optional(),
+  sourceCredentialKind: z.enum(["domain-password", "http-basic"]).optional(),
   routeSourceName: z.string().optional(),
   routeSourceIconUrl: z.string().optional(),
   extractedLinks: z.array(extractedLinkSchema).optional(),

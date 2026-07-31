@@ -125,15 +125,18 @@ export default defineSchema({
 
   userPluginDomains: defineTable({
     userId: v.id("users"),
+    workerId: v.string(),
     domain: v.string(),
     pluginId: v.string(),
   })
     .index("by_userId", ["userId"])
-    .index("by_userId_domain", ["userId", "domain"]),
+    .index("by_userId_domain", ["userId", "domain"])
+    .index("by_userId_workerId_domain", ["userId", "workerId", "domain"]),
 
   userPluginCredentials: defineTable({
     userId: v.id("users"),
     pluginDomainId: v.id("userPluginDomains"),
+    workerId: v.string(),
     pluginId: v.string(),
     domain: v.string(),
     ciphertext: v.string(),
@@ -145,7 +148,8 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_pluginDomainId", ["pluginDomainId"])
-    .index("by_userId_domain", ["userId", "domain"]),
+    .index("by_userId_domain", ["userId", "domain"])
+    .index("by_userId_workerId_domain", ["userId", "workerId", "domain"]),
 
   usageCounters: defineTable({
     ownerKey: v.string(),

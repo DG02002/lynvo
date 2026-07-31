@@ -11,6 +11,7 @@ export interface ExtractOptions {
   readonly url: string
   readonly requestId: string
   readonly workerId?: string
+  readonly sourceId?: string
   readonly kind?: "source" | "node"
   readonly userId?: string
   readonly accessToken?: string
@@ -38,6 +39,7 @@ export interface MetadataResult {
   readonly sourceIconUrl?: string
   readonly sourceStatus?: "active" | "maintenance" | "degraded" | "down"
   readonly sourceVersion?: string
+  readonly sourceCredentialKind?: "domain-password" | "http-basic"
   readonly routeSourceName?: string
   readonly routeSourceIconUrl?: string
   readonly workerId?: string

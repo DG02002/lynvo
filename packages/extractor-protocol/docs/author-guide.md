@@ -142,6 +142,7 @@ Recommended route layout:
 - `GET /manifest`
 - `POST /verify`
 - `GET /usage`
+- `POST /discover` when `features.discovery` is true
 - `POST /extract`
 
 Keep the Hono layer thin. The extraction logic should sit behind small route handlers.
@@ -152,7 +153,8 @@ Use `Authorization: Bearer <apiKey>`.
 
 Recommended behavior:
 
-- reject missing auth on `POST /verify`, `GET /usage`, and `POST /extract`
+- reject missing auth on `POST /verify`, `GET /usage`, `POST /discover`, and
+  `POST /extract`
 - validate the bearer token before doing expensive extraction work
 - report finite credential-scoped usage and enforce it before extraction work
 - return structured protocol errors
@@ -381,6 +383,7 @@ const lazyFolder = {
   badge: "Open folder",
   nodeUrl: "https://source.example.com/0:/Collections/",
   resourceId: "folder_shows_v1",
+  resolutionKind: "folder",
 } satisfies ExtractorNode
 ```
 
@@ -399,6 +402,11 @@ When the user opens that lazy folder, Lynvo sends another extraction request:
 Return a normal success envelope whose `nodes` contain the resolved folder
 contents. Never expose credentials in `nodeUrl`, `resourceId`, labels, or
 metadata.
+
+Set `resolutionKind` to `folder` when resolving the node returns folder
+contents. Set it to `mirrors` when resolving returns alternative playable
+routes. Omit it only for backward compatibility; Lynvo treats an omitted value
+as `mirrors`.
 
 ## UI Metadata
 

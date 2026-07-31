@@ -7,6 +7,19 @@ export const collectLinkAndDescendantIds = (link: ExtractedLink): string[] => [
   ...(link.children?.flatMap(collectLinkAndDescendantIds) ?? []),
 ]
 
+export const collectSelectableLinkIds = (
+  links: readonly ExtractedLink[]
+): string[] =>
+  links.flatMap((link) => {
+    const isFolder = link.type === "folder"
+    const isSelectable =
+      link.selectable === true || (!isFolder && link.selectable !== false)
+    return [
+      ...(isSelectable ? [getSelectableLinkId(link)] : []),
+      ...collectSelectableLinkIds(link.children ?? []),
+    ]
+  })
+
 const isLinkOrDescendantSelected = (
   link: ExtractedLink,
   selectedIds: Set<string>

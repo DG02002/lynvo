@@ -45,6 +45,72 @@ const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
 }
 
 describe("LinkSelectionDialog", () => {
+  it("selects and clears every selectable link", () => {
+    const onConfirm = vi.fn()
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "group",
+            url: "",
+            label: "Group",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                id: "video-one",
+                url: "https://cdn.example/video-one.mkv",
+                label: "Video One",
+                type: "file",
+              },
+              {
+                id: "video-two",
+                url: "https://cdn.example/video-two.mkv",
+                label: "Video Two",
+                type: "file",
+              },
+            ],
+          },
+        ]}
+        onConfirm={onConfirm}
+      />
+    )
+
+    expect(screen.getByText("0 selected")).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Select all",
+      })
+    )
+    expect(screen.getByText("2 selected")).toBeVisible()
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3)
+    expect(
+      screen
+        .getAllByRole("checkbox")
+        .every((checkbox) => checkbox.hasAttribute("data-checked"))
+    ).toBe(true)
+
+    fireEvent.click(screen.getByRole("button", { name: "Save Selected" }))
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "video-one" }),
+      expect.objectContaining({ id: "video-two" }),
+    ])
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "Select all",
+      })
+    )
+    expect(screen.getByText("0 selected")).toBeVisible()
+    expect(
+      screen
+        .getAllByRole("checkbox")
+        .every((checkbox) => !checkbox.hasAttribute("data-checked"))
+    ).toBe(true)
+  })
+
   it("selects children discovered after a selected lazy folder is expanded", async () => {
     const resolveFolder = vi.fn().mockResolvedValue([
       {
@@ -56,25 +122,31 @@ describe("LinkSelectionDialog", () => {
     ])
     render(<LazyFolderHarness resolveFolder={resolveFolder} />)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+    )
     fireEvent.click(screen.getByText("Lazy folder"))
     await screen.findByText("Video One")
 
-    expect(screen.getAllByRole("checkbox")).toHaveLength(2)
     expect(
-      screen
-        .getAllByRole("checkbox")
-        .every((item) => item.hasAttribute("data-checked"))
-    ).toBe(true)
+      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+    ).toBeChecked()
+    expect(
+      screen.getByRole("checkbox", { name: "Select Video One" })
+    ).toBeChecked()
   })
 
   it("selects a lazy folder without expanding it when its checkbox is clicked", () => {
     const resolveFolder = vi.fn().mockResolvedValue([])
     render(<LazyFolderHarness resolveFolder={resolveFolder} />)
 
-    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+    )
 
-    expect(screen.getByRole("checkbox")).toBeChecked()
+    expect(
+      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+    ).toBeChecked()
     expect(resolveFolder).not.toHaveBeenCalled()
     expect(
       screen.getByRole("treeitem", { name: /Lazy folder/ })

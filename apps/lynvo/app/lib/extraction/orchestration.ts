@@ -4,7 +4,10 @@ import type {
   RecentLinkViewItem,
 } from "~/features/links/types"
 import { mergeDefinedMeta } from "~/features/links/links.mapper"
-import { getRecentLinkViewItemWorkerId } from "~/features/links/link-metadata-accessors"
+import {
+  getRecentLinkViewItemSourceId,
+  getRecentLinkViewItemWorkerId,
+} from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { decideSavePresentation } from "./presentation"
 import { defaultExtractionClient } from "./client"
@@ -14,6 +17,7 @@ declare global {
     extract: (request: {
       url: string
       workerId?: string
+      sourceId?: string
       kind?: "source" | "node"
     }) => Promise<{ links: ExtractedLink[]; meta?: MetaData }>
     getMetadata: (request: { url: string }) => Promise<MetaData>
@@ -44,6 +48,7 @@ declare global {
     resolveFolder: (options: {
       folderUrl: string
       workerId?: string
+      sourceId?: string
     }) => Promise<ExtractedLink[]>
     expandFolder: (options: {
       item: RecentLinkViewItem
@@ -55,6 +60,9 @@ declare global {
 
 const getSavedWorkerId = (item: RecentLinkViewItem | undefined) =>
   getRecentLinkViewItemWorkerId(item) || undefined
+
+const getSavedSourceId = (item: RecentLinkViewItem | undefined) =>
+  getRecentLinkViewItemSourceId(item) || undefined
 
 export const createExtractionOrchestration = (
   transport: ExtractionTransport
@@ -76,14 +84,20 @@ export const createExtractionOrchestration = (
     return await transport.extract({
       url,
       workerId,
+      sourceId: getSavedSourceId(item),
       kind: workerId ? "node" : undefined,
     })
   }
-  const extractFolder = async (folderUrl: string, workerId?: string) =>
+  const extractFolder = async (
+    folderUrl: string,
+    workerId?: string,
+    sourceId?: string
+  ) =>
     (
       await transport.extract({
         url: folderUrl,
         workerId,
+        sourceId,
         kind: workerId ? "node" : undefined,
       })
     ).links
@@ -116,17 +130,19 @@ export const createExtractionOrchestration = (
       const result = await transport.extract({
         url: item.url,
         workerId: getSavedWorkerId(item),
+        sourceId: getSavedSourceId(item),
       })
       return result.links
     },
     resolveMirror: async (item, lazyItemUrl) =>
       (await extractSavedItemNode(item, lazyItemUrl)).links,
-    resolveFolder: async ({ folderUrl, workerId }) =>
-      await extractFolder(folderUrl, workerId),
+    resolveFolder: async ({ folderUrl, workerId, sourceId }) =>
+      await extractFolder(folderUrl, workerId, sourceId),
     expandFolder: async ({ item, linkId, linkUrl }) => {
       const resolvedChildren = await extractFolder(
         linkUrl,
-        getSavedWorkerId(item)
+        getSavedWorkerId(item),
+        getSavedSourceId(item)
       )
       return attachResolvedChildren({
         links: item.extractedLinks ?? [],

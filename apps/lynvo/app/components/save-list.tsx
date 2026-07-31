@@ -7,6 +7,7 @@ import { useLinkActions } from "~/hooks/useLinkActions"
 import { useRecentLinks } from "~/hooks/useRecentLinks"
 import { cn } from "~/lib/utils"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
+import { AddSourceDomainAlertDialog } from "~/components/links/add-source-domain-alert-dialog"
 
 const SaveList = () => {
   useDraftSweep()
@@ -21,14 +22,20 @@ const SaveList = () => {
     actions,
     isHydrating,
   } = useRecentLinks()
-  const { input, isSaving, extractingItems, linkCardActions, selectionDialog } =
-    useLinkActions({
-      recents,
-      recentLinks: actions,
-      setHighlightedId,
-      setSortOrder,
-      setCurrentPage,
-    })
+  const {
+    input,
+    isSaving,
+    extractingItems,
+    linkCardActions,
+    selectionDialog,
+    pluginDomainDialog,
+  } = useLinkActions({
+    recents,
+    recentLinks: actions,
+    setHighlightedId,
+    setSortOrder,
+    setCurrentPage,
+  })
 
   useSaveListFullscreen(Boolean(selectedItemUrl))
 
@@ -79,6 +86,12 @@ const SaveList = () => {
         audioInfo={selectionDialog.display.audioInfo}
         isDraftMode={selectionDialog.display.isDraftMode}
         workerId={selectionDialog.display.workerId}
+      />
+      <AddSourceDomainAlertDialog
+        suggestion={pluginDomainDialog.suggestion}
+        isAdding={pluginDomainDialog.isAdding}
+        onAdd={pluginDomainDialog.add}
+        onDismiss={pluginDomainDialog.dismiss}
       />
     </main>
   )

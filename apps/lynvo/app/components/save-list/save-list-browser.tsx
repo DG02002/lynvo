@@ -68,6 +68,9 @@ const isLazyFolder = (link: ExtractedLink) =>
   !link.children?.length &&
   link.childrenResolved !== true
 
+const isMirrorResolvable = (link: ExtractedLink) =>
+  link.workerNodeKind === "resolvable" && link.resolutionKind !== "folder"
+
 const getFolderVisualState = (link: ExtractedLink, isOpen: boolean) => {
   if (isOpen) {
     return "open"
@@ -130,7 +133,7 @@ const FolderTree = ({
     parentPath: FolderLevel[]
   ) =>
     folderLinks.flatMap((link) => {
-      if (link.type !== "folder" || link.workerNodeKind === "resolvable") {
+      if (link.type !== "folder" || isMirrorResolvable(link)) {
         return []
       }
       const linkKey = getLinkKey(link)
@@ -538,8 +541,7 @@ const FinderBrowser = ({
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
-            const isResolvable = link.workerNodeKind === "resolvable"
-            if (isResolvable) {
+            if (isMirrorResolvable(link)) {
               return (
                 <ResolvableContainerRow
                   key={linkKey}
@@ -688,11 +690,11 @@ export const SaveListBrowser = ({
             !item.isDraft &&
             view.extractedLinks.length === 1 &&
             (view.extractedLinks[0]?.type !== "folder" ||
-              view.extractedLinks[0]?.workerNodeKind === "resolvable")
+              isMirrorResolvable(view.extractedLinks[0]))
               ? view.extractedLinks[0]
               : undefined
           const isResolvableContainer =
-            directLink?.workerNodeKind === "resolvable"
+            directLink && isMirrorResolvable(directLink)
           const isExtracting = extractingItems.has(item.url)
           const isRootFolderNew =
             !directLink &&

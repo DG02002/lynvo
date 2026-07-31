@@ -58,6 +58,7 @@ export const createBhadooNodes = (
           id: item.id,
           label: item.name,
           nodeUrl: nodeUrl.toString(),
+          resolutionKind: "folder" as const,
         },
       ]
     }
@@ -167,7 +168,7 @@ export const extractBhadooGoogleDriveIndex = async ({
   folderUrl.username = ""
   folderUrl.password = ""
   const filename = getBhadooPathFilename(folderUrl)
-  if (isVideoFile(filename)) {
+  if (!folderUrl.pathname.endsWith("/") && isVideoFile(filename)) {
     const playableUrl = new URL(folderUrl)
     const actionValues = playableUrl.searchParams.getAll("a")
     playableUrl.searchParams.delete("a")

@@ -59,6 +59,8 @@ describe("SaveListBrowser", () => {
               url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
               label: "Folder Alpha",
               type: "folder",
+              workerNodeKind: "resolvable",
+              resolutionKind: "folder",
             },
           ],
         },

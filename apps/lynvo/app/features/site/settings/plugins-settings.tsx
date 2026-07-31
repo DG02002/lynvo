@@ -50,9 +50,11 @@ import {
   externalWorkerSchema,
   type ExternalWorkerFormValues,
 } from "./plugin-settings-schemas"
+import { OFFICIAL_EXTRACTOR_ID } from "~/lib/constants"
 
 export interface PluginDomain {
   _id: string
+  workerId: string
   pluginId: string
   domain: string
   hasCredential: boolean
@@ -75,9 +77,10 @@ export function PluginsSettings({
   officialPlugins: OfficialPlugin[] | null
 }) {
   const workers = useQuery(api.userWorkers.list, {}) ?? EMPTY_WORKERS
-  const domains =
+  const domains = (
     (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
     EMPTY_DOMAINS
+  ).filter((domain) => domain.workerId === OFFICIAL_EXTRACTOR_ID)
   const [domainInputs, setDomainInputs] = React.useState<
     Record<string, string>
   >({})

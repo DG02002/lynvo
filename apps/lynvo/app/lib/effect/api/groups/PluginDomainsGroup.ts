@@ -12,12 +12,23 @@ import {
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(Schema.Unknown),
+      success: Schema.Array(
+        Schema.Struct({
+          _id: Schema.String,
+          _creationTime: Schema.Number,
+          userId: Schema.String,
+          workerId: Schema.String,
+          domain: Schema.String,
+          pluginId: Schema.String,
+          hasCredential: Schema.Boolean,
+        })
+      ),
       error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
         domain: Schema.String,
+        workerId: Schema.String,
         pluginId: Schema.String,
         username: Schema.optional(Schema.String),
         password: Schema.optional(Schema.String),

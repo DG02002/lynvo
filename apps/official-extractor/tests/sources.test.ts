@@ -45,7 +45,11 @@ describe("Bhadoo source adapter", () => {
       new URL("https://drive.example/0:/Collections/")
     )
     expect(nodes).toMatchObject([
-      { kind: "resolvable", label: "Folder 1" },
+      {
+        kind: "resolvable",
+        label: "Folder 1",
+        resolutionKind: "folder",
+      },
       { kind: "playable", label: "playable-item.mkv", size: "469.28 MB" },
     ])
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
@@ -74,6 +78,44 @@ describe("Bhadoo source adapter", () => {
       Authorization: `Basic ${btoa("viewer:secret")}`,
     })
   })
+
+  it("treats a trailing-slash video filename as an index folder", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        nextPageToken: null,
+        curPageIndex: 0,
+        data: {
+          files: [
+            {
+              id: "nested-folder",
+              name: "Real files",
+              mimeType: "application/vnd.google-apps.folder",
+            },
+          ],
+        },
+      })
+    )
+
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://drive.example/0:/fake-video.mkv/",
+        },
+      },
+      targetUrl: "https://drive.example/0:/fake-video.mkv/",
+      source,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result.nodes).toMatchObject([
+      {
+        kind: "resolvable",
+        label: "Real files",
+        resolutionKind: "folder",
+      },
+    ])
+  })
 })
 
 describe("OneDrive source adapter", () => {
@@ -91,7 +133,11 @@ describe("OneDrive source adapter", () => {
       "token"
     )
     expect(nodes).toMatchObject([
-      { kind: "resolvable", label: "Folder 1" },
+      {
+        kind: "resolvable",
+        label: "Folder 1",
+        resolutionKind: "folder",
+      },
       { kind: "playable", label: "playable-item.mp4" },
     ])
   })
@@ -213,6 +259,7 @@ describe("Google Drive public files source adapter", () => {
         id: "folder-id",
         label: "Nested folder",
         nodeUrl: "https://drive.google.com/drive/folders/folder-id",
+        resolutionKind: "folder",
       },
       {
         kind: "playable",

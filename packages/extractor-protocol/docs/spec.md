@@ -133,6 +133,23 @@ Auth:
 
 - `Authorization: Bearer <apiKey>`
 
+### `POST /discover`
+
+Purpose:
+
+- let an extractor identify a source implementation without teaching Lynvo
+  source-specific URL or HTML signatures
+- return a stable `sourceId` and either `pattern` or `verified` confidence
+- decline unsupported URLs with `{ "matched": false }`
+
+This endpoint is optional and must be advertised with
+`features.discovery: true`. Discovery must be bounded, safe against SSRF, and
+must not persist credentials.
+
+Auth:
+
+- `Authorization: Bearer <apiKey>`
+
 ### `GET /usage`
 
 Purpose:
@@ -421,6 +438,7 @@ Rules:
   "label": "Lazy Item 1",
   "nodeUrl": "https://example.com/intermediate-step",
   "resourceId": "opaque-id-optional",
+  "resolutionKind": "folder",
   "badge": "Variant Alpha"
 }
 ```
@@ -430,6 +448,9 @@ Rules:
 - must contain `nodeUrl` or `resourceId`
 - may represent an lazy item, redirector, container page, or any intermediate target
 - must be resolvable by the same worker
+- may set `resolutionKind` to `folder` for lazy folder contents or `mirrors`
+  for alternative playable routes; omission remains backward-compatible and is
+  interpreted as `mirrors` by Lynvo
 
 ### Playable Node
 

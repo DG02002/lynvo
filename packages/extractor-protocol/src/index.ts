@@ -25,6 +25,7 @@ export interface ExtractorManifest {
     password: boolean
     lazyNodes: boolean
     basicAuth?: boolean
+    discovery?: boolean
   }
   extensions: Record<string, unknown>
 }
@@ -61,6 +62,7 @@ export interface ResolvableNode {
   label: string
   nodeUrl?: string
   resourceId?: string
+  resolutionKind?: "folder" | "mirrors"
   badge?: string
   size?: string
   sourceName?: string
@@ -145,6 +147,19 @@ export interface VerifyErrorResponse {
   }
 }
 
+export interface DiscoverRequest {
+  url: string
+  basicAuth?: HttpBasicAuth
+}
+
+export type DiscoverResponse =
+  | { matched: false }
+  | {
+      matched: true
+      sourceId: string
+      confidence: "pattern" | "verified"
+    }
+
 export interface ExtractorSourceMetadata {
   id: string
   displayName: string
@@ -197,6 +212,12 @@ export interface ExtractorRuntimeExtractOptions<Env> {
   env: Env
 }
 
+export interface ExtractorRuntimeDiscoverOptions<Env> {
+  request: DiscoverRequest
+  targetUrl: string
+  env: Env
+}
+
 export type ExtractorRuntimeManifest<Env> =
   | ExtractorManifest
   | ((
@@ -209,6 +230,9 @@ export interface ExtractorRuntimeOptions<Env> {
   extract: (
     options: ExtractorRuntimeExtractOptions<Env>
   ) => Promise<ExtractSuccessResponse> | ExtractSuccessResponse
+  discover?: (
+    options: ExtractorRuntimeDiscoverOptions<Env>
+  ) => Promise<DiscoverResponse> | DiscoverResponse
   usage: (
     context: ExtractorRuntimeContext<Env>
   ) => Promise<UsageResponse> | UsageResponse
@@ -219,6 +243,7 @@ export interface ExtractorRuntime<Env> {
   handleManifest: (request: Request, env: Env) => Promise<Response>
   handleVerify: (request: Request, env: Env) => Promise<Response>
   handleUsage: (request: Request, env: Env) => Promise<Response>
+  handleDiscover: (request: Request, env: Env) => Promise<Response>
   handleExtract: (request: Request, env: Env) => Promise<Response>
 }
 
@@ -285,6 +310,7 @@ export const manifestSchema = z.object({
     password: z.boolean().optional().default(false),
     lazyNodes: z.boolean().optional().default(false),
     basicAuth: z.boolean().optional().default(false),
+    discovery: z.boolean().optional().default(false),
   }),
   extensions: z.record(z.string(), z.unknown()).optional().default({}),
 })
@@ -315,6 +341,25 @@ export const verifyErrorSchema = z.object({
     message: z.string(),
   }),
 })
+
+export const discoverRequestSchema = z.object({
+  url: z.url(),
+  basicAuth: z
+    .object({
+      username: z.string(),
+      password: z.string(),
+    })
+    .optional(),
+})
+
+export const discoverResponseSchema = z.discriminatedUnion("matched", [
+  z.object({ matched: z.literal(false) }),
+  z.object({
+    matched: z.literal(true),
+    sourceId: z.string().min(1),
+    confidence: z.enum(["pattern", "verified"]),
+  }),
+])
 
 export const extractorSourceMetadataSchema = z.object({
   id: z.string().min(1),
@@ -365,6 +410,7 @@ export const resolvableNodeSchema = z.object({
   kind: z.literal("resolvable"),
   nodeUrl: z.string().optional(),
   resourceId: z.string().optional(),
+  resolutionKind: z.enum(["folder", "mirrors"]).optional(),
 }) as z.ZodType<ResolvableNode>
 
 export const playableNodeSchema = z.object({
@@ -846,6 +892,62 @@ export const createExtractorRuntime = <Env>(
         )
       }
       return jsonResponse(parsedUsage.data)
+    },
+    handleDiscover: async (request, env) => {
+      const authFailure = await authenticate(request, env)
+      if (authFailure) {
+        return authFailure
+      }
+      if (!options.discover) {
+        return jsonResponse(
+          createProtocolError(
+            "UNSUPPORTED_URL",
+            "This extractor does not support source discovery."
+          ),
+          404
+        )
+      }
+
+      let body: unknown
+      try {
+        body = await request.json()
+      } catch {
+        return jsonResponse(
+          createProtocolError("BAD_REQUEST", "Invalid JSON body."),
+          400
+        )
+      }
+      const parsed = discoverRequestSchema.safeParse(body)
+      if (!parsed.success) {
+        return jsonResponse(
+          createProtocolError("BAD_REQUEST", "Invalid discovery request."),
+          400
+        )
+      }
+
+      try {
+        const result = await options.discover({
+          request: parsed.data,
+          targetUrl: parsed.data.url,
+          env,
+        })
+        const parsedResult = discoverResponseSchema.safeParse(result)
+        return parsedResult.success
+          ? jsonResponse(parsedResult.data)
+          : jsonResponse(
+              createProtocolError(
+                "PROTOCOL_MISMATCH",
+                "Extractor returned an invalid discovery response."
+              ),
+              500
+            )
+      } catch (error) {
+        options.onError?.(error, { request, env })
+        return jsonResponse(
+          createProtocolError("TEMPORARY_FAILURE", "Source discovery failed."),
+          502
+        )
+      }
     },
     handleExtract: async (request, env) => {
       const authFailure = await authenticate(request, env)

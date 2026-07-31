@@ -162,6 +162,7 @@ export const createGoogleDrivePublicFolderNodes = (
           id: item.id,
           label: item.name,
           nodeUrl: `https://drive.google.com/drive/folders/${item.id}`,
+          resolutionKind: "folder",
         },
       ]
     }

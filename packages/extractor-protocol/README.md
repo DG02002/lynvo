@@ -7,6 +7,7 @@ It provides:
 - protocol schemas and TypeScript interfaces
 - `createExtractorRuntime` for Worker route behavior
 - URL matcher helpers
+- optional standardized source discovery
 - Lynvo source metadata helpers
 - protocol error/request builders
 - contract validation helpers for external extractor tests

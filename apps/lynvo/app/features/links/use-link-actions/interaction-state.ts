@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 import { OPENING_RESET_DELAY_MS } from "./constants"
 import type { OpenSelectionDialogOptions } from "./action-types"
+import type { SourceDomainSuggestion } from "~/lib/plugin-domain"
 
 export interface SelectionDialogState {
   open: boolean
@@ -10,6 +11,7 @@ export interface SelectionDialogState {
   originalUrl: string
   existingItemId?: string
   isDraftMode: boolean
+  pluginDomainSuggestion?: SourceDomainSuggestion
 }
 
 export const useSelectionDialog = () => {
@@ -29,6 +31,7 @@ export const useSelectionDialog = () => {
       meta,
       existingItemId,
       isDraftMode = false,
+      pluginDomainSuggestion,
     }: OpenSelectionDialogOptions) => {
       setSelectionDialogState({
         open: true,
@@ -37,13 +40,19 @@ export const useSelectionDialog = () => {
         originalUrl,
         existingItemId,
         isDraftMode,
+        pluginDomainSuggestion,
       })
     },
     []
   )
 
   const closeSelectionDialog = useCallback(
-    () => setSelectionDialogState((prev) => ({ ...prev, open: false })),
+    () =>
+      setSelectionDialogState((prev) => ({
+        ...prev,
+        open: false,
+        pluginDomainSuggestion: undefined,
+      })),
     []
   )
 

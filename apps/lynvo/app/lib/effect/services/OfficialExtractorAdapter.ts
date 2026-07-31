@@ -3,6 +3,7 @@ import {
   matchExtractorUrl,
   type ExtractorManifest,
   type ExtractorSourceMetadata,
+  type HttpBasicAuth,
 } from "@lynvo/extractor-protocol"
 import { Effect } from "effect"
 import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
@@ -42,6 +43,25 @@ export const getOfficialManifest = Effect.fn(
         requestId,
       }),
     catch: (cause) => officialError(cause, "official extractor"),
+  })
+})
+
+export const discoverOfficialSource = Effect.fn(
+  "OfficialExtractorAdapter.discoverOfficialSource"
+)(function* (
+  environment: Env,
+  targetUrl: string,
+  basicAuth?: HttpBasicAuth,
+  requestId?: string
+) {
+  return yield* Effect.tryPromise({
+    try: () =>
+      createOfficialClient(environment).discover(targetUrl, {
+        apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY,
+        basicAuth,
+        requestId,
+      }),
+    catch: (cause) => officialError(cause, targetUrl),
   })
 })
 

@@ -1,6 +1,7 @@
 import {
   createNodeExtractRequest,
   createSourceExtractRequest,
+  discoverResponseSchema,
   extractErrorSchema,
   extractSuccessSchema,
   isSupportedProtocolVersion,
@@ -11,6 +12,7 @@ import {
   verifyErrorSchema,
   verifySuccessSchema,
   type ExtractSuccessResponse,
+  type DiscoverResponse,
   type ExtractorManifest,
   type HttpBasicAuth,
   type UsageResponse,
@@ -213,6 +215,36 @@ export class ExtractorProtocolClient {
       throw new ExtractorProtocolClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Extractor usage response does not match protocol v1.",
+      })
+    }
+    return parsed.data
+  }
+
+  discover = async (
+    targetUrl: string,
+    options: ExtractorClientOptions & { basicAuth?: HttpBasicAuth }
+  ): Promise<DiscoverResponse> => {
+    const response = await this.request(
+      "/discover",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: targetUrl,
+          ...(options.basicAuth ? { basicAuth: options.basicAuth } : {}),
+        }),
+      },
+      options
+    )
+    const value = await parseJson(response)
+    if (!response.ok) {
+      throwResponseFailure(value, response.status)
+    }
+    const parsed = discoverResponseSchema.safeParse(value)
+    if (!parsed.success) {
+      throw new ExtractorProtocolClientError({
+        code: "PROTOCOL_MISMATCH",
+        message: "Extractor discovery response does not match protocol v1.",
       })
     }
     return parsed.data

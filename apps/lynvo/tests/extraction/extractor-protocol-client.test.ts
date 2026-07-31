@@ -105,4 +105,33 @@ describe("ExtractorProtocolClient", () => {
       status: 429,
     })
   })
+
+  it("sends structured credentials to standardized discovery", async () => {
+    const requests: Request[] = []
+    const client = new ExtractorProtocolClient({
+      fetch: async (request) => {
+        requests.push(request.clone())
+        return Response.json({
+          matched: true,
+          sourceId: "example",
+          confidence: "verified",
+        })
+      },
+    })
+
+    await expect(
+      client.discover("https://source.example/path", {
+        apiKey: "secret",
+        basicAuth: { username: "viewer", password: "safe" },
+      })
+    ).resolves.toEqual({
+      matched: true,
+      sourceId: "example",
+      confidence: "verified",
+    })
+    expect(await requests[0].json()).toEqual({
+      url: "https://source.example/path",
+      basicAuth: { username: "viewer", password: "safe" },
+    })
+  })
 })

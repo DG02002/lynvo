@@ -22,12 +22,14 @@ describe("bounded lifecycle cleanup", () => {
       const now = Date.now()
       const domainId = await context.db.insert("userPluginDomains", {
         userId: target.userId,
+        workerId: "worker-1",
         domain: "target.example",
         pluginId: "direct",
       })
       await context.db.insert("userPluginCredentials", {
         userId: target.userId,
         pluginDomainId: domainId,
+        workerId: "worker-1",
         pluginId: "direct",
         domain: "target.example",
         ciphertext: "encrypted",

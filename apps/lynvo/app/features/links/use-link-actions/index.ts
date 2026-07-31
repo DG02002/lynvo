@@ -75,22 +75,27 @@ export function useLinkActions({
     expandMirror: handleMirrorExpand,
     setAsCurrent: recentLinks.setPlayableItemAsCurrent,
   }
-  const { isSaving, handleSave, confirmSelection, saveSelectionDraft } =
-    useSaveActions({
-      url,
-      recents,
-      addRecent: recentLinks.add,
-      updateRecentLinks: recentLinks.updateLinks,
-      openSelectionDialog,
-      setExtractionPreview,
-      closeSelectionDialog,
-      selectionDialogState,
-      setError,
-      setCurrentUrl: setUrl,
-      setHighlightedId,
-      setSortOrder,
-      setCurrentPage,
-    })
+  const {
+    isSaving,
+    handleSave,
+    confirmSelection,
+    saveSelectionDraft,
+    pluginDomainDialog,
+  } = useSaveActions({
+    url,
+    recents,
+    addRecent: recentLinks.add,
+    updateRecentLinks: recentLinks.updateLinks,
+    openSelectionDialog,
+    setExtractionPreview,
+    closeSelectionDialog,
+    selectionDialogState,
+    setError,
+    setCurrentUrl: setUrl,
+    setHighlightedId,
+    setSortOrder,
+    setCurrentPage,
+  })
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
@@ -99,6 +104,7 @@ export function useLinkActions({
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,
           workerId: selectionDialogState.meta.workerId,
+          sourceId: selectionDialogState.meta.sourceId,
         })
         setSelectionDialogState((currentState) =>
           currentState.originalUrl === originalUrl
@@ -162,5 +168,6 @@ export function useLinkActions({
       saveSelectionDraft,
       expandFolder: expandSelectionFolder,
     },
+    pluginDomainDialog,
   }
 }

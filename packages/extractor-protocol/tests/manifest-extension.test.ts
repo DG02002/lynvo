@@ -2,10 +2,22 @@ import { describe, expect, it } from "vitest"
 import {
   getLynvoManifestExtension,
   manifestSchema,
+  resolvableNodeSchema,
   validateExtractorManifestContract,
 } from "../src/index"
 
 describe("Lynvo manifest source credentials", () => {
+  it("preserves optional resolvable-node semantics", () => {
+    expect(
+      resolvableNodeSchema.parse({
+        kind: "resolvable",
+        label: "Lazy folder",
+        nodeUrl: "https://example.com/folder/",
+        resolutionKind: "folder",
+      })
+    ).toMatchObject({ resolutionKind: "folder" })
+  })
+
   it("accepts backward-compatible source capability metadata", () => {
     const manifest = manifestSchema.parse({
       protocolVersion: "1.0",

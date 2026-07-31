@@ -11,6 +11,7 @@ export interface EncryptedPluginCredential {
 
 export interface PluginCredentialContext {
   readonly userId: string
+  readonly workerId: string
   readonly pluginId: string
   readonly domain: string
 }
@@ -54,7 +55,7 @@ export const createPluginCredentialAdditionalData = (
   context: PluginCredentialContext
 ): Uint8Array<ArrayBuffer> =>
   new TextEncoder().encode(
-    `${context.userId}\u0000${context.pluginId}\u0000${context.domain}\u0000${KEY_VERSION}`
+    `${context.userId}\u0000${context.workerId}\u0000${context.pluginId}\u0000${context.domain}\u0000${KEY_VERSION}`
   )
 
 const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {

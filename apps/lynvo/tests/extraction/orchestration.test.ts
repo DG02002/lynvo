@@ -8,7 +8,11 @@ const savedWorkerItem = (): RecentLinkViewItem => ({
   timestamp: 1,
   metadata: {
     schemaVersion: 2,
-    source: { workerId: "worker-1", sourceName: "Worker Source" },
+    source: {
+      workerId: "worker-1",
+      sourceId: "bhadoo-google-drive-index",
+      sourceName: "Worker Source",
+    },
     extraction: {
       extractedLinks: [
         {
@@ -49,6 +53,15 @@ describe("extraction presentation", () => {
     expect(decideSavePresentation([{ ...file, type: "folder" }]).kind).toBe(
       "selectionDialog"
     )
+    expect(
+      decideSavePresentation([
+        {
+          ...file,
+          type: "folder",
+          workerNodeKind: "resolvable",
+        },
+      ]).kind
+    ).toBe("selectionDialog")
     expect(decideSavePresentation([]).kind).toBe("error")
   })
 })
@@ -123,12 +136,14 @@ describe("extraction orchestration", () => {
         {
           url: "https://example.com/source",
           workerId: "worker-1",
+          sourceId: "bhadoo-google-drive-index",
         },
       ],
       [
         {
           url: "https://worker.example/playable-item",
           workerId: "worker-1",
+          sourceId: "bhadoo-google-drive-index",
           kind: "node",
         },
       ],
@@ -136,6 +151,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://worker.example/folder/1",
           workerId: "worker-1",
+          sourceId: "bhadoo-google-drive-index",
           kind: "node",
         },
       ],

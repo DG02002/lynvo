@@ -59,6 +59,8 @@ export const normalizeLinkMetadata = (
       sourceIconUrl: existingV2?.source?.sourceIconUrl ?? legacy.sourceIconUrl,
       sourceStatus: existingV2?.source?.sourceStatus ?? legacy.sourceStatus,
       sourceVersion: existingV2?.source?.sourceVersion ?? legacy.sourceVersion,
+      sourceCredentialKind:
+        existingV2?.source?.sourceCredentialKind ?? legacy.sourceCredentialKind,
       filename: existingV2?.source?.filename ?? legacy.filename,
       contentType: existingV2?.source?.contentType ?? legacy.contentType,
       contentLength: existingV2?.source?.contentLength ?? legacy.contentLength,
@@ -111,6 +113,7 @@ export const toLegacyMeta = (metadata: LinkMetadataV2): MetaData => {
     sourceIconUrl: source.sourceIconUrl,
     sourceStatus: source.sourceStatus,
     sourceVersion: source.sourceVersion,
+    sourceCredentialKind: source.sourceCredentialKind,
     audio: source.audio,
     pageTitle: source.pageTitle,
     title: source.title,
