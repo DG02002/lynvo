@@ -11,7 +11,7 @@ const authenticatedHeaders = {
   "Content-Type": "application/json",
 }
 
-describe("official extractor protocol routes", () => {
+describe("Lynvo Plugin Server protocol routes", () => {
   it("serves a public valid manifest", async () => {
     const response = await SELF.fetch("https://worker.example/manifest")
     const manifest: unknown = await response.json()

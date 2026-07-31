@@ -6,9 +6,9 @@ workspace.
 ## Repository map
 
 - `apps/lynvo`: product application and direct-link extraction core.
-- `apps/official-extractor`: private managed OneDrive and Bhadoo Worker.
+- `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
-- `examples/extractor-worker`: minimal compatible Worker used by root CI.
+- `examples/plugin-server`: minimal compatible Worker used by root CI.
 - `docs/usage-limits.md`: account and extractor capacity policy.
 - `docs/apple-HIG/`: design and writing references used by contributors.
 
@@ -38,8 +38,8 @@ pnpm secrets:local
 ```
 
 `pnpm secrets:local` configures one shared, cryptographically random
-`OFFICIAL_EXTRACTOR_API_KEY` in the ignored local secret files for Lynvo and
-the official extractor. It preserves existing variables, refuses to overwrite
+`LYNVO_PLUGIN_SERVER_API_KEY` in the ignored local secret files for Lynvo and
+the Lynvo Plugin Server. It preserves existing variables, refuses to overwrite
 conflicting keys, never prints the key, and sets both files to owner-only
 permissions (`0600`). It is safe to run repeatedly.
 
@@ -131,7 +131,7 @@ Use unquoted values for URLs and ordinary single-line values. Use `""` for an
 intentionally empty value. Quote values that contain spaces, `#`, or leading
 or trailing whitespace.
 
-`pnpm dev` starts the Lynvo web application and the official extractor as an
+`pnpm dev` starts the Lynvo web application and the Lynvo Plugin Server as an
 auxiliary Worker, using the Convex URL in `.dev.vars`. `pnpm dev:local` starts
 those two processes plus the Convex watcher. It first validates the selected
 Convex deployment, then creates an ignored `.dev.vars.local` and replaces only
@@ -140,10 +140,10 @@ Convex deployment, then creates an ignored `.dev.vars.local` and replaces only
 ## Development commands
 
 ```sh
-# Lynvo web application and auxiliary official extractor using .dev.vars
+# Lynvo web application and auxiliary Lynvo Plugin Server using .dev.vars
 pnpm dev
 
-# Lynvo, auxiliary official extractor, and Convex watcher using .env.local
+# Lynvo, auxiliary Lynvo Plugin Server, and Convex watcher using .env.local
 pnpm dev:local
 
 # Same local stack, exposed to other devices on the local network
@@ -152,8 +152,8 @@ pnpm dev:local --host
 # Same local stack without per-account usage limits for plugin testing
 pnpm dev:local --host --no-usage
 
-# Official extractor by itself for standalone debugging
-pnpm --filter @lynvo/official-extractor dev
+# Lynvo Plugin Server by itself for standalone debugging
+pnpm --filter @lynvo/lynvo-plugin-server dev
 
 # Regenerate Lynvo Cloudflare bindings
 pnpm --filter @lynvo/app cf-typegen
@@ -181,7 +181,7 @@ pnpm test
 pnpm build
 ```
 
-`pnpm build` includes dry-run bundles for the official extractor and example
+`pnpm build` includes dry-run bundles for the Lynvo Plugin Server and example
 Worker. After building Lynvo, verify its generated deployment bundle with:
 
 ```sh
@@ -203,12 +203,12 @@ Before deployment:
 - Choose the production Lynvo URL before initializing production Convex Auth.
 - Use the same `AUTH_GATEWAY_SECRET` in Lynvo and Convex.
 - Generate a production-only `PLUGIN_CREDENTIAL_MASTER_KEY` and retain it securely.
-- Set `OFFICIAL_EXTRACTOR_API_KEY` independently on both Workers with the same value.
+- Set `LYNVO_PLUGIN_SERVER_API_KEY` independently on both Workers with the same value.
 - Confirm the official Worker has `workers_dev` disabled and no public route.
-- Confirm `OFFICIAL_EXTRACTOR` targets the intended Worker in the same Cloudflare account.
+- Confirm `LYNVO_PLUGIN_SERVER` targets the intended Worker in the same Cloudflare account.
 
 Convex is the application database. Lynvo’s Durable Object coordinates realtime
-connections; the official extractor’s Durable Object enforces global extraction
+connections; the Lynvo Plugin Server’s Durable Object enforces global extraction
 capacity. Keep both Wrangler migrations intact.
 
 ## Deployment order
@@ -217,19 +217,19 @@ Deployment requires explicit authorization. Never deploy as part of routine
 implementation or verification.
 
 1. Run `wrangler whoami` and verify the intended Cloudflare account.
-2. Configure the official extractor secret and usage-limiter Durable Object migration.
-3. Deploy `@lynvo/official-extractor` first.
+2. Configure the Lynvo Plugin Server secret and usage-limiter Durable Object migration.
+3. Deploy `@lynvo/lynvo-plugin-server` first.
 4. Validate `/manifest`, `/verify`, `/usage`, and `/extract` in a controlled environment.
 5. Deploy the Convex schema and functions to create or update the production deployment.
 6. Run the Convex Auth initializer with `--prod` from `apps/lynvo`.
 7. Generate a production gateway secret and set the same value in Convex and Lynvo.
 8. Configure the remaining Lynvo Worker secrets and production Convex URL.
 9. Confirm production contains `SITE_URL`, `JWT_PRIVATE_KEY`, `JWKS`, and `AUTH_GATEWAY_SECRET`.
-10. Deploy `@lynvo/app` with `OFFICIAL_EXTRACTOR` bound to the exact target.
+10. Deploy `@lynvo/app` with `LYNVO_PLUGIN_SERVER` bound to the exact target.
 11. Smoke-test account creation, sign-in, TV sign-in, extraction, logs, and counters.
 
 ```sh
-pnpm --filter @lynvo/official-extractor deploy
+pnpm --filter @lynvo/lynvo-plugin-server deploy
 pnpm --filter @lynvo/app exec convex deploy
 cd apps/lynvo
 pnpx @convex-dev/auth --prod
@@ -248,7 +248,7 @@ deployments.
 
 For rollback, restore the recorded Lynvo Worker version before removing or
 rolling back a target version it still expects. Do not restore the deleted
-in-process official extractors as an emergency fallback.
+in-process Lynvo Plugin Servers as an emergency fallback.
 
 ## Cloudflare Builds monorepo setup
 
@@ -258,7 +258,7 @@ Configure each project with the directory that owns its Wrangler configuration:
 | Worker project     | Root directory             | Deploy command |
 | ------------------ | -------------------------- | -------------- |
 | Lynvo              | `/apps/lynvo`              | `pnpm deploy`  |
-| Official extractor | `/apps/official-extractor` | `pnpm deploy`  |
+| Lynvo Plugin Server | `/apps/lynvo-plugin-server` | `pnpm deploy`  |
 
 Keep the Workers as separate build targets even though they share one atomic
 repository. Include `packages/plugin-server-protocol/**`, the root lockfile, and

@@ -30,11 +30,11 @@ _Avoid_: external extractor, external worker, custom extractor
 
 **Lynvo Plugin Server**:
 The Plugin Server managed by Lynvo for its official Plugins.
-_Avoid_: official extractor, official worker
+_Avoid_: Lynvo Plugin Server, official worker
 
 **Lynvo Plugin Server Binding**:
 The private connection from Lynvo to the Lynvo Plugin Server.
-_Avoid_: official extractor binding
+_Avoid_: Lynvo Plugin Server binding
 
 **Plugin Server Protocol**:
 The versioned contract every Plugin Server follows when identifying Plugins, reporting usage, and returning Media Nodes.

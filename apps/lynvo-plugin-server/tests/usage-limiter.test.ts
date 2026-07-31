@@ -4,10 +4,10 @@ import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   USAGE_LIMITER_NAME,
 } from "../src/constants"
-import type { OfficialExtractorUsageLimiter } from "../src/usage-limiter"
+import type { LynvoPluginServerUsageLimiter } from "../src/usage-limiter"
 
 const getStub = (): DurableObjectStub => {
-  const namespace = env.OFFICIAL_EXTRACTOR_USAGE_LIMITER
+  const namespace = env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER
   const id = namespace.idFromName(USAGE_LIMITER_NAME)
   return namespace.get(id)
 }
@@ -24,7 +24,7 @@ const requestAt = (
 
 describe("usage limiter", () => {
   beforeEach(async () => {
-    await runInDurableObject<OfficialExtractorUsageLimiter, void>(
+    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
       getStub(),
       (_instance, state) => {
         state.storage.sql.exec("DELETE FROM usage_counters")
@@ -104,7 +104,7 @@ describe("usage limiter", () => {
     const timestampMs = Date.UTC(2026, 6, 19)
     const periodKey = "2026-07-19"
     const stub = getStub()
-    await runInDurableObject<OfficialExtractorUsageLimiter, void>(
+    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
       stub,
       (_instance, state) => {
         state.storage.sql.exec(

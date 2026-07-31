@@ -85,14 +85,14 @@ const planDetailSections = [
         feature: "Google Drive Public Folders & Files",
         allowance: "Included",
         icon: {
-          url: "/official-extractor-assets/icons/sources/google-drive-public-files.webp",
+          url: "/lynvo-plugin-server-assets/icons/sources/google-drive-public-files.webp",
         },
       },
       {
         feature: "Spencerwooo's OneDrive Vercel Index",
         allowance: "Included",
         icon: {
-          url: "/official-extractor-assets/icons/sources/onedrive-index.webp",
+          url: "/lynvo-plugin-server-assets/icons/sources/onedrive-index.webp",
         },
       },
     ],

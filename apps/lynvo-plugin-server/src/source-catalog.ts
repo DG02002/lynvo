@@ -9,8 +9,8 @@ import {
 } from "@lynvo/plugin-server-protocol"
 import {
   BHADOO_SOURCE_ID,
-  EXTRACTOR_ID,
-  EXTRACTOR_NAME,
+  PLUGIN_SERVER_ID,
+  PLUGIN_SERVER_NAME,
   GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID,
   ONEDRIVE_SOURCE_ID,
   SOURCE_IMPLEMENTATION_VERSION,
@@ -121,8 +121,8 @@ export const createOfficialManifest = (
   publicAssetOrigin?: string
 ): PluginServerManifest => ({
   protocolVersion: "1.0",
-  pluginServerId: EXTRACTOR_ID,
-  displayName: EXTRACTOR_NAME,
+  pluginServerId: PLUGIN_SERVER_ID,
+  displayName: PLUGIN_SERVER_NAME,
   hasIcon: false,
   homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
@@ -186,8 +186,8 @@ export const createSourceResponseMetadata = (
   publicAssetOrigin?: string,
   pageTitle?: string
 ): ExtractSuccessResponse["plugin"] => ({
-  pluginServerId: EXTRACTOR_ID,
-  displayName: EXTRACTOR_NAME,
+  pluginServerId: PLUGIN_SERVER_ID,
+  displayName: PLUGIN_SERVER_NAME,
   pluginId: source.id,
   pluginName: source.displayName,
   ...(publicAssetOrigin && source.iconPath

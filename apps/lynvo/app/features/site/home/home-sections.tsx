@@ -57,10 +57,10 @@ export const ExtractionSection = () => (
 
       <div className="flex flex-col gap-8">
         <div>
-          <p className="text-lg">Official extractor</p>
+          <p className="text-lg">Lynvo Plugin Server</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Use managed sources whose current capabilities are shown in Settings
-            from the official extractor manifest.
+            from the Lynvo Plugin Server manifest.
           </p>
         </div>
         <div>

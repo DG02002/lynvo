@@ -21,7 +21,7 @@ describe("Changelog", () => {
 
     const updates = screen.getByRole("region", { name: "Changelog updates" })
 
-    expect(within(updates).getByText("Official extractor")).toBeVisible()
+    expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
       within(updates).queryByText("Product launch")
     ).not.toBeInTheDocument()
@@ -47,7 +47,7 @@ describe("Changelog", () => {
     )
     expect(within(updates).getByText("Product launch")).toBeVisible()
     expect(
-      within(updates).queryByText("Official extractor")
+      within(updates).queryByText("Lynvo Plugin Server")
     ).not.toBeInTheDocument()
     expect(
       within(updates).queryByText("Platform foundation")
@@ -57,7 +57,7 @@ describe("Changelog", () => {
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
       "?type=extractor"
     )
-    expect(within(updates).getByText("Official extractor")).toBeVisible()
+    expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
       within(updates).queryByText("Product launch")
     ).not.toBeInTheDocument()
@@ -68,13 +68,13 @@ describe("Changelog", () => {
     )
     expect(within(updates).getByText("Platform foundation")).toBeVisible()
     expect(
-      within(updates).queryByText("Official extractor")
+      within(updates).queryByText("Lynvo Plugin Server")
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "All updates" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(within(updates).getByText("Product launch")).toBeVisible()
-    expect(within(updates).getByText("Official extractor")).toBeVisible()
+    expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(within(updates).getByText("Platform foundation")).toBeVisible()
   })
 
@@ -97,7 +97,7 @@ describe("Changelog", () => {
     )
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 3 })
-    expect(sortedHeadings[0]).toHaveTextContent("Official extractor")
+    expect(sortedHeadings[0]).toHaveTextContent("Lynvo Plugin Server")
     expect(sortedHeadings.at(-1)).toHaveTextContent("Platform foundation")
   })
 

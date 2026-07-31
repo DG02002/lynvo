@@ -268,7 +268,7 @@ export const UsageSettings = ({
               description="One monthly allowance shared across all official plugins and direct links, with a separate daily safety limit."
             />
             <UsageSummary
-              label="Official extractor"
+              label="Lynvo Plugin Server"
               total={totalMetrics(officialMetrics)}
               resetsAt={officialResetAt}
             />

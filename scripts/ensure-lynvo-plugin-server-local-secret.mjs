@@ -2,10 +2,10 @@ import { randomBytes } from "node:crypto"
 import { chmod, readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 
-const SECRET_NAME = "OFFICIAL_EXTRACTOR_API_KEY"
+const SECRET_NAME = "LYNVO_PLUGIN_SERVER_API_KEY"
 const secretFiles = [
   resolve("apps/lynvo/.dev.vars"),
-  resolve("apps/official-extractor/.dev.vars"),
+  resolve("apps/lynvo-plugin-server/.dev.vars"),
 ]
 
 const readSecretFile = async (path) => {

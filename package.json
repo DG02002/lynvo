@@ -11,7 +11,7 @@
     "deploy:lynvo": "pnpm --filter @lynvo/app deploy",
     "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
     "sync:repos": "tsx scripts/sync-repos.ts",
-    "secrets:local": "node scripts/ensure-official-extractor-local-secret.mjs"
+    "secrets:local": "node scripts/ensure-lynvo-plugin-server-local-secret.mjs"
   },
   "devDependencies": {
     "oxfmt": "catalog:",

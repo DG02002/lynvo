@@ -140,7 +140,7 @@ export default defineConfig({
       viteEnvironment: { name: "ssr" },
       auxiliaryWorkers: [
         {
-          configPath: "../official-extractor/wrangler.jsonc",
+          configPath: "../lynvo-plugin-server/wrangler.jsonc",
         },
       ],
     }),

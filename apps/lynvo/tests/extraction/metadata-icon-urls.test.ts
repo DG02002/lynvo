@@ -6,15 +6,15 @@ describe("resolveMetadataIconUrls", () => {
     expect(
       resolveMetadataIconUrls(
         {
-          pluginName: "Lynvo Official Extractor",
+          pluginName: "Lynvo Lynvo Plugin Server",
           sourceName: "Google Drive Public Folders & Files",
           sourceIconUrl:
-            "http://localhost:5173/official-extractor-assets/icons/sources/google-drive-public-files.webp",
+            "http://localhost:5173/lynvo-plugin-server-assets/icons/sources/google-drive-public-files.webp",
         },
         "http://192.168.1.3:5173/save"
       ).sourceIconUrl
     ).toBe(
-      "http://192.168.1.3:5173/official-extractor-assets/icons/sources/google-drive-public-files.webp"
+      "http://192.168.1.3:5173/lynvo-plugin-server-assets/icons/sources/google-drive-public-files.webp"
     )
   })
 

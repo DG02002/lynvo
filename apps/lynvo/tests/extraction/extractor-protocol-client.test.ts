@@ -35,7 +35,7 @@ const manifest = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("ExtractorProtocolClient", () => {
-  it("allows the Official Extractor to finish its bounded retry budget", () => {
+  it("allows the Lynvo Plugin Server to finish its bounded retry budget", () => {
     expect(EXTRACTOR_REQUEST_TIMEOUT_MS).toBeGreaterThan(45_000)
   })
 

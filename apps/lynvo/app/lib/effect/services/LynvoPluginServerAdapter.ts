@@ -6,7 +6,7 @@ import {
   type HttpBasicAuth,
 } from "@lynvo/plugin-server-protocol"
 import { Effect } from "effect"
-import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
+import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import {
   ExtractorProtocolClient,
   ExtractorProtocolClientError,
@@ -30,24 +30,24 @@ const officialError = (cause: unknown, url: string) =>
 
 const createOfficialClient = (environment: Env) =>
   new ExtractorProtocolClient(
-    new ServiceBindingExtractorTransport(environment.OFFICIAL_EXTRACTOR)
+    new ServiceBindingExtractorTransport(environment.LYNVO_PLUGIN_SERVER)
   )
 
 export const getOfficialManifest = Effect.fn(
-  "OfficialExtractorAdapter.getOfficialManifest"
+  "LynvoPluginServerAdapter.getOfficialManifest"
 )(function* (environment: Env, requestId?: string) {
   return yield* Effect.tryPromise({
     try: () =>
       createOfficialClient(environment).getManifest({
-        apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY,
+        apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         requestId,
       }),
-    catch: (cause) => officialError(cause, "official extractor"),
+    catch: (cause) => officialError(cause, "Lynvo Plugin Server"),
   })
 })
 
 export const discoverOfficialSource = Effect.fn(
-  "OfficialExtractorAdapter.discoverOfficialSource"
+  "LynvoPluginServerAdapter.discoverOfficialSource"
 )(function* (
   environment: Env,
   targetUrl: string,
@@ -57,7 +57,7 @@ export const discoverOfficialSource = Effect.fn(
   return yield* Effect.tryPromise({
     try: () =>
       createOfficialClient(environment).discover(targetUrl, {
-        apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY,
+        apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         basicAuth,
         requestId,
       }),
@@ -74,7 +74,7 @@ export const getOfficialMetadata = (
   return source
     ? getExtractorMetadata(
         manifest,
-        OFFICIAL_EXTRACTOR_ID,
+        LYNVO_PLUGIN_SERVER_ID,
         targetUrl,
         source.id
       )
@@ -97,7 +97,7 @@ export const findOfficialManifestSource = (
 }
 
 export const extractFromOfficial = Effect.fn(
-  "OfficialExtractorAdapter.extractFromOfficial"
+  "LynvoPluginServerAdapter.extractFromOfficial"
 )(function* (
   environment: Env,
   targetUrl: string,
@@ -111,7 +111,7 @@ export const extractFromOfficial = Effect.fn(
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const client = createOfficialClient(environment)
   const options = {
-    apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY,
+    apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
     requestId,
     ...credentials,
   }
@@ -122,5 +122,5 @@ export const extractFromOfficial = Effect.fn(
         : client.extractSource(targetUrl, options),
     catch: (cause) => officialError(cause, targetUrl),
   })
-  return mapExtractorResult(result, OFFICIAL_EXTRACTOR_ID)
+  return mapExtractorResult(result, LYNVO_PLUGIN_SERVER_ID)
 })

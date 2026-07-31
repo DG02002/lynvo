@@ -50,7 +50,7 @@ const changelogEntries: ChangelogEntry[] = [
     type: "extractor",
     date: "Jul 19, 2026",
     dateTime: "2026-07-19",
-    title: "Official extractor",
+    title: "Lynvo Plugin Server",
     category: "Extractor",
     description:
       "Moved supported sources to Lynvo's managed extractor, with Bhadoo Google Drive and OneDrive index support, source discovery, and per-source usage limits.",

@@ -50,7 +50,7 @@ import {
   externalWorkerSchema,
   type ExternalWorkerFormValues,
 } from "./plugin-settings-schemas"
-import { OFFICIAL_EXTRACTOR_ID } from "~/lib/constants"
+import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 
 export interface PluginDomain {
   _id: string
@@ -82,7 +82,7 @@ export function PluginsSettings({
   const domains = (
     (useQuery(api.pluginDomains.list, {}) as PluginDomain[] | undefined) ??
     EMPTY_DOMAINS
-  ).filter((domain) => domain.workerId === OFFICIAL_EXTRACTOR_ID)
+  ).filter((domain) => domain.workerId === LYNVO_PLUGIN_SERVER_ID)
   const [domainInputs, setDomainInputs] = React.useState<
     Record<string, string>
   >({})
@@ -178,7 +178,7 @@ export function PluginsSettings({
           {officialPlugins === null && (
             <SettingsRow>
               <p className="text-sm text-muted-foreground">
-                Official extractor metadata is currently unavailable.
+                Lynvo Plugin Server metadata is currently unavailable.
               </p>
             </SettingsRow>
           )}

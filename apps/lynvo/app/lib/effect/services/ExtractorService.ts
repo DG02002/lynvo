@@ -28,8 +28,8 @@ import {
   findOfficialManifestSource,
   getOfficialManifest,
   getOfficialMetadata,
-} from "./OfficialExtractorAdapter"
-import { OFFICIAL_EXTRACTOR_ID } from "../../constants"
+} from "./LynvoPluginServerAdapter"
+import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
@@ -193,7 +193,7 @@ export class ExtractorService extends Context.Service<
               options.requestId
             )
           }
-          if (options.workerId && options.workerId !== OFFICIAL_EXTRACTOR_ID) {
+          if (options.workerId && options.workerId !== LYNVO_PLUGIN_SERVER_ID) {
             return yield* new ValidationError({
               message: "The saved extractor worker is unavailable.",
             })
@@ -212,7 +212,7 @@ export class ExtractorService extends Context.Service<
               api.pluginDomains.getByDomain,
               {
                 domain: getHostname(targetUrl),
-                workerId: OFFICIAL_EXTRACTOR_ID,
+                workerId: LYNVO_PLUGIN_SERVER_ID,
               },
               { accessToken: options.accessToken }
             )
@@ -255,7 +255,7 @@ export class ExtractorService extends Context.Service<
               )
             }
           }
-          if (options.workerId === OFFICIAL_EXTRACTOR_ID && !source) {
+          if (options.workerId === LYNVO_PLUGIN_SERVER_ID && !source) {
             return yield* new ValidationError({
               message: "The saved extractor worker is unavailable.",
             })
@@ -273,7 +273,7 @@ export class ExtractorService extends Context.Service<
                   api.pluginDomains.getCredentialByDomainForService,
                   {
                     domain,
-                    workerId: OFFICIAL_EXTRACTOR_ID,
+                    workerId: LYNVO_PLUGIN_SERVER_ID,
                     serviceToken,
                   },
                   { accessToken: options.accessToken }
@@ -291,7 +291,7 @@ export class ExtractorService extends Context.Service<
                 const credential = yield* credentialVault
                   .decrypt(encryptedCredential, {
                     userId: options.userId,
-                    workerId: OFFICIAL_EXTRACTOR_ID,
+                    workerId: LYNVO_PLUGIN_SERVER_ID,
                     pluginId: source.id,
                     domain,
                   })
@@ -390,7 +390,7 @@ export class ExtractorService extends Context.Service<
               api.pluginDomains.getByDomain,
               {
                 domain: getHostname(extractedAuth.url),
-                workerId: OFFICIAL_EXTRACTOR_ID,
+                workerId: LYNVO_PLUGIN_SERVER_ID,
               },
               { accessToken: options.accessToken }
             )

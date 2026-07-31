@@ -5,7 +5,7 @@ const lynvoConfigPath = process.argv[2]
   : new URL("../wrangler.jsonc", import.meta.url)
 const officialConfigPath = process.argv[3]
   ? new URL(`file://${process.argv[3]}`)
-  : new URL("../../official-extractor/wrangler.jsonc", import.meta.url)
+  : new URL("../../lynvo-plugin-server/wrangler.jsonc", import.meta.url)
 
 const [lynvoConfig, officialConfig] = await Promise.all([
   readFile(lynvoConfigPath, "utf8"),
@@ -20,21 +20,21 @@ const requiredLynvoFragments = [
   '"name": "WORKER_AUTH_SESSION"',
   '"name": "EXTERNAL_WORKER_CREDENTIAL_VAULT"',
   '"name": "USER_REALTIME_ROOM"',
-  '"binding": "OFFICIAL_EXTRACTOR"',
-  '"service": "lynvo-official-extractor"',
+  '"binding": "LYNVO_PLUGIN_SERVER"',
+  '"service": "lynvo-plugin-server"',
   '"VITE_CONVEX_URL"',
   '"AUTH_GATEWAY_SECRET"',
   '"AUTH_SESSION_MASTER_KEY"',
   '"TURNSTILE_SECRET_KEY"',
   '"PLUGIN_CREDENTIAL_MASTER_KEY"',
-  '"OFFICIAL_EXTRACTOR_API_KEY"',
+  '"LYNVO_PLUGIN_SERVER_API_KEY"',
 ]
 const requiredOfficialFragments = [
-  '"name": "lynvo-official-extractor"',
+  '"name": "lynvo-plugin-server"',
   '"workers_dev": false',
-  '"name": "OFFICIAL_EXTRACTOR_USAGE_LIMITER"',
-  '"PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/official-extractor-assets"',
-  '"OFFICIAL_EXTRACTOR_API_KEY"',
+  '"name": "LYNVO_PLUGIN_SERVER_USAGE_LIMITER"',
+  '"PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets"',
+  '"LYNVO_PLUGIN_SERVER_API_KEY"',
 ]
 
 const hasMissingFragment = (config, requiredFragments) =>

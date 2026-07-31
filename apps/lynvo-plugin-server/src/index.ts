@@ -14,21 +14,21 @@ import {
   extractFromOfficialSource,
 } from "./source-catalog"
 import {
-  OfficialExtractorUsageLimiter,
+  LynvoPluginServerUsageLimiter,
   readUsage,
   reserveUsage,
   settleUsage,
 } from "./usage-limiter"
 
 initLogger({
-  env: { service: "lynvo-official-extractor" },
+  env: { service: "lynvo-plugin-server" },
 })
 
-const runtime = createPluginServerRuntime<OfficialExtractorBindings>({
+const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   manifest: ({ env }) => createOfficialManifest(env.PUBLIC_ASSET_ORIGIN),
   auth: {
     validate: ({ request, env }) => {
-      const apiKey = env.OFFICIAL_EXTRACTOR_API_KEY
+      const apiKey = env.LYNVO_PLUGIN_SERVER_API_KEY
       return apiKey ? validateBearerCredential(request, apiKey) : false
     },
   },
@@ -40,7 +40,7 @@ const runtime = createPluginServerRuntime<OfficialExtractorBindings>({
       throw createError({
         message: "RATE_LIMITED",
         status: 429,
-        why: "The extractor has no remaining capacity for this period.",
+        why: "The Plugin Server has no remaining capacity for this period.",
         fix: "Retry after the usage window resets.",
       })
     }
@@ -61,11 +61,11 @@ const runtime = createPluginServerRuntime<OfficialExtractorBindings>({
   onError: () => {},
 })
 
-interface OfficialExtractorEnvironment extends EvlogVariables {
-  Bindings: OfficialExtractorBindings
+interface LynvoPluginServerEnvironment extends EvlogVariables {
+  Bindings: LynvoPluginServerBindings
 }
 
-const app = new Hono<OfficialExtractorEnvironment>()
+const app = new Hono<LynvoPluginServerEnvironment>()
 
 app.use("*", evlog())
 
@@ -136,5 +136,5 @@ app.notFound(() =>
   )
 )
 
-export { OfficialExtractorUsageLimiter }
+export { LynvoPluginServerUsageLimiter }
 export default app

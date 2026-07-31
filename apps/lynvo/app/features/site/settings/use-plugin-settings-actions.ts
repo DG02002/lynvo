@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import type { ExternalWorkerFormValues } from "./plugin-settings-schemas"
-import { OFFICIAL_EXTRACTOR_ID } from "~/lib/constants"
+import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 
 interface MutationResult {
   success: boolean
@@ -185,7 +185,7 @@ export const usePluginSettingsActions = ({
         client.pluginDomains.create({
           payload: {
             domain,
-            workerId: OFFICIAL_EXTRACTOR_ID,
+            workerId: LYNVO_PLUGIN_SERVER_ID,
             pluginId,
             username: usernameInputs[pluginId] || undefined,
             password: passwordInputs[pluginId] || undefined,

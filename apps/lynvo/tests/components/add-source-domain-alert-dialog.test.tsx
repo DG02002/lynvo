@@ -16,7 +16,7 @@ describe("AddSourceDomainAlertDialog", () => {
           sanitizedUrl: "https://index.example.com/0:/Movies/",
           username: "source-user",
           password: "source-secret",
-          workerId: "official-extractor",
+          workerId: "lynvo-plugin-server",
         }}
         isAdding={false}
         onAdd={onAdd}

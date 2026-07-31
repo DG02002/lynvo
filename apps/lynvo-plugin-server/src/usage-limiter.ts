@@ -29,7 +29,7 @@ const nextResetAt = (timestampMs: number): string => {
   ).toISOString()
 }
 
-export class OfficialExtractorUsageLimiter {
+export class LynvoPluginServerUsageLimiter {
   private readonly state: DurableObjectState
 
   constructor(state: DurableObjectState) {
@@ -98,8 +98,8 @@ export class OfficialExtractorUsageLimiter {
       const usage: UsageResponse = {
         metrics: [
           {
-            id: "official-extractor-operations",
-            label: "Official extractor operations",
+            id: "lynvo-plugin-server-operations",
+            label: "Lynvo Plugin Server operations",
             used: this.getUsed(periodKey),
             limit: GLOBAL_DAILY_OPERATION_LIMIT,
             unit: "operations",
@@ -115,9 +115,9 @@ export class OfficialExtractorUsageLimiter {
 }
 
 const getUsageLimiterStub = (
-  env: OfficialExtractorBindings
+  env: LynvoPluginServerBindings
 ): DurableObjectStub => {
-  const namespace = env.OFFICIAL_EXTRACTOR_USAGE_LIMITER
+  const namespace = env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER
   if (!namespace) {
     throw new Error("Usage limiter binding is unavailable.")
   }
@@ -126,7 +126,7 @@ const getUsageLimiterStub = (
 }
 
 export const reserveUsage = async (
-  env: OfficialExtractorBindings
+  env: LynvoPluginServerBindings
 ): Promise<UsageReservationResult> => {
   const response = await getUsageLimiterStub(env).fetch(
     "https://usage.internal/reserve",
@@ -137,7 +137,7 @@ export const reserveUsage = async (
 }
 
 export const settleUsage = async (
-  env: OfficialExtractorBindings,
+  env: LynvoPluginServerBindings,
   succeeded: boolean,
   periodKey: string
 ): Promise<void> => {
@@ -149,7 +149,7 @@ export const settleUsage = async (
 }
 
 export const readUsage = async (
-  env: OfficialExtractorBindings
+  env: LynvoPluginServerBindings
 ): Promise<UsageResponse> => {
   const response = await getUsageLimiterStub(env).fetch(
     "https://usage.internal/usage"

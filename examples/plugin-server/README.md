@@ -4,9 +4,9 @@ This is the minimal tested implementation of a Lynvo-compatible extractor. It
 is intentionally independent of the official OneDrive and Bhadoo source code.
 
 ```sh
-pnpm --filter @lynvo/example-extractor-worker check
-pnpm --filter @lynvo/example-extractor-worker test
-pnpm --filter @lynvo/example-extractor-worker build
+pnpm --filter @lynvo/example-plugin-server check
+pnpm --filter @lynvo/example-plugin-server test
+pnpm --filter @lynvo/example-plugin-server build
 ```
 
 Read the package-owned documentation before adapting the example:

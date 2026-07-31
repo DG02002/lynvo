@@ -1,0 +1,46 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "lynvo-plugin-server",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-07-19",
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  "vars": {
+    "PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
+  },
+  "secrets": {
+    "required": ["LYNVO_PLUGIN_SERVER_API_KEY"],
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LYNVO_PLUGIN_SERVER_USAGE_LIMITER",
+        "class_name": "LynvoPluginServerUsageLimiter",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LynvoPluginServerUsageLimiter"],
+    },
+  ],
+  "env": {
+    "local": {
+      "vars": {
+        "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/lynvo-plugin-server-assets",
+      },
+      "secrets": {
+        "required": ["LYNVO_PLUGIN_SERVER_API_KEY"],
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "LYNVO_PLUGIN_SERVER_USAGE_LIMITER",
+            "class_name": "LynvoPluginServerUsageLimiter",
+          },
+        ],
+      },
+    },
+  },
+}

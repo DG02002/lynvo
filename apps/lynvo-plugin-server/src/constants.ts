@@ -1,5 +1,5 @@
-export const EXTRACTOR_ID = "dev.lynvo.official-extractor"
-export const EXTRACTOR_NAME = "Lynvo Official Extractor"
+export const PLUGIN_SERVER_ID = "dev.lynvo.plugin-server"
+export const PLUGIN_SERVER_NAME = "Lynvo Plugin Server"
 export const BHADOO_SOURCE_ID = "bhadoo-google-drive-index"
 export const GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID = "google-drive-public-files"
 export const ONEDRIVE_SOURCE_ID = "onedrive-index"

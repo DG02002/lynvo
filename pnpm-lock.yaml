@@ -244,7 +244,7 @@ importers:
         specifier: 'catalog:'
         version: 4.116.0(@cloudflare/workers-types@5.20260731.1)
 
-  apps/official-extractor:
+  apps/lynvo-plugin-server:
     dependencies:
       '@lynvo/plugin-server-protocol':
         specifier: workspace:*
@@ -287,7 +287,7 @@ importers:
         specifier: 'catalog:'
         version: 4.116.0(@cloudflare/workers-types@5.20260731.1)
 
-  examples/extractor-worker:
+  examples/plugin-server:
     dependencies:
       '@lynvo/plugin-server-protocol':
         specifier: workspace:*

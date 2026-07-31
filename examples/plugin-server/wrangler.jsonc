@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "lynvo-example-extractor",
+  "name": "lynvo-example-plugin-server",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-19",
   "workers_dev": false

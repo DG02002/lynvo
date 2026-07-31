@@ -29,8 +29,8 @@ export const loadOfficialPlugins = async (
 ): Promise<OfficialPlugin[] | null> => {
   try {
     const manifest = await new ExtractorProtocolClient(
-      new ServiceBindingExtractorTransport(environment.OFFICIAL_EXTRACTOR)
-    ).getManifest({ apiKey: environment.OFFICIAL_EXTRACTOR_API_KEY })
+      new ServiceBindingExtractorTransport(environment.LYNVO_PLUGIN_SERVER)
+    ).getManifest({ apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY })
     return (getLynvoManifestExtension(manifest).plugins ?? []).map(
       (source) => ({
         id: source.id,
@@ -42,7 +42,7 @@ export const loadOfficialPlugins = async (
         icon: source.iconUrl
           ? { url: resolveOfficialPluginIconUrl(source.iconUrl, requestUrl) }
           : {},
-        description: source.description ?? "Official extractor source.",
+        description: source.description ?? "Lynvo Plugin Server source.",
         supportsDomains: Boolean(source.credential),
         domainRequired:
           source.credential?.kind === "http-basic"
@@ -59,7 +59,7 @@ export const loadOfficialPlugins = async (
     )
   } catch (error) {
     console.error({
-      event: "official_extractor_manifest_load_failed",
+      event: "lynvo_plugin_server_manifest_load_failed",
       error,
     })
     return null

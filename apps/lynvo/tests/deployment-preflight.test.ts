@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest"
 const scriptPath = resolve("scripts/deployment-preflight.mjs")
 const lynvoConfig = readFileSync(resolve("wrangler.jsonc"), "utf8")
 const officialConfig = readFileSync(
-  resolve("../official-extractor/wrangler.jsonc"),
+  resolve("../lynvo-plugin-server/wrangler.jsonc"),
   "utf8"
 )
 
@@ -34,10 +34,10 @@ describe("deployment preflight command", () => {
     ["missing session binding", lynvoConfig.replace('"name": "WORKER_AUTH_SESSION"', '"name": "MISSING_SESSION"'), officialConfig],
     ["missing credential vault binding", lynvoConfig.replace('"name": "EXTERNAL_WORKER_CREDENTIAL_VAULT"', '"name": "MISSING_CREDENTIAL_VAULT"'), officialConfig],
     ["missing session key declaration", lynvoConfig.replace('"AUTH_SESSION_MASTER_KEY",', ""), officialConfig],
-    ["wrong service", lynvoConfig.replace('"service": "lynvo-official-extractor"', '"service": "wrong-extractor"'), officialConfig],
+    ["wrong service", lynvoConfig.replace('"service": "lynvo-plugin-server"', '"service": "wrong-extractor"'), officialConfig],
     ["public extractor", lynvoConfig, officialConfig.replace('"workers_dev": false', '"workers_dev": true')],
-    ["wrong origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/official-extractor-assets", "https://wrong.example/assets")],
-    ["empty origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/official-extractor-assets", "")],
+    ["wrong origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets", "https://wrong.example/assets")],
+    ["empty origin", lynvoConfig, officialConfig.replace("https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets", "")],
   ])("rejects %s configuration", (_name, lynvo, official) => {
     const result = runPreflight(lynvo, official)
     expect(result.status).not.toBe(0)

@@ -1,5 +1,5 @@
 {
-  "name": "@lynvo/example-extractor-worker",
+  "name": "@lynvo/example-plugin-server",
   "private": true,
   "type": "module",
   "scripts": {
