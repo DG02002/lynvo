@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 import {
-  getLegacySettingsPath,
   getSettingsPath,
   parseSettingsRoute,
 } from "~/features/site/settings/settings-route"
@@ -34,13 +33,5 @@ describe("settings routes", () => {
     expect(getSettingsPath("security", "active-sessions")).toBe(
       "/settings/security/active-sessions"
     )
-  })
-
-  it("migrates legacy hash URLs to canonical paths", () => {
-    expect(getLegacySettingsPath("#plugins")).toBe("/settings/plugins")
-    expect(getLegacySettingsPath("#security/active-sessions")).toBe(
-      "/settings/security/active-sessions"
-    )
-    expect(getLegacySettingsPath("")).toBeNull()
   })
 })

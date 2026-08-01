@@ -9,35 +9,20 @@ describe("getPluginServerManifestView", () => {
         protocolVersion: "1.0",
         pluginServerId: "dev.example.plugin-server",
         displayName: "Example Plugin Server",
-        iconUrl: "https://plugin-server.example/icon.svg",
+        iconUrl: "https://plugin-server.example/icon.webp",
         auth: { type: "bearer" },
+        usage: { endpoint: "/usage" },
         matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
         features: { password: true, lazyNodes: true },
-        extensions: {},
-      })
-    )
-
-    expect(view.name).toBe("Example Plugin Server")
-    expect(view.icon).toBe("https://plugin-server.example/icon.svg")
-    expect(view.hosts).toBe("example.com")
-  })
-
-  it("keeps structurally valid legacy manifests visible for display", () => {
-    const view = getPluginServerManifestView(
-      JSON.stringify({
-        protocolVersion: "1.0",
-        pluginServerId: "dev.example.legacy-plugin-server",
-        displayName: "Legacy Plugin Server",
-        auth: { type: "bearer" },
-        matchers: [{ hosts: ["legacy.example"] }],
-        features: {},
         extensions: {
           lynvo: {
             plugins: [
               {
-                id: "legacy-source",
-                displayName: "Legacy Source",
-                hosts: ["legacy.example"],
+                id: "example-source",
+                displayName: "Example Source",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["example.com"],
               },
             ],
           },
@@ -45,10 +30,39 @@ describe("getPluginServerManifestView", () => {
       })
     )
 
-    expect(view).toMatchObject({
-      name: "Legacy Plugin Server",
-      hosts: "legacy.example",
-      plugins: [{ id: "legacy-source", displayName: "Legacy Source" }],
+    expect(view.name).toBe("Example Plugin Server")
+    expect(view.icon).toBe("https://plugin-server.example/icon.webp")
+    expect(view.hosts).toBe("example.com")
+  })
+
+  it("does not display manifests that fail the current contract", () => {
+    const view = getPluginServerManifestView(
+      JSON.stringify({
+        protocolVersion: "1.0",
+        pluginServerId: "dev.example.incomplete-plugin-server",
+        displayName: "Incomplete Plugin Server",
+        auth: { type: "bearer" },
+        matchers: [{ hosts: ["incomplete.example"] }],
+        features: {},
+        extensions: {
+          lynvo: {
+            plugins: [
+              {
+                id: "incomplete-source",
+                displayName: "Incomplete Source",
+                hosts: ["incomplete.example"],
+              },
+            ],
+          },
+        },
+      })
+    )
+
+    expect(view).toEqual({
+      name: "Unknown",
+      icon: null,
+      hosts: "None",
+      plugins: [],
     })
   })
 
@@ -59,6 +73,7 @@ describe("getPluginServerManifestView", () => {
         pluginServerId: "dev.example.plugin-server",
         displayName: "Example Plugin Server",
         auth: { type: "bearer" },
+        usage: { endpoint: "/usage" },
         matchers: [{ hosts: ["resolver-beta.example"], pathPatterns: ["/**"] }],
         features: { password: true, lazyNodes: true },
         extensions: {
@@ -67,7 +82,7 @@ describe("getPluginServerManifestView", () => {
               {
                 id: "resolver-beta",
                 displayName: "Resolver Beta",
-                iconUrl: "https://icons.example/resolver-beta.svg",
+                iconUrl: "https://icons.example/resolver-beta.webp",
                 status: "maintenance",
                 version: "1.2.3",
                 hosts: ["resolver-beta.example"],
@@ -82,7 +97,7 @@ describe("getPluginServerManifestView", () => {
       {
         id: "resolver-beta",
         displayName: "Resolver Beta",
-        iconUrl: "https://icons.example/resolver-beta.svg",
+        iconUrl: "https://icons.example/resolver-beta.webp",
         status: "maintenance",
         version: "1.2.3",
         hosts: ["resolver-beta.example"],
@@ -137,6 +152,7 @@ describe("getPluginServerManifestView", () => {
         pluginServerId: "dev.example.plugin-server",
         displayName: "Example Plugin Server",
         auth: { type: "bearer" },
+        usage: { endpoint: "/usage" },
         matchers: [{ hosts: ["example.com"] }],
         features: {},
         extensions: {
@@ -145,9 +161,19 @@ describe("getPluginServerManifestView", () => {
               {
                 id: "first-source",
                 displayName: "First source",
-                iconUrl: "http://localhost:8788/icons/sources/first-source.png",
+                iconUrl:
+                  "http://localhost:8788/icons/sources/first-source.webp",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["example.com"],
               },
-              { id: "second-source", displayName: "Second source" },
+              {
+                id: "second-source",
+                displayName: "Second source",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["example.com"],
+              },
             ],
           },
         },
@@ -167,6 +193,7 @@ describe("getPluginServerManifestView", () => {
         pluginServerId: "dev.example.custom-plugin-server",
         displayName: "Example Custom Plugin Server",
         auth: { type: "bearer" },
+        usage: { endpoint: "/usage" },
         matchers: [{ hosts: ["example.com"] }],
         features: {},
         extensions: {
@@ -176,6 +203,9 @@ describe("getPluginServerManifestView", () => {
                 id: "hubcloud",
                 displayName: "HubCloud",
                 iconUrl: "http://localhost:8788/icons/sources/hubcloud.webp",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["example.com"],
               },
             ],
           },

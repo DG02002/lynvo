@@ -33,9 +33,9 @@ describe("browser storage boundaries", () => {
     })
   })
 
-  it("drops malformed saved links while preserving valid cache entries", () => {
+  it("drops saved links that do not use the current cache shape", () => {
     localStorage.setItem(
-      "sl2jp:recents:sync:v1:user-1",
+      "lynvo:recents:sync:v1:user-1",
       JSON.stringify({
         version: 2,
         etag: "etag",
@@ -53,15 +53,29 @@ describe("browser storage boundaries", () => {
     expect(readLinksCache("user-1")).toMatchObject({
       version: 2,
       etag: "etag",
-      results: [{ id: "link-1", url: "https://example.com" }],
+      results: [],
     })
   })
 
   it("drops malformed local recent entries", () => {
     localStorage.setItem(
-      "sl2jp:recents:v1",
+      "lynvo:recents:v1",
       JSON.stringify([
-        { url: "https://example.com", timestamp: 10 },
+        {
+          url: "https://example.com",
+          timestamp: 10,
+          metadata: {
+            schemaVersion: 3,
+            source: {},
+            extraction: { extractedLinks: [] },
+            playback: { watchedUrls: [], watchedIds: [] },
+          },
+        },
+        {
+          url: "https://legacy.example",
+          timestamp: 11,
+          meta: { title: "Old metadata shape" },
+        },
         { url: 42, timestamp: "invalid" },
       ])
     )
@@ -70,9 +84,40 @@ describe("browser storage boundaries", () => {
       {
         url: "https://example.com",
         timestamp: 10,
+        metadata: {
+          schemaVersion: 3,
+          source: {},
+          extraction: { extractedLinks: [] },
+          playback: { watchedUrls: [], watchedIds: [] },
+        },
         extractedLinks: undefined,
       },
     ])
+  })
+
+  it("does not read recent links from the historical storage namespaces", () => {
+    localStorage.setItem(
+      "sl2jp:recents:sync:v1:user-1",
+      JSON.stringify({ results: [], version: 2, etag: "etag" })
+    )
+    localStorage.setItem(
+      "sl2jp:recents:v1",
+      JSON.stringify([
+        {
+          url: "https://example.com",
+          timestamp: 10,
+          metadata: {
+            schemaVersion: 3,
+            source: {},
+            extraction: { extractedLinks: [] },
+            playback: { watchedUrls: [], watchedIds: [] },
+          },
+        },
+      ])
+    )
+
+    expect(readLinksCache("user-1")).toBeUndefined()
+    expect(readLocalRecents()).toEqual([])
   })
 })
 

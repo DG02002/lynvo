@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { ExtractedLink, MetaData } from "./types"
+import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
 
 export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
   z.object({
@@ -61,32 +61,40 @@ export const draftsSchema = z.record(z.string(), draftSchema)
 
 export type StoredDraft = z.infer<typeof draftSchema>
 
+const linkMetadataSchema: z.ZodType<LinkMetadata> = z.object({
+  schemaVersion: z.literal(3),
+  source: z.record(z.string(), z.unknown()),
+  extraction: z.object({
+    extractedLinks: z.array(extractedLinkSchema),
+    extractedAt: z.number().optional(),
+  }),
+  playback: z.object({
+    watchedUrls: z.array(z.string()),
+    watchedIds: z.array(z.string()),
+    resolvedMirrors: z
+      .record(z.string(), z.array(extractedLinkSchema))
+      .optional(),
+    newPlayableItemUrls: z.array(z.string()).optional(),
+  }),
+})
+
 export const linksCacheEnvelopeSchema = z.object({
   results: z.array(z.unknown()),
   version: z.number().optional().default(0),
   etag: z.string().optional().default(""),
 })
 
-export const storedSavedLinkSchema = z.union([
-  z.looseObject({
-    id: z.string(),
-    url: z.string().min(1),
-    createdAt: z.number(),
-    updatedAt: z.number(),
-    metadata: z.unknown(),
-    title: z.string().optional(),
-  }),
-  z.looseObject({
-    id: z.string(),
-    url: z.string().min(1),
-    created_at: z.number(),
-    updated_at: z.number().optional(),
-    title: z.string().optional(),
-    meta: z.unknown().optional(),
-  }),
-])
+export const storedSavedLinkSchema = z.strictObject({
+  id: z.string(),
+  url: z.string().min(1),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  metadata: linkMetadataSchema,
+  title: z.string().optional(),
+})
 
 export const storedRecentLinkSchema = z.looseObject({
   url: z.string().min(1),
   timestamp: z.number(),
+  metadata: linkMetadataSchema,
 })

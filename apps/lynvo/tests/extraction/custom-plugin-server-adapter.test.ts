@@ -26,23 +26,17 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-interface LegacyManifestOptions {
-  includeUsage: boolean
-  includePluginStatus: boolean
-  includePluginVersion: boolean
-}
+const incompleteManifestFields = ["usage", "status", "version"] as const
 
-const createLegacyStoredManifest = ({
-  includeUsage,
-  includePluginStatus,
-  includePluginVersion,
-}: LegacyManifestOptions): string =>
+const createIncompleteStoredManifest = (
+  missingField: (typeof incompleteManifestFields)[number]
+): string =>
   JSON.stringify({
     protocolVersion: "1.0",
     pluginServerId: "dev.example.plugin-server",
     displayName: "Example Plugin Server",
     auth: { type: "bearer" },
-    ...(includeUsage ? { usage: { endpoint: "/usage" } } : {}),
+    ...(missingField === "usage" ? {} : { usage: { endpoint: "/usage" } }),
     matchers: [{ hosts: ["source.example"] }],
     features: {},
     extensions: {
@@ -51,41 +45,14 @@ const createLegacyStoredManifest = ({
           {
             id: "example-source",
             displayName: "Example Source",
-            ...(includePluginStatus ? { status: "active" } : {}),
-            ...(includePluginVersion ? { version: "1.0.0" } : {}),
+            ...(missingField === "status" ? {} : { status: "active" }),
+            ...(missingField === "version" ? {} : { version: "1.0.0" }),
             hosts: ["source.example"],
           },
         ],
       },
     },
   })
-
-const legacyManifestCases: Array<[string, LegacyManifestOptions]> = [
-  [
-    "usage",
-    {
-      includeUsage: false,
-      includePluginStatus: true,
-      includePluginVersion: true,
-    },
-  ],
-  [
-    "Plugin status",
-    {
-      includeUsage: true,
-      includePluginStatus: false,
-      includePluginVersion: true,
-    },
-  ],
-  [
-    "Plugin version",
-    {
-      includeUsage: true,
-      includePluginStatus: true,
-      includePluginVersion: false,
-    },
-  ],
-]
 
 describe("extractFromCustomPluginServer", () => {
   it("forwards structured Basic Auth only to plugin servers that declare support", async () => {
@@ -342,11 +309,7 @@ describe("selectCustomPluginServer", () => {
       _id: "pluginServer-one",
       baseUrl: "https://plugin-server.example",
       apiKey: "secret",
-      manifest: createLegacyStoredManifest({
-        includeUsage: false,
-        includePluginStatus: false,
-        includePluginVersion: false,
-      }),
+      manifest: createIncompleteStoredManifest("usage"),
       enabled: true,
       priority: 0,
       verificationStatus: "down",
@@ -367,14 +330,14 @@ describe("selectCustomPluginServer", () => {
     expect(selectedById).toBeUndefined()
   })
 
-  it.each(legacyManifestCases)(
-    "routes through a verified stored manifest when %s is missing",
-    async (_missingField, manifestOptions) => {
+  it.each(incompleteManifestFields)(
+    "does not route through a verified stored manifest when %s is missing",
+    async (missingField) => {
       const pluginServer = {
         _id: "pluginServer-one",
         baseUrl: "https://plugin-server.example",
         apiKey: "secret",
-        manifest: createLegacyStoredManifest(manifestOptions),
+        manifest: createIncompleteStoredManifest(missingField),
         enabled: true,
         priority: 0,
         verificationStatus: "verified",
@@ -384,7 +347,7 @@ describe("selectCustomPluginServer", () => {
         selectCustomPluginServer([pluginServer], "https://source.example/title")
       )
 
-      expect(selected?._id).toBe("pluginServer-one")
+      expect(selected).toBeUndefined()
     }
   )
 

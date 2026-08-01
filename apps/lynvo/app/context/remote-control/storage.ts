@@ -1,35 +1,12 @@
-import {
-  LEGACY_REMOTE_DEVICE_NAME_KEY,
-  LEGACY_REMOTE_SESSION_ID_KEY,
-  REMOTE_DEVICE_NAME_KEY,
-  REMOTE_SESSION_ID_KEY,
-} from "./constants"
-
-const migrateStoredValue = (currentKey: string, legacyKey: string) => {
-  const currentValue = localStorage.getItem(currentKey)
-  if (currentValue) {
-    return currentValue
-  }
-  const legacyValue = localStorage.getItem(legacyKey)
-  if (legacyValue) {
-    localStorage.setItem(currentKey, legacyValue)
-  }
-  return legacyValue
-}
+import { REMOTE_DEVICE_NAME_KEY, REMOTE_SESSION_ID_KEY } from "./constants"
 
 export const remoteControlPersistence: RemoteControlPersistence = {
   load: () => {
     if (typeof window === "undefined") {
       return { sessionId: null, deviceName: null }
     }
-    const sessionId = migrateStoredValue(
-      REMOTE_SESSION_ID_KEY,
-      LEGACY_REMOTE_SESSION_ID_KEY
-    )
-    const deviceName = migrateStoredValue(
-      REMOTE_DEVICE_NAME_KEY,
-      LEGACY_REMOTE_DEVICE_NAME_KEY
-    )
+    const sessionId = localStorage.getItem(REMOTE_SESSION_ID_KEY)
+    const deviceName = localStorage.getItem(REMOTE_DEVICE_NAME_KEY)
     if (!sessionId || !deviceName) {
       localStorage.removeItem(REMOTE_SESSION_ID_KEY)
       localStorage.removeItem(REMOTE_DEVICE_NAME_KEY)

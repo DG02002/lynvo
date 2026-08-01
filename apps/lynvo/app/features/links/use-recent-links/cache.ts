@@ -1,10 +1,9 @@
 import type { RecentLinkViewItem } from "~/features/links/types"
+import { z } from "zod"
 import { RECENT_LINKS_MAX_COUNT } from "../../../../convex/constants"
 import {
   toRecentLinkViewItem,
-  toSavedLinkDTO,
   createLinkMetadata,
-  normalizeLinkMetadata,
   toFlatMeta,
   type SavedLink,
 } from "~/features/links/links.mapper"
@@ -15,23 +14,14 @@ import {
 } from "~/features/links/storage-schemas"
 
 export const RECENTS_MAX_LIMIT = RECENT_LINKS_MAX_COUNT
-export const RECENTS_KEY = "sl2jp:recents:v1"
-const SYNCED_RECENTS_KEY_PREFIX = "sl2jp:recents:sync:v1:"
+export const RECENTS_KEY = "lynvo:recents:v1"
+const SYNCED_RECENTS_KEY_PREFIX = "lynvo:recents:sync:v1:"
 
 export type LinksCache = {
   results: SavedLink[]
   version: number
   etag: string
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
-
-const optionalString = (value: unknown) =>
-  typeof value === "string" ? value : undefined
-
-const optionalNumber = (value: unknown) =>
-  typeof value === "number" ? value : undefined
 
 function linksCacheKey(userId: string) {
   return `${SYNCED_RECENTS_KEY_PREFIX}${userId}`
@@ -73,42 +63,16 @@ export function writeLinksCache(userId: string, cache: LinksCache) {
   }
 }
 
-function toSavedLink(value: unknown): SavedLink {
-  if (!isRecord(value)) {
-    return toSavedLinkDTO({
-      id: "",
-      url: "",
-      created_at: 0,
-    })
-  }
-
-  if (
-    typeof value.id === "string" &&
-    typeof value.url === "string" &&
-    typeof value.createdAt === "number" &&
-    typeof value.updatedAt === "number" &&
-    value.metadata
-  ) {
-    return {
-      id: value.id,
-      url: value.url,
-      title: optionalString(value.title),
-      createdAt: value.createdAt,
-      updatedAt: value.updatedAt,
-      metadata: normalizeLinkMetadata(value.metadata),
-    }
-  }
-
-  return toSavedLinkDTO({
-    id: optionalString(value.id) ?? "",
-    url: optionalString(value.url) ?? "",
-    title: optionalString(value.title),
-    created_at: optionalNumber(value.created_at) ?? 0,
-    updated_at: optionalNumber(value.updated_at),
-    meta: normalizeLinkMetadata(value.meta),
-    extractedLinks: undefined,
-  })
-}
+const toSavedLink = (
+  value: z.infer<typeof storedSavedLinkSchema>
+): SavedLink => ({
+  id: value.id,
+  url: value.url,
+  title: value.title,
+  createdAt: value.createdAt,
+  updatedAt: value.updatedAt,
+  metadata: value.metadata,
+})
 
 export function readLocalRecents(): RecentLinkViewItem[] {
   if (typeof window === "undefined") {

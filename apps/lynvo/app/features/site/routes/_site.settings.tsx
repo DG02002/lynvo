@@ -1,9 +1,7 @@
-import * as React from "react"
 import {
   type LoaderFunctionArgs,
   redirect,
   useLoaderData,
-  useLocation,
   useNavigate,
 } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -30,7 +28,6 @@ import {
 import { getServerEnv } from "~/lib/env.server"
 import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
 import {
-  getLegacySettingsPath,
   getSettingsPath,
   parseSettingsRoute,
   type SettingsTab,
@@ -109,15 +106,7 @@ const settingsTabs = [
 export default function Settings() {
   const { user, lynvoPlugins, requestOrigin, activeTab, showActiveSessions } =
     useLoaderData<typeof loader>()
-  const location = useLocation()
   const navigate = useNavigate()
-
-  React.useEffect(() => {
-    const legacyPath = getLegacySettingsPath(location.hash)
-    if (legacyPath) {
-      navigate(legacyPath, { replace: true })
-    }
-  }, [location.hash, navigate])
 
   const handleTabChange = (tab: string) => {
     navigate(getSettingsPath(tab as SettingsTab))

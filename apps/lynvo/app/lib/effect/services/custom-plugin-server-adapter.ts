@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import {
   getLynvoManifestExtension,
   getMatchedPlugin,
-  pluginServerManifestSchema,
+  parsePluginServerManifestContract,
   type PluginMetadata,
   type HttpBasicAuth,
 } from "@lynvo/plugin-server-protocol"
@@ -41,8 +41,8 @@ const customPluginServerError = (
   })
 
 const parseStoredPluginServerManifest = (value: unknown) => {
-  const parsed = pluginServerManifestSchema.safeParse(value)
-  return parsed.success ? parsed.data : undefined
+  const parsed = parsePluginServerManifestContract(value)
+  return parsed.ok ? parsed.value : undefined
 }
 
 export const getCustomPluginServerUsage = Effect.fn(

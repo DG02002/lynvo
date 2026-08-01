@@ -11,6 +11,7 @@ const pluginServer = {
     pluginServerId: "dev.example.plugin-server",
     displayName: "Example Plugin Server",
     auth: { type: "bearer" },
+    usage: { endpoint: "/usage" },
     matchers: [{ hosts: ["example.com"] }],
     features: {},
     extensions: {
@@ -20,6 +21,8 @@ const pluginServer = {
             id: "source-alpha",
             displayName: "Source Alpha",
             homepage: "https://source-alpha.example/project",
+            status: "active",
+            version: "1.0.0",
             hosts: ["source-alpha.example"],
           },
         ],

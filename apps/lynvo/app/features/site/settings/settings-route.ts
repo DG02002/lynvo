@@ -43,15 +43,3 @@ export const parseSettingsRoute = (
   }
   return null
 }
-
-export const getLegacySettingsPath = (hash: string) => {
-  const [section, subview] = hash.replace(/^#/, "").split("/")
-  const route = parseSettingsRoute(section, subview)
-  if (!route || !section) {
-    return null
-  }
-  return getSettingsPath(
-    route.activeTab,
-    route.showActiveSessions ? "active-sessions" : undefined
-  )
-}

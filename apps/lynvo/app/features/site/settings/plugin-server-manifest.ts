@@ -1,6 +1,6 @@
 import {
   getLynvoManifestExtension,
-  pluginServerManifestSchema,
+  parsePluginServerManifestContract,
   type PluginMetadata,
   type PluginServerManifest,
 } from "@lynvo/plugin-server-protocol"
@@ -17,8 +17,8 @@ const parsePluginServerManifestForDisplay = (
 ): PluginServerManifest | null => {
   try {
     const parsed: unknown = JSON.parse(value)
-    const result = pluginServerManifestSchema.safeParse(parsed)
-    return result.success ? result.data : null
+    const result = parsePluginServerManifestContract(parsed)
+    return result.ok ? (result.value ?? null) : null
   } catch {
     return null
   }

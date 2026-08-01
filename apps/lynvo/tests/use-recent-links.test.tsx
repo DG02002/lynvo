@@ -101,7 +101,7 @@ describe("useRecentLinks", () => {
 
   it("hydrates signed-in recents from cache once while waiting for Convex", () => {
     storage.setItem(
-      "sl2jp:recents:sync:v1:user-1",
+      "lynvo:recents:sync:v1:user-1",
       JSON.stringify({
         results: [cacheEntry],
         version: 100,
@@ -125,7 +125,7 @@ describe("useRecentLinks", () => {
 
   it("updates cached recents when the Worker returns live links", async () => {
     storage.setItem(
-      "sl2jp:recents:sync:v1:user-1",
+      "lynvo:recents:sync:v1:user-1",
       JSON.stringify({
         results: [cacheEntry],
         version: 100,
@@ -161,7 +161,7 @@ describe("useRecentLinks", () => {
       expect(result.current.recents[0].title).toBe("Live link")
     })
     expect(setItem).toHaveBeenCalledWith(
-      "sl2jp:recents:sync:v1:user-1",
+      "lynvo:recents:sync:v1:user-1",
       expect.stringContaining("Live link")
     )
   })
@@ -219,17 +219,18 @@ describe("useRecentLinks", () => {
 
   it("replaces rather than merges collections across identity changes", async () => {
     storage.setItem(
-      "sl2jp:recents:v1",
+      "lynvo:recents:v1",
       JSON.stringify([
         {
           url: "https://example.com/anonymous",
           title: "Anonymous link",
           timestamp: 50,
+          metadata: metadata("anonymous-file"),
         },
       ])
     )
     storage.setItem(
-      "sl2jp:recents:sync:v1:user-1",
+      "lynvo:recents:sync:v1:user-1",
       JSON.stringify({ results: [cacheEntry], version: 100, etag: "100" })
     )
     routeLoaderDataMock.mockReturnValue({ user: null })
@@ -259,7 +260,7 @@ describe("useRecentLinks", () => {
   })
 
   it("removes corrupt local storage and recovers with an empty collection", () => {
-    storage.setItem("sl2jp:recents:v1", "not-json")
+    storage.setItem("lynvo:recents:v1", "not-json")
     routeLoaderDataMock.mockReturnValue({ user: null })
 
     const { result } = renderHook(() => useRecentLinks(), {
@@ -267,6 +268,6 @@ describe("useRecentLinks", () => {
     })
 
     expect(result.current.recents).toEqual([])
-    expect(storage.getItem("sl2jp:recents:v1")).toBeNull()
+    expect(storage.getItem("lynvo:recents:v1")).toBeNull()
   })
 })
