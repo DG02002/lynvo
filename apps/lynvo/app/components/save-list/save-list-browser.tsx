@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react"
 import type { ComponentProps } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -8,7 +7,6 @@ import {
   DashboardSquare03Icon,
   Folder01Icon,
   Folder02Icon,
-  FolderSymlinkIcon,
   PackageIcon,
   PackageOpenIcon,
   PackageSearchIcon,
@@ -30,6 +28,17 @@ import { formatPlayableExpiry } from "~/features/links/format-playable-expiry"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import {
+  getFolderIcon,
+  getFolderVisualState,
+  getItemTitle,
+  getLinkKey,
+  getResolvableSourceName,
+  isMirrorResolvable,
+  type FolderLevel,
+} from "./save-list-browser-model"
+import { useFinderBrowserState } from "./use-finder-browser-state"
+import { useResolvableContainerState } from "./use-resolvable-container-state"
 
 interface SaveListBrowserProps {
   items: RecentLinkViewItem[]
@@ -40,11 +49,6 @@ interface SaveListBrowserProps {
   highlightedId: string | null
   isHydrating: boolean
   onAddLink?: () => void
-}
-
-interface FolderLevel {
-  id: string
-  label: string
 }
 
 interface FinderBrowserProps {
@@ -61,56 +65,6 @@ interface FolderTreeProps {
   onSelectRoot: () => void
   onSelectFolder: (link: ExtractedLink, path: FolderLevel[]) => void
 }
-
-const getLinkKey = (link: ExtractedLink) => link.id ?? link.url
-
-const isLazyFolder = (link: ExtractedLink) =>
-  link.type === "folder" &&
-  !link.children?.length &&
-  link.childrenResolved !== true
-
-const isMirrorResolvable = (link: ExtractedLink) =>
-  link.mediaNodeKind === "resolvable" && link.resolutionKind !== "folder"
-
-const getFolderVisualState = (link: ExtractedLink, isOpen: boolean) => {
-  if (isOpen) {
-    return "open"
-  }
-  return isLazyFolder(link) ? "lazy-closed" : "closed"
-}
-
-const getFolderIcon = (link: ExtractedLink, isOpen: boolean) => {
-  const visualState = getFolderVisualState(link, isOpen)
-  if (visualState === "open") {
-    return Folder02Icon
-  }
-  return visualState === "lazy-closed" ? FolderSymlinkIcon : Folder01Icon
-}
-
-const getResolvableSourceName = (
-  link: ExtractedLink,
-  item: RecentLinkViewItem
-) => {
-  if (link.sourceName) {
-    return link.sourceName
-  }
-  const view = toRecentLinkViewModel(item)
-  return view.sourceName || view.pluginName || item.url
-}
-
-const getItemTitle = (item: RecentLinkViewItem) =>
-  toRecentLinkViewModel(item).title || new URL(item.url).hostname
-
-const getLinksAtFolderPath = (
-  rootLinks: ExtractedLink[],
-  folderPath: FolderLevel[]
-) =>
-  folderPath.reduce<ExtractedLink[]>((currentLinks, folder) => {
-    const currentFolder = currentLinks.find(
-      (link) => getLinkKey(link) === folder.id
-    )
-    return currentFolder?.children ?? []
-  }, rootLinks)
 
 const SaveListRowIcon = ({
   icon,
@@ -298,53 +252,16 @@ const ResolvableContainerRow = ({
   isResolving,
   onRemove,
 }: ResolvableContainerRowProps) => {
-  const savedMirrors =
-    getRecentLinkViewItemMetadata(item).playback.resolvedMirrors?.[link.url] ??
-    []
-  const [mirrors, setMirrors] = useState(() =>
-    savedMirrors.filter((mirror) => mirror.status !== "down")
-  )
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [didResolutionFail, setDidResolutionFail] = useState(false)
-  const displaySize = link.size || mirrors.find((mirror) => mirror.size)?.size
-
-  const resolveLink = async (bypassCache = false) => {
-    setDidResolutionFail(false)
-    setIsExpanded(true)
-    const resolvedLinks = await actions.expandMirror(
-      item.url,
-      link.url,
-      bypassCache
-    )
-    const availableMirrors =
-      resolvedLinks?.filter((mirror) => mirror.status !== "down") ?? []
-    setMirrors(availableMirrors)
-    if (!availableMirrors.length) {
-      setIsExpanded(false)
-      setDidResolutionFail(true)
-    }
-  }
-
-  const openLink = () => {
-    if (!link.watched) {
-      actions.markWatched(item.url, link.url)
-    }
-    if (mirrors.length) {
-      setIsExpanded((currentValue) => !currentValue)
-      return
-    }
-    void resolveLink()
-  }
-
-  const resolutionState = isResolving
-    ? "resolving"
-    : didResolutionFail
-      ? "failed"
-      : mirrors.length > 0
-        ? isExpanded
-          ? "expanded"
-          : "collapsed"
-        : "unresolved"
+  const {
+    mirrors,
+    isExpanded,
+    didResolutionFail,
+    displaySize,
+    resolutionState: resolvedState,
+    openLink,
+    refreshLink,
+  } = useResolvableContainerState({ item, link, actions })
+  const resolutionState = isResolving ? "resolving" : resolvedState
 
   return (
     <div className="flex flex-col border-b last:border-b-0">
@@ -399,10 +316,7 @@ const ResolvableContainerRow = ({
           <ResolvableLinkMenu
             itemLabel={link.label}
             onCopyLink={() => void navigator.clipboard.writeText(link.url)}
-            onRefresh={() => {
-              setMirrors([])
-              void resolveLink(true)
-            }}
+            onRefresh={refreshLink}
             onRemove={onRemove}
           />
         </div>
@@ -425,68 +339,15 @@ const FinderBrowser = ({
   extractingItems,
   onExit,
 }: FinderBrowserProps) => {
-  const itemRootLinks = useMemo(
-    () => toRecentLinkViewModel(item).extractedLinks,
-    [item]
-  )
-  const [rootLinks, setRootLinks] = useState(itemRootLinks)
-  const [folderPath, setFolderPath] = useState<FolderLevel[]>([])
-  const contentRef = useRef<HTMLDivElement>(null)
-  const scrollPositionsRef = useRef(new Map<string, number>())
-  const currentLinks = useMemo(
-    () => getLinksAtFolderPath(rootLinks, folderPath),
-    [folderPath, rootLinks]
-  )
-  const currentFolderKey = folderPath.at(-1)?.id ?? item.url
-
-  useEffect(() => {
-    setRootLinks(itemRootLinks)
-  }, [itemRootLinks])
-
-  useEffect(() => {
-    contentRef.current?.scrollTo({
-      top: scrollPositionsRef.current.get(currentFolderKey) ?? 0,
-    })
-  }, [currentFolderKey])
-
-  const rememberScrollPosition = () => {
-    scrollPositionsRef.current.set(
-      currentFolderKey,
-      contentRef.current?.scrollTop ?? 0
-    )
-  }
-
-  const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
-    const linkKey = getLinkKey(link)
-    actions.markWatched(item.url, link.url)
-    if (!link.children?.length && link.childrenResolved !== true) {
-      const resolvedLinks = await actions.expandFolder(
-        item.url,
-        linkKey,
-        link.url
-      )
-      if (!resolvedLinks) {
-        return
-      }
-      setRootLinks(resolvedLinks)
-    }
-    rememberScrollPosition()
-    setFolderPath(targetPath)
-  }
-
-  const openLink = async (link: ExtractedLink) => {
-    const linkKey = getLinkKey(link)
-    if (link.type === "folder" || link.children?.length) {
-      await openFolder(link, [
-        ...folderPath,
-        { id: linkKey, label: link.label },
-      ])
-      return
-    }
-
-    actions.markWatched(item.url, link.url)
-    actions.play(link)
-  }
+  const {
+    rootLinks,
+    folderPath,
+    currentLinks,
+    contentRef,
+    openFolder,
+    openLink,
+    selectRoot,
+  } = useFinderBrowserState({ item, actions })
 
   if (rootLinks.length === 0) {
     return (
@@ -530,10 +391,7 @@ const FinderBrowser = ({
             rootLabel={getItemTitle(item)}
             folderPath={folderPath}
             links={rootLinks}
-            onSelectRoot={() => {
-              rememberScrollPosition()
-              setFolderPath([])
-            }}
+            onSelectRoot={selectRoot}
             onSelectFolder={(link, path) => void openFolder(link, path)}
           />
         </aside>

@@ -9,24 +9,18 @@ import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import {
   PluginServerClient,
-  PluginServerClientError,
   ServiceBindingPluginServerTransport,
 } from "../../extraction/plugin-server-client"
 import { ExtractionError } from "../errors"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
+  extractPluginServerResponse,
+  requestPluginServer,
+} from "./plugin-server-adapter-runtime"
+import {
   getPluginServerMetadata,
   mapPluginServerExtractionResult,
 } from "./plugin-server-result-mapping"
-
-const lynvoPluginServerError = (cause: unknown, url: string) =>
-  new ExtractionError({
-    message:
-      cause instanceof PluginServerClientError
-        ? cause.code
-        : "TEMPORARY_FAILURE",
-    url,
-  })
 
 const createLynvoPluginServerClient = (environment: Env) =>
   new PluginServerClient(
@@ -36,14 +30,14 @@ const createLynvoPluginServerClient = (environment: Env) =>
 export const getLynvoPluginServerManifest = Effect.fn(
   "LynvoPluginServerAdapter.getLynvoPluginServerManifest"
 )(function* (environment: Env, requestId?: string) {
-  return yield* Effect.tryPromise({
-    try: () =>
+  return yield* requestPluginServer(
+    () =>
       createLynvoPluginServerClient(environment).getManifest({
         apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         requestId,
       }),
-    catch: (cause) => lynvoPluginServerError(cause, "Lynvo Plugin Server"),
-  })
+    "Lynvo Plugin Server"
+  )
 })
 
 export const discoverLynvoPlugin = Effect.fn(
@@ -54,15 +48,15 @@ export const discoverLynvoPlugin = Effect.fn(
   basicAuth?: HttpBasicAuth,
   requestId?: string
 ) {
-  return yield* Effect.tryPromise({
-    try: () =>
+  return yield* requestPluginServer(
+    () =>
       createLynvoPluginServerClient(environment).discover(targetUrl, {
         apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         basicAuth,
         requestId,
       }),
-    catch: (cause) => lynvoPluginServerError(cause, targetUrl),
-  })
+    targetUrl
+  )
 })
 
 export const getLynvoPluginServerMetadata = (
@@ -115,12 +109,9 @@ export const extractFromLynvoPluginServer = Effect.fn(
     requestId,
     ...credentials,
   }
-  const result = yield* Effect.tryPromise({
-    try: () =>
-      kind === "node"
-        ? client.extractNode(targetUrl, options)
-        : client.extractSource(targetUrl, options),
-    catch: (cause) => lynvoPluginServerError(cause, targetUrl),
-  })
+  const result = yield* requestPluginServer(
+    () => extractPluginServerResponse(client, targetUrl, kind, options),
+    targetUrl
+  )
   return mapPluginServerExtractionResult(result, LYNVO_PLUGIN_SERVER_ID)
 })

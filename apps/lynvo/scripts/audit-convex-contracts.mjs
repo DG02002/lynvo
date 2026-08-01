@@ -47,31 +47,62 @@ const schemaTables = new Set(
     (match) => match[1]
   )
 )
-const classifiedTables = new Set(
-  Array.from(ownershipSource.matchAll(/"(\w+)"/g), (match) => match[1])
+const catalogSection =
+  ownershipSource.match(
+    /ACCOUNT_DATA_CATALOG = \{([\s\S]*?)\} as const satisfies/
+  )?.[1] ?? ""
+const catalogEntries = Array.from(
+  catalogSection.matchAll(
+    /\b(\w+):\s*\{\s*lifecycle:\s*"(erased|operational|global)",\s*storage:\s*(null|"[^"]+")\s*,?\s*\}/gs
+  ),
+  (match) => ({
+    table: match[1],
+    lifecycle: match[2],
+    storage: match[3],
+  })
 )
-const erasedSection =
-  ownershipSource.match(/erased:\s*\[([\s\S]*?)\]/)?.[1] ?? ""
+const classifiedTables = new Set(catalogEntries.map((entry) => entry.table))
 const erasedTables = new Set(
-  Array.from(erasedSection.matchAll(/"(\w+)"/g), (match) => match[1])
+  catalogEntries
+    .filter((entry) => entry.lifecycle === "erased")
+    .map((entry) => entry.table)
 )
-const storageRegistrySection =
-  storageSource.match(
-    /STORAGE_DOMAIN_REGISTRY = \{([\s\S]*?)\} as const/
-  )?.[1] ?? ""
 const storageTables = new Set(
-  Array.from(
-    storageRegistrySection.matchAll(/^\s+(\w+):/gm),
-    (match) => match[1]
+  catalogEntries
+    .filter((entry) => entry.lifecycle === "erased")
+    .map((entry) => entry.table)
+)
+const storageLedgerTables = new Set(
+  catalogEntries
+    .filter((entry) => entry.storage !== "null")
+    .map((entry) => entry.table)
+)
+const usesSharedStorageRegistry = storageSource.includes(
+  "ACCOUNT_DATA_STORAGE_REGISTRY"
+)
+const usesSharedErasureRegistry =
+  /(?:import|export)[\s\S]*ACCOUNT_ERASURE_TABLES[\s\S]*from "\.\/accountDataOwnership"/.test(
+    erasureSource
   )
-)
-const erasureRegistrySection =
-  erasureSource.match(
-    /ACCOUNT_ERASURE_TABLES = \[([\s\S]*?)\] as const/
-  )?.[1] ?? ""
-const erasureTables = new Set(
-  Array.from(erasureRegistrySection.matchAll(/"(\w+)"/g), (match) => match[1])
-)
+const erasureTables = usesSharedErasureRegistry
+  ? new Set(erasedTables)
+  : new Set()
+
+if (catalogEntries.length !== schemaTables.size) {
+  failures.push(
+    "convex/accountDataOwnership.ts: account data catalog does not cover every schema table"
+  )
+}
+if (!usesSharedStorageRegistry) {
+  failures.push(
+    "convex/storagePolicy.ts: storage policy must consume the account data storage registry"
+  )
+}
+if (!usesSharedErasureRegistry) {
+  failures.push(
+    "convex/accountErasure.ts: erasure must consume the shared account erasure registry"
+  )
+}
 
 for (const tableName of schemaTables) {
   if (!classifiedTables.has(tableName)) {
@@ -100,7 +131,7 @@ for (const tableName of erasedTables) {
     )
   }
 }
-for (const tableName of storageTables) {
+for (const tableName of storageLedgerTables) {
   if (!erasedTables.has(tableName)) {
     failures.push(
       `convex/storagePolicy.ts: non-erased storage table ${tableName}`

@@ -20,8 +20,7 @@ import { getLynvoPluginServerMetadata } from "./lynvo-plugin-server-adapter"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
 import { executeLynvoRoute } from "./lynvo-route-execution"
 import { executeCustomRoute } from "./custom-route-execution"
-import { loadAuthenticatedExtractionContext } from "./authenticated-extraction-context"
-import { selectExtractionRoute } from "./extraction-route-selection"
+import { loadAuthenticatedExtractionRoute } from "./authenticated-extraction-context"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
@@ -40,24 +39,11 @@ export class ExtractionService extends Context.Service<
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
         if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionContext(
+          const context = yield* loadAuthenticatedExtractionRoute(
             convex,
             environment,
             options.userId,
-            options.accessToken
-          ).pipe(
-            Effect.mapError(
-              (error) =>
-                new ValidationError({
-                  message: error.message,
-                  details: error,
-                })
-            )
-          )
-          const route = yield* selectExtractionRoute(
-            convex,
-            environment,
-            context.pluginServers,
+            options.accessToken,
             {
               targetUrl,
               accessToken: options.accessToken,
@@ -67,7 +53,18 @@ export class ExtractionService extends Context.Service<
               extractionKind: options.kind ?? "source",
               inlineBasicAuth: routeInput.basicAuth,
             }
+          ).pipe(
+            Effect.mapError((error) =>
+              error._tag === "ExtractionError" ||
+              error._tag === "ValidationError"
+                ? error
+                : new ValidationError({
+                    message: error.message,
+                    details: error,
+                  })
+            )
           )
+          const route = context.route
           if (route.kind === "custom") {
             return yield* executeCustomRoute(
               convex,
@@ -113,21 +110,11 @@ export class ExtractionService extends Context.Service<
         const targetUrl = routeInput.targetUrl
 
         if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionContext(
+          const context = yield* loadAuthenticatedExtractionRoute(
             convex,
             environment,
             options.userId,
-            options.accessToken
-          ).pipe(
-            Effect.mapError(
-              (error) =>
-                new ConvexError({ message: error.message, cause: error })
-            )
-          )
-          const route = yield* selectExtractionRoute(
-            convex,
-            environment,
-            context.pluginServers,
+            options.accessToken,
             {
               targetUrl,
               accessToken: options.accessToken,
@@ -137,11 +124,17 @@ export class ExtractionService extends Context.Service<
             }
           ).pipe(
             Effect.mapError((error) =>
-              error._tag === "ExtractionError"
-                ? new ConvexError({ message: error.message, cause: error })
+              error._tag === "ExtractionError" ||
+              error._tag === "ConvexError" ||
+              error._tag === "CredentialVaultError"
+                ? new ConvexError({
+                    message: error.message,
+                    cause: error,
+                  })
                 : error
             )
           )
+          const route = context.route
           if (route.kind === "custom") {
             const metadata = yield* getCustomPluginServerMetadata(
               route.route.pluginServer,

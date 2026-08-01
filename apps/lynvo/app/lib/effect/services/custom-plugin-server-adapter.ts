@@ -8,7 +8,7 @@ import {
 } from "@lynvo/plugin-server-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl } from "../../../lib/plugin-server-utils"
-import { ExtractionError } from "../errors"
+import type { ExtractionError } from "../errors"
 import type {
   ExtractionResult,
   MetadataResult,
@@ -17,9 +17,12 @@ import type {
 import { isPluginServerUsable } from "./plugin-server-verification-status"
 import {
   PluginServerClient,
-  PluginServerClientError,
   HttpPluginServerTransport,
 } from "../../extraction/plugin-server-client"
+import {
+  extractPluginServerResponse,
+  requestPluginServer,
+} from "./plugin-server-adapter-runtime"
 import {
   getPluginServerMetadata,
   mapPluginServerExtractionResult,
@@ -27,18 +30,6 @@ import {
 
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
-
-const customPluginServerError = (
-  cause: unknown,
-  url: string
-): ExtractionError =>
-  new ExtractionError({
-    message:
-      cause instanceof PluginServerClientError
-        ? cause.code
-        : "TEMPORARY_FAILURE",
-    url,
-  })
 
 const parseStoredPluginServerManifest = (value: unknown) => {
   const parsed = parsePluginServerManifestContract(value)
@@ -48,13 +39,13 @@ const parseStoredPluginServerManifest = (value: unknown) => {
 export const getCustomPluginServerUsage = Effect.fn(
   "CustomPluginServerAdapter.getCustomPluginServerUsage"
 )(function* (pluginServer: RegisteredPluginServer) {
-  const usage = yield* Effect.tryPromise({
-    try: () =>
+  const usage = yield* requestPluginServer(
+    () =>
       createCustomPluginServerClient(pluginServer).getUsage({
         apiKey: pluginServer.apiKey,
       }),
-    catch: (cause) => customPluginServerError(cause, pluginServer.baseUrl),
-  })
+    pluginServer.baseUrl
+  )
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   return {
     pluginServerId: pluginServer._id,
@@ -164,15 +155,15 @@ export const discoverCustomPlugin = Effect.fn(
   if (!manifest?.features.discovery) {
     return undefined
   }
-  return yield* Effect.tryPromise({
-    try: () =>
+  return yield* requestPluginServer(
+    () =>
       createCustomPluginServerClient(pluginServer).discover(targetUrl, {
         apiKey: pluginServer.apiKey,
         basicAuth,
         requestId,
       }),
-    catch: (cause) => customPluginServerError(cause, targetUrl),
-  })
+    targetUrl
+  )
 })
 
 export const extractFromCustomPluginServer = Effect.fn(
@@ -194,24 +185,16 @@ export const extractFromCustomPluginServer = Effect.fn(
     ? (extractedAuth.basicAuth ?? credentials?.basicAuth)
     : undefined
   const client = createCustomPluginServerClient(pluginServer)
-  const resultValue = yield* Effect.tryPromise({
-    try: () =>
-      kind === "node"
-        ? client.extractNode(extractedAuth.url, {
-            apiKey: pluginServer.apiKey,
-            password: credentials?.password,
-            basicAuth,
-            pluginId: credentials?.pluginId,
-            requestId,
-          })
-        : client.extractSource(extractedAuth.url, {
-            apiKey: pluginServer.apiKey,
-            password: credentials?.password,
-            basicAuth,
-            pluginId: credentials?.pluginId,
-            requestId,
-          }),
-    catch: (cause) => customPluginServerError(cause, targetUrl),
-  })
+  const resultValue = yield* requestPluginServer(
+    () =>
+      extractPluginServerResponse(client, extractedAuth.url, kind, {
+        apiKey: pluginServer.apiKey,
+        password: credentials?.password,
+        basicAuth,
+        pluginId: credentials?.pluginId,
+        requestId,
+      }),
+    targetUrl
+  )
   return mapPluginServerExtractionResult(resultValue, pluginServer._id)
 })

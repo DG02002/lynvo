@@ -5,23 +5,9 @@ import { internal } from "./_generated/api"
 import { v } from "convex/values"
 import { releaseAccountCapacity } from "./accountCapacity"
 import { ACCOUNT_ERASURE_BATCH_SIZE } from "./constants"
+import { ACCOUNT_ERASURE_TABLES } from "./accountDataOwnership"
 
-export const ACCOUNT_ERASURE_TABLES = [
-  "users",
-  "authSessions",
-  "authAccounts",
-  "authRefreshTokens",
-  "authVerificationCodes",
-  "authVerifiers",
-  "links",
-  "userStorageLedgers",
-  "userPluginServers",
-  "userPluginDomains",
-  "userPluginCredentials",
-  "usageCounters",
-  "deviceCodes",
-  "remoteCommands",
-] as const
+export { ACCOUNT_ERASURE_TABLES }
 
 declare global {
   interface AccountErasureBatch<Document> {

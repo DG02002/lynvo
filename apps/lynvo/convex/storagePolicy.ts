@@ -1,5 +1,6 @@
 import type { Id } from "./_generated/dataModel"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
+import { ACCOUNT_DATA_STORAGE_REGISTRY } from "./accountDataOwnership"
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
@@ -23,22 +24,7 @@ export const STORAGE_DOMAIN_NAMES = [
   "deviceCodes",
 ]
 
-export const STORAGE_DOMAIN_REGISTRY = {
-  users: "profileBytes",
-  links: "recentLinkBytes",
-  userPluginServers: "pluginServerBytes",
-  userPluginDomains: "pluginDomainBytes",
-  userPluginCredentials: "pluginCredentialBytes",
-  authSessions: null,
-  authAccounts: null,
-  authRefreshTokens: null,
-  authVerificationCodes: null,
-  authVerifiers: null,
-  deviceCodes: null,
-  userStorageLedgers: null,
-  usageCounters: null,
-  remoteCommands: null,
-} as const
+export const STORAGE_DOMAIN_REGISTRY = ACCOUNT_DATA_STORAGE_REGISTRY
 
 export type StorageLedgerDomain = Exclude<
   (typeof STORAGE_DOMAIN_REGISTRY)[keyof typeof STORAGE_DOMAIN_REGISTRY],

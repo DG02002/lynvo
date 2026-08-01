@@ -4,12 +4,12 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 
 const createFixture = ({
-  storageTables = ["users"],
-  erasureTables = ["users"],
+  omitStorage = false,
+  usesSharedErasureRegistry = true,
   extraSource,
 }: {
-  storageTables?: string[]
-  erasureTables?: string[]
+  omitStorage?: boolean
+  usesSharedErasureRegistry?: boolean
   extraSource?: string
 }) => {
   const directory = mkdtempSync(join(tmpdir(), "lynvo-contract-audit-"))
@@ -19,19 +19,17 @@ const createFixture = ({
   )
   writeFileSync(
     join(directory, "accountDataOwnership.ts"),
-    'export const ACCOUNT_DATA_OWNERSHIP = { erased: ["users"], operational: [], global: [] }'
+    `export const ACCOUNT_DATA_CATALOG = { users: { lifecycle: "erased"${omitStorage ? "" : ', storage: "profileBytes"'} } } as const satisfies Record<string, unknown>`
   )
   writeFileSync(
     join(directory, "storagePolicy.ts"),
-    `export const STORAGE_DOMAIN_REGISTRY = { ${storageTables
-      .map((table) => `${table}: "profileBytes"`)
-      .join(",")} } as const`
+    'import { ACCOUNT_DATA_STORAGE_REGISTRY } from "./accountDataOwnership"'
   )
   writeFileSync(
     join(directory, "accountErasure.ts"),
-    `export const ACCOUNT_ERASURE_TABLES = [${erasureTables
-      .map((table) => `"${table}"`)
-      .join(",")}] as const`
+    usesSharedErasureRegistry
+      ? 'import { ACCOUNT_ERASURE_TABLES } from "./accountDataOwnership"'
+      : "export const ACCOUNT_ERASURE_TABLES = [] as const"
   )
   if (extraSource) {
     writeFileSync(join(directory, "unsafe.ts"), extraSource)
@@ -66,7 +64,7 @@ describe("Convex contract audit", () => {
   })
 
   it("rejects erased tables missing storage classification", () => {
-    const directory = createFixture({ storageTables: [] })
+    const directory = createFixture({ omitStorage: true })
     try {
       expect(() => runAudit(directory)).toThrow()
     } finally {
@@ -74,8 +72,8 @@ describe("Convex contract audit", () => {
     }
   })
 
-  it("rejects erased tables missing erasure coverage", () => {
-    const directory = createFixture({ erasureTables: [] })
+  it("rejects erasure implementations that do not use the shared registry", () => {
+    const directory = createFixture({ usesSharedErasureRegistry: false })
     try {
       expect(() => runAudit(directory)).toThrow()
     } finally {

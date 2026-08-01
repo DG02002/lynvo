@@ -1,4 +1,3 @@
-import type { HttpBasicAuth } from "@lynvo/plugin-server-protocol"
 import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, ValidationError } from "../errors"
@@ -7,7 +6,10 @@ import {
   selectCustomRoute,
   type CustomRouteSelection,
 } from "./custom-route-selection"
-import type { RegisteredPluginServer } from "./extraction-types"
+import type {
+  RegisteredPluginServer,
+  SelectExtractionRouteOptions,
+} from "./extraction-types"
 import {
   selectLynvoRoute,
   type LynvoRouteSelection,
@@ -17,16 +19,6 @@ export type ExtractionRouteSelection =
   | { readonly kind: "custom"; readonly route: CustomRouteSelection }
   | { readonly kind: "lynvo"; readonly route: LynvoRouteSelection }
   | { readonly kind: "direct" }
-
-export interface SelectExtractionRouteOptions {
-  readonly targetUrl: string
-  readonly accessToken: string
-  readonly requestId: string
-  readonly pluginServerId?: string
-  readonly pluginId?: string
-  readonly extractionKind: "source" | "node"
-  readonly inlineBasicAuth?: HttpBasicAuth
-}
 
 export const selectExtractionRoute = Effect.fn(
   "ExtractionRouteSelection.selectExtractionRoute"
