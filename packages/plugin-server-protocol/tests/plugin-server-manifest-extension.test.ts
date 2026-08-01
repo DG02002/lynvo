@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   getLynvoManifestExtension,
+  parsePluginServerManifestContract,
   pluginServerManifestSchema,
   resolvableNodeSchema,
   validatePluginServerManifestContract,
+  validPluginServerManifestFixture,
 } from "../src/index"
 
 describe("Lynvo manifest source credentials", () => {
@@ -80,6 +82,106 @@ describe("Lynvo manifest source credentials", () => {
       path: "iconUrl",
       message: "Provide iconUrl when hasIcon is true.",
     })
+  })
+
+  it("accepts only manifests that satisfy the complete Plugin Server contract", () => {
+    const { usage: declaredUsage, ...manifestWithoutUsage } =
+      validPluginServerManifestFixture
+
+    expect(
+      parsePluginServerManifestContract(validPluginServerManifestFixture).value
+        ?.pluginServerId
+    ).toBe("dev.lynvo.example-plugin-server")
+    expect(parsePluginServerManifestContract(manifestWithoutUsage)).toMatchObject(
+      {
+        ok: false,
+        issues: [
+          {
+            path: "usage",
+            message: "Declare the mandatory authenticated /usage endpoint.",
+          },
+        ],
+      }
+    )
+    expect(declaredUsage).toEqual({ endpoint: "/usage" })
+  })
+
+  it("reports duplicate Plugin ids through the typed parser result", () => {
+    const duplicatePluginManifest = {
+      ...validPluginServerManifestFixture,
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "duplicate-plugin",
+              displayName: "First Plugin",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["first.example"],
+            },
+            {
+              id: "duplicate-plugin",
+              displayName: "Second Plugin",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["second.example"],
+            },
+          ],
+        },
+      },
+    }
+
+    expect(
+      parsePluginServerManifestContract(duplicatePluginManifest)
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "extensions.lynvo.plugins.1.id",
+          message: "Duplicate source id: duplicate-plugin",
+        },
+      ],
+    })
+  })
+
+  it("reports icon capability and URL mismatches", () => {
+    const invalidIconManifest = {
+      ...validPluginServerManifestFixture,
+      hasIcon: false,
+      iconUrl: "https://icons.example/server.svg",
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "example-plugin",
+              displayName: "Example Plugin",
+              hasIcon: false,
+              iconUrl: "https://icons.example/plugin.webp",
+              status: "active",
+              version: "1.0.0",
+              hosts: ["example.com"],
+            },
+          ],
+        },
+      },
+    }
+
+    expect(validatePluginServerManifestContract(invalidIconManifest).issues).toEqual(
+      expect.arrayContaining([
+        {
+          path: "iconUrl",
+          message: "Use a direct HTTPS WebP URL for Plugin Server icons.",
+        },
+        {
+          path: "hasIcon",
+          message: "Set hasIcon to true when iconUrl is present.",
+        },
+        {
+          path: "extensions.lynvo.plugins.0.hasIcon",
+          message: "Set hasIcon to true when iconUrl is present.",
+        },
+      ])
+    )
   })
 
   it("keeps the new fields optional for existing manifests", () => {

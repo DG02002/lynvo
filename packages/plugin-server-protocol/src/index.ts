@@ -195,6 +195,11 @@ export interface ContractValidationResult {
   issues: ContractIssue[]
 }
 
+export interface ContractParseResult<Value>
+  extends ContractValidationResult {
+  value?: Value
+}
+
 export interface PluginServerRuntimeContext<Env> {
   request: Request
   env: Env
@@ -714,22 +719,27 @@ const issue = (path: string, message: string): ContractIssue => ({
   message,
 })
 
-export const validatePluginServerManifestContract = (
-  value: unknown
+const mapSchemaIssues = (
+  schemaIssues: ReadonlyArray<{
+    path: ReadonlyArray<PropertyKey>
+    message: string
+  }>,
+  fallbackPath: string
+): ContractIssue[] =>
+  schemaIssues.map((schemaIssue) =>
+    issue(
+      schemaIssue.path.map((segment) => String(segment)).join(".") ||
+        fallbackPath,
+      schemaIssue.message
+    )
+  )
+
+const validateParsedPluginServerManifestContract = (
+  value: unknown,
+  manifest: PluginServerManifest
 ): ContractValidationResult => {
   const didDeclareUsage =
     typeof value === "object" && value !== null && "usage" in value
-  const parsed = pluginServerManifestSchema.safeParse(value)
-  if (!parsed.success) {
-    return {
-      ok: false,
-      issues: parsed.error.issues.map((schemaIssue) =>
-        issue(schemaIssue.path.join(".") || "manifest", schemaIssue.message)
-      ),
-    }
-  }
-
-  const manifest = parsed.data
   const issues: ContractIssue[] = []
   const pluginIds = new Set<string>()
   const extension = getLynvoManifestExtension(manifest)
@@ -822,21 +832,34 @@ export const validatePluginServerManifestContract = (
   }
 }
 
-export const validateExtractSuccessContract = (
+export const parsePluginServerManifestContract = (
   value: unknown
-): ContractValidationResult => {
-  const parsed = extractSuccessSchema.safeParse(value)
+): ContractParseResult<PluginServerManifest> => {
+  const parsed = pluginServerManifestSchema.safeParse(value)
   if (!parsed.success) {
     return {
       ok: false,
-      issues: parsed.error.issues.map((schemaIssue) =>
-        issue(schemaIssue.path.join(".") || "extract", schemaIssue.message)
-      ),
+      issues: mapSchemaIssues(parsed.error.issues, "manifest"),
     }
   }
+  const validation = validateParsedPluginServerManifestContract(
+    value,
+    parsed.data
+  )
+  return validation.ok ? { ...validation, value: parsed.data } : validation
+}
 
+export const validatePluginServerManifestContract = (
+  value: unknown
+): ContractValidationResult => {
+  const parsed = parsePluginServerManifestContract(value)
+  return { ok: parsed.ok, issues: parsed.issues }
+}
+
+const validateParsedExtractSuccessContract = (
+  result: ExtractSuccessResponse
+): ContractValidationResult => {
   const issues: ContractIssue[] = []
-  const result = parsed.data
 
   if (result.plugin.iconUrl && !result.plugin.iconUrl.endsWith(".webp")) {
     issues.push(
@@ -865,22 +888,33 @@ export const validateExtractSuccessContract = (
   }
 }
 
-export const validateUsageContract = (
+export const parseExtractSuccessContract = (
   value: unknown
-): ContractValidationResult => {
-  const parsed = usageResponseSchema.safeParse(value)
+): ContractParseResult<ExtractSuccessResponse> => {
+  const parsed = extractSuccessSchema.safeParse(value)
   if (!parsed.success) {
     return {
       ok: false,
-      issues: parsed.error.issues.map((schemaIssue) =>
-        issue(schemaIssue.path.join(".") || "usage", schemaIssue.message)
-      ),
+      issues: mapSchemaIssues(parsed.error.issues, "extract"),
     }
   }
+  const validation = validateParsedExtractSuccessContract(parsed.data)
+  return validation.ok ? { ...validation, value: parsed.data } : validation
+}
 
+export const validateExtractSuccessContract = (
+  value: unknown
+): ContractValidationResult => {
+  const parsed = parseExtractSuccessContract(value)
+  return { ok: parsed.ok, issues: parsed.issues }
+}
+
+const validateParsedUsageContract = (
+  usage: UsageResponse
+): ContractValidationResult => {
   const metricIds = new Set<string>()
   const issues: ContractIssue[] = []
-  parsed.data.metrics.forEach((metric, index) => {
+  usage.metrics.forEach((metric, index) => {
     if (metric.used > metric.limit) {
       issues.push(
         issue(`metrics.${index}.used`, "Usage cannot exceed its finite limit.")
@@ -897,19 +931,44 @@ export const validateUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
+export const parseUsageResponseContract = (
+  value: unknown
+): ContractParseResult<UsageResponse> => {
+  const parsed = usageResponseSchema.safeParse(value)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      issues: mapSchemaIssues(parsed.error.issues, "usage"),
+    }
+  }
+  const validation = validateParsedUsageContract(parsed.data)
+  return validation.ok ? { ...validation, value: parsed.data } : validation
+}
+
+export const validateUsageContract = (
+  value: unknown
+): ContractValidationResult => {
+  const parsed = parseUsageResponseContract(value)
+  return { ok: parsed.ok, issues: parsed.issues }
+}
+
 export const createPluginServerRuntime = <Env>(
   options: PluginServerRuntimeOptions<Env>
 ): PluginServerRuntime<Env> => {
   const resolveManifest = async (
     request: Request,
     env: Env
-  ): Promise<PluginServerManifest> => {
+  ): Promise<PluginServerManifest | undefined> => {
     const value =
       typeof options.manifest === "function"
         ? await options.manifest({ request, env })
         : options.manifest
-    return pluginServerManifestSchema.parse(value)
+    const parsed = parsePluginServerManifestContract(value)
+    return parsed.ok && parsed.value ? parsed.value : undefined
   }
+
+  const protocolMismatchResponse = (message: string): Response =>
+    jsonResponse(createProtocolError("PROTOCOL_MISMATCH", message), 500)
 
   const authenticate = async (
     request: Request,
@@ -925,8 +984,14 @@ export const createPluginServerRuntime = <Env>(
   }
 
   return {
-    handleManifest: async (request, env) =>
-      jsonResponse(await resolveManifest(request, env)),
+    handleManifest: async (request, env) => {
+      const manifest = await resolveManifest(request, env)
+      return manifest
+        ? jsonResponse(manifest)
+        : protocolMismatchResponse(
+            "Plugin Server Manifest does not match protocol v1."
+          )
+    },
     handleVerify: async (request, env) => {
       const authFailure = await authenticate(request, env)
       if (authFailure) {
@@ -940,8 +1005,8 @@ export const createPluginServerRuntime = <Env>(
         return authFailure
       }
       const usage = await options.usage({ request, env })
-      const parsedUsage = usageResponseSchema.safeParse(usage)
-      if (!parsedUsage.success) {
+      const parsedUsage = parseUsageResponseContract(usage)
+      if (!parsedUsage.ok || !parsedUsage.value) {
         return jsonResponse(
           createProtocolError(
             "PROTOCOL_MISMATCH",
@@ -950,7 +1015,7 @@ export const createPluginServerRuntime = <Env>(
           500
         )
       }
-      return jsonResponse(parsedUsage.data)
+      return jsonResponse(parsedUsage.value)
     },
     handleDiscover: async (request, env) => {
       const authFailure = await authenticate(request, env)
@@ -1034,6 +1099,11 @@ export const createPluginServerRuntime = <Env>(
 
       const targetUrl = getExtractTargetUrl(parsed.data)
       const manifest = await resolveManifest(request, env)
+      if (!manifest) {
+        return protocolMismatchResponse(
+          "Plugin Server Manifest does not match protocol v1."
+        )
+      }
       if (!matchPluginServerUrl(targetUrl, manifest.matchers)) {
         return jsonResponse(
           createProtocolError(
@@ -1050,8 +1120,8 @@ export const createPluginServerRuntime = <Env>(
           targetUrl,
           env,
         })
-        const parsedResult = extractSuccessSchema.safeParse(result)
-        if (!parsedResult.success) {
+        const parsedResult = parseExtractSuccessContract(result)
+        if (!parsedResult.ok || !parsedResult.value) {
           return jsonResponse(
             createProtocolError(
               "PROTOCOL_MISMATCH",
@@ -1060,7 +1130,7 @@ export const createPluginServerRuntime = <Env>(
             500
           )
         }
-        return jsonResponse(parsedResult.data)
+        return jsonResponse(parsedResult.value)
       } catch (error) {
         options.onError?.(error, { request, env })
         const message = error instanceof Error ? error.message : String(error)

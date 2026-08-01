@@ -12,7 +12,7 @@ export interface PluginServerManifestView {
   plugins: PluginMetadata[]
 }
 
-const parsePluginServerManifest = (
+const parsePluginServerManifestForDisplay = (
   value: string
 ): PluginServerManifest | null => {
   try {
@@ -49,7 +49,7 @@ export const getPluginServerManifestView = (
   manifestValue: string,
   requestOrigin?: string
 ): PluginServerManifestView => {
-  const manifest = parsePluginServerManifest(manifestValue)
+  const manifest = parsePluginServerManifestForDisplay(manifestValue)
   const extension = manifest ? getLynvoManifestExtension(manifest) : undefined
   const hosts =
     manifest?.matchers?.flatMap((matcher) => matcher.hosts ?? []).join(", ") ||

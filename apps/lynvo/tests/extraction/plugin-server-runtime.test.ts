@@ -3,6 +3,8 @@ import {
   createPluginServerRuntime,
   isSupportedProtocolVersion,
   type ExtractSuccessResponse,
+  type PluginServerManifest,
+  type UsageResponse,
 } from "@lynvo/plugin-server-protocol"
 
 interface TestEnv {
@@ -19,44 +21,87 @@ const createRequest = (body: unknown, apiKey = "secret") =>
     body: JSON.stringify(body),
   })
 
+const manifest: PluginServerManifest = {
+  protocolVersion: "1.0",
+  pluginServerId: "dev.example.plugin-server",
+  displayName: "Example Plugin Server",
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [{ hosts: ["source.example"], pathPatterns: ["/**"] }],
+  features: { password: true, lazyNodes: true },
+  extensions: {
+    lynvo: {
+      plugins: [
+        {
+          id: "example-source",
+          displayName: "Example Source",
+          status: "active",
+          version: "1.0.0",
+          hosts: ["source.example"],
+        },
+      ],
+    },
+  },
+}
+
 const createRuntime = (
-  extract: () => ExtractSuccessResponse | Promise<ExtractSuccessResponse>
+  extract: () => ExtractSuccessResponse | Promise<ExtractSuccessResponse>,
+  usage: () => UsageResponse | Promise<UsageResponse> = () => ({
+    metrics: [
+      {
+        id: "operations",
+        label: "Operations",
+        used: 0,
+        limit: 10,
+        unit: "operations",
+        period: "daily",
+        resetsAt: "2026-07-20T00:00:00.000Z",
+      },
+    ],
+  }),
+  runtimeManifest: PluginServerManifest = manifest
 ) =>
   createPluginServerRuntime<TestEnv>({
-    manifest: {
-      protocolVersion: "1.0",
-      pluginServerId: "dev.example.plugin-server",
-      displayName: "Example Plugin Server",
-      auth: { type: "bearer" },
-      usage: { endpoint: "/usage" },
-      matchers: [{ hosts: ["source.example"], pathPatterns: ["/**"] }],
-      features: { password: true, lazyNodes: true },
-      extensions: {},
-    },
+    manifest: runtimeManifest,
     auth: {
       validate: ({ request, env }) =>
         request.headers.get("Authorization") === `Bearer ${env.validApiKey}`,
     },
     extract,
-    usage: () => ({
-      metrics: [
-        {
-          id: "operations",
-          label: "Operations",
-          used: 0,
-          limit: 10,
-          unit: "operations",
-          period: "daily",
-          resetsAt: "2026-07-20T00:00:00.000Z",
-        },
-      ],
-    }),
+    usage,
   })
 
 describe("createPluginServerRuntime", () => {
   it("declares supported protocol versions", () => {
     expect(isSupportedProtocolVersion("1.0")).toBe(true)
     expect(isSupportedProtocolVersion("2.0")).toBe(false)
+  })
+
+  it("rejects a structurally valid manifest that fails semantic contract validation", async () => {
+    const { usage: declaredUsage, ...manifestWithoutUsage } = manifest
+    const runtime = createRuntime(
+      () => ({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      }),
+      undefined,
+      manifestWithoutUsage as unknown as PluginServerManifest
+    )
+
+    const response = await runtime.handleManifest(
+      new Request("https://pluginServer.example/manifest"),
+      { validApiKey: "secret" }
+    )
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({
+      error: { code: "PROTOCOL_MISMATCH" },
+    })
+    expect(declaredUsage).toEqual({ endpoint: "/usage" })
   })
 
   it("serves a validated manifest", async () => {
@@ -134,6 +179,44 @@ describe("createPluginServerRuntime", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({
       metrics: [{ id: "operations", limit: 10 }],
+    })
+  })
+
+  it("rejects usage that exceeds a declared finite limit", async () => {
+    const runtime = createRuntime(
+      () => ({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      }),
+      () => ({
+        metrics: [
+          {
+            id: "operations",
+            label: "Operations",
+            used: 11,
+            limit: 10,
+            unit: "operations",
+            period: "daily",
+            resetsAt: "2026-07-20T00:00:00.000Z",
+          },
+        ],
+      })
+    )
+
+    const response = await runtime.handleUsage(
+      new Request("https://pluginServer.example/usage", {
+        headers: { Authorization: "Bearer secret" },
+      }),
+      { validApiKey: "secret" }
+    )
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({
+      error: { code: "PROTOCOL_MISMATCH" },
     })
   })
 
@@ -256,6 +339,30 @@ describe("createPluginServerRuntime", () => {
         ],
       }),
     })
+
+    const response = await runtime.handleExtract(
+      createRequest({
+        input: { kind: "source", sourceUrl: "https://source.example/title" },
+      }),
+      { validApiKey: "secret" }
+    )
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toMatchObject({
+      error: { code: "PROTOCOL_MISMATCH" },
+    })
+  })
+
+  it("rejects extraction responses with invalid icon metadata", async () => {
+    const runtime = createRuntime(() => ({
+      plugin: {
+        pluginServerId: "dev.example.plugin-server",
+        displayName: "Example Plugin Server",
+        pluginIconUrl: "https://source.example/plugin.svg",
+      },
+      nodes: [],
+      extensions: {},
+    }))
 
     const response = await runtime.handleExtract(
       createRequest({

@@ -64,6 +64,16 @@ The shared local helpers are:
 
 - `validatePluginServerManifestContract(value)`
 - `validateExtractSuccessContract(value)`
+- `validateUsageContract(value)`
+- `parsePluginServerManifestContract(value)`
+- `parseExtractSuccessContract(value)`
+- `parseUsageResponseContract(value)`
+
+Use the typed `parse*Contract` helpers when accepting live protocol values;
+successful results expose `.value` and rejected results expose detailed
+`.issues`. Use the `validate*Contract` helpers for diagnostics and contract
+tests. Structural schemas are reserved for narrow decoding or display-only
+paths.
 
 See [`examples/plugin-server/tests/contract.test.ts`](../../../examples/plugin-server/tests/contract.test.ts)
 for the workspace contract-test example.

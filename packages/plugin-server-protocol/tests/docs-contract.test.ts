@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
-import { extractSuccessSchema } from "../src/index"
+import { parseExtractSuccessContract } from "../src/index"
 
 const documentationUrls = [
   new URL("../docs/spec.md", import.meta.url),
@@ -30,7 +30,7 @@ describe("published Plugin Server documentation", () => {
           "nodes" in value &&
           "extensions" in value
         ) {
-          expect(extractSuccessSchema.safeParse(value).success).toBe(true)
+          expect(parseExtractSuccessContract(value).ok).toBe(true)
         }
       }
     }

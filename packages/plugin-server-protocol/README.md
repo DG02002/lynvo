@@ -10,7 +10,7 @@ It provides:
 - optional standardized source discovery
 - Lynvo source metadata helpers
 - protocol error/request builders
-- contract validation helpers for Custom Plugin Server tests
+- canonical contract parsers and diagnostic validation helpers
 - mandatory finite usage schemas and authenticated runtime handling
 
 Custom Plugin Servers in this workspace can import this local package instead of copying Lynvo schemas. It is private and does not require npm publishing.
@@ -25,8 +25,17 @@ Documentation:
 See [`examples/plugin-server`](../../examples/plugin-server/) for the
 minimal tested workspace implementation.
 
-Useful test helpers:
+Contract helpers:
 
 - `validatePluginServerManifestContract(value)`
 - `validateExtractSuccessContract(value)`
 - `validateUsageContract(value)`
+- `parsePluginServerManifestContract(value)`
+- `parseExtractSuccessContract(value)`
+- `parseUsageResponseContract(value)`
+
+Use the typed `parse*Contract` helpers at runtime: an accepted value is
+available as `.value`, while a rejected value includes detailed `.issues`.
+Use the `validate*Contract` helpers for diagnostics and contract-test
+assertions. The exported structural schemas are for narrow decoding or
+display-only paths, not for accepting live Plugin Server responses.

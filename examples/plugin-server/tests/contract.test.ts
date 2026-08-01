@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
-  usageResponseSchema,
+  parseUsageResponseContract,
   verifyErrorSchema,
 } from "@lynvo/plugin-server-protocol"
 import worker, { manifest } from "../src/index"
@@ -44,9 +44,11 @@ describe("example Plugin Server contract", () => {
       }),
       environment
     )
-    expect(usageResponseSchema.safeParse(await usageResponse.json()).success).toBe(
-      true
-    )
+    expect(
+      parseUsageResponseContract(await usageResponse.json()).value
+    ).toMatchObject({
+      metrics: [{ id: "example-operations-daily" }],
+    })
 
     const unauthorizedResponse = await worker.fetch(
       new Request("https://worker.example/verify", { method: "POST" }),

@@ -115,6 +115,66 @@ describe("PluginServerClient", () => {
     })
   })
 
+  it("rejects a manifest that is structurally valid but semantically incomplete", async () => {
+    const { usage: declaredUsage, ...manifestWithoutUsage } = manifest
+    const client = new PluginServerClient({
+      fetch: async () => Response.json(manifestWithoutUsage),
+    })
+
+    await expect(client.getManifest()).rejects.toMatchObject<
+      Partial<PluginServerClientError>
+    >({
+      code: "PROTOCOL_MISMATCH",
+    })
+    expect(declaredUsage).toEqual({ endpoint: "/usage" })
+  })
+
+  it("rejects usage that exceeds its declared finite limit", async () => {
+    const client = new PluginServerClient({
+      fetch: async () =>
+        Response.json({
+          metrics: [
+            {
+              id: "operations",
+              label: "Operations",
+              used: 11,
+              limit: 10,
+              unit: "operations",
+              period: "daily",
+              resetsAt: "2026-07-20T00:00:00.000Z",
+            },
+          ],
+        }),
+    })
+
+    await expect(client.getUsage({})).rejects.toMatchObject<
+      Partial<PluginServerClientError>
+    >({
+      code: "PROTOCOL_MISMATCH",
+    })
+  })
+
+  it("rejects extraction responses with invalid icon metadata", async () => {
+    const client = new PluginServerClient({
+      fetch: async () =>
+        Response.json({
+          plugin: {
+            pluginServerId: "dev.example.plugin-server",
+            displayName: "Example",
+            pluginIconUrl: "https://source.example/plugin.svg",
+          },
+          nodes: [],
+          extensions: {},
+        }),
+    })
+
+    await expect(
+      client.extractSource("https://source.example/file", {})
+    ).rejects.toMatchObject<Partial<PluginServerClientError>>({
+      code: "PROTOCOL_MISMATCH",
+    })
+  })
+
   it("sends structured credentials to standardized discovery", async () => {
     const requests: Request[] = []
     const client = new PluginServerClient({

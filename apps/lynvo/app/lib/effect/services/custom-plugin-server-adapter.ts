@@ -40,6 +40,11 @@ const customPluginServerError = (
     url,
   })
 
+const parseStoredPluginServerManifest = (value: unknown) => {
+  const parsed = pluginServerManifestSchema.safeParse(value)
+  return parsed.success ? parsed.data : undefined
+}
+
 export const getCustomPluginServerUsage = Effect.fn(
   "CustomPluginServerAdapter.getCustomPluginServerUsage"
 )(function* (pluginServer: RegisteredPluginServer) {
@@ -79,8 +84,7 @@ export const decodePluginServerManifest = Effect.fn(
   if (json === undefined) {
     return undefined
   }
-  const parsed = pluginServerManifestSchema.safeParse(json)
-  return parsed.success ? parsed.data : undefined
+  return parseStoredPluginServerManifest(json)
 })
 
 export const selectCustomPluginServer = Effect.fn(

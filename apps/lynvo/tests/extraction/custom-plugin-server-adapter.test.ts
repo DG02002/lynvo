@@ -26,6 +26,67 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+interface LegacyManifestOptions {
+  includeUsage: boolean
+  includePluginStatus: boolean
+  includePluginVersion: boolean
+}
+
+const createLegacyStoredManifest = ({
+  includeUsage,
+  includePluginStatus,
+  includePluginVersion,
+}: LegacyManifestOptions): string =>
+  JSON.stringify({
+    protocolVersion: "1.0",
+    pluginServerId: "dev.example.plugin-server",
+    displayName: "Example Plugin Server",
+    auth: { type: "bearer" },
+    ...(includeUsage ? { usage: { endpoint: "/usage" } } : {}),
+    matchers: [{ hosts: ["source.example"] }],
+    features: {},
+    extensions: {
+      lynvo: {
+        plugins: [
+          {
+            id: "example-source",
+            displayName: "Example Source",
+            ...(includePluginStatus ? { status: "active" } : {}),
+            ...(includePluginVersion ? { version: "1.0.0" } : {}),
+            hosts: ["source.example"],
+          },
+        ],
+      },
+    },
+  })
+
+const legacyManifestCases: Array<[string, LegacyManifestOptions]> = [
+  [
+    "usage",
+    {
+      includeUsage: false,
+      includePluginStatus: true,
+      includePluginVersion: true,
+    },
+  ],
+  [
+    "Plugin status",
+    {
+      includeUsage: true,
+      includePluginStatus: false,
+      includePluginVersion: true,
+    },
+  ],
+  [
+    "Plugin version",
+    {
+      includeUsage: true,
+      includePluginStatus: true,
+      includePluginVersion: false,
+    },
+  ],
+]
+
 describe("extractFromCustomPluginServer", () => {
   it("forwards structured Basic Auth only to plugin servers that declare support", async () => {
     const fetchMock = vi.fn(async () =>
@@ -51,9 +112,22 @@ describe("extractFromCustomPluginServer", () => {
             pluginServerId: "dev.example.plugin-server",
             displayName: "Example Plugin Server",
             auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
             matchers: [{ hosts: ["source.example"] }],
             features: { basicAuth: true },
-            extensions: {},
+            extensions: {
+              lynvo: {
+                plugins: [
+                  {
+                    id: "example-source",
+                    displayName: "Example Source",
+                    status: "active",
+                    version: "1.0.0",
+                    hosts: ["source.example"],
+                  },
+                ],
+              },
+            },
           }),
           enabled: true,
           priority: 0,
@@ -161,6 +235,7 @@ describe("extractFromCustomPluginServer", () => {
             pluginServerId: "dev.example.plugin-server",
             displayName: "Example Plugin Server",
             auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
             matchers: [{ hosts: ["plugin-source-alpha.example"] }],
             features: {},
             extensions: {
@@ -172,6 +247,8 @@ describe("extractFromCustomPluginServer", () => {
                     iconUrl:
                       "https://plugin-server.example/icons/plugin-source-alpha.webp",
                     routesToPluginId: "plugin-source-beta",
+                    status: "active",
+                    version: "1.0.0",
                     hosts: ["plugin-source-alpha.example"],
                   },
                   {
@@ -179,6 +256,8 @@ describe("extractFromCustomPluginServer", () => {
                     displayName: "Source Beta",
                     iconUrl:
                       "https://plugin-server.example/icons/plugin-source-beta.webp",
+                    status: "active",
+                    version: "1.0.0",
                     hosts: ["plugin-source-beta.example"],
                   },
                 ],
@@ -263,14 +342,10 @@ describe("selectCustomPluginServer", () => {
       _id: "pluginServer-one",
       baseUrl: "https://plugin-server.example",
       apiKey: "secret",
-      manifest: JSON.stringify({
-        protocolVersion: "1.0",
-        pluginServerId: "dev.example.plugin-server",
-        displayName: "Example Plugin Server",
-        auth: { type: "bearer" },
-        matchers: [{ hosts: ["source.example"] }],
-        features: {},
-        extensions: {},
+      manifest: createLegacyStoredManifest({
+        includeUsage: false,
+        includePluginStatus: false,
+        includePluginVersion: false,
       }),
       enabled: true,
       priority: 0,
@@ -290,5 +365,44 @@ describe("selectCustomPluginServer", () => {
 
     expect(selected).toBeUndefined()
     expect(selectedById).toBeUndefined()
+  })
+
+  it.each(legacyManifestCases)(
+    "routes through a verified stored manifest when %s is missing",
+    async (_missingField, manifestOptions) => {
+      const pluginServer = {
+        _id: "pluginServer-one",
+        baseUrl: "https://plugin-server.example",
+        apiKey: "secret",
+        manifest: createLegacyStoredManifest(manifestOptions),
+        enabled: true,
+        priority: 0,
+        verificationStatus: "verified",
+      }
+
+      const selected = await Effect.runPromise(
+        selectCustomPluginServer([pluginServer], "https://source.example/title")
+      )
+
+      expect(selected?._id).toBe("pluginServer-one")
+    }
+  )
+
+  it("does not select a verified Plugin Server with a malformed manifest", async () => {
+    const pluginServer = {
+      _id: "pluginServer-one",
+      baseUrl: "https://plugin-server.example",
+      apiKey: "secret",
+      manifest: "not-json",
+      enabled: true,
+      priority: 0,
+      verificationStatus: "verified",
+    }
+
+    const selected = await Effect.runPromise(
+      selectCustomPluginServer([pluginServer], "https://source.example/title")
+    )
+
+    expect(selected).toBeUndefined()
   })
 })

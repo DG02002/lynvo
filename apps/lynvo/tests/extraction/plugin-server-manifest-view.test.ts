@@ -22,6 +22,36 @@ describe("getPluginServerManifestView", () => {
     expect(view.hosts).toBe("example.com")
   })
 
+  it("keeps structurally valid legacy manifests visible for display", () => {
+    const view = getPluginServerManifestView(
+      JSON.stringify({
+        protocolVersion: "1.0",
+        pluginServerId: "dev.example.legacy-plugin-server",
+        displayName: "Legacy Plugin Server",
+        auth: { type: "bearer" },
+        matchers: [{ hosts: ["legacy.example"] }],
+        features: {},
+        extensions: {
+          lynvo: {
+            plugins: [
+              {
+                id: "legacy-source",
+                displayName: "Legacy Source",
+                hosts: ["legacy.example"],
+              },
+            ],
+          },
+        },
+      })
+    )
+
+    expect(view).toMatchObject({
+      name: "Legacy Plugin Server",
+      hosts: "legacy.example",
+      plugins: [{ id: "legacy-source", displayName: "Legacy Source" }],
+    })
+  })
+
   it("exposes Plugin icons from Lynvo manifest extensions", () => {
     const view = getPluginServerManifestView(
       JSON.stringify({

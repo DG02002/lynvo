@@ -3,12 +3,10 @@ import {
   createSourceExtractRequest,
   discoverResponseSchema,
   extractErrorSchema,
-  extractSuccessSchema,
   isSupportedProtocolVersion,
-  pluginServerManifestSchema,
-  usageResponseSchema,
-  validatePluginServerManifestContract,
-  validateUsageContract,
+  parseExtractSuccessContract,
+  parsePluginServerManifestContract,
+  parseUsageResponseContract,
   verifyErrorSchema,
   verifySuccessSchema,
   type ExtractSuccessResponse,
@@ -174,19 +172,18 @@ export class PluginServerClient {
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    const parsed = pluginServerManifestSchema.safeParse(value)
-    const contract = validatePluginServerManifestContract(value)
+    const parsed = parsePluginServerManifestContract(value)
     if (
-      !parsed.success ||
-      !contract.ok ||
-      !isSupportedProtocolVersion(parsed.data.protocolVersion)
+      !parsed.ok ||
+      !parsed.value ||
+      !isSupportedProtocolVersion(parsed.value.protocolVersion)
     ) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Plugin Server Manifest does not match protocol v1.",
       })
     }
-    return parsed.data
+    return parsed.value
   }
 
   verify = async (options: PluginServerClientOptions): Promise<void> => {
@@ -211,15 +208,14 @@ export class PluginServerClient {
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    const parsed = usageResponseSchema.safeParse(value)
-    const contract = validateUsageContract(value)
-    if (!parsed.success || !contract.ok) {
+    const parsed = parseUsageResponseContract(value)
+    if (!parsed.ok || !parsed.value) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Plugin Server usage response does not match protocol v1.",
       })
     }
-    return parsed.data
+    return parsed.value
   }
 
   discover = async (
@@ -284,14 +280,14 @@ export class PluginServerClient {
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    const parsed = extractSuccessSchema.safeParse(value)
-    if (!parsed.success) {
+    const parsed = parseExtractSuccessContract(value)
+    if (!parsed.ok || !parsed.value) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Plugin Server response does not match protocol v1.",
       })
     }
-    return parsed.data
+    return parsed.value
   }
 
   extractSource = (

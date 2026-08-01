@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 import {
   extractErrorSchema,
   extractSuccessSchema,
+  parseExtractSuccessContract,
+  parseUsageResponseContract,
   pluginServerManifestSchema,
+  validateUsageContract,
   usageResponseSchema,
   validExtractErrorFixture,
   validExtractSuccessFixture,
@@ -12,10 +15,19 @@ import {
 
 describe("Plugin Server protocol fixtures", () => {
   it("keeps every canonical fixture executable", () => {
-    expect(pluginServerManifestSchema.safeParse(validPluginServerManifestFixture).success).toBe(true)
-    expect(usageResponseSchema.safeParse(validUsageResponseFixture).success).toBe(true)
-    expect(extractSuccessSchema.safeParse(validExtractSuccessFixture).success).toBe(true)
-    expect(extractErrorSchema.safeParse(validExtractErrorFixture).success).toBe(true)
+    expect(
+      pluginServerManifestSchema.safeParse(validPluginServerManifestFixture)
+        .success
+    ).toBe(true)
+    expect(
+      usageResponseSchema.safeParse(validUsageResponseFixture).success
+    ).toBe(true)
+    expect(
+      extractSuccessSchema.safeParse(validExtractSuccessFixture).success
+    ).toBe(true)
+    expect(extractErrorSchema.safeParse(validExtractErrorFixture).success).toBe(
+      true
+    )
   })
 
   it("rejects the obsolete source response envelope", () => {
@@ -26,5 +38,77 @@ describe("Plugin Server protocol fixtures", () => {
         extensions: {},
       }).success
     ).toBe(false)
+  })
+
+  it("accepts only usage responses within their declared finite limits", () => {
+    const invalidUsageResponse = {
+      ...validUsageResponseFixture,
+      metrics: [
+        {
+          ...validUsageResponseFixture.metrics[0],
+          used: 1_001,
+        },
+      ],
+    }
+
+    expect(
+      parseUsageResponseContract(validUsageResponseFixture).value?.metrics[0]
+    ).toMatchObject({ used: 0, limit: 1_000 })
+    expect(parseUsageResponseContract(invalidUsageResponse)).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "metrics.0.used",
+          message: "Usage cannot exceed its finite limit.",
+        },
+      ],
+    })
+  })
+
+  it("reports duplicate usage metric ids through the typed parser result", () => {
+    const duplicateMetricResponse = {
+      ...validUsageResponseFixture,
+      metrics: [
+        validUsageResponseFixture.metrics[0],
+        { ...validUsageResponseFixture.metrics[0], label: "Duplicate metric" },
+      ],
+    }
+
+    expect(validateUsageContract(duplicateMetricResponse).issues).toContainEqual({
+      path: "metrics.1.id",
+      message: "Duplicate metric id: example-operations-daily",
+    })
+    expect(parseUsageResponseContract(duplicateMetricResponse)).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "metrics.1.id",
+          message: "Duplicate metric id: example-operations-daily",
+        },
+      ],
+    })
+  })
+
+  it("accepts only extraction responses with valid icon metadata", () => {
+    const invalidExtractSuccessResponse = {
+      ...validExtractSuccessFixture,
+      plugin: {
+        ...validExtractSuccessFixture.plugin,
+        pluginIconUrl: "https://media.example.com/plugin.svg",
+      },
+    }
+
+    expect(
+      parseExtractSuccessContract(validExtractSuccessFixture).value?.plugin
+    ).toMatchObject({ pluginServerId: "dev.lynvo.example-plugin-server" })
+    expect(parseExtractSuccessContract(invalidExtractSuccessResponse)).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "plugin.pluginIconUrl",
+          message: "Use a direct HTTPS WebP URL for Plugin icons.",
+        },
+      ],
+    })
   })
 })
