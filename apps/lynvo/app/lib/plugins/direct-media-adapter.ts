@@ -12,6 +12,7 @@ import {
   isAllowedDirectContentType,
   isSuccessfulDirectStatus,
 } from "./direct-media-policy"
+import { createOutboundHttpTransport } from "~/lib/outbound-http"
 
 const getDirectFilename = (
   url: string,
@@ -38,21 +39,11 @@ const getDirectFilename = (
 }
 
 const fetchDirectRange = async (url: string, timeoutMs: number) => {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: createRangeHeaders(),
-      signal: controller.signal,
-    })
-    clearTimeout(timeoutId)
-    return response
-  } catch (error) {
-    clearTimeout(timeoutId)
-    throw error
-  }
+  return await createOutboundHttpTransport().fetch(url, {
+    method: "GET",
+    headers: createRangeHeaders(),
+    timeoutMs,
+  })
 }
 
 export interface DirectMediaAdapter {

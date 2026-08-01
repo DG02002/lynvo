@@ -32,6 +32,8 @@ import {
   DEVICE_CODE_CREATION_RATE_LIMIT,
   DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
   DEVICE_CODE_PREFLIGHT_TTL_MS,
+  EXTRACTION_ROUTE_RATE_LIMIT,
+  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
 } from "../convex/constants"
 import {
   addRequestContext,
@@ -651,6 +653,65 @@ app.use("/api/auth/tv/authorize", async (context, next) => {
     )
   }
   addRequestContext(context, { rate_limit: { allowed: true } })
+  return next()
+})
+
+app.use("/api/extract", async (context, next) => {
+  const result = await rateLimit(
+    context.env,
+    `extraction:${clientIp(context.req.raw)}`,
+    EXTRACTION_ROUTE_RATE_LIMIT,
+    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
+  )
+  addRequestContext(context, {
+    extraction_rate_limit: { outcome: result },
+  })
+  if (result === "limited") {
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many Extraction requests. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
+  }
+  if (result === "unavailable") {
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Extraction is temporarily unavailable.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  return next()
+})
+
+app.use("/api/meta", async (context, next) => {
+  const result = await rateLimit(
+    context.env,
+    `metadata:${clientIp(context.req.raw)}`,
+    EXTRACTION_ROUTE_RATE_LIMIT,
+    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
+  )
+  addRequestContext(context, {
+    extraction_rate_limit: { outcome: result },
+  })
+  if (result !== "allowed") {
+    return context.json(
+      requestApiError(context, {
+        code: result === "limited" ? "rate_limited" : "service_unavailable",
+        error:
+          result === "limited"
+            ? "Too many metadata requests. Try again later."
+            : "Metadata is temporarily unavailable.",
+        retryable: true,
+      }),
+      result === "limited" ? 429 : 503
+    )
+  }
   return next()
 })
 

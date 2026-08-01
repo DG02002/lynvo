@@ -46,7 +46,7 @@ describe("Extraction interface routing", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async (input) => {
-        requestedUrls.push(String(input))
+        requestedUrls.push(input instanceof Request ? input.url : String(input))
         return new Response(null, {
           status: 206,
           headers: { "Content-Type": "video/mp4" },

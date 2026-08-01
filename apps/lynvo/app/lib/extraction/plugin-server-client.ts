@@ -21,6 +21,7 @@ import {
   PLUGIN_SERVER_INTERNAL_ORIGIN,
   PLUGIN_SERVER_REQUEST_TIMEOUT_MS,
 } from "../constants"
+import { createOutboundHttpTransport } from "../outbound-http"
 
 export interface PluginServerTransport {
   fetch: (request: Request) => Promise<Response>
@@ -69,17 +70,18 @@ export class HttpPluginServerTransport implements PluginServerTransport {
       method === "GET" || method === "HEAD"
         ? undefined
         : await request.arrayBuffer()
-    return fetch(
-      new Request(
-        `${this.baseUrl}${internalUrl.pathname}${internalUrl.search}`,
-        {
-          method,
-          headers: request.headers,
-          body,
-          signal: request.signal,
-        }
-      )
-    )
+    const destination = `${this.baseUrl}${internalUrl.pathname}${internalUrl.search}`
+    return createOutboundHttpTransport({
+      allowLocalDevelopment: import.meta.env.DEV,
+    }).fetch(destination, {
+      method,
+      headers: request.headers,
+      body,
+      signal: request.signal,
+      protectedOrigin: new URL(this.baseUrl).origin,
+      allowedProtocols: ["http:", "https:"],
+      timeoutMs: PLUGIN_SERVER_REQUEST_TIMEOUT_MS,
+    })
   }
 }
 

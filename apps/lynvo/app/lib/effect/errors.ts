@@ -63,20 +63,30 @@ export class CredentialVaultError extends Schema.TaggedErrorClass<CredentialVaul
   }
 ) {}
 
-export const ConvexApiError = ConvexError.pipe(HttpApiSchema.status(503))
-export const ExtractionApiError = ExtractionError.pipe(
+const publicError = <Tag extends string>(tag: Tag) =>
+  Schema.Struct({ _tag: Schema.Literal(tag), message: Schema.String })
+
+export const ConvexApiError = publicError("ConvexError").pipe(
+  HttpApiSchema.status(503)
+)
+export const ExtractionApiError = publicError("ExtractionError").pipe(
   HttpApiSchema.status(422)
 )
-export const ValidationApiError = ValidationError.pipe(
+export const ValidationApiError = publicError("ValidationError").pipe(
   HttpApiSchema.status(400)
 )
-export const UnauthorizedApiError = UnauthorizedError.pipe(
+export const UnauthorizedApiError = publicError("UnauthorizedError").pipe(
   HttpApiSchema.status(401)
 )
-export const NotFoundApiError = NotFoundError.pipe(HttpApiSchema.status(404))
-export const CsrfApiError = CsrfError.pipe(HttpApiSchema.status(403))
-export const PluginServerRegistrationApiError =
-  PluginServerRegistrationError.pipe(HttpApiSchema.status(422))
-export const CredentialVaultApiError = CredentialVaultError.pipe(
+export const NotFoundApiError = publicError("NotFoundError").pipe(
+  HttpApiSchema.status(404)
+)
+export const CsrfApiError = publicError("CsrfError").pipe(
+  HttpApiSchema.status(403)
+)
+export const PluginServerRegistrationApiError = publicError(
+  "PluginServerRegistrationError"
+).pipe(HttpApiSchema.status(422))
+export const CredentialVaultApiError = publicError("CredentialVaultError").pipe(
   HttpApiSchema.status(503)
 )

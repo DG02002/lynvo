@@ -1,6 +1,9 @@
 export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
+export const OUTBOUND_HTTP_MAX_REDIRECTS = 3
+export const OUTBOUND_HTTP_MAX_RESPONSE_BYTES = 5 * 1024 * 1024
+export const OUTBOUND_HTTP_TIMEOUT_MS = 15_000
 export const LYNVO_PLUGIN_SERVER_ID = "lynvo:dev.lynvo.plugin-server"
 export const COOKIE_PREFERENCES_STORAGE_KEY = "lynvo:cookie-preferences"
 export const COOKIE_PREFERENCES_VERSION = 1

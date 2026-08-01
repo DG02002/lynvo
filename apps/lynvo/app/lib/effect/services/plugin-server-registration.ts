@@ -44,7 +44,10 @@ export const normalizePluginServerBaseUrl = Effect.fn(
       message: "Plugin Server base URL must be a valid URL.",
     })
   }
-  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+  if (
+    url.protocol !== "https:" &&
+    !(import.meta.env.DEV && url.hostname === "localhost")
+  ) {
     return yield* new PluginServerRegistrationError({
       message: "Plugin Server base URL must use HTTPS.",
     })
