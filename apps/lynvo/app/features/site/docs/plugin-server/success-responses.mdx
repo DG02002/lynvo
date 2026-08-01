@@ -1,6 +1,6 @@
 ---
 title: Return successful Extraction responses
-description: Return Media Nodes with the Source metadata Lynvo needs.
+description: Return Media Nodes with the Plugin metadata Lynvo needs.
 navLabel: Success responses
 contentType: Reference
 ---
@@ -9,17 +9,17 @@ contentType: Reference
 
 ## Return a successful Extraction response
 
-Every successful Extraction returns Source metadata, an array of Media Nodes, and an extensions object.
+Every successful Extraction returns Plugin metadata, an array of Media Nodes, and an extensions object.
 
 <CodeBlock label="Successful response">
 
 ```json {2-7,9-15}
 {
-  "source": {
+  "plugin": {
     "pluginServerId": "com.example.my-plugin-server",
     "displayName": "My Plugin Server",
     "pluginId": "example-media",
-    "sourceName": "Example Media",
+    "pluginName": "Example Media",
     "pageTitle": "Example collection"
   },
   "nodes": [
@@ -36,7 +36,7 @@ Every successful Extraction returns Source metadata, an array of Media Nodes, an
 
 </CodeBlock>
 
-The `source` object supports:
+The `plugin` object supports:
 
 | Field            | Required | Purpose                    |
 | ---------------- | -------- | -------------------------- |
@@ -44,8 +44,8 @@ The `source` object supports:
 | `displayName`    | Yes      | Plugin Server display name |
 | `iconUrl`        | No       | Plugin Server icon         |
 | `pluginId`       | No       | Matches a declared Plugin  |
-| `sourceName`     | No       | Source display name        |
-| `sourceIconUrl`  | No       | Source icon                |
+| `pluginName`     | No       | Plugin display name        |
+| `pluginIconUrl`  | No       | Plugin icon                |
 | `pageTitle`      | No       | Extracted page title       |
 | `audio`          | No       | Audio-language summary     |
 

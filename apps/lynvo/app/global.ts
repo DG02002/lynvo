@@ -63,9 +63,24 @@ declare global {
     failures: readonly string[]
   }
 
+  interface UsageReadCustomGroup {
+    key: string
+    serverName: string
+    unit: string
+    period: UsageMetric["period"]
+    total: UsageReadTotal
+    resetsAt?: string
+    entries: readonly UsageReadEntry[]
+  }
+
+  interface UsageReadCustomSection {
+    groups: readonly UsageReadCustomGroup[]
+    failures: readonly string[]
+  }
+
   interface UsageReadSnapshot {
     lynvo: UsageReadSection
-    custom: UsageReadSection
+    custom: UsageReadCustomSection
   }
 
   interface UsageReadModule {

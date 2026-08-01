@@ -1,30 +1,10 @@
 import {
   createPluginServerRuntime,
-  type PluginServerManifest,
+  validPluginServerManifestFixture,
+  validUsageResponseFixture,
 } from "@lynvo/plugin-server-protocol"
 
-export const manifest: PluginServerManifest = {
-  protocolVersion: "1.0",
-  pluginServerId: "dev.lynvo.example-plugin-server",
-  displayName: "Example Plugin Server",
-  auth: { type: "bearer" },
-  usage: { endpoint: "/usage" },
-  matchers: [{ hosts: ["media.example.com"] }],
-  features: { password: false, lazyNodes: false },
-  extensions: {
-    lynvo: {
-      plugins: [
-        {
-          id: "example-media",
-          displayName: "Example Media",
-          status: "active",
-          version: "1.0.0",
-          hosts: ["media.example.com"],
-        },
-      ],
-    },
-  },
-}
+export const manifest = validPluginServerManifestFixture
 
 type ExampleEnvironment = Record<string, never>
 
@@ -34,7 +14,7 @@ const runtime = createPluginServerRuntime<ExampleEnvironment>({
     validate: ({ request }) =>
       request.headers.get("authorization") === "Bearer example-secret",
   },
-  usage: () => ({ metrics: [] }),
+  usage: () => validUsageResponseFixture,
   extract: ({ targetUrl }) => ({
     plugin: {
       pluginServerId: manifest.pluginServerId,

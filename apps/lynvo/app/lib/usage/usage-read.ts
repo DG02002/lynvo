@@ -70,35 +70,51 @@ const normalizeLynvoSection = (
 const normalizeCustomSection = (
   usage: readonly CustomPluginServerUsage[],
   didAdapterFail: boolean
-): UsageReadSection => {
+): UsageReadCustomSection => {
   const available = usage.filter((pluginServer) => !pluginServer.error)
-  const monthlyMetrics = available.flatMap((pluginServer) =>
-    extractionMetrics(pluginServer.metrics, "monthly")
-  )
   return {
-    total: totalMetrics(monthlyMetrics),
-    resetsAt: earliestValidReset(monthlyMetrics),
-    entries: available.flatMap((pluginServer) =>
-      extractionMetrics(pluginServer.metrics, "monthly").map((metric) => {
-        const plugin = pluginServer.plugins?.find(
-          (candidate) => candidate.id === metric.pluginId
+    groups: available.flatMap((pluginServer) => {
+      const groupKeys = new Set(
+        pluginServer.metrics.map(
+          (metric) => `${metric.unit}\u0000${metric.period}`
         )
-        const isSharedMetric = !metric.pluginId
-        const iconKind: UsageReadEntry["iconKind"] = isSharedMetric
-          ? "plugin-server"
-          : "source"
+      )
+      return [...groupKeys].map((groupKey) => {
+        const [unit, periodValue] = groupKey.split("\u0000")
+        const period: UsageMetric["period"] =
+          periodValue === "daily" ? "daily" : "monthly"
+        const metrics = pluginServer.metrics.filter(
+          (metric) => metric.unit === unit && metric.period === period
+        )
         return {
-          key: `${pluginServer.pluginServerId}:${metric.id}`,
-          name: isSharedMetric
-            ? pluginServer.name
-            : (plugin?.name ?? metric.label.replace(/\s+extractions$/i, "")),
-          used: metric.used,
-          limit: metric.limit,
-          iconUrl: plugin?.iconUrl ?? pluginServer.iconUrl,
-          iconKind,
+          key: `${pluginServer.pluginServerId}:${unit}:${period}`,
+          serverName: pluginServer.name,
+          unit,
+          period,
+          total: totalMetrics(metrics),
+          resetsAt: earliestValidReset(metrics),
+          entries: metrics.map((metric) => {
+            const plugin = pluginServer.plugins?.find(
+              (candidate) => candidate.id === metric.pluginId
+            )
+            const isServerMetric = !metric.pluginId
+            const iconKind: UsageReadEntry["iconKind"] = isServerMetric
+              ? "plugin-server"
+              : "source"
+            return {
+              key: `${pluginServer.pluginServerId}:${metric.id}`,
+              name: isServerMetric
+                ? metric.label
+                : (plugin?.name ?? metric.label),
+              used: metric.used,
+              limit: metric.limit,
+              iconUrl: plugin?.iconUrl ?? pluginServer.iconUrl,
+              iconKind,
+            }
+          }),
         }
       })
-    ),
+    }),
     failures: didAdapterFail
       ? [CUSTOM_USAGE_FAILURE]
       : usage.flatMap((pluginServer) =>

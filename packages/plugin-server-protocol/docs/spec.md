@@ -334,7 +334,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 
 ```json
 {
-  "source": {
+  "plugin": {
     "pluginServerId": "com.example.lynvo.source-alpha",
     "displayName": "Example source-alpha Plugin Server",
     "iconUrl": "https://example.com/icon.webp",
@@ -377,7 +377,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 
 ```json
 {
-  "source": {
+  "plugin": {
     "pluginServerId": "com.example.lynvo.resolver-beta",
     "displayName": "Example Resolver Beta Plugin Server",
     "iconUrl": "https://example.com/icon.webp"

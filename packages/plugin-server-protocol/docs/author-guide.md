@@ -415,8 +415,8 @@ You may return minimal source metadata:
 - `displayName`
 - `iconUrl`
 - `pluginId`
-- `sourceName`
-- `sourceIconUrl`
+- `pluginName`
+- `pluginIconUrl`
 - `pageTitle`
 - `audio`
 
@@ -520,7 +520,7 @@ const runtime = createPluginServerRuntime({
       matchers: [{ hosts: ["example.com"], pathPatterns: ["/**"] }],
       features: { password: true, lazyNodes: true, basicAuth: true },
       extensions: {
-        lynvo: { sources },
+        lynvo: { plugins: sources },
       },
     }
   },
@@ -531,12 +531,12 @@ const runtime = createPluginServerRuntime({
   extract: async ({ request, targetUrl }) => {
     if (request.input.kind === "source") {
       return {
-        source: {
+        plugin: {
           pluginServerId: "com.example.lynvo.plugin-server",
           displayName: "Example Plugin Server",
           pluginId: "example-source",
-          sourceName: "Example Source",
-          sourceIconUrl: "https://example.com/icons/source.webp",
+          pluginName: "Example Source",
+          pluginIconUrl: "https://example.com/icons/source.webp",
         },
         nodes: [
           {
@@ -551,12 +551,12 @@ const runtime = createPluginServerRuntime({
     }
 
     return {
-      source: {
+      plugin: {
         pluginServerId: "com.example.lynvo.plugin-server",
         displayName: "Example Plugin Server",
         pluginId: "example-source",
-        sourceName: "Example Source",
-        sourceIconUrl: "https://example.com/icons/source.webp",
+        pluginName: "Example Source",
+        pluginIconUrl: "https://example.com/icons/source.webp",
       },
       nodes: [
         {

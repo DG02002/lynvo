@@ -159,31 +159,37 @@ export const UsageSettings = ({
           </SettingsList>
         </SettingsPanel>
 
-        {(snapshot.custom.entries.length > 0 ||
+        {(snapshot.custom.groups.length > 0 ||
           snapshot.custom.failures.length > 0) && (
           <SettingsPanel className="gap-4">
             <SectionHeading
               title="Custom Plugin Server usage"
-              description="Monthly requests shared across enabled Custom Plugin Servers."
+              description="Each Custom Plugin Server reports its own independent capacities."
             />
-            <UsageSummary
-              label="Custom Plugin Servers"
-              total={snapshot.custom.total}
-              resetsAt={snapshot.custom.resetsAt}
-            />
-            <SettingsList>
-              {snapshot.custom.entries.map((item) => (
-                <UsageItem
-                  {...item}
-                  key={item.key}
-                  hideIcon={item.iconKind === "hidden"}
-                  fallback={
-                    item.iconKind === "plugin-server"
-                      ? "plugin-server"
-                      : "source"
-                  }
+            {snapshot.custom.groups.map((group) => (
+              <div key={group.key} className="flex flex-col gap-3">
+                <UsageSummary
+                  label={`${group.serverName} · ${group.period} ${group.unit}`}
+                  total={group.total}
+                  resetsAt={group.resetsAt}
                 />
-              ))}
+                <SettingsList>
+                  {group.entries.map((item) => (
+                    <UsageItem
+                      {...item}
+                      key={item.key}
+                      hideIcon={item.iconKind === "hidden"}
+                      fallback={
+                        item.iconKind === "plugin-server"
+                          ? "plugin-server"
+                          : "source"
+                      }
+                    />
+                  ))}
+                </SettingsList>
+              </div>
+            ))}
+            <SettingsList>
               {snapshot.custom.failures.map((failure) => (
                 <SettingsRow key={failure} className="py-2">
                   <span className="text-sm text-destructive">{failure}</span>

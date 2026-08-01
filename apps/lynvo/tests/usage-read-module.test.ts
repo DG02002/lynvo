@@ -43,15 +43,26 @@ describe("Usage Read module", () => {
         {
           pluginServerId: "custom-1",
           name: "Custom One",
+          plugins: [{ id: "media", name: "Media Plugin" }],
           metrics: [
             {
-              id: "monthly",
-              label: "Requests",
+              id: "monthly-bytes",
+              label: "Transferred bytes",
               used: 4,
               limit: 40,
-              unit: "extractions",
+              unit: "bytes",
               period: "monthly",
               resetsAt: "not-a-date",
+            },
+            {
+              id: "daily-operations",
+              label: "Operations",
+              used: 2,
+              limit: 20,
+              unit: "operations",
+              period: "daily",
+              resetsAt: "2030-02-03T00:00:00.000Z",
+              pluginId: "media",
             },
           ],
         },
@@ -72,9 +83,24 @@ describe("Usage Read module", () => {
         entries: [{ name: "Daily extraction limit", used: 3, limit: 15 }],
       },
       custom: {
-        total: { used: 4, limit: 40 },
-        resetsAt: undefined,
-        entries: [{ name: "Custom One", used: 4, limit: 40 }],
+        groups: [
+          {
+            serverName: "Custom One",
+            unit: "bytes",
+            period: "monthly",
+            total: { used: 4, limit: 40 },
+            resetsAt: undefined,
+            entries: [{ name: "Transferred bytes", used: 4, limit: 40 }],
+          },
+          {
+            serverName: "Custom One",
+            unit: "operations",
+            period: "daily",
+            total: { used: 2, limit: 20 },
+            resetsAt: "2030-02-03T00:00:00.000Z",
+            entries: [{ name: "Media Plugin", used: 2, limit: 20 }],
+          },
+        ],
         failures: ["Usage for Custom Two couldn’t be loaded."],
       },
     })
@@ -93,7 +119,7 @@ describe("Usage Read module", () => {
     ).resolves.toMatchObject({
       lynvo: { entries: [] },
       custom: {
-        entries: [],
+        groups: [],
         failures: [
           "Custom Plugin Server usage couldn’t be loaded. Check the connection, then reload Settings.",
         ],

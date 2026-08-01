@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 import {
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
+  usageResponseSchema,
+  verifyErrorSchema,
 } from "@lynvo/plugin-server-protocol"
 import worker, { manifest } from "../src/index"
 
@@ -33,5 +35,26 @@ describe("example Plugin Server contract", () => {
       ok: true,
       issues: [],
     })
+  })
+
+  it("publishes finite usage and rejects invalid authentication", async () => {
+    const usageResponse = await worker.fetch(
+      new Request("https://worker.example/usage", {
+        headers: { Authorization: "Bearer example-secret" },
+      }),
+      environment
+    )
+    expect(usageResponseSchema.safeParse(await usageResponse.json()).success).toBe(
+      true
+    )
+
+    const unauthorizedResponse = await worker.fetch(
+      new Request("https://worker.example/verify", { method: "POST" }),
+      environment
+    )
+    expect(unauthorizedResponse.status).toBe(401)
+    expect(
+      verifyErrorSchema.safeParse(await unauthorizedResponse.json()).success
+    ).toBe(true)
   })
 })
