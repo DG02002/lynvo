@@ -30,6 +30,7 @@ const runSession = (
             getByName: () => ({
               fetch: async () =>
                 Response.json({
+                  convexSessionId: "authSessions:456",
                   accessToken: "opaque-session-access-token",
                   refreshToken: "server-only-refresh-token",
                   createdAt: 1,
@@ -109,7 +110,7 @@ describe("AuthSessionService", () => {
         })
       )
     )
-    expect(result).toEqual({ user: null })
+    expect(result).toEqual({ kind: "unauthenticated", user: null })
   })
 
   it("does not authenticate from the legacy JWT cookie", async () => {
@@ -126,7 +127,7 @@ describe("AuthSessionService", () => {
         })
       )
     )
-    expect(result).toEqual({ user: null })
+    expect(result).toEqual({ kind: "unauthenticated", user: null })
   })
 
   it("resolves an opaque Worker session without exposing the refresh token", async () => {

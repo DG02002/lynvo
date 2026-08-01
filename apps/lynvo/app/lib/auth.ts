@@ -43,6 +43,12 @@ export const getUserSession = async (
       authSession.getSession(request)
     )
   )
+  if (result.kind === "unavailable") {
+    throw data(
+      { error: "Authentication is temporarily unavailable." },
+      { status: 503 }
+    )
+  }
   return {
     user: result.user
       ? {

@@ -1,4 +1,5 @@
 interface SessionPayload {
+  readonly convexSessionId: string
   readonly accessToken: string
   readonly refreshToken: string
   readonly createdAt: number
@@ -48,14 +49,17 @@ const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   typeof payload === "object" &&
   payload !== null &&
   "accessToken" in payload &&
+  "convexSessionId" in payload &&
   "refreshToken" in payload &&
   "createdAt" in payload &&
   "expiresAt" in payload &&
   typeof payload.accessToken === "string" &&
+  typeof payload.convexSessionId === "string" &&
   typeof payload.refreshToken === "string" &&
   typeof payload.createdAt === "number" &&
   typeof payload.expiresAt === "number" &&
   payload.accessToken.length > 0 &&
+  payload.convexSessionId.length > 0 &&
   payload.refreshToken.length > 0 &&
   payload.expiresAt > payload.createdAt &&
   (!("idleTimeoutMs" in payload) ||
@@ -122,6 +126,7 @@ export class WorkerAuthSession implements DurableObject {
         masterKey,
         new TextEncoder().encode(
           JSON.stringify({
+            convexSessionId: payload.convexSessionId,
             accessToken: payload.accessToken,
             refreshToken: payload.refreshToken,
           })
@@ -184,8 +189,10 @@ export class WorkerAuthSession implements DurableObject {
           typeof tokens !== "object" ||
           tokens === null ||
           !("accessToken" in tokens) ||
+          !("convexSessionId" in tokens) ||
           !("refreshToken" in tokens) ||
           typeof tokens.accessToken !== "string" ||
+          typeof tokens.convexSessionId !== "string" ||
           typeof tokens.refreshToken !== "string"
         ) {
           return new Response(null, { status: 422 })
@@ -198,6 +205,7 @@ export class WorkerAuthSession implements DurableObject {
           ),
         } satisfies StoredSession)
         return Response.json({
+          convexSessionId: tokens.convexSessionId,
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           createdAt: storedSession.createdAt,

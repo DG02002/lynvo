@@ -15,6 +15,7 @@ interface AuthSessionStoreNamespace {
 
 export interface CreateAuthSessionInput {
   readonly sessionId: string
+  readonly convexSessionId: string
   readonly accessToken: string
   readonly refreshToken: string
   readonly nowMs: number
@@ -35,6 +36,7 @@ export interface AuthSessionUnavailable {
 }
 
 export interface AuthSessionState {
+  readonly convexSessionId: string
   readonly accessToken: string
   readonly refreshToken: string
   readonly createdAt: number
@@ -108,6 +110,11 @@ const createSessionCookie = (sessionId: string): string =>
 const createExpiredSessionCookie = (): string =>
   `${WORKER_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
 
+const rotationRequests = new WeakMap<
+  AuthSessionStoreNamespace,
+  Map<string, ReturnType<AuthSessionModule["rotate"]>>
+>()
+
 const parseAuthSessionState = (
   value: unknown
 ): AuthSessionState | undefined => {
@@ -115,20 +122,24 @@ const parseAuthSessionState = (
     typeof value !== "object" ||
     value === null ||
     !("accessToken" in value) ||
+    !("convexSessionId" in value) ||
     !("refreshToken" in value) ||
     !("createdAt" in value) ||
     !("expiresAt" in value) ||
     typeof value.accessToken !== "string" ||
+    typeof value.convexSessionId !== "string" ||
     typeof value.refreshToken !== "string" ||
     typeof value.createdAt !== "number" ||
     typeof value.expiresAt !== "number" ||
     value.accessToken.length === 0 ||
+    value.convexSessionId.length === 0 ||
     value.refreshToken.length === 0 ||
     value.expiresAt <= value.createdAt
   ) {
     return undefined
   }
   return {
+    convexSessionId: value.convexSessionId,
     accessToken: value.accessToken,
     refreshToken: value.refreshToken,
     createdAt: value.createdAt,
@@ -147,6 +158,7 @@ export const createAuthSessionModule = (
         .fetch("https://session.internal/session", {
           method: "POST",
           body: JSON.stringify({
+            convexSessionId: input.convexSessionId,
             accessToken: input.accessToken,
             refreshToken: input.refreshToken,
             createdAt: input.nowMs,
@@ -189,32 +201,52 @@ export const createAuthSessionModule = (
     }
   },
   rotate: async (input) => {
-    const current = await createAuthSessionModule(namespace).read(
-      input.sessionId
-    )
-    if (current.kind !== "active") {
-      return current
+    let namespaceRequests = rotationRequests.get(namespace)
+    if (!namespaceRequests) {
+      namespaceRequests = new Map()
+      rotationRequests.set(namespace, namespaceRequests)
     }
-    try {
-      const tokens = await input.refresh(current.session.refreshToken)
-      if (!tokens) {
-        return { kind: "invalid" }
+    const activeRequest = namespaceRequests.get(input.sessionId)
+    if (activeRequest) {
+      return await activeRequest
+    }
+    const request = (async () => {
+      const current = await createAuthSessionModule(namespace).read(
+        input.sessionId
+      )
+      if (current.kind !== "active") {
+        return current
       }
-      const response = await namespace
-        .getByName(input.sessionId)
-        .fetch("https://session.internal/session", {
-          method: "POST",
-          body: JSON.stringify({
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            createdAt: current.session.createdAt,
-            expiresAt: current.session.expiresAt,
-            idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
-          }),
-        })
-      return response.ok ? { kind: "rotated" } : { kind: "unavailable" }
-    } catch {
-      return { kind: "unavailable" }
+      try {
+        const tokens = await input.refresh(current.session.refreshToken)
+        if (!tokens) {
+          return { kind: "invalid" } as const
+        }
+        const response = await namespace
+          .getByName(input.sessionId)
+          .fetch("https://session.internal/session", {
+            method: "POST",
+            body: JSON.stringify({
+              convexSessionId: current.session.convexSessionId,
+              accessToken: tokens.accessToken,
+              refreshToken: tokens.refreshToken,
+              createdAt: current.session.createdAt,
+              expiresAt: current.session.expiresAt,
+              idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+            }),
+          })
+        return response.ok
+          ? ({ kind: "rotated" } as const)
+          : ({ kind: "unavailable" } as const)
+      } catch {
+        return { kind: "unavailable" } as const
+      }
+    })()
+    namespaceRequests.set(input.sessionId, request)
+    try {
+      return await request
+    } finally {
+      namespaceRequests.delete(input.sessionId)
     }
   },
   revoke: async (sessionId) => {

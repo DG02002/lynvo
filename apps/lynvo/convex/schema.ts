@@ -54,9 +54,12 @@ export default defineSchema({
   authSessions: defineTable({
     userId: v.id("users"),
     expirationTime: v.number(),
+    workerSessionId: v.optional(v.string()),
     deviceName: v.optional(v.string()),
     lastActiveAt: v.optional(v.number()),
-  }).index("userId", ["userId"]),
+  })
+    .index("userId", ["userId"])
+    .index("by_workerSessionId", ["workerSessionId"]),
 
   authAccounts: defineTable({
     userId: v.id("users"),

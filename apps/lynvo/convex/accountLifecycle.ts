@@ -87,7 +87,14 @@ export const revokeUserSession = async (
   await deleteSessionRefreshTokens(ctx, [sessionId])
   await deleteSessionVerifiers(ctx, [sessionId])
   await ctx.db.delete("authSessions", sessionId)
+  return session.workerSessionId
 }
+
+export const revokeCurrentUserSession = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  sessionId: Id<"authSessions">
+) => await revokeUserSession(ctx, userId, null, sessionId)
 
 export const revokeAllUserSessions = async (
   ctx: MutationCtx,
@@ -104,6 +111,9 @@ export const revokeAllUserSessions = async (
   )
   await Promise.all(
     sessions.map((session) => ctx.db.delete("authSessions", session._id))
+  )
+  return sessions.flatMap((session) =>
+    session.workerSessionId ? [session.workerSessionId] : []
   )
 }
 

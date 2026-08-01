@@ -41,6 +41,7 @@ describe("Worker authentication session HTTP behavior", () => {
       new Request("https://session.internal/session", {
         method: "POST",
         body: JSON.stringify({
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,
@@ -61,6 +62,7 @@ describe("Worker authentication session HTTP behavior", () => {
     )
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
+      convexSessionId: "convex-session-id",
       accessToken: "access-token",
       refreshToken: "refresh-token",
       createdAt: 1_000,
@@ -74,6 +76,7 @@ describe("Worker authentication session HTTP behavior", () => {
       new Request("https://session.internal/session", {
         method: "POST",
         body: JSON.stringify({
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,
@@ -108,6 +111,7 @@ describe("Worker authentication session HTTP behavior", () => {
       new Request("https://session.internal/session", {
         method: "POST",
         body: JSON.stringify({
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,
@@ -127,6 +131,7 @@ describe("Worker authentication session HTTP behavior", () => {
       new Request("https://session.internal/session", {
         method: "POST",
         body: JSON.stringify({
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,

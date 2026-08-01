@@ -34,6 +34,29 @@ interface AuthenticationTokens {
   readonly refreshToken: string
 }
 
+const readConvexSessionId = (accessToken: string): string | undefined => {
+  const payloadSegment = accessToken.split(".")[1]
+  if (!payloadSegment) {
+    return undefined
+  }
+  try {
+    const normalizedSegment = payloadSegment
+      .replaceAll("-", "+")
+      .replaceAll("_", "/")
+      .padEnd(Math.ceil(payloadSegment.length / 4) * 4, "=")
+    const payload: unknown = JSON.parse(atob(normalizedSegment))
+    return typeof payload === "object" &&
+      payload !== null &&
+      "sessionId" in payload &&
+      typeof payload.sessionId === "string" &&
+      payload.sessionId.length > 0
+      ? payload.sessionId
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
 interface WorkerAuthenticationFlow {
   readonly signIn: (
     input: AuthenticationFlowInput
@@ -95,20 +118,36 @@ export const createWorkerAuthenticationFlow = (
       }
     }
     const deviceName = input.params.deviceName?.trim().slice(0, 80)
+    const convexSessionId = readConvexSessionId(tokens.token)
+    if (!convexSessionId) {
+      return { kind: "unavailable" }
+    }
+    client.setAuth(tokens.token)
     if (deviceName) {
-      client.setAuth(tokens.token)
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
+    const workerSessionId = crypto.randomUUID()
     const session = await createAuthSessionModule(
       environment.WORKER_AUTH_SESSION
     ).create({
-      sessionId: crypto.randomUUID(),
+      sessionId: workerSessionId,
+      convexSessionId,
       accessToken: tokens.token,
       refreshToken: tokens.refreshToken,
       nowMs: Date.now(),
     })
     if (session.kind === "unavailable") {
       return session
+    }
+    try {
+      await client.mutation(api.users.linkCurrentSessionWorker, {
+        workerSessionId,
+      })
+    } catch {
+      await createAuthSessionModule(environment.WORKER_AUTH_SESSION).revoke(
+        workerSessionId
+      )
+      return { kind: "unavailable" }
     }
     return {
       kind: "completed",

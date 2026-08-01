@@ -12,7 +12,7 @@ import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./Middleware"
 import { validateCSRF } from "../../csrf"
 import { AuthSessionService } from "../services/AuthSessionService"
-import { UnauthorizedError, CsrfError } from "../errors"
+import { UnauthorizedError, CsrfError, ConvexError } from "../errors"
 import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
@@ -33,6 +33,12 @@ export const WebAuthLive = Layer.succeed(
       const request = yield* HttpServerRequest.HttpServerRequest
       const webRequest = yield* webRequestFromSource(request.source)
       const result = yield* authSession.getSession(webRequest)
+
+      if (result.kind === "unavailable") {
+        return yield* new ConvexError({
+          message: "Authentication is temporarily unavailable",
+        })
+      }
 
       if (!result.user || !result.accessToken) {
         return yield* new UnauthorizedError({ message: "Unauthorized" })

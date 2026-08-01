@@ -33,6 +33,7 @@ import {
   deleteUserAccountData,
   replacePasswordAndInvalidateOtherSessions,
   revokeAllUserSessions,
+  revokeCurrentUserSession,
   revokeUserSession,
   touchUserActivity,
 } from "./accountLifecycle"
@@ -74,6 +75,10 @@ export const getSessionUser = query({
     const userId = await getAuthenticatedUserId(ctx)
     const sessionId = await getAuthSessionId(ctx)
     if (!sessionId) {
+      throw new Error("Authentication session required")
+    }
+    const session = await ctx.db.get("authSessions", sessionId)
+    if (!session || session.userId !== userId) {
       throw new Error("Authentication session required")
     }
     const user = await ctx.db.get("users", userId)
@@ -324,6 +329,31 @@ export const setCurrentSessionDevice = mutation({
   },
 })
 
+export const linkCurrentSessionWorker = mutation({
+  returns: v.object({ success: v.boolean() }),
+  args: { workerSessionId: v.string() },
+  handler: async (ctx, args) => {
+    await getAuthenticatedWritableUserId(ctx)
+    const sessionId = await getAuthSessionId(ctx)
+    if (!sessionId) {
+      throw new Error("Session not found")
+    }
+    const existingSession = await ctx.db
+      .query("authSessions")
+      .withIndex("by_workerSessionId", (queryBuilder) =>
+        queryBuilder.eq("workerSessionId", args.workerSessionId)
+      )
+      .unique()
+    if (existingSession && existingSession._id !== sessionId) {
+      throw new Error("Worker session is already linked")
+    }
+    await ctx.db.patch("authSessions", sessionId, {
+      workerSessionId: args.workerSessionId,
+    })
+    return { success: true }
+  },
+})
+
 export const revokeSession = mutation({
   returns: v.any(),
   args: {
@@ -336,7 +366,29 @@ export const revokeSession = mutation({
     if (!sessionId) {
       throw new Error("Session not found")
     }
-    await revokeUserSession(ctx, userId, currentSessionId, sessionId)
+    const workerSessionId = await revokeUserSession(
+      ctx,
+      userId,
+      currentSessionId,
+      sessionId
+    )
+    return {
+      success: true,
+      workerSessionIds: workerSessionId ? [workerSessionId] : [],
+    }
+  },
+})
+
+export const revokeCurrentSessionFromWorker = mutation({
+  returns: v.object({ success: v.boolean() }),
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthenticatedWritableUserId(ctx)
+    const sessionId = await getAuthSessionId(ctx)
+    if (!sessionId) {
+      throw new Error("Session not found")
+    }
+    await revokeCurrentUserSession(ctx, userId, sessionId)
     return { success: true }
   },
 })
@@ -346,8 +398,8 @@ export const revokeAllSessions = mutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
-    await revokeAllUserSessions(ctx, userId)
-    return { success: true }
+    const workerSessionIds = await revokeAllUserSessions(ctx, userId)
+    return { success: true, workerSessionIds }
   },
 })
 

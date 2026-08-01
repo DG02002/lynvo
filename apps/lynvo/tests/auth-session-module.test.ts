@@ -38,6 +38,7 @@ describe("Auth Session module", () => {
 
     const result = await authSession.create({
       sessionId: "opaque-session-id",
+      convexSessionId: "convex-session-id",
       accessToken: "access-token",
       refreshToken: "refresh-token",
       nowMs: 1_000,
@@ -52,6 +53,7 @@ describe("Auth Session module", () => {
       {
         sessionId: "opaque-session-id",
         payload: {
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,
@@ -82,6 +84,7 @@ describe("Auth Session module", () => {
     const authSession = createAuthSessionModule(
       createReadableStore(
         Response.json({
+          convexSessionId: "convex-session-id",
           accessToken: "access-token",
           refreshToken: "refresh-token",
           createdAt: 1_000,
@@ -93,6 +96,7 @@ describe("Auth Session module", () => {
     await expect(authSession.read("opaque-session-id")).resolves.toEqual({
       kind: "active",
       session: {
+        convexSessionId: "convex-session-id",
         accessToken: "access-token",
         refreshToken: "refresh-token",
         createdAt: 1_000,
@@ -129,6 +133,7 @@ describe("Auth Session module", () => {
           return init?.method === "POST"
             ? new Response(null, { status: 204 })
             : Response.json({
+                convexSessionId: "convex-session-id",
                 accessToken: "old-access-token",
                 refreshToken: "old-refresh-token",
                 createdAt: 1_000,
@@ -153,6 +158,7 @@ describe("Auth Session module", () => {
     expect(requests[1]).toEqual({
       method: "POST",
       payload: {
+        convexSessionId: "convex-session-id",
         accessToken: "new-access-token",
         refreshToken: "new-refresh-token",
         createdAt: 1_000,
@@ -160,5 +166,53 @@ describe("Auth Session module", () => {
         idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
       },
     })
+  })
+
+  it("serializes concurrent rotation for one opaque session", async () => {
+    let accessToken = "old-access-token"
+    let refreshCalls = 0
+    const authSession = createAuthSessionModule({
+      getByName: () => ({
+        fetch: async (_url: string, init?: RequestInit) => {
+          if (init?.method === "POST") {
+            const payload: unknown = JSON.parse(String(init.body))
+            if (
+              typeof payload === "object" &&
+              payload !== null &&
+              "accessToken" in payload &&
+              typeof payload.accessToken === "string"
+            ) {
+              accessToken = payload.accessToken
+            }
+            return new Response(null, { status: 204 })
+          }
+          return Response.json({
+            convexSessionId: "convex-session-id",
+            accessToken,
+            refreshToken: "refresh-token",
+            createdAt: 1_000,
+            expiresAt: 20_000,
+          })
+        },
+      }),
+    })
+    const rotate = () =>
+      authSession.rotate({
+        sessionId: "opaque-session-id",
+        refresh: async () => {
+          refreshCalls += 1
+          await Promise.resolve()
+          return {
+            accessToken: "new-access-token",
+            refreshToken: "new-refresh-token",
+          }
+        },
+      })
+
+    await expect(Promise.all([rotate(), rotate()])).resolves.toEqual([
+      { kind: "rotated" },
+      { kind: "rotated" },
+    ])
+    expect(refreshCalls).toBe(1)
   })
 })

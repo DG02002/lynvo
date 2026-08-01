@@ -23,7 +23,6 @@ import {
   authPreflightRequestSchema,
   authSignInRequestSchema,
   deviceCodeRequestSchema,
-  refreshedAuthTokensSchema,
   turnstileVerificationResponseSchema,
 } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
@@ -539,6 +538,33 @@ app.delete("/api/auth/session", async (context) => {
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   if (sessionId) {
+    const activeSession = await authSession.read(sessionId)
+    if (activeSession.kind === "unavailable") {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "Logout is temporarily unavailable. Try again later.",
+          retryable: true,
+        }),
+        503
+      )
+    }
+    if (activeSession.kind === "active") {
+      try {
+        const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+        client.setAuth(activeSession.session.accessToken)
+        await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
+      } catch {
+        return context.json(
+          requestApiError(context, {
+            code: "service_unavailable",
+            error: "Logout is temporarily unavailable. Try again later.",
+            retryable: true,
+          }),
+          503
+        )
+      }
+    }
     const sessionResult = await authSession.revoke(sessionId)
     if (sessionResult.kind === "unavailable") {
       return context.json(
@@ -557,76 +583,6 @@ app.delete("/api/auth/session", async (context) => {
   return context.body(null, 204)
 })
 
-app.post("/api/auth/session/refresh", async (context) => {
-  addRequestContext(context, { operation: "auth_session_refresh" })
-  if (!isSameOriginRequest(context.req.raw)) {
-    return context.json(
-      requestApiError(context, {
-        code: "forbidden",
-        error: "You do not have access to this request.",
-        retryable: false,
-      }),
-      403
-    )
-  }
-  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
-  if (!sessionId) {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_credentials",
-        error: "Your session has expired.",
-        retryable: false,
-      }),
-      401
-    )
-  }
-  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
-  try {
-    const sessionResult = await authSession.rotate({
-      sessionId,
-      refresh: async (refreshToken) => {
-        const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-        const refreshed = refreshedAuthTokensSchema.parse(
-          await client.action(api.auth.signIn, { refreshToken })
-        )
-        return refreshed.tokens
-          ? {
-              accessToken: refreshed.tokens.token,
-              refreshToken: refreshed.tokens.refreshToken,
-            }
-          : undefined
-      },
-    })
-    if (
-      sessionResult.kind === "expired" ||
-      sessionResult.kind === "revoked_or_missing" ||
-      sessionResult.kind === "invalid"
-    ) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_credentials",
-          error: "Your session has expired.",
-          retryable: false,
-        }),
-        401
-      )
-    }
-    if (sessionResult.kind !== "rotated") {
-      throw new Error("Session rotation failed")
-    }
-    return context.body(null, 204)
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Session refresh is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-})
-
 app.get("/api/realtime", async (context) => {
   addRequestContext(context, {
     operation: "realtime_connect",
@@ -640,6 +596,9 @@ app.get("/api/realtime", async (context) => {
     return context.text("Forbidden", 403)
   }
   const session = await getSession(request, context.env)
+  if (session.kind === "unavailable") {
+    return context.text("Service unavailable", 503)
+  }
   if (!session.user) {
     addRequestContext(context, { authenticated: false })
     return context.text("Unauthorized", 401)
@@ -655,6 +614,9 @@ app.get("/api/realtime", async (context) => {
 
 app.use("/api/auth/tv/authorize", async (context, next) => {
   const session = await getSession(context.req.raw, context.env)
+  if (session.kind === "unavailable") {
+    return context.text("Service unavailable", 503)
+  }
   if (!session.user) {
     return next()
   }

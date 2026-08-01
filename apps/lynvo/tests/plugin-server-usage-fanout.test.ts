@@ -104,6 +104,7 @@ describe("Plugin Server usage HTTP fan-out", () => {
           getByName: () => ({
             fetch: async () =>
               Response.json({
+                convexSessionId: "authSessions:456",
                 accessToken: "access-token",
                 refreshToken: "refresh-token",
                 createdAt: 1,
@@ -155,6 +156,7 @@ describe("Plugin Server usage HTTP fan-out", () => {
           getByName: () => ({
             fetch: async () =>
               Response.json({
+                convexSessionId: "authSessions:456",
                 accessToken: "access-token",
                 refreshToken: "refresh-token",
                 createdAt: 1,

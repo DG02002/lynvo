@@ -1,6 +1,6 @@
-import { Context } from "effect"
+import { Context, Schema } from "effect"
 import { HttpApiMiddleware } from "effect/unstable/httpapi"
-import { UnauthorizedError, CsrfError } from "../errors"
+import { UnauthorizedError, CsrfError, ConvexError } from "../errors"
 
 export class CurrentUser extends Context.Service<
   CurrentUser,
@@ -18,7 +18,7 @@ export class WebAuth extends HttpApiMiddleware.Service<
     provides: CurrentUser
   }
 >()("app/effect/api/WebAuth", {
-  error: UnauthorizedError,
+  error: Schema.Union([UnauthorizedError, ConvexError]),
 }) {}
 
 export class CsrfMiddleware extends HttpApiMiddleware.Service<CsrfMiddleware>()(

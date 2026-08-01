@@ -47,6 +47,7 @@ describe("Worker account erasure HTTP behavior", () => {
                 return new Response(null, { status: 204 })
               }
               return Response.json({
+                convexSessionId: "authSessions:456",
                 accessToken: "access-token",
                 refreshToken: "refresh-token",
                 createdAt: 1,

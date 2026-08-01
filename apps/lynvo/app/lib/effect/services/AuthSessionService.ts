@@ -13,6 +13,7 @@ export interface SessionUser {
 }
 
 export interface SessionResult {
+  readonly kind: "authenticated" | "unauthenticated" | "unavailable"
   readonly user: SessionUser | null
   readonly accessToken?: string
 }
@@ -31,54 +32,98 @@ export class AuthSessionService extends Context.Service<
       const convex = yield* ConvexService
       const environment = yield* CloudflareEnv
 
-      const getSession = Effect.fn("AuthSessionService.getSession")(function* (
-        request: Request
-      ): Effect.fn.Return<SessionResult> {
-        const opaqueSessionId = getCookieValue(
-          request,
-          WORKER_SESSION_COOKIE_NAME
-        )
-        const workerAccessToken = opaqueSessionId
-          ? yield* Effect.tryPromise({
-              try: async () => {
-                const result = await createAuthSessionModule(
-                  environment.WORKER_AUTH_SESSION
-                ).read(opaqueSessionId)
-                return result.kind === "active"
-                  ? result.session.accessToken
-                  : undefined
-              },
-              catch: () => undefined,
-            }).pipe(Effect.catch(() => Effect.succeed(undefined)))
-          : undefined
-        const accessToken = workerAccessToken
-        if (!accessToken) {
-          return { user: null }
-        }
-
-        const user = yield* convex
-          .query(api.users.getSessionUser, {}, { accessToken })
-          .pipe(
-            Effect.catch((error) =>
-              Effect.logWarning("Convex Auth session validation failed", {
-                error: error.message,
-              }).pipe(Effect.as(null))
-            )
+      const resolveSession = Effect.fn("AuthSessionService.resolveSession")(
+        function* (request: Request): Effect.fn.Return<SessionResult> {
+          const opaqueSessionId = getCookieValue(
+            request,
+            WORKER_SESSION_COOKIE_NAME
           )
+          if (!opaqueSessionId) {
+            return { kind: "unauthenticated", user: null }
+          }
+          const authSession = createAuthSessionModule(
+            environment.WORKER_AUTH_SESSION
+          )
+          const storedSession = yield* Effect.promise(() =>
+            authSession.read(opaqueSessionId)
+          )
+          if (storedSession.kind === "unavailable") {
+            return { kind: "unavailable", user: null }
+          }
+          if (storedSession.kind !== "active") {
+            return { kind: "unauthenticated", user: null }
+          }
 
-        if (!user) {
-          return { user: null }
-        }
+          const validate = (accessToken: string) =>
+            convex.query(api.users.getSessionUser, {}, { accessToken })
+          let accessToken = storedSession.session.accessToken
+          let user = yield* Effect.option(validate(accessToken))
+          if (user._tag === "None" || user.value === null) {
+            const rotation = yield* Effect.promise(() =>
+              authSession.rotate({
+                sessionId: opaqueSessionId,
+                refresh: async (refreshToken) => {
+                  const refreshed = await Effect.runPromise(
+                    convex.action(api.auth.signIn, { refreshToken })
+                  )
+                  return refreshed.tokens
+                    ? {
+                        accessToken: refreshed.tokens.token,
+                        refreshToken: refreshed.tokens.refreshToken,
+                      }
+                    : undefined
+                },
+              })
+            )
+            if (rotation.kind === "unavailable") {
+              return { kind: "unavailable", user: null }
+            }
+            if (rotation.kind !== "rotated") {
+              return { kind: "unauthenticated", user: null }
+            }
+            const rotatedSession = yield* Effect.promise(() =>
+              authSession.read(opaqueSessionId)
+            )
+            if (rotatedSession.kind !== "active") {
+              return {
+                kind:
+                  rotatedSession.kind === "unavailable"
+                    ? "unavailable"
+                    : "unauthenticated",
+                user: null,
+              }
+            }
+            accessToken = rotatedSession.session.accessToken
+            user = yield* Effect.option(validate(accessToken))
+          }
 
-        return {
-          user: {
-            id: user.id,
-            username: user.username,
-            sid: user.sessionId,
-          },
-          accessToken,
+          if (user._tag === "None" || user.value === null) {
+            return { kind: "unavailable", user: null }
+          }
+          const authenticatedUser = user.value
+
+          return {
+            kind: "authenticated",
+            user: {
+              id: authenticatedUser.id,
+              username: authenticatedUser.username,
+              sid: authenticatedUser.sessionId,
+            },
+            accessToken,
+          }
         }
-      })
+      )
+
+      const sessionRequests = new WeakMap<Request, Promise<SessionResult>>()
+      const getSession = (request: Request) => {
+        const activeRequest = sessionRequests.get(request)
+        if (activeRequest) {
+          return Effect.promise(() => activeRequest)
+        }
+        const requestPromise = Effect.runPromise(resolveSession(request))
+        sessionRequests.set(request, requestPromise)
+        return Effect.promise(() => requestPromise)
+      }
 
       return AuthSessionService.of({ getSession })
     })

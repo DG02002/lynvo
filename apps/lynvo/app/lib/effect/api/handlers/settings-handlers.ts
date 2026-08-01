@@ -5,6 +5,27 @@ import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
+import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { ConvexError } from "../../errors"
+
+const revokeWorkerSessions = (workerSessionIds: readonly string[]) =>
+  Effect.gen(function* () {
+    const environment = yield* CloudflareEnv
+    yield* Effect.forEach(workerSessionIds, (workerSessionId) =>
+      Effect.tryPromise({
+        try: async () => {
+          const response = await environment.WORKER_AUTH_SESSION.getByName(
+            workerSessionId
+          ).fetch("https://session.internal/session", { method: "DELETE" })
+          if (!response.ok) {
+            throw new Error("Worker session revocation failed")
+          }
+        },
+        catch: () =>
+          new ConvexError({ message: "Session revocation is unavailable" }),
+      })
+    )
+  })
 
 export const SettingsHandlers = HttpApiBuilder.group(
   Api,
@@ -113,22 +134,26 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.mutation(
+          const result = yield* convex.mutation(
             api.users.revokeSession,
             { sessionId: params.sessionId },
             { accessToken: user.accessToken }
           )
+          yield* revokeWorkerSessions(result.workerSessionIds)
+          return { success: true }
         })
       )
       .handle("revokeAllSessions", () =>
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.mutation(
+          const result = yield* convex.mutation(
             api.users.revokeAllSessions,
             {},
             { accessToken: user.accessToken }
           )
+          yield* revokeWorkerSessions(result.workerSessionIds)
+          return { success: true }
         })
       )
       .handle("deleteAccount", ({ payload }) =>
