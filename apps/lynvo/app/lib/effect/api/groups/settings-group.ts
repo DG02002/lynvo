@@ -28,7 +28,7 @@ const StorageUsageSchema = Schema.Struct({
   averageLinkBytes: Schema.Number,
   storageLimitBytes: Schema.Number,
   storageWarningBytes: Schema.Number,
-  recentCardLimitBytes: Schema.Number,
+  linkLimitBytes: Schema.Number,
   retentionDays: Schema.Number,
   retentionDayOptions: Schema.Array(Schema.Number),
   defaultRetentionDays: Schema.Number,
@@ -82,7 +82,7 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
       }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
-    HttpApiEndpoint.delete("clearRecentLinks", "/storage/links", {
+    HttpApiEndpoint.delete("clearLinks", "/storage/links", {
       success: Schema.Struct({
         success: Schema.Boolean,
         deletedLinks: Schema.Number,

@@ -4,34 +4,34 @@ import { LinkInputSection } from "~/components/send-link/LinkInputSection"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { useLinkActions } from "~/hooks/useLinkActions"
-import { useRecentLinks } from "~/hooks/useRecentLinks"
+import { useLinks } from "~/hooks/useLinks"
 import { cn } from "~/lib/utils"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
-import { AddSourceDomainAlertDialog } from "~/components/links/add-source-domain-alert-dialog"
+import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 
 const SaveList = () => {
   useDraftSweep()
 
   const [selectedItemUrl, setSelectedItemUrl] = useState<string | null>(null)
   const {
-    recents,
+    links,
     setCurrentPage,
     setSortOrder,
     highlightedId,
     setHighlightedId,
     actions,
     isHydrating,
-  } = useRecentLinks()
+  } = useLinks()
   const {
     input,
     isSaving,
     extractingItems,
-    linkCardActions,
+    linkItemActions,
     selectionDialog,
     pluginDomainDialog,
   } = useLinkActions({
-    recents,
-    recentLinks: actions,
+    links,
+    linkActions: actions,
     setHighlightedId,
     setSortOrder,
     setCurrentPage,
@@ -63,10 +63,10 @@ const SaveList = () => {
 
       <div className="w-full">
         <SaveListBrowser
-          items={recents}
+          items={links}
           selectedItemUrl={selectedItemUrl}
           onSelectedItemUrlChange={setSelectedItemUrl}
-          actions={linkCardActions}
+          actions={linkItemActions}
           extractingItems={extractingItems}
           highlightedId={highlightedId}
           isHydrating={isHydrating}
@@ -88,9 +88,8 @@ const SaveList = () => {
         pageTitle={selectionDialog.display.pageTitle}
         audioInfo={selectionDialog.display.audioInfo}
         isDraftMode={selectionDialog.display.isDraftMode}
-        pluginServerId={selectionDialog.display.pluginServerId}
       />
-      <AddSourceDomainAlertDialog
+      <AddPluginDomainAlertDialog
         suggestion={pluginDomainDialog.suggestion}
         isAdding={pluginDomainDialog.isAdding}
         onAdd={pluginDomainDialog.add}

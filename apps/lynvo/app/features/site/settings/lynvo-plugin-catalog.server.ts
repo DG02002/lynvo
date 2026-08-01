@@ -46,9 +46,9 @@ export const loadLynvoPlugins = async (
         supportsDomains: Boolean(plugin.credential),
         domainRequired:
           plugin.credential?.kind === "http-basic"
-            ? "Add the source domain. Optional HTTP Basic Auth credentials are encrypted when saved."
+            ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
             : plugin.credential
-              ? "Add the source domain. Optional domain passwords are encrypted when saved."
+              ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
               : "",
         ...(plugin.credential
           ? { credentialKind: plugin.credential.kind }

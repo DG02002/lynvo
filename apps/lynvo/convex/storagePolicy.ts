@@ -4,18 +4,18 @@ import { ACCOUNT_DATA_STORAGE_REGISTRY } from "./accountDataOwnership"
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
-  RECENT_LINK_LIMIT_BYTES,
+  LINK_LIMIT_BYTES,
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   STORAGE_LEDGER_SCHEMA_VERSION,
   OPERATIONAL_STORAGE_DOCUMENT_LIMIT,
   STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT,
-  RECENT_LINK_RETENTION_BATCH_SIZE,
+  LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
 
 export const STORAGE_DOMAIN_NAMES = [
   "profile",
-  "recentLinks",
+  "links",
   "pluginServers",
   "pluginDomains",
   "pluginCredentials",
@@ -34,7 +34,7 @@ export type StorageLedgerDomain = Exclude<
 declare global {
   interface AppOwnedStorageUsage {
     profileBytes: number
-    recentLinkBytes: number
+    linkBytes: number
     pluginServerBytes: number
     pluginDomainBytes: number
     pluginCredentialBytes: number
@@ -67,7 +67,7 @@ const assertBoundedInventory = (documents: unknown[], domain: string) => {
 
 export const calculateStorageUsage = (inventory: {
   profile?: unknown[]
-  recentLinks?: unknown[]
+  links?: unknown[]
   pluginServers?: unknown[]
   pluginDomains?: unknown[]
   pluginCredentials?: unknown[]
@@ -76,7 +76,7 @@ export const calculateStorageUsage = (inventory: {
   deviceCodes?: unknown[]
 }) => {
   const profileBytes = sumDocumentBytes(inventory.profile)
-  const linkBytes = sumDocumentBytes(inventory.recentLinks)
+  const linkBytes = sumDocumentBytes(inventory.links)
   const pluginServerBytes = sumDocumentBytes(inventory.pluginServers)
   const pluginDomainBytes =
     sumDocumentBytes(inventory.pluginDomains) +
@@ -87,7 +87,7 @@ export const calculateStorageUsage = (inventory: {
     sumDocumentBytes(inventory.deviceCodes)
   const estimatedBytes =
     profileBytes + linkBytes + pluginServerBytes + pluginDomainBytes + authBytes
-  const savedLinkCount = inventory.recentLinks?.length ?? 0
+  const savedLinkCount = inventory.links?.length ?? 0
 
   return {
     estimatedBytes,
@@ -108,7 +108,7 @@ export const getStorageUsage = async (
 ) => {
   const [
     user,
-    recentLinks,
+    links,
     pluginServers,
     pluginDomains,
     pluginCredentials,
@@ -161,7 +161,7 @@ export const getStorageUsage = async (
 
   return calculateStorageUsage({
     profile: user ? [user] : [],
-    recentLinks: assertBoundedInventory(recentLinks, "Recent Links"),
+    links: assertBoundedInventory(links, "Recent Links"),
     pluginServers: assertBoundedInventory(pluginServers, "Plugin Servers"),
     pluginDomains: assertBoundedInventory(pluginDomains, "Plugin Domains"),
     pluginCredentials: assertBoundedInventory(
@@ -178,7 +178,7 @@ export const calculateAppOwnedStorageUsage = async (
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">
 ): Promise<AppOwnedStorageUsage> => {
-  const [user, recentLinks, pluginServers, pluginDomains, pluginCredentials] =
+  const [user, links, pluginServers, pluginDomains, pluginCredentials] =
     await Promise.all([
       ctx.db.get("users", userId),
       ctx.db
@@ -207,8 +207,8 @@ export const calculateAppOwnedStorageUsage = async (
         .take(STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT + 1),
     ])
   const profileBytes = user ? byteLength(user) : 0
-  const recentLinkBytes = sumDocumentBytes(
-    assertBoundedInventory(recentLinks, "Recent Links")
+  const linkBytes = sumDocumentBytes(
+    assertBoundedInventory(links, "Recent Links")
   )
   const pluginServerBytes = sumDocumentBytes(
     assertBoundedInventory(pluginServers, "Plugin Servers")
@@ -221,14 +221,14 @@ export const calculateAppOwnedStorageUsage = async (
   )
   return {
     profileBytes,
-    recentLinkBytes,
+    linkBytes,
     pluginServerBytes,
     pluginDomainBytes,
     pluginCredentialBytes,
-    savedLinkCount: recentLinks.length,
+    savedLinkCount: links.length,
     totalEnforcedBytes:
       profileBytes +
-      recentLinkBytes +
+      linkBytes +
       pluginServerBytes +
       pluginDomainBytes +
       pluginCredentialBytes,
@@ -324,7 +324,7 @@ export const applyStorageMutation = async (
   const totalEnforcedBytes = ledger.totalEnforcedBytes + deltaBytes
   assertStorageGrowth(totalEnforcedBytes, deltaBytes)
   const savedLinkCount =
-    domain === "recentLinkBytes"
+    domain === "linkBytes"
       ? ledger.savedLinkCount +
         (currentDocument ? 0 : 1) -
         (nextDocument ? 0 : 1)
@@ -381,25 +381,25 @@ export const recordStorageDeletion = async (
   currentDocument: unknown
 ) => await applyStorageMutation(ctx, userId, domain, currentDocument, undefined)
 
-export const assertRecentLinkSize = (recentLinkBytes: number) => {
-  if (recentLinkBytes > RECENT_LINK_LIMIT_BYTES) {
+export const assertLinkSize = (linkBytes: number) => {
+  if (linkBytes > LINK_LIMIT_BYTES) {
     throw new Error("This link contains too much data to save.")
   }
 }
 
-export const assertRecentLinkMutation = async (
+export const assertLinkMutation = async (
   ctx: MutationCtx,
   userId: Id<"users">,
-  currentRecentLink: unknown | undefined,
-  nextRecentLink: unknown
+  currentLink: unknown | undefined,
+  nextLink: unknown
 ) => {
-  assertRecentLinkSize(byteLength(nextRecentLink))
+  assertLinkSize(byteLength(nextLink))
   return await assertStorageMutation(
     ctx,
     userId,
-    "recentLinkBytes",
-    currentRecentLink,
-    nextRecentLink
+    "linkBytes",
+    currentLink,
+    nextLink
   )
 }
 
@@ -413,12 +413,10 @@ export const normalizeRetentionDays = (retentionDays: number) => {
 export const getRetentionCutoff = (now: number, retentionDays: number) =>
   now - retentionDays * DAY_MS
 
-export const selectExpiredRecentLinks = <
-  RecentLink extends { createdAt: number },
->(
-  recentLinks: RecentLink[],
+export const selectExpiredLinks = <Link extends { createdAt: number }>(
+  links: Link[],
   cutoff: number
-) => recentLinks.filter((recentLink) => recentLink.createdAt < cutoff)
+) => links.filter((link) => link.createdAt < cutoff)
 
 export const getUserRetentionDays = async (
   ctx: QueryCtx | MutationCtx,
@@ -428,7 +426,7 @@ export const getUserRetentionDays = async (
   return user?.storageRetentionDays ?? DEFAULT_RETENTION_DAYS
 }
 
-export const getExpiredRecentLinks = async (
+export const getExpiredLinks = async (
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">,
   retentionDays: number,
@@ -440,33 +438,28 @@ export const getExpiredRecentLinks = async (
     .withIndex("by_userId_createdAt", (queryBuilder) =>
       queryBuilder.eq("userId", userId).lt("createdAt", cutoff)
     )
-    .take(RECENT_LINK_RETENTION_BATCH_SIZE)
+    .take(LINK_RETENTION_BATCH_SIZE)
 }
 
-export const deleteExpiredRecentLinks = async (
+export const deleteExpiredLinks = async (
   ctx: MutationCtx,
   userId: Id<"users">,
   retentionDays: number,
   now: number
 ) => {
-  const expiredRecentLinks = await getExpiredRecentLinks(
-    ctx,
-    userId,
-    retentionDays,
-    now
-  )
-  for (const recentLink of expiredRecentLinks) {
-    await recordStorageDeletion(ctx, userId, "recentLinkBytes", recentLink)
-    await ctx.db.delete("links", recentLink._id)
+  const expiredLinks = await getExpiredLinks(ctx, userId, retentionDays, now)
+  for (const link of expiredLinks) {
+    await recordStorageDeletion(ctx, userId, "linkBytes", link)
+    await ctx.db.delete("links", link._id)
   }
-  return expiredRecentLinks.length
+  return expiredLinks.length
 }
 
-export const cleanupExpiredRecentLinks = async (
+export const cleanupExpiredStoredLinks = async (
   ctx: MutationCtx,
   userId: Id<"users">,
   now: number
 ) => {
   const retentionDays = await getUserRetentionDays(ctx, userId)
-  return await deleteExpiredRecentLinks(ctx, userId, retentionDays, now)
+  return await deleteExpiredLinks(ctx, userId, retentionDays, now)
 }

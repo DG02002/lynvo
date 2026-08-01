@@ -32,7 +32,7 @@ describe("Storage settings browser data", () => {
             averageLinkBytes: 512,
             storageLimitBytes: 10_240,
             storageWarningBytes: 8_192,
-            recentCardLimitBytes: 4_096,
+            linkLimitBytes: 4_096,
             retentionDays: 30,
             retentionDayOptions: [7, 30, 90],
             defaultRetentionDays: 30,

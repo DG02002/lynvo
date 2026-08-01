@@ -1,7 +1,8 @@
 import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
+import { SupportChannelLinks } from "~/components/SupportChannelLinks"
 
 export const UsagePolicyContent = () => (
-  <PolicyLayout title="Usage policy" updatedAt="July 31, 2026">
+  <PolicyLayout title="Usage policy" updatedAt="August 1, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       Lynvo helps you save, resolve, and play links through the Lynvo Plugin
       Server and Custom Plugin Servers. This policy explains permitted use of
@@ -10,7 +11,7 @@ export const UsagePolicyContent = () => (
     <p>
       An <strong>account</strong> is the username-based record used to access
       Lynvo, and a <strong>Recent Link</strong> is a saved URL and its related
-      metadata. A <strong>Plugin Server</strong> processes supported URLs. A
+      metadata. A <strong>Plugin Server</strong> processes supported URLs. A{" "}
       <strong>Plugin</strong> is the Source-specific integration inside that
       service, and a <strong>Source</strong> is the website, service, or URL
       pattern the Plugin supports. A <strong>credential</strong> is a password,
@@ -98,9 +99,9 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="7. Keep credentials secure">
       <p>
-        Protect your Lynvo password, sessions, Source credentials, and Custom
-        Plugin Server API keys. Do not publish or share credentials, and revoke
-        or rotate them if you believe they have been exposed.
+        Protect your Lynvo password, sessions, Plugin Domain credentials, and
+        Custom Plugin Server API keys. Do not publish or share credentials, and
+        revoke or rotate them if you believe they have been exposed.
       </p>
     </PolicySection>
 
@@ -115,9 +116,9 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="9. Reporting and policy changes">
       <p>
-        Use the official contact method displayed by Lynvo to report suspected
-        abuse or an unsafe Plugin Server. Include enough information for the
-        report to be reviewed without sharing passwords or API keys.
+        To report suspected abuse or an unsafe Plugin Server, use{" "}
+        <SupportChannelLinks />. Include enough information for the report to be
+        reviewed without sharing passwords or API keys.
       </p>
       <p>
         Lynvo may update this policy as Lynvo and its risks change. The updated

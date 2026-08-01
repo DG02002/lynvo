@@ -24,9 +24,9 @@ const requiredLynvoFragments = [
   '"service": "lynvo-plugin-server"',
   '"VITE_CONVEX_URL"',
   '"AUTH_GATEWAY_SECRET"',
-  '"AUTH_SESSION_MASTER_KEY"',
+  '"AUTH_SESSION_ENCRYPTION_KEY"',
   '"TURNSTILE_SECRET_KEY"',
-  '"PLUGIN_CREDENTIAL_MASTER_KEY"',
+  '"PLUGIN_CREDENTIAL_ENCRYPTION_KEY"',
   '"LYNVO_PLUGIN_SERVER_API_KEY"',
 ]
 const requiredLynvoPluginServerFragments = [
@@ -48,7 +48,7 @@ const sessionBindingCount =
 const credentialVaultBindingCount =
   lynvoConfig.split('"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"').length - 1
 const sessionKeyDeclarationCount =
-  lynvoConfig.split('"AUTH_SESSION_MASTER_KEY"').length - 1
+  lynvoConfig.split('"AUTH_SESSION_ENCRYPTION_KEY"').length - 1
 
 if (
   hasMissingFragment(lynvoConfig, requiredLynvoFragments) ||

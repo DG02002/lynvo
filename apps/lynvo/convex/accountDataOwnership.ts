@@ -2,7 +2,7 @@ type AccountDataLifecycle = "erased" | "operational" | "global"
 
 type StorageLedgerField =
   | "profileBytes"
-  | "recentLinkBytes"
+  | "linkBytes"
   | "pluginServerBytes"
   | "pluginDomainBytes"
   | "pluginCredentialBytes"
@@ -17,7 +17,7 @@ export const ACCOUNT_DATA_CATALOG = {
   authVerificationCodes: { lifecycle: "erased", storage: null },
   authVerifiers: { lifecycle: "erased", storage: null },
   authRateLimits: { lifecycle: "operational", storage: null },
-  links: { lifecycle: "erased", storage: "recentLinkBytes" },
+  links: { lifecycle: "erased", storage: "linkBytes" },
   userStorageLedgers: { lifecycle: "erased", storage: null },
   userPluginServers: { lifecycle: "erased", storage: "pluginServerBytes" },
   userPluginDomains: { lifecycle: "erased", storage: "pluginDomainBytes" },

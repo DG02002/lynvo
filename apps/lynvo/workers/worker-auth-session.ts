@@ -18,7 +18,7 @@ interface StoredSession {
   readonly idleExpiresAt: number
 }
 
-type SessionEnvironment = Partial<Pick<Env, "AUTH_SESSION_MASTER_KEY">>
+type SessionEnvironment = Partial<Pick<Env, "AUTH_SESSION_ENCRYPTION_KEY">>
 
 const SESSION_STORAGE_KEY = "session"
 const ALGORITHM = "AES-256-GCM"
@@ -65,10 +65,10 @@ const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   (!("idleTimeoutMs" in payload) ||
     (typeof payload.idleTimeoutMs === "number" && payload.idleTimeoutMs > 0))
 
-const importMasterKey = async (encodedKey: string): Promise<CryptoKey> => {
+const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
   const bytes = decodeBase64(encodedKey)
   if (bytes.byteLength !== KEY_LENGTH_BYTES) {
-    throw new Error("Invalid session master key")
+    throw new Error("Invalid session encryption key")
   }
   return await crypto.subtle.importKey(
     "raw",
@@ -90,13 +90,13 @@ export class WorkerAuthSession implements DurableObject {
       `worker-auth-session\u0000${this.state.id.toString()}\u0000${KEY_VERSION}`
     )
 
-  private getMasterKey = async (): Promise<CryptoKey | undefined> => {
-    const encodedKey = this.environment.AUTH_SESSION_MASTER_KEY
+  private getEncryptionKey = async (): Promise<CryptoKey | undefined> => {
+    const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
     if (!encodedKey) {
       return undefined
     }
     try {
-      return await importMasterKey(encodedKey)
+      return await importEncryptionKey(encodedKey)
     } catch {
       return undefined
     }
@@ -112,8 +112,8 @@ export class WorkerAuthSession implements DurableObject {
       if (!isSessionPayload(payload)) {
         return new Response(null, { status: 400 })
       }
-      const masterKey = await this.getMasterKey()
-      if (!masterKey) {
+      const encryptionKey = await this.getEncryptionKey()
+      if (!encryptionKey) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
       const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH_BYTES))
@@ -123,7 +123,7 @@ export class WorkerAuthSession implements DurableObject {
           iv: nonce,
           additionalData: this.additionalData(),
         },
-        masterKey,
+        encryptionKey,
         new TextEncoder().encode(
           JSON.stringify({
             convexSessionId: payload.convexSessionId,
@@ -170,8 +170,8 @@ export class WorkerAuthSession implements DurableObject {
         await this.state.storage.delete(SESSION_STORAGE_KEY)
         return new Response(null, { status: 401 })
       }
-      const masterKey = await this.getMasterKey()
-      if (!masterKey) {
+      const encryptionKey = await this.getEncryptionKey()
+      if (!encryptionKey) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
       try {
@@ -181,7 +181,7 @@ export class WorkerAuthSession implements DurableObject {
             iv: decodeBase64(storedSession.nonce),
             additionalData: this.additionalData(),
           },
-          masterKey,
+          encryptionKey,
           decodeBase64(storedSession.ciphertext)
         )
         const tokens: unknown = JSON.parse(new TextDecoder().decode(plaintext))

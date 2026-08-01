@@ -86,7 +86,7 @@ describe("Convex storage ledger", () => {
       }
       await context.db.patch("userStorageLedgers", ledger._id, {
         schemaVersion: 0,
-        recentLinkBytes: 0,
+        linkBytes: 0,
         savedLinkCount: 0,
         totalEnforcedBytes: ledger.profileBytes,
       })

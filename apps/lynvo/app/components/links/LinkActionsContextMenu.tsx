@@ -33,7 +33,7 @@ export function LinkActionsDotMenu({
 }: LinkActionsDotMenuProps) {
   const handleCopy = () => {
     onCopyLink()
-    toast.success("Copied")
+    toast.success("Link copied")
   }
 
   return (

@@ -16,12 +16,12 @@ export interface RefreshFlowEffects {
 }
 
 export const createRefreshFlowEffects = ({
-  updateRecentLinks,
+  updateLinks,
   openSelectionDialog,
   extractingItems,
   runWithExtractingItem,
 }: {
-  updateRecentLinks: (url: string, links: ExtractedLink[]) => void
+  updateLinks: (url: string, links: ExtractedLink[]) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
   extractingItems: Set<string>
   runWithExtractingItem: <T>(
@@ -29,7 +29,7 @@ export const createRefreshFlowEffects = ({
     task: () => Promise<T>
   ) => Promise<T>
 }): RefreshFlowEffects => ({
-  updateLinks: updateRecentLinks,
+  updateLinks,
   openSelection: openSelectionDialog,
   runExtracting: runWithExtractingItem,
   isExtracting: (itemKey) => extractingItems.has(itemKey),

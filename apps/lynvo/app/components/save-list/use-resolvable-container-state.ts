@@ -1,12 +1,12 @@
 import { useState } from "react"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
-import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 interface UseResolvableContainerStateOptions {
-  item: RecentLinkViewItem
+  item: LinkViewItem
   link: ExtractedLink
-  actions: LinkCardActions
+  actions: LinkItemActions
 }
 
 export const useResolvableContainerState = ({
@@ -15,8 +15,7 @@ export const useResolvableContainerState = ({
   actions,
 }: UseResolvableContainerStateOptions) => {
   const savedMirrors =
-    getRecentLinkViewItemMetadata(item).playback.resolvedMirrors?.[link.url] ??
-    []
+    getLinkViewItemMetadata(item).playback.resolvedMirrors?.[link.url] ?? []
   const [mirrors, setMirrors] = useState(() =>
     savedMirrors.filter((mirror) => mirror.status !== "down")
   )

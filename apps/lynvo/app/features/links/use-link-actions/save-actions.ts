@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import type {
   ExtractedLink,
   MetaData,
-  RecentLinkViewItem,
+  LinkViewItem,
 } from "~/features/links/types"
 import { writeDraft } from "~/components/links/DraftManager"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
@@ -13,14 +13,14 @@ import type { OpenSelectionDialogOptions } from "./action-types"
 import { createSaveFlowEffects } from "./save-flow-effects"
 import { getSaveErrorMessage } from "./save-error-message"
 import { client } from "~/lib/effect/api/client"
-import type { SourceDomainSuggestion } from "~/lib/plugin-domain"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 export const useSaveActions = ({
   url,
-  recents,
-  addRecent,
-  updateRecentLinks,
+  links,
+  addLink,
+  updateLinks,
   openSelectionDialog,
   setExtractionPreview,
   closeSelectionDialog,
@@ -32,13 +32,13 @@ export const useSaveActions = ({
   setCurrentPage,
 }: {
   url: string
-  recents: RecentLinkViewItem[]
-  addRecent: (
+  links: LinkViewItem[]
+  addLink: (
     url: string,
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  updateRecentLinks: (url: string, links: ExtractedLink[]) => void
+  updateLinks: (url: string, links: ExtractedLink[]) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
   closeSelectionDialog: () => void
@@ -52,7 +52,7 @@ export const useSaveActions = ({
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
   const [pluginDomainSuggestion, setPluginDomainSuggestion] =
-    useState<SourceDomainSuggestion | null>(null)
+    useState<PluginDomainSuggestion | null>(null)
   const effects = createSaveFlowEffects({
     setError,
     setExtractionPreview,
@@ -74,8 +74,8 @@ export const useSaveActions = ({
       const result = await saveLink({
         overrideUrl,
         currentUrl: url,
-        recents,
-        addRecent,
+        links,
+        addLink,
         effects,
       })
       await offerPluginDomainSuggestion(result?.pluginDomainSuggestion)
@@ -103,8 +103,8 @@ export const useSaveActions = ({
         originalUrl,
         meta,
         existingItemId,
-        addRecent,
-        updateRecentLinks,
+        addLink,
+        updateLinks,
         effects,
         pluginDomainSuggestion: selectionSuggestion,
       })
@@ -127,7 +127,7 @@ export const useSaveActions = ({
   }
 
   async function offerPluginDomainSuggestion(
-    suggestion: SourceDomainSuggestion | undefined
+    suggestion: PluginDomainSuggestion | undefined
   ) {
     if (!suggestion) {
       return

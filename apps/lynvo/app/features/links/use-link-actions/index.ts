@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import type { RecentLinkViewItem } from "~/features/links/types"
+import type { LinkViewItem } from "~/features/links/types"
 import type { ExtractionPreview } from "./action-types"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
-import type { RecentLinksActions } from "~/features/links/use-recent-links/actions"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { LinksActions } from "~/features/links/use-links/actions"
 import {
   useExtractingItems,
   useOpeningState,
@@ -16,16 +16,16 @@ import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 
 interface UseLinkActionsProps {
-  recents: RecentLinkViewItem[]
-  recentLinks: RecentLinksActions
+  links: LinkViewItem[]
+  linkActions: LinksActions
   setHighlightedId: (id: string | null) => void
   setSortOrder: (order: "newest" | "oldest") => void
   setCurrentPage: (page: number) => void
 }
 
 export function useLinkActions({
-  recents,
-  recentLinks,
+  links,
+  linkActions,
   setHighlightedId,
   setSortOrder,
   setCurrentPage,
@@ -44,7 +44,7 @@ export function useLinkActions({
   const { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady } =
     useOpeningState()
   const { extractingItems, runWithExtractingItem } = useExtractingItems()
-  const { handleRecentClick } = usePlaybackActions({
+  const { handleLinkClick } = usePlaybackActions({
     isOpeningRef,
     setIsOpening,
     resetOpeningWhenReady,
@@ -56,24 +56,24 @@ export function useLinkActions({
     handleHardRefresh,
     handleMirrorExpand,
   } = useRefreshActions({
-    recents,
-    updateRecentLinks: recentLinks.updateLinks,
-    cacheResolvedMirrors: recentLinks.cacheResolvedMirrors,
+    links,
+    updateLinks: linkActions.updateLinks,
+    cacheResolvedMirrors: linkActions.cacheResolvedMirrors,
     openSelectionDialog,
     extractingItems,
     runWithExtractingItem,
   })
-  const linkCardActions: LinkCardActions = {
-    play: handleRecentClick,
+  const linkItemActions: LinkItemActions = {
+    play: handleLinkClick,
     showLinks: handleShowLinks,
-    remove: recentLinks.remove,
-    markWatched: recentLinks.markWatched,
-    removeLink: recentLinks.removeLink,
+    remove: linkActions.remove,
+    markWatched: linkActions.markWatched,
+    removeLink: linkActions.removeLink,
     expandFolder: handleExpandFolder,
     softRefresh: handleSoftRefresh,
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
-    setAsCurrent: recentLinks.setPlayableItemAsCurrent,
+    setAsCurrent: linkActions.setPlayableItemAsCurrent,
   }
   const {
     isSaving,
@@ -83,9 +83,9 @@ export function useLinkActions({
     pluginDomainDialog,
   } = useSaveActions({
     url,
-    recents,
-    addRecent: recentLinks.add,
-    updateRecentLinks: recentLinks.updateLinks,
+    links,
+    addLink: linkActions.add,
+    updateLinks: linkActions.updateLinks,
     openSelectionDialog,
     setExtractionPreview,
     closeSelectionDialog,
@@ -146,7 +146,7 @@ export function useLinkActions({
     isSaving,
     isOpening,
     extractingItems,
-    linkCardActions,
+    linkItemActions,
     selectionDialog: {
       state: selectionDialogState,
       setOpen: (open: boolean) =>
@@ -163,7 +163,6 @@ export function useLinkActions({
           selectionDialogState.meta?.filename,
         audioInfo: selectionDialogState.meta?.audio,
         isDraftMode: selectionDialogState.isDraftMode,
-        pluginServerId: selectionDialogState.meta?.pluginServerId,
       },
       confirmSelection,
       saveSelectionDraft,

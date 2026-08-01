@@ -24,6 +24,7 @@ const policyLinks = [
   { label: "Privacy policy", to: policyPaths.privacyPolicy },
   { label: "Cookie policy", to: policyPaths.cookiePolicy },
   { label: "Usage policy", to: policyPaths.usagePolicy },
+  { label: "Open-source licenses", to: policyPaths.licenses },
 ] as const
 
 const footerLinkClassName =

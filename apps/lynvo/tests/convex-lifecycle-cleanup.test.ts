@@ -6,8 +6,8 @@ import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
   CLEANUP_USER_PAGE_SIZE,
   DAY_MS,
-  RECENT_LINKS_MAX_COUNT,
-  RECENT_LINK_RETENTION_BATCH_SIZE,
+  LINKS_MAX_COUNT,
+  LINK_RETENTION_BATCH_SIZE,
 } from "../convex/constants"
 import {
   calculateAppOwnedStorageUsage,
@@ -191,7 +191,7 @@ describe("bounded lifecycle cleanup", () => {
         createdAt: now,
         updatedAt: now,
       })
-      for (let index = 0; index < RECENT_LINKS_MAX_COUNT; index += 1) {
+      for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
         await context.db.insert("links", {
           userId: target.userId,
           url: `https://target.example/link/${index}`,
@@ -365,7 +365,7 @@ describe("bounded lifecycle cleanup", () => {
         if (user === users[0]) {
           for (
             let linkIndex = 0;
-            linkIndex < RECENT_LINK_RETENTION_BATCH_SIZE + 5;
+            linkIndex < LINK_RETENTION_BATCH_SIZE + 5;
             linkIndex += 1
           ) {
             await context.db.insert("links", {
@@ -392,7 +392,7 @@ describe("bounded lifecycle cleanup", () => {
       }
     })
 
-    await convex.mutation(internal.links.cleanupExpiredRecentCards, {
+    await convex.mutation(internal.links.cleanupExpiredLinks, {
       paginationOpts: { cursor: null, numItems: CLEANUP_USER_PAGE_SIZE },
     })
     await convex.finishAllScheduledFunctions(vi.runAllTimers)

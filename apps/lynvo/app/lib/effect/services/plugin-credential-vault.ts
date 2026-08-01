@@ -61,7 +61,7 @@ export const createPluginCredentialAdditionalData = (
 const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
   const keyBytes = decodeBase64(encodedKey)
   if (keyBytes.byteLength !== KEY_LENGTH_BYTES) {
-    throw new Error("PLUGIN_CREDENTIAL_MASTER_KEY must contain 32 bytes")
+    throw new Error("PLUGIN_CREDENTIAL_ENCRYPTION_KEY must contain 32 bytes")
   }
   return await crypto.subtle.importKey(
     "raw",
@@ -83,7 +83,7 @@ export class PluginCredentialVault extends Context.Service<
       const getEncryptionKey = () =>
         Effect.tryPromise({
           try: () =>
-            importEncryptionKey(environment.PLUGIN_CREDENTIAL_MASTER_KEY),
+            importEncryptionKey(environment.PLUGIN_CREDENTIAL_ENCRYPTION_KEY),
           catch: (cause) =>
             new CredentialVaultError({
               message: "Plugin credential encryption is unavailable",

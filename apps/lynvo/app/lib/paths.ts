@@ -18,6 +18,7 @@ export const sitePaths = {
 
 export const policyPaths = {
   cookiePolicy: "/policies/cookie-policy",
+  licenses: "/policies/licenses",
   privacyPolicy: "/policies/privacy-policy",
   termsOfUse: "/policies/terms-of-use",
   usagePolicy: "/policies/usage-policy",

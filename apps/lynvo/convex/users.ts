@@ -22,8 +22,8 @@ import { validatePassword } from "../app/lib/auth-policy"
 import {
   DEFAULT_RETENTION_DAYS,
   MAX_RETENTION_DAYS,
-  RECENT_LINK_LIMIT_BYTES,
-  RECENT_LINK_RETENTION_BATCH_SIZE,
+  LINK_LIMIT_BYTES,
+  LINK_RETENTION_BATCH_SIZE,
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
@@ -38,8 +38,8 @@ import {
   touchUserActivity,
 } from "./accountLifecycle"
 import {
-  deleteExpiredRecentLinks,
-  getExpiredRecentLinks,
+  deleteExpiredLinks,
+  getExpiredLinks,
   calculateAppOwnedStorageUsage,
   assertStorageMutation,
   getOperationalStorageBytes,
@@ -144,16 +144,11 @@ export const updateStorageRetentionDays = mutation({
 
     if (args.deleteExpiredLinks) {
       const now = Date.now()
-      deletedLinks = await deleteExpiredRecentLinks(
-        ctx,
-        userId,
-        retentionDays,
-        now
-      )
-      if (deletedLinks === RECENT_LINK_RETENTION_BATCH_SIZE) {
+      deletedLinks = await deleteExpiredLinks(ctx, userId, retentionDays, now)
+      if (deletedLinks === LINK_RETENTION_BATCH_SIZE) {
         await ctx.scheduler.runAfter(
           0,
-          internal.links.cleanupExpiredRecentLinksForUser,
+          internal.links.cleanupExpiredLinksForUser,
           { userId, now }
         )
       }
@@ -179,7 +174,7 @@ export const previewStorageRetentionDays = query({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = normalizeRetentionDays(args.days)
-    const expiredLinks = await getExpiredRecentLinks(
+    const expiredLinks = await getExpiredLinks(
       ctx,
       userId,
       retentionDays,
@@ -190,7 +185,7 @@ export const previewStorageRetentionDays = query({
   },
 })
 
-export const clearRecentCards = mutation({
+export const clearLinks = mutation({
   returns: v.any(),
   args: {},
   handler: async (ctx) => {
@@ -201,7 +196,7 @@ export const clearRecentCards = mutation({
       .collect()
 
     for (const link of links) {
-      await recordStorageDeletion(ctx, userId, "recentLinkBytes", link)
+      await recordStorageDeletion(ctx, userId, "linkBytes", link)
       await ctx.db.delete("links", link._id)
     }
 
@@ -260,7 +255,7 @@ export const getStorageUsage = query({
       estimatedBytes: ledger.totalEnforcedBytes + authBytes,
       enforcedBytes: ledger.totalEnforcedBytes,
       operationalBytes: authBytes,
-      linkBytes: ledger.recentLinkBytes,
+      linkBytes: ledger.linkBytes,
       pluginServerBytes: ledger.pluginServerBytes,
       pluginDomainBytes,
       authBytes,
@@ -268,11 +263,11 @@ export const getStorageUsage = query({
       savedLinkCount: ledger.savedLinkCount,
       averageLinkBytes:
         ledger.savedLinkCount > 0
-          ? Math.round(ledger.recentLinkBytes / ledger.savedLinkCount)
+          ? Math.round(ledger.linkBytes / ledger.savedLinkCount)
           : 0,
       storageLimitBytes: USER_STORAGE_LIMIT_BYTES,
       storageWarningBytes: USER_STORAGE_WARNING_BYTES,
-      recentCardLimitBytes: RECENT_LINK_LIMIT_BYTES,
+      linkLimitBytes: LINK_LIMIT_BYTES,
       retentionDays,
       retentionDayOptions: [...STORAGE_RETENTION_DAY_OPTIONS],
       defaultRetentionDays: DEFAULT_RETENTION_DAYS,

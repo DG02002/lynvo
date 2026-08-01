@@ -4,14 +4,14 @@ export interface ParsedPluginDomainInput {
   username?: string
 }
 
-export interface SourceUrlCandidate {
+export interface PluginDomainCandidate {
   domain: string
   password?: string
   sanitizedUrl: string
   username?: string
 }
 
-export interface SourceDomainSuggestion extends SourceUrlCandidate {
+export interface PluginDomainSuggestion extends PluginDomainCandidate {
   pluginIconUrl?: string
   pluginId: string
   pluginName: string
@@ -59,9 +59,9 @@ export const normalizePluginDomain = (value: string): string => {
   return parsedUrl.hostname.toLowerCase().replace(/\.$/, "")
 }
 
-export const parseSourceUrlCandidate = (
+export const parsePluginDomainCandidate = (
   value: string
-): SourceUrlCandidate | undefined => {
+): PluginDomainCandidate | undefined => {
   try {
     const parsed = new URL(value)
     if (parsed.protocol !== "https:") {

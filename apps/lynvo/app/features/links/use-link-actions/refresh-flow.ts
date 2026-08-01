@@ -8,15 +8,16 @@ import type {
 
 export const softRefreshLink = async ({
   itemUrl,
-  recents,
+  links,
   effects,
 }: SoftRefreshOptions) => {
   try {
-    const currentItem = recents.find((recentItem) => recentItem.url === itemUrl)
+    const currentItem = links.find((linkItem) => linkItem.url === itemUrl)
 
     if (currentItem) {
-      const links = await extractionOrchestration.refreshSource(currentItem)
-      effects.updateLinks(itemUrl, links)
+      const refreshedLinks =
+        await extractionOrchestration.refreshSource(currentItem)
+      effects.updateLinks(itemUrl, refreshedLinks)
     }
     effects.showRefreshSuccess()
   } catch (error) {
@@ -27,16 +28,16 @@ export const softRefreshLink = async ({
 
 export const hardRefreshLink = async ({
   itemUrl,
-  recents,
+  links,
   effects,
 }: SoftRefreshOptions) => {
-  const item = recents.find((recentItem) => recentItem.url === itemUrl)
+  const item = links.find((linkItem) => linkItem.url === itemUrl)
 
   try {
     const { mergedMeta, presentation } =
       await extractionOrchestration.prepareSource({
         targetUrl: itemUrl,
-        recents,
+        links,
         existingMeta: item?.meta,
       })
 
@@ -68,11 +69,11 @@ export const hardRefreshLink = async ({
 export const expandMirrorLinks = async ({
   itemUrl,
   lazyItemUrl,
-  recents,
+  links,
   effects,
 }: MirrorExpandOptions): Promise<ExtractedLink[] | null> => {
   try {
-    const item = recents.find((recentItem) => recentItem.url === itemUrl)
+    const item = links.find((linkItem) => linkItem.url === itemUrl)
     return await extractionOrchestration.resolveMirror(item, lazyItemUrl)
   } catch (error) {
     console.error(error)
@@ -85,22 +86,22 @@ export const expandFolderLink = async ({
   itemUrl,
   linkId,
   linkUrl,
-  recents,
+  links,
   effects,
 }: FolderExpandOptions) => {
   try {
-    const currentItem = recents.find((recentItem) => recentItem.url === itemUrl)
+    const currentItem = links.find((linkItem) => linkItem.url === itemUrl)
     if (!currentItem || !currentItem.extractedLinks) {
       return null
     }
 
-    const links = await extractionOrchestration.expandFolder({
+    const expandedLinks = await extractionOrchestration.expandFolder({
       item: currentItem,
       linkId,
       linkUrl,
     })
-    effects.updateLinks(itemUrl, links)
-    return links
+    effects.updateLinks(itemUrl, expandedLinks)
+    return expandedLinks
   } catch (error) {
     console.error(error)
     effects.showOptionsError()

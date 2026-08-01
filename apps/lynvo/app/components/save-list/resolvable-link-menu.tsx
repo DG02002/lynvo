@@ -57,7 +57,7 @@ export const ResolvableLinkMenu = ({
             <DropdownMenuItem
               onClick={() => {
                 onCopyLink()
-                toast.success("Copied")
+                toast.success("Link copied")
               }}
             >
               <HugeiconsIcon icon={CopyIcon} />
@@ -75,7 +75,7 @@ export const ResolvableLinkMenu = ({
               onClick={() => setIsRemoveDialogOpen(true)}
             >
               <HugeiconsIcon icon={Delete02Icon} />
-              Remove saved item
+              Remove link
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
@@ -88,10 +88,10 @@ export const ResolvableLinkMenu = ({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="font-normal">
-              Remove this item?
+              Remove this link?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the resolvable item from the saved folder.
+              This removes the link from the playable choices.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -103,7 +103,7 @@ export const ResolvableLinkMenu = ({
                 setIsRemoveDialogOpen(false)
               }}
             >
-              Remove saved item
+              Remove link
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

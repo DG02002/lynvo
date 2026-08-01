@@ -1,6 +1,6 @@
 import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
-import { TvSignInQr } from "~/components/auth/TvSignInQr"
+import { DeviceLoginQr } from "~/components/auth/DeviceLoginQr"
 import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 
@@ -21,7 +21,7 @@ export default function SignInWithAnotherDevice() {
           </div>
 
           <div className="mx-auto flex w-full max-w-sm justify-center">
-            <TvSignInQr />
+            <DeviceLoginQr />
           </div>
 
           <div className="mx-auto w-full max-w-sm">
@@ -42,7 +42,7 @@ export default function SignInWithAnotherDevice() {
               viewTransition
               className="underline underline-offset-4"
             >
-              Terms of Use
+              Terms of use
             </Link>
             <span> | </span>
             <Link
@@ -50,7 +50,7 @@ export default function SignInWithAnotherDevice() {
               viewTransition
               className="underline underline-offset-4"
             >
-              Privacy Policy
+              Privacy policy
             </Link>
           </div>
         </div>

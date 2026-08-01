@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   normalizeLinkMetadata,
-  toRecentLinkViewModel,
-  toRecentLinkViewItem,
+  toLinkViewModel,
+  toLinkViewItem,
   toSavedLinkDTO,
   createLinkMetadata,
   mergeDefinedMeta,
@@ -78,8 +78,8 @@ describe("links mapper metadata normalization", () => {
       },
     }
 
-    const item = toRecentLinkViewItem(toSavedLinkDTO(row))
-    const view = toRecentLinkViewModel(item)
+    const item = toLinkViewItem(toSavedLinkDTO(row))
+    const view = toLinkViewModel(item)
     expect(view.badge).toBe("4K")
     expect(view.extractedLinks[0].watched).toBe(true)
   })
@@ -120,7 +120,7 @@ describe("save-flow metadata preservation", () => {
       extractedLinks: [{ id: "link", url: "https://cdn.test", label: "CDN" }],
     })
 
-    const item = toRecentLinkViewItem(
+    const item = toLinkViewItem(
       toSavedLinkDTO({
         id: "1",
         url: "https://source.test",
@@ -128,7 +128,7 @@ describe("save-flow metadata preservation", () => {
         meta: metadata,
       })
     )
-    const view = toRecentLinkViewModel(item)
+    const view = toLinkViewModel(item)
 
     expect(metadata.source.pluginId).toBe("resolver-beta")
     expect(metadata.source.sourceName).toBe("Resolver Beta")

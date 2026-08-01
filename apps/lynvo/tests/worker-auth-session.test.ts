@@ -19,7 +19,7 @@ class MemorySessionStorage {
 const TEST_SESSION_KEY = btoa("abcdef0123456789abcdef0123456789")
 
 const createSession = (
-  environment = { AUTH_SESSION_MASTER_KEY: TEST_SESSION_KEY }
+  environment = { AUTH_SESSION_ENCRYPTION_KEY: TEST_SESSION_KEY }
 ) => {
   const storage = new MemorySessionStorage()
   return {
@@ -106,7 +106,7 @@ describe("Worker authentication session HTTP behavior", () => {
   })
 
   it("fails closed when session encryption is unavailable", async () => {
-    const { session } = createSession({ AUTH_SESSION_MASTER_KEY: "" })
+    const { session } = createSession({ AUTH_SESSION_ENCRYPTION_KEY: "" })
     const response = await session.fetch(
       new Request("https://session.internal/session", {
         method: "POST",

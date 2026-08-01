@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest"
 import {
-  assertRecentLinkSize,
+  assertLinkSize,
   assertStorageGrowth,
   byteLength,
   calculateStorageUsage,
   getRetentionCutoff,
   projectStorageBytes,
-  selectExpiredRecentLinks,
+  selectExpiredLinks,
   STORAGE_DOMAIN_NAMES,
 } from "../convex/storagePolicy"
 import {
   DAY_MS,
-  RECENT_LINK_LIMIT_BYTES,
+  LINK_LIMIT_BYTES,
   USER_STORAGE_LIMIT_BYTES,
 } from "../convex/constants"
 
@@ -30,7 +30,7 @@ describe("storage policy", () => {
 
     const inventory = {
       profile: [{ name: "Ada" }],
-      recentLinks: [{ url: "https://example.com" }],
+      links: [{ url: "https://example.com" }],
       pluginServers: [{ baseUrl: "https://plugin-server.example" }],
       pluginDomains: [{ domain: "example.com" }],
       pluginCredentials: [{ ciphertext: "secret" }],
@@ -64,24 +64,24 @@ describe("storage policy", () => {
     expect(projectStorageBytes(100, 50, 50)).toBe(100)
   })
 
-  it("preserves the per-Recent-Link limit", () => {
-    expect(() => assertRecentLinkSize(RECENT_LINK_LIMIT_BYTES)).not.toThrow()
-    expect(() => assertRecentLinkSize(RECENT_LINK_LIMIT_BYTES + 1)).toThrow(
+  it("preserves the per-link limit", () => {
+    expect(() => assertLinkSize(LINK_LIMIT_BYTES)).not.toThrow()
+    expect(() => assertLinkSize(LINK_LIMIT_BYTES + 1)).toThrow(
       "This link contains too much data to save."
     )
   })
 
-  it("selects only Recent Links older than the retention cutoff", () => {
+  it("selects only links older than the retention cutoff", () => {
     const now = 10 * DAY_MS
     const cutoff = getRetentionCutoff(now, 7)
-    const recentLinks = [
+    const links = [
       { createdAt: cutoff - 1, url: "expired" },
       { createdAt: cutoff, url: "edge" },
       { createdAt: cutoff + 1, url: "retained" },
     ]
 
-    expect(selectExpiredRecentLinks(recentLinks, cutoff)).toEqual([
-      recentLinks[0],
+    expect(selectExpiredLinks(links, cutoff)).toEqual([
+      links[0],
     ])
   })
 })

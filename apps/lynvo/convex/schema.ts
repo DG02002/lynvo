@@ -125,7 +125,7 @@ export default defineSchema({
     userId: v.id("users"),
     schemaVersion: v.number(),
     profileBytes: v.number(),
-    recentLinkBytes: v.number(),
+    linkBytes: v.number(),
     pluginServerBytes: v.number(),
     pluginDomainBytes: v.number(),
     pluginCredentialBytes: v.number(),

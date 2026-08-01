@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import {
   readLinksCache,
-  readLocalRecents,
-} from "~/features/links/use-recent-links/cache"
+  readLocalLinks,
+} from "~/features/links/use-links/cache"
 import { authSignInResponseSchema } from "~/lib/auth-http-schema"
 import {
   authPreflightRequestSchema,
@@ -35,7 +35,7 @@ describe("browser storage boundaries", () => {
 
   it("drops saved links that do not use the current cache shape", () => {
     localStorage.setItem(
-      "lynvo:recents:sync:v1:user-1",
+      "lynvo:links:sync:v1:user-1",
       JSON.stringify({
         version: 2,
         etag: "etag",
@@ -57,9 +57,9 @@ describe("browser storage boundaries", () => {
     })
   })
 
-  it("drops malformed local recent entries", () => {
+  it("drops malformed local link entries", () => {
     localStorage.setItem(
-      "lynvo:recents:v1",
+      "lynvo:links:v1",
       JSON.stringify([
         {
           url: "https://example.com",
@@ -80,7 +80,7 @@ describe("browser storage boundaries", () => {
       ])
     )
 
-    expect(readLocalRecents()).toEqual([
+    expect(readLocalLinks()).toEqual([
       {
         url: "https://example.com",
         timestamp: 10,
@@ -95,13 +95,13 @@ describe("browser storage boundaries", () => {
     ])
   })
 
-  it("does not read recent links from the historical storage namespaces", () => {
+  it("does not read links from legacy storage namespaces", () => {
     localStorage.setItem(
-      "sl2jp:recents:sync:v1:user-1",
+      "sl2jp:links:sync:v1:user-1",
       JSON.stringify({ results: [], version: 2, etag: "etag" })
     )
     localStorage.setItem(
-      "sl2jp:recents:v1",
+      "sl2jp:links:v1",
       JSON.stringify([
         {
           url: "https://example.com",
@@ -117,7 +117,7 @@ describe("browser storage boundaries", () => {
     )
 
     expect(readLinksCache("user-1")).toBeUndefined()
-    expect(readLocalRecents()).toEqual([])
+    expect(readLocalLinks()).toEqual([])
   })
 })
 

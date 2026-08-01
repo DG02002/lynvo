@@ -6,7 +6,7 @@ import { LinksHandlers } from "./handlers/LinksHandlers"
 import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
 import { PluginDomainsHandlers } from "./handlers/PluginDomainsHandlers"
 import { ExtractionHandlers } from "./handlers/extraction-handlers"
-import { TvHandlers } from "./handlers/TvHandlers"
+import { DeviceAuthHandlers } from "./handlers/DeviceAuthHandlers"
 import { RemoteHandlers } from "./handlers/RemoteHandlers"
 import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./Middleware"
@@ -94,7 +94,7 @@ const HandlersLive = Layer.mergeAll(
   PluginServersHandlers,
   PluginDomainsHandlers,
   ExtractionHandlers,
-  TvHandlers,
+  DeviceAuthHandlers,
   RemoteHandlers,
   SettingsHandlers
 )

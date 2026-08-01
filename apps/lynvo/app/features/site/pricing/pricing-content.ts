@@ -33,6 +33,6 @@ export const pricingFaqs = [
     value: "privacy",
     question: "How does Lynvo protect account privacy?",
     answer:
-      "Lynvo stores account records and link metadata, not the linked video files. Account controls can remove history, change the retention period, revoke sessions, and delete the account.",
+      "Lynvo stores account records and link metadata, not the linked video files. Account controls can remove saved links, change the retention period, revoke sessions, and delete the account.",
   },
 ]

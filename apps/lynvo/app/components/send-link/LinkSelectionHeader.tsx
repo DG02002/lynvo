@@ -9,8 +9,6 @@ interface LinkSelectionHeaderProps {
   pageTitle?: string
   audioInfo?: string
   isDraftMode: boolean
-  pluginServerId?: string
-  workerName?: string
 }
 
 export const LinkSelectionHeader = ({
@@ -18,7 +16,6 @@ export const LinkSelectionHeader = ({
   pluginName,
   pageTitle,
   audioInfo,
-  workerName,
 }: LinkSelectionHeaderProps) => {
   const normalizedAudio = audioInfo
     ?.split("|")
@@ -44,12 +41,6 @@ export const LinkSelectionHeader = ({
               </span>
             )}
           </div>
-        </div>
-      )}
-
-      {workerName && (
-        <div className="text-sm sm:text-base text-foreground font-normal">
-          Via {workerName}
         </div>
       )}
 

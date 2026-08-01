@@ -2,9 +2,7 @@ import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 import type { Route } from "./+types/_site.help-center"
-
-const TELEGRAM_SUPPORT_URL = "https://t.me/lynvo_support"
-const GITHUB_ISSUES_URL = "https://github.com/DG02002/lynvo/issues"
+import { GITHUB_ISSUES_URL, TELEGRAM_SUPPORT_URL } from "~/lib/support-links"
 
 const TelegramLogo = () => (
   <svg
@@ -85,7 +83,7 @@ const HelpCenter = () => (
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Support</p>
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
-          How can we help?
+          Get help with Lynvo
         </h1>
         <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
           Choose a private message or a public post.

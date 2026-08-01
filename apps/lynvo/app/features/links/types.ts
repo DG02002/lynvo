@@ -73,7 +73,7 @@ export interface MetaData {
   pluginServerId?: string
 }
 
-export interface RecentLinkViewItem {
+export interface LinkViewItem {
   url: string
   timestamp: number
   updatedAt?: number

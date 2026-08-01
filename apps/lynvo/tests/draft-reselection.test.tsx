@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { useRefreshActions } from "~/features/links/use-link-actions/refresh-actions"
-import type { RecentLinkViewItem } from "~/features/links/types"
+import type { LinkViewItem } from "~/features/links/types"
 
 describe("draft selection", () => {
   it("opens the stored draft tree without running extraction again", async () => {
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source-alpha.example/folder-alpha/",
       timestamp: 1,
       isDraft: true,
@@ -28,8 +28,8 @@ describe("draft selection", () => {
     })
     const { result } = renderHook(() =>
       useRefreshActions({
-        recents: [item],
-        updateRecentLinks: vi.fn(),
+        links: [item],
+        updateLinks: vi.fn(),
         cacheResolvedMirrors: vi.fn(),
         openSelectionDialog,
         extractingItems: new Set(),

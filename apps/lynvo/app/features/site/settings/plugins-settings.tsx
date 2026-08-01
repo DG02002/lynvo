@@ -144,8 +144,8 @@ export function PluginsSettings({
                         href={plugin.sourceUrl}
                         target="_blank"
                         rel="noreferrer"
-                        aria-label={`View upstream project for ${plugin.name}`}
-                        title="View upstream project"
+                        aria-label={`View project for ${plugin.name}`}
+                        title="View project"
                         className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                       >
                         <HugeiconsIcon
@@ -385,7 +385,7 @@ const AddPluginDomainDialog = ({
                   type="password"
                   value={password}
                   onChange={(event) => onPasswordChange(event.target.value)}
-                  placeholder="Domain password"
+                  placeholder="Plugin Domain password"
                   autoComplete="new-password"
                   required
                 />
@@ -805,8 +805,8 @@ const PluginCredentialEditor = ({
                   Remove this domain?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  {domain.domain} and its saved credentials will be removed from
-                  this plugin.
+                  {domain.domain} and its Plugin Credentials will be removed
+                  from this plugin.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

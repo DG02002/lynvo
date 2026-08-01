@@ -22,7 +22,7 @@ Lynvo owns:
 - response validation
 - UI rendering
 - playback behavior
-- saved-item state
+- Recent Link state
 
 Plugin Servers own:
 
@@ -42,7 +42,7 @@ Example:
 1. User submits a `source-alpha` URL.
 2. Lynvo selects one matching Plugin Server.
 3. The Plugin Server returns a tree with lazy nodes.
-4. User clicks an lazy item node.
+4. The user selects a lazy item node.
 5. Lynvo calls the same Plugin Server again with only that clicked node target.
 6. The Plugin Server resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
 
@@ -62,7 +62,8 @@ Example:
 
 ### Plugin Server Affinity
 
-- Once a saved item is created, Lynvo must persist the originating Plugin Server entry id.
+- Once a Recent Link is created, Lynvo must persist the originating Plugin
+  Server entry id.
 - Refresh and lazy follow-up must use that same Plugin Server first.
 - If the original Plugin Server is unavailable, Lynvo should fail closed and only offer explicit user-triggered re-routing from the original top-level source URL.
 

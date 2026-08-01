@@ -9,6 +9,7 @@
  */
 
 import type * as accountCapacity from "../accountCapacity.js";
+import type * as accountDataOwnership from "../accountDataOwnership.js";
 import type * as accountErasure from "../accountErasure.js";
 import type * as accountLifecycle from "../accountLifecycle.js";
 import type * as auth from "../auth.js";
@@ -18,6 +19,7 @@ import type * as authentication from "../authentication.js";
 import type * as commands from "../commands.js";
 import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
+import type * as deviceAuth from "../deviceAuth.js";
 import type * as http from "../http.js";
 import type * as links from "../links.js";
 import type * as migrations from "../migrations.js";
@@ -25,7 +27,6 @@ import type * as passwordCrypto from "../passwordCrypto.js";
 import type * as pluginDomainLifecycle from "../pluginDomainLifecycle.js";
 import type * as pluginDomains from "../pluginDomains.js";
 import type * as storagePolicy from "../storagePolicy.js";
-import type * as tv from "../tv.js";
 import type * as usage from "../usage.js";
 import type * as userPluginServers from "../userPluginServers.js";
 import type * as userPreferences from "../userPreferences.js";
@@ -39,6 +40,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accountCapacity: typeof accountCapacity;
+  accountDataOwnership: typeof accountDataOwnership;
   accountErasure: typeof accountErasure;
   accountLifecycle: typeof accountLifecycle;
   auth: typeof auth;
@@ -48,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   commands: typeof commands;
   constants: typeof constants;
   crons: typeof crons;
+  deviceAuth: typeof deviceAuth;
   http: typeof http;
   links: typeof links;
   migrations: typeof migrations;
@@ -55,7 +58,6 @@ declare const fullApi: ApiFromModules<{
   pluginDomainLifecycle: typeof pluginDomainLifecycle;
   pluginDomains: typeof pluginDomains;
   storagePolicy: typeof storagePolicy;
-  tv: typeof tv;
   usage: typeof usage;
   userPluginServers: typeof userPluginServers;
   userPreferences: typeof userPreferences;

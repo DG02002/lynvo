@@ -31,6 +31,10 @@ export default [
       "features/site/routes/_site.policies.cookie-policy.tsx"
     ),
     route(
+      "policies/licenses",
+      "features/site/routes/_site.policies.licenses.tsx"
+    ),
+    route(
       "policies/privacy-policy",
       "features/site/routes/_site.policies.privacy-policy.tsx"
     ),
@@ -62,8 +66,8 @@ export default [
     route("auth/logout", "features/auth/routes/_auth.logout.tsx"),
   ]),
 
-  // TV Pairing
-  route("tv", "features/auth/routes/_auth.tv.tsx"),
+  // Device login
+  route("device", "features/auth/routes/_auth.device.tsx"),
 
   // Devtools Configuration
   route(

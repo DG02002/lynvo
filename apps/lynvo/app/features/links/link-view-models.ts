@@ -2,7 +2,7 @@ import type {
   ExtractedLink,
   LinkMetadata,
   LinkResponse,
-  RecentLinkViewItem,
+  LinkViewItem,
 } from "./types"
 import {
   normalizeLinkMetadata,
@@ -10,7 +10,7 @@ import {
 } from "./link-metadata-normalization"
 import { applyWatchedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
-import { getRecentLinkViewItemMetadata } from "./link-metadata-accessors"
+import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 
 export interface SavedLinkDTO {
   id: string
@@ -23,7 +23,7 @@ export interface SavedLinkDTO {
 
 export type SavedLink = SavedLinkDTO
 
-export interface RecentLinkViewModel {
+export interface LinkViewModel {
   id?: string
   url: string
   title?: string
@@ -49,7 +49,7 @@ export const toSavedLinkDTO = (link: LinkResponse): SavedLinkDTO => ({
   metadata: normalizeLinkMetadata(link.meta, link.extractedLinks),
 })
 
-export const toRecentLinkViewItem = (dto: SavedLink): RecentLinkViewItem => {
+export const toLinkViewItem = (dto: SavedLink): LinkViewItem => {
   const source = getLinkSourceFields(dto.metadata)
   return {
     id: dto.id,
@@ -70,21 +70,17 @@ export const toRecentLinkViewItem = (dto: SavedLink): RecentLinkViewItem => {
   }
 }
 
-const toSavedLinkDTOFromRecentLinkViewItem = (
-  item: RecentLinkViewItem
-): SavedLinkDTO => ({
+const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
   id: item.id ?? item.url,
   url: item.url,
   title: item.title,
   createdAt: item.timestamp,
   updatedAt: item.updatedAt ?? item.timestamp,
-  metadata: getRecentLinkViewItemMetadata(item),
+  metadata: getLinkViewItemMetadata(item),
 })
 
-export const toRecentLinkViewModel = (
-  item: RecentLinkViewItem
-): RecentLinkViewModel => {
-  const dto = toSavedLinkDTOFromRecentLinkViewItem(item)
+export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
+  const dto = toSavedLinkDTOFromLinkViewItem(item)
   const watchedUrls = new Set(dto.metadata.playback.watchedUrls)
   const watchedIds = new Set(dto.metadata.playback.watchedIds)
   const source = getLinkSourceFields(dto.metadata)

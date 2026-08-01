@@ -119,10 +119,10 @@ VITE_CONVEX_URL=https://your-deployment.convex.cloud
 AUTH_GATEWAY_SECRET=replace-with-the-same-secret-used-in-convex
 TURNSTILE_SITE_KEY=0x...
 TURNSTILE_SECRET_KEY=0x...
-PLUGIN_CREDENTIAL_MASTER_KEY=base64-encoded-32-byte-key
+PLUGIN_CREDENTIAL_ENCRYPTION_KEY=base64-encoded-32-byte-key
 ```
 
-Generate `PLUGIN_CREDENTIAL_MASTER_KEY` with `openssl rand -base64 32`. Keep
+Generate `PLUGIN_CREDENTIAL_ENCRYPTION_KEY` with `openssl rand -base64 32`. Keep
 the same key for the lifetime of an environment; replacing it makes existing
 encrypted Plugin Credentials unreadable.
 
@@ -211,7 +211,7 @@ Before deployment:
 - Configure the production Convex URL and Turnstile values.
 - Choose the production Lynvo URL before initializing production Convex Auth.
 - Use the same `AUTH_GATEWAY_SECRET` in Lynvo and Convex.
-- Generate a production-only `PLUGIN_CREDENTIAL_MASTER_KEY` and retain it securely.
+- Generate a production-only `PLUGIN_CREDENTIAL_ENCRYPTION_KEY` and retain it securely.
 - Set `LYNVO_PLUGIN_SERVER_API_KEY` independently on both Workers with the same value.
 - Confirm the Lynvo Plugin Server has `workers_dev` disabled and no public route.
 - Confirm `LYNVO_PLUGIN_SERVER` targets the intended Worker in the same Cloudflare account.
@@ -235,7 +235,7 @@ implementation or verification.
 8. Configure the remaining Lynvo Worker secrets and production Convex URL.
 9. Confirm production contains `SITE_URL`, `JWT_PRIVATE_KEY`, `JWKS`, and `AUTH_GATEWAY_SECRET`.
 10. Deploy `@lynvo/app` with `LYNVO_PLUGIN_SERVER` bound to the exact target.
-11. Smoke-test account creation, login, TV login, extraction, logs, and counters.
+11. Smoke-test account creation, login, device login, extraction, logs, and counters.
 
 ```sh
 pnpm --filter @lynvo/lynvo-plugin-server deploy

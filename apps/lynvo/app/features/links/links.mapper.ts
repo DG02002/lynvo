@@ -1,8 +1,4 @@
-export type {
-  RecentLinkViewModel,
-  SavedLink,
-  SavedLinkDTO,
-} from "./link-view-models"
+export type { LinkViewModel, SavedLink, SavedLinkDTO } from "./link-view-models"
 export {
   createLinkMetadata,
   mergeDefinedMeta,
@@ -11,7 +7,7 @@ export {
 } from "./link-metadata-normalization"
 export { withResolvedMirrors, withWatchedUrl } from "./link-playback-metadata"
 export {
-  toRecentLinkViewItem,
-  toRecentLinkViewModel,
+  toLinkViewItem,
+  toLinkViewModel,
   toSavedLinkDTO,
 } from "./link-view-models"

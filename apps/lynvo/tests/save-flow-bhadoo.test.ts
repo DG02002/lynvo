@@ -10,7 +10,7 @@ const createEffects = (): SaveFlowEffects => ({
   showPreview: vi.fn(),
   openSelection: vi.fn(),
   closeSelection: vi.fn(),
-  focusRecent: vi.fn(),
+  focusLink: vi.fn(),
   resetAfterSave: vi.fn(),
 })
 
@@ -45,13 +45,13 @@ describe("Bhadoo save flow", () => {
         },
       },
     })
-    const addRecent = vi.fn().mockResolvedValue("saved-id")
+    const addLink = vi.fn().mockResolvedValue("saved-id")
     const effects = createEffects()
 
     const result = await saveLink({
       currentUrl: credentialedUrl,
-      recents: [],
-      addRecent,
+      links: [],
+      addLink,
       effects,
     })
 
@@ -62,7 +62,7 @@ describe("Bhadoo save flow", () => {
     expect(extractionOrchestration.prepareSource).toHaveBeenCalledWith(
       expect.objectContaining({ targetUrl: credentialedUrl })
     )
-    expect(addRecent).toHaveBeenCalledWith(
+    expect(addLink).toHaveBeenCalledWith(
       sanitizedUrl,
       meta,
       expect.any(Array)

@@ -3,8 +3,8 @@ import {
   Folder02Icon,
   FolderSymlinkIcon,
 } from "@hugeicons/core-free-icons"
-import { toRecentLinkViewModel } from "~/features/links/link-view-models"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import { toLinkViewModel } from "~/features/links/link-view-models"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 export interface FolderLevel {
   id: string
@@ -38,17 +38,17 @@ export const getFolderIcon = (link: ExtractedLink, isOpen: boolean) => {
 
 export const getResolvableSourceName = (
   link: ExtractedLink,
-  item: RecentLinkViewItem
+  item: LinkViewItem
 ) => {
   if (link.sourceName) {
     return link.sourceName
   }
-  const view = toRecentLinkViewModel(item)
+  const view = toLinkViewModel(item)
   return view.sourceName || view.pluginName || item.url
 }
 
-export const getItemTitle = (item: RecentLinkViewItem) =>
-  toRecentLinkViewModel(item).title || new URL(item.url).hostname
+export const getItemTitle = (item: LinkViewItem) =>
+  toLinkViewModel(item).title || new URL(item.url).hostname
 
 export const getLinksAtFolderPath = (
   rootLinks: ExtractedLink[],

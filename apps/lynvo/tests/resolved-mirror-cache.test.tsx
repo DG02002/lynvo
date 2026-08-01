@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { useRefreshActions } from "~/features/links/use-link-actions/refresh-actions"
-import type { RecentLinkViewItem } from "~/features/links/types"
+import type { LinkViewItem } from "~/features/links/types"
 
 describe("resolved mirror cache", () => {
   it("returns persisted mirrors without repeating extraction", async () => {
@@ -13,7 +13,7 @@ describe("resolved mirror cache", () => {
         type: "file" as const,
       },
     ]
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source.example/show",
       timestamp: 1,
       metadata: {
@@ -33,8 +33,8 @@ describe("resolved mirror cache", () => {
     const cacheResolvedMirrors = vi.fn()
     const { result } = renderHook(() =>
       useRefreshActions({
-        recents: [item],
-        updateRecentLinks: vi.fn(),
+        links: [item],
+        updateLinks: vi.fn(),
         cacheResolvedMirrors,
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),
@@ -61,7 +61,7 @@ describe("resolved mirror cache", () => {
         type: "file" as const,
       },
     ]
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source.example/show",
       timestamp: 1,
       metadata: {
@@ -80,8 +80,8 @@ describe("resolved mirror cache", () => {
     })
     const { result } = renderHook(() =>
       useRefreshActions({
-        recents: [item],
-        updateRecentLinks: vi.fn(),
+        links: [item],
+        updateLinks: vi.fn(),
         cacheResolvedMirrors: vi.fn(),
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),

@@ -10,4 +10,4 @@ export const COOKIE_PREFERENCES_VERSION = 1
 export const OPEN_COOKIE_PREFERENCES_EVENT = "lynvo:open-cookie-preferences"
 export const DOCS_SCROLL_OFFSET_PX = 112
 export const DOCS_SCROLL_END_TOLERANCE_PX = 2
-export const TV_AUTH_STATUS_POLL_INTERVAL_MS = 2_000
+export const DEVICE_AUTH_STATUS_POLL_INTERVAL_MS = 2_000

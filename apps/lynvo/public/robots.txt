@@ -7,4 +7,4 @@ Disallow: /account
 Disallow: /auth/
 Disallow: /save
 Disallow: /settings
-Disallow: /tv
+Disallow: /device

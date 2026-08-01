@@ -38,11 +38,12 @@ describe("device authorization", () => {
       throw new Error("Math.random must not generate authentication codes")
     })
 
-    const generated = await convex.mutation(api.tv.generateCode, {
-      deviceName: "Test TV",
+    const generated = await convex.mutation(api.deviceAuth.generateCode, {
+      deviceName: "Personal phone",
       preflightToken,
     })
     expect(generated.code).toMatch(/^\d{8}$/)
+    expect(generated.deviceName).toBe("Personal phone")
     randomSpy.mockRestore()
     vi.unstubAllEnvs()
   })
@@ -53,7 +54,7 @@ describe("device authorization", () => {
     const convex = createConvexTest()
 
     await expect(
-      convex.mutation(api.tv.generateCode, {
+      convex.mutation(api.deviceAuth.generateCode, {
         deviceName: "Test TV",
         preflightToken: "invalid",
       })
@@ -63,19 +64,19 @@ describe("device authorization", () => {
       { purpose: "deviceCode", exp: Date.now() + DEVICE_CODE_TTL_MS },
       gatewaySecret
     )
-    const generated = await convex.mutation(api.tv.generateCode, {
+    const generated = await convex.mutation(api.deviceAuth.generateCode, {
       deviceName: "Test TV",
       preflightToken,
     })
 
     await expect(
-      convex.query(api.tv.getStatus, {
+      convex.query(api.deviceAuth.getStatus, {
         code: generated.code,
         pollSecret: "wrong-secret",
       })
     ).resolves.toEqual({ status: "invalid" })
     await expect(
-      convex.query(api.tv.getStatus, {
+      convex.query(api.deviceAuth.getStatus, {
         code: generated.code,
         pollSecret: generated.pollSecret,
       })
@@ -100,7 +101,7 @@ describe("device authorization", () => {
     })
 
     await expect(
-      convex.mutation(api.tv.authorizeCode, { code: "12345678" })
+      convex.mutation(api.deviceAuth.authorizeCode, { code: "12345678" })
     ).rejects.toThrow("UNAUTHORIZED")
   })
 
@@ -126,19 +127,19 @@ describe("device authorization", () => {
     )
     vi.useFakeTimers()
     vi.setSystemTime(expiresAt - 1)
-    await authenticatedClient.mutation(api.tv.authorizeCode, {
+    await authenticatedClient.mutation(api.deviceAuth.authorizeCode, {
       code: "23456789",
     })
 
     await expect(
-      convex.mutation(internal.tv.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
         code: "23456789",
         pollSecret,
         now: expiresAt - 1,
       })
     ).resolves.toMatchObject({ userId: user.userId })
     await expect(
-      convex.mutation(internal.tv.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
         code: "23456789",
         pollSecret,
         now: expiresAt - 1,
@@ -157,7 +158,7 @@ describe("device authorization", () => {
       })
     })
     await expect(
-      convex.mutation(internal.tv.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
         code: "34567890",
         pollSecret,
         now: expiresAt,
@@ -188,7 +189,7 @@ describe("device authorization", () => {
     })
 
     await expect(
-      convex.mutation(internal.tv.cleanupExpiredCodes)
+      convex.mutation(internal.deviceAuth.cleanupExpiredCodes)
     ).resolves.toEqual({ deleted: DEVICE_CODE_CLEANUP_BATCH_SIZE })
     await expect(
       convex.run(

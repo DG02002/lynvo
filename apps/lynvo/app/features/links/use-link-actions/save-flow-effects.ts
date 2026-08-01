@@ -9,7 +9,7 @@ export interface SaveFlowEffects {
   showPreview: (meta: MetaData) => void
   openSelection: (options: OpenSelectionDialogOptions) => void
   closeSelection: () => void
-  focusRecent: (id: string) => void
+  focusLink: (id: string) => void
   resetAfterSave: () => void
 }
 
@@ -38,7 +38,7 @@ export const createSaveFlowEffects = ({
   showPreview: (meta) => setExtractionPreview({ meta }),
   openSelection: openSelectionDialog,
   closeSelection: closeSelectionDialog,
-  focusRecent: (id) => {
+  focusLink: (id) => {
     setHighlightedId(id)
     setSortOrder("newest")
     setCurrentPage(1)

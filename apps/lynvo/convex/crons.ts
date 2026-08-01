@@ -14,13 +14,13 @@ crons.interval(
 crons.interval(
   "cleanup expired device codes",
   { minutes: 10 },
-  internal.tv.cleanupExpiredCodes
+  internal.deviceAuth.cleanupExpiredCodes
 )
 
 crons.interval(
-  "cleanup expired recent cards",
+  "cleanup expired links",
   { hours: 24 },
-  internal.links.cleanupExpiredRecentCards,
+  internal.links.cleanupExpiredLinks,
   {
     paginationOpts: { cursor: null, numItems: CLEANUP_USER_PAGE_SIZE },
   }

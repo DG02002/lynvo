@@ -70,7 +70,7 @@ const CustomPluginServerRow = ({
               <span className="truncate text-sm text-foreground">
                 {manifest.name}
               </span>
-              {isDown && <Badge variant="destructive">Down</Badge>}
+              {isDown && <Badge variant="destructive">Unavailable</Badge>}
             </div>
             <span
               className="truncate font-mono text-xs text-muted-foreground"
@@ -90,7 +90,7 @@ const CustomPluginServerRow = ({
             }
             aria-label={
               isDown
-                ? `${manifest.name} is down`
+                ? `${manifest.name} is unavailable`
                 : `${pluginServer.enabled ? "Disable" : "Enable"} ${manifest.name}`
             }
           />
@@ -174,8 +174,8 @@ const CustomPluginServerRow = ({
                       }
                       target="_blank"
                       rel="noreferrer"
-                      aria-label={`View upstream project for ${source.displayName}`}
-                      title="View upstream project"
+                      aria-label={`View project for ${source.displayName}`}
+                      title="View project"
                       className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                     >
                       <HugeiconsIcon
@@ -190,7 +190,7 @@ const CustomPluginServerRow = ({
                 {(source.status === "down" ||
                   source.status === "maintenance") && (
                   <Badge variant={sourceStatusVariant(source.status)}>
-                    {source.status}
+                    {source.status === "down" ? "Unavailable" : "Maintenance"}
                   </Badge>
                 )}
                 {source.version && (

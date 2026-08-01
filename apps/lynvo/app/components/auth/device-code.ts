@@ -2,7 +2,7 @@ import { readApiResponseError } from "~/lib/api-errors"
 import { deviceCodeResponseSchema } from "~/lib/auth-gateway-schemas"
 
 export const createDeviceCode = async (deviceName: string) => {
-  const response = await fetch("/api/auth/tv/code", {
+  const response = await fetch("/api/auth/device/code", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },

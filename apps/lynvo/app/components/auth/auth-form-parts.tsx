@@ -105,7 +105,7 @@ export const AuthPolicyLinks = () => (
       viewTransition
       className="underline underline-offset-4"
     >
-      Terms of Use
+      Terms of use
     </Link>
     <span> | </span>
     <Link
@@ -113,7 +113,7 @@ export const AuthPolicyLinks = () => (
       viewTransition
       className="underline underline-offset-4"
     >
-      Privacy Policy
+      Privacy policy
     </Link>
   </div>
 )

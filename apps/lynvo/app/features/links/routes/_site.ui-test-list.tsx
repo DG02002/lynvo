@@ -2,10 +2,10 @@ import { useMemo, useReducer } from "react"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
 import { Button } from "~/components/ui/button"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withWatchedUrl } from "~/features/links/link-playback-metadata"
-import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
 import { cn } from "~/lib/utils"
 import { TEST_MIRROR_RESOLUTION_DELAY_MS } from "~/features/links/testing/constants"
@@ -23,7 +23,7 @@ export const loader = () => ({
 })
 
 interface SaveListUiTestState {
-  items: RecentLinkViewItem[]
+  items: LinkViewItem[]
   selectedItemUrl: string | null
   highlightedId: string | null
   isHydrating: boolean
@@ -82,9 +82,8 @@ const SaveListUiTestRoute = () => {
       }),
     })
   }
-  const setItems = (
-    update: (items: RecentLinkViewItem[]) => RecentLinkViewItem[]
-  ) => updateField("items", update)
+  const setItems = (update: (items: LinkViewItem[]) => LinkViewItem[]) =>
+    updateField("items", update)
   const setSelectedItemUrl = (url: string | null) =>
     updateField("selectedItemUrl", () => url)
   const toggleIsHydrating = () =>
@@ -99,7 +98,7 @@ const SaveListUiTestRoute = () => {
     updateField("selectionItemUrl", () => url)
   const selectionItem = items.find((item) => item.url === selectionItemUrl)
   const selectionMetadata = selectionItem
-    ? getRecentLinkViewItemMetadata(selectionItem)
+    ? getLinkViewItemMetadata(selectionItem)
     : undefined
   useSaveListFullscreen(Boolean(selectedItemUrl))
 
@@ -107,7 +106,7 @@ const SaveListUiTestRoute = () => {
     setEvents((currentEvents) => [event, ...currentEvents].slice(0, 8))
   }
 
-  const actions = useMemo<LinkCardActions>(
+  const actions = useMemo<LinkItemActions>(
     () => ({
       play: (target) =>
         recordEvent(
@@ -145,7 +144,7 @@ const SaveListUiTestRoute = () => {
             if (item.url !== itemUrl) {
               return item
             }
-            const metadata = getRecentLinkViewItemMetadata(item)
+            const metadata = getLinkViewItemMetadata(item)
             return {
               ...item,
               metadata: {
@@ -279,7 +278,7 @@ const SaveListUiTestRoute = () => {
           className="flex flex-col gap-2 border-t pt-4"
           aria-live="polite"
         >
-          <h2 className="text-sm font-medium">Recent test actions</h2>
+          <h2 className="text-sm font-medium">Link test actions</h2>
           <ol className="flex flex-col gap-1 text-xs text-muted-foreground">
             {events.map((event, eventIndex) => (
               <li key={`${event}-${eventIndex}`}>{event}</li>
@@ -308,9 +307,9 @@ const SaveListUiTestRoute = () => {
                     isDraft: false,
                     draftExpiresAt: undefined,
                     metadata: {
-                      ...getRecentLinkViewItemMetadata(item),
+                      ...getLinkViewItemMetadata(item),
                       extraction: {
-                        ...getRecentLinkViewItemMetadata(item).extraction,
+                        ...getLinkViewItemMetadata(item).extraction,
                         extractedLinks: selectedLinks,
                       },
                     },
@@ -342,9 +341,6 @@ const SaveListUiTestRoute = () => {
         }
         audioInfo={String(selectionMetadata?.source.audio ?? "") || undefined}
         isDraftMode={Boolean(selectionItem?.isDraft)}
-        pluginServerId={
-          String(selectionMetadata?.source.pluginServerId ?? "") || undefined
-        }
       />
     </main>
   )

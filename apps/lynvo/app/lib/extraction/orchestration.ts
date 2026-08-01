@@ -1,12 +1,12 @@
 import type {
   ExtractedLink,
   MetaData,
-  RecentLinkViewItem,
+  LinkViewItem,
 } from "~/features/links/types"
 import { mergeDefinedMeta } from "~/features/links/links.mapper"
 import {
-  getRecentLinkViewItemSourceId,
-  getRecentLinkViewItemPluginServerId,
+  getLinkViewItemSourceId,
+  getLinkViewItemPluginServerId,
 } from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { decideSavePresentation } from "./presentation"
@@ -25,7 +25,7 @@ declare global {
 
   interface PrepareExtractionOptions {
     targetUrl: string
-    recents: RecentLinkViewItem[]
+    links: LinkViewItem[]
     sourceMetadata?: MetaData
     existingMeta?: MetaData
   }
@@ -33,16 +33,16 @@ declare global {
   interface ExtractionOrchestration {
     getSourceMetadata: (
       targetUrl: string,
-      recents: RecentLinkViewItem[]
+      links: LinkViewItem[]
     ) => Promise<MetaData>
     prepareSource: (options: PrepareExtractionOptions) => Promise<{
       metadata: MetaData
       mergedMeta: MetaData
       presentation: ReturnType<typeof decideSavePresentation>
     }>
-    refreshSource: (item: RecentLinkViewItem) => Promise<ExtractedLink[]>
+    refreshSource: (item: LinkViewItem) => Promise<ExtractedLink[]>
     resolveMirror: (
-      item: RecentLinkViewItem | undefined,
+      item: LinkViewItem | undefined,
       lazyItemUrl: string
     ) => Promise<ExtractedLink[]>
     resolveFolder: (options: {
@@ -51,33 +51,33 @@ declare global {
       pluginId?: string
     }) => Promise<ExtractedLink[]>
     expandFolder: (options: {
-      item: RecentLinkViewItem
+      item: LinkViewItem
       linkId: string
       linkUrl: string
     }) => Promise<ExtractedLink[]>
   }
 }
 
-const getSavedPluginServerId = (item: RecentLinkViewItem | undefined) =>
-  getRecentLinkViewItemPluginServerId(item) || undefined
+const getSavedPluginServerId = (item: LinkViewItem | undefined) =>
+  getLinkViewItemPluginServerId(item) || undefined
 
-const getSavedSourceId = (item: RecentLinkViewItem | undefined) =>
-  getRecentLinkViewItemSourceId(item) || undefined
+const getSavedSourceId = (item: LinkViewItem | undefined) =>
+  getLinkViewItemSourceId(item) || undefined
 
 export const createExtractionOrchestration = (
   transport: ExtractionTransport
 ): ExtractionOrchestration => {
   const getSourceMetadata = async (
     targetUrl: string,
-    recents: RecentLinkViewItem[]
+    links: LinkViewItem[]
   ) => {
     const metadata = await transport.getMetadata({ url: targetUrl })
-    const existingItem = recents.find((item) => item.url === targetUrl)
+    const existingItem = links.find((item) => item.url === targetUrl)
     const pluginServerId = getSavedPluginServerId(existingItem)
     return pluginServerId ? { ...metadata, pluginServerId } : metadata
   }
   const extractSavedItemNode = async (
-    item: RecentLinkViewItem | undefined,
+    item: LinkViewItem | undefined,
     url: string
   ) => {
     const pluginServerId = getSavedPluginServerId(item)
@@ -106,13 +106,13 @@ export const createExtractionOrchestration = (
     getSourceMetadata,
     prepareSource: async ({
       targetUrl,
-      recents,
+      links,
       sourceMetadata,
       existingMeta,
     }) => {
       const metadata =
-        sourceMetadata ?? (await getSourceMetadata(targetUrl, recents))
-      const existingItem = recents.find((item) => item.url === targetUrl)
+        sourceMetadata ?? (await getSourceMetadata(targetUrl, links))
+      const existingItem = links.find((item) => item.url === targetUrl)
       const pluginServerId = getSavedPluginServerId(existingItem)
       const metadataWithPluginServer = pluginServerId
         ? { ...metadata, pluginServerId }

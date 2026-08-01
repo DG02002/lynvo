@@ -108,12 +108,12 @@ export const SettingsHandlers = HttpApiBuilder.group(
           )
         })
       )
-      .handle("clearRecentLinks", () =>
+      .handle("clearLinks", () =>
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
           return yield* convex.mutation(
-            api.users.clearRecentCards,
+            api.users.clearLinks,
             {},
             { accessToken: user.accessToken }
           )

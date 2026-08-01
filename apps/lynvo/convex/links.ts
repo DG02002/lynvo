@@ -7,16 +7,16 @@ import {
   getAuthenticatedWritableUserId,
 } from "./authentication"
 import {
-  assertRecentLinkMutation,
-  cleanupExpiredRecentLinks,
+  assertLinkMutation,
+  cleanupExpiredStoredLinks,
   getRetentionCutoff,
   getUserRetentionDays,
   recordStorageDeletion,
 } from "./storagePolicy"
 import {
   CLEANUP_USER_PAGE_SIZE,
-  RECENT_LINKS_MAX_COUNT,
-  RECENT_LINK_RETENTION_BATCH_SIZE,
+  LINKS_MAX_COUNT,
+  LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
 
 // List retained links for a user, ordered by createdAt desc.
@@ -33,7 +33,7 @@ export const list = query({
         q.eq("userId", userId).gte("createdAt", cutoff)
       )
       .order("desc")
-      .take(RECENT_LINKS_MAX_COUNT)
+      .take(LINKS_MAX_COUNT)
     return links.map((link) => ({
       _id: link._id,
       url: link.url,
@@ -46,7 +46,7 @@ export const list = query({
 })
 
 // Create a new link or update title/meta if the URL already exists.
-// Enforces per-card, per-user storage, and retention limits.
+// Enforces per-link, per-user storage, and retention limits.
 export const createOrUpdate = mutation({
   returns: v.any(),
   args: {
@@ -57,15 +57,15 @@ export const createOrUpdate = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
     const now = Date.now()
-    const deletedExpiredLinks = await cleanupExpiredRecentLinks(
+    const deletedExpiredLinks = await cleanupExpiredStoredLinks(
       ctx,
       userId,
       now
     )
-    if (deletedExpiredLinks === RECENT_LINK_RETENTION_BATCH_SIZE) {
+    if (deletedExpiredLinks === LINK_RETENTION_BATCH_SIZE) {
       await ctx.scheduler.runAfter(
         0,
-        internal.links.cleanupExpiredRecentLinksForUser,
+        internal.links.cleanupExpiredLinksForUser,
         { userId, now }
       )
     }
@@ -85,7 +85,7 @@ export const createOrUpdate = mutation({
         meta: args.meta ?? existing.meta,
         updatedAt: now,
       }
-      await assertRecentLinkMutation(ctx, userId, existing, nextDoc)
+      await assertLinkMutation(ctx, userId, existing, nextDoc)
       await ctx.db.patch("links", existing._id, {
         title: args.title ?? existing.title,
         meta: args.meta ?? existing.meta,
@@ -108,14 +108,12 @@ export const createOrUpdate = mutation({
         queryBuilder.eq("userId", userId)
       )
       .order("asc")
-      .take(RECENT_LINKS_MAX_COUNT)
-    const oldestRecentLink =
-      retainedLinks.length === RECENT_LINKS_MAX_COUNT
-        ? retainedLinks[0]
-        : undefined
-    await assertRecentLinkMutation(ctx, userId, oldestRecentLink, newDoc)
-    if (oldestRecentLink) {
-      await ctx.db.delete("links", oldestRecentLink._id)
+      .take(LINKS_MAX_COUNT)
+    const oldestLink =
+      retainedLinks.length === LINKS_MAX_COUNT ? retainedLinks[0] : undefined
+    await assertLinkMutation(ctx, userId, oldestLink, newDoc)
+    if (oldestLink) {
+      await ctx.db.delete("links", oldestLink._id)
     }
 
     return await ctx.db.insert("links", newDoc)
@@ -137,7 +135,7 @@ export const deleteById = mutation({
       throw new Error("Link not found or no longer available")
     }
 
-    await recordStorageDeletion(ctx, userId, "recentLinkBytes", existing)
+    await recordStorageDeletion(ctx, userId, "linkBytes", existing)
     await ctx.db.delete("links", existing._id)
     return { success: true }
   },
@@ -163,7 +161,7 @@ export const updateMeta = mutation({
       meta: args.meta,
       updatedAt: Date.now(),
     }
-    await assertRecentLinkMutation(ctx, userId, existing, nextDoc)
+    await assertLinkMutation(ctx, userId, existing, nextDoc)
 
     await ctx.db.patch("links", existing._id, {
       meta: args.meta,
@@ -173,7 +171,7 @@ export const updateMeta = mutation({
   },
 })
 
-export const cleanupExpiredRecentCards = internalMutation({
+export const cleanupExpiredLinks = internalMutation({
   args: {
     paginationOpts: paginationOptsValidator,
     processedUsers: v.optional(v.number()),
@@ -186,44 +184,35 @@ export const cleanupExpiredRecentCards = internalMutation({
     const users = await ctx.db.query("users").paginate(args.paginationOpts)
     const user = users.page[0]
     const deletedInBatch = user
-      ? await cleanupExpiredRecentLinks(ctx, user._id, now)
+      ? await cleanupExpiredStoredLinks(ctx, user._id, now)
       : 0
-    const didFinishUser =
-      !user || deletedInBatch < RECENT_LINK_RETENTION_BATCH_SIZE
+    const didFinishUser = !user || deletedInBatch < LINK_RETENTION_BATCH_SIZE
     const processedUsers =
       (args.processedUsers ?? 0) + (user && didFinishUser ? 1 : 0)
     const deletedLinks = (args.deletedLinks ?? 0) + deletedInBatch
     if (!didFinishUser) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.links.cleanupExpiredRecentCards,
-        {
-          paginationOpts: args.paginationOpts,
-          processedUsers,
-          deletedLinks,
-          startedAt,
-        }
-      )
+      await ctx.scheduler.runAfter(0, internal.links.cleanupExpiredLinks, {
+        paginationOpts: args.paginationOpts,
+        processedUsers,
+        deletedLinks,
+        startedAt,
+      })
       return { processedUsers, deletedLinks, continued: true }
     }
     if (!users.isDone) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.links.cleanupExpiredRecentCards,
-        {
-          paginationOpts: {
-            cursor: users.continueCursor,
-            numItems: CLEANUP_USER_PAGE_SIZE,
-          },
-          processedUsers,
-          deletedLinks,
-          startedAt,
-        }
-      )
+      await ctx.scheduler.runAfter(0, internal.links.cleanupExpiredLinks, {
+        paginationOpts: {
+          cursor: users.continueCursor,
+          numItems: CLEANUP_USER_PAGE_SIZE,
+        },
+        processedUsers,
+        deletedLinks,
+        startedAt,
+      })
       return { processedUsers, deletedLinks, continued: true }
     }
     console.info("maintenance.cleanup_complete", {
-      job: "recent_links_retention",
+      job: "links_retention",
       processedUsers,
       deletedLinks,
       continued: false,
@@ -234,20 +223,20 @@ export const cleanupExpiredRecentCards = internalMutation({
   },
 })
 
-export const cleanupExpiredRecentLinksForUser = internalMutation({
+export const cleanupExpiredLinksForUser = internalMutation({
   returns: v.object({ deletedLinks: v.number(), continued: v.boolean() }),
   args: { userId: v.id("users"), now: v.number() },
   handler: async (ctx, args) => {
-    const deletedLinks = await cleanupExpiredRecentLinks(
+    const deletedLinks = await cleanupExpiredStoredLinks(
       ctx,
       args.userId,
       args.now
     )
-    const continued = deletedLinks === RECENT_LINK_RETENTION_BATCH_SIZE
+    const continued = deletedLinks === LINK_RETENTION_BATCH_SIZE
     if (continued) {
       await ctx.scheduler.runAfter(
         0,
-        internal.links.cleanupExpiredRecentLinksForUser,
+        internal.links.cleanupExpiredLinksForUser,
         args
       )
     }

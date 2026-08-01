@@ -18,7 +18,7 @@ flowchart LR
 ## Manifest Metadata
 
 The validated manifest is Lynvo's source of Plugin Server identity. Custom Plugin Server
-manifests are stored at registration; the managed official manifest is resolved
+manifests are stored at registration; the managed Lynvo Plugin Server manifest is resolved
 through the binding and reused within the request.
 
 Lynvo reads:

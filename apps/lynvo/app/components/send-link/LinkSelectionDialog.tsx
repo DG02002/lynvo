@@ -33,8 +33,6 @@ interface LinkSelectionDialogProps {
   audioInfo?: string
   isDraftMode?: boolean
   preSelectedIds?: string[]
-  pluginServerId?: string
-  workerName?: string
 }
 
 export function LinkSelectionDialog({
@@ -51,8 +49,6 @@ export function LinkSelectionDialog({
   audioInfo,
   isDraftMode = false,
   preSelectedIds = EMPTY_PRE_SELECTED_IDS,
-  pluginServerId,
-  workerName,
 }: LinkSelectionDialogProps) {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
     () => new Set(preSelectedIds)
@@ -220,8 +216,6 @@ export function LinkSelectionDialog({
           pageTitle={pageTitle}
           audioInfo={audioInfo}
           isDraftMode={isDraftMode}
-          pluginServerId={pluginServerId}
-          workerName={workerName}
         />
 
         <div className="min-w-0 flex-1 overflow-y-auto bg-popover px-4 py-4 md:px-8 md:py-6">

@@ -44,7 +44,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Platform foundation",
     category: "Platform",
     description:
-      "Improved reliability at scale with transactional storage accounting, bounded recent-link subscriptions, and limited lifecycle cleanup work per scheduled run.",
+      "Improved reliability at scale with transactional storage accounting, bounded link subscriptions, and limited lifecycle cleanup work per scheduled run.",
   },
   {
     type: "plugin-server",
@@ -62,7 +62,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Product launch",
     category: "Product",
     description:
-      "Launched link saving and folder browsing, playback in supported desktop and TV players, and remote control between signed-in devices.",
+      "Launched link saving and folder browsing, playback in supported Android players and Android TV, and remote control between signed-in devices.",
   },
 ]
 

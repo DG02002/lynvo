@@ -83,11 +83,14 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         params.pollSecret,
         "Polling secret is required"
       )
-      const record = await ctx.runMutation(internal.tv.consumeAuthorizedCode, {
-        code,
-        pollSecret,
-        now: Date.now(),
-      })
+      const record = await ctx.runMutation(
+        internal.deviceAuth.consumeAuthorizedCode,
+        {
+          code,
+          pollSecret,
+          now: Date.now(),
+        }
+      )
       console.info("security.qr_exchanged")
       return { userId: record.userId }
     }

@@ -93,7 +93,7 @@ export const storedSavedLinkSchema = z.strictObject({
   title: z.string().optional(),
 })
 
-export const storedRecentLinkSchema = z.looseObject({
+export const storedLinkSchema = z.looseObject({
   url: z.string().min(1),
   timestamp: z.number(),
   metadata: linkMetadataSchema,

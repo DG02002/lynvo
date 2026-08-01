@@ -66,7 +66,7 @@ describe("deployment preflight command", () => {
     ],
     [
       "missing session key declaration",
-      lynvoConfig.replace('"AUTH_SESSION_MASTER_KEY",', ""),
+      lynvoConfig.replace('"AUTH_SESSION_ENCRYPTION_KEY",', ""),
       lynvoPluginServerConfig,
     ],
     [

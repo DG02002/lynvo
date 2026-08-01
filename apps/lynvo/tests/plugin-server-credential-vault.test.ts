@@ -2,7 +2,7 @@
 
 import { PluginServerCredentialVault } from "../workers/plugin-server-credential-vault"
 
-const TEST_MASTER_KEY = btoa("0123456789abcdef0123456789abcdef")
+const TEST_ENCRYPTION_KEY = btoa("0123456789abcdef0123456789abcdef")
 
 const createState = (): DurableObjectState => ({}) as DurableObjectState
 
@@ -16,7 +16,7 @@ const request = (path: string, body: Record<string, unknown>) =>
 describe("PluginServerCredentialVault HTTP behavior", () => {
   it("encrypts a credential without returning plaintext and decrypts it in the same context", async () => {
     const vault = new PluginServerCredentialVault(createState(), {
-      PLUGIN_CREDENTIAL_MASTER_KEY: TEST_MASTER_KEY,
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
     } as Env)
 
     const encryptedResponse = await vault.fetch(
@@ -46,7 +46,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
 
   it("rejects copied ciphertext in a different user or Plugin Server context", async () => {
     const vault = new PluginServerCredentialVault(createState(), {
-      PLUGIN_CREDENTIAL_MASTER_KEY: TEST_MASTER_KEY,
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
     } as Env)
     const encryptedResponse = await vault.fetch(
       request("/encrypt", {
@@ -67,7 +67,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
     expect(copiedResponse.status).toBe(422)
   })
 
-  it("fails closed when the production master key is unavailable", async () => {
+  it("fails closed when the production encryption key is unavailable", async () => {
     const vault = new PluginServerCredentialVault(createState(), {} as Env)
     const response = await vault.fetch(
       request("/encrypt", {

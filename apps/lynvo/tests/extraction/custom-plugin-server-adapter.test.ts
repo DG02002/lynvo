@@ -304,7 +304,7 @@ describe("extractFromCustomPluginServer", () => {
 })
 
 describe("selectCustomPluginServer", () => {
-  it("does not select an enabled pluginServer that is down", async () => {
+  it("does not select an enabled Plugin Server when it is unavailable", async () => {
     const pluginServer = {
       _id: "pluginServer-one",
       baseUrl: "https://plugin-server.example",

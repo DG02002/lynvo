@@ -17,7 +17,7 @@ export function RemoteCommandListener() {
           const payload = lastCommand.payload as { url?: string } | null
           const url = payload?.url
           if (url) {
-            toast.success("Remote: Opening player")
+            toast.info("Opening player…")
             await openInPlayer(url)
           }
         }

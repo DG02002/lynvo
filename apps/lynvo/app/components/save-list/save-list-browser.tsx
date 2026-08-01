@@ -14,20 +14,20 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import {
-  DraftCardDotMenu,
-  RecentLinkCardDotMenu,
-} from "~/components/links/CardDotMenu"
+  DraftLinkItemMenu,
+  LinkItemMenu,
+} from "~/components/links/LinkItemMenu"
 import { LinkActionsDotMenu } from "~/components/links/LinkActionsContextMenu"
 import { Spinner } from "~/components/ui/spinner"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
-import { toRecentLinkViewModel } from "~/features/links/link-view-models"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { formatPlayableExpiry } from "~/features/links/format-playable-expiry"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
-import { getRecentLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import {
   getFolderIcon,
   getFolderVisualState,
@@ -41,10 +41,10 @@ import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 
 interface SaveListBrowserProps {
-  items: RecentLinkViewItem[]
+  items: LinkViewItem[]
   selectedItemUrl: string | null
   onSelectedItemUrlChange: (url: string | null) => void
-  actions: LinkCardActions
+  actions: LinkItemActions
   extractingItems: Set<string>
   highlightedId: string | null
   isHydrating: boolean
@@ -52,8 +52,8 @@ interface SaveListBrowserProps {
 }
 
 interface FinderBrowserProps {
-  item: RecentLinkViewItem
-  actions: LinkCardActions
+  item: LinkViewItem
+  actions: LinkItemActions
   extractingItems: Set<string>
   onExit: () => void
 }
@@ -173,7 +173,7 @@ const FinderEmptyState = ({
       <h1 className="min-w-0 flex-1 line-clamp-2 break-words text-base font-normal md:text-xl">
         {getItemTitle(item)}
       </h1>
-      <RecentLinkCardDotMenu
+      <LinkItemMenu
         item={item}
         actions={actions}
         showRemove
@@ -196,13 +196,13 @@ interface ResolvedMirrorRowsProps {
   mirrors: ExtractedLink[]
   sourceLink: ExtractedLink
   itemUrl: string
-  actions: LinkCardActions
+  actions: LinkItemActions
 }
 
 interface ResolvableContainerRowProps {
-  item: RecentLinkViewItem
+  item: LinkViewItem
   link: ExtractedLink
-  actions: LinkCardActions
+  actions: LinkItemActions
   isResolving: boolean
   onRemove: () => void
 }
@@ -376,7 +376,7 @@ const FinderBrowser = ({
             {getItemTitle(item)}
           </h1>
         </div>
-        <RecentLinkCardDotMenu
+        <LinkItemMenu
           item={item}
           actions={actions}
           showRemove
@@ -555,7 +555,7 @@ export const SaveListBrowser = ({
       <div className="flex flex-col">
         {items.map((item) => {
           const itemKey = item.id ?? item.url
-          const view = toRecentLinkViewModel(item)
+          const view = toLinkViewModel(item)
           const directLink =
             !item.isDraft &&
             view.extractedLinks.length === 1 &&
@@ -569,9 +569,9 @@ export const SaveListBrowser = ({
           const isRootFolderNew =
             !directLink &&
             !item.isDraft &&
-            !new Set(
-              getRecentLinkViewItemMetadata(item).playback.watchedUrls
-            ).has(item.url)
+            !new Set(getLinkViewItemMetadata(item).playback.watchedUrls).has(
+              item.url
+            )
 
           if (directLink && isResolvableContainer) {
             return (
@@ -646,7 +646,7 @@ export const SaveListBrowser = ({
                   </span>
                 )}
                 {item.isDraft ? (
-                  <DraftCardDotMenu
+                  <DraftLinkItemMenu
                     item={item}
                     actions={actions}
                     playableLink={directLink}
@@ -654,7 +654,7 @@ export const SaveListBrowser = ({
                     isRefreshing={isExtracting}
                   />
                 ) : (
-                  <RecentLinkCardDotMenu
+                  <LinkItemMenu
                     item={item}
                     actions={actions}
                     playableLink={directLink}

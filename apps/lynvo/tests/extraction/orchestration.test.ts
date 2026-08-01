@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { createExtractionOrchestration } from "~/lib/extraction/orchestration"
 import { decideSavePresentation } from "~/lib/extraction/presentation"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
-const savedWorkerItem = (): RecentLinkViewItem => ({
+const savedWorkerItem = (): LinkViewItem => ({
   url: "https://example.com/source",
   timestamp: 1,
   metadata: {
@@ -98,7 +98,7 @@ describe("extraction orchestration", () => {
     )
     const result = await orchestration.prepareSource({
       targetUrl: "https://example.com/source",
-      recents: [savedWorkerItem()],
+      links: [savedWorkerItem()],
       sourceMetadata: metadata,
     })
 
@@ -172,7 +172,7 @@ describe("extraction orchestration", () => {
 
     const result = await orchestration.prepareSource({
       targetUrl: "https://example.com/new",
-      recents: [],
+      links: [],
     })
 
     expect(result.presentation.kind).toBe("directSave")

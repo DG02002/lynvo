@@ -17,7 +17,7 @@ const RESERVED_USERNAMES = new Set([
   "signup",
   "support",
   "system",
-  "tv",
+  "device",
 ])
 
 const WEAK_PASSWORD_PATTERNS = [

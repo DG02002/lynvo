@@ -163,7 +163,7 @@ describe("OneDrive source adapter", () => {
     ])
   })
 
-  it("extracts Next.js page data and forwards a hashed domain password", async () => {
+  it("extracts Next.js page data and forwards a hashed Plugin Domain password", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         '<script id="__NEXT_DATA__" type="application/json">' +

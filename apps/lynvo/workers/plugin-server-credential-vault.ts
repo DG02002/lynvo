@@ -11,7 +11,7 @@ interface CredentialContext {
 }
 
 type CredentialVaultEnvironment = Partial<
-  Pick<Env, "PLUGIN_CREDENTIAL_MASTER_KEY">
+  Pick<Env, "PLUGIN_CREDENTIAL_ENCRYPTION_KEY">
 >
 
 const ALGORITHM = "AES-256-GCM"
@@ -67,10 +67,10 @@ const isEncryptedCredential = (
   value.algorithm === ALGORITHM &&
   value.keyVersion === KEY_VERSION
 
-const importMasterKey = async (encodedKey: string): Promise<CryptoKey> => {
+const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
   const bytes = decodeBase64(encodedKey)
   if (bytes.byteLength !== KEY_LENGTH_BYTES) {
-    throw new Error("Invalid credential master key")
+    throw new Error("Invalid credential encryption key")
   }
   return await crypto.subtle.importKey(
     "raw",
@@ -91,14 +91,14 @@ export class PluginServerCredentialVault implements DurableObject {
     if (request.method !== "POST") {
       return new Response(null, { status: 405 })
     }
-    const encodedKey = this.environment.PLUGIN_CREDENTIAL_MASTER_KEY
+    const encodedKey = this.environment.PLUGIN_CREDENTIAL_ENCRYPTION_KEY
     if (!encodedKey) {
       return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
     }
-    let masterKey: CryptoKey
+    let encryptionKey: CryptoKey
     let payload: unknown
     try {
-      masterKey = await importMasterKey(encodedKey)
+      encryptionKey = await importEncryptionKey(encodedKey)
       payload = await request.json()
     } catch {
       return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
@@ -122,7 +122,7 @@ export class PluginServerCredentialVault implements DurableObject {
           iv: nonce,
           additionalData: additionalData(payload),
         },
-        masterKey,
+        encryptionKey,
         new TextEncoder().encode(payload.apiKey)
       )
       return Response.json({
@@ -146,7 +146,7 @@ export class PluginServerCredentialVault implements DurableObject {
             iv: decodeBase64(payload.credential.nonce),
             additionalData: additionalData(payload),
           },
-          masterKey,
+          encryptionKey,
           decodeBase64(payload.credential.ciphertext)
         )
         return Response.json({ apiKey: new TextDecoder().decode(plaintext) })

@@ -1,26 +1,29 @@
 import { Link } from "react-router"
 import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
+import {
+  SupportChannelLinks,
+  TelegramSupportLink,
+} from "~/components/SupportChannelLinks"
 import { policyPaths } from "~/lib/paths"
 
 export const TermsOfUseContent = () => (
-  <PolicyLayout title="Terms of use" updatedAt="July 31, 2026">
+  <PolicyLayout title="Terms of use" updatedAt="August 1, 2026">
     <p>
-      These terms govern your use of Lynvo&apos;s website, account, saved-link
-      library, Extraction tools, device synchronization, and Remote Play
-      features. By creating an account or using Lynvo, you agree to these terms.
+      These terms govern your use of Lynvo&apos;s website, account, saved links,
+      Extraction tools, device synchronization, and Remote Play features. By
+      creating an account or using Lynvo, you agree to these terms.
     </p>
     <p>
       In these terms, <strong>Lynvo</strong> means the website and related
-      service, together called the <strong>Service</strong>. An{" "}
-      <strong>account</strong> is the username-based record used to access
-      Lynvo; and a <strong>Recent Link</strong> is a saved URL and its related
-      metadata. A <strong>Plugin Server</strong> is a service that processes
-      supported URLs. A <strong>Plugin</strong> is the Source-specific
-      integration inside that service, and a <strong>Source</strong> is the
-      website, service, or URL pattern the Plugin supports. A
-      <strong>credential</strong> is a password, API key, or similar secret. A
-      <strong>service provider</strong> is another organization that processes
-      data or supplies infrastructure for Lynvo.
+      hosted service. An <strong>account</strong> is the username-based record
+      used to access Lynvo; and a <strong>Recent Link</strong> is a saved URL
+      and its related metadata. A <strong>Plugin Server</strong> is a service
+      that processes supported URLs. A <strong>Plugin</strong> is the
+      Source-specific integration inside that service, and a{" "}
+      <strong>Source</strong> is the website, service, or URL pattern the Plugin
+      supports. A <strong>credential</strong> is a password, API key, or similar
+      secret. A <strong>service provider</strong> is another organization that
+      processes data or supplies infrastructure for Lynvo.
     </p>
 
     <PolicySection title="1. What Lynvo does">
@@ -67,8 +70,8 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Review active sessions in Settings and revoke any session you don&apos;t
-        recognize. Use the official contact method displayed by Lynvo if you
-        suspect unauthorized access.
+        recognize. For suspected unauthorized access, message us privately on{" "}
+        <TelegramSupportLink />.
       </p>
     </PolicySection>
 
@@ -87,7 +90,7 @@ export const TermsOfUseContent = () => (
       <p>
         Saved-link records expire separately. The default retention period is 90
         days. You can select 7, 30, 90, or 180 days in Settings. You can also
-        delete individual links or clear all saved-link history at any time.
+        delete individual links or clear all saved links at any time.
       </p>
     </PolicySection>
 
@@ -140,7 +143,7 @@ export const TermsOfUseContent = () => (
 
     <PolicySection title="7. Plugins, Plugin Servers, Sources, and players">
       <p>
-        You may configure Plugin domains, Source credentials, and Custom Plugin
+        You may configure Plugin Domains, Plugin Credentials, and Custom Plugin
         Servers. Only connect a Plugin Server you trust. A configured Plugin
         Server may receive the Source URL, its API key, and the request data
         needed to perform Extraction.
@@ -176,9 +179,9 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Lynvo may limit, suspend, or terminate access if you violate these
-        terms, create security or legal risk, abuse the Service, or require
-        resources that threaten Service reliability. Lynvo may also remove links
-        or configuration when law requires it.
+        terms, create security or legal risk, abuse Lynvo, or require resources
+        that threaten Lynvo reliability. Lynvo may also remove links or
+        configuration when law requires it.
       </p>
     </PolicySection>
 
@@ -186,12 +189,12 @@ export const TermsOfUseContent = () => (
       <p>
         Lynvo is an evolving service. Features, supported Sources, players,
         limits, and availability may change. Lynvo may discontinue part or all
-        of the Service.
+        of the hosted Lynvo service.
       </p>
       <p>
         Keep your own copy of any URL or information you can&apos;t afford to
         lose. Don&apos;t rely on Lynvo as the only record of a link, credential,
-        or watchlist.
+        or saved-link collection.
       </p>
     </PolicySection>
 
@@ -219,44 +222,42 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Where law doesn&apos;t allow a complete exclusion, Lynvo&apos;s total
-        liability for claims related to the Service won&apos;t exceed the amount
-        you paid to Lynvo during the 12 months before the event giving rise to
-        the claim. Some jurisdictions don&apos;t allow certain exclusions, so
-        parts of this section may not apply to you.
+        liability for claims related to Lynvo won&apos;t exceed the amount you
+        paid to Lynvo during the 12 months before the event giving rise to the
+        claim. Some jurisdictions don&apos;t allow certain exclusions, so parts
+        of this section may not apply to you.
       </p>
     </PolicySection>
 
     <PolicySection title="13. Copyright and legal reports">
       <p>
-        Use the official contact method displayed by the Service if you believe
-        a link or use of Lynvo violates your rights. Include the URL, the right
-        you own or represent, your contact details, and enough information to
-        evaluate the report. Lynvo may remove access to reported material or
+        For a rights report, use <SupportChannelLinks />. Include the URL, the
+        right you own or represent, your contact details, and enough information
+        to evaluate the report. Lynvo may remove access to reported material or
         suspend repeat violators when appropriate.
       </p>
     </PolicySection>
 
     <PolicySection title="14. Changes to these terms">
       <p>
-        Lynvo may update these terms when the Service or legal requirements
-        change. The updated date identifies the current version. Lynvo will
-        provide additional notice when law requires it. Your continued use after
-        an update means you accept the revised terms.
+        Lynvo may update these terms when Lynvo or legal requirements change.
+        The updated date identifies the current version. Lynvo will provide
+        additional notice when law requires it. Your continued use after an
+        update means you accept the revised terms.
       </p>
     </PolicySection>
 
     <PolicySection title="15. General terms">
       <p>
         These terms and the privacy policy form the agreement between you and
-        Lynvo about the Service. If a court finds one provision unenforceable,
-        the remaining provisions continue to apply. A failure to enforce a
-        provision isn&apos;t a waiver of it.
+        Lynvo. If a court finds one provision unenforceable, the remaining
+        provisions continue to apply. A failure to enforce a provision
+        isn&apos;t a waiver of it.
       </p>
       <p>
         You may not transfer these terms without Lynvo&apos;s permission. Lynvo
         may transfer them as part of a reorganization, acquisition, or transfer
-        of the Service. Use the official contact method displayed by the Service
-        with questions about these terms.
+        of Lynvo. For questions about these terms, use <SupportChannelLinks />.
       </p>
     </PolicySection>
   </PolicyLayout>

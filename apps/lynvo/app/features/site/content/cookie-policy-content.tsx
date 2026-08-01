@@ -1,6 +1,7 @@
 import { Link } from "react-router"
 
 import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
+import { SupportChannelLinks } from "~/components/SupportChannelLinks"
 import { policyPaths } from "~/lib/paths"
 
 const cookieRows = [
@@ -49,7 +50,7 @@ const browserStorageRows = [
 ] as const
 
 export const CookiePolicyContent = () => (
-  <PolicyLayout title="Cookie policy" updatedAt="July 31, 2026">
+  <PolicyLayout title="Cookie policy" updatedAt="August 1, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       This cookie policy explains how Lynvo uses cookies and similar
       technologies and how you can manage them. It should be read with the{" "}
@@ -210,8 +211,8 @@ export const CookiePolicyContent = () => (
 
     <PolicySection title="Questions">
       <p>
-        Use the official contact method displayed by Lynvo if you have a
-        question about this cookie policy or Lynvo’s use of browser storage.
+        For questions about this cookie policy or Lynvo’s use of browser
+        storage, use <SupportChannelLinks />.
       </p>
     </PolicySection>
   </PolicyLayout>

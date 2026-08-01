@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withWatchedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 
 const createActions = (
-  overrides: Partial<LinkCardActions> = {}
-): LinkCardActions => ({
+  overrides: Partial<LinkItemActions> = {}
+): LinkItemActions => ({
   play: vi.fn(),
   remove: vi.fn(),
   showLinks: vi.fn(),
@@ -46,7 +46,7 @@ describe("SaveListBrowser", () => {
       },
     ]
     const expandFolder = vi.fn().mockResolvedValue(resolvedLinks)
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://index.example.com/0:/Collections/",
       timestamp: Date.now(),
       metadata: {
@@ -114,7 +114,7 @@ describe("SaveListBrowser", () => {
         size: "1.2 GB",
       },
     ])
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       id: "plugin-source-beta-item",
       url: "https://plugin-source-beta.cx/drive/example",
       timestamp: Date.now(),
@@ -169,7 +169,7 @@ describe("SaveListBrowser", () => {
     let finishResolution: (() => void) | undefined
     let resolutionCount = 0
     const markWatched = vi.fn()
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       id: "resolver-beta-item",
       url: "https://source-alpha.example/collection",
       timestamp: Date.now(),
@@ -321,7 +321,7 @@ describe("SaveListBrowser", () => {
 
   it("shows a red failure state when a resolvable item returns no links", async () => {
     const markWatched = vi.fn()
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source-alpha.example/failure",
       timestamp: Date.now(),
       metadata: {
@@ -382,7 +382,7 @@ describe("SaveListBrowser", () => {
       type: "file",
       expiry: TEST_PLAYABLE_EXPIRY_AT_MS,
     }
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source.example/video",
       timestamp: Date.now(),
       metadata: {
@@ -415,7 +415,7 @@ describe("SaveListBrowser", () => {
 
   it("shows New on an unclicked root folder and marks it watched on open", () => {
     const markWatched = vi.fn()
-    const item: RecentLinkViewItem = {
+    const item: LinkViewItem = {
       url: "https://source.example/folder",
       timestamp: Date.now(),
       metadata: {

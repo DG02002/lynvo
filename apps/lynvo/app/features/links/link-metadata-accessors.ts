@@ -1,4 +1,4 @@
-import type { LinkMetadata, MetaData, RecentLinkViewItem } from "./types"
+import type { LinkMetadata, MetaData, LinkViewItem } from "./types"
 import {
   normalizeLinkMetadata,
   toFlatMeta,
@@ -19,31 +19,24 @@ export const getMetadataPluginServerId = (
   return metadata.pluginServerId
 }
 
-export const getRecentLinkViewItemPluginServerId = (
-  item: RecentLinkViewItem | undefined
+export const getLinkViewItemPluginServerId = (
+  item: LinkViewItem | undefined
 ) =>
-  item
-    ? getMetadataPluginServerId(getRecentLinkViewItemMetadata(item))
-    : undefined
+  item ? getMetadataPluginServerId(getLinkViewItemMetadata(item)) : undefined
 
-export const getRecentLinkViewItemSourceId = (
-  item: RecentLinkViewItem | undefined
-) => {
+export const getLinkViewItemSourceId = (item: LinkViewItem | undefined) => {
   if (!item) {
     return undefined
   }
-  const pluginId = getRecentLinkViewItemMetadata(item).source.pluginId
+  const pluginId = getLinkViewItemMetadata(item).source.pluginId
   return typeof pluginId === "string" ? pluginId : undefined
 }
 
-export const getRecentLinkViewItemMetadata = (
-  item: RecentLinkViewItem
-): LinkMetadata =>
+export const getLinkViewItemMetadata = (item: LinkViewItem): LinkMetadata =>
   item.metadata ?? normalizeLinkMetadata(item.meta, item.extractedLinks)
 
-export const getRecentLinkViewItemFlatMeta = (
-  item: RecentLinkViewItem
-): MetaData => toFlatMeta(getRecentLinkViewItemMetadata(item))
+export const getLinkViewItemFlatMeta = (item: LinkViewItem): MetaData =>
+  toFlatMeta(getLinkViewItemMetadata(item))
 
-export const getRecentLinkViewItemExtractedLinks = (item: RecentLinkViewItem) =>
-  getRecentLinkViewItemMetadata(item).extraction.extractedLinks
+export const getLinkViewItemExtractedLinks = (item: LinkViewItem) =>
+  getLinkViewItemMetadata(item).extraction.extractedLinks

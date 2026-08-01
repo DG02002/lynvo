@@ -1,10 +1,10 @@
-import type { RecentLinkViewItem } from "~/features/links/types"
+import type { LinkViewItem } from "~/features/links/types"
 import {
   TEST_DRAFT_LIFETIME_MS,
   TEST_PLAYABLE_EXPIRY_AT_MS,
 } from "~/features/links/testing/constants"
 
-export const createSaveListTestItems = (): RecentLinkViewItem[] => {
+export const createSaveListTestItems = (): LinkViewItem[] => {
   const timestamp = Date.now()
 
   return [

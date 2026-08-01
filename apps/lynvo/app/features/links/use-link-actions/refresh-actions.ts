@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import {
   expandFolderLink,
   expandMirrorLinks,
@@ -8,22 +8,22 @@ import {
 } from "./refresh-flow"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import {
-  getRecentLinkViewItemExtractedLinks,
-  getRecentLinkViewItemFlatMeta,
-  getRecentLinkViewItemMetadata,
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemFlatMeta,
+  getLinkViewItemMetadata,
 } from "~/features/links/link-metadata-accessors"
 import { createRefreshFlowEffects } from "./refresh-flow-effects"
 
 export const useRefreshActions = ({
-  recents,
-  updateRecentLinks,
+  links,
+  updateLinks,
   cacheResolvedMirrors,
   openSelectionDialog,
   extractingItems,
   runWithExtractingItem,
 }: {
-  recents: RecentLinkViewItem[]
-  updateRecentLinks: (url: string, links: ExtractedLink[]) => void
+  links: LinkViewItem[]
+  updateLinks: (url: string, links: ExtractedLink[]) => void
   cacheResolvedMirrors: (
     itemUrl: string,
     lazyItemUrl: string,
@@ -39,26 +39,21 @@ export const useRefreshActions = ({
   const effects = useMemo(
     () =>
       createRefreshFlowEffects({
-        updateRecentLinks,
+        updateLinks,
         openSelectionDialog,
         extractingItems,
         runWithExtractingItem,
       }),
-    [
-      extractingItems,
-      openSelectionDialog,
-      runWithExtractingItem,
-      updateRecentLinks,
-    ]
+    [extractingItems, openSelectionDialog, runWithExtractingItem, updateLinks]
   )
 
   const handleSoftRefresh = useCallback(
     async (itemUrl: string) => {
       await effects.runExtracting(itemUrl, () =>
-        softRefreshLink({ itemUrl, recents, effects })
+        softRefreshLink({ itemUrl, links, effects })
       )
     },
-    [effects, recents]
+    [effects, links]
   )
 
   const handleHardRefresh = useCallback(
@@ -66,30 +61,29 @@ export const useRefreshActions = ({
       await effects.runExtracting(itemUrl, () =>
         hardRefreshLink({
           itemUrl,
-          recents,
+          links,
           effects,
         })
       )
     },
-    [effects, recents]
+    [effects, links]
   )
 
   const handleShowLinks = useCallback(
     async (itemUrl: string) => {
-      const item = recents.find((recentItem) => recentItem.url === itemUrl)
+      const item = links.find((linkItem) => linkItem.url === itemUrl)
       if (item?.isDraft) {
         effects.openSelection({
           originalUrl: item.url,
-          links:
-            item.extractedLinks ?? getRecentLinkViewItemExtractedLinks(item),
-          meta: item.meta ?? getRecentLinkViewItemFlatMeta(item),
+          links: item.extractedLinks ?? getLinkViewItemExtractedLinks(item),
+          meta: item.meta ?? getLinkViewItemFlatMeta(item),
           isDraftMode: true,
         })
         return
       }
       await handleHardRefresh(itemUrl)
     },
-    [effects, handleHardRefresh, recents]
+    [effects, handleHardRefresh, links]
   )
 
   const handleMirrorExpand = useCallback(
@@ -102,11 +96,9 @@ export const useRefreshActions = ({
         return null
       }
 
-      const item = recents.find((recentItem) => recentItem.url === itemUrl)
+      const item = links.find((linkItem) => linkItem.url === itemUrl)
       const cachedMirrors = item
-        ? getRecentLinkViewItemMetadata(item).playback.resolvedMirrors?.[
-            lazyItemUrl
-          ]
+        ? getLinkViewItemMetadata(item).playback.resolvedMirrors?.[lazyItemUrl]
         : undefined
       if (cachedMirrors && !bypassCache) {
         return cachedMirrors
@@ -116,7 +108,7 @@ export const useRefreshActions = ({
         const mirrors = await expandMirrorLinks({
           itemUrl,
           lazyItemUrl,
-          recents,
+          links,
           effects,
         })
         if (mirrors) {
@@ -125,7 +117,7 @@ export const useRefreshActions = ({
         return mirrors
       })
     },
-    [cacheResolvedMirrors, effects, recents]
+    [cacheResolvedMirrors, effects, links]
   )
 
   const handleExpandFolder = useCallback(
@@ -139,12 +131,12 @@ export const useRefreshActions = ({
           itemUrl,
           linkId,
           linkUrl,
-          recents,
+          links,
           effects,
         })
       )
     },
-    [effects, recents]
+    [effects, links]
   )
 
   return {

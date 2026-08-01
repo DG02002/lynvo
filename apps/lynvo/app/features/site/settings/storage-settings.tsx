@@ -64,8 +64,7 @@ export function StorageSettings() {
     queryFn: () => Effect.runPromise(client.settings.getStorageUsage()),
   })
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
-  const [isClearingRecentCards, setIsClearingRecentCards] =
-    React.useState(false)
+  const [isClearingLinks, setIsClearingLinks] = React.useState(false)
   const [pendingRetention, setPendingRetention] = React.useState<{
     days: number
     expiredLinkCount: number
@@ -134,10 +133,10 @@ export function StorageSettings() {
     }
   }
 
-  const handleClearRecentCards = async () => {
-    setIsClearingRecentCards(true)
+  const handleClearLinks = async () => {
+    setIsClearingLinks(true)
     try {
-      const result = await Effect.runPromise(client.settings.clearRecentLinks())
+      const result = await Effect.runPromise(client.settings.clearLinks())
       await queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_QUERY_KEY })
       toast.success(
         result.deletedLinks > 0
@@ -152,7 +151,7 @@ export function StorageSettings() {
         )
       )
     } finally {
-      setIsClearingRecentCards(false)
+      setIsClearingLinks(false)
     }
   }
 
@@ -203,9 +202,7 @@ export function StorageSettings() {
                     variant="outline"
                     size="sm"
                     className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none !active:translate-y-0 transition-colors shrink-0 px-4 text-sm font-normal"
-                    disabled={
-                      isClearingRecentCards || usage.savedLinkCount === 0
-                    }
+                    disabled={isClearingLinks || usage.savedLinkCount === 0}
                   >
                     Delete all
                   </Button>
@@ -223,7 +220,7 @@ export function StorageSettings() {
                 </AlertDialogHeader>
                 <div className="flex flex-col gap-3 w-full mt-4">
                   <AlertDialogAction
-                    onClick={handleClearRecentCards}
+                    onClick={handleClearLinks}
                     className="w-full h-12 text-sm rounded-full"
                   >
                     Delete all saved links

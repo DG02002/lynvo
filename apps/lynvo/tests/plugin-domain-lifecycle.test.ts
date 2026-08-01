@@ -3,7 +3,7 @@ import { Effect, Layer } from "effect"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
-  parseSourceUrlCandidate,
+  parsePluginDomainCandidate,
 } from "~/lib/plugin-domain"
 import {
   createPluginCredentialAdditionalData,
@@ -44,7 +44,7 @@ describe("Plugin Domain lifecycle", () => {
 
   it("detects a Bhadoo index URL and removes credentials from its saved URL", () => {
     expect(
-      parseSourceUrlCandidate(
+      parsePluginDomainCandidate(
         "https://source-user:source%40secret@index.example.com/0:/Movies/"
       )
     ).toEqual({
@@ -56,12 +56,12 @@ describe("Plugin Domain lifecycle", () => {
   })
 
   it("accepts any HTTPS source URL without classifying its implementation", () => {
-    expect(parseSourceUrlCandidate("https://example.com/movies/")).toEqual({
+    expect(parsePluginDomainCandidate("https://example.com/movies/")).toEqual({
       domain: "example.com",
       sanitizedUrl: "https://example.com/movies/",
     })
     expect(
-      parseSourceUrlCandidate("http://example.com/0:/Movies/")
+      parsePluginDomainCandidate("http://example.com/0:/Movies/")
     ).toBeUndefined()
   })
 
@@ -136,7 +136,7 @@ describe("Plugin Domain lifecycle", () => {
 
   it("decrypts only with the exact owning context", async () => {
     const environmentLayer = Layer.succeed(CloudflareEnv, {
-      PLUGIN_CREDENTIAL_MASTER_KEY: btoa("0123456789abcdef0123456789abcdef"),
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa("0123456789abcdef0123456789abcdef"),
     } as Env)
     const vaultLayer = PluginCredentialVault.layer.pipe(
       Layer.provide(environmentLayer)

@@ -34,7 +34,7 @@ const pluginServer = {
 }
 
 describe("CustomPluginServerTable", () => {
-  it("shows a down enabled Plugin Server as operationally unavailable", () => {
+  it("shows an unavailable enabled Plugin Server", () => {
     render(
       <CustomPluginServerTable
         pluginServers={[pluginServer]}
@@ -45,9 +45,9 @@ describe("CustomPluginServerTable", () => {
       />
     )
 
-    expect(screen.getByText("Down")).toBeInTheDocument()
+    expect(screen.getByText("Unavailable")).toBeInTheDocument()
     const availabilitySwitch = screen.getByRole("switch", {
-      name: "Example Plugin Server is down",
+      name: "Example Plugin Server is unavailable",
     })
     expect(availabilitySwitch).toHaveAttribute("aria-disabled", "true")
     expect(availabilitySwitch).not.toBeChecked()
@@ -59,7 +59,7 @@ describe("CustomPluginServerTable", () => {
     ).not.toBeNull()
     expect(
       screen.getByRole("link", {
-        name: "View upstream project for Source Alpha",
+        name: "View project for Source Alpha",
       })
     ).toHaveAttribute("href", "https://source-alpha.example/project")
     expect(screen.queryByText("source-alpha.example")).not.toBeInTheDocument()

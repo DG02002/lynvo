@@ -12,6 +12,7 @@ const PUBLIC_EXACT_PATHS = new Set([
   "/privacy",
   "/terms",
   "/policies/cookie-policy",
+  "/policies/licenses",
   "/policies/privacy-policy",
   "/policies/terms-of-use",
   "/policies/usage-policy",

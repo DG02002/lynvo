@@ -5,21 +5,21 @@ import { vibrateSaveStart, vibrateSaveSuccess } from "./save-feedback"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
 import type { ConfirmSelectionOptions, SaveLinkOptions } from "./action-types"
 import {
-  parseSourceUrlCandidate,
-  type SourceDomainSuggestion,
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
 
 export const saveLink = async ({
   overrideUrl,
   currentUrl,
-  recents,
-  addRecent,
+  links,
+  addLink,
   effects,
 }: SaveLinkOptions) => {
   const rawUrl = overrideUrl ?? currentUrl
   const targetUrl = normalizeUrl(rawUrl || "")
-  const sourceCandidate = parseSourceUrlCandidate(targetUrl)
-  const savedUrl = sourceCandidate?.sanitizedUrl ?? targetUrl
+  const pluginDomainCandidate = parsePluginDomainCandidate(targetUrl)
+  const savedUrl = pluginDomainCandidate?.sanitizedUrl ?? targetUrl
 
   if (!targetUrl) {
     effects.showError("Please enter a URL.")
@@ -43,10 +43,10 @@ export const saveLink = async ({
     return
   }
 
-  const existingItem = recents.find((recentItem) => recentItem.url === savedUrl)
+  const existingItem = links.find((linkItem) => linkItem.url === savedUrl)
   if (existingItem) {
     effects.showError("Link already exists on your account.")
-    effects.focusRecent(existingItem.id || existingItem.url)
+    effects.focusLink(existingItem.id || existingItem.url)
     return
   }
 
@@ -54,7 +54,7 @@ export const saveLink = async ({
 
   const metadata = await extractionOrchestration.getSourceMetadata(
     targetUrl,
-    recents
+    links
   )
   effects.showPreview(metadata)
 
@@ -67,16 +67,16 @@ export const saveLink = async ({
   const { mergedMeta, presentation } =
     await extractionOrchestration.prepareSource({
       targetUrl,
-      recents,
+      links,
       sourceMetadata: metadata,
     })
-  const pluginDomainSuggestion: SourceDomainSuggestion | undefined =
-    sourceCandidate &&
+  const pluginDomainSuggestion: PluginDomainSuggestion | undefined =
+    pluginDomainCandidate &&
     mergedMeta.pluginId &&
     mergedMeta.pluginServerId &&
     mergedMeta.sourceCredentialKind
       ? {
-          ...sourceCandidate,
+          ...pluginDomainCandidate,
           pluginIconUrl: mergedMeta.sourceIconUrl ?? mergedMeta.pluginIcon,
           pluginId: mergedMeta.pluginId,
           pluginName:
@@ -103,8 +103,8 @@ export const saveLink = async ({
     return
   }
 
-  const newId = await addRecent(savedUrl, mergedMeta, [presentation.link])
-  effects.focusRecent(newId || savedUrl)
+  const newId = await addLink(savedUrl, mergedMeta, [presentation.link])
+  effects.focusLink(newId || savedUrl)
 
   effects.resetAfterSave()
   effects.clearPreview()
@@ -119,16 +119,16 @@ export const confirmSelectedLinks = async ({
   originalUrl,
   meta,
   existingItemId,
-  addRecent,
-  updateRecentLinks,
+  addLink,
+  updateLinks,
   effects,
   pluginDomainSuggestion,
 }: ConfirmSelectionOptions) => {
   if (existingItemId) {
-    updateRecentLinks(originalUrl, selectedLinks)
+    updateLinks(originalUrl, selectedLinks)
     toast.success("Links updated")
   } else {
-    await addRecent(originalUrl, meta, selectedLinks)
+    await addLink(originalUrl, meta, selectedLinks)
   }
 
   deleteDraft(originalUrl)

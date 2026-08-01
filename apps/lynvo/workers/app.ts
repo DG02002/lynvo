@@ -330,7 +330,7 @@ app.post("/api/auth/preflight", async (context) => {
   return context.json({ preflightToken })
 })
 
-app.post("/api/auth/tv/code", async (context) => {
+app.post("/api/auth/device/code", async (context) => {
   addRequestContext(context, { operation: "device_code_create" })
   if (!isSameOriginRequest(context.req.raw)) {
     return context.json(
@@ -419,7 +419,7 @@ app.post("/api/auth/tv/code", async (context) => {
       env.AUTH_GATEWAY_SECRET
     )
     const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
-    const result = await convex.mutation(api.tv.generateCode, {
+    const result = await convex.mutation(api.deviceAuth.generateCode, {
       deviceName: payload.deviceName ?? "Unknown device",
       preflightToken,
     })
@@ -614,7 +614,7 @@ app.get("/api/realtime", async (context) => {
   )
 })
 
-app.use("/api/auth/tv/authorize", async (context, next) => {
+app.use("/api/auth/device/authorize", async (context, next) => {
   const session = await getSession(context.req.raw, context.env)
   if (session.kind === "unavailable") {
     return context.text("Service unavailable", 503)
@@ -624,7 +624,7 @@ app.use("/api/auth/tv/authorize", async (context, next) => {
   }
   const rateLimitResult = await rateLimit(
     context.env,
-    `auth:tv-approval:${clientIp(context.req.raw)}:${session.user.id}`,
+    `auth:device-approval:${clientIp(context.req.raw)}:${session.user.id}`,
     10,
     600
   )

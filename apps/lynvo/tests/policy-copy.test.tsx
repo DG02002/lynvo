@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { MemoryRouter } from "react-router"
 
 import { CookiePolicyContent } from "~/features/site/content/cookie-policy-content"
+import { LicensesContent } from "~/features/site/content/licenses-content"
 import { PrivacyPolicyContent } from "~/features/site/content/privacy-policy-content"
 import { TermsOfUseContent } from "~/features/site/content/terms-of-use-content"
 import { UsagePolicyContent } from "~/features/site/content/usage-policy-content"
@@ -32,6 +33,28 @@ describe("policy copy", () => {
     expect(privacy).toContain("90-day retention window")
     expect(privacy).toContain("7, 30, 90, or 180 days")
     expect(privacy).toContain("90 days (3 months)")
+    expect(privacy).toContain("Telegram")
+    expect(privacy).not.toMatch(/clear your history|history/)
+  })
+
+  it("uses current link terminology in policy copy", () => {
+    const terms = renderText(<TermsOfUseContent />)
+    const usage = renderText(<UsagePolicyContent />)
+
+    for (const policy of [terms, usage]) {
+      expect(policy).not.toMatch(/saved-link history|watchlist|saved item/i)
+      expect(policy).toContain("Recent Link")
+    }
+  })
+
+  it("exposes the software license boundaries", () => {
+    const licenses = renderText(<LicensesContent />)
+
+    expect(licenses).toContain("AGPL-3.0")
+    expect(licenses).toContain("MIT License")
+    expect(licenses).toContain("@dg02002/lynvo-plugin-server-protocol")
+    expect(licenses).toContain("Telegram")
+    expect(licenses).toContain("GitHub Issues")
   })
 
   it("matches the cookie consent action labels", () => {

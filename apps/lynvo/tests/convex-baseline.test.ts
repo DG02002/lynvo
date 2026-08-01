@@ -6,12 +6,12 @@ import {
   createConvexTest,
   insertTestUser,
 } from "./convex-test-harness"
-import { RECENT_LINKS_MAX_COUNT } from "../convex/constants"
+import { LINKS_MAX_COUNT } from "../convex/constants"
 
 const LIST_TIME_BUCKET = Date.UTC(2026, 6, 22)
 
 describe("Convex function boundaries", () => {
-  it("rejects anonymous Recent Link reads", async () => {
+  it("rejects anonymous link reads", async () => {
     const convex = createConvexTest()
 
     await expect(
@@ -19,7 +19,7 @@ describe("Convex function boundaries", () => {
     ).rejects.toThrow("UNAUTHORIZED")
   })
 
-  it("isolates Recent Links by authenticated user", async () => {
+  it("isolates links by authenticated user", async () => {
     const convex = createConvexTest()
     const firstUser = await insertTestUser(convex, "first-user")
     const secondUser = await insertTestUser(convex, "second-user")
@@ -53,11 +53,11 @@ describe("Convex function boundaries", () => {
     expect(links[0]?.url).toBe("https://first.example")
   })
 
-  it("bounds Recent Links and atomically evicts the oldest unique URL", async () => {
+  it("bounds links and atomically evicts the oldest unique URL", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "bounded-user")
     await convex.run(async (context) => {
-      for (let index = 0; index < RECENT_LINKS_MAX_COUNT; index += 1) {
+      for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://bounded.example/${index}`,
@@ -75,18 +75,18 @@ describe("Convex function boundaries", () => {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
 
-    expect(links).toHaveLength(RECENT_LINKS_MAX_COUNT)
+    expect(links).toHaveLength(LINKS_MAX_COUNT)
     expect(links[0]?.url).toBe("https://bounded.example/new")
     expect(links.some((link) => link.url === "https://bounded.example/0")).toBe(
       false
     )
   })
 
-  it("updates an existing Recent Link without evicting another item", async () => {
+  it("updates an existing link without evicting another item", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "update-user")
     await convex.run(async (context) => {
-      for (let index = 0; index < RECENT_LINKS_MAX_COUNT; index += 1) {
+      for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://update.example/${index}`,
@@ -105,7 +105,7 @@ describe("Convex function boundaries", () => {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
 
-    expect(links).toHaveLength(RECENT_LINKS_MAX_COUNT)
+    expect(links).toHaveLength(LINKS_MAX_COUNT)
     expect(links.find((link) => link.url.endsWith("/50"))?.title).toBe(
       "Updated"
     )
@@ -117,7 +117,7 @@ describe("Convex function boundaries", () => {
     const firstUser = await insertTestUser(convex, "eviction-user")
     const secondUser = await insertTestUser(convex, "isolated-user")
     await convex.run(async (context) => {
-      for (let index = 0; index < RECENT_LINKS_MAX_COUNT; index += 1) {
+      for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
         await context.db.insert("links", {
           userId: firstUser.userId,
           url: `https://eviction.example/${index}`,
@@ -152,7 +152,7 @@ describe("Convex function boundaries", () => {
     const afterRejection = await firstClient.query(api.links.list, {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
-    expect(afterRejection).toHaveLength(RECENT_LINKS_MAX_COUNT)
+    expect(afterRejection).toHaveLength(LINKS_MAX_COUNT)
     expect(
       afterRejection.some((link) => link.url === "https://eviction.example/0")
     ).toBe(true)
@@ -187,9 +187,9 @@ describe("Convex function boundaries", () => {
   it("allows internal cleanup only through the internal API", async () => {
     const convex = createConvexTest()
 
-    expectTypeOf(api.links).not.toHaveProperty("cleanupExpiredRecentCards")
+    expectTypeOf(api.links).not.toHaveProperty("cleanupExpiredLinks")
     await expect(
-      convex.mutation(internal.links.cleanupExpiredRecentCards, {
+      convex.mutation(internal.links.cleanupExpiredLinks, {
         paginationOpts: { cursor: null, numItems: 1 },
       })
     ).resolves.toEqual({

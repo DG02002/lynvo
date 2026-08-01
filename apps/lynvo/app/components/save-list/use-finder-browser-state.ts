@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { toRecentLinkViewModel } from "~/features/links/link-view-models"
-import type { ExtractedLink, RecentLinkViewItem } from "~/features/links/types"
-import type { LinkCardActions } from "~/features/links/link-card-actions"
+import { toLinkViewModel } from "~/features/links/link-view-models"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
 import {
   getLinkKey,
   getLinksAtFolderPath,
@@ -9,8 +9,8 @@ import {
 } from "./save-list-browser-model"
 
 interface UseFinderBrowserStateOptions {
-  item: RecentLinkViewItem
-  actions: LinkCardActions
+  item: LinkViewItem
+  actions: LinkItemActions
 }
 
 export const useFinderBrowserState = ({
@@ -18,7 +18,7 @@ export const useFinderBrowserState = ({
   actions,
 }: UseFinderBrowserStateOptions) => {
   const itemRootLinks = useMemo(
-    () => toRecentLinkViewModel(item).extractedLinks,
+    () => toLinkViewModel(item).extractedLinks,
     [item]
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createSaveListTestItems } from "~/features/links/testing/save-list-test-fixtures"
-import { getRecentLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
+import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import type { ExtractedLink } from "~/features/links/types"
 
 const flattenLinks = (links: ExtractedLink[]): ExtractedLink[] =>
@@ -12,7 +12,7 @@ const flattenLinks = (links: ExtractedLink[]): ExtractedLink[] =>
 describe("save-list UI test fixtures", () => {
   it("uses a realistic multi-item selection tree for drafts", () => {
     const draft = createSaveListTestItems().find((item) => item.isDraft)
-    const links = draft ? getRecentLinkViewItemExtractedLinks(draft) : []
+    const links = draft ? getLinkViewItemExtractedLinks(draft) : []
 
     expect(links.length).toBeGreaterThan(1)
     expect(
@@ -22,12 +22,12 @@ describe("save-list UI test fixtures", () => {
 
   it("contains no empty navigable folders", () => {
     const savedItems = createSaveListTestItems().filter((item) => !item.isDraft)
-    const savedLinks = savedItems.flatMap(getRecentLinkViewItemExtractedLinks)
+    const savedLinks = savedItems.flatMap(getLinkViewItemExtractedLinks)
     const flattenedLinks = flattenLinks(savedLinks)
 
     expect(
       savedItems.some(
-        (item) => getRecentLinkViewItemExtractedLinks(item).length === 0
+        (item) => getLinkViewItemExtractedLinks(item).length === 0
       )
     ).toBe(false)
     expect(
@@ -45,7 +45,7 @@ describe("save-list UI test fixtures", () => {
       (item) => item.id === "source-alpha-mirrors"
     )
     const flattenedLinks = flattenLinks(
-      mirrorItem ? getRecentLinkViewItemExtractedLinks(mirrorItem) : []
+      mirrorItem ? getLinkViewItemExtractedLinks(mirrorItem) : []
     )
 
     expect(

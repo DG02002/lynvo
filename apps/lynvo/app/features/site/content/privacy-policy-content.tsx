@@ -1,7 +1,8 @@
 import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
+import { TelegramSupportLink } from "~/components/SupportChannelLinks"
 
 export const PrivacyPolicyContent = () => (
-  <PolicyLayout title="Privacy policy" updatedAt="July 31, 2026">
+  <PolicyLayout title="Privacy policy" updatedAt="August 1, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       This policy explains what Lynvo stores when you create an account, save a
       link, connect a device, or configure a Plugin. It also explains automatic
@@ -12,7 +13,7 @@ export const PrivacyPolicyContent = () => (
       service; an <strong>account</strong> is the username-based record used to
       access Lynvo; and a <strong>Recent Link</strong> is a saved URL and its
       related metadata. A <strong>Plugin Server</strong> processes supported
-      URLs, a <strong>Plugin</strong> is its Source-specific integration, and a
+      URLs, a <strong>Plugin</strong> is its Source-specific integration, and a{" "}
       <strong>Source</strong> is the website, service, or URL pattern the Plugin
       supports. A <strong>credential</strong> is a password, API key, or similar
       secret. A <strong>service provider</strong> is another organization that
@@ -22,9 +23,9 @@ export const PrivacyPolicyContent = () => (
     <PolicySection title="1. Who operates Lynvo and how to contact us">
       <p>
         Lynvo operates the Lynvo website and related link-saving, Extraction,
-        synchronization, and remote-play features described in this policy. Use
-        the official contact method displayed by Lynvo for privacy questions or
-        requests.
+        synchronization, and remote-play features described in this policy. For
+        privacy questions or requests, message us privately on{" "}
+        <TelegramSupportLink />.
       </p>
     </PolicySection>
 
@@ -50,7 +51,7 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">Credentials you add:</strong>
-          Plugin domain passwords and Plugin Server API keys
+          Plugin Domain credentials and Plugin Server API keys
         </li>
         <li>
           <strong className="text-foreground">Session data:</strong> session
@@ -151,7 +152,7 @@ export const PrivacyPolicyContent = () => (
     <PolicySection title="6. Credentials and security">
       <p>
         Lynvo hashes account passwords and doesn&apos;t store them as readable
-        text. Lynvo encrypts Plugin domain passwords with Advanced Encryption
+        text. Lynvo encrypts Plugin Domain credentials with Advanced Encryption
         Standard 256-bit Galois/Counter Mode (AES-256-GCM). Plugin Server API
         keys are stored with your Plugin Server configuration and are sent to
         that Plugin Server when Lynvo makes an authorized request.
@@ -202,12 +203,12 @@ export const PrivacyPolicyContent = () => (
         access.
       </p>
       <p>
-        You can delete saved links, clear your history, revoke other sessions,
-        or permanently delete your account in Settings. Account deletion removes
-        the account, links, Plugin configuration, stored Plugin credentials,
-        Plugin Server configuration, pairing records, and sessions. Deleted data
-        and automatically deleted inactive accounts can&apos;t be recovered
-        through Lynvo.
+        You can delete saved links, clear your saved links, revoke other
+        sessions, or permanently delete your account in Settings. Account
+        deletion removes the account, links, Plugin configuration, stored Plugin
+        credentials, Plugin Server configuration, pairing records, and sessions.
+        Deleted data and automatically deleted inactive accounts can&apos;t be
+        recovered through Lynvo.
       </p>
     </PolicySection>
 
@@ -220,9 +221,9 @@ export const PrivacyPolicyContent = () => (
       </p>
       <p>
         Use the controls in Settings when they cover your request. For another
-        privacy request, use the official contact method displayed by Lynvo.
-        Lynvo may need information that verifies you control the account before
-        acting on a request.
+        privacy request, message us privately on <TelegramSupportLink />. Lynvo
+        may need information that verifies you control the account before acting
+        on a request.
       </p>
     </PolicySection>
 
@@ -239,9 +240,9 @@ export const PrivacyPolicyContent = () => (
       <p>
         Lynvo isn&apos;t directed to children under 13. Don&apos;t use Lynvo if
         you&apos;re younger than the minimum age required to consent to online
-        services where you live. Use the official contact method displayed by
-        Lynvo if you believe a child provided personal data in violation of this
-        section.
+        services where you live. If you believe a child provided personal data
+        in violation of this section, message us privately on{" "}
+        <TelegramSupportLink />.
       </p>
     </PolicySection>
 
