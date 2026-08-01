@@ -21,6 +21,21 @@ declare global {
     ) => Promise<void>
     delete: (itemUrl: string, itemId?: string) => Promise<void>
     clear: () => Promise<void>
+    reset: (
+      adapter: RecentLinksPersistenceAdapter,
+      identity: string,
+      items: RecentLinkViewItem[]
+    ) => void
+  }
+
+  interface RecentLinksOperation {
+    id: number
+    kind: "add" | "update" | "delete" | "clear"
+    status: "pending" | "completed" | "failed"
+    item?: RecentLinkViewItem
+    itemUrl?: string
+    itemId?: string
+    identityGeneration: number
   }
 
   interface LocalRecentLinksAdapterOptions {
@@ -99,47 +114,163 @@ export const createServerRecentLinksAdapter = ({
 })
 
 export const createRecentLinksPersistence = (
-  adapter: RecentLinksPersistenceAdapter,
-  initialItems: RecentLinkViewItem[] = []
+  initialAdapter: RecentLinksPersistenceAdapter,
+  initialItems: RecentLinkViewItem[] = [],
+  initialIdentity = "default"
 ): RecentLinksPersistence => {
-  let items = initialItems
+  let adapter = initialAdapter
+  let identity = initialIdentity
+  let baseItems = initialItems
+  let visibleItems = initialItems
+  let nextOperationId = 1
+  let identityGeneration = 0
+  const operations: RecentLinksOperation[] = []
+  const operationSettlements = new WeakMap<
+    RecentLinksOperation,
+    Promise<void>
+  >()
+  const resolveOperationSettlements = new WeakMap<
+    RecentLinksOperation,
+    () => void
+  >()
   let reconciliationVersion = 0
-  let mutationVersion = 0
   const listeners = new Set<() => void>()
 
-  const publish = (nextItems: RecentLinkViewItem[]) => {
-    items = nextItems
+  const applyOperation = (
+    items: RecentLinkViewItem[],
+    operation: RecentLinksOperation
+  ): RecentLinkViewItem[] => {
+    if (operation.kind === "clear") {
+      return []
+    }
+    if (operation.kind === "add" && operation.item) {
+      return replaceByUrl(items, operation.item)
+    }
+    if (operation.kind === "update" && operation.item) {
+      const updatedItem = operation.item
+      return items.map((currentItem) =>
+        currentItem.url === operation.itemUrl ? updatedItem : currentItem
+      )
+    }
+    if (operation.kind === "delete") {
+      return items.filter(
+        (currentItem) =>
+          currentItem.url !== operation.itemUrl ||
+          (operation.itemId !== undefined &&
+            currentItem.id !== operation.itemId)
+      )
+    }
+    return items
+  }
+
+  const deriveVisibleItems = () => operations.reduce(applyOperation, baseItems)
+
+  const publish = () => {
+    visibleItems = deriveVisibleItems()
     listeners.forEach((listener) => listener())
   }
 
-  const runOptimisticMutation = async (
-    optimisticItems: RecentLinkViewItem[],
-    persist: () => Promise<RecentLinkViewItem[]>
-  ) => {
-    const previousItems = items
-    const currentMutationVersion = ++mutationVersion
-    publish(optimisticItems)
-    try {
-      publish(await persist())
-    } catch (error) {
-      if (currentMutationVersion === mutationVersion) {
-        publish(previousItems)
+  const compactCompletedOperations = () => {
+    while (operations[0]?.status === "completed") {
+      const operation = operations.shift()
+      if (operation) {
+        baseItems = applyOperation(baseItems, operation)
       }
+    }
+  }
+
+  const runOperation = async <Result>(
+    operation: RecentLinksOperation,
+    persist: () => Promise<Result>,
+    complete: (result: Result) => void
+  ) => {
+    operations.push(operation)
+    publish()
+    try {
+      const result = await persist()
+      if (operation.identityGeneration !== identityGeneration) {
+        resolveOperationSettlements.get(operation)?.()
+        return result
+      }
+      complete(result)
+      operation.status = "completed"
+      compactCompletedOperations()
+      publish()
+      resolveOperationSettlements.get(operation)?.()
+      return result
+    } catch (error) {
+      operation.status = "failed"
+      if (operation.identityGeneration !== identityGeneration) {
+        resolveOperationSettlements.get(operation)?.()
+        throw error
+      }
+      const operationIndex = operations.findIndex(
+        (currentOperation) => currentOperation.id === operation.id
+      )
+      if (operationIndex !== -1) {
+        operations.splice(operationIndex, 1)
+      }
+      compactCompletedOperations()
+      publish()
+      resolveOperationSettlements.get(operation)?.()
       throw error
     }
   }
 
+  const createOperation = (
+    operation: Omit<
+      RecentLinksOperation,
+      "id" | "status" | "identityGeneration"
+    >
+  ): RecentLinksOperation => {
+    const nextOperation: RecentLinksOperation = {
+      ...operation,
+      id: nextOperationId++,
+      status: "pending",
+      identityGeneration,
+    }
+    operationSettlements.set(
+      nextOperation,
+      new Promise((resolve) => {
+        resolveOperationSettlements.set(nextOperation, resolve)
+      })
+    )
+    return nextOperation
+  }
+
+  const findPriorPendingAdd = (itemUrl: string) => {
+    for (let index = operations.length - 1; index >= 0; index -= 1) {
+      const operation = operations[index]
+      if (operation?.kind === "add" && operation.item?.url === itemUrl) {
+        return operation
+      }
+    }
+    return undefined
+  }
+
+  const waitForPriorAdd = async (operation?: RecentLinksOperation) => {
+    if (operation) {
+      await operationSettlements.get(operation)
+    }
+    return operation
+  }
+
   return {
-    getSnapshot: () => items,
+    getSnapshot: () => visibleItems,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
     load: async () => {
       const loadVersion = reconciliationVersion
+      const loadIdentityGeneration = identityGeneration
       const loadedItems = await adapter.list()
-      if (loadVersion === reconciliationVersion) {
-        publish(loadedItems)
+      if (
+        loadVersion === reconciliationVersion &&
+        loadIdentityGeneration === identityGeneration
+      ) {
+        baseItems = loadedItems
+        publish()
       }
     },
     reconcile: (nextItems, version = reconciliationVersion + 1) => {
@@ -147,52 +278,101 @@ export const createRecentLinksPersistence = (
         return
       }
       reconciliationVersion = version
-      publish(nextItems)
+      baseItems = nextItems
+      publish()
     },
     add: async (item) => {
-      let persistedItem = item
-      await runOptimisticMutation(replaceByUrl(items, item), async () => {
-        persistedItem = await adapter.add(item)
-        return replaceByUrl(items, persistedItem)
-      })
-      return persistedItem
+      const mutationAdapter = adapter
+      const operation = createOperation({ kind: "add", item })
+      return await runOperation(
+        operation,
+        () => mutationAdapter.add(item),
+        (persistedItem) => {
+          operation.item = persistedItem
+        }
+      )
     },
     update: async (itemUrl, updateItem) => {
-      const itemIndex = items.findIndex((item) => item.url === itemUrl)
-      if (itemIndex === -1) {
+      const currentItem = visibleItems.find((item) => item.url === itemUrl)
+      if (!currentItem) {
         return
       }
-      const updatedItem = updateItem(items[itemIndex])
+      const updatedItem = updateItem(currentItem)
       if (!updatedItem) {
         return
       }
-      const optimisticItems = items.with(itemIndex, updatedItem)
-      await runOptimisticMutation(optimisticItems, async () => {
-        const persistedItem = await adapter.update(updatedItem)
-        return optimisticItems.with(itemIndex, persistedItem)
+      const operation = createOperation({
+        kind: "update",
+        itemUrl,
+        item: updatedItem,
       })
+      const mutationAdapter = adapter
+      const priorAdd = findPriorPendingAdd(itemUrl)
+      await runOperation(
+        operation,
+        async () => {
+          const settledAdd = await waitForPriorAdd(priorAdd)
+          const itemWithPersistedId =
+            settledAdd?.status === "completed" && settledAdd.item?.id
+              ? { ...updatedItem, id: settledAdd.item.id }
+              : updatedItem
+          return settledAdd?.status === "failed"
+            ? itemWithPersistedId
+            : await mutationAdapter.update(itemWithPersistedId)
+        },
+        (persistedItem) => {
+          operation.item = persistedItem
+        }
+      )
     },
     delete: async (itemUrl, itemId) => {
-      const item = items.find(
+      const item = visibleItems.find(
         (currentItem) =>
           currentItem.url === itemUrl && (!itemId || currentItem.id === itemId)
       )
       if (!item) {
         return
       }
-      const optimisticItems = items.filter(
-        (currentItem) => currentItem !== item
+      const priorAdd = findPriorPendingAdd(itemUrl)
+      const mutationAdapter = adapter
+      const operation = createOperation({ kind: "delete", itemUrl, itemId })
+      await runOperation(
+        operation,
+        async () => {
+          const settledAdd = await waitForPriorAdd(priorAdd)
+          if (settledAdd?.status === "failed") {
+            return
+          }
+          const itemToDelete =
+            settledAdd?.status === "completed" && settledAdd.item?.id
+              ? { ...item, id: settledAdd.item.id }
+              : item
+          await mutationAdapter.delete(itemToDelete)
+        },
+        () => undefined
       )
-      await runOptimisticMutation(optimisticItems, async () => {
-        await adapter.delete(item)
-        return optimisticItems
-      })
     },
     clear: async () => {
-      await runOptimisticMutation([], async () => {
-        await adapter.clear()
-        return []
-      })
+      const mutationAdapter = adapter
+      const operation = createOperation({ kind: "clear" })
+      await runOperation(
+        operation,
+        () => mutationAdapter.clear(),
+        () => undefined
+      )
+    },
+    reset: (nextAdapter, nextIdentity, nextItems) => {
+      if (nextIdentity === identity) {
+        adapter = nextAdapter
+        return
+      }
+      adapter = nextAdapter
+      identity = nextIdentity
+      baseItems = nextItems
+      operations.splice(0)
+      reconciliationVersion = 0
+      identityGeneration += 1
+      publish()
     },
   }
 }

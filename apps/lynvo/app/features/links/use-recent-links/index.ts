@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react"
 import { Effect } from "effect"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
@@ -64,33 +70,46 @@ export const useRecentLinks = () => {
     []
   )
 
-  const persistence = useMemo(() => {
-    const adapter = userId
-      ? createServerRecentLinksAdapter({
-          read: () => cachedItems,
-          create: createRecentLink,
-          update: updateRecentLink,
-          delete: async (id) => {
-            await Effect.runPromise(
-              client.links.delete({ params: { linkId: id } })
-            )
-          },
-          clear: async () => {
-            await Effect.runPromise(client.settings.clearRecentLinks())
-          },
-        })
-      : createLocalRecentLinksAdapter({
-          storage: localStorage,
-          storageKey: RECENTS_KEY,
-          maximumItems: RECENTS_MAX_LIMIT,
-          read: readLocalRecents,
-        })
-    return createRecentLinksPersistence(adapter, cachedItems)
-  }, [cachedItems, createRecentLink, updateRecentLink, userId])
+  const adapter = useMemo(
+    () =>
+      userId
+        ? createServerRecentLinksAdapter({
+            read: () => cachedItems,
+            create: createRecentLink,
+            update: updateRecentLink,
+            delete: async (id) => {
+              await Effect.runPromise(
+                client.links.delete({ params: { linkId: id } })
+              )
+            },
+            clear: async () => {
+              await Effect.runPromise(client.settings.clearRecentLinks())
+            },
+          })
+        : createLocalRecentLinksAdapter({
+            storage: localStorage,
+            storageKey: RECENTS_KEY,
+            maximumItems: RECENTS_MAX_LIMIT,
+            read: readLocalRecents,
+          }),
+    [cachedItems, createRecentLink, updateRecentLink, userId]
+  )
+  const identity = userId ?? "anonymous"
+  const persistenceRef = useRef<RecentLinksPersistence | undefined>(undefined)
+  if (!persistenceRef.current) {
+    persistenceRef.current = createRecentLinksPersistence(
+      adapter,
+      cachedItems,
+      identity
+    )
+  } else {
+    persistenceRef.current.reset(adapter, identity, cachedItems)
+  }
+  const persistence = persistenceRef.current
 
   useEffect(() => {
     persistence.load().catch((error) => console.error(error))
-  }, [persistence])
+  }, [adapter, identity, persistence])
 
   useEffect(() => {
     if (!userId || !linksQuery.isLive) {

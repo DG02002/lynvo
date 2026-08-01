@@ -13,6 +13,27 @@ const item = (url: string, id?: string): RecentLinkViewItem => ({
   timestamp: 1,
 })
 
+const deferred = <Value>() => {
+  let resolve: (value: Value) => void = () => undefined
+  let reject: (error: Error) => void = () => undefined
+  const promise = new Promise<Value>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
+
+const createAdapter = (
+  overrides: Partial<RecentLinksPersistenceAdapter> = {}
+): RecentLinksPersistenceAdapter => ({
+  list: async () => [],
+  add: async (nextItem) => nextItem,
+  update: async (nextItem) => nextItem,
+  delete: async () => undefined,
+  clear: async () => undefined,
+  ...overrides,
+})
+
 const runAdapterContract = async (
   createAdapter: () => RecentLinksPersistenceAdapter
 ) => {
@@ -137,6 +158,159 @@ describe("Recent Links optimistic state", () => {
 
     rejectFirstAdd(new Error("offline"))
     await expect(olderMutation).rejects.toThrow("offline")
-    expect(persistence.getSnapshot()[0].url).toBe("https://example.com/newer")
+    expect(persistence.getSnapshot()).toEqual([
+      item("https://example.com/newer"),
+    ])
+  })
+
+  it("keeps an older success when a newer independent mutation fails", async () => {
+    const olderResult = deferred<RecentLinkViewItem>()
+    const adapter = createAdapter({
+      add: vi
+        .fn()
+        .mockReturnValueOnce(olderResult.promise)
+        .mockRejectedValueOnce(new Error("offline")),
+    })
+    const persistence = createRecentLinksPersistence(adapter)
+    const olderItem = item("https://example.com/older")
+    const olderMutation = persistence.add(olderItem)
+    const newerMutation = persistence.add(item("https://example.com/newer"))
+
+    await expect(newerMutation).rejects.toThrow("offline")
+    olderResult.resolve(olderItem)
+    await olderMutation
+
+    expect(persistence.getSnapshot()).toEqual([olderItem])
+  })
+
+  it("rebases remote snapshots over pending optimistic operations", async () => {
+    const addResult = deferred<RecentLinkViewItem>()
+    const optimistic = item("https://example.com/optimistic")
+    const remote = item("https://example.com/remote", "remote")
+    const persistence = createRecentLinksPersistence(
+      createAdapter({ add: async () => await addResult.promise })
+    )
+    const pendingAdd = persistence.add(optimistic)
+
+    persistence.reconcile([remote], 2)
+
+    expect(persistence.getSnapshot()).toEqual([optimistic, remote])
+    addResult.resolve({ ...optimistic, id: "persisted" })
+    await pendingAdd
+    expect(persistence.getSnapshot()).toEqual([
+      { ...optimistic, id: "persisted" },
+      remote,
+    ])
+  })
+
+  it("resolves same-item updates and deletion in operation order", async () => {
+    const original = item("https://example.com/same", "same")
+    const firstUpdate = deferred<RecentLinkViewItem>()
+    const persistence = createRecentLinksPersistence(
+      createAdapter({
+        update: vi
+          .fn()
+          .mockReturnValueOnce(firstUpdate.promise)
+          .mockImplementationOnce(async (nextItem) => nextItem),
+      }),
+      [original]
+    )
+    const olderUpdate = persistence.update(original.url, (currentItem) => ({
+      ...currentItem,
+      title: "Older update",
+    }))
+    await persistence.update(original.url, (currentItem) => ({
+      ...currentItem,
+      title: "Newer update",
+    }))
+
+    firstUpdate.resolve({ ...original, title: "Older update" })
+    await olderUpdate
+    expect(persistence.getSnapshot()[0]?.title).toBe("Newer update")
+
+    await persistence.delete(original.url, original.id)
+    expect(persistence.getSnapshot()).toEqual([])
+  })
+
+  it("keeps operations after clear while removing operations before it", async () => {
+    const clearResult = deferred<void>()
+    const laterItem = item("https://example.com/after-clear")
+    const persistence = createRecentLinksPersistence(
+      createAdapter({ clear: async () => await clearResult.promise }),
+      [item("https://example.com/original")]
+    )
+    const pendingClear = persistence.clear()
+    await persistence.add(laterItem)
+
+    expect(persistence.getSnapshot()).toEqual([laterItem])
+    clearResult.resolve()
+    await pendingClear
+    expect(persistence.getSnapshot()).toEqual([laterItem])
+  })
+
+  it("orders deletion after an in-flight add of the same URL", async () => {
+    const addResult = deferred<RecentLinkViewItem>()
+    const deleteItem = vi.fn(async () => undefined)
+    const optimistic = item("https://example.com/add-delete")
+    const persistence = createRecentLinksPersistence(
+      createAdapter({
+        add: async () => await addResult.promise,
+        delete: deleteItem,
+      })
+    )
+    const pendingAdd = persistence.add(optimistic)
+    const pendingDelete = persistence.delete(optimistic.url)
+
+    addResult.resolve({ ...optimistic, id: "persisted-id" })
+    await pendingAdd
+    await pendingDelete
+
+    expect(deleteItem).toHaveBeenCalledWith({
+      ...optimistic,
+      id: "persisted-id",
+    })
+    expect(persistence.getSnapshot()).toEqual([])
+  })
+
+  it("prevents stale loads from crossing reconciliation or identity boundaries", async () => {
+    const loadResult = deferred<RecentLinkViewItem[]>()
+    const persistence = createRecentLinksPersistence(
+      createAdapter({ list: async () => await loadResult.promise }),
+      [],
+      "anonymous"
+    )
+    const pendingLoad = persistence.load()
+    const live = item("https://example.com/live")
+    persistence.reconcile([live], 2)
+    loadResult.resolve([item("https://example.com/stale")])
+    await pendingLoad
+    expect(persistence.getSnapshot()).toEqual([live])
+
+    const oldIdentityLoad = deferred<RecentLinkViewItem[]>()
+    persistence.reset(
+      createAdapter({ list: async () => await oldIdentityLoad.promise }),
+      "user-1",
+      [item("https://example.com/user-one")]
+    )
+    const pendingIdentityLoad = persistence.load()
+    const userTwo = item("https://example.com/user-two")
+    persistence.reset(createAdapter(), "user-2", [userTwo])
+    oldIdentityLoad.resolve([item("https://example.com/wrong-user")])
+    await pendingIdentityLoad
+    expect(persistence.getSnapshot()).toEqual([userTwo])
+
+    const oldMutation = deferred<RecentLinkViewItem>()
+    persistence.reset(
+      createAdapter({ add: async () => await oldMutation.promise }),
+      "user-3",
+      []
+    )
+    const pendingOldMutation = persistence.add(
+      item("https://example.com/user-three")
+    )
+    persistence.reset(createAdapter(), "user-4", [userTwo])
+    oldMutation.resolve(item("https://example.com/user-three", "persisted"))
+    await pendingOldMutation
+    expect(persistence.getSnapshot()).toEqual([userTwo])
   })
 })
