@@ -1,4 +1,8 @@
 import { z } from "zod"
+import {
+  remoteCommandFieldsSchema,
+  remoteCommandWirePayloadSchema,
+} from "~/lib/remote-play/wire"
 
 export const remoteDeviceSchema = z.object({
   id: z.string().min(1),
@@ -10,17 +14,11 @@ export const remotePollResponseSchema = z.object({
   controllerName: z.string().optional(),
   controllingDevices: z.array(remoteDeviceSchema).optional(),
   activeTargets: z.array(z.string().min(1)).optional(),
+  commands: z.array(remoteCommandFieldsSchema).optional(),
 })
 
 export const remoteRealtimeEventSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("command"),
-    id: z.string().min(1),
-    command: z.string().min(1),
-    payload: z.unknown().optional(),
-    createdAt: z.number(),
-    targetSessionId: z.string().min(1),
-  }),
+  remoteCommandWirePayloadSchema,
   z.object({
     kind: z.literal("connections"),
     controllingDevices: z.array(remoteDeviceSchema),

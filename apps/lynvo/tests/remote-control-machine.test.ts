@@ -125,25 +125,30 @@ describe("remote-control machine", () => {
 
   it("deduplicates replayed commands and rejects stale commands", async () => {
     const harness = createHarness()
-    harness.machine.receiveCommand(
-      "play",
-      '{"url":"one"}',
-      1_000_000,
-      "command-1"
-    )
+    harness.machine.receiveCommand({
+      command: "play",
+      payload: { url: "one" },
+      createdAt: 1_000_000,
+      id: "command-1",
+    })
     const firstCommand = harness.machine.getSnapshot().lastCommand
     expect(firstCommand?.payload).toEqual({ url: "one" })
     harness.machine.acknowledgeCommand(firstCommand!.id)
-    harness.machine.receiveCommand(
-      "play",
-      '{"url":"one"}',
-      1_000_000,
-      "command-1"
-    )
+    harness.machine.receiveCommand({
+      command: "play",
+      payload: { url: "one" },
+      createdAt: 1_000_000,
+      id: "command-1",
+    })
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
 
     harness.setNow(2_000_000)
-    harness.machine.receiveCommand("play", null, 1_000_000, "stale")
+    harness.machine.receiveCommand({
+      command: "play",
+      payload: null,
+      createdAt: 1_000_000,
+      id: "stale",
+    })
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
 
@@ -179,10 +184,68 @@ describe("remote-control machine", () => {
     expect(harness.transport.acknowledge).toHaveBeenCalledWith("command-1")
   })
 
+  it("ignores a late realtime copy after durable polling delivered a command", async () => {
+    const harness = createHarness()
+    harness.setPollResponse({
+      commands: [
+        {
+          id: "command-1",
+          command: "play",
+          payload: '{"url":"one"}',
+          createdAt: 1_000_000,
+        },
+      ],
+    })
+
+    await harness.machine.poll()
+    harness.machine.receiveRealtime(
+      {
+        kind: "command",
+        id: "command-1",
+        command: "play",
+        payload: '{"url":"one"}',
+        createdAt: 1_000_000,
+        targetSessionId: "receiver-session",
+      },
+      "receiver-session"
+    )
+
+    expect(harness.machine.getSnapshot().lastCommand?.id).toBe("command-1")
+  })
+
+  it("keeps a pending command when receiver projection changes", async () => {
+    const harness = createHarness()
+    harness.setPollResponse({
+      controllingDevices: [{ id: "phone-1", name: "Phone" }],
+      commands: [
+        {
+          id: "command-1",
+          command: "play",
+          payload: "{}",
+          createdAt: 1_000_000,
+        },
+      ],
+    })
+
+    await harness.machine.poll()
+    harness.machine.receiveRealtime({
+      kind: "connections",
+      controllingDevices: [],
+    })
+
+    expect(harness.machine.getSnapshot().controllingDevices).toEqual([])
+    expect(harness.machine.getSnapshot().lastCommand?.id).toBe("command-1")
+  })
+
   it("retries a failed acknowledgement without replaying the command", async () => {
     const harness = createHarness()
     harness.transport.acknowledge.mockRejectedValueOnce(new Error("offline"))
-    harness.machine.receiveCommand("play", "{}", 1_000_000, "command-1")
+    harness.machine.receiveCommand({
+      command: "play",
+      payload: {},
+      createdAt: 1_000_000,
+      id: "command-1",
+    })
 
     await harness.machine.acknowledgeCommand("command-1")
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
@@ -203,7 +266,7 @@ describe("remote-control machine", () => {
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
 
-  it("supports legacy and partial polling payloads with identity-aware devices", async () => {
+  it("supports partial polling payloads with identity-aware devices", async () => {
     const harness = createHarness()
     harness.setPollResponse({
       controlledBy: "phone-1",

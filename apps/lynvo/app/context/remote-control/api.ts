@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { client } from "~/lib/effect/api/client"
+import { remotePollResponseSchema } from "./schemas"
 
 export const remoteApi: RemoteControlTransport = {
   connect: async () => undefined,
@@ -20,7 +21,13 @@ export const remoteApi: RemoteControlTransport = {
   },
   poll: async () => {
     const result = await Effect.runPromise(client.remote.pollInbox({}))
-    return { commands: [...result.commands] }
+    const parsed = remotePollResponseSchema.safeParse({
+      commands: [...result.commands],
+    })
+    if (!parsed.success) {
+      throw new Error("Invalid remote poll response")
+    }
+    return parsed.data
   },
   acknowledge: async (commandId) =>
     await Effect.runPromise(

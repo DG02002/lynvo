@@ -205,6 +205,17 @@ describe("HTTP and realtime boundaries", () => {
         controllingDevices: [{ id: "session-1" }],
       }).success
     ).toBe(false)
+    expect(
+      remotePollResponseSchema.safeParse({
+        commands: [
+          {
+            command: "play",
+            payload: "{}",
+            createdAt: 10,
+          },
+        ],
+      }).success
+    ).toBe(false)
   })
 
   it("validates Turnstile responses", () => {
@@ -226,6 +237,7 @@ describe("HTTP and realtime boundaries", () => {
         kind: "command",
         id: "command-1",
         command: "play",
+        payload: "{}",
         createdAt: 10,
         targetSessionId: "session-1",
       }).success

@@ -1,27 +1,13 @@
+import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 import {
-  REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS,
-  REMOTE_COMMAND_STALE_AFTER_MS,
-  REMOTE_POLL_INTERVAL_MS,
-} from "./constants"
+  createRemoteCommandDelivery,
+  parseRemoteCommandWirePayload,
+} from "./command-delivery"
 
 declare global {
   interface RemoteDevice {
     id: string
     name: string
-  }
-
-  interface RemoteCommand {
-    id: string
-    command: string
-    payload: unknown
-    receivedAt: number
-  }
-
-  interface PendingRemoteCommand {
-    id: string
-    command: "play" | "pause"
-    payload: string
-    createdAt: number
   }
 
   interface RemoteControlMachineState {
@@ -41,7 +27,7 @@ declare global {
     controllerName?: string | null
     controllingDevices?: RemoteDevice[]
     activeTargets?: string[]
-    commands?: readonly PendingRemoteCommand[]
+    commands?: readonly RemoteCommandWireFields[]
   }
 
   interface RemoteRealtimeEvent {
@@ -108,12 +94,7 @@ declare global {
     disconnect: () => Promise<void>
     disconnectReceiver: () => Promise<void>
     send: (command: string, payload?: unknown) => Promise<void>
-    receiveCommand: (
-      command: string,
-      payload: unknown,
-      createdAt: number,
-      id: string
-    ) => boolean
+    receiveCommand: (command: RemoteCommandDeliveryInput) => boolean
     setRealtimeStatus: (status: string) => void
     receiveRealtime: (
       event: RemoteRealtimeEvent,
@@ -136,24 +117,6 @@ const EMPTY_STATE: RemoteControlMachineState = {
   isConnecting: false,
   isDisconnecting: false,
 }
-
-const parsePayload = (payload: string | unknown | null) => {
-  if (typeof payload !== "string") {
-    return payload ?? null
-  }
-  try {
-    return JSON.parse(payload)
-  } catch {
-    return null
-  }
-}
-
-const commandFingerprint = (
-  command: string,
-  payload: unknown,
-  createdAt?: number,
-  id?: string
-) => id ?? `${command}:${JSON.stringify(payload)}:${createdAt ?? "legacy"}`
 
 const haveSameDevices = (
   currentDevices: RemoteDevice[],
@@ -187,46 +150,10 @@ export const createRemoteControlMachine = ({
   }
   const listeners = new Set<() => void>()
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
-  const processedCommands = new Map<string, number>()
-  const appliedCommands = new Map<string, number>()
-  const pendingAcknowledgements = new Set<string>()
-  const acknowledgementRequests = new Map<string, Promise<void>>()
-
-  const removeExpiredCommandIds = (now: number) => {
-    for (const commandIds of [processedCommands, appliedCommands]) {
-      for (const [commandId, recordedAt] of commandIds) {
-        if (now - recordedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
-          commandIds.delete(commandId)
-        }
-      }
-    }
-  }
-
-  const retryAcknowledgement = (commandId: string) => {
-    const activeRequest = acknowledgementRequests.get(commandId)
-    if (activeRequest) {
-      return activeRequest
-    }
-    const request = transport
-      .acknowledge(commandId)
-      .then(() => {
-        pendingAcknowledgements.delete(commandId)
-        appliedCommands.delete(commandId)
-        processedCommands.set(commandId, clock.now())
-      })
-      .catch(() => {
-        pendingAcknowledgements.add(commandId)
-      })
-      .finally(() => {
-        acknowledgementRequests.delete(commandId)
-      })
-    acknowledgementRequests.set(commandId, request)
-    return request
-  }
-
-  const retryPendingAcknowledgements = async () => {
-    await Promise.all([...pendingAcknowledgements].map(retryAcknowledgement))
-  }
+  const delivery = createRemoteCommandDelivery({
+    acknowledge: transport.acknowledge,
+    now: clock.now,
+  })
 
   const publish = (nextState: RemoteControlMachineState) => {
     state = nextState
@@ -235,34 +162,24 @@ export const createRemoteControlMachine = ({
   const publishOutcome = (outcome: RemoteControlOutcome) =>
     outcomeListeners.forEach((listener) => listener(outcome))
 
-  const receiveCommand = (
-    command: string,
-    payload: unknown,
-    createdAt?: number,
-    id?: string
-  ) => {
-    const now = clock.now()
-    if (
-      createdAt !== undefined &&
-      now - createdAt > REMOTE_COMMAND_STALE_AFTER_MS
-    ) {
-      return false
-    }
-    removeExpiredCommandIds(now)
-    const commandId = commandFingerprint(command, payload, createdAt, id)
-    if (
-      processedCommands.has(commandId) ||
-      appliedCommands.has(commandId) ||
-      state.lastCommand !== null
-    ) {
-      return false
+  const syncDeliveryState = () => {
+    const lastCommand = delivery.getSnapshot().lastCommand
+    if (state.lastCommand === lastCommand) {
+      return
     }
     publish({
       ...state,
-      lastCommand: { id: commandId, command, payload, receivedAt: now },
+      lastCommand,
     })
-    publishOutcome({ type: "command-received", command })
-    return true
+  }
+
+  const receiveCommand = (command: RemoteCommandDeliveryInput) => {
+    const didReceive = delivery.receive(command)
+    syncDeliveryState()
+    if (didReceive) {
+      publishOutcome({ type: "command-received", command: command.command })
+    }
+    return didReceive
   }
 
   const syncDevices = (nextDevices: RemoteDevice[]) => {
@@ -372,25 +289,18 @@ export const createRemoteControlMachine = ({
         throw error
       }
     },
-    receiveCommand: (command, payload, createdAt, id) =>
-      receiveCommand(command, parsePayload(payload), createdAt, id),
+    receiveCommand: (command) => receiveCommand(command),
     setRealtimeStatus: (realtimeStatus) => {
       if (state.realtimeStatus !== realtimeStatus) {
         publish({ ...state, realtimeStatus })
       }
     },
     receiveRealtime: (event, userSessionId) => {
-      if (
-        event.kind === "command" &&
-        event.command &&
-        event.targetSessionId === userSessionId
-      ) {
-        receiveCommand(
-          event.command,
-          event.payload ?? null,
-          event.createdAt,
-          event.id
-        )
+      if (event.kind === "command" && event.targetSessionId === userSessionId) {
+        const command = parseRemoteCommandWirePayload(event)
+        if (command) {
+          receiveCommand(command)
+        }
       } else if (event.kind === "connections" && event.controllingDevices) {
         syncDevices(event.controllingDevices)
       } else if (event.kind === "targets") {
@@ -398,7 +308,7 @@ export const createRemoteControlMachine = ({
       }
     },
     poll: async () => {
-      await retryPendingAcknowledgements()
+      await delivery.retryPendingAcknowledgements()
       const data = await transport.poll()
       if (data.controllingDevices !== undefined) {
         syncDevices(data.controllingDevices)
@@ -414,26 +324,16 @@ export const createRemoteControlMachine = ({
       }
       disconnectMissingTarget(data.activeTargets)
       for (const command of data.commands ?? []) {
-        if (
-          receiveCommand(
-            command.command,
-            parsePayload(command.payload),
-            command.createdAt,
-            command.id
-          )
-        ) {
+        const parsedCommand = parseRemoteCommandWirePayload(command)
+        if (parsedCommand && receiveCommand(parsedCommand)) {
           break
         }
       }
     },
     acknowledgeCommand: async (commandId) => {
-      if (state.lastCommand?.id !== commandId) {
-        return
-      }
-      appliedCommands.set(commandId, clock.now())
-      pendingAcknowledgements.add(commandId)
-      publish({ ...state, lastCommand: null })
-      await retryAcknowledgement(commandId)
+      const acknowledgement = delivery.acknowledge(commandId)
+      syncDeliveryState()
+      await acknowledgement
     },
     start: () => {
       const intervalId = clock.setInterval(() => {

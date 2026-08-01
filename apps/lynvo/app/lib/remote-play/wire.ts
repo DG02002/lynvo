@@ -1,12 +1,15 @@
 import { z } from "zod"
 
 declare global {
-  interface RemoteCommandWirePayload {
-    kind: "command"
+  interface RemoteCommandWireFields {
     id: string
     command: "play" | "pause"
     payload: string
     createdAt: number
+  }
+
+  interface RemoteCommandWirePayload extends RemoteCommandWireFields {
+    kind: "command"
     targetSessionId: string
   }
 
@@ -16,12 +19,15 @@ declare global {
   }
 }
 
-export const remoteCommandWirePayloadSchema = z.object({
-  kind: z.literal("command"),
+export const remoteCommandFieldsSchema = z.object({
   id: z.string().min(1),
   command: z.enum(["play", "pause"]),
   payload: z.string(),
   createdAt: z.number().nonnegative().finite(),
+})
+
+export const remoteCommandWirePayloadSchema = remoteCommandFieldsSchema.extend({
+  kind: z.literal("command"),
   targetSessionId: z.string().min(1),
 })
 
