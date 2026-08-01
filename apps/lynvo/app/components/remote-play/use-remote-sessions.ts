@@ -1,6 +1,31 @@
 import { useState } from "react"
+import { Effect } from "effect"
+import { client } from "~/lib/effect/api/client"
 import type { RemoteSession } from "./types"
-import { remoteSessionsResponseSchema } from "./schemas"
+
+declare global {
+  interface RemoteSessionContract {
+    id: string
+    deviceName: string
+    lastActiveAt: number
+    createdAt: number
+    isCurrent: boolean
+  }
+}
+
+export const loadRemoteSessions = async (
+  listSessions: () => Promise<readonly RemoteSessionContract[]> = () =>
+    Effect.runPromise(client.settings.listSessions())
+): Promise<RemoteSession[]> => {
+  const sessions = await listSessions()
+  return sessions
+    .filter((session) => !session.isCurrent)
+    .map((session) => ({
+      id: session.id,
+      deviceName: session.deviceName,
+      lastActiveAt: session.lastActiveAt,
+    }))
+}
 
 export const useRemoteSessions = () => {
   const [sessions, setSessions] = useState<RemoteSession[]>([])
@@ -11,17 +36,7 @@ export const useRemoteSessions = () => {
     setLoading(true)
     setHasError(false)
     try {
-      const res = await fetch("/api/sessions")
-      if (res.ok) {
-        const result = remoteSessionsResponseSchema.safeParse(await res.json())
-        if (result.success) {
-          setSessions(result.data.sessions)
-        } else {
-          setHasError(true)
-        }
-      } else {
-        setHasError(true)
-      }
+      setSessions(await loadRemoteSessions())
     } catch (error) {
       console.error("Unable to fetch remote sessions", error)
       setHasError(true)

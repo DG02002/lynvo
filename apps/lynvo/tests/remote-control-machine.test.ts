@@ -92,7 +92,7 @@ describe("remote-control machine", () => {
     expect(connectedHarness.machine.getSnapshot().activeSessionId).toBe("tv-1")
   })
 
-  it("starts polling on realtime loss and stops polling work on recovery", async () => {
+  it("keeps durable polling active while realtime is connected", async () => {
     const harness = createHarness({ storedSessionId: "tv-1" })
     harness.machine.start()
     harness.machine.setRealtimeStatus("disconnected")
@@ -103,7 +103,9 @@ describe("remote-control machine", () => {
 
     harness.machine.setRealtimeStatus("connected")
     harness.runInterval()
-    expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(2)
+    )
   })
 
   it("classifies polling failures as delivery outcomes", async () => {
@@ -175,6 +177,30 @@ describe("remote-control machine", () => {
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
     expect(harness.transport.acknowledge).toHaveBeenCalledOnce()
     expect(harness.transport.acknowledge).toHaveBeenCalledWith("command-1")
+  })
+
+  it("retries a failed acknowledgement without replaying the command", async () => {
+    const harness = createHarness()
+    harness.transport.acknowledge.mockRejectedValueOnce(new Error("offline"))
+    harness.machine.receiveCommand("play", "{}", 1_000_000, "command-1")
+
+    await harness.machine.acknowledgeCommand("command-1")
+    expect(harness.machine.getSnapshot().lastCommand).toBeNull()
+
+    harness.setPollResponse({
+      commands: [
+        {
+          id: "command-1",
+          command: "play",
+          payload: "{}",
+          createdAt: 1_000_000,
+        },
+      ],
+    })
+    await harness.machine.poll()
+
+    expect(harness.transport.acknowledge).toHaveBeenCalledTimes(2)
+    expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
 
   it("supports legacy and partial polling payloads with identity-aware devices", async () => {

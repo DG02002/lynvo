@@ -6,6 +6,7 @@ import { ConvexService } from "../../services/ConvexService"
 import { api } from "../../../../../convex/_generated/api"
 import type { Id } from "../../../../../convex/_generated/dataModel"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { createRemoteCommandMessage } from "../../../remote-play/wire"
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -31,14 +32,15 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             "https://realtime.internal/broadcast",
             {
               method: "POST",
-              body: JSON.stringify({
-                kind: "command",
-                id: commandId,
-                command: payload.command,
-                payload: commandPayload,
-                createdAt: Date.now(),
-                targetSessionId: payload.target_session_id,
-              }),
+              body: JSON.stringify(
+                createRemoteCommandMessage({
+                  id: commandId,
+                  command: payload.command,
+                  payload: commandPayload,
+                  createdAt: Date.now(),
+                  targetSessionId: payload.target_session_id,
+                })
+              ),
             }
           )
         ).pipe(Effect.ignore)

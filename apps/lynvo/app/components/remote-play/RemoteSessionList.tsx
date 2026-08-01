@@ -76,7 +76,7 @@ export const RemoteSessionList = ({
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-medium leading-none truncate block">
-                  {session.device_name || "Unnamed device"}
+                  {session.deviceName || "Unnamed device"}
                 </p>
               </div>
             </button>

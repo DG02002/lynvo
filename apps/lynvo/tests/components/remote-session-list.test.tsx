@@ -56,7 +56,7 @@ describe("RemoteSessionList", () => {
 
   it("labels a session without a supplied name", () => {
     renderList({
-      sessions: [{ id: "session-one", device_name: "" }],
+      sessions: [{ id: "session-one", deviceName: "", lastActiveAt: 10 }],
     })
 
     expect(screen.getByText("Unnamed device")).toBeVisible()

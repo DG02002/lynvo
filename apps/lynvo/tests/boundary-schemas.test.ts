@@ -10,7 +10,6 @@ import {
   turnstileVerificationResponseSchema,
 } from "~/lib/auth-gateway-schemas"
 import { getSafeRedirectPath } from "~/components/auth/auth-form-actions"
-import { remoteSessionsResponseSchema } from "~/components/remote-play/schemas"
 import {
   remotePollResponseSchema,
   remoteRealtimeEventSchema,
@@ -163,25 +162,7 @@ describe("HTTP and realtime boundaries", () => {
     ).toBe(false)
   })
 
-  it("validates remote session and Turnstile responses", () => {
-    expect(
-      remoteSessionsResponseSchema.safeParse({
-        sessions: [
-          {
-            id: "session-1",
-            device_name: "TV",
-            user_agent: "Browser",
-            last_active_at: 10,
-            location: "Home",
-          },
-        ],
-      }).success
-    ).toBe(true)
-    expect(
-      remoteSessionsResponseSchema.safeParse({
-        sessions: [{ id: "session-1" }],
-      }).success
-    ).toBe(false)
+  it("validates Turnstile responses", () => {
     expect(
       turnstileVerificationResponseSchema.safeParse({
         success: true,

@@ -40,7 +40,7 @@ export function RemotePlayButton({
   const { sessions, loading, hasError, fetchSessions } = useRemoteSessions()
 
   const handleDeviceSelect = (session: RemoteSession) => {
-    connectToSession(session.id, session.device_name || "Unnamed device")
+    connectToSession(session.id, session.deviceName || "Unnamed device")
     setOpen(false)
   }
 

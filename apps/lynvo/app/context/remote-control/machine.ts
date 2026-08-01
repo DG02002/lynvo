@@ -120,7 +120,7 @@ declare global {
       userSessionId?: string
     ) => void
     poll: () => Promise<void>
-    acknowledgeCommand: (commandId: string) => void
+    acknowledgeCommand: (commandId: string) => Promise<void>
     start: () => () => void
   }
 }
@@ -188,6 +188,45 @@ export const createRemoteControlMachine = ({
   const listeners = new Set<() => void>()
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
   const processedCommands = new Map<string, number>()
+  const appliedCommands = new Map<string, number>()
+  const pendingAcknowledgements = new Set<string>()
+  const acknowledgementRequests = new Map<string, Promise<void>>()
+
+  const removeExpiredCommandIds = (now: number) => {
+    for (const commandIds of [processedCommands, appliedCommands]) {
+      for (const [commandId, recordedAt] of commandIds) {
+        if (now - recordedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
+          commandIds.delete(commandId)
+        }
+      }
+    }
+  }
+
+  const retryAcknowledgement = (commandId: string) => {
+    const activeRequest = acknowledgementRequests.get(commandId)
+    if (activeRequest) {
+      return activeRequest
+    }
+    const request = transport
+      .acknowledge(commandId)
+      .then(() => {
+        pendingAcknowledgements.delete(commandId)
+        appliedCommands.delete(commandId)
+        processedCommands.set(commandId, clock.now())
+      })
+      .catch(() => {
+        pendingAcknowledgements.add(commandId)
+      })
+      .finally(() => {
+        acknowledgementRequests.delete(commandId)
+      })
+    acknowledgementRequests.set(commandId, request)
+    return request
+  }
+
+  const retryPendingAcknowledgements = async () => {
+    await Promise.all([...pendingAcknowledgements].map(retryAcknowledgement))
+  }
 
   const publish = (nextState: RemoteControlMachineState) => {
     state = nextState
@@ -209,13 +248,13 @@ export const createRemoteControlMachine = ({
     ) {
       return false
     }
-    for (const [processedId, processedAt] of processedCommands) {
-      if (now - processedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
-        processedCommands.delete(processedId)
-      }
-    }
+    removeExpiredCommandIds(now)
     const commandId = commandFingerprint(command, payload, createdAt, id)
-    if (processedCommands.has(commandId) || state.lastCommand !== null) {
+    if (
+      processedCommands.has(commandId) ||
+      appliedCommands.has(commandId) ||
+      state.lastCommand !== null
+    ) {
       return false
     }
     publish({
@@ -359,6 +398,7 @@ export const createRemoteControlMachine = ({
       }
     },
     poll: async () => {
+      await retryPendingAcknowledgements()
       const data = await transport.poll()
       if (data.controllingDevices !== undefined) {
         syncDevices(data.controllingDevices)
@@ -386,13 +426,14 @@ export const createRemoteControlMachine = ({
         }
       }
     },
-    acknowledgeCommand: (commandId) => {
+    acknowledgeCommand: async (commandId) => {
       if (state.lastCommand?.id !== commandId) {
         return
       }
-      processedCommands.set(commandId, clock.now())
+      appliedCommands.set(commandId, clock.now())
+      pendingAcknowledgements.add(commandId)
       publish({ ...state, lastCommand: null })
-      void transport.acknowledge(commandId).catch(() => undefined)
+      await retryAcknowledgement(commandId)
     },
     start: () => {
       const intervalId = clock.setInterval(() => {
@@ -401,7 +442,7 @@ export const createRemoteControlMachine = ({
           state.controlledBy ||
           state.controllingDevices.length > 0
         )
-        if (state.realtimeStatus !== "connected" && isActive) {
+        if (isActive) {
           void machine
             .poll()
             .catch(() => publishOutcome({ type: "delivery-unavailable" }))
