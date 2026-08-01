@@ -12,15 +12,9 @@ const cookieRows = [
   },
   {
     source: "Lynvo",
-    name: "__convexAuthJWT_lynvo",
-    duration: "Up to 1 year",
+    name: "__Host-lynvo-session",
+    duration: "30 days",
     purpose: "Authentication and session continuity",
-  },
-  {
-    source: "Lynvo",
-    name: "__convexAuthRefreshToken_lynvo",
-    duration: "Up to 1 year",
-    purpose: "Secure authentication renewal",
   },
   {
     source: "Lynvo",
@@ -46,11 +40,6 @@ const browserStorageRows = [
     name: "theme",
     duration: "Until cleared",
     purpose: "Remembering your appearance preference",
-  },
-  {
-    name: "Lynvo authentication storage",
-    duration: "Up to 1 year",
-    purpose: "Maintaining your signed-in session",
   },
   {
     name: "Player and device preferences",

@@ -17,6 +17,7 @@ import { createApiErrorResponse } from "../app/lib/api-errors"
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
 import { getCookieValue } from "../app/lib/auth-cookie"
 import { createAuthSessionModule } from "./auth-session"
+import { createWorkerAuthenticationFlow } from "./authentication-flow"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
   authPreflightRequestSchema,
@@ -479,53 +480,29 @@ app.post("/api/auth/sign-in", async (context) => {
   }
   const flow = payload.params.flow
   try {
-    const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-    const result = await client.action(api.auth.signIn, {
+    const result = await createWorkerAuthenticationFlow(context.env).signIn({
       provider: payload.provider,
       params: payload.params,
     })
-    const tokens = (
-      result as { tokens?: { token?: string; refreshToken?: string } }
-    ).tokens
-    const deviceName = payload.params.deviceName?.trim().slice(0, 80)
-    if (tokens?.token && deviceName) {
-      client.setAuth(tokens.token)
-      await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
+    if (result.kind === "unavailable") {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "Login is unavailable. Try again later.",
+          retryable: true,
+        }),
+        503
+      )
     }
-    if (tokens?.token && tokens.refreshToken) {
-      const sessionId = crypto.randomUUID()
-      const createdAt = Date.now()
-      const sessionResult = await createAuthSessionModule(
-        context.env.WORKER_AUTH_SESSION
-      ).create({
-        sessionId,
-        accessToken: tokens.token,
-        refreshToken: tokens.refreshToken,
-        nowMs: createdAt,
-      })
-      if (sessionResult.kind === "unavailable") {
-        return context.json(
-          requestApiError(context, {
-            code: "service_unavailable",
-            error: "Login is unavailable. Try again later.",
-            retryable: true,
-          }),
-          503
-        )
-      }
-      context.header("Set-Cookie", sessionResult.cookie)
-      addRequestContext(context, {
-        auth_flow: flow,
-        has_tokens: true,
-        worker_session_created: true,
-      })
-      return context.json({ signingIn: true })
+    if (result.cookie) {
+      context.header("Set-Cookie", result.cookie)
     }
     addRequestContext(context, {
       auth_flow: flow,
-      has_tokens: Boolean(tokens),
+      has_tokens: result.hasTokens,
+      worker_session_created: Boolean(result.cookie),
     })
-    return context.json(result)
+    return context.json(result.browserState)
   } catch (error) {
     const authError = classifyAuthSignInError(error, flow)
     addRequestContext(context, {

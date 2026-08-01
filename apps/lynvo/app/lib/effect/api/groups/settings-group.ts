@@ -45,6 +45,11 @@ const UserSessionSchema = Schema.Struct({
 
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(
+    HttpApiEndpoint.post("touchActivity", "/activity", {
+      payload: Schema.Struct({ deviceName: Schema.String }),
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
     HttpApiEndpoint.get("getPlayerPreferences", "/player", {
       success: PlayerPreferencesSchema,
       error: [UnauthorizedApiError, ConvexApiError],

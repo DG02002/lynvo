@@ -37,12 +37,9 @@ export const loader = async (args: Route.LoaderArgs) => {
     (await csrfCookie.parse(cookieHeader)) || crypto.randomUUID()
 
   const sessionResult = await getUserSession(request, env)
-  const convexUrl = env.VITE_CONVEX_URL
-
   const data = {
     user: sessionResult.user,
     csrfToken,
-    convexUrl,
     turnstileSiteKey: env.TURNSTILE_SITE_KEY,
     buildTime: __BUILD_TIME__,
     initialTheme: getThemeFromCookieHeader(cookieHeader),
@@ -56,15 +53,9 @@ export const loader = async (args: Route.LoaderArgs) => {
 }
 
 const App = ({ loaderData }: Route.ComponentProps) => {
-  const { buildTime, convexUrl } = loaderData
+  const { buildTime } = loaderData
 
-  return (
-    <AppProviders
-      convexUrl={convexUrl}
-      buildTime={buildTime}
-      user={loaderData.user}
-    />
-  )
+  return <AppProviders buildTime={buildTime} user={loaderData.user} />
 }
 
 export default App

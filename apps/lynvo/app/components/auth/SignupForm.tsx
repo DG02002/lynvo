@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
-import { useLocation, useRouteLoaderData } from "react-router"
+import { useLocation } from "react-router"
 import { toast } from "sonner"
 import { Turnstile, type TurnstileHandle } from "~/components/turnstile"
 import { authCopy } from "~/features/auth/auth.copy"
@@ -25,10 +25,6 @@ import {
 
 export function SignupForm() {
   const location = useLocation()
-  const rootData = useRouteLoaderData("root") as
-    | { convexUrl?: string }
-    | undefined
-  const convexUrl = rootData?.convexUrl ?? ""
   const turnstileTokenRef = React.useRef<string | null>(null)
   if (turnstileTokenRef.current === null) {
     turnstileTokenRef.current = initialTurnstileToken()
@@ -61,7 +57,7 @@ export function SignupForm() {
           turnstileToken: turnstileTokenRef.current,
         })
         const result = await withTimeout(
-          signInWithConvexAuthHttp(convexUrl, "credentials", {
+          signInWithConvexAuthHttp("credentials", {
             flow: "signUp",
             username: value.username,
             password: value.password,

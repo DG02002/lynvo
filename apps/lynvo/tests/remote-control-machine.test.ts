@@ -16,6 +16,7 @@ const createHarness = ({
     disconnect: vi.fn(async () => undefined),
     send: vi.fn(async () => undefined),
     poll: vi.fn(async () => pollResponse),
+    acknowledge: vi.fn(async () => undefined),
   }
   const persistence = {
     load: vi.fn(() => ({
@@ -105,6 +106,21 @@ describe("remote-control machine", () => {
     expect(harness.transport.poll).toHaveBeenCalledTimes(1)
   })
 
+  it("classifies polling failures as delivery outcomes", async () => {
+    const harness = createHarness({ storedSessionId: "tv-1" })
+    const outcomes: RemoteControlOutcome[] = []
+    harness.machine.subscribeOutcomes((outcome) => outcomes.push(outcome))
+    harness.transport.poll.mockRejectedValueOnce(new Error("unauthorized"))
+    harness.machine.start()
+    harness.machine.setRealtimeStatus("disconnected")
+
+    harness.runInterval()
+
+    await vi.waitFor(() =>
+      expect(outcomes).toContainEqual({ type: "delivery-unavailable" })
+    )
+  })
+
   it("deduplicates replayed commands and rejects stale commands", async () => {
     const harness = createHarness()
     harness.machine.receiveCommand(
@@ -127,6 +143,38 @@ describe("remote-control machine", () => {
     harness.setNow(2_000_000)
     harness.machine.receiveCommand("play", null, 1_000_000, "stale")
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
+  })
+
+  it("applies realtime and durable delivery of one command only once", async () => {
+    const harness = createHarness()
+    harness.machine.receiveRealtime(
+      {
+        kind: "command",
+        id: "command-1",
+        command: "play",
+        payload: '{"url":"one"}',
+        createdAt: 1_000_000,
+        targetSessionId: "receiver-session",
+      },
+      "receiver-session"
+    )
+    harness.machine.acknowledgeCommand("command-1")
+    harness.setPollResponse({
+      commands: [
+        {
+          id: "command-1",
+          command: "play",
+          payload: '{"url":"one"}',
+          createdAt: 1_000_000,
+        },
+      ],
+    })
+
+    await harness.machine.poll()
+
+    expect(harness.machine.getSnapshot().lastCommand).toBeNull()
+    expect(harness.transport.acknowledge).toHaveBeenCalledOnce()
+    expect(harness.transport.acknowledge).toHaveBeenCalledWith("command-1")
   })
 
   it("supports legacy and partial polling payloads with identity-aware devices", async () => {

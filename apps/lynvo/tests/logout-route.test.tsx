@@ -3,14 +3,8 @@ import { createMemoryRouter, RouterProvider } from "react-router"
 import { vi } from "vitest"
 import Logout from "../app/features/auth/routes/_auth.logout"
 
-const signOut = vi.fn(async () => undefined)
-
-vi.mock("@convex-dev/auth/react", () => ({
-  useAuthActions: () => ({ signOut }),
-}))
-
 describe("logout route", () => {
-  it("revokes the Worker session before signing out of the legacy client", async () => {
+  it("revokes the Worker session", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(null, { status: 204 }))
@@ -25,7 +19,6 @@ describe("logout route", () => {
         method: "DELETE",
         credentials: "same-origin",
       })
-      expect(signOut).toHaveBeenCalledOnce()
     })
   })
 })

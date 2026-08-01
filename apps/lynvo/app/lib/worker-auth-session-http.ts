@@ -8,9 +8,4 @@ export const revokeWorkerSession = async (): Promise<void> => {
   }
 }
 
-export const signOutWithWorkerSession = async (
-  signOut: () => Promise<void>
-): Promise<void> => {
-  await revokeWorkerSession()
-  await signOut()
-}
+export const signOutWithWorkerSession = revokeWorkerSession

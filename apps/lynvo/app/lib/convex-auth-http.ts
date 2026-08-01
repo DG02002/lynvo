@@ -2,7 +2,6 @@ import { authSignInResponseSchema } from "./auth-http-schema"
 import { readApiResponseError } from "./api-errors"
 
 export async function signInWithConvexAuthHttp(
-  _convexUrl: string,
   provider: string,
   params: Record<string, string>
 ) {

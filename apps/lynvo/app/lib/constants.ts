@@ -1,4 +1,3 @@
-export const AUTH_JWT_COOKIE_NAME = "__convexAuthJWT_lynvo"
 export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
@@ -8,3 +7,4 @@ export const COOKIE_PREFERENCES_VERSION = 1
 export const OPEN_COOKIE_PREFERENCES_EVENT = "lynvo:open-cookie-preferences"
 export const DOCS_SCROLL_OFFSET_PX = 112
 export const DOCS_SCROLL_END_TOLERANCE_PX = 2
+export const TV_AUTH_STATUS_POLL_INTERVAL_MS = 2_000

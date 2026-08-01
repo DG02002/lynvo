@@ -17,6 +17,24 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.get("pollInbox", "/inbox", {
+      success: Schema.Struct({
+        commands: Schema.Array(
+          Schema.Struct({
+            id: Schema.String,
+            command: Schema.Literals(["play", "pause"]),
+            payload: Schema.String,
+            createdAt: Schema.Number,
+          })
+        ),
+      }),
+      error: [UnauthorizedApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.post("acknowledge", "/acknowledge", {
+      payload: Schema.Struct({ id: Schema.String }),
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })
   )
   .middleware(WebAuth)

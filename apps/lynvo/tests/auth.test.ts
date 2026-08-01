@@ -6,10 +6,7 @@ import {
   getCookieValue,
   normalizeReturnTo,
 } from "../app/lib/auth-cookie"
-import {
-  AUTH_JWT_COOKIE_NAME,
-  WORKER_SESSION_COOKIE_NAME,
-} from "../app/lib/constants"
+import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
 import {
   normalizeUsername,
   validatePassword,
@@ -92,10 +89,10 @@ describe("auth transaction helpers", () => {
   it("parses exact cookie names", () => {
     const request = new Request("https://lynvo.test", {
       headers: {
-        Cookie: `other=1; ${AUTH_JWT_COOKIE_NAME}=access%20token`,
+        Cookie: "other=1; exact-cookie=access%20token",
       },
     })
-    expect(getCookieValue(request, AUTH_JWT_COOKIE_NAME)).toBe("access token")
+    expect(getCookieValue(request, "exact-cookie")).toBe("access token")
   })
 })
 
@@ -118,7 +115,7 @@ describe("AuthSessionService", () => {
   it("does not authenticate from the legacy JWT cookie", async () => {
     const result = await runSession(
       new Request("https://lynvo.test", {
-        headers: { Cookie: `${AUTH_JWT_COOKIE_NAME}=valid-token` },
+        headers: { Cookie: "__convexAuthJWT_lynvo=valid-token" },
       }),
       Layer.succeed(
         ConvexService,

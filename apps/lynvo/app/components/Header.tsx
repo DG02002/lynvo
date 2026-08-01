@@ -1,5 +1,4 @@
 import { useRouteLoaderData, useNavigate } from "react-router"
-import { useAuthActions } from "@convex-dev/auth/react"
 import { LogoLink } from "~/components/logo"
 import { useState } from "react"
 import { GuestNavActions } from "./header/GuestNavActions"
@@ -9,7 +8,6 @@ import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
 
 export function Header() {
   const navigate = useNavigate()
-  const { signOut } = useAuthActions()
   const data = useRouteLoaderData("root") as
     | { user: { username: string } | null }
     | undefined
@@ -19,7 +17,7 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
-      await signOutWithWorkerSession(signOut)
+      await signOutWithWorkerSession()
       navigate("/", { viewTransition: true })
     } catch (error) {
       console.error("Logout failed:", error)

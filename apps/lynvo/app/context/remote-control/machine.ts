@@ -17,6 +17,13 @@ declare global {
     receivedAt: number
   }
 
+  interface PendingRemoteCommand {
+    id: string
+    command: "play" | "pause"
+    payload: string
+    createdAt: number
+  }
+
   interface RemoteControlMachineState {
     activeSessionId: string | null
     connectedDeviceName: string | null
@@ -34,6 +41,7 @@ declare global {
     controllerName?: string | null
     controllingDevices?: RemoteDevice[]
     activeTargets?: string[]
+    commands?: readonly PendingRemoteCommand[]
   }
 
   interface RemoteRealtimeEvent {
@@ -56,6 +64,7 @@ declare global {
       payload?: unknown
     ) => Promise<unknown>
     poll: () => Promise<RemotePollResponse>
+    acknowledge: (commandId: string) => Promise<unknown>
   }
 
   interface RemoteControlPersistence {
@@ -84,6 +93,7 @@ declare global {
       | "receiver-connected"
       | "receiver-ended"
       | "command-received"
+      | "delivery-unavailable"
     deviceName?: string
     command?: string
   }
@@ -205,10 +215,7 @@ export const createRemoteControlMachine = ({
       }
     }
     const commandId = commandFingerprint(command, payload, createdAt, id)
-    if (
-      processedCommands.has(commandId) ||
-      state.lastCommand?.id === commandId
-    ) {
+    if (processedCommands.has(commandId) || state.lastCommand !== null) {
       return false
     }
     publish({
@@ -366,6 +373,18 @@ export const createRemoteControlMachine = ({
         syncDevices([])
       }
       disconnectMissingTarget(data.activeTargets)
+      for (const command of data.commands ?? []) {
+        if (
+          receiveCommand(
+            command.command,
+            parsePayload(command.payload),
+            command.createdAt,
+            command.id
+          )
+        ) {
+          break
+        }
+      }
     },
     acknowledgeCommand: (commandId) => {
       if (state.lastCommand?.id !== commandId) {
@@ -373,6 +392,7 @@ export const createRemoteControlMachine = ({
       }
       processedCommands.set(commandId, clock.now())
       publish({ ...state, lastCommand: null })
+      void transport.acknowledge(commandId).catch(() => undefined)
     },
     start: () => {
       const intervalId = clock.setInterval(() => {
@@ -382,7 +402,9 @@ export const createRemoteControlMachine = ({
           state.controllingDevices.length > 0
         )
         if (state.realtimeStatus !== "connected" && isActive) {
-          void machine.poll().catch(() => undefined)
+          void machine
+            .poll()
+            .catch(() => publishOutcome({ type: "delivery-unavailable" }))
         }
       }, REMOTE_POLL_INTERVAL_MS)
       return () => clock.clearInterval(intervalId)

@@ -1,17 +1,18 @@
 import * as React from "react"
 import { QRCodeCanvas } from "qrcode.react"
-import { useRouteLoaderData } from "react-router"
-import { useQuery } from "convex/react"
+import { useQuery } from "@tanstack/react-query"
+import { Effect } from "effect"
 import { Spinner } from "~/components/ui/spinner"
 import { Button } from "~/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Refresh01Icon } from "@hugeicons/core-free-icons"
-import { api } from "../../../convex/_generated/api"
 import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import { createDeviceCode } from "./device-code"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { getBrowserDeviceName } from "~/lib/device-name"
+import { client } from "~/lib/effect/api/client"
+import { TV_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -78,10 +79,6 @@ const reduceTvSignInState = (
 }
 
 export function TvSignInQr() {
-  const rootData = useRouteLoaderData("root") as
-    | { convexUrl?: string }
-    | undefined
-  const convexUrl = rootData?.convexUrl ?? ""
   const [state, dispatch] = React.useReducer(
     reduceTvSignInState,
     INITIAL_TV_SIGN_IN_STATE
@@ -96,10 +93,17 @@ export function TvSignInQr() {
     isGenerating,
   } = state
   const codeRef = React.useRef<string | null>(null)
-  const status = useQuery(
-    api.tv.getStatus,
-    code && pollSecret ? { code, pollSecret } : "skip"
-  )
+  const { data: status } = useQuery({
+    queryKey: ["tv-auth-status", code, pollSecret],
+    queryFn: () =>
+      Effect.runPromise(
+        client.tv.status({
+          query: { code: code ?? "", pollSecret: pollSecret ?? "" },
+        })
+      ),
+    enabled: Boolean(code && pollSecret),
+    refetchInterval: TV_AUTH_STATUS_POLL_INTERVAL_MS,
+  })
   const hasExpired = useExpiryClock(expiresAt)
   const hasSignedInRef = React.useRef(false)
   const origin = React.useSyncExternalStore(
@@ -146,16 +150,12 @@ export function TvSignInQr() {
       hasSignedInRef.current = true
       const currentCode = codeRef.current
       void (async () => {
-        const result = await signInWithConvexAuthHttp(
-          convexUrl,
-          "credentials",
-          {
-            flow: "device",
-            code: currentCode,
-            pollSecret: pollSecret ?? "",
-            deviceName,
-          }
-        )
+        const result = await signInWithConvexAuthHttp("credentials", {
+          flow: "device",
+          code: currentCode,
+          pollSecret: pollSecret ?? "",
+          deviceName,
+        })
         if (!result.signingIn) {
           throw new Error(
             "This device couldn’t log in. Generate a new code, then try again."
@@ -172,7 +172,7 @@ export function TvSignInQr() {
         })
       })
     }
-  }, [convexUrl, deviceName, pollSecret, status])
+  }, [deviceName, pollSecret, status])
 
   let phase: Phase = "loading"
   if (hasError) {

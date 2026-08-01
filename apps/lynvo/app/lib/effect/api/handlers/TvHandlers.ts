@@ -8,6 +8,21 @@ import { api } from "../../../../../convex/_generated/api"
 
 export const TvHandlers = HttpApiBuilder.group(Api, "tv", (handlers) =>
   handlers
+    .handle("status", ({ query }) =>
+      Effect.gen(function* () {
+        const convex = yield* ConvexService
+        return yield* convex.query(api.tv.getStatus, query)
+      })
+    )
+    .handle("approval", ({ query }) =>
+      Effect.gen(function* () {
+        const convex = yield* ConvexService
+        const user = yield* CurrentUser
+        return yield* convex.query(api.tv.getCodeForApproval, query, {
+          accessToken: user.accessToken,
+        })
+      })
+    )
     .handle("authorize", ({ payload }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService

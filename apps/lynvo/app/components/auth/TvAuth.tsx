@@ -1,13 +1,12 @@
 import * as React from "react"
 import { Link } from "react-router"
-import { useQuery } from "convex/react"
+import { useQuery } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { Button } from "~/components/ui/button"
 import { toast } from "sonner"
 import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
-import { api } from "../../../convex/_generated/api"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { client } from "~/lib/effect/api/client"
@@ -21,10 +20,11 @@ export default function TvAuth({ user }: TvAuthProps) {
     typeof window !== "undefined" ? window.location.search : ""
   )
   const code = params.get("code") ?? ""
-  const codeRecord = useQuery(
-    api.tv.getCodeForApproval,
-    code.length === 8 ? { code } : "skip"
-  )
+  const { data: codeRecord } = useQuery({
+    queryKey: ["tv-auth-approval", code],
+    queryFn: () => Effect.runPromise(client.tv.approval({ query: { code } })),
+    enabled: code.length === 8,
+  })
   const hasExpired = useExpiryClock(codeRecord?.expiresAt)
   const canApprove = codeRecord?.status === "pending" && !hasExpired
   const [loading, setLoading] = React.useState(false)

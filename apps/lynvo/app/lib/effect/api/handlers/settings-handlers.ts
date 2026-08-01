@@ -11,6 +11,27 @@ export const SettingsHandlers = HttpApiBuilder.group(
   "settings",
   (handlers) =>
     handlers
+      .handle("touchActivity", ({ payload }) =>
+        Effect.gen(function* () {
+          const convex = yield* ConvexService
+          const user = yield* CurrentUser
+          yield* Effect.all([
+            convex.mutation(
+              api.users.touchActivity,
+              {},
+              {
+                accessToken: user.accessToken,
+              }
+            ),
+            convex.mutation(
+              api.users.setCurrentSessionDevice,
+              { deviceName: payload.deviceName },
+              { accessToken: user.accessToken }
+            ),
+          ])
+          return { success: true }
+        })
+      )
       .handle("getPlayerPreferences", () =>
         Effect.gen(function* () {
           const convex = yield* ConvexService

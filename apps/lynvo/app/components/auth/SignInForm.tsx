@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useForm } from "@tanstack/react-form"
-import { useLocation, useRouteLoaderData } from "react-router"
+import { useLocation } from "react-router"
 import { Button } from "~/components/ui/button"
 import { toast } from "sonner"
 import { Turnstile, type TurnstileHandle } from "~/components/turnstile"
@@ -26,10 +26,6 @@ import {
 
 export function SignInForm() {
   const location = useLocation()
-  const rootData = useRouteLoaderData("root") as
-    | { convexUrl?: string }
-    | undefined
-  const convexUrl = rootData?.convexUrl ?? ""
   const turnstileTokenRef = React.useRef<string | null>(null)
   if (turnstileTokenRef.current === null) {
     turnstileTokenRef.current = initialTurnstileToken()
@@ -60,17 +56,13 @@ export function SignInForm() {
           username: value.username,
           turnstileToken: turnstileTokenRef.current,
         })
-        const result = await signInWithConvexAuthHttp(
-          convexUrl,
-          "credentials",
-          {
-            flow: "signIn",
-            username: value.username,
-            password: value.password,
-            preflightToken,
-            deviceName: getBrowserDeviceName(),
-          }
-        )
+        const result = await signInWithConvexAuthHttp("credentials", {
+          flow: "signIn",
+          username: value.username,
+          password: value.password,
+          preflightToken,
+          deviceName: getBrowserDeviceName(),
+        })
         if (!result.signingIn) {
           throw new Error(
             "The username or password is incorrect. Check both fields, then try again."
