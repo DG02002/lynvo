@@ -148,7 +148,7 @@ export const touchUserActivity = async (
 ) => {
   const user = await ctx.db.get("users", userId)
   if (user && now - user.lastActiveAt > ACTIVITY_UPDATE_INTERVAL_MS) {
-    await assertStorageMutation(ctx, userId, user, {
+    await assertStorageMutation(ctx, userId, "profileBytes", user, {
       ...user,
       lastActiveAt: now,
     })

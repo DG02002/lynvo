@@ -23,6 +23,7 @@ import {
   DEFAULT_RETENTION_DAYS,
   MAX_RETENTION_DAYS,
   RECENT_LINK_LIMIT_BYTES,
+  RECENT_LINK_RETENTION_BATCH_SIZE,
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
@@ -112,7 +113,7 @@ export const updatePlayerPreferences = mutation({
     if (!user) {
       throw new Error("Authentication required")
     }
-    await assertStorageMutation(ctx, userId, user, {
+    await assertStorageMutation(ctx, userId, "profileBytes", user, {
       ...user,
       ...buildPlayerPreferencesPatch(args),
     })
@@ -137,15 +138,23 @@ export const updateStorageRetentionDays = mutation({
     let deletedLinks = 0
 
     if (args.deleteExpiredLinks) {
+      const now = Date.now()
       deletedLinks = await deleteExpiredRecentLinks(
         ctx,
         userId,
         retentionDays,
-        Date.now()
+        now
       )
+      if (deletedLinks === RECENT_LINK_RETENTION_BATCH_SIZE) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.links.cleanupExpiredRecentLinksForUser,
+          { userId, now }
+        )
+      }
     }
 
-    await assertStorageMutation(ctx, userId, user, {
+    await assertStorageMutation(ctx, userId, "profileBytes", user, {
       ...user,
       storageRetentionDays: retentionDays,
     })
@@ -187,7 +196,7 @@ export const clearRecentCards = mutation({
       .collect()
 
     for (const link of links) {
-      await recordStorageDeletion(ctx, userId, link)
+      await recordStorageDeletion(ctx, userId, "recentLinkBytes", link)
       await ctx.db.delete("links", link._id)
     }
 

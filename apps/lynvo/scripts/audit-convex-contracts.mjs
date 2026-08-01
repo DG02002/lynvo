@@ -33,6 +33,14 @@ const ownershipSource = readFileSync(
   join(CONVEX_DIRECTORY, "accountDataOwnership.ts"),
   "utf8"
 )
+const storageSource = readFileSync(
+  join(CONVEX_DIRECTORY, "storagePolicy.ts"),
+  "utf8"
+)
+const erasureSource = readFileSync(
+  join(CONVEX_DIRECTORY, "accountErasure.ts"),
+  "utf8"
+)
 const schemaTables = new Set(
   Array.from(
     schemaSource.matchAll(/^\s+(\w+): defineTable/gm),
@@ -41,6 +49,28 @@ const schemaTables = new Set(
 )
 const classifiedTables = new Set(
   Array.from(ownershipSource.matchAll(/"(\w+)"/g), (match) => match[1])
+)
+const erasedSection =
+  ownershipSource.match(/erased:\s*\[([\s\S]*?)\]/)?.[1] ?? ""
+const erasedTables = new Set(
+  Array.from(erasedSection.matchAll(/"(\w+)"/g), (match) => match[1])
+)
+const storageRegistrySection =
+  storageSource.match(
+    /STORAGE_DOMAIN_REGISTRY = \{([\s\S]*?)\} as const/
+  )?.[1] ?? ""
+const storageTables = new Set(
+  Array.from(
+    storageRegistrySection.matchAll(/^\s+(\w+):/gm),
+    (match) => match[1]
+  )
+)
+const erasureRegistrySection =
+  erasureSource.match(
+    /ACCOUNT_ERASURE_TABLES = \[([\s\S]*?)\] as const/
+  )?.[1] ?? ""
+const erasureTables = new Set(
+  Array.from(erasureRegistrySection.matchAll(/"(\w+)"/g), (match) => match[1])
 )
 
 for (const tableName of schemaTables) {
@@ -54,6 +84,33 @@ for (const tableName of classifiedTables) {
   if (!schemaTables.has(tableName)) {
     failures.push(
       `convex/accountDataOwnership.ts: unknown classified table ${tableName}`
+    )
+  }
+}
+
+for (const tableName of erasedTables) {
+  if (!storageTables.has(tableName)) {
+    failures.push(
+      `convex/storagePolicy.ts: unclassified erased table ${tableName}`
+    )
+  }
+  if (!erasureTables.has(tableName)) {
+    failures.push(
+      `convex/accountErasure.ts: uncovered erased table ${tableName}`
+    )
+  }
+}
+for (const tableName of storageTables) {
+  if (!erasedTables.has(tableName)) {
+    failures.push(
+      `convex/storagePolicy.ts: non-erased storage table ${tableName}`
+    )
+  }
+}
+for (const tableName of erasureTables) {
+  if (!erasedTables.has(tableName)) {
+    failures.push(
+      `convex/accountErasure.ts: non-erased coverage table ${tableName}`
     )
   }
 }

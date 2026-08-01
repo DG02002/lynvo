@@ -6,6 +6,23 @@ import { v } from "convex/values"
 import { releaseAccountCapacity } from "./accountCapacity"
 import { ACCOUNT_ERASURE_BATCH_SIZE } from "./constants"
 
+export const ACCOUNT_ERASURE_TABLES = [
+  "users",
+  "authSessions",
+  "authAccounts",
+  "authRefreshTokens",
+  "authVerificationCodes",
+  "authVerifiers",
+  "links",
+  "userStorageLedgers",
+  "userPluginServers",
+  "userPluginDomains",
+  "userPluginCredentials",
+  "usageCounters",
+  "deviceCodes",
+  "remoteCommands",
+] as const
+
 declare global {
   interface AccountErasureBatch<Document> {
     read: () => Promise<Document[]>

@@ -7,6 +7,7 @@ import {
   CLEANUP_USER_PAGE_SIZE,
   DAY_MS,
   RECENT_LINKS_MAX_COUNT,
+  RECENT_LINK_RETENTION_BATCH_SIZE,
 } from "../convex/constants"
 import {
   calculateAppOwnedStorageUsage,
@@ -360,6 +361,20 @@ describe("bounded lifecycle cleanup", () => {
           createdAt: now - 8 * DAY_MS,
           updatedAt: now - 8 * DAY_MS,
         })
+        if (user === users[0]) {
+          for (
+            let linkIndex = 0;
+            linkIndex < RECENT_LINK_RETENTION_BATCH_SIZE + 5;
+            linkIndex += 1
+          ) {
+            await context.db.insert("links", {
+              userId: user.userId,
+              url: `https://${user.userId}.example/expired-${linkIndex}`,
+              createdAt: now - 8 * DAY_MS,
+              updatedAt: now - 8 * DAY_MS,
+            })
+          }
+        }
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://${user.userId}.example/live`,

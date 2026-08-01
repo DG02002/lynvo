@@ -130,7 +130,13 @@ export const createPending = mutation({
       createdAt: now,
       updatedAt: now,
     }
-    await assertStorageMutation(ctx, userId, undefined, newDoc)
+    await assertStorageMutation(
+      ctx,
+      userId,
+      "pluginServerBytes",
+      undefined,
+      newDoc
+    )
     return await ctx.db.insert("userPluginServers", newDoc)
   },
 })
@@ -164,7 +170,13 @@ export const finalizeEncryptedCredential = mutation({
       credentialStatus: "ready" as const,
       updatedAt: Date.now(),
     }
-    await assertStorageMutation(ctx, userId, existing, nextDoc)
+    await assertStorageMutation(
+      ctx,
+      userId,
+      "pluginServerBytes",
+      existing,
+      nextDoc
+    )
     await ctx.db.patch("userPluginServers", existing._id, {
       ...credential,
       credentialStatus: "ready",
@@ -203,7 +215,13 @@ export const update = mutation({
       ...updates,
       updatedAt: Date.now(),
     }
-    await assertStorageMutation(ctx, userId, existing, nextDoc)
+    await assertStorageMutation(
+      ctx,
+      userId,
+      "pluginServerBytes",
+      existing,
+      nextDoc
+    )
     await ctx.db.patch("userPluginServers", existing._id, {
       ...updates,
       updatedAt: nextDoc.updatedAt,
@@ -228,7 +246,7 @@ export const deleteById = mutation({
       throw new Error("Plugin server not found or no longer available")
     }
 
-    await recordStorageDeletion(ctx, userId, existing)
+    await recordStorageDeletion(ctx, userId, "pluginServerBytes", existing)
     await ctx.db.delete("userPluginServers", existing._id)
     return { success: true }
   },

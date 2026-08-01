@@ -81,6 +81,7 @@ const replaceCredential = async (
   await assertStorageMutation(
     ctx,
     userId,
+    "pluginCredentialBytes",
     existingCredential,
     credentialDocument
   )
@@ -123,7 +124,13 @@ export const upsertPluginDomain = async (
       domain,
       pluginId: input.pluginId,
     }
-    await assertStorageMutation(ctx, userId, undefined, pluginDomainDocument)
+    await assertStorageMutation(
+      ctx,
+      userId,
+      "pluginDomainBytes",
+      undefined,
+      pluginDomainDocument
+    )
     const pluginDomainId = await ctx.db.insert(
       "userPluginDomains",
       pluginDomainDocument
@@ -141,14 +148,25 @@ export const upsertPluginDomain = async (
   const existingCredential = await getCredential(ctx, existingDomain._id)
   const isReassignment = existingDomain.pluginId !== input.pluginId
   const nextDomain = { ...existingDomain, pluginId: input.pluginId, domain }
-  await assertStorageMutation(ctx, userId, existingDomain, nextDomain)
+  await assertStorageMutation(
+    ctx,
+    userId,
+    "pluginDomainBytes",
+    existingDomain,
+    nextDomain
+  )
   await ctx.db.patch("userPluginDomains", existingDomain._id, {
     pluginId: input.pluginId,
     domain,
   })
 
   if (isReassignment && existingCredential) {
-    await recordStorageDeletion(ctx, userId, existingCredential)
+    await recordStorageDeletion(
+      ctx,
+      userId,
+      "pluginCredentialBytes",
+      existingCredential
+    )
     await ctx.db.delete("userPluginCredentials", existingCredential._id)
   }
   if (input.credential) {
@@ -196,7 +214,12 @@ export const deletePluginCredential = async (
   )
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
-    await recordStorageDeletion(ctx, userId, credential)
+    await recordStorageDeletion(
+      ctx,
+      userId,
+      "pluginCredentialBytes",
+      credential
+    )
     await ctx.db.delete("userPluginCredentials", credential._id)
   }
 }
@@ -213,9 +236,14 @@ export const deletePluginDomain = async (
   )
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
-    await recordStorageDeletion(ctx, userId, credential)
+    await recordStorageDeletion(
+      ctx,
+      userId,
+      "pluginCredentialBytes",
+      credential
+    )
     await ctx.db.delete("userPluginCredentials", credential._id)
   }
-  await recordStorageDeletion(ctx, userId, pluginDomain)
+  await recordStorageDeletion(ctx, userId, "pluginDomainBytes", pluginDomain)
   await ctx.db.delete("userPluginDomains", pluginDomain._id)
 }
