@@ -30,7 +30,7 @@ vi.mock("convex/browser", () => ({
 }))
 
 describe("Worker sign-in session HTTP behavior", () => {
-  it("adds an opaque HttpOnly session while preserving the legacy client during widening", async () => {
+  it("returns only browser-safe state after creating an opaque HttpOnly session", async () => {
     const storedSessions: Array<unknown> = []
     const { default: worker } = await import("../workers/app")
     const response = await worker.fetch(
@@ -68,7 +68,7 @@ describe("Worker sign-in session HTTP behavior", () => {
     expect(cookie).toContain("SameSite=Lax")
     expect(cookie).not.toContain("convex-access-token")
     expect(cookie).not.toContain("convex-refresh-token")
-    await expect(response.json()).resolves.toEqual(signInResult)
+    await expect(response.json()).resolves.toEqual({ signingIn: true })
   })
 
   it("revokes an opaque session and expires its cookie", async () => {

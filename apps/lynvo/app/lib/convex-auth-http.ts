@@ -1,9 +1,5 @@
-import { cookieSyncedAuthStorage } from "./convex-auth-storage"
 import { authSignInResponseSchema } from "./auth-http-schema"
 import { readApiResponseError } from "./api-errors"
-
-const jwtStorageKey = "__convexAuthJWT_lynvo"
-const refreshTokenStorageKey = "__convexAuthRefreshToken_lynvo"
 
 export async function signInWithConvexAuthHttp(
   _convexUrl: string,
@@ -25,16 +21,8 @@ export async function signInWithConvexAuthHttp(
     throw new Error("Authentication returned an invalid response")
   }
   const result = parsed.data
-  if (result.tokens) {
-    cookieSyncedAuthStorage.setItem(jwtStorageKey, result.tokens.token)
-    cookieSyncedAuthStorage.setItem(
-      refreshTokenStorageKey,
-      result.tokens.refreshToken
-    )
-  }
-
   return {
-    signingIn: result.signingIn ?? Boolean(result.tokens),
+    signingIn: result.signingIn ?? false,
     redirect: result.redirect ? new URL(result.redirect) : undefined,
     started: result.started,
   }

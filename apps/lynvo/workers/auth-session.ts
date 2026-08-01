@@ -50,13 +50,52 @@ export interface AuthSessionExpired {
   readonly kind: "expired"
 }
 
+export interface AuthSessionRevokedOrMissing {
+  readonly kind: "revoked_or_missing"
+}
+
+export interface AuthSessionInvalid {
+  readonly kind: "invalid"
+}
+
+export interface RotateAuthSessionTokens {
+  readonly accessToken: string
+  readonly refreshToken: string
+}
+
+export interface RotateAuthSessionInput {
+  readonly sessionId: string
+  readonly refresh: (
+    refreshToken: string
+  ) => Promise<RotateAuthSessionTokens | undefined>
+}
+
+export interface AuthSessionRotated {
+  readonly kind: "rotated"
+}
+
 export interface AuthSessionModule {
   readonly create: (
     input: CreateAuthSessionInput
   ) => Promise<AuthSessionCreated | AuthSessionUnavailable>
   readonly read: (
     sessionId: string
-  ) => Promise<AuthSessionActive | AuthSessionExpired | AuthSessionUnavailable>
+  ) => Promise<
+    | AuthSessionActive
+    | AuthSessionExpired
+    | AuthSessionRevokedOrMissing
+    | AuthSessionInvalid
+    | AuthSessionUnavailable
+  >
+  readonly rotate: (
+    input: RotateAuthSessionInput
+  ) => Promise<
+    | AuthSessionRotated
+    | AuthSessionExpired
+    | AuthSessionRevokedOrMissing
+    | AuthSessionInvalid
+    | AuthSessionUnavailable
+  >
   readonly revoke: (
     sessionId: string
   ) => Promise<AuthSessionRevoked | AuthSessionUnavailable>
@@ -134,11 +173,46 @@ export const createAuthSessionModule = (
       if (response.status === 401) {
         return { kind: "expired" }
       }
+      if (response.status === 404) {
+        return { kind: "revoked_or_missing" }
+      }
+      if (response.status === 422) {
+        return { kind: "invalid" }
+      }
       if (!response.ok) {
         return { kind: "unavailable" }
       }
       const session = parseAuthSessionState(await response.json())
-      return session ? { kind: "active", session } : { kind: "unavailable" }
+      return session ? { kind: "active", session } : { kind: "invalid" }
+    } catch {
+      return { kind: "unavailable" }
+    }
+  },
+  rotate: async (input) => {
+    const current = await createAuthSessionModule(namespace).read(
+      input.sessionId
+    )
+    if (current.kind !== "active") {
+      return current
+    }
+    try {
+      const tokens = await input.refresh(current.session.refreshToken)
+      if (!tokens) {
+        return { kind: "invalid" }
+      }
+      const response = await namespace
+        .getByName(input.sessionId)
+        .fetch("https://session.internal/session", {
+          method: "POST",
+          body: JSON.stringify({
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            createdAt: current.session.createdAt,
+            expiresAt: current.session.expiresAt,
+            idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+          }),
+        })
+      return response.ok ? { kind: "rotated" } : { kind: "unavailable" }
     } catch {
       return { kind: "unavailable" }
     }

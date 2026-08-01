@@ -115,7 +115,7 @@ describe("AuthSessionService", () => {
     expect(result).toEqual({ user: null })
   })
 
-  it("maps an authenticated Convex Auth session", async () => {
+  it("does not authenticate from the legacy JWT cookie", async () => {
     const result = await runSession(
       new Request("https://lynvo.test", {
         headers: { Cookie: `${AUTH_JWT_COOKIE_NAME}=valid-token` },
@@ -124,22 +124,12 @@ describe("AuthSessionService", () => {
         ConvexService,
         ConvexService.of({
           action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: () =>
-            Effect.succeed({
-              id: "users:123",
-              username: "darshan",
-              sessionId: "authSessions:456",
-            }),
+          query: () => Effect.die(new Error("Unexpected Convex query")),
           mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
         })
       )
     )
-    expect(result.user).toEqual({
-      id: "users:123",
-      username: "darshan",
-      sid: "authSessions:456",
-    })
-    expect(result.accessToken).toBe("valid-token")
+    expect(result).toEqual({ user: null })
   })
 
   it("resolves an opaque Worker session without exposing the refresh token", async () => {

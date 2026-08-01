@@ -113,7 +113,52 @@ describe("Auth Session module", () => {
       kind: "expired",
     })
     await expect(malformed.read("opaque-session-id")).resolves.toEqual({
-      kind: "unavailable",
+      kind: "invalid",
+    })
+  })
+
+  it("rotates tokens while preserving the absolute session lifetime", async () => {
+    const requests: Array<{ method: string; payload?: unknown }> = []
+    const authSession = createAuthSessionModule({
+      getByName: () => ({
+        fetch: async (_url: string, init?: RequestInit) => {
+          requests.push({
+            method: init?.method ?? "GET",
+            payload: init?.body ? JSON.parse(String(init.body)) : undefined,
+          })
+          return init?.method === "POST"
+            ? new Response(null, { status: 204 })
+            : Response.json({
+                accessToken: "old-access-token",
+                refreshToken: "old-refresh-token",
+                createdAt: 1_000,
+                expiresAt: 20_000,
+              })
+        },
+      }),
+    })
+
+    await expect(
+      authSession.rotate({
+        sessionId: "opaque-session-id",
+        refresh: async (refreshToken) => {
+          expect(refreshToken).toBe("old-refresh-token")
+          return {
+            accessToken: "new-access-token",
+            refreshToken: "new-refresh-token",
+          }
+        },
+      })
+    ).resolves.toEqual({ kind: "rotated" })
+    expect(requests[1]).toEqual({
+      method: "POST",
+      payload: {
+        accessToken: "new-access-token",
+        refreshToken: "new-refresh-token",
+        createdAt: 1_000,
+        expiresAt: 20_000,
+        idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+      },
     })
   })
 })

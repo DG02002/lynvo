@@ -17,7 +17,6 @@ import { createApiErrorResponse } from "../app/lib/api-errors"
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
 import { getCookieValue } from "../app/lib/auth-cookie"
 import { createAuthSessionModule } from "./auth-session"
-import { SESSION_IDLE_TIMEOUT_MS } from "./constants"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
   authPreflightRequestSchema,
@@ -520,7 +519,7 @@ app.post("/api/auth/sign-in", async (context) => {
         has_tokens: true,
         worker_session_created: true,
       })
-      return context.json(result)
+      return context.json({ signingIn: true })
     }
     addRequestContext(context, {
       auth_flow: flow,
@@ -604,11 +603,28 @@ app.post("/api/auth/session/refresh", async (context) => {
       401
     )
   }
-  const sessionStub = context.env.WORKER_AUTH_SESSION.getByName(sessionId)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   try {
-    const sessionResult = await authSession.read(sessionId)
-    if (sessionResult.kind === "expired") {
+    const sessionResult = await authSession.rotate({
+      sessionId,
+      refresh: async (refreshToken) => {
+        const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+        const refreshed = refreshedAuthTokensSchema.parse(
+          await client.action(api.auth.signIn, { refreshToken })
+        )
+        return refreshed.tokens
+          ? {
+              accessToken: refreshed.tokens.token,
+              refreshToken: refreshed.tokens.refreshToken,
+            }
+          : undefined
+      },
+    })
+    if (
+      sessionResult.kind === "expired" ||
+      sessionResult.kind === "revoked_or_missing" ||
+      sessionResult.kind === "invalid"
+    ) {
       return context.json(
         requestApiError(context, {
           code: "invalid_credentials",
@@ -618,34 +634,8 @@ app.post("/api/auth/session/refresh", async (context) => {
         401
       )
     }
-    if (sessionResult.kind === "unavailable") {
-      throw new Error("Session read failed")
-    }
-    const session = sessionResult.session
-    const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-    const refreshed = refreshedAuthTokensSchema.parse(
-      await client.action(api.auth.signIn, {
-        refreshToken: session.refreshToken,
-      })
-    )
-    if (!refreshed.tokens) {
-      throw new Error("Session refresh returned no tokens")
-    }
-    const replaceResponse = await sessionStub.fetch(
-      "https://session.internal/session",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          accessToken: refreshed.tokens.token,
-          refreshToken: refreshed.tokens.refreshToken,
-          createdAt: session.createdAt,
-          expiresAt: session.expiresAt,
-          idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
-        }),
-      }
-    )
-    if (!replaceResponse.ok) {
-      throw new Error("Session token replacement failed")
+    if (sessionResult.kind !== "rotated") {
+      throw new Error("Session rotation failed")
     }
     return context.body(null, 204)
   } catch {

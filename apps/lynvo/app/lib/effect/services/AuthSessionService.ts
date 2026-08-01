@@ -1,10 +1,7 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
 import { api } from "../../../../convex/_generated/api"
-import {
-  AUTH_JWT_COOKIE_NAME,
-  WORKER_SESSION_COOKIE_NAME,
-} from "../../constants"
+import { WORKER_SESSION_COOKIE_NAME } from "../../constants"
 import { getCookieValue } from "../../auth-cookie"
 import { CloudflareEnv } from "./CloudflareEnv"
 import { createAuthSessionModule } from "../../../../workers/auth-session"
@@ -54,8 +51,7 @@ export class AuthSessionService extends Context.Service<
               catch: () => undefined,
             }).pipe(Effect.catch(() => Effect.succeed(undefined)))
           : undefined
-        const accessToken =
-          workerAccessToken ?? getCookieValue(request, AUTH_JWT_COOKIE_NAME)
+        const accessToken = workerAccessToken
         if (!accessToken) {
           return { user: null }
         }

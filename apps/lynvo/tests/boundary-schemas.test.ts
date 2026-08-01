@@ -136,15 +136,16 @@ describe("HTTP and realtime boundaries", () => {
     ).toBe(false)
   })
 
-  it("requires complete token pairs in auth responses", () => {
+  it("rejects tokens in browser auth responses", () => {
     expect(
       authSignInResponseSchema.safeParse({
-        tokens: { token: "access", refreshToken: "refresh" },
+        signingIn: true,
       }).success
     ).toBe(true)
     expect(
       authSignInResponseSchema.safeParse({
-        tokens: { token: "access" },
+        signingIn: true,
+        tokens: { token: "access", refreshToken: "refresh" },
       }).success
     ).toBe(false)
   })

@@ -99,7 +99,7 @@ describe("Worker authentication session HTTP behavior", () => {
           new Request("https://session.internal/session?nowMs=1500")
         )
       ).status
-    ).toBe(401)
+    ).toBe(404)
   })
 
   it("fails closed when session encryption is unavailable", async () => {

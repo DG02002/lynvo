@@ -154,15 +154,15 @@ export class WorkerAuthSession implements DurableObject {
         await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
       const nowParameter = url.searchParams.get("nowMs")
       const nowMs = nowParameter ? Number(nowParameter) : Date.now()
+      if (!storedSession) {
+        return new Response(null, { status: 404 })
+      }
       if (
-        !storedSession ||
         !Number.isFinite(nowMs) ||
         nowMs >= storedSession.expiresAt ||
         nowMs >= storedSession.idleExpiresAt
       ) {
-        if (storedSession) {
-          await this.state.storage.delete(SESSION_STORAGE_KEY)
-        }
+        await this.state.storage.delete(SESSION_STORAGE_KEY)
         return new Response(null, { status: 401 })
       }
       const masterKey = await this.getMasterKey()
@@ -188,7 +188,7 @@ export class WorkerAuthSession implements DurableObject {
           typeof tokens.accessToken !== "string" ||
           typeof tokens.refreshToken !== "string"
         ) {
-          return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+          return new Response(null, { status: 422 })
         }
         await this.state.storage.put(SESSION_STORAGE_KEY, {
           ...storedSession,
@@ -204,7 +204,7 @@ export class WorkerAuthSession implements DurableObject {
           expiresAt: storedSession.expiresAt,
         } satisfies SessionPayload)
       } catch {
-        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+        return new Response(null, { status: 422 })
       }
     }
     return new Response(null, { status: 405 })
