@@ -1,11 +1,11 @@
-import { lynvoPluginCatalogSchema } from "./schemas"
+import { lynvoPluginCatalogSchema } from "./schemas.js"
 import type {
   ExtractRequest,
   LynvoManifestExtension,
   PluginMetadata,
   PluginServerManifest,
   PluginServerMatcher,
-} from "./models"
+} from "./models.js"
 
 const patternToExpression = (
   pattern: string,

@@ -1,11 +1,11 @@
 import { z } from "zod"
-import { ERROR_CODES } from "./models"
+import { ERROR_CODES } from "./models.js"
 import type {
   GroupNode,
   MediaNode,
   PlayableNode,
   ResolvableNode,
-} from "./models"
+} from "./models.js"
 
 export const pluginServerMatcherSchema = z.object({
   hosts: z.array(z.string()).min(1),

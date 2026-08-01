@@ -1,6 +1,6 @@
-export * from "./models"
-export * from "./schemas"
-export * from "./fixtures"
+export * from "./models.js"
+export * from "./schemas.js"
+export * from "./fixtures.js"
 export {
   applyHttpBasicAuth,
   createNodeExtractRequest,
@@ -8,14 +8,14 @@ export {
   createSourceExtractRequest,
   extractHttpBasicAuth,
   isErrorCode,
-} from "./requests"
+} from "./requests.js"
 export {
   getExtractTargetUrl,
   getLynvoManifestExtension,
   getMatchedPlugin,
   matchPluginServerUrl,
   parseLynvoManifestExtension,
-} from "./matching"
+} from "./matching.js"
 export {
   parseExtractSuccessContract,
   parsePluginServerManifestContract,
@@ -23,5 +23,5 @@ export {
   validateExtractSuccessContract,
   validatePluginServerManifestContract,
   validateUsageContract,
-} from "./contracts"
-export { createPluginServerRuntime } from "./runtime"
+} from "./contracts.js"
+export { createPluginServerRuntime } from "./runtime.js"

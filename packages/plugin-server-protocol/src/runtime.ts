@@ -2,20 +2,20 @@ import {
   discoverRequestSchema,
   discoverResponseSchema,
   extractRequestSchema,
-} from "./schemas"
+} from "./schemas.js"
 import {
   parseExtractSuccessContract,
   parsePluginServerManifestContract,
   parseUsageResponseContract,
-} from "./contracts"
-import { createProtocolError } from "./requests"
-import { getExtractTargetUrl, matchPluginServerUrl } from "./matching"
+} from "./contracts.js"
+import { createProtocolError } from "./requests.js"
+import { getExtractTargetUrl, matchPluginServerUrl } from "./matching.js"
 import type {
   PluginServerManifest,
   PluginServerRuntime,
   PluginServerRuntimeOptions,
   VerifySuccessResponse,
-} from "./models"
+} from "./models.js"
 
 const jsonResponse = (value: unknown, status = 200): Response =>
   Response.json(value, { status })

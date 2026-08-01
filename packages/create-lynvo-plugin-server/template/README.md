@@ -1,0 +1,53 @@
+# **PROJECT_DISPLAY_NAME**
+
+A standalone Cloudflare Worker for a Lynvo-compatible Custom Plugin Server.
+
+This generated project owns the source-specific matcher, extraction logic,
+usage accounting, secrets, and deployment. Lynvo owns the protocol contract,
+registration, credential storage, response validation, and playback behavior.
+
+## Start locally
+
+Install dependencies and create a local secret file:
+
+```sh
+pnpm install
+cp .dev.vars.example .dev.vars
+```
+
+Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars` to a local-only value, then
+run the quality gates:
+
+```sh
+pnpm check
+pnpm test
+pnpm build
+pnpm dev
+```
+
+Deploy after configuring your Cloudflare account:
+
+```sh
+pnpm wrangler login
+pnpm deploy
+```
+
+Register the deployed Worker URL and the same bearer secret in Lynvo. Never
+send the secret to a browser or commit `.dev.vars`.
+
+## Customize the example
+
+Replace the example matcher in `src/index.ts` and the implementation in
+`src/plugins/example.ts`. Keep every lazy node resolvable by this same Worker.
+Use the shared runtime for `/manifest`, `/verify`, `/usage`, and `/extract`
+instead of copying protocol validation into local route handlers.
+
+## Protocol references
+
+- [Protocol specification](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/spec.md)
+- [Plugin Server author guide](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/author-guide.md)
+- [Compatibility checklist](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/compatibility-checklist.md)
+
+The generated project uses `@lynvo/plugin-server-protocol` version
+`__LYNVO_PROTOCOL_VERSION__`. Keep it on a compatible protocol version when
+upgrading the Worker.

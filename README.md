@@ -21,6 +21,21 @@ every Plugin Server the same request, response, metadata, and error contract.
 
 Direct links remain inside Lynvo and use the final Direct Media Adapter fallback.
 
+Create an independent Lynvo-compatible Plugin Server with the public starter:
+
+```sh
+pnpm create lynvo-plugin-server@latest my-plugin-server
+cd my-plugin-server
+pnpm test
+pnpm build
+```
+
+The generated Worker owns source-specific extraction and deployment. The
+versioned [`@lynvo/plugin-server-protocol`](packages/plugin-server-protocol/README.md)
+package owns the shared wire contract. See the [Plugin Server development and
+release guide](docs/plugin-server-development.md) for standalone setup,
+versioning, external compatibility, and troubleshooting.
+
 ## Privacy and trust
 
 Plugin Domain credentials are encrypted and used only on the server for the
@@ -32,5 +47,6 @@ resolution without persisting extraction credentials.
 
 - [Contributing and operating Lynvo](CONTRIBUTING.md)
 - [Plugin Server Protocol](packages/plugin-server-protocol/README.md)
+- [Plugin Server development and release](docs/plugin-server-development.md)
 - [Usage-limit policy](docs/usage-limits.md)
 - [Project terminology](CONTEXT.md)

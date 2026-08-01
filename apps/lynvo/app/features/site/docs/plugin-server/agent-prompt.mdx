@@ -37,8 +37,9 @@ handlers. Build a reusable Plugin Server shell where developers can add Plugins
 later.
 
 Implement Lynvo Custom Plugin Server protocol version 1.0 over HTTPS and JSON.
-The private @lynvo/plugin-server-protocol package is not available outside the
-Lynvo monorepo, so define and test the required schemas locally.
+Use the published @lynvo/plugin-server-protocol package for the shared
+schemas, contract parsers, and runtime route helper. Do not copy the Lynvo
+application or use a workspace or local-link dependency.
 
 Create these required endpoints:
 - GET /manifest: public

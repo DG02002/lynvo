@@ -4,8 +4,8 @@ import type {
   ExtractRequest,
   ExtractedHttpBasicAuth,
   HttpBasicAuth,
-} from "./models"
-import { ERROR_CODES } from "./models"
+} from "./models.js"
+import { ERROR_CODES } from "./models.js"
 
 export const createProtocolError = (
   code: ErrorCode,

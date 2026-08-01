@@ -1,6 +1,6 @@
 # @lynvo/plugin-server-protocol
 
-Shared protocol package for Lynvo-compatible Custom Plugin Servers.
+Public protocol package for Lynvo-compatible Custom Plugin Servers.
 
 It provides:
 
@@ -13,7 +13,33 @@ It provides:
 - canonical contract parsers and diagnostic validation helpers
 - mandatory finite usage schemas and authenticated runtime handling
 
-Custom Plugin Servers in this workspace can import this local package instead of copying Lynvo schemas. It is private and does not require npm publishing.
+The package is the canonical versioned contract for standalone Plugin Servers.
+It is framework-agnostic and can run in Cloudflare Workers or another runtime
+that provides the web platform APIs used by the runtime helper.
+
+For the fastest standalone setup, use the published starter:
+
+```sh
+pnpm create lynvo-plugin-server@latest my-plugin-server
+```
+
+Inside the Lynvo monorepo, keep using the workspace protocol so local changes
+are tested together:
+
+```json
+{
+  "@lynvo/plugin-server-protocol": "workspace:*"
+}
+```
+
+Outside the monorepo, install a published semver version instead:
+
+```sh
+pnpm add @lynvo/plugin-server-protocol
+```
+
+Do not use `workspace:`, `link:`, or a relative Lynvo path in a standalone
+Plugin Server.
 
 Documentation:
 
@@ -22,8 +48,14 @@ Documentation:
 - [Compatibility checklist](docs/compatibility-checklist.md)
 - [Metadata flow](docs/metadata-flow.md)
 
-See [`examples/plugin-server`](../../examples/plugin-server/) for the
-minimal tested workspace implementation.
+See [`examples/plugin-server`](https://github.com/DG02002/lynvo/tree/main/examples/plugin-server)
+for the minimal tested workspace implementation, or inspect the canonical
+starter template in [`create-lynvo-plugin-server`](https://github.com/DG02002/lynvo/tree/main/packages/create-lynvo-plugin-server/template).
+
+The package follows semver for its JavaScript API. Protocol compatibility is
+declared separately by the manifest's `protocolVersion` field; the current
+protocol is v1 (`"1.0"`). Keep the protocol package and the manifest version
+compatible when upgrading a deployed Worker.
 
 Contract helpers:
 

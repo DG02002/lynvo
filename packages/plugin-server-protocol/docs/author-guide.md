@@ -8,11 +8,21 @@ The recommended stack is:
 
 - Cloudflare Workers
 - Hono
-- the local `@lynvo/plugin-server-protocol` contract package
+- the published `@lynvo/plugin-server-protocol` contract package
 
 The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@lynvo/plugin-server-protocol` package; Plugin Servers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another Plugin Server.
 
-Start with:
+Start with the generator when creating a standalone Worker:
+
+```sh
+pnpm create lynvo-plugin-server@latest my-plugin-server
+```
+
+The generator creates the Worker, Hono route wiring, contract tests, and
+Wrangler configuration. It installs the published protocol package rather
+than requiring a Lynvo checkout.
+
+Then read:
 
 - `compatibility-checklist.md` for the compatibility rules Lynvo expects.
 - `examples/plugin-server/` for the workspace example.
@@ -77,11 +87,17 @@ Do not define a local protocol schema unless you are writing an adapter around `
 
 ## Protocol Package
 
-In this repository, use the local protocol package:
+Choose the dependency source based on where the Plugin Server lives:
 
 Inside this monorepo, declare `"@lynvo/plugin-server-protocol": "workspace:*"`.
-For a standalone repository, consume a published package version or package
-tarball; do not use a workspace reference outside this workspace.
+For a standalone repository, install a published version or package tarball:
+
+```sh
+pnpm add @lynvo/plugin-server-protocol
+```
+
+Do not use a `workspace:`, `link:`, or relative Lynvo path outside the
+monorepo. The package's public entry point resolves to built `dist` files.
 
 Use it for:
 
@@ -92,7 +108,9 @@ Use it for:
 - testing routing with `matchPluginServerUrl`
 - returning nodes with the exported `MediaNode` shapes
 
-This keeps the Plugin Server’s public interface small and stable. This does not require publishing to npm. Your Plugin Server can have as much Source-specific implementation as it needs behind that interface, but Lynvo should only see the protocol.
+This keeps the Plugin Server’s public interface small and stable. Your Plugin
+Server can have as much Source-specific implementation as it needs behind that
+interface, but Lynvo should only see the protocol.
 
 ## Suggested Runtime Configuration
 

@@ -1,25 +1,52 @@
 {
   "name": "@lynvo/plugin-server-protocol",
   "version": "0.1.0",
-  "private": true,
   "description": "Lynvo Custom Plugin Server protocol schemas, runtime helpers, and metadata utilities.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DG02002/lynvo.git",
+    "directory": "packages/plugin-server-protocol"
+  },
+  "homepage": "https://github.com/DG02002/lynvo/tree/main/packages/plugin-server-protocol",
+  "bugs": {
+    "url": "https://github.com/DG02002/lynvo/issues"
+  },
+  "keywords": [
+    "lynvo",
+    "plugin-server",
+    "cloudflare-workers",
+    "hono",
+    "protocol"
+  ],
   "files": [
     "dist",
     "docs",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "pnpm run typecheck && pnpm run test",
+    "prepack": "pnpm run release:check",
+    "release:check": "pnpm run build && node scripts/release-check.mjs",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -2,8 +2,8 @@ import {
   extractSuccessSchema,
   pluginServerManifestSchema,
   usageResponseSchema,
-} from "./schemas"
-import { getLynvoManifestExtension } from "./matching"
+} from "./schemas.js"
+import { getLynvoManifestExtension } from "./matching.js"
 import type {
   ContractIssue,
   ContractParseResult,
@@ -11,7 +11,7 @@ import type {
   ExtractSuccessResponse,
   PluginServerManifest,
   UsageResponse,
-} from "./models"
+} from "./models.js"
 
 const issue = (path: string, message: string): ContractIssue => ({
   path,

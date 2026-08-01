@@ -1,0 +1,2 @@
+# Copy this file to .dev.vars and set a local-only secret before running pnpm dev.
+LYNVO_PLUGIN_SERVER_API_KEY=

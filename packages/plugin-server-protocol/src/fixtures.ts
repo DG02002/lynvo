@@ -3,7 +3,7 @@ import type {
   ExtractSuccessResponse,
   PluginServerManifest,
   UsageResponse,
-} from "./models"
+} from "./models.js"
 
 export const validPluginServerManifestFixture: PluginServerManifest = {
   protocolVersion: "1.0",

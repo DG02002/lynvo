@@ -9,23 +9,24 @@ contentType: Tutorial
 
 ## Create a Hono Cloudflare Worker
 
-Create a Worker-first Hono project. A Plugin Server does not need a React frontend.
+Create a Worker-first Hono project with the canonical Lynvo starter. A Plugin
+Server does not need a React frontend.
 
 <CodeBlock label="Terminal">
 
 ```sh
-pnpm create hono@latest my-lynvo-plugin-server \
-  --template cloudflare-workers \
-  --install \
-  --pm pnpm
+pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
 
 cd my-lynvo-plugin-server
-pnpm add zod
+pnpm test
+pnpm build
 ```
 
 </CodeBlock>
 
-Configure Wrangler with a current compatibility date and Worker observability.
+The generator includes Wrangler, Hono, the published protocol package, a
+minimal example Plugin, and contract tests. Configure Wrangler with a current
+compatibility date and Worker observability if your deployment needs it.
 
 <CodeBlock label="wrangler.jsonc">
 

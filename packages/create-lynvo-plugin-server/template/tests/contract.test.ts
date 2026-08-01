@@ -1,0 +1,79 @@
+import { describe, expect, it } from "vitest"
+import {
+  parseUsageResponseContract,
+  validateExtractSuccessContract,
+  validatePluginServerManifestContract,
+  verifyErrorSchema,
+} from "@lynvo/plugin-server-protocol"
+import app, { manifest } from "../src/index.js"
+
+const environment = {
+  LYNVO_PLUGIN_SERVER_API_KEY: "local-test-secret",
+}
+
+const authorizedHeaders = {
+  Authorization: "Bearer local-test-secret",
+}
+
+describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
+  it("publishes a valid manifest", () => {
+    expect(validatePluginServerManifestContract(manifest)).toEqual({
+      ok: true,
+      issues: [],
+    })
+  })
+
+  it("rejects invalid authentication", async () => {
+    const response = await app.fetch(
+      new Request("https://worker.example/verify", { method: "POST" }),
+      environment
+    )
+
+    expect(response.status).toBe(401)
+    expect(verifyErrorSchema.safeParse(await response.json()).success).toBe(
+      true
+    )
+  })
+
+  it("publishes finite usage for an authorized request", async () => {
+    const response = await app.fetch(
+      new Request("https://worker.example/usage", {
+        headers: authorizedHeaders,
+      }),
+      environment
+    )
+
+    expect(response.status).toBe(200)
+    expect(
+      parseUsageResponseContract(await response.json()).value
+    ).toMatchObject({
+      metrics: [{ id: "example-operations-daily" }],
+    })
+  })
+
+  it("returns a valid extraction envelope", async () => {
+    const response = await app.fetch(
+      new Request("https://worker.example/extract", {
+        method: "POST",
+        headers: { ...authorizedHeaders, "content-type": "application/json" },
+        body: JSON.stringify({
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example.com/video.mp4",
+          },
+        }),
+      }),
+      environment
+    )
+
+    const body = (await response.json()) as {
+      nodes: Array<{ url: string }>
+    }
+    expect(response.status).toBe(200)
+    expect(validateExtractSuccessContract(body)).toEqual({
+      ok: true,
+      issues: [],
+    })
+    expect(body.nodes[0].url).toBe("https://media.example.com/video.mp4")
+  })
+})

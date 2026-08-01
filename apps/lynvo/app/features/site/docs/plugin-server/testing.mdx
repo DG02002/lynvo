@@ -16,6 +16,8 @@ Start the Plugin Server and inspect the public manifest:
 <CodeBlock label="Terminal">
 
 ```sh
+pnpm check
+pnpm test
 pnpm dev
 curl http://localhost:8787/manifest
 ```
@@ -58,5 +60,9 @@ Your automated contract suite should cover:
 - Malformed JSON and invalid request shapes
 - Exhausted usage before upstream work starts
 - Safe temporary and permanent failure responses
+
+The generated starter includes the first four contract checks. Extend
+`tests/contract.test.ts` as you add password, lazy-node, discovery, or usage
+reservation behavior.
 
 </DocSection>

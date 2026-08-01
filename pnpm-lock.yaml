@@ -306,6 +306,8 @@ importers:
         specifier: 'catalog:'
         version: 4.116.0(@cloudflare/workers-types@5.20260731.1)
 
+  packages/create-lynvo-plugin-server: {}
+
   packages/plugin-server-protocol:
     dependencies:
       zod:

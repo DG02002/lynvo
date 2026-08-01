@@ -11,10 +11,25 @@ contentType: Tutorial
 
 Install the tools and create the accounts required for local development and deployment:
 
-- Node.js and pnpm
+- Node.js 22.11 or newer and pnpm 10.26.1 or newer
 - A Cloudflare account with Wrangler access
 - A Lynvo account for the final connection test
 - One Source website you are authorized to access and extract
+
+Create the project from a directory outside the Lynvo monorepo:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
+cd my-lynvo-plugin-server
+cp .dev.vars.example .dev.vars
+```
+
+</CodeBlock>
+
+Set a local-only `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`. Keep the file
+uncommitted and use a Wrangler secret for production.
 
 Your Plugin Server must expose a stable HTTPS origin after deployment. It must never require a browser session or browser cookies from Lynvo.
 

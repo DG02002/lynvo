@@ -1,0 +1,47 @@
+{
+  "name": "create-lynvo-plugin-server",
+  "version": "0.1.0",
+  "description": "Create a standalone Lynvo-compatible Plugin Server Worker.",
+  "keywords": [
+    "cloudflare-workers",
+    "create",
+    "lynvo",
+    "plugin-server",
+    "scaffold"
+  ],
+  "homepage": "https://github.com/DG02002/lynvo/tree/main/packages/create-lynvo-plugin-server",
+  "bugs": {
+    "url": "https://github.com/DG02002/lynvo/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DG02002/lynvo.git",
+    "directory": "packages/create-lynvo-plugin-server"
+  },
+  "bin": {
+    "create-lynvo-plugin-server": "bin/create-lynvo-plugin-server.mjs"
+  },
+  "files": [
+    "bin",
+    "template",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "pnpm run check:package && pnpm test",
+    "check:package": "node scripts/check-package.mjs",
+    "prepack": "pnpm run check:package",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "lynvo": {
+    "protocolPackageVersion": "0.1.0"
+  }
+}

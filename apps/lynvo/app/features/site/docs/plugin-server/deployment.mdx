@@ -14,9 +14,10 @@ Run your quality checks before every deployment:
 <CodeBlock label="Terminal">
 
 ```sh
+pnpm check
 pnpm test
-pnpm typecheck
-pnpm wrangler deploy
+pnpm build
+pnpm deploy
 ```
 
 </CodeBlock>

@@ -8,7 +8,9 @@ workspace.
 - `apps/lynvo`: product application and direct-link extraction core.
 - `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
+- `packages/create-lynvo-plugin-server`: public standalone Worker generator and canonical template.
 - `examples/plugin-server`: minimal compatible Worker used by root CI.
+- `docs/plugin-server-development.md`: standalone authoring and release flow.
 - `docs/usage-limits.md`: account and Plugin Server capacity policy.
 - `docs/apple-HIG/`: design and writing references used by contributors.
 
@@ -170,6 +172,12 @@ Workspace dependencies use `workspace:*`; shared third-party versions belong
 in the root `pnpm-workspace.yaml` catalog. Do not upgrade TypeScript beyond the
 version supported by React Router.
 
+The public protocol package and creator package are intentionally different
+from the private application packages. Use `workspace:*` only inside this
+monorepo. A generated or external Plugin Server must use the published
+`@lynvo/plugin-server-protocol` semver package and must not contain `workspace:`
+or `link:` dependencies.
+
 ## Required quality gates
 
 Run all gates from the repository root before committing:
@@ -179,6 +187,7 @@ pnpm install --frozen-lockfile
 pnpm check
 pnpm test
 pnpm build
+pnpm check:plugin-server-release
 ```
 
 `pnpm build` includes dry-run bundles for the Lynvo Plugin Server and example
