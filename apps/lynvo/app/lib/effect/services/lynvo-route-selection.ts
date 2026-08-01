@@ -2,7 +2,7 @@ import type {
   HttpBasicAuth,
   PluginMetadata,
   PluginServerManifest,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"

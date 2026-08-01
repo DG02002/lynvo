@@ -1,4 +1,4 @@
-# @lynvo/plugin-server-protocol
+# @dg02002/lynvo-plugin-server-protocol
 
 Public protocol package for Lynvo-compatible Custom Plugin Servers.
 
@@ -28,14 +28,14 @@ are tested together:
 
 ```json
 {
-  "@lynvo/plugin-server-protocol": "workspace:*"
+  "@dg02002/lynvo-plugin-server-protocol": "workspace:*"
 }
 ```
 
 Outside the monorepo, install a published semver version instead:
 
 ```sh
-pnpm add @lynvo/plugin-server-protocol
+pnpm add @dg02002/lynvo-plugin-server-protocol
 ```
 
 Do not use `workspace:`, `link:`, or a relative Lynvo path in a standalone
@@ -71,3 +71,7 @@ available as `.value`, while a rejected value includes detailed `.issues`.
 Use the `validate*Contract` helpers for diagnostics and contract-test
 assertions. The exported structural schemas are for narrow decoding or
 display-only paths, not for accepting live Plugin Server responses.
+
+## License
+
+This package is licensed under the MIT License. See [LICENSE](LICENSE).

@@ -48,6 +48,12 @@ instead of copying protocol validation into local route handlers.
 - [Plugin Server author guide](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/author-guide.md)
 - [Compatibility checklist](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/compatibility-checklist.md)
 
-The generated project uses `@lynvo/plugin-server-protocol` version
+The generated project uses `@dg02002/lynvo-plugin-server-protocol` version
 `__LYNVO_PROTOCOL_VERSION__`. Keep it on a compatible protocol version when
 upgrading the Worker.
+
+## License
+
+The initial template files are provided under the MIT License. See
+[LICENSE](LICENSE). You may choose different terms for your own Plugin Server
+after generation.

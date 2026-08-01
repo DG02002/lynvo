@@ -4,7 +4,7 @@ import {
   validateExtractSuccessContract,
   validatePluginServerManifestContract,
   verifyErrorSchema,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import app, { manifest } from "../src/index.js"
 
 const environment = {

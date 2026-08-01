@@ -8,9 +8,9 @@ The recommended stack is:
 
 - Cloudflare Workers
 - Hono
-- the published `@lynvo/plugin-server-protocol` contract package
+- the published `@dg02002/lynvo-plugin-server-protocol` contract package
 
-The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@lynvo/plugin-server-protocol` package; Plugin Servers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another Plugin Server.
+The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@dg02002/lynvo-plugin-server-protocol` package; Plugin Servers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another Plugin Server.
 
 Start with the generator when creating a standalone Worker:
 
@@ -83,17 +83,17 @@ Recommended module responsibilities:
 - `auth.ts`: bearer key validation
 - `plugins/*`: Source-specific extraction logic
 
-Do not define a local protocol schema unless you are writing an adapter around `@lynvo/plugin-server-protocol`. Local copies drift and make the Plugin Server harder to trust.
+Do not define a local protocol schema unless you are writing an adapter around `@dg02002/lynvo-plugin-server-protocol`. Local copies drift and make the Plugin Server harder to trust.
 
 ## Protocol Package
 
 Choose the dependency source based on where the Plugin Server lives:
 
-Inside this monorepo, declare `"@lynvo/plugin-server-protocol": "workspace:*"`.
+Inside this monorepo, declare `"@dg02002/lynvo-plugin-server-protocol": "workspace:*"`.
 For a standalone repository, install a published version or package tarball:
 
 ```sh
-pnpm add @lynvo/plugin-server-protocol
+pnpm add @dg02002/lynvo-plugin-server-protocol
 ```
 
 Do not use a `workspace:`, `link:`, or relative Lynvo path outside the
@@ -342,7 +342,7 @@ Use `playable` only for a final URL Lynvo can send to a player. Do not use it
 for an HTML page that still needs resolution.
 
 ```ts
-import type { MediaNode } from "@lynvo/plugin-server-protocol"
+import type { MediaNode } from "@dg02002/lynvo-plugin-server-protocol"
 
 const directLink = {
   kind: "playable",
@@ -505,7 +505,7 @@ If you use Cloudflare-native testing, prefer running tests in the Workers runtim
 
 ```ts
 import { Hono } from "hono"
-import { createPluginServerRuntime } from "@lynvo/plugin-server-protocol"
+import { createPluginServerRuntime } from "@dg02002/lynvo-plugin-server-protocol"
 
 const app = new Hono()
 

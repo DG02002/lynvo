@@ -12,7 +12,7 @@
     "deploy": "wrangler deploy --config wrangler.jsonc --env=\"\""
   },
   "dependencies": {
-    "@lynvo/plugin-server-protocol": "^__LYNVO_PROTOCOL_VERSION__",
+    "@dg02002/lynvo-plugin-server-protocol": "^__LYNVO_PROTOCOL_VERSION__",
     "hono": "^4.12.32"
   },
   "devDependencies": {

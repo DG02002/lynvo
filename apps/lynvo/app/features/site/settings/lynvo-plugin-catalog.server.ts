@@ -1,4 +1,4 @@
-import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
+import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,

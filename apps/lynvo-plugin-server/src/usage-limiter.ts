@@ -1,4 +1,4 @@
-import type { UsageResponse } from "@lynvo/plugin-server-protocol"
+import type { UsageResponse } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   MILLISECONDS_PER_DAY,

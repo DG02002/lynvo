@@ -4,7 +4,7 @@ import {
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
   validateUsageContract,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 const authenticatedHeaders = {
   Authorization: "Bearer test-api-key",

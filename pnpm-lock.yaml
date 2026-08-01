@@ -74,6 +74,9 @@ importers:
       '@convex-dev/migrations':
         specifier: ^0.3.6
         version: 0.3.6(convex-helpers@0.1.120(@standard-schema/spec@1.1.0)(convex@1.42.3(react@19.2.8))(hono@4.12.32)(react@19.2.8)(typescript@7.0.2)(zod@4.4.3))(convex@1.42.3(react@19.2.8))
+      '@dg02002/lynvo-plugin-server-protocol':
+        specifier: workspace:*
+        version: link:../../packages/plugin-server-protocol
       '@fontsource-variable/inter':
         specifier: ^5.3.0
         version: 5.3.0
@@ -83,9 +86,6 @@ importers:
       '@hugeicons/react':
         specifier: ^1.1.9
         version: 1.1.9(react@19.2.8)
-      '@lynvo/plugin-server-protocol':
-        specifier: workspace:*
-        version: link:../../packages/plugin-server-protocol
       '@tanstack/react-form':
         specifier: ^1.33.2
         version: 1.33.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -246,7 +246,7 @@ importers:
 
   apps/lynvo-plugin-server:
     dependencies:
-      '@lynvo/plugin-server-protocol':
+      '@dg02002/lynvo-plugin-server-protocol':
         specifier: workspace:*
         version: link:../../packages/plugin-server-protocol
       cheerio:
@@ -289,7 +289,7 @@ importers:
 
   examples/plugin-server:
     dependencies:
-      '@lynvo/plugin-server-protocol':
+      '@dg02002/lynvo-plugin-server-protocol':
         specifier: workspace:*
         version: link:../../packages/plugin-server-protocol
     devDependencies:

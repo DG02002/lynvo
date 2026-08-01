@@ -31,7 +31,7 @@ pnpm build
 ```
 
 The generated Worker owns source-specific extraction and deployment. The
-versioned [`@lynvo/plugin-server-protocol`](packages/plugin-server-protocol/README.md)
+versioned [`@dg02002/lynvo-plugin-server-protocol`](packages/plugin-server-protocol/README.md)
 package owns the shared wire contract. See the [Plugin Server development and
 release guide](docs/plugin-server-development.md) for standalone setup,
 versioning, external compatibility, and troubleshooting.
@@ -50,3 +50,10 @@ resolution without persisting extraction credentials.
 - [Plugin Server development and release](docs/plugin-server-development.md)
 - [Usage-limit policy](docs/usage-limits.md)
 - [Project terminology](CONTEXT.md)
+
+## License
+
+Lynvo core is licensed under the GNU Affero General Public License v3.0. The
+publishable `@dg02002/lynvo-plugin-server-protocol` and
+`create-lynvo-plugin-server` packages are MIT licensed independently; see the
+`LICENSE` file in each package directory.

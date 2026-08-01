@@ -9,7 +9,7 @@ pnpm create lynvo-plugin-server@latest my-plugin-server
 
 The creator contains the canonical Worker-first Hono template. It does not
 depend on the Lynvo application or on a local Lynvo checkout. The generated
-project consumes the published `@lynvo/plugin-server-protocol` package.
+project consumes the published `@dg02002/lynvo-plugin-server-protocol` package.
 
 Options:
 
@@ -31,3 +31,10 @@ matching, extraction logic, usage accounting, secrets, and deployment.
 See the [protocol specification](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/spec.md),
 [author guide](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/author-guide.md),
 and [compatibility checklist](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/compatibility-checklist.md).
+
+## License
+
+This package is licensed under the MIT License. See [LICENSE](LICENSE).
+The generated starter includes the same license for its initial template
+files; change the generated project's license if your own Plugin Server uses
+different terms.

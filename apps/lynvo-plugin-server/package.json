@@ -17,7 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@lynvo/plugin-server-protocol": "workspace:*",
+    "@dg02002/lynvo-plugin-server-protocol": "workspace:*",
     "cheerio": "catalog:",
     "evlog": "^2.22.4",
     "hono": "catalog:"

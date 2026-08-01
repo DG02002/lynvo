@@ -6,7 +6,7 @@ import {
   type ExtractSuccessResponse,
   type ExtractRequest,
   type DiscoverResponse,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import {
   BHADOO_SOURCE_ID,
   PLUGIN_SERVER_ID,

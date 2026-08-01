@@ -2,7 +2,7 @@ import * as cheerio from "cheerio"
 import type {
   MediaNode,
   ExtractSuccessResponse,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 export const decodeExtractionText = (value: string): string =>
   cheerio.load(value, undefined, false).text()

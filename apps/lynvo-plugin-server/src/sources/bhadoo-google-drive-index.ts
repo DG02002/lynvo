@@ -2,7 +2,7 @@ import type {
   MediaNode,
   ExtractSuccessResponse,
   HttpBasicAuth,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { createBasicAuthorization } from "../auth"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,

@@ -6,7 +6,7 @@ import type {
   UnauthorizedError,
   ConvexError,
 } from "../errors"
-import type { HttpBasicAuth } from "@lynvo/plugin-server-protocol"
+import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 
 export interface ExtractOptions {
   readonly url: string

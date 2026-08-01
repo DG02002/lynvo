@@ -2,7 +2,7 @@ import {
   createPluginServerRuntime,
   validPluginServerManifestFixture,
   validUsageResponseFixture,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 export const manifest = validPluginServerManifestFixture
 

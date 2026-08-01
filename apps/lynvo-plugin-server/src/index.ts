@@ -6,7 +6,7 @@ import {
   extractErrorSchema,
   extractRequestSchema,
   extractSuccessSchema,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
 import {
   createLynvoPluginServerManifest,

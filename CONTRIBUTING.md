@@ -175,7 +175,7 @@ version supported by React Router.
 The public protocol package and creator package are intentionally different
 from the private application packages. Use `workspace:*` only inside this
 monorepo. A generated or external Plugin Server must use the published
-`@lynvo/plugin-server-protocol` semver package and must not contain `workspace:`
+`@dg02002/lynvo-plugin-server-protocol` semver package and must not contain `workspace:`
 or `link:` dependencies.
 
 ## Required quality gates

@@ -5,7 +5,7 @@ import {
   parsePluginServerManifestContract,
   type PluginMetadata,
   type HttpBasicAuth,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl } from "../../../lib/plugin-server-utils"
 import type { ExtractionError } from "../errors"

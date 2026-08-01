@@ -34,7 +34,7 @@ const protocolPackageJson = JSON.parse(
 )
 assert(
   packageJson.lynvo.protocolPackageVersion === protocolPackageJson.version,
-  "lynvo.protocolPackageVersion must match @lynvo/plugin-server-protocol"
+  "lynvo.protocolPackageVersion must match @dg02002/lynvo-plugin-server-protocol"
 )
 
 const requiredFiles = [

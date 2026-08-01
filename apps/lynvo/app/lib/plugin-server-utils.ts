@@ -1,9 +1,9 @@
 import type { ExtractedLink } from "~/features/links/types"
-import { matchPluginServerUrl } from "@lynvo/plugin-server-protocol"
+import { matchPluginServerUrl } from "@dg02002/lynvo-plugin-server-protocol"
 import type {
   MediaNode,
   PluginServerMatcher,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 export const matchUrl = (
   targetUrl: string,

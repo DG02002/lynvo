@@ -5,7 +5,7 @@ import {
   type ExtractSuccessResponse,
   type PluginServerManifest,
   type UsageResponse,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 interface TestEnv {
   validApiKey: string

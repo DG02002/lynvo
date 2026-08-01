@@ -1,7 +1,7 @@
 import type {
   HttpBasicAuth,
   PluginMetadata,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { ExtractionError } from "../errors"
 import {

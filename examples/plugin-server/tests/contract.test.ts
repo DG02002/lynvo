@@ -4,7 +4,7 @@ import {
   validateExtractSuccessContract,
   parseUsageResponseContract,
   verifyErrorSchema,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import worker, { manifest } from "../src/index"
 
 const environment = {}

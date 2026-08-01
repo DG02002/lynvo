@@ -2,7 +2,7 @@ import { load } from "cheerio"
 import type {
   MediaNode,
   ExtractSuccessResponse,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import type { PluginAdapterOptions } from "../plugin-catalog"
 import { createPluginResponseMetadata } from "../plugin-catalog"
 import {

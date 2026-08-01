@@ -57,7 +57,7 @@ test("generates a standalone project with a semver protocol dependency", async (
   )
   assert.equal(packageJson.name, "my-plugin-server")
   assert.equal(
-    packageJson.dependencies["@lynvo/plugin-server-protocol"],
+    packageJson.dependencies["@dg02002/lynvo-plugin-server-protocol"],
     "^0.1.0"
   )
   assert.equal(packageJson.dependencies.hono, "^4.12.32")

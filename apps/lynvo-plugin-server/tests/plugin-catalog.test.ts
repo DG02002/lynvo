@@ -4,7 +4,7 @@ import {
   createLynvoPluginServerManifest,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
-import { getLynvoManifestExtension } from "@lynvo/plugin-server-protocol"
+import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
   it("generates manifest plugin metadata and dispatch from one catalog", () => {

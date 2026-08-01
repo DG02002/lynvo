@@ -1,4 +1,4 @@
-import type { ExtractSuccessResponse } from "@lynvo/plugin-server-protocol"
+import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { ExtractionError } from "../errors"
 import {

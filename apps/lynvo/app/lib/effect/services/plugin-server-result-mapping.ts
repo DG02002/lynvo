@@ -3,7 +3,7 @@ import {
   getMatchedPlugin,
   type ExtractSuccessResponse,
   type PluginServerManifest,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
 import {
   decodeExtractionText,

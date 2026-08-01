@@ -14,7 +14,7 @@ import {
   type PluginServerManifest,
   type HttpBasicAuth,
   type UsageResponse,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import {
   PLUGIN_SERVER_INTERNAL_ORIGIN,
   PLUGIN_SERVER_REQUEST_TIMEOUT_MS,

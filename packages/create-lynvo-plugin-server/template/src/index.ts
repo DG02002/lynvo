@@ -4,7 +4,7 @@ import {
   validPluginServerManifestFixture,
   validUsageResponseFixture,
   type PluginServerManifest,
-} from "@lynvo/plugin-server-protocol"
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { extractExampleSource } from "./plugins/example.js"
 
 export interface Env {

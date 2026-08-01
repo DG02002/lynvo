@@ -40,7 +40,7 @@ try {
   mkdirSync(creatorDirectory)
   run("pnpm", [
     "--filter",
-    "@lynvo/plugin-server-protocol",
+    "@dg02002/lynvo-plugin-server-protocol",
     "pack",
     "--pack-destination",
     protocolDirectory,
@@ -55,7 +55,7 @@ try {
 
   const protocolTarball = findTarball(
     protocolDirectory,
-    "lynvo-plugin-server-protocol-"
+    "dg02002-lynvo-plugin-server-protocol-"
   )
   const creatorTarball = findTarball(
     creatorDirectory,
@@ -98,7 +98,7 @@ try {
     "pnpm",
     [
       "add",
-      `@lynvo/plugin-server-protocol@file:${protocolTarball}`,
+      `@dg02002/lynvo-plugin-server-protocol@file:${protocolTarball}`,
       "--save-exact",
     ],
     join(temporaryRoot, "generated-plugin")

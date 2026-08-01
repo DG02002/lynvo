@@ -17,7 +17,7 @@ pnpm build
 ```
 
 The generated project uses Hono, Cloudflare Workers, Wrangler, Vitest, and the
-published `@lynvo/plugin-server-protocol` package. Copy `.dev.vars.example` to
+published `@dg02002/lynvo-plugin-server-protocol` package. Copy `.dev.vars.example` to
 `.dev.vars`, set a local-only `LYNVO_PLUGIN_SERVER_API_KEY`, and run `pnpm dev`
 before connecting a deployed Worker to Lynvo.
 
@@ -44,7 +44,7 @@ From the `lynvo/` repository root:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm --filter @lynvo/plugin-server-protocol check
+pnpm --filter @dg02002/lynvo-plugin-server-protocol check
 pnpm --filter @lynvo/example-plugin-server check
 pnpm --filter @lynvo/example-plugin-server test
 pnpm --filter create-lynvo-plugin-server check
@@ -71,9 +71,9 @@ maintainer details are confirmed. The packages are configured for public
 scoped/unscoped publishing and run release checks before packing.
 
 ```sh
-pnpm --filter @lynvo/plugin-server-protocol release:check
-pnpm --filter @lynvo/plugin-server-protocol pack --dry-run
-pnpm --filter @lynvo/plugin-server-protocol publish --access public
+pnpm --filter @dg02002/lynvo-plugin-server-protocol release:check
+pnpm --filter @dg02002/lynvo-plugin-server-protocol pack --dry-run
+pnpm --filter @dg02002/lynvo-plugin-server-protocol publish --access public
 
 pnpm --filter create-lynvo-plugin-server check
 pnpm --filter create-lynvo-plugin-server pack --dry-run
@@ -82,8 +82,8 @@ pnpm --filter create-lynvo-plugin-server publish --access public
 
 Publish the protocol package first. The creator's generated projects depend on
 that published semver version. Keep npm 2FA enabled and credentials out of
-the repository. Later, configure npm trusted publishing for the exact GitHub
-workflow instead of storing a long-lived token.
+the repository. Publication is manual for now; add npm trusted publishing
+later when the project needs an automated release workflow.
 
 ## Troubleshooting
 
