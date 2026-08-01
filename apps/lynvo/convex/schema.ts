@@ -169,6 +169,7 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_domain", ["userId", "domain"])
+    .index("by_userId_pluginServerId", ["userId", "pluginServerId"])
     .index("by_userId_pluginServerId_domain", [
       "userId",
       "pluginServerId",

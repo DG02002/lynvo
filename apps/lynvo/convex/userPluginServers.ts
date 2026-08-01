@@ -10,8 +10,10 @@ import { assertStorageMutation, recordStorageDeletion } from "./storagePolicy"
 import { verifyCredentialReadToken } from "./authGateway"
 import {
   CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT,
+  PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT,
   PLUGIN_SERVER_REGISTRATION_TTL_MS,
 } from "./constants"
+import { deletePluginDomainDocument } from "./pluginDomainLifecycle"
 
 declare const process: {
   env: { AUTH_GATEWAY_SECRET?: string }
@@ -524,6 +526,18 @@ export const deleteById = mutation({
       throw new Error("Plugin server not found or no longer available")
     }
 
+    const pluginDomains = await ctx.db
+      .query("userPluginDomains")
+      .withIndex("by_userId_pluginServerId", (queryBuilder) =>
+        queryBuilder.eq("userId", userId).eq("pluginServerId", existing._id)
+      )
+      .take(PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT + 1)
+    if (pluginDomains.length > PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT) {
+      throw new Error("Plugin server cleanup exceeds the synchronous limit")
+    }
+    for (const pluginDomain of pluginDomains) {
+      await deletePluginDomainDocument(ctx, userId, pluginDomain)
+    }
     await recordStorageDeletion(ctx, userId, "pluginServerBytes", existing)
     await ctx.db.delete("userPluginServers", existing._id)
     return { success: true }

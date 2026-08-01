@@ -3,6 +3,7 @@
 import { api } from "../convex/_generated/api"
 import {
   CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT,
+  PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT,
   PLUGIN_SERVER_REGISTRATION_TTL_MS,
 } from "../convex/constants"
 import {
@@ -153,5 +154,91 @@ describe("Convex Plugin Server lifecycle", () => {
     expect(result.row).toBeNull()
     expect(result.ledger).toMatchObject(result.inventory)
     expect(result.ledger?.pluginServerBytes).toBe(0)
+  })
+
+  it("cascades domains and credentials with exact storage accounting", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "plugin-cascade-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+    const registration = await beginRegistration(client, 0)
+    await finalizeRegistration(client, registration.id)
+    await client.mutation(api.pluginDomains.create, {
+      domain: "credential.example",
+      pluginServerId: registration.id,
+      pluginId: "plugin-1",
+      credential: {
+        ciphertext: "ciphertext",
+        nonce: "nonce",
+        algorithm: "AES-256-GCM",
+        keyVersion: 1,
+      },
+    })
+    await client.mutation(api.pluginDomains.create, {
+      domain: "public.example",
+      pluginServerId: registration.id,
+      pluginId: "plugin-2",
+    })
+
+    await client.mutation(api.userPluginServers.deleteById, {
+      id: registration.id,
+    })
+
+    const result = await convex.run(async (context) => ({
+      server: await context.db.get("userPluginServers", registration.id),
+      domains: await context.db
+        .query("userPluginDomains")
+        .withIndex("by_userId_pluginServerId", (queryBuilder) =>
+          queryBuilder
+            .eq("userId", user.userId)
+            .eq("pluginServerId", registration.id)
+        )
+        .collect(),
+      credentials: await context.db
+        .query("userPluginCredentials")
+        .withIndex("by_userId_pluginServerId_domain", (queryBuilder) =>
+          queryBuilder
+            .eq("userId", user.userId)
+            .eq("pluginServerId", registration.id)
+        )
+        .collect(),
+      ledger: await getUserStorageLedger(context, user.userId),
+      inventory: await calculateAppOwnedStorageUsage(context, user.userId),
+    }))
+    expect(result.server).toBeNull()
+    expect(result.domains).toEqual([])
+    expect(result.credentials).toEqual([])
+    expect(result.ledger).toMatchObject(result.inventory)
+  })
+
+  it("refuses an oversized cascade before deleting the parent", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "plugin-large-cascade-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+    const registration = await beginRegistration(client, 0)
+    await convex.run(async (context) => {
+      for (
+        let index = 0;
+        index <= PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT;
+        index += 1
+      ) {
+        await context.db.insert("userPluginDomains", {
+          userId: user.userId,
+          pluginServerId: registration.id,
+          domain: `domain-${index}.example`,
+          pluginId: "plugin-1",
+        })
+      }
+    })
+
+    await expect(
+      client.mutation(api.userPluginServers.deleteById, {
+        id: registration.id,
+      })
+    ).rejects.toThrow("cleanup exceeds the synchronous limit")
+    await expect(
+      convex.run((context) =>
+        context.db.get("userPluginServers", registration.id)
+      )
+    ).resolves.not.toBeNull()
   })
 })

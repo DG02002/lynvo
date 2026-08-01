@@ -234,6 +234,14 @@ export const deletePluginDomain = async (
     userId,
     domainId
   )
+  await deletePluginDomainDocument(ctx, userId, pluginDomain)
+}
+
+export const deletePluginDomainDocument = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  pluginDomain: Doc<"userPluginDomains">
+) => {
   const credential = await getCredential(ctx, pluginDomain._id)
   if (credential) {
     await recordStorageDeletion(
