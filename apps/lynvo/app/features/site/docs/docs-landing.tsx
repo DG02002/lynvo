@@ -15,7 +15,7 @@ const documentationCards = [
   },
   {
     title: "Plugin Server",
-    description: "Build a Custom Plugin Server for supported media Sources.",
+    description: "Create and connect a Lynvo-compatible Custom Plugin Server.",
     to: "/docs/plugin-server",
     icon: ThreeDViewIcon,
   },
@@ -30,7 +30,7 @@ export const DocsLanding = () => (
           Lynvo for developers
         </h1>
         <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
-          Set up Lynvo on Android TV or build a Custom Plugin Server.
+          Set up Lynvo on Android TV or create a Custom Plugin Server.
         </p>
       </header>
 

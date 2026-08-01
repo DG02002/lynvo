@@ -1,43 +1,50 @@
 ---
-title: Define the public manifest
-description: Declare your Plugin Server’s identity, supported URLs, and capabilities.
+title: Configure the Plugin Server manifest
+description: Declare your Plugin Server identity, supported URLs, and Plugin metadata.
 navLabel: Manifest
 contentType: Reference
 ---
 
 <DocSection id="manifest">
 
-## Define the public manifest
+## Configure the Plugin Server manifest
 
-The manifest lets Lynvo validate compatibility and route URLs without sending them to every Plugin Server. Keep `pluginServerId` stable after anyone connects the Plugin Server.
+The generated starter declares the manifest in `src/index.ts`. Keep the server ID stable after you connect the Worker to Lynvo.
 
-<CodeBlock label="src/manifest.ts">
+Start with the generated object and replace the example values:
 
-```ts {2,5,8-12}
+<CodeBlock label="src/index.ts">
+
+```ts
+import {
+  validPluginServerManifestFixture,
+  type PluginServerManifest,
+} from "@dg02002/lynvo-plugin-server-protocol"
+
 export const manifest = {
-  protocolVersion: "1.0",
-  pluginServerId: "com.example.my-plugin-server",
+  ...validPluginServerManifestFixture,
+  pluginServerId: "com.example.my_plugin_server",
   displayName: "My Plugin Server",
-  hasIcon: false,
-  auth: { type: "bearer" },
-  usage: { endpoint: "/usage" },
-  matchers: [
-    {
-      hosts: ["media.example.com"],
-      pathPatterns: ["/watch/**"],
-      schemes: ["https"],
+  matchers: [{ hosts: ["media.example.com"] }],
+  extensions: {
+    lynvo: {
+      plugins: [
+        {
+          id: "example-source",
+          displayName: "Example Source",
+          status: "active",
+          version: "0.1.0",
+          hosts: ["media.example.com"],
+        },
+      ],
     },
-  ],
-  features: {
-    password: false,
-    lazyNodes: true,
-    basicAuth: false,
   },
-  extensions: {},
-} as const
+} satisfies PluginServerManifest
 ```
 
 </CodeBlock>
+
+Replace the `com.example` namespace with an identifier you control. Keep the `pluginServerId` unchanged after users register the Worker.
 
 Manifest fields follow these rules:
 
@@ -55,6 +62,6 @@ Manifest fields follow these rules:
 | `features`        | Yes      | Declares password, lazy node, and Basic Auth support |
 | `extensions`      | No       | Namespaced non-core metadata                         |
 
-Each matcher requires `hosts`. `hostPatterns` and `pathPatterns` accept `*` within one segment and `**` across segments. `schemes` defaults to `["https"]`.
+Keep `matchers` and `extensions.lynvo.plugins` aligned with the Source code. Lynvo uses the manifest to select the Worker before it sends an Extraction request.
 
 </DocSection>

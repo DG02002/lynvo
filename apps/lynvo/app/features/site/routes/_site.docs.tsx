@@ -27,8 +27,7 @@ export const meta = ({ loaderData }: Route.MetaArgs) => {
       { title: "Documentation | Lynvo" },
       {
         name: "description",
-        content:
-          "Choose a Lynvo guide for Android TV setup or Plugin Server development.",
+        content: "Create a Custom Plugin Server or set up Lynvo on Android TV.",
       },
       { name: "contentType", content: "Landing" },
     ]

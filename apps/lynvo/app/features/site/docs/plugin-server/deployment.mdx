@@ -1,6 +1,6 @@
 ---
 title: Deploy the Plugin Server
-description: Publish the Plugin Server and verify its production manifest and authentication.
+description: Deploy the generated Worker and verify its production manifest and authentication.
 navLabel: Deployment
 contentType: Tutorial
 ---
@@ -9,7 +9,20 @@ contentType: Tutorial
 
 ## Deploy the Plugin Server
 
-Run your quality checks before every deployment:
+Complete the local contract checks before you send the Worker to Cloudflare. The `pnpm build` command performs a dry run; `pnpm deploy` creates or updates the Worker.
+
+Log in to Wrangler and configure the production bearer key:
+
+<CodeBlock label="Terminal">
+
+```sh
+pnpm wrangler login
+pnpm wrangler secret put LYNVO_PLUGIN_SERVER_API_KEY
+```
+
+</CodeBlock>
+
+Run the checks and deploy:
 
 <CodeBlock label="Terminal">
 
@@ -22,7 +35,7 @@ pnpm deploy
 
 </CodeBlock>
 
-Call all four required endpoints at the deployed HTTPS origin. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
+Call the four required endpoints at the deployed HTTPS origin. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
 
 Use bounded upstream requests, reject unsupported hosts, and record structured logs without credentials. Keep the deployment origin stable after users connect it.
 

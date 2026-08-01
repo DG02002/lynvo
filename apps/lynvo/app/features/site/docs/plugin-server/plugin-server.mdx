@@ -1,30 +1,55 @@
 ---
-title: Custom Plugin Servers
-description: Learn what a Custom Plugin Server does and how it works with Lynvo.
+title: Create a Custom Plugin Server
+description: Create, test, deploy, and connect a Lynvo-compatible Custom Plugin Server.
 navLabel: Plugin Server
 contentType: Tutorial
 ---
 
-<DocSection id="overview">
+<DocSection id="quickstart">
 
-## Build and connect a Custom Plugin Server
+## Create a Custom Plugin Server
 
-This guide takes you from an empty Cloudflare Worker to a deployed Plugin Server connected in Lynvo. You will create a Hono project, use the public `@dg02002/lynvo-plugin-server-protocol` package, implement Plugin Server Protocol version `1.0`, add a Plugin, enforce usage limits, test every response, and connect the Plugin Server in Lynvo Settings.
+Use the published starter to create a Cloudflare Worker with the protocol runtime, a working example Plugin, and contract tests. You do not need to clone Lynvo or assemble the Worker shell yourself.
 
-A Custom Plugin Server is an HTTPS service that converts supported Source URLs into normalized Media Nodes. Lynvo owns registration, routing, saved state, and playback. Your Plugin Server owns Plugin matching, Extraction, staged resolution, authentication, and finite usage enforcement.
+<CodeBlock label="Terminal">
 
-Build the integration in this order:
+```sh
+pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
+cd my-lynvo-plugin-server
+cp .dev.vars.example .dev.vars
+pnpm check
+pnpm test
+pnpm build
+```
 
-1. Create the Plugin Server and configure its production secret
-2. Implement the four protocol endpoints and validate every JSON boundary
-3. Add Plugins that return playable, container, folder, or lazy Media Nodes
-4. Reserve, settle, and report finite usage
-5. Test the contract, deploy the Plugin Server, and connect it to Lynvo
+</CodeBlock>
 
-<DocsNote title="Protocol contract">
+Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`, then start the Worker with `pnpm dev`. The generator installs dependencies by default. If you pass `--skip-install`, run `pnpm install` before the checks.
 
-The endpoint tables, JSON schemas, and stated invariants define Plugin Server Protocol version `1.0`. New standalone projects should use the published `@dg02002/lynvo-plugin-server-protocol` package so route behavior and contract validation stay aligned with Lynvo. The package is framework-agnostic; Hono is the recommended Worker stack.
+<DocsNote title="The starter owns the protocol shell">
+
+The generated project already wires `/manifest`, `/verify`, `/usage`, and `/extract` through `@dg02002/lynvo-plugin-server-protocol`. Replace the example manifest and Plugin before you connect a production Worker.
 
 </DocsNote>
+
+The starter includes:
+
+- A Hono Cloudflare Worker and Wrangler configuration
+- A semver dependency on the published protocol package
+- A manifest with one example Plugin
+- A shared runtime for authentication, validation, usage, and Extraction
+- Contract tests for the manifest, authentication, usage, and Extraction
+
+The example usage response is a finite test fixture. Replace it with durable accounting before production deployment.
+
+Use the documentation in this order:
+
+1. [Prepare your development environment](/docs/plugin-server/prerequisites)
+2. [Generate your Plugin Server](/docs/plugin-server/create-plugin-server)
+3. [Configure bearer authentication](/docs/plugin-server/authentication)
+4. [Add a Plugin](/docs/plugin-server/plugins)
+5. [Test the protocol contract](/docs/plugin-server/testing)
+6. [Deploy the Plugin Server](/docs/plugin-server/deployment)
+7. [Connect the Plugin Server to Lynvo](/docs/plugin-server/connect)
 
 </DocSection>

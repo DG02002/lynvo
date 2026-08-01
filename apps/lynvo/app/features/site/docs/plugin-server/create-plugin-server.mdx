@@ -1,59 +1,44 @@
 ---
-title: Create a Hono Cloudflare Worker
-description: Create the Plugin Server project, configure Wrangler, and run it locally.
+title: Generate your Plugin Server
+description: Generate the Worker shell, install its dependencies, and run the starter locally.
 navLabel: Create a Worker
 contentType: Tutorial
 ---
 
 <DocSection id="create-worker">
 
-## Create a Hono Cloudflare Worker
+## Generate your Plugin Server
 
-Create a Worker-first Hono project with the canonical Lynvo starter. A Plugin
-Server does not need a React frontend.
+Run the creator from the directory where you want the project. It creates a standalone Worker and installs the published protocol package.
 
 <CodeBlock label="Terminal">
 
 ```sh
 pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
-
 cd my-lynvo-plugin-server
+pnpm check
 pnpm test
 pnpm build
 ```
 
 </CodeBlock>
 
-The generator includes Wrangler, Hono, the published protocol package, a
-minimal example Plugin, and contract tests. Configure Wrangler with a current
-compatibility date and Worker observability if your deployment needs it.
+The generator creates:
 
-<CodeBlock label="wrangler.jsonc">
+- `src/index.ts` with the manifest, shared runtime, and Hono routes
+- `src/plugins/example.ts` with a deterministic example Source adapter
+- `tests/contract.test.ts` with the first protocol checks
+- `wrangler.jsonc` and `.dev.vars.example`
+- A semver dependency on `@dg02002/lynvo-plugin-server-protocol`
 
-```jsonc
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "my-lynvo-plugin-server",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-07-23",
-  "observability": {
-    "enabled": true,
-  },
-}
-```
+Edit these files first:
 
-</CodeBlock>
+1. Replace the example matcher and Plugin metadata in `src/index.ts`
+2. Replace the example Source adapter in `src/plugins/example.ts`
+3. Add Source fixtures to `tests/contract.test.ts`
 
-Run the generated Worker locally:
+Run `pnpm dev` to start the local Worker. The `pnpm build` script performs a Wrangler dry run. Use `pnpm deploy` only after the contract checks pass and the production secret is configured.
 
-<CodeBlock label="Terminal">
-
-```sh
-pnpm dev
-```
-
-</CodeBlock>
-
-Wrangler prints the local origin. The default is usually `http://localhost:8787`, but you must use the origin shown in your terminal.
+The generated project has no workspace or local-link dependency. You can move it to another repository without cloning Lynvo.
 
 </DocSection>

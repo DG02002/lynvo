@@ -9,16 +9,35 @@ contentType: Tutorial
 
 ## Test the protocol contract
 
-Test the Plugin Server in the Cloudflare Workers runtime when possible. Cover successful responses and every boundary that can reject a request.
+Run the generated checks before you deploy. The starter checks types, contract behavior, and the Wrangler bundle without requiring a live Cloudflare Worker.
 
-Start the Plugin Server and inspect the public manifest:
+Run the local checks:
 
 <CodeBlock label="Terminal">
 
 ```sh
 pnpm check
 pnpm test
+pnpm build
+```
+
+</CodeBlock>
+
+Start the Worker in a separate terminal:
+
+<CodeBlock label="Terminal">
+
+```sh
 pnpm dev
+```
+
+</CodeBlock>
+
+Inspect the public manifest:
+
+<CodeBlock label="Terminal">
+
+```sh
 curl http://localhost:8787/manifest
 ```
 
@@ -43,16 +62,21 @@ Test a Source Extraction:
 curl -X POST http://localhost:8787/extract \
   -H "Authorization: Bearer your_local_plugin_server_api_key_here" \
   -H "Content-Type: application/json" \
-  -d '{"input":{"kind":"source","sourceUrl":"https://media.example.com/watch/123"}}'
+  -d '{
+    "input": {
+      "kind": "source",
+      "sourceUrl": "https://media.example.com/watch/123"
+    }
+  }'
 ```
 
 </CodeBlock>
 
-Your automated contract suite should cover:
+Extend the contract suite as you add Source behavior. Cover these boundaries:
 
-- Public valid manifest and protocol version
+- Valid and invalid manifest metadata
 - Missing, invalid, and valid bearer credentials
-- Finite usage response and unique metric IDs
+- Finite usage responses and unique metric IDs
 - Supported and unsupported Source URLs
 - Playable, group, selectable folder, and lazy folder nodes
 - Lazy-node follow-up through the same Plugin Server
@@ -61,8 +85,6 @@ Your automated contract suite should cover:
 - Exhausted usage before upstream work starts
 - Safe temporary and permanent failure responses
 
-The generated starter includes the first four contract checks. Extend
-`tests/contract.test.ts` as you add password, lazy-node, discovery, or usage
-reservation behavior.
+The starter includes the first four contract checks in `tests/contract.test.ts`. Add Source fixtures before you deploy a real Source implementation.
 
 </DocSection>

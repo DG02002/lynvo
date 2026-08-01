@@ -1,59 +1,48 @@
 ---
-title: Wire the Hono routes
-description: Connect authentication, validation, usage enforcement, and Extraction to the protocol endpoints.
-navLabel: Hono routes
-contentType: Tutorial
+title: Use the shared route runtime
+description: Keep Hono routes focused on the shared Plugin Server protocol runtime.
+navLabel: Route runtime
+contentType: Reference
 ---
 
 <DocSection id="routes">
 
-## Wire the Hono routes
+## Use the shared route runtime
 
-Keep the route layer limited to authentication, validation, usage reservation, adapter dispatch, and response serialization.
+The generated `src/index.ts` wires each required endpoint through `createPluginServerRuntime`. Keep authentication, validation, usage, and response serialization in that runtime.
+
+The generated route layer looks like this:
 
 <CodeBlock label="src/index.ts">
 
-```ts {7-10}
-import { Hono } from "hono"
-import { isAuthorized, type Env } from "./auth"
-import { manifest } from "./manifest"
+```ts
+const runtime = createPluginServerRuntime<Env>({
+  manifest,
+  auth: { validate: ({ request, env }) => hasValidBearer(request, env) },
+  usage: () => validUsageResponseFixture,
+  extract: ({ targetUrl }) =>
+    extractExampleSource(targetUrl, manifest.pluginServerId),
+})
 
 const app = new Hono<{ Bindings: Env }>()
-
-app.get("/manifest", (c) => c.json(manifest))
-app.post("/verify", (c) =>
-  isAuthorized(c.req.raw, c.env)
-    ? c.json({ ok: true })
-    : protocolError(c, "AUTH_INVALID", 401)
+app.get("/manifest", (context) =>
+  runtime.handleManifest(context.req.raw, context.env)
+)
+app.post("/verify", (context) =>
+  runtime.handleVerify(context.req.raw, context.env)
+)
+app.get("/usage", (context) =>
+  runtime.handleUsage(context.req.raw, context.env)
+)
+app.post("/extract", (context) =>
+  runtime.handleExtract(context.req.raw, context.env)
 )
 ```
 
 </CodeBlock>
 
-Apply the same bearer check to usage and Extraction:
+Replace the manifest, authentication function, usage provider, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
 
-<CodeBlock label="src/index.ts">
-
-```ts {1-4,7-11}
-app.get("/usage", async (c) => {
-  if (!isAuthorized(c.req.raw, c.env)) {
-    return protocolError(c, "AUTH_INVALID", 401)
-  }
-  return c.json(await readUsage(c.env))
-})
-
-app.post("/extract", async (c) => {
-  if (!isAuthorized(c.req.raw, c.env)) {
-    return protocolError(c, "AUTH_INVALID", 401)
-  }
-  return handleExtract(c)
-})
-
-export default app
-```
-
-</CodeBlock>
-
-`handleExtract` must parse `extractRequestSchema`, confirm a matcher accepts the target URL, reserve usage, dispatch to the matching Plugin, validate the response, and settle usage.
+The starter returns a finite usage fixture so its contract tests can run without a database. Replace that provider with durable accounting before deployment.
 
 </DocSection>

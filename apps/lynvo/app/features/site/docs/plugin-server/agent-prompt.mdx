@@ -1,180 +1,51 @@
 ---
-title: Generate a Plugin Server Worker with an agent
-description: Copy this prompt into a coding agent to create the shared Worker before adding Source Plugins.
-navLabel: Generate the boilerplate
+title: Extend a generated Plugin Server with an agent
+description: Use a coding agent to replace the starter Plugin without rebuilding the Worker shell.
+navLabel: Extend with an agent
 contentType: Tutorial
 ---
 
 <DocSection id="agent-prompt">
 
-## Generate the external Plugin Server boilerplate
+## Extend the generated Worker with an agent
 
-Paste this prompt into a coding agent from the directory where you want the project created. The agent should build the shared Plugin Server infrastructure, not a finished Source Plugin.
-
-Before you run it, replace `your_organization_name` and `your_plugin_server_name`. You can keep the example Plugin until the Plugin Server passes its contract tests.
+Generate the project first with `pnpm create lynvo-plugin-server@latest`. Then run the prompt below from the generated project directory. It tells the agent to extend the existing Worker instead of rebuilding the protocol shell.
 
 <CodeBlock label="Agent prompt">
 
 ```text
-Create a production-ready Lynvo Custom Plugin Server Worker.
+Open this existing Lynvo-compatible Plugin Server project.
 
-Project identity:
-- Organization: your_organization_name
-- Plugin Server name: your_plugin_server_name
-- Plugin Server ID: com.your_organization_name.your_plugin_server_name
+Project rules:
+- Keep the generated Hono Worker, Wrangler config, and package scripts.
+- Keep @dg02002/lynvo-plugin-server-protocol as the protocol dependency.
+- Keep createPluginServerRuntime and the four required route handlers.
+- Read the bearer key from LYNVO_PLUGIN_SERVER_API_KEY.
+- Do not add a frontend or move Source logic into route handlers.
 
-Use this stack:
-- TypeScript with strict mode
-- Cloudflare Workers
-- Hono for HTTP routing
-- Zod for every request and response boundary
-- pnpm
-- Vitest
-- Wrangler configuration in wrangler.jsonc
+Replace the example Plugin with support for this Source:
+- Source name: your_source_name
+- Supported hosts: your_source_host
+- Supported paths: your_source_path_pattern
+- Plugin ID: your_plugin_id
 
-Do not build a frontend. Do not add Source-specific scraping to the route
-handlers. Build a reusable Plugin Server shell where developers can add Plugins
-later.
+Implement the Source matcher, upstream requests, response parsing, and Media
+Node mapping in src/plugins. Update the manifest and
+extensions.lynvo.plugins in src/index.ts so they match the implementation.
 
-Implement Lynvo Custom Plugin Server protocol version 1.0 over HTTPS and JSON.
-Use the published @dg02002/lynvo-plugin-server-protocol package for the shared
-schemas, contract parsers, and runtime route helper. Do not copy the Lynvo
-application or use a workspace or local-link dependency.
+Keep credentials out of URLs, manifests, responses, and logs. Use bounded
+requests and return the protocol error codes for unsupported, temporary, and
+permanent failures. Replace the usage fixture with durable accounting before
+calling the Worker production-ready.
 
-Create these required endpoints:
-- GET /manifest: public
-- POST /verify: bearer authentication required
-- GET /usage: bearer authentication required
-- POST /extract: bearer authentication required
-
-Add POST /discover only if the manifest advertises features.discovery. Require
-bearer authentication and return a stable Plugin ID when a Source matches.
-
-Read the bearer key from PLUGIN_SERVER_API_KEY. Support .dev.vars locally and a
-Wrangler secret in production. Reject unauthorized requests before usage
-reservation or upstream network access.
-
-Design a Plugin interface with:
-- Stable id, displayName, version, and status
-- Optional description, homepage, and direct HTTPS WebP iconUrl
-- URL matchers for schemes, hosts, host patterns, and path patterns
-- Declared password, lazy-node, and HTTP Basic Auth capabilities
-- canHandle(input) for routing
-- extract(context) for Source-specific Extraction
-
-Create a Plugin catalog as the single source of truth for manifest metadata
-and request dispatch. The Hono route layer must not contain Source-specific
-conditions.
-
-Add one clearly labeled example Plugin for media.example.com. Keep it small
-and deterministic so a developer can replace it with a real Plugin. Document
-exactly which files belong to the shared Plugin Server and which belong to a
-Plugin.
-
-The manifest must include:
-- protocolVersion: "1.0"
-- A stable namespaced pluginServerId
-- A human-readable displayName
-- auth.type: "bearer"
-- usage.endpoint: "/usage"
-- Non-empty matchers derived from the Plugin catalog
-- features for password, lazyNodes, basicAuth, and optional discovery
-- extensions.lynvo.plugins derived from the Plugin catalog
-
-Model Extraction input as either:
-- A Source URL with kind: "source" and sourceUrl
-- A lazy-node request with kind: "node", nodeUrl, and optional resourceId
-
-Support optional pluginId, password, and basicAuth credentials. Never place
-credentials in a target URL, response, manifest, or log.
-
-Support these Media Node kinds:
-- playable with label and URL
-- group with label, children, and optional selectable
-- resolvable with label, nodeUrl, and optional resourceId
-
-Support optional node metadata used by Lynvo, including description,
-thumbnail, size, MIME type, quality, duration, subtitles, audio tracks,
-headers, and expiry when applicable. Validate URLs and recursive child nodes.
-
-A successful Extraction response must include:
-- plugin.pluginServerId and plugin.displayName
-- Optional pluginId, pluginName, pluginIconUrl, pageTitle, and audio summary
-- A non-empty nodes array
-- An extensions object
-
-Return JSON protocol errors with a stable code and safe message. Implement:
-- UNSUPPORTED_URL
-- AUTH_INVALID
-- AUTH_REQUIRED
-- RATE_LIMITED
-- TEMPORARY_FAILURE
-- PERMANENT_FAILURE
-- PASSWORD_REQUIRED
-- INVALID_PASSWORD
-- NODE_EXPIRED
-- PROTOCOL_MISMATCH
-- BAD_REQUEST
-
-Implement finite usage reporting. GET /usage must return at least one metric
-with id, label, used, limit, unit, period, and resetsAt. Reserve capacity
-atomically before Extraction, settle successful usage, and release failed
-reservations. Use a Cloudflare Durable Object when concurrency requires shared
-state. Do not use an in-memory counter as the production limiter.
-
-Keep modules focused. Use a structure similar to:
-- src/index.ts
-- src/app.ts
-- src/env.ts
-- src/auth.ts
-- src/manifest.ts
-- src/protocol/schemas.ts
-- src/protocol/errors.ts
-- src/plugins/types.ts
-- src/plugins/catalog.ts
-- src/plugins/example-media.ts
-- src/usage/limiter.ts
-- tests/contract.test.ts
-- tests/plugins/example-media.test.ts
-
-Add contract tests for:
-- Manifest schema and protocol version
-- Duplicate Plugin IDs
-- Matcher and Source metadata consistency
-- Authentication on protected endpoints
-- Malformed Extraction requests
-- Supported and unsupported URLs
-- Every node kind
-- Success response validation
-- Every protocol error envelope
-- Usage response validation
-- Reservation settlement and release
-- No credentials in responses or logs
-
-Add README instructions for:
-- Installing dependencies
-- Running locally
-- Setting PLUGIN_SERVER_API_KEY
-- Running tests and type checks
-- Deploying with Wrangler
-- Verifying all four production endpoints
-- Adding a new Plugin without editing the route layer
-- Connecting the deployed origin and bearer key in Lynvo Settings
-
-Use arrow functions, descriptive names, kebab-case files, and TypeScript
-interfaces. Avoid type casts and duplicated schemas. Keep secrets out of source
-control.
-
-Run formatting, tests, type checking, and a Wrangler dry-run build. Fix all
-failures before finishing. At the end, report:
-1. The created file tree
-2. The commands that passed
-3. The environment variables and secrets still required
-4. The exact files a developer edits to add the first real Plugin
+Add contract fixtures for supported URLs, unsupported URLs, authentication,
+malformed requests, failure responses, and every Media Node kind you return.
+Run pnpm check, pnpm test, and pnpm build. Report changed files and remaining
+secrets or deployment configuration.
 ```
 
 </CodeBlock>
 
-The generated Worker should run before you add a real Source. Replace the example Plugin one Source at a time, and keep its supported, unsupported, and failure fixtures beside the Plugin.
+The agent should edit the Plugin implementation, manifest metadata, and tests. Keep the shared runtime and route wiring unchanged unless the protocol requires an explicit extension.
 
 </DocSection>

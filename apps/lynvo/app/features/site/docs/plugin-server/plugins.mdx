@@ -1,6 +1,6 @@
 ---
 title: Add a Plugin
-description: Organize Source-specific matching and Extraction without coupling it to your routes.
+description: Replace the starter example with Source-specific matching and Extraction.
 navLabel: Plugins
 contentType: Tutorial
 ---
@@ -9,45 +9,34 @@ contentType: Tutorial
 
 ## Add a Plugin
 
-One Plugin Server can host several Plugins. Each Plugin supports a Source: a website, service, or URL pattern with its own matchers, metadata, and Extraction function.
+The generated project includes one deterministic example Plugin. Replace it with your Source implementation before you deploy.
 
-Define a Plugin catalog so manifest metadata and request dispatch use the same records:
+Start with these files:
 
-<CodeBlock label="src/plugins/catalog.ts">
+1. Replace the Source implementation in `src/plugins/example.ts`
+2. Update the matcher and Plugin metadata in `src/index.ts`
+3. Add supported, unsupported, and failure fixtures to `tests/contract.test.ts`
 
-```ts {1-8}
-export const plugins = [
-  {
-    id: "example-media",
-    displayName: "Example Media",
-    status: "active" as const,
-    version: "1.0.0",
-    hosts: ["media.example.com"],
-    matchers: [
-      {
-        hosts: ["media.example.com"],
-        pathPatterns: ["/watch/**"],
-        schemes: ["https"],
-      },
-    ],
+The Source implementation returns a protocol response instead of a framework response:
+
+<CodeBlock label="src/plugins/example.ts">
+
+```ts
+import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protocol"
+
+export const extractExampleSource = (
+  targetUrl: string,
+  pluginServerId: string
+): ExtractSuccessResponse => ({
+  plugin: {
+    pluginServerId,
+    displayName: "My Plugin Server",
+    pluginId: "example-source",
+    pluginName: "Example Source",
   },
-]
-```
-
-</CodeBlock>
-
-Publish user-visible Sources under `extensions.lynvo.plugins`:
-
-<CodeBlock label="src/manifest.ts">
-
-```ts {4-6}
-export const manifest = {
-  // Core manifest fields
-  matchers: plugins.flatMap((plugin) => plugin.matchers),
-  extensions: {
-    lynvo: { plugins },
-  },
-}
+  nodes: [{ kind: "playable", label: "Example item", url: targetUrl }],
+  extensions: {},
+})
 ```
 
 </CodeBlock>
@@ -67,13 +56,8 @@ Plugin metadata supports these fields:
 | `hosts` and `matchers`  | Source URLs handled by the Plugin              |
 | `credential`            | Domain password or HTTP Basic Auth capability  |
 
-Add a Plugin by completing four changes:
+A Plugin should own Source credentials, upstream requests, response parsing, Media Node creation, and Source-specific errors. The shared runtime should own bearer authentication, protocol validation, usage enforcement, and response serialization.
 
-1. Create the Plugin module
-2. Add one catalog record
-3. Add a direct HTTPS WebP icon when available
-4. Add supported, unsupported, and failure fixtures
-
-Do not add Source-specific conditions to the Hono route layer.
+For multiple Plugins, keep one catalog as the source of truth for manifest metadata and request dispatch. Do not add Source-specific conditions to the Hono route layer.
 
 </DocSection>
