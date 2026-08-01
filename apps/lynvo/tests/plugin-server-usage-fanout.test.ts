@@ -5,6 +5,7 @@ import { csrfCookie } from "../app/lib/csrf"
 
 const PLUGIN_SERVER_COUNT = 6
 let queryCount = 0
+let registrationAtLimit = false
 
 const manifest = JSON.stringify({
   protocolVersion: "1.0",
@@ -52,7 +53,12 @@ vi.mock("convex/browser", () => ({
           }
         : storedPluginServers
     }
-    mutation = async () => ({ success: true })
+    mutation = async () => {
+      if (registrationAtLimit) {
+        throw new Error("You have reached the saved plugin server limit.")
+      }
+      return { success: true }
+    }
   },
 }))
 
@@ -121,8 +127,9 @@ describe("Plugin Server usage HTTP fan-out", () => {
     fetchMock.mockRestore()
   })
 
-  it("rejects registration before contacting another Plugin Server at the account limit", async () => {
+  it("rejects registration before remote contact at the lifecycle capacity", async () => {
     queryCount = 0
+    registrationAtLimit = true
     const csrfCookieHeader = await csrfCookie.serialize("test-csrf-token")
     const fetchMock = vi.spyOn(globalThis, "fetch")
     const { default: worker } = await import("../workers/app")
@@ -169,5 +176,6 @@ describe("Plugin Server usage HTTP fan-out", () => {
     expect(fetchMock).not.toHaveBeenCalled()
     expect(await response.text()).toContain("saved plugin server limit")
     fetchMock.mockRestore()
+    registrationAtLimit = false
   })
 })

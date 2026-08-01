@@ -23,22 +23,19 @@ describe("Convex credential boundary", () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "plugin-server-boundary-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
-    const pluginServerId = await client.mutation(
-      api.userPluginServers.createPending,
+    const registration = await client.mutation(
+      api.userPluginServers.beginRegistration,
       {
         baseUrl: "https://plugin-server.example",
-        manifest: "{}",
-        enabled: true,
-        priority: 0,
-        verificationStatus: "verified",
       }
     )
     await client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
-      id: pluginServerId,
+      id: registration.id,
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
       apiKeyAlgorithm: "AES-256-GCM",
       apiKeyVersion: 1,
+      manifest: "{}",
     })
 
     const publicWorkers = await client.query(api.userPluginServers.list, {})

@@ -134,11 +134,18 @@ export default defineSchema({
   userPluginServers: defineTable({
     userId: v.id("users"),
     baseUrl: v.string(),
+    normalizedBaseUrl: v.string(),
     apiKeyCiphertext: v.optional(v.string()),
     apiKeyNonce: v.optional(v.string()),
     apiKeyAlgorithm: v.optional(v.literal("AES-256-GCM")),
     apiKeyVersion: v.optional(v.number()),
-    credentialStatus: v.union(v.literal("pending"), v.literal("ready")),
+    credentialStatus: v.union(
+      v.literal("pending"),
+      v.literal("ready"),
+      v.literal("failed")
+    ),
+    pendingExpiresAt: v.optional(v.number()),
+    failureReason: v.optional(v.string()),
     manifest: v.string(),
     enabled: v.boolean(),
     priority: v.number(),
@@ -147,7 +154,9 @@ export default defineSchema({
     lastManifestRefreshAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_normalizedBaseUrl", ["userId", "normalizedBaseUrl"]),
 
   userPluginDomains: defineTable({
     userId: v.id("users"),

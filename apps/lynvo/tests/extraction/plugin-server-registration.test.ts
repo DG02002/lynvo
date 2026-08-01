@@ -1,11 +1,14 @@
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   normalizePluginServerBaseUrl,
   preparePluginServerRefresh,
   preparePluginServerRegistration,
 } from "~/lib/effect/services/plugin-server-registration"
-import type { RegisteredPluginServer } from "~/lib/effect/services/extraction-types"
+import { registerCustomPluginServer } from "~/lib/effect/services/custom-plugin-server-lifecycle"
+import { ConvexService } from "~/lib/effect/services/ConvexService"
+import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
+import { ConvexError } from "~/lib/effect/errors"
 
 const createManifest = (
   sourceIconUrl = "https://icons.example/resolver-beta.webp"
@@ -74,7 +77,6 @@ describe("Plugin Server registration", () => {
       preparePluginServerRegistration({
         baseUrl: "https://plugin-server.example/",
         apiKey: "secret",
-        existingPluginServers: [],
       })
     )
 
@@ -103,34 +105,6 @@ describe("Plugin Server registration", () => {
     expect(requests[2].headers.get("Authorization")).toBe("Bearer secret")
   })
 
-  it("rejects duplicate plugin servers before making network requests", async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
-    const existingPluginServers: RegisteredPluginServer[] = [
-      {
-        _id: "pluginServer-1",
-        baseUrl: "https://plugin-server.example",
-        apiKey: "old-secret",
-        manifest: "{}",
-        enabled: true,
-        priority: 0,
-      },
-    ]
-
-    await expect(
-      Effect.runPromise(
-        preparePluginServerRegistration({
-          baseUrl: "https://plugin-server.example/",
-          apiKey: "secret",
-          existingPluginServers,
-        })
-      )
-    ).rejects.toMatchObject({
-      message: "This Plugin Server is already registered.",
-    })
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
   it("rejects plugin servers without mandatory usage reporting", async () => {
     vi.stubGlobal(
       "fetch",
@@ -146,7 +120,6 @@ describe("Plugin Server registration", () => {
         preparePluginServerRegistration({
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
-          existingPluginServers: [],
         })
       )
     ).rejects.toMatchObject({
@@ -169,12 +142,82 @@ describe("Plugin Server registration", () => {
         preparePluginServerRegistration({
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
-          existingPluginServers: [],
         })
       )
     ).rejects.toMatchObject({
       message: "Plugin Server Manifest does not match protocol v1.",
     })
+  })
+
+  it("preserves the primary registration error when recovery also fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json(createManifest()))
+        .mockResolvedValueOnce(Response.json({ ok: true }))
+        .mockResolvedValueOnce(Response.json(createUsage()))
+    )
+    let mutationCount = 0
+    const credentialVault = {
+      getByName: () => ({
+        fetch: () =>
+          Promise.resolve(
+            Response.json({
+              ciphertext: "ciphertext",
+              nonce: "nonce",
+              algorithm: "AES-256-GCM",
+              keyVersion: 1,
+            })
+          ),
+      }),
+    }
+    const layer = Layer.mergeAll(
+      Layer.succeed(
+        CloudflareEnv,
+        CloudflareEnv.of({
+          AUTH_GATEWAY_SECRET: "test-secret",
+          PLUGIN_SERVER_CREDENTIAL_VAULT: credentialVault,
+        } as unknown as Env)
+      ),
+      Layer.succeed(
+        ConvexService,
+        ConvexService.of({
+          action: () => Effect.die(new Error("Unexpected Convex action")),
+          query: () => Effect.die(new Error("Unexpected Convex query")),
+          mutation: () => {
+            mutationCount += 1
+            if (mutationCount === 1) {
+              return Effect.succeed({
+                id: "plugin-server-1",
+                resumed: false,
+              })
+            }
+            return Effect.fail(
+              new ConvexError({
+                message:
+                  mutationCount === 2
+                    ? "Finalization mutation failed"
+                    : "Recovery mutation failed",
+              })
+            )
+          },
+        })
+      )
+    )
+
+    await expect(
+      Effect.runPromise(
+        registerCustomPluginServer({
+          baseUrl: "https://plugin-server.example",
+          apiKey: "secret",
+          user: { id: "user-1", accessToken: "access-token" },
+        }).pipe(Effect.provide(layer))
+      )
+    ).rejects.toMatchObject({
+      message: "Finalization mutation failed",
+    })
+    expect(mutationCount).toBe(3)
   })
 
   it("refreshes a registered pluginServer manifest using the stored API key", async () => {

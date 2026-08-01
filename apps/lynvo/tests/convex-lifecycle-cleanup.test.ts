@@ -202,6 +202,7 @@ describe("bounded lifecycle cleanup", () => {
       await context.db.insert("userPluginServers", {
         userId: target.userId,
         baseUrl: "https://plugin-server.target.example",
+        normalizedBaseUrl: "https://plugin-server.target.example",
         apiKeyCiphertext: "ciphertext",
         apiKeyNonce: "nonce",
         apiKeyAlgorithm: "AES-256-GCM",

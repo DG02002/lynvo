@@ -11,7 +11,6 @@ import type { RegisteredPluginServer } from "./extraction-types"
 export interface PluginServerRegistrationInput {
   readonly baseUrl: string
   readonly apiKey: string
-  readonly existingPluginServers: ReadonlyArray<RegisteredPluginServer>
   readonly requestId?: string
 }
 
@@ -54,23 +53,6 @@ export const normalizePluginServerBaseUrl = Effect.fn(
   url.search = ""
   url.hash = ""
   return url.toString().replace(/\/$/, "")
-})
-
-const ensureUniquePluginServer = Effect.fn(
-  "PluginServerRegistration.ensureUniquePluginServer"
-)(function* (
-  existingPluginServers: ReadonlyArray<RegisteredPluginServer>,
-  baseUrl: string
-): Effect.fn.Return<void, PluginServerRegistrationError> {
-  if (
-    existingPluginServers.some(
-      (pluginServer) => pluginServer.baseUrl.replace(/\/$/, "") === baseUrl
-    )
-  ) {
-    return yield* new PluginServerRegistrationError({
-      message: "This Plugin Server is already registered.",
-    })
-  }
 })
 
 const registrationError = (
@@ -136,7 +118,6 @@ export const preparePluginServerRegistration = Effect.fn(
   PluginServerRegistrationError
 > {
   const baseUrl = yield* normalizePluginServerBaseUrl(input.baseUrl)
-  yield* ensureUniquePluginServer(input.existingPluginServers, baseUrl)
   const prepared = yield* preparePluginServer(
     baseUrl,
     input.apiKey,

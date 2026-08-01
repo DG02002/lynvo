@@ -26,6 +26,7 @@ describe("Convex storage ledger", () => {
       await context.db.insert("userPluginServers", {
         userId: user.userId,
         baseUrl: "https://plugins.existing.example",
+        normalizedBaseUrl: "https://plugins.existing.example",
         credentialStatus: "pending",
         manifest: "{}",
         enabled: true,
@@ -134,29 +135,27 @@ describe("Convex storage ledger", () => {
     expect(afterDelete.ledger).toMatchObject(afterDelete.inventory)
     expect(afterDelete.ledger?.savedLinkCount).toBe(0)
 
-    const pluginServerId = await client.mutation(
-      api.userPluginServers.createPending,
+    const registration = await client.mutation(
+      api.userPluginServers.beginRegistration,
       {
         baseUrl: "https://plugin-server.ledger.example",
-        manifest: "{}",
-        enabled: true,
-        priority: 1,
-        verificationStatus: "verified",
       }
     )
     await client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
-      id: pluginServerId,
+      id: registration.id,
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
       apiKeyAlgorithm: "AES-256-GCM",
       apiKeyVersion: 1,
+      manifest: "{}",
     })
-    await client.mutation(api.userPluginServers.update, {
-      id: pluginServerId,
+    await client.mutation(api.userPluginServers.recordRefreshSuccess, {
+      id: registration.id,
       manifest: JSON.stringify({ name: "Larger manifest" }),
+      now: Date.now(),
     })
     await client.mutation(api.userPluginServers.deleteById, {
-      id: pluginServerId,
+      id: registration.id,
     })
     const afterWorkerDelete = await convex.run(async (context) => ({
       ledger: await getUserStorageLedger(context, user.userId),
@@ -214,6 +213,7 @@ describe("Convex storage ledger", () => {
         await context.db.insert("userPluginServers", {
           userId: user.userId,
           baseUrl: `https://quota-${serverIndex}.example`,
+          normalizedBaseUrl: `https://quota-${serverIndex}.example`,
           credentialStatus: "pending",
           manifest: "x".repeat(740_000),
           enabled: true,
