@@ -16,14 +16,14 @@ export const TermsOfUseContent = () => (
     <p>
       In these terms, <strong>Lynvo</strong> means the website and related
       hosted service. An <strong>account</strong> is the username-based record
-      used to access Lynvo; and a <strong>Recent Link</strong> is a saved URL
-      and its related metadata. A <strong>Plugin Server</strong> is a service
-      that processes supported URLs. A <strong>Plugin</strong> is the
-      Source-specific integration inside that service, and a{" "}
-      <strong>Source</strong> is the website, service, or URL pattern the Plugin
-      supports. A <strong>credential</strong> is a password, API key, or similar
-      secret. A <strong>service provider</strong> is another organization that
-      processes data or supplies infrastructure for Lynvo.
+      used to access Lynvo; and a <strong>saved link</strong> is a saved URL and
+      its related metadata. A <strong>Plugin Server</strong> is a service that
+      processes supported URLs. A <strong>Plugin</strong> is the Source-specific
+      integration inside that service, and a <strong>Source</strong> is the
+      website, service, or URL pattern the Plugin supports. A{" "}
+      <strong>credential</strong> is a password, API key, or similar secret. A{" "}
+      <strong>service provider</strong> is another organization that processes
+      data or supplies infrastructure for Lynvo.
     </p>
 
     <PolicySection title="1. What Lynvo does">
@@ -97,9 +97,9 @@ export const TermsOfUseContent = () => (
     <PolicySection title="5. Account and storage limits">
       <p>
         Each account currently has a 3 MB storage limit for account records. A
-        single Recent Link can use up to 1 MB, and an account can contain up to
-        100 Recent Links. These limits cover stored records and metadata, not
-        the size of a linked video file.
+        single saved link can use up to 1 MB, and an account can contain up to
+        100 saved links. These limits cover stored records and metadata, not the
+        size of a linked video file.
       </p>
       <p>
         Lynvo Plugin Server and Direct media requests share an allowance of 15

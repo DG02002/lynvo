@@ -1,9 +1,20 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it } from "vitest"
 import { PlanSection } from "~/features/site/home/home-sections"
+import { meta as homeMeta } from "~/features/site/routes/_site._index"
 import Pricing from "~/features/site/routes/_site.pricing"
 import { pricingFaqs } from "~/features/site/pricing/pricing-content"
+
+const siteManifest = JSON.parse(
+  readFileSync(resolve(process.cwd(), "public/site.webmanifest"), "utf8")
+) as {
+  name: string
+  description: string
+  orientation?: string
+}
 
 describe("marketing and pricing copy", () => {
   it("states the implemented Free plan limits without unsupported claims", () => {
@@ -42,5 +53,14 @@ describe("marketing and pricing copy", () => {
     expect(faqCopy).toContain("100 saved links")
     expect(faqCopy).toContain("200-request monthly allowance")
     expect(faqCopy).toContain("15-request daily limit")
+  })
+
+  it("keeps app metadata aligned with the supported Android devices", () => {
+    expect(homeMeta({} as never)).toContainEqual({
+      title: "Lynvo - Save links. Play them on Android.",
+    })
+    expect(siteManifest.name).toBe("Lynvo - Save links. Play them on Android.")
+    expect(siteManifest.description).toContain("Android players")
+    expect(siteManifest.orientation).toBeUndefined()
   })
 })

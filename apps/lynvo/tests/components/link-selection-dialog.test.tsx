@@ -136,7 +136,7 @@ describe("LinkSelectionDialog", () => {
     ).toBeChecked()
   })
 
-  it("selects a lazy folder without expanding it when its checkbox is clicked", () => {
+  it("selects a lazy folder without expanding it when its checkbox is selected", () => {
     const resolveFolder = vi.fn().mockResolvedValue([])
     render(<LazyFolderHarness resolveFolder={resolveFolder} />)
 
@@ -225,7 +225,7 @@ describe("LinkSelectionDialog", () => {
     expect(screen.queryByText(/Audio:/)).not.toBeInTheDocument()
   })
 
-  it("displays a working close button above the custom header", () => {
+  it("displays a working close button with the custom header", () => {
     const onOpenChange = vi.fn()
     render(
       <LinkSelectionDialog

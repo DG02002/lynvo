@@ -9,7 +9,7 @@ import {
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Lynvo - Save the link. Stream on TV." },
+    { title: "Lynvo - Save links. Play them on Android." },
     {
       name: "description",
       content:

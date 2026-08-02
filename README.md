@@ -8,7 +8,7 @@ playable links that can be saved and opened again later.
 - Extracts playable files from supported OneDrive and Google Drive index deployments.
 - Accepts direct media URLs through Lynvo's Direct Media Adapter.
 - Supports Custom Plugin Servers for additional Sources.
-- Saves Recent Links with source identity, playable items, and playback state.
+- Saves links with source identity, playable items, and playback state.
 - Resolves folders and lazy items progressively instead of loading an entire source at once.
 - Sends playback to connected devices and supported players.
 
@@ -21,20 +21,15 @@ every Plugin Server the same request, response, metadata, and error contract.
 
 Direct links remain inside Lynvo and use the final Direct Media Adapter fallback.
 
-Create an independent Lynvo-compatible Plugin Server with the public starter:
-
-```sh
-pnpm create lynvo-plugin-server@latest my-plugin-server
-cd my-plugin-server
-pnpm test
-pnpm build
-```
-
-The generated Worker owns source-specific extraction and deployment. The
-versioned [`@dg02002/lynvo-plugin-server-protocol`](packages/plugin-server-protocol/README.md)
-package owns the shared wire contract. See the [Plugin Server development and
-release guide](docs/plugin-server-development.md) for standalone setup,
-versioning, external compatibility, and troubleshooting.
+Public instructions for creating, testing, deploying, and connecting an
+independent Lynvo-compatible Plugin Server are rendered in Lynvo at
+`/docs/plugin-server`. Their source is in
+[`apps/lynvo/app/features/site/docs/plugin-server/`](apps/lynvo/app/features/site/docs/plugin-server/).
+The versioned
+[`@dg02002/lynvo-plugin-server-protocol`](packages/plugin-server-protocol/README.md)
+package owns the shared wire contract. Maintainers working in this repository
+can use the [internal Plugin Server maintainer guide](docs/plugin-server-maintainer-guide.md)
+for monorepo, compatibility, and release work.
 
 ## Privacy and trust
 
@@ -47,8 +42,7 @@ resolution without persisting extraction credentials.
 
 - [Contributing and operating Lynvo](CONTRIBUTING.md)
 - [Plugin Server Protocol](packages/plugin-server-protocol/README.md)
-- [Plugin Server development and release](docs/plugin-server-development.md)
-- [Usage-limit policy](docs/usage-limits.md)
+- [Plugin Server maintainer guide](docs/plugin-server-maintainer-guide.md)
 - [Project terminology](CONTEXT.md)
 
 ## License

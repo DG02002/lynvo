@@ -5,7 +5,6 @@ const GENERATED_OR_IMMUTABLE_PATHS = new Set([
   "apps/lynvo/worker-configuration.d.ts",
   "apps/lynvo-plugin-server/worker-configuration.d.ts",
   "scripts/check-plugin-server-terminology.mjs",
-  "docs/POLICY-WRITING-FINDINGS.md",
 ])
 const TEXT_FILE_PATTERN =
   /\.(?:cjs|css|html|js|json|jsonc|md|mdx|mjs|ts|tsx|yaml|yml)$/

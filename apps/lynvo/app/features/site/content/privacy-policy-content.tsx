@@ -11,7 +11,7 @@ export const PrivacyPolicyContent = () => (
     <p>
       In this policy, <strong>Lynvo</strong> means the website and related
       service; an <strong>account</strong> is the username-based record used to
-      access Lynvo; and a <strong>Recent Link</strong> is a saved URL and its
+      access Lynvo; and a <strong>saved link</strong> is a saved URL and its
       related metadata. A <strong>Plugin Server</strong> processes supported
       URLs, a <strong>Plugin</strong> is its Source-specific integration, and a{" "}
       <strong>Source</strong> is the website, service, or URL pattern the Plugin
@@ -167,11 +167,11 @@ export const PrivacyPolicyContent = () => (
 
     <PolicySection title="7. Retention and automatic deletion">
       <p>
-        Recent Links use a 90-day retention window by default. You can change it
-        to 7, 30, 90, or 180 days in Settings. Lynvo checks daily for Recent
-        Links older than the selected window and deletes them. An account can
-        contain up to 100 Recent Links within 3 MB of account-record storage;
-        each Recent Link can use up to 1 MB.
+        Saved links use a 90-day retention window by default. You can change it
+        to 7, 30, 90, or 180 days in Settings. Lynvo checks daily for saved
+        links older than the selected window and deletes them. An account can
+        contain up to 100 saved links within 3 MB of account-record storage;
+        each saved link can use up to 1 MB.
       </p>
       <ul className="list-disc pl-6">
         <li>Processed remote commands expire after five minutes</li>

@@ -3,6 +3,11 @@
 ## Goal
 
 This guide explains how to build a Lynvo-compatible Custom Plugin Server.
+It is the package-level technical reference for the protocol contract. The
+complete end-to-end workflow for creating, testing, deploying, and connecting a
+server is maintained in Lynvo's public in-app docs at `/docs/plugin-server`.
+That separation keeps this guide useful when the protocol package is consumed
+outside the Lynvo application without duplicating the public tutorial.
 
 The recommended stack is:
 

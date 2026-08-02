@@ -21,7 +21,7 @@ export function ReceiverOverlay() {
             />
           </div>
           <h2 className="text-xl font-semibold tracking-tight">
-            Connected to Remote Device
+            Connected to remote device
           </h2>
         </div>
 

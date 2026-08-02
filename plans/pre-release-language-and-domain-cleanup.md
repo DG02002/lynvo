@@ -13,7 +13,7 @@ The cleanup should make the code describe the product that exists today:
 
 - saved links are represented as a list of link items, not cards;
 - QR login is a generic device-login flow, not a TV-only flow;
-- Plugin Domains, Plugin Credentials, Plugin Servers, and Recent Links use
+- Plugin Domains, Plugin Credentials, Plugin Servers, and saved links use
   their canonical product terms where those terms are useful to users;
 - the core license and package-level license boundaries are visible and
   accurately described.
@@ -27,18 +27,16 @@ one.
 
 - Use `links` and `LinkItem` for the saved-link list implementation. Do not add
   `Recent` or `Card` to feature-local API, variable, component, or test names.
-- Rename feature-local `RecentLink*` view, hook, persistence, and mapper names
-  to `Link*` equivalents. Keep “Recent Links” only where it is intentionally
-  the user-facing product label or a deliberately documented policy term.
+- Use `Link*` names for feature-local saved-link views, hooks, persistence, and
+  mappers. Keep `saved links` as the user-facing product term.
 - Rename list operations to `clearLinks`, `linkLimitBytes`, and
   `cleanupExpiredLinks` where the surrounding module already establishes the
   saved-link context.
 - Rename item-level UI concepts to `LinkItemMenu` and `LinkItemActions`.
 - Name plugin-domain parsing and suggestion values as `PluginDomain*`, not
   generic source-URL candidates.
-- Keep “Recent Links” available as the formal user-facing product term where it
-  distinguishes the saved-link collection from other links. Use “saved links”
-  in natural explanatory copy when it is clearer.
+- Use “saved links” consistently for the stored-link collection and in natural
+  explanatory copy.
 - Change the QR approval URL from `/tv?code=...` to `/device?code=...`.
 - Rename the internal TV-specific authentication abstractions to generic
   device-auth names. Keep “TV” in Android TV documentation and fixtures when
@@ -165,8 +163,8 @@ guidance.
 
 ### Documentation and protocol language
 
-- Replace protocol “saved-item” wording with Recent Link, saved link, or Media
-  Node according to the layer being documented.
+- Replace protocol “saved-item” wording with saved link or Media Node according
+  to the layer being documented.
 - Replace “managed official manifest” with “Lynvo Plugin Server manifest.”
 - Change the Plugin Server documentation navigation label from “Create a
   Worker” to “Create a Plugin Server.” Keep “Cloudflare Worker” when it refers

@@ -161,7 +161,7 @@ export const getStorageUsage = async (
 
   return calculateStorageUsage({
     profile: user ? [user] : [],
-    links: assertBoundedInventory(links, "Recent Links"),
+    links: assertBoundedInventory(links, "links"),
     pluginServers: assertBoundedInventory(pluginServers, "Plugin Servers"),
     pluginDomains: assertBoundedInventory(pluginDomains, "Plugin Domains"),
     pluginCredentials: assertBoundedInventory(
@@ -207,9 +207,7 @@ export const calculateAppOwnedStorageUsage = async (
         .take(STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT + 1),
     ])
   const profileBytes = user ? byteLength(user) : 0
-  const linkBytes = sumDocumentBytes(
-    assertBoundedInventory(links, "Recent Links")
-  )
+  const linkBytes = sumDocumentBytes(assertBoundedInventory(links, "links"))
   const pluginServerBytes = sumDocumentBytes(
     assertBoundedInventory(pluginServers, "Plugin Servers")
   )

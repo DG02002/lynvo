@@ -10,9 +10,9 @@ workspace.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
 - `packages/create-lynvo-plugin-server`: public standalone Worker generator and canonical template.
 - `examples/plugin-server`: minimal compatible Worker used by root CI.
-- `docs/plugin-server-development.md`: standalone authoring and release flow.
-- `docs/usage-limits.md`: account and Plugin Server capacity policy.
-- `docs/apple-HIG/`: design and writing references used by contributors.
+- `apps/lynvo/app/features/site/docs/plugin-server/`: public Plugin Server author docs rendered at `/docs/plugin-server`.
+- `docs/plugin-server-maintainer-guide.md`: internal monorepo, compatibility, and package release guide.
+- `docs/apple-HIG/`: read-only design and writing references used by contributors.
 
 ## Prerequisites
 
@@ -178,6 +178,52 @@ monorepo. A generated or external Plugin Server must use the published
 `@dg02002/lynvo-plugin-server-protocol` semver package and must not contain `workspace:`
 or `link:` dependencies.
 
+## Usage limits and reset
+
+Lynvo separates extraction capacity into two independent resources:
+
+- Lynvo account quotas reserve per-user capacity before a Lynvo Plugin Server
+  binding call.
+- Lynvo Plugin Server capacity reserves global upstream capacity before Source
+  work begins.
+
+Lynvo Plugins use Lynvo-owned counters. Custom Plugin Servers expose and
+enforce their own finite counters through the mandatory authenticated
+`GET /usage` protocol endpoint.
+
+### Current Lynvo Plugin limits
+
+- 200 Lynvo Plugin extractions per account per UTC month, shared across all
+  Lynvo Plugins and direct links.
+- 15 Lynvo Plugin extractions per account per UTC day.
+- 20,000 Lynvo Plugin extraction operations globally per UTC day.
+
+The global daily ceiling intentionally reserves most of the Workers Free daily
+allowance for authentication, settings, saved links, realtime connections, and
+other dynamic application traffic.
+
+The Lynvo Plugin Server enforces its own finite global service capacity before
+upstream work and reports that service-credential usage through the Plugin
+Server Protocol. Lynvo separately keeps the per-account quotas above because
+the binding credential identifies Lynvo as a service, not an individual
+account.
+
+Use `pnpm dev:local --host --no-usage` for repeated Plugin Server testing
+without advancing account usage counters. Omit `--no-usage` to test the normal
+daily and monthly account quotas. The global daily extraction safety limit
+always remains enabled.
+
+### Reset every Lynvo account
+
+Run this from the repository root against the configured Convex deployment:
+
+```bash
+pnpm --filter @lynvo/app usage:reset
+```
+
+The reset advances a global usage epoch. Existing counter rows remain available
+for later cleanup but stop affecting every account immediately.
+
 ## Required quality gates
 
 Run all gates from the repository root before committing:
@@ -281,7 +327,6 @@ extra configuration.
 
 ## Specialized references
 
-- [Usage limits](docs/usage-limits.md)
 - [Protocol package and documentation](packages/plugin-server-protocol/README.md)
 - [Project terminology](CONTEXT.md)
 - [Typography reference](<docs/apple-HIG/Typography - Apple HIG.md>)

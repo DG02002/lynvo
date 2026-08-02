@@ -41,10 +41,10 @@ export const LicensesContent = () => (
         <ExternalLink href={LYNVO_LICENSE_URL}>LICENSE file</ExternalLink>.
       </p>
       <p>
-        Copyright © 2026 Lynvo contributors. The software is provided without
-        warranty under the terms of AGPL-3.0. The license explains the rights to
-        use, modify, convey, and distribute the covered source code and how to
-        obtain the corresponding source when those obligations apply.
+        Copyright © 2026 Lynvo. The software is provided without warranty under
+        the terms of AGPL-3.0. The license explains the rights to use, modify,
+        convey, and distribute the covered source code and how to obtain the
+        corresponding source when those obligations apply.
       </p>
     </PolicySection>
 

@@ -19,7 +19,7 @@ describe("policy copy", () => {
     for (const policy of [terms, usage]) {
       expect(policy).toContain("3 MB")
       expect(policy).toContain("1 MB")
-      expect(policy).toContain("100 Recent Links")
+      expect(policy).toContain("100 saved links")
       expect(policy).toContain("15 requests per day")
       expect(policy).toContain("200 requests per month")
       expect(policy).toContain("Lynvo Plugin Server")
@@ -34,6 +34,7 @@ describe("policy copy", () => {
     expect(privacy).toContain("7, 30, 90, or 180 days")
     expect(privacy).toContain("90 days (3 months)")
     expect(privacy).toContain("Telegram")
+    expect(privacy).not.toMatch(/Recent Link/i)
     expect(privacy).not.toMatch(/clear your history|history/)
   })
 
@@ -43,7 +44,8 @@ describe("policy copy", () => {
 
     for (const policy of [terms, usage]) {
       expect(policy).not.toMatch(/saved-link history|watchlist|saved item/i)
-      expect(policy).toContain("Recent Link")
+      expect(policy).toContain("saved link")
+      expect(policy).not.toMatch(/Recent Link/i)
     }
   })
 
@@ -52,6 +54,7 @@ describe("policy copy", () => {
 
     expect(licenses).toContain("AGPL-3.0")
     expect(licenses).toContain("MIT License")
+    expect(licenses).toContain("Copyright © 2026 Lynvo")
     expect(licenses).toContain("@dg02002/lynvo-plugin-server-protocol")
     expect(licenses).toContain("Telegram")
     expect(licenses).toContain("GitHub Issues")

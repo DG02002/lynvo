@@ -10,7 +10,7 @@ export const UsagePolicyContent = () => (
     </p>
     <p>
       An <strong>account</strong> is the username-based record used to access
-      Lynvo, and a <strong>Recent Link</strong> is a saved URL and its related
+      Lynvo, and a <strong>saved link</strong> is a saved URL and its related
       metadata. A <strong>Plugin Server</strong> processes supported URLs. A{" "}
       <strong>Plugin</strong> is the Source-specific integration inside that
       service, and a <strong>Source</strong> is the website, service, or URL
@@ -71,8 +71,8 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="5. Follow account and request limits">
       <p>
-        Each account can store up to 100 Recent Links within 3 MB of
-        account-record storage. A single Recent Link can use up to 1 MB. Lynvo
+        Each account can store up to 100 saved links within 3 MB of
+        account-record storage. A single saved link can use up to 1 MB. Lynvo
         Plugin Server and Direct media requests share an allowance of 15
         requests per day and 200 requests per month.
       </p>

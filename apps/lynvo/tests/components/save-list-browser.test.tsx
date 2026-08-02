@@ -413,7 +413,7 @@ describe("SaveListBrowser", () => {
     expect(screen.getByText("Expires Jan 1, 2030")).toBeInTheDocument()
   })
 
-  it("shows New on an unclicked root folder and marks it watched on open", () => {
+  it("shows New on a root folder before it is opened and marks it watched on open", () => {
     const markWatched = vi.fn()
     const item: LinkViewItem = {
       url: "https://source.example/folder",

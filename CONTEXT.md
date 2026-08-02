@@ -4,13 +4,9 @@ Lynvo saves playable links, extracted source metadata, and playback state for a 
 
 ## Language
 
-**Recent Link**:
+**Saved link**:
 A saved source URL with its extracted playable links, metadata, and playback state.
-_Avoid_: card, history item, saved card
-
-**Recent Links**:
-The ordered collection of Recent Links shown on the Save page.
-_Avoid_: recents, history
+_Avoid_: card, history item, saved card, recent link
 
 **Plugin Domain**:
 A normalized hostname that a user has assigned to a Lynvo Plugin.
