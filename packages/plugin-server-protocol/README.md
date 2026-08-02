@@ -48,9 +48,9 @@ Documentation:
 - [Compatibility checklist](docs/compatibility-checklist.md)
 - [Metadata flow](docs/metadata-flow.md)
 
-See [`examples/plugin-server`](https://github.com/DG02002/lynvo/tree/main/examples/plugin-server)
-for the minimal tested workspace implementation, or inspect the canonical
-starter template in [`create-lynvo-plugin-server`](https://github.com/DG02002/lynvo/tree/main/packages/create-lynvo-plugin-server/template).
+Inspect the canonical starter template in
+[`create-lynvo-plugin-server`](https://github.com/DG02002/lynvo/tree/main/packages/create-lynvo-plugin-server/template)
+for the generated Worker and its contract tests.
 
 The package follows semver for its JavaScript API. Protocol compatibility is
 declared separately by the manifest's `protocolVersion` field; the current

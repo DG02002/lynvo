@@ -75,5 +75,6 @@ successful results expose `.value` and rejected results expose detailed
 tests. Structural schemas are reserved for narrow decoding or display-only
 paths.
 
-See [`examples/plugin-server/tests/contract.test.ts`](../../../examples/plugin-server/tests/contract.test.ts)
-for the workspace contract-test example.
+The generated starter includes `tests/contract.test.ts` with the initial
+contract checks. Keep those checks and add Source-specific fixtures before
+you deploy a real Source implementation.

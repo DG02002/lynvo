@@ -47,16 +47,14 @@ From the `lynvo/` repository root:
 ```sh
 pnpm install --frozen-lockfile
 pnpm --filter @dg02002/lynvo-plugin-server-protocol check
-pnpm --filter @lynvo/example-plugin-server check
-pnpm --filter @lynvo/example-plugin-server test
 pnpm --filter create-lynvo-plugin-server check
 pnpm check:plugin-server-release
 ```
 
 The canonical starter template lives at
 `packages/create-lynvo-plugin-server/template/`. Keep it minimal and
-independent of Lynvo application services. The workspace example is a test
-fixture and may continue to use the workspace protocol.
+independent of Lynvo application services. The generated project uses the
+published protocol package; only this monorepo uses `workspace:*`.
 
 ## External compatibility consumer
 

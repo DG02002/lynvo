@@ -9,7 +9,6 @@ workspace.
 - `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
 - `packages/create-lynvo-plugin-server`: public standalone Worker generator and canonical template.
-- `examples/plugin-server`: minimal compatible Worker used by root CI.
 - `apps/lynvo/app/features/site/docs/plugin-server/`: public Plugin Server author docs rendered at `/docs/plugin-server`.
 - `docs/plugin-server-maintainer-guide.md`: internal monorepo, compatibility, and package release guide.
 - `docs/apple-HIG/`: read-only design and writing references used by contributors.

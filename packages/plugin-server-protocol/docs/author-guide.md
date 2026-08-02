@@ -30,7 +30,8 @@ than requiring a Lynvo checkout.
 Then read:
 
 - `compatibility-checklist.md` for the compatibility rules Lynvo expects.
-- `examples/plugin-server/` for the workspace example.
+- `tests/contract.test.ts` in the generated project for the initial contract
+  checks to keep and extend.
 
 ## Recommended Project Setup
 
