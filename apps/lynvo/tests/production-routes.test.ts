@@ -11,10 +11,6 @@ const getRoutePaths = (routeConfig: typeof routes): string[] =>
   ])
 
 describe("production route table", () => {
-  it("does not expose the test-only links route", () => {
-    expect(getRoutePaths(routes)).not.toContain("ui-test-list")
-  })
-
   it("exposes the public device-login and license routes", () => {
     const routePaths = getRoutePaths(routes)
 

@@ -23,7 +23,7 @@ describe("policy copy", () => {
       expect(policy).toContain("15 requests per day")
       expect(policy).toContain("200 requests per month")
       expect(policy).toContain("Lynvo Plugin Server")
-      expect(policy).toContain("Direct media")
+      expect(policy).toContain("Direct Media")
     }
   })
 

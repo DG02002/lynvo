@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import type { ExtractedLink } from "~/features/links/types"
 import { useRemoteControl } from "~/context/RemoteControlContext"
-import { playLinkTarget } from "./playback-flow"
+import { playbackTarget } from "./playback-flow"
 
 export const usePlaybackActions = ({
   isOpeningRef,
@@ -22,7 +22,7 @@ export const usePlaybackActions = ({
       setIsOpening(true)
 
       try {
-        await playLinkTarget({ target, activeSessionId, sendCommand })
+        await playbackTarget({ target, activeSessionId, sendCommand })
       } finally {
         resetOpeningWhenReady()
       }

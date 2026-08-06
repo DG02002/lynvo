@@ -2,27 +2,27 @@ import type { ExtractedLink, LinkMetadata } from "./types"
 import { normalizeLinkMetadata } from "./link-metadata-normalization"
 import { mergeUnique } from "./link-tree-metadata"
 
-export const applyWatchedState = (
+export const applyOpenedState = (
   links: ExtractedLink[],
-  watchedUrls: Set<string>,
-  watchedIds: Set<string>
+  openedUrls: Set<string>,
+  openedIds: Set<string>
 ): ExtractedLink[] =>
   links.map((link) => {
-    const isWatched =
-      watchedUrls.has(link.url) || (link.id ? watchedIds.has(link.id) : false)
+    const isOpened =
+      openedUrls.has(link.url) || (link.id ? openedIds.has(link.id) : false)
 
     return {
       ...link,
-      watched: isWatched,
+      opened: isOpened,
       ...(link.children
         ? {
-            children: applyWatchedState(link.children, watchedUrls, watchedIds),
+            children: applyOpenedState(link.children, openedUrls, openedIds),
           }
         : {}),
     }
   })
 
-export const withWatchedUrl = (
+export const withOpenedUrl = (
   metadata: unknown,
   linkUrl: string
 ): LinkMetadata => {
@@ -31,7 +31,7 @@ export const withWatchedUrl = (
     ...normalized,
     playback: {
       ...normalized.playback,
-      watchedUrls: mergeUnique(normalized.playback.watchedUrls, [linkUrl]),
+      openedUrls: mergeUnique(normalized.playback.openedUrls, [linkUrl]),
     },
   }
 }

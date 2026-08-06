@@ -9,11 +9,11 @@ import {
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Lynvo - Save links. Play them on Android." },
+    { title: "Lynvo - Save links. Open them in Android players." },
     {
       name: "description",
       content:
-        "Save video links, sync your library, and open them in your preferred player across Android TV, phones, and tablets.",
+        "Use Lynvo in any browser to save video links, sync your library, and open them in Just (Video) Player, VLC for Android, MPV, or MX Player on Android TV, Android phones, and Android tablets.",
     },
   ]
 }

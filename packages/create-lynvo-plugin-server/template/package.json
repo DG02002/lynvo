@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --config wrangler.jsonc",
+    "images:optimize": "node scripts/optimize-images.mjs public/icons/sources",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "build": "wrangler deploy --dry-run --config wrangler.jsonc --env=\"\"",
-    "deploy": "wrangler deploy --config wrangler.jsonc --env=\"\""
+    "build": "pnpm run images:optimize && wrangler deploy --dry-run --config wrangler.jsonc --env=\"\"",
+    "deploy": "pnpm run images:optimize && wrangler deploy --config wrangler.jsonc --env=\"\""
   },
   "dependencies": {
     "@dg02002/lynvo-plugin-server-protocol": "^__LYNVO_PROTOCOL_VERSION__",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260731.1",
+    "sharp": "^0.35.3",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10",
     "wrangler": "^4.116.0"

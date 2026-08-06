@@ -70,8 +70,8 @@ export function RemotePlayButton({
         <DialogHeader className="p-6 pb-2 text-left">
           <DialogTitle className="font-normal">Connect Remote Play</DialogTitle>
           <DialogDescription>
-            Open Lynvo in <strong>TV Bro</strong> on the TV. Keep Lynvo open,
-            then choose the TV from the device list.
+            Open Lynvo in a browser on another device. Keep Lynvo open, then
+            choose that device from the list.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col p-2">

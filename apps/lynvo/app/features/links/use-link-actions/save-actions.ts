@@ -111,7 +111,7 @@ export const useSaveActions = ({
       await offerPluginDomainSuggestion(result.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
-      effects.showError("Unable to save the selection. Try again.")
+      effects.showError("Unable to save the selected links. Try again.")
     } finally {
       setIsSaving(false)
     }

@@ -33,6 +33,19 @@ const sourceStatusMessage = (status: string | undefined) => {
   return undefined
 }
 
+const sourceStatusLabel = (status: string) => {
+  if (status === "maintenance") {
+    return "Maintenance"
+  }
+  if (status === "degraded") {
+    return "Degraded"
+  }
+  if (status === "down") {
+    return "Unavailable"
+  }
+  return "Status unavailable"
+}
+
 const getErrorTitle = (error: string, isExistingLinkWarning: boolean) => {
   if (isExistingLinkWarning) {
     return "Link already saved"
@@ -193,7 +206,7 @@ export function LinkInputSection({
             <span className="font-medium text-foreground">
               {extractionPreview.meta.sourceName ||
                 extractionPreview.meta.pluginName ||
-                "Direct media"}
+                "Direct Media"}
             </span>
             {extractionPreview.meta.sourceName &&
               extractionPreview.meta.pluginName && (
@@ -224,8 +237,8 @@ export function LinkInputSection({
             )}
             {extractionPreview.meta.sourceStatus &&
               extractionPreview.meta.sourceStatus !== "active" && (
-                <span className="rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-                  {extractionPreview.meta.sourceStatus}
+                <span className="rounded border px-1.5 py-0.5 text-[10px] tracking-wide">
+                  {sourceStatusLabel(extractionPreview.meta.sourceStatus)}
                 </span>
               )}
           </div>

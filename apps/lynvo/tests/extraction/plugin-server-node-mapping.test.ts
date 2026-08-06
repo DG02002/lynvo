@@ -25,7 +25,7 @@ describe("mapNodeToExtractedLink", () => {
     expect(link.children).toHaveLength(1)
   })
 
-  it("maps playable nodes to direct file links", () => {
+  it("maps playable nodes to playable file links", () => {
     const node: MediaNode = {
       kind: "playable",
       id: "route-alpha",

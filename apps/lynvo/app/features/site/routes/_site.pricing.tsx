@@ -36,7 +36,7 @@ const freePlanFeatures = [
   "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
-  "Android playback and remote control",
+  "Android player handoff and Remote Play",
 ]
 
 const planCardClassName = "self-start rounded-lg"
@@ -69,11 +69,11 @@ const planDetailSections = [
     details: [
       {
         feature: "Monthly requests",
-        allowance: "200, shared across Lynvo Plugins and direct media",
+        allowance: "200, shared across Lynvo Plugins and Direct Media",
       },
       { feature: "Daily requests", allowance: "15" },
       {
-        feature: "Direct links",
+        feature: "Direct Media links",
         allowance: "Included",
         icon: { hugeIcon: Link01Icon },
       },
@@ -99,14 +99,14 @@ const planDetailSections = [
     ],
   },
   {
-    title: "Plugins and devices",
+    title: "Plugins and Remote Play",
     details: [
       {
         feature: "Custom Plugin Server allowance",
         allowance: "Set by each Plugin Server",
       },
       { feature: "Real-time sync", allowance: "Included" },
-      { feature: "Remote playback control", allowance: "Included" },
+      { feature: "Remote Play control", allowance: "Included" },
     ],
   },
 ] satisfies { title: string; details: PlanDetail[] }[]
@@ -143,7 +143,8 @@ export default function Pricing() {
           <CardHeader className={planCardHeaderClassName}>
             <CardTitle className={planCardTitleClassName}>Free</CardTitle>
             <CardDescription className={planCardDescriptionClassName}>
-              For saving and playing supported links on Android devices.
+              For saving links and opening them in Android players on Android
+              TV, Android phones, and Android tablets.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-8">

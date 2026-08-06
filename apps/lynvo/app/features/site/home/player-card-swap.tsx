@@ -255,7 +255,7 @@ export const PlayerCardSwap = () => {
   return (
     <ul
       className="player-card-swap"
-      aria-label="Supported Android player previews"
+      aria-label="Four Android player previews"
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocus={pause}

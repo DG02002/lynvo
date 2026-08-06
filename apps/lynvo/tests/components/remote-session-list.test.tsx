@@ -36,9 +36,9 @@ describe("RemoteSessionList", () => {
     const props = renderList()
 
     expect(screen.getByText("No Remote Play devices found")).toBeVisible()
-    expect(screen.getByText(/same Wi-Fi network/)).toBeVisible()
+    expect(screen.getByText(/another device/)).toBeVisible()
     expect(
-      screen.getByRole("button", { name: "Set up Remote Play" })
+      screen.getByRole("button", { name: "Android TV setup" })
     ).toHaveAttribute("href", "/docs/android-tv")
 
     fireEvent.click(screen.getByRole("button", { name: "Search again" }))

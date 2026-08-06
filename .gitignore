@@ -136,8 +136,6 @@ Thumbs.db
 
 .repos
 plans/
-animation-plans/
-testlinks.md
 
 # Source directories overridden by broad global Git ignore rules
 !app/lib/

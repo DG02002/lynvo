@@ -7,7 +7,6 @@
     "clean": "rm -rf build .react-router",
     "dev:local": "node scripts/start-local-dev.mjs",
     "dev": "react-router dev",
-    "dev:cloud": "react-router dev",
     "preview": "pnpm run build && vite preview",
     "test": "vitest",
     "lint": "oxlint app workers convex scripts",

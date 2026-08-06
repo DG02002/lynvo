@@ -41,8 +41,8 @@ export const useResolvableContainerState = ({
   }
 
   const openLink = () => {
-    if (!link.watched) {
-      actions.markWatched(item.url, link.url)
+    if (!link.opened) {
+      actions.markOpened(item.url, link.url)
     }
     if (mirrors.length) {
       setIsExpanded((currentValue) => !currentValue)

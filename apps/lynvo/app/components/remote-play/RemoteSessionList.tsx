@@ -47,7 +47,7 @@ export const RemoteSessionList = ({
             <p className="mt-1 text-xs text-muted-foreground">
               {hasError
                 ? "Check the connection, then search again."
-                : "Connect this device and the TV to the same Wi-Fi network. Keep Lynvo open in TV Bro on the TV."}
+                : "Open Lynvo in a browser on another device, then search again."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Button variant="outline" size="sm" onClick={onSearchAgain}>
@@ -59,7 +59,7 @@ export const RemoteSessionList = ({
                 nativeButton={false}
                 render={<Link to={sitePaths.androidTvSetup} />}
               >
-                Set up Remote Play
+                Android TV setup
               </Button>
             </div>
           </div>

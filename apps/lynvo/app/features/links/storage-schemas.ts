@@ -13,7 +13,7 @@ export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
     rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
     expiry: z.number().optional(),
     status: z.enum(["up", "down"]).optional(),
-    watched: z.boolean().optional(),
+    opened: z.boolean().optional(),
     size: z.string().optional(),
     sourceName: z.string().optional(),
     selectable: z.boolean().optional(),
@@ -27,7 +27,6 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
   contentType: z.string().optional(),
   contentLength: z.number().optional(),
   lastModified: z.string().optional(),
-  acceptRanges: z.string().optional(),
   rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
   pluginName: z.string().optional(),
   pluginIcon: z.string().optional(),
@@ -69,12 +68,11 @@ const linkMetadataSchema: z.ZodType<LinkMetadata> = z.object({
     extractedAt: z.number().optional(),
   }),
   playback: z.object({
-    watchedUrls: z.array(z.string()),
-    watchedIds: z.array(z.string()),
+    openedUrls: z.array(z.string()),
+    openedIds: z.array(z.string()),
     resolvedMirrors: z
       .record(z.string(), z.array(extractedLinkSchema))
       .optional(),
-    newPlayableItemUrls: z.array(z.string()).optional(),
   }),
 })
 
@@ -91,10 +89,4 @@ export const storedSavedLinkSchema = z.strictObject({
   updatedAt: z.number(),
   metadata: linkMetadataSchema,
   title: z.string().optional(),
-})
-
-export const storedLinkSchema = z.looseObject({
-  url: z.string().min(1),
-  timestamp: z.number(),
-  metadata: linkMetadataSchema,
 })

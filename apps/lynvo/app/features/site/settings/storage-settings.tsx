@@ -165,7 +165,7 @@ export function StorageSettings() {
           </span>
           <Progress value={progressPercent} />
           <span className="text-xs text-muted-foreground">
-            Saved links, folders, and playback details count toward this limit.
+            Saved links and their extracted link data count toward this limit.
             Account security and connected-device records use approximately{" "}
             {formatBytes(usage.operationalBytes)} of additional storage.
           </span>
@@ -214,8 +214,8 @@ export function StorageSettings() {
                     Delete all saved links?
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-                    This permanently removes every saved link, folder, and
-                    playback detail from the account. This cannot be undone.
+                    This permanently removes every saved link and its extracted
+                    link data from the account. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="flex flex-col gap-3 w-full mt-4">

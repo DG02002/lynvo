@@ -49,6 +49,8 @@ The `plugin` object supports:
 | `pageTitle`      | No       | Extracted page title       |
 | `audio`          | No       | Audio-language summary     |
 
-Lynvo owns layout, watched state, saved selection, playback state, and link caching. Do not return interface instructions.
+Lynvo owns layout, opened markers, selected links, and link caching.
+An opened marker only records that an item was opened; Lynvo does not store
+playback positions or resume state. Do not return interface instructions.
 
 </DocSection>

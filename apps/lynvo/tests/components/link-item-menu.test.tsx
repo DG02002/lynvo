@@ -12,12 +12,11 @@ const createActions = (): LinkItemActions => ({
   play: vi.fn(),
   remove: vi.fn(),
   showLinks: vi.fn(),
-  markWatched: vi.fn(),
+  markOpened: vi.fn(),
   expandFolder: vi.fn(),
   softRefresh: vi.fn(),
   hardRefresh: vi.fn(),
   expandMirror: vi.fn(),
-  setAsCurrent: vi.fn(),
 })
 
 describe("LinkItemMenu", () => {
@@ -78,12 +77,7 @@ describe("LinkItemMenu", () => {
     expect(actions.hardRefresh).toHaveBeenCalledWith(item.url)
 
     rerender(
-      <LinkItemMenu
-        item={item}
-        actions={actions}
-        showRemove
-        isRefreshing
-      />
+      <LinkItemMenu item={item} actions={actions} showRemove isRefreshing />
     )
 
     expect(
@@ -91,7 +85,7 @@ describe("LinkItemMenu", () => {
     ).toBeDisabled()
   })
 
-  it("does not offer refresh or re-selection for a direct saved link", async () => {
+  it("does not offer refresh or re-selection for a Direct Media saved link", async () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/video.mp4",
       label: "video.mp4",

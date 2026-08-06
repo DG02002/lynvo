@@ -9,8 +9,6 @@ const PUBLIC_EXACT_PATHS = new Set([
   "/help-center",
   "/plugins",
   "/pricing",
-  "/privacy",
-  "/terms",
   "/policies/cookie-policy",
   "/policies/licenses",
   "/policies/privacy-policy",

@@ -22,7 +22,8 @@ const About = () => (
         </h1>
         <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
           Lynvo started with a simple playback problem and grew into an easier
-          way to save a link on one device and play it on another.
+          way to save a link on an Android phone or tablet and open it in a
+          player on Android TV.
         </p>
       </header>
 
@@ -33,10 +34,10 @@ const About = () => (
         <div className="space-y-4 leading-7 text-foreground">
           <p>
             About nine months ago, I found some Dolby Vision Profile 5 videos
-            available through direct links. My Android TV supported Dolby Vision
-            natively, but VLC could not play those files correctly. I started
-            looking for a media player that supported both Dolby Vision and HTTP
-            network streams.
+            available through Direct Media links. My Android TV supported Dolby
+            Vision natively, but VLC could not play those files correctly. I
+            started looking for a media player that supported both Dolby Vision
+            and HTTP network streams.
           </p>
           <p>
             That search led me to{" "}
@@ -60,7 +61,7 @@ const About = () => (
         <div className="space-y-4 leading-7 text-foreground">
           <p>
             Just Player could open network streams, but it did not have a
-            dedicated screen where someone could paste a URL on a TV. Its
+            dedicated screen where someone could paste a URL on Android TV. Its
             documented approach was to receive the URL through Android’s share
             sheet.
           </p>
@@ -103,10 +104,11 @@ const About = () => (
         <div className="space-y-4 leading-7 text-foreground">
           <p>
             I wanted a solution that anyone could use without repeating all
-            those steps. Lynvo lets someone save a link from one device, find it
-            on another through cloud sync, and send it to a supported player.
-            There is no complicated setup and no need to type a long media URL
-            with a TV remote.
+            those steps. Lynvo lets someone save a link from an Android phone or
+            tablet, find it on Android TV through cloud sync, and send it to
+            Just (Video) Player, VLC for Android, MPV, or MX Player. There is no
+            complicated setup and no need to type a long media URL with an
+            Android TV remote.
           </p>
           <p>
             Plugins made the experience more useful. Lynvo Plugins can resolve
@@ -115,10 +117,10 @@ const About = () => (
             Sources.
           </p>
           <p>
-            Before Lynvo had its current name and identity, it was called
-            PlayLink. I used that earlier version myself almost every day. Lynvo
-            is the same practical idea, rebuilt into a more complete and
-            carefully designed product.
+            The first version was useful, but it needed a clearer identity and a
+            stronger foundation. I used it almost every day. Lynvo is the same
+            practical idea, rebuilt into a more complete and carefully designed
+            product.
           </p>
         </div>
       </section>

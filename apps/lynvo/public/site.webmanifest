@@ -1,7 +1,7 @@
 {
-  "name": "Lynvo - Save links. Play them on Android.",
+  "name": "Lynvo - Save links. Open them in Android players.",
   "short_name": "Lynvo",
-  "description": "Save video links, open them in Android players, and control playback from another device.",
+  "description": "Save video links on Android phones, Android tablets, and Android TV, then open them in Just (Video) Player, VLC for Android, MPV, or MX Player.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

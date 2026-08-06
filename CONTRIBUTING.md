@@ -44,8 +44,7 @@ the Lynvo Plugin Server. It preserves existing variables, refuses to overwrite
 conflicting keys, never prints the key, and sets both files to owner-only
 permissions (`0600`). It is safe to run repeatedly.
 
-Never commit `.dev.vars`, `.env`, credentials, test links, `plans/`,
-`animation-plans/`, or `.repos/`.
+Never commit `.dev.vars`, `.env`, credentials, test links, or `.repos/`.
 
 ## Create and connect a Convex project
 
@@ -193,7 +192,7 @@ enforce their own finite counters through the mandatory authenticated
 ### Current Lynvo Plugin limits
 
 - 200 Lynvo Plugin extractions per account per UTC month, shared across all
-  Lynvo Plugins and direct links.
+  Lynvo Plugins and Direct Media.
 - 15 Lynvo Plugin extractions per account per UTC day.
 - 20,000 Lynvo Plugin extraction operations globally per UTC day.
 
@@ -235,8 +234,9 @@ pnpm build
 pnpm check:plugin-server-release
 ```
 
-`pnpm build` includes dry-run bundles for the Lynvo Plugin Server and example
-Worker. After building Lynvo, verify its generated deployment bundle with:
+`pnpm build` includes dry-run bundles for the Lynvo application and private
+Lynvo Plugin Server Worker. After building Lynvo, verify its generated
+deployment bundle with:
 
 ```sh
 pnpm --filter @lynvo/app exec wrangler deploy --dry-run
@@ -328,6 +328,5 @@ extra configuration.
 
 - [Protocol package and documentation](packages/plugin-server-protocol/README.md)
 - [Project terminology](CONTEXT.md)
-- [Typography reference](<docs/apple-HIG/Typography - Apple HIG.md>)
 - [Writing reference](<docs/apple-HIG/Writing - Apple HIG.md>)
 - [Inclusive-writing reference](<docs/apple-HIG/Writing Inclusively - Apple HIG.md>)

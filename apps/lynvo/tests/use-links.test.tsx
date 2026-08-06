@@ -33,8 +33,8 @@ const metadata = (label: string): LinkMetadata => ({
     ],
   },
   playback: {
-    watchedUrls: [],
-    watchedIds: [],
+    openedUrls: [],
+    openedIds: [],
   },
 })
 
@@ -217,57 +217,4 @@ describe("useLinks", () => {
     )
   })
 
-  it("replaces rather than merges collections across identity changes", async () => {
-    storage.setItem(
-      "lynvo:links:v1",
-      JSON.stringify([
-        {
-          url: "https://example.com/anonymous",
-          title: "Anonymous link",
-          timestamp: 50,
-          metadata: metadata("anonymous-file"),
-        },
-      ])
-    )
-    storage.setItem(
-      "lynvo:links:sync:v1:user-1",
-      JSON.stringify({ results: [cacheEntry], version: 100, etag: "100" })
-    )
-    routeLoaderDataMock.mockReturnValue({ user: null })
-    const { result, rerender } = renderHook(() => useLinks(), {
-      wrapper: createWrapper(),
-    })
-
-    expect(result.current.links.map(({ title }) => title)).toEqual([
-      "Anonymous link",
-    ])
-
-    routeLoaderDataMock.mockReturnValue({ user: { sub: "user-1" } })
-    rerender()
-    await waitFor(() => {
-      expect(result.current.links.map(({ title }) => title)).toEqual([
-        "Cached link",
-      ])
-    })
-
-    routeLoaderDataMock.mockReturnValue({ user: null })
-    rerender()
-    await waitFor(() => {
-      expect(result.current.links.map(({ title }) => title)).toEqual([
-        "Anonymous link",
-      ])
-    })
-  })
-
-  it("removes corrupt local storage and recovers with an empty collection", () => {
-    storage.setItem("lynvo:links:v1", "not-json")
-    routeLoaderDataMock.mockReturnValue({ user: null })
-
-    const { result } = renderHook(() => useLinks(), {
-      wrapper: createWrapper(),
-    })
-
-    expect(result.current.links).toEqual([])
-    expect(storage.getItem("lynvo:links:v1")).toBeNull()
-  })
 })

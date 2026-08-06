@@ -35,7 +35,7 @@ describe("player-utils", () => {
     })
   })
 
-  it("builds Android intent URLs for every supported player", () => {
+  it("builds Android intent URLs for all four configured players", () => {
     for (const player of PLAYER_DEFINITIONS) {
       const intent = buildIntentUrl(
         "https://cdn.example.com/video.mp4?token=abc",
@@ -50,15 +50,15 @@ describe("player-utils", () => {
     }
   })
 
-  it("uses Just Player for range-supported links by default", () => {
+  it("uses Just (Video) Player for links with HTTP byte-range support by default", () => {
     expect(selectPlayerForRangeCapability("supported").id).toBe("just")
   })
 
-  it("uses VLC for non-range links by default", () => {
+  it("uses VLC for links without HTTP byte-range support by default", () => {
     expect(selectPlayerForRangeCapability("unsupported").id).toBe("vlc")
   })
 
-  it("treats unknown range support like range-supported links", () => {
+  it("treats unknown byte-range support like supported requests", () => {
     expect(selectPlayerForRangeCapability("unknown").id).toBe("just")
   })
 

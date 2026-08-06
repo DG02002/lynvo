@@ -9,23 +9,13 @@ import { Effect } from "effect"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
 import { client } from "~/lib/effect/api/client"
-import {
-  linksToLinkViewItems,
-  readLinksCache,
-  readLocalLinks,
-  LINKS_KEY,
-  LINKS_MAX_LIMIT,
-} from "./cache"
+import { linksToLinkViewItems, readLinksCache } from "./cache"
 import { useLinksQuery } from "./query"
 import { useLinksMutations } from "./mutations"
 import { useLinksPaginationAndSort } from "./pagination"
 import { useDraftLinks } from "./drafts"
 import type { LinksActions } from "./actions"
-import {
-  createServerLinksAdapter,
-  createLocalLinksAdapter,
-  createLinksPersistence,
-} from "./persistence"
+import { createServerLinksAdapter, createLinksPersistence } from "./persistence"
 import { createServerLink } from "./link-server"
 
 export const useLinks = () => {
@@ -34,11 +24,8 @@ export const useLinks = () => {
   const userId = user?.sub
   const cachedLinks = useMemo(() => readLinksCache(userId), [userId])
   const cachedItems = useMemo(
-    () =>
-      userId
-        ? linksToLinkViewItems(cachedLinks?.results ?? [])
-        : readLocalLinks(),
-    [cachedLinks?.results, userId]
+    () => linksToLinkViewItems(cachedLinks?.results ?? []),
+    [cachedLinks?.results]
   )
   const linksQuery = useLinksQuery(userId, cachedLinks)
 
@@ -69,29 +56,22 @@ export const useLinks = () => {
 
   const adapter = useMemo(
     () =>
-      userId
-        ? createServerLinksAdapter({
-            read: () => cachedItems,
-            create: createLink,
-            update: updateLink,
-            delete: async (id) => {
-              await Effect.runPromise(
-                client.links.delete({ params: { linkId: id } })
-              )
-            },
-            clear: async () => {
-              await Effect.runPromise(client.settings.clearLinks())
-            },
-          })
-        : createLocalLinksAdapter({
-            storage: localStorage,
-            storageKey: LINKS_KEY,
-            maximumItems: LINKS_MAX_LIMIT,
-            read: readLocalLinks,
-          }),
+      createServerLinksAdapter({
+        read: () => cachedItems,
+        create: createLink,
+        update: updateLink,
+        delete: async (id) => {
+          await Effect.runPromise(
+            client.links.delete({ params: { linkId: id } })
+          )
+        },
+        clear: async () => {
+          await Effect.runPromise(client.settings.clearLinks())
+        },
+      }),
     [cachedItems, createLink, updateLink, userId]
   )
-  const identity = userId ?? "anonymous"
+  const identity = userId ?? "signed-out"
   const persistenceRef = useRef<LinksPersistence | undefined>(undefined)
   if (!persistenceRef.current) {
     persistenceRef.current = createLinksPersistence(
@@ -133,10 +113,9 @@ export const useLinks = () => {
     add: mutations.addLink,
     remove: mutations.remove,
     updateLinks: mutations.updateLinks,
-    markWatched: mutations.markLinkAsWatched,
+    markOpened: mutations.markLinkAsOpened,
     cacheResolvedMirrors: mutations.cacheResolvedMirrors,
     removeLink: mutations.removeLink,
-    setPlayableItemAsCurrent: mutations.setPlayableItemAsCurrent,
   }
 
   return {

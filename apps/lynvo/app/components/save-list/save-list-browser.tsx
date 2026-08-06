@@ -26,6 +26,7 @@ import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { formatPlayableExpiry } from "~/features/links/format-playable-expiry"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
+import { DraftExpiryBadge } from "~/components/save-list/draft-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import {
@@ -234,7 +235,7 @@ const ResolvedMirrorRows = ({
             itemLabel={mirror.label}
             onCopyLink={() => void navigator.clipboard.writeText(mirror.url)}
             onOpenInPlayer={(player) => {
-              actions.markWatched(itemUrl, sourceLink.url)
+              actions.markOpened(itemUrl, sourceLink.url)
               void openInSpecificPlayer(mirror.url, player)
             }}
             className="size-9 shrink-0 text-foreground"
@@ -271,7 +272,7 @@ const ResolvableContainerRow = ({
           className={cn(
             "flex min-h-24 w-full items-center gap-3 px-4 py-6 pr-16 text-left",
             "hover:bg-muted",
-            link.watched && "bg-sky-500/15 hover:bg-sky-500/20",
+            link.opened && "bg-sky-500/15 hover:bg-sky-500/20",
             didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
           )}
           data-resolution-state={resolutionState}
@@ -299,7 +300,7 @@ const ResolvableContainerRow = ({
               {displaySize}
             </span>
           )}
-          {!link.watched && <NewBadge />}
+          {!link.opened && <NewBadge />}
           {isResolving ? (
             <Spinner aria-label={`Loading playable links for ${link.label}…`} />
           ) : mirrors.length > 0 ? (
@@ -422,7 +423,7 @@ const FinderBrowser = ({
               void navigator.clipboard.writeText(link.url)
             }
             const openLinkInPlayer = (player: PlayerDefinition) => {
-              actions.markWatched(item.url, link.url)
+              actions.markOpened(item.url, link.url)
               void openInSpecificPlayer(link.url, player)
             }
 
@@ -441,7 +442,7 @@ const FinderBrowser = ({
                       "flex min-h-24 w-full items-center gap-3 px-4 py-6 text-left",
                       "hover:bg-muted",
                       !isFolder && "pr-16",
-                      link.watched && "bg-sky-500/15 hover:bg-sky-500/20"
+                      link.opened && "bg-sky-500/15 hover:bg-sky-500/20"
                     )}
                     onClick={() => void openLink(link)}
                   >
@@ -456,7 +457,7 @@ const FinderBrowser = ({
                         {link.size}
                       </span>
                     )}
-                    {!link.watched && <NewBadge />}
+                    {!link.opened && <NewBadge />}
                     {link.expiry && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {formatPlayableExpiry(link.expiry)}
@@ -569,7 +570,7 @@ export const SaveListBrowser = ({
           const isRootFolderNew =
             !directLink &&
             !item.isDraft &&
-            !new Set(getLinkViewItemMetadata(item).playback.watchedUrls).has(
+            !new Set(getLinkViewItemMetadata(item).playback.openedUrls).has(
               item.url
             )
 
@@ -596,7 +597,7 @@ export const SaveListBrowser = ({
                 className={cn(
                   "flex min-h-24 w-full items-center gap-3 px-4 py-6",
                   "hover:bg-muted/70",
-                  directLink?.watched && "bg-sky-500/15 hover:bg-sky-500/20"
+                  directLink?.opened && "bg-sky-500/15 hover:bg-sky-500/20"
                 )}
               >
                 <button
@@ -608,11 +609,11 @@ export const SaveListBrowser = ({
                       return
                     }
                     if (directLink) {
-                      actions.markWatched(item.url, directLink.url)
+                      actions.markOpened(item.url, directLink.url)
                       actions.play(directLink)
                       return
                     }
-                    actions.markWatched(item.url, item.url)
+                    actions.markOpened(item.url, item.url)
                     onSelectedItemUrlChange(item.url)
                   }}
                 >
@@ -632,7 +633,7 @@ export const SaveListBrowser = ({
                     </span>
                   </span>
                 </button>
-                {(directLink ? !directLink.watched : isRootFolderNew) && (
+                {(directLink ? !directLink.opened : isRootFolderNew) && (
                   <NewBadge />
                 )}
                 {!directLink && (
@@ -644,6 +645,9 @@ export const SaveListBrowser = ({
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {formatPlayableExpiry(directLink.expiry)}
                   </span>
+                )}
+                {item.isDraft && item.draftExpiresAt && (
+                  <DraftExpiryBadge expiresAt={item.draftExpiresAt} />
                 )}
                 {item.isDraft ? (
                   <DraftLinkItemMenu

@@ -95,7 +95,7 @@ describe("LinkInputSection", () => {
     ])
   })
 
-  it("shows the Direct Link plugin icon without an icon card effect", () => {
+  it("shows the Direct Media plugin icon without an icon card effect", () => {
     const { container } = render(
       <LinkInputSection
         url="https://media.example/video.mp4"
@@ -105,7 +105,7 @@ describe("LinkInputSection", () => {
         extractionPreview={{
           meta: {
             pluginId: "direct-link",
-            pluginName: "Direct Link",
+            pluginName: "Direct Media",
           },
         }}
         error={null}
@@ -121,5 +121,22 @@ describe("LinkInputSection", () => {
     expect(icon).toHaveClass("text-foreground")
     expect(icon).not.toHaveClass("text-muted-foreground")
     expect(container.querySelector("img")).not.toBeInTheDocument()
+  })
+
+  it("uses a human-readable label for an unavailable Source", () => {
+    render(
+      <LinkInputSection
+        url="https://source.example/video"
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving
+        extractionPreview={{ meta: { sourceStatus: "down" } }}
+        error={null}
+        setError={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText("Unavailable")).toBeVisible()
+    expect(screen.queryByText("DOWN")).not.toBeInTheDocument()
   })
 })

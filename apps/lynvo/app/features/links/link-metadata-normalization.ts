@@ -1,9 +1,9 @@
 import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
 import { getLinkSourceFields } from "./link-source-fields"
 import {
-  collectWatched,
+  collectOpened,
   mergeUnique,
-  stripWatchedFlags,
+  stripOpenedFlags,
 } from "./link-tree-metadata"
 
 interface ParsedMetadata extends MetaData {
@@ -45,7 +45,7 @@ export const normalizeLinkMetadata = (
     parsed.extractedLinks ??
     topLevelExtractedLinks ??
     []
-  const watchedFromLinks = collectWatched(extractedLinks)
+  const openedFromLinks = collectOpened(extractedLinks)
 
   return {
     schemaVersion: 3,
@@ -64,7 +64,6 @@ export const normalizeLinkMetadata = (
       contentType: existing?.source?.contentType ?? parsed.contentType,
       contentLength: existing?.source?.contentLength ?? parsed.contentLength,
       lastModified: existing?.source?.lastModified ?? parsed.lastModified,
-      acceptRanges: existing?.source?.acceptRanges ?? parsed.acceptRanges,
       rangeRequest: existing?.source?.rangeRequest ?? parsed.rangeRequest,
       pageTitle: existing?.source?.pageTitle ?? parsed.pageTitle,
       title: existing?.source?.title ?? parsed.title,
@@ -76,23 +75,22 @@ export const normalizeLinkMetadata = (
           : undefined) ?? parsed.pluginServerId,
     },
     extraction: {
-      extractedLinks: stripWatchedFlags(extractedLinks),
+      extractedLinks: stripOpenedFlags(extractedLinks),
       extractedAt:
         existing?.extraction?.extractedAt ??
         parsed.extractedAt ??
         (extractedLinks.length > 0 ? Date.now() : undefined),
     },
     playback: {
-      watchedUrls: mergeUnique(
-        existing?.playback?.watchedUrls,
-        watchedFromLinks.watchedUrls
+      openedUrls: mergeUnique(
+        existing?.playback?.openedUrls,
+        openedFromLinks.openedUrls
       ),
-      watchedIds: mergeUnique(
-        existing?.playback?.watchedIds,
-        watchedFromLinks.watchedIds
+      openedIds: mergeUnique(
+        existing?.playback?.openedIds,
+        openedFromLinks.openedIds
       ),
       resolvedMirrors: existing?.playback?.resolvedMirrors ?? {},
-      newPlayableItemUrls: existing?.playback?.newPlayableItemUrls ?? [],
     },
   }
 }
@@ -106,7 +104,6 @@ export const toFlatMeta = (metadata: LinkMetadata): MetaData => {
     contentType: source.contentType,
     contentLength: source.contentLength,
     lastModified: source.lastModified,
-    acceptRanges: source.acceptRanges,
     rangeRequest: source.rangeRequest,
     pluginName: source.pluginName,
     pluginIcon: source.pluginIcon,
@@ -151,7 +148,7 @@ export const createLinkMetadata = (input: {
       ...definedBaseSource,
     },
     extraction: {
-      extractedLinks: stripWatchedFlags(
+      extractedLinks: stripOpenedFlags(
         input.extractedLinks ?? base.extraction.extractedLinks
       ),
       extractedAt: Date.now(),

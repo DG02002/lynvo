@@ -9,7 +9,7 @@ export interface ExtractedLink {
   rangeRequest?: "supported" | "unsupported" | "unknown"
   expiry?: number // Timestamp when the link expires
   status?: "up" | "down"
-  watched?: boolean
+  opened?: boolean
   size?: string // Human readable size (e.g. "1.5 GB")
   sourceName?: string
   selectable?: boolean // false for non-checkable containers
@@ -40,10 +40,9 @@ export interface LinkMetadata {
     extractedAt?: number
   }
   playback: {
-    watchedUrls: string[]
-    watchedIds: string[]
+    openedUrls: string[]
+    openedIds: string[]
     resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
-    newPlayableItemUrls?: string[] // playable item URLs flagged as "New"
   }
 }
 
@@ -52,7 +51,6 @@ export interface MetaData {
   contentType?: string
   contentLength?: number
   lastModified?: string
-  acceptRanges?: string
   rangeRequest?: "supported" | "unsupported" | "unknown"
   pluginName?: string
   pluginIcon?: string

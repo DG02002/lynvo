@@ -98,7 +98,7 @@ export function PlayerSettings() {
         toast.error("The player setting couldn’t be saved. Try again.")
       }
     )
-    toast.success("Seeking player updated")
+    toast.success("Player for links with HTTP byte-range support updated")
   }
 
   const handleRangeUnsupportedChange = (playerId: PlayerId) => {
@@ -109,7 +109,7 @@ export function PlayerSettings() {
         toast.error("The player setting couldn’t be saved. Try again.")
       }
     )
-    toast.success("Standard playback player updated")
+    toast.success("Player for links without HTTP byte-range support updated")
   }
 
   const selectedRangeSupported = PLAYER_DEFINITIONS.find(
@@ -124,8 +124,8 @@ export function PlayerSettings() {
       <SettingsList>
         <SettingsRow>
           <SettingsRowInfo
-            label="Player for videos with seeking"
-            description="Used when a video can resume from a saved position or jump to another point."
+            label="Player for links with HTTP byte-range support"
+            description="Default for links whose server supports HTTP byte-range requests, which can enable seeking."
           />
           <Select
             value={rangeSupportedPlayerId}
@@ -164,8 +164,8 @@ export function PlayerSettings() {
 
         <SettingsRow>
           <SettingsRowInfo
-            label="Player for standard playback"
-            description="Used when a video must play from the beginning and cannot jump to another point."
+            label="Player for links without HTTP byte-range support"
+            description="Default for links whose server does not support HTTP byte-range requests. VLC may still allow seeking for some links."
           />
           <Select
             value={rangeUnsupportedPlayerId}

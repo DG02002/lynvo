@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { withWatchedUrl } from "~/features/links/link-playback-metadata"
+import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 
 const createActions = (
@@ -13,12 +13,11 @@ const createActions = (
   play: vi.fn(),
   remove: vi.fn(),
   showLinks: vi.fn(),
-  markWatched: vi.fn(),
+  markOpened: vi.fn(),
   expandFolder: vi.fn(),
   softRefresh: vi.fn(),
   hardRefresh: vi.fn(),
   expandMirror: vi.fn().mockResolvedValue(null),
-  setAsCurrent: vi.fn(),
   ...overrides,
 })
 
@@ -64,7 +63,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     }
 
@@ -132,7 +131,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     }
 
@@ -161,14 +160,14 @@ describe("SaveListBrowser", () => {
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
   })
 
-  it("resolves a Resolver Beta playable-item inline with loading and watched feedback", async () => {
+  it("resolves a Resolver Beta playable-item inline with loading and opened feedback", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
       value: vi.fn(),
     })
     let finishResolution: (() => void) | undefined
     let resolutionCount = 0
-    const markWatched = vi.fn()
+    const markOpened = vi.fn()
     const item: LinkViewItem = {
       id: "resolver-beta-item",
       url: "https://source-alpha.example/collection",
@@ -188,7 +187,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     }
 
@@ -196,11 +195,11 @@ describe("SaveListBrowser", () => {
       const [extractingItems, setExtractingItems] = useState(new Set<string>())
       const [currentItem, setCurrentItem] = useState(item)
       const actions = createActions({
-        markWatched: (itemUrl, linkUrl) => {
-          markWatched(itemUrl, linkUrl)
+        markOpened: (itemUrl, linkUrl) => {
+          markOpened(itemUrl, linkUrl)
           setCurrentItem((previousItem) => ({
             ...previousItem,
-            metadata: withWatchedUrl(
+            metadata: withOpenedUrl(
               previousItem.metadata ?? previousItem.meta,
               linkUrl
             ),
@@ -264,7 +263,7 @@ describe("SaveListBrowser", () => {
       "data-resolution-state",
       "resolving"
     )
-    expect(markWatched).toHaveBeenCalledWith(
+    expect(markOpened).toHaveBeenCalledWith(
       item.url,
       "https://resolver-beta.example/playable-item-one"
     )
@@ -284,7 +283,7 @@ describe("SaveListBrowser", () => {
     expect(
       screen.queryByText("Play from CF Server (404)")
     ).not.toBeInTheDocument()
-    expect(markWatched).toHaveBeenCalledWith(
+    expect(markOpened).toHaveBeenCalledWith(
       item.url,
       "https://resolver-beta.example/playable-item-one"
     )
@@ -320,7 +319,7 @@ describe("SaveListBrowser", () => {
   })
 
   it("shows a red failure state when a resolvable item returns no links", async () => {
-    const markWatched = vi.fn()
+    const markOpened = vi.fn()
     const item: LinkViewItem = {
       url: "https://source-alpha.example/failure",
       timestamp: Date.now(),
@@ -338,7 +337,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     }
 
@@ -348,7 +347,7 @@ describe("SaveListBrowser", () => {
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions({
-          markWatched,
+          markOpened,
           expandMirror: vi.fn().mockResolvedValue(null),
         })}
         extractingItems={new Set()}
@@ -369,13 +368,13 @@ describe("SaveListBrowser", () => {
       )
     })
     expect(failedPlayableItemButton).toHaveClass("bg-destructive/15")
-    expect(markWatched).toHaveBeenCalledWith(
+    expect(markOpened).toHaveBeenCalledWith(
       item.url,
       "https://resolver-beta.example/resolution-failure"
     )
   })
 
-  it("renders a watched direct root item with the watched background", () => {
+  it("renders an opened Direct Media root item with the opened background", () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/video.mp4",
       label: "video.mp4",
@@ -387,9 +386,9 @@ describe("SaveListBrowser", () => {
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 3,
-        source: { sourceName: "Direct Link" },
+        source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { watchedUrls: [directLink.url], watchedIds: [] },
+        playback: { openedUrls: [directLink.url], openedIds: [] },
       },
     }
 
@@ -413,8 +412,39 @@ describe("SaveListBrowser", () => {
     expect(screen.getByText("Expires Jan 1, 2030")).toBeInTheDocument()
   })
 
-  it("shows New on a root folder before it is opened and marks it watched on open", () => {
-    const markWatched = vi.fn()
+  it("shows the expiration countdown for a draft", () => {
+    const now = Date.now()
+    const item: LinkViewItem = {
+      url: "https://source.example/draft",
+      timestamp: now,
+      title: "Draft link",
+      isDraft: true,
+      draftExpiresAt: now + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000,
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[item]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(screen.getByText("Expiring in 2 days 3 hours")).toBeVisible()
+  })
+
+  it("shows New on a root folder before it is opened and marks it opened on open", () => {
+    const markOpened = vi.fn()
     const item: LinkViewItem = {
       url: "https://source.example/folder",
       timestamp: Date.now(),
@@ -432,7 +462,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     }
 
@@ -441,7 +471,7 @@ describe("SaveListBrowser", () => {
         items={[item]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({ markWatched })}
+        actions={createActions({ markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -458,7 +488,7 @@ describe("SaveListBrowser", () => {
       )
     ).toBe(true)
     fireEvent.click(screen.getByText("source.example").closest("button")!)
-    expect(markWatched).toHaveBeenCalledWith(item.url, item.url)
+    expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
   })
 
   it("uses a spinner for hydration and a plain empty state", () => {

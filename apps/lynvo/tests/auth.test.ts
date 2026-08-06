@@ -113,7 +113,7 @@ describe("AuthSessionService", () => {
     expect(result).toEqual({ kind: "unauthenticated", user: null })
   })
 
-  it("does not authenticate from the legacy JWT cookie", async () => {
+  it("ignores an unsupported JWT cookie", async () => {
     const result = await runSession(
       new Request("https://lynvo.test", {
         headers: { Cookie: "__convexAuthJWT_lynvo=valid-token" },

@@ -259,7 +259,7 @@ export function LinkSelectionDialog({
               disabled={selectedIds.size === 0}
               className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
             >
-              Save selected
+              Save selected links
             </Button>
           </div>
         </div>

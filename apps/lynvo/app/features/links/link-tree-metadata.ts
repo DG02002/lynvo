@@ -1,17 +1,17 @@
 import type { ExtractedLink } from "./types"
 
-export const collectWatched = (links: ExtractedLink[] = []) => {
-  const watchedUrls = new Set<string>()
-  const watchedIds = new Set<string>()
+export const collectOpened = (links: ExtractedLink[] = []) => {
+  const openedUrls = new Set<string>()
+  const openedIds = new Set<string>()
 
   const visit = (items: ExtractedLink[]) => {
     for (const link of items) {
-      if (link.watched) {
+      if (link.opened) {
         if (link.url) {
-          watchedUrls.add(link.url)
+          openedUrls.add(link.url)
         }
         if (link.id) {
-          watchedIds.add(link.id)
+          openedIds.add(link.id)
         }
       }
       if (link.children?.length) {
@@ -21,15 +21,15 @@ export const collectWatched = (links: ExtractedLink[] = []) => {
   }
 
   visit(links)
-  return { watchedUrls: [...watchedUrls], watchedIds: [...watchedIds] }
+  return { openedUrls: [...openedUrls], openedIds: [...openedIds] }
 }
 
-export const stripWatchedFlags = (
+export const stripOpenedFlags = (
   links: ExtractedLink[] = []
 ): ExtractedLink[] =>
-  links.map(({ watched: _watched, children, ...link }) => ({
+  links.map(({ opened: _opened, children, ...link }) => ({
     ...link,
-    ...(children ? { children: stripWatchedFlags(children) } : {}),
+    ...(children ? { children: stripOpenedFlags(children) } : {}),
   }))
 
 export const removeLinkFromTree = (

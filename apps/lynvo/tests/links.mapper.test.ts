@@ -14,10 +14,10 @@ describe("links mapper metadata normalization", () => {
     const metadata = normalizeLinkMetadata("not-json")
     expect(metadata.schemaVersion).toBe(3)
     expect(metadata.extraction.extractedLinks).toEqual([])
-    expect(metadata.playback.watchedUrls).toEqual([])
+    expect(metadata.playback.openedUrls).toEqual([])
   })
 
-  it("normalizes flat meta strings and watched flags", () => {
+  it("normalizes flat meta strings and opened flags", () => {
     const metadata = normalizeLinkMetadata(
       JSON.stringify({
         pluginName: "Plugin",
@@ -25,14 +25,14 @@ describe("links mapper metadata normalization", () => {
         password: "secret",
         badge: "Variant Alpha",
         extractedLinks: [
-          { id: "a", url: "https://a.test", label: "A", watched: true },
+          { id: "a", url: "https://a.test", label: "A", opened: true },
           {
             id: "folder",
             url: "https://folder.test",
             label: "Folder",
             type: "folder",
             children: [
-              { id: "b", url: "https://b.test", label: "B", watched: true },
+              { id: "b", url: "https://b.test", label: "B", opened: true },
             ],
           },
         ],
@@ -43,15 +43,35 @@ describe("links mapper metadata normalization", () => {
     expect(metadata.source.pluginIcon).toBe("icon.png")
     expect(metadata.source.password).toBeUndefined()
     expect(metadata.source.badge).toBe("Variant Alpha")
-    expect(metadata.playback.watchedUrls).toEqual([
+    expect(metadata.playback.openedUrls).toEqual([
       "https://a.test",
       "https://b.test",
     ])
-    expect(metadata.playback.watchedIds).toEqual(["a", "b"])
-    expect(metadata.extraction.extractedLinks[0].watched).toBeUndefined()
+    expect(metadata.playback.openedIds).toEqual(["a", "b"])
+    expect(metadata.extraction.extractedLinks[0].opened).toBeUndefined()
     expect(
-      metadata.extraction.extractedLinks[1].children?.[0].watched
+      metadata.extraction.extractedLinks[1].children?.[0].opened
     ).toBeUndefined()
+  })
+
+  it("does not retain playback positions or resume state", () => {
+    const metadata = normalizeLinkMetadata({
+      schemaVersion: 3,
+      source: {},
+      extraction: { extractedLinks: [] },
+      playback: {
+        openedUrls: ["https://video.test/file"],
+        openedIds: ["file"],
+        position: 120,
+        resumeState: { position: 120 },
+      },
+    })
+
+    expect(metadata.playback).toEqual({
+      openedUrls: ["https://video.test/file"],
+      openedIds: ["file"],
+      resolvedMirrors: {},
+    })
   })
 
   it("accepts top-level extractedLinks", () => {
@@ -61,7 +81,7 @@ describe("links mapper metadata normalization", () => {
     expect(metadata.extraction.extractedLinks).toHaveLength(1)
   })
 
-  it("preserves current metadata and derives watched view state", () => {
+  it("preserves current metadata and derives opened view state", () => {
     const row: LinkResponse = {
       id: "1",
       url: "https://page.test",
@@ -74,26 +94,26 @@ describe("links mapper metadata normalization", () => {
         extraction: {
           extractedLinks: [{ id: "x", url: "https://x.test", label: "X" }],
         },
-        playback: { watchedUrls: ["https://x.test"], watchedIds: [] },
+        playback: { openedUrls: ["https://x.test"], openedIds: [] },
       },
     }
 
     const item = toLinkViewItem(toSavedLinkDTO(row))
     const view = toLinkViewModel(item)
     expect(view.badge).toBe("4K")
-    expect(view.extractedLinks[0].watched).toBe(true)
+    expect(view.extractedLinks[0].opened).toBe(true)
   })
 })
 
 describe("save-flow metadata preservation", () => {
-  it("preserves pluginServerId and watched state when updating extracted links", () => {
+  it("preserves pluginServerId and opened state when updating extracted links", () => {
     const previous = normalizeLinkMetadata({
       pluginName: "Plugin Server",
       pluginServerId: "plugin-server-1",
       extractedLinks: [{ id: "old", url: "https://old.test", label: "Old" }],
     })
-    previous.playback.watchedUrls = ["https://old.test"]
-    previous.playback.watchedIds = ["old"]
+    previous.playback.openedUrls = ["https://old.test"]
+    previous.playback.openedIds = ["old"]
 
     const updated = createLinkMetadata({
       extractedLinks: [{ id: "new", url: "https://new.test", label: "New" }],
@@ -103,8 +123,8 @@ describe("save-flow metadata preservation", () => {
     expect(
       (updated.source as Record<string, string | undefined>).pluginServerId
     ).toBe("plugin-server-1")
-    expect(updated.playback.watchedUrls).toContain("https://old.test")
-    expect(updated.playback.watchedIds).toContain("old")
+    expect(updated.playback.openedUrls).toContain("https://old.test")
+    expect(updated.playback.openedIds).toContain("old")
   })
 
   it("preserves Plugin Server source identity metadata", () => {

@@ -67,13 +67,12 @@ export function useLinkActions({
     play: handleLinkClick,
     showLinks: handleShowLinks,
     remove: linkActions.remove,
-    markWatched: linkActions.markWatched,
+    markOpened: linkActions.markOpened,
     removeLink: linkActions.removeLink,
     expandFolder: handleExpandFolder,
     softRefresh: handleSoftRefresh,
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
-    setAsCurrent: linkActions.setPlayableItemAsCurrent,
   }
   const {
     isSaving,

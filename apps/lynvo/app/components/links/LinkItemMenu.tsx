@@ -151,7 +151,7 @@ const LinkItemMenuContent = ({
                           <DropdownMenuItem
                             key={player.id}
                             onClick={() => {
-                              actions.markWatched(item.url, playableLink.url)
+                              actions.markOpened(item.url, playableLink.url)
                               void openInSpecificPlayer(
                                 playableLink.url,
                                 player

@@ -12,12 +12,12 @@ export const HomeHero = () => {
         {/* Massive Typography */}
         <div className="flex flex-col items-center gap-4 text-center">
           <h1 className="t-stagger-line t-stagger-line--2 mt-8 max-w-4xl text-balance text-5xl font-normal tracking-[-0.04em] md:text-7xl lg:text-[5.5rem] lg:leading-[0.95]">
-            Save it here. Watch it on Android.
+            Save it here. Open it in an Android player.
           </h1>
           <p className="t-stagger-line t-stagger-line--3 mt-2 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Save supported video links in a library that stays in sync, then
-            open each video in the appropriate Android player on a TV, phone, or
-            tablet.
+            Use the Lynvo website in any browser to save supported video links
+            in a library that stays in sync, then open each URL in the selected
+            player on Android TV, an Android phone, or an Android tablet.
           </p>
         </div>
 

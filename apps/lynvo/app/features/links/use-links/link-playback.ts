@@ -1,46 +1,13 @@
-import { withWatchedUrl } from "~/features/links/links.mapper"
+import { withOpenedUrl } from "~/features/links/links.mapper"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { LinkViewItem } from "~/features/links/types"
 import { createUpdatedItemFromMetadata } from "./link-items"
 
-export const createWatchedLinkItem = (item: LinkViewItem, linkUrl: string) => {
+export const createOpenedLinkItem = (item: LinkViewItem, linkUrl: string) => {
   if (!item.extractedLinks) {
     return undefined
   }
 
-  const metadata = withWatchedUrl(getLinkViewItemMetadata(item), linkUrl)
-  return createUpdatedItemFromMetadata(item, metadata)
-}
-
-export const createCurrentPlayableItem = (
-  item: LinkViewItem,
-  lazyItemUrl: string,
-  folderItemUrls: string[]
-) => {
-  const playableItemIndex = folderItemUrls.indexOf(lazyItemUrl)
-  if (playableItemIndex === -1) {
-    return undefined
-  }
-
-  const previousMetadata = getLinkViewItemMetadata(item)
-  const watchedToMark = folderItemUrls.slice(0, playableItemIndex)
-  const unwatchedToUnmark = folderItemUrls.slice(playableItemIndex)
-  const currentWatched = new Set(previousMetadata.playback?.watchedUrls ?? [])
-
-  for (const url of watchedToMark) {
-    currentWatched.add(url)
-  }
-  for (const url of unwatchedToUnmark) {
-    currentWatched.delete(url)
-  }
-
-  const metadata = {
-    ...previousMetadata,
-    playback: {
-      ...previousMetadata.playback,
-      watchedUrls: [...currentWatched],
-    },
-  }
-
+  const metadata = withOpenedUrl(getLinkViewItemMetadata(item), linkUrl)
   return createUpdatedItemFromMetadata(item, metadata)
 }

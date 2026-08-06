@@ -9,7 +9,7 @@ import { Link } from "react-router"
 const documentationCards = [
   {
     title: "Set up Android TV",
-    description: "Set up Lynvo on Android TV with your phone.",
+    description: "Set up Lynvo on Android TV with an Android phone or tablet.",
     to: "/docs/android-tv",
     icon: ModernTvIcon,
   },

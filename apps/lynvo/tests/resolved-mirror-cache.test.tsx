@@ -21,8 +21,8 @@ describe("resolved mirror cache", () => {
         source: { pluginServerId: "plugin-server-one" },
         extraction: { extractedLinks: [] },
         playback: {
-          watchedUrls: [],
-          watchedIds: [],
+          openedUrls: [],
+          openedIds: [],
           resolvedMirrors: { [lazyItemUrl]: mirrors },
         },
       },
@@ -69,8 +69,8 @@ describe("resolved mirror cache", () => {
         source: { pluginServerId: "plugin-server-one" },
         extraction: { extractedLinks: [] },
         playback: {
-          watchedUrls: [],
-          watchedIds: [],
+          openedUrls: [],
+          openedIds: [],
           resolvedMirrors: { [lazyItemUrl]: cachedMirrors },
         },
       },

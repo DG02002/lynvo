@@ -7,16 +7,16 @@ contentType: How-to
 
 <DocSection id="overview">
 
-## Prepare your TV and phone
+## Prepare your Android TV and Android phone or tablet
 
-This guide shows you how to open Lynvo on Android TV, log in from a phone or another device, and configure the recommended video players. Connect the Android TV and the other device to the same Wi-Fi network.
+This guide shows you how to open Lynvo on Android TV, log in from an Android phone or tablet, and configure the recommended video players. Connect the Android TV and the Android phone or tablet to the same Wi-Fi network.
 
 Install these apps before you begin:
 
-- On your TV, install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
-- On your TV, install [Just (Video) Player](https://play.google.com/store/apps/details?id=com.brouken.player)
-- On your TV, install [VLC for Android](https://play.google.com/store/apps/details?id=org.videolan.vlc)
-- On your phone, install the [Google TV app](https://play.google.com/store/apps/details?id=com.google.android.videos)
+- On your Android TV, install [TV Bro](https://play.google.com/store/apps/details?id=com.phlox.tvwebbrowser)
+- On your Android TV, install [Just (Video) Player](https://play.google.com/store/apps/details?id=com.brouken.player)
+- On your Android TV, install [VLC for Android](https://play.google.com/store/apps/details?id=org.videolan.vlc)
+- On your Android phone or tablet, install the [Google TV app](https://play.google.com/store/apps/details?id=com.google.android.videos)
 
 <AndroidTvPlayerDefaults />
 
@@ -26,18 +26,18 @@ Install these apps before you begin:
 
 ## Open Lynvo in TV Bro
 
-Use the Google TV virtual remote to paste Lynvo’s address instead of typing it with the TV remote:
+Use the Google TV virtual remote to paste Lynvo’s address instead of typing it with the Android TV remote:
 
-1. Open [lynvo.dg02002.workers.dev](https://lynvo.dg02002.workers.dev) on your phone
+1. Open [lynvo.dg02002.workers.dev](https://lynvo.dg02002.workers.dev) on your Android phone or tablet
 2. Copy `https://lynvo.dg02002.workers.dev`
 3. Open **TV Bro** on your Android TV
-4. Open the **Google TV** app on your phone
-5. Select your TV and open the virtual remote
+4. Open the **Google TV** app on your Android phone or tablet
+5. Select your Android TV and open the virtual remote
 6. Select the address bar in TV Bro
 7. Paste `https://lynvo.dg02002.workers.dev` with the virtual remote keyboard
 8. Open the page
 
-If you cannot use the Google TV virtual remote, enter the same address with the TV remote or a connected keyboard.
+If you cannot use the Google TV virtual remote, enter the same address with the Android TV remote or a connected keyboard.
 
 Bookmark Lynvo in TV Bro so you can return without entering the address again.
 
@@ -47,18 +47,18 @@ Bookmark Lynvo in TV Bro so you can return without entering the address again.
 
 <DocSection id="sign-in">
 
-## Log in with another device
+## Log in from an Android phone or tablet
 
-Complete login on a phone or another device so you do not need to enter account details with the TV remote:
+Complete login on an Android phone or tablet so you do not need to enter account details with the Android TV remote:
 
-1. Select **Log in** on the Lynvo page displayed on your TV
+1. Select **Log in** on the Lynvo page displayed on your Android TV
 2. Select **Use a QR code**
 3. Choose one method:
    - Scan the QR code with a camera, then open the Lynvo page that appears
-   - Open the address displayed with the QR code on another device, then enter the eight-character login code
-4. Log in to Lynvo on the other device
-5. Approve the TV login if Lynvo asks for confirmation
-6. Return to the TV and wait for Lynvo to complete login
+   - Open the address displayed with the QR code on an Android phone or tablet, then enter the eight-character login code
+4. Log in to Lynvo on the Android phone or tablet
+5. Approve the Android TV login if Lynvo asks for confirmation
+6. Return to the Android TV and wait for Lynvo to complete login
 
 If the code expires, select **Generate new code**, then scan the new QR code or enter the new login code.
 
@@ -68,24 +68,31 @@ If the code expires, select **Generate new code**, then scan the new QR code or 
 
 ## Set up Remote Play
 
-1. Keep Lynvo open in TV Bro on the TV
-2. Open Lynvo on the device you want to use as the remote
+1. Keep Lynvo open in TV Bro on the Android TV
+2. Open Lynvo on the Android phone or tablet you want to use as the remote
 3. Select **Remote Play**
 4. Select the TV from **Available devices**
 
-If the TV does not appear, connect both devices to the same Wi-Fi network, keep Lynvo open in TV Bro, then select **Search again**.
+If the TV does not appear, connect the Android phone or tablet and the TV to the same Wi-Fi network, keep Lynvo open in TV Bro, then select **Search again**.
 
 </DocSection>
 
 <DocSection id="play-video">
 
-## Play a video
+## Open a video in a player
 
-Lynvo selects a player based on whether the video supports seeking:
+Lynvo marks an item opened the first time you open it. It does not store a
+playback position or resume state. Lynvo does not play video; it opens a URL in
+an external Android player. When you open the same link again, Lynvo sends the
+same URL to the selected player. The selected player may remember its own
+playback position. Player behavior depends on the link server and the player:
 
-- **Just (Video) Player**: the default for videos that support seeking
-- **VLC for Android**: the default for videos that require standard playback
+- **Just (Video) Player**: recommended for links whose servers support HTTP byte-range requests. It can open other links too, but it cannot seek when the server does not support byte-range requests.
+- **VLC for Android**: recommended for links without HTTP byte-range support. It may still allow seeking for some links.
+- **MPV** and **MX Player**: also available in **Settings**
 
-Android TV may ask which app should open a video the first time. Select the player Lynvo recommends. You can change the default players later in **Settings**.
+Android TV may ask which app should open a video the first time. Select the
+player Lynvo recommends. You can change the default players later in
+**Settings**.
 
 </DocSection>

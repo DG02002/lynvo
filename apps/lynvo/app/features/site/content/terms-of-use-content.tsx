@@ -29,10 +29,11 @@ export const TermsOfUseContent = () => (
     <PolicySection title="1. What Lynvo does">
       <p>
         Lynvo saves URLs and related metadata, resolves supported pages into
-        playable links, synchronizes records across your sessions, and launches
-        links in compatible Android players. Lynvo is a link-management and
-        playback-launching service. It isn&apos;t a video catalog, media seller,
-        or subscription to third-party content.
+        playable links, synchronizes records across your sessions, and opens
+        links in Just (Video) Player, VLC for Android, MPV, or MX Player on
+        Android phones, Android tablets, and Android TV. Lynvo does not play
+        video; it is a link-management and player-handoff service. It isn&apos;t
+        a video catalog, media seller, or subscription to third-party content.
       </p>
       <p>
         Lynvo doesn&apos;t control the websites, files, Plugins, Custom Plugin
@@ -102,7 +103,7 @@ export const TermsOfUseContent = () => (
         size of a linked video file.
       </p>
       <p>
-        Lynvo Plugin Server and Direct media requests share an allowance of 15
+        Lynvo Plugin Server and Direct Media requests share an allowance of 15
         requests per day and 200 requests per month. Custom Plugin Servers
         report and enforce their own finite limits.
       </p>
@@ -150,9 +151,10 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Sources can change or remove files, require authorization, block
-        requests, or return unsafe material. Android players may handle links
-        differently. Lynvo doesn&apos;t endorse or guarantee third-party
-        services, files, Plugins, Plugin Servers, or players.
+        requests, or return unsafe material. Just (Video) Player, VLC for
+        Android, MPV, and MX Player may handle links differently. Lynvo
+        doesn&apos;t endorse or guarantee third-party services, files, Plugins,
+        Plugin Servers, or players.
       </p>
     </PolicySection>
 
@@ -187,9 +189,9 @@ export const TermsOfUseContent = () => (
 
     <PolicySection title="10. Changes and availability">
       <p>
-        Lynvo is an evolving service. Features, supported Sources, players,
-        limits, and availability may change. Lynvo may discontinue part or all
-        of the hosted Lynvo service.
+        Lynvo is an evolving service. Features, supported Sources, the four
+        Android players, limits, and availability may change. Lynvo may
+        discontinue part or all of the hosted Lynvo service.
       </p>
       <p>
         Keep your own copy of any URL or information you can&apos;t afford to
@@ -207,7 +209,8 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Lynvo doesn&apos;t promise that a link will resolve, remain available,
-        support seeking, open in a selected player, or stay synchronized. Lynvo
+        support HTTP byte-range requests, open in a selected player, or that the
+        selected player will resume a previous position or allow seeking. Lynvo
         also doesn&apos;t promise that third-party content is accurate, safe,
         lawful, or available.
       </p>

@@ -36,8 +36,12 @@ describe("marketing and pricing copy", () => {
     )
 
     expect(
-      screen.getByText("200, shared across Lynvo Plugins and direct media")
+      screen.getByText("200, shared across Lynvo Plugins and Direct Media")
     ).toBeVisible()
+    expect(screen.getByText("Plugins and Remote Play")).toBeVisible()
+    expect(
+      screen.queryByText("Plugins and Android devices")
+    ).not.toBeInTheDocument()
     expect(
       screen.getAllByRole("link", { name: "Create a free account" })
     ).toHaveLength(2)
@@ -55,12 +59,20 @@ describe("marketing and pricing copy", () => {
     expect(faqCopy).toContain("15-request daily limit")
   })
 
-  it("keeps app metadata aligned with the supported Android devices", () => {
+  it("keeps app metadata aligned with Lynvo's Android platforms", () => {
     expect(homeMeta({} as never)).toContainEqual({
-      title: "Lynvo - Save links. Play them on Android.",
+      title: "Lynvo - Save links. Open them in Android players.",
     })
-    expect(siteManifest.name).toBe("Lynvo - Save links. Play them on Android.")
-    expect(siteManifest.description).toContain("Android players")
+    expect(siteManifest.name).toBe(
+      "Lynvo - Save links. Open them in Android players."
+    )
+    expect(siteManifest.description).toContain("Android phones")
+    expect(siteManifest.description).toContain("Android tablets")
+    expect(siteManifest.description).toContain("Android TV")
+    expect(siteManifest.description).toContain("Just (Video) Player")
+    expect(siteManifest.description).toContain("VLC for Android")
+    expect(siteManifest.description).toContain("MPV")
+    expect(siteManifest.description).toContain("MX Player")
     expect(siteManifest.orientation).toBeUndefined()
   })
 })

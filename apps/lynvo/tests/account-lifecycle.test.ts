@@ -37,6 +37,6 @@ describe("account lifecycle", () => {
     })
     expect(() =>
       buildPlayerPreferencesPatch({ rangeSupportedPlayerId: "unknown" })
-    ).toThrow("Choose a supported player")
+    ).toThrow("Choose Just (Video) Player, VLC for Android, MPV, or MX Player")
   })
 })

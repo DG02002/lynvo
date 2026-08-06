@@ -15,7 +15,7 @@ describe("directMediaAdapter", () => {
     vi.restoreAllMocks()
   })
 
-  it("marks direct video links as range-supported when byte range returns 206", async () => {
+  it("marks Direct Media links as range-supported when byte range returns 206", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(206))
 
     const links = await directMediaAdapter.extract(
@@ -31,7 +31,7 @@ describe("directMediaAdapter", () => {
     ])
   })
 
-  it("keeps direct video links when byte range returns 200 and marks them unsupported", async () => {
+  it("keeps Direct Media links when byte range returns 200 and marks them unsupported", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200))
 
     const links = await directMediaAdapter.extract(
@@ -47,7 +47,7 @@ describe("directMediaAdapter", () => {
     )
   })
 
-  it("rejects non-video direct links", async () => {
+  it("rejects non-video Direct Media URLs", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200, "text/html"))
 
     await expect(

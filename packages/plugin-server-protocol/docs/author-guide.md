@@ -68,7 +68,7 @@ Lynvo will not send:
 
 - browser cookies
 - UI instructions
-- playback state
+- opened markers, selected links, playback positions, or resume state
 - Plugin-specific mode names
 
 ## Suggested File Shape
@@ -329,12 +329,12 @@ Do not return raw implementation details unless you place them under `extensions
 
 ## Node Implementation Reference
 
-The protocol has three wire-level node kinds. Product terms such as “direct
+The protocol has three wire-level node kinds. Product terms such as “playable
 link,” “container,” “folder,” and “lazy folder” map onto those kinds as follows:
 
 | Product item           | Protocol kind | Important fields                |
 | ---------------------- | ------------- | ------------------------------- |
-| Direct playable link   | `playable`    | `url`                           |
+| Playable link          | `playable`    | `url`                           |
 | Display-only container | `group`       | `selectable: false`, `children` |
 | Selectable folder      | `group`       | `selectable: true`, `children`  |
 | Lazy folder            | `resolvable`  | `nodeUrl` and/or `resourceId`   |
@@ -342,7 +342,7 @@ link,” “container,” “folder,” and “lazy folder” map onto those kin
 Import `MediaNode` so TypeScript checks copyable implementations against
 the shared contract.
 
-### Direct link item
+### Playable item
 
 Use `playable` only for a final URL Lynvo can send to a player. Do not use it
 for an HTML page that still needs resolution.
@@ -350,7 +350,7 @@ for an HTML page that still needs resolution.
 ```ts
 import type { MediaNode } from "@dg02002/lynvo-plugin-server-protocol"
 
-const directLink = {
+const playableLink = {
   kind: "playable",
   id: "playable-item-primary",
   label: "Playable Item — Variant Alpha",
@@ -373,7 +373,7 @@ const folderContainer = {
   label: "Folder 1",
   badge: "10 playable items",
   selectable: false,
-  children: [directLink],
+  children: [playableLink],
 } satisfies MediaNode
 ```
 

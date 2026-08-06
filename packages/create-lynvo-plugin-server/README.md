@@ -21,6 +21,7 @@ The generated project includes:
 
 - Hono route wiring through `createPluginServerRuntime`.
 - Cloudflare Worker and Wrangler configuration.
+- An image optimization script for Plugin icons.
 - A small example Plugin and source extraction function.
 - Contract tests for the manifest, authentication, usage, and extraction routes.
 - A blank `.dev.vars.example` showing the local secret name without credentials.

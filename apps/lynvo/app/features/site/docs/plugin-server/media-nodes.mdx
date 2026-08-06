@@ -13,19 +13,19 @@ Plugin Server Protocol version `1.0` has three Media Node kinds. Lynvo maps prod
 
 | Product item           | Protocol kind | Required fields                         |
 | ---------------------- | ------------- | --------------------------------------- |
-| Direct playable item   | `playable`    | `label`, `url`                          |
+| Playable item          | `playable`    | `label`, `url`                          |
 | Display-only container | `group`       | `label`, `children`                     |
 | Selectable folder      | `group`       | `label`, `selectable: true`, `children` |
 | Lazy folder            | `resolvable`  | `label`, `nodeUrl`                      |
 
-### Return a direct playable item
+### Return a playable item
 
 Use `playable` only when the URL can go directly to a media player.
 
 <CodeBlock label="Playable node">
 
 ```ts {2,5}
-const directItem = {
+const playableItem = {
   kind: "playable",
   id: "episode-1",
   label: "Episode 1",
@@ -53,7 +53,7 @@ const seasonContainer = {
   id: "season-1",
   label: "Season 1",
   selectable: false,
-  children: [directItem],
+  children: [playableItem],
 }
 ```
 

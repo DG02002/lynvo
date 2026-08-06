@@ -41,8 +41,8 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">Saved-link data:</strong> URLs,
-          titles, Source details, extracted file and folder metadata, watch
-          state, and record timestamps
+          titles, Source details, extracted file and folder metadata, opened
+          markers, and record timestamps
         </li>
         <li>
           <strong className="text-foreground">Settings:</strong> player
@@ -93,7 +93,7 @@ export const PrivacyPolicyContent = () => (
         <li>Authenticate your account and keep sessions active</li>
         <li>Save, organize, extract, and synchronize your links</li>
         <li>Open a playable link in the player you select</li>
-        <li>Pair devices and deliver remote-play commands</li>
+        <li>Pair devices and deliver Remote Play commands</li>
         <li>Run Plugins and Custom Plugin Servers you configure</li>
         <li>Enforce storage, rate, and abuse-prevention limits</li>
         <li>Diagnose failures and protect Lynvo from unauthorized use</li>
@@ -137,7 +137,7 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">
-            Android players you select:
+            Just (Video) Player, VLC for Android, MPV, or MX Player:
           </strong>
           the playable URL and playback intent needed to open the video
         </li>

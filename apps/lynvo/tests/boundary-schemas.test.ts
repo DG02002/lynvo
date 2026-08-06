@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import {
-  readLinksCache,
-  readLocalLinks,
-} from "~/features/links/use-links/cache"
+import { readLinksCache } from "~/features/links/use-links/cache"
 import { authSignInResponseSchema } from "~/lib/auth-http-schema"
 import {
   authPreflightRequestSchema,
@@ -57,68 +54,6 @@ describe("browser storage boundaries", () => {
     })
   })
 
-  it("drops malformed local link entries", () => {
-    localStorage.setItem(
-      "lynvo:links:v1",
-      JSON.stringify([
-        {
-          url: "https://example.com",
-          timestamp: 10,
-          metadata: {
-            schemaVersion: 3,
-            source: {},
-            extraction: { extractedLinks: [] },
-            playback: { watchedUrls: [], watchedIds: [] },
-          },
-        },
-        {
-          url: "https://legacy.example",
-          timestamp: 11,
-          meta: { title: "Old metadata shape" },
-        },
-        { url: 42, timestamp: "invalid" },
-      ])
-    )
-
-    expect(readLocalLinks()).toEqual([
-      {
-        url: "https://example.com",
-        timestamp: 10,
-        metadata: {
-          schemaVersion: 3,
-          source: {},
-          extraction: { extractedLinks: [] },
-          playback: { watchedUrls: [], watchedIds: [] },
-        },
-        extractedLinks: undefined,
-      },
-    ])
-  })
-
-  it("does not read links from legacy storage namespaces", () => {
-    localStorage.setItem(
-      "sl2jp:links:sync:v1:user-1",
-      JSON.stringify({ results: [], version: 2, etag: "etag" })
-    )
-    localStorage.setItem(
-      "sl2jp:links:v1",
-      JSON.stringify([
-        {
-          url: "https://example.com",
-          timestamp: 10,
-          metadata: {
-            schemaVersion: 3,
-            source: {},
-            extraction: { extractedLinks: [] },
-            playback: { watchedUrls: [], watchedIds: [] },
-          },
-        },
-      ])
-    )
-
-    expect(readLinksCache("user-1")).toBeUndefined()
-    expect(readLocalLinks()).toEqual([])
-  })
 })
 
 describe("HTTP and realtime boundaries", () => {

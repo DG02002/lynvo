@@ -50,16 +50,16 @@ const writeCache = async (cache) => {
   await writeFile(cacheFile, `${JSON.stringify(cache, null, 2)}\n`)
 }
 
-const listSourceFiles = async (dir) => {
+const listSourceFiles = async (directory) => {
   try {
-    const entries = await readdir(dir, { withFileTypes: true })
+    const entries = await readdir(directory, { withFileTypes: true })
     return entries
       .filter(
         (entry) =>
           entry.isFile() &&
           [".png", ".webp"].includes(path.extname(entry.name).toLowerCase())
       )
-      .map((entry) => path.join(dir, entry.name))
+      .map((entry) => path.join(directory, entry.name))
   } catch (error) {
     if (error && error.code === "ENOENT") {
       return []
@@ -102,9 +102,9 @@ const optimizeWebp = async (filePath, cache) => {
   const outputHash = hashBuffer(output)
 
   if (keepOptimized) {
-    const tmpPath = `${outputPath}.tmp`
-    await writeFile(tmpPath, output)
-    await rename(tmpPath, outputPath)
+    const temporaryPath = `${outputPath}.tmp`
+    await writeFile(temporaryPath, output)
+    await rename(temporaryPath, outputPath)
     if (filePath !== outputPath) {
       await rm(filePath)
     }

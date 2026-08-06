@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 import type { LinkViewItem } from "~/features/links/types"
 import {
   createServerLinksAdapter,
-  createLocalLinksAdapter,
   createLinksPersistence,
 } from "~/features/links/use-links/persistence"
 
@@ -56,25 +55,6 @@ const runAdapterContract = async (
 }
 
 describe("Links persistence adapters", () => {
-  it("applies the common contract to local browser storage", async () => {
-    const values = new Map<string, string>()
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => values.set(key, value),
-      removeItem: (key: string) => values.delete(key),
-    }
-    const read = () => JSON.parse(values.get("links") ?? "[]")
-
-    await runAdapterContract(() =>
-      createLocalLinksAdapter({
-        storage: storage as Storage,
-        storageKey: "links",
-        maximumItems: 100,
-        read,
-      })
-    )
-  })
-
   it("applies the common contract to server operations", async () => {
     let items: LinkViewItem[] = []
     await runAdapterContract(() =>
@@ -277,7 +257,7 @@ describe("Links optimistic state", () => {
     const persistence = createLinksPersistence(
       createAdapter({ list: async () => await loadResult.promise }),
       [],
-      "anonymous"
+      "user-old"
     )
     const pendingLoad = persistence.load()
     const live = item("https://example.com/live")

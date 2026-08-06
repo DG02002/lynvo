@@ -65,7 +65,7 @@ export interface DirectMediaAdapter {
 
 export const directMediaAdapter: DirectMediaAdapter = {
   id: "direct-link",
-  name: "Direct Link",
+  name: "Direct Media",
   icon: {},
   canHandle: (_url: string) => {
     return true

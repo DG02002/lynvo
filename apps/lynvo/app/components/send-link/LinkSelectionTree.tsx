@@ -26,8 +26,8 @@ export const LinkSelectionTree = ({
     ))}
     {links.length === 0 && (
       <div className="p-8 text-center text-muted-foreground">
-        No supported links are available to select. Close this window and try a
-        different link.
+        No links are available to select. Close this window and try a different
+        link.
       </div>
     )}
   </div>

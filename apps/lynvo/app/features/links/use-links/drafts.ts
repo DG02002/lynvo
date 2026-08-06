@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { getExpiringDrafts } from "~/components/links/DraftManager"
+import {
+  DRAFT_TTL_MS,
+  getExpiringDrafts,
+} from "~/components/links/DraftManager"
 import type { LinkViewItem } from "~/features/links/types"
 
 const draftToLinkViewItem = (
   draft: ReturnType<typeof getExpiringDrafts>[number]
 ): LinkViewItem => ({
   url: draft.originalUrl,
-  timestamp: draft.expiresAt - 24 * 60 * 60 * 1000,
+  timestamp: draft.expiresAt - DRAFT_TTL_MS,
   title: draft.meta.pageTitle || draft.meta.title || draft.originalUrl,
   extractedLinks: draft.links,
   meta: draft.meta,

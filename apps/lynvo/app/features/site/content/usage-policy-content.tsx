@@ -4,9 +4,10 @@ import { SupportChannelLinks } from "~/components/SupportChannelLinks"
 export const UsagePolicyContent = () => (
   <PolicyLayout title="Usage policy" updatedAt="August 1, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
-      Lynvo helps you save, resolve, and play links through the Lynvo Plugin
-      Server and Custom Plugin Servers. This policy explains permitted use of
-      Lynvo, its infrastructure, and any connected Plugin Server.
+      Lynvo helps you save and resolve links, then open them in external Android
+      players through the Lynvo Plugin Server and Custom Plugin Servers. This
+      policy explains permitted use of Lynvo, its infrastructure, and any
+      connected Plugin Server.
     </p>
     <p>
       An <strong>account</strong> is the username-based record used to access
@@ -61,7 +62,7 @@ export const UsagePolicyContent = () => (
         Do not automate requests in a way that degrades Lynvo, evade account or
         Plugin Server limits, create accounts to obtain additional allowances,
         resell access, or generate deceptive traffic or traffic unrelated to
-        saving and playing links.
+        saving, resolving, and opening links in external Android players.
       </p>
       <p>
         Lynvo may rate-limit, reject, or temporarily pause requests to protect
@@ -73,7 +74,7 @@ export const UsagePolicyContent = () => (
       <p>
         Each account can store up to 100 saved links within 3 MB of
         account-record storage. A single saved link can use up to 1 MB. Lynvo
-        Plugin Server and Direct media requests share an allowance of 15
+        Plugin Server and Direct Media requests share an allowance of 15
         requests per day and 200 requests per month.
       </p>
       <p>

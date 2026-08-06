@@ -8,7 +8,7 @@ import {
   normalizeLinkMetadata,
   toFlatMeta,
 } from "./link-metadata-normalization"
-import { applyWatchedState } from "./link-playback-metadata"
+import { applyOpenedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 
@@ -81,8 +81,8 @@ const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
 
 export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
   const dto = toSavedLinkDTOFromLinkViewItem(item)
-  const watchedUrls = new Set(dto.metadata.playback.watchedUrls)
-  const watchedIds = new Set(dto.metadata.playback.watchedIds)
+  const openedUrls = new Set(dto.metadata.playback.openedUrls)
+  const openedIds = new Set(dto.metadata.playback.openedIds)
   const source = getLinkSourceFields(dto.metadata)
 
   return {
@@ -99,10 +99,10 @@ export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
     sourceIconUrl: source.sourceIconUrl,
     sourceStatus: source.sourceStatus,
     sourceVersion: source.sourceVersion,
-    extractedLinks: applyWatchedState(
+    extractedLinks: applyOpenedState(
       dto.metadata.extraction.extractedLinks,
-      watchedUrls,
-      watchedIds
+      openedUrls,
+      openedIds
     ),
   }
 }

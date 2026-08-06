@@ -2,7 +2,9 @@ const PLAYER_IDS = ["just", "vlc", "mpv", "mx"]
 
 export const normalizePlayerId = (playerId: string) => {
   if (!PLAYER_IDS.includes(playerId)) {
-    throw new Error("Choose a supported player")
+    throw new Error(
+      "Choose Just (Video) Player, VLC for Android, MPV, or MX Player"
+    )
   }
   return playerId
 }

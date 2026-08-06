@@ -50,7 +50,7 @@ export const useFinderBrowserState = ({
 
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
     const linkKey = getLinkKey(link)
-    actions.markWatched(item.url, link.url)
+    actions.markOpened(item.url, link.url)
     if (!link.children?.length && link.childrenResolved !== true) {
       const resolvedLinks = await actions.expandFolder(
         item.url,
@@ -76,7 +76,7 @@ export const useFinderBrowserState = ({
       return
     }
 
-    actions.markWatched(item.url, link.url)
+    actions.markOpened(item.url, link.url)
     actions.play(link)
   }
 

@@ -35,7 +35,7 @@ export const createRefreshFlowEffects = ({
   isExtracting: (itemKey) => extractingItems.has(itemKey),
   showRefreshSuccess: () => toast.success("Links refreshed"),
   showNoLinks: () =>
-    toast.error("No supported links are available. Try another Source page."),
+    toast.error("No playable links are available. Try another Source page."),
   showRefreshError: () =>
     toast.error("The saved link couldn’t be refreshed. Try again."),
   showReselectError: () =>

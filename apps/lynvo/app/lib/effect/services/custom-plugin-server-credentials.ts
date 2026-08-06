@@ -119,7 +119,7 @@ export const decryptCustomPluginServer = Effect.fn(
     pluginServer.apiKeyVersion === undefined
   ) {
     return yield* new CredentialVaultError({
-      message: "Custom Plugin Server credential migration is incomplete",
+      message: "Custom Plugin Server credential record is incomplete",
     })
   }
   const decrypted = yield* vaultRequest(

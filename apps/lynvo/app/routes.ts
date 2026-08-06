@@ -12,13 +12,10 @@ export default [
   layout("features/site/routes/_site.tsx", [
     index("features/site/routes/_site._index.tsx"),
     route("save", "features/links/routes/_site.save.tsx"),
-    route("account", "features/site/routes/_site.account.tsx"),
     route(
       "settings/:section?/:subview?",
       "features/site/routes/_site.settings.tsx"
     ),
-    route("privacy", "features/site/routes/_site.privacy.tsx"),
-    route("terms", "features/site/routes/_site.terms.tsx"),
     route("about", "features/site/routes/_site.about.tsx"),
     route("help-center", "features/site/routes/_site.help-center.tsx"),
     route("docs/markdown/*", "features/site/routes/_site.docs-markdown.ts"),

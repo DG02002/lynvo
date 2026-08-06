@@ -35,21 +35,12 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["UserRealtimeRoom"],
-    },
-    {
-      "tag": "v2",
-      "new_sqlite_classes": ["AuthRateLimiter", "WorkerAuthSession"],
-    },
-    {
-      "tag": "v3",
-      // Immutable applied migration; v4 deletes this disposable legacy state.
-      "new_sqlite_classes": ["ExternalWorkerCredentialVault"],
-    },
-    {
-      "tag": "v4",
-      "new_sqlite_classes": ["PluginServerCredentialVault"],
-      "deleted_classes": ["ExternalWorkerCredentialVault"],
+      "new_sqlite_classes": [
+        "UserRealtimeRoom",
+        "AuthRateLimiter",
+        "WorkerAuthSession",
+        "PluginServerCredentialVault",
+      ],
     },
   ],
   "secrets": {

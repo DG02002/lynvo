@@ -61,12 +61,21 @@ test("generates a standalone project with a semver protocol dependency", async (
     "^0.1.0"
   )
   assert.equal(packageJson.dependencies.hono, "^4.12.32")
+  assert.equal(packageJson.devDependencies.sharp, "^0.35.3")
+  assert.equal(
+    packageJson.scripts["images:optimize"],
+    "node scripts/optimize-images.mjs public/icons/sources"
+  )
   assert.equal(packageJson.packageManager, "pnpm@10.26.1")
 
   const generatedFiles = await readdir(destination)
   assert(generatedFiles.includes(".dev.vars.example"))
   assert(generatedFiles.includes(".gitignore"))
   assert(generatedFiles.includes("README.md"))
+  assert.match(
+    await readFile(join(destination, "scripts/optimize-images.mjs"), "utf8"),
+    /sharp/
+  )
   assert.match(
     await readFile(join(destination, "src/index.ts"), "utf8"),
     /my-plugin-server/

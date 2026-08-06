@@ -38,13 +38,6 @@ declare global {
     identityGeneration: number
   }
 
-  interface LocalLinksAdapterOptions {
-    storage: Storage
-    storageKey: string
-    maximumItems: number
-    read: () => LinkViewItem[]
-  }
-
   interface ServerLinksAdapterOptions {
     read: () => LinkViewItem[]
     create: (item: LinkViewItem) => Promise<string>
@@ -58,38 +51,6 @@ const replaceByUrl = (items: LinkViewItem[], nextItem: LinkViewItem) => [
   nextItem,
   ...items.filter((item) => item.url !== nextItem.url),
 ]
-
-export const createLocalLinksAdapter = ({
-  storage,
-  storageKey,
-  maximumItems,
-  read,
-}: LocalLinksAdapterOptions): LinksPersistenceAdapter => {
-  const write = (items: LinkViewItem[]) =>
-    storage.setItem(storageKey, JSON.stringify(items.slice(0, maximumItems)))
-
-  return {
-    list: async () => read(),
-    add: async (item) => {
-      write(replaceByUrl(read(), item))
-      return item
-    },
-    update: async (item) => {
-      write(
-        read().map((currentItem) =>
-          currentItem.url === item.url ? item : currentItem
-        )
-      )
-      return item
-    },
-    delete: async (item) => {
-      write(read().filter((currentItem) => currentItem.url !== item.url))
-    },
-    clear: async () => {
-      storage.removeItem(storageKey)
-    },
-  }
-}
 
 export const createServerLinksAdapter = ({
   read,

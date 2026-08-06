@@ -3,13 +3,13 @@ export const pricingFaqs = [
     value: "storage-cap",
     question: "What counts toward the Free plan’s 3 MB storage limit?",
     answer:
-      "Saved links, folders, and playback details count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 1 MB, and the plan allows up to 100 saved links.",
+      "Saved links, folders, and opened markers count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 1 MB, and the plan allows up to 100 saved links.",
   },
   {
     value: "lynvo-plugin-operation",
     question: "What counts as a Lynvo Plugin Server request?",
     answer:
-      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 15-request daily limit are shared across Lynvo Plugins and direct media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
+      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 15-request daily limit are shared across Lynvo Plugins and Direct Media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
   },
   {
     value: "limit-reached",
@@ -19,15 +19,15 @@ export const pricingFaqs = [
   },
   {
     value: "operating-systems",
-    question: "Which operating systems does Lynvo support?",
+    question: "Where can Lynvo hand off links to players?",
     answer:
-      "Lynvo is designed for Android. Player handoff depends on supported Android video players, so other operating systems are not currently supported.",
+      "You can open the Lynvo website in any browser to sign in and manage links. Link handoff is designed for Android TV, Android phones, and Android tablets. Lynvo opens links in Just (Video) Player, VLC for Android, MPV, or MX Player.",
   },
   {
     value: "links",
     question: "Which links can Lynvo save?",
     answer:
-      "Lynvo can save direct media links, links supported by a Lynvo Plugin, and links handled by a configured Custom Plugin Server.",
+      "Lynvo can save Direct Media links, links supported by a Lynvo Plugin, and links handled by a configured Custom Plugin Server.",
   },
   {
     value: "privacy",

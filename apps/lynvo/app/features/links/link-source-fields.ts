@@ -6,7 +6,6 @@ export interface LinkSourceFields {
   contentType?: string
   contentLength?: number
   lastModified?: string
-  acceptRanges?: string
   rangeRequest?: "supported" | "unsupported" | "unknown"
   pluginName?: string
   pluginIcon?: string
@@ -72,7 +71,6 @@ export const getLinkSourceFields = (
   contentType: getSourceString(metadata.source, "contentType"),
   contentLength: getSourceNumber(metadata.source, "contentLength"),
   lastModified: getSourceString(metadata.source, "lastModified"),
-  acceptRanges: getSourceString(metadata.source, "acceptRanges"),
   rangeRequest: getRangeRequest(metadata.source),
   pluginName: getSourceString(metadata.source, "pluginName"),
   pluginIcon: getSourceString(metadata.source, "pluginIcon"),

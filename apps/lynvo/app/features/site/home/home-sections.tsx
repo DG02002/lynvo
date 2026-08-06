@@ -32,12 +32,14 @@ export const PlayerSection = () => (
     <div className="player-showcase">
       <div className="player-showcase__copy">
         <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
-          Open links in a preferred player.
+          Open links in one of four Android players.
         </h2>
         <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Choose one player for videos that support seeking and another for
-          videos that must play from the beginning. Lynvo uses the matching
-          player on the Android device.
+          Lynvo marks a link opened when you open it, but it does not store a
+          playback position or resume state. Lynvo does not play video; it opens
+          the URL in an external Android player. Use Just (Video) Player for
+          links whose servers support HTTP byte-range requests, and VLC for
+          Android otherwise. Lynvo opens the same URL in the selected player.
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export const ExtractionSection = () => (
   <section className="relative overflow-hidden py-24 md:py-32">
     <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
       <SectionIntro
-        title="Open supported links."
+        title="Open links from Sources."
         description="Use Plugins managed by Lynvo, or connect a compatible Custom Plugin Server for additional Sources."
       />
 
@@ -60,15 +62,15 @@ export const ExtractionSection = () => (
         <div>
           <p className="text-lg">Lynvo Plugin Server</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Open links from Sources supported by Lynvo-managed Plugins. Current
+            Open links from Sources handled by Lynvo-managed Plugins. Current
             availability appears in Settings.
           </p>
         </div>
         <div>
           <p className="text-lg">Custom Plugin Servers</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Connect a compatible Custom Plugin Server to add its Plugins and
-            supported Sources.
+            Connect a compatible Custom Plugin Server to add its Plugins and the
+            Sources they handle.
           </p>
         </div>
       </div>
@@ -102,9 +104,11 @@ export const AndroidScreensSection = () => (
             <HugeiconsIcon icon={SmartPhone01Icon} className="size-7" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg text-foreground">Phone and tablet</span>
+            <span className="text-lg text-foreground">
+              Android phones and tablets
+            </span>
             <span className="text-sm text-muted-foreground">
-              Touch controls for Android phones and tablets
+              Touch controls for Android phones and Android tablets
             </span>
           </div>
         </div>
@@ -135,16 +139,17 @@ export const PlanSection = () => {
           <div className="flex flex-col items-center gap-3">
             <span className="text-2xl text-foreground">Real-time sync</span>
             <span className="text-sm text-muted-foreground text-center">
-              A link saved on one device appears in the library on connected
-              devices.
+              A link saved in one browser or device appears in the library on
+              connected browsers and devices.
             </span>
           </div>
           <div className="flex flex-col items-center gap-3">
             <span className="text-2xl text-foreground">
-              Across Android devices
+              On Android TV, phones, and tablets
             </span>
             <span className="text-sm text-muted-foreground text-center">
-              Open supported links on Android TV, phones, and tablets.
+              Open saved links on Android TV, Android phones, and Android
+              tablets.
             </span>
           </div>
         </div>

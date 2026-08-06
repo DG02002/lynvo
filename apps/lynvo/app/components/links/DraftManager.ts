@@ -6,7 +6,7 @@ import {
 } from "~/features/links/storage-schemas"
 
 const DRAFTS_KEY = "lynvo:drafts:v1"
-const DRAFT_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
+export const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 export interface Draft extends StoredDraft {}
 
@@ -85,7 +85,7 @@ export function writeDraft(
     links,
     meta,
     originalUrl: url,
-    expiresAt: Date.now() + DRAFT_TTL,
+    expiresAt: Date.now() + DRAFT_TTL_MS,
   }
   writeRawDrafts(raw)
 }

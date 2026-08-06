@@ -8,7 +8,7 @@
 - Recommended runtime: Cloudflare Workers
 - Recommended framework: Hono
 - Protocol scope: staged extraction by Plugin Servers
-- Out of scope: Lynvo direct-link core flow
+- Out of scope: Lynvo Direct Media core flow
 
 ## Goal
 
@@ -21,7 +21,7 @@ Lynvo owns:
 - Plugin Server credential storage
 - response validation
 - UI rendering
-- playback behavior
+- player selection and link launching
 - saved-link state
 
 Plugin Servers own:
@@ -82,8 +82,9 @@ Plugin Servers may return:
 
 Plugin Servers must not return or control:
 
-- watched state
-- saved selection state
+- opened markers
+- playback positions or resume state
+- selected links
 - mirror cache owned by Lynvo
 - UI layout instructions
 - button styling or placement
@@ -555,7 +556,9 @@ For each saved extracted item, Lynvo should persist:
 - original source URL
 - originating Plugin Server entry id
 - normalized extraction data
-- Lynvo-owned playback state
+- Lynvo-owned opened markers and selected links. An opened marker
+  records that an item was opened; Lynvo does not persist playback positions
+  or resume state.
 
 ## Operational Guidance
 
@@ -573,6 +576,6 @@ Lynvo deployments may still enforce their own operational request budgets.
 
 - browser-to-Plugin Server direct calls
 - UI instructions from Plugin Servers
-- Plugin Server-managed playback state
+- Playback positions or resume state
 - framework-specific protocol behavior
 - WebSocket or SSE transport between Lynvo and the Plugin Server

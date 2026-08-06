@@ -62,7 +62,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Product launch",
     category: "Product",
     description:
-      "Launched link saving and folder browsing, playback in supported Android players and Android TV, and remote control between signed-in devices.",
+      "Launched link saving and folder browsing, URL handoff to Just (Video) Player, VLC for Android, MPV, and MX Player on Android TV, Android phones, and Android tablets, plus Remote Play between signed-in devices.",
   },
 ]
 

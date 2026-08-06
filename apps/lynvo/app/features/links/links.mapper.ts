@@ -5,7 +5,7 @@ export {
   normalizeLinkMetadata,
   toFlatMeta,
 } from "./link-metadata-normalization"
-export { withResolvedMirrors, withWatchedUrl } from "./link-playback-metadata"
+export { withResolvedMirrors, withOpenedUrl } from "./link-playback-metadata"
 export {
   toLinkViewItem,
   toLinkViewModel,

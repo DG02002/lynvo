@@ -25,7 +25,7 @@ interface HomeDemoItem {
   detail: string
   meta?: string
   isNew?: boolean
-  isWatched?: boolean
+  isOpened?: boolean
   isFolder?: boolean
 }
 
@@ -33,8 +33,8 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
   {
     icon: PlayIcon,
     title: "Midnight Relay — Episode 06 · 1080p",
-    detail: "Direct video",
-    isWatched: true,
+    detail: "Direct Media",
+    isOpened: true,
   },
   {
     icon: PackageSearchIcon,
@@ -199,7 +199,7 @@ export const HomeSaveDemo = () => {
 const DemoLibraryItem = ({ item }: { item: HomeDemoItem }) => (
   <div className="border-b last:border-b-0">
     <div
-      className={`flex min-h-24 w-full items-center gap-3 px-4 py-6 ${item.isWatched ? "bg-sky-500/15" : ""}`}
+      className={`flex min-h-24 w-full items-center gap-3 px-4 py-6 ${item.isOpened ? "bg-sky-500/15" : ""}`}
     >
       <span className="flex size-14 shrink-0 items-center justify-center text-foreground">
         <HugeiconsIcon icon={item.icon} />

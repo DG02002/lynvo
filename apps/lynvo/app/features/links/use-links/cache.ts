@@ -1,6 +1,5 @@
 import type { LinkViewItem } from "~/features/links/types"
 import { z } from "zod"
-import { LINKS_MAX_COUNT } from "../../../../convex/constants"
 import {
   toLinkViewItem,
   createLinkMetadata,
@@ -9,12 +8,9 @@ import {
 } from "~/features/links/links.mapper"
 import {
   linksCacheEnvelopeSchema,
-  storedLinkSchema,
   storedSavedLinkSchema,
 } from "~/features/links/storage-schemas"
 
-export const LINKS_MAX_LIMIT = LINKS_MAX_COUNT
-export const LINKS_KEY = "lynvo:links:v1"
 const SYNCED_LINKS_KEY_PREFIX = "lynvo:links:sync:v1:"
 
 export type LinksCache = {
@@ -73,37 +69,6 @@ const toSavedLink = (
   updatedAt: value.updatedAt,
   metadata: value.metadata,
 })
-
-export function readLocalLinks(): LinkViewItem[] {
-  if (typeof window === "undefined") {
-    return []
-  }
-  try {
-    const savedLinks = localStorage.getItem(LINKS_KEY)
-    if (!savedLinks) {
-      return []
-    }
-    const parsed: unknown = JSON.parse(savedLinks)
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-    return parsed.flatMap((value) => {
-      const item = storedLinkSchema.safeParse(value)
-      return item.success
-        ? [
-            {
-              ...item.data,
-              extractedLinks: undefined,
-            } as LinkViewItem,
-          ]
-        : []
-    })
-  } catch (error) {
-    console.error("Unable to read links", error)
-    localStorage.removeItem(LINKS_KEY)
-    return []
-  }
-}
 
 export function linksToLinkViewItems(
   links: SavedLink[],

@@ -48,15 +48,10 @@ interface ActiveSessionsViewProps {
   onRevokeAllSessions: () => void
 }
 
-const getSessionClientName = (deviceName: string, isMobile: boolean) => {
-  const lowerDeviceName = deviceName.toLowerCase()
-  if (!isMobile) {
-    return "Lynvo Web"
-  }
-  return lowerDeviceName.includes("android")
-    ? "Lynvo Android App"
-    : "Lynvo iOS App"
-}
+const getSessionClientName = (deviceName: string) =>
+  deviceName.toLowerCase().includes("android")
+    ? "Lynvo on Android"
+    : "Lynvo Web"
 
 const getSessionDeviceName = (deviceName: string) =>
   deviceName.trim() || "Unnamed device"
@@ -105,7 +100,7 @@ export const ActiveSessionsView = ({
           session.deviceName
         )
         const DeviceIcon = isMobile ? SmartPhone02Icon : LaptopMinimalIcon
-        const clientName = getSessionClientName(session.deviceName, isMobile)
+        const clientName = getSessionClientName(session.deviceName)
 
         return (
           <SettingsRow key={session.id} className="items-start gap-4">

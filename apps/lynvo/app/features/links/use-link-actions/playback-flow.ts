@@ -1,7 +1,7 @@
 import type { ExtractedLink } from "~/features/links/types"
 import { openInPlayer } from "~/lib/player-utils"
 
-export interface PlayLinkTargetOptions {
+export interface PlaybackTargetOptions {
   target: string | ExtractedLink
   activeSessionId: string | null | undefined
   sendCommand: (command: string, payload?: unknown) => Promise<void>
@@ -18,11 +18,11 @@ const openPlaybackTarget = async (target: string | ExtractedLink) => {
   await openInPlayer(targetUrl, { rangeRequest })
 }
 
-export const playLinkTarget = async ({
+export const playbackTarget = async ({
   target,
   activeSessionId,
   sendCommand,
-}: PlayLinkTargetOptions) => {
+}: PlaybackTargetOptions) => {
   const targetUrl = getTargetUrl(target)
 
   if (activeSessionId) {

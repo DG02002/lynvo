@@ -14,8 +14,10 @@ standalone author workflow; this file is not a second copy of those steps.
 
 Lynvo Plugin Servers are independently deployed HTTPS Workers. Lynvo owns
 registration, credential storage, routing, response validation, saved-link
-state, and playback. A Plugin Server owns source matching, extraction, staged
-lazy resolution, its bearer secret, finite usage accounting, and deployment.
+state, player selection, and link launching. Lynvo’s opened markers record only
+that an item was opened; Lynvo does not store playback positions or resume
+state. A Plugin Server owns source matching, extraction, staged lazy resolution,
+its bearer secret, finite usage accounting, and deployment.
 
 The public protocol contract lives in
 `packages/plugin-server-protocol/docs/spec.md`. The package author guide and
@@ -33,8 +35,8 @@ The manifest wire protocol is currently v1:
 
 The npm package follows semver independently. Use a compatible published
 version in standalone projects. Inside this monorepo, use `workspace:*` so the
-application and examples exercise the same source. Never carry `workspace:`,
-`link:`, or a relative Lynvo path into an external project.
+application and internal package tests exercise the same source. Never carry
+`workspace:`, `link:`, or a relative Lynvo path into an external project.
 
 Upgrade the protocol package and the manifest protocol version deliberately;
 an incompatible manifest should be rejected as a protocol mismatch rather than

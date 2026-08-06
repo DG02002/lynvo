@@ -7,7 +7,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "The rules for using Lynvo accounts, saved links, Plugins, Custom Plugin Servers, remote play, and Android players.",
+        "The rules for using Lynvo accounts, saved links, Plugins, Custom Plugin Servers, remote play, and Just (Video) Player, VLC for Android, MPV, and MX Player.",
     },
   ]
 }

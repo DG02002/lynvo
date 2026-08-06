@@ -4,7 +4,8 @@ A standalone Cloudflare Worker for a Lynvo-compatible Custom Plugin Server.
 
 This generated project owns the source-specific matcher, extraction logic,
 usage accounting, secrets, and deployment. Lynvo owns the protocol contract,
-registration, credential storage, response validation, and playback behavior.
+registration, credential storage, response validation, player selection, and
+link launching.
 
 ## Start locally
 
@@ -34,6 +35,13 @@ pnpm deploy
 
 Register the deployed Worker URL and the same bearer secret in Lynvo. Never
 send the secret to a browser or commit `.dev.vars`.
+
+## Optimize Plugin icons
+
+Place PNG or WebP Plugin icons in `public/icons/sources/`. The `pnpm build` and
+`pnpm deploy` commands optimize them to WebP at up to 256 pixels per side. Run
+`pnpm images:optimize` directly when you want to update the assets without a
+deployment.
 
 ## Customize the example
 

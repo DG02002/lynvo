@@ -114,7 +114,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     },
     {
@@ -135,9 +135,9 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
               type: "folder",
               children: [
                 {
-                  id: "watched-playable-item",
+                  id: "opened-playable-item",
                   url: "https://media.example/library/folder-one/playable-item-one.mp4",
-                  label: "Playable Item 1 — Watched file with a size",
+                  label: "Playable Item 1 — Opened file with a size",
                   type: "file",
                   size: "780 MB",
                 },
@@ -169,10 +169,10 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
           ],
         },
         playback: {
-          watchedUrls: [
+          openedUrls: [
             "https://media.example/library/folder-one/playable-item-one.mp4",
           ],
-          watchedIds: [],
+          openedIds: [],
         },
       },
     },
@@ -207,7 +207,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     },
     {
@@ -235,7 +235,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     },
     {
@@ -254,7 +254,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     },
     {
@@ -321,7 +321,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
             },
           ],
         },
-        playback: { watchedUrls: [], watchedIds: [] },
+        playback: { openedUrls: [], openedIds: [] },
       },
     },
   ]

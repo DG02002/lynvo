@@ -417,11 +417,11 @@ describe("Extraction interface routing", () => {
     fetchMock.mockRestore()
   })
 
-  it("does not use direct media when Lynvo route loading fails", async () => {
+  it("does not use Direct Media when Lynvo route loading fails", async () => {
     const directMediaFetch = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () =>
-        Response.json({ unexpected: "direct media fallback" })
+        Response.json({ unexpected: "Direct Media fallback" })
       )
     const environmentWithUnavailableLynvo = {
       ...environment,
@@ -488,7 +488,7 @@ describe("Extraction interface routing", () => {
     const directMediaFetch = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () =>
-        Response.json({ unexpected: "direct media fallback" })
+        Response.json({ unexpected: "Direct Media fallback" })
       )
     const environmentWithLynvo = {
       ...environment,

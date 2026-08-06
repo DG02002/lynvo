@@ -273,7 +273,11 @@ export const AndroidTvPlayerDefaults = () => (
     <div className="flex flex-col gap-1">
       <p className="font-medium">Recommended player defaults</p>
       <p className="text-sm leading-6 text-muted-foreground">
-        Lynvo selects a player based on whether the video supports seeking.
+        Lynvo marks an item opened the first time you open it. It does not store
+        a playback position or resume state. Lynvo does not play video; it opens
+        a URL in an external Android player. When you open the same link again,
+        Lynvo sends the same URL to the selected player. The selected player may
+        remember its own playback position.
       </p>
     </div>
 
@@ -288,7 +292,8 @@ export const AndroidTvPlayerDefaults = () => (
           <span>Just (Video) Player</span>
         </div>
         <span className="text-sm text-muted-foreground">
-          Videos that support seeking
+          Recommended for links whose servers support HTTP byte-range requests.
+          Can open other links, but cannot seek without byte-range support.
         </span>
       </div>
 
@@ -302,13 +307,15 @@ export const AndroidTvPlayerDefaults = () => (
           <span>VLC for Android</span>
         </div>
         <span className="text-sm text-muted-foreground">
-          Videos that require standard playback
+          Recommended for links without HTTP byte-range support. May still allow
+          seeking for some links.
         </span>
       </div>
     </div>
 
     <p className="text-sm leading-6 text-muted-foreground">
-      Change either default in <strong>Settings</strong> after you log in.
+      MPV and MX Player are also available in <strong>Settings</strong>. Change
+      either default after you log in.
     </p>
   </section>
 )
@@ -337,9 +344,12 @@ export const AndroidTvRemoteTroubleshooting = () => (
         </h3>
 
         <ol className="mt-4 flex list-decimal flex-col gap-2 pl-5 text-sm leading-6">
-          <li>Connect your phone and Android TV to the same Wi-Fi network.</li>
+          <li>
+            Connect your Android phone or tablet and Android TV to the same
+            Wi-Fi network.
+          </li>
           <li>Complete the pairing prompt in the Google TV app.</li>
-          <li>Select the TV Bro address bar and try again.</li>
+          <li>Select the TV Bro address bar on Android TV and try again.</li>
         </ol>
       </div>
     </div>

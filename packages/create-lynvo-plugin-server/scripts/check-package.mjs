@@ -40,6 +40,7 @@ assert(
 const requiredFiles = [
   "bin/create-lynvo-plugin-server.mjs",
   "template/package.json",
+  "template/scripts/optimize-images.mjs",
   "template/src/index.ts",
   "template/tests/contract.test.ts",
   "template/pnpm-workspace.yaml",

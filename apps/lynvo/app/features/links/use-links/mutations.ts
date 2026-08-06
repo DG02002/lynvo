@@ -8,10 +8,7 @@ import {
   createUpdatedItemFromMetadata,
   createUpdatedItemWithLinks,
 } from "./link-items"
-import {
-  createCurrentPlayableItem,
-  createWatchedLinkItem,
-} from "./link-playback"
+import { createOpenedLinkItem } from "./link-playback"
 import { buildLinkViewItem, showSaveError } from "./link-add"
 
 const persistWithoutWaiting = (operation: Promise<void>) => {
@@ -76,11 +73,11 @@ export const useLinksMutations = (persistence: LinksPersistence) => {
     [persistence]
   )
 
-  const markLinkAsWatched = useCallback(
+  const markLinkAsOpened = useCallback(
     (itemUrl: string, linkUrl: string) => {
       persistWithoutWaiting(
         persistence.update(itemUrl, (item) =>
-          createWatchedLinkItem(item, linkUrl)
+          createOpenedLinkItem(item, linkUrl)
         )
       )
     },
@@ -121,26 +118,15 @@ export const useLinksMutations = (persistence: LinksPersistence) => {
             },
             playback: {
               ...metadata.playback,
-              watchedUrls: metadata.playback.watchedUrls.filter(
-                (watchedUrl) => watchedUrl !== linkUrl
+              openedUrls: metadata.playback.openedUrls.filter(
+                (openedUrl) => openedUrl !== linkUrl
               ),
-              watchedIds: metadata.playback.watchedIds.filter(
-                (watchedId) => watchedId !== linkKey
+              openedIds: metadata.playback.openedIds.filter(
+                (openedId) => openedId !== linkKey
               ),
             },
           })
         })
-      )
-    },
-    [persistence]
-  )
-
-  const setPlayableItemAsCurrent = useCallback(
-    (itemUrl: string, lazyItemUrl: string, folderItemUrls: string[]) => {
-      persistWithoutWaiting(
-        persistence.update(itemUrl, (item) =>
-          createCurrentPlayableItem(item, lazyItemUrl, folderItemUrls)
-        )
       )
     },
     [persistence]
@@ -151,9 +137,8 @@ export const useLinksMutations = (persistence: LinksPersistence) => {
     clearLinks,
     addLink,
     updateLinks,
-    markLinkAsWatched,
+    markLinkAsOpened,
     cacheResolvedMirrors,
     removeLink,
-    setPlayableItemAsCurrent,
   }
 }

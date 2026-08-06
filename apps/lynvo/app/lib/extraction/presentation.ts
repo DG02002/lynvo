@@ -27,7 +27,7 @@ export const decideSavePresentation = (
     return {
       kind: "error",
       message:
-        "This Source page doesn’t contain supported links. Try a different link.",
+        "This Source page doesn’t contain any links Lynvo can open. Try a different link.",
     }
   }
 
@@ -45,6 +45,6 @@ export const decideSavePresentation = (
   return {
     kind: "error",
     message:
-      "Supported links were found, but none can be played. Try another Source page.",
+      "Links were found, but none can be opened in Just (Video) Player, VLC for Android, MPV, or MX Player. Try another Source page.",
   }
 }

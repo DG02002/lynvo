@@ -38,15 +38,4 @@ describe("remote-control browser persistence", () => {
     })
   })
 
-  it("does not migrate storage keys from the previous product name", () => {
-    localStorage.setItem("playlink_remote_session_id", "old-session")
-    localStorage.setItem("playlink_remote_device_name", "Old device")
-
-    expect(remoteControlPersistence.load()).toEqual({
-      sessionId: null,
-      deviceName: null,
-    })
-    expect(localStorage.getItem(REMOTE_SESSION_ID_KEY)).toBeNull()
-    expect(localStorage.getItem(REMOTE_DEVICE_NAME_KEY)).toBeNull()
-  })
 })
