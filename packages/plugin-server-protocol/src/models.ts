@@ -43,6 +43,10 @@ export interface UsageResponse {
   metrics: UsageMetric[]
 }
 
+export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
+
+export type ExpirySource = "signed-url" | "expires-header" | "cache-control"
+
 export interface GroupNode {
   kind: "group"
   id?: string
@@ -75,7 +79,9 @@ export interface PlayableNode {
   size?: string
   sourceName?: string
   expiry?: number
+  expirySource?: ExpirySource
   status?: "up" | "down" | "unknown"
+  rangeRequest?: RangeRequestCapability
 }
 
 export type MediaNode = GroupNode | ResolvableNode | PlayableNode

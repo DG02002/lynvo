@@ -32,6 +32,10 @@ describe("mapNodeToExtractedLink", () => {
       label: "Play from Source Route Alpha",
       url: "https://cdn.example/file.m3u8",
       size: "1.4 GB",
+      status: "up",
+      rangeRequest: "supported",
+      expiry: 1_798_761_600_000,
+      expirySource: "signed-url",
     }
 
     const link = mapNodeToExtractedLink(node)
@@ -39,6 +43,10 @@ describe("mapNodeToExtractedLink", () => {
     expect(link.type).toBe("file")
     expect(link.mediaNodeKind).toBe("playable")
     expect(link.url).toBe("https://cdn.example/file.m3u8")
+    expect(link.status).toBe("up")
+    expect(link.rangeRequest).toBe("supported")
+    expect(link.expiry).toBe(1_798_761_600_000)
+    expect(link.expirySource).toBe("signed-url")
   })
 
   it("does not let resolvable nodes masquerade as final playable files", () => {

@@ -40,6 +40,25 @@ describe("Plugin Server protocol fixtures", () => {
     ).toBe(false)
   })
 
+  it("accepts playable health and expiry metadata", () => {
+    const response = {
+      ...validExtractSuccessFixture,
+      nodes: [
+        {
+          kind: "playable",
+          label: "Signed video",
+          url: "https://media.example.com/signed-video",
+          status: "up",
+          rangeRequest: "supported",
+          expiry: 1_798_761_600_000,
+          expirySource: "signed-url",
+        },
+      ],
+    }
+
+    expect(extractSuccessSchema.safeParse(response).success).toBe(true)
+  })
+
   it("accepts only usage responses within their declared finite limits", () => {
     const invalidUsageResponse = {
       ...validUsageResponseFixture,

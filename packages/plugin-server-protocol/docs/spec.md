@@ -89,6 +89,42 @@ Plugin Servers must not return or control:
 - UI layout instructions
 - button styling or placement
 
+### Playable Health Metadata
+
+Playable nodes may report the result of a bounded media probe:
+
+```json
+{
+  "kind": "playable",
+  "label": "Example video",
+  "url": "https://media.example/video",
+  "status": "up",
+  "rangeRequest": "supported",
+  "expiry": 1798761600000,
+  "expirySource": "signed-url"
+}
+```
+
+`rangeRequest` reports whether the media endpoint honored `Range: bytes=0-0`:
+
+- `supported`: the probe returned `206` with `Content-Range`.
+- `unsupported`: the probe returned `200`, so the endpoint ignored the range.
+- `unknown`: the response did not establish either behavior.
+
+`status` is `up` only when the endpoint returned a usable non-HTML response;
+`down` is used for failed statuses or HTML responses. Plugin Servers should
+cancel the response body after reading the headers so a probe never downloads
+the media file.
+
+When expiry metadata is available, `expiry` is a Unix timestamp in
+milliseconds. `expirySource` identifies the source, in this priority order:
+`signed-url`, `expires-header`, or `cache-control`. A Cache-Control-derived
+expiry is an estimate and must not be treated as a cryptographic guarantee.
+
+Health metadata may be omitted when a final endpoint requires a
+source-specific or credentialed proxy that the Plugin Server cannot reproduce
+for a safe bounded probe.
+
 ### Security
 
 - Plugin Server API keys are server-side only.

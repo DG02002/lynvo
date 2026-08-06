@@ -46,8 +46,10 @@ export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink => {
     type: "file",
     mediaNodeKind: "playable",
     ...(node.expiry ? { expiry: node.expiry } : {}),
+    ...(node.expirySource ? { expirySource: node.expirySource } : {}),
     ...(node.status && node.status !== "unknown"
       ? { status: node.status }
       : {}),
+    ...(node.rangeRequest ? { rangeRequest: node.rangeRequest } : {}),
   }
 }

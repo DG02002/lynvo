@@ -152,7 +152,11 @@ export const playableNodeSchema = z.object({
   kind: z.literal("playable"),
   url: z.string(),
   expiry: z.number().optional(),
+  expirySource: z
+    .enum(["signed-url", "expires-header", "cache-control"])
+    .optional(),
   status: z.enum(["up", "down", "unknown"]).optional(),
+  rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
 }) as z.ZodType<PlayableNode>
 
 export const extractSuccessSchema = z.object({

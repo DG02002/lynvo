@@ -7,6 +7,7 @@ const response = (status: number, contentType = "video/mp4") =>
     headers: {
       "content-type": contentType,
       "content-disposition": 'attachment; filename="playable-item.mp4"',
+      ...(status === 206 ? { "content-range": "bytes 0-0/100" } : {}),
     },
   })
 
@@ -26,9 +27,29 @@ describe("directMediaAdapter", () => {
       expect.objectContaining({
         url: "https://cdn.example.com/playable-item.mp4",
         label: "playable-item.mp4",
+        status: "up",
         rangeRequest: "supported",
       }),
     ])
+  })
+
+  it("cancels the probe body instead of buffering media", async () => {
+    const probeResponse = new Response("probe body", {
+      status: 206,
+      headers: {
+        "content-type": "video/mp4",
+        "content-disposition": 'attachment; filename="playable-item.mp4"',
+        "content-range": "bytes 0-0/100",
+      },
+    })
+    const arrayBufferSpy = vi.spyOn(probeResponse, "arrayBuffer")
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(probeResponse)
+
+    await directMediaAdapter.extract(
+      "https://cdn.example.com/playable-item.mp4"
+    )
+
+    expect(arrayBufferSpy).not.toHaveBeenCalled()
   })
 
   it("keeps Direct Media links when byte range returns 200 and marks them unsupported", async () => {
@@ -42,6 +63,7 @@ describe("directMediaAdapter", () => {
       expect.objectContaining({
         url: "https://cdn.example.com/playable-item.mp4",
         label: "playable-item.mp4",
+        status: "up",
         rangeRequest: "unsupported",
       })
     )
@@ -62,5 +84,32 @@ describe("directMediaAdapter", () => {
       directMediaAdapter.extract("https://cdn.example.com/archive.zip")
     ).rejects.toThrow("file type")
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("accepts extensionless signed URLs using their response filename", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 206,
+        headers: {
+          "content-type": "application/octet-stream",
+          "content-disposition": 'attachment; filename="signed-video.mkv"',
+          "content-range": "bytes 0-0/100",
+          date: "Thu, 06 Aug 2026 11:01:20 GMT",
+          "cache-control": "public, max-age=604800",
+        },
+      })
+    )
+
+    const links = await directMediaAdapter.extract(
+      "https://r2.example/object?X-Amz-Date=20260806T110120Z&X-Amz-Expires=28800"
+    )
+
+    expect(links[0]).toMatchObject({
+      label: "signed-video.mkv",
+      status: "up",
+      rangeRequest: "supported",
+      expiry: Date.parse("2026-08-06T19:01:20Z"),
+      expirySource: "signed-url",
+    })
   })
 })

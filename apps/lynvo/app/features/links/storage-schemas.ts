@@ -12,6 +12,9 @@ export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
     childrenResolved: z.boolean().optional(),
     rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
     expiry: z.number().optional(),
+    expirySource: z
+      .enum(["signed-url", "expires-header", "cache-control"])
+      .optional(),
     status: z.enum(["up", "down"]).optional(),
     opened: z.boolean().optional(),
     size: z.string().optional(),

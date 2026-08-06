@@ -118,6 +118,30 @@ This keeps the Plugin Server’s public interface small and stable. Your Plugin
 Server can have as much Source-specific implementation as it needs behind that
 interface, but Lynvo should only see the protocol.
 
+## Playable Link Probes
+
+When a Plugin Server emits a final playable node, use one bounded `GET` probe
+with `Range: bytes=0-0`. Read the response headers, then cancel the body.
+Never buffer an unbounded media response merely to decide whether the link is
+alive.
+
+Report the probe in the node metadata:
+
+- `206` with `Content-Range` → `status: "up"`, `rangeRequest: "supported"`.
+- `200` with a media response → `status: "up"`, `rangeRequest: "unsupported"`.
+- `403`, `404`, `5xx`, or an HTML response → `status: "down"`.
+- Anything else that does not establish range behavior → `rangeRequest: "unknown"`.
+
+For expiry, prefer signed URL parameters when they carry an explicit expiry,
+then the response `Expires` header, then `Cache-Control: max-age`. Store the
+result in `expiry` as Unix milliseconds and identify the source with
+`expirySource`. Cache-Control is only an estimate; it does not prove when an
+origin will invalidate a link.
+
+If the final URL requires a source-specific or credentialed proxy that the
+probe cannot reproduce, omit health metadata instead of probing an endpoint
+that is known to reject the server request.
+
 ## Suggested Runtime Configuration
 
 ### Compatibility Date

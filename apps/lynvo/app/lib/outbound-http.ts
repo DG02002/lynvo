@@ -15,6 +15,7 @@ declare global {
     allowedProtocols?: readonly string[]
     timeoutMs?: number
     maximumResponseBytes?: number
+    responseBodyMode?: "read" | "discard"
   }
 
   interface OutboundHttpTransport {
@@ -165,6 +166,10 @@ export const createOutboundHttpTransport = (
         clearTimeout(timeoutId)
       }
       if (!isRedirect(response.status)) {
+        if (options.responseBodyMode === "discard") {
+          await response.body?.cancel()
+          return new Response(null, response)
+        }
         const responseBody = await response.arrayBuffer()
         if (
           responseBody.byteLength >

@@ -1,3 +1,8 @@
+import type {
+  ExpirySource,
+  RangeRequestCapability,
+} from "@dg02002/lynvo-plugin-server-protocol"
+
 export interface ExtractedLink {
   url: string
   label: string
@@ -6,8 +11,9 @@ export interface ExtractedLink {
   type?: "file" | "folder"
   children?: ExtractedLink[]
   childrenResolved?: boolean
-  rangeRequest?: "supported" | "unsupported" | "unknown"
+  rangeRequest?: RangeRequestCapability
   expiry?: number // Timestamp when the link expires
+  expirySource?: ExpirySource
   status?: "up" | "down"
   opened?: boolean
   size?: string // Human readable size (e.g. "1.5 GB")
@@ -51,7 +57,7 @@ export interface MetaData {
   contentType?: string
   contentLength?: number
   lastModified?: string
-  rangeRequest?: "supported" | "unsupported" | "unknown"
+  rangeRequest?: RangeRequestCapability
   pluginName?: string
   pluginIcon?: string
   pluginId?: string

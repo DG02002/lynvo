@@ -24,9 +24,9 @@ import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
-import { formatPlayableExpiry } from "~/features/links/format-playable-expiry"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { DraftExpiryBadge } from "~/components/save-list/draft-expiry-badge"
+import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import {
@@ -458,10 +458,11 @@ const FinderBrowser = ({
                       </span>
                     )}
                     {!link.opened && <NewBadge />}
-                    {link.expiry && (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatPlayableExpiry(link.expiry)}
-                      </span>
+                    {link.expiry !== undefined && (
+                      <PlayableExpiryBadge
+                        expiresAt={link.expiry}
+                        expirySource={link.expirySource}
+                      />
                     )}
                     {isResolving ? (
                       <Spinner aria-label={`Loading ${link.label}…`} />
@@ -641,10 +642,11 @@ export const SaveListBrowser = ({
                     {view.extractedLinks.length} items
                   </span>
                 )}
-                {directLink?.expiry && (
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatPlayableExpiry(directLink.expiry)}
-                  </span>
+                {directLink?.expiry !== undefined && (
+                  <PlayableExpiryBadge
+                    expiresAt={directLink.expiry}
+                    expirySource={directLink.expirySource}
+                  />
                 )}
                 {item.isDraft && item.draftExpiresAt && (
                   <DraftExpiryBadge expiresAt={item.draftExpiresAt} />

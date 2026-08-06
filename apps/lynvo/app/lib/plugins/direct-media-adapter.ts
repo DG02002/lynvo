@@ -6,7 +6,9 @@ import {
   DIRECT_LINK_FETCH_TIMEOUT_MS,
   assertSupportedFilename,
   createRangeHeaders,
+  getRangeRequestCapability,
   getContentDispositionFilename,
+  getResponseExpiry,
   getResponseFilename,
   getUrlFilename,
   isAllowedDirectContentType,
@@ -42,6 +44,7 @@ const fetchDirectRange = async (url: string, timeoutMs: number) => {
   return await createOutboundHttpTransport().fetch(url, {
     method: "GET",
     headers: createRangeHeaders(),
+    responseBodyMode: "discard",
     timeoutMs,
   })
 }
@@ -106,12 +109,20 @@ export const directMediaAdapter: DirectMediaAdapter = {
         assertSupportedFilename(filename)
       }
 
+      const rangeRequest = getRangeRequestCapability(
+        response.status,
+        response.headers
+      )
+      const expiry = getResponseExpiry(url, response.headers)
+
       return [
         {
           url,
           label: filename,
           id: "direct",
-          rangeRequest: response.status === 206 ? "supported" : "unsupported",
+          status: "up",
+          rangeRequest,
+          ...expiry,
         },
       ]
     } catch (error: unknown) {
