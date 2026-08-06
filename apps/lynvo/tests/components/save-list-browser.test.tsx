@@ -409,7 +409,12 @@ describe("SaveListBrowser", () => {
     ).toHaveClass("bg-sky-500/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
-    expect(screen.getByText("Expires Jan 1, 2030")).toBeInTheDocument()
+    const expiryBadge = screen.getByText("Playable link expires Jan 1, 2030")
+    expect(expiryBadge).toBeInTheDocument()
+    expect(expiryBadge).toHaveAttribute(
+      "title",
+      "Expiry for this playable link; the saved item itself does not expire."
+    )
   })
 
   it("shows the expiration countdown for a draft", () => {

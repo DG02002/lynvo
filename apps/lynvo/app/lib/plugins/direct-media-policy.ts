@@ -183,18 +183,13 @@ export const getResponseExpiry = (
     }
   } catch {}
 
-  const expiresHeader = headers.get("expires")
-  if (expiresHeader) {
-    const expiry = Date.parse(expiresHeader)
-    if (Number.isFinite(expiry)) {
-      return { expiry, expirySource: "expires-header" }
-    }
-  }
-
   const cacheControl = headers.get("cache-control")
   const maxAgeMatch = cacheControl?.match(REGEX_MAX_AGE)
   const maxAgeSeconds = maxAgeMatch ? Number(maxAgeMatch[1]) : undefined
-  if (maxAgeSeconds !== undefined && Number.isFinite(maxAgeSeconds)) {
+  if (maxAgeSeconds !== undefined) {
+    if (!Number.isFinite(maxAgeSeconds) || maxAgeSeconds <= 0) {
+      return {}
+    }
     const responseDate = headers.get("date")
     const parsedResponseDate = responseDate ? Date.parse(responseDate) : NaN
     const baseTime = Number.isFinite(parsedResponseDate)
@@ -203,6 +198,19 @@ export const getResponseExpiry = (
     return {
       expiry: baseTime + maxAgeSeconds * MILLISECONDS_PER_SECOND,
       expirySource: "cache-control",
+    }
+  }
+
+  const expiresHeader = headers.get("expires")
+  if (expiresHeader) {
+    const expiry = Date.parse(expiresHeader)
+    const responseDate = headers.get("date")
+    const responseDateTimestamp = responseDate ? Date.parse(responseDate) : NaN
+    const comparisonTimestamp = Number.isFinite(responseDateTimestamp)
+      ? responseDateTimestamp
+      : Date.now()
+    if (Number.isFinite(expiry) && expiry > comparisonTimestamp) {
+      return { expiry, expirySource: "expires-header" }
     }
   }
 

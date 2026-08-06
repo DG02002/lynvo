@@ -19,11 +19,13 @@ export const formatPlayableExpiry = (
 ): string => {
   const remainingMinutes = Math.ceil((expiry - now) / MINUTE_MS)
   if (remainingMinutes <= 0) {
-    return "Expired"
+    return "Playable link expired"
   }
 
   if (remainingMinutes > RELATIVE_EXPIRY_WINDOW_MINUTES) {
-    return `Expires ${PLAYABLE_EXPIRY_DATE_FORMATTER.format(new Date(expiry))}`
+    return `Playable link expires ${PLAYABLE_EXPIRY_DATE_FORMATTER.format(
+      new Date(expiry)
+    )}`
   }
 
   const days = Math.floor(remainingMinutes / DAY_IN_MINUTES)
@@ -43,5 +45,5 @@ export const formatPlayableExpiry = (
     parts.push(formatUnit(minutes, "min"))
   }
 
-  return `Expires in ${parts.join(" ")}`
+  return `Playable link expires in ${parts.join(" ")}`
 }

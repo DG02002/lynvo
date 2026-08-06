@@ -69,6 +69,33 @@ describe("directMediaAdapter", () => {
     )
   })
 
+  it("does not treat Google cache revalidation headers as link expiry", async () => {
+    const cacheTimestamp = "Thu, 06 Aug 2026 16:57:51 GMT"
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 200,
+        headers: {
+          "cache-control": "private, max-age=0",
+          "content-disposition": 'attachment; filename="google-video.mkv"',
+          "content-type": "video/mkv",
+          date: cacheTimestamp,
+          expires: cacheTimestamp,
+        },
+      })
+    )
+
+    const links = await directMediaAdapter.extract(
+      "https://video-downloads.googleusercontent.com/google-token"
+    )
+
+    expect(links[0]).toMatchObject({
+      status: "up",
+      rangeRequest: "unsupported",
+    })
+    expect(links[0]).not.toHaveProperty("expiry")
+    expect(links[0]).not.toHaveProperty("expirySource")
+  })
+
   it("rejects non-video Direct Media URLs", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200, "text/html"))
 

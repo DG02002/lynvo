@@ -118,8 +118,9 @@ the media file.
 
 When expiry metadata is available, `expiry` is a Unix timestamp in
 milliseconds. `expirySource` identifies the source, in this priority order:
-`signed-url`, `expires-header`, or `cache-control`. A Cache-Control-derived
-expiry is an estimate and must not be treated as a cryptographic guarantee.
+`signed-url`, `cache-control`, or `expires-header`. Response-header-derived
+expiry (`Expires` or `Cache-Control`) is an estimate and must not be treated
+as a cryptographic guarantee.
 
 Health metadata may be omitted when a final endpoint requires a
 source-specific or credentialed proxy that the Plugin Server cannot reproduce

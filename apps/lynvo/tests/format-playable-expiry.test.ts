@@ -9,23 +9,23 @@ const NOW = 1_000_000
 describe("formatPlayableExpiry", () => {
   it("uses relative time for links expiring within a week", () => {
     expect(formatPlayableExpiry(NOW + DAY_MS, NOW)).toBe(
-      "Expires in 1 day"
+      "Playable link expires in 1 day"
     )
     expect(formatPlayableExpiry(NOW + 24 * HOUR_MS, NOW)).toBe(
-      "Expires in 1 day"
+      "Playable link expires in 1 day"
     )
     expect(formatPlayableExpiry(NOW + 45 * MINUTE_MS, NOW)).toBe(
-      "Expires in 45 mins"
+      "Playable link expires in 45 mins"
     )
   })
 
   it("uses a calendar date for long-lived links", () => {
     expect(formatPlayableExpiry(Date.parse("2030-01-01T00:00:00Z"), NOW)).toBe(
-      "Expires Jan 1, 2030"
+      "Playable link expires Jan 1, 2030"
     )
   })
 
   it("reports expired links explicitly", () => {
-    expect(formatPlayableExpiry(NOW, NOW)).toBe("Expired")
+    expect(formatPlayableExpiry(NOW, NOW)).toBe("Playable link expired")
   })
 })

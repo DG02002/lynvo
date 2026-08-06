@@ -16,7 +16,8 @@ export const PlayableExpiryBadge = ({
 
   const label = formatPlayableExpiry(expiresAt)
   const isExpired = expiresAt <= Date.now()
-  const isEstimated = expirySource === "cache-control"
+  const isEstimated =
+    expirySource === "cache-control" || expirySource === "expires-header"
   const displayLabel = isEstimated ? `Estimated · ${label}` : label
 
   return (
@@ -25,8 +26,8 @@ export const PlayableExpiryBadge = ({
       aria-label={displayLabel}
       title={
         isEstimated
-          ? "Estimated from Cache-Control; the media server may expire it sooner."
-          : undefined
+          ? "Estimated expiry for this playable link from response caching headers; the saved item itself does not expire."
+          : "Expiry for this playable link; the saved item itself does not expire."
       }
       className="tabular-nums"
     >
