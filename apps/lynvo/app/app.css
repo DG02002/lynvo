@@ -140,6 +140,29 @@
   }
 }
 
+@keyframes clipboard-icon-shimmer {
+  from {
+    mask-position: 150% 0;
+  }
+  to {
+    mask-position: -150% 0;
+  }
+}
+
+.clipboard-icon-shimmer {
+  mask-image: linear-gradient(
+    90deg,
+    transparent 20%,
+    black 45%,
+    black 55%,
+    transparent 80%
+  );
+  mask-position: 150% 0;
+  mask-repeat: no-repeat;
+  mask-size: 250% 100%;
+  animation: clipboard-icon-shimmer 4s linear infinite;
+}
+
 .home-demo-cursor {
   top: 76%;
   left: 88%;
@@ -200,6 +223,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .clipboard-icon-shimmer {
+    animation: none;
+    mask-image: none;
+  }
+
   .home-demo-cursor {
     display: none;
   }

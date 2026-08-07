@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { LinkInputSection } from "~/components/send-link/LinkInputSection"
 
@@ -27,11 +27,25 @@ describe("LinkInputSection", () => {
     )
   })
 
-  it("detects a source link copied inside the app without refocusing", async () => {
-    let clipboardText = ""
+  it("does not request clipboard access until the user allows it", async () => {
+    const readText = vi.fn(() =>
+      Promise.resolve("https://example.com/new-source")
+    )
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { readText: vi.fn(() => Promise.resolve(clipboardText)) },
+      value: { readText },
+    })
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        query: vi.fn(() =>
+          Promise.resolve({
+            state: "prompt",
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          })
+        ),
+      },
     })
 
     render(
@@ -46,13 +60,24 @@ describe("LinkInputSection", () => {
       />
     )
 
-    clipboardText = "https://example.com/new-source"
-    act(() => window.dispatchEvent(new Event("lynvo:clipboard-write")))
+    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    expect(readText).not.toHaveBeenCalled()
+
+    fireEvent.focus(screen.getByLabelText("Link"))
+    expect(readText).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByLabelText("Enable clipboard suggestions"))
+    expect(screen.getByText("Paste links faster")).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", { name: "Allow clipboard access" })
+    )
 
     await waitFor(() =>
-      expect(screen.getByText(clipboardText)).toHaveClass("font-normal")
+      expect(screen.getByText("https://example.com/new-source")).toHaveClass(
+        "font-normal"
+      )
     )
-    expect(screen.getByText(clipboardText)).not.toHaveClass("font-mono")
+    expect(readText).toHaveBeenCalledTimes(1)
   })
 
   it("shows a routed source without exposing the plugin version", () => {

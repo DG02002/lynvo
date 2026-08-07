@@ -16,14 +16,20 @@ export const useClipboardUrl = ({
   onSave: (url?: string) => void
 }) => {
   const [clipboardUrl, setClipboardUrl] = React.useState<string | null>(null)
+  const [clipboardPermission, setClipboardPermission] = React.useState<
+    PermissionState | "unsupported"
+  >("prompt")
+  const skipNextGrantedRead = React.useRef(false)
 
-  const checkClipboard = React.useCallback(async () => {
+  const readClipboard = React.useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
+      setClipboardPermission("unsupported")
       return
     }
 
     try {
       const text = await navigator.clipboard.readText()
+      setClipboardPermission("granted")
       setClipboardUrl(
         text && text !== currentUrl && isHttpUrl(text) ? text : null
       )
@@ -31,6 +37,13 @@ export const useClipboardUrl = ({
       setClipboardUrl(null)
     }
   }, [currentUrl])
+
+  const checkClipboard = React.useCallback(async () => {
+    if (clipboardPermission !== "granted") {
+      return
+    }
+    await readClipboard()
+  }, [clipboardPermission, readClipboard])
 
   const pasteClipboardUrl = () => {
     if (!clipboardUrl) {
@@ -50,10 +63,52 @@ export const useClipboardUrl = ({
   }
 
   React.useEffect(() => {
-    void checkClipboard()
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      setClipboardPermission("unsupported")
+      return
+    }
 
-    const onFocus = () => void checkClipboard()
-    const onPaste = () => void checkClipboard()
+    if (!navigator.permissions) {
+      setClipboardPermission("unsupported")
+      return
+    }
+
+    let permissionStatus: PermissionStatus | undefined
+    let permissionChangeHandler: (() => void) | undefined
+    let isActive = true
+
+    void navigator.permissions
+      .query({ name: "clipboard-read" as PermissionName })
+      .then((status) => {
+        if (!isActive) return
+        permissionStatus = status
+        permissionChangeHandler = () => setClipboardPermission(status.state)
+        permissionChangeHandler()
+        status.addEventListener("change", permissionChangeHandler)
+      })
+      .catch(() => {
+        if (isActive) setClipboardPermission("unsupported")
+      })
+
+    return () => {
+      isActive = false
+      if (permissionStatus && permissionChangeHandler) {
+        permissionStatus.removeEventListener("change", permissionChangeHandler)
+      }
+    }
+  }, [])
+
+  React.useEffect(() => {
+    if (clipboardPermission !== "granted") return
+
+    if (skipNextGrantedRead.current) {
+      skipNextGrantedRead.current = false
+    } else {
+      void readClipboard()
+    }
+
+    const onFocus = () => void readClipboard()
+    const onPaste = () => void readClipboard()
 
     window.addEventListener("focus", onFocus)
     window.addEventListener(CLIPBOARD_WRITE_EVENT, onFocus)
@@ -64,11 +119,16 @@ export const useClipboardUrl = ({
       window.removeEventListener(CLIPBOARD_WRITE_EVENT, onFocus)
       document.removeEventListener("paste", onPaste)
     }
-  }, [checkClipboard])
+  }, [clipboardPermission, readClipboard])
 
   return {
     clipboardUrl,
+    clipboardPermission,
     checkClipboard,
+    requestClipboardAccess: async () => {
+      skipNextGrantedRead.current = true
+      await readClipboard()
+    },
     pasteClipboardUrl,
     clearMatchedClipboardUrl,
   }

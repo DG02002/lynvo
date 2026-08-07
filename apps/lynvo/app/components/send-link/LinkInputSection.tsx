@@ -18,6 +18,8 @@ import {
 } from "~/components/ui/input-group"
 import { cn } from "~/lib/utils"
 import { useClipboardUrl } from "./use-clipboard-url"
+import { ClipboardPermissionDialog } from "./ClipboardPermissionDialog"
+import { ClipboardAccessIcon } from "./ClipboardAccessIcon"
 import type { ExtractionPreview } from "~/features/links/use-link-actions/action-types"
 
 const sourceStatusMessage = (status: string | undefined) => {
@@ -75,10 +77,14 @@ export function LinkInputSection({
   error,
   setError,
 }: LinkInputSectionProps) {
+  const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
+    React.useState(false)
   const isExistingLinkWarning = error === "Link already exists on your account."
   const {
     clipboardUrl,
+    clipboardPermission,
     checkClipboard,
+    requestClipboardAccess,
     pasteClipboardUrl,
     clearMatchedClipboardUrl,
   } = useClipboardUrl({ currentUrl: url, setUrl, setError, onSave })
@@ -159,6 +165,18 @@ export function LinkInputSection({
           aria-invalid={Boolean(error && !isExistingLinkWarning)}
         />
         <InputGroupAddon align="inline-end">
+          {clipboardPermission !== "granted" && (
+            <InputGroupButton
+              type="button"
+              onClick={() => setIsClipboardDialogOpen(true)}
+              size="icon-xs"
+              title="Enable clipboard suggestions"
+              aria-label="Enable clipboard suggestions"
+              className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
+            >
+              <ClipboardAccessIcon className="size-6" />
+            </InputGroupButton>
+          )}
           <InputGroupButton
             type="button"
             onClick={() => onSave()}
@@ -181,6 +199,12 @@ export function LinkInputSection({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+
+      <ClipboardPermissionDialog
+        open={isClipboardDialogOpen}
+        onOpenChange={setIsClipboardDialogOpen}
+        onAllow={requestClipboardAccess}
+      />
 
       {isSaving && extractionPreview && (
         <div className="flex flex-col gap-1 px-3 text-xs text-muted-foreground">
