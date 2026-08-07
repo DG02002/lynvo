@@ -1,12 +1,16 @@
 import { useState } from "react"
+import { AirplayLineIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog"
+import { Button } from "~/components/ui/button"
 import { useRemoteControl } from "~/context/RemoteControlContext"
 import { RemotePlayStatusCard } from "./remote-play/RemotePlayStatusCard"
 import { RemotePlayTrigger } from "./remote-play/RemotePlayTrigger"
@@ -66,15 +70,21 @@ export function RemotePlayButton({
           }
         />
       )}
-      <DialogContent className="sm:max-w-md gap-0 p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 text-left">
-          <DialogTitle className="font-normal">Connect Remote Play</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="p-10 sm:max-w-md" showCloseButton={false}>
+        <HugeiconsIcon
+          icon={AirplayLineIcon}
+          className="mx-auto size-16 text-foreground"
+        />
+        <DialogHeader className="w-full items-center gap-4 text-center">
+          <DialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
+            Connect Remote Play
+          </DialogTitle>
+          <DialogDescription className="w-full text-center text-base text-muted-foreground">
             Open Lynvo in a browser on another device. Keep Lynvo open, then
             choose that device from the list.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col p-2">
+        <div className="flex flex-col">
           {controlledBy ? (
             <RemotePlayStatusCard
               label="Controlled by"
@@ -100,6 +110,18 @@ export function RemotePlayButton({
             />
           )}
         </div>
+        <DialogClose
+          render={
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="h-13.5 w-full"
+            />
+          }
+        >
+          Cancel
+        </DialogClose>
       </DialogContent>
     </Dialog>
   )
