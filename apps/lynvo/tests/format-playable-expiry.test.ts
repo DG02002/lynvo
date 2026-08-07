@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { formatPlayableExpiry } from "~/features/links/format-playable-expiry"
+import {
+  formatPlayableExpiry,
+  formatPlayableValidity,
+} from "~/features/links/format-playable-expiry"
 
 const MINUTE_MS = 60 * 1000
 const HOUR_MS = 60 * MINUTE_MS
@@ -27,5 +30,13 @@ describe("formatPlayableExpiry", () => {
 
   it("reports expired links explicitly", () => {
     expect(formatPlayableExpiry(NOW, NOW)).toBe("Playable link expired")
+  })
+})
+
+describe("formatPlayableValidity", () => {
+  it("uses compact units and marks estimated validity", () => {
+    expect(
+      formatPlayableValidity(NOW + 5 * DAY_MS + 23 * HOUR_MS, NOW, true)
+    ).toBe("Link valid for ~5d 23h")
   })
 })

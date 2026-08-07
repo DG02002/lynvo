@@ -409,12 +409,54 @@ describe("SaveListBrowser", () => {
     ).toHaveClass("bg-sky-500/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
-    const expiryBadge = screen.getByText("Playable link expires Jan 1, 2030")
-    expect(expiryBadge).toBeInTheDocument()
-    expect(expiryBadge).toHaveAttribute(
+    const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")
+    expect(expiryMetadata).toBeInTheDocument()
+    expect(expiryMetadata).toHaveAttribute(
       "title",
       "Expiry for this playable link; the saved item itself does not expire."
     )
+  })
+
+  it("disables and mutes an expired playable link", () => {
+    const play = vi.fn()
+    const directLink: ExtractedLink = {
+      url: "https://cdn.example.com/expired-video.mp4",
+      label: "expired-video.mp4",
+      type: "file",
+      expiry: Date.now() - 60_000,
+    }
+    const item: LinkViewItem = {
+      url: "https://source.example/expired-video",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Direct Media" },
+        extraction: { extractedLinks: [directLink] },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[item]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions({ play })}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    const filename = screen.getByText("expired-video.mp4")
+    const itemButton = filename.closest("button")!
+    expect(itemButton).toBeDisabled()
+    expect(itemButton).toHaveClass("text-muted-foreground", "opacity-60")
+    expect(filename).toHaveClass("line-through")
+    expect(screen.getByText("Link expired").querySelector("svg")).toBeNull()
+    expect(screen.queryByText("New")).not.toBeInTheDocument()
+    fireEvent.click(itemButton)
+    expect(play).not.toHaveBeenCalled()
   })
 
   it("shows the expiration countdown for a draft", () => {
@@ -483,8 +525,11 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByText("New")).toBeInTheDocument()
-    const newBadge = screen.getByText("New")
+    const newBadges = screen.getAllByText("New")
+    expect(newBadges).toHaveLength(2)
+    expect(newBadges[0]).toHaveClass("md:hidden")
+    expect(newBadges[1]).toHaveClass("hidden", "md:inline-flex")
+    const newBadge = newBadges[1]
     const itemCount = screen.getByText("1 items")
     expect(
       Boolean(

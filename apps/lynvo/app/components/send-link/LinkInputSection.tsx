@@ -66,7 +66,10 @@ interface LinkInputSectionProps {
   extractionPreview: ExtractionPreview | null
   error: string | null
   setError: (err: string | null) => void
+  savedUrls?: ReadonlySet<string>
 }
+
+const EMPTY_SAVED_URLS = new Set<string>()
 
 export function LinkInputSection({
   url,
@@ -76,6 +79,7 @@ export function LinkInputSection({
   extractionPreview,
   error,
   setError,
+  savedUrls = EMPTY_SAVED_URLS,
 }: LinkInputSectionProps) {
   const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
     React.useState(false)
@@ -87,7 +91,13 @@ export function LinkInputSection({
     requestClipboardAccess,
     pasteClipboardUrl,
     clearMatchedClipboardUrl,
-  } = useClipboardUrl({ currentUrl: url, setUrl, setError, onSave })
+  } = useClipboardUrl({
+    currentUrl: url,
+    savedUrls,
+    setUrl,
+    setError,
+    onSave,
+  })
   const statusMessage = sourceStatusMessage(
     extractionPreview?.meta.sourceStatus
   )
@@ -165,18 +175,19 @@ export function LinkInputSection({
           aria-invalid={Boolean(error && !isExistingLinkWarning)}
         />
         <InputGroupAddon align="inline-end">
-          {clipboardPermission !== "granted" && (
-            <InputGroupButton
-              type="button"
-              onClick={() => setIsClipboardDialogOpen(true)}
-              size="icon-xs"
-              title="Enable clipboard suggestions"
-              aria-label="Enable clipboard suggestions"
-              className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
-            >
-              <ClipboardAccessIcon className="size-6" />
-            </InputGroupButton>
-          )}
+          {clipboardPermission !== "checking" &&
+            clipboardPermission !== "granted" && (
+              <InputGroupButton
+                type="button"
+                onClick={() => setIsClipboardDialogOpen(true)}
+                size="icon-xs"
+                title="Enable clipboard suggestions"
+                aria-label="Enable clipboard suggestions"
+                className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
+              >
+                <ClipboardAccessIcon className="size-6" />
+              </InputGroupButton>
+            )}
           <InputGroupButton
             type="button"
             onClick={() => onSave()}

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useDraftSweep } from "~/components/links/DraftManager"
 import { LinkInputSection } from "~/components/send-link/LinkInputSection"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
@@ -38,6 +38,10 @@ const SaveList = () => {
   })
 
   useSaveListFullscreen(Boolean(selectedItemUrl))
+  const savedUrls = useMemo(
+    () => new Set(links.map((link) => link.url)),
+    [links]
+  )
 
   return (
     <div
@@ -57,6 +61,7 @@ const SaveList = () => {
             extractionPreview={input.extractionPreview}
             error={input.error}
             setError={input.setError}
+            savedUrls={savedUrls}
           />
         </div>
       )}

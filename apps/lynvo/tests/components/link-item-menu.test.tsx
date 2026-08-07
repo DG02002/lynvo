@@ -117,4 +117,39 @@ describe("LinkItemMenu", () => {
     expect(screen.queryByText("Refresh")).not.toBeInTheDocument()
     expect(screen.queryByText("Reload link choices")).not.toBeInTheDocument()
   })
+
+  it("offers only management actions for an expired Direct Media link", async () => {
+    const directLink: ExtractedLink = {
+      url: "https://cdn.example.com/expired.mp4",
+      label: "expired.mp4",
+      type: "file",
+    }
+
+    render(
+      <LinkItemMenu
+        item={{
+          url: directLink.url,
+          timestamp: Date.now(),
+          extractedLinks: [directLink],
+        }}
+        actions={createActions()}
+        playableLink={directLink}
+        isPlayableLinkExpired
+        showRemove
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Open menu for ${directLink.url}`,
+      })
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Copy Source link")).toBeInTheDocument()
+    })
+    expect(screen.getByText("Remove saved link")).toBeInTheDocument()
+    expect(screen.queryByText("Open in")).not.toBeInTheDocument()
+    expect(screen.queryByText("Reload link choices")).not.toBeInTheDocument()
+  })
 })

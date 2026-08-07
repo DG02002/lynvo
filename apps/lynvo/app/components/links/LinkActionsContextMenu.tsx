@@ -22,6 +22,7 @@ interface LinkActionsDotMenuProps {
   itemLabel: string
   onCopyLink: () => void
   onOpenInPlayer: (player: PlayerDefinition) => void
+  isPlayable?: boolean
   className?: string
 }
 
@@ -29,6 +30,7 @@ export function LinkActionsDotMenu({
   itemLabel,
   onCopyLink,
   onOpenInPlayer,
+  isPlayable = true,
   className,
 }: LinkActionsDotMenuProps) {
   const handleCopy = () => {
@@ -57,22 +59,24 @@ export function LinkActionsDotMenu({
           <HugeiconsIcon icon={CopyIcon} />
           Copy link
         </DropdownMenuItem>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={ArrowUpRight01Icon} />
-            Open in
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-56">
-            {PLAYER_DEFINITIONS.map((player) => (
-              <DropdownMenuItem
-                key={player.id}
-                onClick={() => onOpenInPlayer(player)}
-              >
-                <PlayerOption player={player} />
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        {isPlayable && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <HugeiconsIcon icon={ArrowUpRight01Icon} />
+              Open in
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              {PLAYER_DEFINITIONS.map((player) => (
+                <DropdownMenuItem
+                  key={player.id}
+                  onClick={() => onOpenInPlayer(player)}
+                >
+                  <PlayerOption player={player} />
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

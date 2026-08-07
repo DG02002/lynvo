@@ -47,3 +47,39 @@ export const formatPlayableExpiry = (
 
   return `Playable link expires in ${parts.join(" ")}`
 }
+
+export const formatPlayableValidity = (
+  expiry: number,
+  now = Date.now(),
+  isEstimated = false
+): string => {
+  const remainingMinutes = Math.ceil((expiry - now) / MINUTE_MS)
+  if (remainingMinutes <= 0) {
+    return "Link expired"
+  }
+
+  if (remainingMinutes > RELATIVE_EXPIRY_WINDOW_MINUTES) {
+    return `Link valid until ${PLAYABLE_EXPIRY_DATE_FORMATTER.format(
+      new Date(expiry)
+    )}`
+  }
+
+  const days = Math.floor(remainingMinutes / DAY_IN_MINUTES)
+  const hours = Math.floor(
+    (remainingMinutes % DAY_IN_MINUTES) / HOUR_IN_MINUTES
+  )
+  const minutes = remainingMinutes % HOUR_IN_MINUTES
+  const parts: string[] = []
+
+  if (days > 0) {
+    parts.push(`${days}d`)
+  }
+  if (hours > 0) {
+    parts.push(`${hours}h`)
+  }
+  if (minutes > 0 && parts.length < 2) {
+    parts.push(`${minutes}m`)
+  }
+
+  return `Link valid for ${isEstimated ? "~" : ""}${parts.join(" ")}`
+}

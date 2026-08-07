@@ -121,7 +121,7 @@ export const HomeSaveDemo = () => {
           <div className="relative z-20 mx-auto mb-8 flex w-full flex-col gap-4">
             <div
               aria-hidden={!isClipboardOpen}
-              className={`home-demo-clipboard-reveal grid transition-[grid-template-rows,opacity,transform,filter] duration-500 motion-reduce:transition-none ${isClipboardOpen ? "grid-rows-[1fr] translate-y-0 opacity-100 blur-0" : "grid-rows-[0fr] -translate-y-1 opacity-0 blur-[4px]"}`}
+              className={`home-demo-clipboard-reveal transition-[opacity,transform,filter] duration-500 motion-reduce:transition-none ${isClipboardOpen ? "translate-y-0 opacity-100 blur-0" : "-translate-y-1 opacity-0 blur-[4px]"}`}
             >
               <div className="min-h-0 overflow-hidden">
                 <div className="w-full rounded-md px-1 py-2 text-left">
@@ -165,7 +165,7 @@ export const HomeSaveDemo = () => {
 
           <section className="border-t">
             <div
-              className={`home-demo-created-item grid transition-[grid-template-rows,opacity] ${isItemCreated ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+              className={`home-demo-created-item transition-opacity ${isItemCreated ? "opacity-100" : "opacity-0"}`}
               aria-hidden={!isItemCreated}
             >
               <div className="min-h-0">

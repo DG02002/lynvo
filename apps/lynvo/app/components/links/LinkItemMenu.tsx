@@ -35,6 +35,7 @@ interface LinkItemMenuProps {
   showRemove?: boolean
   onRemoved?: () => void
   playableLink?: ExtractedLink
+  isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
 }
 
@@ -49,6 +50,7 @@ const LinkItemMenuContent = ({
   showRemove = false,
   onRemoved,
   playableLink,
+  isPlayableLinkExpired = false,
   isRefreshing = false,
 }: LinkItemMenuContentProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
@@ -139,7 +141,7 @@ const LinkItemMenuContent = ({
                     Reload link choices
                   </DropdownMenuItem>
                 )}
-                {playableLink && (
+                {playableLink && !isPlayableLinkExpired && (
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <HugeiconsIcon icon={ArrowUpRight01Icon} />

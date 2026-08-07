@@ -69,10 +69,17 @@ interface FolderTreeProps {
 
 const SaveListRowIcon = ({
   icon,
+  className,
 }: {
   icon: ComponentProps<typeof HugeiconsIcon>["icon"]
+  className?: string
 }) => (
-  <span className="flex size-14 shrink-0 items-center justify-center text-foreground">
+  <span
+    className={cn(
+      "flex size-10 shrink-0 items-center justify-center text-foreground md:size-14",
+      className
+    )}
+  >
     <HugeiconsIcon icon={icon} />
   </span>
 )
@@ -421,6 +428,10 @@ const FinderBrowser = ({
               )
             }
             const isFolder = link.type === "folder" || Boolean(link.children)
+            const isExpired =
+              !isFolder &&
+              link.expiry !== undefined &&
+              link.expiry <= Date.now()
             const isResolving = extractingItems.has(link.url)
             const copyLink = () => {
               void navigator.clipboard.writeText(link.url)
@@ -438,35 +449,52 @@ const FinderBrowser = ({
                 <div className="relative">
                   <button
                     type="button"
+                    disabled={isExpired}
                     data-folder-state={
                       isFolder ? getFolderVisualState(link, false) : undefined
                     }
                     className={cn(
                       "flex min-h-24 w-full items-center gap-3 px-4 py-6 text-left",
-                      "hover:bg-muted",
+                      !isExpired && "hover:bg-muted",
                       !isFolder && "pr-16",
-                      link.opened && "bg-sky-500/15 hover:bg-sky-500/20"
+                      link.opened &&
+                        !isExpired &&
+                        "bg-sky-500/15 hover:bg-sky-500/20",
+                      isExpired &&
+                        "cursor-not-allowed text-muted-foreground opacity-60"
                     )}
                     onClick={() => void openLink(link)}
                   >
                     <SaveListRowIcon
                       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
+                      className={
+                        isExpired ? "text-muted-foreground" : undefined
+                      }
                     />
-                    <span className="min-w-0 flex-1 line-clamp-3 break-words text-sm md:text-lg">
-                      {link.label}
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={cn(
+                          "block line-clamp-3 break-words text-sm md:text-lg",
+                          isExpired && "line-through"
+                        )}
+                      >
+                        {link.label}
+                      </span>
+                      {link.expiry !== undefined && (
+                        <span className="mt-1 flex justify-end text-xs text-muted-foreground">
+                          <PlayableExpiryBadge
+                            expiresAt={link.expiry}
+                            expirySource={link.expirySource}
+                          />
+                        </span>
+                      )}
                     </span>
                     {link.size && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {link.size}
                       </span>
                     )}
-                    {!link.opened && <NewBadge />}
-                    {link.expiry !== undefined && (
-                      <PlayableExpiryBadge
-                        expiresAt={link.expiry}
-                        expirySource={link.expirySource}
-                      />
-                    )}
+                    {!link.opened && !isExpired && <NewBadge />}
                     {isResolving ? (
                       <Spinner aria-label={`Loading ${link.label}…`} />
                     ) : isFolder ? (
@@ -482,6 +510,7 @@ const FinderBrowser = ({
                         itemLabel={link.label}
                         onCopyLink={copyLink}
                         onOpenInPlayer={openLinkInPlayer}
+                        isPlayable={!isExpired}
                         className="size-9 shrink-0 text-foreground"
                       />
                     </div>
@@ -570,12 +599,17 @@ export const SaveListBrowser = ({
           const isResolvableContainer =
             directLink && isMirrorResolvable(directLink)
           const isExtracting = extractingItems.has(item.url)
+          const isDirectLinkExpired =
+            directLink?.expiry !== undefined && directLink.expiry <= Date.now()
           const isRootFolderNew =
             !directLink &&
             !item.isDraft &&
             !new Set(getLinkViewItemMetadata(item).playback.openedUrls).has(
               item.url
             )
+          const isRootItemNew =
+            !isDirectLinkExpired &&
+            (directLink ? !directLink.opened : isRootFolderNew)
 
           if (directLink && isResolvableContainer) {
             return (
@@ -598,14 +632,21 @@ export const SaveListBrowser = ({
             >
               <div
                 className={cn(
-                  "flex min-h-24 w-full items-center gap-3 px-4 py-6",
-                  "hover:bg-muted/70",
-                  directLink?.opened && "bg-sky-500/15 hover:bg-sky-500/20"
+                  "flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3",
+                  !isDirectLinkExpired && "hover:bg-muted/70",
+                  directLink?.opened &&
+                    !isDirectLinkExpired &&
+                    "bg-sky-500/15 hover:bg-sky-500/20"
                 )}
               >
                 <button
                   type="button"
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  disabled={isDirectLinkExpired}
+                  className={cn(
+                    "flex min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                    isDirectLinkExpired &&
+                      "cursor-not-allowed text-muted-foreground opacity-60"
+                  )}
                   onClick={() => {
                     if (item.isDraft) {
                       actions.showLinks(item.url)
@@ -621,34 +662,61 @@ export const SaveListBrowser = ({
                   }}
                 >
                   {directLink ? (
-                    <SaveListRowIcon icon={PlayIcon} />
+                    <SaveListRowIcon
+                      icon={PlayIcon}
+                      className={
+                        isDirectLinkExpired
+                          ? "text-muted-foreground"
+                          : undefined
+                      }
+                    />
                   ) : item.isDraft ? (
                     <SaveListRowIcon icon={DashboardSquare03Icon} />
                   ) : (
                     <SaveListRowIcon icon={Folder01Icon} />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block line-clamp-3 break-words text-sm font-normal md:text-lg">
+                    <span
+                      className={cn(
+                        "block line-clamp-3 break-words text-sm font-normal md:text-lg",
+                        isDirectLinkExpired && "line-through"
+                      )}
+                    >
                       {directLink?.label || getItemTitle(item)}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {view.sourceName || view.pluginName || item.url}
+                    <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
+                      <span className="min-w-0 truncate">
+                        {view.sourceName || view.pluginName || item.url}
+                      </span>
+                      {(isRootItemNew || directLink?.expiry !== undefined) && (
+                        <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
+                          {directLink?.expiry !== undefined && (
+                            <>
+                              <span
+                                aria-hidden="true"
+                                className="hidden md:inline"
+                              >
+                                ·
+                              </span>
+                              <PlayableExpiryBadge
+                                expiresAt={directLink.expiry}
+                                expirySource={directLink.expirySource}
+                              />
+                            </>
+                          )}
+                          {isRootItemNew && <NewBadge className="md:hidden" />}
+                        </span>
+                      )}
                     </span>
                   </span>
                 </button>
-                {(directLink ? !directLink.opened : isRootFolderNew) && (
-                  <NewBadge />
+                {isRootItemNew && (
+                  <NewBadge className="hidden md:inline-flex" />
                 )}
                 {!directLink && (
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {view.extractedLinks.length} items
                   </span>
-                )}
-                {directLink?.expiry !== undefined && (
-                  <PlayableExpiryBadge
-                    expiresAt={directLink.expiry}
-                    expirySource={directLink.expirySource}
-                  />
                 )}
                 {item.isDraft && item.draftExpiresAt && (
                   <DraftExpiryBadge expiresAt={item.draftExpiresAt} />
@@ -658,6 +726,7 @@ export const SaveListBrowser = ({
                     item={item}
                     actions={actions}
                     playableLink={directLink}
+                    isPlayableLinkExpired={isDirectLinkExpired}
                     showRemove
                     isRefreshing={isExtracting}
                   />
@@ -666,6 +735,7 @@ export const SaveListBrowser = ({
                     item={item}
                     actions={actions}
                     playableLink={directLink}
+                    isPlayableLinkExpired={isDirectLinkExpired}
                     showRemove
                     isRefreshing={isExtracting}
                   />

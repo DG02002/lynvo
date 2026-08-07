@@ -60,6 +60,9 @@ describe("LinkInputSection", () => {
       />
     )
 
+    expect(
+      screen.queryByLabelText("Enable clipboard suggestions")
+    ).not.toBeInTheDocument()
     await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
     expect(readText).not.toHaveBeenCalled()
 
@@ -78,6 +81,42 @@ describe("LinkInputSection", () => {
       )
     )
     expect(readText).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not suggest a clipboard URL that is already saved", async () => {
+    const savedUrl = "https://example.com/already-saved"
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { readText: vi.fn(() => Promise.resolve(savedUrl)) },
+    })
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        query: vi.fn(() =>
+          Promise.resolve({
+            state: "granted",
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          })
+        ),
+      },
+    })
+
+    render(
+      <LinkInputSection
+        url=""
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={null}
+        setError={vi.fn()}
+        savedUrls={new Set([savedUrl])}
+      />
+    )
+
+    await waitFor(() => expect(navigator.clipboard.readText).toHaveBeenCalled())
+    expect(screen.queryByText(savedUrl)).not.toBeInTheDocument()
   })
 
   it("shows a routed source without exposing the plugin version", () => {

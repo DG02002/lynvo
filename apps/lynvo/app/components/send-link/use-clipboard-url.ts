@@ -6,19 +6,21 @@ const isHttpUrl = (value: string) =>
 
 export const useClipboardUrl = ({
   currentUrl,
+  savedUrls,
   setUrl,
   setError,
   onSave,
 }: {
   currentUrl: string
+  savedUrls: ReadonlySet<string>
   setUrl: (url: string) => void
   setError: (err: string | null) => void
   onSave: (url?: string) => void
 }) => {
   const [clipboardUrl, setClipboardUrl] = React.useState<string | null>(null)
   const [clipboardPermission, setClipboardPermission] = React.useState<
-    PermissionState | "unsupported"
-  >("prompt")
+    PermissionState | "checking" | "unsupported"
+  >("checking")
   const skipNextGrantedRead = React.useRef(false)
 
   const readClipboard = React.useCallback(async () => {
@@ -31,12 +33,20 @@ export const useClipboardUrl = ({
       const text = await navigator.clipboard.readText()
       setClipboardPermission("granted")
       setClipboardUrl(
-        text && text !== currentUrl && isHttpUrl(text) ? text : null
+        text && text !== currentUrl && !savedUrls.has(text) && isHttpUrl(text)
+          ? text
+          : null
       )
     } catch {
       setClipboardUrl(null)
     }
-  }, [currentUrl])
+  }, [currentUrl, savedUrls])
+
+  React.useEffect(() => {
+    if (clipboardUrl && savedUrls.has(clipboardUrl)) {
+      setClipboardUrl(null)
+    }
+  }, [clipboardUrl, savedUrls])
 
   const checkClipboard = React.useCallback(async () => {
     if (clipboardPermission !== "granted") {
@@ -80,14 +90,18 @@ export const useClipboardUrl = ({
     void navigator.permissions
       .query({ name: "clipboard-read" as PermissionName })
       .then((status) => {
-        if (!isActive) return
+        if (!isActive) {
+          return
+        }
         permissionStatus = status
         permissionChangeHandler = () => setClipboardPermission(status.state)
         permissionChangeHandler()
         status.addEventListener("change", permissionChangeHandler)
       })
       .catch(() => {
-        if (isActive) setClipboardPermission("unsupported")
+        if (isActive) {
+          setClipboardPermission("unsupported")
+        }
       })
 
     return () => {
@@ -99,7 +113,9 @@ export const useClipboardUrl = ({
   }, [])
 
   React.useEffect(() => {
-    if (clipboardPermission !== "granted") return
+    if (clipboardPermission !== "granted") {
+      return
+    }
 
     if (skipNextGrantedRead.current) {
       skipNextGrantedRead.current = false
