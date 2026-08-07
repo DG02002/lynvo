@@ -7,6 +7,7 @@ import {
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -16,15 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog"
 
 interface ResolvableLinkMenuProps {
   itemLabel: string
@@ -81,33 +73,18 @@ export const ResolvableLinkMenu = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog
+      <ConfirmationAlertDialog
         open={isRemoveDialogOpen}
         onOpenChange={setIsRemoveDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-normal">
-              Remove this link?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the link from the playable choices.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                onRemove()
-                setIsRemoveDialogOpen(false)
-              }}
-            >
-              Remove link
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Remove this link?"
+        description="This removes the link from the playable choices."
+        confirmLabel="Remove link"
+        confirmVariant="destructive"
+        onConfirm={() => {
+          onRemove()
+          setIsRemoveDialogOpen(false)
+        }}
+      />
     </>
   )
 }

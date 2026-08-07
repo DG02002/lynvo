@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
+  Alert01Icon,
   ArrowDown01Icon,
   Delete02Icon,
   Edit02Icon,
@@ -13,29 +14,11 @@ import {
 import { Button } from "~/components/ui/button"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
-import { Input } from "~/components/ui/input"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Alert, AlertDescription } from "~/components/ui/alert"
 import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "~/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/alert-dialog"
+import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
 import type { LynvoPlugin } from "./plugin-settings-data"
@@ -628,6 +611,12 @@ const PluginCredentialEditor = ({
   const [username, setUsername] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [isSaving, setIsSaving] = React.useState(false)
+  const [isRemoveCredentialDialogOpen, setIsRemoveCredentialDialogOpen] =
+    React.useState(false)
+  const [isRemoveDomainDialogOpen, setIsRemoveDomainDialogOpen] =
+    React.useState(false)
+  const [isRemovingCredential, setIsRemovingCredential] = React.useState(false)
+  const [isRemovingDomain, setIsRemovingDomain] = React.useState(false)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -679,40 +668,38 @@ const PluginCredentialEditor = ({
             >
               <HugeiconsIcon icon={Edit02Icon} />
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="font-normal">
-                  Edit credentials for {domain.domain}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <FormDialogContent
+              title="Edit Plugin Credentials"
+              description={`Update the credentials Lynvo uses to access ${domain.domain}.`}
+              media={
+                <HugeiconsIcon
+                  icon={Link01Icon}
+                  className="mx-auto size-16 text-foreground"
+                />
+              }
+              onSubmit={handleSubmit}
+              submitLabel={isSaving ? "Saving…" : "Save credentials"}
+              submitDisabled={isSaving}
+              cancelDisabled={isSaving}
+            >
+              <FieldGroup className="gap-4">
                 {credentialKind === "http-basic" && (
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor={`credential-username-${domain._id}`}
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      Username
-                    </label>
-                    <Input
+                  <Field className="gap-1.5">
+                    <FormDialogInput
                       id={`credential-username-${domain._id}`}
+                      label="Username"
                       autoComplete="username"
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
                       required
                       autoFocus
                     />
-                  </div>
+                  </Field>
                 )}
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor={`credential-${domain._id}`}
-                    className="text-xs font-medium text-muted-foreground"
-                  >
-                    Password
-                  </label>
-                  <Input
+                <Field className="gap-1.5">
+                  <FormDialogInput
                     id={`credential-${domain._id}`}
+                    label="Password"
                     type="password"
                     autoComplete="new-password"
                     value={password}
@@ -720,64 +707,77 @@ const PluginCredentialEditor = ({
                     required
                     autoFocus={credentialKind === "domain-password"}
                   />
-                </div>
-                <DialogFooter>
-                  {domain.hasCredential && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="mr-auto"
-                      onClick={async () => {
-                        await onDeleteCredential(domain._id)
-                        setIsEditing(false)
-                      }}
-                    >
-                      Remove credentials
-                    </Button>
-                  )}
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? "Saving…" : "Save credentials"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
+                </Field>
+              </FieldGroup>
+              {domain.hasCredential && (
                 <Button
+                  type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  className="hover:bg-transparent dark:hover:bg-transparent"
-                  aria-label={`Remove ${domain.domain}`}
-                />
-              }
-            >
-              <HugeiconsIcon icon={Delete02Icon} />
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-normal">
-                  Remove this domain?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {domain.domain} and its Plugin Credentials will be removed
-                  from this plugin.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={() => onDeleteDomain(domain._id)}
+                  className="w-full text-destructive hover:bg-transparent hover:text-destructive"
+                  disabled={isSaving}
+                  onClick={() => setIsRemoveCredentialDialogOpen(true)}
                 >
-                  Remove domain
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  Remove credentials
+                </Button>
+              )}
+            </FormDialogContent>
+          </Dialog>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="hover:bg-transparent dark:hover:bg-transparent"
+            aria-label={`Remove ${domain.domain}`}
+            onClick={() => setIsRemoveDomainDialogOpen(true)}
+          >
+            <HugeiconsIcon icon={Delete02Icon} />
+          </Button>
         </div>
       </div>
+      <ConfirmationAlertDialog
+        open={isRemoveCredentialDialogOpen}
+        onOpenChange={setIsRemoveCredentialDialogOpen}
+        title="Remove these Plugin Credentials?"
+        media={
+          <HugeiconsIcon
+            icon={Alert01Icon}
+            className="mx-auto size-16 text-destructive"
+          />
+        }
+        description={`Lynvo will no longer use the saved credentials for ${domain.domain}.`}
+        confirmLabel={isRemovingCredential ? "Removing…" : "Remove credentials"}
+        confirmVariant="destructive"
+        disabled={isRemovingCredential}
+        onConfirm={() => {
+          setIsRemovingCredential(true)
+          void onDeleteCredential(domain._id).finally(() => {
+            setIsRemovingCredential(false)
+            setIsRemoveCredentialDialogOpen(false)
+            setIsEditing(false)
+          })
+        }}
+      />
+      <ConfirmationAlertDialog
+        open={isRemoveDomainDialogOpen}
+        onOpenChange={setIsRemoveDomainDialogOpen}
+        title="Remove this domain?"
+        media={
+          <HugeiconsIcon
+            icon={Alert01Icon}
+            className="mx-auto size-16 text-destructive"
+          />
+        }
+        description={`${domain.domain} and its Plugin Credentials will be removed from this plugin.`}
+        confirmLabel={isRemovingDomain ? "Removing…" : "Remove domain"}
+        confirmVariant="destructive"
+        disabled={isRemovingDomain}
+        onConfirm={() => {
+          setIsRemovingDomain(true)
+          void onDeleteDomain(domain._id).finally(() => {
+            setIsRemovingDomain(false)
+            setIsRemoveDomainDialogOpen(false)
+          })
+        }}
+      />
     </div>
   )
 }

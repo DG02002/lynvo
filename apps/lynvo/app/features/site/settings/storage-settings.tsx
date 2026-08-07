@@ -1,17 +1,10 @@
 import * as React from "react"
+import { Alert01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { toast } from "sonner"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "~/components/ui/alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
 import {
@@ -65,6 +58,8 @@ export function StorageSettings() {
   })
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
   const [isClearingLinks, setIsClearingLinks] = React.useState(false)
+  const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] =
+    React.useState(false)
   const [pendingRetention, setPendingRetention] = React.useState<{
     days: number
     expiredLinkCount: number
@@ -190,88 +185,63 @@ export function StorageSettings() {
           </SettingsRow>
           <SettingsRow>
             <SettingsRowInfo label="Delete all links" />
-            <AlertDialog>
-              <AlertDialogTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none !active:translate-y-0 transition-colors shrink-0 px-4 text-sm font-normal"
-                    disabled={isClearingLinks || usage.savedLinkCount === 0}
-                  >
-                    Delete all
-                  </Button>
-                }
-              />
-              <AlertDialogContent className="p-10">
-                <AlertDialogHeader className="place-items-center gap-4 w-full text-center">
-                  <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-                    Delete all saved links?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-                    This permanently removes every saved link and its extracted
-                    link data from the account. This cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="flex flex-col gap-3 w-full mt-4">
-                  <AlertDialogAction
-                    onClick={handleClearLinks}
-                    className="w-full h-12 text-sm rounded-full"
-                  >
-                    Delete all saved links
-                  </AlertDialogAction>
-                  <AlertDialogCancel
-                    variant="outline"
-                    className="w-full h-12 text-sm rounded-full border-muted-foreground/20"
-                  >
-                    Cancel
-                  </AlertDialogCancel>
-                </div>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl !border-destructive !text-destructive !bg-transparent !hover:bg-transparent !hover:text-destructive !hover:border-destructive !shadow-none !active:translate-y-0 transition-colors shrink-0 px-4 text-sm font-normal"
+              disabled={isClearingLinks || usage.savedLinkCount === 0}
+              onClick={() => setIsClearLinksDialogOpen(true)}
+            >
+              Delete all
+            </Button>
           </SettingsRow>
         </SettingsList>
       </div>
-      <AlertDialog
+      <ConfirmationAlertDialog
+        open={isClearLinksDialogOpen}
+        onOpenChange={setIsClearLinksDialogOpen}
+        title="Delete all saved links?"
+        media={
+          <HugeiconsIcon
+            icon={Alert01Icon}
+            className="mx-auto size-16 text-destructive"
+          />
+        }
+        description="This permanently removes every saved link and its extracted link data from the account. This cannot be undone."
+        confirmLabel={
+          isClearingLinks ? "Deleting saved links…" : "Delete all saved links"
+        }
+        confirmVariant="destructive"
+        disabled={isClearingLinks}
+        onConfirm={() => void handleClearLinks()}
+      />
+      <ConfirmationAlertDialog
         open={pendingRetention !== null}
         onOpenChange={(open) => {
           if (!open) {
             setPendingRetention(null)
           }
         }}
-      >
-        <AlertDialogContent className="p-10">
-          <AlertDialogHeader className="place-items-center gap-4 w-full text-center">
-            <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-              Delete older links?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-              Changing auto-delete to {pendingRetention?.days} days will
-              permanently remove {pendingRetention?.expiredLinkCount} saved{" "}
-              {pendingRetention?.expiredLinkCount === 1 ? "link" : "links"}
-              from the account. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-3 w-full mt-4">
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingRetention) {
-                  void applyRetentionChange(pendingRetention.days, true)
-                }
-              }}
-              className="w-full h-12 text-sm rounded-full"
-            >
-              Delete older links
-            </AlertDialogAction>
-            <AlertDialogCancel
-              variant="outline"
-              className="w-full h-12 text-sm rounded-full border-muted-foreground/20"
-            >
-              Cancel
-            </AlertDialogCancel>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Delete older links?"
+        description={
+          <>
+            Changing auto-delete to {pendingRetention?.days} days will
+            permanently remove {pendingRetention?.expiredLinkCount} saved{" "}
+            {pendingRetention?.expiredLinkCount === 1 ? "link" : "links"} from
+            the account. This cannot be undone.
+          </>
+        }
+        confirmLabel={
+          isUpdatingRetention ? "Deleting older links…" : "Delete older links"
+        }
+        confirmVariant="destructive"
+        disabled={isUpdatingRetention}
+        onConfirm={() => {
+          if (pendingRetention) {
+            void applyRetentionChange(pendingRetention.days, true)
+          }
+        }}
+      />
     </SettingsPanel>
   )
 }

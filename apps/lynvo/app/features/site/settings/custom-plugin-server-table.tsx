@@ -1,5 +1,6 @@
 import * as React from "react"
 import {
+  Alert01Icon,
   ArrowDown01Icon,
   Delete02Icon,
   LinkSquare02Icon,
@@ -8,6 +9,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Badge } from "~/components/ui/badge"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Button } from "~/components/ui/button"
 import {
@@ -31,7 +33,7 @@ import { SettingsList, SettingsRow } from "./settings-layout"
 interface CustomPluginServerRowProps {
   pluginServer: CustomPluginServer
   requestOrigin: string
-  onDeletePluginServer: (pluginServerId: string) => void
+  onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => void
   onTogglePluginServer: (
     pluginServerId: string,
@@ -47,6 +49,8 @@ const CustomPluginServerRow = ({
   onTogglePluginServer,
 }: CustomPluginServerRowProps) => {
   const [isExpanded, setIsExpanded] = React.useState(true)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [isDeleting, setIsDeleting] = React.useState(false)
   const manifest = getPluginServerManifestView(
     pluginServer.manifest,
     requestOrigin
@@ -118,7 +122,7 @@ const CustomPluginServerRow = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => onDeletePluginServer(pluginServer._id)}
+                  onClick={() => setIsDeleteDialogOpen(true)}
                 >
                   <HugeiconsIcon icon={Delete02Icon} />
                   Delete
@@ -203,6 +207,28 @@ const CustomPluginServerRow = ({
           ))}
         </div>
       )}
+      <ConfirmationAlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete this Custom Plugin Server?"
+        media={
+          <HugeiconsIcon
+            icon={Alert01Icon}
+            className="mx-auto size-16 text-destructive"
+          />
+        }
+        description={`${manifest.name} and its server connection will be removed. You can add it again later.`}
+        confirmLabel={isDeleting ? "Deleting…" : "Delete server"}
+        confirmVariant="destructive"
+        disabled={isDeleting}
+        onConfirm={() => {
+          setIsDeleting(true)
+          void onDeletePluginServer(pluginServer._id).finally(() => {
+            setIsDeleting(false)
+            setIsDeleteDialogOpen(false)
+          })
+        }}
+      />
     </div>
   )
 }
@@ -216,7 +242,7 @@ export const CustomPluginServerTable = ({
 }: {
   pluginServers: readonly CustomPluginServer[]
   requestOrigin: string
-  onDeletePluginServer: (pluginServerId: string) => void
+  onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => void
   onTogglePluginServer: (
     pluginServerId: string,
