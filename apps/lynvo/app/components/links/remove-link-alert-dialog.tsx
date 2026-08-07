@@ -1,4 +1,4 @@
-import { ConfirmationAlertDialog } from "~/components/ui/confirmation-alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import type { LinkViewItem } from "~/features/links/types"
 
 interface RemoveLinkAlertDialogProps {

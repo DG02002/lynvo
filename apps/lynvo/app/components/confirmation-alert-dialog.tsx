@@ -49,7 +49,8 @@ export function ConfirmationAlertDialog({
         </AlertDialogHeader>
         <div className="mt-4 flex w-full flex-col gap-3">
           <AlertDialogAction
-            className="h-12 w-full rounded-full text-sm"
+            size="lg"
+            className="h-13.5 w-full"
             variant={confirmVariant}
             disabled={disabled}
             onClick={onConfirm}
@@ -59,7 +60,8 @@ export function ConfirmationAlertDialog({
           {cancelLabel !== null && (
             <AlertDialogCancel
               variant="outline"
-              className="h-12 w-full rounded-full border-muted-foreground/20 text-sm"
+              size="lg"
+              className="h-13.5 w-full border-muted-foreground/20"
               disabled={disabled}
             >
               {cancelLabel}

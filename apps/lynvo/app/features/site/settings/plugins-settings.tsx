@@ -8,8 +8,11 @@ import {
   Edit02Icon,
   Link01Icon,
   LinkSquare02Icon,
+  PlugSocketIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
+import { FormDialogContent } from "~/components/form-dialog-content"
+import { FormDialogInput } from "~/components/form-dialog-input"
 import { Input } from "~/components/ui/input"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Alert, AlertDescription } from "~/components/ui/alert"
@@ -20,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
   DialogFooter,
 } from "~/components/ui/dialog"
 import {
@@ -284,119 +286,110 @@ const AddPluginDomainDialog = ({
         <HugeiconsIcon icon={Add01Icon} />
         <span className="sr-only">Add domain for {plugin.name}</span>
       </DialogTrigger>
-      <DialogContent className="min-w-0 sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="font-normal">
-            Add domain for {plugin.name}
-          </DialogTitle>
-          <DialogDescription>{plugin.domainRequired}</DialogDescription>
-        </DialogHeader>
-        <form
-          onSubmit={async (event) => {
-            const didAdd = await onSubmit(event)
-            if (didAdd) {
-              onAdded()
-              setOpen(false)
-            }
-          }}
-          className="flex min-w-0 flex-col gap-4"
-        >
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor={`plugin-domain-${plugin.id}`}
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Domain
-            </label>
-            <Input
+      <FormDialogContent
+        title={`Add domain for ${plugin.name}`}
+        description={plugin.domainRequired}
+        media={<PluginIcon icon={plugin.icon} className="mx-auto size-16" />}
+        onSubmit={async (event) => {
+          const didAdd = await onSubmit(event)
+          if (didAdd) {
+            onAdded()
+            setOpen(false)
+          }
+        }}
+        submitLabel={isAdding ? "Adding…" : "Add domain"}
+        submitDisabled={isAdding}
+        cancelDisabled={isAdding}
+      >
+        <FieldGroup className="gap-4">
+          <Field className="gap-1.5">
+            <FormDialogInput
               id={`plugin-domain-${plugin.id}`}
+              label="Domain"
               value={domain}
               onChange={(event) => onDomainChange(event.target.value)}
-              placeholder="example.com"
               autoCapitalize="none"
               autoCorrect="off"
               required
             />
-          </div>
+          </Field>
           {plugin.credentialKind === "http-basic" && (
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center gap-2 text-sm">
+            <FieldGroup className="gap-4">
+              <Field orientation="horizontal">
                 <Checkbox
+                  id={`plugin-http-basic-${plugin.id}`}
                   checked={isPasswordProtected}
                   onCheckedChange={(checked) =>
                     onPasswordProtectedChange(checked === true)
                   }
                 />
-                This domain uses HTTP Basic Auth
-              </label>
+                <FieldLabel htmlFor={`plugin-http-basic-${plugin.id}`}>
+                  This domain uses HTTP Basic Auth
+                </FieldLabel>
+              </Field>
               {isPasswordProtected && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor={`plugin-username-${plugin.id}`}
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      Username
-                    </label>
-                    <Input
+                <FieldGroup className="gap-4">
+                  <Field className="gap-1.5">
+                    <FormDialogInput
                       id={`plugin-username-${plugin.id}`}
+                      label="Username"
                       value={username}
                       onChange={(event) => onUsernameChange(event.target.value)}
                       autoComplete="username"
                       required
                     />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label
-                      htmlFor={`plugin-password-${plugin.id}`}
-                      className="text-xs font-medium text-muted-foreground"
-                    >
-                      Password
-                    </label>
-                    <Input
+                  </Field>
+                  <Field className="gap-1.5">
+                    <FormDialogInput
                       id={`plugin-password-${plugin.id}`}
+                      label="Password"
                       type="password"
                       value={password}
                       onChange={(event) => onPasswordChange(event.target.value)}
                       autoComplete="new-password"
                       required
                     />
-                  </div>
-                </div>
+                  </Field>
+                </FieldGroup>
               )}
-            </div>
+            </FieldGroup>
           )}
           {plugin.credentialKind === "domain-password" && (
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center gap-2 text-sm">
+            <FieldGroup className="gap-4">
+              <Field orientation="horizontal">
                 <Checkbox
+                  id={`plugin-domain-password-${plugin.id}`}
                   checked={isPasswordProtected}
                   onCheckedChange={(checked) =>
                     onPasswordProtectedChange(checked === true)
                   }
                 />
-                This domain requires a password
-              </label>
+                <FieldLabel htmlFor={`plugin-domain-password-${plugin.id}`}>
+                  This domain requires a password
+                </FieldLabel>
+              </Field>
               {isPasswordProtected && (
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => onPasswordChange(event.target.value)}
-                  placeholder="Plugin Domain password"
-                  autoComplete="new-password"
-                  required
-                />
+                <Field className="gap-1.5">
+                  <FormDialogInput
+                    id={`plugin-password-${plugin.id}`}
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => onPasswordChange(event.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
               )}
-            </div>
+            </FieldGroup>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <DialogFooter>
-            <Button type="submit" disabled={isAdding}>
-              {isAdding ? "Adding…" : "Add domain"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </FieldGroup>
+      </FormDialogContent>
     </Dialog>
   )
 }
@@ -517,100 +510,86 @@ export const CustomPluginServersSection = ({
           >
             <HugeiconsIcon icon={Add01Icon} />
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="font-normal">
-                Add Custom Plugin Server
-              </DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault()
-                void form.handleSubmit()
-              }}
-              className="mt-2 flex flex-col gap-4"
-            >
-              <FieldGroup className="gap-4">
-                <form.Field name="baseUrl">
-                  {(field) => {
-                    const isInvalid =
-                      field.state.meta.isTouched && !field.state.meta.isValid
-                    return (
-                      <Field data-invalid={isInvalid} className="gap-1.5">
-                        <FieldLabel
-                          htmlFor="custom-plugin-server-base-url"
-                          className="text-xs font-medium text-muted-foreground"
-                        >
-                          Server URL
-                        </FieldLabel>
-                        <Input
-                          id="custom-plugin-server-base-url"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) => {
-                            setRegistrationError(null)
-                            field.handleChange(event.target.value)
-                          }}
-                          placeholder="https://plugin-server.example.com"
-                          className="h-10 rounded-xl px-3"
-                          aria-invalid={isInvalid}
-                        />
-                        {isInvalid ? (
-                          <FieldError errors={field.state.meta.errors} />
-                        ) : null}
-                      </Field>
-                    )
-                  }}
-                </form.Field>
-                <form.Field name="apiKey">
-                  {(field) => {
-                    const isInvalid =
-                      field.state.meta.isTouched && !field.state.meta.isValid
-                    return (
-                      <Field data-invalid={isInvalid} className="gap-1.5">
-                        <FieldLabel
-                          htmlFor="custom-plugin-server-api-key"
-                          className="text-xs font-medium text-muted-foreground"
-                        >
-                          API key
-                        </FieldLabel>
-                        <Input
-                          id="custom-plugin-server-api-key"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) => {
-                            setRegistrationError(null)
-                            field.handleChange(event.target.value)
-                          }}
-                          placeholder="Example: sk_live_…"
-                          type="password"
-                          className="h-10 rounded-xl px-3"
-                          aria-invalid={isInvalid}
-                        />
-                        {isInvalid ? (
-                          <FieldError errors={field.state.meta.errors} />
-                        ) : null}
-                      </Field>
-                    )
-                  }}
-                </form.Field>
-              </FieldGroup>
-              {registrationError ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{registrationError}</AlertDescription>
-                </Alert>
-              ) : null}
-              <DialogFooter className="mt-2">
-                <form.Subscribe selector={(state) => state.isSubmitting}>
-                  {(isSubmitting) => (
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Adding…" : "Add Custom Plugin Server"}
-                    </Button>
-                  )}
-                </form.Subscribe>
-              </DialogFooter>
-            </form>
-          </DialogContent>
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <FormDialogContent
+                title="Add Custom Plugin Server"
+                description="Connect a server using its URL and API key."
+                media={
+                  <HugeiconsIcon
+                    icon={PlugSocketIcon}
+                    className="mx-auto size-16 text-foreground"
+                  />
+                }
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void form.handleSubmit()
+                }}
+                submitLabel={
+                  isSubmitting ? "Adding…" : "Add Custom Plugin Server"
+                }
+                submitDisabled={isSubmitting}
+                cancelDisabled={isSubmitting}
+              >
+                <FieldGroup className="gap-4">
+                  <form.Field name="baseUrl">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid} className="gap-1.5">
+                          <FormDialogInput
+                            id="custom-plugin-server-base-url"
+                            label="Server URL"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => {
+                              setRegistrationError(null)
+                              field.handleChange(event.target.value)
+                            }}
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid ? (
+                            <FieldError errors={field.state.meta.errors} />
+                          ) : null}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+                  <form.Field name="apiKey">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid} className="gap-1.5">
+                          <FormDialogInput
+                            id="custom-plugin-server-api-key"
+                            label="API key"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => {
+                              setRegistrationError(null)
+                              field.handleChange(event.target.value)
+                            }}
+                            type="password"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid ? (
+                            <FieldError errors={field.state.meta.errors} />
+                          ) : null}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+                </FieldGroup>
+                {registrationError ? (
+                  <Alert variant="destructive">
+                    <AlertDescription>{registrationError}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </FormDialogContent>
+            )}
+          </form.Subscribe>
         </Dialog>
       </div>
       {pluginServers.length > 0 && (

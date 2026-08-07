@@ -1,15 +1,10 @@
 import * as React from "react"
-import { Button } from "~/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "~/components/ui/dialog"
-import { Input } from "~/components/ui/input"
-import { Label } from "~/components/ui/label"
+import { Alert01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { FormDialogContent } from "~/components/form-dialog-content"
+import { FormDialogInput } from "~/components/form-dialog-input"
+import { Field, FieldGroup } from "~/components/field"
+import { Dialog } from "~/components/ui/dialog"
 
 interface DeleteAccountDialogProps {
   username: string
@@ -31,54 +26,47 @@ export const DeleteAccountDialog = ({
   onDeleteAccount,
 }: DeleteAccountDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle className="font-normal text-destructive">
-          Delete account
-        </DialogTitle>
-        <DialogDescription className="mt-2">
+    <FormDialogContent
+      title="Delete account"
+      media={
+        <HugeiconsIcon
+          icon={Alert01Icon}
+          className="mx-auto size-16 text-destructive"
+        />
+      }
+      description={
+        <>
           This permanently deletes the account, saved links, settings, Plugin
           Server connections, credentials, and active sessions. This cannot be
           undone.
-          <span className="mt-2 block text-foreground font-medium">
+          <span className="mt-3 block font-medium text-foreground">
             Enter this username exactly to confirm:{" "}
-            <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs select-all">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs select-all">
               {username}
             </span>
           </span>
-        </DialogDescription>
-      </DialogHeader>
-      <form onSubmit={onDeleteAccount} className="space-y-4">
-        <Label htmlFor="delete-account-username">
-          Type username to confirm
-        </Label>
-        <Input
-          id="delete-account-username"
-          type="text"
-          value={confirmUsername}
-          onChange={(event) => onConfirmUsernameChange(event.target.value)}
-          required
-          className="w-full"
-          autoComplete="off"
-        />
-        <DialogFooter className="flex sm:justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={busy === "delete"}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="destructive"
-            disabled={confirmUsername.trim() !== username || busy === "delete"}
-          >
-            {busy === "delete" ? "Deleting account…" : "Delete account"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </DialogContent>
+        </>
+      }
+      onSubmit={onDeleteAccount}
+      submitLabel={busy === "delete" ? "Deleting account…" : "Delete account"}
+      submitVariant="destructive"
+      submitDisabled={confirmUsername.trim() !== username || busy === "delete"}
+      cancelDisabled={busy === "delete"}
+    >
+      <FieldGroup className="gap-4">
+        <Field className="gap-1.5">
+          <FormDialogInput
+            id="delete-account-username"
+            label="Type username to confirm"
+            tone="destructive"
+            type="text"
+            value={confirmUsername}
+            onChange={(event) => onConfirmUsernameChange(event.target.value)}
+            required
+            autoComplete="off"
+          />
+        </Field>
+      </FieldGroup>
+    </FormDialogContent>
   </Dialog>
 )

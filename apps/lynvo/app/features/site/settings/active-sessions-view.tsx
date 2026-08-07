@@ -3,7 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { SmartPhone02Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
-import { ConfirmationAlertDialog } from "~/components/ui/confirmation-alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
 const LaptopMinimalIcon = [

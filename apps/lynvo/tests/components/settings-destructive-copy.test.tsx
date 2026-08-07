@@ -18,6 +18,7 @@ describe("settings destructive actions", () => {
     )
 
     expect(screen.getByLabelText("Type username to confirm")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled()
     expect(screen.getByText("darshan")).toBeVisible()
     expect(screen.getByText(/Plugin Server connections/)).toBeVisible()
   })

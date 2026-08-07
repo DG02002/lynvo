@@ -2,7 +2,7 @@ import * as React from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ChevronRightIcon } from "@hugeicons/core-free-icons"
+import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import {
   SettingsPanel,
@@ -15,7 +15,7 @@ import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
 import { revokeWorkerSession } from "~/lib/worker-auth-session-http"
 import { client } from "~/lib/effect/api/client"
-import { ConfirmationAlertDialog } from "~/components/ui/confirmation-alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 
 type SettingsUser = {
   id: string
@@ -122,6 +122,12 @@ export function SecuritySettings({
           open={revokeAllDialogOpen}
           onOpenChange={setRevokeAllDialogOpen}
           title="Log out all sessions?"
+          media={
+            <HugeiconsIcon
+              icon={Alert01Icon}
+              className="mx-auto size-16 text-destructive"
+            />
+          }
           description="This logs out every device, including this one. Unsaved work on those devices may be lost. Session termination may take up to 30 minutes."
           confirmLabel={
             busy === "revokeAll" ? "Logging out…" : "Log out all sessions"
