@@ -40,6 +40,7 @@ import {
   requestLogging,
   type RequestLoggingEnvironment,
 } from "./request-logging"
+import { responseSecurityHeaders } from "./response-security-headers"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -57,17 +58,7 @@ const app = new Hono<RequestLoggingEnvironment>()
 
 const TURNSTILE_HOSTNAME = "lynvo.dg02002.workers.dev"
 const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
-app.use("*", async (context, next) => {
-  await next()
-  context.res.headers.set("Strict-Transport-Security", "max-age=31536000")
-  context.res.headers.set("X-Content-Type-Options", "nosniff")
-  context.res.headers.set("X-Frame-Options", "DENY")
-  context.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-  context.res.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  )
-})
+app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging())
 

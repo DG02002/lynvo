@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it, vi } from "vitest"
 import { Hono } from "hono"
 import { initLogger, type DrainContext } from "evlog"
 import {
@@ -6,6 +6,7 @@ import {
   requestLogging,
   type RequestLoggingEnvironment,
 } from "../workers/request-logging"
+import { responseSecurityHeaders } from "../workers/response-security-headers"
 
 const environment = {
   ENVIRONMENT: "test",
@@ -60,5 +61,54 @@ describe("request logging", () => {
       user_id: "user-123",
       extraction: { target_host: "example.com", link_count: 4 },
     })
+  })
+
+  it("emits a WebSocket upgrade without reusing the sealed logger", async () => {
+    const drained: DrainContext[] = []
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+    try {
+      const app = new Hono<RequestLoggingEnvironment>()
+      app.use("*", responseSecurityHeaders())
+      app.use(
+        "*",
+        requestLogging({
+          drain: (context) => {
+            drained.push(context)
+          },
+        })
+      )
+      app.get("/realtime", (context) => {
+        addRequestContext(context, {
+          operation: "realtime_connect",
+          transport: "websocket",
+        })
+        const response = context.body(null)
+        Object.defineProperty(response, "status", { value: 101 })
+        response.headers.set = () => {
+          throw new TypeError("immutable WebSocket upgrade headers")
+        }
+        return response
+      })
+
+      const response = await app.request(
+        new Request("https://lynvo.example/realtime", {
+          headers: { Upgrade: "websocket" },
+        }),
+        undefined,
+        environment
+      )
+
+      expect(response.status).toBe(101)
+      expect(drained).toHaveLength(1)
+      expect(drained[0]?.event).toMatchObject({
+        operation: "realtime_connect",
+        status: 101,
+        transport: "websocket",
+      })
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
   })
 })
