@@ -28,11 +28,9 @@ export const UserMenu = ({
       render={
         <button
           type="button"
-          className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-accent transition-colors outline-none"
+          className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
         >
-          <div className="p-1">
-            <HugeiconsIcon icon={UserIcon} className="size-4" />
-          </div>
+          <HugeiconsIcon icon={UserIcon} className="size-4" />
           <span className="hidden text-base font-normal sm:inline">
             {username}
           </span>
