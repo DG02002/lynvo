@@ -15,15 +15,7 @@ import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
 import { revokeWorkerSession } from "~/lib/worker-auth-session-http"
 import { client } from "~/lib/effect/api/client"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/ui/confirmation-alert-dialog"
 
 type SettingsUser = {
   id: string
@@ -103,7 +95,6 @@ export function SecuritySettings({
         <ActiveSessionsView
           sessions={sessions}
           busy={busy}
-          onBack={() => onShowActiveSessionsChange(false)}
           onRevokeSession={async (sessionIndex) => {
             try {
               await Effect.runPromise(
@@ -122,37 +113,23 @@ export function SecuritySettings({
                   "The session couldn’t be logged out. Try again."
                 )
               )
+              throw error
             }
           }}
           onRevokeAllSessions={() => setRevokeAllDialogOpen(true)}
         />
-        <AlertDialog
+        <ConfirmationAlertDialog
           open={revokeAllDialogOpen}
           onOpenChange={setRevokeAllDialogOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Log out all sessions?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This logs out every device, including this one. Unsaved work on
-                those devices may be lost. Session termination may take up to 30
-                minutes.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <AlertDialogCancel disabled={busy === "revokeAll"}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={busy === "revokeAll"}
-                onClick={() => void handleRevokeAllSessions()}
-              >
-                {busy === "revokeAll" ? "Logging out…" : "Log out all sessions"}
-              </AlertDialogAction>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          title="Log out all sessions?"
+          description="This logs out every device, including this one. Unsaved work on those devices may be lost. Session termination may take up to 30 minutes."
+          confirmLabel={
+            busy === "revokeAll" ? "Logging out…" : "Log out all sessions"
+          }
+          confirmVariant="destructive"
+          disabled={busy === "revokeAll"}
+          onConfirm={() => void handleRevokeAllSessions()}
+        />
       </>
     )
   }
@@ -177,7 +154,10 @@ export function SecuritySettings({
             onClick={() => onShowActiveSessionsChange(true)}
             className="hover:bg-transparent cursor-pointer select-none"
           >
-            <SettingsRowInfo label="Active sessions" />
+            <SettingsRowInfo
+              label="Active sessions"
+              description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Log out all to end all sessions."
+            />
             <div className="flex items-center gap-1.5 shrink-0 text-foreground">
               <span className="text-sm font-normal">{sessions.length}</span>
               <HugeiconsIcon icon={ChevronRightIcon} className="size-5" />

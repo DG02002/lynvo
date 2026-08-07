@@ -1,12 +1,4 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog"
+import { ConfirmationAlertDialog } from "~/components/ui/confirmation-alert-dialog"
 
 export const LogoutDialog = ({
   open,
@@ -19,30 +11,12 @@ export const LogoutDialog = ({
   username: string
   onLogout: () => void
 }) => (
-  <AlertDialog open={open} onOpenChange={onOpenChange}>
-    <AlertDialogContent className="p-10">
-      <AlertDialogHeader className="place-items-center gap-4 w-full text-center">
-        <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-          Log out of Lynvo?
-        </AlertDialogTitle>
-        <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-          Logged in as {username}.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <div className="flex flex-col gap-3 w-full mt-4">
-        <AlertDialogAction
-          onClick={onLogout}
-          className="w-full h-12 text-sm rounded-full"
-        >
-          Log out
-        </AlertDialogAction>
-        <AlertDialogCancel
-          variant="outline"
-          className="w-full h-12 text-sm rounded-full border-muted-foreground/20"
-        >
-          Cancel
-        </AlertDialogCancel>
-      </div>
-    </AlertDialogContent>
-  </AlertDialog>
+  <ConfirmationAlertDialog
+    open={open}
+    onOpenChange={onOpenChange}
+    title="Log out of Lynvo?"
+    description={<>Logged in as {username}.</>}
+    confirmLabel="Log out"
+    onConfirm={onLogout}
+  />
 )

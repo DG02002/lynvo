@@ -1,0 +1,72 @@
+import type { ReactNode } from "react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog"
+import type { Button } from "~/components/ui/button"
+
+interface ConfirmationAlertDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: ReactNode
+  description: ReactNode
+  media?: ReactNode
+  confirmLabel: ReactNode
+  onConfirm: () => void
+  cancelLabel?: ReactNode | null
+  confirmVariant?: React.ComponentProps<typeof Button>["variant"]
+  disabled?: boolean
+}
+
+export function ConfirmationAlertDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  media,
+  confirmLabel,
+  onConfirm,
+  cancelLabel = "Cancel",
+  confirmVariant = "default",
+  disabled = false,
+}: ConfirmationAlertDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="p-10">
+        {media}
+        <AlertDialogHeader className="w-full place-items-center gap-4 text-center sm:place-items-center sm:text-center">
+          <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
+            {title}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="w-full text-center text-base text-muted-foreground">
+            {description}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="mt-4 flex w-full flex-col gap-3">
+          <AlertDialogAction
+            className="h-12 w-full rounded-full text-sm"
+            variant={confirmVariant}
+            disabled={disabled}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </AlertDialogAction>
+          {cancelLabel !== null && (
+            <AlertDialogCancel
+              variant="outline"
+              className="h-12 w-full rounded-full border-muted-foreground/20 text-sm"
+              disabled={disabled}
+            >
+              {cancelLabel}
+            </AlertDialogCancel>
+          )}
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}

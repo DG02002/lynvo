@@ -523,12 +523,11 @@ export const SaveListBrowser = ({
   if (isHydrating) {
     return (
       <div
-        className="flex min-h-56 items-center justify-center gap-2"
+        className="flex min-h-56 items-center justify-center"
         role="status"
         aria-label="Loading saved links…"
       >
         <Spinner aria-hidden="true" />
-        <span>Loading saved links…</span>
       </div>
     )
   }

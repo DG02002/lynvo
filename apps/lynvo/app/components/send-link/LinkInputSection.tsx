@@ -131,7 +131,7 @@ export function LinkInputSection({
         </div>
       )}
 
-      <label htmlFor="link-input" className="px-3 text-sm font-medium">
+      <label htmlFor="link-input" className="sr-only">
         Link
       </label>
       <InputGroup className="w-full h-13.5 rounded-full bg-muted/30 sm:flex-1 border-2 border-default-medium has-[[data-slot=input-group-control]:focus-visible]:border-2 has-[[data-slot=input-group-control]:focus-visible]:border-blue-500 has-[[data-slot=input-group-control]:focus-visible]:ring-0">

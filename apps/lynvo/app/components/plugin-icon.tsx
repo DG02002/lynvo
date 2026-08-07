@@ -1,7 +1,4 @@
-import {
-  GeometricShapes01Icon,
-  ThreeDViewIcon,
-} from "@hugeicons/core-free-icons"
+import { HelpSquareIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { cn } from "~/lib/utils"
 import { getPluginIconSource, type PluginIconSource } from "~/lib/plugin-icons"
@@ -43,9 +40,7 @@ export const PluginIcon = ({
 
   return (
     <HugeiconsIcon
-      icon={
-        fallback === "plugin-server" ? ThreeDViewIcon : GeometricShapes01Icon
-      }
+      icon={HelpSquareIcon}
       className={cn("shrink-0 text-foreground", className)}
       aria-hidden="true"
       data-icon-fallback={fallback}

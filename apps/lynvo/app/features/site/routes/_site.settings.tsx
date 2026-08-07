@@ -7,12 +7,14 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Activity03Icon,
+  ArrowLeft01Icon,
   HardDriveIcon,
   Key01Icon,
   PlayIcon,
   Plug02Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
+import { Button } from "~/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { GeneralSettings } from "~/features/site/settings/general-settings"
 import { PlayerSettings } from "~/features/site/settings/player-settings"
@@ -174,9 +176,22 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="security" className="flex flex-col">
-            <header className="pb-4">
+            <header className="flex items-center gap-3 pb-4">
+              {showActiveSessions && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-ml-2 h-9 w-9"
+                  onClick={() =>
+                    navigate(getSettingsPath("security"), { replace: true })
+                  }
+                  aria-label="Back to Security and login"
+                >
+                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
+                </Button>
+              )}
               <h1 className="text-2xl font-normal tracking-tight">
-                Security and login
+                {showActiveSessions ? "Active sessions" : "Security and login"}
               </h1>
             </header>
             <SecuritySettings

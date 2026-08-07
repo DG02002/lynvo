@@ -164,11 +164,6 @@ export function StorageSettings() {
             {formatBytes(usage.storageLimitBytes)} used
           </span>
           <Progress value={progressPercent} />
-          <span className="text-xs text-muted-foreground">
-            Saved links and their extracted link data count toward this limit.
-            Account security and connected-device records use approximately{" "}
-            {formatBytes(usage.operationalBytes)} of additional storage.
-          </span>
         </div>
 
         <SettingsList>

@@ -1,3 +1,5 @@
+import { showPlayerLaunchError } from "~/lib/player-launch-events"
+
 export type PlayerId = "just" | "vlc" | "mpv" | "mx"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
 
@@ -172,13 +174,13 @@ export const openInSpecificPlayer = async (
     return true
   }
 
-  if (
-    typeof navigator !== "undefined" &&
-    /android/i.test(navigator.userAgent)
-  ) {
-    launchIntentViaAnchor(intent)
-  } else {
-    window.open(targetUrl, "_blank", "noopener,noreferrer")
+  const isAndroid =
+    typeof navigator !== "undefined" && /android/i.test(navigator.userAgent)
+
+  if (!isAndroid || !launchIntentViaAnchor(intent)) {
+    document.removeEventListener("visibilitychange", visHandler)
+    showPlayerLaunchError(player.name, player.iconUrl)
+    return { expectsNavigation: false, player }
   }
 
   return { expectsNavigation: true, player }
