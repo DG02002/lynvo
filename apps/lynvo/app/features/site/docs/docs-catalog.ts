@@ -106,6 +106,14 @@ const pagesByFileName = new Map<string, DocumentationPage>()
 const pagesBySlug = new Map<string, DocumentationPage>()
 const sourcePathBySlug = new Map<string, string>()
 
+const getPageByFileName = (fileName: string) => {
+  const page = pagesByFileName.get(fileName)
+  if (!page) {
+    throw new Error(`Documentation page is missing: ${fileName}`)
+  }
+  return page
+}
+
 for (const [path, loadContent] of Object.entries(contentModules)) {
   const frontmatter = contentFrontmatter[path]
   const content = getRawContent(path)
@@ -251,16 +259,16 @@ export const docsCatalog = {
       sections: [
         {
           title: "What is a Custom Plugin Server?",
-          content: pagesByFileName.get("what-is-a-plugin-server")!.rawContent,
+          content: getPageByFileName("what-is-a-plugin-server").rawContent,
         },
         {
           level: 3,
           title: "What is a Plugin?",
-          content: pagesByFileName.get("what-is-a-plugin")!.rawContent,
+          content: getPageByFileName("what-is-a-plugin").rawContent,
         },
         {
           title: "Create a Plugin Server with an agent",
-          content: pagesByFileName.get("agent-prompt")!.rawContent,
+          content: getPageByFileName("agent-prompt").rawContent,
         },
         {
           title: "Create a Plugin Server manually",
@@ -270,27 +278,27 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Prepare your development environment",
-          content: pagesByFileName.get("prerequisites")!.rawContent,
+          content: getPageByFileName("prerequisites").rawContent,
         },
         {
           level: 3,
           title: "Generate the project",
-          content: pagesByFileName.get("create-plugin-server")!.rawContent,
+          content: getPageByFileName("create-plugin-server").rawContent,
         },
         {
           level: 3,
           title: "Understand protocol version 1.0",
-          content: pagesByFileName.get("protocol-overview")!.rawContent,
+          content: getPageByFileName("protocol-overview").rawContent,
         },
         {
           level: 3,
           title: "Configure the manifest",
-          content: pagesByFileName.get("manifest")!.rawContent,
+          content: getPageByFileName("manifest").rawContent,
         },
         {
           level: 3,
           title: "Wire the shared routes",
-          content: pagesByFileName.get("hono-routes")!.rawContent,
+          content: getPageByFileName("hono-routes").rawContent,
         },
         {
           title: "Build a Plugin and return Media Nodes",
@@ -300,11 +308,11 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Add a Source Plugin",
-          content: pagesByFileName.get("plugins")!.rawContent,
+          content: getPageByFileName("plugins").rawContent,
         },
         {
           title: "Choose among the 4 node types",
-          content: pagesByFileName.get("media-nodes")!.rawContent,
+          content: getPageByFileName("media-nodes").rawContent,
         },
         {
           title: "Configure security and usage limits",
@@ -314,12 +322,12 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Create the Plugin Server API key",
-          content: pagesByFileName.get("authentication")!.rawContent,
+          content: getPageByFileName("authentication").rawContent,
         },
         {
           level: 3,
           title: "Define and enforce usage limits",
-          content: pagesByFileName.get("usage-limits")!.rawContent,
+          content: getPageByFileName("usage-limits").rawContent,
         },
         {
           title: "Handle protocol requests and responses",
@@ -329,17 +337,17 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Validate Extraction requests",
-          content: pagesByFileName.get("extraction-requests")!.rawContent,
+          content: getPageByFileName("extraction-requests").rawContent,
         },
         {
           level: 3,
           title: "Return successful responses",
-          content: pagesByFileName.get("success-responses")!.rawContent,
+          content: getPageByFileName("success-responses").rawContent,
         },
         {
           level: 3,
           title: "Return structured errors",
-          content: pagesByFileName.get("errors")!.rawContent,
+          content: getPageByFileName("errors").rawContent,
         },
         {
           title: "Test, deploy, and connect",
@@ -349,17 +357,17 @@ export const docsCatalog = {
         {
           level: 3,
           title: "Test the protocol contract",
-          content: pagesByFileName.get("testing")!.rawContent,
+          content: getPageByFileName("testing").rawContent,
         },
         {
           level: 3,
           title: "Deploy the Plugin Server",
-          content: pagesByFileName.get("deployment")!.rawContent,
+          content: getPageByFileName("deployment").rawContent,
         },
         {
           level: 3,
           title: "Connect the Plugin Server to Lynvo",
-          content: pagesByFileName.get("connect")!.rawContent,
+          content: getPageByFileName("connect").rawContent,
         },
       ],
     })

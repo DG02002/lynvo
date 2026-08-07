@@ -18,13 +18,17 @@ export const loadRemoteSessions = async (
     Effect.runPromise(client.settings.listSessions())
 ): Promise<RemoteSession[]> => {
   const sessions = await listSessions()
-  return sessions
-    .filter((session) => !session.isCurrent)
-    .map((session) => ({
-      id: session.id,
-      deviceName: session.deviceName,
-      lastActiveAt: session.lastActiveAt,
-    }))
+  return sessions.flatMap((session) =>
+    session.isCurrent
+      ? []
+      : [
+          {
+            id: session.id,
+            deviceName: session.deviceName,
+            lastActiveAt: session.lastActiveAt,
+          },
+        ]
+  )
 }
 
 export const useRemoteSessions = () => {

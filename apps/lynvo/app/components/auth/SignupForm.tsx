@@ -25,10 +25,9 @@ import {
 
 export function SignupForm() {
   const location = useLocation()
-  const turnstileTokenRef = React.useRef<string | null>(null)
-  if (turnstileTokenRef.current === null) {
-    turnstileTokenRef.current = initialTurnstileToken()
-  }
+  const [turnstileTokenRef] = React.useState(() => ({
+    current: initialTurnstileToken(),
+  }))
   const [accountCreationError, setAccountCreationError] = React.useState<
     string | null
   >(null)
@@ -97,9 +96,8 @@ export function SignupForm() {
       switchTo={`${authPaths.signIn}${location.search}`}
       onSubmit={() => void form.handleSubmit()}
     >
-      <form.Field
-        name="username"
-        children={(field) => (
+      <form.Field name="username">
+        {(field) => (
           <AuthTextField
             id={field.name}
             name={field.name}
@@ -113,10 +111,9 @@ export function SignupForm() {
             errors={field.state.meta.errors}
           />
         )}
-      />
-      <form.Field
-        name="password"
-        children={(field) => (
+      </form.Field>
+      <form.Field name="password">
+        {(field) => (
           <AuthTextField
             id={field.name}
             name={field.name}
@@ -131,10 +128,9 @@ export function SignupForm() {
             errors={field.state.meta.errors}
           />
         )}
-      />
-      <form.Field
-        name="confirmPassword"
-        children={(field) => (
+      </form.Field>
+      <form.Field name="confirmPassword">
+        {(field) => (
           <AuthTextField
             id={field.name}
             name={field.name}
@@ -149,7 +145,7 @@ export function SignupForm() {
             errors={field.state.meta.errors}
           />
         )}
-      />
+      </form.Field>
       <AuthControl>
         <Turnstile
           action="lynvo-sign-up"
@@ -162,16 +158,15 @@ export function SignupForm() {
       {accountCreationError ? (
         <AuthFormAlert message={accountCreationError} />
       ) : null}
-      <form.Subscribe
-        selector={(state) => state.isSubmitting}
-        children={(isSubmitting) => (
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
           <AuthSubmitButton
             isSubmitting={isSubmitting}
             submitText={authCopy.signup.submitButton}
             submittingText={authCopy.signup.submittingButton}
           />
         )}
-      />
+      </form.Subscribe>
     </AuthFormShell>
   )
 }

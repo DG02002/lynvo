@@ -86,6 +86,7 @@ export const acknowledge = mutation({
   returns: v.any(),
   args: { id: v.id("remoteCommands") },
   handler: async (context, arguments_) => {
+    // react-doctor-disable-next-line react-doctor/async-parallel -- authorization must fail before session and command reads
     const userId = await getAuthenticatedWritableUserId(context)
     const sessionId = await getAuthenticatedSession(context)
     const command = await context.db.get("remoteCommands", arguments_.id)

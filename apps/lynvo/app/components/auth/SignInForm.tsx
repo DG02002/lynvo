@@ -26,10 +26,9 @@ import {
 
 export function SignInForm() {
   const location = useLocation()
-  const turnstileTokenRef = React.useRef<string | null>(null)
-  if (turnstileTokenRef.current === null) {
-    turnstileTokenRef.current = initialTurnstileToken()
-  }
+  const [turnstileTokenRef] = React.useState(() => ({
+    current: initialTurnstileToken(),
+  }))
   const [authenticationError, setAuthenticationError] = React.useState<
     string | null
   >(null)
@@ -93,9 +92,8 @@ export function SignInForm() {
       switchTo={`${authPaths.createAccount}${location.search}`}
       onSubmit={() => void form.handleSubmit()}
     >
-      <form.Field
-        name="username"
-        children={(field) => (
+      <form.Field name="username">
+        {(field) => (
           <AuthTextField
             id={field.name}
             name={field.name}
@@ -109,10 +107,9 @@ export function SignInForm() {
             errors={field.state.meta.errors}
           />
         )}
-      />
-      <form.Field
-        name="password"
-        children={(field) => (
+      </form.Field>
+      <form.Field name="password">
+        {(field) => (
           <AuthTextField
             id={field.name}
             name={field.name}
@@ -127,7 +124,7 @@ export function SignInForm() {
             errors={field.state.meta.errors}
           />
         )}
-      />
+      </form.Field>
       <AuthControl>
         <Turnstile
           action="lynvo-sign-in"
@@ -140,16 +137,15 @@ export function SignInForm() {
       {authenticationError ? (
         <AuthFormAlert message={authenticationError} />
       ) : null}
-      <form.Subscribe
-        selector={(state) => state.isSubmitting}
-        children={(isSubmitting) => (
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
           <AuthSubmitButton
             isSubmitting={isSubmitting}
             submitText={authCopy.signin.submitButton}
             submittingText={authCopy.signin.submittingButton}
           />
         )}
-      />
+      </form.Subscribe>
       <AuthDivider />
       <AuthControl>
         <Button

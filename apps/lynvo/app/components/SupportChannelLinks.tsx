@@ -13,7 +13,7 @@ export const TelegramSupportLink = () => (
   </a>
 )
 
-export const GitHubIssuesLink = () => (
+const GitHubIssuesLink = () => (
   <a
     href={GITHUB_ISSUES_URL}
     target="_blank"

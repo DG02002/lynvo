@@ -34,13 +34,3 @@ export const turnstileVerificationResponseSchema = z.object({
   hostname: z.string(),
   action: z.string(),
 })
-
-export const refreshedAuthTokensSchema = z.object({
-  tokens: z
-    .strictObject({
-      token: z.string().min(1),
-      refreshToken: z.string().min(1),
-    })
-    .nullable()
-    .optional(),
-})

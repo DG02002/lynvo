@@ -131,8 +131,12 @@ describe("Extraction interface routing", () => {
               action: () => Effect.die(new Error("Unexpected Convex action")),
               query: () => {
                 queryCount += 1
-                if (queryCount === 1) return Effect.succeed([])
-                if (queryCount === 2) return Effect.succeed(undefined)
+                if (queryCount === 1) {
+                  return Effect.succeed([])
+                }
+                if (queryCount === 2) {
+                  return Effect.succeed(undefined)
+                }
                 return Effect.die(new Error("Unexpected credential query"))
               },
               mutation: () => Effect.succeed(undefined),

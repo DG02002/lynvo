@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { getScrollAdjustment } from "~/components/page-table-of-contents"
+import { getScrollAdjustment } from "~/components/page-table-of-contents-utils"
 
 describe("documentation outline scrolling", () => {
   it("scrolls down when the active item falls below the visible outline", () => {

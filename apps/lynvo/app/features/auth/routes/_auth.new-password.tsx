@@ -85,9 +85,8 @@ export default function NewPassword() {
               </h1>
             </div>
             <FieldGroup className="gap-4">
-              <form.Field
-                name="oldPassword"
-                children={(field) => (
+              <form.Field name="oldPassword">
+                {(field) => (
                   <AuthTextField
                     id={field.name}
                     name={field.name}
@@ -102,10 +101,9 @@ export default function NewPassword() {
                     errors={field.state.meta.errors}
                   />
                 )}
-              />
-              <form.Field
-                name="newPassword"
-                children={(field) => (
+              </form.Field>
+              <form.Field name="newPassword">
+                {(field) => (
                   <AuthTextField
                     id={field.name}
                     name={field.name}
@@ -120,10 +118,9 @@ export default function NewPassword() {
                     errors={field.state.meta.errors}
                   />
                 )}
-              />
-              <form.Field
-                name="confirmPassword"
-                children={(field) => (
+              </form.Field>
+              <form.Field name="confirmPassword">
+                {(field) => (
                   <AuthTextField
                     id={field.name}
                     name={field.name}
@@ -138,13 +135,12 @@ export default function NewPassword() {
                     errors={field.state.meta.errors}
                   />
                 )}
-              />
+              </form.Field>
               {passwordChangeError ? (
                 <AuthFormAlert message={passwordChangeError} />
               ) : null}
-              <form.Subscribe
-                selector={(state) => state.isSubmitting}
-                children={(isSubmitting) => (
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
                   <AuthSubmitButton
                     isSubmitting={isSubmitting}
                     submitText="Change password"
@@ -152,7 +148,7 @@ export default function NewPassword() {
                     className="mt-2"
                   />
                 )}
-              />
+              </form.Subscribe>
             </FieldGroup>
             <AuthPolicyLinks />
           </FieldSet>

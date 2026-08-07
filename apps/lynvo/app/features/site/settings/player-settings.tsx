@@ -37,17 +37,20 @@ export function PlayerSettings() {
     queryKey: PLAYER_PREFERENCES_QUERY_KEY,
     queryFn: () => Effect.runPromise(client.settings.getPlayerPreferences()),
   })
-  const updateCloudPreferences = async (preferences: {
-    rangeSupportedPlayerId?: PlayerId
-    rangeUnsupportedPlayerId?: PlayerId
-  }) => {
-    await Effect.runPromise(
-      client.settings.updatePlayerPreferences({ payload: preferences })
-    )
-    await queryClient.invalidateQueries({
-      queryKey: PLAYER_PREFERENCES_QUERY_KEY,
-    })
-  }
+  const updateCloudPreferences = React.useCallback(
+    async (preferences: {
+      rangeSupportedPlayerId?: PlayerId
+      rangeUnsupportedPlayerId?: PlayerId
+    }) => {
+      await Effect.runPromise(
+        client.settings.updatePlayerPreferences({ payload: preferences })
+      )
+      await queryClient.invalidateQueries({
+        queryKey: PLAYER_PREFERENCES_QUERY_KEY,
+      })
+    },
+    [queryClient]
+  )
   const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
     React.useState<PlayerId>(
       () => getPlayerPreferences().rangeSupportedPlayerId
@@ -88,7 +91,7 @@ export function PlayerSettings() {
     void updateCloudPreferences(localPreferences).catch(() => {
       toast.error("Player settings couldn’t be saved. Try again.")
     })
-  }, [cloudPreferences])
+  }, [cloudPreferences, updateCloudPreferences])
 
   const handleRangeSupportedChange = (playerId: PlayerId) => {
     setRangeSupportedPlayerId(playerId)

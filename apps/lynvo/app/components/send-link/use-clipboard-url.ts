@@ -22,6 +22,8 @@ export const useClipboardUrl = ({
     PermissionState | "checking" | "unsupported"
   >("checking")
   const skipNextGrantedRead = React.useRef(false)
+  const availableClipboardUrl =
+    clipboardUrl && !savedUrls.has(clipboardUrl) ? clipboardUrl : null
 
   const readClipboard = React.useCallback(async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
@@ -42,12 +44,6 @@ export const useClipboardUrl = ({
     }
   }, [currentUrl, savedUrls])
 
-  React.useEffect(() => {
-    if (clipboardUrl && savedUrls.has(clipboardUrl)) {
-      setClipboardUrl(null)
-    }
-  }, [clipboardUrl, savedUrls])
-
   const checkClipboard = React.useCallback(async () => {
     if (clipboardPermission !== "granted") {
       return
@@ -56,22 +52,23 @@ export const useClipboardUrl = ({
   }, [clipboardPermission, readClipboard])
 
   const pasteClipboardUrl = () => {
-    if (!clipboardUrl) {
+    if (!availableClipboardUrl) {
       return
     }
 
-    setUrl(clipboardUrl)
+    setUrl(availableClipboardUrl)
     setClipboardUrl(null)
     setError(null)
-    onSave(clipboardUrl)
+    onSave(availableClipboardUrl)
   }
 
   const clearMatchedClipboardUrl = (nextUrl: string) => {
-    if (clipboardUrl && nextUrl === clipboardUrl) {
+    if (availableClipboardUrl && nextUrl === availableClipboardUrl) {
       setClipboardUrl(null)
     }
   }
 
+  // react-doctor-disable-next-line react-doctor/effect-needs-cleanup -- the asynchronous listener is removed by this effect's teardown
   React.useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
       setClipboardPermission("unsupported")
@@ -138,7 +135,7 @@ export const useClipboardUrl = ({
   }, [clipboardPermission, readClipboard])
 
   return {
-    clipboardUrl,
+    clipboardUrl: availableClipboardUrl,
     clipboardPermission,
     checkClipboard,
     requestClipboardAccess: async () => {
