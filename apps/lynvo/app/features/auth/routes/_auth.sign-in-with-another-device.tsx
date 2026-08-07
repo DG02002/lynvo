@@ -5,7 +5,7 @@ import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 
 export function meta() {
-  return [{ title: "Log in with another device | Lynvo" }]
+  return [{ title: "Log in on this device | Lynvo" }]
 }
 
 export default function SignInWithAnotherDevice() {
@@ -16,8 +16,12 @@ export default function SignInWithAnotherDevice() {
           <div className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">
-              Log in with another device
+              Log in on this device
             </h1>
+            <p className="text-balance text-lg text-muted-foreground">
+              On a device where you’re already logged in to Lynvo, scan the QR
+              code below.
+            </p>
           </div>
 
           <div className="mx-auto flex w-full max-w-sm justify-center">

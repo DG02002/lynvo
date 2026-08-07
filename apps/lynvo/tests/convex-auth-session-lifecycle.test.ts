@@ -13,9 +13,9 @@ describe("Convex auth session lifecycle", () => {
     const target = await insertTestUser(convex, "revoked-user")
     const client = asAuthenticatedUser(convex, target.userId, target.sessionId)
 
-    await expect(client.query(api.users.getSessionUser, {})).resolves.toMatchObject(
-      { id: target.userId, sessionId: target.sessionId }
-    )
+    await expect(
+      client.query(api.users.getSessionUser, {})
+    ).resolves.toMatchObject({ id: target.userId, sessionId: target.sessionId })
     await convex.run(async (context) => {
       await context.db.delete("authSessions", target.sessionId)
     })

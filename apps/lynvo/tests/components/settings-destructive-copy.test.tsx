@@ -17,11 +17,8 @@ describe("settings destructive actions", () => {
       />
     )
 
-    expect(screen.getByLabelText("Username")).toHaveAttribute(
-      "placeholder",
-      "darshan"
-    )
-    expect(screen.getByText("Enter darshan exactly.")).toBeVisible()
+    expect(screen.getByLabelText("Type username to confirm")).toBeVisible()
+    expect(screen.getByText("darshan")).toBeVisible()
     expect(screen.getByText(/Plugin Server connections/)).toBeVisible()
   })
 

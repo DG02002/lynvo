@@ -10,7 +10,7 @@ vi.mock("sonner", () => ({
 
 describe("device approval route behavior", () => {
   beforeEach(() => {
-    window.history.replaceState({}, "", "/device?code=12345678")
+    window.history.replaceState({}, "", "/auth/device?user_code=NXSM-BKXB")
   })
 
   it("submits approval through the same-origin authentication API", async () => {
@@ -21,7 +21,7 @@ describe("device approval route behavior", () => {
       )
       return url.pathname.endsWith("/approval")
         ? Response.json({
-            code: "12345678",
+            code: "NXSM-BKXB",
             status: "pending",
             expiresAt: Date.now() + 60_000,
             deviceName: "Living room TV",
@@ -33,13 +33,17 @@ describe("device approval route behavior", () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <DeviceApproval user={{ username: "darshan" }} />
+          <DeviceApproval />
         </MemoryRouter>
       </QueryClientProvider>
     )
     const approveButton = await screen.findByRole("button", {
       name: "Approve login",
     })
+    expect(screen.getByLabelText("Login verification code")).toHaveTextContent(
+      "NXSM-BKXB"
+    )
+    expect(screen.queryByText(/Living room TV/)).not.toBeInTheDocument()
     await waitFor(() => expect(approveButton).toBeEnabled())
     fireEvent.click(approveButton)
 
@@ -54,6 +58,14 @@ describe("device approval route behavior", () => {
           )
         })
       ).toBe(true)
+    )
+    expect(
+      await screen.findByRole("heading", { name: "Login approved" })
+    ).toBeVisible()
+    expect(screen.getByText("The other device is now logged in.")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Go home" })).toHaveAttribute(
+      "href",
+      "/"
     )
   })
 })

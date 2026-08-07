@@ -1,6 +1,5 @@
 import { Link } from "react-router"
 import { policyPaths, sitePaths } from "~/lib/paths"
-import { OPEN_COOKIE_PREFERENCES_EVENT } from "~/lib/constants"
 
 const supportLinks = [
   { label: "Help center", to: sitePaths.helpCenter },
@@ -29,9 +28,6 @@ const policyLinks = [
 
 const footerLinkClassName =
   "text-sm text-foreground transition-opacity hover:opacity-70"
-
-const openCookiePreferences = () =>
-  window.dispatchEvent(new Event(OPEN_COOKIE_PREFERENCES_EVENT))
 
 const FooterLinkGroup = ({
   heading,
@@ -87,15 +83,8 @@ export function Footer() {
       </div>
 
       <div className="mt-16 px-4 pt-5 pb-10 md:mt-20 md:px-8 md:pb-12">
-        <p className="flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-          <span>Lynvo © 2026</span>
-          <button
-            type="button"
-            className="underline underline-offset-4 hover:text-foreground"
-            onClick={openCookiePreferences}
-          >
-            Manage cookies
-          </button>
+        <p className="text-center text-sm text-muted-foreground">
+          Lynvo © 2026
         </p>
       </div>
     </footer>

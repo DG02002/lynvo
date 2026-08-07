@@ -60,11 +60,12 @@ describe("policy copy", () => {
     expect(licenses).toContain("GitHub Issues")
   })
 
-  it("matches the cookie consent action labels", () => {
+  it("states that Lynvo does not use optional tracking cookies", () => {
     const cookiePolicy = renderText(<CookiePolicyContent />)
 
-    expect(cookiePolicy).toContain("Accept all cookies")
-    expect(cookiePolicy).toContain("Reject optional cookies")
-    expect(cookiePolicy).toContain("Manage cookies")
+    expect(cookiePolicy).toContain(
+      "does not use optional analytics or marketing cookies"
+    )
+    expect(cookiePolicy).not.toContain("Accept all cookies")
   })
 })

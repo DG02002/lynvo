@@ -136,7 +136,9 @@ describe("Plugin Domain lifecycle", () => {
 
   it("decrypts only with the exact owning context", async () => {
     const environmentLayer = Layer.succeed(CloudflareEnv, {
-      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa("0123456789abcdef0123456789abcdef"),
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
+        "0123456789abcdef0123456789abcdef"
+      ),
     } as Env)
     const vaultLayer = PluginCredentialVault.layer.pipe(
       Layer.provide(environmentLayer)

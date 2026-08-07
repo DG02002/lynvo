@@ -124,8 +124,8 @@ export function PlayerSettings() {
       <SettingsList>
         <SettingsRow>
           <SettingsRowInfo
-            label="Player for links with HTTP byte-range support"
-            description="Default for links whose server supports HTTP byte-range requests, which can enable seeking."
+            label="Links with HTTP byte-range support"
+            description="Use for links that let the player jump forward or backward."
           />
           <Select
             value={rangeSupportedPlayerId}
@@ -164,8 +164,8 @@ export function PlayerSettings() {
 
         <SettingsRow>
           <SettingsRowInfo
-            label="Player for links without HTTP byte-range support"
-            description="Default for links whose server does not support HTTP byte-range requests. VLC may still allow seeking for some links."
+            label="Links without HTTP byte-range support"
+            description="Use for links that may not let the player jump forward or backward."
           />
           <Select
             value={rangeUnsupportedPlayerId}

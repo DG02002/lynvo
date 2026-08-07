@@ -18,21 +18,17 @@ describe("outbound HTTP safety boundary", () => {
     const fetch = vi.fn<typeof globalThis.fetch>()
     const transport = createOutboundHttpTransport({ fetch })
 
-    await expect(transport.fetch(url)).rejects.toBeInstanceOf(
-      OutboundHttpError
-    )
+    await expect(transport.fetch(url)).rejects.toBeInstanceOf(OutboundHttpError)
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it("validates every redirect before following it", async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        new Response(null, {
-          status: 302,
-          headers: { Location: "http://127.0.0.1/private" },
-        })
-      )
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
+      new Response(null, {
+        status: 302,
+        headers: { Location: "http://127.0.0.1/private" },
+      })
+    )
     const transport = createOutboundHttpTransport({ fetch })
 
     await expect(
@@ -42,14 +38,12 @@ describe("outbound HTTP safety boundary", () => {
   })
 
   it("never forwards protected credentials across origins", async () => {
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        new Response(null, {
-          status: 307,
-          headers: { Location: "https://other.example/final" },
-        })
-      )
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
+      new Response(null, {
+        status: 307,
+        headers: { Location: "https://other.example/final" },
+      })
+    )
     const transport = createOutboundHttpTransport({ fetch })
 
     await expect(

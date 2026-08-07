@@ -105,10 +105,7 @@ export function PluginsSettings({
   return (
     <SettingsPanel className="gap-8">
       <div className="flex flex-col gap-3">
-        <SectionHeading
-          title="Lynvo plugins"
-          description="Plugins maintained by Lynvo for supported Sources."
-        />
+        <SectionHeading title="Lynvo plugins" />
         <SettingsList>
           {lynvoPlugins === null && (
             <SettingsRow>
@@ -525,9 +522,6 @@ export const CustomPluginServersSection = ({
               <DialogTitle className="font-normal">
                 Add Custom Plugin Server
               </DialogTitle>
-              <DialogDescription>
-                Enter the URL and API key for the Custom Plugin Server.
-              </DialogDescription>
             </DialogHeader>
             <form
               onSubmit={(event) => {
@@ -547,7 +541,7 @@ export const CustomPluginServersSection = ({
                           htmlFor="custom-plugin-server-base-url"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          Custom Plugin Server URL
+                          Server URL
                         </FieldLabel>
                         <Input
                           id="custom-plugin-server-base-url"
@@ -578,7 +572,7 @@ export const CustomPluginServersSection = ({
                           htmlFor="custom-plugin-server-api-key"
                           className="text-xs font-medium text-muted-foreground"
                         >
-                          Custom Plugin Server API key
+                          API key
                         </FieldLabel>
                         <Input
                           id="custom-plugin-server-api-key"
@@ -619,20 +613,6 @@ export const CustomPluginServersSection = ({
           </DialogContent>
         </Dialog>
       </div>
-      {pluginServers.length === 0 && (
-        <div className="flex flex-col items-start gap-2 rounded-xl border p-4">
-          <p className="text-sm text-muted-foreground">
-            No Custom Plugin Servers are connected.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onAddPluginServerOpenChange(true)}
-          >
-            Add Custom Plugin Server
-          </Button>
-        </div>
-      )}
       {pluginServers.length > 0 && (
         <CustomPluginServerTable
           pluginServers={pluginServers}
@@ -723,11 +703,8 @@ const PluginCredentialEditor = ({
             <DialogContent>
               <DialogHeader>
                 <DialogTitle className="font-normal">
-                  Edit credentials
+                  Edit credentials for {domain.domain}
                 </DialogTitle>
-                <DialogDescription>
-                  Update the credentials Lynvo uses for {domain.domain}.
-                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 {credentialKind === "http-basic" && (

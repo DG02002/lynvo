@@ -81,13 +81,9 @@ const HelpCenter = () => (
   <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-12">
       <header className="flex flex-col items-center gap-4 text-center">
-        <p className="text-sm">Support</p>
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
           Get help with Lynvo
         </h1>
-        <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
-          Choose a private message or a public post.
-        </p>
       </header>
 
       <section

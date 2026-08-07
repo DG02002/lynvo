@@ -92,9 +92,7 @@ describe("LinkSelectionDialog", () => {
         .every((checkbox) => checkbox.hasAttribute("data-checked"))
     ).toBe(true)
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Save selected links" })
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Save selected links" }))
     expect(onConfirm).toHaveBeenCalledWith([
       expect.objectContaining({ id: "video-one" }),
       expect.objectContaining({ id: "video-two" }),

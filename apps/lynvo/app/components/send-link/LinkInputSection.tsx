@@ -124,7 +124,9 @@ export function LinkInputSection({
             <AlertTitle>
               {getErrorTitle(error, isExistingLinkWarning)}
             </AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            {!isExistingLinkWarning && (
+              <AlertDescription>{error}</AlertDescription>
+            )}
           </Alert>
         </div>
       )}

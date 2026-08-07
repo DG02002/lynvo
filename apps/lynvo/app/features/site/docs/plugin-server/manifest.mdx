@@ -7,8 +7,6 @@ contentType: Reference
 
 <DocSection id="manifest">
 
-## Configure the Plugin Server manifest
-
 The generated starter declares the manifest in `src/index.ts`. Keep the server ID stable after you connect the Worker to Lynvo.
 
 Start with the generated object and replace the example values:
@@ -54,10 +52,10 @@ Manifest fields follow these rules:
 | `pluginServerId`  | Yes      | Stable namespaced identifier                         |
 | `displayName`     | Yes      | Human-readable Plugin Server name                    |
 | `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it        |
-| `iconUrl`         | No       | Direct HTTPS image URL                               |
+| `iconUrl`         | No       | HTTPS image URL; loopback HTTP is allowed locally    |
 | `homepage`        | No       | HTTPS project URL                                    |
 | `auth.type`       | Yes      | Must equal `"bearer"`                                |
-| `usage.endpoint`  | Yes      | Must equal `"/usage"`                                |
+| `usage.endpoint`  | No       | Defaults to `"/usage"`                               |
 | `matchers`        | Yes      | Non-empty array                                      |
 | `features`        | Yes      | Declares password, lazy node, and Basic Auth support |
 | `extensions`      | No       | Namespaced non-core metadata                         |

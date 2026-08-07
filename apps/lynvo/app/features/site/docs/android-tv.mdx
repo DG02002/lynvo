@@ -1,6 +1,6 @@
 ---
 title: Android TV setup
-description: Install the recommended apps, open Lynvo in TV Bro, and log in with a QR code or login code.
+description: Install the recommended apps, open Lynvo in TV Bro, and log in with a QR code.
 navLabel: Android TV setup
 contentType: How-to
 ---
@@ -9,7 +9,7 @@ contentType: How-to
 
 ## Prepare your Android TV and Android phone or tablet
 
-This guide shows you how to open Lynvo on Android TV, log in from an Android phone or tablet, and configure the recommended video players. Connect the Android TV and the Android phone or tablet to the same Wi-Fi network.
+This guide shows you how to open Lynvo on Android TV, log in from an Android phone or tablet, and configure the recommended video players. Lynvo works in any browser, but opening links in the supported external players requires Android.
 
 Install these apps before you begin:
 
@@ -17,8 +17,6 @@ Install these apps before you begin:
 - On your Android TV, install [Just (Video) Player](https://play.google.com/store/apps/details?id=com.brouken.player)
 - On your Android TV, install [VLC for Android](https://play.google.com/store/apps/details?id=org.videolan.vlc)
 - On your Android phone or tablet, install the [Google TV app](https://play.google.com/store/apps/details?id=com.google.android.videos)
-
-<AndroidTvPlayerDefaults />
 
 </DocSection>
 
@@ -53,14 +51,12 @@ Complete login on an Android phone or tablet so you do not need to enter account
 
 1. Select **Log in** on the Lynvo page displayed on your Android TV
 2. Select **Use a QR code**
-3. Choose one method:
-   - Scan the QR code with a camera, then open the Lynvo page that appears
-   - Open the address displayed with the QR code on an Android phone or tablet, then enter the eight-character login code
+3. Scan the QR code with the Android phone or tablet, then open the Lynvo page that appears
 4. Log in to Lynvo on the Android phone or tablet
-5. Approve the Android TV login if Lynvo asks for confirmation
+5. Confirm that the activation code matches the code on the Android TV, then approve the login
 6. Return to the Android TV and wait for Lynvo to complete login
 
-If the code expires, select **Generate new code**, then scan the new QR code or enter the new login code.
+If the code expires, select **Generate new code**, then scan the new QR code.
 
 </DocSection>
 
@@ -73,7 +69,7 @@ If the code expires, select **Generate new code**, then scan the new QR code or 
 3. Select **Remote Play**
 4. Select the TV from **Available devices**
 
-If the TV does not appear, connect the Android phone or tablet and the TV to the same Wi-Fi network, keep Lynvo open in TV Bro, then select **Search again**.
+If the TV does not appear, confirm that both devices are logged in to the same Lynvo account, keep Lynvo open in TV Bro, then select **Search again**.
 
 </DocSection>
 
@@ -81,15 +77,7 @@ If the TV does not appear, connect the Android phone or tablet and the TV to the
 
 ## Open a video in a player
 
-Lynvo marks an item opened the first time you open it. It does not store a
-playback position or resume state. Lynvo does not play video; it opens a URL in
-an external Android player. When you open the same link again, Lynvo sends the
-same URL to the selected player. The selected player may remember its own
-playback position. Player behavior depends on the link server and the player:
-
-- **Just (Video) Player**: recommended for links whose servers support HTTP byte-range requests. It can open other links too, but it cannot seek when the server does not support byte-range requests.
-- **VLC for Android**: recommended for links without HTTP byte-range support. It may still allow seeking for some links.
-- **MPV** and **MX Player**: also available in **Settings**
+Select a saved link to open it in an external Android player. Lynvo chooses the player configured for that link in **Settings**.
 
 Android TV may ask which app should open a video the first time. Select the
 player Lynvo recommends. You can change the default players later in

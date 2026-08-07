@@ -1,4 +1,3 @@
-import { useLoaderData } from "react-router"
 import DeviceApproval from "~/components/auth/DeviceApproval"
 import {
   getUserSession,
@@ -9,7 +8,7 @@ import { getServerEnv } from "~/lib/env.server"
 import type { Route } from "./+types/_auth.device"
 
 export function meta(_: Route.MetaArgs) {
-  return [{ title: "Device login | Lynvo" }]
+  return [{ title: "Approve login | Lynvo" }]
 }
 
 export async function loader(args: Route.LoaderArgs): Promise<any> {
@@ -18,9 +17,9 @@ export async function loader(args: Route.LoaderArgs): Promise<any> {
   const sessionResult = await getUserSession(request, env)
 
   const url = new URL(request.url)
-  const code = url.searchParams.get("code")
+  const code = url.searchParams.get("user_code")
   if (code && !sessionResult.user) {
-    requireUserOrRedirect(sessionResult, `/device?code=${code}`)
+    requireUserOrRedirect(sessionResult, `/auth/device?user_code=${code}`)
   }
 
   return responseWithSession(
@@ -31,6 +30,5 @@ export async function loader(args: Route.LoaderArgs): Promise<any> {
 }
 
 export default function Device() {
-  const { user } = useLoaderData<typeof loader>()
-  return <DeviceApproval user={user} />
+  return <DeviceApproval />
 }

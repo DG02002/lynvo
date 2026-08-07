@@ -36,39 +36,31 @@ export const DeleteAccountDialog = ({
         <DialogTitle className="font-normal text-destructive">
           Delete account
         </DialogTitle>
-        <DialogDescription className="space-y-2 mt-2">
-          <p>
-            This permanently deletes the account, saved links, settings, Plugin
-            Server connections, credentials, and active sessions. This cannot be
-            undone.
-          </p>
-          <p className="text-foreground font-medium">
+        <DialogDescription className="mt-2">
+          This permanently deletes the account, saved links, settings, Plugin
+          Server connections, credentials, and active sessions. This cannot be
+          undone.
+          <span className="mt-2 block text-foreground font-medium">
             Enter this username exactly to confirm:{" "}
             <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs select-all">
               {username}
             </span>
-          </p>
+          </span>
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={onDeleteAccount} className="space-y-4">
-        <Label htmlFor="delete-account-username">Username</Label>
+        <Label htmlFor="delete-account-username">
+          Type username to confirm
+        </Label>
         <Input
           id="delete-account-username"
           type="text"
-          placeholder={username}
           value={confirmUsername}
           onChange={(event) => onConfirmUsernameChange(event.target.value)}
           required
           className="w-full"
           autoComplete="off"
-          aria-describedby="delete-account-username-guidance"
         />
-        <p
-          id="delete-account-username-guidance"
-          className="text-sm text-muted-foreground"
-        >
-          Enter {username} exactly.
-        </p>
         <DialogFooter className="flex sm:justify-end gap-2">
           <Button
             type="button"

@@ -32,17 +32,24 @@ describe("RemoteSessionList", () => {
     expect(screen.getByText("Searching for Remote Play devices…")).toBeVisible()
   })
 
-  it("provides setup and retry actions when no devices are found", () => {
+  it("provides a retry action when no devices are found", () => {
     const props = renderList()
 
     expect(screen.getByText("No Remote Play devices found")).toBeVisible()
-    expect(screen.getByText(/another device/)).toBeVisible()
-    expect(
-      screen.getByRole("button", { name: "Android TV setup" })
-    ).toHaveAttribute("href", "/docs/android-tv")
-
     fireEvent.click(screen.getByRole("button", { name: "Search again" }))
     expect(props.onSearchAgain).toHaveBeenCalledOnce()
+  })
+
+  it("shows the empty state when only the current device is available", () => {
+    renderList({
+      sessions: [
+        { id: "current-session", deviceName: "This device", lastActiveAt: 10 },
+      ],
+      activeSessionId: "current-session",
+    })
+
+    expect(screen.getByText("No Remote Play devices found")).toBeVisible()
+    expect(screen.getByRole("button", { name: "Search again" })).toBeVisible()
   })
 
   it("distinguishes a failed device request from an empty list", () => {

@@ -22,11 +22,11 @@ export const saveLink = async ({
   const savedUrl = pluginDomainCandidate?.sanitizedUrl ?? targetUrl
 
   if (!targetUrl) {
-    effects.showError("Please enter a URL.")
+    effects.showError("Enter a URL.")
     return
   }
   if (!isProbablyValidUrl(targetUrl)) {
-    effects.showError("Please enter a valid URL.")
+    effects.showError("Enter a valid URL.")
     return
   }
   effects.clearError()

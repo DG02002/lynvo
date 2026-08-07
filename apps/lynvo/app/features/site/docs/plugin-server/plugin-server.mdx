@@ -1,55 +1,22 @@
 ---
-title: Create a Custom Plugin Server
-description: Create, test, deploy, and connect a Lynvo-compatible Custom Plugin Server.
+title: Build a Custom Plugin Server
+description: Follow the guides for building and connecting a Lynvo-compatible Custom Plugin Server.
 navLabel: Plugin Server
-contentType: Tutorial
+contentType: Landing
 ---
 
 <DocSection id="quickstart">
 
-## Create a Custom Plugin Server
+Create a Cloudflare Worker from the published starter, replace its example Plugin, and connect the deployed server to Lynvo. Follow these guides in order:
 
-Use the published starter to create a Cloudflare Worker with the protocol runtime, a working example Plugin, and contract tests. You do not need to clone Lynvo or assemble the Worker shell yourself.
-
-<CodeBlock label="Terminal">
-
-```sh
-pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
-cd my-lynvo-plugin-server
-cp .dev.vars.example .dev.vars
-pnpm check
-pnpm test
-pnpm build
-```
-
-</CodeBlock>
-
-Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`, then start the Worker with `pnpm dev`. The generator installs dependencies by default. If you pass `--skip-install`, run `pnpm install` before the checks.
-
-<DocsNote title="The starter owns the protocol shell">
-
-The generated project already wires `/manifest`, `/verify`, `/usage`, and `/extract` through `@dg02002/lynvo-plugin-server-protocol`. Replace the example manifest and Plugin before you connect a production Worker.
-
-</DocsNote>
-
-The starter includes:
-
-- A Hono Cloudflare Worker and Wrangler configuration
-- A semver dependency on the published protocol package
-- A manifest with one example Plugin
-- A shared runtime for authentication, validation, usage, and Extraction
-- Contract tests for the manifest, authentication, usage, and Extraction
-
-The example usage response is a finite test fixture. Replace it with durable accounting before production deployment.
-
-Use the documentation in this order:
-
-1. [Prepare your development environment](/docs/plugin-server/prerequisites)
-2. [Generate your Plugin Server](/docs/plugin-server/create-plugin-server)
-3. [Configure bearer authentication](/docs/plugin-server/authentication)
-4. [Add a Plugin](/docs/plugin-server/plugins)
-5. [Test the protocol contract](/docs/plugin-server/testing)
-6. [Deploy the Plugin Server](/docs/plugin-server/deployment)
-7. [Connect the Plugin Server to Lynvo](/docs/plugin-server/connect)
+1. [Understand Plugin Servers](/docs/plugin-server/what-is-a-plugin-server)
+2. [Understand Plugins](/docs/plugin-server/what-is-a-plugin)
+3. [Prepare your development environment](/docs/plugin-server/prerequisites)
+4. [Generate your Plugin Server](/docs/plugin-server/create-plugin-server)
+5. [Configure bearer authentication](/docs/plugin-server/authentication)
+6. [Add a Plugin](/docs/plugin-server/plugins)
+7. [Test the protocol contract](/docs/plugin-server/testing)
+8. [Deploy the Plugin Server](/docs/plugin-server/deployment)
+9. [Connect the Plugin Server to Lynvo](/docs/plugin-server/connect)
 
 </DocSection>

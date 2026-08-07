@@ -183,9 +183,12 @@ const FinderEmptyState = ({
       />
     </header>
     <div className="flex h-[calc(100svh-4rem)] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
-      <p className="text-sm text-muted-foreground">
-        No saved files are available yet.
-      </p>
+      <div className="flex flex-col gap-1">
+        <p className="font-medium">No playable links</p>
+        <p className="text-sm text-muted-foreground">
+          Resolve this saved link to load its playable links.
+        </p>
+      </div>
       <Button variant="outline" onClick={() => actions.showLinks(item.url)}>
         Resolve links
       </Button>

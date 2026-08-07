@@ -28,9 +28,7 @@ describe("sign-in form", () => {
     const renderedSignIn = render(<RouterProvider router={signInRouter} />)
 
     expect(
-      await screen.findByText(
-        "Enter the username and password for the account."
-      )
+      await screen.findByRole("heading", { name: "Welcome back" })
     ).toBeVisible()
     expect(screen.getByText("Turnstile bypassed in dev mode")).toHaveAttribute(
       "data-turnstile-action",
@@ -49,7 +47,7 @@ describe("sign-in form", () => {
     render(<RouterProvider router={signUpRouter} />)
 
     expect(
-      await screen.findByText("Choose a username and password.")
+      await screen.findByRole("heading", { name: "Create an account" })
     ).toBeVisible()
     expect(screen.getByText("Turnstile bypassed in dev mode")).toHaveAttribute(
       "data-turnstile-action",

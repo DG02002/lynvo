@@ -60,11 +60,9 @@ export default [
       "auth/sign-in-with-another-device",
       "features/auth/routes/_auth.sign-in-with-another-device.tsx"
     ),
+    route("auth/device", "features/auth/routes/_auth.device.tsx"),
     route("auth/logout", "features/auth/routes/_auth.logout.tsx"),
   ]),
-
-  // Device login
-  route("device", "features/auth/routes/_auth.device.tsx"),
 
   // Devtools Configuration
   route(

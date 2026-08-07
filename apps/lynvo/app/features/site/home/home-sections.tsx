@@ -35,11 +35,8 @@ export const PlayerSection = () => (
           Open links in one of four Android players.
         </h2>
         <p className="mt-6 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
-          Lynvo marks a link opened when you open it, but it does not store a
-          playback position or resume state. Lynvo does not play video; it opens
-          the URL in an external Android player. Use Just (Video) Player for
-          links whose servers support HTTP byte-range requests, and VLC for
-          Android otherwise. Lynvo opens the same URL in the selected player.
+          Lynvo sends each link to the external Android player you choose. Use
+          Just (Video) Player, VLC for Android, MPV, or MX Player.
         </p>
       </div>
 
@@ -82,8 +79,8 @@ export const AndroidScreensSection = () => (
   <section className="relative overflow-hidden py-24 md:py-32">
     <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
       <SectionIntro
-        title="Use every Android screen."
-        description="Access your links on Android TV, Android phones, and Android tablets. The interface adapts to each screen and stays in sync."
+        title="Use Lynvo across Android devices."
+        description="Open links on Android TV, Android phones, and Android tablets from a library that stays in sync."
       />
 
       <div className="flex flex-col gap-6">
@@ -94,7 +91,7 @@ export const AndroidScreensSection = () => (
           <div className="flex flex-col">
             <span className="text-lg text-foreground">Android TV</span>
             <span className="text-sm text-muted-foreground">
-              Large controls designed for a TV remote
+              Navigate with a TV remote
             </span>
           </div>
         </div>
@@ -108,7 +105,7 @@ export const AndroidScreensSection = () => (
               Android phones and tablets
             </span>
             <span className="text-sm text-muted-foreground">
-              Touch controls for Android phones and Android tablets
+              Save and open links with touch controls
             </span>
           </div>
         </div>
@@ -145,11 +142,10 @@ export const PlanSection = () => {
           </div>
           <div className="flex flex-col items-center gap-3">
             <span className="text-2xl text-foreground">
-              On Android TV, phones, and tablets
+              Android TV, phones, and tablets
             </span>
             <span className="text-sm text-muted-foreground text-center">
-              Open saved links on Android TV, Android phones, and Android
-              tablets.
+              Open links in supported external Android players.
             </span>
           </div>
         </div>

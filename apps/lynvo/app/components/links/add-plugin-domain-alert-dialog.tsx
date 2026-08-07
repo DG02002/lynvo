@@ -45,9 +45,6 @@ export function AddPluginDomainAlertDialog({
             Lynvo recognized <strong>{suggestion?.domain}</strong> as{" "}
             {suggestion?.pluginName}. Add this Plugin Domain so Lynvo can load
             its links faster next time.
-            {suggestion?.username
-              ? " Your Plugin Credentials will be stored securely for this domain."
-              : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="mt-4 flex w-full flex-col gap-3">

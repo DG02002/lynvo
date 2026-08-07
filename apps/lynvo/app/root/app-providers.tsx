@@ -8,7 +8,6 @@ import { VersionWatcher } from "~/components/VersionWatcher"
 import { Toaster } from "~/components/ui/sonner"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
-import { CookieConsent } from "~/components/cookie-consent"
 
 interface AppProvidersProps {
   buildTime: string
@@ -52,7 +51,6 @@ export const AppProviders = ({
           <RemoteControlProvider user={providerUser}>
             <VersionWatcher buildTime={buildTime} />
             {children ?? <Outlet />}
-            <CookieConsent />
           </RemoteControlProvider>
         </RealtimeProvider>
         <Toaster />

@@ -14,19 +14,32 @@ declare const process: {
   }
 }
 
-const DEVICE_CODE_MINIMUM = 10_000_000
-const DEVICE_CODE_RANGE = 90_000_000
-const UINT32_RANGE = 0x1_0000_0000
+const DEVICE_CODE_LETTER_COUNT = 8
+const DEVICE_CODE_GROUP_LENGTH = 4
+const DEVICE_CODE_ALPHABET_SIZE = 26
+const DEVICE_CODE_FIRST_LETTER_CODE_POINT = "A".charCodeAt(0)
 const DEVICE_CODE_RANDOM_LIMIT =
-  Math.floor(UINT32_RANGE / DEVICE_CODE_RANGE) * DEVICE_CODE_RANGE
+  Math.floor(256 / DEVICE_CODE_ALPHABET_SIZE) * DEVICE_CODE_ALPHABET_SIZE
 const DEVICE_CODE_COLLISION_ATTEMPTS = 5
 
-const generateNumericCode = () => {
-  const randomValue = new Uint32Array(1)
-  do {
-    crypto.getRandomValues(randomValue)
-  } while (randomValue[0] >= DEVICE_CODE_RANDOM_LIMIT)
-  return (DEVICE_CODE_MINIMUM + (randomValue[0] % DEVICE_CODE_RANGE)).toString()
+const generateDeviceCode = () => {
+  let letters = ""
+  while (letters.length < DEVICE_CODE_LETTER_COUNT) {
+    const randomValues = new Uint8Array(DEVICE_CODE_LETTER_COUNT)
+    crypto.getRandomValues(randomValues)
+    for (const randomValue of randomValues) {
+      if (
+        randomValue < DEVICE_CODE_RANDOM_LIMIT &&
+        letters.length < DEVICE_CODE_LETTER_COUNT
+      ) {
+        letters += String.fromCharCode(
+          DEVICE_CODE_FIRST_LETTER_CODE_POINT +
+            (randomValue % DEVICE_CODE_ALPHABET_SIZE)
+        )
+      }
+    }
+  }
+  return `${letters.slice(0, DEVICE_CODE_GROUP_LENGTH)}-${letters.slice(DEVICE_CODE_GROUP_LENGTH)}`
 }
 
 const bytesToHex = (bytes: Uint8Array) =>
@@ -69,7 +82,7 @@ export const generateCode = mutation({
       attempt < DEVICE_CODE_COLLISION_ATTEMPTS;
       attempt += 1
     ) {
-      const candidate = generateNumericCode()
+      const candidate = generateDeviceCode()
       const existing = await context.db
         .query("deviceCodes")
         .withIndex("by_code", (queryBuilder) =>

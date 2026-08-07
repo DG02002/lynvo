@@ -19,7 +19,7 @@ export const meta = (_: Route.MetaArgs) => [
   { title: "Lynvo Plugins | Lynvo" },
   {
     name: "description",
-    content: "Explore the plugins supported and maintained by Lynvo.",
+    content: "Explore Lynvo-managed Plugins for supported Sources.",
   },
 ]
 
@@ -39,9 +39,6 @@ const Plugins = () => {
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
           Lynvo plugins
         </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground text-pretty">
-          Plugins maintained by Lynvo for supported third-party projects.
-        </p>
       </header>
 
       <section aria-label="Lynvo plugins" className="mx-auto mt-14 max-w-4xl">

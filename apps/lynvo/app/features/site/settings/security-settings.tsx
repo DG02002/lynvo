@@ -177,10 +177,7 @@ export function SecuritySettings({
             onClick={() => onShowActiveSessionsChange(true)}
             className="hover:bg-transparent cursor-pointer select-none"
           >
-            <SettingsRowInfo
-              label="Active sessions"
-              description="Review devices logged in to the account and end individual or all sessions."
-            />
+            <SettingsRowInfo label="Active sessions" />
             <div className="flex items-center gap-1.5 shrink-0 text-foreground">
               <span className="text-sm font-normal">{sessions.length}</span>
               <HugeiconsIcon icon={ChevronRightIcon} className="size-5" />

@@ -14,7 +14,7 @@ describe("production route table", () => {
   it("exposes the public device-login and license routes", () => {
     const routePaths = getRoutePaths(routes)
 
-    expect(routePaths).toContain("device")
+    expect(routePaths).toContain("auth/device")
     expect(routePaths).toContain("policies/licenses")
     expect(routePaths).not.toContain("tv")
   })

@@ -103,12 +103,10 @@ const About = () => (
         </h2>
         <div className="space-y-4 leading-7 text-foreground">
           <p>
-            I wanted a solution that anyone could use without repeating all
-            those steps. Lynvo lets someone save a link from an Android phone or
-            tablet, find it on Android TV through cloud sync, and send it to
-            Just (Video) Player, VLC for Android, MPV, or MX Player. There is no
-            complicated setup and no need to type a long media URL with an
-            Android TV remote.
+            I wanted to avoid repeating those steps. Lynvo lets someone save a
+            link in a browser, find it on Android TV through cloud sync, and
+            send it to Just (Video) Player, VLC for Android, MPV, or MX Player
+            without typing a long media URL with an Android TV remote.
           </p>
           <p>
             Plugins made the experience more useful. Lynvo Plugins can resolve

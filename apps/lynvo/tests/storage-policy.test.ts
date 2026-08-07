@@ -80,8 +80,6 @@ describe("storage policy", () => {
       { createdAt: cutoff + 1, url: "retained" },
     ]
 
-    expect(selectExpiredLinks(links, cutoff)).toEqual([
-      links[0],
-    ])
+    expect(selectExpiredLinks(links, cutoff)).toEqual([links[0]])
   })
 })

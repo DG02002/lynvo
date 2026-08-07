@@ -45,8 +45,8 @@ export function ReceiverOverlay() {
 
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Use your connected session to open links in its external Android
-            player and manage content.
+            Links sent from the controlling device open in this device’s Android
+            player.
           </p>
           <Button
             variant="destructive"

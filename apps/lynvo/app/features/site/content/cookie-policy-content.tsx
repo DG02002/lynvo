@@ -33,11 +33,6 @@ const cookieRows = [
 
 const browserStorageRows = [
   {
-    name: "lynvo:cookie-preferences",
-    duration: "Until cleared or replaced",
-    purpose: "Remembering your cookie choices on this browser",
-  },
-  {
     name: "theme",
     duration: "Until cleared",
     purpose: "Remembering your appearance preference",
@@ -153,50 +148,16 @@ export const CookiePolicyContent = () => (
       </div>
     </PolicySection>
 
-    <PolicySection title="Analytics cookies">
-      <p>
-        Analytics cookies can help a service understand traffic, performance,
-        and how visitors interact with its features. Lynvo does not currently
-        set optional analytics cookies. Selecting an analytics preference
-        records your choice but does not by itself install an analytics tool.
-      </p>
-      <p>
-        If Lynvo introduces analytics cookies, they will remain off unless your
-        saved choice and applicable law permit their use. This policy will be
-        updated with the provider, cookie name, duration, and purpose.
-      </p>
-    </PolicySection>
-
-    <PolicySection title="Marketing cookies">
-      <p>
-        Marketing measurement cookies can measure campaign effectiveness.
-        Personalized marketing cookies can be used to tailor or measure
-        marketing on third-party platforms. Lynvo does not currently set either
-        category of marketing cookie.
-      </p>
-      <p>
-        Selecting a marketing preference records your choice but does not by
-        itself install marketing technology. If Lynvo introduces these cookies,
-        this policy will be updated with specific disclosures before they are
-        used.
-      </p>
-    </PolicySection>
-
     <PolicySection title="Managing cookies">
       <p>
-        You can select <strong>Accept all cookies</strong>, select{" "}
-        <strong>Reject optional cookies</strong>, or choose individual
-        categories in <strong>Cookie preferences</strong>. Select{" "}
-        <strong>Manage cookies</strong> in the footer to change these choices at
-        any time.
+        Lynvo currently uses only the cookies and browser storage required for
+        authentication, security, appearance, player defaults, and connected
+        devices. Lynvo does not use optional analytics or marketing cookies.
       </p>
       <p>
-        Your choices are specific to the browser and device where you save them.
-        You may need to choose again after clearing browser data, using another
-        browser, or using another device. Your browser settings can also block
-        or delete cookies and local storage. Blocking necessary storage may
-        prevent login, security checks, appearance settings, or other features
-        from working correctly.
+        Your browser settings can block or delete cookies and local storage.
+        Blocking necessary storage may prevent login, security checks,
+        appearance settings, or other features from working correctly.
       </p>
     </PolicySection>
 

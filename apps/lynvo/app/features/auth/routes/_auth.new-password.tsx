@@ -83,9 +83,6 @@ export default function NewPassword() {
               <h1 className="text-4xl font-normal tracking-tight">
                 Change your password
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Enter the current password, then choose a new password.
-              </p>
             </div>
             <FieldGroup className="gap-4">
               <form.Field

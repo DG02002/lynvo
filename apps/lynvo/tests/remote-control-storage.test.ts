@@ -37,5 +37,4 @@ describe("remote-control browser persistence", () => {
       deviceName: "Living room",
     })
   })
-
 })

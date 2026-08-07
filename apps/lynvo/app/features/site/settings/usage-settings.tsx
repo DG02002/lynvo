@@ -164,7 +164,7 @@ export const UsageSettings = ({
           <SettingsPanel className="gap-4">
             <SectionHeading
               title="Custom Plugin Server usage"
-              description="Each Custom Plugin Server reports its own independent capacities."
+              description="Each Custom Plugin Server has separate usage limits."
             />
             {snapshot.custom.groups.map((group) => (
               <div key={group.key} className="flex flex-col gap-3">

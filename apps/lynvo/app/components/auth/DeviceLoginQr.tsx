@@ -131,7 +131,7 @@ export function DeviceLoginQr() {
         kind: "failed",
         errorMessage: getUserFacingErrorMessage(
           error,
-          "The login code couldn’t be created. Try generating a new code."
+          "The activation code couldn’t be created. Try generating a new code."
         ),
       })
     }
@@ -196,7 +196,7 @@ export function DeviceLoginQr() {
         role="status"
       >
         <Spinner />
-        <span>Creating login code…</span>
+        <span>Creating activation code…</span>
       </div>
     )
   }
@@ -222,11 +222,11 @@ export function DeviceLoginQr() {
     return null
   }
 
-  const authUrl = `${origin}/device?code=${code}`
+  const authUrl = `${origin}/auth/device?user_code=${code}`
 
   return (
-    <div className="flex flex-col items-start gap-6">
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+    <div className="flex flex-col items-center gap-6 text-center">
+      <div>
         <QRCodeCanvas
           value={authUrl}
           size={180}
@@ -237,18 +237,16 @@ export function DeviceLoginQr() {
         />
       </div>
 
-      <div className="flex flex-col gap-2 text-left">
+      <div className="flex flex-col items-center gap-2 text-center">
         <p className="text-sm text-muted-foreground">
-          Scan the QR code, or open{" "}
-          <span className="font-mono font-bold text-foreground">
-            {origin}/device
-          </span>{" "}
-          on another device and enter this code:
+          Confirm that the same activation code appears on the other device.
         </p>
-        <p className="font-mono text-3xl font-bold tracking-[0.2em] text-primary">
+        <p
+          aria-label="Login verification code"
+          className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
+        >
           {code}
         </p>
-        <p className="text-xs text-muted-foreground">{deviceName}</p>
       </div>
     </div>
   )

@@ -23,10 +23,10 @@ export const LogoutDialog = ({
     <AlertDialogContent className="p-10">
       <AlertDialogHeader className="place-items-center gap-4 w-full text-center">
         <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
-          Are you sure you want to log out?
+          Log out of Lynvo?
         </AlertDialogTitle>
         <AlertDialogDescription className="text-base text-center text-muted-foreground w-full">
-          Log out of Lynvo as {username}?
+          Logged in as {username}.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <div className="flex flex-col gap-3 w-full mt-4">

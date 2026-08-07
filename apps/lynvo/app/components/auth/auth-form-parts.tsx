@@ -14,7 +14,6 @@ const controlWidthClass = "mx-auto w-full max-w-sm"
 export interface AuthFormShellProps {
   ariaLabel: string
   heading: string
-  subheading: string
   children: ReactNode
   switchPrompt: string
   switchLinkText: string
@@ -91,9 +90,13 @@ export const AuthSubmitButton = ({
       size="lg"
       className={cn("h-13.5 w-full", className)}
       disabled={isSubmitting}
+      aria-label={isSubmitting ? submittingText : undefined}
     >
-      {isSubmitting && <Spinner className="mr-2 size-4" aria-hidden="true" />}
-      {isSubmitting ? submittingText : submitText}
+      {isSubmitting ? (
+        <Spinner className="size-4" aria-hidden="true" />
+      ) : (
+        submitText
+      )}
     </Button>
   </AuthControl>
 )
@@ -134,7 +137,6 @@ export const AuthDivider = () => (
 export const AuthFormShell = ({
   ariaLabel,
   heading,
-  subheading,
   children,
   switchPrompt,
   switchLinkText,
@@ -154,7 +156,6 @@ export const AuthFormShell = ({
           <div className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">{heading}</h1>
-            <p className="text-sm text-muted-foreground">{subheading}</p>
           </div>
 
           <FieldGroup className="gap-4">{children}</FieldGroup>
@@ -170,7 +171,6 @@ export const AuthFormShell = ({
             </Link>
           </div>
 
-          <AuthDivider />
           <AuthPolicyLinks />
         </FieldSet>
       </form>

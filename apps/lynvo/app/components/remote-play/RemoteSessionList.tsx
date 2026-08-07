@@ -1,8 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ComputerIcon } from "@hugeicons/core-free-icons"
-import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
-import { sitePaths } from "~/lib/paths"
 import type { RemoteSession } from "./types"
 
 export const RemoteSessionList = ({
@@ -37,29 +35,21 @@ export const RemoteSessionList = ({
               Searching for Remote Play devices…
             </p>
           </div>
-        ) : hasError || sessions.length === 0 ? (
+        ) : hasError || visibleSessions.length === 0 ? (
           <div className="flex flex-col items-center px-4 py-6 text-center">
             <p className="text-sm font-medium">
               {hasError
                 ? "Device list couldn’t be loaded"
                 : "No Remote Play devices found"}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {hasError
-                ? "Check the connection, then search again."
-                : "Open Lynvo in a browser on another device, then search again."}
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {hasError && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Check the connection, then search again.
+              </p>
+            )}
+            <div className="mt-4 flex justify-center">
               <Button variant="outline" size="sm" onClick={onSearchAgain}>
                 Search again
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                nativeButton={false}
-                render={<Link to={sitePaths.androidTvSetup} />}
-              >
-                Android TV setup
               </Button>
             </div>
           </div>

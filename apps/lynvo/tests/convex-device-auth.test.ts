@@ -42,7 +42,7 @@ describe("device authorization", () => {
       deviceName: "Personal phone",
       preflightToken,
     })
-    expect(generated.code).toMatch(/^\d{8}$/)
+    expect(generated.code).toMatch(/^[A-Z]{4}-[A-Z]{4}$/)
     expect(generated.deviceName).toBe("Personal phone")
     randomSpy.mockRestore()
     vi.unstubAllEnvs()
@@ -91,7 +91,7 @@ describe("device authorization", () => {
     const convex = createConvexTest()
     await convex.run(async (context) => {
       await context.db.insert("deviceCodes", {
-        code: "12345678",
+        code: "ABCD-EFGH",
         pollSecretDigest: await digestPollSecret("poll-secret"),
         status: "pending",
         deviceName: "Test TV",
@@ -101,7 +101,7 @@ describe("device authorization", () => {
     })
 
     await expect(
-      convex.mutation(api.deviceAuth.authorizeCode, { code: "12345678" })
+      convex.mutation(api.deviceAuth.authorizeCode, { code: "ABCD-EFGH" })
     ).rejects.toThrow("UNAUTHORIZED")
   })
 
@@ -112,7 +112,7 @@ describe("device authorization", () => {
     const expiresAt = 1_000_000
     await convex.run(async (context) => {
       await context.db.insert("deviceCodes", {
-        code: "23456789",
+        code: "BCDE-FGHI",
         pollSecretDigest: await digestPollSecret(pollSecret),
         status: "pending",
         deviceName: "Test TV",
@@ -128,19 +128,19 @@ describe("device authorization", () => {
     vi.useFakeTimers()
     vi.setSystemTime(expiresAt - 1)
     await authenticatedClient.mutation(api.deviceAuth.authorizeCode, {
-      code: "23456789",
+      code: "BCDE-FGHI",
     })
 
     await expect(
       convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
-        code: "23456789",
+        code: "BCDE-FGHI",
         pollSecret,
         now: expiresAt - 1,
       })
     ).resolves.toMatchObject({ userId: user.userId })
     await expect(
       convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
-        code: "23456789",
+        code: "BCDE-FGHI",
         pollSecret,
         now: expiresAt - 1,
       })
@@ -148,7 +148,7 @@ describe("device authorization", () => {
 
     await convex.run(async (context) => {
       await context.db.insert("deviceCodes", {
-        code: "34567890",
+        code: "CDEF-GHIJ",
         pollSecretDigest: await digestPollSecret(pollSecret),
         status: "authorized",
         userId: user.userId,
@@ -159,7 +159,7 @@ describe("device authorization", () => {
     })
     await expect(
       convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
-        code: "34567890",
+        code: "CDEF-GHIJ",
         pollSecret,
         now: expiresAt,
       })
@@ -178,7 +178,7 @@ describe("device authorization", () => {
         codeIndex += 1
       ) {
         await context.db.insert("deviceCodes", {
-          code: String(codeIndex).padStart(8, "0"),
+          code: `TEST-${String.fromCharCode(65 + Math.floor(codeIndex / 26))}${String.fromCharCode(65 + (codeIndex % 26))}AA`,
           pollSecretDigest: await digestPollSecret(String(codeIndex)),
           status: "pending",
           deviceName: "Expired TV",

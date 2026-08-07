@@ -27,15 +27,12 @@ const CustomPluginServersHarness = ({
 }
 
 describe("CustomPluginServersSection", () => {
-  it("provides an action when no Plugin Servers are connected", () => {
+  it("provides one add action when no Plugin Servers are connected", () => {
     render(<CustomPluginServersHarness onAddPluginServer={vi.fn()} />)
 
     expect(
-      screen.getByText("No Custom Plugin Servers are connected.")
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
     ).toBeVisible()
-    expect(
-      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })
-    ).toHaveLength(2)
   })
 
   it("validates and submits a Custom Plugin Server form", async () => {
@@ -43,7 +40,7 @@ describe("CustomPluginServersSection", () => {
     render(<CustomPluginServersHarness onAddPluginServer={onAddPluginServer} />)
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })[0]!
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
     )
     fireEvent.click(
       screen.getByRole("button", { name: "Add Custom Plugin Server" })
@@ -52,10 +49,10 @@ describe("CustomPluginServersSection", () => {
     expect(await screen.findByText("Base URL is required.")).toBeVisible()
     expect(onAddPluginServer).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText("Custom Plugin Server URL"), {
+    fireEvent.change(screen.getByLabelText("Server URL"), {
       target: { value: "https://plugin-server.example.com" },
     })
-    fireEvent.change(screen.getByLabelText("Custom Plugin Server API key"), {
+    fireEvent.change(screen.getByLabelText("API key"), {
       target: { value: "secret" },
     })
     fireEvent.click(
@@ -84,9 +81,9 @@ describe("CustomPluginServersSection", () => {
     render(<CustomPluginServersHarness onAddPluginServer={onAddPluginServer} />)
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Add Custom Plugin Server" })[0]!
+      screen.getByRole("button", { name: "Add Custom Plugin Server" })
     )
-    fireEvent.change(screen.getByLabelText("Custom Plugin Server URL"), {
+    fireEvent.change(screen.getByLabelText("Server URL"), {
       target: { value: "https://plugin-server.example.com" },
     })
     fireEvent.click(

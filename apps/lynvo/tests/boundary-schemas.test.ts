@@ -53,7 +53,6 @@ describe("browser storage boundaries", () => {
       results: [],
     })
   })
-
 })
 
 describe("HTTP and realtime boundaries", () => {

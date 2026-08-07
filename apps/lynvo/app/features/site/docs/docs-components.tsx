@@ -265,61 +265,6 @@ export function DocsNote({
   )
 }
 
-export const AndroidTvPlayerDefaults = () => (
-  <section
-    aria-label="Recommended player defaults"
-    className="my-3 flex flex-col gap-4"
-  >
-    <div className="flex flex-col gap-1">
-      <p className="font-medium">Recommended player defaults</p>
-      <p className="text-sm leading-6 text-muted-foreground">
-        Lynvo marks an item opened the first time you open it. It does not store
-        a playback position or resume state. Lynvo does not play video; it opens
-        a URL in an external Android player. When you open the same link again,
-        Lynvo sends the same URL to the selected player. The selected player may
-        remember its own playback position.
-      </p>
-    </div>
-
-    <div className="divide-y border-y">
-      <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="flex items-center gap-3">
-          <img
-            src="/icons/players/just.webp"
-            alt=""
-            className="size-10 rounded-lg object-cover"
-          />
-          <span>Just (Video) Player</span>
-        </div>
-        <span className="text-sm text-muted-foreground">
-          Recommended for links whose servers support HTTP byte-range requests.
-          Can open other links, but cannot seek without byte-range support.
-        </span>
-      </div>
-
-      <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="flex items-center gap-3">
-          <img
-            src="/icons/players/vlc.webp"
-            alt=""
-            className="size-10 rounded-lg object-cover"
-          />
-          <span>VLC for Android</span>
-        </div>
-        <span className="text-sm text-muted-foreground">
-          Recommended for links without HTTP byte-range support. May still allow
-          seeking for some links.
-        </span>
-      </div>
-    </div>
-
-    <p className="text-sm leading-6 text-muted-foreground">
-      MPV and MX Player are also available in <strong>Settings</strong>. Change
-      either default after you log in.
-    </p>
-  </section>
-)
-
 export const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
@@ -459,7 +404,6 @@ const DocsLink = ({
   )
 
 export const docsComponents: MDXComponents = {
-  AndroidTvPlayerDefaults,
   AndroidTvRemoteTroubleshooting,
   DocSection,
   CodeBlock,

@@ -88,7 +88,6 @@ export function SignInForm() {
     <AuthFormShell
       ariaLabel="Log in form"
       heading={authCopy.signin.pageHeading}
-      subheading={authCopy.signin.pageSubheading}
       switchPrompt={authCopy.signin.switchPrompt}
       switchLinkText={authCopy.signin.switchLink}
       switchTo={`${authPaths.createAccount}${location.search}`}

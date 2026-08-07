@@ -3,29 +3,29 @@ import { Link } from "react-router"
 import { useQuery } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { Button } from "~/components/ui/button"
+import { Spinner } from "~/components/ui/spinner"
 import { toast } from "sonner"
 import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/LynvoLink"
-import { authPaths, policyPaths } from "~/lib/paths"
+import { authPaths } from "~/lib/paths"
+import { AuthPolicyLinks } from "./auth-form-parts"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { client } from "~/lib/effect/api/client"
 
-interface DeviceApprovalProps {
-  user?: { username: string } | null
-}
-
-export default function DeviceApproval({ user }: DeviceApprovalProps) {
+export default function DeviceApproval() {
   const params = new URLSearchParams(
     typeof window !== "undefined" ? window.location.search : ""
   )
-  const code = params.get("code") ?? ""
-  const { data: codeRecord } = useQuery({
+  const code = params.get("user_code") ?? ""
+  const hasValidCode = /^[A-Z]{4}-[A-Z]{4}$/.test(code)
+  const { data: codeRecord, isPending: isCodeQueryPending } = useQuery({
     queryKey: ["device-auth-approval", code],
     queryFn: () =>
       Effect.runPromise(client.device.approval({ query: { code } })),
-    enabled: code.length === 8,
+    enabled: hasValidCode,
   })
+  const isCheckingCode = hasValidCode && isCodeQueryPending
   const hasExpired = useExpiryClock(codeRecord?.expiresAt)
   const canApprove = codeRecord?.status === "pending" && !hasExpired
   const [loading, setLoading] = React.useState(false)
@@ -39,12 +39,12 @@ export default function DeviceApproval({ user }: DeviceApprovalProps) {
     try {
       await Effect.runPromise(client.device.authorize({ payload: { code } }))
       setSuccess(true)
-      toast.success("Device login approved")
+      toast.success("Login approved")
     } catch (error) {
       toast.error(
         getUserFacingErrorMessage(
           error,
-          "This device couldn’t be approved. Check the code, then try again."
+          "The login couldn’t be approved. Check the code, then try again."
         )
       )
     } finally {
@@ -53,10 +53,10 @@ export default function DeviceApproval({ user }: DeviceApprovalProps) {
   }
 
   const heading = success
-    ? "Device login approved"
-    : canApprove
-      ? `Approve login for ${codeRecord.deviceName}?`
-      : "Match the code on your device"
+    ? "Login approved"
+    : isCheckingCode || (codeRecord && canApprove)
+      ? "Approve login"
+      : "Code invalid or expired"
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col">
@@ -67,56 +67,73 @@ export default function DeviceApproval({ user }: DeviceApprovalProps) {
             <h1 className="text-4xl font-normal tracking-tight">{heading}</h1>
             {success ? (
               <p className="text-balance text-lg text-muted-foreground">
-                You can close this page.
+                The other device is now logged in.
               </p>
+            ) : isCheckingCode ? (
+              <div
+                className="flex items-center justify-center gap-2 text-muted-foreground"
+                role="status"
+              >
+                <Spinner aria-hidden="true" />
+                <span>Checking code…</span>
+              </div>
             ) : (
-              <p className="text-balance text-lg text-muted-foreground">
-                {canApprove
-                  ? `Lynvo will log in ${codeRecord.deviceName} as ${user?.username}. Confirm only if the code on the other device is ${code}.`
-                  : "The code is invalid or expired."}
-              </p>
+              <>
+                <p className="text-balance text-lg text-muted-foreground">
+                  {canApprove
+                    ? "Confirm this code is shown on your device."
+                    : "Generate a new code on the device you want to log in."}
+                </p>
+                {canApprove && (
+                  <p
+                    aria-label="Login verification code"
+                    className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
+                  >
+                    {code}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
-          {!success && (
-            <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
+          <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
+            {success ? (
               <Button
-                type="button"
                 className="h-13.5 w-full"
-                disabled={!canApprove || loading}
-                onClick={() => void handleAuthorize()}
-              >
-                {loading ? "Approving login…" : "Approve login"}
-              </Button>
-              <Button
-                variant="secondary"
-                className="h-13.5 w-full"
+                nativeButton={false}
                 render={
-                  <Link to={authPaths.signIn} viewTransition>
-                    Back to log in
+                  <Link to="/" viewTransition>
+                    Go home
                   </Link>
                 }
               />
-            </div>
-          )}
-
-          <div className="mt-3 hidden space-x-1 text-center text-xs text-muted-foreground md:block">
-            <Link
-              to={policyPaths.termsOfUse}
-              viewTransition
-              className="underline underline-offset-4"
-            >
-              Terms of use
-            </Link>
-            <span> | </span>
-            <Link
-              to={policyPaths.privacyPolicy}
-              viewTransition
-              className="underline underline-offset-4"
-            >
-              Privacy policy
-            </Link>
+            ) : (
+              <>
+                {canApprove && (
+                  <Button
+                    type="button"
+                    className="h-13.5 w-full"
+                    disabled={loading}
+                    onClick={() => void handleAuthorize()}
+                  >
+                    {loading ? "Approving login…" : "Approve login"}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
+                  className="h-13.5 w-full"
+                  nativeButton={false}
+                  render={
+                    <Link to={authPaths.signIn} viewTransition>
+                      Back to log in
+                    </Link>
+                  }
+                />
+              </>
+            )}
           </div>
+
+          <AuthPolicyLinks />
         </FieldSet>
       </div>
     </div>

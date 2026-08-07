@@ -7,8 +7,6 @@ contentType: Tutorial
 
 <DocSection id="prerequisites">
 
-## Prepare your development environment
-
 Install Node.js and pnpm before you generate the project. You need a Cloudflare account for deployment and a Lynvo account for the final connection test.
 
 Install or prepare:
@@ -19,22 +17,6 @@ Install or prepare:
 - A Lynvo account
 - A Source website you are authorized to access and extract
 
-Create the project outside the Lynvo monorepo:
-
-<CodeBlock label="Terminal">
-
-```sh
-pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
-cd my-lynvo-plugin-server
-cp .dev.vars.example .dev.vars
-```
-
-</CodeBlock>
-
-The generator installs dependencies unless you pass `--skip-install`. If you skip installation, run `pnpm install` before `pnpm check`.
-
-Set a local-only `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`. Keep that file uncommitted. Store the production value with `pnpm wrangler secret put LYNVO_PLUGIN_SERVER_API_KEY`.
-
-Your deployed Worker must expose a stable HTTPS origin. It must not require a browser session or browser cookies from Lynvo.
+When these requirements are ready, [generate your Plugin Server](/docs/plugin-server/create-plugin-server).
 
 </DocSection>

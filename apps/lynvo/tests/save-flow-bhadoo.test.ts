@@ -62,11 +62,7 @@ describe("Bhadoo save flow", () => {
     expect(extractionOrchestration.prepareSource).toHaveBeenCalledWith(
       expect.objectContaining({ targetUrl: credentialedUrl })
     )
-    expect(addLink).toHaveBeenCalledWith(
-      sanitizedUrl,
-      meta,
-      expect.any(Array)
-    )
+    expect(addLink).toHaveBeenCalledWith(sanitizedUrl, meta, expect.any(Array))
     expect(result?.pluginDomainSuggestion).toEqual({
       domain: "index.example.com",
       pluginId: "bhadoo-google-drive-index",

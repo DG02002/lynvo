@@ -120,7 +120,9 @@ describe("Changelog", () => {
       .closest("article")
 
     expect(platformEntry).not.toBeNull()
-    const description = within(platformEntry!).getByText(/per scheduled run\.$/)
+    const description = within(platformEntry!).getByText(
+      /accounts with larger libraries\.$/
+    )
     expect(description).toHaveClass("line-clamp-3")
 
     fireEvent.click(
@@ -137,6 +139,13 @@ describe("Changelog", () => {
   })
 
   it("shows five releases before loading the next batch", () => {
+    const scrollHeight = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockReturnValue(0)
+    const clientHeight = vi
+      .spyOn(HTMLElement.prototype, "clientHeight", "get")
+      .mockReturnValue(0)
+
     const entries: ChangelogEntry[] = Array.from({ length: 6 }, (_, index) => ({
       type: "general",
       date: `Jul ${index + 1}, 2026`,
@@ -160,5 +169,8 @@ describe("Changelog", () => {
     expect(
       screen.queryByRole("button", { name: "Load more" })
     ).not.toBeInTheDocument()
+
+    scrollHeight.mockRestore()
+    clientHeight.mockRestore()
   })
 })

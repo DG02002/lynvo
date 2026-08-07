@@ -7,8 +7,6 @@ contentType: Tutorial
 
 <DocSection id="create-plugin-server">
 
-## Generate your Plugin Server
-
 Run the creator from the directory where you want the project. It creates a
 standalone Plugin Server project backed by a Cloudflare Worker and installs the
 published protocol package.
@@ -18,12 +16,15 @@ published protocol package.
 ```sh
 pnpm create lynvo-plugin-server@latest my-lynvo-plugin-server
 cd my-lynvo-plugin-server
+cp .dev.vars.example .dev.vars
 pnpm check
 pnpm test
 pnpm build
 ```
 
 </CodeBlock>
+
+Set `LYNVO_PLUGIN_SERVER_API_KEY` in `.dev.vars`, then run `pnpm dev`. The generator installs dependencies unless you pass `--skip-install`. Run `pnpm install` before the checks when you skip installation.
 
 The generator creates:
 
@@ -40,7 +41,9 @@ Edit these files first:
 2. Replace the example Source adapter in `src/plugins/example.ts`
 3. Add Source fixtures to `tests/contract.test.ts`
 
-Run `pnpm dev` to start the local Worker. The `pnpm build` script performs a Wrangler dry run. Use `pnpm deploy` only after the contract checks pass and the production secret is configured.
+The `pnpm build` script performs a Wrangler dry run. Use `pnpm deploy` only after the contract checks pass and the production secret is configured.
+
+The example usage response is a finite test fixture. Replace it with durable accounting before production deployment.
 
 The generated project has no workspace or local-link dependency. You can move it to another repository without cloning Lynvo.
 

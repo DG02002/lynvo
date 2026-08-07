@@ -44,7 +44,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Platform foundation",
     category: "Platform",
     description:
-      "Improved reliability at scale with transactional storage accounting, bounded link subscriptions, and limited lifecycle cleanup work per scheduled run.",
+      "Improved reliability when saving, deleting, and synchronizing links, including accounts with larger libraries.",
   },
   {
     type: "plugin-server",
@@ -53,7 +53,7 @@ const changelogEntries: ChangelogEntry[] = [
     title: "Lynvo Plugin Server",
     category: "Plugin Server",
     description:
-      "Moved supported sources to the Lynvo Plugin Server, with Bhadoo Google Drive and OneDrive index support, Plugin discovery, and per-Plugin usage limits.",
+      "Added Lynvo-managed support for Bhadoo Google Drive and OneDrive indexes, with usage shown separately for each Plugin.",
   },
   {
     type: "general",

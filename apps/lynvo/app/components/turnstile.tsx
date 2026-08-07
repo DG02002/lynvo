@@ -147,10 +147,5 @@ export const Turnstile = ({
     return null
   }
 
-  return (
-    <div className="flex flex-col gap-2 py-2">
-      <span className="text-sm">Let us know you&apos;re human</span>
-      <div ref={containerRef} data-turnstile-action={action} />
-    </div>
-  )
+  return <div ref={containerRef} data-turnstile-action={action} />
 }

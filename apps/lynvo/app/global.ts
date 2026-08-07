@@ -87,13 +87,6 @@ declare global {
     read: (input: UsageReadInput) => Promise<UsageReadSnapshot>
   }
 
-  interface CookiePreferences {
-    analytics: boolean
-    marketingMeasurement: boolean
-    personalizedMarketing: boolean
-    version: number
-  }
-
   interface DocumentationPage {
     slug: string
     url: string
