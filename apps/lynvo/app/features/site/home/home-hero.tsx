@@ -8,7 +8,7 @@ export const HomeHero = () => {
         <div className="h-[40rem] w-[40rem] rounded-full bg-primary/10 blur-[100px]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-10 px-4 sm:px-6">
+      <div className="relative z-10 flex w-full flex-col items-center gap-10 px-6 md:px-8 lg:px-10 xl:px-14">
         {/* Massive Typography */}
         <div className="flex flex-col items-center gap-4 text-center">
           <h1 className="t-stagger-line t-stagger-line--2 mt-8 max-w-4xl text-balance text-5xl font-normal tracking-[-0.04em] md:text-7xl lg:text-[5.5rem] lg:leading-[0.95]">

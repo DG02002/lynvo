@@ -20,11 +20,12 @@ export const LogoutDialog = ({
     media={
       <HugeiconsIcon
         icon={Logout05Icon}
-        className="mx-auto size-16 text-foreground"
+        className="mx-auto size-16 text-destructive"
       />
     }
     description={<>Logged in as {username}.</>}
     confirmLabel="Log out"
+    confirmVariant="destructive"
     onConfirm={onLogout}
   />
 )

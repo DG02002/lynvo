@@ -42,7 +42,7 @@ const SaveList = () => {
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-5xl flex-col gap-6 overflow-x-hidden px-4 py-8 md:px-8 md:py-12",
+        "flex min-h-[calc(100vh-4rem)] w-full flex-col gap-6 overflow-x-hidden px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14",
         selectedItemUrl &&
           "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background p-0 md:p-0"
       )}

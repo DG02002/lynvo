@@ -1,4 +1,4 @@
-import { Link } from "react-router"
+import { Link, useLocation } from "react-router"
 import { policyPaths, sitePaths } from "~/lib/paths"
 
 const supportLinks = [
@@ -55,34 +55,47 @@ const FooterLinkGroup = ({
 )
 
 export function Footer() {
+  const { pathname } = useLocation()
+  const normalizedPathname = pathname.replace(/\/+$/, "") || "/"
+  const showLinkGroups = !(
+    normalizedPathname === "/save" ||
+    normalizedPathname === "/settings" ||
+    normalizedPathname.startsWith("/settings/") ||
+    normalizedPathname.startsWith("/docs/")
+  )
+
   return (
     <footer data-site-footer className="bg-background">
-      <div className="mx-auto max-w-6xl px-4 md:px-8">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-16 sm:grid-cols-4 md:pt-20">
-          <FooterLinkGroup
-            heading="Support"
-            headingId="footer-support-heading"
-            links={supportLinks}
-          />
-          <FooterLinkGroup
-            heading="Company"
-            headingId="footer-company-heading"
-            links={companyLinks}
-          />
-          <FooterLinkGroup
-            heading="Learn"
-            headingId="footer-learn-heading"
-            links={docsLinks}
-          />
-          <FooterLinkGroup
-            heading="Terms and policies"
-            headingId="footer-policies-heading"
-            links={policyLinks}
-          />
+      {showLinkGroups && (
+        <div className="w-full px-6 md:px-8 lg:px-10 xl:px-14">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-12 pt-16 sm:grid-cols-4 md:pt-20">
+            <FooterLinkGroup
+              heading="Support"
+              headingId="footer-support-heading"
+              links={supportLinks}
+            />
+            <FooterLinkGroup
+              heading="Company"
+              headingId="footer-company-heading"
+              links={companyLinks}
+            />
+            <FooterLinkGroup
+              heading="Learn"
+              headingId="footer-learn-heading"
+              links={docsLinks}
+            />
+            <FooterLinkGroup
+              heading="Terms and policies"
+              headingId="footer-policies-heading"
+              links={policyLinks}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="mt-16 px-4 pt-5 pb-10 md:mt-20 md:px-8 md:pb-12">
+      <div
+        className={`w-full px-6 pt-5 pb-10 md:px-8 md:pb-12 lg:px-10 xl:px-14 ${showLinkGroups ? "mt-16 md:mt-20" : "mt-8 md:mt-12"}`}
+      >
         <p className="text-center text-sm text-muted-foreground">
           Lynvo © 2026
         </p>

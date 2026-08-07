@@ -3,9 +3,10 @@ import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
 
+import { MobilePageOutline } from "~/components/mobile-page-outline"
+import { PageTableOfContents } from "~/components/page-table-of-contents"
 import { DocsDesktopNavigation, DocsMobileNavigation } from "./docs-navigation"
 import { DocsPageActions } from "./docs-page-actions"
-import { DocsTableOfContents } from "./docs-table-of-contents"
 import { cn } from "~/lib/utils"
 
 const lastModifiedDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -57,14 +58,23 @@ export const DocsDocumentLayout = ({
   context: DocumentationPageContext
   children: ReactNode
 }) => (
-  <div className="mx-auto w-full max-w-[96rem] px-4 py-6 md:px-8 lg:py-0">
+  <div className="w-full px-6 py-6 md:px-8 lg:px-10 lg:py-0 xl:px-14">
+    <MobilePageOutline
+      headings={context.page.headings}
+      revealAfterSelector="#docs-page-introduction"
+      className="-mt-6 lg:mt-0 xl:hidden"
+    />
+
     <DocsMobileNavigation context={context} />
 
-    <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,44rem)] lg:justify-center xl:grid-cols-[16rem_minmax(0,44rem)_14rem]">
+    <div className="grid gap-10 lg:grid-cols-[16rem_minmax(0,44rem)] lg:justify-center xl:grid-cols-[minmax(0,1fr)_minmax(0,52rem)_minmax(0,1fr)] xl:justify-normal 2xl:grid-cols-[minmax(0,1fr)_minmax(0,56rem)_minmax(0,1fr)]">
       <DocsDesktopNavigation context={context} />
 
       <article className="min-w-0 self-start py-4 lg:py-12">
-        <header className="flex flex-col gap-5 border-b pb-8">
+        <header
+          id="docs-page-introduction"
+          className="flex flex-col gap-5 border-b pb-8"
+        >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <h1 className="max-w-xl text-3xl font-normal tracking-tight text-balance md:text-4xl">
               {context.page.title}
@@ -82,7 +92,10 @@ export const DocsDocumentLayout = ({
           </p>
         </header>
 
-        <div className="docs-content flex flex-col gap-14 pt-10">
+        <div
+          id="docs-content"
+          className="typeset typeset-docs docs-content pt-10"
+        >
           {children}
         </div>
 
@@ -109,7 +122,7 @@ export const DocsDocumentLayout = ({
       </article>
 
       <aside className="sticky top-16 hidden max-h-[calc(100svh-4rem)] self-start overflow-y-auto py-12 [scrollbar-width:none] xl:block">
-        <DocsTableOfContents headings={context.page.headings} />
+        <PageTableOfContents headings={context.page.headings} />
       </aside>
     </div>
   </div>

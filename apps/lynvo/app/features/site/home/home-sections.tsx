@@ -49,7 +49,7 @@ export const PlayerSection = () => (
 
 export const ExtractionSection = () => (
   <section className="relative overflow-hidden py-24 md:py-32">
-    <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
+    <div className="grid w-full gap-16 px-6 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10 xl:px-14">
       <SectionIntro
         title="Open links from Sources."
         description="Use Plugins managed by Lynvo, or connect a compatible Custom Plugin Server for additional Sources."
@@ -77,7 +77,7 @@ export const ExtractionSection = () => (
 
 export const AndroidScreensSection = () => (
   <section className="relative overflow-hidden py-24 md:py-32">
-    <div className="mx-auto grid max-w-5xl gap-16 px-6 lg:grid-cols-2 lg:items-center">
+    <div className="grid w-full gap-16 px-6 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10 xl:px-14">
       <SectionIntro
         title="Use Lynvo across Android devices."
         description="Open links on Android TV, Android phones, and Android tablets from a library that stays in sync."
@@ -121,12 +121,12 @@ export const PlanSection = () => {
         <div className="h-[30rem] w-[30rem] rounded-full bg-primary/20 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-16 px-6 text-center">
+      <div className="relative z-10 flex w-full flex-col items-center gap-16 px-6 text-center md:px-8 lg:px-10 xl:px-14">
         <h2 className="text-balance text-6xl font-normal tracking-[-0.04em] text-foreground md:text-8xl">
           The Free plan is available now.
         </h2>
 
-        <div className="grid w-full max-w-4xl grid-cols-1 gap-12 sm:grid-cols-3">
+        <div className="grid w-full grid-cols-1 gap-12 sm:grid-cols-3">
           <div className="flex flex-col items-center gap-3">
             <span className="text-2xl text-foreground">3 MB of storage</span>
             <span className="text-sm text-muted-foreground text-center">

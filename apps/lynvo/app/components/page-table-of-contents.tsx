@@ -7,11 +7,21 @@ import {
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
-export const DocsTableOfContents = ({
+interface PageTableOfContentsHeading {
+  id: string
+  label: string
+  level?: 3
+}
+
+export function PageTableOfContents({
+  className,
   headings,
+  variant = "docs",
 }: {
-  headings: readonly DocumentationHeading[]
-}) => {
+  className?: string
+  headings: readonly PageTableOfContentsHeading[]
+  variant?: "docs" | "policy"
+}) {
   const [activeHeadingId, setActiveHeadingId] = useState(headings[0]?.id ?? "")
 
   useEffect(() => {
@@ -39,10 +49,10 @@ export const DocsTableOfContents = ({
         }
       }
 
-      const isAtPageEnd =
+      if (
         window.innerHeight + window.scrollY >=
         document.documentElement.scrollHeight - DOCS_SCROLL_END_TOLERANCE_PX
-      if (isAtPageEnd) {
+      ) {
         nextActiveHeadingId = headingElements.at(-1)?.id ?? nextActiveHeadingId
       }
 
@@ -93,9 +103,22 @@ export const DocsTableOfContents = ({
   }
 
   return (
-    <nav aria-label="On this page" className="flex flex-col gap-3 px-4">
-      <p className="text-xs font-medium text-muted-foreground">On this page</p>
-      <ul className="flex flex-col gap-2">
+    <nav
+      aria-label="On this page"
+      className={cn(
+        "flex flex-col",
+        variant === "docs" && "gap-3 px-4",
+        className
+      )}
+    >
+      {variant === "docs" && (
+        <p className="text-xs font-medium text-muted-foreground">
+          On this page
+        </p>
+      )}
+      <ul
+        className={cn("flex flex-col", variant === "docs" ? "gap-2" : "gap-4")}
+      >
         {headings.map((heading) => {
           const isActive = heading.id === activeHeadingId
 
@@ -106,10 +129,10 @@ export const DocsTableOfContents = ({
                 aria-current={isActive ? "location" : undefined}
                 onClick={(event) => handleHeadingClick(event, heading.id)}
                 className={cn(
-                  "block text-[0.8125rem] leading-5 transition-colors",
+                  "block text-xs font-normal leading-5 transition-colors",
                   heading.level === 3 && "pl-4",
                   isActive
-                    ? "font-medium text-foreground"
+                    ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >

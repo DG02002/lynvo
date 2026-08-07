@@ -10,7 +10,7 @@ export default function SiteLayout() {
     <>
       <RemoteCommandListener />
       <Header />
-      <main data-site-content className="flex-1 pt-16 md:pt-16">
+      <main data-site-content className="flex-1 pt-14 md:pt-16">
         <Outlet />
       </main>
       <Footer />

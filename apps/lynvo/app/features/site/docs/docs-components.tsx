@@ -145,7 +145,7 @@ export function DocSection({
   children: ReactNode
 }) {
   return (
-    <section id={id} className="flex scroll-mt-24 flex-col gap-4 [&>h2]:mb-5">
+    <section id={id} className="scroll-mt-24">
       {children}
     </section>
   )
@@ -198,7 +198,10 @@ export function CodeBlock({
   }
 
   return (
-    <figure ref={figureRef} className="my-2 overflow-hidden rounded-lg border">
+    <figure
+      ref={figureRef}
+      className="not-typeset my-2 overflow-hidden rounded-lg border"
+    >
       <figcaption className="flex min-h-10 items-center justify-between gap-3 border-b bg-muted/30 pl-4 pr-1 text-sm text-foreground">
         <span className="flex min-w-0 items-center gap-2">
           <span aria-hidden="true" className="size-4 shrink-0">
@@ -258,7 +261,7 @@ export function DocsNote({
   children: ReactNode
 }) {
   return (
-    <Alert>
+    <Alert className="not-typeset mt-[var(--typeset-flow)]">
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{children}</AlertDescription>
     </Alert>
@@ -268,7 +271,7 @@ export function DocsNote({
 export const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
-    className="my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+    className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
   >
     <div className="flex items-start gap-4">
       <span className="flex h-7 w-10 shrink-0 items-center justify-center">
@@ -340,7 +343,7 @@ const DocsHeadingAnchor = ({
   <a
     href={`#${headingId}`}
     aria-label={`Link to ${label}`}
-    className="flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-blue-500 opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-400"
+    className="not-typeset flex size-10 shrink-0 scale-[0.25] items-center justify-center rounded-lg text-blue-500 opacity-0 transition-[opacity,scale] duration-200 [transition-timing-function:cubic-bezier(0.2,0,0,1)] group-hover/heading:scale-100 group-hover/heading:opacity-100 focus-visible:scale-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-blue-500 dark:text-blue-400"
   >
     <HugeiconsIcon
       icon={Link02Icon}
@@ -353,13 +356,8 @@ const DocsHeadingAnchor = ({
 
 function DocsTable({ children, ...props }: ComponentProps<"table">) {
   return (
-    <div className="my-2 overflow-x-auto rounded-xl border">
-      <table
-        {...props}
-        className="w-full min-w-xl border-collapse text-left text-sm"
-      >
-        {children}
-      </table>
+    <div className="typeset-scroll">
+      <table {...props}>{children}</table>
     </div>
   )
 }
@@ -371,13 +369,7 @@ const DocsLink = ({
   ...props
 }: ComponentProps<"a">) =>
   href?.startsWith("/") ? (
-    <Link
-      to={href}
-      className={cn(
-        "underline decoration-foreground/30 underline-offset-4 transition-colors hover:decoration-foreground",
-        className
-      )}
-    >
+    <Link to={href} className={className}>
       {children}
     </Link>
   ) : (
@@ -386,10 +378,7 @@ const DocsLink = ({
       href={href}
       target={href?.startsWith("http") ? "_blank" : undefined}
       rel={href?.startsWith("http") ? "noreferrer" : undefined}
-      className={cn(
-        "inline-flex items-center gap-1 underline decoration-foreground/30 underline-offset-4 transition-colors hover:decoration-foreground",
-        className
-      )}
+      className={cn("inline-flex items-center gap-1", className)}
     >
       <span>{children}</span>
       {href?.startsWith("http") && (
@@ -408,7 +397,6 @@ export const docsComponents: MDXComponents = {
   DocSection,
   CodeBlock,
   DocsNote,
-  p: (props) => <p {...props} className="leading-7 text-pretty" />,
   h2: ({ children, id, ...props }) => {
     const headingId = id ?? createHeadingId(children)
 
@@ -416,7 +404,7 @@ export const docsComponents: MDXComponents = {
       <h2
         id={headingId}
         {...props}
-        className="group/heading flex scroll-mt-28 items-center gap-1 text-3xl font-normal tracking-tight text-balance"
+        className="group/heading flex items-center gap-1"
       >
         <span>{children}</span>
         <DocsHeadingAnchor
@@ -433,7 +421,7 @@ export const docsComponents: MDXComponents = {
       <h3
         id={headingId}
         {...props}
-        className="group/heading flex scroll-mt-28 items-center gap-1 pt-5 text-xl font-normal tracking-tight text-balance"
+        className="group/heading flex items-center gap-1"
       >
         <span>{children}</span>
         <DocsHeadingAnchor
@@ -443,15 +431,6 @@ export const docsComponents: MDXComponents = {
       </h3>
     )
   },
-  ul: (props) => (
-    <ul {...props} className="flex list-disc flex-col gap-2 pl-5 leading-7" />
-  ),
-  ol: (props) => (
-    <ol
-      {...props}
-      className="flex list-decimal flex-col gap-3 pl-5 leading-7"
-    />
-  ),
   a: DocsLink,
   pre: ({ className, ...props }) => (
     <pre
@@ -463,7 +442,4 @@ export const docsComponents: MDXComponents = {
     />
   ),
   table: DocsTable,
-  thead: (props) => <thead {...props} className="bg-muted/40" />,
-  th: (props) => <th {...props} className="border-b px-4 py-3 font-medium" />,
-  td: (props) => <td {...props} className="border-b px-4 py-3 align-top" />,
 }
