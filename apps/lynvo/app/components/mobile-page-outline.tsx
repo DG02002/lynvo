@@ -50,16 +50,28 @@ export function MobilePageOutline({
       return
     }
 
-    const discoveredHeadings = Array.from(
-      target.querySelectorAll<HTMLElement>("h2[id], h3[id]")
-    ).map((heading) => ({
-      id: heading.id,
-      label: heading.textContent?.trim() ?? heading.id,
-      level: heading.tagName === "H3" ? (3 as const) : undefined,
-    }))
+    const discoverHeadings = () => {
+      const discoveredHeadings = Array.from(
+        target.querySelectorAll<HTMLElement>("h2[id], h3[id]")
+      ).map((heading) => ({
+        id: heading.id,
+        label: heading.textContent?.trim() ?? heading.id,
+        level: heading.tagName === "H3" ? (3 as const) : undefined,
+      }))
 
-    setHeadings(discoveredHeadings)
-    setActiveHeadingId(discoveredHeadings[0]?.id ?? "")
+      setHeadings(discoveredHeadings)
+      setActiveHeadingId((currentId) =>
+        discoveredHeadings.some((heading) => heading.id === currentId)
+          ? currentId
+          : (discoveredHeadings[0]?.id ?? "")
+      )
+    }
+
+    discoverHeadings()
+    const observer = new MutationObserver(discoverHeadings)
+    observer.observe(target, { childList: true, subtree: true })
+
+    return () => observer.disconnect()
   }, [providedHeadings, targetId])
 
   useEffect(() => {

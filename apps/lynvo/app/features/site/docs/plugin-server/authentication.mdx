@@ -7,7 +7,17 @@ contentType: Tutorial
 
 <DocSection id="authentication">
 
-The generated starter already validates the `Authorization: Bearer` header through the shared protocol runtime. You only need to provide the local and production API keys.
+The generated starter validates the `Authorization: Bearer` header through the shared protocol runtime. Create a random 32-byte key:
+
+<CodeBlock label="Terminal">
+
+```sh
+openssl rand -base64 32
+```
+
+</CodeBlock>
+
+Copy the generated value. Use the same value in Lynvo and in your Plugin Server environment.
 
 Create the local secret file and set its value:
 

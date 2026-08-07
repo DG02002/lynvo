@@ -5,18 +5,155 @@ navLabel: Plugin Server
 contentType: Landing
 ---
 
+import WhatIsAPluginServer from "./what-is-a-plugin-server.mdx"
+import WhatIsAPlugin from "./what-is-a-plugin.mdx"
+import Prerequisites from "./prerequisites.mdx"
+import CreatePluginServer from "./create-plugin-server.mdx"
+import AgentPrompt from "./agent-prompt.mdx"
+import ProtocolOverview from "./protocol-overview.mdx"
+import Authentication from "./authentication.mdx"
+import Manifest from "./manifest.mdx"
+import Plugins from "./plugins.mdx"
+import HonoRoutes from "./hono-routes.mdx"
+import ExtractionRequests from "./extraction-requests.mdx"
+import MediaNodes from "./media-nodes.mdx"
+import SuccessResponses from "./success-responses.mdx"
+import UsageLimits from "./usage-limits.mdx"
+import Errors from "./errors.mdx"
+import Testing from "./testing.mdx"
+import Deployment from "./deployment.mdx"
+import Connect from "./connect.mdx"
+
 <DocSection id="quickstart">
 
-Create a Cloudflare Worker from the published starter, replace its example Plugin, and connect the deployed server to Lynvo. Follow these guides in order:
+Create a Cloudflare Worker from the published starter, replace its example Plugin, and connect the deployed server to Lynvo. This guide covers the complete process from the core concepts through deployment.
 
-1. [Understand Plugin Servers](/docs/plugin-server/what-is-a-plugin-server)
-2. [Understand Plugins](/docs/plugin-server/what-is-a-plugin)
-3. [Prepare your development environment](/docs/plugin-server/prerequisites)
-4. [Generate your Plugin Server](/docs/plugin-server/create-plugin-server)
-5. [Configure bearer authentication](/docs/plugin-server/authentication)
-6. [Add a Plugin](/docs/plugin-server/plugins)
-7. [Test the protocol contract](/docs/plugin-server/testing)
-8. [Deploy the Plugin Server](/docs/plugin-server/deployment)
-9. [Connect the Plugin Server to Lynvo](/docs/plugin-server/connect)
+</DocSection>
+
+<DocSection id="custom-plugin-server-concepts">
+
+## What is a Custom Plugin Server?
+
+A Custom Plugin Server is your deployed service between Lynvo and the Sources you support. It authenticates Lynvo, runs your Plugins, enforces usage limits, and returns Media Nodes that Lynvo can display or play.
+
+<WhatIsAPluginServer components={props.components} />
+
+### What is a Plugin?
+
+<WhatIsAPlugin components={props.components} />
+
+</DocSection>
+
+<DocSection id="agent-assisted-creation">
+
+## Create a Plugin Server with an agent
+
+Use the published starter for the protocol shell, then ask a coding agent to replace the example Source integration. This path keeps authentication, routing, and validation in the generated runtime.
+
+<AgentPrompt components={props.components} />
+
+</DocSection>
+
+<DocSection id="manual-creation">
+
+## Create a Plugin Server manually
+
+Follow the manual path when you want to understand or control each part of the implementation.
+
+### Prepare your development environment
+
+<Prerequisites components={props.components} />
+
+### Generate the project
+
+<CreatePluginServer components={props.components} />
+
+### Understand protocol version 1.0
+
+<ProtocolOverview components={props.components} />
+
+### Configure the manifest
+
+<Manifest components={props.components} />
+
+### Wire the shared routes
+
+<HonoRoutes components={props.components} />
+
+</DocSection>
+
+<DocSection id="plugin-media-nodes">
+
+## Build a Plugin and return Media Nodes
+
+A Plugin recognizes one Source and converts its data into 4 product-level node types: direct media, container, folder, and lazy folder.
+
+### Add a Source Plugin
+
+<Plugins components={props.components} />
+
+</DocSection>
+
+<DocSection id="media-node-types">
+
+## Choose among the 4 node types
+
+<MediaNodes components={props.components} />
+
+</DocSection>
+
+<DocSection id="security-and-usage">
+
+## Configure security and usage limits
+
+Create one secret API key for Lynvo, then define the finite usage limits enforced by your server.
+
+### Create the Plugin Server API key
+
+<Authentication components={props.components} />
+
+### Define and enforce usage limits
+
+<UsageLimits components={props.components} />
+
+</DocSection>
+
+<DocSection id="protocol-requests-and-responses">
+
+## Handle protocol requests and responses
+
+Validate every extraction request and return either normalized Media Nodes or a structured error.
+
+### Validate Extraction requests
+
+<ExtractionRequests components={props.components} />
+
+### Return successful responses
+
+<SuccessResponses components={props.components} />
+
+### Return structured errors
+
+<Errors components={props.components} />
+
+</DocSection>
+
+<DocSection id="test-deploy-and-connect">
+
+## Test, deploy, and connect
+
+Run the contract checks locally before deploying the Worker and adding it to Lynvo.
+
+### Test the protocol contract
+
+<Testing components={props.components} />
+
+### Deploy the Plugin Server
+
+<Deployment components={props.components} />
+
+### Connect the Plugin Server to Lynvo
+
+<Connect components={props.components} />
 
 </DocSection>

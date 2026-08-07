@@ -29,9 +29,6 @@ export const DocsLanding = () => (
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
           Lynvo documentation
         </h1>
-        <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
-          Set up Lynvo on Android TV or create a Custom Plugin Server.
-        </p>
       </header>
 
       <section

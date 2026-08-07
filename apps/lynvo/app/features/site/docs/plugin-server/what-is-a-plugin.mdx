@@ -7,8 +7,6 @@ contentType: Conceptual
 
 <DocSection id="what-is-a-plugin">
 
-## A Plugin adds support for one Source
-
 A Plugin is the Source-specific code inside a Plugin Server. It recognizes URLs from one website or service, fetches the Source data, and converts that data into Lynvo Media Nodes.
 
 For example, a Plugin may support a self-hosted file index. The Plugin matches that index’s domain, handles its authentication rules, reads its folders and files, and returns playable or lazy Media Nodes. The Plugin Server handles the shared protocol around that work.
@@ -24,7 +22,7 @@ A Plugin should own:
 
 A Plugin should not implement bearer authentication, protocol routes, global usage enforcement, or Lynvo interface behavior. Keep those concerns in the Plugin Server shell so every Plugin follows the same contract.
 
-Register every user-visible Plugin under `extensions.lynvo.plugins`. Lynvo reads this catalog to show the Plugin in Settings and route supported URLs to the Plugin Server.
+Register every user-visible Plugin under `extensions.lynvo.plugins`. Lynvo reads this catalog to show the Plugin in [Settings](/settings/plugins) and route supported URLs to the Plugin Server.
 
 ### How Plugin Servers and Plugins fit together
 

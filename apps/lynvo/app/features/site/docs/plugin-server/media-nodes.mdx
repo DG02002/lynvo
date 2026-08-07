@@ -7,18 +7,18 @@ contentType: Reference
 
 <DocSection id="node-schema">
 
-Plugin Server Protocol version `1.0` has three Media Node kinds. Lynvo maps product items to them as follows:
+Plugins return 4 product-level node types. Protocol version `1.0` represents them with 3 `kind` values:
 
 | Product item           | Protocol kind | Required fields                         |
 | ---------------------- | ------------- | --------------------------------------- |
-| Playable item          | `playable`    | `label`, `url`                          |
+| Direct media           | `playable`    | `label`, `url`                          |
 | Display-only container | `group`       | `label`, `children`                     |
 | Selectable folder      | `group`       | `label`, `selectable: true`, `children` |
 | Lazy folder            | `resolvable`  | `label`, `nodeUrl`                      |
 
-### Return a playable item
+### Return direct media
 
-Use `playable` only when the URL can go directly to a media player.
+Use `playable` when the URL points directly to a video or audio file. Lynvo can send this URL to the selected media player without another extraction request.
 
 <CodeBlock label="Playable node">
 
@@ -41,7 +41,7 @@ const playableItem = {
 
 ### Return a display-only container
 
-Use a non-selectable group to organize child nodes.
+Use a non-selectable `group` to label and organize child nodes. A container cannot be selected as a playable item or folder.
 
 <CodeBlock label="Container node">
 
@@ -59,7 +59,7 @@ const seasonContainer = {
 
 ### Return a selectable folder
 
-Set `selectable` to `true` when Lynvo may select the group as a folder target.
+Set `selectable` to `true` when the group represents a complete folder. The folder includes its children in the current response.
 
 <CodeBlock label="Folder node">
 
@@ -77,7 +77,7 @@ const selectableFolder = {
 
 ### Return a lazy folder
 
-Use `resolvable` when the Plugin Server should load the folder after it is opened.
+Use `resolvable` when loading the folder requires another request. Lynvo sends `nodeUrl` back to the same Plugin Server when someone opens the folder.
 
 <CodeBlock label="Lazy folder node">
 

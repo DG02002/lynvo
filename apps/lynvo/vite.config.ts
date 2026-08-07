@@ -9,7 +9,7 @@ import remarkFrontmatter from "remark-frontmatter"
 import remarkMdxFrontmatter from "remark-mdx-frontmatter"
 import { createHighlighterCore } from "shiki/core"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
-import { defineConfig, type ViteDevServer } from "vite"
+import { defineConfig, type Plugin, type ViteDevServer } from "vite"
 import { exec, execFileSync } from "node:child_process"
 import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
@@ -30,7 +30,7 @@ const docsHighlighter = await createHighlighterCore({
   engine: createJavaScriptRegexEngine(),
 })
 
-const docsRaw = () => ({
+const docsRaw = (): Plugin => ({
   name: "docs-raw",
   enforce: "pre" as const,
   resolveId(source: string, importer: string | undefined) {
@@ -55,6 +55,7 @@ const docsRaw = () => ({
   async load(id: string) {
     if (id.startsWith("\0docs-last-modified:")) {
       const filePath = id.slice("\0docs-last-modified:".length)
+      this.addWatchFile(filePath)
       let lastModified = ""
 
       try {
@@ -81,7 +82,9 @@ const docsRaw = () => ({
       return
     }
 
-    const content = await readFile(id.slice("\0docs-raw:".length), "utf8")
+    const filePath = id.slice("\0docs-raw:".length)
+    this.addWatchFile(filePath)
+    const content = await readFile(filePath, "utf8")
     return `export default ${JSON.stringify(content)}`
   },
 })

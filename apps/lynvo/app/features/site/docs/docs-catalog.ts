@@ -2,6 +2,10 @@ import { lazy } from "react"
 
 import pluginServerMeta from "./plugin-server/meta.json"
 import rootMeta from "./meta.json"
+import {
+  assembleDocumentationMarkdown,
+  extractDocumentationSection,
+} from "./docs-markdown"
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
 const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(
@@ -231,5 +235,133 @@ for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
 
 export const docsCatalog = {
   resolve: getContext,
-  getMarkdown: (slug: string) => pagesBySlug.get(slug)?.rawContent,
+  getMarkdown: (slug: string) => {
+    const page = pagesBySlug.get(slug)
+    if (!page) {
+      return
+    }
+    if (slug !== "plugin-server") {
+      return page.rawContent
+    }
+
+    return assembleDocumentationMarkdown({
+      title: page.title,
+      description: page.description,
+      introduction: extractDocumentationSection(page.rawContent, "quickstart"),
+      sections: [
+        {
+          title: "What is a Custom Plugin Server?",
+          content: pagesByFileName.get("what-is-a-plugin-server")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "What is a Plugin?",
+          content: pagesByFileName.get("what-is-a-plugin")!.rawContent,
+        },
+        {
+          title: "Create a Plugin Server with an agent",
+          content: pagesByFileName.get("agent-prompt")!.rawContent,
+        },
+        {
+          title: "Create a Plugin Server manually",
+          content:
+            "Follow the manual path when you want to understand or control each part of the implementation.",
+        },
+        {
+          level: 3,
+          title: "Prepare your development environment",
+          content: pagesByFileName.get("prerequisites")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Generate the project",
+          content: pagesByFileName.get("create-plugin-server")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Understand protocol version 1.0",
+          content: pagesByFileName.get("protocol-overview")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Configure the manifest",
+          content: pagesByFileName.get("manifest")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Wire the shared routes",
+          content: pagesByFileName.get("hono-routes")!.rawContent,
+        },
+        {
+          title: "Build a Plugin and return Media Nodes",
+          content:
+            "A Plugin recognizes one Source and converts its data into 4 product-level node types: direct media, container, folder, and lazy folder.",
+        },
+        {
+          level: 3,
+          title: "Add a Source Plugin",
+          content: pagesByFileName.get("plugins")!.rawContent,
+        },
+        {
+          title: "Choose among the 4 node types",
+          content: pagesByFileName.get("media-nodes")!.rawContent,
+        },
+        {
+          title: "Configure security and usage limits",
+          content:
+            "Create one secret API key for Lynvo, then define the finite usage limits enforced by your server.",
+        },
+        {
+          level: 3,
+          title: "Create the Plugin Server API key",
+          content: pagesByFileName.get("authentication")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Define and enforce usage limits",
+          content: pagesByFileName.get("usage-limits")!.rawContent,
+        },
+        {
+          title: "Handle protocol requests and responses",
+          content:
+            "Validate every extraction request and return either normalized Media Nodes or a structured error.",
+        },
+        {
+          level: 3,
+          title: "Validate Extraction requests",
+          content: pagesByFileName.get("extraction-requests")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Return successful responses",
+          content: pagesByFileName.get("success-responses")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Return structured errors",
+          content: pagesByFileName.get("errors")!.rawContent,
+        },
+        {
+          title: "Test, deploy, and connect",
+          content:
+            "Run the contract checks locally before deploying the Worker and adding it to Lynvo.",
+        },
+        {
+          level: 3,
+          title: "Test the protocol contract",
+          content: pagesByFileName.get("testing")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Deploy the Plugin Server",
+          content: pagesByFileName.get("deployment")!.rawContent,
+        },
+        {
+          level: 3,
+          title: "Connect the Plugin Server to Lynvo",
+          content: pagesByFileName.get("connect")!.rawContent,
+        },
+      ],
+    })
+  },
 }
