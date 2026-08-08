@@ -39,13 +39,10 @@ export class NotFoundError extends Schema.TaggedError<NotFoundError>()(
   }
 ) {}
 
-export class CsrfError extends Schema.TaggedError<CsrfError>()(
-  "CsrfError",
-  {
-    message: Schema.String,
-    cause: Schema.optional(Schema.Unknown),
-  }
-) {}
+export class CsrfError extends Schema.TaggedError<CsrfError>()("CsrfError", {
+  message: Schema.String,
+  cause: Schema.optional(Schema.Unknown),
+}) {}
 
 export class PluginServerRegistrationError extends Schema.TaggedError<PluginServerRegistrationError>()(
   "PluginServerRegistrationError",

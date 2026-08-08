@@ -283,7 +283,7 @@ implementation or verification.
 11. Smoke-test account creation, login, device login, extraction, logs, and counters.
 
 ```sh
-pnpm --filter @lynvo/lynvo-plugin-server deploy
+pnpm --filter @lynvo/lynvo-plugin-server run deploy
 pnpm --filter @lynvo/app exec convex deploy
 cd apps/lynvo
 pnpx @convex-dev/auth --prod
