@@ -478,6 +478,141 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.1);
 }
 
+.player-edge-carousel {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  overflow: hidden;
+  padding-block: clamp(3rem, 6vw, 6rem);
+  background: color-mix(in oklab, var(--muted) 42%, var(--background));
+}
+
+.player-edge-carousel::before {
+  position: absolute;
+  z-index: -1;
+  inset: -3rem;
+  background: color-mix(in oklab, var(--background) 76%, transparent);
+  backdrop-filter: blur(40px) saturate(72%);
+  content: "";
+}
+
+.player-edge-carousel__motion {
+  --player-carousel-card-width: min(72vw, 70rem);
+  --player-carousel-gap: clamp(2.5rem, 5vw, 7rem);
+  width: max-content;
+  animation: player-carousel-scroll 36s linear infinite;
+  animation-play-state: paused;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  will-change: transform;
+}
+
+.player-edge-carousel__motion:active {
+  cursor: grabbing;
+}
+
+.player-edge-carousel__track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: var(--player-carousel-gap);
+  padding-left: calc((100vw - var(--player-carousel-card-width)) / 2);
+}
+
+.player-edge-carousel__motion[data-ready] {
+  animation-play-state: running;
+}
+
+.player-edge-carousel:hover .player-edge-carousel__motion,
+.player-edge-carousel:focus-within .player-edge-carousel__motion {
+  animation-play-state: paused;
+}
+
+.player-edge-carousel__item {
+  width: min(78vw, 76rem);
+  flex: 0 0 var(--player-carousel-card-width);
+}
+
+.player-edge-carousel__card {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: #111113;
+  color: white;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px oklch(1 0 0 / 0.1),
+    0 28px 60px -36px rgba(0, 0, 0, 0.7);
+}
+
+.player-edge-carousel__preview {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--muted);
+}
+
+.player-edge-carousel__placeholder {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+.player-edge-carousel__footer {
+  display: flex;
+  min-height: 3.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.1);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (max-width: 40rem) {
+  .player-edge-carousel__motion {
+    --player-carousel-card-width: 88vw;
+    --player-carousel-gap: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-edge-carousel__motion {
+    animation: none;
+  }
+}
+
+@keyframes player-carousel-scroll {
+  from {
+    transform: translateX(
+      calc(
+        -4 * (var(--player-carousel-card-width) + var(--player-carousel-gap))
+      )
+    );
+  }
+
+  to {
+    transform: translateX(
+      calc(
+        -8 * (var(--player-carousel-card-width) + var(--player-carousel-gap))
+      )
+    );
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .player-edge-carousel::before {
+    background: var(--background);
+    backdrop-filter: none;
+  }
+}
+
 @media (max-width: 40rem) {
   .player-showcase {
     min-height: 39rem;

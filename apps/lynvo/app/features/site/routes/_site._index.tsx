@@ -4,6 +4,7 @@ import {
   AndroidScreensSection,
   ExtractionSection,
   PlayerSection,
+  PlayerSectionEdgeToEdge,
   PlanSection,
 } from "~/features/site/home/home-sections"
 
@@ -23,6 +24,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-col overflow-x-clip tabular-nums">
       <HomeHero />
       <PlayerSection />
+      <PlayerSectionEdgeToEdge />
       <PlanSection />
       <ExtractionSection />
       <AndroidScreensSection />

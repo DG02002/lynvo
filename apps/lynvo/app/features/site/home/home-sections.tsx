@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { SmartPhone01Icon, Tv01Icon } from "@hugeicons/core-free-icons"
 import { cn } from "~/lib/utils"
 import { PlayerCardSwap } from "./player-card-swap"
+import { PlayerEdgeCarousel } from "./player-edge-carousel"
 
 const SectionIntro = ({
   title,
@@ -28,7 +29,7 @@ const SectionIntro = ({
 )
 
 export const PlayerSection = () => (
-  <section className="overflow-hidden py-24 md:py-32">
+  <section className="hidden overflow-hidden py-24 md:py-32 lg:block">
     <div className="player-showcase">
       <div className="player-showcase__copy">
         <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
@@ -43,6 +44,24 @@ export const PlayerSection = () => (
       <div className="player-showcase__visual">
         <PlayerCardSwap />
       </div>
+    </div>
+  </section>
+)
+
+export const PlayerSectionEdgeToEdge = () => (
+  <section className="overflow-hidden py-24 md:py-32 lg:hidden">
+    <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center md:px-8">
+      <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
+        Open links in one of four Android players.
+      </h2>
+      <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground sm:text-xl">
+        Lynvo sends each link to the external Android player you choose. Use
+        Just (Video) Player, VLC for Android, MPV, or MX Player.
+      </p>
+    </div>
+
+    <div className="mt-16 md:mt-24">
+      <PlayerEdgeCarousel />
     </div>
   </section>
 )
@@ -91,7 +110,7 @@ export const AndroidScreensSection = () => (
           <div className="flex flex-col">
             <span className="text-lg text-foreground">Android TV</span>
             <span className="text-sm text-muted-foreground">
-              Navigate with a TV remote
+              Navigate with the TV Bro browser
             </span>
           </div>
         </div>
@@ -122,7 +141,7 @@ export const PlanSection = () => {
       </div>
 
       <div className="relative z-10 flex w-full flex-col items-center gap-16 px-6 text-center md:px-8 lg:px-10 xl:px-14">
-        <h2 className="text-balance text-6xl font-normal tracking-[-0.04em] text-foreground md:text-8xl">
+        <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-6xl lg:text-8xl">
           The Free plan is available now.
         </h2>
 
