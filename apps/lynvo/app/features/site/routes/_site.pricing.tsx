@@ -1,8 +1,4 @@
-import {
-  ArrowUpRight01Icon,
-  Link01Icon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons"
+import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ComponentProps } from "react"
 import { Link } from "react-router"
@@ -27,6 +23,7 @@ import {
 } from "~/components/ui/table"
 import { PricingFaq } from "~/features/site/pricing/pricing-faq"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
+import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { cn } from "~/lib/utils"
 
 const freePlanFeatures = [
@@ -43,8 +40,6 @@ const planCardClassName = "self-start rounded-lg"
 const planCardHeaderClassName = "gap-3"
 const planCardTitleClassName = "text-4xl font-normal tracking-tight"
 const planCardDescriptionClassName = "text-sm text-foreground"
-const planCardBodyTextClassName =
-  "max-w-md text-sm leading-6 text-muted-foreground"
 
 interface PlanDetail {
   feature: string
@@ -75,7 +70,7 @@ const planDetailSections = [
       {
         feature: "Direct Media links",
         allowance: "Included",
-        icon: { hugeIcon: Link01Icon },
+        icon: DIRECT_MEDIA_ICON,
       },
       {
         feature: "Bhadoo’s Google Drive Index",
@@ -191,16 +186,11 @@ export default function Pricing() {
           <CardHeader className={planCardHeaderClassName}>
             <CardTitle className={planCardTitleClassName}>More plans</CardTitle>
             <CardDescription className={planCardDescriptionClassName}>
-              Not available yet.
+              Coming soon.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4">
-            <p className={planCardBodyTextClassName}>
-              Plans with higher limits may be added as Lynvo grows.
-            </p>
-          </CardContent>
           <CardFooter className="sr-only">
-            Additional plans are not available.
+            Additional plans are coming soon.
           </CardFooter>
         </Card>
       </section>

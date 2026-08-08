@@ -1,6 +1,6 @@
 import type { CheerioAPI } from "cheerio"
 import type { ExtractedLink } from "~/features/links/types"
-import type { PluginIconSource } from "~/lib/plugin-icons"
+import { DIRECT_MEDIA_ICON, type PluginIconSource } from "~/lib/plugin-icons"
 import {
   DIRECT_LINK_EXTRACT_TIMEOUT_MS,
   DIRECT_LINK_FETCH_TIMEOUT_MS,
@@ -69,7 +69,7 @@ export interface DirectMediaAdapter {
 export const directMediaAdapter: DirectMediaAdapter = {
   id: "direct-link",
   name: "Direct Media",
-  icon: {},
+  icon: DIRECT_MEDIA_ICON,
   canHandle: (_url: string) => {
     return true
   },

@@ -3,7 +3,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight02Icon,
   AlertCircleIcon,
-  Link01Icon,
   Route01Icon,
 } from "@hugeicons/core-free-icons"
 
@@ -17,6 +16,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { cn } from "~/lib/utils"
+import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useClipboardUrl } from "./use-clipboard-url"
 import { ClipboardPermissionDialog } from "./ClipboardPermissionDialog"
 import { ClipboardAccessIcon } from "./ClipboardAccessIcon"
@@ -224,7 +224,7 @@ export function LinkInputSection({
             <PluginIcon
               icon={
                 extractionPreview.meta.pluginId === "direct-link"
-                  ? { hugeIcon: Link01Icon }
+                  ? DIRECT_MEDIA_ICON
                   : undefined
               }
               iconUrl={

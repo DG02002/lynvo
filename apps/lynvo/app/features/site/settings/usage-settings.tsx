@@ -1,9 +1,9 @@
-import { Link01Icon } from "@hugeicons/core-free-icons"
 import { useQuery } from "@tanstack/react-query"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
+import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import {
@@ -148,9 +148,7 @@ export const UsageSettings = ({
                 {...item}
                 key={item.key}
                 icon={
-                  item.iconKind === "direct"
-                    ? { hugeIcon: Link01Icon }
-                    : item.icon
+                  item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon
                 }
                 hideIcon={item.iconKind === "hidden"}
                 fallback="source"

@@ -25,11 +25,11 @@ export interface ChangelogEntry {
   date: string
   dateTime: string
   title: string
-  category: "Product" | "Plugin Server" | "Platform"
+  category: "Product" | "Plugin Server"
   description: string
 }
 
-type ChangelogType = "general" | "plugin-server" | "platform"
+type ChangelogType = "general" | "plugin-server"
 type ChangelogTab = ChangelogType | "all"
 type SortOrder = "newest" | "oldest"
 
@@ -38,11 +38,11 @@ const ENTRY_BATCH_SIZE = 5
 
 const changelogEntries: ChangelogEntry[] = [
   {
-    type: "platform",
+    type: "general",
     date: "Jul 22, 2026",
     dateTime: "2026-07-22",
-    title: "Platform foundation",
-    category: "Platform",
+    title: "More reliable link management",
+    category: "Product",
     description:
       "Improved reliability when saving, deleting, and synchronizing links, including accounts with larger libraries.",
   },
@@ -66,11 +66,7 @@ const changelogEntries: ChangelogEntry[] = [
   },
 ]
 
-const changelogTypes = new Set<ChangelogType>([
-  "general",
-  "plugin-server",
-  "platform",
-])
+const changelogTypes = new Set<ChangelogType>(["general", "plugin-server"])
 
 const getSelectedTab = (value: string | null): ChangelogTab =>
   value && changelogTypes.has(value as ChangelogType)
@@ -214,7 +210,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "The latest Lynvo product updates, Plugin Server Protocol improvements, and platform changes.",
+        "The latest Lynvo product updates and Plugin Server Protocol improvements.",
     },
   ]
 }
@@ -269,12 +265,6 @@ export default function Changelog() {
               className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
             >
               Plugin Server
-            </TabsTrigger>
-            <TabsTrigger
-              value="platform"
-              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
-            >
-              Platform
             </TabsTrigger>
           </TabsList>
 

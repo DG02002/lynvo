@@ -38,6 +38,13 @@ describe("marketing and pricing copy", () => {
     expect(
       screen.getByText("200, shared across Lynvo Plugins and Direct Media")
     ).toBeVisible()
+    expect(screen.getByText("Coming soon.")).toBeVisible()
+    expect(screen.queryByText("Not available yet.")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "Plans with higher limits may be added as Lynvo grows."
+      )
+    ).not.toBeInTheDocument()
     expect(screen.getByText("Plugins and Remote Play")).toBeVisible()
     expect(
       screen.queryByText("Plugins and Android devices")

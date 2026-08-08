@@ -15,7 +15,7 @@ describe("help center copy", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: /Message on Telegram/ })
-    ).toHaveAttribute("href", "https://t.me/lynvo_support")
+    ).toHaveAttribute("href", "https://t.me/lynvo_support?direct")
     expect(
       screen.getByRole("link", { name: /Open a GitHub issue/ })
     ).toHaveAttribute("href", "https://github.com/DG02002/lynvo/issues")

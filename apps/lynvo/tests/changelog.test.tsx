@@ -41,6 +41,9 @@ describe("Changelog", () => {
 
     const updates = screen.getByRole("region", { name: "Changelog updates" })
 
+    expect(
+      screen.queryByRole("tab", { name: "Platform" })
+    ).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("tab", { name: "Product" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
       "?type=general"
@@ -50,8 +53,8 @@ describe("Changelog", () => {
       within(updates).queryByText("Lynvo Plugin Server")
     ).not.toBeInTheDocument()
     expect(
-      within(updates).queryByText("Platform foundation")
-    ).not.toBeInTheDocument()
+      within(updates).getByText("More reliable link management")
+    ).toBeVisible()
 
     fireEvent.click(screen.getByRole("tab", { name: "Plugin Server" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
@@ -62,20 +65,13 @@ describe("Changelog", () => {
       within(updates).queryByText("Product launch")
     ).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("tab", { name: "Platform" }))
-    expect(screen.getByLabelText("Current location")).toHaveTextContent(
-      "?type=platform"
-    )
-    expect(within(updates).getByText("Platform foundation")).toBeVisible()
-    expect(
-      within(updates).queryByText("Lynvo Plugin Server")
-    ).not.toBeInTheDocument()
-
     fireEvent.click(screen.getByRole("tab", { name: "All updates" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(within(updates).getByText("Product launch")).toBeVisible()
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
-    expect(within(updates).getByText("Platform foundation")).toBeVisible()
+    expect(
+      within(updates).getByText("More reliable link management")
+    ).toBeVisible()
   })
 
   it("sorts visible updates by release date", () => {
@@ -89,7 +85,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 3 })[0]
-    ).toHaveTextContent("Platform foundation")
+    ).toHaveTextContent("More reliable link management")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(
@@ -98,7 +94,9 @@ describe("Changelog", () => {
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 3 })
     expect(sortedHeadings[0]).toHaveTextContent("Lynvo Plugin Server")
-    expect(sortedHeadings.at(-1)).toHaveTextContent("Platform foundation")
+    expect(sortedHeadings.at(-1)).toHaveTextContent(
+      "More reliable link management"
+    )
   })
 
   it("expands long release descriptions", () => {
@@ -110,28 +108,28 @@ describe("Changelog", () => {
       .mockReturnValue(72)
 
     render(
-      <MemoryRouter initialEntries={["/changelog?type=platform"]}>
+      <MemoryRouter initialEntries={["/changelog?type=general"]}>
         <Changelog />
       </MemoryRouter>
     )
 
-    const platformEntry = screen
-      .getByRole("heading", { name: "Platform foundation" })
+    const reliableLinkEntry = screen
+      .getByRole("heading", { name: "More reliable link management" })
       .closest("article")
 
-    expect(platformEntry).not.toBeNull()
-    const description = within(platformEntry!).getByText(
+    expect(reliableLinkEntry).not.toBeNull()
+    const description = within(reliableLinkEntry!).getByText(
       /accounts with larger libraries\.$/
     )
     expect(description).toHaveClass("line-clamp-3")
 
     fireEvent.click(
-      within(platformEntry!).getByRole("button", { name: "Show more" })
+      within(reliableLinkEntry!).getByRole("button", { name: "Show more" })
     )
 
     expect(description).not.toHaveClass("line-clamp-3")
     expect(
-      within(platformEntry!).getByRole("button", { name: "Show less" })
+      within(reliableLinkEntry!).getByRole("button", { name: "Show less" })
     ).toHaveAttribute("aria-expanded", "true")
 
     scrollHeight.mockRestore()

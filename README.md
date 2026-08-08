@@ -29,7 +29,7 @@ Lynvo app and the packages that support it.
 - [Plugin Server documentation](apps/lynvo/app/features/site/docs/plugin-server/) — create a custom integration.
 - [Project terminology](CONTEXT.md) — shared names and concepts used by the project.
 - [Report an issue on GitHub](https://github.com/DG02002/lynvo/issues).
-- [Contact Lynvo on Telegram](https://t.me/lynvo_support).
+- [Contact Lynvo on Telegram](https://t.me/lynvo_support?direct).
 
 ## License
 

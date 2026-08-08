@@ -97,3 +97,10 @@ _Avoid_: scraping when referring to the complete Lynvo operation
 **Media Node**:
 A normalized playable item, folder, group, or unresolved item returned by a Plugin Server.
 _Avoid_: extracted link when referring to the protocol value
+
+**Product update**:
+A public change to Lynvo’s user-facing features or reliability. Improvements to saving, deleting, and synchronizing links belong here.
+_Avoid_: platform update for user-facing Lynvo changes
+
+**Plugin Server update**:
+A public change to a Lynvo Plugin Server or its integration contract.

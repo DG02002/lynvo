@@ -14,20 +14,20 @@ export const meta = (_: Route.MetaArgs) => [
 
 const About = () => (
   <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
-    <article className="mx-auto flex w-full max-w-2xl flex-col gap-10 font-normal">
+    <article className="mx-auto w-full max-w-2xl font-normal">
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Company</p>
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
           About
         </h1>
-        <p className="max-w-xl text-base leading-7 text-foreground text-pretty">
+      </header>
+
+      <div className="typeset typeset-article mt-10">
+        <p>
           Lynvo started with a simple playback problem and grew into an easier
           way to save a link on an Android phone or tablet and open it in a
           player on Android TV.
         </p>
-      </header>
-
-      <div className="typeset typeset-article flex flex-col gap-10">
         <section>
           <h2>Finding the right player</h2>
           <div>
