@@ -45,8 +45,8 @@ export function PolicyLayout({
         className="-mt-12 xl:hidden"
       />
 
-      <header className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 text-center">
-        <p className="mt-8 text-sm md:mt-0">Updated: {updatedAt}</p>
+      <header className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 pt-20 text-center md:pt-0">
+        <p className="text-sm">Updated: {updatedAt}</p>
         <div className="space-y-8">
           <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
             {title}
