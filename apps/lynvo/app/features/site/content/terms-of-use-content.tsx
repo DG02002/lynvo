@@ -7,49 +7,52 @@ import {
 import { policyPaths } from "~/lib/paths"
 
 export const TermsOfUseContent = () => (
-  <PolicyLayout title="Terms of use" updatedAt="August 1, 2026">
+  <PolicyLayout title="Terms of use" updatedAt="August 8, 2026">
     <p>
-      These terms govern your use of Lynvo&apos;s website, account, saved links,
-      Extraction tools, device synchronization, and Remote Play features. By
-      creating an account or using Lynvo, you agree to these terms.
+      These Terms of Use govern your use of Lynvo&apos;s website, account, saved
+      links, Extraction tools, device synchronization, and Remote Play features.
+      By creating an account or using Lynvo, you agree to these terms. If you
+      don&apos;t agree, don&apos;t create an account or use Lynvo.
     </p>
     <p>
       In these terms, <strong>Lynvo</strong> means the website and related
       hosted service. An <strong>account</strong> is the username-based record
-      used to access Lynvo; and a <strong>saved link</strong> is a saved URL and
-      its related metadata. A <strong>Plugin Server</strong> is a service that
-      processes supported URLs. A <strong>Plugin</strong> is the Source-specific
-      integration inside that service, and a <strong>Source</strong> is the
-      website, service, or URL pattern the Plugin supports. A{" "}
+      used to access Lynvo. A <strong>saved link</strong> is a saved URL and its
+      related metadata. A <strong>Plugin Server</strong> processes supported
+      URLs. A <strong>Plugin</strong> is a Source-specific integration inside a
+      Plugin Server, and a <strong>Source</strong> is the website, service, or
+      URL pattern that the Plugin supports. <strong>Extraction</strong> is the
+      process of resolving a supported URL into playable link information. A{" "}
       <strong>credential</strong> is a password, API key, or similar secret. A{" "}
       <strong>service provider</strong> is another organization that processes
       data or supplies infrastructure for Lynvo.
     </p>
 
-    <PolicySection title="1. What Lynvo does">
+    <PolicySection title="1. The Lynvo service">
       <p>
         Lynvo saves URLs and related metadata, resolves supported pages into
         playable links, synchronizes records across your sessions, and opens
         links in Just (Video) Player, VLC for Android, MPV, or MX Player on
         Android phones, Android tablets, and Android TV. Lynvo does not play
-        video; it is a link-management and player-handoff service. It isn&apos;t
-        a video catalog, media seller, or subscription to third-party content.
+        video. It is a link-management and player-handoff service, not a video
+        catalog, media seller, or subscription to third-party content.
       </p>
       <p>
         Lynvo doesn&apos;t control the websites, files, Plugins, Custom Plugin
-        Servers, or video players used with Lynvo. Their own terms apply.
+        Servers, or video players used with Lynvo. Their own terms apply to your
+        use of them.
       </p>
     </PolicySection>
 
-    <PolicySection title="2. Eligibility and your agreement">
+    <PolicySection title="2. Eligibility and authority">
       <p>
         You must be at least 13 years old and meet the minimum age for online
         consent where you live. If local law requires permission from a parent
         or guardian, you must have that permission before using Lynvo.
       </p>
       <p>
-        If you use Lynvo for an organization, you confirm that you can accept
-        these terms for that organization.
+        If you use Lynvo for an organization, you confirm that you have
+        authority to accept these terms for that organization.
       </p>
     </PolicySection>
 
@@ -95,7 +98,7 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="5. Account and storage limits">
+    <PolicySection title="5. Account and request limits">
       <p>
         Each account currently has a 3 MB storage limit for account records. A
         single saved link can use up to 1 MB, and an account can contain up to
@@ -114,13 +117,23 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="6. Your links and responsibilities">
+    <PolicySection title="6. Your links, content, and responsibilities">
       <p>
         You keep any rights you have in URLs, labels, and other information you
         submit. You give Lynvo permission to store, process, display, and send
         that data as needed to operate the features you request.
       </p>
-      <p>You must use Lynvo lawfully. In particular, don&apos;t:</p>
+      <p>
+        You must use Lynvo lawfully and follow the{" "}
+        <Link
+          to={policyPaths.usagePolicy}
+          viewTransition
+          className="font-normal underline underline-offset-4"
+        >
+          Usage policy
+        </Link>
+        . In particular, you may not:
+      </p>
       <ul className="list-disc pl-6">
         <li>Save, access, or play content you have no legal right to use</li>
         <li>Infringe copyright, privacy, or other rights</li>
@@ -145,7 +158,7 @@ export const TermsOfUseContent = () => (
     <PolicySection title="7. Plugins, Plugin Servers, Sources, and players">
       <p>
         You may configure Plugin Domains, Plugin Credentials, and Custom Plugin
-        Servers. Only connect a Plugin Server you trust. A configured Plugin
+        Servers. Connect only a Plugin Server you trust. A configured Plugin
         Server may receive the Source URL, its API key, and the request data
         needed to perform Extraction.
       </p>
@@ -158,7 +171,7 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="8. Privacy">
+    <PolicySection title="8. Privacy and related policies">
       <p>
         The{" "}
         <Link
@@ -166,10 +179,29 @@ export const TermsOfUseContent = () => (
           viewTransition
           className="font-normal underline underline-offset-4"
         >
-          Lynvo privacy policy
+          Privacy policy
         </Link>{" "}
-        explains what data Lynvo collects, where it goes, and when it is
-        deleted. The privacy policy forms part of these terms.
+        explains what data Lynvo collects, where it goes, and when Lynvo deletes
+        it. The Privacy policy forms part of these terms.
+      </p>
+      <p>
+        The{" "}
+        <Link
+          to={policyPaths.cookiePolicy}
+          viewTransition
+          className="font-normal underline underline-offset-4"
+        >
+          Cookie policy
+        </Link>{" "}
+        explains Lynvo&apos;s cookies and browser storage. The{" "}
+        <Link
+          to={policyPaths.usagePolicy}
+          viewTransition
+          className="font-normal underline underline-offset-4"
+        >
+          Usage policy
+        </Link>{" "}
+        explains restricted uses of Lynvo and connected Plugin Servers.
       </p>
     </PolicySection>
 
@@ -177,7 +209,7 @@ export const TermsOfUseContent = () => (
       <p>
         You can stop using Lynvo or delete your account in Settings. Account
         deletion is permanent and removes the account data described in the
-        privacy policy.
+        Privacy policy.
       </p>
       <p>
         Lynvo may limit, suspend, or terminate access if you violate these
@@ -190,8 +222,8 @@ export const TermsOfUseContent = () => (
     <PolicySection title="10. Changes and availability">
       <p>
         Lynvo is an evolving service. Features, supported Sources, the four
-        Android players, limits, and availability may change. Lynvo may
-        discontinue part or all of the hosted Lynvo service.
+        supported Android players, limits, and availability may change. Lynvo
+        may discontinue part or all of the hosted Lynvo service.
       </p>
       <p>
         Keep your own copy of any URL or information you can&apos;t afford to
@@ -200,7 +232,7 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="11. No warranties">
+    <PolicySection title="11. Disclaimer of warranties">
       <p>
         Lynvo is provided “as is” and “as available.” To the extent law permits,
         Lynvo disclaims implied warranties of merchantability, fitness for a
@@ -216,7 +248,7 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="12. Limits on liability">
+    <PolicySection title="12. Limitation of liability">
       <p>
         To the fullest extent law permits, Lynvo and its contributors won&apos;t
         be liable for indirect, incidental, special, consequential, exemplary,
@@ -252,7 +284,7 @@ export const TermsOfUseContent = () => (
 
     <PolicySection title="15. General terms">
       <p>
-        These terms and the privacy policy form the agreement between you and
+        These terms and the Privacy policy form the agreement between you and
         Lynvo. If a court finds one provision unenforceable, the remaining
         provisions continue to apply. A failure to enforce a provision
         isn&apos;t a waiver of it.

@@ -7,7 +7,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "Rules for using Lynvo, Lynvo Plugin Server Extraction, Custom Plugin Servers, credentials, storage, and request allowances.",
+        "Rules for links, content, Custom Plugin Servers, credentials, storage, and request allowances.",
     },
   ]
 }

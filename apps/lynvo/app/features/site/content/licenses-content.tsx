@@ -1,5 +1,7 @@
+import { Link } from "react-router"
 import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
 import { SupportChannelLinks } from "~/components/SupportChannelLinks"
+import { policyPaths } from "~/lib/paths"
 
 const LYNVO_SOURCE_URL = "https://github.com/DG02002/lynvo"
 const LYNVO_LICENSE_URL = "https://github.com/DG02002/lynvo/blob/main/LICENSE"
@@ -73,7 +75,21 @@ export const LicensesContent = () => (
       <p>
         A software license is separate from the terms for the hosted Lynvo
         service, account data, privacy practices, service availability, Lynvo
-        trademarks, and third-party services.
+        trademarks, and third-party services. See the{" "}
+        <Link
+          to={policyPaths.termsOfUse}
+          className="underline underline-offset-4"
+        >
+          Terms of use
+        </Link>{" "}
+        and{" "}
+        <Link
+          to={policyPaths.privacyPolicy}
+          className="underline underline-offset-4"
+        >
+          Privacy policy
+        </Link>{" "}
+        for those separate rules.
       </p>
       <p>
         AGPL-3.0 and the MIT License do not grant rights to access, extract,

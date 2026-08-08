@@ -6,7 +6,7 @@ export const meta = (_: Route.MetaArgs) => [
   {
     name: "description",
     content:
-      "How Lynvo uses cookies and similar browser storage for authentication, security, preferences, analytics, and marketing.",
+      "How Lynvo uses cookies and browser storage for login, security, appearance, player defaults, and connected devices.",
   },
 ]
 

@@ -68,4 +68,17 @@ describe("policy copy", () => {
     )
     expect(cookiePolicy).not.toContain("Accept all cookies")
   })
+
+  it("describes Cloudflare and Convex provider processing", () => {
+    const privacy = renderText(<PrivacyPolicyContent />)
+    const cookiePolicy = renderText(<CookiePolicyContent />)
+
+    expect(privacy).toContain("client IP address")
+    expect(privacy).toContain("TLS fingerprint")
+    expect(privacy).toContain("Convex Data Processing Addendum")
+    expect(privacy).toContain("processor or service provider")
+    expect(privacy).toContain("Standard Contractual Clauses")
+    expect(privacy).toContain("Europe (Ireland)")
+    expect(cookiePolicy).toContain("Turnstile Privacy Addendum")
+  })
 })

@@ -7,7 +7,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "How Lynvo handles account data, saved links, sessions, Plugins, retention, and account deletion.",
+        "How Lynvo collects, uses, shares, and deletes account data, saved links, sessions, and Plugin information.",
     },
   ]
 }
