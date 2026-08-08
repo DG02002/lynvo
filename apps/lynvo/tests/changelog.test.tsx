@@ -74,7 +74,7 @@ describe("Changelog", () => {
     ).toBeVisible()
   })
 
-  it("sorts visible updates by release date", () => {
+  it("keeps same-day updates in release order", () => {
     render(
       <MemoryRouter initialEntries={["/changelog"]}>
         <Changelog />
@@ -93,10 +93,8 @@ describe("Changelog", () => {
     )
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 3 })
-    expect(sortedHeadings[0]).toHaveTextContent("Lynvo Plugin Server")
-    expect(sortedHeadings.at(-1)).toHaveTextContent(
-      "More reliable link management"
-    )
+    expect(sortedHeadings[0]).toHaveTextContent("More reliable link management")
+    expect(sortedHeadings.at(-1)).toHaveTextContent("Product launch")
   })
 
   it("expands long release descriptions", () => {

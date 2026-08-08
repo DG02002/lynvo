@@ -4,7 +4,7 @@ import { SupportChannelLinks } from "~/components/SupportChannelLinks"
 import { policyPaths } from "~/lib/paths"
 
 export const UsagePolicyContent = () => (
-  <PolicyLayout title="Usage policy" updatedAt="August 1, 2026">
+  <PolicyLayout title="Usage policy" updatedAt="August 8, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       Lynvo helps you save and resolve links, then open them in external Android
       players through the Lynvo Plugin Server and Custom Plugin Servers. This

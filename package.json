@@ -21,5 +21,12 @@
     "tsx": "^4.23.11",
     "typescript": "catalog:"
   },
-  "packageManager": "pnpm@10.26.1"
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.7.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@11.20.0"
 }

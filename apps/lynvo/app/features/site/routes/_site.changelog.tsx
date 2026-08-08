@@ -39,8 +39,8 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
-    date: "Jul 22, 2026",
-    dateTime: "2026-07-22",
+    date: "Aug 8, 2026",
+    dateTime: "2026-08-08",
     title: "More reliable link management",
     category: "Product",
     description:
@@ -48,8 +48,8 @@ const changelogEntries: ChangelogEntry[] = [
   },
   {
     type: "plugin-server",
-    date: "Jul 19, 2026",
-    dateTime: "2026-07-19",
+    date: "Aug 8, 2026",
+    dateTime: "2026-08-08",
     title: "Lynvo Plugin Server",
     category: "Plugin Server",
     description:
@@ -57,8 +57,8 @@ const changelogEntries: ChangelogEntry[] = [
   },
   {
     type: "general",
-    date: "Jul 19, 2026",
-    dateTime: "2026-07-19",
+    date: "Aug 8, 2026",
+    dateTime: "2026-08-08",
     title: "Product launch",
     category: "Product",
     description:

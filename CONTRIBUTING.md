@@ -15,7 +15,7 @@ workspace.
 
 ## Prerequisites
 
-Use Node.js 22.11 or newer and the pnpm version pinned in the root
+Use Node.js 26.7.0 or newer and the pnpm version pinned in the root
 `packageManager` field.
 
 Create the following accounts before setting up Lynvo:

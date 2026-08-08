@@ -28,7 +28,7 @@ const ExternalLink = ({
 )
 
 export const LicensesContent = () => (
-  <PolicyLayout title="Open-source licenses" updatedAt="August 1, 2026">
+  <PolicyLayout title="Open-source licenses" updatedAt="August 8, 2026">
     <p>
       Lynvo includes open-source software. This page identifies the licenses for
       the Lynvo core project and the independently licensed packages in the

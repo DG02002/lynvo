@@ -11,6 +11,16 @@ allowBuilds:
 
 blockExoticSubdeps: true
 
+minimumReleaseAgeExclude:
+  - '@asamuzakjp/css-color@6.0.7'
+  - '@cloudflare/vitest-pool-workers@0.20.3'
+  - '@cloudflare/workers-types@5.20260808.1'
+  - '@types/node@26.2.0'
+  - effect@4.0.0-beta.106
+  - nanoid@3.3.18
+  - tsx@4.23.11
+  - wrangler@4.120.0
+
 catalog:
   '@cloudflare/workers-types': ^5.20260808.1
   cheerio: ^1.2.0
