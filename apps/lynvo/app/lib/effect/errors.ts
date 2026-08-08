@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 
-export class ConvexError extends Schema.TaggedErrorClass<ConvexError>()(
+export class ConvexError extends Schema.TaggedError<ConvexError>()(
   "ConvexError",
   {
     message: Schema.String,
@@ -9,7 +9,7 @@ export class ConvexError extends Schema.TaggedErrorClass<ConvexError>()(
   }
 ) {}
 
-export class ExtractionError extends Schema.TaggedErrorClass<ExtractionError>()(
+export class ExtractionError extends Schema.TaggedError<ExtractionError>()(
   "ExtractionError",
   {
     message: Schema.String,
@@ -17,7 +17,7 @@ export class ExtractionError extends Schema.TaggedErrorClass<ExtractionError>()(
   }
 ) {}
 
-export class ValidationError extends Schema.TaggedErrorClass<ValidationError>()(
+export class ValidationError extends Schema.TaggedError<ValidationError>()(
   "ValidationError",
   {
     message: Schema.String,
@@ -25,21 +25,21 @@ export class ValidationError extends Schema.TaggedErrorClass<ValidationError>()(
   }
 ) {}
 
-export class UnauthorizedError extends Schema.TaggedErrorClass<UnauthorizedError>()(
+export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
   "UnauthorizedError",
   {
     message: Schema.String,
   }
 ) {}
 
-export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()(
+export class NotFoundError extends Schema.TaggedError<NotFoundError>()(
   "NotFoundError",
   {
     message: Schema.String,
   }
 ) {}
 
-export class CsrfError extends Schema.TaggedErrorClass<CsrfError>()(
+export class CsrfError extends Schema.TaggedError<CsrfError>()(
   "CsrfError",
   {
     message: Schema.String,
@@ -47,7 +47,7 @@ export class CsrfError extends Schema.TaggedErrorClass<CsrfError>()(
   }
 ) {}
 
-export class PluginServerRegistrationError extends Schema.TaggedErrorClass<PluginServerRegistrationError>()(
+export class PluginServerRegistrationError extends Schema.TaggedError<PluginServerRegistrationError>()(
   "PluginServerRegistrationError",
   {
     message: Schema.String,
@@ -55,7 +55,7 @@ export class PluginServerRegistrationError extends Schema.TaggedErrorClass<Plugi
   }
 ) {}
 
-export class CredentialVaultError extends Schema.TaggedErrorClass<CredentialVaultError>()(
+export class CredentialVaultError extends Schema.TaggedError<CredentialVaultError>()(
   "CredentialVaultError",
   {
     message: Schema.String,
