@@ -17,7 +17,7 @@ import { dirname, resolve } from "node:path"
 
 const docsHighlighter = await createHighlighterCore({
   themes: [
-    import("@shikijs/themes/github-light"),
+    import("@shikijs/themes/github-light-default"),
     import("@shikijs/themes/github-dark"),
   ],
   langs: [
@@ -129,7 +129,7 @@ export default defineConfig({
             docsHighlighter,
             {
               themes: {
-                light: "github-light",
+                light: "github-light-default",
                 dark: "github-dark",
               },
               transformers: [transformerMetaHighlight()],

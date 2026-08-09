@@ -6,6 +6,8 @@ import { createContentSecurityPolicy } from "~/lib/content-security-policy"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes))
+const NEXT_THEMES_BOOTSTRAP_HASH =
+  "gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA="
 
 const getThemeBootstrapHash = async () =>
   toBase64(
@@ -67,12 +69,10 @@ export default async function handleRequest(
   )
   responseHeaders.set(
     "Content-Security-Policy",
-    createContentSecurityPolicy(
-      request.url,
-      import.meta.env.DEV,
-      cspNonce,
-      themeBootstrapHash
-    )
+    createContentSecurityPolicy(request.url, import.meta.env.DEV, cspNonce, [
+      themeBootstrapHash,
+      NEXT_THEMES_BOOTSTRAP_HASH,
+    ])
   )
   responseHeaders.set(
     "Strict-Transport-Security",

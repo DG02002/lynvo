@@ -16,14 +16,27 @@ describe("createContentSecurityPolicy", () => {
     const policy = createContentSecurityPolicy(
       "https://app.lynvo.example/settings/plugins",
       false,
-      "request-nonce"
+      "request-nonce",
+      ["first-script-hash", "second-script-hash"]
     )
 
     expect(policy).not.toContain("http://app.lynvo.example:*")
     expect(policy).toContain("script-src 'self' 'nonce-request-nonce'")
+    expect(policy).toContain("'sha256-first-script-hash'")
+    expect(policy).toContain("'sha256-second-script-hash'")
     expect(policy.match(/script-src[^;]+/)?.[0]).not.toContain(
       "'unsafe-inline'"
     )
     expect(policy).not.toContain("'unsafe-eval'")
+  })
+
+  it("allows embedded fonts without allowing other embedded resources", () => {
+    const policy = createContentSecurityPolicy(
+      "https://app.lynvo.example/",
+      false
+    )
+
+    expect(policy).toContain("font-src 'self' data:")
+    expect(policy).not.toContain("default-src 'self' data:")
   })
 })

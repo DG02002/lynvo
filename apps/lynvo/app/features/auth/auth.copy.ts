@@ -9,6 +9,8 @@ export const authCopy = {
   },
   signin: {
     metaTitle: "Log in | Lynvo",
+    metaDescription:
+      "Log in to Lynvo to save links and open them in Android players.",
     pageHeading: "Welcome back",
     submitButton: "Log in",
     submittingButton: "Logging in…",

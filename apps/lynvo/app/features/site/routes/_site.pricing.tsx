@@ -1,5 +1,6 @@
 import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { useEffect, useRef, useState } from "react"
 import type { ComponentProps } from "react"
 import { Link } from "react-router"
@@ -119,6 +120,16 @@ export function meta(_: Route.MetaArgs) {
   ]
 }
 
+export const links: Route.LinksFunction = () => [
+  {
+    rel: "preload",
+    href: interLatinExtendedFontUrl,
+    as: "font",
+    type: "font/woff2",
+    crossOrigin: "anonymous",
+  },
+]
+
 interface MobilePlanControlsProps {
   className?: string
 }
@@ -129,7 +140,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => (
       <span className="rounded-full bg-background px-3 py-1 shadow-sm">
         Free
       </span>
-      <span className="px-3 py-1 text-muted-foreground">More soon</span>
+      <span className="px-3 py-1 text-foreground">More soon</span>
     </div>
     <Link
       to={authPaths.createAccount}

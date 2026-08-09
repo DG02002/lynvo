@@ -173,9 +173,9 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                 </Badge>
               </div>
               <div className="flex max-w-3xl flex-col gap-3">
-                <h3 className="text-base font-medium text-balance">
+                <h2 className="text-base font-medium text-balance">
                   {entry.title}
-                </h3>
+                </h2>
                 <ChangelogDescription
                   id={`description-${entryKey.replaceAll(" ", "-")}`}
                   description={entry.description}
