@@ -1,8 +1,10 @@
-import { describe, expect, it, beforeEach } from "vitest"
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest"
 import {
   writeDraft,
   readDraft,
   deleteDraft,
+  getDraftsSnapshot,
+  subscribeToDrafts,
 } from "~/features/links/drafts"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 
@@ -30,6 +32,10 @@ describe("Draft module", () => {
       configurable: true,
     })
     mockStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("stores the current tree without selection state", () => {
@@ -75,5 +81,59 @@ describe("Draft module", () => {
 
     expect(readDraft("https://example.com")).toBeNull()
     expect(localStorage.getItem("lynvo:drafts:v1")).toBeNull()
+  })
+
+  it("arms expiry when a draft is written after subscription", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    const subscriber = vi.fn()
+    const unsubscribe = subscribeToDrafts(subscriber)
+
+    writeDraft("https://example.com/late", [], {})
+    subscriber.mockClear()
+    vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000)
+
+    expect(subscriber).toHaveBeenCalledOnce()
+    expect(getDraftsSnapshot()).toEqual([])
+    unsubscribe()
+  })
+
+  it("re-arms for sequential expirations and deletion of the nearest draft", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    writeDraft("https://example.com/first", [], {})
+    vi.advanceTimersByTime(1_000)
+    writeDraft("https://example.com/second", [], {})
+    const subscriber = vi.fn()
+    const unsubscribe = subscribeToDrafts(subscriber)
+
+    deleteDraft("https://example.com/first")
+    subscriber.mockClear()
+    vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000 - 1)
+    expect(subscriber).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+
+    expect(subscriber).toHaveBeenCalledOnce()
+    expect(getDraftsSnapshot()).toEqual([])
+    unsubscribe()
+  })
+
+  it("publishes each sequential draft expiration", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    writeDraft("https://example.com/first-sequential", [], {})
+    vi.advanceTimersByTime(1_000)
+    writeDraft("https://example.com/second-sequential", [], {})
+    const subscriber = vi.fn()
+    const unsubscribe = subscribeToDrafts(subscriber)
+
+    vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000 - 1_000)
+    expect(subscriber).toHaveBeenCalledTimes(1)
+    expect(getDraftsSnapshot()).toHaveLength(1)
+
+    vi.advanceTimersByTime(1_000)
+    expect(subscriber).toHaveBeenCalledTimes(2)
+    expect(getDraftsSnapshot()).toEqual([])
+    unsubscribe()
   })
 })

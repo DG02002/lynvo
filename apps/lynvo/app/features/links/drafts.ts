@@ -8,6 +8,8 @@ const subscribers = new Set<() => void>()
 let cachedStorageValue: string | null | undefined
 let cachedDrafts: readonly Draft[] = EMPTY_DRAFTS
 let cachedStorage: Storage | undefined
+let expiryTimer: number | undefined
+let publish = () => undefined
 
 export interface Draft extends StoredDraft {}
 
@@ -36,11 +38,37 @@ const parseDrafts = (storageValue: string | null): Record<string, Draft> => {
   return {}
 }
 
-const publish = () => {
+const clearExpiryTimer = () => {
+  if (expiryTimer !== undefined) {
+    window.clearTimeout(expiryTimer)
+    expiryTimer = undefined
+  }
+}
+
+const scheduleNextExpiry = () => {
+  clearExpiryTimer()
+  if (subscribers.size === 0) {
+    return
+  }
+  const nextExpiryMs = getDraftsSnapshot().reduce(
+    (nearestExpiryMs, draft) => Math.min(nearestExpiryMs, draft.expiresAt),
+    Number.POSITIVE_INFINITY
+  )
+  if (!Number.isFinite(nextExpiryMs)) {
+    return
+  }
+  expiryTimer = window.setTimeout(
+    publish,
+    Math.min(Math.max(nextExpiryMs - Date.now(), 0), DRAFT_EXPIRY_TIMER_MAX_MS)
+  )
+}
+
+publish = () => {
   cachedStorageValue = undefined
   for (const subscriber of subscribers) {
     subscriber()
   }
+  scheduleNextExpiry()
 }
 
 const writeRawDrafts = (drafts: Record<string, Draft>) => {
@@ -121,24 +149,12 @@ export const subscribeToDrafts = (subscriber: () => void) => {
     }
   }
   window.addEventListener("storage", handleStorage)
-  const nextExpiryMs = getDraftsSnapshot().reduce(
-    (nearestExpiryMs, draft) => Math.min(nearestExpiryMs, draft.expiresAt),
-    Number.POSITIVE_INFINITY
-  )
-  const expiryTimer = Number.isFinite(nextExpiryMs)
-    ? window.setTimeout(
-        publish,
-        Math.min(
-          Math.max(nextExpiryMs - Date.now(), 0),
-          DRAFT_EXPIRY_TIMER_MAX_MS
-        )
-      )
-    : undefined
+  scheduleNextExpiry()
   return () => {
     subscribers.delete(subscriber)
     window.removeEventListener("storage", handleStorage)
-    if (expiryTimer !== undefined) {
-      window.clearTimeout(expiryTimer)
+    if (subscribers.size === 0) {
+      clearExpiryTimer()
     }
   }
 }
