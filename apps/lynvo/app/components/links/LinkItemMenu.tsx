@@ -26,6 +26,7 @@ import type {
   ExtractedLink,
   LinkViewItem,
 } from "~/features/links/types"
+import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
@@ -157,11 +158,10 @@ const LinkItemMenuContent = ({
                           <DropdownMenuItem
                             key={player.id}
                             onClick={() => {
-                              actions.markOpened(item.url, playableLink.url)
-                              void openInSpecificPlayer(
-                                playableLink.url,
-                                player
-                              )
+                              const playableUrl =
+                                getMediaNodeTarget(playableLink)
+                              actions.markOpened(item.url, playableUrl)
+                              void openInSpecificPlayer(playableUrl, player)
                             }}
                           >
                             <PlayerOption player={player} />

@@ -4,7 +4,7 @@ import {
   type ExtractSuccessResponse,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
+import { mapNodesToExtractedLinks } from "~/lib/plugin-server-utils"
 import {
   decodeExtractionText,
   normalizeExtractionText,
@@ -62,7 +62,7 @@ export const mapPluginServerExtractionResult = (
   const result = normalizeExtractionText(resultValue)
 
   return {
-    links: result.nodes.map(mapNodeToExtractedLink),
+    links: mapNodesToExtractedLinks(result.nodes),
     meta: {
       pluginName: result.plugin.displayName || result.plugin.pluginServerId,
       ...(result.plugin.iconUrl ? { pluginIcon: result.plugin.iconUrl } : {}),

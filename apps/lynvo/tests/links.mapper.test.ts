@@ -9,6 +9,15 @@ import {
 } from "../app/features/links/links.mapper"
 import type { LinkResponse } from "../app/features/links/types"
 
+const playableLink = (id: string, url: string, label: string) => ({
+  nodeKey: `test:${id}`,
+  id,
+  url,
+  label,
+  type: "file" as const,
+  mediaNodeKind: "playable" as const,
+})
+
 describe("links mapper metadata boundary", () => {
   it("rejects invalid JSON metadata", () => {
     expect(() => parseLinkMetadata("not-json")).toThrow()
@@ -20,7 +29,7 @@ describe("links mapper metadata boundary", () => {
         schemaVersion: 3,
         source: { pluginName: "Plugin", badge: "Variant Alpha" },
         extraction: {
-          extractedLinks: [{ id: "a", url: "https://a.test", label: "A" }],
+          extractedLinks: [playableLink("a", "https://a.test", "A")],
         },
         playback: { openedUrls: ["https://a.test"], openedIds: ["a"] },
       })
@@ -51,7 +60,7 @@ describe("links mapper metadata boundary", () => {
         schemaVersion: 3,
         source: { pluginName: "Plugin", badge: "4K" },
         extraction: {
-          extractedLinks: [{ id: "x", url: "https://x.test", label: "X" }],
+          extractedLinks: [playableLink("x", "https://x.test", "X")],
         },
         playback: { openedUrls: ["https://x.test"], openedIds: [] },
       },
@@ -71,13 +80,13 @@ describe("save-flow metadata preservation", () => {
         pluginName: "Plugin Server",
         pluginServerId: "plugin-server-1",
       },
-      extractedLinks: [{ id: "old", url: "https://old.test", label: "Old" }],
+      extractedLinks: [playableLink("old", "https://old.test", "Old")],
     })
     previous.playback.openedUrls = ["https://old.test"]
     previous.playback.openedIds = ["old"]
 
     const updated = createLinkMetadata({
-      extractedLinks: [{ id: "new", url: "https://new.test", label: "New" }],
+      extractedLinks: [playableLink("new", "https://new.test", "New")],
       previous,
     })
 
@@ -100,7 +109,7 @@ describe("save-flow metadata preservation", () => {
         sourceVersion: "1.0.0",
         pluginServerId: "plugin-server-1",
       },
-      extractedLinks: [{ id: "link", url: "https://cdn.test", label: "CDN" }],
+      extractedLinks: [playableLink("link", "https://cdn.test", "CDN")],
     })
 
     const item = toLinkViewItem(
@@ -136,7 +145,7 @@ describe("save-flow metadata preservation", () => {
     })
 
     const updated = createLinkMetadata({
-      extractedLinks: [{ url: "https://new.test", label: "New" }],
+      extractedLinks: [playableLink("new", "https://new.test", "New")],
       previous,
     })
 

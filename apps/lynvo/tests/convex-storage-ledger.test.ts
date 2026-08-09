@@ -5,6 +5,15 @@ import {
   calculateAppOwnedStorageUsage,
   getUserStorageLedger,
 } from "../convex/storagePolicy"
+import { EMPTY_LINK_METADATA_JSON } from "../convex/constants"
+
+const createMetadataJson = (source: Record<string, unknown> = {}) =>
+  JSON.stringify({
+    schemaVersion: 3,
+    source,
+    extraction: { extractedLinks: [] },
+    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+  })
 import {
   asAuthenticatedUser,
   createConvexTest,
@@ -20,6 +29,7 @@ describe("Convex storage ledger", () => {
       await context.db.insert("links", {
         userId: user.userId,
         url: "https://existing.example",
+        meta: EMPTY_LINK_METADATA_JSON,
         createdAt: now,
         updatedAt: now,
       })
@@ -92,7 +102,10 @@ describe("Convex storage ledger", () => {
       })
     })
 
-    await client.mutation(api.links.updateMeta, { id: linkId, meta: "{}" })
+    await client.mutation(api.links.updateMeta, {
+      id: linkId,
+      meta: EMPTY_LINK_METADATA_JSON,
+    })
 
     const result = await convex.run(async (context) => ({
       ledger: await getUserStorageLedger(context, user.userId),
@@ -113,11 +126,11 @@ describe("Convex storage ledger", () => {
     })
     await client.mutation(api.links.updateMeta, {
       id: linkId,
-      meta: JSON.stringify({ description: "A larger metadata value" }),
+      meta: createMetadataJson({ description: "A larger metadata value" }),
     })
     await client.mutation(api.links.updateMeta, {
       id: linkId,
-      meta: "{}",
+      meta: EMPTY_LINK_METADATA_JSON,
     })
 
     const beforeDelete = await convex.run(async (context) => ({
@@ -239,7 +252,7 @@ describe("Convex storage ledger", () => {
     await expect(
       client.mutation(api.links.createOrUpdate, {
         url: "https://quota.example/rejected",
-        meta: "x".repeat(300_000),
+        meta: createMetadataJson({ padding: "x".repeat(300_000) }),
       })
     ).rejects.toThrow("Storage is full")
 
@@ -270,7 +283,7 @@ describe("Convex storage ledger", () => {
     await expect(
       client.mutation(api.links.createOrUpdate, {
         url: "https://ledger.example/rejected",
-        meta: "x".repeat(1024 * 1024),
+        meta: createMetadataJson({ padding: "x".repeat(1024 * 1024) }),
       })
     ).rejects.toThrow("too much data")
     const after = await convex.run(async (context) =>

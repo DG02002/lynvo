@@ -5,6 +5,7 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import type { ExtractedLink } from "~/features/links/types"
+import { getMediaNodeKey } from "~/features/links/media-node-interaction"
 import { LinkSelectionHeader } from "./LinkSelectionHeader"
 import { LinkSelectionTree } from "./LinkSelectionTree"
 import {
@@ -116,7 +117,7 @@ export function LinkSelectionDialog({
             targetId: string
           ): boolean => {
             for (const item of items) {
-              const itemId = item.id || item.url
+              const itemId = getMediaNodeKey(item)
               if (itemId === targetId) {
                 return true
               }

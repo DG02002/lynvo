@@ -44,7 +44,27 @@ export const getMediaNodeInteractionState = (
   }
 }
 
-export const getMediaNodeKey = (link: ExtractedLink) => link.id ?? link.url
+export const getMediaNodeKey = (link: ExtractedLink) =>
+  link.nodeKey ??
+  link.id ??
+  link.url ??
+  link.nodeUrl ??
+  link.resourceId ??
+  link.label
+
+export const getResolvableMediaNodeTarget = (link: ExtractedLink) =>
+  link.nodeUrl ?? link.resourceId
+
+export const getMediaNodeTargetOrUndefined = (link: ExtractedLink) =>
+  link.url ?? link.nodeUrl ?? link.resourceId
+
+export const getMediaNodeTarget = (link: ExtractedLink): string => {
+  const target = getMediaNodeTargetOrUndefined(link)
+  if (!target) {
+    throw new Error(`Media node ${getMediaNodeKey(link)} has no target`)
+  }
+  return target
+}
 
 export const isMirrorResolvableMediaNode = (link: ExtractedLink) => {
   const state = getMediaNodeInteractionState(link)

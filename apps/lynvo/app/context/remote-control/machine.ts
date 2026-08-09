@@ -59,6 +59,8 @@ declare global {
     }
     save: (sessionId: string, deviceName: string) => void
     clear: () => void
+    loadDelivery: () => RemoteCommandDeliveryRecord
+    saveDelivery: (record: RemoteCommandDeliveryRecord) => void
   }
 
   interface RemoteControlClock {
@@ -103,6 +105,7 @@ declare global {
     ) => void
     poll: () => Promise<void>
     acknowledgeCommand: (commandId: string) => Promise<void>
+    markCommandApplied: (commandId: string) => void
     start: () => () => void
   }
 }
@@ -154,6 +157,7 @@ export const createRemoteControlMachine = ({
   const delivery = createRemoteCommandDelivery({
     acknowledge: transport.acknowledge,
     now: clock.now,
+    persistence,
   })
 
   const publish = (nextState: RemoteControlMachineState) => {
@@ -340,6 +344,10 @@ export const createRemoteControlMachine = ({
       const acknowledgement = delivery.acknowledge(commandId)
       syncDeliveryState()
       await acknowledgement
+    },
+    markCommandApplied: (commandId) => {
+      delivery.markApplied(commandId)
+      syncDeliveryState()
     },
     start: () => {
       const intervalId = clock.setInterval(() => {

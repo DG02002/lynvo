@@ -26,10 +26,12 @@ const metadata = (label: string): LinkMetadata => ({
   extraction: {
     extractedLinks: [
       {
+        nodeKey: `test:${label}`,
         id: label,
         url: `https://cdn.example.com/${label}`,
         label,
         type: "file",
+        mediaNodeKind: "playable",
       },
     ],
   },
@@ -172,6 +174,14 @@ describe("useLinks", () => {
             createdAt: 200,
             updatedAt: 250,
           },
+          {
+            _id: "link-invalid",
+            url: "https://example.com/invalid",
+            title: "Invalid link",
+            meta: "{}",
+            createdAt: 210,
+            updatedAt: 260,
+          },
         ]),
         { status: 200, headers: { "Content-Type": "application/json" } }
       )
@@ -186,6 +196,7 @@ describe("useLinks", () => {
     await waitFor(() => {
       expect(result.current.links[0].title).toBe("Live link")
     })
+    expect(result.current.links).toHaveLength(1)
     expect(setItem).toHaveBeenCalledWith(
       "lynvo:links:sync:v1:user-1",
       expect.stringContaining("Live link")
@@ -271,10 +282,7 @@ describe("useLinks", () => {
       expect(result.current.links).toHaveLength(1)
     })
     act(() => {
-      result.current.actions.markOpened(
-        cacheEntry.url,
-        cacheEntry.url
-      )
+      result.current.actions.markOpened(cacheEntry.url, cacheEntry.url)
     })
 
     await waitFor(() => {
@@ -291,7 +299,8 @@ describe("useLinks", () => {
     })
     expect(updateCall).toBeDefined()
     const [input, init] = updateCall!
-    const requestBody = input instanceof Request ? input.clone().body : init?.body
+    const requestBody =
+      input instanceof Request ? input.clone().body : init?.body
     expect(requestBody).toBeDefined()
     await expect(new Response(requestBody).json()).resolves.not.toHaveProperty(
       "meta.source.pluginIcon"

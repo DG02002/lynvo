@@ -37,17 +37,13 @@ export const useRefreshActions = ({
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
       publish: (outcome) => {
-        if (outcome.kind === "selection-required" && outcome.selection) {
+        if (outcome.kind === "selection-required") {
           openSelectionDialog(outcome.selection)
-        } else if (
-          outcome.kind === "links-updated" &&
-          outcome.itemUrl &&
-          outcome.links
-        ) {
+        } else if (outcome.kind === "links-updated") {
           updateLinks(outcome.itemUrl, outcome.links)
         } else if (outcome.kind === "refresh-succeeded") {
           toast.success("Links refreshed")
-        } else if (outcome.kind === "error" && outcome.message) {
+        } else if (outcome.kind === "error") {
           toast.error(outcome.message)
         }
       },

@@ -34,7 +34,10 @@ import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badg
 import { NewBadge } from "~/components/save-list/new-badge"
 import { FilenameText } from "~/components/filename-text"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
-import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
+import {
+  getMediaNodeInteractionState,
+  getMediaNodeTarget,
+} from "~/features/links/media-node-interaction"
 import {
   getFolderIcon,
   getFolderVisualState,
@@ -234,35 +237,40 @@ const ResolvedMirrorRows = ({
   actions,
 }: ResolvedMirrorRowsProps) => (
   <div className="flex flex-col border-t bg-sky-500/5">
-    {mirrors.map((mirror) => (
-      <div
-        key={getLinkKey(mirror)}
-        className="relative border-b last:border-b-0"
-      >
-        <Button
-          variant="ghost"
-          className="h-auto min-h-20 w-full justify-start gap-3 rounded-none px-4 py-4 pr-16 text-left font-normal hover:bg-sky-500/10"
-          onClick={() => actions.play(mirror)}
+    {mirrors.map((mirror) => {
+      const mirrorTarget = getMediaNodeTarget(mirror)
+      return (
+        <div
+          key={getLinkKey(mirror)}
+          className="relative border-b last:border-b-0"
         >
-          <SaveListRowIcon icon={PlayIcon} />
-          <FilenameText
-            value={mirror.label}
-            className="min-w-0 flex-1 text-sm md:text-lg"
-          />
-        </Button>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          <LinkActionsDotMenu
-            itemLabel={mirror.label}
-            onCopyLink={() => void navigator.clipboard.writeText(mirror.url)}
-            onOpenInPlayer={(player) => {
-              actions.markOpened(itemUrl, sourceLink.url)
-              void openInSpecificPlayer(mirror.url, player)
-            }}
-            className="size-9 shrink-0 text-foreground"
-          />
+          <Button
+            variant="ghost"
+            className="h-auto min-h-20 w-full justify-start gap-3 rounded-none px-4 py-4 pr-16 text-left font-normal hover:bg-sky-500/10"
+            onClick={() => actions.play(mirror)}
+          >
+            <SaveListRowIcon icon={PlayIcon} />
+            <FilenameText
+              value={mirror.label}
+              className="min-w-0 flex-1 text-sm md:text-lg"
+            />
+          </Button>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <LinkActionsDotMenu
+              itemLabel={mirror.label}
+              onCopyLink={() =>
+                void navigator.clipboard.writeText(mirrorTarget)
+              }
+              onOpenInPlayer={(player) => {
+                actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
+                void openInSpecificPlayer(mirrorTarget, player)
+              }}
+              className="size-9 shrink-0 text-foreground"
+            />
+          </div>
         </div>
-      </div>
-    ))}
+      )
+    })}
   </div>
 )
 
@@ -273,6 +281,7 @@ const ResolvableContainerRow = ({
   isResolving,
   onRemove,
 }: ResolvableContainerRowProps) => {
+  const linkTarget = getMediaNodeTarget(link)
   const {
     mirrors,
     isExpanded,
@@ -337,7 +346,7 @@ const ResolvableContainerRow = ({
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <ResolvableLinkMenu
             itemLabel={link.label}
-            onCopyLink={() => void navigator.clipboard.writeText(link.url)}
+            onCopyLink={() => void navigator.clipboard.writeText(linkTarget)}
             onRefresh={refreshLink}
             onRemove={onRemove}
           />
@@ -424,6 +433,7 @@ const FinderBrowser = ({
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
+            const linkTarget = getMediaNodeTarget(link)
             if (isMirrorResolvable(link)) {
               return (
                 <ResolvableContainerRow
@@ -431,9 +441,9 @@ const FinderBrowser = ({
                   item={item}
                   link={link}
                   actions={actions}
-                  isResolving={extractingItems.has(link.url)}
+                  isResolving={extractingItems.has(linkTarget)}
                   onRemove={() =>
-                    actions.removeLink?.(item.url, linkKey, link.url)
+                    actions.removeLink?.(item.url, linkKey, linkTarget)
                   }
                 />
               )
@@ -443,13 +453,13 @@ const FinderBrowser = ({
               !isFolder &&
               link.expiry !== undefined &&
               link.expiry <= Date.now()
-            const isResolving = extractingItems.has(link.url)
+            const isResolving = extractingItems.has(linkTarget)
             const copyLink = () => {
-              void navigator.clipboard.writeText(link.url)
+              void navigator.clipboard.writeText(linkTarget)
             }
             const openLinkInPlayer = (player: PlayerDefinition) => {
-              actions.markOpened(item.url, link.url)
-              void openInSpecificPlayer(link.url, player)
+              actions.markOpened(item.url, linkTarget)
+              void openInSpecificPlayer(linkTarget, player)
             }
 
             return (
@@ -628,13 +638,14 @@ export const SaveListBrowser = ({
           const isRootItemNew = interactionState.isNew
 
           if (item.kind === "saved" && directLink && isResolvableContainer) {
+            const directLinkTarget = getMediaNodeTarget(directLink)
             return (
               <ResolvableContainerRow
                 key={itemKey}
                 item={item}
                 link={directLink}
                 actions={actions}
-                isResolving={extractingItems.has(directLink.url)}
+                isResolving={extractingItems.has(directLinkTarget)}
                 onRemove={() => actions.remove(item.url, item.id)}
               />
             )
@@ -673,7 +684,10 @@ export const SaveListBrowser = ({
                       return
                     }
                     if (directLink) {
-                      actions.markOpened(item.url, directLink.url)
+                      actions.markOpened(
+                        item.url,
+                        getMediaNodeTarget(directLink)
+                      )
                       actions.play(directLink)
                       return
                     }

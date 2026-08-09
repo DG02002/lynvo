@@ -26,6 +26,7 @@ import type * as migrations from "../migrations.js";
 import type * as passwordCrypto from "../passwordCrypto.js";
 import type * as pluginDomainLifecycle from "../pluginDomainLifecycle.js";
 import type * as pluginDomains from "../pluginDomains.js";
+import type * as sessionCleanup from "../sessionCleanup.js";
 import type * as storagePolicy from "../storagePolicy.js";
 import type * as usage from "../usage.js";
 import type * as userPluginServers from "../userPluginServers.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   passwordCrypto: typeof passwordCrypto;
   pluginDomainLifecycle: typeof pluginDomainLifecycle;
   pluginDomains: typeof pluginDomains;
+  sessionCleanup: typeof sessionCleanup;
   storagePolicy: typeof storagePolicy;
   usage: typeof usage;
   userPluginServers: typeof userPluginServers;

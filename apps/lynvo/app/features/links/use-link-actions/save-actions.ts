@@ -63,38 +63,32 @@ export const useSaveActions = ({
             setError(null)
             break
           case "error":
-            setError(outcome.message ?? null)
+            setError(outcome.message)
             break
           case "clear-preview":
             setExtractionPreview(null)
             break
           case "preview":
-            setExtractionPreview(outcome.meta ? { meta: outcome.meta } : null)
+            setExtractionPreview({ meta: outcome.meta })
             break
           case "selection-required":
-            if (outcome.selection) {
-              openSelectionDialog(outcome.selection)
-            }
+            openSelectionDialog(outcome.selection)
             break
           case "selection-closed":
             closeSelectionDialog()
             break
           case "link-focused":
-            if (outcome.linkId) {
-              setHighlightedId(outcome.linkId)
-              setSortOrder("newest")
-              setCurrentPage(1)
-              clearHighlightAfterDelay(setHighlightedId)
-            }
+            setHighlightedId(outcome.linkId)
+            setSortOrder("newest")
+            setCurrentPage(1)
+            clearHighlightAfterDelay(setHighlightedId)
             break
           case "view-reset":
             resetSaveView({ setCurrentUrl, setSortOrder, setCurrentPage })
             break
           case "links-updated":
-            if (outcome.itemUrl && outcome.links) {
-              updateLinks(outcome.itemUrl, outcome.links)
-              toast.success("Links updated")
-            }
+            updateLinks(outcome.itemUrl, outcome.links)
+            toast.success("Links updated")
             break
           case "draft-saved":
             toast.success("Draft saved")

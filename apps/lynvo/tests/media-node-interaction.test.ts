@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   getMediaNodeInteractionState,
+  getMediaNodeKey,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
 import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
@@ -41,6 +42,26 @@ describe("media node interaction", () => {
       isFolder: false,
       isSelectable: true,
     })
+  })
+
+  it("gives identifier-less groups distinct stable tree identities", () => {
+    const group = mapNodeToExtractedLink({
+      kind: "group",
+      label: "Season",
+      children: [
+        { kind: "group", label: "Episodes", children: [] },
+        { kind: "group", label: "Episodes", children: [] },
+      ],
+    })
+
+    const firstChild = group.children?.[0]
+    const secondChild = group.children?.[1]
+    expect(firstChild).toBeDefined()
+    expect(secondChild).toBeDefined()
+    if (!firstChild || !secondChild) {
+      throw new Error("Expected both group children")
+    }
+    expect(getMediaNodeKey(firstChild)).not.toBe(getMediaNodeKey(secondChild))
   })
 
   it("supports app-native folder and playable shapes", () => {

@@ -18,14 +18,21 @@ interface LinkResult {
   updatedAt: number
 }
 
-const serverLinkToSavedLink = (link: LinkResult): SavedLink => ({
-  id: link._id,
-  url: link.url,
-  title: link.title,
-  createdAt: link.createdAt,
-  updatedAt: link.updatedAt,
-  metadata: parseLinkMetadata(link.meta),
-})
+const serverLinkToSavedLink = (link: LinkResult): SavedLink | undefined => {
+  try {
+    return {
+      id: link._id,
+      url: link.url,
+      title: link.title,
+      createdAt: link.createdAt,
+      updatedAt: link.updatedAt,
+      metadata: parseLinkMetadata(link.meta),
+    }
+  } catch (error) {
+    console.error("Unable to hydrate saved link", { linkId: link._id, error })
+    return undefined
+  }
+}
 
 export function useLinksQuery(
   userId: string | undefined,
@@ -48,7 +55,10 @@ export function useLinksQuery(
       0
     )
     return {
-      results: links.map(serverLinkToSavedLink),
+      results: links.flatMap((link) => {
+        const savedLink = serverLinkToSavedLink(link)
+        return savedLink ? [savedLink] : []
+      }),
       version,
       etag: String(version),
     }

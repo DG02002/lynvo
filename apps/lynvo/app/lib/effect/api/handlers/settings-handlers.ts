@@ -10,6 +10,8 @@ import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { ConvexError } from "../../errors"
 import { createAuthSessionModule } from "../../../../../workers/auth-session"
 import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
+import { signSessionCleanupToken } from "../../../auth-gateway"
+import { SESSION_CLEANUP_TOKEN_TTL_MS } from "../../../../../convex/constants"
 
 const getSignedInSessionLifecycle = (
   convex: ConvexServiceShape,
@@ -41,6 +43,27 @@ const getSignedInSessionLifecycle = (
             )
             .pipe(Effect.map((result) => result.workerSessionIds))
         ),
+      listPendingCleanup: async () => {
+        const serviceToken = await signSessionCleanupToken(
+          environment.AUTH_GATEWAY_SECRET,
+          Date.now() + SESSION_CLEANUP_TOKEN_TTL_MS
+        )
+        return await Effect.runPromise(
+          convex.query(api.sessionCleanup.listPending, { serviceToken })
+        )
+      },
+      completeCleanup: async (workerSessionId) => {
+        const serviceToken = await signSessionCleanupToken(
+          environment.AUTH_GATEWAY_SECRET,
+          Date.now() + SESSION_CLEANUP_TOKEN_TTL_MS
+        )
+        await Effect.runPromise(
+          convex.mutation(api.sessionCleanup.complete, {
+            serviceToken,
+            workerSessionId,
+          })
+        )
+      },
     }
   )
 

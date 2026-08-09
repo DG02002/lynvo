@@ -1,4 +1,8 @@
 import type { ExtractedLink } from "./types"
+import {
+  getMediaNodeKey,
+  getMediaNodeTargetOrUndefined,
+} from "./media-node-interaction"
 
 export const collectOpened = (links: ExtractedLink[] = []) => {
   const openedUrls = new Set<string>()
@@ -7,8 +11,9 @@ export const collectOpened = (links: ExtractedLink[] = []) => {
   const visit = (items: ExtractedLink[]) => {
     for (const link of items) {
       if (link.opened) {
-        if (link.url) {
-          openedUrls.add(link.url)
+        const target = getMediaNodeTargetOrUndefined(link)
+        if (target) {
+          openedUrls.add(target)
         }
         if (link.id) {
           openedIds.add(link.id)
@@ -37,7 +42,7 @@ export const removeLinkFromTree = (
   linkKey: string
 ): ExtractedLink[] =>
   links.reduce<ExtractedLink[]>((remainingLinks, link) => {
-    if ((link.id ?? link.url) === linkKey) {
+    if (getMediaNodeKey(link) === linkKey) {
       return remainingLinks
     }
 
@@ -62,7 +67,10 @@ export const attachResolvedChildren = ({
   resolvedChildren: ExtractedLink[]
 }): ExtractedLink[] =>
   links.map((link) => {
-    if (link.id === linkId || link.url === linkUrl) {
+    if (
+      getMediaNodeKey(link) === linkId ||
+      getMediaNodeTargetOrUndefined(link) === linkUrl
+    ) {
       return { ...link, children: resolvedChildren, childrenResolved: true }
     }
     return link.children

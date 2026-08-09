@@ -49,6 +49,7 @@ import {
   recordStorageDeletion,
 } from "./storagePolicy"
 import { buildPlayerPreferencesPatch } from "./userPreferences"
+import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
 
 const assertCurrentUser = async (ctx: {
   auth: Parameters<typeof getAuthUserId>[0]["auth"]
@@ -463,6 +464,7 @@ export const beginAccountErasure = mutation({
       throw new Error("Username does not match")
     }
     const workerSessionIds = await getAllUserSessionRevocations(ctx, userId)
+    await enqueueWorkerSessionCleanup(ctx, workerSessionIds)
     await deleteUserAccountData(ctx, userId)
     console.info("security.account_deleted", { userId })
     return { workerSessionIds }

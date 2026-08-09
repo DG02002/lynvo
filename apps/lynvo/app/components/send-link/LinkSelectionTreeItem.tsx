@@ -11,6 +11,10 @@ import { Checkbox } from "~/components/ui/checkbox"
 import { Spinner } from "~/components/ui/spinner"
 import { FilenameText } from "~/components/filename-text"
 import type { ExtractedLink } from "~/features/links/types"
+import {
+  getMediaNodeKey,
+  getMediaNodeTarget,
+} from "~/features/links/media-node-interaction"
 import { cn } from "~/lib/utils"
 import { getLinkSelectionState } from "./link-selection-state"
 import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
@@ -76,7 +80,7 @@ export const LinkSelectionTreeItem = ({
     }
 
     setIsResolving(true)
-    const didResolve = await onExpandFolder(linkId, link.url)
+    const didResolve = await onExpandFolder(linkId, getMediaNodeTarget(link))
     setIsResolving(false)
     if (didResolve) {
       setIsExpanded(true)
@@ -164,7 +168,7 @@ export const LinkSelectionTreeItem = ({
         <div className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5">
           {link.children.map((child, index) => (
             <LinkSelectionTreeItem
-              key={child.id || child.url + index}
+              key={`${getMediaNodeKey(child)}:${index}`}
               link={child}
               selectedIds={selectedIds}
               onToggleSelect={onToggleSelect}

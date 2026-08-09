@@ -8,6 +8,7 @@ import {
   DAY_MS,
   LINKS_MAX_COUNT,
   LINK_RETENTION_BATCH_SIZE,
+  EMPTY_LINK_METADATA_JSON,
 } from "../convex/constants"
 import {
   calculateAppOwnedStorageUsage,
@@ -45,6 +46,7 @@ describe("bounded lifecycle cleanup", () => {
         await context.db.insert("links", {
           userId: target.userId,
           url: `https://batched.example/${index}`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: index,
           updatedAt: index,
         })
@@ -103,6 +105,7 @@ describe("bounded lifecycle cleanup", () => {
       const linkId = await context.db.insert("links", {
         userId: target.userId,
         url: "https://interrupted.example/late",
+        meta: EMPTY_LINK_METADATA_JSON,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       })
@@ -195,6 +198,7 @@ describe("bounded lifecycle cleanup", () => {
         await context.db.insert("links", {
           userId: target.userId,
           url: `https://target.example/link/${index}`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: now + index,
           updatedAt: now + index,
         })
@@ -359,6 +363,7 @@ describe("bounded lifecycle cleanup", () => {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://${user.userId}.example/expired`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: now - 8 * DAY_MS,
           updatedAt: now - 8 * DAY_MS,
         })
@@ -371,6 +376,7 @@ describe("bounded lifecycle cleanup", () => {
             await context.db.insert("links", {
               userId: user.userId,
               url: `https://${user.userId}.example/expired-${linkIndex}`,
+              meta: EMPTY_LINK_METADATA_JSON,
               createdAt: now - 8 * DAY_MS,
               updatedAt: now - 8 * DAY_MS,
             })
@@ -379,6 +385,7 @@ describe("bounded lifecycle cleanup", () => {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://${user.userId}.example/live`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: now,
           updatedAt: now,
         })

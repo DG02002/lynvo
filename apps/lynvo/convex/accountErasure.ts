@@ -6,6 +6,7 @@ import { v } from "convex/values"
 import { releaseAccountCapacity } from "./accountCapacity"
 import { ACCOUNT_ERASURE_BATCH_SIZE } from "./constants"
 import { ACCOUNT_ERASURE_TABLES } from "./accountDataOwnership"
+import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
 
 export { ACCOUNT_ERASURE_TABLES }
 
@@ -132,6 +133,9 @@ const deleteSessionBatch = async (
   if (!session) {
     await advance(ctx, progress, "finalize")
     return
+  }
+  if (session.workerSessionId) {
+    await enqueueWorkerSessionCleanup(ctx, [session.workerSessionId])
   }
   const [refreshTokens, verifiers] = await Promise.all([
     ctx.db

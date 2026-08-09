@@ -18,6 +18,11 @@ const createCommand = (
 const createHarness = () => {
   let now = 1_000_000
   let shouldFailAcknowledgement = false
+  let record: RemoteCommandDeliveryRecord = {
+    processed: [],
+    applied: [],
+    pendingAcknowledgements: [],
+  }
   const acknowledge = vi.fn(async () => {
     if (shouldFailAcknowledgement) {
       shouldFailAcknowledgement = false
@@ -27,6 +32,12 @@ const createHarness = () => {
   const delivery = createRemoteCommandDelivery({
     acknowledge,
     now: () => now,
+    persistence: {
+      loadDelivery: () => record,
+      saveDelivery: (nextRecord) => {
+        record = structuredClone(nextRecord)
+      },
+    },
   })
 
   return {
@@ -38,6 +49,7 @@ const createHarness = () => {
     failNextAcknowledgement: () => {
       shouldFailAcknowledgement = true
     },
+    getRecord: () => record,
   }
 }
 
@@ -49,6 +61,7 @@ describe("remote command delivery", () => {
     expect(harness.delivery.receive(createCommand())).toBe(false)
     expect(harness.delivery.getSnapshot().lastCommand?.id).toBe("command-1")
 
+    harness.delivery.markApplied("command-1")
     await harness.delivery.acknowledge("command-1")
 
     expect(harness.delivery.getSnapshot().lastCommand).toBeNull()
@@ -69,6 +82,7 @@ describe("remote command delivery", () => {
     harness.failNextAcknowledgement()
     harness.delivery.receive(createCommand())
 
+    harness.delivery.markApplied("command-1")
     await harness.delivery.acknowledge("command-1")
     await harness.delivery.retryPendingAcknowledgements()
 
@@ -80,6 +94,7 @@ describe("remote command delivery", () => {
   it("expires completed command identities after the deduplication window", async () => {
     const harness = createHarness()
     harness.delivery.receive(createCommand())
+    harness.delivery.markApplied("command-1")
     await harness.delivery.acknowledge("command-1")
     harness.setNow(1_000_000 + REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS + 1)
 
@@ -90,6 +105,28 @@ describe("remote command delivery", () => {
         })
       )
     ).toBe(true)
+  })
+
+  it("does not replay an applied command after a new delivery instance starts", async () => {
+    const harness = createHarness()
+    harness.failNextAcknowledgement()
+    harness.delivery.receive(createCommand())
+    harness.delivery.markApplied("command-1")
+    await harness.delivery.acknowledge("command-1")
+
+    const recoveredAcknowledge = vi.fn(async () => undefined)
+    const recovered = createRemoteCommandDelivery({
+      acknowledge: recoveredAcknowledge,
+      now: () => 1_000_001,
+      persistence: {
+        loadDelivery: harness.getRecord,
+        saveDelivery: vi.fn(),
+      },
+    })
+
+    expect(recovered.receive(createCommand())).toBe(false)
+    await recovered.retryPendingAcknowledgements()
+    expect(recoveredAcknowledge).toHaveBeenCalledWith("command-1")
   })
 
   it("uses one strict conversion path for wire commands", () => {

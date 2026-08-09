@@ -19,6 +19,8 @@ export interface SignedInSessionCoordinator {
   readonly beginAccountErasure: (
     confirmUsername: string
   ) => Promise<readonly string[]>
+  readonly listPendingCleanup: () => Promise<readonly string[]>
+  readonly completeCleanup: (workerSessionId: string) => Promise<void>
 }
 
 export interface SignedInSessionCompleted {
@@ -46,24 +48,41 @@ export interface SignedInSessionLifecycle {
   readonly eraseAccount: (
     confirmUsername: string
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
+  readonly retryCleanup: () => Promise<
+    SignedInSessionCompleted | SignedInSessionUnavailable
+  >
 }
 
-const revokeCommittedSessions = async (
+const drainPendingCleanup = async (
   authSession: AuthSessionModule,
-  revokeConvexSessions: () => Promise<readonly string[]>
+  coordinator: SignedInSessionCoordinator
 ): Promise<SignedInSessionCompleted | SignedInSessionUnavailable> => {
   try {
-    const workerSessionIds = await revokeConvexSessions()
+    const workerSessionIds = await coordinator.listPendingCleanup()
     for (const workerSessionId of workerSessionIds) {
       const result = await authSession.revoke(workerSessionId)
       if (result.kind === "unavailable") {
         return result
       }
+      await coordinator.completeCleanup(workerSessionId)
     }
     return { kind: "completed", cookie: authSession.expireCookie() }
   } catch {
     return { kind: "unavailable" }
   }
+}
+
+const revokeCommittedSessions = async (
+  authSession: AuthSessionModule,
+  coordinator: SignedInSessionCoordinator,
+  revokeConvexSessions: () => Promise<readonly string[]>
+) => {
+  try {
+    await revokeConvexSessions()
+  } catch {
+    return { kind: "unavailable" } satisfies SignedInSessionUnavailable
+  }
+  return await drainPendingCleanup(authSession, coordinator)
 }
 
 export const createSignedInSessionLifecycle = (
@@ -114,18 +133,26 @@ export const createSignedInSessionLifecycle = (
   },
   revokeSession: async (sessionId) =>
     coordinator
-      ? revokeCommittedSessions(authSession, () =>
+      ? revokeCommittedSessions(authSession, coordinator, () =>
           coordinator.revokeSession(sessionId)
         )
       : { kind: "unavailable" },
   revokeAllSessions: async () =>
     coordinator
-      ? revokeCommittedSessions(authSession, coordinator.revokeAllSessions)
+      ? revokeCommittedSessions(
+          authSession,
+          coordinator,
+          coordinator.revokeAllSessions
+        )
       : { kind: "unavailable" },
   eraseAccount: async (confirmUsername) =>
     coordinator
-      ? revokeCommittedSessions(authSession, () =>
+      ? revokeCommittedSessions(authSession, coordinator, () =>
           coordinator.beginAccountErasure(confirmUsername)
         )
+      : { kind: "unavailable" },
+  retryCleanup: async () =>
+    coordinator
+      ? drainPendingCleanup(authSession, coordinator)
       : { kind: "unavailable" },
 })

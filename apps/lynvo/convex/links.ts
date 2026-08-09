@@ -19,6 +19,10 @@ import {
   LINKS_MAX_COUNT,
   LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
+import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
+
+const canonicalizeLinkMetadataJson = (metadataJson: string) =>
+  JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
 
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
@@ -53,7 +57,7 @@ export const createOrUpdate = mutation({
   args: {
     url: v.string(),
     title: v.optional(v.string()),
-    meta: v.optional(v.string()), // JSON string
+    meta: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
@@ -79,7 +83,9 @@ export const createOrUpdate = mutation({
       )
       .unique()
 
-    const metadataJson = args.meta ?? EMPTY_LINK_METADATA_JSON
+    const metadataJson = canonicalizeLinkMetadataJson(
+      args.meta ?? EMPTY_LINK_METADATA_JSON
+    )
     if (existing) {
       const nextDoc = {
         ...existing,
@@ -158,15 +164,16 @@ export const updateMeta = mutation({
     if (!existing || existing.userId !== userId) {
       throw new Error("Link not found or no longer available")
     }
+    const metadataJson = canonicalizeLinkMetadataJson(args.meta)
     const nextDoc = {
       ...existing,
-      meta: args.meta,
+      meta: metadataJson,
       updatedAt: Date.now(),
     }
     await assertLinkMutation(ctx, userId, existing, nextDoc)
 
     await ctx.db.patch("links", existing._id, {
-      meta: args.meta,
+      meta: metadataJson,
       updatedAt: Date.now(),
     })
     return { success: true }

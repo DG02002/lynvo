@@ -8,6 +8,7 @@ import {
 } from "./constants"
 import { assertStorageMutation } from "./storagePolicy"
 import { initiateAccountErasure } from "./accountErasure"
+import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
 
 export const replacePasswordAndInvalidateOtherSessions = async (
   replacePassword: () => Promise<unknown>,
@@ -84,6 +85,9 @@ export const revokeUserSession = async (
   if (!session || session.userId !== userId) {
     throw new Error("Session not found")
   }
+  if (session.workerSessionId) {
+    await enqueueWorkerSessionCleanup(ctx, [session.workerSessionId])
+  }
   await deleteSessionRefreshTokens(ctx, [sessionId])
   await deleteSessionVerifiers(ctx, [sessionId])
   await ctx.db.delete("authSessions", sessionId)
@@ -111,6 +115,12 @@ export const revokeAllUserSessions = async (
   userId: Id<"users">
 ) => {
   const sessions = await getUserSessions(ctx, userId)
+  await enqueueWorkerSessionCleanup(
+    ctx,
+    sessions.flatMap((session) =>
+      session.workerSessionId ? [session.workerSessionId] : []
+    )
+  )
   await deleteSessionRefreshTokens(
     ctx,
     sessions.map((session) => session._id)

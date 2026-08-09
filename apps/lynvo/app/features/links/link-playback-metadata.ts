@@ -1,5 +1,6 @@
 import type { ExtractedLink, LinkMetadata } from "./types"
 import { mergeUnique } from "./link-tree-metadata"
+import { getMediaNodeTargetOrUndefined } from "./media-node-interaction"
 
 export const applyOpenedState = (
   links: ExtractedLink[],
@@ -7,8 +8,10 @@ export const applyOpenedState = (
   openedIds: Set<string>
 ): ExtractedLink[] =>
   links.map((link) => {
+    const target = getMediaNodeTargetOrUndefined(link)
     const isOpened =
-      openedUrls.has(link.url) || (link.id ? openedIds.has(link.id) : false)
+      (target ? openedUrls.has(target) : false) ||
+      (link.id ? openedIds.has(link.id) : false)
 
     return {
       ...link,

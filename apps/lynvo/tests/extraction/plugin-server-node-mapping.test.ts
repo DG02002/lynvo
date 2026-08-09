@@ -63,8 +63,19 @@ describe("mapNodeToExtractedLink", () => {
 
     expect(link.type).toBe("folder")
     expect(link.mediaNodeKind).toBe("resolvable")
-    expect(link.url).toBe("https://pluginServer.example/node/1")
+    expect(link.nodeUrl).toBe("https://pluginServer.example/node/1")
     expect(link.sourceName).toBe("Source Beta")
+  })
+
+  it("preserves resource-only resolvable nodes", () => {
+    const link = mapNodeToExtractedLink({
+      kind: "resolvable",
+      label: "Resource-only folder",
+      resourceId: "folder-1",
+    })
+
+    expect(link.nodeUrl).toBeUndefined()
+    expect(link.resourceId).toBe("folder-1")
   })
 
   it("does not persist source-supplied presentation badges", () => {

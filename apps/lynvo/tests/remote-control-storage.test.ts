@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import {
   REMOTE_DEVICE_NAME_KEY,
+  REMOTE_COMMAND_DELIVERY_KEY,
   REMOTE_SESSION_ID_KEY,
 } from "~/context/remote-control/constants"
 import { remoteControlPersistence } from "~/context/remote-control/storage"
@@ -26,6 +27,19 @@ describe("remote-control browser persistence", () => {
       configurable: true,
     })
     localStorage.clear()
+  })
+
+  it("persists command delivery recovery state", () => {
+    const record: RemoteCommandDeliveryRecord = {
+      processed: [],
+      applied: [["command-1", 100]],
+      pendingAcknowledgements: ["command-1"],
+    }
+
+    remoteControlPersistence.saveDelivery(record)
+
+    expect(localStorage.getItem(REMOTE_COMMAND_DELIVERY_KEY)).not.toBeNull()
+    expect(remoteControlPersistence.loadDelivery()).toEqual(record)
   })
 
   it("loads the current Lynvo storage keys", () => {

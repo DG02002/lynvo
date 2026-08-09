@@ -1,4 +1,5 @@
 import type { ExtractedLink } from "~/features/links/types"
+import { getMediaNodeKey } from "~/features/links/media-node-interaction"
 import { LinkSelectionTreeItem } from "./LinkSelectionTreeItem"
 
 interface LinkSelectionTreeProps {
@@ -17,7 +18,7 @@ export const LinkSelectionTree = ({
   <div className="flex min-w-0 select-none flex-col gap-1">
     {links.map((link, index) => (
       <LinkSelectionTreeItem
-        key={link.id || link.url + index}
+        key={`${getMediaNodeKey(link)}:${index}`}
         link={link}
         selectedIds={selectedIds}
         onToggleSelect={onToggleSelect}

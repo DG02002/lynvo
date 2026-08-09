@@ -83,9 +83,12 @@ export const createDirectMediaModule = (
       }
       return [
         {
+          nodeKey: `direct:${url}`,
           url,
           label: filename,
           id: "direct",
+          type: "file",
+          mediaNodeKind: "playable",
           status: "up",
           rangeRequest: getRangeRequestCapability(
             response.status,

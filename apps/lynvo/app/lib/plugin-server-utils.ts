@@ -10,27 +10,34 @@ export const matchUrl = (
   matchers: ReadonlyArray<PluginServerMatcher>
 ): boolean => matchPluginServerUrl(targetUrl, matchers)
 
-export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink => {
+const getNodeIdentity = (node: MediaNode, treePath: string) =>
+  `${treePath}:${node.kind}:${node.id ?? (node.kind === "playable" ? node.url : node.kind === "resolvable" ? (node.nodeUrl ?? node.resourceId) : node.label)}`
+
+const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
   if (node.kind === "group") {
     return {
+      nodeKey: getNodeIdentity(node, treePath),
       id: node.id,
       label: node.label,
       ...(node.size ? { size: node.size } : {}),
       ...(node.sourceName ? { sourceName: node.sourceName } : {}),
       selectable: node.selectable !== false,
       type: "folder",
-      url: "",
       mediaNodeKind: "group",
-      children: (node.children ?? []).map(mapNodeToExtractedLink),
+      children: node.children.map((child, childIndex) =>
+        mapNode(child, `${treePath}.${childIndex}`)
+      ),
     }
   }
   if (node.kind === "resolvable") {
     return {
+      nodeKey: getNodeIdentity(node, treePath),
       id: node.id,
       label: node.label,
       ...(node.size ? { size: node.size } : {}),
       ...(node.sourceName ? { sourceName: node.sourceName } : {}),
-      url: node.nodeUrl ?? "",
+      ...(node.nodeUrl ? { nodeUrl: node.nodeUrl } : {}),
+      ...(node.resourceId ? { resourceId: node.resourceId } : {}),
       type: "folder",
       selectable: true,
       mediaNodeKind: "resolvable",
@@ -38,11 +45,12 @@ export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink => {
     }
   }
   return {
+    nodeKey: getNodeIdentity(node, treePath),
     id: node.id,
     label: node.label,
     ...(node.size ? { size: node.size } : {}),
     ...(node.sourceName ? { sourceName: node.sourceName } : {}),
-    url: node.url ?? "",
+    url: node.url,
     type: "file",
     mediaNodeKind: "playable",
     ...(node.expiry ? { expiry: node.expiry } : {}),
@@ -53,3 +61,11 @@ export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink => {
     ...(node.rangeRequest ? { rangeRequest: node.rangeRequest } : {}),
   }
 }
+
+export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink =>
+  mapNode(node, "0")
+
+export const mapNodesToExtractedLinks = (
+  nodes: ReadonlyArray<MediaNode>
+): ExtractedLink[] =>
+  nodes.map((node, nodeIndex) => mapNode(node, String(nodeIndex)))

@@ -20,6 +20,7 @@ declare global {
     connectedDeviceName: string | null
     lastCommand: RemoteCommand | null
     acknowledgeCommand: (commandId: string) => void
+    markCommandApplied: (commandId: string) => void
     controlledBy: string | null
     controllingDeviceName: string | null
     controllingDevices: RemoteDevice[]
@@ -125,6 +126,7 @@ export const RemoteControlProvider = ({
       connectedDeviceName: state.connectedDeviceName,
       lastCommand: state.lastCommand,
       acknowledgeCommand: machine.acknowledgeCommand,
+      markCommandApplied: machine.markCommandApplied,
       controlledBy: state.controlledBy,
       controllingDeviceName: state.controllingDeviceName,
       controllingDevices: state.controllingDevices,

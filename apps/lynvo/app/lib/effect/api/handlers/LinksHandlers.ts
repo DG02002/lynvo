@@ -5,6 +5,18 @@ import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
 import { api } from "../../../../../convex/_generated/api"
 import { getDailyTimeBucket } from "../../../use-coarse-time-bucket"
+import { linkMetadataSchema } from "~/features/links/storage-schemas"
+import { ValidationError } from "../../errors"
+
+const encodeCanonicalMetadata = (metadata: unknown) =>
+  Effect.try({
+    try: () => JSON.stringify(linkMetadataSchema.parse(metadata)),
+    catch: (details) =>
+      new ValidationError({
+        message: "Saved link metadata is invalid",
+        details,
+      }),
+  })
 
 export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
   handlers
@@ -25,12 +37,13 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
         return yield* convex.mutation(
           api.links.createOrUpdate,
           {
             url: payload.url,
             title: payload.title,
-            meta: JSON.stringify(payload.meta),
+            meta: metadataJson,
           },
           { accessToken: user.accessToken }
         )
@@ -54,11 +67,12 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
         yield* convex.mutation(
           api.links.updateMeta,
           {
             id: params.linkId,
-            meta: JSON.stringify(payload.meta),
+            meta: metadataJson,
           },
           { accessToken: user.accessToken }
         )

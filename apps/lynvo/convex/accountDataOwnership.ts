@@ -18,6 +18,7 @@ export const ACCOUNT_DATA_CATALOG = {
   authVerifiers: { lifecycle: "erased", storage: null },
   authRateLimits: { lifecycle: "operational", storage: null },
   links: { lifecycle: "erased", storage: "linkBytes" },
+  workerSessionCleanupIntents: { lifecycle: "operational", storage: null },
   userStorageLedgers: { lifecycle: "erased", storage: null },
   userPluginServers: { lifecycle: "erased", storage: "pluginServerBytes" },
   userPluginDomains: { lifecycle: "erased", storage: "pluginDomainBytes" },

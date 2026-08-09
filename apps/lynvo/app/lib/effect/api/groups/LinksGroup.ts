@@ -5,6 +5,7 @@ import {
   UnauthorizedApiError,
   CsrfApiError,
   ConvexApiError,
+  ValidationApiError,
 } from "../../errors"
 
 const LinkSchema = Schema.Struct({
@@ -29,7 +30,12 @@ export class LinksGroup extends HttpApiGroup.make("links")
         meta: Schema.Unknown,
       }),
       success: Schema.String,
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ValidationApiError,
+        ConvexApiError,
+      ],
     }),
     HttpApiEndpoint.delete("delete", "/:linkId", {
       params: {
@@ -46,7 +52,12 @@ export class LinksGroup extends HttpApiGroup.make("links")
         meta: Schema.Unknown,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ValidationApiError,
+        ConvexApiError,
+      ],
     })
   )
   .middleware(WebAuth)

@@ -4,7 +4,10 @@ import type {
 } from "@dg02002/lynvo-plugin-server-protocol"
 
 export interface ExtractedLink {
-  url: string
+  nodeKey?: string
+  url?: string
+  nodeUrl?: string
+  resourceId?: string
   label: string
   id?: string
   badge?: string

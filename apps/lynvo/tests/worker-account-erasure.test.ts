@@ -8,12 +8,7 @@ vi.mock("cloudflare:workers", () => ({ DurableObject: class {} }))
 vi.mock("convex/browser", () => ({
   ConvexHttpClient: class {
     setAuth = () => undefined
-    query = async () => ({
-      id: "users:123",
-      username: "darshan",
-      sessionId: "authSessions:456",
-      workerSessionIds: ["opaque-session-id"],
-    })
+    query = async () => ["opaque-session-id"]
     action = async () => ({ success: true })
     mutation = async () => ({ workerSessionIds: ["opaque-session-id"] })
   },
@@ -41,6 +36,7 @@ describe("Worker account erasure HTTP behavior", () => {
       {
         ENVIRONMENT: "production",
         VITE_CONVEX_URL: "https://convex.example",
+        AUTH_GATEWAY_SECRET: "test-gateway-secret",
         WORKER_AUTH_SESSION: {
           getByName: (sessionId: string) => ({
             fetch: async (_url: string, init?: RequestInit) => {

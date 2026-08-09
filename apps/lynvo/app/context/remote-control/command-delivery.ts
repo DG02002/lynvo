@@ -27,11 +27,19 @@ declare global {
   interface RemoteCommandDeliveryDependencies {
     acknowledge: (commandId: string) => Promise<unknown>
     now: () => number
+    persistence: Pick<RemoteControlPersistence, "loadDelivery" | "saveDelivery">
+  }
+
+  interface RemoteCommandDeliveryRecord {
+    processed: Array<[string, number]>
+    applied: Array<[string, number]>
+    pendingAcknowledgements: string[]
   }
 
   interface RemoteCommandDelivery {
     getSnapshot: () => RemoteCommandDeliveryState
     receive: (command: RemoteCommandDeliveryInput) => boolean
+    markApplied: (commandId: string) => void
     acknowledge: (commandId: string) => Promise<void>
     retryPendingAcknowledgements: () => Promise<void>
   }
@@ -57,12 +65,21 @@ export const parseRemoteCommandWirePayload = (
 export const createRemoteCommandDelivery = ({
   acknowledge,
   now,
+  persistence,
 }: RemoteCommandDeliveryDependencies): RemoteCommandDelivery => {
   let state: RemoteCommandDeliveryState = { lastCommand: null }
-  const processedCommands = new Map<string, number>()
-  const appliedCommands = new Map<string, number>()
-  const pendingAcknowledgements = new Set<string>()
+  const storedRecord = persistence.loadDelivery()
+  const processedCommands = new Map(storedRecord.processed)
+  const appliedCommands = new Map(storedRecord.applied)
+  const pendingAcknowledgements = new Set(storedRecord.pendingAcknowledgements)
   const acknowledgementRequests = new Map<string, Promise<void>>()
+
+  const persist = () =>
+    persistence.saveDelivery({
+      processed: [...processedCommands],
+      applied: [...appliedCommands],
+      pendingAcknowledgements: [...pendingAcknowledgements],
+    })
 
   const expireRecordedCommandIds = (currentTime: number) => {
     for (const commandIds of [processedCommands, appliedCommands]) {
@@ -72,6 +89,7 @@ export const createRemoteCommandDelivery = ({
         }
       }
     }
+    persist()
   }
 
   const retryAcknowledgement = (commandId: string) => {
@@ -84,9 +102,11 @@ export const createRemoteCommandDelivery = ({
         pendingAcknowledgements.delete(commandId)
         appliedCommands.delete(commandId)
         processedCommands.set(commandId, now())
+        persist()
       })
       .catch(() => {
         pendingAcknowledgements.add(commandId)
+        persist()
       })
       .finally(() => {
         acknowledgementRequests.delete(commandId)
@@ -123,13 +143,19 @@ export const createRemoteCommandDelivery = ({
       }
       return true
     },
-    acknowledge: async (commandId) => {
+    markApplied: (commandId) => {
       if (state.lastCommand?.id !== commandId) {
         return
       }
       appliedCommands.set(commandId, now())
       pendingAcknowledgements.add(commandId)
       state = { lastCommand: null }
+      persist()
+    },
+    acknowledge: async (commandId) => {
+      if (!pendingAcknowledgements.has(commandId)) {
+        return
+      }
       await retryAcknowledgement(commandId)
     },
     retryPendingAcknowledgements: async () => {

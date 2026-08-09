@@ -25,26 +25,68 @@ export interface DraftSelection {
   isDraftMode: true
 }
 
-export interface SavedLinkInteractionOutcome {
-  kind:
-    | "clear-error"
-    | "error"
-    | "clear-preview"
-    | "preview"
-    | "selection-required"
-    | "selection-closed"
-    | "link-focused"
-    | "view-reset"
-    | "links-updated"
-    | "refresh-succeeded"
-    | "draft-saved"
-  message?: string
-  meta?: MetaData
-  selection?: DraftSelection | SavedLinkSelection
-  linkId?: string
-  itemUrl?: string
-  links?: ExtractedLink[]
+export interface SavedLinkClearErrorOutcome {
+  kind: "clear-error"
 }
+
+export interface SavedLinkErrorOutcome {
+  kind: "error"
+  message: string
+}
+
+export interface SavedLinkClearPreviewOutcome {
+  kind: "clear-preview"
+}
+
+export interface SavedLinkPreviewOutcome {
+  kind: "preview"
+  meta: MetaData
+}
+
+export interface SavedLinkSelectionRequiredOutcome {
+  kind: "selection-required"
+  selection: DraftSelection | SavedLinkSelection
+}
+
+export interface SavedLinkSelectionClosedOutcome {
+  kind: "selection-closed"
+}
+
+export interface SavedLinkFocusedOutcome {
+  kind: "link-focused"
+  linkId: string
+}
+
+export interface SavedLinkViewResetOutcome {
+  kind: "view-reset"
+}
+
+export interface SavedLinksUpdatedOutcome {
+  kind: "links-updated"
+  itemUrl: string
+  links: ExtractedLink[]
+}
+
+export interface SavedLinkRefreshSucceededOutcome {
+  kind: "refresh-succeeded"
+}
+
+export interface SavedLinkDraftSavedOutcome {
+  kind: "draft-saved"
+}
+
+export type SavedLinkInteractionOutcome =
+  | SavedLinkClearErrorOutcome
+  | SavedLinkErrorOutcome
+  | SavedLinkClearPreviewOutcome
+  | SavedLinkPreviewOutcome
+  | SavedLinkSelectionRequiredOutcome
+  | SavedLinkSelectionClosedOutcome
+  | SavedLinkFocusedOutcome
+  | SavedLinkViewResetOutcome
+  | SavedLinksUpdatedOutcome
+  | SavedLinkRefreshSucceededOutcome
+  | SavedLinkDraftSavedOutcome
 
 export interface SavedLinkSelection {
   originalUrl: string

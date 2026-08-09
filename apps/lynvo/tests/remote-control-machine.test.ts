@@ -25,6 +25,12 @@ const createHarness = ({
     })),
     save: vi.fn(),
     clear: vi.fn(),
+    loadDelivery: vi.fn(() => ({
+      processed: [],
+      applied: [],
+      pendingAcknowledgements: [],
+    })),
+    saveDelivery: vi.fn(),
   }
   const machine = createRemoteControlMachine({
     transport,
@@ -137,6 +143,7 @@ describe("remote-control machine", () => {
       url: "https://example.com/one",
       rangeRequest: "unknown",
     })
+    harness.machine.markCommandApplied(firstCommand!.id)
     harness.machine.acknowledgeCommand(firstCommand!.id)
     harness.machine.receiveCommand({
       command: "play",
@@ -172,6 +179,7 @@ describe("remote-control machine", () => {
       },
       "receiver-session"
     )
+    harness.machine.markCommandApplied("command-1")
     harness.machine.acknowledgeCommand("command-1")
     harness.setPollResponse({
       commands: [
@@ -276,6 +284,7 @@ describe("remote-control machine", () => {
       id: "command-1",
     })
 
+    harness.machine.markCommandApplied("command-1")
     await harness.machine.acknowledgeCommand("command-1")
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
 

@@ -2,6 +2,7 @@ import { useState } from "react"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 
 interface UseResolvableContainerStateOptions {
   item: LinkViewItem
@@ -14,8 +15,9 @@ export const useResolvableContainerState = ({
   link,
   actions,
 }: UseResolvableContainerStateOptions) => {
+  const linkTarget = getMediaNodeTarget(link)
   const savedMirrors =
-    getLinkViewItemMetadata(item).playback.resolvedMirrors?.[link.url] ?? []
+    getLinkViewItemMetadata(item).playback.resolvedMirrors?.[linkTarget] ?? []
   const [mirrors, setMirrors] = useState(() =>
     savedMirrors.filter((mirror) => mirror.status !== "down")
   )
@@ -28,7 +30,7 @@ export const useResolvableContainerState = ({
     setIsExpanded(true)
     const resolvedLinks = await actions.expandMirror(
       item.url,
-      link.url,
+      linkTarget,
       bypassCache
     )
     const availableMirrors =
@@ -42,7 +44,7 @@ export const useResolvableContainerState = ({
 
   const openLink = () => {
     if (!link.opened) {
-      actions.markOpened(item.url, link.url)
+      actions.markOpened(item.url, linkTarget)
     }
     if (mirrors.length) {
       setIsExpanded((currentValue) => !currentValue)

@@ -16,6 +16,11 @@ export interface CredentialReadPayload {
   readonly exp: number
 }
 
+export interface SessionCleanupPayload {
+  readonly purpose: "sessionCleanup"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 
 const base64UrlEncode = (bytes: Uint8Array): string => {
@@ -42,7 +47,8 @@ export const signAuthPreflightToken = async (
   payload:
     | AuthPreflightPayload
     | DeviceCodePreflightPayload
-    | CredentialReadPayload,
+    | CredentialReadPayload
+    | SessionCleanupPayload,
   secret: string
 ): Promise<string> => {
   const encodedPayload = base64UrlEncode(
@@ -64,5 +70,14 @@ export const signCredentialReadToken = async (
 ) =>
   await signAuthPreflightToken(
     { purpose: "credentialRead", exp: expiresAt },
+    secret
+  )
+
+export const signSessionCleanupToken = async (
+  secret: string,
+  expiresAt: number
+) =>
+  await signAuthPreflightToken(
+    { purpose: "sessionCleanup", exp: expiresAt },
     secret
   )

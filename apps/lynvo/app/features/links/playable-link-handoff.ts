@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { ExtractedLink } from "~/features/links/types"
+import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { openInPlayer, type RangeRequestCapability } from "~/lib/player-utils"
 
 export const remotePlaybackIntentSchema = z.object({
@@ -32,7 +33,7 @@ export const parseRemotePlaybackIntent = (value: unknown) =>
 const toRemotePlaybackIntent = (
   target: string | ExtractedLink
 ): RemotePlaybackIntent => ({
-  url: typeof target === "string" ? target : target.url,
+  url: typeof target === "string" ? target : getMediaNodeTarget(target),
   rangeRequest:
     typeof target === "string" ? "unknown" : (target.rangeRequest ?? "unknown"),
 })

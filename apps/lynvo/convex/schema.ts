@@ -113,13 +113,18 @@ export default defineSchema({
     userId: v.id("users"),
     url: v.string(),
     title: v.optional(v.string()),
-    meta: v.optional(v.string()),
+    meta: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_url", ["userId", "url"]),
+
+  workerSessionCleanupIntents: defineTable({
+    workerSessionId: v.string(),
+    createdAt: v.number(),
+  }).index("by_workerSessionId", ["workerSessionId"]),
 
   userStorageLedgers: defineTable({
     userId: v.id("users"),

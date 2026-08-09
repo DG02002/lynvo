@@ -40,7 +40,14 @@ describe("Draft module", () => {
 
   it("stores the current tree without selection state", () => {
     const links: ExtractedLink[] = [
-      { url: "https://example.com/file.mp4", label: "File", id: "file-1" },
+      {
+        nodeKey: "test:file-1",
+        url: "https://example.com/file.mp4",
+        label: "File",
+        id: "file-1",
+        type: "file",
+        mediaNodeKind: "playable",
+      },
     ]
     const meta: MetaData = {
       pluginName: "Spencerwooo's Onedrive Vercel Index",
@@ -58,7 +65,15 @@ describe("Draft module", () => {
   it("removes a draft", () => {
     writeDraft(
       "https://example.com",
-      [{ url: "https://example.com/file.mp4", label: "File" }],
+      [
+        {
+          nodeKey: "test:file",
+          url: "https://example.com/file.mp4",
+          label: "File",
+          type: "file",
+          mediaNodeKind: "playable",
+        },
+      ],
       {}
     )
     deleteDraft("https://example.com")

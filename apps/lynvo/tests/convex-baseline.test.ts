@@ -6,9 +6,17 @@ import {
   createConvexTest,
   insertTestUser,
 } from "./convex-test-harness"
-import { LINKS_MAX_COUNT } from "../convex/constants"
+import { EMPTY_LINK_METADATA_JSON, LINKS_MAX_COUNT } from "../convex/constants"
 
 const LIST_TIME_BUCKET = Date.UTC(2026, 6, 22)
+
+const createMetadataJson = (source: Record<string, unknown>) =>
+  JSON.stringify({
+    schemaVersion: 3,
+    source,
+    extraction: { extractedLinks: [] },
+    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+  })
 
 describe("Convex function boundaries", () => {
   it("rejects anonymous link reads", async () => {
@@ -17,6 +25,23 @@ describe("Convex function boundaries", () => {
     await expect(
       convex.query(api.links.list, { timeBucket: LIST_TIME_BUCKET })
     ).rejects.toThrow("UNAUTHORIZED")
+  })
+
+  it("rejects noncanonical metadata before committing a link", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "invalid-metadata-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+
+    await expect(
+      client.mutation(api.links.createOrUpdate, {
+        url: "https://invalid.example",
+        meta: "{}",
+      })
+    ).rejects.toThrow()
+
+    await expect(
+      client.query(api.links.list, { timeBucket: LIST_TIME_BUCKET })
+    ).resolves.toEqual([])
   })
 
   it("isolates links by authenticated user", async () => {
@@ -29,12 +54,14 @@ describe("Convex function boundaries", () => {
       await context.db.insert("links", {
         userId: firstUser.userId,
         url: "https://first.example",
+        meta: EMPTY_LINK_METADATA_JSON,
         createdAt: now,
         updatedAt: now,
       })
       await context.db.insert("links", {
         userId: secondUser.userId,
         url: "https://second.example",
+        meta: EMPTY_LINK_METADATA_JSON,
         createdAt: now,
         updatedAt: now,
       })
@@ -61,6 +88,7 @@ describe("Convex function boundaries", () => {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://bounded.example/${index}`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: LIST_TIME_BUCKET + index,
           updatedAt: LIST_TIME_BUCKET + index,
         })
@@ -90,6 +118,7 @@ describe("Convex function boundaries", () => {
         await context.db.insert("links", {
           userId: user.userId,
           url: `https://update.example/${index}`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: LIST_TIME_BUCKET + index,
           updatedAt: LIST_TIME_BUCKET + index,
         })
@@ -121,6 +150,7 @@ describe("Convex function boundaries", () => {
         await context.db.insert("links", {
           userId: firstUser.userId,
           url: `https://eviction.example/${index}`,
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: LIST_TIME_BUCKET + index,
           updatedAt: LIST_TIME_BUCKET + index,
         })
@@ -128,6 +158,7 @@ describe("Convex function boundaries", () => {
       await context.db.insert("links", {
         userId: secondUser.userId,
         url: "https://isolated.example/oldest",
+        meta: EMPTY_LINK_METADATA_JSON,
         createdAt: LIST_TIME_BUCKET - 1,
         updatedAt: LIST_TIME_BUCKET - 1,
       })
@@ -146,7 +177,7 @@ describe("Convex function boundaries", () => {
     await expect(
       firstClient.mutation(api.links.createOrUpdate, {
         url: "https://eviction.example/rejected",
-        meta: "x".repeat(1024 * 1024),
+        meta: createMetadataJson({ padding: "x".repeat(1024 * 1024) }),
       })
     ).rejects.toThrow("too much data")
     const afterRejection = await firstClient.query(api.links.list, {
@@ -177,6 +208,7 @@ describe("Convex function boundaries", () => {
         await context.db.insert("links", {
           userId: user.userId,
           url: "https://schema.example",
+          meta: EMPTY_LINK_METADATA_JSON,
           createdAt: "invalid",
           updatedAt: Date.now(),
         })

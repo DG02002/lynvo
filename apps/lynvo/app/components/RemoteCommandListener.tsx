@@ -4,7 +4,8 @@ import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
 import { toast } from "sonner"
 
 export const RemoteCommandListener = () => {
-  const { lastCommand, acknowledgeCommand } = useRemoteControl()
+  const { lastCommand, acknowledgeCommand, markCommandApplied } =
+    useRemoteControl()
 
   useEffect(() => {
     if (!lastCommand) {
@@ -14,6 +15,7 @@ export const RemoteCommandListener = () => {
     const handleCommand = async () => {
       try {
         toast.info("Opening player…")
+        markCommandApplied(lastCommand.id)
         await playableLinkHandoff.receive(lastCommand.payload)
         acknowledgeCommand(lastCommand.id)
       } catch {
@@ -22,7 +24,7 @@ export const RemoteCommandListener = () => {
     }
 
     void handleCommand()
-  }, [acknowledgeCommand, lastCommand])
+  }, [acknowledgeCommand, lastCommand, markCommandApplied])
 
   return null
 }

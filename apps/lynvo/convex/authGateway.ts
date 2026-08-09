@@ -16,6 +16,11 @@ export interface CredentialReadPayload {
   readonly exp: number
 }
 
+export interface SessionCleanupPayload {
+  readonly purpose: "sessionCleanup"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -128,6 +133,25 @@ export const verifyCredentialReadToken = async (
     payload.exp < Date.now()
   ) {
     throw new Error("Expired credential read token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
+}
+
+export const verifySessionCleanupToken = async (
+  token: string,
+  secret: string
+): Promise<SessionCleanupPayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "sessionCleanup" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired session cleanup token")
   }
   return { purpose: payload.purpose, exp: payload.exp }
 }
