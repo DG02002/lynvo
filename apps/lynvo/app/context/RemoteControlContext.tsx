@@ -16,7 +16,7 @@ declare global {
     activeSessionId: string | null
     connectToSession: (sessionId: string, deviceName: string) => void
     disconnect: () => void
-    sendCommand: (command: string, data?: unknown) => Promise<void>
+    sendRemotePlayback: (intent: RemotePlaybackIntent) => Promise<void>
     connectedDeviceName: string | null
     lastCommand: RemoteCommand | null
     acknowledgeCommand: (commandId: string) => void
@@ -91,14 +91,14 @@ export const RemoteControlProvider = ({
           toast.error(
             "Remote Play updates are temporarily unavailable. Check the connection."
           )
+        } else if (outcome.type === "invalid-command") {
+          toast.error("Remote Play received an invalid playback request.")
         } else if (outcome.type === "receiver-connected") {
           toast.info(`Connected to ${outcome.deviceName}`)
         } else if (outcome.type === "receiver-ended") {
           toast.info("Remote Play connection ended")
         } else if (outcome.command === "play") {
           toast.info("Playing on the connected device")
-        } else if (outcome.command === "pause") {
-          toast.info("Paused on the connected device")
         }
       }),
     [machine]
@@ -121,7 +121,7 @@ export const RemoteControlProvider = ({
       disconnect: () => {
         void machine.disconnect().catch(console.error)
       },
-      sendCommand: machine.send,
+      sendRemotePlayback: machine.sendRemotePlayback,
       connectedDeviceName: state.connectedDeviceName,
       lastCommand: state.lastCommand,
       acknowledgeCommand: machine.acknowledgeCommand,

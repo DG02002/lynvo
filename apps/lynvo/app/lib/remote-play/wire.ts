@@ -1,9 +1,10 @@
 import { z } from "zod"
+import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handoff"
 
 declare global {
   interface RemoteCommandWireFields {
     id: string
-    command: "play" | "pause"
+    command: "play"
     payload: string
     createdAt: number
   }
@@ -21,8 +22,19 @@ declare global {
 
 export const remoteCommandFieldsSchema = z.object({
   id: z.string().min(1),
-  command: z.enum(["play", "pause"]),
-  payload: z.string(),
+  command: z.literal("play"),
+  payload: z.string().superRefine((payload, context) => {
+    try {
+      const parsed = parseRemotePlaybackIntent(JSON.parse(payload))
+      if (parsed.success) {
+        return
+      }
+    } catch {
+      context.addIssue({ code: "custom", message: "Invalid playback intent" })
+      return
+    }
+    context.addIssue({ code: "custom", message: "Invalid playback intent" })
+  }),
   createdAt: z.number().nonnegative().finite(),
 })
 

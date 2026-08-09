@@ -3,19 +3,20 @@ import {
   REMOTE_COMMAND_STALE_AFTER_MS,
 } from "./constants"
 import { remoteCommandFieldsSchema } from "~/lib/remote-play/wire"
+import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handoff"
 
 declare global {
   interface RemoteCommandDeliveryInput {
     id: string
-    command: "play" | "pause"
-    payload: unknown
+    command: "play"
+    payload: RemotePlaybackIntent
     createdAt: number
   }
 
   interface RemoteCommand {
     id: string
-    command: "play" | "pause"
-    payload: unknown
+    command: "play"
+    payload: RemotePlaybackIntent
     receivedAt: number
   }
 
@@ -36,14 +37,6 @@ declare global {
   }
 }
 
-const parsePayload = (payload: string) => {
-  try {
-    return JSON.parse(payload)
-  } catch {
-    return null
-  }
-}
-
 export const parseRemoteCommandWirePayload = (
   value: unknown
 ): RemoteCommandDeliveryInput | undefined => {
@@ -51,9 +44,13 @@ export const parseRemoteCommandWirePayload = (
   if (!parsed.success) {
     return undefined
   }
+  const payload = parseRemotePlaybackIntent(JSON.parse(parsed.data.payload))
+  if (!payload.success) {
+    return undefined
+  }
   return {
     ...parsed.data,
-    payload: parsePayload(parsed.data.payload),
+    payload: payload.data,
   }
 }
 

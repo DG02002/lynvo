@@ -128,16 +128,19 @@ describe("remote-control machine", () => {
     const harness = createHarness()
     harness.machine.receiveCommand({
       command: "play",
-      payload: { url: "one" },
+      payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
     })
     const firstCommand = harness.machine.getSnapshot().lastCommand
-    expect(firstCommand?.payload).toEqual({ url: "one" })
+    expect(firstCommand?.payload).toEqual({
+      url: "https://example.com/one",
+      rangeRequest: "unknown",
+    })
     harness.machine.acknowledgeCommand(firstCommand!.id)
     harness.machine.receiveCommand({
       command: "play",
-      payload: { url: "one" },
+      payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
     })
@@ -146,7 +149,10 @@ describe("remote-control machine", () => {
     harness.setNow(2_000_000)
     harness.machine.receiveCommand({
       command: "play",
-      payload: null,
+      payload: {
+        url: "https://example.com/stale",
+        rangeRequest: "unknown",
+      },
       createdAt: 1_000_000,
       id: "stale",
     })
@@ -160,7 +166,7 @@ describe("remote-control machine", () => {
         kind: "command",
         id: "command-1",
         command: "play",
-        payload: '{"url":"one"}',
+        payload: '{"url":"https://example.com/one"}',
         createdAt: 1_000_000,
         targetSessionId: "receiver-session",
       },
@@ -172,7 +178,7 @@ describe("remote-control machine", () => {
         {
           id: "command-1",
           command: "play",
-          payload: '{"url":"one"}',
+          payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
         },
       ],
@@ -192,7 +198,7 @@ describe("remote-control machine", () => {
         {
           id: "command-1",
           command: "play",
-          payload: '{"url":"one"}',
+          payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
         },
       ],
@@ -204,7 +210,7 @@ describe("remote-control machine", () => {
         kind: "command",
         id: "command-1",
         command: "play",
-        payload: '{"url":"one"}',
+        payload: '{"url":"https://example.com/one"}',
         createdAt: 1_000_000,
         targetSessionId: "receiver-session",
       },
@@ -222,7 +228,7 @@ describe("remote-control machine", () => {
         {
           id: "command-1",
           command: "play",
-          payload: "{}",
+          payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
         },
       ],
@@ -238,12 +244,34 @@ describe("remote-control machine", () => {
     expect(harness.machine.getSnapshot().lastCommand?.id).toBe("command-1")
   })
 
+  it("reports invalid playback intents without acknowledging them", async () => {
+    const harness = createHarness()
+    const outcomes: RemoteControlOutcome[] = []
+    harness.machine.subscribeOutcomes((outcome) => outcomes.push(outcome))
+    harness.setPollResponse({
+      commands: [
+        {
+          id: "invalid-command",
+          command: "play",
+          payload: '{"url":"not-a-url"}',
+          createdAt: 1_000_000,
+        },
+      ],
+    })
+
+    await harness.machine.poll()
+
+    expect(outcomes).toContainEqual({ type: "invalid-command" })
+    expect(harness.machine.getSnapshot().lastCommand).toBeNull()
+    expect(harness.transport.acknowledge).not.toHaveBeenCalled()
+  })
+
   it("retries a failed acknowledgement without replaying the command", async () => {
     const harness = createHarness()
     harness.transport.acknowledge.mockRejectedValueOnce(new Error("offline"))
     harness.machine.receiveCommand({
       command: "play",
-      payload: {},
+      payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
     })
@@ -256,7 +284,7 @@ describe("remote-control machine", () => {
         {
           id: "command-1",
           command: "play",
-          payload: "{}",
+          payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
         },
       ],

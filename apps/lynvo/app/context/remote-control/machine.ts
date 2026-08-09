@@ -46,8 +46,7 @@ declare global {
     disconnect: (targetSessionId: string) => Promise<unknown>
     send: (
       targetSessionId: string,
-      command: string,
-      payload?: unknown
+      intent: RemotePlaybackIntent
     ) => Promise<unknown>
     poll: () => Promise<RemotePollResponse>
     acknowledge: (commandId: string) => Promise<unknown>
@@ -79,9 +78,10 @@ declare global {
       | "receiver-connected"
       | "receiver-ended"
       | "command-received"
+      | "invalid-command"
       | "delivery-unavailable"
     deviceName?: string
-    command?: string
+    command?: "play"
   }
 
   interface RemoteControlMachine {
@@ -94,7 +94,7 @@ declare global {
     connect: (sessionId: string, deviceName: string) => Promise<void>
     disconnect: () => Promise<void>
     disconnectReceiver: () => Promise<void>
-    send: (command: string, payload?: unknown) => Promise<void>
+    sendRemotePlayback: (intent: RemotePlaybackIntent) => Promise<void>
     receiveCommand: (command: RemoteCommandDeliveryInput) => boolean
     setRealtimeStatus: (status: string) => void
     receiveRealtime: (
@@ -279,12 +279,12 @@ export const createRemoteControlMachine = ({
       syncDevices([])
       publishOutcome({ type: "receiver-disconnected" })
     },
-    send: async (command, payload) => {
+    sendRemotePlayback: async (intent) => {
       if (!state.activeSessionId) {
         return
       }
       try {
-        await transport.send(state.activeSessionId, command, payload)
+        await transport.send(state.activeSessionId, intent)
       } catch (error) {
         publishOutcome({ type: "send-failed" })
         await machine.disconnect().catch(() => undefined)
@@ -302,6 +302,8 @@ export const createRemoteControlMachine = ({
         const command = parseRemoteCommandWirePayload(event)
         if (command) {
           receiveCommand(command)
+        } else {
+          publishOutcome({ type: "invalid-command" })
         }
       } else if (event.kind === "connections" && event.controllingDevices) {
         syncDevices(event.controllingDevices)
@@ -329,6 +331,8 @@ export const createRemoteControlMachine = ({
         const parsedCommand = parseRemoteCommandWirePayload(command)
         if (parsedCommand && receiveCommand(parsedCommand)) {
           break
+        } else if (!parsedCommand) {
+          publishOutcome({ type: "invalid-command" })
         }
       }
     },

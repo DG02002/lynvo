@@ -1,9 +1,9 @@
 import { useEffect } from "react"
 import { useRemoteControl } from "~/context/RemoteControlContext"
-import { openInPlayer } from "~/lib/player-utils"
+import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
 import { toast } from "sonner"
 
-export function RemoteCommandListener() {
+export const RemoteCommandListener = () => {
   const { lastCommand, acknowledgeCommand } = useRemoteControl()
 
   useEffect(() => {
@@ -13,20 +13,15 @@ export function RemoteCommandListener() {
 
     const handleCommand = async () => {
       try {
-        if (lastCommand.command === "play") {
-          const payload = lastCommand.payload as { url?: string } | null
-          const url = payload?.url
-          if (url) {
-            toast.info("Opening player…")
-            await openInPlayer(url)
-          }
-        }
-      } finally {
+        toast.info("Opening player…")
+        await playableLinkHandoff.receive(lastCommand.payload)
         acknowledgeCommand(lastCommand.id)
+      } catch {
+        toast.error("Remote Play couldn’t open this link.")
       }
     }
 
-    handleCommand()
+    void handleCommand()
   }, [acknowledgeCommand, lastCommand])
 
   return null

@@ -13,7 +13,7 @@ import {
   REMOTE_COMMAND_TTL_MS,
 } from "./constants"
 
-const remoteCommandValidator = v.union(v.literal("play"), v.literal("pause"))
+const remoteCommandValidator = v.literal("play")
 
 const getAuthenticatedSession = async (
   context: Parameters<typeof getAuthSessionId>[0]

@@ -85,7 +85,7 @@ describe("authenticated remote commands", () => {
     })
     await senderClient.mutation(api.commands.enqueue, {
       targetSessionId: secondSessionId,
-      command: "pause",
+      command: "play",
       payload: "{}",
     })
 
@@ -99,7 +99,7 @@ describe("authenticated remote commands", () => {
     )
 
     expect(commands).toHaveLength(1)
-    expect(commands[0]?.command).toBe("pause")
+    expect(commands[0]?.command).toBe("play")
   })
 
   it("prevents acknowledgement from another session", async () => {

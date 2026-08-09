@@ -236,7 +236,7 @@ export default defineSchema({
   remoteCommands: defineTable({
     userId: v.id("users"),
     targetSessionId: v.id("authSessions"),
-    command: v.union(v.literal("play"), v.literal("pause")),
+    command: v.literal("play"),
     payload: v.string(),
     createdAt: v.number(),
     expiresAt: v.number(),

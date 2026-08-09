@@ -12,7 +12,7 @@ export const usePlaybackActions = ({
   setIsOpening: (value: boolean) => void
   resetOpeningWhenReady: () => void
 }) => {
-  const { activeSessionId, sendCommand } = useRemoteControl()
+  const { activeSessionId, sendRemotePlayback } = useRemoteControl()
 
   const handleLinkClick = useCallback(
     async (target: string | ExtractedLink) => {
@@ -22,7 +22,11 @@ export const usePlaybackActions = ({
       setIsOpening(true)
 
       try {
-        await playbackTarget({ target, activeSessionId, sendCommand })
+        await playbackTarget.handoff({
+          target,
+          activeSessionId,
+          sendRemotePlayback,
+        })
       } finally {
         resetOpeningWhenReady()
       }
@@ -31,7 +35,7 @@ export const usePlaybackActions = ({
       activeSessionId,
       isOpeningRef,
       resetOpeningWhenReady,
-      sendCommand,
+      sendRemotePlayback,
       setIsOpening,
     ]
   )

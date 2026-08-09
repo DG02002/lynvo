@@ -10,7 +10,7 @@ const createCommand = (
 ): RemoteCommandDeliveryInput => ({
   id: "command-1",
   command: "play",
-  payload: { url: "https://example.com/video" },
+  payload: { url: "https://example.com/video", rangeRequest: "unknown" },
   createdAt: 1_000_000,
   ...overrides,
 })
@@ -105,7 +105,10 @@ describe("remote command delivery", () => {
     ).toEqual({
       id: "command-1",
       command: "play",
-      payload: { url: "https://example.com/video" },
+      payload: {
+        url: "https://example.com/video",
+        rangeRequest: "unknown",
+      },
       createdAt: 1_000_000,
     })
 

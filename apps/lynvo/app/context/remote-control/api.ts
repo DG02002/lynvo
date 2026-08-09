@@ -5,16 +5,13 @@ import { remotePollResponseSchema } from "./schemas"
 export const remoteApi: RemoteControlTransport = {
   connect: async () => undefined,
   disconnect: async () => undefined,
-  send: async (targetSessionId, command, data) => {
-    if (command !== "play" && command !== "pause") {
-      throw new Error("Unsupported remote command")
-    }
+  send: async (targetSessionId, intent) => {
     return await Effect.runPromise(
       client.remote.send({
         payload: {
           target_session_id: targetSessionId,
-          command,
-          data,
+          command: "play",
+          data: intent,
         },
       })
     )
