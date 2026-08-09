@@ -156,8 +156,8 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
 
         return (
           <Fragment key={entryKey}>
-            <article className="grid gap-6 py-10 md:grid-cols-[12rem_1fr] md:gap-12 md:py-14">
-              <div className="flex flex-col items-start gap-3">
+            <article className="grid gap-5 py-8 md:grid-cols-[12rem_1fr] md:gap-12 md:py-14">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 md:flex-col md:items-start md:gap-3">
                 <p className="text-sm font-medium">{entry.category}</p>
                 <time
                   dateTime={entry.dateTime}
@@ -166,7 +166,7 @@ export const ChangelogList = ({ entries }: { entries: ChangelogEntry[] }) => {
                   {entry.date}
                 </time>
                 <Badge
-                  className="h-7 bg-lime-950 px-3 text-sm text-lime-200"
+                  className="ml-auto h-7 bg-lime-950 px-3 text-sm text-lime-200 md:ml-0"
                   aria-label="General availability"
                 >
                   GA
@@ -230,7 +230,7 @@ export default function Changelog() {
   }
 
   return (
-    <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
+    <div className="w-full px-6 py-12 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="flex max-w-3xl flex-col gap-5">
         <h1 className="text-4xl font-normal tracking-tight text-balance md:text-6xl">
           Changelog
@@ -240,29 +240,29 @@ export default function Changelog() {
       <Tabs
         value={selectedTab}
         onValueChange={handleTabChange}
-        className="mt-10 gap-8"
+        className="mt-8 gap-6 md:mt-10 md:gap-8"
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           <TabsList
             variant="line"
             aria-label="Changelog categories"
-            className="gap-6 p-0 md:gap-8"
+            className="w-fit max-w-full min-w-0 gap-4 p-0 sm:gap-6 md:gap-8"
           >
             <TabsTrigger
               value="all"
-              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
             >
-              All updates
+              All
             </TabsTrigger>
             <TabsTrigger
               value="general"
-              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
             >
               Product
             </TabsTrigger>
             <TabsTrigger
               value="plugin-server"
-              className="h-10 p-0 text-base after:hidden data-active:bg-transparent hover:bg-transparent"
+              className="h-11 min-w-0 flex-none p-0 text-sm after:hidden data-active:bg-transparent hover:bg-transparent sm:h-10 sm:text-base"
             >
               Plugin Server
             </TabsTrigger>
@@ -271,6 +271,7 @@ export default function Changelog() {
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button type="button" variant="ghost" size="sm" />}
+              className="ml-auto min-h-11 px-2 sm:min-h-0 sm:px-3"
             >
               Sort
               <HugeiconsIcon

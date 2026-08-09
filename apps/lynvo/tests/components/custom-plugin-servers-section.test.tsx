@@ -42,6 +42,7 @@ describe("CustomPluginServersSection", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Add Custom Plugin Server" })
     )
+
     fireEvent.click(
       screen.getByRole("button", { name: "Add Custom Plugin Server" })
     )

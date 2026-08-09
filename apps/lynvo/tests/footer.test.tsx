@@ -41,6 +41,10 @@ describe("Footer", () => {
       expect(
         screen.getByRole("heading", { name: "Terms and policies" })
       ).toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "About" })).toHaveAttribute(
+        "href",
+        "/about"
+      )
     }
   )
 })

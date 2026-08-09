@@ -68,7 +68,7 @@ describe("marketing and pricing copy", () => {
 
   it("keeps app metadata aligned with Lynvo's Android platforms", () => {
     expect(homeMeta({} as never)).toContainEqual({
-      title: "Lynvo - Save links. Open them in Android players.",
+      title: "Lynvo | Save links. Open them in Android players.",
     })
     expect(siteManifest.name).toBe(
       "Lynvo - Save links. Open them in Android players."

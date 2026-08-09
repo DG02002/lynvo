@@ -22,7 +22,7 @@ const About = () => (
         </h1>
       </header>
 
-      <div className="typeset typeset-article mt-10">
+      <div className="typeset typeset-policy mt-10">
         <p>
           Lynvo started with a simple playback problem and grew into an easier
           way to save a link on an Android phone or tablet and open it in a

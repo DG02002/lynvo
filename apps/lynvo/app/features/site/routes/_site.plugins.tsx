@@ -34,16 +34,19 @@ const Plugins = () => {
   const { lynvoPlugins } = useLoaderData<typeof loader>()
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-16 md:px-8 md:py-24">
+    <div className="mx-auto w-full max-w-5xl px-6 py-12 md:px-8 md:py-24">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
           Lynvo plugins
         </h1>
       </header>
 
-      <section aria-label="Lynvo plugins" className="mx-auto mt-14 max-w-4xl">
+      <section
+        aria-label="Lynvo plugins"
+        className="mx-auto mt-10 max-w-4xl md:mt-14"
+      >
         <Table>
-          <TableHeader>
+          <TableHeader className="hidden md:table-header-group">
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-0">Plugin</TableHead>
               <TableHead>Description</TableHead>
@@ -61,8 +64,11 @@ const Plugins = () => {
               </TableRow>
             ) : (
               lynvoPlugins.map((plugin) => (
-                <TableRow key={plugin.id} className="hover:bg-transparent">
-                  <TableCell className="pl-0 py-5 whitespace-normal">
+                <TableRow
+                  key={plugin.id}
+                  className="block hover:bg-transparent md:table-row"
+                >
+                  <TableCell className="block px-0 pt-6 pb-0 whitespace-normal md:table-cell md:py-5">
                     <a
                       href={plugin.sourceUrl}
                       target="_blank"
@@ -79,7 +85,7 @@ const Plugins = () => {
                       />
                     </a>
                   </TableCell>
-                  <TableCell className="max-w-md py-5 whitespace-normal text-muted-foreground">
+                  <TableCell className="block max-w-none px-0 pt-2 pb-6 pl-12 whitespace-normal text-muted-foreground text-pretty md:table-cell md:max-w-md md:px-3 md:py-5">
                     {plugin.description}
                   </TableCell>
                 </TableRow>

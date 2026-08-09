@@ -21,7 +21,7 @@ export const DocsDocumentLayout = ({
   context: DocumentationPageContext
   children: ReactNode
 }) => (
-  <div className="w-full px-5 pb-12 pt-6 md:px-8 lg:px-10 lg:py-0 xl:px-14">
+  <div className="w-full px-6 pb-12 pt-6 md:px-8 lg:px-10 lg:py-0 xl:px-14">
     <MobilePageOutline
       targetId="docs-content"
       revealAfterSelector="#docs-page-introduction"

@@ -39,7 +39,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         )}
         <RouteSeoMetadata />
         <Meta />
-        <Links />
+        <Links nonce="" />
       </head>
       <body className="h-full bg-background text-foreground antialiased flex flex-col min-h-screen">
         {children}

@@ -59,6 +59,7 @@ describe("remote-control machine", () => {
       storedDeviceName: "Stored TV",
     })
     expect(harness.machine.getSnapshot().activeSessionId).toBe("stored-session")
+    expect(harness.machine.getServerSnapshot().activeSessionId).toBeNull()
 
     const freshHarness = createHarness()
     await freshHarness.machine.connect("tv-1", "Living Room")

@@ -23,25 +23,20 @@ export function RealtimeProvider({
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
 }) {
+  const userId = user?.id
+  const sessionId = user?.sessionId
   const [state, dispatch] = useReducer(realtimeReducer, {
-    status: user ? "connecting" : "disabled",
+    status: userId ? "connecting" : "disabled",
   })
 
-  const [prevUser, setPrevUser] = React.useState(user)
-  if (user !== prevUser) {
-    setPrevUser(user)
-    if (!user) {
-      dispatch({ type: "SET_STATUS", status: "disabled" })
-    }
-  }
-
   useEffect(() => {
-    if (!user || typeof window === "undefined") {
+    if (!userId || typeof window === "undefined") {
+      dispatch({ type: "SET_STATUS", status: "disabled" })
       return
     }
 
     return openRealtimeSocket({ dispatch })
-  }, [user])
+  }, [sessionId, userId])
 
   const value = useMemo(() => ({ status: state.status }), [state.status])
 

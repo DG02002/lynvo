@@ -17,8 +17,22 @@ import { useDraftLinks } from "./drafts"
 import type { LinksActions } from "./actions"
 import { createServerLinksAdapter, createLinksPersistence } from "./persistence"
 import { createServerLink } from "./link-server"
+import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+
+const EMPTY_LINKS: LinkViewItem[] = []
+const subscribeToHydration = () => () => undefined
+const getHydratedSnapshot = () => true
+const getServerHydratedSnapshot = () => false
+
+const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
+  JSON.parse(JSON.stringify(metadata)) as LinkMetadata
 
 export const useLinks = () => {
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot
+  )
   const rootData = useRouteLoaderData<typeof rootLoader>("root")
   const user = rootData?.user ?? null
   const userId = user?.sub
@@ -49,7 +63,7 @@ export const useLinks = () => {
     await Effect.runPromise(
       client.links.updateMeta({
         params: { linkId: item.id },
-        payload: { meta: structuredClone(item.metadata) },
+        payload: { meta: toJsonMetadata(item.metadata) },
       })
     )
   }, [])
@@ -104,7 +118,7 @@ export const useLinks = () => {
   const links = useSyncExternalStore(
     persistence.subscribe,
     persistence.getSnapshot,
-    persistence.getSnapshot
+    () => EMPTY_LINKS
   )
   const combinedLinks = useDraftLinks(links)
   const mutations = useLinksMutations(persistence)
@@ -123,7 +137,7 @@ export const useLinks = () => {
     actions,
     user,
     isLoading: linksQuery.isLoading,
-    isHydrating: Boolean(userId && linksQuery.isLoading && links.length === 0),
+    isHydrating: Boolean(userId && !hasHydrated && links.length === 0),
     ...pagination,
   }
 }

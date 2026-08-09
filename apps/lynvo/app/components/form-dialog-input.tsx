@@ -21,6 +21,7 @@ export const FormDialogInput = ({
       className
     )}
     labelClassName={cn(
+      "bg-popover",
       tone === "destructive" && "peer-focus:text-destructive",
       labelClassName
     )}

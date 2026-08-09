@@ -26,4 +26,11 @@ describe("site landmarks", () => {
     const rendered = render(<RouterProvider router={router} />)
     expect(rendered.container.querySelectorAll("main")).toHaveLength(1)
   })
+
+  it("uses policy typography for the About page", () => {
+    const rendered = render(<About />)
+
+    expect(rendered.container.querySelector(".typeset-policy")).not.toBeNull()
+    expect(rendered.container.querySelector(".typeset-article")).toBeNull()
+  })
 })

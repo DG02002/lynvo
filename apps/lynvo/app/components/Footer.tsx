@@ -6,7 +6,7 @@ const supportLinks = [
 ] as const
 
 const companyLinks = [
-  { label: "About Lynvo", to: sitePaths.about },
+  { label: "About", to: sitePaths.about },
   { label: "Pricing", to: sitePaths.pricing },
   { label: "Plugins", to: sitePaths.plugins },
   { label: "Changelog", to: sitePaths.changelog },

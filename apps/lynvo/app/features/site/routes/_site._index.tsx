@@ -10,7 +10,7 @@ import {
 
 export function meta(_: Route.MetaArgs) {
   return [
-    { title: "Lynvo - Save links. Open them in Android players." },
+    { title: "Lynvo | Save links. Open them in Android players." },
     {
       name: "description",
       content:

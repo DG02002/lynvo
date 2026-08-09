@@ -60,7 +60,7 @@ export const RemoteControlProvider = ({
   const state = useSyncExternalStore(
     machine.subscribe,
     machine.getSnapshot,
-    machine.getSnapshot
+    machine.getServerSnapshot
   )
 
   useEffect(() => machine.start(), [machine])

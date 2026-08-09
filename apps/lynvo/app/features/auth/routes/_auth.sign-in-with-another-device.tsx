@@ -38,6 +38,7 @@ export default function SignInWithAnotherDevice() {
             <Button
               variant="secondary"
               className="h-13.5 w-full"
+              nativeButton={false}
               render={
                 <Link to={authPaths.signIn} viewTransition>
                   Back to log in

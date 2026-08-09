@@ -65,7 +65,7 @@ describe("Changelog", () => {
       within(updates).queryByText("Product launch")
     ).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("tab", { name: "All updates" }))
+    fireEvent.click(screen.getByRole("tab", { name: "All" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(within(updates).getByText("Product launch")).toBeVisible()
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()

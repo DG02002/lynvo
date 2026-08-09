@@ -42,7 +42,7 @@ export const meta = ({ loaderData }: Route.MetaArgs) => {
   }
 
   return [
-    { title: `${context.page.title} | Lynvo Docs` },
+    { title: `${context.page.title} | Lynvo` },
     { name: "description", content: context.page.description },
     { name: "contentType", content: context.page.contentType },
   ]

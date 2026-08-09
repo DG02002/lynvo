@@ -86,6 +86,7 @@ declare global {
 
   interface RemoteControlMachine {
     getSnapshot: () => RemoteControlMachineState
+    getServerSnapshot: () => RemoteControlMachineState
     subscribe: (listener: () => void) => () => void
     subscribeOutcomes: (
       listener: (outcome: RemoteControlOutcome) => void
@@ -221,6 +222,7 @@ export const createRemoteControlMachine = ({
 
   const machine: RemoteControlMachine = {
     getSnapshot: () => state,
+    getServerSnapshot: () => EMPTY_STATE,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
