@@ -36,6 +36,7 @@ import {
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
 import { createAuthenticationIntake } from "./authentication-intake"
+import { createSessionCleanupModule } from "./session-cleanup"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -602,4 +603,10 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
+  scheduled: async (_controller, env) => {
+    const result = await createSessionCleanupModule(env).drain()
+    if (result.kind === "unavailable") {
+      throw new Error("Worker Auth Session cleanup is unavailable")
+    }
+  },
 } satisfies ExportedHandler<Env>

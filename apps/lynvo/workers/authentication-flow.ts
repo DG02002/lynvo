@@ -2,10 +2,12 @@ import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
 import { createAuthSessionModule } from "./auth-session"
 import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
+import { createSessionCleanupModule } from "./session-cleanup"
 
 interface AuthenticationFlowEnvironment {
   readonly VITE_CONVEX_URL: string
   readonly WORKER_AUTH_SESSION: Env["WORKER_AUTH_SESSION"]
+  readonly AUTH_GATEWAY_SECRET: string
 }
 
 interface AuthenticationFlowInput {
@@ -128,7 +130,9 @@ export const createWorkerAuthenticationFlow = (
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
     const lifecycle = createSignedInSessionLifecycle(
-      createAuthSessionModule(environment.WORKER_AUTH_SESSION)
+      createAuthSessionModule(environment.WORKER_AUTH_SESSION),
+      undefined,
+      createSessionCleanupModule(environment)
     )
     const session = await lifecycle.establish({
       convexSessionId,

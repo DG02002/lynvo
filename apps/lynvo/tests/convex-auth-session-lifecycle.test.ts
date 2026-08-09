@@ -31,6 +31,12 @@ describe("Convex auth session lifecycle", () => {
       success: true,
       workerSessionIds: ["concurrently-relinked-worker-session"],
     })
+    const cleanupIntents = await convex.run((context) =>
+      context.db.query("workerSessionCleanupIntents").collect()
+    )
+    expect(cleanupIntents).toMatchObject([
+      { workerSessionId: "concurrently-relinked-worker-session" },
+    ])
   })
 
   it("denies an issued token immediately after its session row is deleted", async () => {

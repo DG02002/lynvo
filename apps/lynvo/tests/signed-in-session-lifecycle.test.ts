@@ -4,6 +4,7 @@ import {
   createSignedInSessionLifecycle,
   type SignedInSessionCoordinator,
 } from "../workers/signed-in-session-lifecycle"
+import type { SessionCleanupModule } from "../workers/session-cleanup"
 
 const createAuthSession = (
   overrides: Partial<AuthSessionModule> = {}
@@ -28,8 +29,14 @@ const createCoordinator = (
   revokeSession: vi.fn().mockResolvedValue([]),
   revokeAllSessions: vi.fn().mockResolvedValue([]),
   beginAccountErasure: vi.fn().mockResolvedValue([]),
-  listPendingCleanup: vi.fn().mockResolvedValue([]),
-  completeCleanup: vi.fn().mockResolvedValue(undefined),
+  ...overrides,
+})
+
+const createCleanup = (
+  overrides: Partial<SessionCleanupModule> = {}
+): SessionCleanupModule => ({
+  record: vi.fn().mockResolvedValue({ kind: "completed" }),
+  drain: vi.fn().mockResolvedValue({ kind: "completed" }),
   ...overrides,
 })
 
@@ -102,7 +109,9 @@ describe("signed-in session lifecycle", () => {
       authSession,
       createCoordinator({
         revokeAllSessions: revokeConvexSessions,
-        listPendingCleanup: vi.fn().mockResolvedValue(["worker-session"]),
+      }),
+      createCleanup({
+        drain: vi.fn().mockResolvedValue({ kind: "unavailable" }),
       })
     )
 
@@ -112,7 +121,7 @@ describe("signed-in session lifecycle", () => {
     expect(revokeConvexSessions).toHaveBeenCalledOnce()
   })
 
-  it("revokes the Worker identifiers returned by the Convex commit", async () => {
+  it("drains durable Worker cleanup after the Convex commit", async () => {
     const operationOrder: string[] = []
     const authSession = createAuthSession({
       revoke: vi.fn().mockImplementation(async () => {
@@ -120,7 +129,12 @@ describe("signed-in session lifecycle", () => {
         return { kind: "revoked", cookie: "session=expired" }
       }),
     })
-    const completeCleanup = vi.fn().mockResolvedValue(undefined)
+    const cleanup = createCleanup({
+      drain: vi.fn().mockImplementation(async () => {
+        operationOrder.push("worker")
+        return { kind: "completed" }
+      }),
+    })
     const lifecycle = createSignedInSessionLifecycle(
       authSession,
       createCoordinator({
@@ -128,31 +142,34 @@ describe("signed-in session lifecycle", () => {
           operationOrder.push("convex")
           return ["worker-session"]
         },
-        listPendingCleanup: vi.fn().mockResolvedValue(["worker-session"]),
-        completeCleanup,
-      })
+      }),
+      cleanup
     )
 
     const result = await lifecycle.revokeAllSessions()
 
     expect(result).toEqual({ kind: "completed", cookie: "session=expired" })
     expect(operationOrder).toEqual(["convex", "worker"])
-    expect(completeCleanup).toHaveBeenCalledWith("worker-session")
+    expect(cleanup.drain).toHaveBeenCalledOnce()
   })
 
   it("resumes durable cleanup through a fresh lifecycle instance", async () => {
-    const pending = new Set(["worker-session"])
-    const coordinator = createCoordinator({
-      listPendingCleanup: async () => [...pending],
-      completeCleanup: async (workerSessionId) => {
-        pending.delete(workerSessionId)
+    let shouldFail = true
+    const cleanup = createCleanup({
+      drain: async () => {
+        if (shouldFail) {
+          shouldFail = false
+          return { kind: "unavailable" }
+        }
+        return { kind: "completed" }
       },
     })
     const failedLifecycle = createSignedInSessionLifecycle(
       createAuthSession({
         revoke: vi.fn().mockResolvedValue({ kind: "unavailable" }),
       }),
-      coordinator
+      undefined,
+      cleanup
     )
     expect(await failedLifecycle.retryCleanup()).toEqual({
       kind: "unavailable",
@@ -161,21 +178,27 @@ describe("signed-in session lifecycle", () => {
     const recoveredAuthSession = createAuthSession()
     const recoveredLifecycle = createSignedInSessionLifecycle(
       recoveredAuthSession,
-      coordinator
+      undefined,
+      cleanup
     )
     expect(await recoveredLifecycle.retryCleanup()).toEqual({
       kind: "completed",
       cookie: "session=expired",
     })
-    expect(recoveredAuthSession.revoke).toHaveBeenCalledWith("worker-session")
-    expect(pending.size).toBe(0)
   })
 
   it("surfaces failed Worker compensation after Convex linking fails", async () => {
     const authSession = createAuthSession({
       revoke: vi.fn().mockResolvedValue({ kind: "unavailable" }),
     })
-    const lifecycle = createSignedInSessionLifecycle(authSession)
+    const cleanup = createCleanup({
+      drain: vi.fn().mockResolvedValue({ kind: "unavailable" }),
+    })
+    const lifecycle = createSignedInSessionLifecycle(
+      authSession,
+      undefined,
+      cleanup
+    )
 
     const result = await lifecycle.establish({
       convexSessionId: "convex-session",
@@ -186,6 +209,8 @@ describe("signed-in session lifecycle", () => {
     })
 
     expect(result).toEqual({ kind: "unavailable" })
-    expect(authSession.revoke).toHaveBeenCalledOnce()
+    expect(authSession.revoke).not.toHaveBeenCalled()
+    expect(cleanup.record).toHaveBeenCalledWith(expect.any(String))
+    expect(cleanup.drain).toHaveBeenCalledOnce()
   })
 })

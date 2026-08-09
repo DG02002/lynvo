@@ -44,6 +44,19 @@ export const listPending = query({
   },
 })
 
+export const enqueue = mutation({
+  args: {
+    serviceToken: v.string(),
+    workerSessionIds: v.array(v.string()),
+  },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await authorizeCleanup(args.serviceToken)
+    await enqueueWorkerSessionCleanup(ctx, args.workerSessionIds)
+    return { success: true }
+  },
+})
+
 export const complete = mutation({
   args: { serviceToken: v.string(), workerSessionId: v.string() },
   returns: v.object({ success: v.boolean() }),
