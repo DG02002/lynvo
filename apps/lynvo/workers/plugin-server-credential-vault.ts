@@ -1,9 +1,12 @@
-interface EncryptedPluginServerCredential {
-  readonly ciphertext: string
-  readonly nonce: string
-  readonly algorithm: "AES-256-GCM"
-  readonly keyVersion: number
-}
+import type { SealedRecord } from "../app/lib/security/sealed-record"
+import {
+  isSealedRecord,
+  sealRecord,
+  unsealRecord,
+} from "../app/lib/security/sealed-record"
+import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
+
+interface EncryptedPluginServerCredential extends SealedRecord {}
 
 interface CredentialContext {
   readonly userId: string
@@ -14,33 +17,11 @@ type CredentialVaultEnvironment = Partial<
   Pick<Env, "PLUGIN_CREDENTIAL_ENCRYPTION_KEY">
 >
 
-const ALGORITHM = "AES-256-GCM"
-const WEB_CRYPTO_ALGORITHM = "AES-GCM"
-const KEY_VERSION = 1
-const KEY_LENGTH_BYTES = 32
-const NONCE_LENGTH_BYTES = 12
 const UNAVAILABLE_RESPONSE = { error: "Credential protection is unavailable." }
-
-const decodeBase64 = (value: string): Uint8Array<ArrayBuffer> => {
-  const decoded = atob(value)
-  const bytes = new Uint8Array(decoded.length)
-  for (let index = 0; index < decoded.length; index += 1) {
-    bytes[index] = decoded.charCodeAt(index)
-  }
-  return bytes
-}
-
-const encodeBase64 = (value: ArrayBuffer): string => {
-  let encoded = ""
-  for (const byte of new Uint8Array(value)) {
-    encoded += String.fromCharCode(byte)
-  }
-  return btoa(encoded)
-}
 
 const additionalData = ({ userId, pluginServerId }: CredentialContext) =>
   new TextEncoder().encode(
-    `plugin-server\u0000v${KEY_VERSION}\u0000${userId}\u0000${pluginServerId}`
+    `plugin-server\u0000v${SEALED_RECORD_KEY_VERSION}\u0000${userId}\u0000${pluginServerId}`
   )
 
 const isContext = (value: unknown): value is CredentialContext =>
@@ -52,34 +33,6 @@ const isContext = (value: unknown): value is CredentialContext =>
   typeof value.pluginServerId === "string" &&
   value.userId.length > 0 &&
   value.pluginServerId.length > 0
-
-const isEncryptedCredential = (
-  value: unknown
-): value is EncryptedPluginServerCredential =>
-  typeof value === "object" &&
-  value !== null &&
-  "ciphertext" in value &&
-  "nonce" in value &&
-  "algorithm" in value &&
-  "keyVersion" in value &&
-  typeof value.ciphertext === "string" &&
-  typeof value.nonce === "string" &&
-  value.algorithm === ALGORITHM &&
-  value.keyVersion === KEY_VERSION
-
-const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
-  const bytes = decodeBase64(encodedKey)
-  if (bytes.byteLength !== KEY_LENGTH_BYTES) {
-    throw new Error("Invalid credential encryption key")
-  }
-  return await crypto.subtle.importKey(
-    "raw",
-    bytes,
-    { name: WEB_CRYPTO_ALGORITHM },
-    false,
-    ["encrypt", "decrypt"]
-  )
-}
 
 export class PluginServerCredentialVault implements DurableObject {
   constructor(
@@ -95,10 +48,8 @@ export class PluginServerCredentialVault implements DurableObject {
     if (!encodedKey) {
       return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
     }
-    let encryptionKey: CryptoKey
     let payload: unknown
     try {
-      encryptionKey = await importEncryptionKey(encodedKey)
       payload = await request.json()
     } catch {
       return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
@@ -115,40 +66,29 @@ export class PluginServerCredentialVault implements DurableObject {
       ) {
         return new Response(null, { status: 400 })
       }
-      const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH_BYTES))
-      const ciphertext = await crypto.subtle.encrypt(
-        {
-          name: WEB_CRYPTO_ALGORITHM,
-          iv: nonce,
+      try {
+        const credential = await sealRecord({
+          encodedKey,
           additionalData: additionalData(payload),
-        },
-        encryptionKey,
-        new TextEncoder().encode(payload.apiKey)
-      )
-      return Response.json({
-        ciphertext: encodeBase64(ciphertext),
-        nonce: encodeBase64(nonce.buffer),
-        algorithm: ALGORITHM,
-        keyVersion: KEY_VERSION,
-      } satisfies EncryptedPluginServerCredential)
+          plaintext: new TextEncoder().encode(payload.apiKey),
+        })
+        return Response.json(
+          credential satisfies EncryptedPluginServerCredential
+        )
+      } catch {
+        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+      }
     }
     if (pathname === "/decrypt") {
-      if (
-        !("credential" in payload) ||
-        !isEncryptedCredential(payload.credential)
-      ) {
+      if (!("credential" in payload) || !isSealedRecord(payload.credential)) {
         return new Response(null, { status: 400 })
       }
       try {
-        const plaintext = await crypto.subtle.decrypt(
-          {
-            name: WEB_CRYPTO_ALGORITHM,
-            iv: decodeBase64(payload.credential.nonce),
-            additionalData: additionalData(payload),
-          },
-          encryptionKey,
-          decodeBase64(payload.credential.ciphertext)
-        )
+        const plaintext = await unsealRecord({
+          encodedKey,
+          additionalData: additionalData(payload),
+          record: payload.credential,
+        })
         return Response.json({ apiKey: new TextDecoder().decode(plaintext) })
       } catch {
         return new Response(null, { status: 422 })

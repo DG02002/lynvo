@@ -7,11 +7,7 @@ interface SessionPayload {
   readonly idleTimeoutMs?: number
 }
 
-interface StoredSession {
-  readonly ciphertext: string
-  readonly nonce: string
-  readonly algorithm: "AES-256-GCM"
-  readonly keyVersion: number
+interface StoredSession extends SealedRecord {
   readonly createdAt: number
   readonly expiresAt: number
   readonly idleTimeoutMs: number
@@ -21,29 +17,7 @@ interface StoredSession {
 type SessionEnvironment = Partial<Pick<Env, "AUTH_SESSION_ENCRYPTION_KEY">>
 
 const SESSION_STORAGE_KEY = "session"
-const ALGORITHM = "AES-256-GCM"
-const WEB_CRYPTO_ALGORITHM = "AES-GCM"
-const KEY_VERSION = 1
-const KEY_LENGTH_BYTES = 32
-const NONCE_LENGTH_BYTES = 12
 const UNAVAILABLE_RESPONSE = { error: "Session service is unavailable." }
-
-const decodeBase64 = (value: string): Uint8Array<ArrayBuffer> => {
-  const decoded = atob(value)
-  const bytes = new Uint8Array(decoded.length)
-  for (let index = 0; index < decoded.length; index += 1) {
-    bytes[index] = decoded.charCodeAt(index)
-  }
-  return bytes
-}
-
-const encodeBase64 = (value: ArrayBuffer): string => {
-  let encoded = ""
-  for (const byte of new Uint8Array(value)) {
-    encoded += String.fromCharCode(byte)
-  }
-  return btoa(encoded)
-}
 
 const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   typeof payload === "object" &&
@@ -65,20 +39,6 @@ const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   (!("idleTimeoutMs" in payload) ||
     (typeof payload.idleTimeoutMs === "number" && payload.idleTimeoutMs > 0))
 
-const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
-  const bytes = decodeBase64(encodedKey)
-  if (bytes.byteLength !== KEY_LENGTH_BYTES) {
-    throw new Error("Invalid session encryption key")
-  }
-  return await crypto.subtle.importKey(
-    "raw",
-    bytes,
-    { name: WEB_CRYPTO_ALGORITHM },
-    false,
-    ["encrypt", "decrypt"]
-  )
-}
-
 export class WorkerAuthSession implements DurableObject {
   constructor(
     private readonly state: DurableObjectState,
@@ -87,20 +47,8 @@ export class WorkerAuthSession implements DurableObject {
 
   private additionalData = (): Uint8Array<ArrayBuffer> =>
     new TextEncoder().encode(
-      `worker-auth-session\u0000${this.state.id.toString()}\u0000${KEY_VERSION}`
+      `worker-auth-session\u0000${this.state.id.toString()}\u0000${SEALED_RECORD_KEY_VERSION}`
     )
-
-  private getEncryptionKey = async (): Promise<CryptoKey | undefined> => {
-    const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
-    if (!encodedKey) {
-      return undefined
-    }
-    try {
-      return await importEncryptionKey(encodedKey)
-    } catch {
-      return undefined
-    }
-  }
 
   fetch = async (request: Request): Promise<Response> => {
     const url = new URL(request.url)
@@ -112,31 +60,28 @@ export class WorkerAuthSession implements DurableObject {
       if (!isSessionPayload(payload)) {
         return new Response(null, { status: 400 })
       }
-      const encryptionKey = await this.getEncryptionKey()
-      if (!encryptionKey) {
+      const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
+      if (!encodedKey) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
-      const nonce = crypto.getRandomValues(new Uint8Array(NONCE_LENGTH_BYTES))
-      const ciphertext = await crypto.subtle.encrypt(
-        {
-          name: WEB_CRYPTO_ALGORITHM,
-          iv: nonce,
+      let sealedRecord: SealedRecord
+      try {
+        sealedRecord = await sealRecord({
+          encodedKey,
           additionalData: this.additionalData(),
-        },
-        encryptionKey,
-        new TextEncoder().encode(
-          JSON.stringify({
-            convexSessionId: payload.convexSessionId,
-            accessToken: payload.accessToken,
-            refreshToken: payload.refreshToken,
-          })
-        )
-      )
+          plaintext: new TextEncoder().encode(
+            JSON.stringify({
+              convexSessionId: payload.convexSessionId,
+              accessToken: payload.accessToken,
+              refreshToken: payload.refreshToken,
+            })
+          ),
+        })
+      } catch {
+        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+      }
       const storedSession: StoredSession = {
-        ciphertext: encodeBase64(ciphertext),
-        nonce: encodeBase64(nonce.buffer),
-        algorithm: ALGORITHM,
-        keyVersion: KEY_VERSION,
+        ...sealedRecord,
         createdAt: payload.createdAt,
         expiresAt: payload.expiresAt,
         idleTimeoutMs:
@@ -170,20 +115,16 @@ export class WorkerAuthSession implements DurableObject {
         await this.state.storage.delete(SESSION_STORAGE_KEY)
         return new Response(null, { status: 401 })
       }
-      const encryptionKey = await this.getEncryptionKey()
-      if (!encryptionKey) {
+      const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
+      if (!encodedKey) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
       try {
-        const plaintext = await crypto.subtle.decrypt(
-          {
-            name: WEB_CRYPTO_ALGORITHM,
-            iv: decodeBase64(storedSession.nonce),
-            additionalData: this.additionalData(),
-          },
-          encryptionKey,
-          decodeBase64(storedSession.ciphertext)
-        )
+        const plaintext = await unsealRecord({
+          encodedKey,
+          additionalData: this.additionalData(),
+          record: storedSession,
+        })
         const tokens: unknown = JSON.parse(new TextDecoder().decode(plaintext))
         if (
           typeof tokens !== "object" ||
@@ -218,3 +159,6 @@ export class WorkerAuthSession implements DurableObject {
     return new Response(null, { status: 405 })
   }
 }
+import type { SealedRecord } from "../app/lib/security/sealed-record"
+import { sealRecord, unsealRecord } from "../app/lib/security/sealed-record"
+import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
