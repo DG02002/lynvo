@@ -3,7 +3,6 @@ import { ConvexService } from "./ConvexService"
 import { ConvexError, ExtractionError, ValidationError } from "../errors"
 import { createDirectMediaModule } from "../../plugins/direct-media"
 import { createOutboundHttpTransport } from "../../outbound-http"
-import { getCustomPluginServerMetadata } from "./custom-plugin-server-adapter"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -13,11 +12,17 @@ import type {
 } from "./extraction-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import { CloudflareEnv } from "./CloudflareEnv"
-import { getLynvoPluginServerMetadata } from "./lynvo-plugin-server-adapter"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
-import { executeLynvoRoute } from "./lynvo-route-execution"
-import { executeCustomRoute } from "./custom-route-execution"
-import { loadAuthenticatedExtractionRoute } from "./authenticated-extraction-context"
+import { loadAuthenticatedExtractionContext } from "./authenticated-extraction-context"
+import {
+  extractWithCustomPluginServer,
+  getCustomRouteMetadata,
+} from "./custom-extraction-adapter"
+import {
+  extractWithLynvoPluginServer,
+  getLynvoRouteMetadata,
+} from "./lynvo-extraction-adapter"
+import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
@@ -37,64 +42,61 @@ export class ExtractionService extends Context.Service<
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
         if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionRoute(
+          const context = yield* loadAuthenticatedExtractionContext(
             convex,
             environment,
             options.userId,
-            options.accessToken,
-            {
-              targetUrl,
-              accessToken: options.accessToken,
-              requestId: options.requestId,
-              pluginServerId: options.pluginServerId,
-              pluginId: options.pluginId,
-              extractionKind: options.kind ?? "source",
-              inlineBasicAuth: routeInput.basicAuth,
-            }
+            options.accessToken
           ).pipe(
-            Effect.mapError((error) =>
-              error._tag === "ExtractionError" ||
-              error._tag === "ValidationError"
-                ? error
-                : new ValidationError({
-                    message: error.message,
-                    details: error,
-                  })
+            Effect.mapError(
+              (error) =>
+                new ValidationError({
+                  message: error.message,
+                  details: error,
+                })
             )
           )
-          const route = context.route
-          if (route.kind === "custom") {
-            return yield* executeCustomRoute(
-              convex,
-              credentialVault,
-              route.route,
-              {
-                targetUrl,
-                userId: options.userId,
-                accessToken: options.accessToken,
-                serviceToken: context.serviceToken,
-                requestId: options.requestId,
-                kind: options.kind ?? "source",
-                inlineBasicAuth: routeInput.basicAuth,
-              }
-            )
+          const routeOptions = {
+            targetUrl,
+            userId: options.userId,
+            accessToken: options.accessToken,
+            serviceToken: context.serviceToken,
+            requestId: options.requestId,
+            pluginServerId: options.pluginServerId,
+            pluginId: options.pluginId,
+            kind: options.kind ?? "source",
+            inlineBasicAuth: routeInput.basicAuth,
           }
-          if (route.kind === "lynvo") {
-            return yield* executeLynvoRoute(
-              convex,
-              credentialVault,
-              environment,
-              route.route,
-              {
-                targetUrl,
-                userId: options.userId,
-                accessToken: options.accessToken,
-                serviceToken: context.serviceToken,
-                requestId: options.requestId,
-                kind: options.kind ?? "source",
-                inlineBasicAuth: routeInput.basicAuth,
-              }
-            )
+          const customResult = yield* extractWithCustomPluginServer(
+            convex,
+            credentialVault,
+            context.pluginServers,
+            routeOptions
+          )
+          if (customResult) {
+            return customResult
+          }
+          if (
+            options.pluginServerId &&
+            options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+          ) {
+            return yield* new ValidationError({
+              message: "The saved Plugin Server is unavailable.",
+            })
+          }
+          const lynvoResult = yield* extractWithLynvoPluginServer(
+            convex,
+            credentialVault,
+            environment,
+            routeOptions
+          )
+          if (lynvoResult) {
+            return lynvoResult
+          }
+          if (options.pluginServerId === LYNVO_PLUGIN_SERVER_ID) {
+            return yield* new ValidationError({
+              message: "The saved Plugin Server is unavailable.",
+            })
           }
         }
 
@@ -116,50 +118,53 @@ export class ExtractionService extends Context.Service<
         const targetUrl = routeInput.targetUrl
 
         if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionRoute(
+          const context = yield* loadAuthenticatedExtractionContext(
             convex,
             environment,
             options.userId,
-            options.accessToken,
-            {
-              targetUrl,
-              accessToken: options.accessToken,
-              requestId: options.requestId,
-              extractionKind: "source",
-              inlineBasicAuth: routeInput.basicAuth,
-            }
+            options.accessToken
           ).pipe(
-            Effect.mapError((error) =>
-              error._tag === "ExtractionError" ||
-              error._tag === "ConvexError" ||
-              error._tag === "CredentialVaultError"
-                ? new ConvexError({
-                    message: error.message,
-                    cause: error,
-                  })
-                : error
+            Effect.mapError(
+              (error) =>
+                new ConvexError({
+                  message: error.message,
+                  cause: error,
+                })
             )
           )
-          const route = context.route
-          if (route.kind === "custom") {
-            const metadata = yield* getCustomPluginServerMetadata(
-              route.route.pluginServer,
-              targetUrl,
-              route.route.plugin?.id
-            )
-            if (metadata) {
-              return metadata
-            }
+          const routeOptions = {
+            targetUrl,
+            accessToken: options.accessToken,
+            requestId: options.requestId,
+            kind: "source" as const,
+            inlineBasicAuth: routeInput.basicAuth,
           }
-          if (route.kind === "lynvo") {
-            const metadata = getLynvoPluginServerMetadata(
-              route.route.manifest,
-              targetUrl,
-              route.route.plugin.id
+          const customMetadata = yield* getCustomRouteMetadata(
+            context.pluginServers,
+            routeOptions
+          ).pipe(
+            Effect.mapError((error) =>
+              error._tag === "ValidationError"
+                ? error
+                : new ConvexError({ message: error.message, cause: error })
             )
-            if (metadata) {
-              return metadata
-            }
+          )
+          if (customMetadata) {
+            return customMetadata
+          }
+          const lynvoMetadata = yield* getLynvoRouteMetadata(
+            convex,
+            environment,
+            routeOptions
+          ).pipe(
+            Effect.mapError((error) =>
+              error._tag === "ValidationError"
+                ? error
+                : new ConvexError({ message: error.message, cause: error })
+            )
+          )
+          if (lynvoMetadata) {
+            return lynvoMetadata
           }
         }
 
