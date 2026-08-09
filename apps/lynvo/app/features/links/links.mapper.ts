@@ -2,7 +2,7 @@ export type { LinkViewModel, SavedLink, SavedLinkDTO } from "./link-view-models"
 export {
   createLinkMetadata,
   mergeDefinedMeta,
-  normalizeLinkMetadata,
+  parseLinkMetadata,
   toFlatMeta,
 } from "./link-metadata-normalization"
 export { withResolvedMirrors, withOpenedUrl } from "./link-playback-metadata"

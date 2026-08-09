@@ -40,3 +40,9 @@ export const EXTRACTION_ROUTE_RATE_LIMIT = 30
 export const EXTRACTION_ROUTE_RATE_WINDOW_SECONDS = 60
 export const CREDENTIAL_READ_TOKEN_TTL_MS = 2 * 60 * 1000
 export const USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT = 200
+export const EMPTY_LINK_METADATA_JSON = JSON.stringify({
+  schemaVersion: 3,
+  source: {},
+  extraction: { extractedLinks: [] },
+  playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+})

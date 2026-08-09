@@ -34,8 +34,7 @@ export interface LinkResponse {
   created_at: number
   updated_at?: number
   title?: string
-  meta?: MetaData | LinkMetadata | string
-  extractedLinks?: ExtractedLink[]
+  meta: LinkMetadata | string
 }
 
 export interface LinkMetadata {
@@ -68,12 +67,10 @@ export interface MetaData {
   sourceCredentialKind?: "domain-password" | "http-basic"
   routeSourceName?: string
   routeSourceIconUrl?: string
-  extractedLinks?: ExtractedLink[]
   audio?: string
   pageTitle?: string
   title?: string
   badge?: string
-  schemaVersion?: number
   pluginServerId?: string
 }
 

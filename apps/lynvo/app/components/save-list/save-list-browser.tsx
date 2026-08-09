@@ -609,8 +609,7 @@ export const SaveListBrowser = ({
             item.kind === "saved"
               ? toLinkViewModel(item)
               : {
-                  extractedLinks:
-                    item.extractedLinks ?? item.meta.extractedLinks ?? [],
+                  extractedLinks: item.extractedLinks ?? [],
                   sourceName: item.meta.sourceName,
                   pluginName: item.meta.pluginName,
                 }

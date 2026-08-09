@@ -30,7 +30,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
           {
             url: payload.url,
             title: payload.title,
-            meta: payload.meta ? JSON.stringify(payload.meta) : undefined,
+            meta: JSON.stringify(payload.meta),
           },
           { accessToken: user.accessToken }
         )

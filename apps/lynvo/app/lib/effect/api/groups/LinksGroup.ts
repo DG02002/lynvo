@@ -26,7 +26,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
       payload: Schema.Struct({
         url: Schema.String,
         title: Schema.optional(Schema.String),
-        meta: Schema.optional(Schema.Unknown),
+        meta: Schema.Unknown,
       }),
       success: Schema.String,
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],

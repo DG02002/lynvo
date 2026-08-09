@@ -43,12 +43,10 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
   sourceCredentialKind: z.enum(["domain-password", "http-basic"]).optional(),
   routeSourceName: z.string().optional(),
   routeSourceIconUrl: z.string().optional(),
-  extractedLinks: z.array(extractedLinkSchema).optional(),
   audio: z.string().optional(),
   pageTitle: z.string().optional(),
   title: z.string().optional(),
   badge: z.string().optional(),
-  schemaVersion: z.number().optional(),
   pluginServerId: z.string().optional(),
 })
 
@@ -63,14 +61,14 @@ export const draftsSchema = z.record(z.string(), draftSchema)
 
 export type StoredDraft = z.infer<typeof draftSchema>
 
-const linkMetadataSchema: z.ZodType<LinkMetadata> = z.object({
+export const linkMetadataSchema: z.ZodType<LinkMetadata> = z.strictObject({
   schemaVersion: z.literal(3),
   source: z.record(z.string(), z.unknown()),
-  extraction: z.object({
+  extraction: z.strictObject({
     extractedLinks: z.array(extractedLinkSchema),
     extractedAt: z.number().optional(),
   }),
-  playback: z.object({
+  playback: z.strictObject({
     openedUrls: z.array(z.string()),
     openedIds: z.array(z.string()),
     resolvedMirrors: z

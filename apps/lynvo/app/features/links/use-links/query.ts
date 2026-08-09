@@ -5,7 +5,7 @@ import { client } from "~/lib/effect/api/client"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import type { LinksCache } from "./cache"
 import {
-  normalizeLinkMetadata,
+  parseLinkMetadata,
   type SavedLink,
 } from "~/features/links/links.mapper"
 
@@ -24,7 +24,7 @@ const serverLinkToSavedLink = (link: LinkResult): SavedLink => ({
   title: link.title,
   createdAt: link.createdAt,
   updatedAt: link.updatedAt,
-  metadata: normalizeLinkMetadata(link.meta),
+  metadata: parseLinkMetadata(link.meta),
 })
 
 export function useLinksQuery(

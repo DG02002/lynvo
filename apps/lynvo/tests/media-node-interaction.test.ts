@@ -43,7 +43,7 @@ describe("media node interaction", () => {
     })
   })
 
-  it("decodes legacy folder and playable shapes at the interaction boundary", () => {
+  it("supports app-native folder and playable shapes", () => {
     expect(
       getMediaNodeInteractionState({
         label: "Folder",

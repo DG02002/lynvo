@@ -111,7 +111,7 @@ export const getSavedLinkInteractionState = (
 
 export const getDraftSelection = (item: DraftListItem): DraftSelection => ({
   originalUrl: item.url,
-  links: item.extractedLinks ?? item.meta.extractedLinks ?? [],
+  links: item.extractedLinks ?? [],
   meta: item.meta,
   isDraftMode: true,
 })

@@ -1,5 +1,4 @@
 import type { ExtractedLink, LinkMetadata } from "./types"
-import { normalizeLinkMetadata } from "./link-metadata-normalization"
 import { mergeUnique } from "./link-tree-metadata"
 
 export const applyOpenedState = (
@@ -23,31 +22,29 @@ export const applyOpenedState = (
   })
 
 export const withOpenedUrl = (
-  metadata: unknown,
+  metadata: LinkMetadata,
   linkUrl: string
 ): LinkMetadata => {
-  const normalized = normalizeLinkMetadata(metadata)
   return {
-    ...normalized,
+    ...metadata,
     playback: {
-      ...normalized.playback,
-      openedUrls: mergeUnique(normalized.playback.openedUrls, [linkUrl]),
+      ...metadata.playback,
+      openedUrls: mergeUnique(metadata.playback.openedUrls, [linkUrl]),
     },
   }
 }
 
 export const withResolvedMirrors = (
-  metadata: unknown,
+  metadata: LinkMetadata,
   lazyItemUrl: string,
   mirrors: ExtractedLink[]
 ): LinkMetadata => {
-  const normalized = normalizeLinkMetadata(metadata)
   return {
-    ...normalized,
+    ...metadata,
     playback: {
-      ...normalized.playback,
+      ...metadata.playback,
       resolvedMirrors: {
-        ...normalized.playback.resolvedMirrors,
+        ...metadata.playback.resolvedMirrors,
         [lazyItemUrl]: mirrors,
       },
     },

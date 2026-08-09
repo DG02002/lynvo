@@ -4,7 +4,7 @@ import type {
   LinkResponse,
   LinkViewItem,
 } from "./types"
-import { normalizeLinkMetadata } from "./link-metadata-normalization"
+import { parseLinkMetadata } from "./link-metadata-normalization"
 import { applyOpenedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
 
@@ -42,7 +42,7 @@ export const toSavedLinkDTO = (link: LinkResponse): SavedLinkDTO => ({
   title: link.title,
   createdAt: link.created_at,
   updatedAt: link.updated_at ?? link.created_at,
-  metadata: normalizeLinkMetadata(link.meta, link.extractedLinks),
+  metadata: parseLinkMetadata(link.meta),
 })
 
 export const toLinkViewItem = (dto: SavedLink): LinkViewItem => ({

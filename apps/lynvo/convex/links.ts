@@ -15,6 +15,7 @@ import {
 } from "./storagePolicy"
 import {
   CLEANUP_USER_PAGE_SIZE,
+  EMPTY_LINK_METADATA_JSON,
   LINKS_MAX_COUNT,
   LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
@@ -78,17 +79,18 @@ export const createOrUpdate = mutation({
       )
       .unique()
 
+    const metadataJson = args.meta ?? EMPTY_LINK_METADATA_JSON
     if (existing) {
       const nextDoc = {
         ...existing,
         title: args.title ?? existing.title,
-        meta: args.meta ?? existing.meta,
+        meta: metadataJson,
         updatedAt: now,
       }
       await assertLinkMutation(ctx, userId, existing, nextDoc)
       await ctx.db.patch("links", existing._id, {
         title: args.title ?? existing.title,
-        meta: args.meta ?? existing.meta,
+        meta: metadataJson,
         updatedAt: now,
       })
       return existing._id
@@ -98,7 +100,7 @@ export const createOrUpdate = mutation({
       userId,
       url: args.url,
       title: args.title,
-      meta: args.meta,
+      meta: metadataJson,
       createdAt: now,
       updatedAt: now,
     }

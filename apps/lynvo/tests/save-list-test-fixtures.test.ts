@@ -14,7 +14,7 @@ describe("save-list UI test fixtures", () => {
     const draft = createSaveListTestItems().find(
       (item) => item.kind === "draft"
     )
-    const links = draft?.meta.extractedLinks ?? []
+    const links = draft?.extractedLinks ?? []
 
     expect(links.length).toBeGreaterThan(1)
     expect(
