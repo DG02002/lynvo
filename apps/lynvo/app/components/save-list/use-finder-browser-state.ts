@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 import {
   getLinkKey,
   getLinksAtFolderPath,
@@ -51,7 +52,7 @@ export const useFinderBrowserState = ({
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
     const linkKey = getLinkKey(link)
     actions.markOpened(item.url, link.url)
-    if (!link.children?.length && link.childrenResolved !== true) {
+    if (getMediaNodeInteractionState(link).needsResolution) {
       const resolvedLinks = await actions.expandFolder(
         item.url,
         linkKey,
@@ -68,7 +69,7 @@ export const useFinderBrowserState = ({
 
   const openLink = async (link: ExtractedLink) => {
     const linkKey = getLinkKey(link)
-    if (link.type === "folder" || link.children?.length) {
+    if (getMediaNodeInteractionState(link).isFolder) {
       await openFolder(link, [
         ...folderPath,
         { id: linkKey, label: link.label },

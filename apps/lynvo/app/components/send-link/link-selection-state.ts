@@ -4,17 +4,17 @@ import {
   hasSelectedDescendant,
   isAllChildrenSelected,
 } from "./link-selection-utils"
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
 export const getLinkSelectionState = (
   link: ExtractedLink,
   selectedIds: Set<string>
 ) => {
   const linkId = getSelectableLinkId(link)
-  const isFolder = link.type === "folder"
-  const isSelectable =
-    link.selectable === true || (!isFolder && link.selectable !== false)
+  const interaction = getMediaNodeInteractionState(link)
+  const { isFolder, isSelectable } = interaction
   const hasChildren = Boolean(link.children?.length)
-  const canExpand = isFolder && hasChildren
+  const canExpand = interaction.canExpand
 
   return {
     linkId,

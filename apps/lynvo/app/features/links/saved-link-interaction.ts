@@ -6,9 +6,10 @@ import type {
 } from "./types"
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
-
-const isMirrorResolvable = (link: ExtractedLink) =>
-  link.mediaNodeKind === "resolvable" && link.resolutionKind !== "folder"
+import {
+  getMediaNodeInteractionState,
+  isMirrorResolvableMediaNode,
+} from "./media-node-interaction"
 
 export interface SavedLinkInteractionState {
   directLink?: ExtractedLink
@@ -88,8 +89,8 @@ export const getSavedLinkInteractionState = (
   const view = toLinkViewModel(item)
   const directLink =
     view.extractedLinks.length === 1 &&
-    (view.extractedLinks[0]?.type !== "folder" ||
-      isMirrorResolvable(view.extractedLinks[0]))
+    (!getMediaNodeInteractionState(view.extractedLinks[0]).isFolder ||
+      isMirrorResolvableMediaNode(view.extractedLinks[0]))
       ? view.extractedLinks[0]
       : undefined
   const isDirectLinkExpired =
@@ -104,7 +105,7 @@ export const getSavedLinkInteractionState = (
       !isDirectLinkExpired &&
       (directLink ? directLink.opened !== true : isRootFolderNew),
     isResolvableContainer:
-      directLink !== undefined && isMirrorResolvable(directLink),
+      directLink !== undefined && isMirrorResolvableMediaNode(directLink),
   }
 }
 

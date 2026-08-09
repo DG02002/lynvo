@@ -9,21 +9,23 @@ import type {
   LinkListItem,
   LinkViewItem,
 } from "~/features/links/types"
+import {
+  getMediaNodeInteractionState,
+  getMediaNodeKey,
+  isMirrorResolvableMediaNode,
+} from "~/features/links/media-node-interaction"
 
 export interface FolderLevel {
   id: string
   label: string
 }
 
-export const getLinkKey = (link: ExtractedLink) => link.id ?? link.url
+export const getLinkKey = getMediaNodeKey
 
 export const isLazyFolder = (link: ExtractedLink) =>
-  link.type === "folder" &&
-  !link.children?.length &&
-  link.childrenResolved !== true
+  getMediaNodeInteractionState(link).needsResolution
 
-export const isMirrorResolvable = (link: ExtractedLink) =>
-  link.mediaNodeKind === "resolvable" && link.resolutionKind !== "folder"
+export const isMirrorResolvable = isMirrorResolvableMediaNode
 
 export const getFolderVisualState = (link: ExtractedLink, isOpen: boolean) => {
   if (isOpen) {

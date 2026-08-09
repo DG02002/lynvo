@@ -34,6 +34,7 @@ import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badg
 import { NewBadge } from "~/components/save-list/new-badge"
 import { FilenameText } from "~/components/filename-text"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 import {
   getFolderIcon,
   getFolderVisualState,
@@ -101,7 +102,10 @@ const FolderTree = ({
     parentPath: FolderLevel[]
   ) =>
     folderLinks.flatMap((link) => {
-      if (link.type !== "folder" || isMirrorResolvable(link)) {
+      if (
+        !getMediaNodeInteractionState(link).isFolder ||
+        isMirrorResolvable(link)
+      ) {
         return []
       }
       const linkKey = getLinkKey(link)
@@ -434,7 +438,7 @@ const FinderBrowser = ({
                 />
               )
             }
-            const isFolder = link.type === "folder" || Boolean(link.children)
+            const isFolder = getMediaNodeInteractionState(link).isFolder
             const isExpired =
               !isFolder &&
               link.expiry !== undefined &&

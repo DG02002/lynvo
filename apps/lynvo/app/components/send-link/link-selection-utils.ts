@@ -1,6 +1,10 @@
 import type { ExtractedLink } from "~/features/links/types"
+import {
+  getMediaNodeInteractionState,
+  getMediaNodeKey,
+} from "~/features/links/media-node-interaction"
 
-export const getSelectableLinkId = (link: ExtractedLink) => link.id || link.url
+export const getSelectableLinkId = getMediaNodeKey
 
 export const collectLinkAndDescendantIds = (link: ExtractedLink): string[] => [
   getSelectableLinkId(link),
@@ -11,9 +15,7 @@ export const collectSelectableLinkIds = (
   links: readonly ExtractedLink[]
 ): string[] =>
   links.flatMap((link) => {
-    const isFolder = link.type === "folder"
-    const isSelectable =
-      link.selectable === true || (!isFolder && link.selectable !== false)
+    const isSelectable = getMediaNodeInteractionState(link).isSelectable
     return [
       ...(isSelectable ? [getSelectableLinkId(link)] : []),
       ...collectSelectableLinkIds(link.children ?? []),
@@ -65,7 +67,7 @@ export const isAllChildrenSelected = (
   selectedIds: Set<string>
 ): boolean => {
   const linkId = getSelectableLinkId(link)
-  if (link.type !== "folder") {
+  if (!getMediaNodeInteractionState(link).isFolder) {
     return selectedIds.has(linkId)
   }
   if (!link.children || link.children.length === 0) {

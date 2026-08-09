@@ -1,4 +1,5 @@
 import type { ExtractedLink } from "~/features/links/types"
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
 export interface DirectSavePresentation {
   readonly kind: "directSave"
@@ -31,8 +32,12 @@ export const decideSavePresentation = (
     }
   }
 
-  const hasFolder = links.some((link) => link.type === "folder")
-  const directFiles = links.filter((link) => link.type !== "folder")
+  const hasFolder = links.some(
+    (link) => getMediaNodeInteractionState(link).isFolder
+  )
+  const directFiles = links.filter(
+    (link) => !getMediaNodeInteractionState(link).isFolder
+  )
 
   if (hasFolder || directFiles.length > 1) {
     return { kind: "selectionDialog", links: [...links] }

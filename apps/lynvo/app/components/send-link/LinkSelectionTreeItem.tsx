@@ -13,6 +13,7 @@ import { FilenameText } from "~/components/filename-text"
 import type { ExtractedLink } from "~/features/links/types"
 import { cn } from "~/lib/utils"
 import { getLinkSelectionState } from "./link-selection-state"
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
 interface LinkSelectionTreeItemProps {
   link: ExtractedLink
@@ -39,15 +40,13 @@ export const LinkSelectionTreeItem = ({
   const [isExpanded, setIsExpanded] = React.useState(hasSelectedChild)
   const [isResolving, setIsResolving] = React.useState(false)
   const canResolve =
-    isFolder &&
-    !hasChildren &&
-    link.childrenResolved !== true &&
+    getMediaNodeInteractionState(link).needsResolution &&
     Boolean(onExpandFolder)
   const folderState = !isFolder
     ? undefined
     : isExpanded
       ? "open"
-      : link.childrenResolved !== true && !hasChildren
+      : getMediaNodeInteractionState(link).needsResolution
         ? "lazy-closed"
         : "closed"
   const itemIcon = isFolder
