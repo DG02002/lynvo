@@ -1,11 +1,8 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
 import { ConvexError, ExtractionError, ValidationError } from "../errors"
-import {
-  extractDirectMedia,
-  getDirectMediaMetadata,
-} from "./direct-media-adapter"
-import { directMediaAdapter } from "../../plugins/direct-media-adapter"
+import { createDirectMediaModule } from "../../plugins/direct-media"
+import { createOutboundHttpTransport } from "../../outbound-http"
 import { getCustomPluginServerMetadata } from "./custom-plugin-server-adapter"
 import type {
   ExtractionResult,
@@ -32,6 +29,7 @@ export class ExtractionService extends Context.Service<
       const convex = yield* ConvexService
       const credentialVault = yield* PluginCredentialVault
       const environment = yield* CloudflareEnv
+      const directMedia = createDirectMediaModule(createOutboundHttpTransport())
 
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
@@ -100,7 +98,15 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        return yield* extractDirectMedia(directMediaAdapter, targetUrl)
+        const links = yield* Effect.tryPromise({
+          try: () => directMedia.extract(targetUrl),
+          catch: (cause) =>
+            new ExtractionError({
+              message: cause instanceof Error ? cause.message : String(cause),
+              url: targetUrl,
+            }),
+        })
+        return { links }
       })
 
       const getMetadata = Effect.fn("ExtractionService.getMetadata")(function* (
@@ -157,9 +163,10 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        return yield* getDirectMediaMetadata(directMediaAdapter, {
-          ...options,
-          url: targetUrl,
+        return yield* Effect.tryPromise({
+          try: () => directMedia.getMetadata(targetUrl),
+          catch: (cause) =>
+            new ConvexError({ message: "Metadata fetch failed", cause }),
         })
       })
 
