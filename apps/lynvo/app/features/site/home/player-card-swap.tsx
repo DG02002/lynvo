@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import { useAnimationActivity } from "./use-animation-activity"
 
 const PLAYER_PREVIEWS: Partial<Record<string, string>> = {
   just: "/images/player-previews/just-player.webp",
@@ -74,6 +75,8 @@ const opacityForSlot = (slot: Slot) =>
   DEPTH_OPACITY[slot.depth] ?? DEPTH_OPACITY.at(-1)!
 
 export const PlayerCardSwap = () => {
+  const { animationContainerRef, isAnimationActive } =
+    useAnimationActivity<HTMLUListElement>()
   const cardRefs = useRef<Array<HTMLElement | null>>([])
   const [initialOrder] = useState(() =>
     PLAYER_DEFINITIONS.map((_, index) => index)
@@ -89,6 +92,10 @@ export const PlayerCardSwap = () => {
   const zIndexTimerRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
+    if (!isAnimationActive) {
+      return
+    }
+
     let disposed = false
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
     reducedMotionRef.current = mediaQuery.matches
@@ -237,10 +244,13 @@ export const PlayerCardSwap = () => {
       window.clearTimeout(timerRef.current)
       window.clearTimeout(zIndexTimerRef.current)
       animationsRef.current.forEach((animation) => animation.cancel())
+      animationsRef.current = []
+      runningRef.current = false
+      scheduleRef.current = () => {}
       mediaQuery.removeEventListener("change", updateMotionPreference)
       window.removeEventListener("resize", updateLayout)
     }
-  }, [])
+  }, [isAnimationActive])
 
   const pause = () => {
     pausedRef.current = true
@@ -254,6 +264,7 @@ export const PlayerCardSwap = () => {
 
   return (
     <ul
+      ref={animationContainerRef}
       className="player-card-swap"
       aria-label="Four Android player previews"
       onMouseEnter={pause}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import { useAnimationActivity } from "./use-animation-activity"
 
 const PLAYER_PREVIEWS: Partial<Record<string, string>> = {
   just: "/images/player-previews/just-player.webp",
@@ -12,6 +13,8 @@ const STORAGE_KEY = "lynvo-player-carousel-track-start"
 const LOOP_DURATION = 36_000
 
 export const PlayerEdgeCarousel = () => {
+  const { animationContainerRef, isAnimationActive } =
+    useAnimationActivity<HTMLDivElement>()
   const [animationDelay, setAnimationDelay] = useState<number | null>(null)
   const motionRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{
@@ -63,6 +66,7 @@ export const PlayerEdgeCarousel = () => {
 
   return (
     <div
+      ref={animationContainerRef}
       className="player-edge-carousel"
       role="region"
       aria-roledescription="carousel"
@@ -72,6 +76,7 @@ export const PlayerEdgeCarousel = () => {
         ref={motionRef}
         className="player-edge-carousel__motion"
         data-ready={animationDelay !== null || undefined}
+        data-animation-active={isAnimationActive || undefined}
         style={
           animationDelay === null
             ? undefined

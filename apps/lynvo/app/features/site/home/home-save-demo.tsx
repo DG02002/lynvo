@@ -37,6 +37,7 @@ import {
   HOME_DEMO_STEP_DELAYS_MS,
   REDUCED_MOTION_MEDIA_QUERY,
 } from "./home-demo-constants"
+import { useAnimationActivity } from "./use-animation-activity"
 
 interface HomeDemoItem {
   icon: typeof PlayIcon
@@ -112,7 +113,8 @@ export const HomeSaveDemo = () => {
   const [isReducedMotion, setIsReducedMotion] = useState(false)
   const [cursorPosition, setCursorPosition] =
     useState<HomeDemoCursorPosition | null>(null)
-  const demoStageRef = useRef<HTMLDivElement>(null)
+  const { animationContainerRef: demoStageRef, isAnimationActive } =
+    useAnimationActivity<HTMLDivElement>()
   const copySourceRef = useRef<HTMLButtonElement>(null)
   const clipboardRef = useRef<HTMLButtonElement>(null)
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -136,7 +138,7 @@ export const HomeSaveDemo = () => {
   }, [])
 
   useEffect(() => {
-    if (isReducedMotion) {
+    if (isReducedMotion || !isAnimationActive) {
       return
     }
 
@@ -146,7 +148,7 @@ export const HomeSaveDemo = () => {
     const timeout = window.setTimeout(() => setStep(nextStep), delay)
 
     return () => window.clearTimeout(timeout)
-  }, [isReducedMotion, step])
+  }, [isAnimationActive, isReducedMotion, step])
 
   const isClipboardOpen =
     step === HOME_DEMO_STEP.CLIPBOARD_VISIBLE ||

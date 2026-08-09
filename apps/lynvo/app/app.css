@@ -521,7 +521,7 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-left: calc((100vw - var(--player-carousel-card-width)) / 2);
 }
 
-.player-edge-carousel__motion[data-ready] {
+.player-edge-carousel__motion[data-ready][data-animation-active] {
   animation-play-state: running;
 }
 
