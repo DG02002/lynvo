@@ -7,11 +7,8 @@ import {
   softRefreshLink,
 } from "./refresh-flow"
 import type { OpenSelectionDialogOptions } from "./action-types"
-import {
-  getLinkViewItemExtractedLinks,
-  getLinkViewItemFlatMeta,
-  getLinkViewItemMetadata,
-} from "~/features/links/link-metadata-accessors"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { getDraftSelection } from "~/features/links/saved-link-interaction"
 import { createRefreshFlowEffects } from "./refresh-flow-effects"
 
 export const useRefreshActions = ({
@@ -72,13 +69,9 @@ export const useRefreshActions = ({
   const handleShowLinks = useCallback(
     async (itemUrl: string) => {
       const item = links.find((linkItem) => linkItem.url === itemUrl)
-      if (item?.isDraft) {
-        effects.openSelection({
-          originalUrl: item.url,
-          links: item.extractedLinks ?? getLinkViewItemExtractedLinks(item),
-          meta: item.meta ?? getLinkViewItemFlatMeta(item),
-          isDraftMode: true,
-        })
+      const draftSelection = item ? getDraftSelection(item) : undefined
+      if (draftSelection) {
+        effects.openSelection(draftSelection)
         return
       }
       await handleHardRefresh(itemUrl)

@@ -29,7 +29,7 @@ import { DraftExpiryBadge } from "~/components/save-list/draft-expiry-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { FilenameText } from "~/components/filename-text"
-import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
   getFolderIcon,
   getFolderVisualState,
@@ -596,27 +596,14 @@ export const SaveListBrowser = ({
         {items.map((item) => {
           const itemKey = item.id ?? item.url
           const view = toLinkViewModel(item)
-          const directLink =
-            !item.isDraft &&
-            view.extractedLinks.length === 1 &&
-            (view.extractedLinks[0]?.type !== "folder" ||
-              isMirrorResolvable(view.extractedLinks[0]))
-              ? view.extractedLinks[0]
-              : undefined
-          const isResolvableContainer =
-            directLink && isMirrorResolvable(directLink)
+          const interactionState = getSavedLinkInteractionState(
+            item,
+            Date.now()
+          )
+          const { directLink, isDirectLinkExpired, isResolvableContainer } =
+            interactionState
           const isExtracting = extractingItems.has(item.url)
-          const isDirectLinkExpired =
-            directLink?.expiry !== undefined && directLink.expiry <= Date.now()
-          const isRootFolderNew =
-            !directLink &&
-            !item.isDraft &&
-            !new Set(getLinkViewItemMetadata(item).playback.openedUrls).has(
-              item.url
-            )
-          const isRootItemNew =
-            !isDirectLinkExpired &&
-            (directLink ? !directLink.opened : isRootFolderNew)
+          const isRootItemNew = interactionState.isNew
 
           if (directLink && isResolvableContainer) {
             return (
