@@ -15,7 +15,7 @@ const persistWithoutWaiting = (operation: Promise<void>) => {
   operation.catch((error) => console.error(error))
 }
 
-export const useLinksMutations = (persistence: LinksPersistence) => {
+export const useLinksMutations = (persistence: LinksMutationPersistence) => {
   const remove = useCallback(
     async (url: string, id?: string, silent = false) => {
       try {

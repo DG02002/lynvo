@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useSyncExternalStore,
-} from "react"
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
 import { Effect } from "effect"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
@@ -87,33 +81,28 @@ export const useLinks = () => {
     [cachedItems, createLink, updateLink, userId]
   )
   const identity = userId ?? "signed-out"
-  const synchronizationRef = useRef<SavedLinkSynchronization | undefined>(
-    undefined
+  const synchronization = useMemo(
+    () => createSavedLinkSynchronization(adapter, identity, cachedItems),
+    [identity]
   )
-  if (!synchronizationRef.current) {
-    synchronizationRef.current = createSavedLinkSynchronization(
-      adapter,
-      identity,
-      cachedItems
-    )
-  } else {
-    synchronizationRef.current.connect(adapter, identity, cachedItems)
-  }
-  const synchronization = synchronizationRef.current
 
   useEffect(() => {
-    synchronization.load().catch((error) => console.error(error))
-  }, [adapter, identity, synchronization])
-
-  useEffect(() => {
-    if (!userId || !linksQuery.isLive) {
-      return
-    }
-    synchronization.acceptRemote(
-      linksQuery.data?.results ?? [],
-      linksQuery.data?.version
-    )
-  }, [linksQuery.data, linksQuery.isLive, synchronization, userId])
+    synchronization
+      .synchronize({
+        adapter,
+        identity,
+        cachedItems,
+        remote: linksQuery.isLive ? linksQuery.data : undefined,
+      })
+      .catch((error) => console.error(error))
+  }, [
+    adapter,
+    cachedItems,
+    identity,
+    linksQuery.data,
+    linksQuery.isLive,
+    synchronization,
+  ])
 
   const links = useSyncExternalStore(
     synchronization.subscribe,

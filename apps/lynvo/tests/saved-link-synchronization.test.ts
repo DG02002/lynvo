@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { LinkViewItem } from "~/features/links/types"
 import type { SavedLink } from "~/features/links/links.mapper"
 import { createSavedLinkSynchronization } from "~/features/links/use-links/synchronization"
@@ -28,7 +28,33 @@ const createSavedLink = (updatedAt: number): SavedLink => ({
 })
 
 describe("saved link synchronization", () => {
-  it("preserves locally resolved links while accepting a newer remote snapshot", () => {
+  it("keeps a live snapshot when cached loading settles afterward", async () => {
+    let resolveLoad: (items: LinkViewItem[]) => void = () => undefined
+    const load = new Promise<LinkViewItem[]>((resolve) => {
+      resolveLoad = resolve
+    })
+    const adapter = createAdapter()
+    adapter.list = () => load
+    const synchronization = createSavedLinkSynchronization(
+      adapter,
+      "user-one",
+      [],
+      { publish: vi.fn() }
+    )
+
+    const convergence = synchronization.synchronize({
+      adapter,
+      identity: "user-one",
+      cachedItems: [],
+      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+    })
+    resolveLoad([{ url: "https://example.com/stale-cache", timestamp: 1 }])
+    await convergence
+
+    expect(synchronization.getSnapshot()[0]?.title).toBe("Remote title")
+  })
+
+  it("preserves locally resolved links while accepting a newer remote snapshot", async () => {
     const cachedItem: LinkViewItem = {
       id: "link-one",
       url: "https://example.com/one",
@@ -40,10 +66,20 @@ describe("saved link synchronization", () => {
     const synchronization = createSavedLinkSynchronization(
       createAdapter([cachedItem]),
       "user-one",
-      [cachedItem]
+      [cachedItem],
+      { publish: vi.fn() }
     )
 
-    synchronization.acceptRemote([createSavedLink(2)], 2)
+    await synchronization.synchronize({
+      adapter: createAdapter([cachedItem]),
+      identity: "user-one",
+      cachedItems: [cachedItem],
+      remote: {
+        results: [createSavedLink(2)],
+        version: 2,
+        etag: "2",
+      },
+    })
 
     expect(synchronization.getSnapshot()[0]).toMatchObject({
       title: "Remote title",
@@ -51,34 +87,58 @@ describe("saved link synchronization", () => {
     })
   })
 
-  it("rejects an older remote snapshot through the same interface", () => {
+  it("rejects an older remote snapshot through the same interface", async () => {
     const synchronization = createSavedLinkSynchronization(
       createAdapter(),
       "user-one",
-      []
+      [],
+      { publish: vi.fn() }
     )
 
-    synchronization.acceptRemote([createSavedLink(2)], 2)
-    synchronization.acceptRemote([{ ...createSavedLink(1), title: "Stale" }], 1)
+    const adapter = createAdapter()
+    await synchronization.synchronize({
+      adapter,
+      identity: "user-one",
+      cachedItems: [],
+      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+    })
+    await synchronization.synchronize({
+      adapter,
+      identity: "user-one",
+      cachedItems: [],
+      remote: {
+        results: [{ ...createSavedLink(1), title: "Stale" }],
+        version: 1,
+        etag: "1",
+      },
+    })
 
     expect(synchronization.getSnapshot()[0]?.title).toBe("Remote title")
   })
 
-  it("resets cached state when the signed-in identity changes", () => {
+  it("resets cached state when the signed-in identity changes", async () => {
     const synchronization = createSavedLinkSynchronization(
       createAdapter(),
       "user-one",
-      []
+      [],
+      { publish: vi.fn() }
     )
-    synchronization.acceptRemote([createSavedLink(2)], 2)
+    await synchronization.synchronize({
+      adapter: createAdapter(),
+      identity: "user-one",
+      cachedItems: [],
+      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+    })
     const userTwoItem: LinkViewItem = {
       url: "https://example.com/user-two",
       timestamp: 3,
     }
 
-    synchronization.connect(createAdapter([userTwoItem]), "user-two", [
-      userTwoItem,
-    ])
+    await synchronization.synchronize({
+      adapter: createAdapter([userTwoItem]),
+      identity: "user-two",
+      cachedItems: [userTwoItem],
+    })
 
     expect(synchronization.getSnapshot()).toEqual([userTwoItem])
   })

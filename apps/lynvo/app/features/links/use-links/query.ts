@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { client } from "~/lib/effect/api/client"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
-import { writeLinksCache, type LinksCache } from "./cache"
+import type { LinksCache } from "./cache"
 import {
   normalizeLinkMetadata,
   type SavedLink,
@@ -53,14 +53,6 @@ export function useLinksQuery(
       etag: String(version),
     }
   }, [links])
-
-  useEffect(() => {
-    if (userId && liveLinks) {
-      writeLinksCache(userId, liveLinks)
-    } else {
-      // no-op to satisfy react-doctor/no-event-handler rule
-    }
-  }, [liveLinks, userId])
 
   return {
     data: liveLinks ?? cachedLinks,

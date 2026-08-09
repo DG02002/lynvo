@@ -28,6 +28,11 @@ declare global {
     ) => void
   }
 
+  interface LinksMutationPersistence extends Pick<
+    LinksPersistence,
+    "add" | "update" | "delete" | "clear"
+  > {}
+
   interface LinksOperation {
     id: number
     kind: "add" | "update" | "delete" | "clear"
