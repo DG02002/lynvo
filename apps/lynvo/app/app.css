@@ -483,16 +483,16 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   isolation: isolate;
   width: 100%;
   overflow: hidden;
-  padding-block: clamp(3rem, 6vw, 6rem);
-  background: color-mix(in oklab, var(--muted) 42%, var(--background));
+  padding-top: clamp(3rem, 6vw, 6rem);
+  padding-bottom: clamp(7rem, 12vw, 11rem);
+  background: var(--background);
 }
 
 .player-edge-carousel::before {
   position: absolute;
   z-index: -1;
   inset: -3rem;
-  background: color-mix(in oklab, var(--background) 76%, transparent);
-  backdrop-filter: blur(40px) saturate(72%);
+  background: var(--background);
   content: "";
 }
 

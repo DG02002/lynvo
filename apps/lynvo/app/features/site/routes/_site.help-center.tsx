@@ -78,8 +78,8 @@ export const meta = (_: Route.MetaArgs) => [
 ]
 
 const HelpCenter = () => (
-  <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-12">
+  <div className="w-full px-6 py-12 md:px-8 lg:px-10 xl:px-14">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 sm:gap-12">
       <header className="flex flex-col items-center gap-4 text-center">
         <h1 className="py-4 text-4xl font-normal tracking-tight text-balance md:py-6 md:text-6xl">
           Get help with Lynvo
@@ -93,22 +93,22 @@ const HelpCenter = () => (
         {supportOptions.map((option) => (
           <article
             key={option.title}
-            className="grid gap-6 py-8 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:items-center sm:gap-8"
+            className="grid grid-cols-[3rem_minmax(0,1fr)] gap-x-4 gap-y-3 py-8 sm:grid-cols-[3rem_minmax(0,1fr)_auto] sm:gap-x-8 sm:gap-y-2"
           >
-            <option.logo />
-            <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-normal tracking-tight">
-                {option.title}
-              </h2>
-              <p className="max-w-md text-sm leading-6 text-muted-foreground text-pretty">
-                {option.description}
-              </p>
+            <div className="row-start-1 flex items-center sm:row-span-2 sm:self-center">
+              <option.logo />
             </div>
+            <h2 className="col-start-2 row-start-1 self-center text-xl font-normal tracking-tight">
+              {option.title}
+            </h2>
+            <p className="col-span-2 row-start-2 max-w-md text-sm leading-6 text-muted-foreground text-pretty sm:col-span-1 sm:col-start-2">
+              {option.description}
+            </p>
             <a
               href={option.href}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-11 items-center gap-2 justify-self-start text-sm underline underline-offset-4 transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-4 sm:justify-self-end"
+              className="col-span-2 row-start-3 mt-1 inline-flex min-h-11 items-center gap-2 justify-self-start text-sm underline underline-offset-4 transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-4 sm:col-span-1 sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:self-center sm:justify-self-end"
             >
               {option.action}
               <HugeiconsIcon

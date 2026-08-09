@@ -1,5 +1,6 @@
 import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useRef, useState } from "react"
 import type { ComponentProps } from "react"
 import { Link } from "react-router"
 import type { Route } from "./+types/_site.pricing"
@@ -22,6 +23,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { PricingFaq } from "~/features/site/pricing/pricing-faq"
+import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { cn } from "~/lib/utils"
@@ -117,9 +119,74 @@ export function meta(_: Route.MetaArgs) {
   ]
 }
 
+interface MobilePlanControlsProps {
+  className?: string
+}
+
+const MobilePlanControls = ({ className }: MobilePlanControlsProps) => (
+  <div className={cn("flex flex-col gap-3 sm:hidden", className)}>
+    <div className="mx-auto grid w-52 max-w-full grid-cols-2 rounded-full bg-muted p-0.5 text-center text-sm">
+      <span className="rounded-full bg-background px-3 py-1 shadow-sm">
+        Free
+      </span>
+      <span className="px-3 py-1 text-muted-foreground">More soon</span>
+    </div>
+    <Link
+      to={authPaths.createAccount}
+      viewTransition
+      className={cn(buttonVariants({ size: "lg" }), "mx-auto w-full max-w-2xl")}
+    >
+      Get Free
+      <HugeiconsIcon
+        icon={ArrowUpRight01Icon}
+        strokeWidth={2}
+        data-icon="inline-end"
+      />
+    </Link>
+  </div>
+)
+
 export default function Pricing() {
+  const comparisonTableRef = useRef<HTMLDivElement>(null)
+  const comparisonEndRef = useRef<HTMLDivElement>(null)
+  const [isComparisonTableVisible, setIsComparisonTableVisible] =
+    useState(false)
+  const [isComparisonEndVisible, setIsComparisonEndVisible] = useState(false)
+
+  useEffect(() => {
+    const comparisonTable = comparisonTableRef.current
+    const comparisonEnd = comparisonEndRef.current
+
+    if (!comparisonTable || !comparisonEnd) {
+      return
+    }
+
+    const tableObserver = new IntersectionObserver(([entry]) => {
+      setIsComparisonTableVisible(entry.isIntersecting)
+    })
+    const endObserver = new IntersectionObserver(
+      ([entry]) => {
+        setIsComparisonEndVisible(entry.isIntersecting)
+      },
+      {
+        rootMargin: `0px 0px -${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px 0px`,
+      }
+    )
+
+    tableObserver.observe(comparisonTable)
+    endObserver.observe(comparisonEnd)
+
+    return () => {
+      tableObserver.disconnect()
+      endObserver.disconnect()
+    }
+  }, [])
+
+  const isMobileComparisonControlVisible =
+    isComparisonTableVisible && !isComparisonEndVisible
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-16 md:px-8 md:py-24">
+    <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
       <header className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
         <p className="text-sm">Lynvo</p>
         <h1 className="my-4 text-4xl font-normal tracking-tight text-balance md:text-6xl">
@@ -202,8 +269,8 @@ export default function Pricing() {
           </h2>
         </header>
 
-        <div className="mt-12">
-          <div className="sticky top-16 z-20 grid grid-cols-[60%_40%] items-end bg-background py-4">
+        <div ref={comparisonTableRef} className="mt-12">
+          <div className="sticky top-16 z-20 hidden grid-cols-[60%_40%] items-end bg-background py-4 sm:grid">
             <div aria-hidden="true" />
             <div className="flex flex-col items-start gap-3">
               <span className="text-lg">Free</span>
@@ -223,8 +290,8 @@ export default function Pricing() {
           </div>
           <Table className="table-fixed">
             <colgroup>
-              <col className="w-3/5" />
-              <col className="w-2/5" />
+              <col className="w-[58%] sm:w-3/5" />
+              <col className="w-[42%] sm:w-2/5" />
             </colgroup>
             <TableHeader className="sr-only">
               <TableRow className="hover:bg-transparent">
@@ -244,19 +311,19 @@ export default function Pricing() {
                 </TableRow>
                 {section.details.map(({ feature, allowance, icon }) => (
                   <TableRow key={feature} className="hover:bg-transparent">
-                    <TableCell className="px-0 py-5 font-medium whitespace-normal">
-                      <span className="flex items-center gap-2.5">
+                    <TableCell className="py-5 pr-4 pl-0 font-medium whitespace-normal sm:pr-6">
+                      <span className="flex min-w-0 items-center gap-2.5">
                         {icon && (
                           <PluginIcon
                             icon={icon}
                             fallback="source"
-                            className="size-6"
+                            className="size-6 shrink-0"
                           />
                         )}
-                        <span>{feature}</span>
+                        <span className="min-w-0 text-pretty">{feature}</span>
                       </span>
                     </TableCell>
-                    <TableCell className="px-0 py-5 whitespace-normal text-muted-foreground">
+                    <TableCell className="py-5 pr-0 pl-4 whitespace-normal text-muted-foreground sm:pl-6">
                       {allowance}
                     </TableCell>
                   </TableRow>
@@ -264,6 +331,15 @@ export default function Pricing() {
               </TableBody>
             ))}
           </Table>
+
+          <div ref={comparisonEndRef} className="h-px sm:hidden" />
+          <MobilePlanControls
+            className={cn(
+              isMobileComparisonControlVisible
+                ? "fixed inset-x-0 bottom-0 z-40 bg-background px-6 pt-4 pb-4"
+                : "mt-4"
+            )}
+          />
         </div>
 
         <footer className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center text-sm italic leading-6 text-muted-foreground">

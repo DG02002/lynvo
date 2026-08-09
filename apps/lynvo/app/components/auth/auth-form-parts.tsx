@@ -102,7 +102,7 @@ export const AuthSubmitButton = ({
 )
 
 export const AuthPolicyLinks = () => (
-  <div className="mt-3 hidden space-x-1 text-center text-xs text-muted-foreground md:block">
+  <div className="mt-3 space-x-1 text-center text-xs text-muted-foreground">
     <Link
       to={policyPaths.termsOfUse}
       viewTransition

@@ -29,7 +29,7 @@ const SectionIntro = ({
 )
 
 export const PlayerSection = () => (
-  <section className="hidden overflow-hidden py-24 md:py-32 lg:block">
+  <section className="hidden overflow-hidden bg-background py-24 md:py-32 lg:block">
     <div className="player-showcase">
       <div className="player-showcase__copy">
         <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
@@ -49,7 +49,7 @@ export const PlayerSection = () => (
 )
 
 export const PlayerSectionEdgeToEdge = () => (
-  <section className="overflow-hidden py-24 md:py-32 lg:hidden">
+  <section className="overflow-hidden bg-background py-24 md:py-32 lg:hidden">
     <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center md:px-8">
       <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-5xl lg:text-6xl">
         Open links in one of four Android players.
@@ -67,7 +67,7 @@ export const PlayerSectionEdgeToEdge = () => (
 )
 
 export const ExtractionSection = () => (
-  <section className="relative overflow-hidden py-24 md:py-32">
+  <section className="relative overflow-hidden bg-background py-24 md:py-32">
     <div className="grid w-full gap-16 px-6 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10 xl:px-14">
       <SectionIntro
         title="Open links from Sources."
@@ -95,7 +95,7 @@ export const ExtractionSection = () => (
 )
 
 export const AndroidScreensSection = () => (
-  <section className="relative overflow-hidden py-24 md:py-32">
+  <section className="relative overflow-hidden bg-background py-24 md:py-32">
     <div className="grid w-full gap-16 px-6 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10 xl:px-14">
       <SectionIntro
         title="Use Lynvo across Android devices."
@@ -135,11 +135,7 @@ export const AndroidScreensSection = () => (
 
 export const PlanSection = () => {
   return (
-    <section className="relative overflow-hidden py-32 md:py-48">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-30 dark:opacity-20">
-        <div className="h-[30rem] w-[30rem] rounded-full bg-primary/20 blur-[120px]" />
-      </div>
-
+    <section className="relative overflow-hidden bg-background py-32 md:py-48">
       <div className="relative z-10 flex w-full flex-col items-center gap-16 px-6 text-center md:px-8 lg:px-10 xl:px-14">
         <h2 className="text-balance text-4xl font-normal tracking-[-0.04em] text-foreground md:text-6xl lg:text-8xl">
           The Free plan is available now.

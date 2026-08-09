@@ -21,7 +21,7 @@ export function meta(_: Route.MetaArgs) {
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip tabular-nums">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-background tabular-nums">
       <HomeHero />
       <PlayerSection />
       <PlayerSectionEdgeToEdge />

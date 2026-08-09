@@ -257,7 +257,7 @@ export const HomeSaveDemo = () => {
   return (
     <div
       ref={demoStageRef}
-      className="home-save-demo relative pointer-events-none t-stagger-line t-stagger-line--4 mt-12 w-full max-w-4xl select-none pt-16"
+      className="home-save-demo relative pointer-events-none t-stagger-line t-stagger-line--4 mt-12 mb-16 w-full max-w-4xl select-none pt-16 md:mb-24"
       data-demo-item-created={step === HOME_DEMO_STEP.ITEM_CREATED}
       data-step={step}
       aria-label="Animated preview of saving and removing a video link in Lynvo"

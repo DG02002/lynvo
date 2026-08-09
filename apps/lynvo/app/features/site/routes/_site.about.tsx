@@ -13,7 +13,7 @@ export const meta = (_: Route.MetaArgs) => [
 ]
 
 const About = () => (
-  <div className="mx-auto w-full max-w-5xl px-4 py-12 md:px-8">
+  <div className="w-full px-6 py-12 md:px-8 lg:px-10 xl:px-14">
     <article className="mx-auto w-full max-w-2xl font-normal">
       <header className="flex flex-col items-center gap-4 text-center">
         <p className="text-sm">Company</p>
