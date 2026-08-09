@@ -1,4 +1,5 @@
 import type { ExtractedLink } from "~/features/links/types"
+import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import type {
   FolderExpandOptions,
@@ -38,7 +39,7 @@ export const hardRefreshLink = async ({
       await extractionOrchestration.prepareSource({
         targetUrl: itemUrl,
         links,
-        existingMeta: item?.meta,
+        existingMeta: item ? getLinkViewItemFlatMeta(item) : undefined,
       })
 
     if (presentation.kind === "selectionDialog") {
@@ -91,7 +92,7 @@ export const expandFolderLink = async ({
 }: FolderExpandOptions) => {
   try {
     const currentItem = links.find((linkItem) => linkItem.url === itemUrl)
-    if (!currentItem || !currentItem.extractedLinks) {
+    if (!currentItem) {
       return null
     }
 

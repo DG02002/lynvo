@@ -83,17 +83,7 @@ export interface LinkViewItem {
   updatedAt?: number
   title?: string
   id?: string
-  hasFilename?: boolean
-  metadata?: LinkMetadata
-  meta?: MetaData
-  pluginName?: string
-  pluginIcon?: string
-  pluginId?: string
-  sourceName?: string
-  sourceIconUrl?: string
-  sourceStatus?: "active" | "maintenance" | "degraded" | "down"
-  sourceVersion?: string
-  extractedLinks?: ExtractedLink[]
+  metadata: LinkMetadata
 }
 
 export interface SavedLinkListItem extends LinkViewItem {

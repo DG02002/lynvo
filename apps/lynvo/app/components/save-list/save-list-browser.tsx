@@ -548,7 +548,7 @@ export const SaveListBrowser = ({
 }: SaveListBrowserProps) => {
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
-  if (selectedItem) {
+  if (selectedItem?.kind === "saved") {
     return (
       <FinderBrowser
         key={selectedItem.url}

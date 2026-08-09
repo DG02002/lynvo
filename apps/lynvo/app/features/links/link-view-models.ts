@@ -4,13 +4,9 @@ import type {
   LinkResponse,
   LinkViewItem,
 } from "./types"
-import {
-  normalizeLinkMetadata,
-  toFlatMeta,
-} from "./link-metadata-normalization"
+import { normalizeLinkMetadata } from "./link-metadata-normalization"
 import { applyOpenedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
-import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 
 export interface SavedLinkDTO {
   id: string
@@ -49,26 +45,14 @@ export const toSavedLinkDTO = (link: LinkResponse): SavedLinkDTO => ({
   metadata: normalizeLinkMetadata(link.meta, link.extractedLinks),
 })
 
-export const toLinkViewItem = (dto: SavedLink): LinkViewItem => {
-  const source = getLinkSourceFields(dto.metadata)
-  return {
-    id: dto.id,
-    url: dto.url,
-    title: dto.title,
-    timestamp: dto.createdAt,
-    updatedAt: dto.updatedAt,
-    metadata: dto.metadata,
-    meta: toFlatMeta(dto.metadata),
-    hasFilename: Boolean(dto.metadata.source.filename),
-    pluginName: source.pluginName,
-    pluginIcon: source.pluginIcon,
-    sourceName: source.sourceName,
-    sourceIconUrl: source.sourceIconUrl,
-    sourceStatus: source.sourceStatus,
-    sourceVersion: source.sourceVersion,
-    extractedLinks: dto.metadata.extraction.extractedLinks,
-  }
-}
+export const toLinkViewItem = (dto: SavedLink): LinkViewItem => ({
+  id: dto.id,
+  url: dto.url,
+  title: dto.title,
+  timestamp: dto.createdAt,
+  updatedAt: dto.updatedAt,
+  metadata: dto.metadata,
+})
 
 const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
   id: item.id ?? item.url,
@@ -76,7 +60,7 @@ const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
   title: item.title,
   createdAt: item.timestamp,
   updatedAt: item.updatedAt ?? item.timestamp,
-  metadata: getLinkViewItemMetadata(item),
+  metadata: item.metadata,
 })
 
 export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {

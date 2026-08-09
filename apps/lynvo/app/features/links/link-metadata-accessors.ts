@@ -1,8 +1,5 @@
 import type { LinkMetadata, MetaData, LinkViewItem } from "./types"
-import {
-  normalizeLinkMetadata,
-  toFlatMeta,
-} from "./link-metadata-normalization"
+import { toFlatMeta } from "./link-metadata-normalization"
 
 export const getMetadataPluginServerId = (
   metadata: LinkMetadata | MetaData | undefined
@@ -33,7 +30,7 @@ export const getLinkViewItemSourceId = (item: LinkViewItem | undefined) => {
 }
 
 export const getLinkViewItemMetadata = (item: LinkViewItem): LinkMetadata =>
-  item.metadata ?? normalizeLinkMetadata(item.meta, item.extractedLinks)
+  item.metadata
 
 export const getLinkViewItemFlatMeta = (item: LinkViewItem): MetaData =>
   toFlatMeta(getLinkViewItemMetadata(item))

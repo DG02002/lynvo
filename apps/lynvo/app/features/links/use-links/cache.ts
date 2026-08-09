@@ -3,7 +3,6 @@ import { z } from "zod"
 import {
   toLinkViewItem,
   createLinkMetadata,
-  toFlatMeta,
   type SavedLink,
 } from "~/features/links/links.mapper"
 import {
@@ -79,17 +78,18 @@ export function linksToLinkViewItems(
     const existing = previous.find(
       (p) => p.id === item.id || p.url === item.url
     )
-    if (existing?.extractedLinks && (item.extractedLinks?.length ?? 0) === 0) {
+    const existingLinks = existing?.metadata.extraction.extractedLinks ?? []
+    if (
+      existingLinks.length > 0 &&
+      item.metadata.extraction.extractedLinks.length === 0
+    ) {
       const metadata = createLinkMetadata({
-        meta: item.meta,
-        extractedLinks: existing.extractedLinks,
+        extractedLinks: existingLinks,
         previous: item.metadata,
       })
       return {
         ...item,
         metadata,
-        meta: toFlatMeta(metadata),
-        extractedLinks: metadata.extraction.extractedLinks,
       }
     }
     return item

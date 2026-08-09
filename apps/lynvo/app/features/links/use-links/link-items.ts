@@ -1,4 +1,4 @@
-import { createLinkMetadata, toFlatMeta } from "~/features/links/links.mapper"
+import { createLinkMetadata } from "~/features/links/links.mapper"
 import {
   getLinkViewItemFlatMeta,
   getLinkViewItemMetadata,
@@ -21,21 +21,6 @@ export interface CreateLinkUpdateOptions {
   links: ExtractedLink[]
 }
 
-const getSourceString = (metadata: LinkMetadata, key: string) => {
-  const value = metadata.source[key]
-  return typeof value === "string" ? value : undefined
-}
-
-const getSourceStatus = (metadata: LinkMetadata) => {
-  const value = metadata.source.sourceStatus
-  return value === "active" ||
-    value === "maintenance" ||
-    value === "degraded" ||
-    value === "down"
-    ? value
-    : undefined
-}
-
 export const createLinkViewItem = ({
   targetUrl,
   title,
@@ -46,16 +31,7 @@ export const createLinkViewItem = ({
     title,
     timestamp: Date.now(),
     updatedAt: Date.now(),
-    hasFilename: Boolean(metadata.source.filename),
     metadata,
-    meta: toFlatMeta(metadata),
-    pluginName: getSourceString(metadata, "pluginName"),
-    pluginIcon: getSourceString(metadata, "pluginIcon"),
-    sourceName: getSourceString(metadata, "sourceName"),
-    sourceIconUrl: getSourceString(metadata, "sourceIconUrl"),
-    sourceStatus: getSourceStatus(metadata),
-    sourceVersion: getSourceString(metadata, "sourceVersion"),
-    extractedLinks: metadata.extraction.extractedLinks,
   }
 }
 
@@ -65,8 +41,6 @@ export const createUpdatedItemFromMetadata = (
 ): LinkViewItem => ({
   ...item,
   metadata,
-  meta: toFlatMeta(metadata),
-  extractedLinks: metadata.extraction.extractedLinks,
 })
 
 export const createUpdatedItemWithLinks = ({
@@ -80,10 +54,7 @@ export const createUpdatedItemWithLinks = ({
     previous,
   })
 
-  return {
-    ...createUpdatedItemFromMetadata(item, metadata),
-    extractedLinks: metadata.extraction.extractedLinks,
-  }
+  return createUpdatedItemFromMetadata(item, metadata)
 }
 
 export const getFilenameFromUrl = (url: string) => {

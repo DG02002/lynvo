@@ -150,7 +150,7 @@ export const createExtractionOrchestration = (
         getSavedSourceId(item)
       )
       return attachResolvedChildren({
-        links: item.extractedLinks ?? [],
+        links: item.metadata.extraction.extractedLinks,
         linkId,
         linkUrl,
         resolvedChildren,

@@ -15,6 +15,7 @@ vi.mock("convex/browser", () => ({
       workerSessionIds: ["opaque-session-id"],
     })
     action = async () => ({ success: true })
+    mutation = async () => ({ workerSessionIds: ["opaque-session-id"] })
   },
 }))
 

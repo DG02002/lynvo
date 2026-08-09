@@ -34,6 +34,7 @@ export function useLinkActions({
   const [error, setError] = useState<string | null>(null)
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
+  const savedLinks = links.filter((item) => item.kind === "saved")
 
   const {
     selectionDialogState,
@@ -56,7 +57,7 @@ export function useLinkActions({
     handleHardRefresh,
     handleMirrorExpand,
   } = useRefreshActions({
-    links,
+    links: savedLinks,
     updateLinks: linkActions.updateLinks,
     cacheResolvedMirrors: linkActions.cacheResolvedMirrors,
     openSelectionDialog,
@@ -82,7 +83,7 @@ export function useLinkActions({
     pluginDomainDialog,
   } = useSaveActions({
     url,
-    links,
+    links: savedLinks,
     addLink: linkActions.add,
     updateLinks: linkActions.updateLinks,
     openSelectionDialog,

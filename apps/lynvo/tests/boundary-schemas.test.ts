@@ -171,7 +171,7 @@ describe("HTTP and realtime boundaries", () => {
         kind: "command",
         id: "command-1",
         command: "play",
-        payload: "{}",
+        payload: '{"url":"https://example.com/video","rangeRequest":"unknown"}',
         createdAt: 10,
         targetSessionId: "session-1",
       }).success

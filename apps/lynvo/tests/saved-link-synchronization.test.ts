@@ -59,9 +59,16 @@ describe("saved link synchronization", () => {
       id: "link-one",
       url: "https://example.com/one",
       timestamp: 1,
-      extractedLinks: [
-        { url: "https://files.example/one", label: "Resolved file" },
-      ],
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            { url: "https://files.example/one", label: "Resolved file" },
+          ],
+        },
+        playback: { openedIds: [], openedUrls: [] },
+      },
     }
     const synchronization = createSavedLinkSynchronization(
       createAdapter([cachedItem]),
@@ -83,7 +90,11 @@ describe("saved link synchronization", () => {
 
     expect(synchronization.getSnapshot()[0]).toMatchObject({
       title: "Remote title",
-      extractedLinks: cachedItem.extractedLinks,
+      metadata: {
+        extraction: {
+          extractedLinks: cachedItem.metadata.extraction.extractedLinks,
+        },
+      },
     })
   })
 
