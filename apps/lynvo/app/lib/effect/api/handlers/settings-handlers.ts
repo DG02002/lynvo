@@ -7,24 +7,22 @@ import { ConvexService } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { ConvexError } from "../../errors"
+import { createAuthSessionModule } from "../../../../../workers/auth-session"
+import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
 
 const revokeWorkerSessions = (workerSessionIds: readonly string[]) =>
   Effect.gen(function* () {
     const environment = yield* CloudflareEnv
-    yield* Effect.forEach(workerSessionIds, (workerSessionId) =>
-      Effect.tryPromise({
-        try: async () => {
-          const response = await environment.WORKER_AUTH_SESSION.getByName(
-            workerSessionId
-          ).fetch("https://session.internal/session", { method: "DELETE" })
-          if (!response.ok) {
-            throw new Error("Worker session revocation failed")
-          }
-        },
-        catch: () =>
-          new ConvexError({ message: "Session revocation is unavailable" }),
-      })
+    const result = yield* Effect.promise(() =>
+      createSignedInSessionLifecycle(
+        createAuthSessionModule(environment.WORKER_AUTH_SESSION)
+      ).revokeWorkerSessions(workerSessionIds)
     )
+    if (result.kind === "unavailable") {
+      return yield* new ConvexError({
+        message: "Session revocation is unavailable",
+      })
+    }
   })
 
 export const SettingsHandlers = HttpApiBuilder.group(

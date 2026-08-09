@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
 import { createAuthSessionModule } from "./auth-session"
+import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
 
 interface AuthenticationFlowEnvironment {
   readonly VITE_CONVEX_URL: string
@@ -126,28 +127,22 @@ export const createWorkerAuthenticationFlow = (
     if (deviceName) {
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
-    const workerSessionId = crypto.randomUUID()
-    const session = await createAuthSessionModule(
-      environment.WORKER_AUTH_SESSION
-    ).create({
-      sessionId: workerSessionId,
+    const lifecycle = createSignedInSessionLifecycle(
+      createAuthSessionModule(environment.WORKER_AUTH_SESSION)
+    )
+    const session = await lifecycle.establish({
       convexSessionId,
       accessToken: tokens.token,
       refreshToken: tokens.refreshToken,
       nowMs: Date.now(),
+      linkWorkerSession: async (workerSessionId) => {
+        await client.mutation(api.users.linkCurrentSessionWorker, {
+          workerSessionId,
+        })
+      },
     })
     if (session.kind === "unavailable") {
       return session
-    }
-    try {
-      await client.mutation(api.users.linkCurrentSessionWorker, {
-        workerSessionId,
-      })
-    } catch {
-      await createAuthSessionModule(environment.WORKER_AUTH_SESSION).revoke(
-        workerSessionId
-      )
-      return { kind: "unavailable" }
     }
     return {
       kind: "completed",

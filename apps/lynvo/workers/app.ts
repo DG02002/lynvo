@@ -17,6 +17,7 @@ import { createApiErrorResponse } from "../app/lib/api-errors"
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
 import { getCookieValue } from "../app/lib/auth-cookie"
 import { createAuthSessionModule } from "./auth-session"
+import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
 import { createWorkerAuthenticationFlow } from "./authentication-flow"
 import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
@@ -530,49 +531,27 @@ app.delete("/api/auth/session", async (context) => {
   }
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
-  if (sessionId) {
-    const activeSession = await authSession.read(sessionId)
-    if (activeSession.kind === "unavailable") {
-      return context.json(
-        requestApiError(context, {
-          code: "service_unavailable",
-          error: "Logout is temporarily unavailable. Try again later.",
-          retryable: true,
-        }),
-        503
-      )
-    }
-    if (activeSession.kind === "active") {
-      try {
-        const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-        client.setAuth(activeSession.session.accessToken)
-        await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
-      } catch {
-        return context.json(
-          requestApiError(context, {
-            code: "service_unavailable",
-            error: "Logout is temporarily unavailable. Try again later.",
-            retryable: true,
-          }),
-          503
-        )
-      }
-    }
-    const sessionResult = await authSession.revoke(sessionId)
-    if (sessionResult.kind === "unavailable") {
-      return context.json(
-        requestApiError(context, {
-          code: "service_unavailable",
-          error: "Logout is temporarily unavailable. Try again later.",
-          retryable: true,
-        }),
-        503
-      )
-    }
-    context.header("Set-Cookie", sessionResult.cookie)
-  } else {
-    context.header("Set-Cookie", authSession.expireCookie())
+  const sessionResult = await createSignedInSessionLifecycle(
+    authSession
+  ).terminate({
+    sessionId,
+    revokeConvexSession: async (accessToken) => {
+      const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+      client.setAuth(accessToken)
+      await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
+    },
+  })
+  if (sessionResult.kind === "unavailable") {
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Logout is temporarily unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
   }
+  context.header("Set-Cookie", sessionResult.cookie)
   return context.body(null, 204)
 })
 
@@ -738,17 +717,12 @@ app.all("/api/*", async (context) => {
   }
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
-  const sessionResult = sessionId
-    ? await authSession.revoke(sessionId)
-    : undefined
-  const didRevokeSession = !sessionResult || sessionResult.kind === "revoked"
+  const sessionResult = await createSignedInSessionLifecycle(
+    authSession
+  ).revokeWorkerSessions(sessionId ? [sessionId] : [])
+  const didRevokeSession = sessionResult.kind === "completed"
   const headers = new Headers(response.headers)
-  headers.set(
-    "Set-Cookie",
-    sessionResult?.kind === "revoked"
-      ? sessionResult.cookie
-      : authSession.expireCookie()
-  )
+  headers.set("Set-Cookie", authSession.expireCookie())
   addRequestContext(context, {
     worker_session_revoked: didRevokeSession,
   })
