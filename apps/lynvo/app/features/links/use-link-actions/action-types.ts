@@ -3,9 +3,8 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import type { SaveFlowEffects } from "./save-flow-effects"
-import type { RefreshFlowEffects } from "./refresh-flow-effects"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
+import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
 export interface OpenSelectionDialogOptions {
   originalUrl: string
@@ -33,7 +32,7 @@ export interface SaveLinkOptions {
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  effects: SaveFlowEffects
+  reporter: SavedLinkInteractionReporter
 }
 
 export interface ConfirmSelectionOptions {
@@ -46,22 +45,21 @@ export interface ConfirmSelectionOptions {
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  updateLinks: (url: string, links: ExtractedLink[]) => void
-  effects: SaveFlowEffects
+  reporter: SavedLinkInteractionReporter
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
 export interface SoftRefreshOptions {
   itemUrl: string
   links: LinkViewItem[]
-  effects: RefreshFlowEffects
+  reporter: SavedLinkInteractionReporter
 }
 
 export interface MirrorExpandOptions {
   itemUrl: string
   lazyItemUrl: string
   links: LinkViewItem[]
-  effects: RefreshFlowEffects
+  reporter: SavedLinkInteractionReporter
 }
 
 export interface FolderExpandOptions {
@@ -69,5 +67,5 @@ export interface FolderExpandOptions {
   linkId: string
   linkUrl: string
   links: LinkViewItem[]
-  effects: RefreshFlowEffects
+  reporter: SavedLinkInteractionReporter
 }

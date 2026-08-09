@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   getDraftSelection,
   getSavedLinkInteractionState,
+  shouldOfferPluginDomainSuggestion,
 } from "~/features/links/saved-link-interaction"
 import type { DraftListItem, LinkViewItem } from "~/features/links/types"
 
@@ -87,5 +88,24 @@ describe("saved link interaction", () => {
     expect(getSavedLinkInteractionState(item, 10)).toMatchObject({
       isResolvableContainer: true,
     })
+  })
+
+  it("offers a Plugin Domain only when the same mapping is not configured", async () => {
+    const suggestion = {
+      domain: "index.example.com",
+      pluginServerId: "server",
+      pluginId: "source",
+      pluginName: "Source",
+      sanitizedUrl: "https://index.example.com",
+      username: "user",
+      password: "secret",
+    }
+
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [])
+    ).resolves.toEqual(suggestion)
+    await expect(
+      shouldOfferPluginDomainSuggestion(suggestion, async () => [suggestion])
+    ).resolves.toBeUndefined()
   })
 })

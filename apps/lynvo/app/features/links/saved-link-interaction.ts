@@ -24,6 +24,63 @@ export interface DraftSelection {
   isDraftMode: true
 }
 
+export interface SavedLinkInteractionOutcome {
+  kind:
+    | "clear-error"
+    | "error"
+    | "clear-preview"
+    | "preview"
+    | "selection-required"
+    | "selection-closed"
+    | "link-focused"
+    | "view-reset"
+    | "links-updated"
+    | "refresh-succeeded"
+    | "draft-saved"
+  message?: string
+  meta?: MetaData
+  selection?: DraftSelection | SavedLinkSelection
+  linkId?: string
+  itemUrl?: string
+  links?: ExtractedLink[]
+}
+
+export interface SavedLinkSelection {
+  originalUrl: string
+  links: ExtractedLink[]
+  meta: MetaData
+  existingItemId?: string
+  isDraftMode?: boolean
+  pluginDomainSuggestion?: import("~/lib/plugin-domain").PluginDomainSuggestion
+}
+
+export interface SavedLinkInteractionReporter {
+  publish: (outcome: SavedLinkInteractionOutcome) => void
+}
+
+export interface PluginDomainIdentity {
+  pluginServerId: string
+  pluginId: string
+  domain: string
+}
+
+export const shouldOfferPluginDomainSuggestion = async (
+  suggestion: import("~/lib/plugin-domain").PluginDomainSuggestion | undefined,
+  listDomains: () => Promise<readonly PluginDomainIdentity[]>
+) => {
+  if (!suggestion) {
+    return undefined
+  }
+  const domains = await listDomains()
+  const isConfigured = domains.some(
+    (domain) =>
+      domain.pluginServerId === suggestion.pluginServerId &&
+      domain.pluginId === suggestion.pluginId &&
+      domain.domain === suggestion.domain
+  )
+  return isConfigured ? undefined : suggestion
+}
+
 export const getSavedLinkInteractionState = (
   item: LinkViewItem,
   currentTimeMs: number

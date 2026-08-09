@@ -1,17 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { saveLink } from "~/features/links/use-link-actions/save-flow"
-import type { SaveFlowEffects } from "~/features/links/use-link-actions/save-flow-effects"
+import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
-const createEffects = (): SaveFlowEffects => ({
-  clearError: vi.fn(),
-  showError: vi.fn(),
-  clearPreview: vi.fn(),
-  showPreview: vi.fn(),
-  openSelection: vi.fn(),
-  closeSelection: vi.fn(),
-  focusLink: vi.fn(),
-  resetAfterSave: vi.fn(),
+const createReporter = (): SavedLinkInteractionReporter => ({
+  publish: vi.fn(),
 })
 
 describe("Bhadoo save flow", () => {
@@ -46,13 +39,13 @@ describe("Bhadoo save flow", () => {
       },
     })
     const addLink = vi.fn().mockResolvedValue("saved-id")
-    const effects = createEffects()
+    const reporter = createReporter()
 
     const result = await saveLink({
       currentUrl: credentialedUrl,
       links: [],
       addLink,
-      effects,
+      reporter,
     })
 
     expect(extractionOrchestration.getSourceMetadata).toHaveBeenCalledWith(

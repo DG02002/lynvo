@@ -10,7 +10,7 @@ import type {
 export const softRefreshLink = async ({
   itemUrl,
   links,
-  effects,
+  reporter,
 }: SoftRefreshOptions) => {
   try {
     const currentItem = links.find((linkItem) => linkItem.url === itemUrl)
@@ -18,19 +18,26 @@ export const softRefreshLink = async ({
     if (currentItem) {
       const refreshedLinks =
         await extractionOrchestration.refreshSource(currentItem)
-      effects.updateLinks(itemUrl, refreshedLinks)
+      reporter.publish({
+        kind: "links-updated",
+        itemUrl,
+        links: refreshedLinks,
+      })
     }
-    effects.showRefreshSuccess()
+    reporter.publish({ kind: "refresh-succeeded" })
   } catch (error) {
     console.error(error)
-    effects.showRefreshError()
+    reporter.publish({
+      kind: "error",
+      message: "The saved link couldn’t be refreshed. Try again.",
+    })
   }
 }
 
 export const hardRefreshLink = async ({
   itemUrl,
   links,
-  effects,
+  reporter,
 }: SoftRefreshOptions) => {
   const item = links.find((linkItem) => linkItem.url === itemUrl)
 
@@ -43,27 +50,40 @@ export const hardRefreshLink = async ({
       })
 
     if (presentation.kind === "selectionDialog") {
-      effects.openSelection({
-        originalUrl: itemUrl,
-        links: presentation.links,
-        meta: mergedMeta,
-        existingItemId: item?.id,
+      reporter.publish({
+        kind: "selection-required",
+        selection: {
+          originalUrl: itemUrl,
+          links: presentation.links,
+          meta: mergedMeta,
+          existingItemId: item?.id,
+        },
       })
       return
     }
 
     if (presentation.kind === "directSave") {
       if (item) {
-        effects.updateLinks(itemUrl, [presentation.link])
+        reporter.publish({
+          kind: "links-updated",
+          itemUrl,
+          links: [presentation.link],
+        })
       }
-      effects.showRefreshSuccess()
+      reporter.publish({ kind: "refresh-succeeded" })
       return
     }
 
-    effects.showNoLinks()
+    reporter.publish({
+      kind: "error",
+      message: "No playable links are available. Try another Source page.",
+    })
   } catch (error) {
     console.error(error)
-    effects.showReselectError()
+    reporter.publish({
+      kind: "error",
+      message: "Link choices couldn’t be loaded. Try again.",
+    })
   }
 }
 
@@ -71,14 +91,17 @@ export const expandMirrorLinks = async ({
   itemUrl,
   lazyItemUrl,
   links,
-  effects,
+  reporter,
 }: MirrorExpandOptions): Promise<ExtractedLink[] | null> => {
   try {
     const item = links.find((linkItem) => linkItem.url === itemUrl)
     return await extractionOrchestration.resolveMirror(item, lazyItemUrl)
   } catch (error) {
     console.error(error)
-    effects.showMirrorError()
+    reporter.publish({
+      kind: "error",
+      message: "Playable links couldn’t be loaded. Try again.",
+    })
     return null
   }
 }
@@ -88,7 +111,7 @@ export const expandFolderLink = async ({
   linkId,
   linkUrl,
   links,
-  effects,
+  reporter,
 }: FolderExpandOptions) => {
   try {
     const currentItem = links.find((linkItem) => linkItem.url === itemUrl)
@@ -101,11 +124,14 @@ export const expandFolderLink = async ({
       linkId,
       linkUrl,
     })
-    effects.updateLinks(itemUrl, expandedLinks)
+    reporter.publish({ kind: "links-updated", itemUrl, links: expandedLinks })
     return expandedLinks
   } catch (error) {
     console.error(error)
-    effects.showOptionsError()
+    reporter.publish({
+      kind: "error",
+      message: "Playback options couldn’t be loaded. Try again.",
+    })
     return null
   }
 }

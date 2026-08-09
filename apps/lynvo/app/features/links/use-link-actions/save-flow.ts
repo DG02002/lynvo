@@ -1,4 +1,3 @@
-import { toast } from "sonner"
 import { readDraft, deleteDraft } from "~/features/links/drafts"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { vibrateSaveStart, vibrateSaveSuccess } from "./save-feedback"
@@ -14,7 +13,7 @@ export const saveLink = async ({
   currentUrl,
   links,
   addLink,
-  effects,
+  reporter,
 }: SaveLinkOptions) => {
   const rawUrl = overrideUrl ?? currentUrl
   const targetUrl = normalizeUrl(rawUrl || "")
@@ -22,31 +21,40 @@ export const saveLink = async ({
   const savedUrl = pluginDomainCandidate?.sanitizedUrl ?? targetUrl
 
   if (!targetUrl) {
-    effects.showError("Enter a URL.")
+    reporter.publish({ kind: "error", message: "Enter a URL." })
     return
   }
   if (!isProbablyValidUrl(targetUrl)) {
-    effects.showError("Enter a valid URL.")
+    reporter.publish({ kind: "error", message: "Enter a valid URL." })
     return
   }
-  effects.clearError()
-  effects.clearPreview()
+  reporter.publish({ kind: "clear-error" })
+  reporter.publish({ kind: "clear-preview" })
 
   const existingDraft = readDraft(savedUrl)
   if (existingDraft) {
-    effects.openSelection({
-      originalUrl: savedUrl,
-      links: existingDraft.links,
-      meta: existingDraft.meta,
-      isDraftMode: true,
+    reporter.publish({
+      kind: "selection-required",
+      selection: {
+        originalUrl: savedUrl,
+        links: existingDraft.links,
+        meta: existingDraft.meta,
+        isDraftMode: true,
+      },
     })
     return
   }
 
   const existingItem = links.find((linkItem) => linkItem.url === savedUrl)
   if (existingItem) {
-    effects.showError("Link already exists on your account.")
-    effects.focusLink(existingItem.id || existingItem.url)
+    reporter.publish({
+      kind: "error",
+      message: "Link already exists on your account.",
+    })
+    reporter.publish({
+      kind: "link-focused",
+      linkId: existingItem.id || existingItem.url,
+    })
     return
   }
 
@@ -56,11 +64,14 @@ export const saveLink = async ({
     targetUrl,
     links
   )
-  effects.showPreview(metadata)
+  reporter.publish({ kind: "preview", meta: metadata })
 
   if (metadata.filename?.toLowerCase().endsWith(".rar")) {
-    effects.showError("RAR archives cannot be saved as individual files.")
-    effects.clearPreview()
+    reporter.publish({
+      kind: "error",
+      message: "RAR archives cannot be saved as individual files.",
+    })
+    reporter.publish({ kind: "clear-preview" })
     return
   }
 
@@ -88,26 +99,28 @@ export const saveLink = async ({
       : undefined
 
   if (presentation.kind === "error") {
-    effects.showError(presentation.message)
-    effects.clearPreview()
+    reporter.publish({ kind: "error", message: presentation.message })
+    reporter.publish({ kind: "clear-preview" })
     return
   }
 
   if (presentation.kind === "selectionDialog") {
-    effects.openSelection({
-      originalUrl: savedUrl,
-      pluginDomainSuggestion,
-      links: presentation.links,
-      meta: mergedMeta,
+    reporter.publish({
+      kind: "selection-required",
+      selection: {
+        originalUrl: savedUrl,
+        pluginDomainSuggestion,
+        links: presentation.links,
+        meta: mergedMeta,
+      },
     })
     return
   }
 
   const newId = await addLink(savedUrl, mergedMeta, [presentation.link])
-  effects.focusLink(newId || savedUrl)
-
-  effects.resetAfterSave()
-  effects.clearPreview()
+  reporter.publish({ kind: "link-focused", linkId: newId || savedUrl })
+  reporter.publish({ kind: "view-reset" })
+  reporter.publish({ kind: "clear-preview" })
   vibrateSaveSuccess()
   return {
     pluginDomainSuggestion,
@@ -120,20 +133,22 @@ export const confirmSelectedLinks = async ({
   meta,
   existingItemId,
   addLink,
-  updateLinks,
-  effects,
+  reporter,
   pluginDomainSuggestion,
 }: ConfirmSelectionOptions) => {
   if (existingItemId) {
-    updateLinks(originalUrl, selectedLinks)
-    toast.success("Links updated")
+    reporter.publish({
+      kind: "links-updated",
+      itemUrl: originalUrl,
+      links: selectedLinks,
+    })
   } else {
     await addLink(originalUrl, meta, selectedLinks)
   }
 
   deleteDraft(originalUrl)
-  effects.closeSelection()
-  effects.resetAfterSave()
+  reporter.publish({ kind: "selection-closed" })
+  reporter.publish({ kind: "view-reset" })
   vibrateSaveSuccess()
   return { pluginDomainSuggestion }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Effect } from "effect"
 import { toast } from "sonner"
 import type {
@@ -10,11 +10,13 @@ import { writeDraft } from "~/features/links/drafts"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
-import { createSaveFlowEffects } from "./save-flow-effects"
+import { clearHighlightAfterDelay, resetSaveView } from "./save-feedback"
 import { getSaveErrorMessage } from "./save-error-message"
 import { client } from "~/lib/effect/api/client"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
+import { shouldOfferPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
 
 export const useSaveActions = ({
   url,
@@ -53,16 +55,67 @@ export const useSaveActions = ({
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
   const [pluginDomainSuggestion, setPluginDomainSuggestion] =
     useState<PluginDomainSuggestion | null>(null)
-  const effects = createSaveFlowEffects({
-    setError,
-    setExtractionPreview,
-    openSelectionDialog,
-    closeSelectionDialog,
-    setCurrentUrl,
-    setHighlightedId,
-    setSortOrder,
-    setCurrentPage,
-  })
+  const reporter = useMemo<SavedLinkInteractionReporter>(
+    () => ({
+      publish: (outcome) => {
+        switch (outcome.kind) {
+          case "clear-error":
+            setError(null)
+            break
+          case "error":
+            setError(outcome.message ?? null)
+            break
+          case "clear-preview":
+            setExtractionPreview(null)
+            break
+          case "preview":
+            setExtractionPreview(outcome.meta ? { meta: outcome.meta } : null)
+            break
+          case "selection-required":
+            if (outcome.selection) {
+              openSelectionDialog(outcome.selection)
+            }
+            break
+          case "selection-closed":
+            closeSelectionDialog()
+            break
+          case "link-focused":
+            if (outcome.linkId) {
+              setHighlightedId(outcome.linkId)
+              setSortOrder("newest")
+              setCurrentPage(1)
+              clearHighlightAfterDelay(setHighlightedId)
+            }
+            break
+          case "view-reset":
+            resetSaveView({ setCurrentUrl, setSortOrder, setCurrentPage })
+            break
+          case "links-updated":
+            if (outcome.itemUrl && outcome.links) {
+              updateLinks(outcome.itemUrl, outcome.links)
+              toast.success("Links updated")
+            }
+            break
+          case "draft-saved":
+            toast.success("Draft saved")
+            break
+          default:
+            break
+        }
+      },
+    }),
+    [
+      closeSelectionDialog,
+      openSelectionDialog,
+      setCurrentPage,
+      setCurrentUrl,
+      setError,
+      setExtractionPreview,
+      setHighlightedId,
+      setSortOrder,
+      updateLinks,
+    ]
+  )
 
   const handleSave = async (overrideUrl?: string) => {
     if (isSaving) {
@@ -76,13 +129,13 @@ export const useSaveActions = ({
         currentUrl: url,
         links,
         addLink,
-        effects,
+        reporter,
       })
       await offerPluginDomainSuggestion(result?.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
-      effects.clearPreview()
-      effects.showError(getSaveErrorMessage(error))
+      reporter.publish({ kind: "clear-preview" })
+      reporter.publish({ kind: "error", message: getSaveErrorMessage(error) })
     } finally {
       setIsSaving(false)
     }
@@ -104,14 +157,16 @@ export const useSaveActions = ({
         meta,
         existingItemId,
         addLink,
-        updateLinks,
-        effects,
+        reporter,
         pluginDomainSuggestion: selectionSuggestion,
       })
       await offerPluginDomainSuggestion(result.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
-      effects.showError("Unable to save the selected links. Try again.")
+      reporter.publish({
+        kind: "error",
+        message: "Unable to save the selected links. Try again.",
+      })
     } finally {
       setIsSaving(false)
     }
@@ -121,28 +176,21 @@ export const useSaveActions = ({
     const { originalUrl, links, meta } = selectionDialogState
     if (links.length > 0) {
       writeDraft(originalUrl, links, meta)
-      toast.success("Draft saved")
+      reporter.publish({ kind: "draft-saved" })
     }
     closeSelectionDialog()
   }
 
-  async function offerPluginDomainSuggestion(
+  const offerPluginDomainSuggestion = async (
     suggestion: PluginDomainSuggestion | undefined
-  ) {
-    if (!suggestion) {
-      return
-    }
-
+  ) => {
     try {
-      const domains = await Effect.runPromise(client.pluginDomains.list({}))
-      const isConfigured = domains.some(
-        (domain) =>
-          domain.pluginServerId === suggestion.pluginServerId &&
-          domain.pluginId === suggestion.pluginId &&
-          domain.domain === suggestion.domain
+      const offeredSuggestion = await shouldOfferPluginDomainSuggestion(
+        suggestion,
+        () => Effect.runPromise(client.pluginDomains.list({}))
       )
-      if (!isConfigured) {
-        setPluginDomainSuggestion(suggestion)
+      if (offeredSuggestion) {
+        setPluginDomainSuggestion(offeredSuggestion)
       }
     } catch (error) {
       console.error(error)
