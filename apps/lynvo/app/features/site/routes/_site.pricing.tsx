@@ -151,7 +151,8 @@ export default function Pricing() {
   const comparisonEndRef = useRef<HTMLDivElement>(null)
   const [isComparisonTableVisible, setIsComparisonTableVisible] =
     useState(false)
-  const [isComparisonEndVisible, setIsComparisonEndVisible] = useState(false)
+  const [hasComparisonEndBeenReached, setHasComparisonEndBeenReached] =
+    useState(false)
 
   useEffect(() => {
     const comparisonTable = comparisonTableRef.current
@@ -166,7 +167,13 @@ export default function Pricing() {
     })
     const endObserver = new IntersectionObserver(
       ([entry]) => {
-        setIsComparisonEndVisible(entry.isIntersecting)
+        const observerBottom =
+          entry.rootBounds?.bottom ??
+          window.innerHeight - MOBILE_PRICING_CONTROLS_HEIGHT_PX
+
+        setHasComparisonEndBeenReached(
+          entry.boundingClientRect.top <= observerBottom
+        )
       },
       {
         rootMargin: `0px 0px -${MOBILE_PRICING_CONTROLS_HEIGHT_PX}px 0px`,
@@ -183,7 +190,7 @@ export default function Pricing() {
   }, [])
 
   const isMobileComparisonControlVisible =
-    isComparisonTableVisible && !isComparisonEndVisible
+    isComparisonTableVisible && !hasComparisonEndBeenReached
 
   return (
     <div className="w-full px-6 py-16 md:px-8 md:py-24 lg:px-10 xl:px-14">
@@ -333,13 +340,14 @@ export default function Pricing() {
           </Table>
 
           <div ref={comparisonEndRef} className="h-px sm:hidden" />
-          <MobilePlanControls
-            className={cn(
-              isMobileComparisonControlVisible
-                ? "fixed inset-x-0 bottom-0 z-40 bg-background px-6 pt-4 pb-4"
-                : "mt-4"
-            )}
-          />
+          {isMobileComparisonControlVisible && (
+            <div
+              className="flow-root sm:hidden"
+              style={{ height: MOBILE_PRICING_CONTROLS_HEIGHT_PX }}
+            >
+              <MobilePlanControls className="fixed inset-x-0 bottom-0 z-40 bg-background px-6 pt-4 pb-4" />
+            </div>
+          )}
         </div>
 
         <footer className="mx-auto mt-12 flex max-w-3xl flex-col items-center gap-4 text-center text-sm italic leading-6 text-muted-foreground">
