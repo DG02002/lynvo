@@ -2,7 +2,6 @@ import type { Route } from "./+types/root"
 import { initLogger } from "evlog"
 import { evlog, useLogger as getRequestLogger } from "evlog/react-router"
 import interLatinFontUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url"
-import jetBrainsMonoLatinFontUrl from "@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2?url"
 import "./app.css"
 import { csrfCookie } from "~/lib/csrf"
 import { getUserSession, responseWithSession } from "~/lib/auth"
@@ -24,13 +23,6 @@ export const links: Route.LinksFunction = () => [
   {
     rel: "preload",
     href: interLatinFontUrl,
-    as: "font",
-    type: "font/woff2",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "preload",
-    href: jetBrainsMonoLatinFontUrl,
     as: "font",
     type: "font/woff2",
     crossOrigin: "anonymous",

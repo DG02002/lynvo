@@ -84,7 +84,7 @@ describe("Changelog", () => {
     const updates = screen.getByRole("region", { name: "Changelog updates" })
 
     expect(
-      within(updates).getAllByRole("heading", { level: 3 })[0]
+      within(updates).getAllByRole("heading", { level: 2 })[0]
     ).toHaveTextContent("More reliable link management")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
@@ -92,7 +92,7 @@ describe("Changelog", () => {
       screen.getByRole("menuitemradio", { name: "Oldest to newest" })
     )
 
-    const sortedHeadings = within(updates).getAllByRole("heading", { level: 3 })
+    const sortedHeadings = within(updates).getAllByRole("heading", { level: 2 })
     expect(sortedHeadings[0]).toHaveTextContent("More reliable link management")
     expect(sortedHeadings.at(-1)).toHaveTextContent("Product launch")
   })

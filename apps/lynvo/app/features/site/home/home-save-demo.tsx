@@ -264,9 +264,9 @@ export const HomeSaveDemo = () => {
     >
       <div
         aria-hidden={!isCopySourceVisible}
-        className={`home-demo-copy-source absolute top-0 left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 px-1 py-1 text-center transition-[opacity,transform] duration-200 ${isCopySourceVisible ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"}`}
+        className={`home-demo-copy-source absolute top-0 left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 px-1 py-1 text-center transition-transform duration-200 ${isCopySourceVisible ? "visible translate-y-0" : "invisible -translate-y-1"}`}
       >
-        <span className="block max-w-52 truncate text-xs text-foreground/75">
+        <span className="block max-w-52 truncate text-xs text-foreground">
           {HOME_DEMO_CLIPBOARD_URL}
         </span>
         <button
@@ -317,7 +317,7 @@ export const HomeSaveDemo = () => {
                   <button
                     ref={clipboardRef}
                     aria-hidden={!isClipboardOpen}
-                    aria-label="Paste clipboard link"
+                    aria-label={`Paste clipboard link ${HOME_DEMO_CLIPBOARD_URL}`}
                     className="pointer-events-auto w-full cursor-pointer rounded-md px-1 py-2 text-left"
                     onClick={handleClipboardClick}
                     type="button"
@@ -435,7 +435,9 @@ const DemoLibraryItem = ({
           <span className="block line-clamp-3 break-words text-sm font-normal md:text-lg">
             {item.title}
           </span>
-          <span className="mt-1 block truncate text-xs text-muted-foreground">
+          <span
+            className={`mt-1 block truncate text-xs ${item.isOpened ? "text-foreground/80" : "text-muted-foreground"}`}
+          >
             {item.detail}
           </span>
         </span>

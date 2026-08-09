@@ -5,7 +5,13 @@ import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
 
 export function meta() {
-  return [{ title: "Log in on this device | Lynvo" }]
+  return [
+    { title: "Log in on this device | Lynvo" },
+    {
+      name: "description",
+      content: "Scan a QR code to log in to Lynvo from another device.",
+    },
+  ]
 }
 
 export default function SignInWithAnotherDevice() {

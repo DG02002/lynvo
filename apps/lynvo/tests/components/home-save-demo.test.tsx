@@ -42,6 +42,15 @@ describe("HomeSaveDemo", () => {
       container.querySelector('[data-slot="input-group"]')
     ).toBeInTheDocument()
     expect(container.querySelector(".shimmer")).not.toBeInTheDocument()
+    expect(container.querySelector(".home-demo-copy-source")).toHaveClass(
+      "transition-transform"
+    )
+    expect(container.querySelector(".home-demo-copy-source")).not.toHaveClass(
+      "transition-[opacity,transform]"
+    )
+    expect(screen.getAllByText("Direct Media")[0]).toHaveClass(
+      "text-foreground/80"
+    )
     expect(
       container.querySelector(".home-demo-created-item")
     ).not.toBeInTheDocument()
@@ -104,7 +113,7 @@ describe("HomeSaveDemo", () => {
       }
 
       const clipboardButton = screen.getByRole("button", {
-        name: "Paste clipboard link",
+        name: "Paste clipboard link https://video.example/aurora-station-1080p.mp4",
       })
       fireEvent.click(clipboardButton)
 

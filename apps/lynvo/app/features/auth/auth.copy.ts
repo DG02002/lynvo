@@ -1,6 +1,8 @@
 export const authCopy = {
   signup: {
     metaTitle: "Create an account | Lynvo",
+    metaDescription:
+      "Create a Lynvo account to save links and open them in Android players.",
     pageHeading: "Create an account",
     submitButton: "Create account",
     submittingButton: "Creating account…",
