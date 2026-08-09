@@ -1,9 +1,9 @@
 import { useState } from "react"
-import type { LinkViewItem } from "~/features/links/types"
+import type { LinkListItem } from "~/features/links/types"
 
 const ITEMS_PER_PAGE = 10
 
-export function useLinksPaginationAndSort(links: LinkViewItem[]) {
+export function useLinksPaginationAndSort(links: LinkListItem[]) {
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -21,8 +21,8 @@ export function useLinksPaginationAndSort(links: LinkViewItem[]) {
   })
 
   const sortedLinks = filteredLinks.toSorted((a, b) => {
-    if (a.isDraft !== b.isDraft) {
-      return a.isDraft ? -1 : 1
+    if (a.kind !== b.kind) {
+      return a.kind === "draft" ? -1 : 1
     }
     if (sortOrder === "newest") {
       return b.timestamp - a.timestamp

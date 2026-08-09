@@ -1,20 +1,19 @@
-import type { LinkViewItem } from "~/features/links/types"
+import type { LinkListItem } from "~/features/links/types"
 import {
   TEST_DRAFT_LIFETIME_MS,
   TEST_PLAYABLE_EXPIRY_AT_MS,
 } from "~/features/links/testing/constants"
 
-export const createSaveListTestItems = (): LinkViewItem[] => {
+export const createSaveListTestItems = (): LinkListItem[] => {
   const timestamp = Date.now()
 
   return [
     {
-      id: "selection-draft",
+      kind: "draft",
       url: "https://media.example/selection-draft",
       timestamp,
       title: "Draft awaiting link selection",
-      isDraft: true,
-      draftExpiresAt: timestamp + TEST_DRAFT_LIFETIME_MS,
+      expiresAt: timestamp + TEST_DRAFT_LIFETIME_MS,
       meta: {
         pluginName: "Spencerwooo's Onedrive Vercel Index",
         pluginIcon: "/icons/sources/onedrive-index.webp",
@@ -94,6 +93,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "direct-file",
       url: "https://media.example/direct-file",
       timestamp,
@@ -118,6 +118,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "nested-library",
       url: "https://media.example/library",
       timestamp,
@@ -177,6 +178,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "multiple-direct-files",
       url: "https://media.example/multiple-files",
       timestamp,
@@ -211,6 +213,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "expiring-direct-file",
       url: "https://media.example/expiring",
       timestamp,
@@ -239,6 +242,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "fallback-title",
       url: "https://fallback-title.example/path/video.mp4",
       timestamp,
@@ -258,6 +262,7 @@ export const createSaveListTestItems = (): LinkViewItem[] => {
       },
     },
     {
+      kind: "saved",
       id: "source-alpha-mirrors",
       url: "https://source-alpha.example/example-collection-collection-folder-1",
       timestamp,

@@ -4,7 +4,7 @@ import {
   DraftLinkItemMenu,
   LinkItemMenu,
 } from "~/components/links/LinkItemMenu"
-import { readDraft, writeDraft } from "~/components/links/DraftManager"
+import { readDraft, writeDraft } from "~/features/links/drafts"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink } from "~/features/links/types"
 
@@ -39,10 +39,13 @@ describe("LinkItemMenu", () => {
     render(
       <DraftLinkItemMenu
         item={{
+          kind: "draft",
           url: draftUrl,
           timestamp: Date.now(),
+          title: draftUrl,
           extractedLinks: [],
-          isDraft: true,
+          meta: {},
+          expiresAt: Date.now() + 60_000,
         }}
         actions={actions}
         showRemove

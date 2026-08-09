@@ -3,7 +3,11 @@ import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  DraftListItem,
+  ExtractedLink,
+  LinkViewItem,
+} from "~/features/links/types"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 
@@ -69,7 +73,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions({ expandFolder })}
@@ -137,7 +141,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={onSelectedItemUrlChange}
         actions={createActions({ expandMirror })}
@@ -193,7 +197,10 @@ describe("SaveListBrowser", () => {
 
     const Harness = () => {
       const [extractingItems, setExtractingItems] = useState(new Set<string>())
-      const [currentItem, setCurrentItem] = useState(item)
+      const [currentItem, setCurrentItem] = useState({
+        ...item,
+        kind: "saved" as const,
+      })
       const actions = createActions({
         markOpened: (itemUrl, linkUrl) => {
           markOpened(itemUrl, linkUrl)
@@ -343,7 +350,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={item.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions({
@@ -394,7 +401,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions()}
@@ -438,7 +445,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions({ play })}
@@ -461,18 +468,13 @@ describe("SaveListBrowser", () => {
 
   it("shows the expiration countdown for a draft", () => {
     const now = Date.now()
-    const item: LinkViewItem = {
+    const item: DraftListItem = {
+      kind: "draft",
       url: "https://source.example/draft",
       timestamp: now,
       title: "Draft link",
-      isDraft: true,
-      draftExpiresAt: now + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000,
-      metadata: {
-        schemaVersion: 3,
-        source: {},
-        extraction: { extractedLinks: [] },
-        playback: { openedUrls: [], openedIds: [] },
-      },
+      expiresAt: now + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000,
+      meta: {},
     }
 
     render(
@@ -515,7 +517,7 @@ describe("SaveListBrowser", () => {
 
     render(
       <SaveListBrowser
-        items={[item]}
+        items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions({ markOpened })}

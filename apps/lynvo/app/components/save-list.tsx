@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import { useDraftSweep } from "~/components/links/DraftManager"
 import { LinkInputSection } from "~/components/send-link/LinkInputSection"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
@@ -10,8 +9,6 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 
 const SaveList = () => {
-  useDraftSweep()
-
   const [selectedItemUrl, setSelectedItemUrl] = useState<string | null>(null)
   const {
     links,

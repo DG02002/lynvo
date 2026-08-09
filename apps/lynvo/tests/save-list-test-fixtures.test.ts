@@ -11,8 +11,10 @@ const flattenLinks = (links: ExtractedLink[]): ExtractedLink[] =>
 
 describe("save-list UI test fixtures", () => {
   it("uses a realistic multi-item selection tree for drafts", () => {
-    const draft = createSaveListTestItems().find((item) => item.isDraft)
-    const links = draft ? getLinkViewItemExtractedLinks(draft) : []
+    const draft = createSaveListTestItems().find(
+      (item) => item.kind === "draft"
+    )
+    const links = draft?.meta.extractedLinks ?? []
 
     expect(links.length).toBeGreaterThan(1)
     expect(
@@ -21,7 +23,9 @@ describe("save-list UI test fixtures", () => {
   })
 
   it("contains no empty navigable folders", () => {
-    const savedItems = createSaveListTestItems().filter((item) => !item.isDraft)
+    const savedItems = createSaveListTestItems().filter(
+      (item) => item.kind === "saved"
+    )
     const savedLinks = savedItems.flatMap(getLinkViewItemExtractedLinks)
     const flattenedLinks = flattenLinks(savedLinks)
 
@@ -42,7 +46,7 @@ describe("save-list UI test fixtures", () => {
 
   it("includes Source Alpha playable items that resolve Resolver Beta mirrors when selected", () => {
     const mirrorItem = createSaveListTestItems().find(
-      (item) => item.id === "source-alpha-mirrors"
+      (item) => item.kind === "saved" && item.id === "source-alpha-mirrors"
     )
     const flattenedLinks = flattenLinks(
       mirrorItem ? getLinkViewItemExtractedLinks(mirrorItem) : []

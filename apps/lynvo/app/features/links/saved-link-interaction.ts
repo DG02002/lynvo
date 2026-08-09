@@ -1,8 +1,10 @@
-import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
-import {
-  getLinkViewItemFlatMeta,
-  getLinkViewItemMetadata,
-} from "./link-metadata-accessors"
+import type {
+  DraftListItem,
+  ExtractedLink,
+  LinkViewItem,
+  MetaData,
+} from "./types"
+import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
 
 const isMirrorResolvable = (link: ExtractedLink) =>
@@ -11,7 +13,6 @@ const isMirrorResolvable = (link: ExtractedLink) =>
 export interface SavedLinkInteractionState {
   directLink?: ExtractedLink
   isDirectLinkExpired: boolean
-  isDraft: boolean
   isNew: boolean
   isResolvableContainer: boolean
 }
@@ -28,9 +29,7 @@ export const getSavedLinkInteractionState = (
   currentTimeMs: number
 ): SavedLinkInteractionState => {
   const view = toLinkViewModel(item)
-  const isDraft = item.isDraft === true
   const directLink =
-    !isDraft &&
     view.extractedLinks.length === 1 &&
     (view.extractedLinks[0]?.type !== "folder" ||
       isMirrorResolvable(view.extractedLinks[0]))
@@ -39,13 +38,11 @@ export const getSavedLinkInteractionState = (
   const isDirectLinkExpired =
     directLink?.expiry !== undefined && directLink.expiry <= currentTimeMs
   const openedUrls = new Set(getLinkViewItemMetadata(item).playback.openedUrls)
-  const isRootFolderNew =
-    directLink === undefined && !isDraft && !openedUrls.has(item.url)
+  const isRootFolderNew = directLink === undefined && !openedUrls.has(item.url)
 
   return {
     directLink,
     isDirectLinkExpired,
-    isDraft,
     isNew:
       !isDirectLinkExpired &&
       (directLink ? directLink.opened !== true : isRootFolderNew),
@@ -54,18 +51,9 @@ export const getSavedLinkInteractionState = (
   }
 }
 
-export const getDraftSelection = (
-  item: LinkViewItem
-): DraftSelection | undefined => {
-  if (item.isDraft !== true) {
-    return undefined
-  }
-
-  const view = toLinkViewModel(item)
-  return {
-    originalUrl: item.url,
-    links: item.extractedLinks ?? view.extractedLinks,
-    meta: item.meta ?? getLinkViewItemFlatMeta(item),
-    isDraftMode: true,
-  }
-}
+export const getDraftSelection = (item: DraftListItem): DraftSelection => ({
+  originalUrl: item.url,
+  links: item.extractedLinks ?? item.meta.extractedLinks ?? [],
+  meta: item.meta,
+  isDraftMode: true,
+})

@@ -1,5 +1,5 @@
 import { toast } from "sonner"
-import { readDraft, deleteDraft } from "~/components/links/DraftManager"
+import { readDraft, deleteDraft } from "~/features/links/drafts"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { vibrateSaveStart, vibrateSaveSuccess } from "./save-feedback"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"

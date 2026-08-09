@@ -94,6 +94,27 @@ export interface LinkViewItem {
   sourceStatus?: "active" | "maintenance" | "degraded" | "down"
   sourceVersion?: string
   extractedLinks?: ExtractedLink[]
-  isDraft?: boolean
-  draftExpiresAt?: number
 }
+
+export interface SavedLinkListItem extends LinkViewItem {
+  kind: "saved"
+}
+
+export interface DraftListItem {
+  kind: "draft"
+  url: string
+  timestamp: number
+  title: string
+  extractedLinks?: ExtractedLink[]
+  meta: MetaData
+  pluginName?: string
+  pluginIcon?: string
+  expiresAt: number
+}
+
+export interface LinkListItemMap {
+  saved: SavedLinkListItem
+  draft: DraftListItem
+}
+
+export type LinkListItem = LinkListItemMap[keyof LinkListItemMap]

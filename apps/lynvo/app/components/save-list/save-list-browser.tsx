@@ -20,7 +20,11 @@ import {
 import { LinkActionsDotMenu } from "~/components/links/LinkActionsContextMenu"
 import { Spinner } from "~/components/ui/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkListItem,
+  LinkViewItem,
+} from "~/features/links/types"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
@@ -43,7 +47,7 @@ import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 
 interface SaveListBrowserProps {
-  items: LinkViewItem[]
+  items: LinkListItem[]
   selectedItemUrl: string | null
   onSelectedItemUrlChange: (url: string | null) => void
   actions: LinkItemActions
@@ -594,18 +598,33 @@ export const SaveListBrowser = ({
     <section className="border-t">
       <div className="flex flex-col">
         {items.map((item) => {
-          const itemKey = item.id ?? item.url
-          const view = toLinkViewModel(item)
-          const interactionState = getSavedLinkInteractionState(
-            item,
-            Date.now()
-          )
+          const isDraft = item.kind === "draft"
+          const itemKey =
+            item.kind === "saved" ? (item.id ?? item.url) : item.url
+          const view =
+            item.kind === "saved"
+              ? toLinkViewModel(item)
+              : {
+                  extractedLinks:
+                    item.extractedLinks ?? item.meta.extractedLinks ?? [],
+                  sourceName: item.meta.sourceName,
+                  pluginName: item.meta.pluginName,
+                }
+          const interactionState =
+            item.kind === "saved"
+              ? getSavedLinkInteractionState(item, Date.now())
+              : {
+                  directLink: undefined,
+                  isDirectLinkExpired: false,
+                  isNew: false,
+                  isResolvableContainer: false,
+                }
           const { directLink, isDirectLinkExpired, isResolvableContainer } =
             interactionState
           const isExtracting = extractingItems.has(item.url)
           const isRootItemNew = interactionState.isNew
 
-          if (directLink && isResolvableContainer) {
+          if (item.kind === "saved" && directLink && isResolvableContainer) {
             return (
               <ResolvableContainerRow
                 key={itemKey}
@@ -622,7 +641,11 @@ export const SaveListBrowser = ({
             <div
               key={itemKey}
               className="border-b last:border-b-0"
-              data-highlighted={highlightedId === item.id || undefined}
+              data-highlighted={
+                item.kind === "saved" && highlightedId === item.id
+                  ? true
+                  : undefined
+              }
             >
               <div
                 className={cn(
@@ -642,7 +665,7 @@ export const SaveListBrowser = ({
                       "cursor-not-allowed text-muted-foreground opacity-60"
                   )}
                   onClick={() => {
-                    if (item.isDraft) {
+                    if (isDraft) {
                       actions.showLinks(item.url)
                       return
                     }
@@ -664,7 +687,7 @@ export const SaveListBrowser = ({
                           : undefined
                       }
                     />
-                  ) : item.isDraft ? (
+                  ) : isDraft ? (
                     <SaveListRowIcon icon={DashboardSquare03Icon} />
                   ) : (
                     <SaveListRowIcon icon={Folder01Icon} />
@@ -722,10 +745,10 @@ export const SaveListBrowser = ({
                     {view.extractedLinks.length} items
                   </span>
                 )}
-                {item.isDraft && item.draftExpiresAt && (
-                  <DraftExpiryBadge expiresAt={item.draftExpiresAt} />
+                {item.kind === "draft" && (
+                  <DraftExpiryBadge expiresAt={item.expiresAt} />
                 )}
-                {item.isDraft ? (
+                {item.kind === "draft" ? (
                   <DraftLinkItemMenu
                     item={item}
                     actions={actions}

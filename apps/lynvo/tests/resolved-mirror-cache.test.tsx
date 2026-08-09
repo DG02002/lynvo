@@ -33,7 +33,7 @@ describe("resolved mirror cache", () => {
     const cacheResolvedMirrors = vi.fn()
     const { result } = renderHook(() =>
       useRefreshActions({
-        links: [item],
+        links: [{ ...item, kind: "saved" }],
         updateLinks: vi.fn(),
         cacheResolvedMirrors,
         openSelectionDialog: vi.fn(),
@@ -80,7 +80,7 @@ describe("resolved mirror cache", () => {
     })
     const { result } = renderHook(() =>
       useRefreshActions({
-        links: [item],
+        links: [{ ...item, kind: "saved" }],
         updateLinks: vi.fn(),
         cacheResolvedMirrors: vi.fn(),
         openSelectionDialog: vi.fn(),

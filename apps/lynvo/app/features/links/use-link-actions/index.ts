@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import type { LinkViewItem } from "~/features/links/types"
+import type { LinkListItem } from "~/features/links/types"
 import type { ExtractionPreview } from "./action-types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinksActions } from "~/features/links/use-links/actions"
@@ -16,7 +16,7 @@ import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 
 interface UseLinkActionsProps {
-  links: LinkViewItem[]
+  links: LinkListItem[]
   linkActions: LinksActions
   setHighlightedId: (id: string | null) => void
   setSortOrder: (order: "newest" | "oldest") => void

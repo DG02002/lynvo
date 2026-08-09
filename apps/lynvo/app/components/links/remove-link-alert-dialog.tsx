@@ -1,8 +1,6 @@
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import type { LinkViewItem } from "~/features/links/types"
-
 interface RemoveLinkAlertDialogProps {
-  item: LinkViewItem
+  item: { url: string; id?: string }
   open: boolean
   onOpenChange: (open: boolean) => void
   onRemove: (url: string, id?: string) => void

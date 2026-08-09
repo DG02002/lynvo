@@ -3,7 +3,7 @@ import {
   writeDraft,
   readDraft,
   deleteDraft,
-} from "~/components/links/DraftManager"
+} from "~/features/links/drafts"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 
 const createMockStorage = () => {
@@ -22,7 +22,7 @@ const createMockStorage = () => {
   }
 }
 
-describe("DraftManager", () => {
+describe("Draft module", () => {
   beforeEach(() => {
     const mockStorage = createMockStorage()
     Object.defineProperty(globalThis, "localStorage", {

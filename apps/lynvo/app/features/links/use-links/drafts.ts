@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from "react"
+import { DRAFT_TTL_MS } from "~/features/links/constants"
 import {
-  DRAFT_TTL_MS,
-  getExpiringDrafts,
-} from "~/components/links/DraftManager"
-import type { LinkViewItem } from "~/features/links/types"
+  getDraftsSnapshot,
+  getServerDraftsSnapshot,
+  subscribeToDrafts,
+  type Draft,
+} from "~/features/links/drafts"
+import type {
+  DraftListItem,
+  LinkListItem,
+  LinkViewItem,
+} from "~/features/links/types"
 
-const draftToLinkViewItem = (
-  draft: ReturnType<typeof getExpiringDrafts>[number]
-): LinkViewItem => ({
+const draftToLinkViewItem = (draft: Draft): DraftListItem => ({
+  kind: "draft",
   url: draft.originalUrl,
   timestamp: draft.expiresAt - DRAFT_TTL_MS,
   title: draft.meta.pageTitle || draft.meta.title || draft.originalUrl,
@@ -15,30 +21,22 @@ const draftToLinkViewItem = (
   meta: draft.meta,
   pluginName: draft.meta.pluginName,
   pluginIcon: draft.meta.pluginIcon,
-  isDraft: true,
-  draftExpiresAt: draft.expiresAt,
+  expiresAt: draft.expiresAt,
 })
 
-export function useDraftLinks(links: LinkViewItem[]) {
-  const [drafts, setDrafts] = useState<LinkViewItem[]>([])
-
-  const refreshDrafts = useCallback(() => {
-    setDrafts(getExpiringDrafts().map(draftToLinkViewItem))
-  }, [])
-
-  useEffect(() => {
-    refreshDrafts()
-    window.addEventListener("storage", refreshDrafts)
-    window.addEventListener("lynvo:drafts:change", refreshDrafts)
-    return () => {
-      window.removeEventListener("storage", refreshDrafts)
-      window.removeEventListener("lynvo:drafts:change", refreshDrafts)
-    }
-  }, [refreshDrafts])
+export const useDraftLinks = (links: LinkViewItem[]): LinkListItem[] => {
+  const drafts = useSyncExternalStore(
+    subscribeToDrafts,
+    getDraftsSnapshot,
+    getServerDraftsSnapshot
+  )
 
   return useMemo(() => {
-    const draftUrls = new Set(drafts.map((draft) => draft.url))
+    const draftUrls = new Set(drafts.map((draft) => draft.originalUrl))
     const filteredLinks = links.filter((link) => !draftUrls.has(link.url))
-    return [...drafts, ...filteredLinks]
+    return [
+      ...drafts.map(draftToLinkViewItem),
+      ...filteredLinks.map((link) => ({ ...link, kind: "saved" as const })),
+    ]
   }, [drafts, links])
 }

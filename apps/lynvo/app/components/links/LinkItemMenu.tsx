@@ -21,16 +21,20 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  DraftListItem,
+  ExtractedLink,
+  LinkViewItem,
+} from "~/features/links/types"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
-import { deleteDraft } from "./DraftManager"
+import { deleteDraft } from "~/features/links/drafts"
 
 interface LinkItemMenuProps {
-  item: LinkViewItem
+  item: LinkViewItem | DraftListItem
   actions: LinkItemActions
   showRemove?: boolean
   onRemoved?: () => void
@@ -81,7 +85,7 @@ const LinkItemMenuContent = ({
     if (isDraft) {
       deleteDraft(item.url)
     } else {
-      void actions.remove(item.url, item.id)
+      void actions.remove(item.url, "id" in item ? item.id : undefined)
     }
     onRemoved?.()
   }
@@ -196,10 +200,10 @@ const LinkItemMenuContent = ({
   )
 }
 
-export const DraftLinkItemMenu = (props: LinkItemMenuProps) => (
-  <LinkItemMenuContent {...props} variant="draft" />
-)
+export const DraftLinkItemMenu = (
+  props: Omit<LinkItemMenuProps, "item"> & { item: DraftListItem }
+) => <LinkItemMenuContent {...props} variant="draft" />
 
-export const LinkItemMenu = (props: LinkItemMenuProps) => (
-  <LinkItemMenuContent {...props} variant="link" />
-)
+export const LinkItemMenu = (
+  props: Omit<LinkItemMenuProps, "item"> & { item: LinkViewItem }
+) => <LinkItemMenuContent {...props} variant="link" />

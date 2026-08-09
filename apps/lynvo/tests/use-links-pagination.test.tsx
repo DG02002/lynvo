@@ -1,17 +1,26 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { useLinksPaginationAndSort } from "~/features/links/use-links/pagination"
-import type { LinkViewItem } from "~/features/links/types"
+import type { DraftListItem, SavedLinkListItem } from "~/features/links/types"
 
-const createItem = (url: string, overrides: Partial<LinkViewItem> = {}) =>
-  ({ url, timestamp: 1, ...overrides }) satisfies LinkViewItem
+const createItem = (url: string, overrides: Partial<SavedLinkListItem> = {}) =>
+  ({
+    kind: "saved",
+    url,
+    timestamp: 1,
+    ...overrides,
+  }) satisfies SavedLinkListItem
 
 describe("useLinksPaginationAndSort", () => {
   it("keeps drafts above saved links in every sort order", () => {
-    const draft = createItem("https://example.com/draft", {
-      isDraft: true,
+    const draft: DraftListItem = {
+      kind: "draft",
+      url: "https://example.com/draft",
       timestamp: 1,
-    })
+      title: "Draft",
+      meta: {},
+      expiresAt: 10,
+    }
     const savedLink = createItem("https://example.com/saved", {
       timestamp: 2,
     })

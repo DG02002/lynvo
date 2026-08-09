@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import {
   expandFolderLink,
   expandMirrorLinks,
@@ -19,7 +19,7 @@ export const useRefreshActions = ({
   extractingItems,
   runWithExtractingItem,
 }: {
-  links: LinkViewItem[]
+  links: LinkListItem[]
   updateLinks: (url: string, links: ExtractedLink[]) => void
   cacheResolvedMirrors: (
     itemUrl: string,
@@ -43,14 +43,18 @@ export const useRefreshActions = ({
       }),
     [extractingItems, openSelectionDialog, runWithExtractingItem, updateLinks]
   )
+  const savedLinks = useMemo(
+    () => links.filter((item) => item.kind === "saved"),
+    [links]
+  )
 
   const handleSoftRefresh = useCallback(
     async (itemUrl: string) => {
       await effects.runExtracting(itemUrl, () =>
-        softRefreshLink({ itemUrl, links, effects })
+        softRefreshLink({ itemUrl, links: savedLinks, effects })
       )
     },
-    [effects, links]
+    [effects, savedLinks]
   )
 
   const handleHardRefresh = useCallback(
@@ -58,20 +62,19 @@ export const useRefreshActions = ({
       await effects.runExtracting(itemUrl, () =>
         hardRefreshLink({
           itemUrl,
-          links,
+          links: savedLinks,
           effects,
         })
       )
     },
-    [effects, links]
+    [effects, savedLinks]
   )
 
   const handleShowLinks = useCallback(
     async (itemUrl: string) => {
       const item = links.find((linkItem) => linkItem.url === itemUrl)
-      const draftSelection = item ? getDraftSelection(item) : undefined
-      if (draftSelection) {
-        effects.openSelection(draftSelection)
+      if (item?.kind === "draft") {
+        effects.openSelection(getDraftSelection(item))
         return
       }
       await handleHardRefresh(itemUrl)
@@ -90,9 +93,12 @@ export const useRefreshActions = ({
       }
 
       const item = links.find((linkItem) => linkItem.url === itemUrl)
-      const cachedMirrors = item
-        ? getLinkViewItemMetadata(item).playback.resolvedMirrors?.[lazyItemUrl]
-        : undefined
+      const cachedMirrors =
+        item?.kind === "saved"
+          ? getLinkViewItemMetadata(item).playback.resolvedMirrors?.[
+              lazyItemUrl
+            ]
+          : undefined
       if (cachedMirrors && !bypassCache) {
         return cachedMirrors
       }
@@ -101,7 +107,7 @@ export const useRefreshActions = ({
         const mirrors = await expandMirrorLinks({
           itemUrl,
           lazyItemUrl,
-          links,
+          links: savedLinks,
           effects,
         })
         if (mirrors) {
@@ -110,7 +116,7 @@ export const useRefreshActions = ({
         return mirrors
       })
     },
-    [cacheResolvedMirrors, effects, links]
+    [cacheResolvedMirrors, effects, links, savedLinks]
   )
 
   const handleExpandFolder = useCallback(
@@ -124,12 +130,12 @@ export const useRefreshActions = ({
           itemUrl,
           linkId,
           linkUrl,
-          links,
+          links: savedLinks,
           effects,
         })
       )
     },
-    [effects, links]
+    [effects, savedLinks]
   )
 
   return {

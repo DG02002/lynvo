@@ -6,7 +6,7 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import { writeDraft } from "~/components/links/DraftManager"
+import { writeDraft } from "~/features/links/drafts"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
