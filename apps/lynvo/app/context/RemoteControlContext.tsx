@@ -1,7 +1,6 @@
 import React, {
   createContext,
   use,
-  useCallback,
   useEffect,
   useMemo,
   useSyncExternalStore,
@@ -9,7 +8,6 @@ import React, {
 import { toast } from "sonner"
 import { useRealtime } from "~/context/RealtimeContext"
 import { remoteApi } from "./remote-control/api"
-import { useRemoteRealtimeEvents } from "./remote-control/events"
 import { createRemoteControlMachine } from "./remote-control/machine"
 import { remoteControlPersistence } from "./remote-control/storage"
 
@@ -106,12 +104,13 @@ export const RemoteControlProvider = ({
     [machine]
   )
 
-  const receiveRealtime = useCallback(
-    (event: RemoteRealtimeEvent) =>
-      machine.receiveRealtime(event, user?.sessionId),
-    [machine, user?.sessionId]
+  useEffect(
+    () =>
+      realtime.subscribeRemoteEvents((event) =>
+        machine.receiveRealtime(event, user?.sessionId)
+      ),
+    [machine, realtime, user?.sessionId]
   )
-  useRemoteRealtimeEvents(receiveRealtime)
 
   const value = useMemo<RemoteControlContextValue>(
     () => ({

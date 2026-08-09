@@ -4,7 +4,7 @@ import { remoteCommandWireMessageSchema } from "~/lib/remote-play/wire"
 declare global {
   interface RealtimeMessage {
     type: string
-    payload?: Record<string, unknown>
+    payload?: unknown
   }
 }
 
@@ -31,3 +31,7 @@ export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
     return null
   }
 }
+
+export const isRemoteRealtimeMessage = (
+  message: RealtimeMessage
+): message is RemoteCommandWireMessage => message.type === "remote.event"

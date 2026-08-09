@@ -4,12 +4,17 @@ import React, {
   useEffect,
   useMemo,
   useReducer,
+  useCallback,
+  useRef,
 } from "react"
 import { realtimeReducer, type RealtimeStatus } from "./realtime/reducer"
 import { openRealtimeSocket } from "./realtime/socket"
 
-type RealtimeContextValue = {
+interface RealtimeContextValue {
   status: RealtimeStatus
+  subscribeRemoteEvents: (
+    listener: (event: RemoteRealtimeEvent) => void
+  ) => () => void
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(
@@ -28,6 +33,19 @@ export function RealtimeProvider({
   const [state, dispatch] = useReducer(realtimeReducer, {
     status: userId ? "connecting" : "disabled",
   })
+  const remoteEventListeners = useRef(
+    new Set<(event: RemoteRealtimeEvent) => void>()
+  )
+  const receiveRemoteEvent = useCallback((event: RemoteRealtimeEvent) => {
+    remoteEventListeners.current.forEach((listener) => listener(event))
+  }, [])
+  const subscribeRemoteEvents = useCallback(
+    (listener: (event: RemoteRealtimeEvent) => void) => {
+      remoteEventListeners.current.add(listener)
+      return () => remoteEventListeners.current.delete(listener)
+    },
+    []
+  )
 
   useEffect(() => {
     if (!userId || typeof window === "undefined") {
@@ -35,10 +53,13 @@ export function RealtimeProvider({
       return
     }
 
-    return openRealtimeSocket({ dispatch })
-  }, [sessionId, userId])
+    return openRealtimeSocket({ dispatch, receiveRemoteEvent })
+  }, [receiveRemoteEvent, sessionId, userId])
 
-  const value = useMemo(() => ({ status: state.status }), [state.status])
+  const value = useMemo(
+    () => ({ status: state.status, subscribeRemoteEvents }),
+    [state.status, subscribeRemoteEvents]
+  )
 
   return (
     <RealtimeContext.Provider value={value}>

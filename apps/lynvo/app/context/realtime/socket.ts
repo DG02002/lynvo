@@ -1,8 +1,9 @@
 import type { RealtimeAction } from "./reducer"
-import { parseRealtimeMessage } from "./message-schema"
+import { isRemoteRealtimeMessage, parseRealtimeMessage } from "./message-schema"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
+  receiveRemoteEvent: (event: RemoteRealtimeEvent) => void
 }
 
 const closeSocket = (socket: WebSocket) => {
@@ -20,24 +21,27 @@ const websocketUrl = () => {
   return url.toString()
 }
 
-const handleRealtimeMessage = (event: MessageEvent) => {
-  const message = parseRealtimeMessage(String(event.data))
+export const deliverRealtimeMessage = (
+  value: string,
+  receiveRemoteEvent: (event: RemoteRealtimeEvent) => void
+) => {
+  const message = parseRealtimeMessage(value)
 
   if (!message) {
     console.error("Unable to read the real-time message")
-    return
+    return false
   }
 
-  if (message.type === "remote.event") {
-    window.dispatchEvent(
-      new CustomEvent("lynvo:remote-event", {
-        detail: message.payload,
-      })
-    )
+  if (isRemoteRealtimeMessage(message)) {
+    receiveRemoteEvent(message.payload)
   }
+  return true
 }
 
-export const openRealtimeSocket = ({ dispatch }: OpenRealtimeSocketOptions) => {
+export const openRealtimeSocket = ({
+  dispatch,
+  receiveRemoteEvent,
+}: OpenRealtimeSocketOptions) => {
   let socket: WebSocket | null = null
   let closed = false
   let reconnectTimer: number | undefined
@@ -57,7 +61,7 @@ export const openRealtimeSocket = ({ dispatch }: OpenRealtimeSocketOptions) => {
   }
 
   const handleMessage = (event: MessageEvent) => {
-    handleRealtimeMessage(event)
+    deliverRealtimeMessage(String(event.data), receiveRemoteEvent)
   }
 
   const removeSocketListeners = () => {
