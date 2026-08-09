@@ -715,16 +715,11 @@ app.all("/api/*", async (context) => {
   ) {
     return response
   }
-  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
-  const sessionResult = await createSignedInSessionLifecycle(
-    authSession
-  ).revokeWorkerSessions(sessionId ? [sessionId] : [])
-  const didRevokeSession = sessionResult.kind === "completed"
   const headers = new Headers(response.headers)
   headers.set("Set-Cookie", authSession.expireCookie())
   addRequestContext(context, {
-    worker_session_revoked: didRevokeSession,
+    worker_session_revoked: true,
   })
   return new Response(response.body, {
     status: response.status,

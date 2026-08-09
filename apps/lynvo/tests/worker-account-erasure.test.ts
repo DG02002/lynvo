@@ -12,6 +12,7 @@ vi.mock("convex/browser", () => ({
       id: "users:123",
       username: "darshan",
       sessionId: "authSessions:456",
+      workerSessionIds: ["opaque-session-id"],
     })
     action = async () => ({ success: true })
   },

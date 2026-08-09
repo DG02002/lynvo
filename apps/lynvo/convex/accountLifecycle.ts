@@ -90,6 +90,32 @@ export const revokeUserSession = async (
   return session.workerSessionId
 }
 
+export const getUserSessionRevocation = async (
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  currentSessionId: Id<"authSessions"> | null,
+  sessionId: Id<"authSessions">
+) => {
+  if (sessionId === currentSessionId) {
+    throw new Error("Use sign out for the current session")
+  }
+  const session = await ctx.db.get("authSessions", sessionId)
+  if (!session || session.userId !== userId) {
+    throw new Error("Session not found")
+  }
+  return session.workerSessionId ? [session.workerSessionId] : []
+}
+
+export const getAllUserSessionRevocations = async (
+  ctx: QueryCtx,
+  userId: Id<"users">
+) => {
+  const sessions = await getUserSessions(ctx, userId)
+  return sessions.flatMap((session) =>
+    session.workerSessionId ? [session.workerSessionId] : []
+  )
+}
+
 export const revokeCurrentUserSession = async (
   ctx: MutationCtx,
   userId: Id<"users">,

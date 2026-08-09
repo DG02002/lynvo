@@ -8,6 +8,28 @@ import {
 } from "./convex-test-harness"
 
 describe("Convex auth session lifecycle", () => {
+  it("prepares Worker revocation without deleting the Convex session", async () => {
+    const convex = createConvexTest()
+    const target = await insertTestUser(convex, "prepared-user")
+    const otherSessionId = await convex.run((context) =>
+      context.db.insert("authSessions", {
+        userId: target.userId,
+        expirationTime: Date.now() + 60_000,
+        workerSessionId: "other-worker-session",
+      })
+    )
+    const client = asAuthenticatedUser(convex, target.userId, target.sessionId)
+
+    await expect(
+      client.query(api.users.prepareSessionRevocation, {
+        sessionId: otherSessionId,
+      })
+    ).resolves.toEqual({ workerSessionIds: ["other-worker-session"] })
+    await expect(
+      convex.run((context) => context.db.get("authSessions", otherSessionId))
+    ).resolves.not.toBeNull()
+  })
+
   it("denies an issued token immediately after its session row is deleted", async () => {
     const convex = createConvexTest()
     const target = await insertTestUser(convex, "revoked-user")

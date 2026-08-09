@@ -31,6 +31,8 @@ import {
 import {
   cleanupInactiveUserAccounts,
   deleteUserAccountData,
+  getAllUserSessionRevocations,
+  getUserSessionRevocation,
   replacePasswordAndInvalidateOtherSessions,
   revokeAllUserSessions,
   revokeCurrentUserSession,
@@ -374,6 +376,26 @@ export const revokeSession = mutation({
   },
 })
 
+export const prepareSessionRevocation = query({
+  returns: v.object({ workerSessionIds: v.array(v.string()) }),
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const currentSessionId = await getAuthSessionId(ctx)
+    const sessionId = ctx.db.normalizeId("authSessions", args.sessionId)
+    if (!sessionId) {
+      throw new Error("Session not found")
+    }
+    const workerSessionIds = await getUserSessionRevocation(
+      ctx,
+      userId,
+      currentSessionId,
+      sessionId
+    )
+    return { workerSessionIds }
+  },
+})
+
 export const revokeCurrentSessionFromWorker = mutation({
   returns: v.object({ success: v.boolean() }),
   args: {},
@@ -395,6 +417,16 @@ export const revokeAllSessions = mutation({
     const userId = await getAuthenticatedWritableUserId(ctx)
     const workerSessionIds = await revokeAllUserSessions(ctx, userId)
     return { success: true, workerSessionIds }
+  },
+})
+
+export const prepareAllSessionRevocations = query({
+  returns: v.object({ workerSessionIds: v.array(v.string()) }),
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const workerSessionIds = await getAllUserSessionRevocations(ctx, userId)
+    return { workerSessionIds }
   },
 })
 

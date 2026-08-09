@@ -13,6 +13,15 @@ export interface TerminateSignedInSessionInput {
   readonly revokeConvexSession: (accessToken: string) => Promise<void>
 }
 
+export interface RevokeSignedInSessionsInput {
+  readonly prepare: () => Promise<readonly string[]>
+  readonly commit: () => Promise<void>
+}
+
+export interface EraseSignedInAccountInput extends RevokeSignedInSessionsInput {
+  readonly eraseAccount: () => Promise<void>
+}
+
 export interface SignedInSessionCompleted {
   readonly kind: "completed"
   readonly cookie: string
@@ -29,9 +38,31 @@ export interface SignedInSessionLifecycle {
   readonly terminate: (
     input: TerminateSignedInSessionInput
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
-  readonly revokeWorkerSessions: (
-    workerSessionIds: readonly string[]
+  readonly revoke: (
+    input: RevokeSignedInSessionsInput
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
+  readonly eraseAccount: (
+    input: EraseSignedInAccountInput
+  ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
+}
+
+const revokePreparedSessions = async (
+  authSession: AuthSessionModule,
+  input: RevokeSignedInSessionsInput
+): Promise<SignedInSessionCompleted | SignedInSessionUnavailable> => {
+  try {
+    const workerSessionIds = await input.prepare()
+    for (const workerSessionId of workerSessionIds) {
+      const result = await authSession.revoke(workerSessionId)
+      if (result.kind === "unavailable") {
+        return result
+      }
+    }
+    await input.commit()
+    return { kind: "completed", cookie: authSession.expireCookie() }
+  } catch {
+    return { kind: "unavailable" }
+  }
 }
 
 export const createSignedInSessionLifecycle = (
@@ -77,13 +108,17 @@ export const createSignedInSessionLifecycle = (
       ? { kind: "completed", cookie: revokedSession.cookie }
       : revokedSession
   },
-  revokeWorkerSessions: async (workerSessionIds) => {
-    for (const workerSessionId of workerSessionIds) {
-      const result = await authSession.revoke(workerSessionId)
-      if (result.kind === "unavailable") {
-        return result
-      }
+  revoke: async (input) => revokePreparedSessions(authSession, input),
+  eraseAccount: async (input) => {
+    const result = await revokePreparedSessions(authSession, input)
+    if (result.kind === "unavailable") {
+      return result
     }
-    return { kind: "completed", cookie: authSession.expireCookie() }
+    try {
+      await input.eraseAccount()
+      return result
+    } catch {
+      return { kind: "unavailable" }
+    }
   },
 })
