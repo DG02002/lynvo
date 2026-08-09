@@ -32,7 +32,6 @@ import {
   cleanupInactiveUserAccounts,
   deleteUserAccountData,
   getAllUserSessionRevocations,
-  getUserSessionRevocation,
   replacePasswordAndInvalidateOtherSessions,
   revokeAllUserSessions,
   revokeCurrentUserSession,
@@ -376,26 +375,6 @@ export const revokeSession = mutation({
   },
 })
 
-export const prepareSessionRevocation = query({
-  returns: v.object({ workerSessionIds: v.array(v.string()) }),
-  args: { sessionId: v.string() },
-  handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx)
-    const currentSessionId = await getAuthSessionId(ctx)
-    const sessionId = ctx.db.normalizeId("authSessions", args.sessionId)
-    if (!sessionId) {
-      throw new Error("Session not found")
-    }
-    const workerSessionIds = await getUserSessionRevocation(
-      ctx,
-      userId,
-      currentSessionId,
-      sessionId
-    )
-    return { workerSessionIds }
-  },
-})
-
 export const revokeCurrentSessionFromWorker = mutation({
   returns: v.object({ success: v.boolean() }),
   args: {},
@@ -417,16 +396,6 @@ export const revokeAllSessions = mutation({
     const userId = await getAuthenticatedWritableUserId(ctx)
     const workerSessionIds = await revokeAllUserSessions(ctx, userId)
     return { success: true, workerSessionIds }
-  },
-})
-
-export const prepareAllSessionRevocations = query({
-  returns: v.object({ workerSessionIds: v.array(v.string()) }),
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthenticatedUserId(ctx)
-    const workerSessionIds = await getAllUserSessionRevocations(ctx, userId)
-    return { workerSessionIds }
   },
 })
 
@@ -479,25 +448,24 @@ export const changePassword = action({
   },
 })
 
-export const deleteAccount = action({
-  returns: v.any(),
+export const beginAccountErasure = mutation({
+  returns: v.object({ workerSessionIds: v.array(v.string()) }),
   args: {
     confirmUsername: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await assertCurrentUser(ctx)
-    const user = await ctx.runQuery(internal.users.getUserForAuthAction, {
-      userId,
-    })
+    const userId = await getAuthenticatedWritableUserId(ctx)
+    const user = await ctx.db.get("users", userId)
     if (!user) {
       throw new Error("Authentication required")
     }
     if (args.confirmUsername.trim() !== user.username) {
       throw new Error("Username does not match")
     }
-    await ctx.runMutation(internal.users.deleteUserData, { userId })
+    const workerSessionIds = await getAllUserSessionRevocations(ctx, userId)
+    await deleteUserAccountData(ctx, userId)
     console.info("security.account_deleted", { userId })
-    return { success: true }
+    return { workerSessionIds }
   },
 })
 

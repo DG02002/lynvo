@@ -4,21 +4,51 @@ import { api } from "../../../../../convex/_generated/api"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
+import type { ConvexServiceShape } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { ConvexError } from "../../errors"
 import { createAuthSessionModule } from "../../../../../workers/auth-session"
 import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
-import type { RevokeSignedInSessionsInput } from "../../../../../workers/signed-in-session-lifecycle"
 
-const runSignedInSessionLifecycle = (operation: RevokeSignedInSessionsInput) =>
+const getSignedInSessionLifecycle = (
+  convex: ConvexServiceShape,
+  accessToken: string,
+  environment: Cloudflare.Env
+) =>
+  createSignedInSessionLifecycle(
+    createAuthSessionModule(environment.WORKER_AUTH_SESSION),
+    {
+      revokeSession: (sessionId) =>
+        Effect.runPromise(
+          convex
+            .mutation(api.users.revokeSession, { sessionId }, { accessToken })
+            .pipe(Effect.map((result) => result.workerSessionIds))
+        ),
+      revokeAllSessions: () =>
+        Effect.runPromise(
+          convex
+            .mutation(api.users.revokeAllSessions, {}, { accessToken })
+            .pipe(Effect.map((result) => result.workerSessionIds))
+        ),
+      beginAccountErasure: (confirmUsername) =>
+        Effect.runPromise(
+          convex
+            .mutation(
+              api.users.beginAccountErasure,
+              { confirmUsername },
+              { accessToken }
+            )
+            .pipe(Effect.map((result) => result.workerSessionIds))
+        ),
+    }
+  )
+
+const runSignedInSessionLifecycle = (
+  operation: () => Promise<{ readonly kind: "completed" | "unavailable" }>
+) =>
   Effect.gen(function* () {
-    const environment = yield* CloudflareEnv
-    const result = yield* Effect.promise(() =>
-      createSignedInSessionLifecycle(
-        createAuthSessionModule(environment.WORKER_AUTH_SESSION)
-      ).revoke(operation)
-    )
+    const result = yield* Effect.promise(operation)
     if (result.kind === "unavailable") {
       return yield* new ConvexError({
         message: "Session revocation is unavailable",
@@ -133,26 +163,15 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* runSignedInSessionLifecycle({
-            prepare: () =>
-              Effect.runPromise(
-                convex
-                  .query(
-                    api.users.prepareSessionRevocation,
-                    { sessionId: params.sessionId },
-                    { accessToken: user.accessToken }
-                  )
-                  .pipe(Effect.map((result) => result.workerSessionIds))
-              ),
-            commit: () =>
-              Effect.runPromise(
-                convex.mutation(
-                  api.users.revokeSession,
-                  { sessionId: params.sessionId },
-                  { accessToken: user.accessToken }
-                )
-              ).then(() => undefined),
-          })
+          const environment = yield* CloudflareEnv
+          const lifecycle = getSignedInSessionLifecycle(
+            convex,
+            user.accessToken,
+            environment
+          )
+          yield* runSignedInSessionLifecycle(() =>
+            lifecycle.revokeSession(params.sessionId)
+          )
           return { success: true }
         })
       )
@@ -160,30 +179,13 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* runSignedInSessionLifecycle({
-            prepare: () =>
-              Effect.runPromise(
-                convex
-                  .query(
-                    api.users.prepareAllSessionRevocations,
-                    {},
-                    {
-                      accessToken: user.accessToken,
-                    }
-                  )
-                  .pipe(Effect.map((result) => result.workerSessionIds))
-              ),
-            commit: () =>
-              Effect.runPromise(
-                convex.mutation(
-                  api.users.revokeAllSessions,
-                  {},
-                  {
-                    accessToken: user.accessToken,
-                  }
-                )
-              ).then(() => undefined),
-          })
+          const environment = yield* CloudflareEnv
+          const lifecycle = getSignedInSessionLifecycle(
+            convex,
+            user.accessToken,
+            environment
+          )
+          yield* runSignedInSessionLifecycle(lifecycle.revokeAllSessions)
           return { success: true }
         })
       )
@@ -192,30 +194,13 @@ export const SettingsHandlers = HttpApiBuilder.group(
           const convex = yield* ConvexService
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
+          const lifecycle = getSignedInSessionLifecycle(
+            convex,
+            user.accessToken,
+            environment
+          )
           const result = yield* Effect.promise(() =>
-            createSignedInSessionLifecycle(
-              createAuthSessionModule(environment.WORKER_AUTH_SESSION)
-            ).eraseAccount({
-              prepare: () =>
-                Effect.runPromise(
-                  convex
-                    .query(
-                      api.users.prepareAllSessionRevocations,
-                      {},
-                      {
-                        accessToken: user.accessToken,
-                      }
-                    )
-                    .pipe(Effect.map((prepared) => prepared.workerSessionIds))
-                ),
-              commit: async () => undefined,
-              eraseAccount: () =>
-                Effect.runPromise(
-                  convex.action(api.users.deleteAccount, payload, {
-                    accessToken: user.accessToken,
-                  })
-                ).then(() => undefined),
-            })
+            lifecycle.eraseAccount(payload.confirmUsername)
           )
           if (result.kind === "unavailable") {
             return yield* new ConvexError({

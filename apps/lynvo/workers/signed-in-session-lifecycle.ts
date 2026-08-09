@@ -13,13 +13,12 @@ export interface TerminateSignedInSessionInput {
   readonly revokeConvexSession: (accessToken: string) => Promise<void>
 }
 
-export interface RevokeSignedInSessionsInput {
-  readonly prepare: () => Promise<readonly string[]>
-  readonly commit: () => Promise<void>
-}
-
-export interface EraseSignedInAccountInput extends RevokeSignedInSessionsInput {
-  readonly eraseAccount: () => Promise<void>
+export interface SignedInSessionCoordinator {
+  readonly revokeSession: (sessionId: string) => Promise<readonly string[]>
+  readonly revokeAllSessions: () => Promise<readonly string[]>
+  readonly beginAccountErasure: (
+    confirmUsername: string
+  ) => Promise<readonly string[]>
 }
 
 export interface SignedInSessionCompleted {
@@ -38,27 +37,29 @@ export interface SignedInSessionLifecycle {
   readonly terminate: (
     input: TerminateSignedInSessionInput
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
-  readonly revoke: (
-    input: RevokeSignedInSessionsInput
+  readonly revokeSession: (
+    sessionId: string
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
+  readonly revokeAllSessions: () => Promise<
+    SignedInSessionCompleted | SignedInSessionUnavailable
+  >
   readonly eraseAccount: (
-    input: EraseSignedInAccountInput
+    confirmUsername: string
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
 }
 
-const revokePreparedSessions = async (
+const revokeCommittedSessions = async (
   authSession: AuthSessionModule,
-  input: RevokeSignedInSessionsInput
+  revokeConvexSessions: () => Promise<readonly string[]>
 ): Promise<SignedInSessionCompleted | SignedInSessionUnavailable> => {
   try {
-    const workerSessionIds = await input.prepare()
+    const workerSessionIds = await revokeConvexSessions()
     for (const workerSessionId of workerSessionIds) {
       const result = await authSession.revoke(workerSessionId)
       if (result.kind === "unavailable") {
         return result
       }
     }
-    await input.commit()
     return { kind: "completed", cookie: authSession.expireCookie() }
   } catch {
     return { kind: "unavailable" }
@@ -66,7 +67,8 @@ const revokePreparedSessions = async (
 }
 
 export const createSignedInSessionLifecycle = (
-  authSession: AuthSessionModule
+  authSession: AuthSessionModule,
+  coordinator?: SignedInSessionCoordinator
 ): SignedInSessionLifecycle => ({
   establish: async (input) => {
     const workerSessionId = crypto.randomUUID()
@@ -84,8 +86,10 @@ export const createSignedInSessionLifecycle = (
       await input.linkWorkerSession(workerSessionId)
       return { kind: "completed", cookie: session.cookie }
     } catch {
-      await authSession.revoke(workerSessionId)
-      return { kind: "unavailable" }
+      const compensation = await authSession.revoke(workerSessionId)
+      return compensation.kind === "unavailable"
+        ? compensation
+        : { kind: "unavailable" }
     }
   },
   terminate: async ({ sessionId, revokeConvexSession }) => {
@@ -108,17 +112,20 @@ export const createSignedInSessionLifecycle = (
       ? { kind: "completed", cookie: revokedSession.cookie }
       : revokedSession
   },
-  revoke: async (input) => revokePreparedSessions(authSession, input),
-  eraseAccount: async (input) => {
-    const result = await revokePreparedSessions(authSession, input)
-    if (result.kind === "unavailable") {
-      return result
-    }
-    try {
-      await input.eraseAccount()
-      return result
-    } catch {
-      return { kind: "unavailable" }
-    }
-  },
+  revokeSession: async (sessionId) =>
+    coordinator
+      ? revokeCommittedSessions(authSession, () =>
+          coordinator.revokeSession(sessionId)
+        )
+      : { kind: "unavailable" },
+  revokeAllSessions: async () =>
+    coordinator
+      ? revokeCommittedSessions(authSession, coordinator.revokeAllSessions)
+      : { kind: "unavailable" },
+  eraseAccount: async (confirmUsername) =>
+    coordinator
+      ? revokeCommittedSessions(authSession, () =>
+          coordinator.beginAccountErasure(confirmUsername)
+        )
+      : { kind: "unavailable" },
 })

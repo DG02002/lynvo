@@ -79,23 +79,24 @@ describe("signed-in session lifecycle", () => {
     expect(authSession.read).not.toHaveBeenCalled()
   })
 
-  it("retains Convex sessions when Worker revocation fails", async () => {
+  it("reports Worker failure after Convex revocation has committed", async () => {
     const authSession = createAuthSession({
       revoke: vi.fn().mockResolvedValue({ kind: "unavailable" }),
     })
-    const commit = vi.fn()
-    const lifecycle = createSignedInSessionLifecycle(authSession)
-
-    const result = await lifecycle.revoke({
-      prepare: vi.fn().mockResolvedValue(["worker-session"]),
-      commit,
+    const revokeConvexSessions = vi.fn().mockResolvedValue(["worker-session"])
+    const lifecycle = createSignedInSessionLifecycle(authSession, {
+      revokeSession: vi.fn(),
+      revokeAllSessions: revokeConvexSessions,
+      beginAccountErasure: vi.fn(),
     })
 
+    const result = await lifecycle.revokeAllSessions()
+
     expect(result).toEqual({ kind: "unavailable" })
-    expect(commit).not.toHaveBeenCalled()
+    expect(revokeConvexSessions).toHaveBeenCalledOnce()
   })
 
-  it("retries idempotent Worker revocation before committing Convex deletion", async () => {
+  it("revokes the Worker identifiers returned by the Convex commit", async () => {
     const operationOrder: string[] = []
     const authSession = createAuthSession({
       revoke: vi.fn().mockImplementation(async () => {
@@ -103,16 +104,36 @@ describe("signed-in session lifecycle", () => {
         return { kind: "revoked", cookie: "session=expired" }
       }),
     })
-    const lifecycle = createSignedInSessionLifecycle(authSession)
-
-    const result = await lifecycle.revoke({
-      prepare: vi.fn().mockResolvedValue(["worker-session"]),
-      commit: async () => {
+    const lifecycle = createSignedInSessionLifecycle(authSession, {
+      revokeSession: vi.fn(),
+      revokeAllSessions: async () => {
         operationOrder.push("convex")
+        return ["worker-session"]
       },
+      beginAccountErasure: vi.fn(),
     })
 
+    const result = await lifecycle.revokeAllSessions()
+
     expect(result).toEqual({ kind: "completed", cookie: "session=expired" })
-    expect(operationOrder).toEqual(["worker", "convex"])
+    expect(operationOrder).toEqual(["convex", "worker"])
+  })
+
+  it("surfaces failed Worker compensation after Convex linking fails", async () => {
+    const authSession = createAuthSession({
+      revoke: vi.fn().mockResolvedValue({ kind: "unavailable" }),
+    })
+    const lifecycle = createSignedInSessionLifecycle(authSession)
+
+    const result = await lifecycle.establish({
+      convexSessionId: "convex-session",
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      nowMs: 1,
+      linkWorkerSession: vi.fn().mockRejectedValue(new Error("offline")),
+    })
+
+    expect(result).toEqual({ kind: "unavailable" })
+    expect(authSession.revoke).toHaveBeenCalledOnce()
   })
 })
