@@ -11,7 +11,6 @@ import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credent
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
-import { signAuthPreflightToken } from "../app/lib/auth-gateway"
 import { classifyAuthSignInError } from "../app/lib/auth-errors"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
@@ -19,20 +18,14 @@ import { getCookieValue } from "../app/lib/auth-cookie"
 import { createAuthSessionModule } from "./auth-session"
 import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
 import { createWorkerAuthenticationFlow } from "./authentication-flow"
-import { normalizeUsername, validateUsername } from "../app/lib/auth-policy"
 import {
-  authPreflightRequestSchema,
   authSignInRequestSchema,
-  deviceCodeRequestSchema,
   turnstileVerificationResponseSchema,
 } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
 import {
-  DEVICE_CODE_CREATION_RATE_LIMIT,
-  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
-  DEVICE_CODE_PREFLIGHT_TTL_MS,
   EXTRACTION_ROUTE_RATE_LIMIT,
   EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
 } from "../convex/constants"
@@ -42,6 +35,7 @@ import {
   type RequestLoggingEnvironment,
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
+import { createAuthenticationIntake } from "./authentication-intake"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -170,6 +164,34 @@ const verifyTurnstile = async (
   return result.data.hostname === TURNSTILE_HOSTNAME
 }
 
+const runAuthenticationIntake = async (
+  context: HonoContext<RequestLoggingEnvironment>,
+  operation: "preflight" | "createDeviceCode"
+) => {
+  const env = context.env as AuthEnv
+  const intake = createAuthenticationIntake({
+    gatewaySecret: env.AUTH_GATEWAY_SECRET,
+    now: Date.now,
+    clientIp,
+    rateLimit: ({ key, limit, windowSeconds }) =>
+      rateLimit(env, key, limit, windowSeconds),
+    verifyTurnstile: (request, token, expectedAction) =>
+      verifyTurnstile(env, request, token, expectedAction),
+    generateDeviceCode: async (deviceName, preflightToken) => {
+      const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
+      return await convex.mutation(api.deviceAuth.generateCode, {
+        deviceName,
+        preflightToken,
+      })
+    },
+  })
+  const outcome = await intake[operation](context.req.raw)
+  addRequestContext(context, { ...outcome.observability })
+  return outcome.kind === "success"
+    ? context.json(outcome.body)
+    : context.json(requestApiError(context, outcome.error), outcome.status)
+}
+
 app.onError((error, context) => {
   addRequestContext(context, {
     error: {
@@ -190,249 +212,12 @@ app.get("/api/version", (context) => {
 
 app.post("/api/auth/preflight", async (context) => {
   addRequestContext(context, { operation: "auth_preflight" })
-  if (!isSameOriginRequest(context.req.raw)) {
-    return context.json(
-      requestApiError(context, {
-        code: "forbidden",
-        error: "You do not have access to this request.",
-        retryable: false,
-      }),
-      403
-    )
-  }
-  const env = context.env as AuthEnv
-  let payload
-  try {
-    const result = authPreflightRequestSchema.safeParse(
-      await context.req.json()
-    )
-    if (!result.success) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error: "Send a valid request.",
-          retryable: false,
-        }),
-        400
-      )
-    }
-    payload = result.data
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Send a valid request.",
-        retryable: false,
-      }),
-      400
-    )
-  }
-  const flow = payload.flow
-  addRequestContext(context, { auth_flow: flow })
-  const username = payload.username ?? ""
-  const normalizedUsername = normalizeUsername(username)
-  const usernameError = validateUsername(username)
-  if ((flow !== "signUp" && flow !== "signIn") || usernameError) {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: usernameError ?? "Start login again.",
-        retryable: false,
-      }),
-      400
-    )
-  }
-  const ip = clientIp(context.req.raw)
-  const rateKey =
-    flow === "signUp"
-      ? `auth:signup:${ip}`
-      : `auth:signin:${ip}:${normalizedUsername}`
-  const rateLimitResult = await rateLimit(
-    env,
-    rateKey,
-    flow === "signUp" ? 5 : 10,
-    600
-  )
-  if (rateLimitResult === "unavailable") {
-    addRequestContext(context, {
-      configuration_error: "auth_rate_limiter_unavailable",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-  if (rateLimitResult === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
-    return context.json(
-      requestApiError(context, {
-        code: "rate_limited",
-        error: "Too many attempts. Try again later.",
-        retryable: true,
-      }),
-      429
-    )
-  }
-  const turnstileOk = await verifyTurnstile(
-    env,
-    context.req.raw,
-    payload.turnstileToken,
-    flow === "signUp" ? "lynvo-sign-up" : "lynvo-sign-in"
-  )
-  if (!turnstileOk) {
-    addRequestContext(context, { turnstile: { verified: false } })
-    return context.json(
-      requestApiError(context, {
-        code: "security_check_required",
-        error: "Complete the security check.",
-        retryable: true,
-      }),
-      400
-    )
-  }
-  if (!env.AUTH_GATEWAY_SECRET) {
-    addRequestContext(context, {
-      configuration_error: "missing_auth_gateway_secret",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-  const preflightToken = await signAuthPreflightToken(
-    {
-      flow,
-      normalizedUsername,
-      exp: Date.now() + 2 * 60 * 1000,
-    },
-    env.AUTH_GATEWAY_SECRET
-  )
-  addRequestContext(context, {
-    rate_limit: { allowed: true },
-    turnstile: { verified: true },
-  })
-  return context.json({ preflightToken })
+  return await runAuthenticationIntake(context, "preflight")
 })
 
 app.post("/api/auth/device/code", async (context) => {
   addRequestContext(context, { operation: "device_code_create" })
-  if (!isSameOriginRequest(context.req.raw)) {
-    return context.json(
-      requestApiError(context, {
-        code: "forbidden",
-        error: "You do not have access to this request.",
-        retryable: false,
-      }),
-      403
-    )
-  }
-  const env = context.env as AuthEnv
-  let payload
-  try {
-    const result = deviceCodeRequestSchema.safeParse(await context.req.json())
-    if (!result.success) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error: "Send a valid request.",
-          retryable: false,
-        }),
-        400
-      )
-    }
-    payload = result.data
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Send a valid request.",
-        retryable: false,
-      }),
-      400
-    )
-  }
-  const rateLimitResult = await rateLimit(
-    env,
-    `auth:device-code:${clientIp(context.req.raw)}`,
-    DEVICE_CODE_CREATION_RATE_LIMIT,
-    DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
-  )
-  if (rateLimitResult === "unavailable") {
-    addRequestContext(context, {
-      configuration_error: "auth_rate_limiter_unavailable",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-  if (rateLimitResult === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
-    return context.json(
-      requestApiError(context, {
-        code: "rate_limited",
-        error: "Too many attempts. Try again later.",
-        retryable: true,
-      }),
-      429
-    )
-  }
-  if (!env.AUTH_GATEWAY_SECRET) {
-    addRequestContext(context, {
-      configuration_error: "missing_auth_gateway_secret",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-  try {
-    const preflightToken = await signAuthPreflightToken(
-      {
-        purpose: "deviceCode",
-        exp: Date.now() + DEVICE_CODE_PREFLIGHT_TTL_MS,
-      },
-      env.AUTH_GATEWAY_SECRET
-    )
-    const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
-    const result = await convex.mutation(api.deviceAuth.generateCode, {
-      deviceName: payload.deviceName ?? "Unknown device",
-      preflightToken,
-    })
-    addRequestContext(context, { rate_limit: { allowed: true } })
-    return context.json(result)
-  } catch (error) {
-    addRequestContext(context, {
-      error: {
-        type: error instanceof Error ? error.name : "UnknownError",
-        message: error instanceof Error ? error.message : String(error),
-      },
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Device login is temporarily unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
+  return await runAuthenticationIntake(context, "createDeviceCode")
 })
 
 app.post("/api/auth/sign-in", async (context) => {
