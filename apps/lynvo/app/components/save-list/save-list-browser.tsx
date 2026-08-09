@@ -28,6 +28,7 @@ import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { DraftExpiryBadge } from "~/components/save-list/draft-expiry-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
+import { FilenameText } from "~/components/filename-text"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import {
   getFolderIcon,
@@ -125,7 +126,7 @@ const FolderTree = ({
               icon={getFolderIcon(link, isInPath)}
               className="shrink-0"
             />
-            <span className="min-w-0 flex-1 break-words">{link.label}</span>
+            <FilenameText value={link.label} className="w-0 min-w-0 flex-1" />
           </Button>
           {link.children?.some((child) => child.type === "folder") && (
             <div className="ml-5 flex min-w-0 flex-col gap-1">
@@ -153,7 +154,7 @@ const FolderTree = ({
           className={cn("shrink-0", folderPath.length > 0 && "rotate-90")}
         />
         <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
-        <span className="min-w-0 flex-1 break-words">{rootLabel}</span>
+        <FilenameText value={rootLabel} className="w-0 min-w-0 flex-1" />
       </Button>
       <div className="ml-5 flex min-w-0 flex-col gap-1">
         {renderFolders(links, [])}
@@ -236,9 +237,10 @@ const ResolvedMirrorRows = ({
           onClick={() => actions.play(mirror)}
         >
           <SaveListRowIcon icon={PlayIcon} />
-          <span className="min-w-0 flex-1 break-words text-sm md:text-lg">
-            {mirror.label}
-          </span>
+          <FilenameText
+            value={mirror.label}
+            className="min-w-0 flex-1 text-sm md:text-lg"
+          />
         </Button>
         <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <LinkActionsDotMenu
@@ -298,9 +300,10 @@ const ResolvableContainerRow = ({
             }
           />
           <span className="min-w-0 flex-1">
-            <span className="block line-clamp-3 break-words text-sm md:text-lg">
-              {link.label}
-            </span>
+            <FilenameText
+              value={link.label}
+              className="block text-sm md:text-lg"
+            />
             <span className="block truncate text-xs text-muted-foreground">
               {getResolvableSourceName(link, item)}
             </span>
@@ -372,8 +375,8 @@ const FinderBrowser = ({
   }
 
   return (
-    <section className="h-svh overflow-hidden bg-background">
-      <header className="flex h-16 items-center gap-3 border-b bg-background px-4 py-3">
+    <section className="flex h-svh flex-col overflow-hidden bg-background">
+      <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3">
         <Button
           variant="ghost"
           className="hover:bg-transparent hover:text-foreground"
@@ -396,8 +399,8 @@ const FinderBrowser = ({
         />
       </header>
 
-      <div className="grid h-[calc(100svh-4rem)] md:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="border-b p-3 md:border-r md:border-b-0">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
+        <aside className="min-w-0 overflow-x-hidden border-b p-3 md:border-r md:border-b-0">
           <FolderTree
             rootLabel={getItemTitle(item)}
             folderPath={folderPath}
@@ -409,7 +412,7 @@ const FinderBrowser = ({
 
         <div
           ref={contentRef}
-          className="h-[calc(100svh-4rem)] overflow-y-auto overscroll-contain p-2"
+          className="min-h-0 overflow-y-auto overscroll-contain p-2"
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
@@ -472,14 +475,16 @@ const FinderBrowser = ({
                       }
                     />
                     <span className="min-w-0 flex-1">
-                      <span
+                      <FilenameText
+                        value={link.label}
                         className={cn(
-                          "block line-clamp-3 break-words text-sm md:text-lg",
+                          "block text-sm md:text-lg",
                           isExpired && "line-through"
                         )}
-                      >
-                        {link.label}
-                      </span>
+                      />
+                      {!link.opened && !isExpired && (
+                        <NewBadge className="mt-2 md:hidden" />
+                      )}
                       {link.expiry !== undefined && (
                         <span className="mt-1 flex justify-end text-xs text-muted-foreground">
                           <PlayableExpiryBadge
@@ -494,7 +499,9 @@ const FinderBrowser = ({
                         {link.size}
                       </span>
                     )}
-                    {!link.opened && !isExpired && <NewBadge />}
+                    {!link.opened && !isExpired && (
+                      <NewBadge className="hidden md:inline-flex" />
+                    )}
                     {isResolving ? (
                       <Spinner aria-label={`Loading ${link.label}…`} />
                     ) : isFolder ? (
@@ -676,37 +683,47 @@ export const SaveListBrowser = ({
                     <SaveListRowIcon icon={Folder01Icon} />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span
+                    <FilenameText
+                      value={directLink?.label || getItemTitle(item)}
                       className={cn(
-                        "block line-clamp-3 break-words text-sm font-normal md:text-lg",
+                        "block text-sm font-normal md:text-lg",
                         isDirectLinkExpired && "line-through"
                       )}
-                    >
-                      {directLink?.label || getItemTitle(item)}
-                    </span>
+                    />
                     <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
                       <span className="min-w-0 truncate">
                         {view.sourceName || view.pluginName || item.url}
                       </span>
-                      {(isRootItemNew || directLink?.expiry !== undefined) && (
-                        <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                          {directLink?.expiry !== undefined && (
-                            <>
-                              <span
-                                aria-hidden="true"
-                                className="hidden md:inline"
-                              >
-                                ·
-                              </span>
-                              <PlayableExpiryBadge
-                                expiresAt={directLink.expiry}
-                                expirySource={directLink.expirySource}
-                              />
-                            </>
-                          )}
+                      {!directLink && (
+                        <span className="flex items-center gap-2 md:hidden">
+                          <span className="md:hidden">
+                            {view.extractedLinks.length} items
+                          </span>
                           {isRootItemNew && <NewBadge className="md:hidden" />}
                         </span>
                       )}
+                      {directLink &&
+                        (isRootItemNew || directLink.expiry !== undefined) && (
+                          <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
+                            {directLink?.expiry !== undefined && (
+                              <>
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden md:inline"
+                                >
+                                  ·
+                                </span>
+                                <PlayableExpiryBadge
+                                  expiresAt={directLink.expiry}
+                                  expirySource={directLink.expirySource}
+                                />
+                              </>
+                            )}
+                            {isRootItemNew && (
+                              <NewBadge className="md:hidden" />
+                            )}
+                          </span>
+                        )}
                     </span>
                   </span>
                 </button>
@@ -714,7 +731,7 @@ export const SaveListBrowser = ({
                   <NewBadge className="hidden md:inline-flex" />
                 )}
                 {!directLink && (
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
                     {view.extractedLinks.length} items
                   </span>
                 )}

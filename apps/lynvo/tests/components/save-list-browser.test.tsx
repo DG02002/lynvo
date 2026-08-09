@@ -529,11 +529,13 @@ describe("SaveListBrowser", () => {
     expect(newBadges).toHaveLength(2)
     expect(newBadges[0]).toHaveClass("md:hidden")
     expect(newBadges[1]).toHaveClass("hidden", "md:inline-flex")
-    const newBadge = newBadges[1]
-    const itemCount = screen.getByText("1 items")
+    const itemCounts = screen.getAllByText("1 items")
+    expect(itemCounts).toHaveLength(2)
+    expect(itemCounts[0]).toHaveClass("md:hidden")
+    expect(itemCounts[1]).toHaveClass("hidden", "md:inline")
     expect(
       Boolean(
-        newBadge.compareDocumentPosition(itemCount) &
+        itemCounts[0].compareDocumentPosition(newBadges[0]) &
         Node.DOCUMENT_POSITION_FOLLOWING
       )
     ).toBe(true)

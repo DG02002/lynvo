@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { AudioWave01Icon } from "@hugeicons/core-free-icons"
 import { DialogHeader, DialogTitle } from "~/components/ui/dialog"
 import { PluginIcon } from "~/components/plugin-icon"
+import { FilenameText } from "~/components/filename-text"
 
 interface LinkSelectionHeaderProps {
   pluginIcon?: string
@@ -45,8 +46,8 @@ export const LinkSelectionHeader = ({
       )}
 
       {pageTitle && (
-        <DialogTitle className="line-clamp-2 text-base font-normal leading-tight text-foreground sm:text-lg">
-          {pageTitle}
+        <DialogTitle className="text-base font-normal leading-tight text-foreground sm:text-lg">
+          <FilenameText value={pageTitle} />
         </DialogTitle>
       )}
 

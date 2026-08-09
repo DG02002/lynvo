@@ -523,7 +523,7 @@ const DemoRemoveDialog = ({
     aria-modal="true"
     aria-label="Remove this link?"
   >
-    <div className="home-demo-remove-dialog__surface grid w-full max-w-xs gap-6 rounded-4xl bg-popover p-10 text-popover-foreground shadow-2xl ring-1 ring-foreground/5 sm:max-w-md">
+    <div className="home-demo-remove-dialog__surface grid w-full max-w-[calc(100%-2rem)] gap-6 rounded-4xl bg-popover p-10 text-popover-foreground shadow-2xl ring-1 ring-foreground/5 sm:max-w-md">
       <div className="grid w-full place-items-center gap-4 text-center">
         <h2 className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
           Remove this link?

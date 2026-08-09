@@ -9,6 +9,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Spinner } from "~/components/ui/spinner"
+import { FilenameText } from "~/components/filename-text"
 import type { ExtractedLink } from "~/features/links/types"
 import { cn } from "~/lib/utils"
 import { getLinkSelectionState } from "./link-selection-state"
@@ -98,7 +99,7 @@ export const LinkSelectionTreeItem = ({
         data-folder-state={folderState}
         tabIndex={0}
         className={cn(
-          "grid min-w-0 grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors sm:grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_7rem]",
+          "grid min-w-0 grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem] items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
           (canExpand || canResolve) && "hover:bg-muted/50 cursor-pointer",
           !canExpand && !canResolve && "cursor-default",
           isSelected && "bg-muted/30"
@@ -133,9 +134,10 @@ export const LinkSelectionTreeItem = ({
         />
 
         <div className="min-w-0">
-          <span className="block text-sm font-normal break-words [word-break:break-word]">
-            {link.label}
-          </span>
+          <FilenameText
+            value={link.label}
+            className="block text-sm font-normal"
+          />
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2 text-xs font-normal text-muted-foreground">

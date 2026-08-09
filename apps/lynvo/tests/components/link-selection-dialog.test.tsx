@@ -200,7 +200,7 @@ describe("LinkSelectionDialog", () => {
         onConfirm={vi.fn()}
         pluginIcon="https://plugin-server.example/plugin.webp"
         pluginName="Example Plugin"
-        pageTitle="The Midnight Romance in Hagwon (2024)"
+        pageTitle="Sample Collection (2024)"
         audioInfo="Hindi| English| Korean"
       />
     )
@@ -218,7 +218,7 @@ describe("LinkSelectionDialog", () => {
     ).toHaveClass("size-10", "md:size-12")
     expect(
       screen.getByRole("heading", {
-        name: "The Midnight Romance in Hagwon (2024)",
+        name: "Sample Collection (2024)",
       })
     ).toHaveClass("text-base", "sm:text-lg")
     expect(screen.getByText("Hindi, English, Korean")).toBeVisible()

@@ -37,7 +37,7 @@ export function ConfirmationAlertDialog({
 }: ConfirmationAlertDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="p-10">
+      <AlertDialogContent className="p-10 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md">
         {media}
         <AlertDialogHeader className="w-full place-items-center gap-4 text-center sm:place-items-center sm:text-center">
           <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
