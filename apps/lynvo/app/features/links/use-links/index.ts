@@ -15,7 +15,8 @@ import { useLinksMutations } from "./mutations"
 import { useLinksPaginationAndSort } from "./pagination"
 import { useDraftLinks } from "./drafts"
 import type { LinksActions } from "./actions"
-import { createServerLinksAdapter, createLinksPersistence } from "./persistence"
+import { createServerLinksAdapter } from "./persistence"
+import { createSavedLinkSynchronization } from "./synchronization"
 import { createServerLink } from "./link-server"
 import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
 
@@ -86,42 +87,41 @@ export const useLinks = () => {
     [cachedItems, createLink, updateLink, userId]
   )
   const identity = userId ?? "signed-out"
-  const persistenceRef = useRef<LinksPersistence | undefined>(undefined)
-  if (!persistenceRef.current) {
-    persistenceRef.current = createLinksPersistence(
+  const synchronizationRef = useRef<SavedLinkSynchronization | undefined>(
+    undefined
+  )
+  if (!synchronizationRef.current) {
+    synchronizationRef.current = createSavedLinkSynchronization(
       adapter,
-      cachedItems,
-      identity
+      identity,
+      cachedItems
     )
   } else {
-    persistenceRef.current.reset(adapter, identity, cachedItems)
+    synchronizationRef.current.connect(adapter, identity, cachedItems)
   }
-  const persistence = persistenceRef.current
+  const synchronization = synchronizationRef.current
 
   useEffect(() => {
-    persistence.load().catch((error) => console.error(error))
-  }, [adapter, identity, persistence])
+    synchronization.load().catch((error) => console.error(error))
+  }, [adapter, identity, synchronization])
 
   useEffect(() => {
     if (!userId || !linksQuery.isLive) {
       return
     }
-    persistence.reconcile(
-      linksToLinkViewItems(
-        linksQuery.data?.results ?? [],
-        persistence.getSnapshot()
-      ),
+    synchronization.acceptRemote(
+      linksQuery.data?.results ?? [],
       linksQuery.data?.version
     )
-  }, [linksQuery.data, linksQuery.isLive, persistence, userId])
+  }, [linksQuery.data, linksQuery.isLive, synchronization, userId])
 
   const links = useSyncExternalStore(
-    persistence.subscribe,
-    persistence.getSnapshot,
+    synchronization.subscribe,
+    synchronization.getSnapshot,
     () => EMPTY_LINKS
   )
   const combinedLinks = useDraftLinks(links)
-  const mutations = useLinksMutations(persistence)
+  const mutations = useLinksMutations(synchronization)
   const pagination = useLinksPaginationAndSort(combinedLinks)
   const actions: LinksActions = {
     add: mutations.addLink,
