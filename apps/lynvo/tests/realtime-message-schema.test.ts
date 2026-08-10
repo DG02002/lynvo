@@ -58,6 +58,28 @@ describe("parseRealtimeMessage", () => {
     }
   })
 
+  it("accepts only a valid account settings revision hint", () => {
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({
+          type: "account-settings.changed",
+          payload: { revision: 4 },
+        })
+      )
+    ).toEqual({
+      type: "account-settings.changed",
+      payload: { revision: 4 },
+    })
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({
+          type: "account-settings.changed",
+          payload: { revision: -1 },
+        })
+      )
+    ).toBeNull()
+  })
+
   it("rejects malformed Remote Play commands", () => {
     expect(
       parseRealtimeMessage(

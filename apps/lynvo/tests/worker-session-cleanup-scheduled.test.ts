@@ -23,7 +23,12 @@ vi.mock("convex/browser", () => ({
       },
     })
     setAuth = () => undefined
-    query = async () => [...pendingSessionIds]
+    query = async (reference: unknown) => {
+      const { getFunctionName } = await import("convex/server")
+      return getFunctionName(reference) === "sessionCleanup:listPending"
+        ? [...pendingSessionIds]
+        : []
+    }
     mutation = async (_reference: unknown, args: Record<string, unknown>) => {
       mutationCalls.push(args)
       if ("workerSessionIds" in args) {

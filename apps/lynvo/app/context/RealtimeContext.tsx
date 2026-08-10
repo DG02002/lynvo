@@ -23,9 +23,11 @@ const RealtimeContext = createContext<RealtimeContextValue | undefined>(
 export function RealtimeProvider({
   children,
   user,
+  onSessionRevoked,
 }: {
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
+  onSessionRevoked?: (userId: string) => void
 }) {
   const userId = user?.id
   const sessionId = user?.sessionId
@@ -58,8 +60,11 @@ export function RealtimeProvider({
       dispatch,
       receiveMessage,
       onOpen: incrementConnectionGeneration,
+      onSessionRevoked: () => {
+        onSessionRevoked?.(userId)
+      },
     })
-  }, [receiveMessage, sessionId, userId])
+  }, [onSessionRevoked, receiveMessage, sessionId, userId])
 
   const value = useMemo(
     () => ({ status: state.status, connectionGeneration, subscribe }),

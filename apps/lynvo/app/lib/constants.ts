@@ -1,4 +1,5 @@
 export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
+export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
 export const OUTBOUND_HTTP_MAX_REDIRECTS = 3

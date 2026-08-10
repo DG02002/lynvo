@@ -2,6 +2,7 @@ import { useCallback } from "react"
 import type { ExtractedLink } from "~/features/links/types"
 import { useRemoteControl } from "~/context/RemoteControlContext"
 import { playbackTarget } from "./playback-flow"
+import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 
 export const usePlaybackActions = ({
   isOpeningRef,
@@ -13,6 +14,7 @@ export const usePlaybackActions = ({
   resetOpeningWhenReady: () => void
 }) => {
   const { activeSessionId, sendRemotePlayback } = useRemoteControl()
+  const playerPreferenceUserId = usePlayerPreferenceIdentity()
 
   const handleLinkClick = useCallback(
     async (target: string | ExtractedLink) => {
@@ -26,6 +28,7 @@ export const usePlaybackActions = ({
           target,
           activeSessionId,
           sendRemotePlayback,
+          playerPreferenceUserId,
         })
       } finally {
         resetOpeningWhenReady()
@@ -34,6 +37,7 @@ export const usePlaybackActions = ({
     [
       activeSessionId,
       isOpeningRef,
+      playerPreferenceUserId,
       resetOpeningWhenReady,
       sendRemotePlayback,
       setIsOpening,

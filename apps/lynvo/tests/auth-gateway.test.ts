@@ -2,6 +2,7 @@
 
 import { api } from "../convex/_generated/api"
 import {
+  signAccountSettingsRealtimeToken,
   signSavedLinkRealtimeToken,
   signSessionCleanupToken,
 } from "../app/lib/auth-gateway"
@@ -77,5 +78,76 @@ describe("Saved link realtime gateway authorization", () => {
     expect(
       await convex.query(api.savedLinkRealtime.listPending, { serviceToken })
     ).toEqual([])
+  })
+
+  it("clamps an impossible future acknowledgement to the authoritative revision", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "future-ack-user")
+    await convex.run(async (context) => {
+      await context.db.insert("savedLinkSynchronizationStates", {
+        userId: user.userId,
+        revision: 2,
+        broadcastRevision: 0,
+        pendingBroadcast: true,
+        updatedAt: Date.now(),
+      })
+    })
+    const serviceToken = await signSavedLinkRealtimeToken(
+      TEST_GATEWAY_SECRET,
+      Date.now() + 60_000
+    )
+    await convex.mutation(api.savedLinkRealtime.acknowledge, {
+      serviceToken,
+      userId: user.userId,
+      revision: 99,
+    })
+    const state = await convex.run(
+      async (context) =>
+        await context.db
+          .query("savedLinkSynchronizationStates")
+          .withIndex("by_userId", (queryBuilder) =>
+            queryBuilder.eq("userId", user.userId)
+          )
+          .unique()
+    )
+    expect(state).toMatchObject({
+      revision: 2,
+      broadcastRevision: 2,
+      pendingBroadcast: false,
+    })
+  })
+
+  it("keeps account settings delivery pending until the latest revision is acknowledged", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "account-settings-ack-user")
+    await convex.run(async (context) => {
+      await context.db.insert("accountSettingsSynchronizationStates", {
+        userId: user.userId,
+        revision: 3,
+        broadcastRevision: 0,
+        pendingBroadcast: true,
+        updatedAt: Date.now(),
+      })
+    })
+    const serviceToken = await signAccountSettingsRealtimeToken(
+      TEST_GATEWAY_SECRET,
+      Date.now() + 60_000
+    )
+    await convex.mutation(api.accountSettingsRealtime.acknowledge, {
+      serviceToken,
+      userId: user.userId,
+      revision: 2,
+    })
+    await expect(
+      convex.query(api.accountSettingsRealtime.listPending, { serviceToken })
+    ).resolves.toEqual([{ userId: user.userId, revision: 3 }])
+    await convex.mutation(api.accountSettingsRealtime.acknowledge, {
+      serviceToken,
+      userId: user.userId,
+      revision: 3,
+    })
+    await expect(
+      convex.query(api.accountSettingsRealtime.listPending, { serviceToken })
+    ).resolves.toEqual([])
   })
 })

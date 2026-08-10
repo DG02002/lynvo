@@ -28,9 +28,21 @@ import {
 const canonicalizeLinkMetadataJson = (metadataJson: string) =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
 
+const savedLinkResultValidator = v.object({
+  _id: v.id("links"),
+  url: v.string(),
+  title: v.optional(v.string()),
+  meta: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
-  returns: v.any(),
+  returns: v.object({
+    revision: v.number(),
+    results: v.array(savedLinkResultValidator),
+  }),
   args: { timeBucket: v.number() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -70,7 +82,7 @@ export const revision = query({
 // Create a new link or update title/meta if the URL already exists.
 // Enforces per-link, per-user storage, and retention limits.
 export const createOrUpdate = mutation({
-  returns: v.any(),
+  returns: v.object({ id: v.id("links"), revision: v.number() }),
   args: {
     url: v.string(),
     title: v.optional(v.string()),
@@ -150,7 +162,7 @@ export const createOrUpdate = mutation({
 
 // Delete a link by ID
 export const deleteById = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean(), revision: v.number() }),
   args: {
     id: v.string(),
   },
@@ -172,7 +184,7 @@ export const deleteById = mutation({
 
 // Update metadata for a link
 export const updateMeta = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean(), revision: v.number() }),
   args: {
     id: v.string(),
     meta: v.string(), // JSON string

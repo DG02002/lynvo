@@ -106,7 +106,7 @@ declare global {
     poll: () => Promise<void>
     acknowledgeCommand: (commandId: string) => Promise<void>
     markCommandApplied: (commandId: string) => void
-    start: () => () => void
+    start: (shouldPoll?: () => boolean) => () => void
   }
 }
 
@@ -349,18 +349,18 @@ export const createRemoteControlMachine = ({
       delivery.markApplied(commandId)
       syncDeliveryState()
     },
-    start: () => {
-      const intervalId = clock.setInterval(() => {
-        const isActive = Boolean(
-          state.activeSessionId ||
-          state.controlledBy ||
-          state.controllingDevices.length > 0
-        )
-        if (isActive) {
-          void machine
-            .poll()
-            .catch(() => publishOutcome({ type: "delivery-unavailable" }))
+    start: (shouldPoll: () => boolean = () => true) => {
+      const poll = () => {
+        if (!shouldPoll()) {
+          return
         }
+        return machine
+          .poll()
+          .catch(() => publishOutcome({ type: "delivery-unavailable" }))
+      }
+      void poll()
+      const intervalId = clock.setInterval(() => {
+        void poll()
       }, REMOTE_POLL_INTERVAL_MS)
       return () => clock.clearInterval(intervalId)
     },

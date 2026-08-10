@@ -68,7 +68,7 @@ export const useSavedLinkRealtimeSynchronization = (
   }, [queryClient, userId])
 
   useEffect(() => {
-    if (!userId || realtime?.status !== "connected") {
+    if (!userId) {
       return
     }
     const checkRevision = async () => {
@@ -87,5 +87,5 @@ export const useSavedLinkRealtimeSynchronization = (
       void checkRevision().catch(console.error)
     }, SAVED_LINK_ANTI_ENTROPY_INTERVAL_MS)
     return () => window.clearInterval(timer)
-  }, [queryClient, realtime, userId])
+  }, [queryClient, userId])
 }

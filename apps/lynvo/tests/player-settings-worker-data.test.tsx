@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { PlayerSettings } from "~/features/site/settings/player-settings"
+import { PlayerPreferenceProvider } from "~/context/player-preference-context"
+import { createMemoryStorage } from "./memory-storage"
 
 describe("Player settings browser data", () => {
   afterEach(() => {
@@ -9,6 +11,7 @@ describe("Player settings browser data", () => {
   })
 
   it("loads Player settings through a same-origin Lynvo operation", async () => {
+    vi.stubGlobal("localStorage", createMemoryStorage())
     const requestedPaths: Array<string> = []
     vi.stubGlobal(
       "fetch",
@@ -33,7 +36,9 @@ describe("Player settings browser data", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <PlayerSettings />
+        <PlayerPreferenceProvider userId="test-user">
+          <PlayerSettings />
+        </PlayerPreferenceProvider>
       </QueryClientProvider>
     )
 

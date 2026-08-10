@@ -153,6 +153,9 @@ const credentialsProvider = ConvexCredentials<DataModel>({
       provider: "credentials",
       account: { id: normalizedUsername, secret: password },
     })
+    if (retrieved.user.passwordChangePendingAt) {
+      throw new Error("Password change is in progress. Try again shortly.")
+    }
     console.info("security.signin_success", { userId: retrieved.user._id })
     return { userId: retrieved.user._id }
   },

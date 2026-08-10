@@ -14,6 +14,16 @@ import {
 } from "./constants"
 
 const remoteCommandValidator = v.literal("play")
+const remoteCommandDocumentValidator = v.object({
+  _id: v.id("remoteCommands"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  targetSessionId: v.id("authSessions"),
+  command: remoteCommandValidator,
+  payload: v.string(),
+  createdAt: v.number(),
+  expiresAt: v.number(),
+})
 
 const getAuthenticatedSession = async (
   context: Parameters<typeof getAuthSessionId>[0]
@@ -35,7 +45,7 @@ const assertPayloadSize = (payload: string) => {
 }
 
 export const enqueue = mutation({
-  returns: v.any(),
+  returns: v.id("remoteCommands"),
   args: {
     targetSessionId: v.id("authSessions"),
     command: remoteCommandValidator,
@@ -65,7 +75,7 @@ export const enqueue = mutation({
 })
 
 export const listForCurrentSession = query({
-  returns: v.any(),
+  returns: v.array(remoteCommandDocumentValidator),
   args: {},
   handler: async (context) => {
     const [userId, sessionId] = await Promise.all([
@@ -83,7 +93,7 @@ export const listForCurrentSession = query({
 })
 
 export const acknowledge = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean() }),
   args: { id: v.id("remoteCommands") },
   handler: async (context, arguments_) => {
     // react-doctor-disable-next-line react-doctor/async-parallel -- authorization must fail before session and command reads

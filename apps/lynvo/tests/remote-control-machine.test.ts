@@ -59,6 +59,19 @@ const createHarness = ({
 }
 
 describe("remote-control machine", () => {
+  it("suppresses immediate and interval polling when the receiver is inactive", async () => {
+    const harness = createHarness()
+    let shouldPoll = false
+    harness.machine.start(() => shouldPoll)
+    harness.runInterval()
+    expect(harness.transport.poll).not.toHaveBeenCalled()
+
+    shouldPoll = true
+    harness.runInterval()
+    await vi.waitFor(() =>
+      expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+    )
+  })
   it("hydrates a stored session and confirms connect before persistence", async () => {
     const harness = createHarness({
       storedSessionId: "stored-session",
@@ -99,19 +112,35 @@ describe("remote-control machine", () => {
     expect(connectedHarness.machine.getSnapshot().activeSessionId).toBe("tv-1")
   })
 
-  it("keeps durable polling active while realtime is connected", async () => {
-    const harness = createHarness({ storedSessionId: "tv-1" })
+  it("polls a receiver inbox without pre-existing Remote Play state", async () => {
+    const harness = createHarness()
+    harness.setPollResponse({
+      commands: [
+        {
+          id: "missed-command",
+          command: "play",
+          payload: '{"url":"https://example.com/missed"}',
+          createdAt: 1_000_000,
+        },
+      ],
+    })
     harness.machine.start()
-    harness.machine.setRealtimeStatus("disconnected")
+    await vi.waitFor(() =>
+      expect(harness.machine.getSnapshot().lastCommand?.id).toBe(
+        "missed-command"
+      )
+    )
+    expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+
     harness.runInterval()
     await vi.waitFor(() =>
-      expect(harness.transport.poll).toHaveBeenCalledTimes(1)
+      expect(harness.transport.poll).toHaveBeenCalledTimes(2)
     )
 
     harness.machine.setRealtimeStatus("connected")
     harness.runInterval()
     await vi.waitFor(() =>
-      expect(harness.transport.poll).toHaveBeenCalledTimes(2)
+      expect(harness.transport.poll).toHaveBeenCalledTimes(3)
     )
   })
 
@@ -122,8 +151,6 @@ describe("remote-control machine", () => {
     harness.transport.poll.mockRejectedValueOnce(new Error("unauthorized"))
     harness.machine.start()
     harness.machine.setRealtimeStatus("disconnected")
-
-    harness.runInterval()
 
     await vi.waitFor(() =>
       expect(outcomes).toContainEqual({ type: "delivery-unavailable" })

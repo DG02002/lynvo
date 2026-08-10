@@ -29,6 +29,10 @@ describe("bounded lifecycle cleanup", () => {
     await convex.mutation(internal.users.deleteUserData, {
       userId: target.userId,
     })
+    const realtimeIntents = await convex.run((context) =>
+      context.db.query("realtimeSessionRevocationIntents").collect()
+    )
+    expect(realtimeIntents).toMatchObject([{ userId: target.userId }])
 
     await expect(
       client.mutation(api.links.createOrUpdate, {
@@ -347,6 +351,15 @@ describe("bounded lifecycle cleanup", () => {
     expect(remaining.first).toBeNull()
     expect(remaining.second).toBeNull()
     expect(remaining.active).not.toBeNull()
+    const realtimeIntents = await convex.run((context) =>
+      context.db.query("realtimeSessionRevocationIntents").collect()
+    )
+    expect(realtimeIntents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ userId: first.userId }),
+        expect.objectContaining({ userId: second.userId }),
+      ])
+    )
     expect(log).toHaveBeenCalledWith(
       "maintenance.cleanup_complete",
       expect.objectContaining({

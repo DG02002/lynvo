@@ -163,4 +163,40 @@ describe("Worker authentication session HTTP behavior", () => {
       ).status
     ).toBe(401)
   })
+
+  it("validates realtime authority without extending idle expiry", async () => {
+    const { session } = createSession()
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          createdAt: 1_000,
+          expiresAt: 10_000,
+          idleTimeoutMs: 1_000,
+        }),
+      })
+    )
+
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/session?nowMs=1500", {
+            method: "HEAD",
+          })
+        )
+      ).status
+    ).toBe(204)
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/session?nowMs=2000", {
+            method: "HEAD",
+          })
+        )
+      ).status
+    ).toBe(401)
+  })
 })

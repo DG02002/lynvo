@@ -26,6 +26,11 @@ export interface SavedLinkRealtimePayload {
   readonly exp: number
 }
 
+export interface AccountSettingsRealtimePayload {
+  readonly purpose: "accountSettingsRealtime"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 
 const base64UrlEncode = (bytes: Uint8Array): string => {
@@ -54,7 +59,8 @@ export const signAuthPreflightToken = async (
     | DeviceCodePreflightPayload
     | CredentialReadPayload
     | SessionCleanupPayload
-    | SavedLinkRealtimePayload,
+    | SavedLinkRealtimePayload
+    | AccountSettingsRealtimePayload,
   secret: string
 ): Promise<string> => {
   const encodedPayload = base64UrlEncode(
@@ -94,5 +100,14 @@ export const signSavedLinkRealtimeToken = async (
 ) =>
   await signAuthPreflightToken(
     { purpose: "savedLinkRealtime", exp: expiresAt },
+    secret
+  )
+
+export const signAccountSettingsRealtimeToken = async (
+  secret: string,
+  expiresAt: number
+) =>
+  await signAuthPreflightToken(
+    { purpose: "accountSettingsRealtime", exp: expiresAt },
     secret
   )

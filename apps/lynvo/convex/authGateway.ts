@@ -26,6 +26,11 @@ export interface SavedLinkRealtimePayload {
   readonly exp: number
 }
 
+export interface AccountSettingsRealtimePayload {
+  readonly purpose: "accountSettingsRealtime"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -176,6 +181,25 @@ export const verifySavedLinkRealtimeToken = async (
     payload.exp < Date.now()
   ) {
     throw new Error("Expired Saved link realtime token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
+}
+
+export const verifyAccountSettingsRealtimeToken = async (
+  token: string,
+  secret: string
+): Promise<AccountSettingsRealtimePayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "accountSettingsRealtime" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired account settings realtime token")
   }
   return { purpose: payload.purpose, exp: payload.exp }
 }

@@ -99,7 +99,7 @@ export class WorkerAuthSession implements DurableObject {
       await this.state.storage.delete(SESSION_STORAGE_KEY)
       return new Response(null, { status: 204 })
     }
-    if (request.method === "GET") {
+    if (request.method === "GET" || request.method === "HEAD") {
       const storedSession =
         await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
       const nowParameter = url.searchParams.get("nowMs")
@@ -114,6 +114,9 @@ export class WorkerAuthSession implements DurableObject {
       ) {
         await this.state.storage.delete(SESSION_STORAGE_KEY)
         return new Response(null, { status: 401 })
+      }
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 204 })
       }
       const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
       if (!encodedKey) {

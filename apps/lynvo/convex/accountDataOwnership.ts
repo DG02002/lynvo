@@ -20,6 +20,14 @@ export const ACCOUNT_DATA_CATALOG = {
   links: { lifecycle: "erased", storage: "linkBytes" },
   savedLinkSynchronizationStates: { lifecycle: "erased", storage: null },
   workerSessionCleanupIntents: { lifecycle: "operational", storage: null },
+  realtimeSessionRevocationIntents: {
+    lifecycle: "operational",
+    storage: null,
+  },
+  accountSettingsSynchronizationStates: {
+    lifecycle: "erased",
+    storage: null,
+  },
   userStorageLedgers: { lifecycle: "erased", storage: null },
   userPluginServers: { lifecycle: "erased", storage: "pluginServerBytes" },
   userPluginDomains: { lifecycle: "erased", storage: "pluginDomainBytes" },

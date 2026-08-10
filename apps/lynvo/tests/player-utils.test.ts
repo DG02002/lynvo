@@ -51,29 +51,44 @@ describe("player-utils", () => {
   })
 
   it("uses Just (Video) Player for links with HTTP byte-range support by default", () => {
-    expect(selectPlayerForRangeCapability("supported").id).toBe("just")
+    expect(selectPlayerForRangeCapability("supported", "test-user").id).toBe(
+      "just"
+    )
   })
 
   it("uses VLC for links without HTTP byte-range support by default", () => {
-    expect(selectPlayerForRangeCapability("unsupported").id).toBe("vlc")
+    expect(
+      selectPlayerForRangeCapability("unsupported", "test-user").id
+    ).toBe("vlc")
   })
 
   it("treats unknown byte-range support like supported requests", () => {
-    expect(selectPlayerForRangeCapability("unknown").id).toBe("just")
+    expect(selectPlayerForRangeCapability("unknown", "test-user").id).toBe(
+      "just"
+    )
   })
 
   it("uses saved player preferences", () => {
-    setRangeSupportedPlayer("mpv")
-    setRangeUnsupportedPlayer("mx")
+    setRangeSupportedPlayer("test-user", "mpv")
+    setRangeUnsupportedPlayer("test-user", "mx")
 
-    expect(selectPlayerForRangeCapability("supported").id).toBe("mpv")
-    expect(selectPlayerForRangeCapability("unsupported").id).toBe("mx")
+    expect(selectPlayerForRangeCapability("supported", "test-user").id).toBe(
+      "mpv"
+    )
+    expect(
+      selectPlayerForRangeCapability("unsupported", "test-user").id
+    ).toBe("mx")
   })
 
   it("ignores invalid saved player preferences", () => {
     localStorageMock.getItem.mockReturnValue("missing-player")
 
-    expect(selectPlayerForRangeCapability("supported").id).toBe("just")
-    expect(selectPlayerForRangeCapability("unsupported").id).toBe("vlc")
+    expect(selectPlayerForRangeCapability("supported", "test-user").id).toBe(
+      "just"
+    )
+    expect(
+      selectPlayerForRangeCapability("unsupported", "test-user").id
+    ).toBe("vlc")
   })
+
 })

@@ -18,6 +18,7 @@ export default defineSchema({
     createdAt: v.number(),
     lastActiveAt: v.number(),
     erasurePendingAt: v.optional(v.number()),
+    passwordChangePendingAt: v.optional(v.number()),
   })
     .index("email", ["email"])
     .index("phone", ["phone"])
@@ -138,6 +139,27 @@ export default defineSchema({
     workerSessionId: v.string(),
     createdAt: v.number(),
   }).index("by_workerSessionId", ["workerSessionId"]),
+
+  realtimeSessionRevocationIntents: defineTable({
+    userId: v.id("users"),
+    sessionId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_userId_sessionId", ["userId", "sessionId"])
+    .index("by_createdAt", ["createdAt"]),
+
+  accountSettingsSynchronizationStates: defineTable({
+    userId: v.id("users"),
+    revision: v.number(),
+    broadcastRevision: v.number(),
+    pendingBroadcast: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_pendingBroadcast_and_updatedAt", [
+      "pendingBroadcast",
+      "updatedAt",
+    ]),
 
   userStorageLedgers: defineTable({
     userId: v.id("users"),

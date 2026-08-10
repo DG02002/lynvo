@@ -4,7 +4,7 @@ import {
   REMOTE_COMMAND_DELIVERY_KEY,
   REMOTE_SESSION_ID_KEY,
 } from "~/context/remote-control/constants"
-import { remoteControlPersistence } from "~/context/remote-control/storage"
+import { createRemoteControlPersistence } from "~/context/remote-control/storage"
 
 const createMemoryStorage = () => {
   const values = new Map<string, string>()
@@ -30,6 +30,9 @@ describe("remote-control browser persistence", () => {
   })
 
   it("persists command delivery recovery state", () => {
+    const remoteControlPersistence = createRemoteControlPersistence(
+      "account-one:session-one"
+    )
     const record: RemoteCommandDeliveryRecord = {
       processed: [],
       applied: [["command-1", 100]],
@@ -38,17 +41,45 @@ describe("remote-control browser persistence", () => {
 
     remoteControlPersistence.saveDelivery(record)
 
-    expect(localStorage.getItem(REMOTE_COMMAND_DELIVERY_KEY)).not.toBeNull()
+    expect(
+      localStorage.getItem(
+        `${REMOTE_COMMAND_DELIVERY_KEY}:account-one:session-one`
+      )
+    ).not.toBeNull()
     expect(remoteControlPersistence.loadDelivery()).toEqual(record)
   })
 
   it("loads the current Lynvo storage keys", () => {
-    localStorage.setItem(REMOTE_SESSION_ID_KEY, "session-1")
-    localStorage.setItem(REMOTE_DEVICE_NAME_KEY, "Living room")
+    const remoteControlPersistence = createRemoteControlPersistence(
+      "account-one:session-one"
+    )
+    localStorage.setItem(
+      `${REMOTE_SESSION_ID_KEY}:account-one:session-one`,
+      "session-1"
+    )
+    localStorage.setItem(
+      `${REMOTE_DEVICE_NAME_KEY}:account-one:session-one`,
+      "Living room"
+    )
 
     expect(remoteControlPersistence.load()).toEqual({
       sessionId: "session-1",
       deviceName: "Living room",
+    })
+  })
+
+  it("isolates delivery state between accounts and sessions", () => {
+    const first = createRemoteControlPersistence("account-one:session-one")
+    const second = createRemoteControlPersistence("account-two:session-two")
+    first.saveDelivery({
+      processed: [["command-one", 1]],
+      applied: [],
+      pendingAcknowledgements: [],
+    })
+    expect(second.loadDelivery()).toEqual({
+      processed: [],
+      applied: [],
+      pendingAcknowledgements: [],
     })
   })
 })

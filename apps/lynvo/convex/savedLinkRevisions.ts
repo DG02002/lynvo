@@ -76,7 +76,11 @@ export const acknowledgeSavedLinkBroadcast = async (
   if (!state) {
     return
   }
-  const broadcastRevision = Math.max(state.broadcastRevision, revision)
+  const acknowledgedRevision = Math.min(revision, state.revision)
+  const broadcastRevision = Math.max(
+    state.broadcastRevision,
+    acknowledgedRevision
+  )
   await ctx.db.patch("savedLinkSynchronizationStates", state._id, {
     broadcastRevision,
     pendingBroadcast: broadcastRevision < state.revision,

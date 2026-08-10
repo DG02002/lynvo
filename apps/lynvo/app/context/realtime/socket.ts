@@ -1,10 +1,12 @@
 import type { RealtimeAction } from "./reducer"
 import { parseRealtimeMessage } from "./message-schema"
+import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
   receiveMessage: (message: RealtimeMessage) => void
   onOpen: () => void
+  onSessionRevoked: () => void
 }
 
 const closeSocket = (socket: WebSocket) => {
@@ -41,6 +43,7 @@ export const openRealtimeSocket = ({
   dispatch,
   receiveMessage,
   onOpen,
+  onSessionRevoked,
 }: OpenRealtimeSocketOptions) => {
   let socket: WebSocket | null = null
   let closed = false
@@ -76,11 +79,20 @@ export const openRealtimeSocket = ({
     socket.removeEventListener("error", handleCloseOrError)
   }
 
-  const handleCloseOrError = () => {
+  const handleCloseOrError = (event: Event) => {
     removeSocketListeners()
     window.clearInterval(heartbeatTimer)
 
     if (closed) {
+      return
+    }
+
+    if (
+      event instanceof CloseEvent &&
+      event.code === REALTIME_SESSION_REVOKED_CLOSE_CODE
+    ) {
+      closed = true
+      onSessionRevoked()
       return
     }
 

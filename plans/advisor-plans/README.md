@@ -8,7 +8,7 @@ conditions, and update the status when finished.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| 001 | Make Saved links converge reliably across active sessions | P1 | L | — | BLOCKED: genuine two-browser manual acceptance unavailable in this workspace |
+| 001 | Make Saved links converge reliably across active sessions | P1 | L | — | BLOCKED: implementation and automated release gate pass; genuine two-browser manual acceptance unavailable in this workspace |
 
 Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or
 `REJECTED: <reason>`.
@@ -19,6 +19,29 @@ Status values: `TODO`, `IN PROGRESS`, `DONE`, `BLOCKED: <reason>`, or
   durable invalidation delivery, browser recovery, and contract tests form one
   correctness boundary. Landing only one layer would leave a false sense of
   realtime safety.
+
+## Latest verification
+
+- Development Convex schema/function push and generated bindings: passed on
+  2026-08-10.
+- Focused password-transition, account-settings isolation, realtime-room, player
+  persistence, and lifecycle suites: 5 files and 22 tests passed. The subsequent
+  explicit player-identity provider/storage suites passed after removing
+  unnecessary backward-compatibility migration code.
+- Root `pnpm check`: passed, including formatting, lint, Convex contract audit,
+  typecheck, and package checks.
+- Root `pnpm test`: passed: Lynvo app 137 files/546 tests, protocol 3 files/14
+  tests, plugin server 4 files/32 tests, and creator package 3 tests.
+- Root production `pnpm build`: passed, including the app production bundles and
+  plugin-server dry-run build.
+- `git diff --check`: passed.
+- Manual two-browser acceptance: not run because this workspace has no genuine
+  interactive two-browser acceptance facility. This remains a STOP condition;
+  the plan is not marked done.
+
+One malformed verification invocation, `pnpm test --run`, duplicated the root
+script's existing `--run` argument and exited before Vitest executed. The exact
+repository command `pnpm test` was then run successfully with the results above.
 
 ## Findings considered and rejected
 

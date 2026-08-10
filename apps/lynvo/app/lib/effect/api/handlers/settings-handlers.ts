@@ -8,6 +8,8 @@ import type { ConvexServiceShape } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
+import { createDurableRealtimeSessionRevocation } from "../../../../../workers/realtime-session-revocation"
+import { createAccountSettingsRealtimeDelivery } from "../../../../../workers/account-settings-realtime-delivery"
 import { ConvexError } from "../../errors"
 import { createAuthSessionModule } from "../../../../../workers/auth-session"
 import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
@@ -16,7 +18,8 @@ import { createSessionCleanupModule } from "../../../../../workers/session-clean
 const getSignedInSessionLifecycle = (
   convex: ConvexServiceShape,
   accessToken: string,
-  environment: Cloudflare.Env
+  environment: Cloudflare.Env,
+  onSessionsRevoked?: (sessionIds: readonly string[]) => void
 ) =>
   createSignedInSessionLifecycle(
     createAuthSessionModule(environment.WORKER_AUTH_SESSION),
@@ -31,7 +34,12 @@ const getSignedInSessionLifecycle = (
         Effect.runPromise(
           convex
             .mutation(api.users.revokeAllSessions, {}, { accessToken })
-            .pipe(Effect.map((result) => result.workerSessionIds))
+            .pipe(
+              Effect.map((result) => {
+                onSessionsRevoked?.(result.sessionIds)
+                return result.workerSessionIds
+              })
+            )
         ),
       beginAccountErasure: (confirmUsername) =>
         Effect.runPromise(
@@ -101,9 +109,18 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* convex.mutation(api.users.updatePlayerPreferences, payload, {
-            accessToken: user.accessToken,
-          })
+          const result = yield* convex.mutation(
+            api.users.updatePlayerPreferences,
+            payload,
+            { accessToken: user.accessToken }
+          )
+          const environment = yield* CloudflareEnv
+          yield* Effect.promise(() =>
+            createAccountSettingsRealtimeDelivery(environment).deliver(
+              user.id,
+              result.revision
+            )
+          )
           return { success: true }
         })
       )
@@ -133,11 +150,22 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.mutation(
+          const result = yield* convex.mutation(
             api.users.updateStorageRetentionDays,
             payload,
             { accessToken: user.accessToken }
           )
+          const revision = result.revision
+          if (revision !== null) {
+            const environment = yield* CloudflareEnv
+            yield* Effect.promise(() =>
+              createSavedLinkRealtimeDelivery(environment).deliver(
+                user.id,
+                revision
+              )
+            )
+          }
+          return { success: true, deletedLinks: result.deletedLinks }
         })
       )
       .handle("clearLinks", () =>
@@ -186,6 +214,12 @@ export const SettingsHandlers = HttpApiBuilder.group(
           yield* runSignedInSessionLifecycle(() =>
             lifecycle.revokeSession(params.sessionId)
           )
+          yield* Effect.promise(() =>
+            createDurableRealtimeSessionRevocation(environment).deliver({
+              userId: user.id,
+              sessionId: params.sessionId,
+            })
+          )
           return { success: true }
         })
       )
@@ -194,12 +228,26 @@ export const SettingsHandlers = HttpApiBuilder.group(
           const convex = yield* ConvexService
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
+          let revokedSessionIds: readonly string[] = []
           const lifecycle = getSignedInSessionLifecycle(
             convex,
             user.accessToken,
-            environment
+            environment,
+            (sessionIds) => {
+              revokedSessionIds = sessionIds
+            }
           )
           yield* runSignedInSessionLifecycle(lifecycle.revokeAllSessions)
+          yield* Effect.promise(() =>
+            Promise.all(
+              revokedSessionIds.map((sessionId) =>
+                createDurableRealtimeSessionRevocation(environment).deliver({
+                  userId: user.id,
+                  sessionId,
+                })
+              )
+            )
+          )
           return { success: true }
         })
       )
@@ -221,6 +269,11 @@ export const SettingsHandlers = HttpApiBuilder.group(
               message: "Account erasure is unavailable",
             })
           }
+          yield* Effect.promise(() =>
+            createDurableRealtimeSessionRevocation(environment).deliver({
+              userId: user.id,
+            })
+          )
           return { success: true }
         })
       )
@@ -237,9 +290,25 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.action(api.users.changePassword, payload, {
-            accessToken: user.accessToken,
-          })
+          const result = yield* convex.action(
+            api.users.changePassword,
+            payload,
+            {
+              accessToken: user.accessToken,
+            }
+          )
+          const environment = yield* CloudflareEnv
+          yield* Effect.promise(() =>
+            Promise.all(
+              result.sessionIds.map((sessionId) =>
+                createDurableRealtimeSessionRevocation(environment).deliver({
+                  userId: user.id,
+                  sessionId,
+                })
+              )
+            )
+          )
+          return { success: true }
         })
       )
 )

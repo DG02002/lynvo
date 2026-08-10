@@ -5,7 +5,9 @@ const { closeSocket, openRealtimeSocket } = vi.hoisted(() => {
   const closeSocket = vi.fn()
   return {
     closeSocket,
-    openRealtimeSocket: vi.fn(() => closeSocket),
+    openRealtimeSocket: vi.fn(
+      (_options: { onSessionRevoked: () => void }) => closeSocket
+    ),
   }
 })
 
@@ -44,4 +46,18 @@ it("closes the socket when the user logs out", () => {
   rerender(<RealtimeProvider user={null}>Content</RealtimeProvider>)
 
   expect(closeSocket).toHaveBeenCalledTimes(1)
+})
+
+it("forwards authoritative session revocation with the account identity", () => {
+  const onSessionRevoked = vi.fn()
+  render(
+    <RealtimeProvider
+      user={{ id: "user-1", sessionId: "session-1" }}
+      onSessionRevoked={onSessionRevoked}
+    >
+      Content
+    </RealtimeProvider>
+  )
+  openRealtimeSocket.mock.calls[0]?.[0].onSessionRevoked()
+  expect(onSessionRevoked).toHaveBeenCalledWith("user-1")
 })

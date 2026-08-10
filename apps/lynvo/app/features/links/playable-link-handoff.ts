@@ -20,10 +20,13 @@ declare global {
     readonly target: string | ExtractedLink
     readonly activeSessionId: string | null | undefined
     readonly sendRemotePlayback: (intent: RemotePlaybackIntent) => Promise<void>
+    readonly playerPreferenceUserId?: string
   }
 
   interface PlayableLinkHandoffDependencies {
-    readonly open: (intent: RemotePlaybackIntent) => Promise<unknown>
+    readonly open: (
+      intent: RemotePlaybackIntent & { playerPreferenceUserId?: string }
+    ) => Promise<unknown>
   }
 }
 
@@ -45,21 +48,25 @@ export const createPlayableLinkHandoff = ({
     target,
     activeSessionId,
     sendRemotePlayback,
+    playerPreferenceUserId,
   }: PlayableLinkHandoffOptions) => {
     const intent = toRemotePlaybackIntent(target)
     if (activeSessionId) {
       await sendRemotePlayback(intent)
       return
     }
-    await open(intent)
+    await open({ ...intent, playerPreferenceUserId })
   },
-  receive: async (value: unknown) => {
+  receive: async (value: unknown, playerPreferenceUserId?: string) => {
     const intent = remotePlaybackIntentSchema.parse(value)
-    await open(intent)
+    await open({ ...intent, playerPreferenceUserId })
   },
 })
 
 export const playableLinkHandoff = createPlayableLinkHandoff({
   open: (intent) =>
-    openInPlayer(intent.url, { rangeRequest: intent.rangeRequest }),
+    openInPlayer(intent.url, {
+      rangeRequest: intent.rangeRequest,
+      userId: intent.playerPreferenceUserId,
+    }),
 })

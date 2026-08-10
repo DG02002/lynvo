@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { useRealtime } from "~/context/RealtimeContext"
 import { remoteApi } from "./remote-control/api"
 import { createRemoteControlMachine } from "./remote-control/machine"
-import { remoteControlPersistence } from "./remote-control/storage"
+import { createRemoteControlPersistence } from "./remote-control/storage"
 
 declare global {
   interface RemoteControlContextValue {
@@ -47,14 +47,15 @@ export const RemoteControlProvider = ({
   user: { id: string; sessionId?: string } | null
 }) => {
   const realtime = useRealtime()
+  const identity = `${user?.id ?? "signed-out"}:${user?.sessionId ?? "none"}`
   const machine = useMemo(
     () =>
       createRemoteControlMachine({
         transport: remoteApi,
-        persistence: remoteControlPersistence,
+        persistence: createRemoteControlPersistence(identity),
         clock: browserClock,
       }),
-    []
+    [identity]
   )
   const state = useSyncExternalStore(
     machine.subscribe,
@@ -62,7 +63,46 @@ export const RemoteControlProvider = ({
     machine.getServerSnapshot
   )
 
-  useEffect(() => machine.start(), [machine])
+  useEffect(
+    () =>
+      user?.sessionId
+        ? machine.start(
+            () => navigator.onLine && document.visibilityState === "visible"
+          )
+        : undefined,
+    [machine, user?.sessionId]
+  )
+  useEffect(() => {
+    if (!user?.sessionId) {
+      return
+    }
+    const poll = () => {
+      if (navigator.onLine && document.visibilityState === "visible") {
+        void machine.poll().catch(console.error)
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        poll()
+      }
+    }
+    window.addEventListener("online", poll)
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      window.removeEventListener("online", poll)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [machine, user?.sessionId])
+  useEffect(() => {
+    if (
+      user?.sessionId &&
+      realtime.connectionGeneration > 0 &&
+      navigator.onLine &&
+      document.visibilityState === "visible"
+    ) {
+      void machine.poll().catch(console.error)
+    }
+  }, [machine, realtime.connectionGeneration, user?.sessionId])
   useEffect(() => {
     machine.setRealtimeStatus(realtime.status)
   }, [machine, realtime.status])

@@ -9,14 +9,7 @@ import {
 import { assertStorageMutation } from "./storagePolicy"
 import { initiateAccountErasure } from "./accountErasure"
 import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
-
-export const replacePasswordAndInvalidateOtherSessions = async (
-  replacePassword: () => Promise<unknown>,
-  invalidateOtherSessions: () => Promise<unknown>
-) => {
-  await replacePassword()
-  await invalidateOtherSessions()
-}
+import { enqueueRealtimeSessionRevocation } from "./realtimeSessionRevocations"
 
 const getUserSessions = async (
   ctx: QueryCtx | MutationCtx,
@@ -72,6 +65,27 @@ const deleteSessionVerifiers = async (
   }
 }
 
+const revokeSessions = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  sessions: Awaited<ReturnType<typeof getUserSessions>>
+) => {
+  const workerSessionIds = sessions.flatMap((session) =>
+    session.workerSessionId ? [session.workerSessionId] : []
+  )
+  await enqueueWorkerSessionCleanup(ctx, workerSessionIds)
+  for (const session of sessions) {
+    await enqueueRealtimeSessionRevocation(ctx, userId, session._id)
+  }
+  const sessionIds = sessions.map((session) => session._id)
+  await deleteSessionRefreshTokens(ctx, sessionIds)
+  await deleteSessionVerifiers(ctx, sessionIds)
+  await Promise.all(
+    sessions.map((session) => ctx.db.delete("authSessions", session._id))
+  )
+  return { workerSessionIds, sessionIds }
+}
+
 export const revokeUserSession = async (
   ctx: MutationCtx,
   userId: Id<"users">,
@@ -85,13 +99,7 @@ export const revokeUserSession = async (
   if (!session || session.userId !== userId) {
     throw new Error("Session not found")
   }
-  if (session.workerSessionId) {
-    await enqueueWorkerSessionCleanup(ctx, [session.workerSessionId])
-  }
-  await deleteSessionRefreshTokens(ctx, [sessionId])
-  await deleteSessionVerifiers(ctx, [sessionId])
-  await ctx.db.delete("authSessions", sessionId)
-  return session.workerSessionId
+  return await revokeSessions(ctx, userId, [session])
 }
 
 export const getAllUserSessionRevocations = async (
@@ -115,26 +123,18 @@ export const revokeAllUserSessions = async (
   userId: Id<"users">
 ) => {
   const sessions = await getUserSessions(ctx, userId)
-  await enqueueWorkerSessionCleanup(
-    ctx,
-    sessions.flatMap((session) =>
-      session.workerSessionId ? [session.workerSessionId] : []
-    )
+  return await revokeSessions(ctx, userId, sessions)
+}
+
+export const revokeOtherUserSessions = async (
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  exceptSessionId: Id<"authSessions"> | null
+) => {
+  const sessions = (await getUserSessions(ctx, userId)).filter(
+    (session) => session._id !== exceptSessionId
   )
-  await deleteSessionRefreshTokens(
-    ctx,
-    sessions.map((session) => session._id)
-  )
-  await deleteSessionVerifiers(
-    ctx,
-    sessions.map((session) => session._id)
-  )
-  await Promise.all(
-    sessions.map((session) => ctx.db.delete("authSessions", session._id))
-  )
-  return sessions.flatMap((session) =>
-    session.workerSessionId ? [session.workerSessionId] : []
-  )
+  return await revokeSessions(ctx, userId, sessions)
 }
 
 export const deleteUserAccountData = async (
@@ -143,6 +143,7 @@ export const deleteUserAccountData = async (
   trigger: "manual" | "inactive" = "manual",
   cleanup?: { processedUsers: number; startedAt: number }
 ) => {
+  await enqueueRealtimeSessionRevocation(ctx, userId)
   return await initiateAccountErasure(ctx, userId, trigger, cleanup)
 }
 

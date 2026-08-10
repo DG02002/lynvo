@@ -13,7 +13,10 @@ import { RequestEventService } from "../app/lib/effect/services/request-event-se
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
 import { classifyAuthSignInError } from "../app/lib/auth-errors"
 import { createApiErrorResponse } from "../app/lib/api-errors"
-import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
+import {
+  REALTIME_SESSION_REVOKED_CLOSE_CODE,
+  WORKER_SESSION_COOKIE_NAME,
+} from "../app/lib/constants"
 import { getCookieValue } from "../app/lib/auth-cookie"
 import { createAuthSessionModule } from "./auth-session"
 import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
@@ -38,6 +41,9 @@ import { responseSecurityHeaders } from "./response-security-headers"
 import { createAuthenticationIntake } from "./authentication-intake"
 import { createSessionCleanupModule } from "./session-cleanup"
 import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
+import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
+import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
+import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -317,6 +323,7 @@ app.delete("/api/auth/session", async (context) => {
     )
   }
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
+  const authenticatedSession = await getSession(context.req.raw, context.env)
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   const sessionResult = await createSignedInSessionLifecycle(
     authSession
@@ -337,6 +344,15 @@ app.delete("/api/auth/session", async (context) => {
       }),
       503
     )
+  }
+  if (
+    authenticatedSession.kind !== "unavailable" &&
+    authenticatedSession.user
+  ) {
+    await createDurableRealtimeSessionRevocation(context.env).deliver({
+      userId: authenticatedSession.user.id,
+      sessionId: authenticatedSession.user.sid,
+    })
   }
   context.header("Set-Cookie", sessionResult.cookie)
   return context.body(null, 204)
@@ -366,8 +382,14 @@ app.get("/api/realtime", async (context) => {
     authenticated: true,
     user_id: session.user.id,
   })
+  const headers = new Headers(request.headers)
+  headers.set("X-Lynvo-Session-Id", session.user.sid)
+  const workerSessionId = getCookieValue(request, WORKER_SESSION_COOKIE_NAME)
+  if (workerSessionId) {
+    headers.set("X-Lynvo-Worker-Session-Id", workerSessionId)
+  }
   return context.env.USER_REALTIME_ROOM.getByName(session.user.id).fetch(
-    request
+    new Request(request, { headers })
   )
 })
 
@@ -551,9 +573,34 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    if (new URL(request.url).pathname.endsWith("/broadcast")) {
+    const pathname = new URL(request.url).pathname
+    if (pathname.endsWith("/broadcast")) {
       const message: unknown = await request.json()
       this.broadcast(message)
+      return Response.json({ success: true })
+    }
+    if (pathname.endsWith("/revoke-session")) {
+      const input: unknown = await request.json()
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        !("sessionId" in input) ||
+        typeof input.sessionId !== "string"
+      ) {
+        return new Response("Invalid session", { status: 400 })
+      }
+      for (const socket of this.ctx.getWebSockets(input.sessionId)) {
+        socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
+      }
+      return Response.json({ success: true })
+    }
+    if (pathname.endsWith("/revoke-account")) {
+      for (const socket of this.ctx.getWebSockets()) {
+        socket.close(
+          REALTIME_SESSION_REVOKED_CLOSE_CODE,
+          "Account sessions revoked"
+        )
+      }
       return Response.json({ success: true })
     }
     if (request.headers.get("Upgrade") !== "websocket") {
@@ -562,8 +609,52 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     const pair = new WebSocketPair()
     const client = pair[0]
     const server = pair[1]
-    this.ctx.acceptWebSocket(server)
+    const sessionId = request.headers.get("X-Lynvo-Session-Id")
+    const workerSessionId = request.headers.get("X-Lynvo-Worker-Session-Id")
+    if (!sessionId || !workerSessionId) {
+      return new Response("Missing session", { status: 401 })
+    }
+    server.serializeAttachment({ sessionId, workerSessionId })
+    this.ctx.acceptWebSocket(server, [sessionId])
+    const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
+    const existingAlarmAt = await this.ctx.storage.getAlarm()
+    if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
+      await this.ctx.storage.setAlarm(nextAlarmAt)
+    }
     return new Response(null, { status: 101, webSocket: client })
+  }
+
+  async alarm(): Promise<void> {
+    try {
+      for (const socket of this.ctx.getWebSockets()) {
+        try {
+          const attachment: unknown = socket.deserializeAttachment()
+          if (
+            typeof attachment !== "object" ||
+            attachment === null ||
+            !("workerSessionId" in attachment) ||
+            typeof attachment.workerSessionId !== "string"
+          ) {
+            socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session invalid")
+            continue
+          }
+          const response = await this.env.WORKER_AUTH_SESSION.getByName(
+            attachment.workerSessionId
+          ).fetch("https://session.internal/session", { method: "HEAD" })
+          if (response.status === 401 || response.status === 404) {
+            socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session expired")
+          }
+        } catch {
+          continue
+        }
+      }
+    } finally {
+      if (this.ctx.getWebSockets().length > 0) {
+        await this.ctx.storage.setAlarm(
+          Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
+        )
+      }
+    }
   }
 
   webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): void {
@@ -605,13 +696,22 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
   scheduled: async (_controller, env) => {
-    const [sessionCleanupResult, savedLinkResult] = await Promise.all([
+    const [
+      sessionCleanupResult,
+      savedLinkResult,
+      realtimeRevocationResult,
+      accountSettingsResult,
+    ] = await Promise.all([
       createSessionCleanupModule(env).drain(),
       createSavedLinkRealtimeDelivery(env).drain(),
+      createDurableRealtimeSessionRevocation(env).drain(),
+      createAccountSettingsRealtimeDelivery(env).drain(),
     ])
     if (
       sessionCleanupResult.kind === "unavailable" ||
-      savedLinkResult.kind === "unavailable"
+      savedLinkResult.kind === "unavailable" ||
+      realtimeRevocationResult.kind === "unavailable" ||
+      accountSettingsResult.kind === "unavailable"
     ) {
       throw new Error("Worker Auth Session cleanup is unavailable")
     }

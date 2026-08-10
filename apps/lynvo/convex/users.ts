@@ -9,11 +9,11 @@ import { v } from "convex/values"
 import {
   getAuthSessionId,
   getAuthUserId,
-  invalidateSessions,
   modifyAccountCredentials,
   retrieveAccount,
 } from "@convex-dev/auth/server"
 import { internal } from "./_generated/api"
+import type { Id } from "./_generated/dataModel"
 import {
   getAuthenticatedUserId,
   getAuthenticatedWritableUserId,
@@ -27,14 +27,15 @@ import {
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
+  PASSWORD_CHANGE_RECOVERY_DELAY_MS,
 } from "./constants"
 import {
   cleanupInactiveUserAccounts,
   deleteUserAccountData,
   getAllUserSessionRevocations,
-  replacePasswordAndInvalidateOtherSessions,
   revokeAllUserSessions,
   revokeCurrentUserSession,
+  revokeOtherUserSessions,
   revokeUserSession,
   touchUserActivity,
 } from "./accountLifecycle"
@@ -51,6 +52,11 @@ import {
 import { buildPlayerPreferencesPatch } from "./userPreferences"
 import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
 import { advanceSavedLinkRevision } from "./savedLinkRevisions"
+import {
+  advanceAccountSettingsRevision,
+  readAccountSettingsRevision,
+} from "./accountSettingsRevisions"
+import { enqueueRealtimeSessionRevocation } from "./realtimeSessionRevocations"
 
 const assertCurrentUser = async (ctx: {
   auth: Parameters<typeof getAuthUserId>[0]["auth"]
@@ -97,7 +103,11 @@ export const getSessionUser = query({
 })
 
 export const getPlayerPreferences = query({
-  returns: v.any(),
+  returns: v.object({
+    rangeSupportedPlayerId: v.optional(v.string()),
+    rangeUnsupportedPlayerId: v.optional(v.string()),
+    revision: v.number(),
+  }),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -105,12 +115,13 @@ export const getPlayerPreferences = query({
     return {
       rangeSupportedPlayerId: user?.rangeSupportedPlayerId,
       rangeUnsupportedPlayerId: user?.rangeUnsupportedPlayerId,
+      revision: await readAccountSettingsRevision(ctx, userId),
     }
   },
 })
 
 export const updatePlayerPreferences = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean(), revision: v.number() }),
   args: {
     rangeSupportedPlayerId: v.optional(v.string()),
     rangeUnsupportedPlayerId: v.optional(v.string()),
@@ -126,12 +137,17 @@ export const updatePlayerPreferences = mutation({
       ...buildPlayerPreferencesPatch(args),
     })
     await ctx.db.patch("users", userId, buildPlayerPreferencesPatch(args))
-    return { success: true }
+    const revision = await advanceAccountSettingsRevision(ctx, userId)
+    return { success: true, revision }
   },
 })
 
 export const updateStorageRetentionDays = mutation({
-  returns: v.any(),
+  returns: v.object({
+    success: v.boolean(),
+    deletedLinks: v.number(),
+    revision: v.union(v.number(), v.null()),
+  }),
   args: {
     days: v.number(),
     deleteExpiredLinks: v.optional(v.boolean()),
@@ -144,12 +160,13 @@ export const updateStorageRetentionDays = mutation({
       throw new Error("Authentication required")
     }
     let deletedLinks = 0
+    let revision: number | null = null
 
     if (args.deleteExpiredLinks) {
       const now = Date.now()
       deletedLinks = await deleteExpiredLinks(ctx, userId, retentionDays, now)
       if (deletedLinks > 0) {
-        await advanceSavedLinkRevision(ctx, userId)
+        revision = await advanceSavedLinkRevision(ctx, userId)
       }
       if (deletedLinks === LINK_RETENTION_BATCH_SIZE) {
         await ctx.scheduler.runAfter(
@@ -167,7 +184,7 @@ export const updateStorageRetentionDays = mutation({
     await ctx.db.patch("users", userId, {
       storageRetentionDays: retentionDays,
     })
-    return { success: true, deletedLinks }
+    return { success: true, deletedLinks, revision }
   },
 })
 
@@ -192,7 +209,11 @@ export const previewStorageRetentionDays = query({
 })
 
 export const clearLinks = mutation({
-  returns: v.any(),
+  returns: v.object({
+    success: v.boolean(),
+    deletedLinks: v.number(),
+    revision: v.union(v.number(), v.null()),
+  }),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
@@ -213,7 +234,7 @@ export const clearLinks = mutation({
 })
 
 export const touchActivity = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean() }),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
@@ -224,7 +245,15 @@ export const touchActivity = mutation({
 })
 
 export const listSessions = query({
-  returns: v.any(),
+  returns: v.array(
+    v.object({
+      id: v.id("authSessions"),
+      deviceName: v.string(),
+      lastActiveAt: v.number(),
+      createdAt: v.number(),
+      isCurrent: v.boolean(),
+    })
+  ),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedUserId(ctx)
@@ -285,7 +314,7 @@ export const getStorageUsage = query({
 })
 
 export const renameSession = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean() }),
   args: {
     sessionId: v.id("authSessions"),
     deviceName: v.string(),
@@ -306,7 +335,7 @@ export const renameSession = mutation({
 })
 
 export const setCurrentSessionDevice = mutation({
-  returns: v.any(),
+  returns: v.object({ success: v.boolean() }),
   args: {
     deviceName: v.string(),
   },
@@ -358,7 +387,10 @@ export const linkCurrentSessionWorker = mutation({
 })
 
 export const revokeSession = mutation({
-  returns: v.any(),
+  returns: v.object({
+    success: v.boolean(),
+    workerSessionIds: v.array(v.string()),
+  }),
   args: {
     sessionId: v.string(),
   },
@@ -369,7 +401,7 @@ export const revokeSession = mutation({
     if (!sessionId) {
       throw new Error("Session not found")
     }
-    const workerSessionId = await revokeUserSession(
+    const revoked = await revokeUserSession(
       ctx,
       userId,
       currentSessionId,
@@ -377,7 +409,7 @@ export const revokeSession = mutation({
     )
     return {
       success: true,
-      workerSessionIds: workerSessionId ? [workerSessionId] : [],
+      workerSessionIds: revoked.workerSessionIds,
     }
   },
 })
@@ -397,22 +429,35 @@ export const revokeCurrentSessionFromWorker = mutation({
 })
 
 export const revokeAllSessions = mutation({
-  returns: v.any(),
+  returns: v.object({
+    success: v.boolean(),
+    workerSessionIds: v.array(v.string()),
+    sessionIds: v.array(v.string()),
+  }),
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
-    const workerSessionIds = await revokeAllUserSessions(ctx, userId)
-    return { success: true, workerSessionIds }
+    const revoked = await revokeAllUserSessions(ctx, userId)
+    return { success: true, ...revoked }
   },
 })
 
 export const changePassword = action({
-  returns: v.any(),
+  returns: v.object({
+    success: v.boolean(),
+    sessionIds: v.array(v.id("authSessions")),
+  }),
   args: {
     currentPassword: v.string(),
     newPassword: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean
+    sessionIds: Array<Id<"authSessions">>
+  }> => {
     const userId = await assertCurrentUser(ctx)
     const [sessionId, user] = await Promise.all([
       getAuthSessionId(ctx),
@@ -435,23 +480,31 @@ export const changePassword = action({
         secret: args.currentPassword,
       },
     })
-    await replacePasswordAndInvalidateOtherSessions(
-      () =>
-        modifyAccountCredentials(ctx, {
-          provider: "credentials",
-          account: {
-            id: user.normalizedUsername,
-            secret: args.newPassword,
-          },
-        }),
-      () =>
-        invalidateSessions(ctx, {
-          userId,
-          except: sessionId ? [sessionId] : [],
-        })
+    const transition = await ctx.runMutation(
+      internal.users.preparePasswordChange,
+      { userId, exceptSessionId: sessionId }
     )
+    try {
+      await modifyAccountCredentials(ctx, {
+        provider: "credentials",
+        account: {
+          id: user.normalizedUsername,
+          secret: args.newPassword,
+        },
+      })
+    } catch (error) {
+      await ctx.runMutation(internal.users.finishPasswordChange, {
+        userId,
+        startedAt: transition.startedAt,
+      })
+      throw error
+    }
+    await ctx.runMutation(internal.users.finishPasswordChange, {
+      userId,
+      startedAt: transition.startedAt,
+    })
     console.info("security.password_changed", { userId })
-    return { success: true }
+    return { success: true, sessionIds: transition.sessionIds }
   },
 })
 
@@ -471,6 +524,7 @@ export const beginAccountErasure = mutation({
     }
     const workerSessionIds = await getAllUserSessionRevocations(ctx, userId)
     await enqueueWorkerSessionCleanup(ctx, workerSessionIds)
+    await enqueueRealtimeSessionRevocation(ctx, userId)
     await deleteUserAccountData(ctx, userId)
     console.info("security.account_deleted", { userId })
     return { workerSessionIds }
@@ -483,6 +537,52 @@ export const getUserForAuthAction = internalQuery({
   },
   handler: async (ctx, args) => {
     return await ctx.db.get("users", args.userId)
+  },
+})
+
+export const preparePasswordChange = internalMutation({
+  args: {
+    userId: v.id("users"),
+    exceptSessionId: v.union(v.id("authSessions"), v.null()),
+  },
+  returns: v.object({
+    sessionIds: v.array(v.id("authSessions")),
+    startedAt: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get("users", args.userId)
+    if (!user || user.passwordChangePendingAt) {
+      throw new Error("Password change is already in progress")
+    }
+    const startedAt = Date.now()
+    await ctx.db.patch("users", args.userId, {
+      passwordChangePendingAt: startedAt,
+    })
+    const revoked = await revokeOtherUserSessions(
+      ctx,
+      args.userId,
+      args.exceptSessionId
+    )
+    await ctx.scheduler.runAfter(
+      PASSWORD_CHANGE_RECOVERY_DELAY_MS,
+      internal.users.finishPasswordChange,
+      { userId: args.userId, startedAt }
+    )
+    return { sessionIds: revoked.sessionIds, startedAt }
+  },
+})
+
+export const finishPasswordChange = internalMutation({
+  args: { userId: v.id("users"), startedAt: v.number() },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get("users", args.userId)
+    if (user?.passwordChangePendingAt === args.startedAt) {
+      await ctx.db.patch("users", args.userId, {
+        passwordChangePendingAt: undefined,
+      })
+    }
+    return { success: true }
   },
 })
 

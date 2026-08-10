@@ -19,6 +19,38 @@ const createMetadataJson = (source: Record<string, unknown>) =>
   })
 
 describe("Convex function boundaries", () => {
+  it("advances and coalesces account settings revisions transactionally", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "settings-revision-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+
+    await expect(
+      client.query(api.users.getPlayerPreferences, {})
+    ).resolves.toMatchObject({
+      revision: 0,
+    })
+    await expect(
+      client.mutation(api.users.updatePlayerPreferences, {
+        rangeSupportedPlayerId: "just",
+      })
+    ).resolves.toEqual({ success: true, revision: 1 })
+    await expect(
+      client.mutation(api.users.updatePlayerPreferences, {
+        rangeUnsupportedPlayerId: "mpv",
+      })
+    ).resolves.toEqual({ success: true, revision: 2 })
+
+    const states = await convex.run((context) =>
+      context.db.query("accountSettingsSynchronizationStates").collect()
+    )
+    expect(states).toHaveLength(1)
+    expect(states[0]).toMatchObject({
+      userId: user.userId,
+      revision: 2,
+      broadcastRevision: 0,
+      pendingBroadcast: true,
+    })
+  })
   it("rejects anonymous link reads", async () => {
     const convex = createConvexTest()
 
@@ -107,9 +139,9 @@ describe("Convex function boundaries", () => {
     expect(links.results).toHaveLength(LINKS_MAX_COUNT)
     expect(links.revision).toBe(1)
     expect(links.results[0]?.url).toBe("https://bounded.example/new")
-    expect(links.results.some((link) => link.url === "https://bounded.example/0")).toBe(
-      false
-    )
+    expect(
+      links.results.some((link) => link.url === "https://bounded.example/0")
+    ).toBe(false)
   })
 
   it("updates an existing link without evicting another item", async () => {
@@ -187,7 +219,9 @@ describe("Convex function boundaries", () => {
     })
     expect(afterRejection.results).toHaveLength(LINKS_MAX_COUNT)
     expect(
-      afterRejection.results.some((link) => link.url === "https://eviction.example/0")
+      afterRejection.results.some(
+        (link) => link.url === "https://eviction.example/0"
+      )
     ).toBe(true)
 
     await firstClient.mutation(api.links.createOrUpdate, {
@@ -253,13 +287,14 @@ describe("Convex function boundaries", () => {
     })
     expect(deleted.revision).toBe(3)
 
-    const state = await convex.run(async (context) =>
-      await context.db
-        .query("savedLinkSynchronizationStates")
-        .withIndex("by_userId", (queryBuilder) =>
-          queryBuilder.eq("userId", user.userId)
-        )
-        .unique()
+    const state = await convex.run(
+      async (context) =>
+        await context.db
+          .query("savedLinkSynchronizationStates")
+          .withIndex("by_userId", (queryBuilder) =>
+            queryBuilder.eq("userId", user.userId)
+          )
+          .unique()
     )
     expect(state).toMatchObject({
       revision: 3,

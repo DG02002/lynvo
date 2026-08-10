@@ -43,6 +43,9 @@ export const DEFAULT_NON_RANGE_PLAYER_ID: PlayerId = "vlc"
 const RANGE_PLAYER_STORAGE_KEY = "lynvo:player:range-supported:v1"
 const NON_RANGE_PLAYER_STORAGE_KEY = "lynvo:player:range-unsupported:v1"
 
+const scopedPlayerKey = (key: string, userId?: string) =>
+  userId ? `${key}:${userId}` : undefined
+
 const playerById = new Map(
   PLAYER_DEFINITIONS.map((player) => [player.id, player])
 )
@@ -50,31 +53,48 @@ const playerById = new Map(
 const isPlayerId = (value: unknown): value is PlayerId =>
   typeof value === "string" && playerById.has(value as PlayerId)
 
-const getStoredPlayerId = (key: string, fallback: PlayerId): PlayerId => {
+const getStoredPlayerId = (
+  key: string,
+  fallback: PlayerId,
+  userId?: string
+): PlayerId => {
   if (typeof localStorage === "undefined") {
     return fallback
   }
 
-  const stored = localStorage.getItem(key)
+  const scopedKey = scopedPlayerKey(key, userId)
+  if (!scopedKey) {
+    return fallback
+  }
+  const stored = localStorage.getItem(scopedKey)
   return isPlayerId(stored) ? stored : fallback
 }
 
-const setStoredPlayerId = (key: string, playerId: PlayerId) => {
+const setStoredPlayerId = (
+  key: string,
+  playerId: PlayerId,
+  userId?: string
+) => {
   if (typeof localStorage === "undefined") {
     return
   }
 
-  localStorage.setItem(key, playerId)
+  const scopedKey = scopedPlayerKey(key, userId)
+  if (scopedKey) {
+    localStorage.setItem(scopedKey, playerId)
+  }
 }
 
-export const getPlayerPreferences = () => ({
+export const getPlayerPreferences = (userId?: string) => ({
   rangeSupportedPlayerId: getStoredPlayerId(
     RANGE_PLAYER_STORAGE_KEY,
-    DEFAULT_RANGE_PLAYER_ID
+    DEFAULT_RANGE_PLAYER_ID,
+    userId
   ),
   rangeUnsupportedPlayerId: getStoredPlayerId(
     NON_RANGE_PLAYER_STORAGE_KEY,
-    DEFAULT_NON_RANGE_PLAYER_ID
+    DEFAULT_NON_RANGE_PLAYER_ID,
+    userId
   ),
 })
 
@@ -90,18 +110,22 @@ export const normalizePlayerPreferences = (preferences: {
     : DEFAULT_NON_RANGE_PLAYER_ID,
 })
 
-export const setRangeSupportedPlayer = (playerId: PlayerId) => {
-  setStoredPlayerId(RANGE_PLAYER_STORAGE_KEY, playerId)
+export const setRangeSupportedPlayer = (userId: string, playerId: PlayerId) => {
+  setStoredPlayerId(RANGE_PLAYER_STORAGE_KEY, playerId, userId)
 }
 
-export const setRangeUnsupportedPlayer = (playerId: PlayerId) => {
-  setStoredPlayerId(NON_RANGE_PLAYER_STORAGE_KEY, playerId)
+export const setRangeUnsupportedPlayer = (
+  userId: string,
+  playerId: PlayerId
+) => {
+  setStoredPlayerId(NON_RANGE_PLAYER_STORAGE_KEY, playerId, userId)
 }
 
 export const selectPlayerForRangeCapability = (
-  rangeRequest: RangeRequestCapability = "unknown"
+  rangeRequest: RangeRequestCapability = "unknown",
+  userId?: string
 ): PlayerDefinition => {
-  const preferences = getPlayerPreferences()
+  const preferences = getPlayerPreferences(userId)
   const playerId =
     rangeRequest === "unsupported"
       ? preferences.rangeUnsupportedPlayerId
@@ -141,9 +165,12 @@ export const buildIntentUrl = (mediaUrl: string, player: PlayerDefinition) => {
 
 export const openInPlayer = async (
   targetUrl: string,
-  options: { rangeRequest?: RangeRequestCapability } = {}
+  options: { rangeRequest?: RangeRequestCapability; userId?: string } = {}
 ) => {
-  const player = selectPlayerForRangeCapability(options.rangeRequest)
+  const player = selectPlayerForRangeCapability(
+    options.rangeRequest,
+    options.userId
+  )
   return openInSpecificPlayer(targetUrl, player)
 }
 

@@ -54,6 +54,11 @@ describe("Worker account erasure HTTP behavior", () => {
             },
           }),
         },
+        USER_REALTIME_ROOM: {
+          getByName: () => ({
+            fetch: async () => Response.json({ success: true }),
+          }),
+        },
       } as Env,
       { waitUntil: () => undefined } as ExecutionContext
     )
