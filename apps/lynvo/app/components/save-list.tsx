@@ -72,9 +72,6 @@ const SaveList = () => {
           extractingItems={extractingItems}
           highlightedId={highlightedId}
           isHydrating={isHydrating}
-          onAddLink={() => {
-            document.getElementById("link-input")?.focus()
-          }}
         />
       </div>
 

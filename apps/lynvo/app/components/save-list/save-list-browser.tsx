@@ -58,7 +58,6 @@ interface SaveListBrowserProps {
   extractingItems: Set<string>
   highlightedId: string | null
   isHydrating: boolean
-  onAddLink?: () => void
 }
 
 interface FinderBrowserProps {
@@ -558,7 +557,6 @@ export const SaveListBrowser = ({
   extractingItems,
   highlightedId,
   isHydrating,
-  onAddLink,
 }: SaveListBrowserProps) => {
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
@@ -593,17 +591,7 @@ export const SaveListBrowser = ({
           icon={Archive04Icon}
           className="size-7 text-foreground"
         />
-        <div className="flex flex-col gap-1">
-          <p className="font-medium">No saved links</p>
-          <p className="text-sm text-muted-foreground">
-            Add a link to save it for later.
-          </p>
-        </div>
-        {onAddLink && (
-          <Button variant="outline" onClick={onAddLink}>
-            Add a link
-          </Button>
-        )}
+        <p className="font-medium">No saved links</p>
       </div>
     )
   }

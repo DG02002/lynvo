@@ -565,9 +565,12 @@ describe("SaveListBrowser", () => {
       <SaveListBrowser items={[]} isHydrating={false} {...commonProps} />
     )
     const emptyHeading = screen.getByText("No saved links")
-    expect(emptyHeading.parentElement?.parentElement).not.toHaveClass(
-      "border",
-      "rounded-2xl"
-    )
+    expect(
+      screen.queryByText("Add a link to save it for later.")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Add a link" })
+    ).not.toBeInTheDocument()
+    expect(emptyHeading.parentElement).not.toHaveClass("border", "rounded-2xl")
   })
 })
