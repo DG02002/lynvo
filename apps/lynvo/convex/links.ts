@@ -20,6 +20,10 @@ import {
   LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
 import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
+import {
+  advanceSavedLinkRevision,
+  readSavedLinkRevision,
+} from "./savedLinkRevisions"
 
 const canonicalizeLinkMetadataJson = (metadataJson: string) =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
@@ -39,14 +43,27 @@ export const list = query({
       )
       .order("desc")
       .take(LINKS_MAX_COUNT)
-    return links.map((link) => ({
-      _id: link._id,
-      url: link.url,
-      title: link.title,
-      meta: link.meta,
-      createdAt: link.createdAt,
-      updatedAt: link.updatedAt,
-    }))
+    const revision = await readSavedLinkRevision(ctx, userId)
+    return {
+      revision,
+      results: links.map((link) => ({
+        _id: link._id,
+        url: link.url,
+        title: link.title,
+        meta: link.meta,
+        createdAt: link.createdAt,
+        updatedAt: link.updatedAt,
+      })),
+    }
+  },
+})
+
+export const revision = query({
+  returns: v.object({ revision: v.number() }),
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthenticatedUserId(ctx)
+    return { revision: await readSavedLinkRevision(ctx, userId) }
   },
 })
 
@@ -99,7 +116,8 @@ export const createOrUpdate = mutation({
         meta: metadataJson,
         updatedAt: now,
       })
-      return existing._id
+      const revision = await advanceSavedLinkRevision(ctx, userId)
+      return { id: existing._id, revision }
     }
 
     const newDoc = {
@@ -124,7 +142,9 @@ export const createOrUpdate = mutation({
       await ctx.db.delete("links", oldestLink._id)
     }
 
-    return await ctx.db.insert("links", newDoc)
+    const id = await ctx.db.insert("links", newDoc)
+    const revision = await advanceSavedLinkRevision(ctx, userId)
+    return { id, revision }
   },
 })
 
@@ -145,7 +165,8 @@ export const deleteById = mutation({
 
     await recordStorageDeletion(ctx, userId, "linkBytes", existing)
     await ctx.db.delete("links", existing._id)
-    return { success: true }
+    const revision = await advanceSavedLinkRevision(ctx, userId)
+    return { success: true, revision }
   },
 })
 
@@ -176,7 +197,8 @@ export const updateMeta = mutation({
       meta: metadataJson,
       updatedAt: Date.now(),
     })
-    return { success: true }
+    const revision = await advanceSavedLinkRevision(ctx, userId)
+    return { success: true, revision }
   },
 })
 
@@ -195,6 +217,9 @@ export const cleanupExpiredLinks = internalMutation({
     const deletedInBatch = user
       ? await cleanupExpiredStoredLinks(ctx, user._id, now)
       : 0
+    if (user && deletedInBatch > 0) {
+      await advanceSavedLinkRevision(ctx, user._id)
+    }
     const didFinishUser = !user || deletedInBatch < LINK_RETENTION_BATCH_SIZE
     const processedUsers =
       (args.processedUsers ?? 0) + (user && didFinishUser ? 1 : 0)
@@ -241,6 +266,9 @@ export const cleanupExpiredLinksForUser = internalMutation({
       args.userId,
       args.now
     )
+    if (deletedLinks > 0) {
+      await advanceSavedLinkRevision(ctx, args.userId)
+    }
     const continued = deletedLinks === LINK_RETENTION_BATCH_SIZE
     if (continued) {
       await ctx.scheduler.runAfter(

@@ -46,7 +46,7 @@ describe("saved link synchronization", () => {
       adapter,
       identity: "user-one",
       cachedItems: [],
-      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
     })
     resolveLoad([{ url: "https://example.com/stale-cache", timestamp: 1 }])
     await convergence
@@ -83,7 +83,7 @@ describe("saved link synchronization", () => {
       cachedItems: [cachedItem],
       remote: {
         results: [createSavedLink(2)],
-        version: 2,
+        revision: 2,
         etag: "2",
       },
     })
@@ -111,7 +111,7 @@ describe("saved link synchronization", () => {
       adapter,
       identity: "user-one",
       cachedItems: [],
-      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
     })
     await synchronization.synchronize({
       adapter,
@@ -119,7 +119,7 @@ describe("saved link synchronization", () => {
       cachedItems: [],
       remote: {
         results: [{ ...createSavedLink(1), title: "Stale" }],
-        version: 1,
+        revision: 1,
         etag: "1",
       },
     })
@@ -138,7 +138,7 @@ describe("saved link synchronization", () => {
       adapter: createAdapter(),
       identity: "user-one",
       cachedItems: [],
-      remote: { results: [createSavedLink(2)], version: 2, etag: "2" },
+      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
     })
     const userTwoItem: LinkViewItem = {
       url: "https://example.com/user-two",

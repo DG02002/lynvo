@@ -50,6 +50,7 @@ import {
 } from "./storagePolicy"
 import { buildPlayerPreferencesPatch } from "./userPreferences"
 import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
+import { advanceSavedLinkRevision } from "./savedLinkRevisions"
 
 const assertCurrentUser = async (ctx: {
   auth: Parameters<typeof getAuthUserId>[0]["auth"]
@@ -147,6 +148,9 @@ export const updateStorageRetentionDays = mutation({
     if (args.deleteExpiredLinks) {
       const now = Date.now()
       deletedLinks = await deleteExpiredLinks(ctx, userId, retentionDays, now)
+      if (deletedLinks > 0) {
+        await advanceSavedLinkRevision(ctx, userId)
+      }
       if (deletedLinks === LINK_RETENTION_BATCH_SIZE) {
         await ctx.scheduler.runAfter(
           0,
@@ -202,7 +206,9 @@ export const clearLinks = mutation({
       await ctx.db.delete("links", link._id)
     }
 
-    return { success: true, deletedLinks: links.length }
+    const revision =
+      links.length > 0 ? await advanceSavedLinkRevision(ctx, userId) : null
+    return { success: true, deletedLinks: links.length, revision }
   },
 })
 

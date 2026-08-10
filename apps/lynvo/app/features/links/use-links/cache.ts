@@ -10,11 +10,11 @@ import {
   storedSavedLinkSchema,
 } from "~/features/links/storage-schemas"
 
-const SYNCED_LINKS_KEY_PREFIX = "lynvo:links:sync:v1:"
+const SYNCED_LINKS_KEY_PREFIX = "lynvo:links:sync:v2:"
 
-export type LinksCache = {
+export interface LinksCache {
   results: SavedLink[]
-  version: number
+  revision: number
   etag: string
 }
 
@@ -39,7 +39,7 @@ export function readLinksCache(userId?: string): LinksCache | undefined {
           const savedLink = storedSavedLinkSchema.safeParse(value)
           return savedLink.success ? [toSavedLink(savedLink.data)] : []
         }),
-        version: result.data.version,
+        revision: result.data.revision,
         etag: result.data.etag,
       }
     }

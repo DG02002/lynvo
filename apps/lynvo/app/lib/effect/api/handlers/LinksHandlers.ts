@@ -7,6 +7,8 @@ import { api } from "../../../../../convex/_generated/api"
 import { getDailyTimeBucket } from "../../../use-coarse-time-bucket"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
 import { ValidationError } from "../../errors"
+import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
 
 const encodeCanonicalMetadata = (metadata: unknown) =>
   Effect.try({
@@ -33,12 +35,25 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         )
       })
     )
+    .handle("revision", () =>
+      Effect.gen(function* () {
+        const convex = yield* ConvexService
+        const user = yield* CurrentUser
+        return yield* convex.query(
+          api.links.revision,
+          {},
+          {
+            accessToken: user.accessToken,
+          }
+        )
+      })
+    )
     .handle("create", ({ payload }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
-        return yield* convex.mutation(
+        const result = yield* convex.mutation(
           api.links.createOrUpdate,
           {
             url: payload.url,
@@ -47,18 +62,33 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
           },
           { accessToken: user.accessToken }
         )
+        const environment = yield* CloudflareEnv
+        yield* Effect.promise(() =>
+          createSavedLinkRealtimeDelivery(environment).deliver(
+            user.id,
+            result.revision
+          )
+        )
+        return result.id
       })
     )
     .handle("delete", ({ params }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
-        yield* convex.mutation(
+        const result = yield* convex.mutation(
           api.links.deleteById,
           {
             id: params.linkId,
           },
           { accessToken: user.accessToken }
+        )
+        const environment = yield* CloudflareEnv
+        yield* Effect.promise(() =>
+          createSavedLinkRealtimeDelivery(environment).deliver(
+            user.id,
+            result.revision
+          )
         )
         return { success: true }
       })
@@ -68,13 +98,20 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
-        yield* convex.mutation(
+        const result = yield* convex.mutation(
           api.links.updateMeta,
           {
             id: params.linkId,
             meta: metadataJson,
           },
           { accessToken: user.accessToken }
+        )
+        const environment = yield* CloudflareEnv
+        yield* Effect.promise(() =>
+          createSavedLinkRealtimeDelivery(environment).deliver(
+            user.id,
+            result.revision
+          )
         )
         return { success: true }
       })

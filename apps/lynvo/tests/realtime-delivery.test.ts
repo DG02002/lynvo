@@ -19,7 +19,7 @@ describe("realtime delivery", () => {
     expect(
       deliverRealtimeMessage(JSON.stringify(message), receiveRemoteEvent)
     ).toBe(true)
-    expect(receiveRemoteEvent).toHaveBeenCalledWith(message.payload)
+    expect(receiveRemoteEvent).toHaveBeenCalledWith(message)
   })
 
   it("does not deliver invalid Remote Play payloads", () => {

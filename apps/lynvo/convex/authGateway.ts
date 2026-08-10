@@ -21,6 +21,11 @@ export interface SessionCleanupPayload {
   readonly exp: number
 }
 
+export interface SavedLinkRealtimePayload {
+  readonly purpose: "savedLinkRealtime"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -152,6 +157,25 @@ export const verifySessionCleanupToken = async (
     payload.exp < Date.now()
   ) {
     throw new Error("Expired session cleanup token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
+}
+
+export const verifySavedLinkRealtimeToken = async (
+  token: string,
+  secret: string
+): Promise<SavedLinkRealtimePayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "savedLinkRealtime" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired Saved link realtime token")
   }
   return { purpose: payload.purpose, exp: payload.exp }
 }

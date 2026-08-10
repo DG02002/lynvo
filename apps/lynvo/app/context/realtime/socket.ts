@@ -1,9 +1,10 @@
 import type { RealtimeAction } from "./reducer"
-import { isRemoteRealtimeMessage, parseRealtimeMessage } from "./message-schema"
+import { parseRealtimeMessage } from "./message-schema"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
-  receiveRemoteEvent: (event: RemoteRealtimeEvent) => void
+  receiveMessage: (message: RealtimeMessage) => void
+  onOpen: () => void
 }
 
 const closeSocket = (socket: WebSocket) => {
@@ -23,7 +24,7 @@ const websocketUrl = () => {
 
 export const deliverRealtimeMessage = (
   value: string,
-  receiveRemoteEvent: (event: RemoteRealtimeEvent) => void
+  receiveMessage: (message: RealtimeMessage) => void
 ) => {
   const message = parseRealtimeMessage(value)
 
@@ -32,15 +33,14 @@ export const deliverRealtimeMessage = (
     return false
   }
 
-  if (isRemoteRealtimeMessage(message)) {
-    receiveRemoteEvent(message.payload)
-  }
+  receiveMessage(message)
   return true
 }
 
 export const openRealtimeSocket = ({
   dispatch,
-  receiveRemoteEvent,
+  receiveMessage,
+  onOpen,
 }: OpenRealtimeSocketOptions) => {
   let socket: WebSocket | null = null
   let closed = false
@@ -51,6 +51,7 @@ export const openRealtimeSocket = ({
   const handleOpen = () => {
     attempt = 0
     dispatch({ type: "SET_STATUS", status: "connected" })
+    onOpen()
     heartbeatTimer = window.setInterval(() => {
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(
@@ -61,7 +62,7 @@ export const openRealtimeSocket = ({
   }
 
   const handleMessage = (event: MessageEvent) => {
-    deliverRealtimeMessage(String(event.data), receiveRemoteEvent)
+    deliverRealtimeMessage(String(event.data), receiveMessage)
   }
 
   const removeSocketListeners = () => {

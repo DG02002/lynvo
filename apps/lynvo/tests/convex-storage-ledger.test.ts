@@ -86,7 +86,7 @@ describe("Convex storage ledger", () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "version-repair-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
-    const linkId = await client.mutation(api.links.createOrUpdate, {
+    const { id: linkId } = await client.mutation(api.links.createOrUpdate, {
       url: "https://version.example",
     })
     await convex.run(async (context) => {
@@ -120,7 +120,7 @@ describe("Convex storage ledger", () => {
     const user = await insertTestUser(convex, "ledger-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
-    const linkId = await client.mutation(api.links.createOrUpdate, {
+    const { id: linkId } = await client.mutation(api.links.createOrUpdate, {
       url: "https://ledger.example/item",
       title: "Initial",
     })

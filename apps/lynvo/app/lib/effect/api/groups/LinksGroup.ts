@@ -17,10 +17,19 @@ const LinkSchema = Schema.Struct({
   updatedAt: Schema.Number,
 })
 
+const LinksSnapshotSchema = Schema.Struct({
+  revision: Schema.Number,
+  results: Schema.Array(LinkSchema),
+})
+
 export class LinksGroup extends HttpApiGroup.make("links")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(LinkSchema),
+      success: LinksSnapshotSchema,
+      error: [UnauthorizedApiError, ConvexApiError],
+    }),
+    HttpApiEndpoint.get("revision", "/revision", {
+      success: Schema.Struct({ revision: Schema.Number }),
       error: [UnauthorizedApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("create", "/", {

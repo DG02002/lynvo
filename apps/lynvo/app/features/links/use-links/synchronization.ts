@@ -32,10 +32,10 @@ export const createSavedLinkSynchronization = (
   let currentIdentity = identity
   let loadPromise: Promise<void> | undefined
 
-  const acceptRemote = (items: SavedLink[], version?: number) => {
+  const acceptRemote = (items: SavedLink[], revision?: number) => {
     persistence.reconcile(
       linksToLinkViewItems(items, persistence.getSnapshot()),
-      version
+      revision
     )
   }
 
@@ -57,7 +57,7 @@ export const createSavedLinkSynchronization = (
         if (input.identity !== "signed-out") {
           cache.publish(input.identity, input.remote)
         }
-        acceptRemote(input.remote.results, input.remote.version)
+        acceptRemote(input.remote.results, input.remote.revision)
       }
       await loadPromise
     },

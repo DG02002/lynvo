@@ -21,6 +21,11 @@ export interface SessionCleanupPayload {
   readonly exp: number
 }
 
+export interface SavedLinkRealtimePayload {
+  readonly purpose: "savedLinkRealtime"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 
 const base64UrlEncode = (bytes: Uint8Array): string => {
@@ -48,7 +53,8 @@ export const signAuthPreflightToken = async (
     | AuthPreflightPayload
     | DeviceCodePreflightPayload
     | CredentialReadPayload
-    | SessionCleanupPayload,
+    | SessionCleanupPayload
+    | SavedLinkRealtimePayload,
   secret: string
 ): Promise<string> => {
   const encodedPayload = base64UrlEncode(
@@ -79,5 +85,14 @@ export const signSessionCleanupToken = async (
 ) =>
   await signAuthPreflightToken(
     { purpose: "sessionCleanup", exp: expiresAt },
+    secret
+  )
+
+export const signSavedLinkRealtimeToken = async (
+  secret: string,
+  expiresAt: number
+) =>
+  await signAuthPreflightToken(
+    { purpose: "savedLinkRealtime", exp: expiresAt },
     secret
   )

@@ -26,6 +26,8 @@ import type * as migrations from "../migrations.js";
 import type * as passwordCrypto from "../passwordCrypto.js";
 import type * as pluginDomainLifecycle from "../pluginDomainLifecycle.js";
 import type * as pluginDomains from "../pluginDomains.js";
+import type * as savedLinkRealtime from "../savedLinkRealtime.js";
+import type * as savedLinkRevisions from "../savedLinkRevisions.js";
 import type * as sessionCleanup from "../sessionCleanup.js";
 import type * as storagePolicy from "../storagePolicy.js";
 import type * as usage from "../usage.js";
@@ -58,6 +60,8 @@ declare const fullApi: ApiFromModules<{
   passwordCrypto: typeof passwordCrypto;
   pluginDomainLifecycle: typeof pluginDomainLifecycle;
   pluginDomains: typeof pluginDomains;
+  savedLinkRealtime: typeof savedLinkRealtime;
+  savedLinkRevisions: typeof savedLinkRevisions;
   sessionCleanup: typeof sessionCleanup;
   storagePolicy: typeof storagePolicy;
   usage: typeof usage;

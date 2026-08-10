@@ -174,6 +174,13 @@ const getIncompleteStage = async (
   if (links.length > 0) {
     return "links"
   }
+  const savedLinkSynchronizationState = await ctx.db
+    .query("savedLinkSynchronizationStates")
+    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
+    .unique()
+  if (savedLinkSynchronizationState) {
+    return "links"
+  }
   const pluginCredentials = await ctx.db
     .query("userPluginCredentials")
     .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
@@ -313,6 +320,27 @@ export const process = internalMutation({
     }
     switch (progress.stage) {
       case "links":
+        if (
+          !(await ctx.db
+            .query("links")
+            .withIndex("by_userId", (queryBuilder) =>
+              queryBuilder.eq("userId", progress.userId)
+            )
+            .first())
+        ) {
+          const synchronizationState = await ctx.db
+            .query("savedLinkSynchronizationStates")
+            .withIndex("by_userId", (queryBuilder) =>
+              queryBuilder.eq("userId", progress.userId)
+            )
+            .unique()
+          if (synchronizationState) {
+            await ctx.db.delete(
+              "savedLinkSynchronizationStates",
+              synchronizationState._id
+            )
+          }
+        }
         await deleteBatch(
           ctx,
           progress,

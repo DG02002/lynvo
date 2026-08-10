@@ -12,9 +12,8 @@ import { openRealtimeSocket } from "./realtime/socket"
 
 interface RealtimeContextValue {
   status: RealtimeStatus
-  subscribeRemoteEvents: (
-    listener: (event: RemoteRealtimeEvent) => void
-  ) => () => void
+  connectionGeneration: number
+  subscribe: (listener: (message: RealtimeMessage) => void) => () => void
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(
@@ -33,16 +32,18 @@ export function RealtimeProvider({
   const [state, dispatch] = useReducer(realtimeReducer, {
     status: userId ? "connecting" : "disabled",
   })
-  const remoteEventListeners = useRef(
-    new Set<(event: RemoteRealtimeEvent) => void>()
+  const [connectionGeneration, incrementConnectionGeneration] = useReducer(
+    (generation: number) => generation + 1,
+    0
   )
-  const receiveRemoteEvent = useCallback((event: RemoteRealtimeEvent) => {
-    remoteEventListeners.current.forEach((listener) => listener(event))
+  const listeners = useRef(new Set<(message: RealtimeMessage) => void>())
+  const receiveMessage = useCallback((message: RealtimeMessage) => {
+    listeners.current.forEach((listener) => listener(message))
   }, [])
-  const subscribeRemoteEvents = useCallback(
-    (listener: (event: RemoteRealtimeEvent) => void) => {
-      remoteEventListeners.current.add(listener)
-      return () => remoteEventListeners.current.delete(listener)
+  const subscribe = useCallback(
+    (listener: (message: RealtimeMessage) => void) => {
+      listeners.current.add(listener)
+      return () => listeners.current.delete(listener)
     },
     []
   )
@@ -53,12 +54,16 @@ export function RealtimeProvider({
       return
     }
 
-    return openRealtimeSocket({ dispatch, receiveRemoteEvent })
-  }, [receiveRemoteEvent, sessionId, userId])
+    return openRealtimeSocket({
+      dispatch,
+      receiveMessage,
+      onOpen: incrementConnectionGeneration,
+    })
+  }, [receiveMessage, sessionId, userId])
 
   const value = useMemo(
-    () => ({ status: state.status, subscribeRemoteEvents }),
-    [state.status, subscribeRemoteEvents]
+    () => ({ status: state.status, connectionGeneration, subscribe }),
+    [connectionGeneration, state.status, subscribe]
   )
 
   return (
@@ -75,3 +80,5 @@ export function useRealtime() {
   }
   return context
 }
+
+export const useOptionalRealtime = () => use(RealtimeContext)

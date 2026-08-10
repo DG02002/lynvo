@@ -13,6 +13,7 @@ import { createServerLinksAdapter } from "./persistence"
 import { createSavedLinkSynchronization } from "./synchronization"
 import { createServerLink } from "./link-server"
 import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+import { useSavedLinkRealtimeSynchronization } from "./realtime-synchronization"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined
@@ -37,6 +38,7 @@ export const useLinks = () => {
     [cachedLinks?.results]
   )
   const linksQuery = useLinksQuery(userId, cachedLinks)
+  useSavedLinkRealtimeSynchronization(userId, linksQuery.data?.revision)
 
   const createLink = useCallback(
     async (item: (typeof cachedItems)[number]) =>

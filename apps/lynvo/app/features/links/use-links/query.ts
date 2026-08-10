@@ -18,6 +18,12 @@ interface LinkResult {
   updatedAt: number
 }
 
+export const savedLinksQueryKey = (
+  userId: string | undefined,
+  timeBucket?: number
+) =>
+  timeBucket === undefined ? ["links", userId] : ["links", userId, timeBucket]
+
 const serverLinkToSavedLink = (link: LinkResult): SavedLink | undefined => {
   try {
     return {
@@ -39,30 +45,26 @@ export function useLinksQuery(
   cachedLinks: LinksCache | undefined
 ) {
   const timeBucket = useDailyTimeBucket()
-  const { data: links, isPending } = useQuery({
-    queryKey: ["links", userId, timeBucket],
+  const { data: snapshot, isPending } = useQuery({
+    queryKey: savedLinksQueryKey(userId, timeBucket),
     queryFn: () => Effect.runPromise(client.links.list()),
     enabled: Boolean(userId),
   })
 
   const liveLinks = useMemo<LinksCache | undefined>(() => {
-    if (!links) {
+    if (!snapshot) {
       return undefined
     }
 
-    const version = links.reduce(
-      (latest, link) => Math.max(latest, link.updatedAt),
-      0
-    )
     return {
-      results: links.flatMap((link) => {
+      results: snapshot.results.flatMap((link) => {
         const savedLink = serverLinkToSavedLink(link)
         return savedLink ? [savedLink] : []
       }),
-      version,
-      etag: String(version),
+      revision: snapshot.revision,
+      etag: `${snapshot.revision}:${timeBucket}`,
     }
-  }, [links])
+  }, [snapshot, timeBucket])
 
   return {
     data: liveLinks ?? cachedLinks,

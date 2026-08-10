@@ -104,10 +104,10 @@ describe("useLinks", () => {
 
   it("hydrates signed-in links from cache once while waiting for Convex", () => {
     storage.setItem(
-      "lynvo:links:sync:v1:user-1",
+      "lynvo:links:sync:v2:user-1",
       JSON.stringify({
         results: [cacheEntry],
-        version: 100,
+        revision: 100,
         etag: "100",
       })
     )
@@ -128,10 +128,10 @@ describe("useLinks", () => {
 
   it("uses the same empty links snapshot as the server during hydration", () => {
     storage.setItem(
-      "lynvo:links:sync:v1:user-1",
+      "lynvo:links:sync:v2:user-1",
       JSON.stringify({
         results: [cacheEntry],
-        version: 100,
+        revision: 100,
         etag: "100",
       })
     )
@@ -153,10 +153,10 @@ describe("useLinks", () => {
 
   it("updates cached links when the Worker returns live links", async () => {
     storage.setItem(
-      "lynvo:links:sync:v1:user-1",
+      "lynvo:links:sync:v2:user-1",
       JSON.stringify({
         results: [cacheEntry],
-        version: 100,
+        revision: 100,
         etag: "100",
       })
     )
@@ -165,24 +165,27 @@ describe("useLinks", () => {
 
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(
-        JSON.stringify([
-          {
-            _id: "link-live",
-            url: "https://example.com/live",
-            title: "Live link",
-            meta: JSON.stringify(metadata("live-file")),
-            createdAt: 200,
-            updatedAt: 250,
-          },
-          {
-            _id: "link-invalid",
-            url: "https://example.com/invalid",
-            title: "Invalid link",
-            meta: "{}",
-            createdAt: 210,
-            updatedAt: 260,
-          },
-        ]),
+        JSON.stringify({
+          revision: 101,
+          results: [
+            {
+              _id: "link-live",
+              url: "https://example.com/live",
+              title: "Live link",
+              meta: JSON.stringify(metadata("live-file")),
+              createdAt: 200,
+              updatedAt: 250,
+            },
+            {
+              _id: "link-invalid",
+              url: "https://example.com/invalid",
+              title: "Invalid link",
+              meta: "{}",
+              createdAt: 210,
+              updatedAt: 260,
+            },
+          ],
+        }),
         { status: 200, headers: { "Content-Type": "application/json" } }
       )
     )
@@ -198,7 +201,7 @@ describe("useLinks", () => {
     })
     expect(result.current.links).toHaveLength(1)
     expect(setItem).toHaveBeenCalledWith(
-      "lynvo:links:sync:v1:user-1",
+      "lynvo:links:sync:v2:user-1",
       expect.stringContaining("Live link")
     )
   })
@@ -213,7 +216,7 @@ describe("useLinks", () => {
           headers: { "Content-Type": "application/json" },
         })
       }
-      return new Response(JSON.stringify([]), {
+      return new Response(JSON.stringify({ revision: 0, results: [] }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       })
@@ -256,10 +259,10 @@ describe("useLinks", () => {
 
   it("removes undefined metadata fields before sending an update", async () => {
     storage.setItem(
-      "lynvo:links:sync:v1:user-1",
+      "lynvo:links:sync:v2:user-1",
       JSON.stringify({
         results: [cacheEntry],
-        version: 100,
+        revision: 100,
         etag: "100",
       })
     )

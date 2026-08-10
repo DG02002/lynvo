@@ -107,9 +107,11 @@ export const RemoteControlProvider = ({
 
   useEffect(
     () =>
-      realtime.subscribeRemoteEvents((event) =>
-        machine.receiveRealtime(event, user?.sessionId)
-      ),
+      realtime.subscribe((message) => {
+        if (message.type === "remote.event") {
+          machine.receiveRealtime(message.payload, user?.sessionId)
+        }
+      }),
     [machine, realtime, user?.sessionId]
   )
 

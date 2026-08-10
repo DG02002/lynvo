@@ -41,7 +41,7 @@ describe("Convex function boundaries", () => {
 
     await expect(
       client.query(api.links.list, { timeBucket: LIST_TIME_BUCKET })
-    ).resolves.toEqual([])
+    ).resolves.toEqual({ revision: 0, results: [] })
   })
 
   it("isolates links by authenticated user", async () => {
@@ -76,8 +76,9 @@ describe("Convex function boundaries", () => {
       timeBucket: LIST_TIME_BUCKET,
     })
 
-    expect(links).toHaveLength(1)
-    expect(links[0]?.url).toBe("https://first.example")
+    expect(links.results).toHaveLength(1)
+    expect(links.results[0]?.url).toBe("https://first.example")
+    expect(links.revision).toBe(0)
   })
 
   it("bounds links and atomically evicts the oldest unique URL", async () => {
@@ -103,9 +104,10 @@ describe("Convex function boundaries", () => {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
 
-    expect(links).toHaveLength(LINKS_MAX_COUNT)
-    expect(links[0]?.url).toBe("https://bounded.example/new")
-    expect(links.some((link) => link.url === "https://bounded.example/0")).toBe(
+    expect(links.results).toHaveLength(LINKS_MAX_COUNT)
+    expect(links.revision).toBe(1)
+    expect(links.results[0]?.url).toBe("https://bounded.example/new")
+    expect(links.results.some((link) => link.url === "https://bounded.example/0")).toBe(
       false
     )
   })
@@ -134,11 +136,11 @@ describe("Convex function boundaries", () => {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
 
-    expect(links).toHaveLength(LINKS_MAX_COUNT)
-    expect(links.find((link) => link.url.endsWith("/50"))?.title).toBe(
+    expect(links.results).toHaveLength(LINKS_MAX_COUNT)
+    expect(links.results.find((link) => link.url.endsWith("/50"))?.title).toBe(
       "Updated"
     )
-    expect(links.some((link) => link.url.endsWith("/0"))).toBe(true)
+    expect(links.results.some((link) => link.url.endsWith("/0"))).toBe(true)
   })
 
   it("keeps eviction user-scoped and rolls back a rejected replacement", async () => {
@@ -183,9 +185,9 @@ describe("Convex function boundaries", () => {
     const afterRejection = await firstClient.query(api.links.list, {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
-    expect(afterRejection).toHaveLength(LINKS_MAX_COUNT)
+    expect(afterRejection.results).toHaveLength(LINKS_MAX_COUNT)
     expect(
-      afterRejection.some((link) => link.url === "https://eviction.example/0")
+      afterRejection.results.some((link) => link.url === "https://eviction.example/0")
     ).toBe(true)
 
     await firstClient.mutation(api.links.createOrUpdate, {
@@ -194,7 +196,7 @@ describe("Convex function boundaries", () => {
     const isolatedLinks = await secondClient.query(api.links.list, {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
-    expect(isolatedLinks.map((link) => link.url)).toEqual([
+    expect(isolatedLinks.results.map((link) => link.url)).toEqual([
       "https://isolated.example/oldest",
     ])
   })
@@ -228,6 +230,41 @@ describe("Convex function boundaries", () => {
       continued: false,
       deletedLinks: 0,
       processedUsers: 0,
+    })
+  })
+
+  it("advances revisions monotonically and coalesces pending delivery", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "revision-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+    expect(await client.query(api.links.revision, {})).toEqual({ revision: 0 })
+
+    const created = await client.mutation(api.links.createOrUpdate, {
+      url: "https://revision.example",
+    })
+    expect(created.revision).toBe(1)
+    const updated = await client.mutation(api.links.updateMeta, {
+      id: created.id,
+      meta: EMPTY_LINK_METADATA_JSON,
+    })
+    expect(updated.revision).toBe(2)
+    const deleted = await client.mutation(api.links.deleteById, {
+      id: created.id,
+    })
+    expect(deleted.revision).toBe(3)
+
+    const state = await convex.run(async (context) =>
+      await context.db
+        .query("savedLinkSynchronizationStates")
+        .withIndex("by_userId", (queryBuilder) =>
+          queryBuilder.eq("userId", user.userId)
+        )
+        .unique()
+    )
+    expect(state).toMatchObject({
+      revision: 3,
+      broadcastRevision: 0,
+      pendingBroadcast: true,
     })
   })
 })

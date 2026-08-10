@@ -2,15 +2,19 @@ import { z } from "zod"
 import { remoteCommandWireMessageSchema } from "~/lib/remote-play/wire"
 
 declare global {
-  interface RealtimeMessage {
-    type: string
-    payload?: unknown
+  interface SavedLinksChangedRealtimeMessage {
+    type: "saved-links.changed"
+    payload: { revision: number }
   }
+
+  type RealtimeMessage =
+    | RemoteCommandWireMessage
+    | SavedLinksChangedRealtimeMessage
 }
 
-export const realtimeMessageSchema = z.object({
-  type: z.string().min(1),
-  payload: z.record(z.string(), z.unknown()).optional(),
+export const savedLinksChangedRealtimeMessageSchema = z.strictObject({
+  type: z.literal("saved-links.changed"),
+  payload: z.strictObject({ revision: z.number().int().nonnegative() }),
 })
 
 export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
@@ -25,7 +29,7 @@ export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
       const remoteResult = remoteCommandWireMessageSchema.safeParse(parsed)
       return remoteResult.success ? remoteResult.data : null
     }
-    const result = realtimeMessageSchema.safeParse(parsed)
+    const result = savedLinksChangedRealtimeMessageSchema.safeParse(parsed)
     return result.success ? result.data : null
   } catch {
     return null

@@ -34,6 +34,12 @@ Long term maintainability is a core priority. If you add new functionality, firs
 - MUST: Put all magic numbers in `constants.ts` using `SCREAMING_SNAKE_CASE` with unit suffixes (`_MS`, `_PX`).
 - MUST: Use Boolean over !!.
 
+## Saved link synchronization invariants
+
+- MUST: Browser code cannot own or persist Convex access or refresh credentials.
+- MUST: Two active sessions for the same account converge through monotonic Saved link revisions, realtime invalidation hints, and HTTP snapshot recovery.
+- MUST: Every Saved link collection mutation advances the revision and records coalesced pending delivery in the same Convex transaction.
+
 ## Shadcn Components
 
 - MUST: Treat files under `apps/lynvo/app/components/ui/` as read-only generated primitives.

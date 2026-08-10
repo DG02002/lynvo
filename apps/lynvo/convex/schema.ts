@@ -121,6 +121,19 @@ export default defineSchema({
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_url", ["userId", "url"]),
 
+  savedLinkSynchronizationStates: defineTable({
+    userId: v.id("users"),
+    revision: v.number(),
+    broadcastRevision: v.number(),
+    pendingBroadcast: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_pendingBroadcast_and_updatedAt", [
+      "pendingBroadcast",
+      "updatedAt",
+    ]),
+
   workerSessionCleanupIntents: defineTable({
     workerSessionId: v.string(),
     createdAt: v.number(),

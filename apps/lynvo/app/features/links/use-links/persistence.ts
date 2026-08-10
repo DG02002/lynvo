@@ -13,7 +13,7 @@ declare global {
     getSnapshot: () => LinkViewItem[]
     subscribe: (listener: () => void) => () => void
     load: () => Promise<void>
-    reconcile: (items: LinkViewItem[], version?: number) => void
+    reconcile: (items: LinkViewItem[], revision?: number) => void
     add: (item: LinkViewItem) => Promise<LinkViewItem>
     update: (
       itemUrl: string,
@@ -93,7 +93,7 @@ export const createLinksPersistence = (
   const operations: LinksOperation[] = []
   const operationSettlements = new WeakMap<LinksOperation, Promise<void>>()
   const resolveOperationSettlements = new WeakMap<LinksOperation, () => void>()
-  let reconciliationVersion = 0
+  let reconciliationRevision = 0
   const listeners = new Set<() => void>()
 
   const applyOperation = (
@@ -219,22 +219,22 @@ export const createLinksPersistence = (
       return () => listeners.delete(listener)
     },
     load: async () => {
-      const loadVersion = reconciliationVersion
+      const loadRevision = reconciliationRevision
       const loadIdentityGeneration = identityGeneration
       const loadedItems = await adapter.list()
       if (
-        loadVersion === reconciliationVersion &&
+        loadRevision === reconciliationRevision &&
         loadIdentityGeneration === identityGeneration
       ) {
         baseItems = loadedItems
         publish()
       }
     },
-    reconcile: (nextItems, version = reconciliationVersion + 1) => {
-      if (version < reconciliationVersion) {
+    reconcile: (nextItems, revision = reconciliationRevision + 1) => {
+      if (revision < reconciliationRevision) {
         return
       }
-      reconciliationVersion = version
+      reconciliationRevision = revision
       baseItems = nextItems
       publish()
     },
@@ -327,7 +327,7 @@ export const createLinksPersistence = (
       identity = nextIdentity
       baseItems = nextItems
       operations.splice(0)
-      reconciliationVersion = 0
+      reconciliationRevision = 0
       identityGeneration += 1
       publish()
     },

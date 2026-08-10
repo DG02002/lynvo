@@ -7,6 +7,7 @@ import { ConvexService } from "../../services/ConvexService"
 import type { ConvexServiceShape } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
 import { ConvexError } from "../../errors"
 import { createAuthSessionModule } from "../../../../../workers/auth-session"
 import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
@@ -143,11 +144,22 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.mutation(
+          const result = yield* convex.mutation(
             api.users.clearLinks,
             {},
             { accessToken: user.accessToken }
           )
+          const revision = result.revision
+          if (revision !== null) {
+            const environment = yield* CloudflareEnv
+            yield* Effect.promise(() =>
+              createSavedLinkRealtimeDelivery(environment).deliver(
+                user.id,
+                revision
+              )
+            )
+          }
+          return { success: true, deletedLinks: result.deletedLinks }
         })
       )
       .handle("listSessions", () =>

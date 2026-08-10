@@ -3,7 +3,7 @@ import { parseRealtimeMessage } from "~/context/realtime/message-schema"
 import { createRemoteCommandMessage } from "~/lib/remote-play/wire"
 
 describe("parseRealtimeMessage", () => {
-  it("parses a valid message and strips unknown envelope fields", () => {
+  it("rejects unknown realtime message types", () => {
     expect(
       parseRealtimeMessage(
         JSON.stringify({
@@ -12,10 +12,7 @@ describe("parseRealtimeMessage", () => {
           ignored: true,
         })
       )
-    ).toEqual({
-      type: "notification",
-      payload: { action: "play" },
-    })
+    ).toBeNull()
   })
 
   it.each([
@@ -38,6 +35,27 @@ describe("parseRealtimeMessage", () => {
     })
 
     expect(parseRealtimeMessage(JSON.stringify(message))).toEqual(message)
+  })
+
+  it("accepts only a valid nonnegative integer Saved link revision", () => {
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({
+          type: "saved-links.changed",
+          payload: { revision: 3 },
+        })
+      )
+    ).toEqual({ type: "saved-links.changed", payload: { revision: 3 } })
+    for (const revision of [-1, 1.5, "3", null]) {
+      expect(
+        parseRealtimeMessage(
+          JSON.stringify({
+            type: "saved-links.changed",
+            payload: { revision },
+          })
+        )
+      ).toBeNull()
+    }
   })
 
   it("rejects malformed Remote Play commands", () => {

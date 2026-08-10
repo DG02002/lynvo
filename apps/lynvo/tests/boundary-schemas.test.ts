@@ -30,11 +30,21 @@ describe("browser storage boundaries", () => {
     })
   })
 
-  it("drops saved links that do not use the current cache shape", () => {
+  it("ignores v1 timestamp caches and drops invalid v2 Saved links", () => {
     localStorage.setItem(
       "lynvo:links:sync:v1:user-1",
       JSON.stringify({
         version: 2,
+        etag: "old",
+        results: [],
+      })
+    )
+    expect(readLinksCache("user-1")).toBeUndefined()
+
+    localStorage.setItem(
+      "lynvo:links:sync:v2:user-1",
+      JSON.stringify({
+        revision: 2,
         etag: "etag",
         results: [
           {
@@ -48,7 +58,7 @@ describe("browser storage boundaries", () => {
     )
 
     expect(readLinksCache("user-1")).toMatchObject({
-      version: 2,
+      revision: 2,
       etag: "etag",
       results: [],
     })
