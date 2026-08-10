@@ -1,10 +1,10 @@
-import { mutation, query } from "./_generated/server"
+import { env, mutation, query } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { v } from "convex/values"
 import { verifySessionCleanupToken } from "./authGateway"
 
 const authorizeCleanup = async (serviceToken: string) => {
-  const secret = process.env.AUTH_GATEWAY_SECRET
+  const secret = env.AUTH_GATEWAY_SECRET
   if (!secret) {
     throw new Error("Session cleanup is unavailable")
   }
