@@ -41,6 +41,66 @@ const runExtraction = <Result>(
   )
 
 describe("Extraction interface routing", () => {
+  it("prioritizes confirmed Direct Media over an assigned Plugin Domain", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 206,
+        headers: {
+          "content-type": "video/x-matroska",
+          "content-disposition": 'attachment; filename="signed-video.mkv"',
+          "content-range": "bytes 0-0/404834455",
+        },
+      })
+    )
+
+    const result = await runExtraction((service) =>
+      service.extract({
+        url: "https://drive.example/download.aspx?file=signed",
+        requestId: "direct-media-plugin-domain",
+        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+        pluginId: "bhadoo-google-drive-index",
+        userId: "user-1",
+        accessToken: "access-token",
+      })
+    )
+
+    expect(result.links).toEqual([
+      expect.objectContaining({
+        label: "signed-video.mkv",
+        mediaNodeKind: "playable",
+        rangeRequest: "supported",
+      }),
+    ])
+  })
+
+  it("prioritizes confirmed Direct Media metadata over an assigned Plugin Domain", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 200,
+        headers: {
+          "content-type": "video/mp4",
+          "content-disposition": 'attachment; filename="signed-video.mp4"',
+        },
+      })
+    )
+
+    const result = await runExtraction((service) =>
+      service.getMetadata({
+        url: "https://drive.example/download?file=signed",
+        requestId: "direct-media-metadata-plugin-domain",
+        userId: "user-1",
+        accessToken: "access-token",
+        env: environment,
+      })
+    )
+
+    expect(result).toMatchObject({
+      filename: "signed-video.mp4",
+      pluginId: "direct-link",
+      pluginName: "Direct Media",
+    })
+  })
+
   it("normalizes embedded HTTP Basic Auth before Extraction and metadata routing", async () => {
     const requestedUrls: string[] = []
     const fetchMock = vi
@@ -421,7 +481,7 @@ describe("Extraction interface routing", () => {
     fetchMock.mockRestore()
   })
 
-  it("does not use Direct Media when Lynvo route loading fails", async () => {
+  it("preserves a Lynvo route failure after an inconclusive Direct Media probe", async () => {
     const directMediaFetch = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () =>
@@ -483,7 +543,7 @@ describe("Extraction interface routing", () => {
       _tag: "ExtractionError",
       message: "TEMPORARY_FAILURE",
     })
-    expect(directMediaFetch).not.toHaveBeenCalled()
+    expect(directMediaFetch).toHaveBeenCalled()
     directMediaFetch.mockRestore()
   })
 
@@ -576,7 +636,7 @@ describe("Extraction interface routing", () => {
       message: "Daily quota reached",
     })
     expect(pluginExtractionCount).toBe(0)
-    expect(directMediaFetch).not.toHaveBeenCalled()
+    expect(directMediaFetch).toHaveBeenCalled()
     directMediaFetch.mockRestore()
   })
 
@@ -627,8 +687,11 @@ describe("Extraction interface routing", () => {
     }
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockImplementation(async () => {
-        pluginExtractionCount += 1
+      .mockImplementation(async (input, init) => {
+        const request = new Request(input, init)
+        if (request.url.endsWith("/extract")) {
+          pluginExtractionCount += 1
+        }
         return Response.json({
           plugin: {
             pluginServerId: "dev.example.protected",
@@ -754,7 +817,9 @@ describe("Extraction interface routing", () => {
             { status: 503 }
           )
         }
-        pluginExtractionCount += 1
+        if (request.url.endsWith("/extract")) {
+          pluginExtractionCount += 1
+        }
         return Response.json({
           plugin: {
             pluginServerId: "dev.example.discovery",

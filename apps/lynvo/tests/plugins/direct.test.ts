@@ -105,6 +105,14 @@ describe("direct media", () => {
     ).rejects.toThrow("supported video format")
   })
 
+  it("does not report HTML pages as Direct Media metadata", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200, "text/html"))
+
+    await expect(
+      directMedia.getMetadata("https://cdn.example.com/page")
+    ).rejects.toThrow("supported video format")
+  })
+
   it("rejects unsupported file extensions before fetching", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
 

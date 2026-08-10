@@ -89,4 +89,14 @@ describe("mapNodeToExtractedLink", () => {
 
     expect(link.badge).toBeUndefined()
   })
+
+  it("omits an absent protocol node ID from the mapped link", () => {
+    const link = mapNodeToExtractedLink({
+      kind: "playable",
+      label: "Signed media",
+      url: "https://cdn.example/download?signature=encoded",
+    })
+
+    expect(link).not.toHaveProperty("id")
+  })
 })

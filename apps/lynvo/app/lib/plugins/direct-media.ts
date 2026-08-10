@@ -47,6 +47,18 @@ const fetchRange = (
     timeoutMs,
   })
 
+const validateDirectMediaResponse = (response: Response) => {
+  if (!isSuccessfulDirectStatus(response.status)) {
+    throw new Error(`The connection failed (Status ${response.status})`)
+  }
+  const contentType = response.headers.get("content-type") || ""
+  if (!isAllowedDirectContentType(contentType)) {
+    throw new Error(
+      `This content isn’t a supported video format (${contentType})`
+    )
+  }
+}
+
 export const createDirectMediaModule = (
   transport: OutboundHttpTransport
 ): DirectMediaModule => ({
@@ -68,15 +80,7 @@ export const createDirectMediaModule = (
         url,
         DIRECT_LINK_EXTRACT_TIMEOUT_MS
       )
-      if (!isSuccessfulDirectStatus(response.status)) {
-        throw new Error(`The connection failed (Status ${response.status})`)
-      }
-      const contentType = response.headers.get("content-type") || ""
-      if (!isAllowedDirectContentType(contentType)) {
-        throw new Error(
-          `This content isn’t a supported video format (${contentType})`
-        )
-      }
+      validateDirectMediaResponse(response)
       const filename = getResponseFilename(url, response.headers)
       if (filename !== "Unknown File") {
         assertSupportedFilename(filename)
@@ -116,9 +120,7 @@ export const createDirectMediaModule = (
       url,
       DIRECT_LINK_FETCH_TIMEOUT_MS
     )
-    if (!isSuccessfulDirectStatus(response.status)) {
-      throw new Error(`Connection failed (Status ${response.status})`)
-    }
+    validateDirectMediaResponse(response)
     return {
       filename: getDirectFilename(url, response.headers),
       pluginId: "direct-link",

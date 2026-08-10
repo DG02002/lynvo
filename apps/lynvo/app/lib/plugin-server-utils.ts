@@ -17,7 +17,7 @@ const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
   if (node.kind === "group") {
     return {
       nodeKey: getNodeIdentity(node, treePath),
-      id: node.id,
+      ...(node.id ? { id: node.id } : {}),
       label: node.label,
       ...(node.size ? { size: node.size } : {}),
       ...(node.sourceName ? { sourceName: node.sourceName } : {}),
@@ -32,7 +32,7 @@ const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
   if (node.kind === "resolvable") {
     return {
       nodeKey: getNodeIdentity(node, treePath),
-      id: node.id,
+      ...(node.id ? { id: node.id } : {}),
       label: node.label,
       ...(node.size ? { size: node.size } : {}),
       ...(node.sourceName ? { sourceName: node.sourceName } : {}),
@@ -46,7 +46,7 @@ const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
   }
   return {
     nodeKey: getNodeIdentity(node, treePath),
-    id: node.id,
+    ...(node.id ? { id: node.id } : {}),
     label: node.label,
     ...(node.size ? { size: node.size } : {}),
     ...(node.sourceName ? { sourceName: node.sourceName } : {}),

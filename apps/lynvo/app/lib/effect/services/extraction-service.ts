@@ -35,12 +35,34 @@ export class ExtractionService extends Context.Service<
       const credentialVault = yield* PluginCredentialVault
       const environment = yield* CloudflareEnv
       const directMedia = createDirectMediaModule(createOutboundHttpTransport())
+      const extractDirectMedia = (targetUrl: string) =>
+        Effect.tryPromise({
+          try: () => directMedia.extract(targetUrl),
+          catch: (cause) =>
+            new ExtractionError({
+              message: cause instanceof Error ? cause.message : String(cause),
+              url: targetUrl,
+            }),
+        })
+      const getDirectMediaMetadata = (targetUrl: string) =>
+        Effect.tryPromise({
+          try: () => directMedia.getMetadata(targetUrl),
+          catch: (cause) =>
+            new ConvexError({ message: "Metadata fetch failed", cause }),
+        })
 
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
       ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
+        const directMediaAttempt =
+          options.kind === "node"
+            ? undefined
+            : yield* Effect.result(extractDirectMedia(targetUrl))
+        if (directMediaAttempt?._tag === "Success") {
+          return { links: directMediaAttempt.success }
+        }
         if (options.userId && options.accessToken) {
           const context = yield* loadAuthenticatedExtractionContext(
             convex,
@@ -100,14 +122,10 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        const links = yield* Effect.tryPromise({
-          try: () => directMedia.extract(targetUrl),
-          catch: (cause) =>
-            new ExtractionError({
-              message: cause instanceof Error ? cause.message : String(cause),
-              url: targetUrl,
-            }),
-        })
+        if (directMediaAttempt?._tag === "Failure") {
+          return yield* directMediaAttempt.failure
+        }
+        const links = yield* extractDirectMedia(targetUrl)
         return { links }
       })
 
@@ -116,6 +134,12 @@ export class ExtractionService extends Context.Service<
       ): Effect.fn.Return<MetadataResult, ValidationError | ConvexError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
+        const directMediaAttempt = yield* Effect.result(
+          getDirectMediaMetadata(targetUrl)
+        )
+        if (directMediaAttempt._tag === "Success") {
+          return directMediaAttempt.success
+        }
 
         if (options.userId && options.accessToken) {
           const context = yield* loadAuthenticatedExtractionContext(
@@ -168,11 +192,7 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        return yield* Effect.tryPromise({
-          try: () => directMedia.getMetadata(targetUrl),
-          catch: (cause) =>
-            new ConvexError({ message: "Metadata fetch failed", cause }),
-        })
+        return yield* directMediaAttempt.failure
       })
 
       return ExtractionService.of({ extract, getMetadata })
