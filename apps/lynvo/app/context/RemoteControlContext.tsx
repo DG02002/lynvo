@@ -151,6 +151,8 @@ export const RemoteControlProvider = ({
       realtime.subscribe((message) => {
         if (message.type === "remote.event") {
           machine.receiveRealtime(message.payload, user?.sessionId)
+        } else if (message.type === "remote-inbox.changed") {
+          void machine.poll().catch(console.error)
         }
       }),
     [machine, realtime, user?.sessionId]

@@ -7,11 +7,7 @@ import {
 import { HttpApiClient } from "effect/unstable/httpapi"
 import { Api } from "./Api"
 import { getCsrfToken } from "../../utils"
-
-const getIdentityMeta = (name: string) =>
-  typeof document === "undefined"
-    ? undefined
-    : document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content
+import { sessionIdentityHeaders } from "../../session-identity"
 
 export class ApiClient extends Context.Service<
   ApiClient,
@@ -23,15 +19,10 @@ export class ApiClient extends Context.Service<
       transformClient: (client) =>
         client.pipe(
           HttpClient.mapRequest((request) => {
-            let authenticatedRequest = request
-            const userId = getIdentityMeta("lynvo-user-id")
-            const sessionId = getIdentityMeta("lynvo-session-id")
-            if (userId && sessionId) {
-              authenticatedRequest = HttpClientRequest.setHeaders(request, {
-                "X-Lynvo-Expected-User-Id": userId,
-                "X-Lynvo-Expected-Session-Id": sessionId,
-              })
-            }
+            const authenticatedRequest = HttpClientRequest.setHeaders(
+              request,
+              sessionIdentityHeaders()
+            )
             if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
               return HttpClientRequest.setHeader(
                 authenticatedRequest,

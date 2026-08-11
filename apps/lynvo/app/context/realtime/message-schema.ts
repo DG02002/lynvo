@@ -12,10 +12,16 @@ declare global {
     payload: { revision: number }
   }
 
+  interface RemoteInboxChangedRealtimeMessage {
+    type: "remote-inbox.changed"
+    payload: Record<string, never>
+  }
+
   type RealtimeMessage =
     | RemoteCommandWireMessage
     | SavedLinksChangedRealtimeMessage
     | AccountSettingsChangedRealtimeMessage
+    | RemoteInboxChangedRealtimeMessage
 }
 
 export const savedLinksChangedRealtimeMessageSchema = z.strictObject({
@@ -26,6 +32,11 @@ export const savedLinksChangedRealtimeMessageSchema = z.strictObject({
 export const accountSettingsChangedRealtimeMessageSchema = z.strictObject({
   type: z.literal("account-settings.changed"),
   payload: z.strictObject({ revision: z.number().int().nonnegative() }),
+})
+
+export const remoteInboxChangedRealtimeMessageSchema = z.strictObject({
+  type: z.literal("remote-inbox.changed"),
+  payload: z.strictObject({}),
 })
 
 export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
@@ -44,6 +55,7 @@ export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
       .union([
         savedLinksChangedRealtimeMessageSchema,
         accountSettingsChangedRealtimeMessageSchema,
+        remoteInboxChangedRealtimeMessageSchema,
       ])
       .safeParse(parsed)
     return result.success ? result.data : null

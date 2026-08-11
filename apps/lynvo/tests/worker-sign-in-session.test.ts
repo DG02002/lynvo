@@ -3,6 +3,11 @@
 import { vi } from "vitest"
 
 const mutationCalls: Array<Record<string, unknown>> = []
+let currentSessionUser = {
+  id: "user-a",
+  username: "darshan",
+  sessionId: "convex-session-id",
+}
 
 const encodeTokenSegment = (value: unknown) =>
   btoa(JSON.stringify(value)).replaceAll("=", "")
@@ -32,6 +37,7 @@ vi.mock("convex/browser", () => ({
           }
         : signInResult
     setAuth = () => undefined
+    query = async () => currentSessionUser
     mutation = async (_reference: unknown, args: Record<string, unknown>) => {
       mutationCalls.push(args)
     }
@@ -95,6 +101,8 @@ describe("Worker sign-in session HTTP behavior", () => {
         headers: {
           Cookie: "__Host-lynvo-session=opaque-session-id",
           Origin: "https://lynvo.dg02002.workers.dev",
+          "X-Lynvo-Expected-User-Id": "user-a",
+          "X-Lynvo-Expected-Session-Id": "convex-session-id",
         },
       }),
       {
@@ -129,6 +137,52 @@ describe("Worker sign-in session HTTP behavior", () => {
     expect(cookie).toContain("Secure")
     expect(cookie).toContain("SameSite=Lax")
     expect(cookie).toContain("Max-Age=0")
+  })
+
+  it("does not revoke a newer session from a stale page", async () => {
+    currentSessionUser = {
+      id: "user-b",
+      username: "newer",
+      sessionId: "session-b",
+    }
+    const revokedSessionIds: string[] = []
+    const { default: worker } = await import("../workers/app")
+    const response = await worker.fetch(
+      new Request("https://lynvo.dg02002.workers.dev/api/auth/session", {
+        method: "DELETE",
+        headers: {
+          Cookie: "__Host-lynvo-session=newer-worker-session",
+          Origin: "https://lynvo.dg02002.workers.dev",
+          "X-Lynvo-Expected-User-Id": "user-a",
+          "X-Lynvo-Expected-Session-Id": "session-a",
+        },
+      }),
+      {
+        ENVIRONMENT: "production",
+        VITE_CONVEX_URL: "https://convex.example",
+        WORKER_AUTH_SESSION: {
+          getByName: (sessionId: string) => ({
+            fetch: async (_url: string, init?: RequestInit) => {
+              if (init?.method === "DELETE") {
+                revokedSessionIds.push(sessionId)
+                return new Response(null, { status: 204 })
+              }
+              return Response.json({
+                convexSessionId: "session-b",
+                accessToken: convexAccessToken,
+                refreshToken: "convex-refresh-token",
+                createdAt: 1_000,
+                expiresAt: 10_000,
+              })
+            },
+          }),
+        },
+      } as Env,
+      { waitUntil: () => undefined } as ExecutionContext
+    )
+
+    expect(response.status).toBe(409)
+    expect(revokedSessionIds).toEqual([])
   })
 
   it("does not expose a browser-callable manual refresh route", async () => {

@@ -31,6 +31,11 @@ export interface AccountSettingsRealtimePayload {
   readonly exp: number
 }
 
+export interface RemoteCommandNotificationPayload {
+  readonly purpose: "remoteCommandNotification"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 
 const base64UrlEncode = (bytes: Uint8Array): string => {
@@ -60,7 +65,8 @@ export const signAuthPreflightToken = async (
     | CredentialReadPayload
     | SessionCleanupPayload
     | SavedLinkRealtimePayload
-    | AccountSettingsRealtimePayload,
+    | AccountSettingsRealtimePayload
+    | RemoteCommandNotificationPayload,
   secret: string
 ): Promise<string> => {
   const encodedPayload = base64UrlEncode(
@@ -109,5 +115,14 @@ export const signAccountSettingsRealtimeToken = async (
 ) =>
   await signAuthPreflightToken(
     { purpose: "accountSettingsRealtime", exp: expiresAt },
+    secret
+  )
+
+export const signRemoteCommandNotificationToken = async (
+  secret: string,
+  expiresAt: number
+) =>
+  await signAuthPreflightToken(
+    { purpose: "remoteCommandNotification", exp: expiresAt },
     secret
   )

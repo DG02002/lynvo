@@ -242,10 +242,13 @@ describe("bounded lifecycle cleanup", () => {
       await context.db.insert("remoteCommands", {
         userId: target.userId,
         targetSessionId: target.sessionId,
+        targetReceiverId: "receiver",
         command: "play",
         payload: "{}",
         createdAt: now,
         expiresAt: now + DAY_MS,
+        status: "queued",
+        availableAt: now,
       })
       await context.db.insert("usageCounters", {
         ownerKey: `user:${target.userId}`,

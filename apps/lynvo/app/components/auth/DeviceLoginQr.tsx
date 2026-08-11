@@ -93,6 +93,7 @@ export function DeviceLoginQr() {
     isGenerating,
   } = state
   const codeRef = React.useRef<string | null>(null)
+  const exchangeAttemptIdRef = React.useRef<string | null>(null)
   const { data: status } = useQuery({
     queryKey: ["device-auth-status", code, pollSecret],
     queryFn: () =>
@@ -119,6 +120,7 @@ export function DeviceLoginQr() {
       const nextDeviceName = getBrowserDeviceName()
       const result = await createDeviceCode(nextDeviceName)
       codeRef.current = result.code
+      exchangeAttemptIdRef.current = crypto.randomUUID()
       dispatch({
         kind: "generated",
         code: result.code,
@@ -144,7 +146,7 @@ export function DeviceLoginQr() {
   React.useEffect(() => {
     if (
       codeRef.current &&
-      status?.status === "authorized" &&
+      (status?.status === "authorized" || status?.status === "consumed") &&
       !hasSignedInRef.current
     ) {
       hasSignedInRef.current = true
@@ -155,6 +157,7 @@ export function DeviceLoginQr() {
           code: currentCode,
           pollSecret: pollSecret ?? "",
           deviceName,
+          exchangeAttemptId: exchangeAttemptIdRef.current ?? "",
         })
         if (!result.signingIn) {
           throw new Error(
@@ -182,7 +185,7 @@ export function DeviceLoginQr() {
     phase = "loading"
   } else if (hasExpired) {
     phase = "expired"
-  } else if (status?.status === "invalid" || status?.status === "consumed") {
+  } else if (status?.status === "invalid") {
     phase = "error"
   } else if (status?.status === "authorized" || hasSignedInRef.current) {
     phase = "approved"

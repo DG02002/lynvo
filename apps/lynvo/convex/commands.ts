@@ -7,7 +7,6 @@ import {
   REMOTE_COMMAND_CLEANUP_BATCH_SIZE,
   REMOTE_COMMAND_CLAIM_LEASE_MS,
   REMOTE_COMMAND_MAX_PAYLOAD_BYTES,
-  REMOTE_COMMAND_QUERY_LIMIT,
   REMOTE_COMMAND_TTL_MS,
 } from "./constants"
 
@@ -64,6 +63,8 @@ export const enqueue = mutation({
       createdAt: now,
       expiresAt: now + REMOTE_COMMAND_TTL_MS,
       status: "queued",
+      availableAt: now,
+      notificationPending: true,
     })
   },
 })
@@ -86,22 +87,32 @@ export const claimNext = mutation({
       getAuthenticatedSession(context),
     ])
     const now = Date.now()
-    const commands = await context.db
-      .query("remoteCommands")
-      .withIndex("by_userId_targetSessionId_createdAt", (queryBuilder) =>
-        queryBuilder.eq("userId", userId).eq("targetSessionId", sessionId)
-      )
-      .order("asc")
-      .take(REMOTE_COMMAND_QUERY_LIMIT)
-    const command = commands.find(
-      (candidate) =>
-        candidate.targetReceiverId === arguments_.receiverId &&
-        candidate.expiresAt > now &&
-        (candidate.status === "queued" ||
-          (candidate.status === "claimed" &&
-            candidate.claimExpiresAt !== undefined &&
-            candidate.claimExpiresAt <= now))
-    )
+    const findAvailableCommand = async (status: "queued" | "claimed") =>
+      await context.db
+        .query("remoteCommands")
+        .withIndex("by_claim_availability", (queryBuilder) =>
+          queryBuilder
+            .eq("userId", userId)
+            .eq("targetSessionId", sessionId)
+            .eq("targetReceiverId", arguments_.receiverId)
+            .eq("status", status)
+            .lte("availableAt", now)
+        )
+        .order("asc")
+        .filter((queryBuilder) =>
+          queryBuilder.gt(queryBuilder.field("expiresAt"), now)
+        )
+        .first()
+    const [queuedCommand, reclaimableCommand] = await Promise.all([
+      findAvailableCommand("queued"),
+      findAvailableCommand("claimed"),
+    ])
+    const command =
+      queuedCommand && reclaimableCommand
+        ? queuedCommand.createdAt <= reclaimableCommand.createdAt
+          ? queuedCommand
+          : reclaimableCommand
+        : (queuedCommand ?? reclaimableCommand)
     if (!command) {
       return null
     }
@@ -110,6 +121,7 @@ export const claimNext = mutation({
       status: "claimed",
       claimToken,
       claimExpiresAt: now + REMOTE_COMMAND_CLAIM_LEASE_MS,
+      availableAt: now + REMOTE_COMMAND_CLAIM_LEASE_MS,
     })
     return {
       id: command._id,
@@ -158,6 +170,7 @@ export const reportResult = mutation({
       status: arguments_.result,
       resultMessage: arguments_.message,
       claimExpiresAt: undefined,
+      availableAt: undefined,
     })
     return { success: true }
   },

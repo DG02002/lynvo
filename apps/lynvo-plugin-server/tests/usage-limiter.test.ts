@@ -2,6 +2,8 @@ import { env, runInDurableObject } from "cloudflare:test"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
+  USAGE_RESERVATION_LEASE_MS,
+  USAGE_RESERVATION_SETTLEMENT_GRACE_MS,
   USAGE_LIMITER_NAME,
 } from "../src/constants"
 import type { LynvoPluginServerUsageLimiter } from "../src/usage-limiter"
@@ -180,7 +182,7 @@ describe("usage limiter", () => {
     const timestampMs = Date.UTC(2026, 6, 19)
     vi.setSystemTime(timestampMs)
     await requestAt("/reserve", timestampMs, { method: "POST" })
-    vi.setSystemTime(timestampMs + 60_000)
+    vi.setSystemTime(timestampMs + USAGE_RESERVATION_LEASE_MS)
     await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
       getStub(),
       async (instance) => {
@@ -188,10 +190,35 @@ describe("usage limiter", () => {
       }
     )
 
-    const usageResponse = await requestAt("/usage", timestampMs + 60_000)
+    const usageResponse = await requestAt(
+      "/usage",
+      timestampMs + USAGE_RESERVATION_LEASE_MS
+    )
     const usage = await usageResponse.json<{
       metrics: Array<{ used: number }>
     }>()
-    expect(usage.metrics[0]?.used).toBe(0)
+    expect(usage.metrics[0]?.used).toBe(1)
+
+    vi.setSystemTime(
+      timestampMs +
+        USAGE_RESERVATION_LEASE_MS +
+        USAGE_RESERVATION_SETTLEMENT_GRACE_MS
+    )
+    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
+      getStub(),
+      async (instance) => {
+        await instance.alarm()
+      }
+    )
+    const reclaimedResponse = await requestAt(
+      "/usage",
+      timestampMs +
+        USAGE_RESERVATION_LEASE_MS +
+        USAGE_RESERVATION_SETTLEMENT_GRACE_MS
+    )
+    const reclaimed = await reclaimedResponse.json<{
+      metrics: Array<{ used: number }>
+    }>()
+    expect(reclaimed.metrics[0]?.used).toBe(0)
   })
 })

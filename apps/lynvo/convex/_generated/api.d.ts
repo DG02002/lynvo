@@ -29,6 +29,7 @@ import type * as passwordCrypto from "../passwordCrypto.js";
 import type * as pluginDomainLifecycle from "../pluginDomainLifecycle.js";
 import type * as pluginDomains from "../pluginDomains.js";
 import type * as realtimeSessionRevocations from "../realtimeSessionRevocations.js";
+import type * as remoteCommandNotifications from "../remoteCommandNotifications.js";
 import type * as savedLinkRealtime from "../savedLinkRealtime.js";
 import type * as savedLinkRevisions from "../savedLinkRevisions.js";
 import type * as sessionCleanup from "../sessionCleanup.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   pluginDomainLifecycle: typeof pluginDomainLifecycle;
   pluginDomains: typeof pluginDomains;
   realtimeSessionRevocations: typeof realtimeSessionRevocations;
+  remoteCommandNotifications: typeof remoteCommandNotifications;
   savedLinkRealtime: typeof savedLinkRealtime;
   savedLinkRevisions: typeof savedLinkRevisions;
   sessionCleanup: typeof sessionCleanup;

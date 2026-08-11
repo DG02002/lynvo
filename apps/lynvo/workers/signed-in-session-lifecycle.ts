@@ -2,6 +2,7 @@ import type { AuthSessionModule } from "./auth-session"
 import type { SessionCleanupModule } from "./session-cleanup"
 
 export interface EstablishSignedInSessionInput {
+  readonly workerSessionId?: string
   readonly convexSessionId: string
   readonly accessToken: string
   readonly refreshToken: string
@@ -76,7 +77,7 @@ export const createSignedInSessionLifecycle = (
   cleanup?: SessionCleanupModule
 ): SignedInSessionLifecycle => ({
   establish: async (input) => {
-    const workerSessionId = crypto.randomUUID()
+    const workerSessionId = input.workerSessionId ?? crypto.randomUUID()
     const session = await authSession.create({
       sessionId: workerSessionId,
       convexSessionId: input.convexSessionId,

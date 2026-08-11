@@ -296,6 +296,8 @@ export default defineSchema({
       v.literal("applied"),
       v.literal("failed")
     ),
+    availableAt: v.optional(v.number()),
+    notificationPending: v.optional(v.boolean()),
     claimToken: v.optional(v.string()),
     claimExpiresAt: v.optional(v.number()),
     resultMessage: v.optional(v.string()),
@@ -303,6 +305,18 @@ export default defineSchema({
     .index("by_userId_targetSessionId_createdAt", [
       "userId",
       "targetSessionId",
+      "createdAt",
+    ])
+    .index("by_claim_availability", [
+      "userId",
+      "targetSessionId",
+      "targetReceiverId",
+      "status",
+      "availableAt",
+      "createdAt",
+    ])
+    .index("by_notificationPending_createdAt", [
+      "notificationPending",
       "createdAt",
     ])
     .index("by_expiresAt", ["expiresAt"]),

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type { RemoteSession } from "./types"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
+import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 
 declare global {
   interface RemoteSessionContract {
@@ -16,16 +17,7 @@ declare global {
 export const loadRemoteSessions = async (
   listSessions: () => Promise<readonly RemoteSessionContract[]> = async () => {
     const url = new URL("/api/remote/receivers", window.location.href)
-    const userId = document.querySelector<HTMLMetaElement>(
-      'meta[name="lynvo-user-id"]'
-    )?.content
-    const sessionId = document.querySelector<HTMLMetaElement>(
-      'meta[name="lynvo-session-id"]'
-    )?.content
-    if (userId && sessionId) {
-      url.searchParams.set("expectedUserId", userId)
-      url.searchParams.set("expectedSessionId", sessionId)
-    }
+    bindSessionIdentityToUrl(url)
     const response = await fetch(url, {
       credentials: "same-origin",
       cache: "no-store",

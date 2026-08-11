@@ -197,6 +197,42 @@ describe("authenticated remote commands", () => {
     expect(command?.createdAt).toBe(0)
   })
 
+  it("claims eligible work behind more than one hundred terminal rows", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "eligible-index")
+    await convex.run(async (context) => {
+      for (let commandIndex = 0; commandIndex < 101; commandIndex += 1) {
+        await context.db.insert("remoteCommands", {
+          userId: user.userId,
+          targetSessionId: user.sessionId,
+          targetReceiverId: "receiver",
+          command: "play",
+          payload: "{}",
+          createdAt: commandIndex,
+          expiresAt: Date.now() + REMOTE_COMMAND_TTL_MS,
+          status: "applied",
+        })
+      }
+    })
+    const authenticatedClient = asAuthenticatedUser(
+      convex,
+      user.userId,
+      user.sessionId
+    )
+    const commandId = await authenticatedClient.mutation(api.commands.enqueue, {
+      targetSessionId: user.sessionId,
+      targetReceiverId: "receiver",
+      command: "play",
+      payload: "deliverable",
+    })
+
+    await expect(
+      authenticatedClient.mutation(api.commands.claimNext, {
+        receiverId: "receiver",
+      })
+    ).resolves.toMatchObject({ id: commandId, payload: "deliverable" })
+  })
+
   it("rejects oversized payloads and unknown command names", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "validation")

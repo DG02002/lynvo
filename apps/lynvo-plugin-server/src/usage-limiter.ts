@@ -3,6 +3,7 @@ import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   MILLISECONDS_PER_DAY,
   USAGE_RESERVATION_LEASE_MS,
+  USAGE_RESERVATION_SETTLEMENT_GRACE_MS,
   USAGE_LIMITER_NAME,
 } from "./constants"
 
@@ -69,7 +70,7 @@ export class LynvoPluginServerUsageLimiter {
       .toArray()[0]
     const pendingRow = this.state.storage.sql
       .exec<UsagePendingCountRow>(
-        "SELECT COUNT(*) AS pending FROM usage_reservations WHERE period_key = ? AND status = 'pending'",
+        "SELECT COUNT(*) AS pending FROM usage_reservations WHERE period_key = ? AND status IN ('pending', 'expired')",
         periodKey
       )
       .toArray()[0]
@@ -102,7 +103,10 @@ export class LynvoPluginServerUsageLimiter {
           reservationId
         )
         .toArray()[0]
-      if (!reservation || reservation.status !== "pending") {
+      if (
+        !reservation ||
+        (reservation.status !== "pending" && reservation.status !== "expired")
+      ) {
         return
       }
       if (succeeded) {
@@ -112,7 +116,7 @@ export class LynvoPluginServerUsageLimiter {
         )
       }
       this.state.storage.sql.exec(
-        "UPDATE usage_reservations SET status = ? WHERE reservation_id = ? AND status = 'pending'",
+        "UPDATE usage_reservations SET status = ? WHERE reservation_id = ? AND status IN ('pending', 'expired')",
         succeeded ? "succeeded" : "failed",
         reservationId
       )
@@ -122,17 +126,24 @@ export class LynvoPluginServerUsageLimiter {
   private scheduleNextAlarm = async (): Promise<void> => {
     const next = this.state.storage.sql
       .exec<UsageReservationRow>(
-        "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE status = 'pending' ORDER BY expires_at ASC LIMIT 1"
+        "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE status IN ('pending', 'expired') ORDER BY expires_at ASC LIMIT 1"
       )
       .toArray()[0]
     if (next) {
-      await this.state.storage.setAlarm(next.expires_at)
+      await this.state.storage.setAlarm(
+        Math.max(next.expires_at, Date.now() + USAGE_RESERVATION_LEASE_MS)
+      )
     }
   }
 
   async alarm(): Promise<void> {
     this.state.storage.sql.exec(
-      "DELETE FROM usage_reservations WHERE expires_at <= ?",
+      "UPDATE usage_reservations SET status = 'expired', expires_at = expires_at + ? WHERE status = 'pending' AND expires_at <= ?",
+      USAGE_RESERVATION_SETTLEMENT_GRACE_MS,
+      Date.now()
+    )
+    this.state.storage.sql.exec(
+      "DELETE FROM usage_reservations WHERE status = 'expired' AND expires_at <= ?",
       Date.now()
     )
     await this.scheduleNextAlarm()

@@ -43,6 +43,7 @@ import { createSessionCleanupModule } from "./session-cleanup"
 import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
 import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
 import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
+import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 export { AuthRateLimiter } from "./auth-rate-limiter"
@@ -325,6 +326,25 @@ app.delete("/api/auth/session", async (context) => {
   }
   const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
   const authenticatedSession = await getSession(context.req.raw, context.env)
+  if (authenticatedSession.kind === "unavailable") {
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Logout is temporarily unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  if (
+    authenticatedSession.user &&
+    (context.req.header("X-Lynvo-Expected-User-Id") !==
+      authenticatedSession.user.id ||
+      context.req.header("X-Lynvo-Expected-Session-Id") !==
+        authenticatedSession.user.sid)
+  ) {
+    return context.text("Session identity changed", 409)
+  }
   const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   const sessionResult = await createSignedInSessionLifecycle(
     authSession
@@ -346,10 +366,7 @@ app.delete("/api/auth/session", async (context) => {
       503
     )
   }
-  if (
-    authenticatedSession.kind !== "unavailable" &&
-    authenticatedSession.user
-  ) {
+  if (authenticatedSession.user) {
     await createDurableRealtimeSessionRevocation(context.env).deliver({
       userId: authenticatedSession.user.id,
       sessionId: authenticatedSession.user.sid,
@@ -637,6 +654,25 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       this.broadcast(message)
       return Response.json({ success: true })
     }
+    if (pathname.endsWith("/notify-inbox")) {
+      const input: unknown = await request.json()
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        !("receiverId" in input) ||
+        typeof input.receiverId !== "string"
+      ) {
+        return new Response("Invalid receiver", { status: 400 })
+      }
+      const serialized = JSON.stringify({
+        type: "remote-inbox.changed",
+        payload: {},
+      })
+      for (const socket of this.ctx.getWebSockets(input.receiverId)) {
+        socket.send(serialized)
+      }
+      return Response.json({ success: true })
+    }
     if (pathname.endsWith("/revoke-session")) {
       const input: unknown = await request.json()
       if (
@@ -809,17 +845,20 @@ export default {
       savedLinkResult,
       realtimeRevocationResult,
       accountSettingsResult,
+      remoteCommandNotificationResult,
     ] = await Promise.all([
       createSessionCleanupModule(env).drain(),
       createSavedLinkRealtimeDelivery(env).drain(),
       createDurableRealtimeSessionRevocation(env).drain(),
       createAccountSettingsRealtimeDelivery(env).drain(),
+      createRemoteCommandNotificationDelivery(env).drain(),
     ])
     if (
       sessionCleanupResult.kind === "unavailable" ||
       savedLinkResult.kind === "unavailable" ||
       realtimeRevocationResult.kind === "unavailable" ||
-      accountSettingsResult.kind === "unavailable"
+      accountSettingsResult.kind === "unavailable" ||
+      remoteCommandNotificationResult.kind === "unavailable"
     ) {
       throw new Error("Worker Auth Session cleanup is unavailable")
     }

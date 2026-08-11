@@ -31,6 +31,11 @@ export interface AccountSettingsRealtimePayload {
   readonly exp: number
 }
 
+export interface RemoteCommandNotificationPayload {
+  readonly purpose: "remoteCommandNotification"
+  readonly exp: number
+}
+
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -200,6 +205,25 @@ export const verifyAccountSettingsRealtimeToken = async (
     payload.exp < Date.now()
   ) {
     throw new Error("Expired account settings realtime token")
+  }
+  return { purpose: payload.purpose, exp: payload.exp }
+}
+
+export const verifyRemoteCommandNotificationToken = async (
+  token: string,
+  secret: string
+): Promise<RemoteCommandNotificationPayload> => {
+  const payload = await verifyGatewayToken(token, secret)
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("purpose" in payload) ||
+    !("exp" in payload) ||
+    payload.purpose !== "remoteCommandNotification" ||
+    typeof payload.exp !== "number" ||
+    payload.exp < Date.now()
+  ) {
+    throw new Error("Expired remote command notification token")
   }
   return { purpose: payload.purpose, exp: payload.exp }
 }

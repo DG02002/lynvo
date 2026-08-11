@@ -46,6 +46,7 @@ declare global {
     itemId?: string
     identityGeneration: number
     metadataOperation?: LinkMetadataOperation
+    replayUpdate?: (item: LinkViewItem) => LinkViewItem | undefined
   }
 
   interface LinkMetadataOperation {
@@ -131,7 +132,9 @@ export const createLinksPersistence = (
     if (operation.kind === "update" && operation.item) {
       const updatedItem = operation.item
       return items.map((currentItem) =>
-        currentItem.url === operation.itemUrl ? updatedItem : currentItem
+        currentItem.url === operation.itemUrl
+          ? (operation.replayUpdate?.(currentItem) ?? updatedItem)
+          : currentItem
       )
     }
     if (operation.kind === "delete") {
@@ -292,6 +295,7 @@ export const createLinksPersistence = (
                   currentItem.metadata.extraction.extractedLinks,
               }
             : metadataOperation,
+        replayUpdate: metadataOperation ? updateItem : undefined,
       })
       const mutationAdapter = adapter
       const priorAdd = findPriorPendingAdd(itemUrl)

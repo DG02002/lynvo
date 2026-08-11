@@ -209,6 +209,10 @@ export const claimAuthorizedCode = internalMutation({
       !record ||
       (record.status !== "authorized" &&
         !(
+          record.status === "consumed" &&
+          record.exchangeAttemptId === arguments_.attemptId
+        ) &&
+        !(
           record.status === "exchanging" &&
           record.exchangeLeaseExpiresAt !== undefined &&
           record.exchangeLeaseExpiresAt <= arguments_.now

@@ -42,6 +42,29 @@ export const reserveAccountCapacity = async (ctx: MutationCtx) => {
   })
 }
 
+export const synchronizeAccountCapacityAfterCreation = async (
+  ctx: MutationCtx
+) => {
+  const capacity = await getCapacity(ctx)
+  if (capacity) {
+    await reserveAccountCapacity(ctx)
+    return
+  }
+  const existingAccounts = await ctx.db
+    .query("users")
+    .take(MAX_REGISTERED_ACCOUNTS + 1)
+  if (existingAccounts.length > MAX_REGISTERED_ACCOUNTS) {
+    throw new Error(
+      "Registration is temporarily closed because Lynvo has reached its account capacity."
+    )
+  }
+  await ctx.db.insert("accountCapacity", {
+    key: CAPACITY_KEY,
+    registeredAccounts: existingAccounts.length,
+    updatedAt: Date.now(),
+  })
+}
+
 export const releaseAccountCapacity = async (ctx: MutationCtx) => {
   const capacity = await getCapacity(ctx)
   if (!capacity) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import type { QueryClient } from "@tanstack/react-query"
+import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 
 interface IdentitySynchronizerProps {
   user: { id: string; sessionId?: string } | null
@@ -13,16 +14,30 @@ export const IdentitySynchronizer = ({
   children,
 }: IdentitySynchronizerProps) => {
   const isReloading = useRef(false)
+  const validationGeneration = useRef(0)
+  const validationRequest = useRef<Promise<void> | null>(null)
   const validateIdentity = useCallback(() => {
-    if (isReloading.current) {
+    if (isReloading.current || validationRequest.current) {
       return
     }
-    void fetch("/api/auth/session/status", {
+    const generation = validationGeneration.current
+    const identity =
+      user?.id && user.sessionId
+        ? { userId: user.id, sessionId: user.sessionId }
+        : undefined
+    const url = bindSessionIdentityToUrl(
+      new URL("/api/auth/session/status", window.location.href),
+      identity
+    )
+    const request = fetch(url, {
       credentials: "same-origin",
       cache: "no-store",
     })
       .then(async (response) => {
-        if (response.status >= 500) {
+        if (
+          response.status >= 500 ||
+          generation !== validationGeneration.current
+        ) {
           return
         }
         const payload: unknown = await response.json().catch(() => null)
@@ -50,9 +65,16 @@ export const IdentitySynchronizer = ({
         window.location.reload()
       })
       .catch(() => undefined)
+      .finally(() => {
+        if (validationRequest.current === request) {
+          validationRequest.current = null
+        }
+      })
+    validationRequest.current = request
   }, [queryClient, user])
 
   useEffect(() => {
+    validationGeneration.current += 1
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
         validateIdentity()

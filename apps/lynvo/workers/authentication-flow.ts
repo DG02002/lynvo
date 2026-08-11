@@ -112,14 +112,10 @@ export const createWorkerAuthenticationFlow = (
   signIn: async (input) => {
     const client = new ConvexHttpClient(environment.VITE_CONVEX_URL)
     const exchangeAttemptId =
-      input.params.flow === "device" ? crypto.randomUUID() : undefined
-    const signInInput = exchangeAttemptId
-      ? {
-          ...input,
-          params: { ...input.params, exchangeAttemptId },
-        }
-      : input
-    const result = await client.action(api.auth.signIn, signInInput)
+      input.params.flow === "device"
+        ? input.params.exchangeAttemptId
+        : undefined
+    const result = await client.action(api.auth.signIn, input)
     const tokens = readTokens(result)
     if (!tokens) {
       return {
@@ -158,6 +154,7 @@ export const createWorkerAuthenticationFlow = (
       }
     }
     const session = await lifecycle.establish({
+      workerSessionId: exchangeAttemptId,
       convexSessionId,
       accessToken: tokens.token,
       refreshToken: tokens.refreshToken,

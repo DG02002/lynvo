@@ -1,11 +1,24 @@
 // @vitest-environment edge-runtime
 
-import { reserveAccountCapacity } from "../convex/accountCapacity"
+import {
+  reserveAccountCapacity,
+  synchronizeAccountCapacityAfterCreation,
+} from "../convex/accountCapacity"
 import { internal } from "../convex/_generated/api"
 import { MAX_REGISTERED_ACCOUNTS } from "../convex/constants"
 import { createConvexTest, insertTestUser } from "./convex-test-harness"
 
 describe("account capacity", () => {
+  it("initializes the post-create count to the exact user count", async () => {
+    const convex = createConvexTest()
+    await insertTestUser(convex, "first-created")
+    await convex.run(synchronizeAccountCapacityAfterCreation)
+
+    const capacity = await convex.run(async (context) =>
+      context.db.query("accountCapacity").unique()
+    )
+    expect(capacity?.registeredAccounts).toBe(1)
+  })
   it("initializes from existing accounts and reserves the new account slot", async () => {
     const convex = createConvexTest()
     await insertTestUser(convex, "existing-first")

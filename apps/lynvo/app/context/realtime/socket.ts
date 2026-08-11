@@ -3,6 +3,7 @@ import { parseRealtimeMessage } from "./message-schema"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
+import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
@@ -21,17 +22,9 @@ const closeSocket = (socket: WebSocket) => {
 }
 
 const websocketUrl = () => {
-  const url = new URL("/api/realtime", window.location.href)
-  const userId = document.querySelector<HTMLMetaElement>(
-    'meta[name="lynvo-user-id"]'
-  )?.content
-  const sessionId = document.querySelector<HTMLMetaElement>(
-    'meta[name="lynvo-session-id"]'
-  )?.content
-  if (userId && sessionId) {
-    url.searchParams.set("expectedUserId", userId)
-    url.searchParams.set("expectedSessionId", sessionId)
-  }
+  const url = bindSessionIdentityToUrl(
+    new URL("/api/realtime", window.location.href)
+  )
   const receiverId = getRemoteReceiverId()
   if (receiverId) {
     url.searchParams.set("receiverId", receiverId)

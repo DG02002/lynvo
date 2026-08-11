@@ -11,6 +11,7 @@ import {
   parseRemoteTargetId,
 } from "../../../remote-target"
 import { ConvexError } from "../../errors"
+import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -58,7 +59,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             new ConvexError({ message: "Remote receiver is offline" })
           )
         }
-        yield* convex.mutation(
+        const commandId = yield* convex.mutation(
           api.commands.enqueue,
           {
             targetSessionId: target.sessionId,
@@ -67,6 +68,13 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             payload: commandPayload,
           },
           { accessToken: user.accessToken }
+        )
+        yield* Effect.promise(() =>
+          createRemoteCommandNotificationDelivery(environment).deliver({
+            commandId,
+            userId: user.id,
+            receiverId: target.receiverId,
+          })
         )
         return { success: true }
       })

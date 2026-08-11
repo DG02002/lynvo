@@ -183,6 +183,28 @@ describe("Links optimistic state", () => {
     ])
   })
 
+  it("replays a completed semantic update over a newer reconciliation", async () => {
+    const updateResult = deferred<LinkViewItem>()
+    const original = item("https://example.com/semantic", "semantic")
+    const persistence = createLinksPersistence(
+      createAdapter({ update: async () => await updateResult.promise }),
+      [original]
+    )
+    const pendingUpdate = persistence.update(
+      original.url,
+      (currentItem) => ({ ...currentItem, timestamp: 2 }),
+      { kind: "markOpened", linkUrl: original.url }
+    )
+    const reconciled = { ...original, title: "Authoritative", timestamp: 1 }
+    persistence.reconcile([reconciled], 2)
+    updateResult.resolve({ ...original, timestamp: 2 })
+    await pendingUpdate
+
+    expect(persistence.getSnapshot()).toEqual([
+      { ...reconciled, timestamp: 2 },
+    ])
+  })
+
   it("resolves same-item updates and deletion in operation order", async () => {
     const original = item("https://example.com/same", "same")
     const firstUpdate = deferred<LinkViewItem>()

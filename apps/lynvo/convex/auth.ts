@@ -13,7 +13,7 @@ import {
 } from "../app/lib/auth-policy"
 import { verifyAuthPreflightToken } from "./authGateway"
 import { hashPasswordSecret, verifyPasswordSecret } from "./passwordCrypto"
-import { reserveAccountCapacity } from "./accountCapacity"
+import { synchronizeAccountCapacityAfterCreation } from "./accountCapacity"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
   SESSION_TOTAL_DURATION_MS,
@@ -164,7 +164,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   callbacks: {
     afterUserCreatedOrUpdated: async (ctx, { existingUserId }) => {
       if (existingUserId === null) {
-        await reserveAccountCapacity(ctx)
+        await synchronizeAccountCapacityAfterCreation(ctx)
       }
     },
   },
