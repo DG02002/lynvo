@@ -11,7 +11,10 @@ import {
   DEVICE_CODE_CLEANUP_BATCH_SIZE,
   DEVICE_CODE_EXCHANGE_LEASE_MS,
   DEVICE_CODE_TTL_MS,
+  SESSION_TOTAL_DURATION_MS,
 } from "./constants"
+import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
+import { revokeUserSession } from "./accountLifecycle"
 
 declare const process: {
   env: {
@@ -205,6 +208,9 @@ export const claimAuthorizedCode = internalMutation({
         queryBuilder.eq("code", arguments_.code)
       )
       .unique()
+    const isSameActiveAttempt =
+      record?.status === "exchanging" &&
+      record.exchangeAttemptId === arguments_.attemptId
     if (
       !record ||
       (record.status !== "authorized" &&
@@ -214,8 +220,9 @@ export const claimAuthorizedCode = internalMutation({
         ) &&
         !(
           record.status === "exchanging" &&
-          record.exchangeLeaseExpiresAt !== undefined &&
-          record.exchangeLeaseExpiresAt <= arguments_.now
+          (isSameActiveAttempt ||
+            (record.exchangeLeaseExpiresAt !== undefined &&
+              record.exchangeLeaseExpiresAt <= arguments_.now))
         )) ||
       !record.userId ||
       arguments_.now >= record.expiresAt ||
@@ -224,12 +231,65 @@ export const claimAuthorizedCode = internalMutation({
     ) {
       throw new Error("Approve this code on the signed-in device")
     }
+    let sessionId = record.exchangeSessionId
+    if (isSameActiveAttempt && sessionId) {
+      const existingSessionId = sessionId
+      const session = await context.db.get("authSessions", existingSessionId)
+      if (
+        !session ||
+        session.userId !== record.userId ||
+        session.deviceExchangeAttemptId !== arguments_.attemptId ||
+        session.workerSessionId
+      ) {
+        throw new Error("Device code exchange session is invalid")
+      }
+      const refreshTokens = await context.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (queryBuilder) =>
+          queryBuilder.eq("sessionId", existingSessionId)
+        )
+        .collect()
+      await Promise.all(
+        refreshTokens.map((refreshToken) =>
+          context.db.delete("authRefreshTokens", refreshToken._id)
+        )
+      )
+    } else {
+      if (
+        record.status === "exchanging" &&
+        record.exchangeAttemptId &&
+        record.exchangeSessionId
+      ) {
+        const supersededSession = await context.db.get(
+          "authSessions",
+          record.exchangeSessionId
+        )
+        if (
+          supersededSession?.userId === record.userId &&
+          supersededSession.deviceExchangeAttemptId === record.exchangeAttemptId
+        ) {
+          await enqueueWorkerSessionCleanup(context, [record.exchangeAttemptId])
+          await revokeUserSession(
+            context,
+            record.userId,
+            null,
+            supersededSession._id
+          )
+        }
+      }
+      sessionId = await context.db.insert("authSessions", {
+        userId: record.userId,
+        expirationTime: arguments_.now + SESSION_TOTAL_DURATION_MS,
+        deviceExchangeAttemptId: arguments_.attemptId,
+      })
+    }
     await context.db.patch("deviceCodes", record._id, {
       status: "exchanging",
       exchangeAttemptId: arguments_.attemptId,
       exchangeLeaseExpiresAt: arguments_.now + DEVICE_CODE_EXCHANGE_LEASE_MS,
+      exchangeSessionId: sessionId,
     })
-    return { userId: record.userId, deviceName: record.deviceName }
+    return { userId: record.userId, deviceName: record.deviceName, sessionId }
   },
 })
 
@@ -255,6 +315,7 @@ export const finalizeExchange = mutation({
       !currentSessionId ||
       record.userId !== userId ||
       currentSessionId !== arguments_.sessionId ||
+      record.exchangeSessionId !== currentSessionId ||
       record.pollSecretDigest !==
         (await digestPollSecret(arguments_.pollSecret)) ||
       record.exchangeAttemptId !== arguments_.attemptId
@@ -311,6 +372,7 @@ export const recoverExchange = query({
       !currentSessionId ||
       !session ||
       record.userId !== userId ||
+      record.exchangeSessionId !== currentSessionId ||
       record.pollSecretDigest !==
         (await digestPollSecret(arguments_.pollSecret)) ||
       session.userId !== userId
@@ -338,7 +400,7 @@ export const recoverExchange = query({
   },
 })
 
-export const releaseExchange = mutation({
+export const abortDeviceExchange = mutation({
   returns: v.null(),
   args: {
     code: v.string(),
@@ -348,28 +410,44 @@ export const releaseExchange = mutation({
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedWritableUserId(context)
     const currentSessionId = await getAuthSessionId(context)
-    const record = await context.db
-      .query("deviceCodes")
-      .withIndex("by_code", (queryBuilder) =>
-        queryBuilder.eq("code", arguments_.code)
-      )
-      .unique()
+    const sessionId = context.db.normalizeId(
+      "authSessions",
+      arguments_.sessionId
+    )
+    if (!currentSessionId || !sessionId || currentSessionId !== sessionId) {
+      throw new Error("Device code exchange session is invalid")
+    }
+    const [record, session] = await Promise.all([
+      context.db
+        .query("deviceCodes")
+        .withIndex("by_code", (queryBuilder) =>
+          queryBuilder.eq("code", arguments_.code)
+        )
+        .unique(),
+      context.db.get("authSessions", sessionId),
+    ])
+    if (
+      !session ||
+      session.userId !== userId ||
+      session.deviceExchangeAttemptId !== arguments_.attemptId
+    ) {
+      throw new Error("Device code exchange session is invalid")
+    }
     if (
       record?.userId === userId &&
-      currentSessionId !== null &&
-      currentSessionId === arguments_.sessionId &&
       record.exchangeAttemptId === arguments_.attemptId &&
-      (record.status === "exchanging" ||
-        (record.status === "consumed" &&
-          record.consumedSessionId === currentSessionId))
+      record.exchangeSessionId === sessionId
     ) {
       await context.db.patch("deviceCodes", record._id, {
         status: "authorized",
         exchangeAttemptId: undefined,
         exchangeLeaseExpiresAt: undefined,
+        exchangeSessionId: undefined,
         consumedSessionId: undefined,
       })
     }
+    await enqueueWorkerSessionCleanup(context, [arguments_.attemptId])
+    await revokeUserSession(context, userId, null, sessionId)
     return null
   },
 })
@@ -383,9 +461,28 @@ export const cleanupExpiredCodes = internalMutation({
         queryBuilder.lt("expiresAt", Date.now())
       )
       .take(DEVICE_CODE_CLEANUP_BATCH_SIZE)
-    await Promise.all(
-      expiredCodes.map((record) => context.db.delete("deviceCodes", record._id))
-    )
+    for (const record of expiredCodes) {
+      if (record.status !== "consumed" && record.exchangeSessionId) {
+        const session = await context.db.get(
+          "authSessions",
+          record.exchangeSessionId
+        )
+        if (
+          session &&
+          session.userId === record.userId &&
+          session.deviceExchangeAttemptId === record.exchangeAttemptId &&
+          !session.workerSessionId
+        ) {
+          if (record.exchangeAttemptId) {
+            await enqueueWorkerSessionCleanup(context, [
+              record.exchangeAttemptId,
+            ])
+          }
+          await revokeUserSession(context, session.userId, null, session._id)
+        }
+      }
+      await context.db.delete("deviceCodes", record._id)
+    }
     if (expiredCodes.length === DEVICE_CODE_CLEANUP_BATCH_SIZE) {
       await context.scheduler.runAfter(
         0,

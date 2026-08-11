@@ -3,6 +3,7 @@
 import { api, internal } from "../convex/_generated/api"
 import {
   DEVICE_CODE_CLEANUP_BATCH_SIZE,
+  DEVICE_CODE_EXCHANGE_LEASE_MS,
   DEVICE_CODE_TTL_MS,
 } from "../convex/constants"
 import { signAuthPreflightToken } from "../app/lib/auth-gateway"
@@ -131,14 +132,21 @@ describe("device authorization", () => {
       code: "BCDE-FGHI",
     })
 
-    await expect(
-      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
+    const claimed = await convex.mutation(
+      internal.deviceAuth.claimAuthorizedCode,
+      {
         code: "BCDE-FGHI",
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-one",
-      })
-    ).resolves.toMatchObject({ userId: user.userId })
+      }
+    )
+    expect(claimed).toMatchObject({ userId: user.userId })
+    const deviceClient = asAuthenticatedUser(
+      convex,
+      user.userId,
+      claimed.sessionId
+    )
     await expect(
       convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
         code: "BCDE-FGHI",
@@ -147,41 +155,41 @@ describe("device authorization", () => {
         attemptId: "exchange-two",
       })
     ).rejects.toThrow("Approve this code")
-    await authenticatedClient.mutation(api.deviceAuth.finalizeExchange, {
+    await deviceClient.mutation(api.deviceAuth.finalizeExchange, {
       code: "BCDE-FGHI",
       pollSecret,
       attemptId: "exchange-one",
-      sessionId: user.sessionId,
+      sessionId: claimed.sessionId,
     })
-    await authenticatedClient.mutation(api.users.linkCurrentSessionWorker, {
+    await deviceClient.mutation(api.users.linkCurrentSessionWorker, {
       workerSessionId: "exchange-one",
     })
     await expect(
-      authenticatedClient.query(api.deviceAuth.recoverExchange, {
+      deviceClient.query(api.deviceAuth.recoverExchange, {
         code: "BCDE-FGHI",
         pollSecret,
         attemptId: "exchange-one",
       })
     ).resolves.toBe("completed")
     await expect(
-      authenticatedClient.query(api.deviceAuth.recoverExchange, {
+      deviceClient.query(api.deviceAuth.recoverExchange, {
         code: "BCDE-FGHI",
         pollSecret: "wrong-secret",
         attemptId: "exchange-one",
       })
     ).resolves.toBe("invalid")
     await expect(
-      authenticatedClient.mutation(api.deviceAuth.finalizeExchange, {
+      deviceClient.mutation(api.deviceAuth.finalizeExchange, {
         code: "BCDE-FGHI",
         pollSecret,
         attemptId: "exchange-one",
-        sessionId: user.sessionId,
+        sessionId: claimed.sessionId,
       })
     ).resolves.toBeNull()
-    await authenticatedClient.mutation(api.deviceAuth.releaseExchange, {
+    await deviceClient.mutation(api.deviceAuth.abortDeviceExchange, {
       code: "BCDE-FGHI",
       attemptId: "exchange-one",
-      sessionId: user.sessionId,
+      sessionId: claimed.sessionId,
     })
     await expect(
       convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
@@ -211,6 +219,267 @@ describe("device authorization", () => {
         attemptId: "expired-exchange",
       })
     ).rejects.toThrow("Approve this code")
+    vi.useRealTimers()
+  })
+
+  it("reuses one attempt-bound session before and after lease expiry", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "retry-owner")
+    const pollSecret = "retry-secret"
+    const now = 100_000
+    await convex.run(async (context) => {
+      await context.db.insert("deviceCodes", {
+        code: "DEFG-HIJK",
+        pollSecretDigest: await digestPollSecret(pollSecret),
+        status: "authorized",
+        userId: user.userId,
+        deviceName: "Retry TV",
+        expiresAt: now + DEVICE_CODE_TTL_MS,
+        createdAt: now,
+      })
+    })
+
+    const firstClaim = await convex.mutation(
+      internal.deviceAuth.claimAuthorizedCode,
+      {
+        code: "DEFG-HIJK",
+        pollSecret,
+        now,
+        attemptId: "retry-attempt",
+      }
+    )
+    await convex.run(async (context) => {
+      await context.db.insert("authRefreshTokens", {
+        sessionId: firstClaim.sessionId,
+        expirationTime: now + DEVICE_CODE_TTL_MS,
+      })
+    })
+    const activeLeaseRetry = await convex.mutation(
+      internal.deviceAuth.claimAuthorizedCode,
+      {
+        code: "DEFG-HIJK",
+        pollSecret,
+        now: now + 1,
+        attemptId: "retry-attempt",
+      }
+    )
+    await convex.run(async (context) => {
+      await context.db.insert("authRefreshTokens", {
+        sessionId: firstClaim.sessionId,
+        expirationTime: now + DEVICE_CODE_TTL_MS,
+      })
+    })
+    const expiredLeaseRetry = await convex.mutation(
+      internal.deviceAuth.claimAuthorizedCode,
+      {
+        code: "DEFG-HIJK",
+        pollSecret,
+        now: now + DEVICE_CODE_EXCHANGE_LEASE_MS + 1,
+        attemptId: "retry-attempt",
+      }
+    )
+
+    expect(activeLeaseRetry.sessionId).toBe(firstClaim.sessionId)
+    expect(expiredLeaseRetry.sessionId).toBe(firstClaim.sessionId)
+    await convex.run(async (context) => {
+      const attemptSessions = await context.db
+        .query("authSessions")
+        .withIndex("by_deviceExchangeAttemptId", (queryBuilder) =>
+          queryBuilder.eq("deviceExchangeAttemptId", "retry-attempt")
+        )
+        .collect()
+      const refreshTokens = await context.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (queryBuilder) =>
+          queryBuilder.eq("sessionId", firstClaim.sessionId)
+        )
+        .collect()
+      expect(attemptSessions).toHaveLength(1)
+      expect(refreshTokens).toHaveLength(0)
+    })
+  })
+
+  it("atomically aborts an unlinked exchange and records Worker cleanup", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "abort-owner")
+    const attemptId = "aborted-attempt"
+    const sessionId = await convex.run(async (context) => {
+      const createdSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: attemptId,
+      })
+      await context.db.insert("deviceCodes", {
+        code: "EFGH-IJKL",
+        pollSecretDigest: await digestPollSecret("abort-secret"),
+        status: "exchanging",
+        userId: user.userId,
+        deviceName: "Abort TV",
+        exchangeAttemptId: attemptId,
+        exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
+        exchangeSessionId: createdSessionId,
+        expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
+        createdAt: Date.now(),
+      })
+      return createdSessionId
+    })
+
+    await asAuthenticatedUser(convex, user.userId, sessionId).mutation(
+      api.deviceAuth.abortDeviceExchange,
+      { code: "EFGH-IJKL", attemptId, sessionId }
+    )
+
+    await convex.run(async (context) => {
+      expect(await context.db.get("authSessions", sessionId)).toBeNull()
+      const intent = await context.db
+        .query("workerSessionCleanupIntents")
+        .withIndex("by_workerSessionId", (queryBuilder) =>
+          queryBuilder.eq("workerSessionId", attemptId)
+        )
+        .unique()
+      expect(intent?.workerSessionId).toBe(attemptId)
+      const record = await context.db
+        .query("deviceCodes")
+        .withIndex("by_code", (queryBuilder) =>
+          queryBuilder.eq("code", "EFGH-IJKL")
+        )
+        .unique()
+      expect(record).toMatchObject({ status: "authorized" })
+    })
+  })
+
+  it("aborts only the authenticated attempt when the code was superseded", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "superseded-owner")
+    const otherUser = await insertTestUser(convex, "other-owner")
+    const sessions = await convex.run(async (context) => {
+      const oldSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: "old-attempt",
+      })
+      const newSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: "new-attempt",
+      })
+      await context.db.insert("deviceCodes", {
+        code: "GHIJ-KLMN",
+        pollSecretDigest: await digestPollSecret("superseded-secret"),
+        status: "exchanging",
+        userId: user.userId,
+        deviceName: "Superseded TV",
+        exchangeAttemptId: "new-attempt",
+        exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
+        exchangeSessionId: newSessionId,
+        expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
+        createdAt: Date.now(),
+      })
+      return { oldSessionId, newSessionId }
+    })
+
+    await expect(
+      asAuthenticatedUser(
+        convex,
+        otherUser.userId,
+        otherUser.sessionId
+      ).mutation(api.deviceAuth.abortDeviceExchange, {
+        code: "GHIJ-KLMN",
+        attemptId: "old-attempt",
+        sessionId: sessions.oldSessionId,
+      })
+    ).rejects.toThrow("Device code exchange session is invalid")
+    await asAuthenticatedUser(
+      convex,
+      user.userId,
+      sessions.oldSessionId
+    ).mutation(api.deviceAuth.abortDeviceExchange, {
+      code: "GHIJ-KLMN",
+      attemptId: "old-attempt",
+      sessionId: sessions.oldSessionId,
+    })
+
+    await convex.run(async (context) => {
+      expect(
+        await context.db.get("authSessions", sessions.oldSessionId)
+      ).toBeNull()
+      expect(
+        await context.db.get("authSessions", sessions.newSessionId)
+      ).not.toBeNull()
+      const record = await context.db
+        .query("deviceCodes")
+        .withIndex("by_code", (queryBuilder) =>
+          queryBuilder.eq("code", "GHIJ-KLMN")
+        )
+        .unique()
+      expect(record).toMatchObject({
+        status: "exchanging",
+        exchangeAttemptId: "new-attempt",
+        exchangeSessionId: sessions.newSessionId,
+      })
+      expect(
+        await context.db
+          .query("workerSessionCleanupIntents")
+          .withIndex("by_workerSessionId", (queryBuilder) =>
+            queryBuilder.eq("workerSessionId", "old-attempt")
+          )
+          .unique()
+      ).not.toBeNull()
+    })
+  })
+
+  it("cleans an abandoned attempt-bound session after code expiry", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(200_000)
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "abandoned-owner")
+    const attemptId = "abandoned-attempt"
+    const sessionId = await convex.run(async (context) => {
+      const createdSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: attemptId,
+      })
+      await context.db.insert("authRefreshTokens", {
+        sessionId: createdSessionId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+      })
+      await context.db.insert("deviceCodes", {
+        code: "FGHI-JKLM",
+        pollSecretDigest: await digestPollSecret("abandoned-secret"),
+        status: "exchanging",
+        userId: user.userId,
+        deviceName: "Abandoned TV",
+        exchangeAttemptId: attemptId,
+        exchangeLeaseExpiresAt: Date.now() - 1,
+        exchangeSessionId: createdSessionId,
+        expiresAt: Date.now() - 1,
+        createdAt: 1,
+      })
+      return createdSessionId
+    })
+
+    await convex.mutation(internal.deviceAuth.cleanupExpiredCodes)
+
+    await convex.run(async (context) => {
+      expect(await context.db.get("authSessions", sessionId)).toBeNull()
+      expect(
+        await context.db
+          .query("authRefreshTokens")
+          .withIndex("sessionId", (queryBuilder) =>
+            queryBuilder.eq("sessionId", sessionId)
+          )
+          .collect()
+      ).toHaveLength(0)
+      expect(
+        await context.db
+          .query("workerSessionCleanupIntents")
+          .withIndex("by_workerSessionId", (queryBuilder) =>
+            queryBuilder.eq("workerSessionId", attemptId)
+          )
+          .unique()
+      ).not.toBeNull()
+    })
     vi.useRealTimers()
   })
 

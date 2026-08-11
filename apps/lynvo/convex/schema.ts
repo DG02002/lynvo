@@ -56,11 +56,13 @@ export default defineSchema({
     userId: v.id("users"),
     expirationTime: v.number(),
     workerSessionId: v.optional(v.string()),
+    deviceExchangeAttemptId: v.optional(v.string()),
     deviceName: v.optional(v.string()),
     lastActiveAt: v.optional(v.number()),
   })
     .index("userId", ["userId"])
-    .index("by_workerSessionId", ["workerSessionId"]),
+    .index("by_workerSessionId", ["workerSessionId"])
+    .index("by_deviceExchangeAttemptId", ["deviceExchangeAttemptId"]),
 
   authAccounts: defineTable({
     userId: v.id("users"),
@@ -274,6 +276,7 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     exchangeAttemptId: v.optional(v.string()),
     exchangeLeaseExpiresAt: v.optional(v.number()),
+    exchangeSessionId: v.optional(v.id("authSessions")),
     consumedSessionId: v.optional(v.id("authSessions")),
     expiresAt: v.number(),
     createdAt: v.number(),

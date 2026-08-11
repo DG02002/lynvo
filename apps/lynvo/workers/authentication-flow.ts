@@ -116,6 +116,7 @@ export const createWorkerAuthenticationFlow = (
         ? input.params.exchangeAttemptId
         : undefined
     const authSession = createAuthSessionModule(environment.WORKER_AUTH_SESSION)
+    const cleanup = createSessionCleanupModule(environment)
     if (exchangeAttemptId) {
       const existingSession = await authSession.read(exchangeAttemptId)
       if (existingSession.kind === "unavailable") {
@@ -151,18 +152,17 @@ export const createWorkerAuthenticationFlow = (
               hasTokens: true,
             }
           }
-          await client.mutation(api.deviceAuth.releaseExchange, {
+          await client.mutation(api.deviceAuth.abortDeviceExchange, {
             code: input.params.code,
             attemptId: exchangeAttemptId,
             sessionId: existingSession.session.convexSessionId,
           })
-          await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
         } catch {
           return { kind: "unavailable" }
         }
-        const revokedSession = await authSession.revoke(exchangeAttemptId)
-        if (revokedSession.kind === "unavailable") {
-          return revokedSession
+        const cleanupResult = await cleanup.drain()
+        if (cleanupResult.kind === "unavailable") {
+          return cleanupResult
         }
         return { kind: "unavailable" }
       }
@@ -188,20 +188,20 @@ export const createWorkerAuthenticationFlow = (
     const lifecycle = createSignedInSessionLifecycle(
       authSession,
       undefined,
-      createSessionCleanupModule(environment)
+      cleanup
     )
     const recoverDeviceExchange = async () => {
       if (!exchangeAttemptId) {
         return
       }
       try {
-        await client.mutation(api.deviceAuth.releaseExchange, {
+        await client.mutation(api.deviceAuth.abortDeviceExchange, {
           code: input.params.code,
           attemptId: exchangeAttemptId,
           sessionId: convexSessionId,
         })
       } finally {
-        await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
+        await cleanup.drain()
       }
     }
     const session = await lifecycle.establish({

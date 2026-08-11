@@ -97,7 +97,7 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         }
       )
       console.info("security.qr_exchanged")
-      return { userId: record.userId }
+      return { userId: record.userId, sessionId: record.sessionId }
     }
 
     const username = requireString(params.username, "Username is required")
