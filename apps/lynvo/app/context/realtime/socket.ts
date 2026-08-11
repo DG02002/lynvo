@@ -75,11 +75,15 @@ export const openRealtimeSocket = ({
 
     socket.removeEventListener("open", handleOpen)
     socket.removeEventListener("message", handleMessage)
-    socket.removeEventListener("close", handleCloseOrError)
-    socket.removeEventListener("error", handleCloseOrError)
+    socket.removeEventListener("close", handleClose)
+    socket.removeEventListener("error", handleError)
   }
 
-  const handleCloseOrError = (event: Event) => {
+  const handleError = () => {
+    dispatch({ type: "SET_STATUS", status: "disconnected" })
+  }
+
+  const handleClose = (event: CloseEvent) => {
     removeSocketListeners()
     window.clearInterval(heartbeatTimer)
 
@@ -87,10 +91,7 @@ export const openRealtimeSocket = ({
       return
     }
 
-    if (
-      event instanceof CloseEvent &&
-      event.code === REALTIME_SESSION_REVOKED_CLOSE_CODE
-    ) {
+    if (event.code === REALTIME_SESSION_REVOKED_CLOSE_CODE) {
       closed = true
       onSessionRevoked()
       return
@@ -113,8 +114,8 @@ export const openRealtimeSocket = ({
 
     currentSocket.addEventListener("open", handleOpen)
     currentSocket.addEventListener("message", handleMessage)
-    currentSocket.addEventListener("close", handleCloseOrError)
-    currentSocket.addEventListener("error", handleCloseOrError)
+    currentSocket.addEventListener("close", handleClose)
+    currentSocket.addEventListener("error", handleError)
   }
 
   connect()

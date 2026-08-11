@@ -12,6 +12,7 @@ import { ThemeCookieSync } from "./theme-cookie-sync"
 import { AccountSettingsSynchronization } from "./account-settings-synchronization"
 import { clearRevokedSessionState } from "./session-revocation"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
+import { IdentitySynchronizer } from "./identity-synchronizer"
 
 interface AppProvidersProps {
   buildTime: string
@@ -62,21 +63,26 @@ export const AppProviders = ({
       >
         <ThemeCookieSync />
         <AuthActivityTouch isAuthenticated={Boolean(user)} />
-        <RealtimeProvider
-          user={providerUser}
-          onSessionRevoked={handleSessionRevoked}
-        >
-          <PlayerPreferenceProvider
-            key={providerUser?.id ?? "signed-out"}
-            userId={providerUser?.id}
-          >
-            <AccountSettingsSynchronization userId={providerUser?.id} />
-            <RemoteControlProvider user={providerUser}>
-              <VersionWatcher buildTime={buildTime} />
-              {children ?? <Outlet />}
-            </RemoteControlProvider>
-          </PlayerPreferenceProvider>
-        </RealtimeProvider>
+        <IdentitySynchronizer user={providerUser} queryClient={queryClient}>
+          {(validateIdentity) => (
+            <RealtimeProvider
+              user={providerUser}
+              onConnectionOpen={validateIdentity}
+              onSessionRevoked={handleSessionRevoked}
+            >
+              <PlayerPreferenceProvider
+                key={providerUser?.id ?? "signed-out"}
+                userId={providerUser?.id}
+              >
+                <AccountSettingsSynchronization userId={providerUser?.id} />
+                <RemoteControlProvider user={providerUser}>
+                  <VersionWatcher buildTime={buildTime} />
+                  {children ?? <Outlet />}
+                </RemoteControlProvider>
+              </PlayerPreferenceProvider>
+            </RealtimeProvider>
+          )}
+        </IdentitySynchronizer>
         <PlayerLaunchErrorDialog />
         <Toaster />
       </ThemeProvider>

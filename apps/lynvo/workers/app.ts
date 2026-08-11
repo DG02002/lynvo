@@ -358,6 +358,22 @@ app.delete("/api/auth/session", async (context) => {
   return context.body(null, 204)
 })
 
+app.get("/api/auth/session/status", async (context) => {
+  addRequestContext(context, { operation: "auth_session_status" })
+  const session = await getSession(context.req.raw, context.env)
+  if (session.kind === "unavailable") {
+    return context.json({ status: "unavailable" }, 503)
+  }
+  if (!session.user) {
+    return context.json({ status: "unauthenticated" }, 401)
+  }
+  return context.json({
+    status: "authenticated",
+    userId: session.user.id,
+    sessionId: session.user.sid,
+  })
+})
+
 app.get("/api/realtime", async (context) => {
   addRequestContext(context, {
     operation: "realtime_connect",

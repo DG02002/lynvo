@@ -24,10 +24,12 @@ export function RealtimeProvider({
   children,
   user,
   onSessionRevoked,
+  onConnectionOpen,
 }: {
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
   onSessionRevoked?: (userId: string) => void
+  onConnectionOpen?: () => void
 }) {
   const userId = user?.id
   const sessionId = user?.sessionId
@@ -59,12 +61,15 @@ export function RealtimeProvider({
     return openRealtimeSocket({
       dispatch,
       receiveMessage,
-      onOpen: incrementConnectionGeneration,
+      onOpen: () => {
+        incrementConnectionGeneration()
+        onConnectionOpen?.()
+      },
       onSessionRevoked: () => {
         onSessionRevoked?.(userId)
       },
     })
-  }, [onSessionRevoked, receiveMessage, sessionId, userId])
+  }, [onConnectionOpen, onSessionRevoked, receiveMessage, sessionId, userId])
 
   const value = useMemo(
     () => ({ status: state.status, connectionGeneration, subscribe }),
