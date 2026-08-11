@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { DeleteAccountDialog } from "~/features/site/settings/delete-account-dialog"
 import { ActiveSessionsView } from "~/features/site/settings/active-sessions-view"
@@ -38,5 +38,40 @@ describe("settings destructive actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Log out all" }))
     expect(onRevokeAllSessions).toHaveBeenCalledOnce()
     expect(screen.getByText(/including this one/)).toBeVisible()
+  })
+
+  it("revokes the selected session after the list changes", async () => {
+    const onRevokeSession = vi.fn().mockResolvedValue(undefined)
+    const targetSession = {
+      id: "target-session",
+      deviceName: "Target device",
+      lastActiveAt: 2,
+    }
+    const { rerender } = render(
+      <ActiveSessionsView
+        sessions={[
+          { id: "older-session", deviceName: "Older device", lastActiveAt: 3 },
+          targetSession,
+        ]}
+        busy={null}
+        onRevokeSession={onRevokeSession}
+        onRevokeAllSessions={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Log out" })[1])
+    rerender(
+      <ActiveSessionsView
+        sessions={[targetSession]}
+        busy={null}
+        onRevokeSession={onRevokeSession}
+        onRevokeAllSessions={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }))
+
+    await waitFor(() =>
+      expect(onRevokeSession).toHaveBeenCalledWith("target-session")
+    )
   })
 })

@@ -45,7 +45,7 @@ export interface UserSession {
 interface ActiveSessionsViewProps {
   sessions: readonly UserSession[]
   busy: string | null
-  onRevokeSession: (sessionIndex: number) => Promise<void>
+  onRevokeSession: (sessionId: string) => Promise<void>
   onRevokeAllSessions: () => void
 }
 
@@ -70,14 +70,11 @@ const formatSessionDate = (lastActiveAt: number) =>
     .replace(",", " at")
 
 const orderSessions = (sessions: readonly UserSession[]) =>
-  sessions
-    .map((session, sessionIndex) => ({ session, sessionIndex }))
-    .sort(
-      (left, right) =>
-        Number(Boolean(right.session.isCurrent)) -
-          Number(Boolean(left.session.isCurrent)) ||
-        right.session.lastActiveAt - left.session.lastActiveAt
-    )
+  [...sessions].sort(
+    (left, right) =>
+      Number(Boolean(right.isCurrent)) - Number(Boolean(left.isCurrent)) ||
+      right.lastActiveAt - left.lastActiveAt
+  )
 
 export const ActiveSessionsView = ({
   sessions,
@@ -86,7 +83,7 @@ export const ActiveSessionsView = ({
   onRevokeAllSessions,
 }: ActiveSessionsViewProps) => {
   const [sessionToRevoke, setSessionToRevoke] = useState<{
-    sessionIndex: number
+    sessionId: string
     deviceName: string
   } | null>(null)
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
@@ -99,7 +96,7 @@ export const ActiveSessionsView = ({
 
     setIsRevoking(true)
     try {
-      await onRevokeSession(sessionToRevoke.sessionIndex)
+      await onRevokeSession(sessionToRevoke.sessionId)
       setRevokeDialogOpen(false)
     } catch {
       // The caller presents the operation error; keep the dialog open to retry.
@@ -111,7 +108,7 @@ export const ActiveSessionsView = ({
   return (
     <div className="flex flex-col gap-6 py-4">
       <SettingsList className="divide-y-0 border-y-0">
-        {orderSessions(sessions).map(({ session, sessionIndex }) => {
+        {orderSessions(sessions).map((session) => {
           const isMobile = /iphone|ipad|android|pixel|phone/i.test(
             session.deviceName
           )
@@ -154,7 +151,7 @@ export const ActiveSessionsView = ({
                   className="h-9 shrink-0 rounded-full border-muted-foreground/30 bg-transparent px-4 text-sm font-medium hover:bg-transparent"
                   onClick={() => {
                     setSessionToRevoke({
-                      sessionIndex,
+                      sessionId: session.id,
                       deviceName: getSessionDeviceName(session.deviceName),
                     })
                     setRevokeDialogOpen(true)

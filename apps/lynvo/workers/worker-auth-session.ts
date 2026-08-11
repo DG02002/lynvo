@@ -12,6 +12,7 @@ interface StoredSession extends SealedRecord {
   readonly expiresAt: number
   readonly idleTimeoutMs: number
   readonly idleExpiresAt: number
+  readonly lastActivityTouchAt?: number
 }
 
 type SessionEnvironment = Partial<Pick<Env, "AUTH_SESSION_ENCRYPTION_KEY">>
@@ -52,10 +53,42 @@ export class WorkerAuthSession implements DurableObject {
 
   fetch = async (request: Request): Promise<Response> => {
     const url = new URL(request.url)
+    if (url.pathname === "/activity-touch") {
+      const storedSession =
+        await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
+      if (!storedSession) {
+        return new Response(null, { status: 404 })
+      }
+      if (request.method === "GET") {
+        return Response.json({
+          lastActivityTouchAt:
+            storedSession.lastActivityTouchAt ?? storedSession.createdAt,
+        })
+      }
+      if (request.method === "PUT") {
+        const payload: unknown = await request.json()
+        if (
+          typeof payload !== "object" ||
+          payload === null ||
+          !("touchedAt" in payload) ||
+          typeof payload.touchedAt !== "number"
+        ) {
+          return new Response(null, { status: 400 })
+        }
+        await this.state.storage.put(SESSION_STORAGE_KEY, {
+          ...storedSession,
+          lastActivityTouchAt: payload.touchedAt,
+        } satisfies StoredSession)
+        return new Response(null, { status: 204 })
+      }
+      return new Response(null, { status: 405 })
+    }
     if (url.pathname !== "/session") {
       return new Response(null, { status: 404 })
     }
     if (request.method === "POST") {
+      const existingSession =
+        await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
       const payload: unknown = await request.json()
       if (!isSessionPayload(payload)) {
         return new Response(null, { status: 400 })
@@ -91,6 +124,8 @@ export class WorkerAuthSession implements DurableObject {
             (payload.idleTimeoutMs ?? payload.expiresAt - payload.createdAt),
           payload.expiresAt
         ),
+        lastActivityTouchAt:
+          existingSession?.lastActivityTouchAt ?? payload.createdAt,
       }
       await this.state.storage.put(SESSION_STORAGE_KEY, storedSession)
       return new Response(null, { status: 204 })

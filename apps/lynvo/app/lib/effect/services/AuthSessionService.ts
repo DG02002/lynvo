@@ -102,6 +102,17 @@ export class AuthSessionService extends Context.Service<
           }
           const authenticatedUser = user.value
 
+          yield* Effect.promise(() =>
+            authSession.touchActivityWhenDue({
+              sessionId: opaqueSessionId,
+              nowMs: Date.now(),
+              touch: () =>
+                Effect.runPromise(
+                  convex.mutation(api.users.touchActivity, {}, { accessToken })
+                ).then(() => undefined),
+            })
+          )
+
           return {
             kind: "authenticated",
             user: {

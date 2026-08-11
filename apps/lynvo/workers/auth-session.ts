@@ -3,6 +3,7 @@ import {
   SESSION_ABSOLUTE_LIFETIME_MS,
   SESSION_COOKIE_MAX_AGE_SECONDS,
   SESSION_IDLE_TIMEOUT_MS,
+  AUTH_ACTIVITY_TOUCH_INTERVAL_MS,
 } from "./constants"
 
 interface AuthSessionStoreStub {
@@ -77,6 +78,11 @@ export interface AuthSessionRotated {
 }
 
 export interface AuthSessionModule {
+  readonly touchActivityWhenDue: (input: {
+    readonly sessionId: string
+    readonly nowMs: number
+    readonly touch: () => Promise<void>
+  }) => Promise<void>
   readonly create: (
     input: CreateAuthSessionInput
   ) => Promise<AuthSessionCreated | AuthSessionUnavailable>
@@ -150,6 +156,33 @@ const parseAuthSessionState = (
 export const createAuthSessionModule = (
   namespace: AuthSessionStoreNamespace
 ): AuthSessionModule => ({
+  touchActivityWhenDue: async (input) => {
+    try {
+      const sessionStore = namespace.getByName(input.sessionId)
+      const statusResponse = await sessionStore.fetch(
+        "https://session.internal/activity-touch"
+      )
+      if (!statusResponse.ok) {
+        return
+      }
+      const status: unknown = await statusResponse.json()
+      if (
+        typeof status !== "object" ||
+        status === null ||
+        !("lastActivityTouchAt" in status) ||
+        typeof status.lastActivityTouchAt !== "number" ||
+        input.nowMs - status.lastActivityTouchAt <
+          AUTH_ACTIVITY_TOUCH_INTERVAL_MS
+      ) {
+        return
+      }
+      await input.touch()
+      await sessionStore.fetch("https://session.internal/activity-touch", {
+        method: "PUT",
+        body: JSON.stringify({ touchedAt: input.nowMs }),
+      })
+    } catch {}
+  },
   expireCookie: createExpiredSessionCookie,
   create: async (input) => {
     try {

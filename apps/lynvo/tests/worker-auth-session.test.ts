@@ -199,4 +199,43 @@ describe("Worker authentication session HTTP behavior", () => {
       ).status
     ).toBe(401)
   })
+
+  it("advances activity touch metadata only after confirmation", async () => {
+    const { session } = createSession()
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          createdAt: 1_000,
+          expiresAt: 10_000,
+        }),
+      })
+    )
+
+    const initialStatus = await session.fetch(
+      new Request("https://session.internal/activity-touch")
+    )
+    await expect(initialStatus.json()).resolves.toEqual({
+      lastActivityTouchAt: 1_000,
+    })
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/activity-touch", {
+            method: "PUT",
+            body: JSON.stringify({ touchedAt: 2_000 }),
+          })
+        )
+      ).status
+    ).toBe(204)
+    const updatedStatus = await session.fetch(
+      new Request("https://session.internal/activity-touch")
+    )
+    await expect(updatedStatus.json()).resolves.toEqual({
+      lastActivityTouchAt: 2_000,
+    })
+  })
 })

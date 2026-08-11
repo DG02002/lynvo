@@ -23,7 +23,13 @@ type SettingsUser = {
   sid: string
 }
 
-const SECURITY_SESSIONS_QUERY_KEY = ["settings", "security", "sessions"]
+const getSecuritySessionsQueryKey = (userId: string, sessionId: string) => [
+  "settings",
+  "security",
+  "sessions",
+  userId,
+  sessionId,
+]
 
 export function SecuritySettings({
   user,
@@ -35,8 +41,12 @@ export function SecuritySettings({
   onShowActiveSessionsChange: (showActiveSessions: boolean) => void
 }) {
   const queryClient = useQueryClient()
+  const securitySessionsQueryKey = getSecuritySessionsQueryKey(
+    user.id,
+    user.sid
+  )
   const { data: sessions = [] } = useQuery({
-    queryKey: SECURITY_SESSIONS_QUERY_KEY,
+    queryKey: securitySessionsQueryKey,
     queryFn: () => Effect.runPromise(client.settings.listSessions()),
   })
   const [deleteConfirmUsername, setDeleteConfirmUsername] = React.useState("")
@@ -95,15 +105,15 @@ export function SecuritySettings({
         <ActiveSessionsView
           sessions={sessions}
           busy={busy}
-          onRevokeSession={async (sessionIndex) => {
+          onRevokeSession={async (sessionId) => {
             try {
               await Effect.runPromise(
                 client.settings.revokeSession({
-                  params: { sessionId: sessions[sessionIndex].id },
+                  params: { sessionId },
                 })
               )
               await queryClient.invalidateQueries({
-                queryKey: SECURITY_SESSIONS_QUERY_KEY,
+                queryKey: securitySessionsQueryKey,
               })
               toast.success("Session logged out")
             } catch (error) {
