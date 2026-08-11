@@ -20,6 +20,16 @@ const closeSocket = (socket: WebSocket) => {
 
 const websocketUrl = () => {
   const url = new URL("/api/realtime", window.location.href)
+  const userId = document.querySelector<HTMLMetaElement>(
+    'meta[name="lynvo-user-id"]'
+  )?.content
+  const sessionId = document.querySelector<HTMLMetaElement>(
+    'meta[name="lynvo-session-id"]'
+  )?.content
+  if (userId && sessionId) {
+    url.searchParams.set("expectedUserId", userId)
+    url.searchParams.set("expectedSessionId", sessionId)
+  }
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
   return url.toString()
 }
@@ -65,6 +75,33 @@ export const openRealtimeSocket = ({
   }
 
   const handleMessage = (event: MessageEvent) => {
+    try {
+      const message: unknown = JSON.parse(String(event.data))
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        "type" in message &&
+        message.type === "session_hello" &&
+        "userId" in message &&
+        "sessionId" in message
+      ) {
+        const expectedUserId = document.querySelector<HTMLMetaElement>(
+          'meta[name="lynvo-user-id"]'
+        )?.content
+        const expectedSessionId = document.querySelector<HTMLMetaElement>(
+          'meta[name="lynvo-session-id"]'
+        )?.content
+        if (
+          message.userId !== expectedUserId ||
+          message.sessionId !== expectedSessionId
+        ) {
+          closed = true
+          socket?.close()
+          onSessionRevoked()
+        }
+        return
+      }
+    } catch {}
     deliverRealtimeMessage(String(event.data), receiveMessage)
   }
 

@@ -43,6 +43,16 @@ export const WebAuthLive = Layer.succeed(
       if (!result.user || !result.accessToken) {
         return yield* new UnauthorizedError({ message: "Unauthorized" })
       }
+      const expectedUserId = request.headers["x-lynvo-expected-user-id"]
+      const expectedSessionId = request.headers["x-lynvo-expected-session-id"]
+      if (
+        expectedUserId !== result.user.id ||
+        expectedSessionId !== result.user.sid
+      ) {
+        return yield* new UnauthorizedError({
+          message: "Session identity changed",
+        })
+      }
 
       const response = yield* Effect.provideService(httpEffect, CurrentUser, {
         ...result.user,

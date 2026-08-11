@@ -367,6 +367,14 @@ app.get("/api/auth/session/status", async (context) => {
   if (!session.user) {
     return context.json({ status: "unauthenticated" }, 401)
   }
+  const expectedUserId = context.req.query("expectedUserId")
+  const expectedSessionId = context.req.query("expectedSessionId")
+  if (
+    expectedUserId !== session.user.id ||
+    expectedSessionId !== session.user.sid
+  ) {
+    return context.text("Session identity changed", 409)
+  }
   return context.json({
     status: "authenticated",
     userId: session.user.id,
@@ -400,6 +408,7 @@ app.get("/api/realtime", async (context) => {
   })
   const headers = new Headers(request.headers)
   headers.set("X-Lynvo-Session-Id", session.user.sid)
+  headers.set("X-Lynvo-User-Id", session.user.id)
   const workerSessionId = getCookieValue(request, WORKER_SESSION_COOKIE_NAME)
   if (workerSessionId) {
     headers.set("X-Lynvo-Worker-Session-Id", workerSessionId)
@@ -626,12 +635,14 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     const client = pair[0]
     const server = pair[1]
     const sessionId = request.headers.get("X-Lynvo-Session-Id")
+    const userId = request.headers.get("X-Lynvo-User-Id")
     const workerSessionId = request.headers.get("X-Lynvo-Worker-Session-Id")
-    if (!sessionId || !workerSessionId) {
+    if (!sessionId || !workerSessionId || !userId) {
       return new Response("Missing session", { status: 401 })
     }
     server.serializeAttachment({ sessionId, workerSessionId })
     this.ctx.acceptWebSocket(server, [sessionId])
+    server.send(JSON.stringify({ type: "session_hello", userId, sessionId }))
     const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
     const existingAlarmAt = await this.ctx.storage.getAlarm()
     if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
