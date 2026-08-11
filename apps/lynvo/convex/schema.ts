@@ -208,6 +208,9 @@ export default defineSchema({
     pluginServerId: v.string(),
     domain: v.string(),
     pluginId: v.string(),
+    credentialGeneration: v.optional(v.number()),
+    credentialAttemptId: v.optional(v.string()),
+    credentialFinalizedAttemptId: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_domain", ["userId", "domain"])

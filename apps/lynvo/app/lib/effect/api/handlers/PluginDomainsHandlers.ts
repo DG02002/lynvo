@@ -58,24 +58,38 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const credentialValue = username
             ? serializeHttpBasicCredential(username, password || "")
             : password || undefined
-          const credential = credentialValue
-            ? yield* vault.encrypt(credentialValue, {
-                userId: user.id,
-                pluginServerId: payload.pluginServerId,
-                pluginId: payload.pluginId,
-                domain,
-              })
-            : undefined
-          yield* convex.mutation(
+          const domainId = yield* convex.mutation(
             api.pluginDomains.create,
             {
               domain,
               pluginServerId: payload.pluginServerId,
               pluginId: payload.pluginId,
-              credential,
             },
             { accessToken: user.accessToken }
           )
+          if (credentialValue) {
+            const attempt = yield* convex.mutation(
+              api.pluginDomains.beginCredentialChange,
+              { id: domainId },
+              { accessToken: user.accessToken }
+            )
+            const credential = yield* vault.encrypt(credentialValue, {
+              userId: user.id,
+              pluginServerId: attempt.pluginServerId,
+              pluginId: attempt.pluginId,
+              domain: attempt.domain,
+            })
+            yield* convex.mutation(
+              api.pluginDomains.finalizeCredentialChange,
+              {
+                id: attempt.id,
+                generation: attempt.generation,
+                attemptId: attempt.attemptId,
+                credential,
+              },
+              { accessToken: user.accessToken }
+            )
+          }
           return { success: true }
         })
       )
@@ -84,8 +98,8 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const convex = yield* ConvexService
           const user = yield* CurrentUser
           const vault = yield* PluginCredentialVault
-          const domain = yield* convex.query(
-            api.pluginDomains.getById,
+          const attempt = yield* convex.mutation(
+            api.pluginDomains.beginCredentialChange,
             { id: params.domainId },
             { accessToken: user.accessToken }
           )
@@ -100,13 +114,18 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
             : password
           const credential = yield* vault.encrypt(credentialValue, {
             userId: user.id,
-            pluginServerId: domain.pluginServerId,
-            pluginId: domain.pluginId,
-            domain: domain.domain,
+            pluginServerId: attempt.pluginServerId,
+            pluginId: attempt.pluginId,
+            domain: attempt.domain,
           })
           yield* convex.mutation(
-            api.pluginDomains.setCredential,
-            { id: domain._id, credential },
+            api.pluginDomains.finalizeCredentialChange,
+            {
+              id: attempt.id,
+              generation: attempt.generation,
+              attemptId: attempt.attemptId,
+              credential,
+            },
             { accessToken: user.accessToken }
           )
           return { success: true }

@@ -123,6 +123,8 @@ export const upsertPluginDomain = async (
       pluginServerId: input.pluginServerId,
       domain,
       pluginId: input.pluginId,
+      credentialGeneration: input.credential ? 1 : 0,
+      credentialFinalizedAttemptId: undefined,
     }
     await assertStorageMutation(
       ctx,
@@ -147,7 +149,16 @@ export const upsertPluginDomain = async (
 
   const existingCredential = await getCredential(ctx, existingDomain._id)
   const isReassignment = existingDomain.pluginId !== input.pluginId
-  const nextDomain = { ...existingDomain, pluginId: input.pluginId, domain }
+  const nextDomain = {
+    ...existingDomain,
+    pluginId: input.pluginId,
+    domain,
+    credentialGeneration: isReassignment
+      ? (existingDomain.credentialGeneration ?? 0) + 1
+      : existingDomain.credentialGeneration,
+    credentialAttemptId: undefined,
+    credentialFinalizedAttemptId: undefined,
+  }
   await assertStorageMutation(
     ctx,
     userId,
@@ -158,6 +169,9 @@ export const upsertPluginDomain = async (
   await ctx.db.patch("userPluginDomains", existingDomain._id, {
     pluginId: input.pluginId,
     domain,
+    credentialGeneration: nextDomain.credentialGeneration,
+    credentialAttemptId: undefined,
+    credentialFinalizedAttemptId: undefined,
   })
 
   if (isReassignment && existingCredential) {

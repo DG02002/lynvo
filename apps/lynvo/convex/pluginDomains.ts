@@ -32,6 +32,9 @@ const pluginDomainFields = {
   pluginServerId: v.string(),
   domain: v.string(),
   pluginId: v.string(),
+  credentialGeneration: v.optional(v.number()),
+  credentialAttemptId: v.optional(v.string()),
+  credentialFinalizedAttemptId: v.optional(v.string()),
 }
 
 const pluginDomainValidator = v.object(pluginDomainFields)
@@ -77,7 +80,12 @@ export const list = query({
       credentials.map((credential) => credential.pluginDomainId)
     )
     return domains.map((domain) => ({
-      ...domain,
+      _id: domain._id,
+      _creationTime: domain._creationTime,
+      userId: domain.userId,
+      pluginServerId: domain.pluginServerId,
+      domain: domain.domain,
+      pluginId: domain.pluginId,
       hasCredential: credentialDomainIds.has(domain._id),
     }))
   },
@@ -158,11 +166,78 @@ export const setCredential = mutation({
   },
 })
 
+export const beginCredentialChange = mutation({
+  returns: v.object({
+    id: v.id("userPluginDomains"),
+    userId: v.id("users"),
+    pluginServerId: v.string(),
+    pluginId: v.string(),
+    domain: v.string(),
+    generation: v.number(),
+    attemptId: v.string(),
+  }),
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedWritableUserId(ctx)
+    const domain = await getAuthorizedPluginDomainById(ctx, userId, args.id)
+    const generation = (domain.credentialGeneration ?? 0) + 1
+    const attemptId = crypto.randomUUID()
+    await ctx.db.patch("userPluginDomains", domain._id, {
+      credentialGeneration: generation,
+      credentialAttemptId: attemptId,
+      credentialFinalizedAttemptId: undefined,
+    })
+    return {
+      id: domain._id,
+      userId: domain.userId,
+      pluginServerId: domain.pluginServerId,
+      pluginId: domain.pluginId,
+      domain: domain.domain,
+      generation,
+      attemptId,
+    }
+  },
+})
+
+export const finalizeCredentialChange = mutation({
+  returns: v.null(),
+  args: {
+    id: v.string(),
+    generation: v.number(),
+    attemptId: v.string(),
+    credential: encryptedCredentialValidator,
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedWritableUserId(ctx)
+    const domain = await getAuthorizedPluginDomainById(ctx, userId, args.id)
+    if (
+      domain.credentialGeneration !== args.generation ||
+      domain.credentialAttemptId !== args.attemptId
+    ) {
+      throw new Error("Plugin credential change was superseded")
+    }
+    if (domain.credentialFinalizedAttemptId === args.attemptId) {
+      return null
+    }
+    await setPluginCredential(ctx, userId, domain._id, args.credential)
+    await ctx.db.patch("userPluginDomains", domain._id, {
+      credentialFinalizedAttemptId: args.attemptId,
+    })
+    return null
+  },
+})
+
 export const deleteCredential = mutation({
   returns: v.null(),
   args: { id: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
+    const domain = await getAuthorizedPluginDomainById(ctx, userId, args.id)
+    await ctx.db.patch("userPluginDomains", domain._id, {
+      credentialGeneration: (domain.credentialGeneration ?? 0) + 1,
+      credentialAttemptId: undefined,
+      credentialFinalizedAttemptId: undefined,
+    })
     await deletePluginCredential(ctx, userId, args.id)
   },
 })
