@@ -7,6 +7,7 @@ export interface EstablishSignedInSessionInput {
   readonly refreshToken: string
   readonly nowMs: number
   readonly linkWorkerSession: (workerSessionId: string) => Promise<void>
+  readonly finalizeSession?: () => Promise<void>
 }
 
 export interface TerminateSignedInSessionInput {
@@ -88,6 +89,7 @@ export const createSignedInSessionLifecycle = (
     }
     try {
       await input.linkWorkerSession(workerSessionId)
+      await input.finalizeSession?.()
       return { kind: "completed", cookie: session.cookie }
     } catch {
       if (cleanup) {

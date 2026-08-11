@@ -267,10 +267,14 @@ export default defineSchema({
     status: v.union(
       v.literal("pending"),
       v.literal("authorized"),
+      v.literal("exchanging"),
       v.literal("consumed")
     ),
     deviceName: v.string(),
     userId: v.optional(v.id("users")),
+    exchangeAttemptId: v.optional(v.string()),
+    exchangeLeaseExpiresAt: v.optional(v.number()),
+    consumedSessionId: v.optional(v.id("authSessions")),
     expiresAt: v.number(),
     createdAt: v.number(),
   })

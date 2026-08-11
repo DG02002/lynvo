@@ -163,11 +163,12 @@ export function DeviceLoginQr() {
         }
         window.location.href = "/save?device_setup=true"
       })().catch((error) => {
+        hasSignedInRef.current = false
         dispatch({
           kind: "failed",
           errorMessage: getUserFacingErrorMessage(
             error,
-            "This device couldn’t log in. Generate a new code, then try again."
+            "This device couldn’t log in. Retrying the approved code…"
           ),
         })
       })

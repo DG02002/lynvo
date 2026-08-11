@@ -105,7 +105,7 @@ describe("device authorization", () => {
     ).rejects.toThrow("UNAUTHORIZED")
   })
 
-  it("consumes an approved code atomically once and enforces expiry", async () => {
+  it("claims and finalizes an approved code only after session creation", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "device-owner")
     const pollSecret = "poll-secret"
@@ -132,19 +132,48 @@ describe("device authorization", () => {
     })
 
     await expect(
-      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
         code: "BCDE-FGHI",
         pollSecret,
         now: expiresAt - 1,
+        attemptId: "exchange-one",
       })
     ).resolves.toMatchObject({ userId: user.userId })
     await expect(
-      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
         code: "BCDE-FGHI",
         pollSecret,
         now: expiresAt - 1,
+        attemptId: "exchange-two",
       })
     ).rejects.toThrow("Approve this code")
+    await authenticatedClient.mutation(api.deviceAuth.finalizeExchange, {
+      code: "BCDE-FGHI",
+      pollSecret,
+      attemptId: "exchange-one",
+      sessionId: user.sessionId,
+    })
+    await expect(
+      authenticatedClient.mutation(api.deviceAuth.finalizeExchange, {
+        code: "BCDE-FGHI",
+        pollSecret,
+        attemptId: "exchange-one",
+        sessionId: user.sessionId,
+      })
+    ).resolves.toBeNull()
+    await authenticatedClient.mutation(api.deviceAuth.releaseExchange, {
+      code: "BCDE-FGHI",
+      attemptId: "exchange-one",
+      sessionId: user.sessionId,
+    })
+    await expect(
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
+        code: "BCDE-FGHI",
+        pollSecret,
+        now: expiresAt - 1,
+        attemptId: "exchange-retry",
+      })
+    ).resolves.toMatchObject({ userId: user.userId })
 
     await convex.run(async (context) => {
       await context.db.insert("deviceCodes", {
@@ -158,10 +187,11 @@ describe("device authorization", () => {
       })
     })
     await expect(
-      convex.mutation(internal.deviceAuth.consumeAuthorizedCode, {
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
         code: "CDEF-GHIJ",
         pollSecret,
         now: expiresAt,
+        attemptId: "expired-exchange",
       })
     ).rejects.toThrow("Approve this code")
     vi.useRealTimers()

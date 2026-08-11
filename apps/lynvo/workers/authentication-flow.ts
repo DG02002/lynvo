@@ -111,7 +111,15 @@ export const createWorkerAuthenticationFlow = (
 ): WorkerAuthenticationFlow => ({
   signIn: async (input) => {
     const client = new ConvexHttpClient(environment.VITE_CONVEX_URL)
-    const result = await client.action(api.auth.signIn, input)
+    const exchangeAttemptId =
+      input.params.flow === "device" ? crypto.randomUUID() : undefined
+    const signInInput = exchangeAttemptId
+      ? {
+          ...input,
+          params: { ...input.params, exchangeAttemptId },
+        }
+      : input
+    const result = await client.action(api.auth.signIn, signInInput)
     const tokens = readTokens(result)
     if (!tokens) {
       return {
@@ -129,11 +137,26 @@ export const createWorkerAuthenticationFlow = (
     if (deviceName) {
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
+    const authSession = createAuthSessionModule(environment.WORKER_AUTH_SESSION)
     const lifecycle = createSignedInSessionLifecycle(
-      createAuthSessionModule(environment.WORKER_AUTH_SESSION),
+      authSession,
       undefined,
       createSessionCleanupModule(environment)
     )
+    const recoverDeviceExchange = async () => {
+      if (!exchangeAttemptId) {
+        return
+      }
+      try {
+        await client.mutation(api.deviceAuth.releaseExchange, {
+          code: input.params.code,
+          attemptId: exchangeAttemptId,
+          sessionId: convexSessionId,
+        })
+      } finally {
+        await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
+      }
+    }
     const session = await lifecycle.establish({
       convexSessionId,
       accessToken: tokens.token,
@@ -144,8 +167,19 @@ export const createWorkerAuthenticationFlow = (
           workerSessionId,
         })
       },
+      finalizeSession: exchangeAttemptId
+        ? async () => {
+            await client.mutation(api.deviceAuth.finalizeExchange, {
+              code: input.params.code,
+              pollSecret: input.params.pollSecret,
+              attemptId: exchangeAttemptId,
+              sessionId: convexSessionId,
+            })
+          }
+        : undefined,
     })
     if (session.kind === "unavailable") {
+      await recoverDeviceExchange()
       return session
     }
     return {

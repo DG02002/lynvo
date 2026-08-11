@@ -85,11 +85,15 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         "Polling secret is required"
       )
       const record = await ctx.runMutation(
-        internal.deviceAuth.consumeAuthorizedCode,
+        internal.deviceAuth.claimAuthorizedCode,
         {
           code,
           pollSecret,
           now: Date.now(),
+          attemptId: requireString(
+            params.exchangeAttemptId,
+            "Exchange attempt is required"
+          ),
         }
       )
       console.info("security.qr_exchanged")

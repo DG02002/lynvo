@@ -5,8 +5,13 @@ import {
   getAuthenticatedUserId,
   getAuthenticatedWritableUserId,
 } from "./authentication"
+import { getAuthSessionId } from "@convex-dev/auth/server"
 import { verifyDeviceCodePreflightToken } from "./authGateway"
-import { DEVICE_CODE_CLEANUP_BATCH_SIZE, DEVICE_CODE_TTL_MS } from "./constants"
+import {
+  DEVICE_CODE_CLEANUP_BATCH_SIZE,
+  DEVICE_CODE_EXCHANGE_LEASE_MS,
+  DEVICE_CODE_TTL_MS,
+} from "./constants"
 
 declare const process: {
   env: {
@@ -130,7 +135,7 @@ export const getStatus = query({
       return { status: "invalid" }
     }
     return {
-      status: record.status,
+      status: record.status === "exchanging" ? "authorized" : record.status,
       deviceName: record.deviceName,
       expiresAt: record.expiresAt,
     }
@@ -186,11 +191,12 @@ export const authorizeCode = mutation({
   },
 })
 
-export const consumeAuthorizedCode = internalMutation({
+export const claimAuthorizedCode = internalMutation({
   args: {
     code: v.string(),
     pollSecret: v.string(),
     now: v.number(),
+    attemptId: v.string(),
   },
   handler: async (context, arguments_) => {
     const record = await context.db
@@ -201,7 +207,12 @@ export const consumeAuthorizedCode = internalMutation({
       .unique()
     if (
       !record ||
-      record.status !== "authorized" ||
+      (record.status !== "authorized" &&
+        !(
+          record.status === "exchanging" &&
+          record.exchangeLeaseExpiresAt !== undefined &&
+          record.exchangeLeaseExpiresAt <= arguments_.now
+        )) ||
       !record.userId ||
       arguments_.now >= record.expiresAt ||
       record.pollSecretDigest !==
@@ -209,9 +220,95 @@ export const consumeAuthorizedCode = internalMutation({
     ) {
       throw new Error("Approve this code on the signed-in device")
     }
-    await context.db.patch("deviceCodes", record._id, { status: "consumed" })
-    console.info("security.qr_code_exchanged", { userId: record.userId })
+    await context.db.patch("deviceCodes", record._id, {
+      status: "exchanging",
+      exchangeAttemptId: arguments_.attemptId,
+      exchangeLeaseExpiresAt: arguments_.now + DEVICE_CODE_EXCHANGE_LEASE_MS,
+    })
     return { userId: record.userId, deviceName: record.deviceName }
+  },
+})
+
+export const finalizeExchange = mutation({
+  returns: v.null(),
+  args: {
+    code: v.string(),
+    pollSecret: v.string(),
+    attemptId: v.string(),
+    sessionId: v.string(),
+  },
+  handler: async (context, arguments_) => {
+    const userId = await getAuthenticatedWritableUserId(context)
+    const currentSessionId = await getAuthSessionId(context)
+    const record = await context.db
+      .query("deviceCodes")
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
+      .unique()
+    if (
+      !record ||
+      !currentSessionId ||
+      record.userId !== userId ||
+      currentSessionId !== arguments_.sessionId ||
+      record.pollSecretDigest !==
+        (await digestPollSecret(arguments_.pollSecret)) ||
+      record.exchangeAttemptId !== arguments_.attemptId
+    ) {
+      throw new Error("Device code exchange was superseded")
+    }
+    if (
+      record.status === "consumed" &&
+      record.consumedSessionId === currentSessionId
+    ) {
+      return null
+    }
+    if (record.status !== "exchanging") {
+      throw new Error("Device code exchange is not active")
+    }
+    await context.db.patch("deviceCodes", record._id, {
+      status: "consumed",
+      consumedSessionId: currentSessionId,
+      exchangeLeaseExpiresAt: undefined,
+    })
+    console.info("security.qr_code_exchanged", { userId })
+    return null
+  },
+})
+
+export const releaseExchange = mutation({
+  returns: v.null(),
+  args: {
+    code: v.string(),
+    attemptId: v.string(),
+    sessionId: v.string(),
+  },
+  handler: async (context, arguments_) => {
+    const userId = await getAuthenticatedWritableUserId(context)
+    const currentSessionId = await getAuthSessionId(context)
+    const record = await context.db
+      .query("deviceCodes")
+      .withIndex("by_code", (queryBuilder) =>
+        queryBuilder.eq("code", arguments_.code)
+      )
+      .unique()
+    if (
+      record?.userId === userId &&
+      currentSessionId !== null &&
+      currentSessionId === arguments_.sessionId &&
+      record.exchangeAttemptId === arguments_.attemptId &&
+      (record.status === "exchanging" ||
+        (record.status === "consumed" &&
+          record.consumedSessionId === currentSessionId))
+    ) {
+      await context.db.patch("deviceCodes", record._id, {
+        status: "authorized",
+        exchangeAttemptId: undefined,
+        exchangeLeaseExpiresAt: undefined,
+        consumedSessionId: undefined,
+      })
+    }
+    return null
   },
 })
 
