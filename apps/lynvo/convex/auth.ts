@@ -13,6 +13,7 @@ import {
 } from "../app/lib/auth-policy"
 import { verifyAuthPreflightToken } from "./authGateway"
 import { hashPasswordSecret, verifyPasswordSecret } from "./passwordCrypto"
+import { reserveAccountCapacity } from "./accountCapacity"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
   SESSION_TOTAL_DURATION_MS,
@@ -123,28 +124,21 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         console.info("security.signup_rejected", { reason: passwordError })
         throw new Error(passwordError)
       }
-      await ctx.runMutation(internal.accountCapacity.reserve, {})
       const now = Date.now()
-      let created
-      try {
-        created = await createAccount(ctx, {
-          provider: "credentials",
-          account: { id: normalizedUsername, secret: password },
-          profile: {
-            email: syntheticEmail(normalizedUsername),
-            name: username,
-            username,
-            normalizedUsername,
-            createdAt: now,
-            lastActiveAt: now,
-          },
-          shouldLinkViaEmail: false,
-          shouldLinkViaPhone: false,
-        })
-      } catch (error) {
-        await ctx.runMutation(internal.accountCapacity.release, {})
-        throw error
-      }
+      const created = await createAccount(ctx, {
+        provider: "credentials",
+        account: { id: normalizedUsername, secret: password },
+        profile: {
+          email: syntheticEmail(normalizedUsername),
+          name: username,
+          username,
+          normalizedUsername,
+          createdAt: now,
+          lastActiveAt: now,
+        },
+        shouldLinkViaEmail: false,
+        shouldLinkViaPhone: false,
+      })
       console.info("security.signup_success", { userId: created.user._id })
       return { userId: created.user._id }
     }
@@ -163,6 +157,13 @@ const credentialsProvider = ConvexCredentials<DataModel>({
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [credentialsProvider],
+  callbacks: {
+    afterUserCreatedOrUpdated: async (ctx, { existingUserId }) => {
+      if (existingUserId === null) {
+        await reserveAccountCapacity(ctx)
+      }
+    },
+  },
   session: {
     totalDurationMs: SESSION_TOTAL_DURATION_MS,
     inactiveDurationMs: ACCOUNT_INACTIVITY_LIMIT_MS,
