@@ -20,6 +20,9 @@ import {
   LINK_RETENTION_BATCH_SIZE,
 } from "./constants"
 import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
+import { extractedLinkSchema } from "../app/features/links/storage-schemas"
+import { removeLinkFromTree } from "../app/features/links/link-tree-metadata"
+import { mergeUnique } from "../app/features/links/link-tree-metadata"
 import {
   advanceSavedLinkRevision,
   readSavedLinkRevision,
@@ -208,6 +211,99 @@ export const updateMeta = mutation({
     await ctx.db.patch("links", existing._id, {
       meta: metadataJson,
       updatedAt: Date.now(),
+    })
+    const revision = await advanceSavedLinkRevision(ctx, userId)
+    return { success: true, revision }
+  },
+})
+
+export const applyMetadataOperation = mutation({
+  returns: v.object({ success: v.boolean(), revision: v.number() }),
+  args: {
+    id: v.string(),
+    operation: v.union(
+      v.object({ kind: v.literal("markOpened"), linkUrl: v.string() }),
+      v.object({
+        kind: v.literal("cacheMirrors"),
+        lazyItemUrl: v.string(),
+        mirrorsJson: v.string(),
+      }),
+      v.object({
+        kind: v.literal("removeExtractedLink"),
+        linkKey: v.string(),
+        linkUrl: v.string(),
+      }),
+      v.object({
+        kind: v.literal("replaceExtraction"),
+        expectedExtractionJson: v.string(),
+        extractedLinksJson: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedWritableUserId(ctx)
+    const linkId = ctx.db.normalizeId("links", args.id)
+    const existing = linkId ? await ctx.db.get("links", linkId) : null
+    if (!existing || existing.userId !== userId) {
+      throw new Error("Link not found or no longer available")
+    }
+
+    const metadata = parseCanonicalLinkMetadataJson(existing.meta)
+    switch (args.operation.kind) {
+      case "markOpened":
+        metadata.playback.openedUrls = mergeUnique(
+          metadata.playback.openedUrls,
+          [args.operation.linkUrl]
+        )
+        break
+      case "cacheMirrors": {
+        const mirrors = extractedLinkSchema
+          .array()
+          .parse(JSON.parse(args.operation.mirrorsJson))
+        metadata.playback.resolvedMirrors = {
+          ...metadata.playback.resolvedMirrors,
+          [args.operation.lazyItemUrl]: mirrors,
+        }
+        break
+      }
+      case "removeExtractedLink": {
+        const operation = args.operation
+        metadata.extraction.extractedLinks = removeLinkFromTree(
+          metadata.extraction.extractedLinks,
+          operation.linkKey
+        )
+        metadata.playback.openedUrls = metadata.playback.openedUrls.filter(
+          (openedUrl) => openedUrl !== operation.linkUrl
+        )
+        metadata.playback.openedIds = metadata.playback.openedIds.filter(
+          (openedId) => openedId !== operation.linkKey
+        )
+        break
+      }
+      case "replaceExtraction": {
+        const currentExtractionJson = JSON.stringify(
+          metadata.extraction.extractedLinks
+        )
+        if (currentExtractionJson !== args.operation.expectedExtractionJson) {
+          throw new Error("Saved link extraction changed; refresh and retry")
+        }
+        metadata.extraction.extractedLinks = extractedLinkSchema
+          .array()
+          .parse(JSON.parse(args.operation.extractedLinksJson))
+        break
+      }
+    }
+
+    const now = Date.now()
+    const nextDoc = {
+      ...existing,
+      meta: JSON.stringify(metadata),
+      updatedAt: now,
+    }
+    await assertLinkMutation(ctx, userId, existing, nextDoc)
+    await ctx.db.patch("links", existing._id, {
+      meta: nextDoc.meta,
+      updatedAt: now,
     })
     const revision = await advanceSavedLinkRevision(ctx, userId)
     return { success: true, revision }

@@ -53,17 +53,81 @@ export const useLinks = () => {
       }),
     []
   )
-  const updateLink = useCallback(async (item: (typeof cachedItems)[number]) => {
-    if (!item.id || !item.metadata) {
-      return
-    }
-    await Effect.runPromise(
-      client.links.updateMeta({
-        params: { linkId: item.id },
-        payload: { meta: toJsonMetadata(item.metadata) },
-      })
-    )
-  }, [])
+  const updateLink = useCallback(
+    async (
+      item: (typeof cachedItems)[number],
+      operation?: LinkMetadataOperation
+    ) => {
+      if (!item.id || !item.metadata) {
+        return
+      }
+      if (operation) {
+        switch (operation.kind) {
+          case "markOpened":
+            if (!operation.linkUrl) throw new Error("Link URL is required")
+            await Effect.runPromise(
+              client.links.applyMetadataOperation({
+                params: { linkId: item.id },
+                payload: { kind: operation.kind, linkUrl: operation.linkUrl },
+              })
+            )
+            return
+          case "cacheMirrors":
+            if (!operation.lazyItemUrl || !operation.mirrors) {
+              throw new Error("Mirror operation is incomplete")
+            }
+            await Effect.runPromise(
+              client.links.applyMetadataOperation({
+                params: { linkId: item.id },
+                payload: {
+                  kind: operation.kind,
+                  lazyItemUrl: operation.lazyItemUrl,
+                  mirrors: operation.mirrors,
+                },
+              })
+            )
+            return
+          case "removeExtractedLink":
+            if (!operation.linkKey || !operation.linkUrl) {
+              throw new Error("Remove operation is incomplete")
+            }
+            await Effect.runPromise(
+              client.links.applyMetadataOperation({
+                params: { linkId: item.id },
+                payload: {
+                  kind: operation.kind,
+                  linkKey: operation.linkKey,
+                  linkUrl: operation.linkUrl,
+                },
+              })
+            )
+            return
+          case "replaceExtraction":
+            if (!operation.expectedExtraction || !operation.extractedLinks) {
+              throw new Error("Extraction operation is incomplete")
+            }
+            await Effect.runPromise(
+              client.links.applyMetadataOperation({
+                params: { linkId: item.id },
+                payload: {
+                  kind: operation.kind,
+                  expectedExtraction: operation.expectedExtraction,
+                  extractedLinks: operation.extractedLinks,
+                },
+              })
+            )
+            return
+        }
+      }
+      await Effect.runPromise(
+        client.links.updateMeta({
+          params: { linkId: item.id },
+          payload: { meta: toJsonMetadata(item.metadata) },
+        })
+      )
+    },
+    []
+  )
 
   const adapter = useMemo(
     () =>

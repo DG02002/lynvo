@@ -1,10 +1,13 @@
-import type { LinkViewItem } from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 declare global {
   interface LinksPersistenceAdapter {
     list: () => Promise<LinkViewItem[]>
     add: (item: LinkViewItem) => Promise<LinkViewItem>
-    update: (item: LinkViewItem) => Promise<LinkViewItem>
+    update: (
+      item: LinkViewItem,
+      metadataOperation?: LinkMetadataOperation
+    ) => Promise<LinkViewItem>
     delete: (item: LinkViewItem) => Promise<void>
     clear: () => Promise<void>
   }
@@ -17,7 +20,8 @@ declare global {
     add: (item: LinkViewItem) => Promise<LinkViewItem>
     update: (
       itemUrl: string,
-      updateItem: (item: LinkViewItem) => LinkViewItem | undefined
+      updateItem: (item: LinkViewItem) => LinkViewItem | undefined,
+      metadataOperation?: LinkMetadataOperation
     ) => Promise<void>
     delete: (itemUrl: string, itemId?: string) => Promise<void>
     clear: () => Promise<void>
@@ -41,12 +45,30 @@ declare global {
     itemUrl?: string
     itemId?: string
     identityGeneration: number
+    metadataOperation?: LinkMetadataOperation
+  }
+
+  interface LinkMetadataOperation {
+    kind:
+      | "markOpened"
+      | "cacheMirrors"
+      | "removeExtractedLink"
+      | "replaceExtraction"
+    linkUrl?: string
+    linkKey?: string
+    lazyItemUrl?: string
+    mirrors?: ExtractedLink[]
+    expectedExtraction?: ExtractedLink[]
+    extractedLinks?: ExtractedLink[]
   }
 
   interface ServerLinksAdapterOptions {
     read: () => LinkViewItem[]
     create: (item: LinkViewItem) => Promise<string>
-    update: (item: LinkViewItem) => Promise<void>
+    update: (
+      item: LinkViewItem,
+      metadataOperation?: LinkMetadataOperation
+    ) => Promise<void>
     delete: (id: string) => Promise<void>
     clear: () => Promise<void>
   }
@@ -66,8 +88,8 @@ export const createServerLinksAdapter = ({
 }: ServerLinksAdapterOptions): LinksPersistenceAdapter => ({
   list: async () => read(),
   add: async (item) => ({ ...item, id: await create(item) }),
-  update: async (item) => {
-    await update(item)
+  update: async (item, metadataOperation) => {
+    await update(item, metadataOperation)
     return item
   },
   delete: async (item) => {
@@ -249,7 +271,7 @@ export const createLinksPersistence = (
         }
       )
     },
-    update: async (itemUrl, updateItem) => {
+    update: async (itemUrl, updateItem, metadataOperation) => {
       const currentItem = visibleItems.find((item) => item.url === itemUrl)
       if (!currentItem) {
         return
@@ -262,6 +284,14 @@ export const createLinksPersistence = (
         kind: "update",
         itemUrl,
         item: updatedItem,
+        metadataOperation:
+          metadataOperation?.kind === "replaceExtraction"
+            ? {
+                ...metadataOperation,
+                expectedExtraction:
+                  currentItem.metadata.extraction.extractedLinks,
+              }
+            : metadataOperation,
       })
       const mutationAdapter = adapter
       const priorAdd = findPriorPendingAdd(itemUrl)
@@ -275,7 +305,10 @@ export const createLinksPersistence = (
               : updatedItem
           return settledAdd?.status === "failed"
             ? itemWithPersistedId
-            : await mutationAdapter.update(itemWithPersistedId)
+            : await mutationAdapter.update(
+                itemWithPersistedId,
+                operation.metadataOperation
+              )
         },
         (persistedItem) => {
           operation.item = persistedItem

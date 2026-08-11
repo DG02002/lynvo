@@ -1,10 +1,6 @@
 import type { LinkViewItem } from "~/features/links/types"
 import { z } from "zod"
-import {
-  toLinkViewItem,
-  createLinkMetadata,
-  type SavedLink,
-} from "~/features/links/links.mapper"
+import { toLinkViewItem, type SavedLink } from "~/features/links/links.mapper"
 import {
   linksCacheEnvelopeSchema,
   storedSavedLinkSchema,
@@ -71,27 +67,7 @@ const toSavedLink = (
 
 export function linksToLinkViewItems(
   links: SavedLink[],
-  previous: LinkViewItem[] = []
+  _previous: LinkViewItem[] = []
 ) {
-  return links.map((link) => {
-    const item = toLinkViewItem(link)
-    const existing = previous.find(
-      (p) => p.id === item.id || p.url === item.url
-    )
-    const existingLinks = existing?.metadata.extraction.extractedLinks ?? []
-    if (
-      existingLinks.length > 0 &&
-      item.metadata.extraction.extractedLinks.length === 0
-    ) {
-      const metadata = createLinkMetadata({
-        extractedLinks: existingLinks,
-        previous: item.metadata,
-      })
-      return {
-        ...item,
-        metadata,
-      }
-    }
-    return item
-  })
+  return links.map(toLinkViewItem)
 }

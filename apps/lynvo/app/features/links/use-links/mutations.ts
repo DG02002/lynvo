@@ -65,8 +65,10 @@ export const useLinksMutations = (persistence: LinksMutationPersistence) => {
   const updateLinks = useCallback(
     (targetUrl: string, links: ExtractedLink[]) => {
       persistWithoutWaiting(
-        persistence.update(targetUrl, (item) =>
-          createUpdatedItemWithLinks({ item, links })
+        persistence.update(
+          targetUrl,
+          (item) => createUpdatedItemWithLinks({ item, links }),
+          { kind: "replaceExtraction", extractedLinks: links }
         )
       )
     },
@@ -76,8 +78,10 @@ export const useLinksMutations = (persistence: LinksMutationPersistence) => {
   const markLinkAsOpened = useCallback(
     (itemUrl: string, linkUrl: string) => {
       persistWithoutWaiting(
-        persistence.update(itemUrl, (item) =>
-          createOpenedLinkItem(item, linkUrl)
+        persistence.update(
+          itemUrl,
+          (item) => createOpenedLinkItem(item, linkUrl),
+          { kind: "markOpened", linkUrl }
         )
       )
     },
@@ -87,15 +91,18 @@ export const useLinksMutations = (persistence: LinksMutationPersistence) => {
   const cacheResolvedMirrors = useCallback(
     (itemUrl: string, lazyItemUrl: string, mirrors: ExtractedLink[]) => {
       persistWithoutWaiting(
-        persistence.update(itemUrl, (item) =>
-          createUpdatedItemFromMetadata(
-            item,
-            withResolvedMirrors(
-              getLinkViewItemMetadata(item),
-              lazyItemUrl,
-              mirrors
-            )
-          )
+        persistence.update(
+          itemUrl,
+          (item) =>
+            createUpdatedItemFromMetadata(
+              item,
+              withResolvedMirrors(
+                getLinkViewItemMetadata(item),
+                lazyItemUrl,
+                mirrors
+              )
+            ),
+          { kind: "cacheMirrors", lazyItemUrl, mirrors }
         )
       )
     },
@@ -105,28 +112,32 @@ export const useLinksMutations = (persistence: LinksMutationPersistence) => {
   const removeLink = useCallback(
     (itemUrl: string, linkKey: string, linkUrl: string) => {
       persistWithoutWaiting(
-        persistence.update(itemUrl, (item) => {
-          const metadata = getLinkViewItemMetadata(item)
-          return createUpdatedItemFromMetadata(item, {
-            ...metadata,
-            extraction: {
-              ...metadata.extraction,
-              extractedLinks: removeLinkFromTree(
-                metadata.extraction.extractedLinks,
-                linkKey
-              ),
-            },
-            playback: {
-              ...metadata.playback,
-              openedUrls: metadata.playback.openedUrls.filter(
-                (openedUrl) => openedUrl !== linkUrl
-              ),
-              openedIds: metadata.playback.openedIds.filter(
-                (openedId) => openedId !== linkKey
-              ),
-            },
-          })
-        })
+        persistence.update(
+          itemUrl,
+          (item) => {
+            const metadata = getLinkViewItemMetadata(item)
+            return createUpdatedItemFromMetadata(item, {
+              ...metadata,
+              extraction: {
+                ...metadata.extraction,
+                extractedLinks: removeLinkFromTree(
+                  metadata.extraction.extractedLinks,
+                  linkKey
+                ),
+              },
+              playback: {
+                ...metadata.playback,
+                openedUrls: metadata.playback.openedUrls.filter(
+                  (openedUrl) => openedUrl !== linkUrl
+                ),
+                openedIds: metadata.playback.openedIds.filter(
+                  (openedId) => openedId !== linkKey
+                ),
+              },
+            })
+          },
+          { kind: "removeExtractedLink", linkKey, linkUrl }
+        )
       )
     },
     [persistence]

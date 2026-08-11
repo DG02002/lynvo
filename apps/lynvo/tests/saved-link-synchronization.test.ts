@@ -54,7 +54,7 @@ describe("saved link synchronization", () => {
     expect(synchronization.getSnapshot()[0]?.title).toBe("Remote title")
   })
 
-  it("preserves locally resolved links while accepting a newer remote snapshot", async () => {
+  it("accepts an authoritative remote empty extraction", async () => {
     const cachedItem: LinkViewItem = {
       id: "link-one",
       url: "https://example.com/one",
@@ -92,7 +92,7 @@ describe("saved link synchronization", () => {
       title: "Remote title",
       metadata: {
         extraction: {
-          extractedLinks: cachedItem.metadata.extraction.extractedLinks,
+          extractedLinks: [],
         },
       },
     })

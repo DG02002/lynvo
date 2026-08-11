@@ -22,6 +22,25 @@ const LinksSnapshotSchema = Schema.Struct({
   results: Schema.Array(LinkSchema),
 })
 
+const LinkMetadataOperationSchema = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("markOpened"), linkUrl: Schema.String }),
+  Schema.Struct({
+    kind: Schema.Literal("cacheMirrors"),
+    lazyItemUrl: Schema.String,
+    mirrors: Schema.Unknown,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("removeExtractedLink"),
+    linkKey: Schema.String,
+    linkUrl: Schema.String,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("replaceExtraction"),
+    expectedExtraction: Schema.Unknown,
+    extractedLinks: Schema.Unknown,
+  }),
+])
+
 export class LinksGroup extends HttpApiGroup.make("links")
   .add(
     HttpApiEndpoint.get("list", "/", {
@@ -60,6 +79,17 @@ export class LinksGroup extends HttpApiGroup.make("links")
       payload: Schema.Struct({
         meta: Schema.Unknown,
       }),
+      success: Schema.Struct({ success: Schema.Boolean }),
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ValidationApiError,
+        ConvexApiError,
+      ],
+    }),
+    HttpApiEndpoint.post("applyMetadataOperation", "/:linkId/meta-operation", {
+      params: { linkId: Schema.String },
+      payload: LinkMetadataOperationSchema,
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
         UnauthorizedApiError,
