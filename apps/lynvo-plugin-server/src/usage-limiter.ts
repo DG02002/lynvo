@@ -2,6 +2,7 @@ import type { UsageResponse } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   MILLISECONDS_PER_DAY,
+  USAGE_RESERVATION_LEASE_MS,
   USAGE_LIMITER_NAME,
 } from "./constants"
 
@@ -13,6 +14,20 @@ export interface UsageCounterRow {
 export interface UsageReservationResult {
   reserved: boolean
   periodKey: string
+  reservationId: string | null
+}
+
+export interface UsageReservationRow {
+  [column: string]: SqlStorageValue
+  reservation_id: string
+  period_key: string
+  status: string
+  expires_at: number
+}
+
+export interface UsagePendingCountRow {
+  [column: string]: SqlStorageValue
+  pending: number
 }
 
 const currentPeriodKey = (timestampMs: number): string =>
@@ -37,6 +52,12 @@ export class LynvoPluginServerUsageLimiter {
     this.state.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS usage_counters (period_key TEXT PRIMARY KEY, used INTEGER NOT NULL)"
     )
+    this.state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS usage_reservations (reservation_id TEXT PRIMARY KEY, period_key TEXT NOT NULL, status TEXT NOT NULL, expires_at INTEGER NOT NULL)"
+    )
+    this.state.storage.sql.exec(
+      "CREATE INDEX IF NOT EXISTS usage_reservations_pending_expiry ON usage_reservations(status, expires_at)"
+    )
   }
 
   private getUsed(periodKey: string): number {
@@ -46,26 +67,75 @@ export class LynvoPluginServerUsageLimiter {
         periodKey
       )
       .toArray()[0]
-    return row?.used ?? 0
+    const pendingRow = this.state.storage.sql
+      .exec<UsagePendingCountRow>(
+        "SELECT COUNT(*) AS pending FROM usage_reservations WHERE period_key = ? AND status = 'pending'",
+        periodKey
+      )
+      .toArray()[0]
+    return (row?.used ?? 0) + (pendingRow?.pending ?? 0)
   }
 
-  private reserve(periodKey: string): boolean {
+  private reserve(
+    periodKey: string,
+    timestampMs: number
+  ): UsageReservationResult {
     const used = this.getUsed(periodKey)
     if (used >= GLOBAL_DAILY_OPERATION_LIMIT) {
-      return false
+      return { reserved: false, periodKey, reservationId: null }
     }
+    const reservationId = crypto.randomUUID()
     this.state.storage.sql.exec(
-      "INSERT INTO usage_counters (period_key, used) VALUES (?, 1) ON CONFLICT(period_key) DO UPDATE SET used = used + 1",
-      periodKey
+      "INSERT INTO usage_reservations (reservation_id, period_key, status, expires_at) VALUES (?, ?, 'pending', ?)",
+      reservationId,
+      periodKey,
+      timestampMs + USAGE_RESERVATION_LEASE_MS
     )
-    return true
+    return { reserved: true, periodKey, reservationId }
   }
 
-  private release(periodKey: string): void {
+  private settle(reservationId: string, succeeded: boolean): void {
+    this.state.storage.transactionSync(() => {
+      const reservation = this.state.storage.sql
+        .exec<UsageReservationRow>(
+          "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE reservation_id = ?",
+          reservationId
+        )
+        .toArray()[0]
+      if (!reservation || reservation.status !== "pending") {
+        return
+      }
+      if (succeeded) {
+        this.state.storage.sql.exec(
+          "INSERT INTO usage_counters (period_key, used) VALUES (?, 1) ON CONFLICT(period_key) DO UPDATE SET used = used + 1",
+          reservation.period_key
+        )
+      }
+      this.state.storage.sql.exec(
+        "UPDATE usage_reservations SET status = ? WHERE reservation_id = ? AND status = 'pending'",
+        succeeded ? "succeeded" : "failed",
+        reservationId
+      )
+    })
+  }
+
+  private scheduleNextAlarm = async (): Promise<void> => {
+    const next = this.state.storage.sql
+      .exec<UsageReservationRow>(
+        "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE status = 'pending' ORDER BY expires_at ASC LIMIT 1"
+      )
+      .toArray()[0]
+    if (next) {
+      await this.state.storage.setAlarm(next.expires_at)
+    }
+  }
+
+  async alarm(): Promise<void> {
     this.state.storage.sql.exec(
-      "UPDATE usage_counters SET used = MAX(0, used - 1) WHERE period_key = ?",
-      periodKey
+      "DELETE FROM usage_reservations WHERE expires_at <= ?",
+      Date.now()
     )
+    await this.scheduleNextAlarm()
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -75,10 +145,11 @@ export class LynvoPluginServerUsageLimiter {
     const pathname = new URL(request.url).pathname
 
     if (pathname === "/reserve" && request.method === "POST") {
-      return Response.json({
-        reserved: this.reserve(periodKey),
-        periodKey,
-      } satisfies UsageReservationResult)
+      const reservation = this.reserve(periodKey, timestampMs)
+      if (reservation.reserved) {
+        await this.scheduleNextAlarm()
+      }
+      return Response.json(reservation)
     }
     if (pathname === "/settle" && request.method === "POST") {
       const body: unknown = await request.json()
@@ -86,11 +157,12 @@ export class LynvoPluginServerUsageLimiter {
         typeof body === "object" &&
         body !== null &&
         "succeeded" in body &&
-        "periodKey" in body &&
-        typeof body.periodKey === "string" &&
-        body.succeeded === false
+        "reservationId" in body &&
+        typeof body.reservationId === "string" &&
+        typeof body.succeeded === "boolean"
       ) {
-        this.release(body.periodKey)
+        this.settle(body.reservationId, body.succeeded)
+        await this.scheduleNextAlarm()
       }
       return new Response(null, { status: 204 })
     }
@@ -139,12 +211,12 @@ export const reserveUsage = async (
 export const settleUsage = async (
   env: LynvoPluginServerBindings,
   succeeded: boolean,
-  periodKey: string
+  reservationId: string
 ): Promise<void> => {
   await getUsageLimiterStub(env).fetch("https://usage.internal/settle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ succeeded, periodKey }),
+    body: JSON.stringify({ succeeded, reservationId }),
   })
 }
 

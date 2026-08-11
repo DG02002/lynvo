@@ -1,5 +1,5 @@
 import { env, runInDurableObject } from "cloudflare:test"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   USAGE_LIMITER_NAME,
@@ -28,8 +28,13 @@ describe("usage limiter", () => {
       getStub(),
       (_instance, state) => {
         state.storage.sql.exec("DELETE FROM usage_counters")
+        state.storage.sql.exec("DELETE FROM usage_reservations")
       }
     )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("reserves concurrent capacity without losing increments", async () => {
@@ -39,16 +44,17 @@ describe("usage limiter", () => {
         requestAt("/reserve", timestampMs, { method: "POST" })
       )
     )
-    expect(
-      await Promise.all(
-        reservations.map((response) => response.json<{ reserved: boolean }>())
+    const results = await Promise.all(
+      reservations.map((response) =>
+        response.json<{
+          reserved: boolean
+          periodKey: string
+          reservationId: string | null
+        }>()
       )
-    ).toEqual(
-      Array.from({ length: 20 }, () => ({
-        reserved: true,
-        periodKey: "2026-07-19",
-      }))
     )
+    expect(results.every((result) => result.reserved)).toBe(true)
+    expect(new Set(results.map((result) => result.reservationId)).size).toBe(20)
 
     const response = await requestAt("/usage", timestampMs)
     const usage = await response.json<{ metrics: Array<{ used: number }> }>()
@@ -60,12 +66,14 @@ describe("usage limiter", () => {
     const reservationResponse = await requestAt("/reserve", timestampMs, {
       method: "POST",
     })
-    const reservation = await reservationResponse.json<{ periodKey: string }>()
+    const reservation = await reservationResponse.json<{
+      reservationId: string
+    }>()
     await requestAt("/settle", timestampMs, {
       method: "POST",
       body: JSON.stringify({
         succeeded: false,
-        periodKey: reservation.periodKey,
+        reservationId: reservation.reservationId,
       }),
     })
     const response = await requestAt("/usage", timestampMs)
@@ -82,14 +90,18 @@ describe("usage limiter", () => {
     const reservation = await reservationResponse.json<{
       reserved: boolean
       periodKey: string
+      reservationId: string
     }>()
 
-    expect(reservation).toEqual({ reserved: true, periodKey: "2026-07-19" })
+    expect(reservation).toMatchObject({
+      reserved: true,
+      periodKey: "2026-07-19",
+    })
     await requestAt("/settle", afterMidnight, {
       method: "POST",
       body: JSON.stringify({
         succeeded: false,
-        periodKey: reservation.periodKey,
+        reservationId: reservation.reservationId,
       }),
     })
 
@@ -121,6 +133,7 @@ describe("usage limiter", () => {
     expect(await response.json()).toEqual({
       reserved: false,
       periodKey: "2026-07-19",
+      reservationId: null,
     })
   })
 
@@ -135,5 +148,50 @@ describe("usage limiter", () => {
     }>()
     expect(usage.metrics[0].used).toBe(0)
     expect(usage.metrics[0].resetsAt).toBe("2026-07-21T00:00:00.000Z")
+  })
+
+  it("settles duplicate requests exactly once", async () => {
+    const timestampMs = Date.UTC(2026, 6, 19)
+    const reservationResponse = await requestAt("/reserve", timestampMs, {
+      method: "POST",
+    })
+    const reservation = await reservationResponse.json<{
+      reservationId: string
+    }>()
+    const settlement = {
+      method: "POST",
+      body: JSON.stringify({
+        succeeded: true,
+        reservationId: reservation.reservationId,
+      }),
+    }
+    await requestAt("/settle", timestampMs, settlement)
+    await requestAt("/settle", timestampMs, settlement)
+
+    const usageResponse = await requestAt("/usage", timestampMs)
+    const usage = await usageResponse.json<{
+      metrics: Array<{ used: number }>
+    }>()
+    expect(usage.metrics[0]?.used).toBe(1)
+  })
+
+  it("reclaims an abandoned reservation through the alarm", async () => {
+    vi.useFakeTimers()
+    const timestampMs = Date.UTC(2026, 6, 19)
+    vi.setSystemTime(timestampMs)
+    await requestAt("/reserve", timestampMs, { method: "POST" })
+    vi.setSystemTime(timestampMs + 60_000)
+    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
+      getStub(),
+      async (instance) => {
+        await instance.alarm()
+      }
+    )
+
+    const usageResponse = await requestAt("/usage", timestampMs + 60_000)
+    const usage = await usageResponse.json<{
+      metrics: Array<{ used: number }>
+    }>()
+    expect(usage.metrics[0]?.used).toBe(0)
   })
 })

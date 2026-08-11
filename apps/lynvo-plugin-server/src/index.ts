@@ -56,7 +56,9 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
       didSucceed = true
       return result
     } finally {
-      await settleUsage(env, didSucceed, reservation.periodKey)
+      if (reservation.reservationId) {
+        await settleUsage(env, didSucceed, reservation.reservationId)
+      }
     }
   },
   onError: () => {},
