@@ -9,6 +9,7 @@ import type { SessionCleanupModule } from "../workers/session-cleanup"
 const createAuthSession = (
   overrides: Partial<AuthSessionModule> = {}
 ): AuthSessionModule => ({
+  beginIssuance: vi.fn().mockResolvedValue({ kind: "acquired" }),
   create: vi.fn().mockResolvedValue({
     kind: "created",
     cookie: "session=active",

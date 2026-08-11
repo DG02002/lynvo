@@ -40,6 +40,42 @@ const createSession = (
 }
 
 describe("Worker authentication session HTTP behavior", () => {
+  it("fences delayed issuers with a renewable Durable Object generation", async () => {
+    const { session } = createSession()
+    const beginIssuance = (generationId: string, nowMs: number) =>
+      session.fetch(
+        new Request("https://session.internal/session/issuance", {
+          method: "POST",
+          body: JSON.stringify({
+            generationId,
+            nowMs,
+            expiresAt: nowMs + 1_000,
+          }),
+        })
+      )
+    const createForGeneration = (generationId: string) =>
+      session.fetch(
+        new Request("https://session.internal/session", {
+          method: "POST",
+          body: JSON.stringify({
+            convexSessionId: "convex-session-id",
+            accessToken: `${generationId}-access`,
+            refreshToken: `${generationId}-refresh`,
+            createdAt: 2_000,
+            expiresAt: 4_000,
+            issuanceGenerationId: generationId,
+          }),
+        })
+      )
+
+    expect((await beginIssuance("generation-one", 1_000)).status).toBe(201)
+    expect((await beginIssuance("generation-two", 1_500)).status).toBe(409)
+    expect((await beginIssuance("generation-two", 2_001)).status).toBe(201)
+    expect((await createForGeneration("generation-one")).status).toBe(409)
+    expect((await createForGeneration("generation-two")).status).toBe(204)
+    expect((await beginIssuance("generation-three", 2_002)).status).toBe(200)
+  })
+
   it("creates, rotates, and reads through the real Durable Object", async () => {
     const { session, storage } = createSession()
     const nowMs = Date.now()

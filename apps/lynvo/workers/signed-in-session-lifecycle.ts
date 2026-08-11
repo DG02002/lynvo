@@ -7,6 +7,7 @@ export interface EstablishSignedInSessionInput {
   readonly accessToken: string
   readonly refreshToken: string
   readonly nowMs: number
+  readonly issuanceGenerationId?: string
   readonly linkWorkerSession: (workerSessionId: string) => Promise<void>
   readonly finalizeSession?: () => Promise<void>
 }
@@ -33,10 +34,18 @@ export interface SignedInSessionUnavailable {
   readonly kind: "unavailable"
 }
 
+export interface SignedInSessionConflict {
+  readonly kind: "conflict"
+}
+
 export interface SignedInSessionLifecycle {
   readonly establish: (
     input: EstablishSignedInSessionInput
-  ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
+  ) => Promise<
+    | SignedInSessionCompleted
+    | SignedInSessionConflict
+    | SignedInSessionUnavailable
+  >
   readonly terminate: (
     input: TerminateSignedInSessionInput
   ) => Promise<SignedInSessionCompleted | SignedInSessionUnavailable>
@@ -84,8 +93,9 @@ export const createSignedInSessionLifecycle = (
       accessToken: input.accessToken,
       refreshToken: input.refreshToken,
       nowMs: input.nowMs,
+      issuanceGenerationId: input.issuanceGenerationId,
     })
-    if (session.kind === "unavailable") {
+    if (session.kind !== "created") {
       return session
     }
     try {

@@ -34,19 +34,22 @@ describe("Worker device exchange recovery", () => {
     mocks.action.mockResolvedValue({
       tokens: { token: accessToken, refreshToken: "refresh-token-one" },
     })
-    mocks.mutation.mockResolvedValue({ success: true })
+    mocks.mutation.mockResolvedValue("current")
     mocks.query.mockResolvedValue("completed")
     const environment = {
       VITE_CONVEX_URL: "https://test.convex.cloud",
       AUTH_GATEWAY_SECRET: "gateway-secret",
       WORKER_AUTH_SESSION: {
         getByName: (sessionId: string) => ({
-          fetch: async (_url: string, init?: RequestInit) => {
+          fetch: async (url: string, init?: RequestInit) => {
             if (init?.method === "DELETE") {
               storedSessions.delete(sessionId)
               return new Response(null, { status: 204 })
             }
             if (init?.method === "POST") {
+              if (url.endsWith("/session/issuance")) {
+                return new Response(null, { status: 201 })
+              }
               if (storedSessions.has(sessionId)) {
                 return new Response(null, { status: 409 })
               }
@@ -99,7 +102,7 @@ describe("Worker device exchange recovery", () => {
       ],
     ])
     mocks.query.mockResolvedValue("resumable")
-    mocks.mutation.mockResolvedValue({ success: true })
+    mocks.mutation.mockResolvedValue("current")
     const environment = {
       VITE_CONVEX_URL: "https://test.convex.cloud",
       AUTH_GATEWAY_SECRET: "gateway-secret",
@@ -135,5 +138,79 @@ describe("Worker device exchange recovery", () => {
     expect(mocks.action).not.toHaveBeenCalled()
     expect(mocks.mutation).toHaveBeenCalledTimes(2)
     expect(storedSessions).toHaveLength(1)
+  })
+
+  it("allows only one concurrent caller to issue a device session", async () => {
+    const storedSessions = new Map<string, unknown>()
+    let issuanceActive = false
+    let releaseSignIn: (() => void) | undefined
+    const signInBarrier = new Promise<void>((resolve) => {
+      releaseSignIn = resolve
+    })
+    mocks.action.mockImplementation(async () => {
+      await signInBarrier
+      return {
+        tokens: {
+          token: createAccessToken("convex-session-one"),
+          refreshToken: "refresh-token-one",
+        },
+      }
+    })
+    mocks.mutation.mockResolvedValue("current")
+    const environment = {
+      VITE_CONVEX_URL: "https://test.convex.cloud",
+      AUTH_GATEWAY_SECRET: "gateway-secret",
+      WORKER_AUTH_SESSION: {
+        getByName: (sessionId: string) => ({
+          fetch: async (url: string, init?: RequestInit) => {
+            if (url.endsWith("/session/issuance")) {
+              if (storedSessions.has(sessionId)) {
+                return new Response(null, { status: 200 })
+              }
+              if (issuanceActive) {
+                return new Response(null, { status: 409 })
+              }
+              issuanceActive = true
+              return new Response(null, { status: 201 })
+            }
+            if (init?.method === "POST") {
+              storedSessions.set(sessionId, JSON.parse(String(init.body)))
+              issuanceActive = false
+              return new Response(null, { status: 204 })
+            }
+            const session = storedSessions.get(sessionId)
+            return session
+              ? Response.json(session)
+              : new Response(null, { status: 404 })
+          },
+        }),
+      },
+    }
+    const { createWorkerAuthenticationFlow } =
+      await import("../workers/authentication-flow")
+    const flow = createWorkerAuthenticationFlow(environment)
+    const input = {
+      provider: "credentials" as const,
+      params: {
+        flow: "device",
+        code: "ABCD-EFGH",
+        pollSecret: "poll-secret",
+        exchangeAttemptId: "exchange-one",
+      },
+    }
+
+    const winner = flow.signIn(input)
+    await vi.waitFor(() => expect(mocks.action).toHaveBeenCalledOnce())
+    const concurrent = await flow.signIn(input)
+    releaseSignIn?.()
+
+    await expect(winner).resolves.toMatchObject({
+      kind: "completed",
+      hasTokens: true,
+    })
+    expect(concurrent).toEqual({ kind: "unavailable" })
+    expect(mocks.action).toHaveBeenCalledOnce()
+    expect(storedSessions).toHaveLength(1)
+    expect(mocks.mutation).toHaveBeenCalledTimes(3)
   })
 })

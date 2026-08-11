@@ -275,6 +275,7 @@ export default defineSchema({
     deviceName: v.string(),
     userId: v.optional(v.id("users")),
     exchangeAttemptId: v.optional(v.string()),
+    exchangeGenerationId: v.optional(v.string()),
     exchangeLeaseExpiresAt: v.optional(v.number()),
     exchangeSessionId: v.optional(v.id("authSessions")),
     consumedSessionId: v.optional(v.id("authSessions")),

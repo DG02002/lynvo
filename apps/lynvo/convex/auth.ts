@@ -94,6 +94,10 @@ const credentialsProvider = ConvexCredentials<DataModel>({
             params.exchangeAttemptId,
             "Exchange attempt is required"
           ),
+          generationId: requireString(
+            params.issuanceGenerationId,
+            "Issuance generation is required"
+          ),
         }
       )
       console.info("security.qr_exchanged")

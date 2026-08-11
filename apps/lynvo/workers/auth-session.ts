@@ -4,6 +4,7 @@ import {
   SESSION_COOKIE_MAX_AGE_SECONDS,
   SESSION_IDLE_TIMEOUT_MS,
   AUTH_ACTIVITY_TOUCH_INTERVAL_MS,
+  AUTH_SESSION_ISSUANCE_LEASE_MS,
 } from "./constants"
 
 interface AuthSessionStoreStub {
@@ -20,6 +21,7 @@ export interface CreateAuthSessionInput {
   readonly accessToken: string
   readonly refreshToken: string
   readonly nowMs: number
+  readonly issuanceGenerationId?: string
 }
 
 export interface AuthSessionCreated {
@@ -34,6 +36,22 @@ export interface AuthSessionRevoked {
 
 export interface AuthSessionUnavailable {
   readonly kind: "unavailable"
+}
+
+export interface AuthSessionConflict {
+  readonly kind: "conflict"
+}
+
+export interface AuthSessionIssuanceAcquired {
+  readonly kind: "acquired"
+}
+
+export interface AuthSessionIssuancePending {
+  readonly kind: "pending"
+}
+
+export interface AuthSessionIssuanceEstablished {
+  readonly kind: "established"
 }
 
 export interface AuthSessionState {
@@ -78,6 +96,16 @@ export interface AuthSessionRotated {
 }
 
 export interface AuthSessionModule {
+  readonly beginIssuance: (input: {
+    readonly sessionId: string
+    readonly generationId: string
+    readonly nowMs: number
+  }) => Promise<
+    | AuthSessionIssuanceAcquired
+    | AuthSessionIssuancePending
+    | AuthSessionIssuanceEstablished
+    | AuthSessionUnavailable
+  >
   readonly touchActivityWhenDue: (input: {
     readonly sessionId: string
     readonly nowMs: number
@@ -85,7 +113,9 @@ export interface AuthSessionModule {
   }) => Promise<void>
   readonly create: (
     input: CreateAuthSessionInput
-  ) => Promise<AuthSessionCreated | AuthSessionUnavailable>
+  ) => Promise<
+    AuthSessionCreated | AuthSessionConflict | AuthSessionUnavailable
+  >
   readonly read: (
     sessionId: string
   ) => Promise<
@@ -157,6 +187,31 @@ const parseAuthSessionState = (
 export const createAuthSessionModule = (
   namespace: AuthSessionStoreNamespace
 ): AuthSessionModule => ({
+  beginIssuance: async (input) => {
+    try {
+      const response = await namespace
+        .getByName(input.sessionId)
+        .fetch("https://session.internal/session/issuance", {
+          method: "POST",
+          body: JSON.stringify({
+            generationId: input.generationId,
+            nowMs: input.nowMs,
+            expiresAt: input.nowMs + AUTH_SESSION_ISSUANCE_LEASE_MS,
+          }),
+        })
+      if (response.status === 201) {
+        return { kind: "acquired" }
+      }
+      if (response.status === 200) {
+        return { kind: "established" }
+      }
+      return response.status === 409
+        ? { kind: "pending" }
+        : { kind: "unavailable" }
+    } catch {
+      return { kind: "unavailable" }
+    }
+  },
   touchActivityWhenDue: async (input) => {
     try {
       const sessionStore = namespace.getByName(input.sessionId)
@@ -199,8 +254,12 @@ export const createAuthSessionModule = (
             createdAt: input.nowMs,
             expiresAt: input.nowMs + SESSION_ABSOLUTE_LIFETIME_MS,
             idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+            issuanceGenerationId: input.issuanceGenerationId,
           }),
         })
+      if (response.status === 409) {
+        return { kind: "conflict" }
+      }
       if (!response.ok) {
         return { kind: "unavailable" }
       }

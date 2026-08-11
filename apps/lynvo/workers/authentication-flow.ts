@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
-import { createAuthSessionModule } from "./auth-session"
+import { createAuthSessionModule, type AuthSessionState } from "./auth-session"
 import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
 import { createSessionCleanupModule } from "./session-cleanup"
 
@@ -60,6 +60,9 @@ const readConvexSessionId = (accessToken: string): string | undefined => {
   }
 }
 
+const readRefreshTokenId = (refreshToken: string): string | undefined =>
+  refreshToken.split("|")[0] || undefined
+
 interface WorkerAuthenticationFlow {
   readonly signIn: (
     input: AuthenticationFlowInput
@@ -117,57 +120,95 @@ export const createWorkerAuthenticationFlow = (
         : undefined
     const authSession = createAuthSessionModule(environment.WORKER_AUTH_SESSION)
     const cleanup = createSessionCleanupModule(environment)
+    const recoverExistingDeviceSession = async (
+      session: AuthSessionState,
+      attemptId: string
+    ): Promise<AuthenticationFlowCompleted | AuthenticationFlowUnavailable> => {
+      client.setAuth(session.accessToken)
+      try {
+        const recoveryPhase = await client.query(
+          api.deviceAuth.recoverExchange,
+          {
+            code: input.params.code,
+            pollSecret: input.params.pollSecret,
+            attemptId,
+          }
+        )
+        if (recoveryPhase === "resumable") {
+          await client.mutation(api.users.linkCurrentSessionWorker, {
+            workerSessionId: attemptId,
+          })
+          await client.mutation(api.deviceAuth.finalizeExchange, {
+            code: input.params.code,
+            pollSecret: input.params.pollSecret,
+            attemptId,
+            sessionId: session.convexSessionId,
+          })
+        }
+        if (recoveryPhase === "resumable" || recoveryPhase === "completed") {
+          return {
+            kind: "completed",
+            browserState: { signingIn: true },
+            cookie: authSession.restoreCookie(attemptId),
+            hasTokens: true,
+          }
+        }
+        await client.mutation(api.deviceAuth.abortDeviceExchange, {
+          code: input.params.code,
+          attemptId,
+          sessionId: session.convexSessionId,
+        })
+      } catch {
+        return { kind: "unavailable" }
+      }
+      const cleanupResult = await cleanup.drain()
+      return cleanupResult.kind === "unavailable"
+        ? cleanupResult
+        : { kind: "unavailable" }
+    }
+    let issuanceGenerationId: string | undefined
     if (exchangeAttemptId) {
       const existingSession = await authSession.read(exchangeAttemptId)
       if (existingSession.kind === "unavailable") {
         return existingSession
       }
       if (existingSession.kind === "active") {
-        client.setAuth(existingSession.session.accessToken)
-        try {
-          const recoveryPhase = await client.query(
-            api.deviceAuth.recoverExchange,
-            {
-              code: input.params.code,
-              pollSecret: input.params.pollSecret,
-              attemptId: exchangeAttemptId,
-            }
-          )
-          if (recoveryPhase === "resumable") {
-            await client.mutation(api.users.linkCurrentSessionWorker, {
-              workerSessionId: exchangeAttemptId,
-            })
-            await client.mutation(api.deviceAuth.finalizeExchange, {
-              code: input.params.code,
-              pollSecret: input.params.pollSecret,
-              attemptId: exchangeAttemptId,
-              sessionId: existingSession.session.convexSessionId,
-            })
-          }
-          if (recoveryPhase === "resumable" || recoveryPhase === "completed") {
-            return {
-              kind: "completed",
-              browserState: { signingIn: true },
-              cookie: authSession.restoreCookie(exchangeAttemptId),
-              hasTokens: true,
-            }
-          }
-          await client.mutation(api.deviceAuth.abortDeviceExchange, {
-            code: input.params.code,
-            attemptId: exchangeAttemptId,
-            sessionId: existingSession.session.convexSessionId,
-          })
-        } catch {
-          return { kind: "unavailable" }
+        return await recoverExistingDeviceSession(
+          existingSession.session,
+          exchangeAttemptId
+        )
+      }
+      issuanceGenerationId = crypto.randomUUID()
+      const issuance = await authSession.beginIssuance({
+        sessionId: exchangeAttemptId,
+        generationId: issuanceGenerationId,
+        nowMs: Date.now(),
+      })
+      if (issuance.kind !== "acquired") {
+        if (issuance.kind === "unavailable") {
+          return issuance
         }
-        const cleanupResult = await cleanup.drain()
-        if (cleanupResult.kind === "unavailable") {
-          return cleanupResult
-        }
-        return { kind: "unavailable" }
+        const issuedSession = await authSession.read(exchangeAttemptId)
+        return issuedSession.kind === "active"
+          ? await recoverExistingDeviceSession(
+              issuedSession.session,
+              exchangeAttemptId
+            )
+          : { kind: "unavailable" }
       }
     }
-    const result = await client.action(api.auth.signIn, input)
+    const result = await client.action(
+      api.auth.signIn,
+      issuanceGenerationId
+        ? {
+            ...input,
+            params: {
+              ...input.params,
+              issuanceGenerationId,
+            },
+          }
+        : input
+    )
     const tokens = readTokens(result)
     if (!tokens) {
       return {
@@ -182,6 +223,24 @@ export const createWorkerAuthenticationFlow = (
       return { kind: "unavailable" }
     }
     client.setAuth(tokens.token)
+    if (exchangeAttemptId && issuanceGenerationId) {
+      const refreshTokenId = readRefreshTokenId(tokens.refreshToken)
+      if (!refreshTokenId) {
+        return { kind: "unavailable" }
+      }
+      const issuanceStatus = await client.mutation(
+        api.deviceAuth.commitExchangeIssuance,
+        {
+          code: input.params.code,
+          attemptId: exchangeAttemptId,
+          generationId: issuanceGenerationId,
+          refreshTokenId,
+        }
+      )
+      if (issuanceStatus !== "current") {
+        return { kind: "unavailable" }
+      }
+    }
     if (deviceName) {
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
@@ -210,6 +269,7 @@ export const createWorkerAuthenticationFlow = (
       accessToken: tokens.token,
       refreshToken: tokens.refreshToken,
       nowMs: Date.now(),
+      issuanceGenerationId,
       linkWorkerSession: async (workerSessionId) => {
         await client.mutation(api.users.linkCurrentSessionWorker, {
           workerSessionId,
@@ -226,6 +286,18 @@ export const createWorkerAuthenticationFlow = (
           }
         : undefined,
     })
+    if (session.kind === "conflict" && exchangeAttemptId) {
+      const issuedSession = await authSession.read(exchangeAttemptId)
+      return issuedSession.kind === "active"
+        ? await recoverExistingDeviceSession(
+            issuedSession.session,
+            exchangeAttemptId
+          )
+        : { kind: "unavailable" }
+    }
+    if (session.kind === "conflict") {
+      return { kind: "unavailable" }
+    }
     if (session.kind === "unavailable") {
       await recoverDeviceExchange()
       return session

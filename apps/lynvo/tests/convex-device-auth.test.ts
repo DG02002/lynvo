@@ -139,6 +139,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-one",
+        generationId: "generation-one",
       }
     )
     expect(claimed).toMatchObject({ userId: user.userId })
@@ -153,6 +154,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-two",
+        generationId: "generation-two",
       })
     ).rejects.toThrow("Approve this code")
     await deviceClient.mutation(api.deviceAuth.finalizeExchange, {
@@ -186,6 +188,15 @@ describe("device authorization", () => {
         sessionId: claimed.sessionId,
       })
     ).resolves.toBeNull()
+    await expect(
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
+        code: "BCDE-FGHI",
+        pollSecret,
+        now: expiresAt - 1,
+        attemptId: "exchange-one",
+        generationId: "generation-one",
+      })
+    ).rejects.toThrow("Approve this code")
     await deviceClient.mutation(api.deviceAuth.abortDeviceExchange, {
       code: "BCDE-FGHI",
       attemptId: "exchange-one",
@@ -197,6 +208,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-retry",
+        generationId: "generation-retry",
       })
     ).resolves.toMatchObject({ userId: user.userId })
 
@@ -217,6 +229,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt,
         attemptId: "expired-exchange",
+        generationId: "expired-generation",
       })
     ).rejects.toThrow("Approve this code")
     vi.useRealTimers()
@@ -246,6 +259,7 @@ describe("device authorization", () => {
         pollSecret,
         now,
         attemptId: "retry-attempt",
+        generationId: "retry-generation-one",
       }
     )
     await convex.run(async (context) => {
@@ -261,6 +275,7 @@ describe("device authorization", () => {
         pollSecret,
         now: now + 1,
         attemptId: "retry-attempt",
+        generationId: "retry-generation-two",
       }
     )
     await convex.run(async (context) => {
@@ -276,6 +291,7 @@ describe("device authorization", () => {
         pollSecret,
         now: now + DEVICE_CODE_EXCHANGE_LEASE_MS + 1,
         attemptId: "retry-attempt",
+        generationId: "retry-generation-three",
       }
     )
 
@@ -296,6 +312,71 @@ describe("device authorization", () => {
         .collect()
       expect(attemptSessions).toHaveLength(1)
       expect(refreshTokens).toHaveLength(0)
+    })
+  })
+
+  it("rejects a late issuance generation and retains one current token root", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "generation-owner")
+    const sessionId = await convex.run(async (context) => {
+      const createdSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: "generation-attempt",
+      })
+      await context.db.insert("deviceCodes", {
+        code: "JKLM-NOPQ",
+        pollSecretDigest: await digestPollSecret("generation-secret"),
+        status: "exchanging",
+        userId: user.userId,
+        deviceName: "Generation TV",
+        exchangeAttemptId: "generation-attempt",
+        exchangeGenerationId: "generation-current",
+        exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
+        exchangeSessionId: createdSessionId,
+        expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
+        createdAt: Date.now(),
+      })
+      return createdSessionId
+    })
+    const refreshTokenIds = await convex.run(async (context) => ({
+      stale: await context.db.insert("authRefreshTokens", {
+        sessionId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+      }),
+      current: await context.db.insert("authRefreshTokens", {
+        sessionId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+      }),
+    }))
+    const deviceClient = asAuthenticatedUser(convex, user.userId, sessionId)
+
+    await expect(
+      deviceClient.mutation(api.deviceAuth.commitExchangeIssuance, {
+        code: "JKLM-NOPQ",
+        attemptId: "generation-attempt",
+        generationId: "generation-stale",
+        refreshTokenId: refreshTokenIds.stale,
+      })
+    ).resolves.toBe("stale")
+    await expect(
+      deviceClient.mutation(api.deviceAuth.commitExchangeIssuance, {
+        code: "JKLM-NOPQ",
+        attemptId: "generation-attempt",
+        generationId: "generation-current",
+        refreshTokenId: refreshTokenIds.current,
+      })
+    ).resolves.toBe("current")
+    await convex.run(async (context) => {
+      const refreshTokens = await context.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (queryBuilder) =>
+          queryBuilder.eq("sessionId", sessionId)
+        )
+        .collect()
+      expect(refreshTokens.map((refreshToken) => refreshToken._id)).toEqual([
+        refreshTokenIds.current,
+      ])
     })
   })
 
@@ -428,7 +509,7 @@ describe("device authorization", () => {
     })
   })
 
-  it("cleans an abandoned attempt-bound session after code expiry", async () => {
+  it("cleans a linked but non-finalized session after code expiry", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(200_000)
     const convex = createConvexTest()
@@ -439,6 +520,7 @@ describe("device authorization", () => {
         userId: user.userId,
         expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
         deviceExchangeAttemptId: attemptId,
+        workerSessionId: attemptId,
       })
       await context.db.insert("authRefreshTokens", {
         sessionId: createdSessionId,
@@ -479,6 +561,103 @@ describe("device authorization", () => {
           )
           .unique()
       ).not.toBeNull()
+    })
+    vi.useRealTimers()
+  })
+
+  it("records expired Worker cleanup when the Convex session is missing", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(300_000)
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "missing-session-owner")
+    await convex.run(async (context) => {
+      const missingSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() - 1,
+        deviceExchangeAttemptId: "missing-session-attempt",
+      })
+      await context.db.delete("authSessions", missingSessionId)
+      await context.db.insert("deviceCodes", {
+        code: "HIJK-LMNO",
+        pollSecretDigest: await digestPollSecret("missing-secret"),
+        status: "exchanging",
+        userId: user.userId,
+        deviceName: "Missing Session TV",
+        exchangeAttemptId: "missing-session-attempt",
+        exchangeLeaseExpiresAt: Date.now() - 1,
+        exchangeSessionId: missingSessionId,
+        expiresAt: Date.now() - 1,
+        createdAt: 1,
+      })
+    })
+
+    await convex.mutation(internal.deviceAuth.cleanupExpiredCodes)
+
+    await convex.run(async (context) => {
+      expect(
+        await context.db
+          .query("workerSessionCleanupIntents")
+          .withIndex("by_workerSessionId", (queryBuilder) =>
+            queryBuilder.eq("workerSessionId", "missing-session-attempt")
+          )
+          .unique()
+      ).not.toBeNull()
+    })
+    vi.useRealTimers()
+  })
+
+  it("leaves a consumed linked session untouched when its code expires", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(400_000)
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "consumed-owner")
+    const attemptId = "consumed-attempt"
+    const sessionId = await convex.run(async (context) => {
+      const createdSessionId = await context.db.insert("authSessions", {
+        userId: user.userId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+        deviceExchangeAttemptId: attemptId,
+        workerSessionId: attemptId,
+      })
+      await context.db.insert("authRefreshTokens", {
+        sessionId: createdSessionId,
+        expirationTime: Date.now() + DEVICE_CODE_TTL_MS,
+      })
+      await context.db.insert("deviceCodes", {
+        code: "IJKL-MNOP",
+        pollSecretDigest: await digestPollSecret("consumed-secret"),
+        status: "consumed",
+        userId: user.userId,
+        deviceName: "Consumed TV",
+        exchangeAttemptId: attemptId,
+        exchangeSessionId: createdSessionId,
+        consumedSessionId: createdSessionId,
+        expiresAt: Date.now() - 1,
+        createdAt: 1,
+      })
+      return createdSessionId
+    })
+
+    await convex.mutation(internal.deviceAuth.cleanupExpiredCodes)
+
+    await convex.run(async (context) => {
+      expect(await context.db.get("authSessions", sessionId)).not.toBeNull()
+      expect(
+        await context.db
+          .query("authRefreshTokens")
+          .withIndex("sessionId", (queryBuilder) =>
+            queryBuilder.eq("sessionId", sessionId)
+          )
+          .collect()
+      ).toHaveLength(1)
+      expect(
+        await context.db
+          .query("workerSessionCleanupIntents")
+          .withIndex("by_workerSessionId", (queryBuilder) =>
+            queryBuilder.eq("workerSessionId", attemptId)
+          )
+          .unique()
+      ).toBeNull()
     })
     vi.useRealTimers()
   })
