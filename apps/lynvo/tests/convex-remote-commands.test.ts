@@ -14,34 +14,21 @@ import {
 } from "./convex-test-harness"
 
 describe("authenticated remote commands", () => {
-  it("rejects anonymous enqueue, list, and acknowledgement calls", async () => {
+  it("rejects anonymous enqueue and claim calls", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "anonymous-target")
-    const commandId = await convex.run(async (context) => {
-      const now = Date.now()
-      return await context.db.insert("remoteCommands", {
-        userId: user.userId,
-        targetSessionId: user.sessionId,
-        command: "play",
-        payload: "{}",
-        createdAt: now,
-        expiresAt: now + REMOTE_COMMAND_TTL_MS,
-      })
-    })
 
     await expect(
       convex.mutation(api.commands.enqueue, {
         targetSessionId: user.sessionId,
         command: "play",
         payload: "{}",
+        targetReceiverId: "receiver",
       })
     ).rejects.toThrow("UNAUTHORIZED")
     await expect(
-      convex.query(api.commands.listForCurrentSession)
-    ).rejects.toThrow("UNAUTHORIZED")
-    await expect(
-      convex.mutation(api.commands.acknowledge, { id: commandId })
-    ).rejects.toThrow("UNAUTHORIZED")
+      convex.mutation(api.commands.claimNext, { receiverId: "receiver" })
+    ).rejects.toThrow("Authentication session required")
   })
 
   it("prevents a user from targeting another user's session", async () => {
@@ -59,11 +46,12 @@ describe("authenticated remote commands", () => {
         targetSessionId: target.sessionId,
         command: "play",
         payload: "{}",
+        targetReceiverId: "receiver",
       })
     ).rejects.toThrow("Remote session not found")
   })
 
-  it("lists commands only for the current authenticated session", async () => {
+  it("claims commands only for the targeted session and receiver", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "multi-session")
     const secondSessionId = await convex.run(
@@ -82,11 +70,13 @@ describe("authenticated remote commands", () => {
       targetSessionId: user.sessionId,
       command: "play",
       payload: '{"url":"first"}',
+      targetReceiverId: "first-receiver",
     })
     await senderClient.mutation(api.commands.enqueue, {
       targetSessionId: secondSessionId,
       command: "play",
       payload: "{}",
+      targetReceiverId: "second-receiver",
     })
 
     const receiverClient = asAuthenticatedUser(
@@ -94,15 +84,18 @@ describe("authenticated remote commands", () => {
       user.userId,
       secondSessionId
     )
-    const commands = await receiverClient.query(
-      api.commands.listForCurrentSession
-    )
-
-    expect(commands).toHaveLength(1)
-    expect(commands[0]?.command).toBe("play")
+    await expect(
+      receiverClient.mutation(api.commands.claimNext, {
+        receiverId: "first-receiver",
+      })
+    ).resolves.toBeNull()
+    const command = await receiverClient.mutation(api.commands.claimNext, {
+      receiverId: "second-receiver",
+    })
+    expect(command?.command).toBe("play")
   })
 
-  it("prevents acknowledgement from another session", async () => {
+  it("prevents another session from claiming a command", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "ack-owner")
     const secondSessionId = await convex.run(
@@ -121,14 +114,16 @@ describe("authenticated remote commands", () => {
       targetSessionId: secondSessionId,
       command: "play",
       payload: "{}",
+      targetReceiverId: "receiver",
     })
 
+    expect(commandId).toBeTruthy()
     await expect(
-      senderClient.mutation(api.commands.acknowledge, { id: commandId })
-    ).rejects.toThrow("Remote command not found")
+      senderClient.mutation(api.commands.claimNext, { receiverId: "receiver" })
+    ).resolves.toBeNull()
   })
 
-  it("acknowledges a command owned by the current session", async () => {
+  it("reports an applied command idempotently", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "ack-current")
     const authenticatedClient = asAuthenticatedUser(
@@ -140,17 +135,36 @@ describe("authenticated remote commands", () => {
       targetSessionId: user.sessionId,
       command: "play",
       payload: "{}",
+      targetReceiverId: "receiver",
     })
-
+    const claim = await authenticatedClient.mutation(api.commands.claimNext, {
+      receiverId: "receiver",
+    })
+    expect(claim?.id).toBe(commandId)
     await expect(
-      authenticatedClient.mutation(api.commands.acknowledge, { id: commandId })
+      authenticatedClient.mutation(api.commands.reportResult, {
+        id: commandId,
+        receiverId: "receiver",
+        claimToken: claim?.claimToken ?? "",
+        result: "applied",
+      })
     ).resolves.toEqual({ success: true })
     await expect(
-      authenticatedClient.query(api.commands.listForCurrentSession)
-    ).resolves.toEqual([])
+      authenticatedClient.mutation(api.commands.reportResult, {
+        id: commandId,
+        receiverId: "receiver",
+        claimToken: claim?.claimToken ?? "",
+        result: "applied",
+      })
+    ).resolves.toEqual({ success: true })
+    await expect(
+      authenticatedClient.mutation(api.commands.claimNext, {
+        receiverId: "receiver",
+      })
+    ).resolves.toBeNull()
   })
 
-  it("caps pending commands and orders them oldest first", async () => {
+  it("claims the oldest targeted command within the bounded query", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "bounded-list")
     await convex.run(async (context) => {
@@ -162,10 +176,12 @@ describe("authenticated remote commands", () => {
         await context.db.insert("remoteCommands", {
           userId: user.userId,
           targetSessionId: user.sessionId,
+          targetReceiverId: "receiver",
           command: "play",
           payload: String(commandIndex),
           createdAt: commandIndex,
           expiresAt: Date.now() + REMOTE_COMMAND_TTL_MS,
+          status: "queued",
         })
       }
     })
@@ -175,13 +191,10 @@ describe("authenticated remote commands", () => {
       user.sessionId
     )
 
-    const commands = await receiverClient.query(
-      api.commands.listForCurrentSession
-    )
-
-    expect(commands).toHaveLength(REMOTE_COMMAND_QUERY_LIMIT)
-    expect(commands[0]?.createdAt).toBe(0)
-    expect(commands.at(-1)?.createdAt).toBe(REMOTE_COMMAND_QUERY_LIMIT - 1)
+    const command = await receiverClient.mutation(api.commands.claimNext, {
+      receiverId: "receiver",
+    })
+    expect(command?.createdAt).toBe(0)
   })
 
   it("rejects oversized payloads and unknown command names", async () => {
@@ -198,6 +211,7 @@ describe("authenticated remote commands", () => {
         targetSessionId: user.sessionId,
         command: "play",
         payload: "x".repeat(REMOTE_COMMAND_MAX_PAYLOAD_BYTES + 1),
+        targetReceiverId: "receiver",
       })
     ).rejects.toThrow("payload is too large")
     await expect(
@@ -205,6 +219,7 @@ describe("authenticated remote commands", () => {
         targetSessionId: user.sessionId,
         command: "stop",
         payload: "{}",
+        targetReceiverId: "receiver",
       })
     ).rejects.toThrow()
   })
@@ -223,10 +238,12 @@ describe("authenticated remote commands", () => {
         await context.db.insert("remoteCommands", {
           userId: user.userId,
           targetSessionId: user.sessionId,
+          targetReceiverId: "receiver",
           command: "play",
           payload: String(commandIndex),
           createdAt: commandIndex,
           expiresAt: 999_999,
+          status: "queued",
         })
       }
     })

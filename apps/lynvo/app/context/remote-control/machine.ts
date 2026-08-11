@@ -49,7 +49,11 @@ declare global {
       intent: RemotePlaybackIntent
     ) => Promise<unknown>
     poll: () => Promise<RemotePollResponse>
-    acknowledge: (commandId: string) => Promise<unknown>
+    reportResult: (
+      commandId: string,
+      result: "applied" | "failed",
+      message?: string
+    ) => Promise<unknown>
   }
 
   interface RemoteControlPersistence {
@@ -106,6 +110,7 @@ declare global {
     poll: () => Promise<void>
     acknowledgeCommand: (commandId: string) => Promise<void>
     markCommandApplied: (commandId: string) => void
+    failCommand: (commandId: string, message?: string) => Promise<void>
     start: (shouldPoll?: () => boolean) => () => void
   }
 }
@@ -155,7 +160,7 @@ export const createRemoteControlMachine = ({
   const listeners = new Set<() => void>()
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
   const delivery = createRemoteCommandDelivery({
-    acknowledge: transport.acknowledge,
+    reportApplied: (commandId) => transport.reportResult(commandId, "applied"),
     now: clock.now,
     persistence,
   })
@@ -347,6 +352,11 @@ export const createRemoteControlMachine = ({
     },
     markCommandApplied: (commandId) => {
       delivery.markApplied(commandId)
+      syncDeliveryState()
+    },
+    failCommand: async (commandId, message) => {
+      await transport.reportResult(commandId, "failed", message)
+      delivery.markFailed(commandId)
       syncDeliveryState()
     },
     start: (shouldPoll: () => boolean = () => true) => {

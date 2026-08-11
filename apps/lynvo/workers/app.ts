@@ -44,6 +44,7 @@ import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
 import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
 import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
 import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
+import { createRemoteTargetId } from "../app/lib/remote-target"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -402,6 +403,12 @@ app.get("/api/realtime", async (context) => {
     addRequestContext(context, { authenticated: false })
     return context.text("Unauthorized", 401)
   }
+  if (
+    context.req.query("expectedUserId") !== session.user.id ||
+    context.req.query("expectedSessionId") !== session.user.sid
+  ) {
+    return context.text("Session identity changed", 409)
+  }
   addRequestContext(context, {
     authenticated: true,
     user_id: session.user.id,
@@ -413,9 +420,35 @@ app.get("/api/realtime", async (context) => {
   if (workerSessionId) {
     headers.set("X-Lynvo-Worker-Session-Id", workerSessionId)
   }
+  const receiverId = context.req.query("receiverId")
+  const deviceName = context.req.query("deviceName")
+  if (receiverId) {
+    headers.set("X-Lynvo-Receiver-Id", receiverId)
+    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
+  }
   return context.env.USER_REALTIME_ROOM.getByName(session.user.id).fetch(
     new Request(request, { headers })
   )
+})
+
+app.get("/api/remote/receivers", async (context) => {
+  const session = await getSession(context.req.raw, context.env)
+  if (session.kind === "unavailable") {
+    return context.json({ receivers: [] }, 503)
+  }
+  if (!session.user) {
+    return context.json({ receivers: [] }, 401)
+  }
+  if (
+    context.req.query("expectedUserId") !== session.user.id ||
+    context.req.query("expectedSessionId") !== session.user.sid
+  ) {
+    return context.json({ receivers: [] }, 409)
+  }
+  const response = await context.env.USER_REALTIME_ROOM.getByName(
+    session.user.id
+  ).fetch("https://realtime.internal/receivers")
+  return new Response(response.body, response)
 })
 
 app.use("/api/auth/device/authorize", async (context, next) => {
@@ -628,6 +661,37 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       }
       return Response.json({ success: true })
     }
+    if (pathname.endsWith("/receivers")) {
+      const receivers = this.ctx.getWebSockets().flatMap((socket) => {
+        const attachment: unknown = socket.deserializeAttachment()
+        if (
+          typeof attachment !== "object" ||
+          attachment === null ||
+          !("receiverId" in attachment) ||
+          !("sessionId" in attachment) ||
+          !("deviceName" in attachment) ||
+          !("connectedAt" in attachment) ||
+          typeof attachment.receiverId !== "string" ||
+          typeof attachment.sessionId !== "string" ||
+          typeof attachment.deviceName !== "string" ||
+          typeof attachment.connectedAt !== "number"
+        ) {
+          return []
+        }
+        return [
+          {
+            id: createRemoteTargetId(
+              attachment.sessionId,
+              attachment.receiverId
+            ),
+            receiverId: attachment.receiverId,
+            deviceName: attachment.deviceName,
+            lastActiveAt: attachment.connectedAt,
+          },
+        ]
+      })
+      return Response.json({ receivers })
+    }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 426 })
     }
@@ -637,11 +701,28 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     const sessionId = request.headers.get("X-Lynvo-Session-Id")
     const userId = request.headers.get("X-Lynvo-User-Id")
     const workerSessionId = request.headers.get("X-Lynvo-Worker-Session-Id")
-    if (!sessionId || !workerSessionId || !userId) {
+    const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
+    const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
+    if (
+      !sessionId ||
+      !workerSessionId ||
+      !userId ||
+      !receiverId ||
+      !deviceName
+    ) {
       return new Response("Missing session", { status: 401 })
     }
-    server.serializeAttachment({ sessionId, workerSessionId })
-    this.ctx.acceptWebSocket(server, [sessionId])
+    for (const existingSocket of this.ctx.getWebSockets(receiverId)) {
+      existingSocket.close(1000, "Receiver replaced")
+    }
+    server.serializeAttachment({
+      sessionId,
+      workerSessionId,
+      receiverId,
+      deviceName,
+      connectedAt: Date.now(),
+    })
+    this.ctx.acceptWebSocket(server, [sessionId, receiverId])
     server.send(JSON.stringify({ type: "session_hello", userId, sessionId }))
     const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
     const existingAlarmAt = await this.ctx.storage.getAlarm()

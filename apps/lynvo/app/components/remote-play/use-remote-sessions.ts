@@ -1,25 +1,66 @@
 import { useState } from "react"
-import { Effect } from "effect"
-import { client } from "~/lib/effect/api/client"
 import type { RemoteSession } from "./types"
+import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 
 declare global {
   interface RemoteSessionContract {
     id: string
     deviceName: string
     lastActiveAt: number
-    createdAt: number
-    isCurrent: boolean
+    receiverId?: string
+    createdAt?: number
+    isCurrent?: boolean
   }
 }
 
 export const loadRemoteSessions = async (
-  listSessions: () => Promise<readonly RemoteSessionContract[]> = () =>
-    Effect.runPromise(client.settings.listSessions())
+  listSessions: () => Promise<readonly RemoteSessionContract[]> = async () => {
+    const url = new URL("/api/remote/receivers", window.location.href)
+    const userId = document.querySelector<HTMLMetaElement>(
+      'meta[name="lynvo-user-id"]'
+    )?.content
+    const sessionId = document.querySelector<HTMLMetaElement>(
+      'meta[name="lynvo-session-id"]'
+    )?.content
+    if (userId && sessionId) {
+      url.searchParams.set("expectedUserId", userId)
+      url.searchParams.set("expectedSessionId", sessionId)
+    }
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      cache: "no-store",
+    })
+    if (!response.ok) {
+      throw new Error("Remote receiver presence is unavailable")
+    }
+    const payload: unknown = await response.json()
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      !("receivers" in payload) ||
+      !Array.isArray(payload.receivers)
+    ) {
+      throw new Error("Remote receiver presence is invalid")
+    }
+    return payload.receivers.filter(
+      (receiver): receiver is RemoteSessionContract =>
+        typeof receiver === "object" &&
+        receiver !== null &&
+        "id" in receiver &&
+        "deviceName" in receiver &&
+        "lastActiveAt" in receiver &&
+        "receiverId" in receiver &&
+        typeof receiver.id === "string" &&
+        typeof receiver.deviceName === "string" &&
+        typeof receiver.lastActiveAt === "number" &&
+        typeof receiver.receiverId === "string"
+    )
+  }
 ): Promise<RemoteSession[]> => {
   const sessions = await listSessions()
+  const currentReceiverId = getRemoteReceiverId()
   return sessions.flatMap((session) =>
-    session.isCurrent
+    session.receiverId === currentReceiverId || session.isCurrent
       ? []
       : [
           {

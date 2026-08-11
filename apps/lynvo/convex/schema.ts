@@ -285,10 +285,20 @@ export default defineSchema({
   remoteCommands: defineTable({
     userId: v.id("users"),
     targetSessionId: v.id("authSessions"),
+    targetReceiverId: v.string(),
     command: v.literal("play"),
     payload: v.string(),
     createdAt: v.number(),
     expiresAt: v.number(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("claimed"),
+      v.literal("applied"),
+      v.literal("failed")
+    ),
+    claimToken: v.optional(v.string()),
+    claimExpiresAt: v.optional(v.number()),
+    resultMessage: v.optional(v.string()),
   })
     .index("by_userId_targetSessionId_createdAt", [
       "userId",

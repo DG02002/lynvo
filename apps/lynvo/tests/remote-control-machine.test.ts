@@ -16,7 +16,7 @@ const createHarness = ({
     disconnect: vi.fn(async () => undefined),
     send: vi.fn(async () => undefined),
     poll: vi.fn(async () => pollResponse),
-    acknowledge: vi.fn(async () => undefined),
+    reportResult: vi.fn(async () => undefined),
   }
   const persistence = {
     load: vi.fn(() => ({
@@ -222,8 +222,11 @@ describe("remote-control machine", () => {
     await harness.machine.poll()
 
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
-    expect(harness.transport.acknowledge).toHaveBeenCalledOnce()
-    expect(harness.transport.acknowledge).toHaveBeenCalledWith("command-1")
+    expect(harness.transport.reportResult).toHaveBeenCalledOnce()
+    expect(harness.transport.reportResult).toHaveBeenCalledWith(
+      "command-1",
+      "applied"
+    )
   })
 
   it("ignores a late realtime copy after durable polling delivered a command", async () => {
@@ -298,12 +301,12 @@ describe("remote-control machine", () => {
 
     expect(outcomes).toContainEqual({ type: "invalid-command" })
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
-    expect(harness.transport.acknowledge).not.toHaveBeenCalled()
+    expect(harness.transport.reportResult).not.toHaveBeenCalled()
   })
 
   it("retries a failed acknowledgement without replaying the command", async () => {
     const harness = createHarness()
-    harness.transport.acknowledge.mockRejectedValueOnce(new Error("offline"))
+    harness.transport.reportResult.mockRejectedValueOnce(new Error("offline"))
     harness.machine.receiveCommand({
       command: "play",
       payload: { url: "https://example.com/one", rangeRequest: "unknown" },
@@ -327,7 +330,7 @@ describe("remote-control machine", () => {
     })
     await harness.machine.poll()
 
-    expect(harness.transport.acknowledge).toHaveBeenCalledTimes(2)
+    expect(harness.transport.reportResult).toHaveBeenCalledTimes(2)
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
 

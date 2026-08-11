@@ -93,7 +93,11 @@ describe("Plugin Server usage HTTP fan-out", () => {
       new Request(
         "https://lynvo.dg02002.workers.dev/api/plugin-servers/usage",
         {
-          headers: { Cookie: "__Host-lynvo-session=opaque-session-id" },
+          headers: {
+            Cookie: "__Host-lynvo-session=opaque-session-id",
+            "X-Lynvo-Expected-User-Id": "users:123",
+            "X-Lynvo-Expected-Session-Id": "authSessions:456",
+          },
         }
       ),
       {
@@ -142,6 +146,8 @@ describe("Plugin Server usage HTTP fan-out", () => {
           Cookie: `__Host-lynvo-session=opaque-session-id; ${csrfCookieHeader}`,
           Origin: "https://lynvo.dg02002.workers.dev",
           "X-CSRF-Token": "test-csrf-token",
+          "X-Lynvo-Expected-User-Id": "users:123",
+          "X-Lynvo-Expected-Session-Id": "authSessions:456",
         },
         body: JSON.stringify({
           baseUrl: "https://new-plugin-server.example",

@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 
 export const RemoteCommandListener = () => {
-  const { lastCommand, acknowledgeCommand, markCommandApplied } =
+  const { lastCommand, acknowledgeCommand, markCommandApplied, failCommand } =
     useRemoteControl()
   const playerPreferenceUserId = usePlayerPreferenceIdentity()
   const inFlightCommandId = useRef<string | null>(null)
@@ -25,7 +25,11 @@ export const RemoteCommandListener = () => {
         )
         markCommandApplied(lastCommand.id)
         acknowledgeCommand(lastCommand.id)
-      } catch {
+      } catch (error) {
+        await failCommand(
+          lastCommand.id,
+          error instanceof Error ? error.message : "Playback handoff failed"
+        ).catch(console.error)
         inFlightCommandId.current = null
         toast.error("Remote Play couldn’t open this link.")
       }
@@ -34,6 +38,7 @@ export const RemoteCommandListener = () => {
     void handleCommand()
   }, [
     acknowledgeCommand,
+    failCommand,
     lastCommand,
     markCommandApplied,
     playerPreferenceUserId,

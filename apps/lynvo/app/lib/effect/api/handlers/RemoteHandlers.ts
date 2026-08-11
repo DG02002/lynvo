@@ -4,9 +4,13 @@ import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
 import { api } from "../../../../../convex/_generated/api"
-import type { Id } from "../../../../../convex/_generated/dataModel"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
-import { createRemoteCommandMessage } from "../../../remote-play/wire"
+import {
+  createRemoteClaimId,
+  parseRemoteClaimId,
+  parseRemoteTargetId,
+} from "../../../remote-target"
+import { ConvexError } from "../../errors"
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -18,61 +22,97 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
         const commandPayload = payload.data
           ? JSON.stringify(payload.data)
           : "{}"
-        const commandId = yield* convex.mutation(
+        const target = parseRemoteTargetId(payload.target_session_id)
+        if (!target) {
+          return yield* Effect.fail(
+            new ConvexError({ message: "Remote receiver target is invalid" })
+          )
+        }
+        const presence: unknown = yield* Effect.tryPromise({
+          try: async () => {
+            const response = await environment.USER_REALTIME_ROOM.getByName(
+              user.id
+            ).fetch("https://realtime.internal/receivers")
+            return await response.json()
+          },
+          catch: (cause) =>
+            new ConvexError({
+              message: "Remote receiver presence is unavailable",
+              cause,
+            }),
+        })
+        const receiverIsLive =
+          typeof presence === "object" &&
+          presence !== null &&
+          "receivers" in presence &&
+          Array.isArray(presence.receivers) &&
+          presence.receivers.some(
+            (receiver) =>
+              typeof receiver === "object" &&
+              receiver !== null &&
+              "id" in receiver &&
+              receiver.id === payload.target_session_id
+          )
+        if (!receiverIsLive) {
+          return yield* Effect.fail(
+            new ConvexError({ message: "Remote receiver is offline" })
+          )
+        }
+        yield* convex.mutation(
           api.commands.enqueue,
           {
-            targetSessionId: payload.target_session_id as Id<"authSessions">,
+            targetSessionId: target.sessionId,
+            targetReceiverId: target.receiverId,
             command: payload.command,
             payload: commandPayload,
           },
           { accessToken: user.accessToken }
         )
-        yield* Effect.tryPromise(() =>
-          environment.USER_REALTIME_ROOM.getByName(user.id).fetch(
-            "https://realtime.internal/broadcast",
-            {
-              method: "POST",
-              body: JSON.stringify(
-                createRemoteCommandMessage({
-                  id: commandId,
-                  command: payload.command,
-                  payload: commandPayload,
-                  createdAt: Date.now(),
-                  targetSessionId: payload.target_session_id,
-                })
-              ),
-            }
-          )
-        ).pipe(Effect.ignore)
         return { success: true }
       })
     )
-    .handle("pollInbox", () =>
+    .handle("pollInbox", ({ query }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
-        const commands = yield* convex.query(
-          api.commands.listForCurrentSession,
-          {},
+        const command = yield* convex.mutation(
+          api.commands.claimNext,
+          { receiverId: query.receiverId },
           { accessToken: user.accessToken }
         )
         return {
-          commands: commands.map((command) => ({
-            id: command._id,
-            command: command.command,
-            payload: command.payload,
-            createdAt: command.createdAt,
-          })),
+          commands: command
+            ? [
+                {
+                  id: createRemoteClaimId(command.id, command.claimToken),
+                  command: command.command,
+                  payload: command.payload,
+                  createdAt: command.createdAt,
+                },
+              ]
+            : [],
         }
       })
     )
-    .handle("acknowledge", ({ payload }) =>
+    .handle("reportResult", ({ payload }) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const claim = parseRemoteClaimId(payload.id)
+        if (!claim) {
+          return yield* Effect.fail(
+            new ConvexError({ message: "Remote command claim is invalid" })
+          )
+        }
         return yield* convex.mutation(
-          api.commands.acknowledge,
-          { id: payload.id as Id<"remoteCommands"> },
+          api.commands.reportResult,
+          {
+            id: claim.commandId,
+            claimToken: claim.claimToken,
+            receiverId: payload.receiverId,
+            result: payload.result,
+            message: payload.message,
+          },
           { accessToken: user.accessToken }
         )
       })

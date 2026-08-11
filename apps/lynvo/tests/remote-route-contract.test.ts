@@ -13,6 +13,7 @@ describe("Remote Play Worker contract", () => {
     const listSessions = vi.fn(async () => [
       {
         id: "current-session",
+        receiverId: "current-receiver",
         deviceName: "This device",
         lastActiveAt: 100,
         createdAt: 50,
@@ -20,6 +21,7 @@ describe("Remote Play Worker contract", () => {
       },
       {
         id: "target-session",
+        receiverId: "target-receiver",
         deviceName: "Living room TV",
         lastActiveAt: 90,
         createdAt: 40,
@@ -40,7 +42,7 @@ describe("Remote Play Worker contract", () => {
   it.each([
     ["POST", "/api/remote/send"],
     ["GET", "/api/remote/inbox"],
-    ["POST", "/api/remote/acknowledge"],
+    ["POST", "/api/remote/result"],
   ])("registers %s %s", async (method, path) => {
     const { default: worker } = await import("../workers/app")
     const response = await worker.fetch(

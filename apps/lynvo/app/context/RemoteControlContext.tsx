@@ -21,6 +21,7 @@ declare global {
     lastCommand: RemoteCommand | null
     acknowledgeCommand: (commandId: string) => void
     markCommandApplied: (commandId: string) => void
+    failCommand: (commandId: string, message?: string) => Promise<void>
     controlledBy: string | null
     controllingDeviceName: string | null
     controllingDevices: RemoteDevice[]
@@ -169,6 +170,7 @@ export const RemoteControlProvider = ({
       lastCommand: state.lastCommand,
       acknowledgeCommand: machine.acknowledgeCommand,
       markCommandApplied: machine.markCommandApplied,
+      failCommand: machine.failCommand,
       controlledBy: state.controlledBy,
       controllingDeviceName: state.controllingDeviceName,
       controllingDevices: state.controllingDevices,

@@ -19,6 +19,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
+      query: Schema.Struct({ receiverId: Schema.String }),
       success: Schema.Struct({
         commands: Schema.Array(
           Schema.Struct({
@@ -31,8 +32,16 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
       }),
       error: [UnauthorizedApiError, ConvexApiError],
     }),
-    HttpApiEndpoint.post("acknowledge", "/acknowledge", {
-      payload: Schema.Struct({ id: Schema.String }),
+    HttpApiEndpoint.post("reportResult", "/result", {
+      payload: Schema.Struct({
+        id: Schema.String,
+        receiverId: Schema.String,
+        result: Schema.Union([
+          Schema.Literal("applied"),
+          Schema.Literal("failed"),
+        ]),
+        message: Schema.optional(Schema.String),
+      }),
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     })

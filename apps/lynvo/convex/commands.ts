@@ -1,30 +1,17 @@
 import { v } from "convex/values"
 import { getAuthSessionId } from "@convex-dev/auth/server"
 import { internal } from "./_generated/api"
-import { internalMutation, mutation, query } from "./_generated/server"
-import {
-  getAuthenticatedUserId,
-  getAuthenticatedWritableUserId,
-} from "./authentication"
+import { internalMutation, mutation } from "./_generated/server"
+import { getAuthenticatedWritableUserId } from "./authentication"
 import {
   REMOTE_COMMAND_CLEANUP_BATCH_SIZE,
+  REMOTE_COMMAND_CLAIM_LEASE_MS,
   REMOTE_COMMAND_MAX_PAYLOAD_BYTES,
   REMOTE_COMMAND_QUERY_LIMIT,
   REMOTE_COMMAND_TTL_MS,
 } from "./constants"
 
 const remoteCommandValidator = v.literal("play")
-const remoteCommandDocumentValidator = v.object({
-  _id: v.id("remoteCommands"),
-  _creationTime: v.number(),
-  userId: v.id("users"),
-  targetSessionId: v.id("authSessions"),
-  command: remoteCommandValidator,
-  payload: v.string(),
-  createdAt: v.number(),
-  expiresAt: v.number(),
-})
-
 const getAuthenticatedSession = async (
   context: Parameters<typeof getAuthSessionId>[0]
 ) => {
@@ -47,67 +34,131 @@ const assertPayloadSize = (payload: string) => {
 export const enqueue = mutation({
   returns: v.id("remoteCommands"),
   args: {
-    targetSessionId: v.id("authSessions"),
+    targetSessionId: v.string(),
     command: remoteCommandValidator,
     payload: v.string(),
+    targetReceiverId: v.string(),
   },
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedWritableUserId(context)
     await getAuthenticatedSession(context)
     assertPayloadSize(arguments_.payload)
-    const targetSession = await context.db.get(
+    const targetSessionId = context.db.normalizeId(
       "authSessions",
       arguments_.targetSessionId
     )
+    if (!targetSessionId) {
+      throw new Error("Remote session not found")
+    }
+    const targetSession = await context.db.get("authSessions", targetSessionId)
     if (!targetSession || targetSession.userId !== userId) {
       throw new Error("Remote session not found")
     }
     const now = Date.now()
     return await context.db.insert("remoteCommands", {
       userId,
-      targetSessionId: arguments_.targetSessionId,
+      targetSessionId,
+      targetReceiverId: arguments_.targetReceiverId,
       command: arguments_.command,
       payload: arguments_.payload,
       createdAt: now,
       expiresAt: now + REMOTE_COMMAND_TTL_MS,
+      status: "queued",
     })
   },
 })
 
-export const listForCurrentSession = query({
-  returns: v.array(remoteCommandDocumentValidator),
-  args: {},
-  handler: async (context) => {
+export const claimNext = mutation({
+  returns: v.union(
+    v.null(),
+    v.object({
+      id: v.id("remoteCommands"),
+      command: remoteCommandValidator,
+      payload: v.string(),
+      createdAt: v.number(),
+      claimToken: v.string(),
+    })
+  ),
+  args: { receiverId: v.string() },
+  handler: async (context, arguments_) => {
     const [userId, sessionId] = await Promise.all([
-      getAuthenticatedUserId(context),
+      getAuthenticatedWritableUserId(context),
       getAuthenticatedSession(context),
     ])
-    return await context.db
+    const now = Date.now()
+    const commands = await context.db
       .query("remoteCommands")
       .withIndex("by_userId_targetSessionId_createdAt", (queryBuilder) =>
         queryBuilder.eq("userId", userId).eq("targetSessionId", sessionId)
       )
       .order("asc")
       .take(REMOTE_COMMAND_QUERY_LIMIT)
+    const command = commands.find(
+      (candidate) =>
+        candidate.targetReceiverId === arguments_.receiverId &&
+        candidate.expiresAt > now &&
+        (candidate.status === "queued" ||
+          (candidate.status === "claimed" &&
+            candidate.claimExpiresAt !== undefined &&
+            candidate.claimExpiresAt <= now))
+    )
+    if (!command) {
+      return null
+    }
+    const claimToken = crypto.randomUUID()
+    await context.db.patch("remoteCommands", command._id, {
+      status: "claimed",
+      claimToken,
+      claimExpiresAt: now + REMOTE_COMMAND_CLAIM_LEASE_MS,
+    })
+    return {
+      id: command._id,
+      command: command.command,
+      payload: command.payload,
+      createdAt: command.createdAt,
+      claimToken,
+    }
   },
 })
 
-export const acknowledge = mutation({
+export const reportResult = mutation({
   returns: v.object({ success: v.boolean() }),
-  args: { id: v.id("remoteCommands") },
+  args: {
+    id: v.string(),
+    receiverId: v.string(),
+    claimToken: v.string(),
+    result: v.union(v.literal("applied"), v.literal("failed")),
+    message: v.optional(v.string()),
+  },
   handler: async (context, arguments_) => {
-    // react-doctor-disable-next-line react-doctor/async-parallel -- authorization must fail before session and command reads
-    const userId = await getAuthenticatedWritableUserId(context)
-    const sessionId = await getAuthenticatedSession(context)
-    const command = await context.db.get("remoteCommands", arguments_.id)
+    const [userId, sessionId] = await Promise.all([
+      getAuthenticatedWritableUserId(context),
+      getAuthenticatedSession(context),
+    ])
+    const commandId = context.db.normalizeId("remoteCommands", arguments_.id)
+    const command = commandId
+      ? await context.db.get("remoteCommands", commandId)
+      : null
     if (
       !command ||
       command.userId !== userId ||
-      command.targetSessionId !== sessionId
+      command.targetSessionId !== sessionId ||
+      command.targetReceiverId !== arguments_.receiverId ||
+      command.claimToken !== arguments_.claimToken
     ) {
-      throw new Error("Remote command not found")
+      throw new Error("Remote command claim is no longer active")
     }
-    await context.db.delete("remoteCommands", command._id)
+    if (command.status === arguments_.result) {
+      return { success: true }
+    }
+    if (command.status !== "claimed") {
+      throw new Error("Remote command claim is no longer active")
+    }
+    await context.db.patch("remoteCommands", command._id, {
+      status: arguments_.result,
+      resultMessage: arguments_.message,
+      claimExpiresAt: undefined,
+    })
     return { success: true }
   },
 })

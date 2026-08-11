@@ -10,6 +10,7 @@ const PUBLIC_FUNCTION =
   /export const (\w+) = (?:query|mutation|action)\(\{([\s\S]*?)(?=\nexport const |$)/g
 const STRING_ID = /args:\s*\{[\s\S]*?\bid:\s*v\.string\(\)/g
 const STRING_ID_ALLOWLIST = new Set([
+  "convex/commands.ts",
   "convex/links.ts",
   "convex/pluginDomains.ts",
   "convex/userPluginServers.ts",

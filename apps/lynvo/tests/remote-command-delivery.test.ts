@@ -23,14 +23,14 @@ const createHarness = () => {
     applied: [],
     pendingAcknowledgements: [],
   }
-  const acknowledge = vi.fn(async () => {
+  const reportApplied = vi.fn(async () => {
     if (shouldFailAcknowledgement) {
       shouldFailAcknowledgement = false
       throw new Error("offline")
     }
   })
   const delivery = createRemoteCommandDelivery({
-    acknowledge,
+    reportApplied,
     now: () => now,
     persistence: {
       loadDelivery: () => record,
@@ -42,7 +42,7 @@ const createHarness = () => {
 
   return {
     delivery,
-    acknowledge,
+    acknowledge: reportApplied,
     setNow: (nextNow: number) => {
       now = nextNow
     },
@@ -116,7 +116,7 @@ describe("remote command delivery", () => {
 
     const recoveredAcknowledge = vi.fn(async () => undefined)
     const recovered = createRemoteCommandDelivery({
-      acknowledge: recoveredAcknowledge,
+      reportApplied: recoveredAcknowledge,
       now: () => 1_000_001,
       persistence: {
         loadDelivery: harness.getRecord,

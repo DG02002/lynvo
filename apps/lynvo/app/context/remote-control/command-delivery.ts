@@ -25,7 +25,7 @@ declare global {
   }
 
   interface RemoteCommandDeliveryDependencies {
-    acknowledge: (commandId: string) => Promise<unknown>
+    reportApplied: (commandId: string) => Promise<unknown>
     now: () => number
     persistence: Pick<RemoteControlPersistence, "loadDelivery" | "saveDelivery">
   }
@@ -40,6 +40,7 @@ declare global {
     getSnapshot: () => RemoteCommandDeliveryState
     receive: (command: RemoteCommandDeliveryInput) => boolean
     markApplied: (commandId: string) => void
+    markFailed: (commandId: string) => void
     acknowledge: (commandId: string) => Promise<void>
     retryPendingAcknowledgements: () => Promise<void>
   }
@@ -63,7 +64,7 @@ export const parseRemoteCommandWirePayload = (
 }
 
 export const createRemoteCommandDelivery = ({
-  acknowledge,
+  reportApplied,
   now,
   persistence,
 }: RemoteCommandDeliveryDependencies): RemoteCommandDelivery => {
@@ -97,7 +98,7 @@ export const createRemoteCommandDelivery = ({
     if (activeRequest) {
       return activeRequest
     }
-    const request = acknowledge(commandId)
+    const request = reportApplied(commandId)
       .then(() => {
         pendingAcknowledgements.delete(commandId)
         appliedCommands.delete(commandId)
@@ -149,6 +150,14 @@ export const createRemoteCommandDelivery = ({
       }
       appliedCommands.set(commandId, now())
       pendingAcknowledgements.add(commandId)
+      state = { lastCommand: null }
+      persist()
+    },
+    markFailed: (commandId) => {
+      if (state.lastCommand?.id !== commandId) {
+        return
+      }
+      processedCommands.set(commandId, now())
       state = { lastCommand: null }
       persist()
     },

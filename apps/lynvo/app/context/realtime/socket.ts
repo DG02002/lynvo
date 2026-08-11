@@ -1,6 +1,8 @@
 import type { RealtimeAction } from "./reducer"
 import { parseRealtimeMessage } from "./message-schema"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
+import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
+import { getBrowserDeviceName } from "~/lib/device-name"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
@@ -29,6 +31,11 @@ const websocketUrl = () => {
   if (userId && sessionId) {
     url.searchParams.set("expectedUserId", userId)
     url.searchParams.set("expectedSessionId", sessionId)
+  }
+  const receiverId = getRemoteReceiverId()
+  if (receiverId) {
+    url.searchParams.set("receiverId", receiverId)
+    url.searchParams.set("deviceName", getBrowserDeviceName())
   }
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
   return url.toString()
