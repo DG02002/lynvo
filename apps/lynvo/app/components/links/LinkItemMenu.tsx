@@ -84,7 +84,9 @@ const LinkItemMenuContent = ({
 
   const removeItem = () => {
     if (isDraft) {
-      deleteDraft(item.url)
+      if ("userId" in item) {
+        deleteDraft(item.userId, item.url)
+      }
     } else {
       void actions.remove(item.url, "id" in item ? item.id : undefined)
     }

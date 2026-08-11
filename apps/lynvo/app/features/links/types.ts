@@ -92,6 +92,7 @@ export interface SavedLinkListItem extends LinkViewItem {
 
 export interface DraftListItem {
   kind: "draft"
+  userId: string
   url: string
   timestamp: number
   title: string

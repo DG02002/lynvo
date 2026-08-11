@@ -24,6 +24,7 @@ export interface ExtractionPreview {
 }
 
 export interface SaveLinkOptions {
+  userId: string
   overrideUrl?: string
   currentUrl: string
   links: LinkViewItem[]
@@ -36,6 +37,7 @@ export interface SaveLinkOptions {
 }
 
 export interface ConfirmSelectionOptions {
+  userId: string
   selectedLinks: ExtractedLink[]
   originalUrl: string
   meta: MetaData

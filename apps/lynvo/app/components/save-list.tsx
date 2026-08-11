@@ -17,6 +17,7 @@ const SaveList = () => {
     highlightedId,
     setHighlightedId,
     actions,
+    user,
     isHydrating,
   } = useLinks()
   const {
@@ -27,6 +28,7 @@ const SaveList = () => {
     selectionDialog,
     pluginDomainDialog,
   } = useLinkActions({
+    userId: user?.sub ?? "signed-out",
     links,
     linkActions: actions,
     setHighlightedId,

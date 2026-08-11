@@ -9,6 +9,7 @@ import {
 } from "~/lib/plugin-domain"
 
 export const saveLink = async ({
+  userId,
   overrideUrl,
   currentUrl,
   links,
@@ -31,7 +32,7 @@ export const saveLink = async ({
   reporter.publish({ kind: "clear-error" })
   reporter.publish({ kind: "clear-preview" })
 
-  const existingDraft = readDraft(savedUrl)
+  const existingDraft = readDraft(userId, savedUrl)
   if (existingDraft) {
     reporter.publish({
       kind: "selection-required",
@@ -128,6 +129,7 @@ export const saveLink = async ({
 }
 
 export const confirmSelectedLinks = async ({
+  userId,
   selectedLinks,
   originalUrl,
   meta,
@@ -146,7 +148,7 @@ export const confirmSelectedLinks = async ({
     await addLink(originalUrl, meta, selectedLinks)
   }
 
-  deleteDraft(originalUrl)
+  deleteDraft(userId, originalUrl)
   reporter.publish({ kind: "selection-closed" })
   reporter.publish({ kind: "view-reset" })
   vibrateSaveSuccess()

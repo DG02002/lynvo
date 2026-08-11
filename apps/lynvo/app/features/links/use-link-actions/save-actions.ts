@@ -19,6 +19,7 @@ import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-i
 import { shouldOfferPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
 
 export const useSaveActions = ({
+  userId,
   url,
   links,
   addLink,
@@ -33,6 +34,7 @@ export const useSaveActions = ({
   setSortOrder,
   setCurrentPage,
 }: {
+  userId: string
   url: string
   links: LinkViewItem[]
   addLink: (
@@ -119,6 +121,7 @@ export const useSaveActions = ({
 
     try {
       const result = await saveLink({
+        userId,
         overrideUrl,
         currentUrl: url,
         links,
@@ -146,6 +149,7 @@ export const useSaveActions = ({
       } = selectionDialogState
 
       const result = await confirmSelectedLinks({
+        userId,
         selectedLinks,
         originalUrl,
         meta,
@@ -169,7 +173,7 @@ export const useSaveActions = ({
   const saveSelectionDraft = () => {
     const { originalUrl, links, meta } = selectionDialogState
     if (links.length > 0) {
-      writeDraft(originalUrl, links, meta)
+      writeDraft(userId, originalUrl, links, meta)
       reporter.publish({ kind: "draft-saved" })
     }
     closeSelectionDialog()

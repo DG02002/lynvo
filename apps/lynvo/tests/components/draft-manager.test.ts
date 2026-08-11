@@ -8,6 +8,8 @@ import {
 } from "~/features/links/drafts"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 
+const TEST_USER_ID = "test-user"
+
 const createMockStorage = () => {
   let store: Record<string, string> = {}
   return {
@@ -53,8 +55,8 @@ describe("Draft module", () => {
       pluginName: "Spencerwooo's Onedrive Vercel Index",
     }
 
-    writeDraft("https://example.com", links, meta)
-    const draft = readDraft("https://example.com")
+    writeDraft(TEST_USER_ID, "https://example.com", links, meta)
+    const draft = readDraft(TEST_USER_ID, "https://example.com")
 
     expect(draft).toBeDefined()
     expect(draft).not.toHaveProperty("selectedIds")
@@ -64,6 +66,7 @@ describe("Draft module", () => {
 
   it("removes a draft", () => {
     writeDraft(
+      TEST_USER_ID,
       "https://example.com",
       [
         {
@@ -76,14 +79,22 @@ describe("Draft module", () => {
       ],
       {}
     )
-    deleteDraft("https://example.com")
+    deleteDraft(TEST_USER_ID, "https://example.com")
 
-    expect(readDraft("https://example.com")).toBeNull()
+    expect(readDraft(TEST_USER_ID, "https://example.com")).toBeNull()
+  })
+
+  it("isolates drafts by account identity", () => {
+    writeDraft("account-a", "https://private.example", [], {})
+
+    expect(readDraft("account-b", "https://private.example")).toBeNull()
+    expect(getDraftsSnapshot("account-b")).toEqual([])
+    expect(readDraft("account-a", "https://private.example")).not.toBeNull()
   })
 
   it("removes malformed draft storage instead of trusting parsed JSON", () => {
     localStorage.setItem(
-      "lynvo:drafts:v1",
+      `lynvo:drafts:v2:${TEST_USER_ID}`,
       JSON.stringify({
         corrupted: {
           links: "not-an-array",
@@ -94,61 +105,61 @@ describe("Draft module", () => {
       })
     )
 
-    expect(readDraft("https://example.com")).toBeNull()
-    expect(localStorage.getItem("lynvo:drafts:v1")).toBeNull()
+    expect(readDraft(TEST_USER_ID, "https://example.com")).toBeNull()
+    expect(localStorage.getItem(`lynvo:drafts:v2:${TEST_USER_ID}`)).toBeNull()
   })
 
   it("arms expiry when a draft is written after subscription", () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_000)
     const subscriber = vi.fn()
-    const unsubscribe = subscribeToDrafts(subscriber)
+    const unsubscribe = subscribeToDrafts(TEST_USER_ID, subscriber)
 
-    writeDraft("https://example.com/late", [], {})
+    writeDraft(TEST_USER_ID, "https://example.com/late", [], {})
     subscriber.mockClear()
     vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000)
 
     expect(subscriber).toHaveBeenCalledOnce()
-    expect(getDraftsSnapshot()).toEqual([])
+    expect(getDraftsSnapshot(TEST_USER_ID)).toEqual([])
     unsubscribe()
   })
 
   it("re-arms for sequential expirations and deletion of the nearest draft", () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_000)
-    writeDraft("https://example.com/first", [], {})
+    writeDraft(TEST_USER_ID, "https://example.com/first", [], {})
     vi.advanceTimersByTime(1_000)
-    writeDraft("https://example.com/second", [], {})
+    writeDraft(TEST_USER_ID, "https://example.com/second", [], {})
     const subscriber = vi.fn()
-    const unsubscribe = subscribeToDrafts(subscriber)
+    const unsubscribe = subscribeToDrafts(TEST_USER_ID, subscriber)
 
-    deleteDraft("https://example.com/first")
+    deleteDraft(TEST_USER_ID, "https://example.com/first")
     subscriber.mockClear()
     vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000 - 1)
     expect(subscriber).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
 
     expect(subscriber).toHaveBeenCalledOnce()
-    expect(getDraftsSnapshot()).toEqual([])
+    expect(getDraftsSnapshot(TEST_USER_ID)).toEqual([])
     unsubscribe()
   })
 
   it("publishes each sequential draft expiration", () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_000)
-    writeDraft("https://example.com/first-sequential", [], {})
+    writeDraft(TEST_USER_ID, "https://example.com/first-sequential", [], {})
     vi.advanceTimersByTime(1_000)
-    writeDraft("https://example.com/second-sequential", [], {})
+    writeDraft(TEST_USER_ID, "https://example.com/second-sequential", [], {})
     const subscriber = vi.fn()
-    const unsubscribe = subscribeToDrafts(subscriber)
+    const unsubscribe = subscribeToDrafts(TEST_USER_ID, subscriber)
 
     vi.advanceTimersByTime(7 * 24 * 60 * 60 * 1_000 - 1_000)
     expect(subscriber).toHaveBeenCalledTimes(1)
-    expect(getDraftsSnapshot()).toHaveLength(1)
+    expect(getDraftsSnapshot(TEST_USER_ID)).toHaveLength(1)
 
     vi.advanceTimersByTime(1_000)
     expect(subscriber).toHaveBeenCalledTimes(2)
-    expect(getDraftsSnapshot()).toEqual([])
+    expect(getDraftsSnapshot(TEST_USER_ID)).toEqual([])
     unsubscribe()
   })
 })

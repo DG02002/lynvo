@@ -12,7 +12,7 @@ import type {
   LinkViewItem,
 } from "~/features/links/types"
 
-const draftToLinkViewItem = (draft: Draft): DraftListItem => ({
+const draftToLinkViewItem = (userId: string, draft: Draft): DraftListItem => ({
   kind: "draft",
   url: draft.originalUrl,
   timestamp: draft.expiresAt - DRAFT_TTL_MS,
@@ -22,12 +22,17 @@ const draftToLinkViewItem = (draft: Draft): DraftListItem => ({
   pluginName: draft.meta.pluginName,
   pluginIcon: draft.meta.pluginIcon,
   expiresAt: draft.expiresAt,
+  userId,
 })
 
-export const useDraftLinks = (links: LinkViewItem[]): LinkListItem[] => {
+export const useDraftLinks = (
+  userId: string | undefined,
+  links: LinkViewItem[]
+): LinkListItem[] => {
   const drafts = useSyncExternalStore(
-    subscribeToDrafts,
-    getDraftsSnapshot,
+    (subscriber) =>
+      userId ? subscribeToDrafts(userId, subscriber) : () => undefined,
+    () => (userId ? getDraftsSnapshot(userId) : []),
     getServerDraftsSnapshot
   )
 
@@ -35,7 +40,7 @@ export const useDraftLinks = (links: LinkViewItem[]): LinkListItem[] => {
     const draftUrls = new Set(drafts.map((draft) => draft.originalUrl))
     const filteredLinks = links.filter((link) => !draftUrls.has(link.url))
     return [
-      ...drafts.map(draftToLinkViewItem),
+      ...drafts.map((draft) => draftToLinkViewItem(userId!, draft)),
       ...filteredLinks.map((link) => ({ ...link, kind: "saved" as const })),
     ]
   }, [drafts, links])

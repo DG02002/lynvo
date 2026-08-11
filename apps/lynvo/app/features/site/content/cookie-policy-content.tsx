@@ -55,7 +55,7 @@ const browserStorageRows = [
   },
   {
     source: "Lynvo",
-    name: "lynvo:drafts:v1",
+    name: "lynvo:drafts:v2:<account-id>",
     duration: "Up to 7 days per draft",
     purpose: "Temporarily retaining link drafts before they are saved",
     domain: "Lynvo origin",

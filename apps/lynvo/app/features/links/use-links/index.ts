@@ -111,7 +111,7 @@ export const useLinks = () => {
     synchronization.getSnapshot,
     () => EMPTY_LINKS
   )
-  const combinedLinks = useDraftLinks(links)
+  const combinedLinks = useDraftLinks(userId, links)
   const mutations = useLinksMutations(synchronization)
   const pagination = useLinksPaginationAndSort(combinedLinks)
   const actions: LinksActions = {

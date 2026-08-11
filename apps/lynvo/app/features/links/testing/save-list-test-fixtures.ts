@@ -10,6 +10,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
   return [
     {
       kind: "draft",
+      userId: "test-user",
       url: "https://media.example/selection-draft",
       timestamp,
       title: "Draft awaiting link selection",

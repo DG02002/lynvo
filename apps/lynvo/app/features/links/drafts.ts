@@ -2,28 +2,53 @@ import type { ExtractedLink, MetaData } from "./types"
 import { draftsSchema, type StoredDraft } from "./storage-schemas"
 import { DRAFT_EXPIRY_TIMER_MAX_MS, DRAFT_TTL_MS } from "./constants"
 
-const DRAFTS_KEY = "lynvo:drafts:v1"
+const DRAFTS_KEY_PREFIX = "lynvo:drafts:v2:"
 const EMPTY_DRAFTS: readonly Draft[] = []
 const subscribers = new Set<() => void>()
-let cachedStorageValue: string | null | undefined
-let cachedDrafts: readonly Draft[] = EMPTY_DRAFTS
-let cachedStorage: Storage | undefined
-let expiryTimer: number | undefined
-let publish = () => undefined
+const draftStores = new Map<string, DraftStore>()
 
 export interface Draft extends StoredDraft {}
 
+interface DraftStore {
+  readonly key: string
+  readonly subscribers: Set<() => void>
+  cachedStorageValue: string | null | undefined
+  cachedDrafts: readonly Draft[]
+  cachedStorage: Storage | undefined
+  expiryTimer: number | undefined
+}
+
+const getDraftStore = (userId: string): DraftStore => {
+  const existingStore = draftStores.get(userId)
+  if (existingStore) {
+    return existingStore
+  }
+  const store: DraftStore = {
+    key: `${DRAFTS_KEY_PREFIX}${userId}`,
+    subscribers: new Set(),
+    cachedStorageValue: undefined,
+    cachedDrafts: EMPTY_DRAFTS,
+    cachedStorage: undefined,
+    expiryTimer: undefined,
+  }
+  draftStores.set(userId, store)
+  return store
+}
+
 const encodeUrlForKey = (url: string): string => btoa(encodeURIComponent(url))
 
-const readStorageValue = (): string | null => {
+const readStorageValue = (store: DraftStore): string | null => {
   try {
-    return localStorage.getItem(DRAFTS_KEY)
+    return localStorage.getItem(store.key)
   } catch {
     return null
   }
 }
 
-const parseDrafts = (storageValue: string | null): Record<string, Draft> => {
+const parseDrafts = (
+  store: DraftStore,
+  storageValue: string | null
+): Record<string, Draft> => {
   if (!storageValue) {
     return {}
   }
@@ -33,55 +58,57 @@ const parseDrafts = (storageValue: string | null): Record<string, Draft> => {
     if (result.success) {
       return result.data
     }
-    localStorage.removeItem(DRAFTS_KEY)
+    localStorage.removeItem(store.key)
   } catch {}
   return {}
 }
 
-const clearExpiryTimer = () => {
-  if (expiryTimer !== undefined) {
-    window.clearTimeout(expiryTimer)
-    expiryTimer = undefined
+const clearExpiryTimer = (store: DraftStore) => {
+  if (store.expiryTimer !== undefined) {
+    window.clearTimeout(store.expiryTimer)
+    store.expiryTimer = undefined
   }
 }
 
-const scheduleNextExpiry = () => {
-  clearExpiryTimer()
-  if (subscribers.size === 0) {
+const scheduleNextExpiry = (store: DraftStore) => {
+  clearExpiryTimer(store)
+  if (store.subscribers.size === 0) {
     return
   }
-  const nextExpiryMs = getDraftsSnapshot().reduce(
+  const nextExpiryMs = getDraftsSnapshotForStore(store).reduce(
     (nearestExpiryMs, draft) => Math.min(nearestExpiryMs, draft.expiresAt),
     Number.POSITIVE_INFINITY
   )
   if (!Number.isFinite(nextExpiryMs)) {
     return
   }
-  expiryTimer = window.setTimeout(
-    publish,
+  store.expiryTimer = window.setTimeout(
+    () => publish(store),
     Math.min(Math.max(nextExpiryMs - Date.now(), 0), DRAFT_EXPIRY_TIMER_MAX_MS)
   )
 }
 
-publish = () => {
-  cachedStorageValue = undefined
-  for (const subscriber of subscribers) {
+const publish = (store: DraftStore) => {
+  store.cachedStorageValue = undefined
+  for (const subscriber of store.subscribers) {
     subscriber()
   }
-  scheduleNextExpiry()
+  scheduleNextExpiry(store)
 }
 
-const writeRawDrafts = (drafts: Record<string, Draft>) => {
+const writeRawDrafts = (store: DraftStore, drafts: Record<string, Draft>) => {
   try {
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts))
-    publish()
+    localStorage.setItem(store.key, JSON.stringify(drafts))
+    publish(store)
   } catch {}
 }
 
-const getCurrentDraftRecord = () => parseDrafts(readStorageValue())
+const getCurrentDraftRecord = (store: DraftStore) =>
+  parseDrafts(store, readStorageValue(store))
 
-export const readDraft = (url: string): Draft | null => {
-  const drafts = getCurrentDraftRecord()
+export const readDraft = (userId: string, url: string): Draft | null => {
+  const store = getDraftStore(userId)
+  const drafts = getCurrentDraftRecord(store)
   const key = encodeUrlForKey(url)
   const draft = drafts[key]
   if (!draft) {
@@ -89,20 +116,22 @@ export const readDraft = (url: string): Draft | null => {
   }
   if (draft.expiresAt <= Date.now()) {
     delete drafts[key]
-    writeRawDrafts(drafts)
+    writeRawDrafts(store, drafts)
     return null
   }
   return draft
 }
 
 export const writeDraft = (
+  userId: string,
   url: string,
   links: ExtractedLink[],
   meta: MetaData
 ) => {
+  const store = getDraftStore(userId)
   const currentTimeMs = Date.now()
   const drafts = Object.fromEntries(
-    Object.entries(getCurrentDraftRecord()).filter(
+    Object.entries(getCurrentDraftRecord(store)).filter(
       ([, draft]) => draft.expiresAt > currentTimeMs
     )
   )
@@ -112,49 +141,57 @@ export const writeDraft = (
     originalUrl: url,
     expiresAt: currentTimeMs + DRAFT_TTL_MS,
   }
-  writeRawDrafts(drafts)
+  writeRawDrafts(store, drafts)
 }
 
-export const deleteDraft = (url: string) => {
-  const drafts = getCurrentDraftRecord()
+export const deleteDraft = (userId: string, url: string) => {
+  const store = getDraftStore(userId)
+  const drafts = getCurrentDraftRecord(store)
   const key = encodeUrlForKey(url)
   if (!drafts[key]) {
     return
   }
   delete drafts[key]
-  writeRawDrafts(drafts)
+  writeRawDrafts(store, drafts)
 }
 
-export const getDraftsSnapshot = (): readonly Draft[] => {
-  if (cachedStorage === localStorage && cachedStorageValue !== undefined) {
-    return cachedDrafts
+const getDraftsSnapshotForStore = (store: DraftStore): readonly Draft[] => {
+  if (
+    store.cachedStorage === localStorage &&
+    store.cachedStorageValue !== undefined
+  ) {
+    return store.cachedDrafts
   }
-  const storageValue = readStorageValue()
-  cachedStorage = localStorage
-  cachedStorageValue = storageValue
+  const storageValue = readStorageValue(store)
+  store.cachedStorage = localStorage
+  store.cachedStorageValue = storageValue
   const currentTimeMs = Date.now()
-  cachedDrafts = Object.values(parseDrafts(storageValue)).filter(
+  store.cachedDrafts = Object.values(parseDrafts(store, storageValue)).filter(
     (draft) => draft.expiresAt > currentTimeMs
   )
-  return cachedDrafts
+  return store.cachedDrafts
 }
+
+export const getDraftsSnapshot = (userId: string) =>
+  getDraftsSnapshotForStore(getDraftStore(userId))
 
 export const getServerDraftsSnapshot = (): readonly Draft[] => EMPTY_DRAFTS
 
-export const subscribeToDrafts = (subscriber: () => void) => {
-  subscribers.add(subscriber)
+export const subscribeToDrafts = (userId: string, subscriber: () => void) => {
+  const store = getDraftStore(userId)
+  store.subscribers.add(subscriber)
   const handleStorage = (event: StorageEvent) => {
-    if (event.key === DRAFTS_KEY || event.key === null) {
-      publish()
+    if (event.key === store.key || event.key === null) {
+      publish(store)
     }
   }
   window.addEventListener("storage", handleStorage)
-  scheduleNextExpiry()
+  scheduleNextExpiry(store)
   return () => {
-    subscribers.delete(subscriber)
+    store.subscribers.delete(subscriber)
     window.removeEventListener("storage", handleStorage)
-    if (subscribers.size === 0) {
-      clearExpiryTimer()
+    if (store.subscribers.size === 0) {
+      clearExpiryTimer(store)
     }
   }
 }

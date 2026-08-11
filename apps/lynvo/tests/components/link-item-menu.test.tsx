@@ -8,6 +8,8 @@ import { readDraft, writeDraft } from "~/features/links/drafts"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink } from "~/features/links/types"
 
+const TEST_USER_ID = "test-user"
+
 const createActions = (): LinkItemActions => ({
   play: vi.fn(),
   remove: vi.fn(),
@@ -34,12 +36,13 @@ describe("LinkItemMenu", () => {
   it("removes a draft from draft storage", async () => {
     const draftUrl = "https://example.com/draft"
     const actions = createActions()
-    writeDraft(draftUrl, [], {})
+    writeDraft(TEST_USER_ID, draftUrl, [], {})
 
     render(
       <DraftLinkItemMenu
         item={{
           kind: "draft",
+          userId: TEST_USER_ID,
           url: draftUrl,
           timestamp: Date.now(),
           title: draftUrl,
@@ -58,7 +61,7 @@ describe("LinkItemMenu", () => {
     fireEvent.click(await screen.findByText("Remove draft"))
     fireEvent.click(await screen.findByRole("button", { name: "Remove" }))
 
-    expect(readDraft(draftUrl)).toBeNull()
+    expect(readDraft(TEST_USER_ID, draftUrl)).toBeNull()
     expect(actions.remove).not.toHaveBeenCalled()
   })
 

@@ -16,6 +16,7 @@ import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 
 interface UseLinkActionsProps {
+  userId: string
   links: LinkListItem[]
   linkActions: LinksActions
   setHighlightedId: (id: string | null) => void
@@ -24,6 +25,7 @@ interface UseLinkActionsProps {
 }
 
 export function useLinkActions({
+  userId,
   links,
   linkActions,
   setHighlightedId,
@@ -82,6 +84,7 @@ export function useLinkActions({
     saveSelectionDraft,
     pluginDomainDialog,
   } = useSaveActions({
+    userId,
     url,
     links: savedLinks,
     addLink: linkActions.add,
