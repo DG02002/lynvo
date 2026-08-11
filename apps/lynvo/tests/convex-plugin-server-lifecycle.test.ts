@@ -29,10 +29,14 @@ const beginRegistration = (
 const finalizeRegistration = (
   client: ReturnType<typeof asAuthenticatedUser>,
   id: string,
+  generation: number,
+  attemptId: string,
   manifest = "{}"
 ) =>
   client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
     id,
+    generation,
+    attemptId,
     manifest,
     apiKeyCiphertext: "ciphertext",
     apiKeyNonce: "nonce",
@@ -84,11 +88,18 @@ describe("Convex Plugin Server lifecycle", () => {
     await client.mutation(api.userPluginServers.markRegistrationFailed, {
       id: first.id,
       reason: "interrupted",
+      generation: first.generation,
+      attemptId: first.attemptId,
     })
     const resumed = await beginRegistration(client, 0)
-    expect(resumed).toEqual({ id: first.id, resumed: true })
+    expect(resumed).toMatchObject({ id: first.id, resumed: true })
 
-    await finalizeRegistration(client, resumed.id)
+    await finalizeRegistration(
+      client,
+      resumed.id,
+      resumed.generation,
+      resumed.attemptId
+    )
     await expect(beginRegistration(client, 0)).rejects.toThrow(
       "already registered"
     )
@@ -100,8 +111,20 @@ describe("Convex Plugin Server lifecycle", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const registration = await beginRegistration(client, 0)
 
-    await finalizeRegistration(client, registration.id, '{"version":1}')
-    await finalizeRegistration(client, registration.id, '{"version":1}')
+    await finalizeRegistration(
+      client,
+      registration.id,
+      registration.generation,
+      registration.attemptId,
+      '{"version":1}'
+    )
+    await finalizeRegistration(
+      client,
+      registration.id,
+      registration.generation,
+      registration.attemptId,
+      '{"version":1}'
+    )
     await client.mutation(api.userPluginServers.recordVerificationFailure, {
       id: registration.id,
     })
@@ -130,6 +153,33 @@ describe("Convex Plugin Server lifecycle", () => {
     expect(result.ledger).toMatchObject(result.inventory)
   })
 
+  it("rejects a finalizer from a superseded registration attempt", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "plugin-generation-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+    const first = await beginRegistration(client, 0)
+    const second = await beginRegistration(client, 0)
+
+    await expect(
+      finalizeRegistration(client, first.id, first.generation, first.attemptId)
+    ).rejects.toThrow("superseded")
+    await finalizeRegistration(
+      client,
+      second.id,
+      second.generation,
+      second.attemptId
+    )
+
+    const stored = await convex.run((context) =>
+      context.db.get("userPluginServers", second.id)
+    )
+    expect(stored).toMatchObject({
+      credentialStatus: "ready",
+      credentialGeneration: second.generation,
+      credentialAttemptId: second.attemptId,
+    })
+  })
+
   it("expires interrupted reservations and removes their exact storage", async () => {
     vi.useFakeTimers()
     const startedAt = new Date("2026-08-01T00:00:00.000Z")
@@ -141,6 +191,8 @@ describe("Convex Plugin Server lifecycle", () => {
     await client.mutation(api.userPluginServers.markRegistrationFailed, {
       id: registration.id,
       reason: "worker interrupted",
+      generation: registration.generation,
+      attemptId: registration.attemptId,
     })
 
     vi.setSystemTime(startedAt.getTime() + PLUGIN_SERVER_REGISTRATION_TTL_MS)
@@ -161,7 +213,12 @@ describe("Convex Plugin Server lifecycle", () => {
     const user = await insertTestUser(convex, "plugin-cascade-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const registration = await beginRegistration(client, 0)
-    await finalizeRegistration(client, registration.id)
+    await finalizeRegistration(
+      client,
+      registration.id,
+      registration.generation,
+      registration.attemptId
+    )
     await client.mutation(api.pluginDomains.create, {
       domain: "credential.example",
       pluginServerId: registration.id,

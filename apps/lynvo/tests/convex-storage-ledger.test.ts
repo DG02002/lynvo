@@ -156,6 +156,8 @@ describe("Convex storage ledger", () => {
     )
     await client.mutation(api.userPluginServers.finalizeEncryptedCredential, {
       id: registration.id,
+      generation: registration.generation,
+      attemptId: registration.attemptId,
       apiKeyCiphertext: "ciphertext",
       apiKeyNonce: "nonce",
       apiKeyAlgorithm: "AES-256-GCM",

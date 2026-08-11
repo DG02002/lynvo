@@ -86,6 +86,8 @@ export const registerCustomPluginServer = Effect.fn(
       api.userPluginServers.finalizeEncryptedCredential,
       {
         id: reservation.id,
+        generation: reservation.generation,
+        attemptId: reservation.attemptId,
         manifest: prepared.manifestValue,
         ...encryptedCredential,
       },
@@ -98,7 +100,12 @@ export const registerCustomPluginServer = Effect.fn(
       convex
         .mutation(
           api.userPluginServers.markRegistrationFailed,
-          { id: reservation.id, reason: primaryError.message },
+          {
+            id: reservation.id,
+            reason: primaryError.message,
+            generation: reservation.generation,
+            attemptId: reservation.attemptId,
+          },
           { accessToken: input.user.accessToken }
         )
         .pipe(

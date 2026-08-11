@@ -44,6 +44,8 @@ const encryptedApiKeyFields = {
 const registrationResultValidator = v.object({
   id: v.id("userPluginServers"),
   resumed: v.boolean(),
+  generation: v.number(),
+  attemptId: v.string(),
 })
 const servicePluginServerValidator = v.object({
   ...pluginServerFields,
@@ -84,6 +86,8 @@ export const list = query({
         apiKeyNonce: _apiKeyNonce,
         apiKeyAlgorithm: _apiKeyAlgorithm,
         apiKeyVersion: _apiKeyVersion,
+        credentialGeneration: _credentialGeneration,
+        credentialAttemptId: _credentialAttemptId,
         ...publicPluginServer
       } = pluginServer
       return [publicPluginServer]
@@ -146,6 +150,7 @@ export const beginRegistration = mutation({
     const now = Date.now()
     const normalizedBaseUrl = normalizeBaseUrl(args.baseUrl)
     const pendingExpiresAt = now + PLUGIN_SERVER_REGISTRATION_TTL_MS
+    const attemptId = crypto.randomUUID()
     const rows = await ctx.db
       .query("userPluginServers")
       .withIndex("by_userId", (queryBuilder) =>
@@ -172,12 +177,15 @@ export const beginRegistration = mutation({
       throw new Error("This Plugin Server is already registered.")
     }
     if (existing) {
+      const generation = (existing.credentialGeneration ?? 0) + 1
       const nextDocument = {
         ...existing,
         baseUrl: normalizedBaseUrl,
         credentialStatus: "pending" as const,
         pendingExpiresAt,
         failureReason: undefined,
+        credentialGeneration: generation,
+        credentialAttemptId: attemptId,
         updatedAt: now,
       }
       await assertStorageMutation(
@@ -192,14 +200,20 @@ export const beginRegistration = mutation({
         credentialStatus: "pending",
         pendingExpiresAt,
         failureReason: undefined,
+        credentialGeneration: generation,
+        credentialAttemptId: attemptId,
         updatedAt: now,
       })
       await ctx.scheduler.runAfter(
         PLUGIN_SERVER_REGISTRATION_TTL_MS,
         internal.userPluginServers.expireRegistration,
-        { id: existing._id, expectedExpiresAt: pendingExpiresAt }
+        {
+          id: existing._id,
+          expectedExpiresAt: pendingExpiresAt,
+          expectedAttemptId: attemptId,
+        }
       )
-      return { id: existing._id, resumed: true }
+      return { id: existing._id, resumed: true, generation, attemptId }
     }
     if (activeRows.length >= CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT) {
       throw new Error("You have reached the saved plugin server limit.")
@@ -213,6 +227,8 @@ export const beginRegistration = mutation({
       priority: 0,
       verificationStatus: "pending",
       credentialStatus: "pending" as const,
+      credentialGeneration: 1,
+      credentialAttemptId: attemptId,
       pendingExpiresAt,
       createdAt: now,
       updatedAt: now,
@@ -228,9 +244,9 @@ export const beginRegistration = mutation({
     await ctx.scheduler.runAfter(
       PLUGIN_SERVER_REGISTRATION_TTL_MS,
       internal.userPluginServers.expireRegistration,
-      { id, expectedExpiresAt: pendingExpiresAt }
+      { id, expectedExpiresAt: pendingExpiresAt, expectedAttemptId: attemptId }
     )
-    return { id, resumed: false }
+    return { id, resumed: false, generation: 1, attemptId }
   },
 })
 
@@ -243,6 +259,8 @@ export const finalizeEncryptedCredential = mutation({
     apiKeyAlgorithm: v.literal("AES-256-GCM"),
     apiKeyVersion: v.number(),
     manifest: v.string(),
+    generation: v.number(),
+    attemptId: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
@@ -253,13 +271,24 @@ export const finalizeEncryptedCredential = mutation({
     if (!existing || existing.userId !== userId) {
       throw new Error("Plugin server credential cannot be finalized")
     }
+    if (
+      existing.credentialGeneration !== args.generation ||
+      existing.credentialAttemptId !== args.attemptId
+    ) {
+      throw new Error("Plugin server registration was superseded")
+    }
     if (existing.credentialStatus === "ready") {
       return { success: true }
     }
     if (existing.credentialStatus !== "pending") {
       throw new Error("Plugin server registration must be resumed")
     }
-    const { id: _id, ...credential } = args
+    const {
+      id: _id,
+      generation: _generation,
+      attemptId: _attemptId,
+      ...credential
+    } = args
     const nextDoc = {
       ...existing,
       ...credential,
@@ -292,7 +321,12 @@ export const finalizeEncryptedCredential = mutation({
 
 export const markRegistrationFailed = mutation({
   returns: successValidator,
-  args: { id: v.string(), reason: v.string() },
+  args: {
+    id: v.string(),
+    reason: v.string(),
+    generation: v.number(),
+    attemptId: v.string(),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
     const pluginServerId = ctx.db.normalizeId("userPluginServers", args.id)
@@ -302,8 +336,12 @@ export const markRegistrationFailed = mutation({
     if (!existing || existing.userId !== userId) {
       throw new Error("Plugin server registration not found")
     }
-    if (existing.credentialStatus === "ready") {
-      return { success: true }
+    if (
+      existing.credentialStatus !== "pending" ||
+      existing.credentialGeneration !== args.generation ||
+      existing.credentialAttemptId !== args.attemptId
+    ) {
+      throw new Error("Plugin server registration was superseded")
     }
     const nextDocument = {
       ...existing,
@@ -332,6 +370,7 @@ export const expireRegistration = internalMutation({
   args: {
     id: v.id("userPluginServers"),
     expectedExpiresAt: v.number(),
+    expectedAttemptId: v.string(),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get("userPluginServers", args.id)
@@ -339,6 +378,7 @@ export const expireRegistration = internalMutation({
       !existing ||
       existing.credentialStatus === "ready" ||
       existing.pendingExpiresAt !== args.expectedExpiresAt ||
+      existing.credentialAttemptId !== args.expectedAttemptId ||
       existing.pendingExpiresAt > Date.now()
     ) {
       return { expired: false }

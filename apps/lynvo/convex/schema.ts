@@ -187,6 +187,8 @@ export default defineSchema({
       v.literal("ready"),
       v.literal("failed")
     ),
+    credentialGeneration: v.optional(v.number()),
+    credentialAttemptId: v.optional(v.string()),
     pendingExpiresAt: v.optional(v.number()),
     failureReason: v.optional(v.string()),
     manifest: v.string(),
