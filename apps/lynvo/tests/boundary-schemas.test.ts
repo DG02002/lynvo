@@ -180,6 +180,7 @@ describe("HTTP and realtime boundaries", () => {
       remoteRealtimeEventSchema.safeParse({
         kind: "command",
         id: "command-1",
+        claimToken: "claim-1",
         command: "play",
         payload: '{"url":"https://example.com/video","rangeRequest":"unknown"}',
         createdAt: 10,

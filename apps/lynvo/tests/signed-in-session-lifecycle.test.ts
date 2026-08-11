@@ -20,6 +20,7 @@ const createAuthSession = (
     cookie: "session=expired",
   }),
   expireCookie: vi.fn().mockReturnValue("session=expired"),
+  restoreCookie: vi.fn().mockReturnValue("session=active"),
   ...overrides,
 })
 

@@ -78,7 +78,7 @@ export const RemoteControlProvider = ({
       return
     }
     const poll = () => {
-      if (navigator.onLine && document.visibilityState === "visible") {
+      if (navigator.onLine) {
         void machine.poll().catch(console.error)
       }
     }
@@ -98,8 +98,7 @@ export const RemoteControlProvider = ({
     if (
       user?.sessionId &&
       realtime.connectionGeneration > 0 &&
-      navigator.onLine &&
-      document.visibilityState === "visible"
+      navigator.onLine
     ) {
       void machine.poll().catch(console.error)
     }

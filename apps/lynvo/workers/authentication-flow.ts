@@ -115,6 +115,58 @@ export const createWorkerAuthenticationFlow = (
       input.params.flow === "device"
         ? input.params.exchangeAttemptId
         : undefined
+    const authSession = createAuthSessionModule(environment.WORKER_AUTH_SESSION)
+    if (exchangeAttemptId) {
+      const existingSession = await authSession.read(exchangeAttemptId)
+      if (existingSession.kind === "unavailable") {
+        return existingSession
+      }
+      if (existingSession.kind === "active") {
+        client.setAuth(existingSession.session.accessToken)
+        try {
+          const recoveryPhase = await client.query(
+            api.deviceAuth.recoverExchange,
+            {
+              code: input.params.code,
+              pollSecret: input.params.pollSecret,
+              attemptId: exchangeAttemptId,
+            }
+          )
+          if (recoveryPhase === "resumable") {
+            await client.mutation(api.users.linkCurrentSessionWorker, {
+              workerSessionId: exchangeAttemptId,
+            })
+            await client.mutation(api.deviceAuth.finalizeExchange, {
+              code: input.params.code,
+              pollSecret: input.params.pollSecret,
+              attemptId: exchangeAttemptId,
+              sessionId: existingSession.session.convexSessionId,
+            })
+          }
+          if (recoveryPhase === "resumable" || recoveryPhase === "completed") {
+            return {
+              kind: "completed",
+              browserState: { signingIn: true },
+              cookie: authSession.restoreCookie(exchangeAttemptId),
+              hasTokens: true,
+            }
+          }
+          await client.mutation(api.deviceAuth.releaseExchange, {
+            code: input.params.code,
+            attemptId: exchangeAttemptId,
+            sessionId: existingSession.session.convexSessionId,
+          })
+          await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
+        } catch {
+          return { kind: "unavailable" }
+        }
+        const revokedSession = await authSession.revoke(exchangeAttemptId)
+        if (revokedSession.kind === "unavailable") {
+          return revokedSession
+        }
+        return { kind: "unavailable" }
+      }
+    }
     const result = await client.action(api.auth.signIn, input)
     const tokens = readTokens(result)
     if (!tokens) {
@@ -133,7 +185,6 @@ export const createWorkerAuthenticationFlow = (
     if (deviceName) {
       await client.mutation(api.users.setCurrentSessionDevice, { deviceName })
     }
-    const authSession = createAuthSessionModule(environment.WORKER_AUTH_SESSION)
     const lifecycle = createSignedInSessionLifecycle(
       authSession,
       undefined,

@@ -24,6 +24,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
         commands: Schema.Array(
           Schema.Struct({
             id: Schema.String,
+            claimToken: Schema.String,
             command: Schema.Literal("play"),
             payload: Schema.String,
             createdAt: Schema.Number,
@@ -35,6 +36,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
     HttpApiEndpoint.post("reportResult", "/result", {
       payload: Schema.Struct({
         id: Schema.String,
+        claimToken: Schema.String,
         receiverId: Schema.String,
         result: Schema.Union([
           Schema.Literal("applied"),

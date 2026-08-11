@@ -668,10 +668,11 @@ export class UserRealtimeRoom extends DurableObject<Env> {
         type: "remote-inbox.changed",
         payload: {},
       })
-      for (const socket of this.ctx.getWebSockets(input.receiverId)) {
+      const sockets = this.ctx.getWebSockets(input.receiverId)
+      for (const socket of sockets) {
         socket.send(serialized)
       }
-      return Response.json({ success: true })
+      return Response.json({ deliveredSocketCount: sockets.length })
     }
     if (pathname.endsWith("/revoke-session")) {
       const input: unknown = await request.json()

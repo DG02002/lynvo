@@ -60,7 +60,7 @@
     },
   ],
   "triggers": {
-    "crons": ["*/5 * * * *"],
+    "crons": ["* * * * *"],
   },
   "vars": {
     "ENVIRONMENT": "production",

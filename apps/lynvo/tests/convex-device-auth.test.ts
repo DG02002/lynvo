@@ -153,6 +153,23 @@ describe("device authorization", () => {
       attemptId: "exchange-one",
       sessionId: user.sessionId,
     })
+    await authenticatedClient.mutation(api.users.linkCurrentSessionWorker, {
+      workerSessionId: "exchange-one",
+    })
+    await expect(
+      authenticatedClient.query(api.deviceAuth.recoverExchange, {
+        code: "BCDE-FGHI",
+        pollSecret,
+        attemptId: "exchange-one",
+      })
+    ).resolves.toBe("completed")
+    await expect(
+      authenticatedClient.query(api.deviceAuth.recoverExchange, {
+        code: "BCDE-FGHI",
+        pollSecret: "wrong-secret",
+        attemptId: "exchange-one",
+      })
+    ).resolves.toBe("invalid")
     await expect(
       authenticatedClient.mutation(api.deviceAuth.finalizeExchange, {
         code: "BCDE-FGHI",

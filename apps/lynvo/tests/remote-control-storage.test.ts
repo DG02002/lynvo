@@ -36,7 +36,7 @@ describe("remote-control browser persistence", () => {
     const record: RemoteCommandDeliveryRecord = {
       processed: [],
       applied: [["command-1", 100]],
-      pendingAcknowledgements: ["command-1"],
+      pendingAcknowledgements: [["command-1", "claim-1"]],
     }
 
     remoteControlPersistence.saveDelivery(record)
@@ -47,6 +47,29 @@ describe("remote-control browser persistence", () => {
       )
     ).not.toBeNull()
     expect(remoteControlPersistence.loadDelivery()).toEqual(record)
+  })
+
+  it("migrates composite acknowledgement identities", () => {
+    const persistence = createRemoteControlPersistence("migration")
+    localStorage.setItem(
+      `${REMOTE_COMMAND_DELIVERY_KEY}:migration`,
+      JSON.stringify({
+        processed: [
+          ["command-2:claim-1", 50],
+          ["command-2:claim-2", 75],
+        ],
+        applied: [
+          ["command-1:claim-1", 100],
+          ["command-1:claim-2", 90],
+        ],
+        pendingAcknowledgements: ["command-1:claim-1"],
+      })
+    )
+    expect(persistence.loadDelivery()).toEqual({
+      processed: [["command-2", 75]],
+      applied: [["command-1", 100]],
+      pendingAcknowledgements: [["command-1", "claim-1"]],
+    })
   })
 
   it("loads the current Lynvo storage keys", () => {

@@ -18,15 +18,7 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "sharp": "catalog:",
-    "tsx": "^4.23.11",
+    "tsx": "^4.23.12",
     "typescript": "catalog:"
-  },
-  "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "26.7.0",
-      "onFail": "download"
-    }
-  },
-  "packageManager": "pnpm@11.20.0"
+  }
 }

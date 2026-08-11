@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { WorkerAuthSession } from "../workers/worker-auth-session"
+import {
+  createAuthSessionModule,
+  SESSION_ABSOLUTE_LIFETIME_MS,
+  SESSION_IDLE_TIMEOUT_MS,
+} from "../workers/auth-session"
 
 class MemorySessionStorage {
   private readonly values = new Map<string, unknown>()
@@ -35,6 +40,80 @@ const createSession = (
 }
 
 describe("Worker authentication session HTTP behavior", () => {
+  it("creates, rotates, and reads through the real Durable Object", async () => {
+    const { session, storage } = createSession()
+    const nowMs = Date.now()
+    const authSession = createAuthSessionModule({
+      getByName: () => ({
+        fetch: async (url: string, init?: RequestInit) =>
+          await session.fetch(new Request(url, init)),
+      }),
+    })
+    await expect(
+      authSession.create({
+        sessionId: "session-object-1",
+        convexSessionId: "convex-session-one",
+        accessToken: "access-token-one",
+        refreshToken: "refresh-token-one",
+        nowMs,
+      })
+    ).resolves.toMatchObject({ kind: "created" })
+    const storedBeforeRotation = storage.inspect("session")
+
+    await expect(
+      Promise.all([
+        authSession.rotate({
+          sessionId: "session-object-1",
+          refresh: async () => ({
+            accessToken: "access-token-two",
+            refreshToken: "refresh-token-two",
+          }),
+        }),
+        authSession.rotate({
+          sessionId: "session-object-1",
+          refresh: async () => ({
+            accessToken: "access-token-three",
+            refreshToken: "refresh-token-three",
+          }),
+        }),
+      ])
+    ).resolves.toEqual([{ kind: "rotated" }, { kind: "rotated" }])
+
+    await expect(authSession.read("session-object-1")).resolves.toMatchObject({
+      kind: "active",
+      session: {
+        convexSessionId: "convex-session-one",
+        accessToken: "access-token-two",
+        refreshToken: "refresh-token-two",
+        createdAt: nowMs,
+      },
+    })
+    expect(storage.inspect("session")).toMatchObject({
+      createdAt: nowMs,
+      expiresAt: nowMs + SESSION_ABSOLUTE_LIFETIME_MS,
+      idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+    })
+    expect(storedBeforeRotation).toMatchObject({
+      createdAt: nowMs,
+      expiresAt: nowMs + SESSION_ABSOLUTE_LIFETIME_MS,
+      idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
+    })
+
+    const conflictingCreate = await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-two",
+          accessToken: "other-access-token",
+          refreshToken: "other-refresh-token",
+          createdAt: 2_000,
+          expiresAt: 3_000,
+        }),
+      })
+    )
+    expect(conflictingCreate.status).toBe(409)
+  })
+
   it("stores server-only credentials and returns the authenticated session", async () => {
     const { session, storage } = createSession()
     const createResponse = await session.fetch(
@@ -67,6 +146,32 @@ describe("Worker authentication session HTTP behavior", () => {
       refreshToken: "refresh-token",
       createdAt: 1_000,
       expiresAt: 2_000,
+    })
+  })
+
+  it("never overwrites an established exchange session", async () => {
+    const { session } = createSession()
+    const create = (convexSessionId: string) =>
+      session.fetch(
+        new Request("https://session.internal/session", {
+          method: "POST",
+          body: JSON.stringify({
+            convexSessionId,
+            accessToken: `${convexSessionId}-access`,
+            refreshToken: `${convexSessionId}-refresh`,
+            createdAt: 1_000,
+            expiresAt: 2_000,
+          }),
+        })
+      )
+
+    expect((await create("convex-session-one")).status).toBe(204)
+    expect((await create("convex-session-two")).status).toBe(409)
+    const response = await session.fetch(
+      new Request("https://session.internal/session?nowMs=1500")
+    )
+    await expect(response.json()).resolves.toMatchObject({
+      convexSessionId: "convex-session-one",
     })
   })
 

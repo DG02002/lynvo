@@ -156,14 +156,11 @@ describe("Auth Session module", () => {
       })
     ).resolves.toEqual({ kind: "rotated" })
     expect(requests[1]).toEqual({
-      method: "POST",
+      method: "PUT",
       payload: {
         convexSessionId: "convex-session-id",
         accessToken: "new-access-token",
         refreshToken: "new-refresh-token",
-        createdAt: 1_000,
-        expiresAt: 20_000,
-        idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
       },
     })
   })
@@ -174,7 +171,7 @@ describe("Auth Session module", () => {
     const authSession = createAuthSessionModule({
       getByName: () => ({
         fetch: async (_url: string, init?: RequestInit) => {
-          if (init?.method === "POST") {
+          if (init?.method === "PUT") {
             const payload: unknown = JSON.parse(String(init.body))
             if (
               typeof payload === "object" &&

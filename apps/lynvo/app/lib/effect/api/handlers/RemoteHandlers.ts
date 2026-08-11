@@ -5,11 +5,7 @@ import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
 import { api } from "../../../../../convex/_generated/api"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
-import {
-  createRemoteClaimId,
-  parseRemoteClaimId,
-  parseRemoteTargetId,
-} from "../../../remote-target"
+import { parseRemoteTargetId } from "../../../remote-target"
 import { ConvexError } from "../../errors"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 
@@ -92,7 +88,8 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
           commands: command
             ? [
                 {
-                  id: createRemoteClaimId(command.id, command.claimToken),
+                  id: command.id,
+                  claimToken: command.claimToken,
                   command: command.command,
                   payload: command.payload,
                   createdAt: command.createdAt,
@@ -106,17 +103,11 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
-        const claim = parseRemoteClaimId(payload.id)
-        if (!claim) {
-          return yield* Effect.fail(
-            new ConvexError({ message: "Remote command claim is invalid" })
-          )
-        }
         return yield* convex.mutation(
           api.commands.reportResult,
           {
-            id: claim.commandId,
-            claimToken: claim.claimToken,
+            id: payload.id,
+            claimToken: payload.claimToken,
             receiverId: payload.receiverId,
             result: payload.result,
             message: payload.message,

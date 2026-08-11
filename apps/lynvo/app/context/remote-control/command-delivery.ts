@@ -8,6 +8,7 @@ import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handof
 declare global {
   interface RemoteCommandDeliveryInput {
     id: string
+    claimToken: string
     command: "play"
     payload: RemotePlaybackIntent
     createdAt: number
@@ -15,6 +16,7 @@ declare global {
 
   interface RemoteCommand {
     id: string
+    claimToken: string
     command: "play"
     payload: RemotePlaybackIntent
     receivedAt: number
@@ -25,7 +27,7 @@ declare global {
   }
 
   interface RemoteCommandDeliveryDependencies {
-    reportApplied: (commandId: string) => Promise<unknown>
+    reportApplied: (commandId: string, claimToken: string) => Promise<unknown>
     now: () => number
     persistence: Pick<RemoteControlPersistence, "loadDelivery" | "saveDelivery">
   }
@@ -33,7 +35,7 @@ declare global {
   interface RemoteCommandDeliveryRecord {
     processed: Array<[string, number]>
     applied: Array<[string, number]>
-    pendingAcknowledgements: string[]
+    pendingAcknowledgements: Array<[string, string]>
   }
 
   interface RemoteCommandDelivery {
@@ -72,7 +74,7 @@ export const createRemoteCommandDelivery = ({
   const storedRecord = persistence.loadDelivery()
   const processedCommands = new Map(storedRecord.processed)
   const appliedCommands = new Map(storedRecord.applied)
-  const pendingAcknowledgements = new Set(storedRecord.pendingAcknowledgements)
+  const pendingAcknowledgements = new Map(storedRecord.pendingAcknowledgements)
   const acknowledgementRequests = new Map<string, Promise<void>>()
 
   const persist = () =>
@@ -98,7 +100,11 @@ export const createRemoteCommandDelivery = ({
     if (activeRequest) {
       return activeRequest
     }
-    const request = reportApplied(commandId)
+    const claimToken = pendingAcknowledgements.get(commandId)
+    if (!claimToken) {
+      return Promise.resolve()
+    }
+    const request = reportApplied(commandId, claimToken)
       .then(() => {
         pendingAcknowledgements.delete(commandId)
         appliedCommands.delete(commandId)
@@ -106,7 +112,6 @@ export const createRemoteCommandDelivery = ({
         persist()
       })
       .catch(() => {
-        pendingAcknowledgements.add(commandId)
         persist()
       })
       .finally(() => {
@@ -127,16 +132,18 @@ export const createRemoteCommandDelivery = ({
         return false
       }
       expireRecordedCommandIds(currentTime)
-      if (
-        processedCommands.has(command.id) ||
-        appliedCommands.has(command.id) ||
-        state.lastCommand !== null
-      ) {
+      if (processedCommands.has(command.id) || state.lastCommand !== null) {
+        return false
+      }
+      if (appliedCommands.has(command.id)) {
+        pendingAcknowledgements.set(command.id, command.claimToken)
+        persist()
         return false
       }
       state = {
         lastCommand: {
           id: command.id,
+          claimToken: command.claimToken,
           command: command.command,
           payload: command.payload,
           receivedAt: currentTime,
@@ -149,7 +156,7 @@ export const createRemoteCommandDelivery = ({
         return
       }
       appliedCommands.set(commandId, now())
-      pendingAcknowledgements.add(commandId)
+      pendingAcknowledgements.set(commandId, state.lastCommand.claimToken)
       state = { lastCommand: null }
       persist()
     },
@@ -168,7 +175,9 @@ export const createRemoteCommandDelivery = ({
       await retryAcknowledgement(commandId)
     },
     retryPendingAcknowledgements: async () => {
-      await Promise.all([...pendingAcknowledgements].map(retryAcknowledgement))
+      await Promise.all(
+        [...pendingAcknowledgements.keys()].map(retryAcknowledgement)
+      )
     },
   }
 }

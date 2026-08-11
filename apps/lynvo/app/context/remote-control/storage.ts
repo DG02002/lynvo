@@ -10,6 +10,62 @@ const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
   pendingAcknowledgements: [],
 }
 
+const parseCommandIdentity = (
+  identity: string
+): { commandId: string; claimToken?: string } => {
+  const separatorIndex = identity.indexOf(":")
+  return separatorIndex > 0 && separatorIndex < identity.length - 1
+    ? {
+        commandId: identity.slice(0, separatorIndex),
+        claimToken: identity.slice(separatorIndex + 1),
+      }
+    : { commandId: identity }
+}
+
+const normalizeTimedCommandEntries = (
+  entries: unknown[]
+): Array<[string, number]> => {
+  const normalizedEntries = new Map<string, number>()
+  for (const entry of entries) {
+    if (
+      !Array.isArray(entry) ||
+      typeof entry[0] !== "string" ||
+      typeof entry[1] !== "number"
+    ) {
+      continue
+    }
+    const { commandId } = parseCommandIdentity(entry[0])
+    const existingTimestamp = normalizedEntries.get(commandId)
+    if (existingTimestamp === undefined || entry[1] > existingTimestamp) {
+      normalizedEntries.set(commandId, entry[1])
+    }
+  }
+  return [...normalizedEntries]
+}
+
+const normalizePendingAcknowledgements = (
+  entries: unknown[]
+): Array<[string, string]> => {
+  const normalizedEntries = new Map<string, string>()
+  for (const entry of entries) {
+    if (
+      Array.isArray(entry) &&
+      typeof entry[0] === "string" &&
+      typeof entry[1] === "string"
+    ) {
+      normalizedEntries.set(entry[0], entry[1])
+      continue
+    }
+    if (typeof entry === "string") {
+      const { commandId, claimToken } = parseCommandIdentity(entry)
+      if (claimToken) {
+        normalizedEntries.set(commandId, claimToken)
+      }
+    }
+  }
+  return [...normalizedEntries]
+}
+
 export const createRemoteControlPersistence = (
   identity = "signed-out"
 ): RemoteControlPersistence => {
@@ -61,20 +117,10 @@ export const createRemoteControlPersistence = (
           return EMPTY_DELIVERY_RECORD
         }
         return {
-          processed: parsed.processed.filter(
-            (entry): entry is [string, number] =>
-              Array.isArray(entry) &&
-              typeof entry[0] === "string" &&
-              typeof entry[1] === "number"
-          ),
-          applied: parsed.applied.filter(
-            (entry): entry is [string, number] =>
-              Array.isArray(entry) &&
-              typeof entry[0] === "string" &&
-              typeof entry[1] === "number"
-          ),
-          pendingAcknowledgements: parsed.pendingAcknowledgements.filter(
-            (commandId): commandId is string => typeof commandId === "string"
+          processed: normalizeTimedCommandEntries(parsed.processed),
+          applied: normalizeTimedCommandEntries(parsed.applied),
+          pendingAcknowledgements: normalizePendingAcknowledgements(
+            parsed.pendingAcknowledgements
           ),
         }
       } catch {

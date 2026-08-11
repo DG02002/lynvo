@@ -42,6 +42,16 @@ export const createRemoteCommandNotificationDelivery = (
     if (!response.ok) {
       throw new Error("Remote inbox notification failed")
     }
+    const result: unknown = await response.json()
+    if (
+      typeof result !== "object" ||
+      result === null ||
+      !("deliveredSocketCount" in result) ||
+      typeof result.deliveredSocketCount !== "number" ||
+      result.deliveredSocketCount < 1
+    ) {
+      throw new Error("Remote inbox notification reached no receivers")
+    }
   }
   const acknowledge = async (commandId: string) => {
     const client = new ConvexHttpClient(environment.VITE_CONVEX_URL)

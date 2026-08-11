@@ -280,6 +280,64 @@ export const finalizeExchange = mutation({
   },
 })
 
+export const recoverExchange = query({
+  returns: v.union(
+    v.literal("resumable"),
+    v.literal("completed"),
+    v.literal("superseded"),
+    v.literal("invalid")
+  ),
+  args: {
+    code: v.string(),
+    pollSecret: v.string(),
+    attemptId: v.string(),
+  },
+  handler: async (context, arguments_) => {
+    const userId = await getAuthenticatedUserId(context)
+    const currentSessionId = await getAuthSessionId(context)
+    const [record, session] = await Promise.all([
+      context.db
+        .query("deviceCodes")
+        .withIndex("by_code", (queryBuilder) =>
+          queryBuilder.eq("code", arguments_.code)
+        )
+        .unique(),
+      currentSessionId
+        ? context.db.get("authSessions", currentSessionId)
+        : null,
+    ])
+    if (
+      !record ||
+      !currentSessionId ||
+      !session ||
+      record.userId !== userId ||
+      record.pollSecretDigest !==
+        (await digestPollSecret(arguments_.pollSecret)) ||
+      session.userId !== userId
+    ) {
+      return "invalid"
+    }
+    if (record.exchangeAttemptId !== arguments_.attemptId) {
+      return "superseded"
+    }
+    if (
+      record.status === "consumed" &&
+      record.consumedSessionId === currentSessionId &&
+      session.workerSessionId === arguments_.attemptId
+    ) {
+      return "completed"
+    }
+    if (
+      record.status === "exchanging" &&
+      (!session.workerSessionId ||
+        session.workerSessionId === arguments_.attemptId)
+    ) {
+      return "resumable"
+    }
+    return "invalid"
+  },
+})
+
 export const releaseExchange = mutation({
   returns: v.null(),
   args: {

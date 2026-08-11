@@ -118,6 +118,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "missed-command",
+          claimToken: "missed-claim",
           command: "play",
           payload: '{"url":"https://example.com/missed"}',
           createdAt: 1_000_000,
@@ -164,6 +165,7 @@ describe("remote-control machine", () => {
       payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
+      claimToken: "claim-1",
     })
     const firstCommand = harness.machine.getSnapshot().lastCommand
     expect(firstCommand?.payload).toEqual({
@@ -177,6 +179,7 @@ describe("remote-control machine", () => {
       payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
+      claimToken: "claim-1",
     })
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
 
@@ -189,6 +192,7 @@ describe("remote-control machine", () => {
       },
       createdAt: 1_000_000,
       id: "stale",
+      claimToken: "stale-claim",
     })
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
   })
@@ -199,6 +203,7 @@ describe("remote-control machine", () => {
       {
         kind: "command",
         id: "command-1",
+        claimToken: "claim-1",
         command: "play",
         payload: '{"url":"https://example.com/one"}',
         createdAt: 1_000_000,
@@ -212,6 +217,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "command-1",
+          claimToken: "claim-1",
           command: "play",
           payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
@@ -225,6 +231,7 @@ describe("remote-control machine", () => {
     expect(harness.transport.reportResult).toHaveBeenCalledOnce()
     expect(harness.transport.reportResult).toHaveBeenCalledWith(
       "command-1",
+      "claim-1",
       "applied"
     )
   })
@@ -235,6 +242,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "command-1",
+          claimToken: "claim-1",
           command: "play",
           payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
@@ -247,6 +255,7 @@ describe("remote-control machine", () => {
       {
         kind: "command",
         id: "command-1",
+        claimToken: "claim-1",
         command: "play",
         payload: '{"url":"https://example.com/one"}',
         createdAt: 1_000_000,
@@ -265,6 +274,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "command-1",
+          claimToken: "claim-1",
           command: "play",
           payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,
@@ -290,6 +300,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "invalid-command",
+          claimToken: "invalid-claim",
           command: "play",
           payload: '{"url":"not-a-url"}',
           createdAt: 1_000_000,
@@ -312,6 +323,7 @@ describe("remote-control machine", () => {
       payload: { url: "https://example.com/one", rangeRequest: "unknown" },
       createdAt: 1_000_000,
       id: "command-1",
+      claimToken: "claim-1",
     })
 
     harness.machine.markCommandApplied("command-1")
@@ -322,6 +334,7 @@ describe("remote-control machine", () => {
       commands: [
         {
           id: "command-1",
+          claimToken: "claim-2",
           command: "play",
           payload: '{"url":"https://example.com/one"}',
           createdAt: 1_000_000,

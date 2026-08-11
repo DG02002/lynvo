@@ -15,8 +15,7 @@ workspace.
 
 ## Prerequisites
 
-Use Node.js 26.7.0 or newer and the pnpm version pinned in the root
-`packageManager` field.
+Use the latest Node.js and pnpm releases.
 
 Create the following accounts before setting up Lynvo:
 
@@ -33,7 +32,7 @@ enough for local development.
 
 ```sh
 corepack enable
-corepack install
+corepack prepare pnpm@latest --activate
 pnpm install --frozen-lockfile
 pnpm secrets:local
 ```

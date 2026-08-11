@@ -66,7 +66,7 @@ test("generates a standalone project with a semver protocol dependency", async (
     packageJson.scripts["images:optimize"],
     "node scripts/optimize-images.mjs public/icons/sources"
   )
-  assert.equal(packageJson.packageManager, "pnpm@11.20.0")
+  assert.equal(packageJson.packageManager, undefined)
 
   const generatedFiles = await readdir(destination)
   assert(generatedFiles.includes(".dev.vars.example"))

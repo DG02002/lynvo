@@ -4,6 +4,7 @@ import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handof
 declare global {
   interface RemoteCommandWireFields {
     id: string
+    claimToken: string
     command: "play"
     payload: string
     createdAt: number
@@ -22,6 +23,7 @@ declare global {
 
 export const remoteCommandFieldsSchema = z.object({
   id: z.string().min(1),
+  claimToken: z.string().min(1),
   command: z.literal("play"),
   payload: z.string().superRefine((payload, context) => {
     try {

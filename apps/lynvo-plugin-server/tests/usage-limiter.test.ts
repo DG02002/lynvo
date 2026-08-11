@@ -221,4 +221,22 @@ describe("usage limiter", () => {
     }>()
     expect(reclaimed.metrics[0]?.used).toBe(0)
   })
+
+  it("does not postpone the earliest alarm when later work arrives", async () => {
+    const timestampMs = Date.UTC(2027, 6, 19)
+    await requestAt("/reserve", timestampMs, { method: "POST" })
+    const firstAlarm = await runInDurableObject<
+      LynvoPluginServerUsageLimiter,
+      number | null
+    >(getStub(), (_instance, state) => state.storage.getAlarm())
+
+    await requestAt("/reserve", timestampMs + 60_000, { method: "POST" })
+    const secondAlarm = await runInDurableObject<
+      LynvoPluginServerUsageLimiter,
+      number | null
+    >(getStub(), (_instance, state) => state.storage.getAlarm())
+
+    expect(firstAlarm).toBe(timestampMs + USAGE_RESERVATION_LEASE_MS)
+    expect(secondAlarm).toBe(firstAlarm)
+  })
 })

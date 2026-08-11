@@ -51,6 +51,7 @@ declare global {
     poll: () => Promise<RemotePollResponse>
     reportResult: (
       commandId: string,
+      claimToken: string,
       result: "applied" | "failed",
       message?: string
     ) => Promise<unknown>
@@ -160,7 +161,8 @@ export const createRemoteControlMachine = ({
   const listeners = new Set<() => void>()
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
   const delivery = createRemoteCommandDelivery({
-    reportApplied: (commandId) => transport.reportResult(commandId, "applied"),
+    reportApplied: (commandId, claimToken) =>
+      transport.reportResult(commandId, claimToken, "applied"),
     now: clock.now,
     persistence,
   })
@@ -355,7 +357,16 @@ export const createRemoteControlMachine = ({
       syncDeliveryState()
     },
     failCommand: async (commandId, message) => {
-      await transport.reportResult(commandId, "failed", message)
+      const command = delivery.getSnapshot().lastCommand
+      if (!command || command.id !== commandId) {
+        return
+      }
+      await transport.reportResult(
+        commandId,
+        command.claimToken,
+        "failed",
+        message
+      )
       delivery.markFailed(commandId)
       syncDeliveryState()
     },

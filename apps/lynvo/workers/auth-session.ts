@@ -108,6 +108,7 @@ export interface AuthSessionModule {
     sessionId: string
   ) => Promise<AuthSessionRevoked | AuthSessionUnavailable>
   readonly expireCookie: () => string
+  readonly restoreCookie: (sessionId: string) => string
 }
 
 const createSessionCookie = (sessionId: string): string =>
@@ -184,6 +185,7 @@ export const createAuthSessionModule = (
     } catch {}
   },
   expireCookie: createExpiredSessionCookie,
+  restoreCookie: createSessionCookie,
   create: async (input) => {
     try {
       const response = await namespace
@@ -257,15 +259,12 @@ export const createAuthSessionModule = (
         }
         const response = await namespace
           .getByName(input.sessionId)
-          .fetch("https://session.internal/session", {
-            method: "POST",
+          .fetch("https://session.internal/session/tokens", {
+            method: "PUT",
             body: JSON.stringify({
               convexSessionId: current.session.convexSessionId,
               accessToken: tokens.accessToken,
               refreshToken: tokens.refreshToken,
-              createdAt: current.session.createdAt,
-              expiresAt: current.session.expiresAt,
-              idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
             }),
           })
         return response.ok

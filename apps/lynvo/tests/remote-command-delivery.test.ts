@@ -9,6 +9,7 @@ const createCommand = (
   overrides: Partial<RemoteCommandDeliveryInput> = {}
 ): RemoteCommandDeliveryInput => ({
   id: "command-1",
+  claimToken: "claim-1",
   command: "play",
   payload: { url: "https://example.com/video", rangeRequest: "unknown" },
   createdAt: 1_000_000,
@@ -126,7 +127,23 @@ describe("remote command delivery", () => {
 
     expect(recovered.receive(createCommand())).toBe(false)
     await recovered.retryPendingAcknowledgements()
-    expect(recoveredAcknowledge).toHaveBeenCalledWith("command-1")
+    expect(recoveredAcknowledge).toHaveBeenCalledWith("command-1", "claim-1")
+  })
+
+  it("acknowledges a reclaimed applied command with the newest claim", async () => {
+    const harness = createHarness()
+    harness.failNextAcknowledgement()
+    harness.delivery.receive(createCommand())
+    harness.delivery.markApplied("command-1")
+    await harness.delivery.acknowledge("command-1")
+
+    expect(
+      harness.delivery.receive(createCommand({ claimToken: "claim-2" }))
+    ).toBe(false)
+    await harness.delivery.retryPendingAcknowledgements()
+
+    expect(harness.acknowledge).toHaveBeenLastCalledWith("command-1", "claim-2")
+    expect(harness.delivery.getSnapshot().lastCommand).toBeNull()
   })
 
   it("uses one strict conversion path for wire commands", () => {
@@ -134,6 +151,7 @@ describe("remote command delivery", () => {
       parseRemoteCommandWirePayload({
         kind: "command",
         id: "command-1",
+        claimToken: "claim-1",
         command: "play",
         payload: '{"url":"https://example.com/video"}',
         createdAt: 1_000_000,
@@ -141,6 +159,7 @@ describe("remote command delivery", () => {
       })
     ).toEqual({
       id: "command-1",
+      claimToken: "claim-1",
       command: "play",
       payload: {
         url: "https://example.com/video",

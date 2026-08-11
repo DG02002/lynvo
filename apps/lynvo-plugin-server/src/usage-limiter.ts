@@ -130,9 +130,10 @@ export class LynvoPluginServerUsageLimiter {
       )
       .toArray()[0]
     if (next) {
-      await this.state.storage.setAlarm(
-        Math.max(next.expires_at, Date.now() + USAGE_RESERVATION_LEASE_MS)
-      )
+      const currentAlarm = await this.state.storage.getAlarm()
+      if (currentAlarm === null || next.expires_at < currentAlarm) {
+        await this.state.storage.setAlarm(next.expires_at)
+      }
     }
   }
 

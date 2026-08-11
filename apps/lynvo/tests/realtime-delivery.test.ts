@@ -9,6 +9,7 @@ describe("realtime delivery", () => {
       payload: {
         kind: "command",
         id: "command-one",
+        claimToken: "claim-one",
         command: "play",
         payload: JSON.stringify({ url: "https://example.com/video" }),
         createdAt: 1,

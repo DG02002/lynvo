@@ -7,6 +7,12 @@ interface SessionPayload {
   readonly idleTimeoutMs?: number
 }
 
+interface SessionTokenUpdatePayload {
+  readonly convexSessionId: string
+  readonly accessToken: string
+  readonly refreshToken: string
+}
+
 interface StoredSession extends SealedRecord {
   readonly createdAt: number
   readonly expiresAt: number
@@ -40,6 +46,21 @@ const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   (!("idleTimeoutMs" in payload) ||
     (typeof payload.idleTimeoutMs === "number" && payload.idleTimeoutMs > 0))
 
+const isSessionTokenUpdatePayload = (
+  payload: unknown
+): payload is SessionTokenUpdatePayload =>
+  typeof payload === "object" &&
+  payload !== null &&
+  "accessToken" in payload &&
+  "convexSessionId" in payload &&
+  "refreshToken" in payload &&
+  typeof payload.accessToken === "string" &&
+  typeof payload.convexSessionId === "string" &&
+  typeof payload.refreshToken === "string" &&
+  payload.accessToken.length > 0 &&
+  payload.convexSessionId.length > 0 &&
+  payload.refreshToken.length > 0
+
 export class WorkerAuthSession implements DurableObject {
   constructor(
     private readonly state: DurableObjectState,
@@ -51,8 +72,76 @@ export class WorkerAuthSession implements DurableObject {
       `worker-auth-session\u0000${this.state.id.toString()}\u0000${SEALED_RECORD_KEY_VERSION}`
     )
 
+  private sealTokens = async (
+    payload: SessionTokenUpdatePayload
+  ): Promise<SealedRecord | undefined> => {
+    const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
+    if (!encodedKey) {
+      return undefined
+    }
+    try {
+      return await sealRecord({
+        encodedKey,
+        additionalData: this.additionalData(),
+        plaintext: new TextEncoder().encode(JSON.stringify(payload)),
+      })
+    } catch {
+      return undefined
+    }
+  }
+
+  private readTokens = async (
+    storedSession: StoredSession
+  ): Promise<SessionTokenUpdatePayload | undefined> => {
+    const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
+    if (!encodedKey) {
+      return undefined
+    }
+    try {
+      const plaintext = await unsealRecord({
+        encodedKey,
+        additionalData: this.additionalData(),
+        record: storedSession,
+      })
+      const tokens: unknown = JSON.parse(new TextDecoder().decode(plaintext))
+      return isSessionTokenUpdatePayload(tokens) ? tokens : undefined
+    } catch {
+      return undefined
+    }
+  }
+
   fetch = async (request: Request): Promise<Response> => {
     const url = new URL(request.url)
+    if (url.pathname === "/session/tokens") {
+      if (request.method !== "PUT") {
+        return new Response(null, { status: 405 })
+      }
+      const storedSession =
+        await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
+      if (!storedSession) {
+        return new Response(null, { status: 404 })
+      }
+      const payload: unknown = await request.json()
+      if (!isSessionTokenUpdatePayload(payload)) {
+        return new Response(null, { status: 400 })
+      }
+      const currentTokens = await this.readTokens(storedSession)
+      if (!currentTokens) {
+        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+      }
+      if (currentTokens.convexSessionId !== payload.convexSessionId) {
+        return new Response(null, { status: 409 })
+      }
+      const sealedRecord = await this.sealTokens(payload)
+      if (!sealedRecord) {
+        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+      }
+      await this.state.storage.put(SESSION_STORAGE_KEY, {
+        ...storedSession,
+        ...sealedRecord,
+      } satisfies StoredSession)
+      return new Response(null, { status: 204 })
+    }
     if (url.pathname === "/activity-touch") {
       const storedSession =
         await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
@@ -89,28 +178,15 @@ export class WorkerAuthSession implements DurableObject {
     if (request.method === "POST") {
       const existingSession =
         await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
+      if (existingSession) {
+        return new Response(null, { status: 409 })
+      }
       const payload: unknown = await request.json()
       if (!isSessionPayload(payload)) {
         return new Response(null, { status: 400 })
       }
-      const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
-      if (!encodedKey) {
-        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
-      }
-      let sealedRecord: SealedRecord
-      try {
-        sealedRecord = await sealRecord({
-          encodedKey,
-          additionalData: this.additionalData(),
-          plaintext: new TextEncoder().encode(
-            JSON.stringify({
-              convexSessionId: payload.convexSessionId,
-              accessToken: payload.accessToken,
-              refreshToken: payload.refreshToken,
-            })
-          ),
-        })
-      } catch {
+      const sealedRecord = await this.sealTokens(payload)
+      if (!sealedRecord) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
       const storedSession: StoredSession = {
@@ -124,8 +200,7 @@ export class WorkerAuthSession implements DurableObject {
             (payload.idleTimeoutMs ?? payload.expiresAt - payload.createdAt),
           payload.expiresAt
         ),
-        lastActivityTouchAt:
-          existingSession?.lastActivityTouchAt ?? payload.createdAt,
+        lastActivityTouchAt: payload.createdAt,
       }
       await this.state.storage.put(SESSION_STORAGE_KEY, storedSession)
       return new Response(null, { status: 204 })
@@ -153,29 +228,8 @@ export class WorkerAuthSession implements DurableObject {
       if (request.method === "HEAD") {
         return new Response(null, { status: 204 })
       }
-      const encodedKey = this.environment.AUTH_SESSION_ENCRYPTION_KEY
-      if (!encodedKey) {
-        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
-      }
-      try {
-        const plaintext = await unsealRecord({
-          encodedKey,
-          additionalData: this.additionalData(),
-          record: storedSession,
-        })
-        const tokens: unknown = JSON.parse(new TextDecoder().decode(plaintext))
-        if (
-          typeof tokens !== "object" ||
-          tokens === null ||
-          !("accessToken" in tokens) ||
-          !("convexSessionId" in tokens) ||
-          !("refreshToken" in tokens) ||
-          typeof tokens.accessToken !== "string" ||
-          typeof tokens.convexSessionId !== "string" ||
-          typeof tokens.refreshToken !== "string"
-        ) {
-          return new Response(null, { status: 422 })
-        }
+      const tokens = await this.readTokens(storedSession)
+      if (tokens) {
         await this.state.storage.put(SESSION_STORAGE_KEY, {
           ...storedSession,
           idleExpiresAt: Math.min(
@@ -190,9 +244,10 @@ export class WorkerAuthSession implements DurableObject {
           createdAt: storedSession.createdAt,
           expiresAt: storedSession.expiresAt,
         } satisfies SessionPayload)
-      } catch {
-        return new Response(null, { status: 422 })
       }
+      return this.environment.AUTH_SESSION_ENCRYPTION_KEY
+        ? new Response(null, { status: 422 })
+        : Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
     }
     return new Response(null, { status: 405 })
   }

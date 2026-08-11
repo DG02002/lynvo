@@ -65,3 +65,26 @@ describe("UserRealtimeRoom session revalidation", () => {
     expect(setAlarm).toHaveBeenCalledOnce()
   })
 })
+
+describe("UserRealtimeRoom inbox notification", () => {
+  it.each([0, 2])("reports delivery to %s matching sockets", async (count) => {
+    const { UserRealtimeRoom } = await import("../workers/app")
+    const send = vi.fn()
+    const room = Object.create(UserRealtimeRoom.prototype) as UserRealtimeRoom
+    Reflect.set(room, "ctx", {
+      getWebSockets: () => Array.from({ length: count }, () => ({ send })),
+    })
+
+    const response = await room.fetch(
+      new Request("https://realtime.internal/notify-inbox", {
+        method: "POST",
+        body: JSON.stringify({ receiverId: "receiver-one" }),
+      })
+    )
+
+    await expect(response.json()).resolves.toEqual({
+      deliveredSocketCount: count,
+    })
+    expect(send).toHaveBeenCalledTimes(count)
+  })
+})

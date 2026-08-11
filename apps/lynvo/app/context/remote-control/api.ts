@@ -39,11 +39,12 @@ export const remoteApi: RemoteControlTransport = {
     }
     return parsed.data
   },
-  reportResult: async (commandId, result, message) =>
+  reportResult: async (commandId, claimToken, result, message) =>
     await Effect.runPromise(
       client.remote.reportResult({
         payload: {
           id: commandId,
+          claimToken,
           receiverId: requireReceiverId(),
           result,
           message,

@@ -28,6 +28,7 @@ describe("parseRealtimeMessage", () => {
   it("accepts the exact Remote Play sender envelope", () => {
     const message = createRemoteCommandMessage({
       id: "command-1",
+      claimToken: "claim-1",
       command: "play",
       payload: '{"url":"https://example.com/video"}',
       createdAt: 1_000_000,

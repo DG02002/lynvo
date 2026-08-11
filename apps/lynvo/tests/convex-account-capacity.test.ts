@@ -88,7 +88,44 @@ describe("account capacity", () => {
           )
           .unique()
     )
-    expect(capacity?.registeredAccounts).toBe(MAX_REGISTERED_ACCOUNTS)
+    expect(capacity?.registeredAccounts).toBe(1)
     vi.useRealTimers()
+  })
+
+  it.each([0, MAX_REGISTERED_ACCOUNTS])(
+    "repairs a drifted capacity projection from %s",
+    async (registeredAccounts) => {
+      const convex = createConvexTest()
+      await insertTestUser(convex, "first")
+      await insertTestUser(convex, "second")
+      await convex.run(async (context) => {
+        await context.db.insert("accountCapacity", {
+          key: "global",
+          registeredAccounts,
+          updatedAt: Date.now(),
+        })
+        await synchronizeAccountCapacityAfterCreation(context)
+      })
+      const capacity = await convex.run(async (context) =>
+        context.db.query("accountCapacity").unique()
+      )
+      expect(capacity?.registeredAccounts).toBe(2)
+    }
+  )
+
+  it("rejects duplicate capacity projections", async () => {
+    const convex = createConvexTest()
+    await convex.run(async (context) => {
+      for (const updatedAt of [1, 2]) {
+        await context.db.insert("accountCapacity", {
+          key: "global",
+          registeredAccounts: 0,
+          updatedAt,
+        })
+      }
+    })
+    await expect(
+      convex.run(synchronizeAccountCapacityAfterCreation)
+    ).rejects.toThrow("unique() query returned more than one result")
   })
 })
