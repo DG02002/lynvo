@@ -28,7 +28,8 @@ describe("usage limiter", () => {
   beforeEach(async () => {
     await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
       getStub(),
-      (_instance, state) => {
+      async (_instance, state) => {
+        await state.storage.deleteAlarm()
         state.storage.sql.exec("DELETE FROM usage_counters")
         state.storage.sql.exec("DELETE FROM usage_reservations")
       }
@@ -40,7 +41,7 @@ describe("usage limiter", () => {
   })
 
   it("reserves concurrent capacity without losing increments", async () => {
-    const timestampMs = Date.UTC(2026, 6, 19)
+    const timestampMs = Date.UTC(2100, 6, 19)
     const reservations = await Promise.all(
       Array.from({ length: 20 }, () =>
         requestAt("/reserve", timestampMs, { method: "POST" })
@@ -64,7 +65,7 @@ describe("usage limiter", () => {
   })
 
   it("releases failed reservations", async () => {
-    const timestampMs = Date.UTC(2026, 6, 19)
+    const timestampMs = Date.UTC(2100, 6, 19)
     const reservationResponse = await requestAt("/reserve", timestampMs, {
       method: "POST",
     })
@@ -84,8 +85,8 @@ describe("usage limiter", () => {
   })
 
   it("releases a failed reservation from its original UTC period", async () => {
-    const beforeMidnight = Date.UTC(2026, 6, 19, 23, 59, 59)
-    const afterMidnight = Date.UTC(2026, 6, 20, 0, 0, 1)
+    const beforeMidnight = Date.UTC(2100, 6, 19, 23, 59, 59)
+    const afterMidnight = Date.UTC(2100, 6, 20, 0, 0, 1)
     const reservationResponse = await requestAt("/reserve", beforeMidnight, {
       method: "POST",
     })
@@ -97,7 +98,7 @@ describe("usage limiter", () => {
 
     expect(reservation).toMatchObject({
       reserved: true,
-      periodKey: "2026-07-19",
+      periodKey: "2100-07-19",
     })
     await requestAt("/settle", afterMidnight, {
       method: "POST",
@@ -115,8 +116,8 @@ describe("usage limiter", () => {
   })
 
   it("rejects reservations at the finite limit", async () => {
-    const timestampMs = Date.UTC(2026, 6, 19)
-    const periodKey = "2026-07-19"
+    const timestampMs = Date.UTC(2100, 6, 19)
+    const periodKey = "2100-07-19"
     const stub = getStub()
     await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
       stub,
@@ -134,14 +135,14 @@ describe("usage limiter", () => {
     })
     expect(await response.json()).toEqual({
       reserved: false,
-      periodKey: "2026-07-19",
+      periodKey: "2100-07-19",
       reservationId: null,
     })
   })
 
   it("uses independent UTC daily periods", async () => {
-    const firstDay = Date.UTC(2026, 6, 19, 23, 59)
-    const secondDay = Date.UTC(2026, 6, 20)
+    const firstDay = Date.UTC(2100, 6, 19, 23, 59)
+    const secondDay = Date.UTC(2100, 6, 20)
     await requestAt("/reserve", firstDay, { method: "POST" })
 
     const response = await requestAt("/usage", secondDay)
@@ -149,11 +150,11 @@ describe("usage limiter", () => {
       metrics: Array<{ used: number; resetsAt: string }>
     }>()
     expect(usage.metrics[0].used).toBe(0)
-    expect(usage.metrics[0].resetsAt).toBe("2026-07-21T00:00:00.000Z")
+    expect(usage.metrics[0].resetsAt).toBe("2100-07-21T00:00:00.000Z")
   })
 
   it("settles duplicate requests exactly once", async () => {
-    const timestampMs = Date.UTC(2026, 6, 19)
+    const timestampMs = Date.UTC(2100, 6, 19)
     const reservationResponse = await requestAt("/reserve", timestampMs, {
       method: "POST",
     })
@@ -179,7 +180,7 @@ describe("usage limiter", () => {
 
   it("reclaims an abandoned reservation through the alarm", async () => {
     vi.useFakeTimers()
-    const timestampMs = Date.UTC(2026, 6, 19)
+    const timestampMs = Date.UTC(2100, 6, 19)
     vi.setSystemTime(timestampMs)
     await requestAt("/reserve", timestampMs, { method: "POST" })
     vi.setSystemTime(timestampMs + USAGE_RESERVATION_LEASE_MS)
@@ -223,7 +224,7 @@ describe("usage limiter", () => {
   })
 
   it("does not postpone the earliest alarm when later work arrives", async () => {
-    const timestampMs = Date.UTC(2027, 6, 19)
+    const timestampMs = Date.UTC(2101, 6, 19)
     await requestAt("/reserve", timestampMs, { method: "POST" })
     const firstAlarm = await runInDurableObject<
       LynvoPluginServerUsageLimiter,
