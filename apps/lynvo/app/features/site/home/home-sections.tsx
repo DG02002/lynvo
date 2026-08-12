@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react"
-import { SmartPhone01Icon, Tv01Icon } from "@hugeicons/core-free-icons"
 import { cn } from "~/lib/utils"
 import { PlayerCardSwap } from "./player-card-swap"
 import { PlayerEdgeCarousel } from "./player-edge-carousel"
@@ -102,30 +100,33 @@ export const AndroidScreensSection = () => (
         description="Open links on Android TV, Android phones, and Android tablets from a library that stays in sync."
       />
 
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-6 rounded-[16px] bg-background p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_8px_16px_-4px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-[8px] bg-foreground text-background">
-            <HugeiconsIcon icon={Tv01Icon} className="size-7" />
+      <div className="relative mx-auto w-full max-w-3xl pb-12 sm:pb-20">
+        <div className="relative rounded-[10px] bg-gradient-to-b from-neutral-600 via-neutral-900 to-neutral-950 p-[5px] shadow-[0_30px_60px_-28px_rgba(0,0,0,0.7)]">
+          <div className="overflow-hidden rounded-[6px] bg-black">
+            <img
+              src="/images/device-previews/lynvo-tv-screen.webp"
+              alt="Lynvo library displayed on a television"
+              className="aspect-video h-auto w-full object-cover object-top"
+              width="1600"
+              height="1067"
+              loading="lazy"
+            />
           </div>
-          <div className="flex flex-col">
-            <span className="text-lg text-foreground">Android TV</span>
-            <span className="text-sm text-muted-foreground">
-              Navigate with the TV Bro browser
-            </span>
-          </div>
+          <div className="absolute bottom-1 left-1/2 h-px w-10 -translate-x-1/2 rounded-full bg-white/25" />
+          <div className="absolute -bottom-5 left-1/2 h-5 w-14 -translate-x-1/2 bg-gradient-to-b from-neutral-700 to-neutral-950 [clip-path:polygon(35%_0,65%_0,100%_100%,0_100%)] sm:-bottom-7 sm:h-7 sm:w-20" />
+          <div className="absolute -bottom-6 left-1/2 h-1.5 w-28 -translate-x-1/2 rounded-full bg-neutral-900 shadow-lg sm:-bottom-9 sm:w-40" />
         </div>
 
-        <div className="flex items-center gap-6 rounded-[16px] bg-background p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_8px_16px_-4px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)] sm:ml-12">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-[8px] bg-foreground text-background">
-            <HugeiconsIcon icon={SmartPhone01Icon} className="size-7" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg text-foreground">
-              Android phones and tablets
-            </span>
-            <span className="text-sm text-muted-foreground">
-              Save and open links with touch controls
-            </span>
+        <div className="absolute -bottom-2 right-[5%] w-[24%] min-w-24 max-w-44 rounded-[14px] bg-neutral-800 p-[3px] shadow-[0_24px_40px_-14px_rgba(0,0,0,0.75)] sm:rounded-[18px] sm:p-1">
+          <div className="relative overflow-hidden rounded-[11px] bg-black sm:rounded-[14px]">
+            <img
+              src="/images/device-previews/lynvo-phone-screen.webp"
+              alt="Lynvo library displayed on an Android phone"
+              className="h-auto w-full"
+              width="884"
+              height="1921"
+              loading="lazy"
+            />
           </div>
         </div>
       </div>
