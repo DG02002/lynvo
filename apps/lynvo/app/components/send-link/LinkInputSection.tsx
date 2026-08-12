@@ -100,7 +100,7 @@ export function LinkInputSection({
   return (
     <div className="w-full mx-auto mb-8 flex flex-col gap-4">
       <div
-        aria-hidden={!clipboardUrl}
+        inert={!clipboardUrl}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-200 motion-reduce:transition-none",
           clipboardUrl

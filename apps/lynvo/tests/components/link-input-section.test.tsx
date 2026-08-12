@@ -221,6 +221,12 @@ describe("LinkInputSection", () => {
     expect(icon).toHaveClass("text-foreground")
     expect(icon).not.toHaveClass("text-muted-foreground")
     expect(container.querySelector("img")).not.toBeInTheDocument()
+    expect(screen.getByText("From Lynvo")).toBeVisible()
+    expect(screen.getByText("Core")).toBeVisible()
+    expect(screen.getByText("Direct Media")).toBeVisible()
+    expect(
+      screen.getByRole("status", { name: "Direct Media from Lynvo Core" })
+    ).toBeVisible()
   })
 
   it("uses a human-readable label for an unavailable Source", () => {

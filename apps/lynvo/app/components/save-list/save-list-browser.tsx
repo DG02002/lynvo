@@ -735,7 +735,7 @@ export const SaveListBrowser = ({
             >
               <div
                 className={cn(
-                  "flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3",
+                  "relative flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3",
                   !isDirectLinkExpired && "hover:bg-muted/70",
                   directLink?.opened &&
                     !isDirectLinkExpired &&
@@ -745,10 +745,14 @@ export const SaveListBrowser = ({
                 <button
                   type="button"
                   disabled={isDirectLinkExpired}
+                  aria-label={
+                    directLink
+                      ? `Open ${directLink.label || getItemTitle(item)}`
+                      : `View ${getItemTitle(item)}`
+                  }
                   className={cn(
-                    "flex min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
-                    isDirectLinkExpired &&
-                      "cursor-not-allowed text-muted-foreground opacity-60"
+                    "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    isDirectLinkExpired && "cursor-not-allowed"
                   )}
                   onClick={() => {
                     if (directLink) {
@@ -769,6 +773,13 @@ export const SaveListBrowser = ({
                     actions.markOpened(item.url, item.url)
                     onSelectedItemUrlChange(item.url)
                   }}
+                />
+                <div
+                  className={cn(
+                    "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                    "flex",
+                    isDirectLinkExpired && "text-muted-foreground opacity-60"
+                  )}
                 >
                   {directLink ? (
                     <SaveListRowIcon
@@ -785,23 +796,23 @@ export const SaveListBrowser = ({
                   <span className="min-w-0 flex-1">
                     <FilenameText
                       value={directLink?.label || getItemTitle(item)}
-                      className="block text-sm font-normal md:text-lg"
+                      className="block text-sm font-normal [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10 md:text-lg"
                       textClassName={
                         isDirectLinkExpired ? "line-through" : undefined
                       }
                     />
                     <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                      <span className="min-w-0 truncate">
-                        {view.sourceName || view.pluginName || item.url}
-                      </span>
-                      {directLink?.size && (
-                        <span className="flex shrink-0 items-center gap-1.5">
-                          <span aria-hidden="true" className="hidden md:inline">
-                            ·
-                          </span>
-                          <span>{directLink.size}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate">
+                          {view.sourceName || view.pluginName || item.url}
                         </span>
-                      )}
+                        {directLink?.size && (
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            <span aria-hidden="true">·</span>
+                            <span>{directLink.size}</span>
+                          </span>
+                        )}
+                      </span>
                       {!directLink && (
                         <span className="flex items-center gap-2 md:hidden">
                           <span className="md:hidden">
@@ -834,27 +845,29 @@ export const SaveListBrowser = ({
                         )}
                     </span>
                   </span>
-                </button>
+                </div>
                 {isRootItemNew && (
-                  <NewBadge className="hidden md:inline-flex" />
+                  <NewBadge className="relative z-10 hidden md:inline-flex" />
                 )}
                 {!directLink && (
-                  <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
+                  <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs text-muted-foreground md:inline">
                     {view.extractedLinks.length} items
                   </span>
                 )}
-                <LinkItemMenu
-                  item={item}
-                  actions={actions}
-                  playableLink={directLink}
-                  isPlayableLinkExpired={isDirectLinkExpired}
-                  showRemove
-                  isRefreshing={isExtracting}
-                />
+                <span className="relative z-10">
+                  <LinkItemMenu
+                    item={item}
+                    actions={actions}
+                    playableLink={directLink}
+                    isPlayableLinkExpired={isDirectLinkExpired}
+                    showRemove
+                    isRefreshing={isExtracting}
+                  />
+                </span>
                 {!directLink && !isExtracting && (
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}
-                    className="shrink-0 text-foreground"
+                    className="pointer-events-none relative z-10 shrink-0 text-foreground"
                   />
                 )}
               </div>

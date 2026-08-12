@@ -476,7 +476,11 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByText("193.65 MB")).toBeVisible()
+    const sourceName = screen.getByText("Google Drive")
+    const fileSize = screen.getByText("193.65 MB")
+    expect(fileSize).toBeVisible()
+    expect(sourceName.parentElement).toContainElement(fileSize)
+    expect(sourceName.parentElement).toHaveTextContent("Google Drive·193.65 MB")
   })
 
   it("renders an opened Direct Media root item with the opened background", () => {
@@ -554,9 +558,15 @@ describe("SaveListBrowser", () => {
     )
 
     const filename = screen.getByText("expired-video.mp4")
-    const itemButton = filename.closest("button")!
+    const itemButton = screen.getByRole("button", {
+      name: "Open expired-video.mp4",
+    })
     expect(itemButton).toBeDisabled()
-    expect(itemButton).toHaveClass("text-muted-foreground", "opacity-60")
+    expect(filename.closest("button")).toBeNull()
+    expect(filename.closest("div")).toHaveClass(
+      "text-muted-foreground",
+      "opacity-60"
+    )
     expect(filename).toHaveClass("line-through")
     expect(screen.getByText("Link expired").querySelector("svg")).toBeNull()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
@@ -613,7 +623,7 @@ describe("SaveListBrowser", () => {
         Node.DOCUMENT_POSITION_FOLLOWING
       )
     ).toBe(true)
-    fireEvent.click(screen.getByText("source.example").closest("button")!)
+    fireEvent.click(screen.getByRole("button", { name: "View source.example" }))
     expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
   })
 
