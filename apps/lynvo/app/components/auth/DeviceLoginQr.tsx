@@ -229,8 +229,11 @@ export function DeviceLoginQr() {
   const authUrl = `${origin}/auth/device?user_code=${code}`
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
-      <div>
+    <div
+      data-device-login-qr
+      className="flex flex-col items-center gap-6 text-center"
+    >
+      <div data-device-login-qr-image>
         <QRCodeCanvas
           value={authUrl}
           size={180}
@@ -241,7 +244,10 @@ export function DeviceLoginQr() {
         />
       </div>
 
-      <div className="flex flex-col items-center gap-2 text-center">
+      <div
+        data-device-login-code
+        className="flex flex-col items-center gap-2 text-center"
+      >
         <p className="text-sm text-muted-foreground">
           Confirm that the same activation code appears on the other device.
         </p>

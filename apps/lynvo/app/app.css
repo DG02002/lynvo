@@ -143,6 +143,88 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   backdrop-filter: none;
 }
 
+@media (orientation: landscape) and (min-width: 40rem) {
+  [data-device-sign-in-page],
+  [data-auth-form-page] {
+    position: relative;
+    left: 50%;
+    width: min(64rem, calc(100vw - 6rem));
+    max-width: none;
+    transform: translateX(-50%);
+  }
+
+  [data-device-sign-in-content],
+  [data-auth-form-content] {
+    padding-block: 0;
+  }
+
+  [data-device-sign-in-stack],
+  [data-auth-form-layout] {
+    display: grid;
+    grid-template-columns: minmax(11rem, 0.8fr) minmax(18rem, 1.2fr);
+    grid-template-rows: auto auto auto;
+    column-gap: 3rem;
+    row-gap: 1rem;
+    align-items: center;
+  }
+
+  [data-device-sign-in-intro] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  [data-device-sign-in-qr-region],
+  [data-device-login-qr] {
+    display: contents;
+  }
+
+  [data-device-login-qr-image] {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    justify-self: center;
+  }
+
+  [data-device-login-code] {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  [data-device-login-code] p:last-child {
+    margin-block: 0.5rem;
+  }
+
+  [data-device-sign-in-back] {
+    grid-column: 2;
+    grid-row: 3;
+    max-width: none;
+  }
+
+  [data-device-sign-in-policies] {
+    display: none;
+  }
+
+  [data-auth-form-intro] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  [data-auth-form-fields] {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+
+  [data-auth-form-switch] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  [data-auth-form-policies] {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
 @keyframes page-fade {
   from {
     opacity: 0;

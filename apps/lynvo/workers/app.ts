@@ -39,6 +39,10 @@ import {
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
 import { createAuthenticationIntake } from "./authentication-intake"
+import {
+  checkAuthenticationRateLimit,
+  checkRateLimit,
+} from "./authentication-rate-limit"
 import { createSessionCleanupModule } from "./session-cleanup"
 import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
 import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
@@ -99,35 +103,7 @@ const clientIp = (request: Request): string =>
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
   "unknown"
 
-const rateLimit = async (
-  env: AuthEnv,
-  key: string,
-  limit: number,
-  windowSeconds: number
-): Promise<"allowed" | "limited" | "unavailable"> => {
-  const limiter = env.AUTH_RATE_LIMITER
-  if (!limiter) {
-    return env.ENVIRONMENT === "production" ? "unavailable" : "allowed"
-  }
-  try {
-    const response = await limiter
-      .getByName(key)
-      .fetch("https://auth-rate-limiter/attempt", {
-        method: "POST",
-        body: JSON.stringify({
-          limit,
-          nowMs: Date.now(),
-          windowMs: windowSeconds * 1_000,
-        }),
-      })
-    if (response.status === 200) {
-      return "allowed"
-    }
-    return response.status === 429 ? "limited" : "unavailable"
-  } catch {
-    return "unavailable"
-  }
-}
+const rateLimit = checkRateLimit
 
 const verifyTurnstile = async (
   env: AuthEnv,
@@ -184,7 +160,7 @@ const runAuthenticationIntake = async (
     now: Date.now,
     clientIp,
     rateLimit: ({ key, limit, windowSeconds }) =>
-      rateLimit(env, key, limit, windowSeconds),
+      checkAuthenticationRateLimit(env, key, limit, windowSeconds),
     verifyTurnstile: (request, token, expectedAction) =>
       verifyTurnstile(env, request, token, expectedAction),
     generateDeviceCode: async (deviceName, preflightToken) => {

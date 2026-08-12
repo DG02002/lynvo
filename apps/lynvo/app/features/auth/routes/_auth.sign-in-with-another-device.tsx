@@ -16,10 +16,19 @@ export function meta() {
 
 export default function SignInWithAnotherDevice() {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col">
-      <div className="flex-1 py-6 pb-16 md:py-8 md:pb-8">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 text-center">
+    <div
+      data-device-sign-in-page
+      className="mx-auto flex w-full max-w-md flex-col"
+    >
+      <div
+        data-device-sign-in-content
+        className="flex-1 py-6 pb-16 md:py-8 md:pb-8"
+      >
+        <div data-device-sign-in-stack className="flex flex-col gap-6">
+          <div
+            data-device-sign-in-intro
+            className="flex flex-col gap-4 text-center"
+          >
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">
               Log in on this device
@@ -30,11 +39,14 @@ export default function SignInWithAnotherDevice() {
             </p>
           </div>
 
-          <div className="mx-auto flex w-full max-w-sm justify-center">
+          <div
+            data-device-sign-in-qr-region
+            className="mx-auto flex w-full max-w-sm justify-center"
+          >
             <DeviceLoginQr />
           </div>
 
-          <div className="mx-auto w-full max-w-sm">
+          <div data-device-sign-in-back className="mx-auto w-full max-w-sm">
             <Button
               variant="secondary"
               className="h-13.5 w-full"
@@ -47,7 +59,10 @@ export default function SignInWithAnotherDevice() {
             />
           </div>
 
-          <div className="mt-3 hidden space-x-1 text-center text-xs text-muted-foreground md:block">
+          <div
+            data-device-sign-in-policies
+            className="mt-3 hidden space-x-1 text-center text-xs text-muted-foreground md:block"
+          >
             <Link
               to={policyPaths.termsOfUse}
               viewTransition

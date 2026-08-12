@@ -102,7 +102,10 @@ export const AuthSubmitButton = ({
 )
 
 export const AuthPolicyLinks = () => (
-  <div className="mt-3 space-x-1 text-center text-xs text-muted-foreground">
+  <div
+    data-auth-form-policies
+    className="mt-3 space-x-1 text-center text-xs text-muted-foreground"
+  >
     <Link
       to={policyPaths.termsOfUse}
       viewTransition
@@ -143,24 +146,30 @@ export const AuthFormShell = ({
   switchTo,
   onSubmit,
 }: AuthFormShellProps) => (
-  <div className="mx-auto flex w-full max-w-md flex-col">
-    <div className="flex-1 py-6 pb-16 md:py-8 md:pb-8">
+  <div data-auth-form-page className="mx-auto flex w-full max-w-md flex-col">
+    <div data-auth-form-content className="flex-1 py-6 pb-16 md:py-8 md:pb-8">
       <form
+        data-auth-form
         aria-label={ariaLabel}
         onSubmit={(event) => {
           event.preventDefault()
           onSubmit()
         }}
       >
-        <FieldSet className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4 text-center">
+        <FieldSet data-auth-form-layout className="flex flex-col gap-6">
+          <div data-auth-form-intro className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">{heading}</h1>
           </div>
 
-          <FieldGroup className="gap-4">{children}</FieldGroup>
+          <FieldGroup data-auth-form-fields className="gap-4">
+            {children}
+          </FieldGroup>
 
-          <div className="mt-1 text-center text-base text-muted-foreground">
+          <div
+            data-auth-form-switch
+            className="mt-1 text-center text-base text-muted-foreground"
+          >
             {switchPrompt}{" "}
             <Link
               to={switchTo}
