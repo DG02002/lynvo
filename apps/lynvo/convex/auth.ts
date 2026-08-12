@@ -35,6 +35,17 @@ const requireString = (value: unknown, message: string): string => {
   return value
 }
 
+const requirePositiveSafeInteger = (
+  value: unknown,
+  message: string
+): number => {
+  const parsed = Number(requireString(value, message))
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(message)
+  }
+  return parsed
+}
+
 const verifyPreflight = async (
   token: string,
   flow: "signUp" | "signIn",
@@ -94,8 +105,8 @@ const credentialsProvider = ConvexCredentials<DataModel>({
             params.exchangeAttemptId,
             "Exchange attempt is required"
           ),
-          generationId: requireString(
-            params.issuanceGenerationId,
+          generation: requirePositiveSafeInteger(
+            params.issuanceGeneration,
             "Issuance generation is required"
           ),
         }

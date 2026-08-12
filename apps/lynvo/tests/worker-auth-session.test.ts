@@ -8,6 +8,14 @@ import {
 
 class MemorySessionStorage {
   private readonly values = new Map<string, unknown>()
+  private alarm: number | null = null
+  private transactionPause:
+    | {
+        readonly entered: () => void
+        readonly wait: Promise<void>
+        remainingTransactions: number
+      }
+    | undefined
 
   get = async <Value>(key: string): Promise<Value | undefined> =>
     this.values.get(key) as Value | undefined
@@ -16,7 +24,57 @@ class MemorySessionStorage {
     this.values.set(key, value)
   }
 
-  delete = async (key: string): Promise<boolean> => this.values.delete(key)
+  delete = async (key: string | string[]): Promise<boolean | number> => {
+    if (typeof key === "string") {
+      return this.values.delete(key)
+    }
+    return key.reduce(
+      (deleted, innerKey) => deleted + Number(this.values.delete(innerKey)),
+      0
+    )
+  }
+
+  transaction = async <Value>(
+    closure: (storage: DurableObjectTransaction) => Promise<Value>
+  ): Promise<Value> => {
+    const pause = this.transactionPause
+    if (pause) {
+      if (pause.remainingTransactions > 0) {
+        pause.remainingTransactions -= 1
+        return await closure(this as unknown as DurableObjectTransaction)
+      }
+      this.transactionPause = undefined
+      pause.entered()
+      await pause.wait
+    }
+    return await closure(this as unknown as DurableObjectTransaction)
+  }
+
+  getAlarm = async (): Promise<number | null> => this.alarm
+
+  setAlarm = async (scheduledTime: number | Date): Promise<void> => {
+    this.alarm =
+      typeof scheduledTime === "number"
+        ? scheduledTime
+        : scheduledTime.getTime()
+  }
+
+  pauseNextTransaction = (remainingTransactions = 0) => {
+    let markEntered: (() => void) | undefined
+    let release: (() => void) | undefined
+    const entered = new Promise<void>((resolve) => {
+      markEntered = resolve
+    })
+    const wait = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    this.transactionPause = {
+      entered: () => markEntered?.(),
+      wait,
+      remainingTransactions,
+    }
+    return { entered, release: () => release?.() }
+  }
 
   inspect = (key: string): unknown => this.values.get(key)
 }
@@ -42,38 +100,131 @@ const createSession = (
 describe("Worker authentication session HTTP behavior", () => {
   it("fences delayed issuers with a renewable Durable Object generation", async () => {
     const { session } = createSession()
-    const beginIssuance = (generationId: string, nowMs: number) =>
+    const beginIssuance = (nowMs: number) =>
       session.fetch(
         new Request("https://session.internal/session/issuance", {
           method: "POST",
           body: JSON.stringify({
-            generationId,
             nowMs,
             expiresAt: nowMs + 1_000,
           }),
         })
       )
-    const createForGeneration = (generationId: string) =>
+    const createForGeneration = (generation: number) =>
       session.fetch(
         new Request("https://session.internal/session", {
           method: "POST",
           body: JSON.stringify({
             convexSessionId: "convex-session-id",
-            accessToken: `${generationId}-access`,
-            refreshToken: `${generationId}-refresh`,
+            accessToken: `${generation}-access`,
+            refreshToken: `${generation}-refresh`,
             createdAt: 2_000,
             expiresAt: 4_000,
-            issuanceGenerationId: generationId,
+            issuanceGeneration: generation,
           }),
         })
       )
 
-    expect((await beginIssuance("generation-one", 1_000)).status).toBe(201)
-    expect((await beginIssuance("generation-two", 1_500)).status).toBe(409)
-    expect((await beginIssuance("generation-two", 2_001)).status).toBe(201)
-    expect((await createForGeneration("generation-one")).status).toBe(409)
-    expect((await createForGeneration("generation-two")).status).toBe(204)
-    expect((await beginIssuance("generation-three", 2_002)).status).toBe(200)
+    const first = await beginIssuance(1_000)
+    expect(first.status).toBe(201)
+    await expect(first.json()).resolves.toEqual({ generation: 1 })
+    expect((await beginIssuance(1_500)).status).toBe(409)
+    const second = await beginIssuance(2_001)
+    expect(second.status).toBe(201)
+    await expect(second.json()).resolves.toEqual({ generation: 2 })
+    expect((await createForGeneration(1)).status).toBe(409)
+    expect((await createForGeneration(2)).status).toBe(204)
+    expect((await beginIssuance(2_002)).status).toBe(200)
+  })
+
+  it("retains the issuance high-water mark when an unfinished session is deleted", async () => {
+    const { session } = createSession()
+    const beginIssuance = (nowMs: number) =>
+      session.fetch(
+        new Request("https://session.internal/session/issuance", {
+          method: "POST",
+          body: JSON.stringify({
+            nowMs,
+            expiresAt: nowMs + 1_000,
+          }),
+        })
+      )
+
+    const first = await beginIssuance(1_000)
+    await expect(first.json()).resolves.toEqual({ generation: 1 })
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/session", { method: "DELETE" })
+        )
+      ).status
+    ).toBe(204)
+
+    const second = await beginIssuance(1_001)
+    expect(second.status).toBe(201)
+    await expect(second.json()).resolves.toEqual({ generation: 2 })
+  })
+
+  it("does not let delayed generation cleanup delete its replacement", async () => {
+    const { session } = createSession()
+    const beginIssuance = async (nowMs: number) => {
+      const response = await session.fetch(
+        new Request("https://session.internal/session/issuance", {
+          method: "POST",
+          body: JSON.stringify({
+            nowMs,
+            expiresAt: nowMs + 1_000,
+          }),
+        })
+      )
+      return (await response.json()) as { generation: number }
+    }
+    const createForGeneration = (generation: number) =>
+      session.fetch(
+        new Request("https://session.internal/session", {
+          method: "POST",
+          body: JSON.stringify({
+            convexSessionId: `convex-session-${generation}`,
+            accessToken: `access-${generation}`,
+            refreshToken: `refresh-${generation}`,
+            createdAt: 1_000,
+            expiresAt: 10_000,
+            issuanceGeneration: generation,
+          }),
+        })
+      )
+
+    expect((await beginIssuance(1_000)).generation).toBe(1)
+    expect((await createForGeneration(1)).status).toBe(204)
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/session?issuanceGeneration=1", {
+            method: "DELETE",
+          })
+        )
+      ).status
+    ).toBe(204)
+    expect((await beginIssuance(1_001)).generation).toBe(2)
+    expect((await createForGeneration(2)).status).toBe(204)
+
+    expect(
+      (
+        await session.fetch(
+          new Request("https://session.internal/session?issuanceGeneration=1", {
+            method: "DELETE",
+          })
+        )
+      ).status
+    ).toBe(204)
+    const current = await session.fetch(
+      new Request("https://session.internal/session?nowMs=1500")
+    )
+    expect(current.status).toBe(200)
+    await expect(current.json()).resolves.toMatchObject({
+      convexSessionId: "convex-session-2",
+      issuanceGeneration: 2,
+    })
   })
 
   it("creates, rotates, and reads through the real Durable Object", async () => {
@@ -244,6 +395,143 @@ describe("Worker authentication session HTTP behavior", () => {
         )
       ).status
     ).toBe(404)
+  })
+
+  it("does not return a deleted session after the object is reused", async () => {
+    const { session, storage } = createSession()
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          createdAt: 1_000,
+          expiresAt: 10_000,
+        }),
+      })
+    )
+    const transactionPause = storage.pauseNextTransaction(1)
+    const read = session.fetch(
+      new Request("https://session.internal/session?nowMs=1500")
+    )
+    await transactionPause.entered
+
+    await session.fetch(
+      new Request("https://session.internal/session", { method: "DELETE" })
+    )
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "replacement-convex-session-id",
+          accessToken: "replacement-access-token",
+          refreshToken: "replacement-refresh-token",
+          createdAt: 1_400,
+          expiresAt: 10_000,
+        }),
+      })
+    )
+    transactionPause.release()
+
+    await expect(read).resolves.toMatchObject({ status: 409 })
+    const current = await session.fetch(
+      new Request("https://session.internal/session?nowMs=1500")
+    )
+    expect(current.status).toBe(200)
+    await expect(current.json()).resolves.toMatchObject({
+      convexSessionId: "replacement-convex-session-id",
+      accessToken: "replacement-access-token",
+      refreshToken: "replacement-refresh-token",
+    })
+    expect(storage.inspect("session")).toBeDefined()
+  })
+
+  it("does not shorten the idle deadline when reads finish out of order", async () => {
+    const { session, storage } = createSession()
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          createdAt: 1_000,
+          expiresAt: 10_000,
+          idleTimeoutMs: 1_000,
+        }),
+      })
+    )
+    const transactionPause = storage.pauseNextTransaction(1)
+    const olderRead = session.fetch(
+      new Request("https://session.internal/session?nowMs=1100")
+    )
+    await transactionPause.entered
+
+    await expect(
+      session.fetch(new Request("https://session.internal/session?nowMs=1900"))
+    ).resolves.toMatchObject({ status: 200 })
+    transactionPause.release()
+
+    await expect(olderRead).resolves.toMatchObject({ status: 200 })
+    expect(storage.inspect("session")).toMatchObject({ idleExpiresAt: 2_900 })
+  })
+
+  it("does not overwrite a replacement session with a stale token rotation", async () => {
+    const { session, storage } = createSession()
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "access-token",
+          refreshToken: "refresh-token",
+          createdAt: 1_000,
+          expiresAt: 10_000,
+        }),
+      })
+    )
+    const transactionPause = storage.pauseNextTransaction()
+    const rotation = session.fetch(
+      new Request("https://session.internal/session/tokens", {
+        method: "PUT",
+        body: JSON.stringify({
+          convexSessionId: "convex-session-id",
+          accessToken: "rotated-access-token",
+          refreshToken: "rotated-refresh-token",
+        }),
+      })
+    )
+    await transactionPause.entered
+
+    await session.fetch(
+      new Request("https://session.internal/session", { method: "DELETE" })
+    )
+    await session.fetch(
+      new Request("https://session.internal/session", {
+        method: "POST",
+        body: JSON.stringify({
+          convexSessionId: "replacement-convex-session-id",
+          accessToken: "replacement-access-token",
+          refreshToken: "replacement-refresh-token",
+          createdAt: 1_400,
+          expiresAt: 10_000,
+        }),
+      })
+    )
+    transactionPause.release()
+
+    await expect(rotation).resolves.toMatchObject({ status: 409 })
+    const current = await session.fetch(
+      new Request("https://session.internal/session?nowMs=1500")
+    )
+    expect(current.status).toBe(200)
+    await expect(current.json()).resolves.toMatchObject({
+      convexSessionId: "replacement-convex-session-id",
+      accessToken: "replacement-access-token",
+      refreshToken: "replacement-refresh-token",
+    })
+    expect(storage.inspect("session")).toBeDefined()
   })
 
   it("fails closed when session encryption is unavailable", async () => {

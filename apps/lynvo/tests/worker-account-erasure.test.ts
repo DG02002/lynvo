@@ -8,7 +8,7 @@ vi.mock("cloudflare:workers", () => ({ DurableObject: class {} }))
 vi.mock("convex/browser", () => ({
   ConvexHttpClient: class {
     setAuth = () => undefined
-    query = async () => ["opaque-session-id"]
+    query = async () => [{ workerSessionId: "opaque-session-id" }]
     action = async () => ({ success: true })
     mutation = async () => ({ workerSessionIds: ["opaque-session-id"] })
   },

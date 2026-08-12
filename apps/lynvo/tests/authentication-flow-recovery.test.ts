@@ -48,7 +48,7 @@ describe("Worker device exchange recovery", () => {
             }
             if (init?.method === "POST") {
               if (url.endsWith("/session/issuance")) {
-                return new Response(null, { status: 201 })
+                return Response.json({ generation: 1 }, { status: 201 })
               }
               if (storedSessions.has(sessionId)) {
                 return new Response(null, { status: 409 })
@@ -98,6 +98,7 @@ describe("Worker device exchange recovery", () => {
           refreshToken: "stale-refresh",
           createdAt: 1,
           expiresAt: Date.now() + 60_000,
+          issuanceGeneration: 1,
         },
       ],
     ])
@@ -171,7 +172,7 @@ describe("Worker device exchange recovery", () => {
                 return new Response(null, { status: 409 })
               }
               issuanceActive = true
-              return new Response(null, { status: 201 })
+              return Response.json({ generation: 1 }, { status: 201 })
             }
             if (init?.method === "POST") {
               storedSessions.set(sessionId, JSON.parse(String(init.body)))

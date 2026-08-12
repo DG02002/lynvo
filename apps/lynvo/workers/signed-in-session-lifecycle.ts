@@ -7,7 +7,7 @@ export interface EstablishSignedInSessionInput {
   readonly accessToken: string
   readonly refreshToken: string
   readonly nowMs: number
-  readonly issuanceGenerationId?: string
+  readonly issuanceGeneration?: number
   readonly linkWorkerSession: (workerSessionId: string) => Promise<void>
   readonly finalizeSession?: () => Promise<void>
 }
@@ -93,7 +93,7 @@ export const createSignedInSessionLifecycle = (
       accessToken: input.accessToken,
       refreshToken: input.refreshToken,
       nowMs: input.nowMs,
-      issuanceGenerationId: input.issuanceGenerationId,
+      issuanceGeneration: input.issuanceGeneration,
     })
     if (session.kind !== "created") {
       return session
@@ -104,13 +104,19 @@ export const createSignedInSessionLifecycle = (
       return { kind: "completed", cookie: session.cookie }
     } catch {
       if (cleanup) {
-        const recorded = await cleanup.record(workerSessionId)
+        const recorded = await cleanup.record(
+          workerSessionId,
+          input.issuanceGeneration
+        )
         if (recorded.kind === "completed") {
           await cleanup.drain()
           return { kind: "unavailable" }
         }
       }
-      const compensation = await authSession.revoke(workerSessionId)
+      const compensation = await authSession.revoke(
+        workerSessionId,
+        input.issuanceGeneration
+      )
       return compensation.kind === "unavailable"
         ? compensation
         : { kind: "unavailable" }

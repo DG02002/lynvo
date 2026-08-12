@@ -13,7 +13,8 @@ const authorizeCleanup = async (serviceToken: string) => {
 
 export const enqueueWorkerSessionCleanup = async (
   ctx: MutationCtx,
-  workerSessionIds: ReadonlyArray<string>
+  workerSessionIds: ReadonlyArray<string>,
+  issuanceGeneration?: number
 ) => {
   for (const workerSessionId of workerSessionIds) {
     const existing = await ctx.db
@@ -25,7 +26,16 @@ export const enqueueWorkerSessionCleanup = async (
     if (!existing) {
       await ctx.db.insert("workerSessionCleanupIntents", {
         workerSessionId,
+        issuanceGeneration,
         createdAt: Date.now(),
+      })
+    } else if (
+      existing.issuanceGeneration !== undefined &&
+      (issuanceGeneration === undefined ||
+        issuanceGeneration > existing.issuanceGeneration)
+    ) {
+      await ctx.db.patch("workerSessionCleanupIntents", existing._id, {
+        issuanceGeneration,
       })
     }
   }
@@ -33,14 +43,22 @@ export const enqueueWorkerSessionCleanup = async (
 
 export const listPending = query({
   args: { serviceToken: v.string() },
-  returns: v.array(v.string()),
+  returns: v.array(
+    v.object({
+      workerSessionId: v.string(),
+      issuanceGeneration: v.optional(v.number()),
+    })
+  ),
   handler: async (ctx, args) => {
     await authorizeCleanup(args.serviceToken)
     const intents = await ctx.db
       .query("workerSessionCleanupIntents")
       .order("asc")
       .take(100)
-    return intents.map((intent) => intent.workerSessionId)
+    return intents.map((intent) => ({
+      workerSessionId: intent.workerSessionId,
+      issuanceGeneration: intent.issuanceGeneration,
+    }))
   },
 })
 
@@ -48,17 +66,26 @@ export const enqueue = mutation({
   args: {
     serviceToken: v.string(),
     workerSessionIds: v.array(v.string()),
+    issuanceGeneration: v.optional(v.number()),
   },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
     await authorizeCleanup(args.serviceToken)
-    await enqueueWorkerSessionCleanup(ctx, args.workerSessionIds)
+    await enqueueWorkerSessionCleanup(
+      ctx,
+      args.workerSessionIds,
+      args.issuanceGeneration
+    )
     return { success: true }
   },
 })
 
 export const complete = mutation({
-  args: { serviceToken: v.string(), workerSessionId: v.string() },
+  args: {
+    serviceToken: v.string(),
+    workerSessionId: v.string(),
+    issuanceGeneration: v.optional(v.number()),
+  },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
     await authorizeCleanup(args.serviceToken)
@@ -68,7 +95,7 @@ export const complete = mutation({
         queryBuilder.eq("workerSessionId", args.workerSessionId)
       )
       .unique()
-    if (intent) {
+    if (intent && intent.issuanceGeneration === args.issuanceGeneration) {
       await ctx.db.delete("workerSessionCleanupIntents", intent._id)
     }
     return { success: true }

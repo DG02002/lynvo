@@ -14,7 +14,8 @@ export interface SessionCleanupUnavailable {
 
 export interface SessionCleanupModule {
   readonly record: (
-    workerSessionId: string
+    workerSessionId: string,
+    issuanceGeneration?: number
   ) => Promise<SessionCleanupCompleted | SessionCleanupUnavailable>
   readonly drain: () => Promise<
     SessionCleanupCompleted | SessionCleanupUnavailable
@@ -40,12 +41,13 @@ export const createSessionCleanupModule = (
   const createClient = () => new ConvexHttpClient(environment.VITE_CONVEX_URL)
 
   return {
-    record: async (workerSessionId) => {
+    record: async (workerSessionId, issuanceGeneration) => {
       try {
         const serviceToken = await createServiceToken(environment)
         await createClient().mutation(api.sessionCleanup.enqueue, {
           serviceToken,
           workerSessionIds: [workerSessionId],
+          issuanceGeneration,
         })
         return { kind: "completed" }
       } catch {
@@ -56,18 +58,22 @@ export const createSessionCleanupModule = (
       try {
         const serviceToken = await createServiceToken(environment)
         const client = createClient()
-        const workerSessionIds = await client.query(
+        const pendingTargets = await client.query(
           api.sessionCleanup.listPending,
           { serviceToken }
         )
-        for (const workerSessionId of workerSessionIds) {
-          const result = await authSession.revoke(workerSessionId)
+        for (const target of pendingTargets) {
+          const result = await authSession.revoke(
+            target.workerSessionId,
+            target.issuanceGeneration
+          )
           if (result.kind === "unavailable") {
             return result
           }
           await client.mutation(api.sessionCleanup.complete, {
             serviceToken,
-            workerSessionId,
+            workerSessionId: target.workerSessionId,
+            issuanceGeneration: target.issuanceGeneration,
           })
         }
         return { kind: "completed" }

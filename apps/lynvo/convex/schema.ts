@@ -139,6 +139,7 @@ export default defineSchema({
 
   workerSessionCleanupIntents: defineTable({
     workerSessionId: v.string(),
+    issuanceGeneration: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_workerSessionId", ["workerSessionId"]),
 
@@ -275,7 +276,7 @@ export default defineSchema({
     deviceName: v.string(),
     userId: v.optional(v.id("users")),
     exchangeAttemptId: v.optional(v.string()),
-    exchangeGenerationId: v.optional(v.string()),
+    exchangeGeneration: v.optional(v.number()),
     exchangeLeaseExpiresAt: v.optional(v.number()),
     exchangeSessionId: v.optional(v.id("authSessions")),
     consumedSessionId: v.optional(v.id("authSessions")),

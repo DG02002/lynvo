@@ -6,7 +6,10 @@ import {
   DEVICE_CODE_EXCHANGE_LEASE_MS,
   DEVICE_CODE_TTL_MS,
 } from "../convex/constants"
-import { signAuthPreflightToken } from "../app/lib/auth-gateway"
+import {
+  signAuthPreflightToken,
+  signSessionCleanupToken,
+} from "../app/lib/auth-gateway"
 import {
   asAuthenticatedUser,
   createConvexTest,
@@ -27,6 +30,52 @@ const digestPollSecret = async (pollSecret: string) =>
   )
 
 describe("device authorization", () => {
+  it("keeps the newest generation-bound Worker cleanup intent", async () => {
+    const gatewaySecret = "test-session-cleanup-secret"
+    vi.stubEnv("AUTH_GATEWAY_SECRET", gatewaySecret)
+    const convex = createConvexTest()
+    const serviceToken = await signSessionCleanupToken(
+      gatewaySecret,
+      Date.now() + DEVICE_CODE_TTL_MS
+    )
+    const enqueue = (issuanceGeneration: number) =>
+      convex.mutation(api.sessionCleanup.enqueue, {
+        serviceToken,
+        workerSessionIds: ["generation-cleanup-attempt"],
+        issuanceGeneration,
+      })
+
+    await enqueue(1)
+    await enqueue(2)
+    await enqueue(1)
+    await expect(
+      convex.query(api.sessionCleanup.listPending, { serviceToken })
+    ).resolves.toEqual([
+      {
+        workerSessionId: "generation-cleanup-attempt",
+        issuanceGeneration: 2,
+      },
+    ])
+
+    await convex.mutation(api.sessionCleanup.complete, {
+      serviceToken,
+      workerSessionId: "generation-cleanup-attempt",
+      issuanceGeneration: 1,
+    })
+    await expect(
+      convex.query(api.sessionCleanup.listPending, { serviceToken })
+    ).resolves.toHaveLength(1)
+    await convex.mutation(api.sessionCleanup.complete, {
+      serviceToken,
+      workerSessionId: "generation-cleanup-attempt",
+      issuanceGeneration: 2,
+    })
+    await expect(
+      convex.query(api.sessionCleanup.listPending, { serviceToken })
+    ).resolves.toEqual([])
+    vi.unstubAllEnvs()
+  })
+
   it("generates fixed-width codes without Math.random", async () => {
     const gatewaySecret = "test-cryptographic-device-code-secret"
     vi.stubEnv("AUTH_GATEWAY_SECRET", gatewaySecret)
@@ -139,7 +188,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-one",
-        generationId: "generation-one",
+        generation: 1,
       }
     )
     expect(claimed).toMatchObject({ userId: user.userId })
@@ -154,14 +203,24 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-two",
-        generationId: "generation-two",
+        generation: 1,
       })
     ).rejects.toThrow("Approve this code")
+    await expect(
+      deviceClient.mutation(api.deviceAuth.finalizeExchange, {
+        code: "BCDE-FGHI",
+        pollSecret,
+        attemptId: "exchange-one",
+        sessionId: claimed.sessionId,
+        generation: 2,
+      })
+    ).rejects.toThrow("Device code exchange was superseded")
     await deviceClient.mutation(api.deviceAuth.finalizeExchange, {
       code: "BCDE-FGHI",
       pollSecret,
       attemptId: "exchange-one",
       sessionId: claimed.sessionId,
+      generation: 1,
     })
     await deviceClient.mutation(api.users.linkCurrentSessionWorker, {
       workerSessionId: "exchange-one",
@@ -186,6 +245,7 @@ describe("device authorization", () => {
         pollSecret,
         attemptId: "exchange-one",
         sessionId: claimed.sessionId,
+        generation: 1,
       })
     ).resolves.toBeNull()
     await expect(
@@ -194,13 +254,14 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-one",
-        generationId: "generation-one",
+        generation: 2,
       })
     ).rejects.toThrow("Approve this code")
     await deviceClient.mutation(api.deviceAuth.abortDeviceExchange, {
       code: "BCDE-FGHI",
       attemptId: "exchange-one",
       sessionId: claimed.sessionId,
+      generation: 1,
     })
     await expect(
       convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
@@ -208,7 +269,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt - 1,
         attemptId: "exchange-retry",
-        generationId: "generation-retry",
+        generation: 1,
       })
     ).resolves.toMatchObject({ userId: user.userId })
 
@@ -229,7 +290,7 @@ describe("device authorization", () => {
         pollSecret,
         now: expiresAt,
         attemptId: "expired-exchange",
-        generationId: "expired-generation",
+        generation: 1,
       })
     ).rejects.toThrow("Approve this code")
     vi.useRealTimers()
@@ -259,7 +320,7 @@ describe("device authorization", () => {
         pollSecret,
         now,
         attemptId: "retry-attempt",
-        generationId: "retry-generation-one",
+        generation: 1,
       }
     )
     await convex.run(async (context) => {
@@ -275,7 +336,7 @@ describe("device authorization", () => {
         pollSecret,
         now: now + 1,
         attemptId: "retry-attempt",
-        generationId: "retry-generation-two",
+        generation: 2,
       }
     )
     await convex.run(async (context) => {
@@ -291,9 +352,36 @@ describe("device authorization", () => {
         pollSecret,
         now: now + DEVICE_CODE_EXCHANGE_LEASE_MS + 1,
         attemptId: "retry-attempt",
-        generationId: "retry-generation-three",
+        generation: 3,
       }
     )
+    const currentRefreshTokenId = await convex.run(
+      async (context) =>
+        await context.db.insert("authRefreshTokens", {
+          sessionId: firstClaim.sessionId,
+          expirationTime: now + DEVICE_CODE_TTL_MS,
+        })
+    )
+
+    await expect(
+      convex.mutation(internal.deviceAuth.claimAuthorizedCode, {
+        code: "DEFG-HIJK",
+        pollSecret,
+        now: now + DEVICE_CODE_EXCHANGE_LEASE_MS + 2,
+        attemptId: "retry-attempt",
+        generation: 2,
+      })
+    ).rejects.toThrow("Approve this code")
+    await asAuthenticatedUser(
+      convex,
+      user.userId,
+      firstClaim.sessionId
+    ).mutation(api.deviceAuth.abortDeviceExchange, {
+      code: "DEFG-HIJK",
+      attemptId: "retry-attempt",
+      sessionId: firstClaim.sessionId,
+      generation: 2,
+    })
 
     expect(activeLeaseRetry.sessionId).toBe(firstClaim.sessionId)
     expect(expiredLeaseRetry.sessionId).toBe(firstClaim.sessionId)
@@ -311,7 +399,17 @@ describe("device authorization", () => {
         )
         .collect()
       expect(attemptSessions).toHaveLength(1)
-      expect(refreshTokens).toHaveLength(0)
+      expect(refreshTokens.map((refreshToken) => refreshToken._id)).toEqual([
+        currentRefreshTokenId,
+      ])
+      expect(
+        await context.db
+          .query("workerSessionCleanupIntents")
+          .withIndex("by_workerSessionId", (queryBuilder) =>
+            queryBuilder.eq("workerSessionId", "retry-attempt")
+          )
+          .unique()
+      ).toBeNull()
     })
   })
 
@@ -331,7 +429,7 @@ describe("device authorization", () => {
         userId: user.userId,
         deviceName: "Generation TV",
         exchangeAttemptId: "generation-attempt",
-        exchangeGenerationId: "generation-current",
+        exchangeGeneration: 2,
         exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
         exchangeSessionId: createdSessionId,
         expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
@@ -355,7 +453,7 @@ describe("device authorization", () => {
       deviceClient.mutation(api.deviceAuth.commitExchangeIssuance, {
         code: "JKLM-NOPQ",
         attemptId: "generation-attempt",
-        generationId: "generation-stale",
+        generation: 1,
         refreshTokenId: refreshTokenIds.stale,
       })
     ).resolves.toBe("stale")
@@ -363,7 +461,7 @@ describe("device authorization", () => {
       deviceClient.mutation(api.deviceAuth.commitExchangeIssuance, {
         code: "JKLM-NOPQ",
         attemptId: "generation-attempt",
-        generationId: "generation-current",
+        generation: 2,
         refreshTokenId: refreshTokenIds.current,
       })
     ).resolves.toBe("current")
@@ -397,6 +495,7 @@ describe("device authorization", () => {
         userId: user.userId,
         deviceName: "Abort TV",
         exchangeAttemptId: attemptId,
+        exchangeGeneration: 1,
         exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
         exchangeSessionId: createdSessionId,
         expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
@@ -407,7 +506,7 @@ describe("device authorization", () => {
 
     await asAuthenticatedUser(convex, user.userId, sessionId).mutation(
       api.deviceAuth.abortDeviceExchange,
-      { code: "EFGH-IJKL", attemptId, sessionId }
+      { code: "EFGH-IJKL", attemptId, sessionId, generation: 1 }
     )
 
     await convex.run(async (context) => {
@@ -418,7 +517,10 @@ describe("device authorization", () => {
           queryBuilder.eq("workerSessionId", attemptId)
         )
         .unique()
-      expect(intent?.workerSessionId).toBe(attemptId)
+      expect(intent).toMatchObject({
+        workerSessionId: attemptId,
+        issuanceGeneration: 1,
+      })
       const record = await context.db
         .query("deviceCodes")
         .withIndex("by_code", (queryBuilder) =>
@@ -451,6 +553,7 @@ describe("device authorization", () => {
         userId: user.userId,
         deviceName: "Superseded TV",
         exchangeAttemptId: "new-attempt",
+        exchangeGeneration: 1,
         exchangeLeaseExpiresAt: Date.now() + DEVICE_CODE_EXCHANGE_LEASE_MS,
         exchangeSessionId: newSessionId,
         expiresAt: Date.now() + DEVICE_CODE_TTL_MS,
@@ -468,6 +571,7 @@ describe("device authorization", () => {
         code: "GHIJ-KLMN",
         attemptId: "old-attempt",
         sessionId: sessions.oldSessionId,
+        generation: 1,
       })
     ).rejects.toThrow("Device code exchange session is invalid")
     await asAuthenticatedUser(
@@ -478,6 +582,7 @@ describe("device authorization", () => {
       code: "GHIJ-KLMN",
       attemptId: "old-attempt",
       sessionId: sessions.oldSessionId,
+      generation: 1,
     })
 
     await convex.run(async (context) => {

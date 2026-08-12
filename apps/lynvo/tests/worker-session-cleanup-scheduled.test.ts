@@ -26,7 +26,7 @@ vi.mock("convex/browser", () => ({
     query = async (reference: unknown) => {
       const { getFunctionName } = await import("convex/server")
       return getFunctionName(reference) === "sessionCleanup:listPending"
-        ? [...pendingSessionIds]
+        ? [...pendingSessionIds].map((workerSessionId) => ({ workerSessionId }))
         : []
     }
     mutation = async (_reference: unknown, args: Record<string, unknown>) => {
@@ -108,6 +108,7 @@ describe("scheduled Worker Auth Session cleanup", () => {
     expect(mutationCalls).toContainEqual({
       serviceToken: expect.any(String),
       workerSessionIds: revokedSessionIds,
+      issuanceGeneration: undefined,
     })
   })
 })

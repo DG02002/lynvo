@@ -1,3 +1,8 @@
+import type { SealedRecord } from "../app/lib/security/sealed-record"
+import { sealRecord, unsealRecord } from "../app/lib/security/sealed-record"
+import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
+import { AUTH_SESSION_ISSUANCE_GENERATION_RETENTION_MS } from "./constants"
+
 interface SessionPayload {
   readonly convexSessionId: string
   readonly accessToken: string
@@ -5,17 +10,16 @@ interface SessionPayload {
   readonly createdAt: number
   readonly expiresAt: number
   readonly idleTimeoutMs?: number
-  readonly issuanceGenerationId?: string
+  readonly issuanceGeneration?: number
 }
 
 interface SessionIssuancePayload {
-  readonly generationId: string
   readonly nowMs: number
   readonly expiresAt: number
 }
 
 interface StoredSessionIssuance {
-  readonly generationId: string
+  readonly generation: number
   readonly expiresAt: number
 }
 
@@ -26,17 +30,23 @@ interface SessionTokenUpdatePayload {
 }
 
 interface StoredSession extends SealedRecord {
+  readonly instanceId?: string
   readonly createdAt: number
   readonly expiresAt: number
   readonly idleTimeoutMs: number
   readonly idleExpiresAt: number
   readonly lastActivityTouchAt?: number
+  readonly revision?: number
+  readonly issuanceGeneration?: number
 }
 
 type SessionEnvironment = Partial<Pick<Env, "AUTH_SESSION_ENCRYPTION_KEY">>
 
 const SESSION_STORAGE_KEY = "session"
 const SESSION_ISSUANCE_STORAGE_KEY = "session-issuance"
+const SESSION_ISSUANCE_GENERATION_KEY = "session-issuance-generation"
+const SESSION_ISSUANCE_GENERATION_RETENTION_KEY =
+  "session-issuance-generation-retention"
 const UNAVAILABLE_RESPONSE = { error: "Session service is unavailable." }
 
 const isSessionPayload = (payload: unknown): payload is SessionPayload =>
@@ -56,8 +66,10 @@ const isSessionPayload = (payload: unknown): payload is SessionPayload =>
   payload.convexSessionId.length > 0 &&
   payload.refreshToken.length > 0 &&
   payload.expiresAt > payload.createdAt &&
-  (!("issuanceGenerationId" in payload) ||
-    typeof payload.issuanceGenerationId === "string") &&
+  (!("issuanceGeneration" in payload) ||
+    (typeof payload.issuanceGeneration === "number" &&
+      Number.isSafeInteger(payload.issuanceGeneration) &&
+      payload.issuanceGeneration > 0)) &&
   (!("idleTimeoutMs" in payload) ||
     (typeof payload.idleTimeoutMs === "number" && payload.idleTimeoutMs > 0))
 
@@ -81,13 +93,10 @@ const isSessionIssuancePayload = (
 ): payload is SessionIssuancePayload =>
   typeof payload === "object" &&
   payload !== null &&
-  "generationId" in payload &&
   "nowMs" in payload &&
   "expiresAt" in payload &&
-  typeof payload.generationId === "string" &&
   typeof payload.nowMs === "number" &&
   typeof payload.expiresAt === "number" &&
-  payload.generationId.length > 0 &&
   payload.expiresAt > payload.nowMs
 
 export class WorkerAuthSession implements DurableObject {
@@ -145,24 +154,47 @@ export class WorkerAuthSession implements DurableObject {
       if (request.method !== "POST") {
         return new Response(null, { status: 405 })
       }
-      if (await this.state.storage.get(SESSION_STORAGE_KEY)) {
-        return new Response(null, { status: 200 })
-      }
       const payload: unknown = await request.json()
       if (!isSessionIssuancePayload(payload)) {
         return new Response(null, { status: 400 })
       }
-      const issuance = await this.state.storage.get<StoredSessionIssuance>(
-        SESSION_ISSUANCE_STORAGE_KEY
-      )
-      if (issuance && issuance.expiresAt > payload.nowMs) {
+      const result = await this.state.storage.transaction(async (storage) => {
+        if (await storage.get(SESSION_STORAGE_KEY)) {
+          return { kind: "established" } as const
+        }
+        const issuance = await storage.get<StoredSessionIssuance>(
+          SESSION_ISSUANCE_STORAGE_KEY
+        )
+        if (issuance && issuance.expiresAt > payload.nowMs) {
+          return { kind: "pending" } as const
+        }
+        const currentGeneration =
+          (await storage.get<number>(SESSION_ISSUANCE_GENERATION_KEY)) ?? 0
+        const generation = currentGeneration + 1
+        const retentionExpiresAt =
+          payload.nowMs + AUTH_SESSION_ISSUANCE_GENERATION_RETENTION_MS
+        await storage.put(SESSION_ISSUANCE_STORAGE_KEY, {
+          generation,
+          expiresAt: payload.expiresAt,
+        } satisfies StoredSessionIssuance)
+        await storage.put(SESSION_ISSUANCE_GENERATION_KEY, generation)
+        await storage.put(
+          SESSION_ISSUANCE_GENERATION_RETENTION_KEY,
+          retentionExpiresAt
+        )
+        const currentAlarm = await storage.getAlarm()
+        if (currentAlarm === null || currentAlarm < retentionExpiresAt) {
+          await storage.setAlarm(retentionExpiresAt)
+        }
+        return { kind: "acquired", generation } as const
+      })
+      if (result.kind === "established") {
+        return new Response(null, { status: 200 })
+      }
+      if (result.kind === "pending") {
         return new Response(null, { status: 409 })
       }
-      await this.state.storage.put(SESSION_ISSUANCE_STORAGE_KEY, {
-        generationId: payload.generationId,
-        expiresAt: payload.expiresAt,
-      } satisfies StoredSessionIssuance)
-      return new Response(null, { status: 201 })
+      return Response.json({ generation: result.generation }, { status: 201 })
     }
     if (url.pathname === "/session/tokens") {
       if (request.method !== "PUT") {
@@ -188,11 +220,33 @@ export class WorkerAuthSession implements DurableObject {
       if (!sealedRecord) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
-      await this.state.storage.put(SESSION_STORAGE_KEY, {
-        ...storedSession,
-        ...sealedRecord,
-      } satisfies StoredSession)
-      return new Response(null, { status: 204 })
+      const updateResult = await this.state.storage.transaction(
+        async (storage) => {
+          const currentSession =
+            await storage.get<StoredSession>(SESSION_STORAGE_KEY)
+          if (!currentSession) {
+            return "missing" as const
+          }
+          if (
+            currentSession.instanceId !== storedSession.instanceId ||
+            (currentSession.revision ?? 0) !== (storedSession.revision ?? 0)
+          ) {
+            return "conflict" as const
+          }
+          await storage.put(SESSION_STORAGE_KEY, {
+            ...currentSession,
+            ...sealedRecord,
+            revision: (currentSession.revision ?? 0) + 1,
+          } satisfies StoredSession)
+          return "updated" as const
+        }
+      )
+      if (updateResult === "missing") {
+        return new Response(null, { status: 404 })
+      }
+      return new Response(null, {
+        status: updateResult === "updated" ? 204 : 409,
+      })
     }
     if (url.pathname === "/activity-touch") {
       const storedSession =
@@ -216,11 +270,25 @@ export class WorkerAuthSession implements DurableObject {
         ) {
           return new Response(null, { status: 400 })
         }
-        await this.state.storage.put(SESSION_STORAGE_KEY, {
-          ...storedSession,
-          lastActivityTouchAt: payload.touchedAt,
-        } satisfies StoredSession)
-        return new Response(null, { status: 204 })
+        const touchedAt = payload.touchedAt
+        const didUpdate = await this.state.storage.transaction(
+          async (storage) => {
+            const currentSession =
+              await storage.get<StoredSession>(SESSION_STORAGE_KEY)
+            if (!currentSession) {
+              return false
+            }
+            await storage.put(SESSION_STORAGE_KEY, {
+              ...currentSession,
+              lastActivityTouchAt: Math.max(
+                currentSession.lastActivityTouchAt ?? currentSession.createdAt,
+                touchedAt
+              ),
+            } satisfies StoredSession)
+            return true
+          }
+        )
+        return new Response(null, { status: didUpdate ? 204 : 404 })
       }
       return new Response(null, { status: 405 })
     }
@@ -241,17 +309,9 @@ export class WorkerAuthSession implements DurableObject {
       if (!sealedRecord) {
         return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
       }
-      const issuance = await this.state.storage.get<StoredSessionIssuance>(
-        SESSION_ISSUANCE_STORAGE_KEY
-      )
-      if (issuance && issuance.generationId !== payload.issuanceGenerationId) {
-        return new Response(null, { status: 409 })
-      }
-      if (payload.issuanceGenerationId && !issuance) {
-        return new Response(null, { status: 409 })
-      }
       const storedSession: StoredSession = {
         ...sealedRecord,
+        instanceId: crypto.randomUUID(),
         createdAt: payload.createdAt,
         expiresAt: payload.expiresAt,
         idleTimeoutMs:
@@ -262,52 +322,151 @@ export class WorkerAuthSession implements DurableObject {
           payload.expiresAt
         ),
         lastActivityTouchAt: payload.createdAt,
+        revision: 0,
+        issuanceGeneration: payload.issuanceGeneration,
       }
-      await this.state.storage.put(SESSION_STORAGE_KEY, storedSession)
-      if (issuance) {
-        await this.state.storage.delete(SESSION_ISSUANCE_STORAGE_KEY)
-      }
-      return new Response(null, { status: 204 })
+      const didCreate = await this.state.storage.transaction(
+        async (storage) => {
+          if (await storage.get(SESSION_STORAGE_KEY)) {
+            return false
+          }
+          const issuance = await storage.get<StoredSessionIssuance>(
+            SESSION_ISSUANCE_STORAGE_KEY
+          )
+          if (
+            (issuance && issuance.generation !== payload.issuanceGeneration) ||
+            (payload.issuanceGeneration !== undefined && !issuance)
+          ) {
+            return false
+          }
+          await storage.put(SESSION_STORAGE_KEY, storedSession)
+          if (issuance) {
+            await storage.delete(SESSION_ISSUANCE_STORAGE_KEY)
+          }
+          return true
+        }
+      )
+      return new Response(null, { status: didCreate ? 204 : 409 })
     }
     if (request.method === "DELETE") {
-      await this.state.storage.delete(SESSION_STORAGE_KEY)
-      await this.state.storage.delete(SESSION_ISSUANCE_STORAGE_KEY)
+      const issuanceGenerationParameter =
+        url.searchParams.get("issuanceGeneration")
+      const issuanceGeneration =
+        issuanceGenerationParameter === null
+          ? undefined
+          : Number(issuanceGenerationParameter)
+      if (
+        issuanceGeneration !== undefined &&
+        (!Number.isSafeInteger(issuanceGeneration) || issuanceGeneration <= 0)
+      ) {
+        return new Response(null, { status: 400 })
+      }
+      await this.state.storage.transaction(async (storage) => {
+        if (issuanceGeneration !== undefined) {
+          const [currentSession, currentIssuance] = await Promise.all([
+            storage.get<StoredSession>(SESSION_STORAGE_KEY),
+            storage.get<StoredSessionIssuance>(SESSION_ISSUANCE_STORAGE_KEY),
+          ])
+          if (
+            (currentSession &&
+              currentSession.issuanceGeneration !== issuanceGeneration) ||
+            (currentIssuance &&
+              currentIssuance.generation !== issuanceGeneration)
+          ) {
+            return
+          }
+        }
+        await storage.delete([
+          SESSION_STORAGE_KEY,
+          SESSION_ISSUANCE_STORAGE_KEY,
+        ])
+      })
       return new Response(null, { status: 204 })
     }
     if (request.method === "GET" || request.method === "HEAD") {
-      const storedSession =
-        await this.state.storage.get<StoredSession>(SESSION_STORAGE_KEY)
       const nowParameter = url.searchParams.get("nowMs")
       const nowMs = nowParameter ? Number(nowParameter) : Date.now()
-      if (!storedSession) {
-        return new Response(null, { status: 404 })
-      }
-      if (
-        !Number.isFinite(nowMs) ||
-        nowMs >= storedSession.expiresAt ||
-        nowMs >= storedSession.idleExpiresAt
-      ) {
-        await this.state.storage.delete(SESSION_STORAGE_KEY)
+      if (!Number.isFinite(nowMs)) {
         return new Response(null, { status: 401 })
+      }
+      const initialSessionStatus = await this.state.storage.transaction(
+        async (storage) => {
+          const currentSession =
+            await storage.get<StoredSession>(SESSION_STORAGE_KEY)
+          if (!currentSession) {
+            return { kind: "missing" } as const
+          }
+          if (
+            nowMs >= currentSession.expiresAt ||
+            nowMs >= currentSession.idleExpiresAt
+          ) {
+            await storage.delete(SESSION_STORAGE_KEY)
+            return { kind: "expired" } as const
+          }
+          return { kind: "active", session: currentSession } as const
+        }
+      )
+      if (initialSessionStatus.kind !== "active") {
+        return new Response(null, {
+          status: initialSessionStatus.kind === "expired" ? 401 : 404,
+        })
       }
       if (request.method === "HEAD") {
         return new Response(null, { status: 204 })
       }
+      const storedSession = initialSessionStatus.session
       const tokens = await this.readTokens(storedSession)
       if (tokens) {
-        await this.state.storage.put(SESSION_STORAGE_KEY, {
-          ...storedSession,
-          idleExpiresAt: Math.min(
-            nowMs + storedSession.idleTimeoutMs,
-            storedSession.expiresAt
-          ),
-        } satisfies StoredSession)
+        const sessionStatus = await this.state.storage.transaction(
+          async (storage) => {
+            const currentSession =
+              await storage.get<StoredSession>(SESSION_STORAGE_KEY)
+            if (!currentSession) {
+              return "missing" as const
+            }
+            if (
+              nowMs >= currentSession.expiresAt ||
+              nowMs >= currentSession.idleExpiresAt
+            ) {
+              await storage.delete(SESSION_STORAGE_KEY)
+              return "expired" as const
+            }
+            if (
+              currentSession.instanceId !== storedSession.instanceId ||
+              (currentSession.revision ?? 0) !== (storedSession.revision ?? 0)
+            ) {
+              return "conflict" as const
+            }
+            await storage.put(SESSION_STORAGE_KEY, {
+              ...currentSession,
+              idleExpiresAt: Math.max(
+                currentSession.idleExpiresAt,
+                Math.min(
+                  nowMs + currentSession.idleTimeoutMs,
+                  currentSession.expiresAt
+                )
+              ),
+            } satisfies StoredSession)
+            return "active" as const
+          }
+        )
+        if (sessionStatus !== "active") {
+          return new Response(null, {
+            status:
+              sessionStatus === "missing"
+                ? 404
+                : sessionStatus === "expired"
+                  ? 401
+                  : 409,
+          })
+        }
         return Response.json({
           convexSessionId: tokens.convexSessionId,
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           createdAt: storedSession.createdAt,
           expiresAt: storedSession.expiresAt,
+          issuanceGeneration: storedSession.issuanceGeneration,
         } satisfies SessionPayload)
       }
       return this.environment.AUTH_SESSION_ENCRYPTION_KEY
@@ -316,7 +475,22 @@ export class WorkerAuthSession implements DurableObject {
     }
     return new Response(null, { status: 405 })
   }
+
+  alarm = async (): Promise<void> => {
+    const nowMs = Date.now()
+    await this.state.storage.transaction(async (storage) => {
+      const retentionExpiresAt = await storage.get<number>(
+        SESSION_ISSUANCE_GENERATION_RETENTION_KEY
+      )
+      if (retentionExpiresAt !== undefined && retentionExpiresAt > nowMs) {
+        await storage.setAlarm(retentionExpiresAt)
+        return
+      }
+      await storage.delete([
+        SESSION_ISSUANCE_STORAGE_KEY,
+        SESSION_ISSUANCE_GENERATION_KEY,
+        SESSION_ISSUANCE_GENERATION_RETENTION_KEY,
+      ])
+    })
+  }
 }
-import type { SealedRecord } from "../app/lib/security/sealed-record"
-import { sealRecord, unsealRecord } from "../app/lib/security/sealed-record"
-import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"

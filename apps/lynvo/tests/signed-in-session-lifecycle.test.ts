@@ -9,7 +9,7 @@ import type { SessionCleanupModule } from "../workers/session-cleanup"
 const createAuthSession = (
   overrides: Partial<AuthSessionModule> = {}
 ): AuthSessionModule => ({
-  beginIssuance: vi.fn().mockResolvedValue({ kind: "acquired" }),
+  beginIssuance: vi.fn().mockResolvedValue({ kind: "acquired", generation: 1 }),
   create: vi.fn().mockResolvedValue({
     kind: "created",
     cookie: "session=active",
@@ -207,12 +207,13 @@ describe("signed-in session lifecycle", () => {
       accessToken: "access-token",
       refreshToken: "refresh-token",
       nowMs: 1,
+      issuanceGeneration: 7,
       linkWorkerSession: vi.fn().mockRejectedValue(new Error("offline")),
     })
 
     expect(result).toEqual({ kind: "unavailable" })
     expect(authSession.revoke).not.toHaveBeenCalled()
-    expect(cleanup.record).toHaveBeenCalledWith(expect.any(String))
+    expect(cleanup.record).toHaveBeenCalledWith(expect.any(String), 7)
     expect(cleanup.drain).toHaveBeenCalledOnce()
   })
 })

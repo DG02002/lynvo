@@ -200,7 +200,7 @@ export const claimAuthorizedCode = internalMutation({
     pollSecret: v.string(),
     now: v.number(),
     attemptId: v.string(),
-    generationId: v.string(),
+    generation: v.number(),
   },
   handler: async (context, arguments_) => {
     const record = await context.db
@@ -212,6 +212,10 @@ export const claimAuthorizedCode = internalMutation({
     const isSameActiveAttempt =
       record?.status === "exchanging" &&
       record.exchangeAttemptId === arguments_.attemptId
+    const isStaleGeneration =
+      record?.exchangeAttemptId === arguments_.attemptId &&
+      record.exchangeGeneration !== undefined &&
+      arguments_.generation <= record.exchangeGeneration
     if (
       !record ||
       (record.status !== "authorized" &&
@@ -222,6 +226,7 @@ export const claimAuthorizedCode = internalMutation({
               record.exchangeLeaseExpiresAt <= arguments_.now))
         )) ||
       !record.userId ||
+      isStaleGeneration ||
       arguments_.now >= record.expiresAt ||
       record.pollSecretDigest !==
         (await digestPollSecret(arguments_.pollSecret))
@@ -265,7 +270,11 @@ export const claimAuthorizedCode = internalMutation({
           supersededSession?.userId === record.userId &&
           supersededSession.deviceExchangeAttemptId === record.exchangeAttemptId
         ) {
-          await enqueueWorkerSessionCleanup(context, [record.exchangeAttemptId])
+          await enqueueWorkerSessionCleanup(
+            context,
+            [record.exchangeAttemptId],
+            record.exchangeGeneration
+          )
           await revokeUserSession(
             context,
             record.userId,
@@ -283,7 +292,7 @@ export const claimAuthorizedCode = internalMutation({
     await context.db.patch("deviceCodes", record._id, {
       status: "exchanging",
       exchangeAttemptId: arguments_.attemptId,
-      exchangeGenerationId: arguments_.generationId,
+      exchangeGeneration: arguments_.generation,
       exchangeLeaseExpiresAt: arguments_.now + DEVICE_CODE_EXCHANGE_LEASE_MS,
       exchangeSessionId: sessionId,
     })
@@ -296,7 +305,7 @@ export const commitExchangeIssuance = mutation({
   args: {
     code: v.string(),
     attemptId: v.string(),
-    generationId: v.string(),
+    generation: v.number(),
     refreshTokenId: v.string(),
   },
   handler: async (context, arguments_) => {
@@ -334,7 +343,7 @@ export const commitExchangeIssuance = mutation({
       record.status !== "exchanging" ||
       record.exchangeAttemptId !== arguments_.attemptId ||
       record.exchangeSessionId !== currentSessionId ||
-      record.exchangeGenerationId !== arguments_.generationId
+      record.exchangeGeneration !== arguments_.generation
     ) {
       await context.db.delete("authRefreshTokens", refreshTokenId)
       return "stale"
@@ -363,6 +372,7 @@ export const finalizeExchange = mutation({
     pollSecret: v.string(),
     attemptId: v.string(),
     sessionId: v.string(),
+    generation: v.number(),
   },
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedWritableUserId(context)
@@ -381,7 +391,8 @@ export const finalizeExchange = mutation({
       record.exchangeSessionId !== currentSessionId ||
       record.pollSecretDigest !==
         (await digestPollSecret(arguments_.pollSecret)) ||
-      record.exchangeAttemptId !== arguments_.attemptId
+      record.exchangeAttemptId !== arguments_.attemptId ||
+      record.exchangeGeneration !== arguments_.generation
     ) {
       throw new Error("Device code exchange was superseded")
     }
@@ -469,6 +480,7 @@ export const abortDeviceExchange = mutation({
     code: v.string(),
     attemptId: v.string(),
     sessionId: v.string(),
+    generation: v.number(),
   },
   handler: async (context, arguments_) => {
     const userId = await getAuthenticatedWritableUserId(context)
@@ -499,18 +511,28 @@ export const abortDeviceExchange = mutation({
     if (
       record?.userId === userId &&
       record.exchangeAttemptId === arguments_.attemptId &&
+      record.exchangeSessionId === sessionId &&
+      record.exchangeGeneration !== arguments_.generation
+    ) {
+      return null
+    }
+    if (
+      record?.userId === userId &&
+      record.exchangeAttemptId === arguments_.attemptId &&
       record.exchangeSessionId === sessionId
     ) {
       await context.db.patch("deviceCodes", record._id, {
         status: "authorized",
-        exchangeAttemptId: undefined,
-        exchangeGenerationId: undefined,
         exchangeLeaseExpiresAt: undefined,
         exchangeSessionId: undefined,
         consumedSessionId: undefined,
       })
     }
-    await enqueueWorkerSessionCleanup(context, [arguments_.attemptId])
+    await enqueueWorkerSessionCleanup(
+      context,
+      [arguments_.attemptId],
+      arguments_.generation
+    )
     await revokeUserSession(context, userId, null, sessionId)
     return null
   },
@@ -528,7 +550,11 @@ export const cleanupExpiredCodes = internalMutation({
     for (const record of expiredCodes) {
       if (record.status !== "consumed") {
         if (record.exchangeAttemptId) {
-          await enqueueWorkerSessionCleanup(context, [record.exchangeAttemptId])
+          await enqueueWorkerSessionCleanup(
+            context,
+            [record.exchangeAttemptId],
+            record.exchangeGeneration
+          )
         }
         if (record.exchangeSessionId) {
           const session = await context.db.get(

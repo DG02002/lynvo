@@ -21,7 +21,7 @@ export interface CreateAuthSessionInput {
   readonly accessToken: string
   readonly refreshToken: string
   readonly nowMs: number
-  readonly issuanceGenerationId?: string
+  readonly issuanceGeneration?: number
 }
 
 export interface AuthSessionCreated {
@@ -44,6 +44,7 @@ export interface AuthSessionConflict {
 
 export interface AuthSessionIssuanceAcquired {
   readonly kind: "acquired"
+  readonly generation: number
 }
 
 export interface AuthSessionIssuancePending {
@@ -60,6 +61,7 @@ export interface AuthSessionState {
   readonly refreshToken: string
   readonly createdAt: number
   readonly expiresAt: number
+  readonly issuanceGeneration?: number
 }
 
 export interface AuthSessionActive {
@@ -98,7 +100,6 @@ export interface AuthSessionRotated {
 export interface AuthSessionModule {
   readonly beginIssuance: (input: {
     readonly sessionId: string
-    readonly generationId: string
     readonly nowMs: number
   }) => Promise<
     | AuthSessionIssuanceAcquired
@@ -135,7 +136,8 @@ export interface AuthSessionModule {
     | AuthSessionUnavailable
   >
   readonly revoke: (
-    sessionId: string
+    sessionId: string,
+    issuanceGeneration?: number
   ) => Promise<AuthSessionRevoked | AuthSessionUnavailable>
   readonly expireCookie: () => string
   readonly restoreCookie: (sessionId: string) => string
@@ -181,6 +183,13 @@ const parseAuthSessionState = (
     refreshToken: value.refreshToken,
     createdAt: value.createdAt,
     expiresAt: value.expiresAt,
+    issuanceGeneration:
+      "issuanceGeneration" in value &&
+      typeof value.issuanceGeneration === "number" &&
+      Number.isSafeInteger(value.issuanceGeneration) &&
+      value.issuanceGeneration > 0
+        ? value.issuanceGeneration
+        : undefined,
   }
 }
 
@@ -194,13 +203,20 @@ export const createAuthSessionModule = (
         .fetch("https://session.internal/session/issuance", {
           method: "POST",
           body: JSON.stringify({
-            generationId: input.generationId,
             nowMs: input.nowMs,
             expiresAt: input.nowMs + AUTH_SESSION_ISSUANCE_LEASE_MS,
           }),
         })
       if (response.status === 201) {
-        return { kind: "acquired" }
+        const value: unknown = await response.json()
+        return typeof value === "object" &&
+          value !== null &&
+          "generation" in value &&
+          typeof value.generation === "number" &&
+          Number.isSafeInteger(value.generation) &&
+          value.generation > 0
+          ? { kind: "acquired", generation: value.generation }
+          : { kind: "unavailable" }
       }
       if (response.status === 200) {
         return { kind: "established" }
@@ -254,7 +270,7 @@ export const createAuthSessionModule = (
             createdAt: input.nowMs,
             expiresAt: input.nowMs + SESSION_ABSOLUTE_LIFETIME_MS,
             idleTimeoutMs: SESSION_IDLE_TIMEOUT_MS,
-            issuanceGenerationId: input.issuanceGenerationId,
+            issuanceGeneration: input.issuanceGeneration,
           }),
         })
       if (response.status === 409) {
@@ -326,7 +342,10 @@ export const createAuthSessionModule = (
               refreshToken: tokens.refreshToken,
             }),
           })
-        return response.ok
+        if (response.status === 404) {
+          return { kind: "revoked_or_missing" } as const
+        }
+        return response.ok || response.status === 409
           ? ({ kind: "rotated" } as const)
           : ({ kind: "unavailable" } as const)
       } catch {
@@ -340,11 +359,15 @@ export const createAuthSessionModule = (
       namespaceRequests.delete(input.sessionId)
     }
   },
-  revoke: async (sessionId) => {
+  revoke: async (sessionId, issuanceGeneration) => {
     try {
+      const query =
+        issuanceGeneration === undefined
+          ? ""
+          : `?issuanceGeneration=${issuanceGeneration}`
       const response = await namespace
         .getByName(sessionId)
-        .fetch("https://session.internal/session", { method: "DELETE" })
+        .fetch(`https://session.internal/session${query}`, { method: "DELETE" })
       if (!response.ok) {
         return { kind: "unavailable" }
       }

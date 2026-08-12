@@ -124,6 +124,10 @@ export const createWorkerAuthenticationFlow = (
       session: AuthSessionState,
       attemptId: string
     ): Promise<AuthenticationFlowCompleted | AuthenticationFlowUnavailable> => {
+      if (!session.issuanceGeneration) {
+        return { kind: "unavailable" }
+      }
+      const issuanceGeneration = session.issuanceGeneration
       client.setAuth(session.accessToken)
       try {
         const recoveryPhase = await client.query(
@@ -143,6 +147,7 @@ export const createWorkerAuthenticationFlow = (
             pollSecret: input.params.pollSecret,
             attemptId,
             sessionId: session.convexSessionId,
+            generation: issuanceGeneration,
           })
         }
         if (recoveryPhase === "resumable" || recoveryPhase === "completed") {
@@ -157,6 +162,7 @@ export const createWorkerAuthenticationFlow = (
           code: input.params.code,
           attemptId,
           sessionId: session.convexSessionId,
+          generation: issuanceGeneration,
         })
       } catch {
         return { kind: "unavailable" }
@@ -166,7 +172,7 @@ export const createWorkerAuthenticationFlow = (
         ? cleanupResult
         : { kind: "unavailable" }
     }
-    let issuanceGenerationId: string | undefined
+    let issuanceGeneration: number | undefined
     if (exchangeAttemptId) {
       const existingSession = await authSession.read(exchangeAttemptId)
       if (existingSession.kind === "unavailable") {
@@ -178,10 +184,8 @@ export const createWorkerAuthenticationFlow = (
           exchangeAttemptId
         )
       }
-      issuanceGenerationId = crypto.randomUUID()
       const issuance = await authSession.beginIssuance({
         sessionId: exchangeAttemptId,
-        generationId: issuanceGenerationId,
         nowMs: Date.now(),
       })
       if (issuance.kind !== "acquired") {
@@ -196,15 +200,16 @@ export const createWorkerAuthenticationFlow = (
             )
           : { kind: "unavailable" }
       }
+      issuanceGeneration = issuance.generation
     }
     const result = await client.action(
       api.auth.signIn,
-      issuanceGenerationId
+      issuanceGeneration
         ? {
             ...input,
             params: {
               ...input.params,
-              issuanceGenerationId,
+              issuanceGeneration: String(issuanceGeneration),
             },
           }
         : input
@@ -223,7 +228,7 @@ export const createWorkerAuthenticationFlow = (
       return { kind: "unavailable" }
     }
     client.setAuth(tokens.token)
-    if (exchangeAttemptId && issuanceGenerationId) {
+    if (exchangeAttemptId && issuanceGeneration) {
       const refreshTokenId = readRefreshTokenId(tokens.refreshToken)
       if (!refreshTokenId) {
         return { kind: "unavailable" }
@@ -233,7 +238,7 @@ export const createWorkerAuthenticationFlow = (
         {
           code: input.params.code,
           attemptId: exchangeAttemptId,
-          generationId: issuanceGenerationId,
+          generation: issuanceGeneration,
           refreshTokenId,
         }
       )
@@ -250,7 +255,7 @@ export const createWorkerAuthenticationFlow = (
       cleanup
     )
     const recoverDeviceExchange = async () => {
-      if (!exchangeAttemptId) {
+      if (!exchangeAttemptId || !issuanceGeneration) {
         return
       }
       try {
@@ -258,6 +263,7 @@ export const createWorkerAuthenticationFlow = (
           code: input.params.code,
           attemptId: exchangeAttemptId,
           sessionId: convexSessionId,
+          generation: issuanceGeneration,
         })
       } finally {
         await cleanup.drain()
@@ -269,22 +275,24 @@ export const createWorkerAuthenticationFlow = (
       accessToken: tokens.token,
       refreshToken: tokens.refreshToken,
       nowMs: Date.now(),
-      issuanceGenerationId,
+      issuanceGeneration,
       linkWorkerSession: async (workerSessionId) => {
         await client.mutation(api.users.linkCurrentSessionWorker, {
           workerSessionId,
         })
       },
-      finalizeSession: exchangeAttemptId
-        ? async () => {
-            await client.mutation(api.deviceAuth.finalizeExchange, {
-              code: input.params.code,
-              pollSecret: input.params.pollSecret,
-              attemptId: exchangeAttemptId,
-              sessionId: convexSessionId,
-            })
-          }
-        : undefined,
+      finalizeSession:
+        exchangeAttemptId && issuanceGeneration
+          ? async () => {
+              await client.mutation(api.deviceAuth.finalizeExchange, {
+                code: input.params.code,
+                pollSecret: input.params.pollSecret,
+                attemptId: exchangeAttemptId,
+                sessionId: convexSessionId,
+                generation: issuanceGeneration,
+              })
+            }
+          : undefined,
     })
     if (session.kind === "conflict" && exchangeAttemptId) {
       const issuedSession = await authSession.read(exchangeAttemptId)
