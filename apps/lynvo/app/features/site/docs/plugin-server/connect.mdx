@@ -12,11 +12,16 @@ Add the Plugin Server after its production contract checks pass:
 1. Open [**Settings**](/settings/plugins) in Lynvo
 2. Find **Custom Plugin Servers**
 3. Select **Add Custom Plugin Server**
-4. Enter the deployed origin in **Server URL**
+4. Enter the deployed origin in **Server URL**, without `/manifest`
 5. Enter the production bearer key in **API key**
 6. Select **Add Custom Plugin Server**
 
 Lynvo fetches `GET /manifest`, checks protocol version `1.0`, calls `POST /verify`, and stores the Plugin Server only when both responses pass validation.
+
+Production and remote Plugin Server origins must use HTTPS. For local
+development on the same machine, use an origin whose hostname is exactly
+`localhost`, such as `http://localhost:8787`. Lynvo rejects plain HTTP origins
+that use `127.0.0.1`, a LAN address, or any other hostname.
 
 Test one URL for every declared Source. Open one lazy folder to confirm that Lynvo sends the follow-up request to the same Plugin Server.
 

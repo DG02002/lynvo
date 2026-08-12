@@ -41,6 +41,29 @@ curl http://localhost:8787/manifest
 
 </CodeBlock>
 
+Use `http://localhost:8787` when Lynvo and the Plugin Server run on the same
+machine. Lynvo allows local HTTP only when the hostname is exactly
+`localhost`; loopback IP addresses, LAN addresses, and other hosts must use
+HTTPS.
+
+To test with a remotely hosted Lynvo instance, expose the local Worker through
+an HTTPS tunnel. Wrangler's interactive development server can start one with
+the `t` shortcut. Verify the public origin before connecting it:
+
+<CodeBlock label="Terminal">
+
+```sh
+curl https://your-tunnel.example/manifest
+```
+
+</CodeBlock>
+
+The response must succeed and every absolute manifest URL, including Plugin
+icon URLs, must use the public HTTPS origin. A tunnel commonly terminates TLS
+before forwarding HTTP to the Worker. If the manifest generates absolute URLs
+from the request, honor `X-Forwarded-Proto: https` or configure the public
+origin explicitly. Never hardcode a temporary tunnel hostname.
+
 Verify the local bearer key:
 
 <CodeBlock label="Terminal">

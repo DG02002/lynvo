@@ -248,6 +248,15 @@ Recommended:
 
 If the icon is served by the Plugin Server itself, expose it as a static asset such as `/icons/sources/example.webp` and set `iconUrl` to the deployed HTTPS origin plus that path.
 
+When a reverse proxy or development tunnel terminates TLS, the request seen by
+the Plugin Server may use HTTP even though its public origin uses HTTPS. Do not
+construct public icon URLs from `new URL(request.url).origin` without accounting
+for that boundary. Either configure the public origin explicitly or upgrade the
+derived URL when the trusted proxy sends `X-Forwarded-Proto: https`. Add a
+contract test that sends an HTTP request with that header and verifies that the
+manifest succeeds with HTTPS icon URLs. Local HTTP icon URLs are valid only on
+loopback development hosts.
+
 ### Plugin Icons
 
 If one Plugin Server supports multiple Plugins, publish those identities under `extensions.lynvo.plugins`.

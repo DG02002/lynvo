@@ -26,6 +26,22 @@ pnpm build
 pnpm dev
 ```
 
+Register `http://localhost:8787` when Lynvo runs on the same machine. Use the
+origin only, without `/manifest`. Lynvo permits local HTTP only for the exact
+`localhost` hostname.
+
+For a remote Lynvo instance, start an HTTPS tunnel from Wrangler's interactive
+development server with the `t` shortcut, then verify its public origin:
+
+```sh
+curl https://your-tunnel.example/manifest
+```
+
+Keep the tunnel running while testing. If you later generate absolute manifest
+URLs from the incoming request, account for TLS termination by honoring a
+trusted `X-Forwarded-Proto: https` header or by configuring the public origin
+explicitly. Do not hardcode a temporary tunnel hostname.
+
 Deploy after configuring your Cloudflare account:
 
 ```sh

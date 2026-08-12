@@ -23,6 +23,22 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
     })
   })
 
+  it("publishes a valid manifest behind a TLS-terminating proxy", async () => {
+    const response = await app.fetch(
+      new Request("http://worker.example/manifest", {
+        headers: { "x-forwarded-proto": "https" },
+      }),
+      environment
+    )
+    const responseManifest = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(validatePluginServerManifestContract(responseManifest)).toEqual({
+      ok: true,
+      issues: [],
+    })
+  })
+
   it("rejects invalid authentication", async () => {
     const response = await app.fetch(
       new Request("https://worker.example/verify", { method: "POST" }),
