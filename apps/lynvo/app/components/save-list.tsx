@@ -29,7 +29,6 @@ const SaveList = () => {
     highlightedId,
     setHighlightedId,
     actions,
-    user,
     isHydrating,
   } = useLinks()
   const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =
@@ -42,7 +41,6 @@ const SaveList = () => {
     selectionDialog,
     pluginDomainDialog,
   } = useLinkActions({
-    userId: user?.sub ?? "signed-out",
     links,
     linkActions: actions,
     setHighlightedId,
@@ -111,13 +109,11 @@ const SaveList = () => {
         onOpenChange={selectionDialog.setOpen}
         links={selectionDialog.state.links}
         onConfirm={selectionDialog.confirmSelection}
-        onSaveDraft={selectionDialog.saveSelectionDraft}
         onExpandFolder={selectionDialog.expandFolder}
         pluginIcon={selectionDialog.display.pluginIcon}
         pluginName={selectionDialog.display.pluginName}
         pageTitle={selectionDialog.display.pageTitle}
         audioInfo={selectionDialog.display.audioInfo}
-        isDraftMode={selectionDialog.display.isDraftMode}
       />
       <AddPluginDomainAlertDialog
         suggestion={pluginDomainDialog.suggestion}

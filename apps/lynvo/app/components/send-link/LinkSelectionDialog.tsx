@@ -1,9 +1,7 @@
 import * as React from "react"
 import { Dialog, DialogClose, DialogContent } from "~/components/ui/dialog"
-import { Button } from "~/components/ui/button"
+import { DialogActionButton } from "~/components/dialog-action-button"
 import { Checkbox } from "~/components/ui/checkbox"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeKey } from "~/features/links/media-node-interaction"
 import { LinkSelectionHeader } from "./LinkSelectionHeader"
@@ -22,7 +20,6 @@ interface LinkSelectionDialogProps {
   onOpenChange: (open: boolean) => void
   links: ExtractedLink[]
   onConfirm: (selectedLinks: ExtractedLink[]) => void
-  onSaveDraft?: () => void
   onExpandFolder?: (
     linkId: string,
     linkUrl: string
@@ -32,7 +29,6 @@ interface LinkSelectionDialogProps {
   pluginName?: string
   pageTitle?: string
   audioInfo?: string
-  isDraftMode?: boolean
   preSelectedIds?: string[]
 }
 
@@ -41,14 +37,12 @@ export function LinkSelectionDialog({
   onOpenChange,
   links,
   onConfirm,
-  onSaveDraft,
   onExpandFolder,
   onClose,
   pluginIcon,
   pluginName,
   pageTitle,
   audioInfo,
-  isDraftMode = false,
   preSelectedIds = EMPTY_PRE_SELECTED_IDS,
 }: LinkSelectionDialogProps) {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(
@@ -181,11 +175,6 @@ export function LinkSelectionDialog({
     [onExpandFolder]
   )
 
-  const handleSaveDraft = () => {
-    onSaveDraft?.()
-    onOpenChange(false)
-  }
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       onClose?.([...selectedIds])
@@ -197,26 +186,13 @@ export function LinkSelectionDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[85vh] w-[calc(100vw-2rem)] min-w-0 flex-col gap-0 overflow-hidden rounded-4xl p-0 md:w-[calc(100vw-4rem)] md:max-w-[60rem]"
+        className="flex h-svh max-h-none w-screen min-w-0 max-w-none flex-col gap-0 overflow-hidden rounded-none p-0 sm:h-auto sm:max-h-[85vh] sm:w-[calc(100vw-2rem)] sm:rounded-4xl md:w-[calc(100vw-4rem)] md:max-w-[60rem]"
       >
-        <DialogClose
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="absolute right-4 top-4 z-20"
-            />
-          }
-        >
-          <HugeiconsIcon icon={Cancel01Icon} />
-          <span className="sr-only">Close link selection</span>
-        </DialogClose>
         <LinkSelectionHeader
           pluginIcon={pluginIcon}
           pluginName={pluginName}
           pageTitle={pageTitle}
           audioInfo={audioInfo}
-          isDraftMode={isDraftMode}
         />
 
         <div className="min-w-0 flex-1 overflow-y-auto bg-popover px-4 py-4 md:px-8 md:py-6">
@@ -245,23 +221,24 @@ export function LinkSelectionDialog({
               </span>
             </div>
           )}
-          <div className="flex w-full flex-col gap-3 sm:ml-auto sm:w-auto sm:flex-row">
-            {onSaveDraft && (
-              <Button
-                variant="outline"
-                onClick={handleSaveDraft}
-                className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
-              >
-                Save draft
-              </Button>
-            )}
-            <Button
+          <div className="flex w-full flex-row gap-3 sm:ml-auto sm:w-auto">
+            <DialogClose
+              render={
+                <DialogActionButton
+                  variant="secondary"
+                  className="w-auto min-w-0 flex-1 shrink sm:flex-none"
+                />
+              }
+            >
+              Cancel
+            </DialogClose>
+            <DialogActionButton
               onClick={handleConfirm}
               disabled={selectedIds.size === 0}
-              className="h-12 w-full justify-center rounded-full px-6 text-sm font-normal sm:w-auto"
+              className="w-auto min-w-0 flex-1 shrink sm:flex-none"
             >
-              Save selected links
-            </Button>
+              Save
+            </DialogActionButton>
           </div>
         </div>
       </DialogContent>

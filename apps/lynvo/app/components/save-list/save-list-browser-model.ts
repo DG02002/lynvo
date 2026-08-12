@@ -54,9 +54,7 @@ export const getResolvableSourceName = (
 }
 
 export const getItemTitle = (item: LinkListItem | LinkViewItem) =>
-  ("kind" in item && item.kind === "draft"
-    ? item.title
-    : toLinkViewModel(item).title) || new URL(item.url).hostname
+  toLinkViewModel(item).title || new URL(item.url).hostname
 
 export const getLinksAtFolderPath = (
   rootLinks: ExtractedLink[],

@@ -10,7 +10,6 @@ export interface SelectionDialogState {
   meta: MetaData
   originalUrl: string
   existingItemId?: string
-  isDraftMode: boolean
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
@@ -21,7 +20,6 @@ export const useSelectionDialog = () => {
       links: [],
       meta: {},
       originalUrl: "",
-      isDraftMode: false,
     })
 
   const openSelectionDialog = useCallback(
@@ -30,7 +28,6 @@ export const useSelectionDialog = () => {
       links,
       meta,
       existingItemId,
-      isDraftMode = false,
       pluginDomainSuggestion,
     }: OpenSelectionDialogOptions) => {
       setSelectionDialogState({
@@ -39,7 +36,6 @@ export const useSelectionDialog = () => {
         meta,
         originalUrl,
         existingItemId,
-        isDraftMode,
         pluginDomainSuggestion,
       })
     },

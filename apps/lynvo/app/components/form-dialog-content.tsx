@@ -1,5 +1,6 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from "react"
 import { Button } from "~/components/ui/button"
+import { DialogActionButton } from "~/components/dialog-action-button"
 import {
   DialogClose,
   DialogContent,
@@ -46,22 +47,18 @@ export const FormDialogContent = ({
     <form onSubmit={onSubmit} className="flex min-w-0 flex-col gap-6">
       {children}
       <div className="flex w-full flex-col gap-3">
-        <Button
+        <DialogActionButton
           type="submit"
           variant={submitVariant}
-          size="lg"
-          className="h-13.5 w-full"
           disabled={submitDisabled}
         >
           {submitLabel}
-        </Button>
+        </DialogActionButton>
         <DialogClose
           render={
-            <Button
+            <DialogActionButton
               type="button"
               variant="secondary"
-              size="lg"
-              className="h-13.5 w-full"
               disabled={cancelDisabled}
             />
           }

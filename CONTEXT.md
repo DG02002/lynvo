@@ -28,15 +28,11 @@ _Avoid_: card, history item, saved card, recent link
 
 **Selected links**:
 Links the user chooses in the link-selection dialog and saves as part of a
-saved link. This is separate from a draft.
+saved link.
 
 **Account-synchronized Saved links**:
 Saved links belonging to a signed-in account that converge across active
 sessions without manual refresh.
-
-**Draft**:
-A browser-local snapshot of the current extraction tree. **Save draft** stores
-the tree without selection state and keeps it for 7 days.
 
 **Opened item**:
 A boolean marker Lynvo sets when you open an item. It is not a playback

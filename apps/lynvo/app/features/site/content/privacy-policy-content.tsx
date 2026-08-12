@@ -137,7 +137,6 @@ export const PrivacyPolicyContent = () => (
       </p>
       <ul className="list-disc pl-6">
         <li>Theme and player preferences</li>
-        <li>Temporary link drafts that expire after up to seven days</li>
         <li>A local cache of synchronized saved-link records</li>
         <li>Remote Play session and paired-device details</li>
       </ul>

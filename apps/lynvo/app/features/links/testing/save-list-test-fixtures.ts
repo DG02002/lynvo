@@ -1,97 +1,99 @@
 import type { LinkListItem } from "~/features/links/types"
-import {
-  TEST_DRAFT_LIFETIME_MS,
-  TEST_PLAYABLE_EXPIRY_AT_MS,
-} from "~/features/links/testing/constants"
+import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 
 export const createSaveListTestItems = (): LinkListItem[] => {
   const timestamp = Date.now()
 
   return [
     {
-      kind: "draft",
-      userId: "test-user",
+      kind: "saved",
+      id: "multi-file-selection",
       url: "https://media.example/selection-draft",
       timestamp,
-      title: "Draft awaiting link selection",
-      expiresAt: timestamp + TEST_DRAFT_LIFETIME_MS,
-      meta: {
-        pluginName: "Spencerwooo's Onedrive Vercel Index",
-        pluginIcon: "/icons/sources/onedrive-index.webp",
-        sourceName: "Spencerwooo's Onedrive Vercel Index",
-        pageTitle: "Example Show — choose files to save",
-        audio: "Audio Alpha",
-        pluginServerId: "ui-test-onedrive-plugin-server",
+      title: "Saved multi-file selection",
+      metadata: {
+        schemaVersion: 3,
+        source: {
+          pluginName: "Spencerwooo's Onedrive Vercel Index",
+          pluginIcon: "/icons/sources/onedrive-index.webp",
+          sourceName: "Spencerwooo's Onedrive Vercel Index",
+          pageTitle: "Example Show",
+          audio: "Audio Alpha",
+          pluginServerId: "ui-test-onedrive-plugin-server",
+        },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "draft-folder-one",
+              url: "https://media.example/selection-draft/folder-one",
+              label: "Folder 1 — Variant Alpha",
+              type: "folder",
+              selectable: true,
+              children: [
+                {
+                  id: "draft-option-one",
+                  url: "https://media.example/selection-draft/folder-one/playable-item-one.mkv",
+                  label: "Example.Show.item-01.Variant Alpha.mkv",
+                  type: "file",
+                  size: "1.2 GB",
+                },
+                {
+                  id: "draft-option-two",
+                  url: "https://media.example/selection-draft/folder-one/playable-item-two.mkv",
+                  label: "Example.Show.item-02.Variant Alpha.mkv",
+                  type: "file",
+                  size: "1.3 GB",
+                },
+                {
+                  id: "draft-option-three",
+                  url: "https://media.example/selection-draft/folder-one/playable-item-three.mkv",
+                  label: "Example.Show.item-03.Variant Alpha.mkv",
+                  type: "file",
+                  size: "1.1 GB",
+                },
+              ],
+            },
+            {
+              id: "draft-folder-two",
+              url: "https://media.example/selection-draft/folder-two",
+              label: "Folder 2 — Variant Beta",
+              type: "folder",
+              selectable: true,
+              children: [
+                {
+                  id: "draft-option-four",
+                  url: "https://media.example/selection-draft/folder-two/playable-item-one.mkv",
+                  label: "Example.Show.item-04.Variant Beta.Audio Beta.mkv",
+                  type: "file",
+                  size: "4.8 GB",
+                },
+                {
+                  id: "draft-option-five",
+                  url: "https://media.example/selection-draft/folder-two/playable-item-two.mkv",
+                  label: "Example.Show.item-05.Variant Beta.Audio Beta.mkv",
+                  type: "file",
+                  size: "4.6 GB",
+                },
+                {
+                  id: "draft-option-six",
+                  url: "https://media.example/selection-draft/folder-two/playable-item-three.mkv",
+                  label: "Example.Show.item-06.Variant Beta.Audio Beta.mkv",
+                  type: "file",
+                  size: "5.0 GB",
+                },
+              ],
+            },
+            {
+              id: "draft-featurette",
+              url: "https://media.example/selection-draft/behind-the-scenes.mp4",
+              label: "Behind the scenes featurette.mp4",
+              type: "file",
+              size: "380 MB",
+            },
+          ],
+        },
+        playback: { openedUrls: [], openedIds: [] },
       },
-      extractedLinks: [
-        {
-          id: "draft-folder-one",
-          url: "https://media.example/selection-draft/folder-one",
-          label: "Folder 1 — Variant Alpha",
-          type: "folder",
-          selectable: true,
-          children: [
-            {
-              id: "draft-option-one",
-              url: "https://media.example/selection-draft/folder-one/playable-item-one.mkv",
-              label: "Example.Show.item-01.Variant Alpha.mkv",
-              type: "file",
-              size: "1.2 GB",
-            },
-            {
-              id: "draft-option-two",
-              url: "https://media.example/selection-draft/folder-one/playable-item-two.mkv",
-              label: "Example.Show.item-02.Variant Alpha.mkv",
-              type: "file",
-              size: "1.3 GB",
-            },
-            {
-              id: "draft-option-three",
-              url: "https://media.example/selection-draft/folder-one/playable-item-three.mkv",
-              label: "Example.Show.item-03.Variant Alpha.mkv",
-              type: "file",
-              size: "1.1 GB",
-            },
-          ],
-        },
-        {
-          id: "draft-folder-two",
-          url: "https://media.example/selection-draft/folder-two",
-          label: "Folder 2 — Variant Beta",
-          type: "folder",
-          selectable: true,
-          children: [
-            {
-              id: "draft-option-four",
-              url: "https://media.example/selection-draft/folder-two/playable-item-one.mkv",
-              label: "Example.Show.item-04.Variant Beta.Audio Beta.mkv",
-              type: "file",
-              size: "4.8 GB",
-            },
-            {
-              id: "draft-option-five",
-              url: "https://media.example/selection-draft/folder-two/playable-item-two.mkv",
-              label: "Example.Show.item-05.Variant Beta.Audio Beta.mkv",
-              type: "file",
-              size: "4.6 GB",
-            },
-            {
-              id: "draft-option-six",
-              url: "https://media.example/selection-draft/folder-two/playable-item-three.mkv",
-              label: "Example.Show.item-06.Variant Beta.Audio Beta.mkv",
-              type: "file",
-              size: "5.0 GB",
-            },
-          ],
-        },
-        {
-          id: "draft-featurette",
-          url: "https://media.example/selection-draft/behind-the-scenes.mp4",
-          label: "Behind the scenes featurette.mp4",
-          type: "file",
-          size: "380 MB",
-        },
-      ],
     },
     {
       kind: "saved",

@@ -5,7 +5,6 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Archive04Icon,
-  DashboardSquare03Icon,
   Folder01Icon,
   Folder02Icon,
   PackageIcon,
@@ -14,10 +13,7 @@ import {
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import {
-  DraftLinkItemMenu,
-  LinkItemMenu,
-} from "~/components/links/LinkItemMenu"
+import { LinkItemMenu } from "~/components/links/LinkItemMenu"
 import { LinkActionsDotMenu } from "~/components/links/LinkActionsContextMenu"
 import { Spinner } from "~/components/ui/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -30,7 +26,6 @@ import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
-import { DraftExpiryBadge } from "~/components/save-list/draft-expiry-badge"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { FilenameText } from "~/components/filename-text"
@@ -702,32 +697,18 @@ export const SaveListBrowser = ({
     <section className="border-t">
       <div className="flex flex-col">
         {items.map((item) => {
-          const isDraft = item.kind === "draft"
-          const itemKey =
-            item.kind === "saved" ? (item.id ?? item.url) : item.url
-          const view =
-            item.kind === "saved"
-              ? toLinkViewModel(item)
-              : {
-                  extractedLinks: item.extractedLinks ?? [],
-                  sourceName: item.meta.sourceName,
-                  pluginName: item.meta.pluginName,
-                }
-          const interactionState =
-            item.kind === "saved"
-              ? getSavedLinkInteractionState(item, Date.now())
-              : {
-                  directLink: undefined,
-                  isDirectLinkExpired: false,
-                  isNew: false,
-                  isResolvableContainer: false,
-                }
+          const itemKey = item.id ?? item.url
+          const view = toLinkViewModel(item)
+          const interactionState = getSavedLinkInteractionState(
+            item,
+            Date.now()
+          )
           const { directLink, isDirectLinkExpired, isResolvableContainer } =
             interactionState
           const isExtracting = extractingItems.has(item.url)
           const isRootItemNew = interactionState.isNew
 
-          if (item.kind === "saved" && directLink && isResolvableContainer) {
+          if (directLink && isResolvableContainer) {
             const directLinkTarget = getMediaNodeTarget(directLink)
             return (
               <ResolvableContainerRow
@@ -745,11 +726,7 @@ export const SaveListBrowser = ({
             <div
               key={itemKey}
               className="border-b last:border-b-0"
-              data-highlighted={
-                item.kind === "saved" && highlightedId === item.id
-                  ? true
-                  : undefined
-              }
+              data-highlighted={highlightedId === item.id ? true : undefined}
             >
               <div
                 className={cn(
@@ -769,10 +746,6 @@ export const SaveListBrowser = ({
                       "cursor-not-allowed text-muted-foreground opacity-60"
                   )}
                   onClick={() => {
-                    if (isDraft) {
-                      actions.showLinks(item.url)
-                      return
-                    }
                     if (directLink) {
                       const directLinkTarget = getMediaNodeTarget(directLink)
                       void actions.play(directLink).then((result) =>
@@ -798,8 +771,6 @@ export const SaveListBrowser = ({
                           : undefined
                       }
                     />
-                  ) : isDraft ? (
-                    <SaveListRowIcon icon={DashboardSquare03Icon} />
                   ) : (
                     <SaveListRowIcon icon={Folder01Icon} />
                   )}
@@ -856,28 +827,14 @@ export const SaveListBrowser = ({
                     {view.extractedLinks.length} items
                   </span>
                 )}
-                {item.kind === "draft" && (
-                  <DraftExpiryBadge expiresAt={item.expiresAt} />
-                )}
-                {item.kind === "draft" ? (
-                  <DraftLinkItemMenu
-                    item={item}
-                    actions={actions}
-                    playableLink={directLink}
-                    isPlayableLinkExpired={isDirectLinkExpired}
-                    showRemove
-                    isRefreshing={isExtracting}
-                  />
-                ) : (
-                  <LinkItemMenu
-                    item={item}
-                    actions={actions}
-                    playableLink={directLink}
-                    isPlayableLinkExpired={isDirectLinkExpired}
-                    showRemove
-                    isRefreshing={isExtracting}
-                  />
-                )}
+                <LinkItemMenu
+                  item={item}
+                  actions={actions}
+                  playableLink={directLink}
+                  isPlayableLinkExpired={isDirectLinkExpired}
+                  showRemove
+                  isRefreshing={isExtracting}
+                />
                 {!directLink && !isExtracting && (
                   <HugeiconsIcon
                     icon={ArrowRight01Icon}

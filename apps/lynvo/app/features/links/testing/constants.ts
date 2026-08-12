@@ -1,2 +1,1 @@
-export const TEST_DRAFT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000
 export const TEST_PLAYABLE_EXPIRY_AT_MS = 1_893_456_000_000

@@ -22,6 +22,10 @@ import {
   setShouldHideTvBroSaveInput,
   useShouldHideTvBroSaveInput,
 } from "./tvbro-save-input-preference"
+import {
+  setShouldAutoSaveAllLinks,
+  useShouldAutoSaveAllLinks,
+} from "./auto-save-links-preference"
 
 const appearanceOptions = [
   { value: "system", label: "System" },
@@ -32,6 +36,7 @@ const appearanceOptions = [
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -63,6 +68,17 @@ export const GeneralSettings = () => {
               </SelectGroup>
             </SelectContent>
           </Select>
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo
+            label="Save all links automatically"
+            description="Save every extracted link without asking you to choose from the selection dialog."
+          />
+          <Switch
+            checked={shouldAutoSaveAllLinks}
+            onCheckedChange={setShouldAutoSaveAllLinks}
+            aria-label="Save all links automatically"
+          />
         </SettingsRow>
         <SettingsRow>
           <SettingsRowInfo

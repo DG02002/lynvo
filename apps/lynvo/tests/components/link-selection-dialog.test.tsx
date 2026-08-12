@@ -92,7 +92,7 @@ describe("LinkSelectionDialog", () => {
         .every((checkbox) => checkbox.hasAttribute("data-checked"))
     ).toBe(true)
 
-    fireEvent.click(screen.getByRole("button", { name: "Save selected links" }))
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
     expect(onConfirm).toHaveBeenCalledWith([
       expect.objectContaining({ id: "video-one" }),
       expect.objectContaining({ id: "video-two" }),
@@ -185,7 +185,11 @@ describe("LinkSelectionDialog", () => {
     )
 
     expect(screen.getByRole("dialog")).toHaveClass(
-      "w-[calc(100vw-2rem)]",
+      "h-svh",
+      "w-screen",
+      "rounded-none",
+      "sm:w-[calc(100vw-2rem)]",
+      "sm:rounded-4xl",
       "md:w-[calc(100vw-4rem)]",
       "md:max-w-[60rem]"
     )
@@ -225,7 +229,7 @@ describe("LinkSelectionDialog", () => {
     expect(screen.queryByText(/Audio:/)).not.toBeInTheDocument()
   })
 
-  it("displays a working close button with the custom header", () => {
+  it("closes from the Cancel action without showing a close icon", () => {
     const onOpenChange = vi.fn()
     render(
       <LinkSelectionDialog
@@ -237,44 +241,58 @@ describe("LinkSelectionDialog", () => {
       />
     )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Close link selection" })
-    )
+    expect(
+      screen.queryByRole("button", { name: "Close link selection" })
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it("saves a draft only when the explicit draft button is used", () => {
-    const onOpenChange = vi.fn()
-    const onSaveDraft = vi.fn()
-
+  it("uses the shared large dialog action size", () => {
     render(
       <LinkSelectionDialog
         open
-        onOpenChange={onOpenChange}
-        links={[
-          {
-            id: "playable-item-one",
-            url: "https://cdn.example.com/playable-item-one.mkv",
-            label: "Playable Item One",
-            type: "file",
-          },
-          {
-            id: "playable-item-two",
-            url: "https://cdn.example.com/playable-item-two.mkv",
-            label: "Playable Item Two",
-            type: "file",
-          },
-        ]}
+        onOpenChange={vi.fn()}
+        links={[]}
         onConfirm={vi.fn()}
-        onSaveDraft={onSaveDraft}
-        preSelectedIds={["playable-item-one"]}
       />
     )
 
-    expect(onSaveDraft).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole("button", { name: "Save draft" }))
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("h-13.5")
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("h-13.5")
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("flex-1")
+    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("flex-1")
+  })
 
-    expect(onSaveDraft).toHaveBeenCalledWith()
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+  it("does not reserve trailing metadata space when a row has none", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "folder-without-metadata",
+            url: "https://drive.example/folder-without-metadata",
+            label: "Folder without metadata",
+            type: "folder",
+          },
+          {
+            id: "file-with-size",
+            url: "https://drive.example/file-with-size.mkv",
+            label: "File with size",
+            type: "file",
+            size: "1.2 GB",
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.getByRole("treeitem", { name: /Folder without metadata/ })
+    ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]")
+    expect(
+      screen.getByRole("treeitem", { name: /File with size/ })
+    ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]")
   })
 })

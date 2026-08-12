@@ -14,9 +14,9 @@ import { useRefreshActions } from "./refresh-actions"
 import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
+import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 
 interface UseLinkActionsProps {
-  userId: string
   links: LinkListItem[]
   linkActions: LinksActions
   setHighlightedId: (id: string | null) => void
@@ -25,7 +25,6 @@ interface UseLinkActionsProps {
 }
 
 export function useLinkActions({
-  userId,
   links,
   linkActions,
   setHighlightedId,
@@ -37,6 +36,7 @@ export function useLinkActions({
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
   const savedLinks = links.filter((item) => item.kind === "saved")
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
 
   const {
     selectionDialogState,
@@ -77,28 +77,23 @@ export function useLinkActions({
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
   }
-  const {
-    isSaving,
-    handleSave,
-    confirmSelection,
-    saveSelectionDraft,
-    pluginDomainDialog,
-  } = useSaveActions({
-    userId,
-    url,
-    links: savedLinks,
-    addLink: linkActions.add,
-    updateLinks: linkActions.updateLinks,
-    openSelectionDialog,
-    setExtractionPreview,
-    closeSelectionDialog,
-    selectionDialogState,
-    setError,
-    setCurrentUrl: setUrl,
-    setHighlightedId,
-    setSortOrder,
-    setCurrentPage,
-  })
+  const { isSaving, handleSave, confirmSelection, pluginDomainDialog } =
+    useSaveActions({
+      url,
+      links: savedLinks,
+      addLink: linkActions.add,
+      updateLinks: linkActions.updateLinks,
+      openSelectionDialog,
+      setExtractionPreview,
+      closeSelectionDialog,
+      selectionDialogState,
+      setError,
+      setCurrentUrl: setUrl,
+      setHighlightedId,
+      setSortOrder,
+      setCurrentPage,
+      shouldAutoSaveAllLinks,
+    })
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
@@ -165,10 +160,8 @@ export function useLinkActions({
           selectionDialogState.meta?.pageTitle ||
           selectionDialogState.meta?.filename,
         audioInfo: selectionDialogState.meta?.audio,
-        isDraftMode: selectionDialogState.isDraftMode,
       },
       confirmSelection,
-      saveSelectionDraft,
       expandFolder: expandSelectionFolder,
     },
     pluginDomainDialog,

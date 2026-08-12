@@ -11,7 +11,6 @@ export interface OpenSelectionDialogOptions {
   links: ExtractedLink[]
   meta: MetaData
   existingItemId?: string
-  isDraftMode?: boolean
   pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
@@ -24,7 +23,6 @@ export interface ExtractionPreview {
 }
 
 export interface SaveLinkOptions {
-  userId: string
   overrideUrl?: string
   currentUrl: string
   links: LinkViewItem[]
@@ -34,10 +32,10 @@ export interface SaveLinkOptions {
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
   reporter: SavedLinkInteractionReporter
+  shouldAutoSaveAllLinks: boolean
 }
 
 export interface ConfirmSelectionOptions {
-  userId: string
   selectedLinks: ExtractedLink[]
   originalUrl: string
   meta: MetaData

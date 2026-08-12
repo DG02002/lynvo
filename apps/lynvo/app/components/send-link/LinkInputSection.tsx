@@ -1,13 +1,8 @@
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  ArrowRight02Icon,
-  AlertCircleIcon,
-  Route01Icon,
-} from "@hugeicons/core-free-icons"
+import { ArrowRight02Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
 
 import { Spinner } from "~/components/ui/spinner"
-import { PluginIcon } from "~/components/plugin-icon"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import {
   InputGroup,
@@ -16,10 +11,10 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { cn } from "~/lib/utils"
-import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useClipboardUrl } from "./use-clipboard-url"
 import { ClipboardPermissionDialog } from "./ClipboardPermissionDialog"
 import { ClipboardAccessIcon } from "./ClipboardAccessIcon"
+import { ExtractionSourceFlow } from "./extraction-source-flow"
 import type { ExtractionPreview } from "~/features/links/use-link-actions/action-types"
 
 const sourceStatusMessage = (status: string | undefined) => {
@@ -219,66 +214,15 @@ export function LinkInputSection({
 
       {isSaving && extractionPreview && (
         <div className="flex flex-col gap-1 px-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span>Using</span>
-            <PluginIcon
-              icon={
-                extractionPreview.meta.pluginId === "direct-link"
-                  ? DIRECT_MEDIA_ICON
-                  : undefined
-              }
-              iconUrl={
-                extractionPreview.meta.sourceIconUrl ||
-                extractionPreview.meta.pluginIcon
-              }
-              fallback={
-                extractionPreview.meta.sourceName ? "source" : "plugin-server"
-              }
-              className={cn(
-                "size-4",
-                extractionPreview.meta.pluginId === "direct-link" &&
-                  "text-foreground"
-              )}
-            />
-            <span className="font-medium text-foreground">
-              {extractionPreview.meta.sourceName ||
-                extractionPreview.meta.pluginName ||
-                "Direct Media"}
-            </span>
-            {extractionPreview.meta.sourceName &&
-              extractionPreview.meta.pluginName && (
-                <span>
-                  from{" "}
-                  <span className="font-medium text-foreground">
-                    {extractionPreview.meta.pluginName}
-                  </span>
-                </span>
-              )}
-            {extractionPreview.meta.routeSourceName && (
-              <>
-                <span
-                  className="flex items-center text-muted-foreground"
-                  aria-label={`Routes to ${extractionPreview.meta.routeSourceName}`}
-                >
-                  <HugeiconsIcon icon={Route01Icon} className="size-4" />
-                </span>
-                <PluginIcon
-                  iconUrl={extractionPreview.meta.routeSourceIconUrl}
-                  fallback="source"
-                  className="size-4"
-                />
-                <span className="font-medium text-foreground">
-                  {extractionPreview.meta.routeSourceName}
-                </span>
-              </>
-            )}
-            {extractionPreview.meta.sourceStatus &&
-              extractionPreview.meta.sourceStatus !== "active" && (
-                <span className="rounded border px-1.5 py-0.5 text-[10px] tracking-wide">
-                  {sourceStatusLabel(extractionPreview.meta.sourceStatus)}
-                </span>
-              )}
-          </div>
+          <ExtractionSourceFlow
+            meta={extractionPreview.meta}
+            statusLabel={
+              extractionPreview.meta.sourceStatus &&
+              extractionPreview.meta.sourceStatus !== "active"
+                ? sourceStatusLabel(extractionPreview.meta.sourceStatus)
+                : undefined
+            }
+          />
           {statusMessage && (
             <span className="text-[11px] text-muted-foreground">
               {statusMessage}

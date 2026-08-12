@@ -7,12 +7,15 @@ import { linksToLinkViewItems, readLinksCache } from "./cache"
 import { useLinksQuery } from "./query"
 import { useLinksMutations } from "./mutations"
 import { useLinksPaginationAndSort } from "./pagination"
-import { useDraftLinks } from "./drafts"
 import type { LinksActions } from "./actions"
 import { createServerLinksAdapter } from "./persistence"
 import { createSavedLinkSynchronization } from "./synchronization"
 import { createServerLink } from "./link-server"
-import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+import type {
+  LinkMetadata,
+  LinkViewItem,
+  SavedLinkListItem,
+} from "~/features/links/types"
 import { useSavedLinkRealtimeSynchronization } from "./realtime-synchronization"
 
 const EMPTY_LINKS: LinkViewItem[] = []
@@ -22,6 +25,11 @@ const getServerHydratedSnapshot = () => false
 
 const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
   JSON.parse(JSON.stringify(metadata)) as LinkMetadata
+
+const toSavedLinkListItem = (item: LinkViewItem): SavedLinkListItem => ({
+  ...item,
+  kind: "saved",
+})
 
 export const useLinks = () => {
   const hasHydrated = useSyncExternalStore(
@@ -175,9 +183,9 @@ export const useLinks = () => {
     synchronization.getSnapshot,
     () => EMPTY_LINKS
   )
-  const combinedLinks = useDraftLinks(userId, links)
+  const savedLinks = useMemo(() => links.map(toSavedLinkListItem), [links])
   const mutations = useLinksMutations(synchronization)
-  const pagination = useLinksPaginationAndSort(combinedLinks)
+  const pagination = useLinksPaginationAndSort(savedLinks)
   const actions: LinksActions = {
     add: mutations.addLink,
     remove: mutations.remove,
@@ -188,7 +196,7 @@ export const useLinks = () => {
   }
 
   return {
-    links: combinedLinks,
+    links: savedLinks,
     actions,
     user,
     isLoading: linksQuery.isLoading,

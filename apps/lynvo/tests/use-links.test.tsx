@@ -122,7 +122,7 @@ describe("useLinks", () => {
     expect(result.current.links[0].title).toBe("Cached link")
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isHydrating).toBe(false)
-    expect(getItem).toHaveBeenCalledTimes(2)
+    expect(getItem).toHaveBeenCalledTimes(1)
     expect(setItem).not.toHaveBeenCalled()
   })
 

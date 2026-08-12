@@ -90,22 +90,8 @@ export interface SavedLinkListItem extends LinkViewItem {
   kind: "saved"
 }
 
-export interface DraftListItem {
-  kind: "draft"
-  userId: string
-  url: string
-  timestamp: number
-  title: string
-  extractedLinks?: ExtractedLink[]
-  meta: MetaData
-  pluginName?: string
-  pluginIcon?: string
-  expiresAt: number
-}
-
 export interface LinkListItemMap {
   saved: SavedLinkListItem
-  draft: DraftListItem
 }
 
 export type LinkListItem = LinkListItemMap[keyof LinkListItemMap]

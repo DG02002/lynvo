@@ -1,4 +1,3 @@
-import { readDraft, deleteDraft } from "~/features/links/drafts"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { vibrateSaveStart, vibrateSaveSuccess } from "./save-feedback"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
@@ -9,12 +8,12 @@ import {
 } from "~/lib/plugin-domain"
 
 export const saveLink = async ({
-  userId,
   overrideUrl,
   currentUrl,
   links,
   addLink,
   reporter,
+  shouldAutoSaveAllLinks,
 }: SaveLinkOptions) => {
   const rawUrl = overrideUrl ?? currentUrl
   const targetUrl = normalizeUrl(rawUrl || "")
@@ -31,20 +30,6 @@ export const saveLink = async ({
   }
   reporter.publish({ kind: "clear-error" })
   reporter.publish({ kind: "clear-preview" })
-
-  const existingDraft = readDraft(userId, savedUrl)
-  if (existingDraft) {
-    reporter.publish({
-      kind: "selection-required",
-      selection: {
-        originalUrl: savedUrl,
-        links: existingDraft.links,
-        meta: existingDraft.meta,
-        isDraftMode: true,
-      },
-    })
-    return
-  }
 
   const existingItem = links.find((linkItem) => linkItem.url === savedUrl)
   if (existingItem) {
@@ -106,6 +91,14 @@ export const saveLink = async ({
   }
 
   if (presentation.kind === "selectionDialog") {
+    if (shouldAutoSaveAllLinks) {
+      const newId = await addLink(savedUrl, mergedMeta, presentation.links)
+      reporter.publish({ kind: "link-focused", linkId: newId || savedUrl })
+      reporter.publish({ kind: "view-reset" })
+      reporter.publish({ kind: "clear-preview" })
+      vibrateSaveSuccess()
+      return { pluginDomainSuggestion }
+    }
     reporter.publish({
       kind: "selection-required",
       selection: {
@@ -129,7 +122,6 @@ export const saveLink = async ({
 }
 
 export const confirmSelectedLinks = async ({
-  userId,
   selectedLinks,
   originalUrl,
   meta,
@@ -148,7 +140,6 @@ export const confirmSelectedLinks = async ({
     await addLink(originalUrl, meta, selectedLinks)
   }
 
-  deleteDraft(userId, originalUrl)
   reporter.publish({ kind: "selection-closed" })
   reporter.publish({ kind: "view-reset" })
   vibrateSaveSuccess()

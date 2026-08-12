@@ -21,9 +21,6 @@ export function useLinksPaginationAndSort(links: LinkListItem[]) {
   })
 
   const sortedLinks = filteredLinks.toSorted((a, b) => {
-    if (a.kind !== b.kind) {
-      return a.kind === "draft" ? -1 : 1
-    }
     if (sortOrder === "newest") {
       return b.timestamp - a.timestamp
     }

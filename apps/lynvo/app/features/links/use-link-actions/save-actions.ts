@@ -6,7 +6,6 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import { writeDraft } from "~/features/links/drafts"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
@@ -19,7 +18,6 @@ import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-i
 import { shouldOfferPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
 
 export const useSaveActions = ({
-  userId,
   url,
   links,
   addLink,
@@ -33,8 +31,8 @@ export const useSaveActions = ({
   setHighlightedId,
   setSortOrder,
   setCurrentPage,
+  shouldAutoSaveAllLinks,
 }: {
-  userId: string
   url: string
   links: LinkViewItem[]
   addLink: (
@@ -52,6 +50,7 @@ export const useSaveActions = ({
   setHighlightedId: (id: string | null) => void
   setSortOrder: (order: "newest" | "oldest") => void
   setCurrentPage: (page: number) => void
+  shouldAutoSaveAllLinks: boolean
 }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
@@ -92,9 +91,6 @@ export const useSaveActions = ({
             updateLinks(outcome.itemUrl, outcome.links)
             toast.success("Links updated")
             break
-          case "draft-saved":
-            toast.success("Draft saved")
-            break
           default:
             break
         }
@@ -121,12 +117,12 @@ export const useSaveActions = ({
 
     try {
       const result = await saveLink({
-        userId,
         overrideUrl,
         currentUrl: url,
         links,
         addLink,
         reporter,
+        shouldAutoSaveAllLinks,
       })
       await offerPluginDomainSuggestion(result?.pluginDomainSuggestion)
     } catch (error) {
@@ -149,7 +145,6 @@ export const useSaveActions = ({
       } = selectionDialogState
 
       const result = await confirmSelectedLinks({
-        userId,
         selectedLinks,
         originalUrl,
         meta,
@@ -168,15 +163,6 @@ export const useSaveActions = ({
     } finally {
       setIsSaving(false)
     }
-  }
-
-  const saveSelectionDraft = () => {
-    const { originalUrl, links, meta } = selectionDialogState
-    if (links.length > 0) {
-      writeDraft(userId, originalUrl, links, meta)
-      reporter.publish({ kind: "draft-saved" })
-    }
-    closeSelectionDialog()
   }
 
   const offerPluginDomainSuggestion = async (
@@ -235,7 +221,6 @@ export const useSaveActions = ({
     isSaving,
     handleSave,
     confirmSelection,
-    saveSelectionDraft,
     pluginDomainDialog: {
       suggestion: pluginDomainSuggestion,
       isAdding: isAddingPluginDomain,

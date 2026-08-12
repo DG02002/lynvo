@@ -1,9 +1,4 @@
-import type {
-  DraftListItem,
-  ExtractedLink,
-  LinkViewItem,
-  MetaData,
-} from "./types"
+import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
 import {
@@ -16,13 +11,6 @@ export interface SavedLinkInteractionState {
   isDirectLinkExpired: boolean
   isNew: boolean
   isResolvableContainer: boolean
-}
-
-export interface DraftSelection {
-  originalUrl: string
-  links: ExtractedLink[]
-  meta: MetaData
-  isDraftMode: true
 }
 
 export interface SavedLinkClearErrorOutcome {
@@ -45,7 +33,7 @@ export interface SavedLinkPreviewOutcome {
 
 export interface SavedLinkSelectionRequiredOutcome {
   kind: "selection-required"
-  selection: DraftSelection | SavedLinkSelection
+  selection: SavedLinkSelection
 }
 
 export interface SavedLinkSelectionClosedOutcome {
@@ -71,10 +59,6 @@ export interface SavedLinkRefreshSucceededOutcome {
   kind: "refresh-succeeded"
 }
 
-export interface SavedLinkDraftSavedOutcome {
-  kind: "draft-saved"
-}
-
 export type SavedLinkInteractionOutcome =
   | SavedLinkClearErrorOutcome
   | SavedLinkErrorOutcome
@@ -86,14 +70,12 @@ export type SavedLinkInteractionOutcome =
   | SavedLinkViewResetOutcome
   | SavedLinksUpdatedOutcome
   | SavedLinkRefreshSucceededOutcome
-  | SavedLinkDraftSavedOutcome
 
 export interface SavedLinkSelection {
   originalUrl: string
   links: ExtractedLink[]
   meta: MetaData
   existingItemId?: string
-  isDraftMode?: boolean
   pluginDomainSuggestion?: import("~/lib/plugin-domain").PluginDomainSuggestion
 }
 
@@ -150,10 +132,3 @@ export const getSavedLinkInteractionState = (
       directLink !== undefined && isMirrorResolvableMediaNode(directLink),
   }
 }
-
-export const getDraftSelection = (item: DraftListItem): DraftSelection => ({
-  originalUrl: item.url,
-  links: item.extractedLinks ?? [],
-  meta: item.meta,
-  isDraftMode: true,
-})

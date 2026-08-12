@@ -46,6 +46,7 @@ describe("Bhadoo save flow", () => {
       links: [],
       addLink,
       reporter,
+      shouldAutoSaveAllLinks: false,
     })
 
     expect(extractionOrchestration.getSourceMetadata).toHaveBeenCalledWith(
@@ -65,5 +66,45 @@ describe("Bhadoo save flow", () => {
       password: "source@secret",
       pluginServerId: "lynvo-plugin-server",
     })
+  })
+
+  it("saves every extracted link without opening selection when enabled", async () => {
+    const sourceUrl = "https://index.example.com/0:/Shows/"
+    const metadata = { filename: "Shows" }
+    const extractedLinks = [
+      {
+        id: "episode-one",
+        label: "Episode One",
+        url: "https://index.example.com/0:/Shows/Episode-One.mkv",
+      },
+      {
+        id: "episode-two",
+        label: "Episode Two",
+        url: "https://index.example.com/0:/Shows/Episode-Two.mkv",
+      },
+    ]
+    vi.spyOn(extractionOrchestration, "getSourceMetadata").mockResolvedValue(
+      metadata
+    )
+    vi.spyOn(extractionOrchestration, "prepareSource").mockResolvedValue({
+      metadata,
+      mergedMeta: metadata,
+      presentation: { kind: "selectionDialog", links: extractedLinks },
+    })
+    const addLink = vi.fn().mockResolvedValue("saved-id")
+    const reporter = createReporter()
+
+    await saveLink({
+      currentUrl: sourceUrl,
+      links: [],
+      addLink,
+      reporter,
+      shouldAutoSaveAllLinks: true,
+    })
+
+    expect(addLink).toHaveBeenCalledWith(sourceUrl, metadata, extractedLinks)
+    expect(reporter.publish).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "selection-required" })
+    )
   })
 })

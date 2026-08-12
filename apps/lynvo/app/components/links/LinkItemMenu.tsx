@@ -21,22 +21,17 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
-import type {
-  DraftListItem,
-  ExtractedLink,
-  LinkViewItem,
-} from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
-import { deleteDraft } from "~/features/links/drafts"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 
 interface LinkItemMenuProps {
-  item: LinkViewItem | DraftListItem
+  item: LinkViewItem
   actions: LinkItemActions
   showRemove?: boolean
   onRemoved?: () => void
@@ -45,22 +40,16 @@ interface LinkItemMenuProps {
   isRefreshing?: boolean
 }
 
-interface LinkItemMenuContentProps extends LinkItemMenuProps {
-  variant: "draft" | "link"
-}
-
 const LinkItemMenuContent = ({
   item,
   actions,
-  variant,
   showRemove = false,
   onRemoved,
   playableLink,
   isPlayableLinkExpired = false,
   isRefreshing = false,
-}: LinkItemMenuContentProps) => {
+}: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
-  const isDraft = variant === "draft"
   const itemLabel = item.title || item.url
   const handleCopyLink = async () => {
     try {
@@ -84,13 +73,7 @@ const LinkItemMenuContent = ({
   }
 
   const removeItem = () => {
-    if (isDraft) {
-      if ("userId" in item) {
-        deleteDraft(item.userId, item.url)
-      }
-    } else {
-      void actions.remove(item.url, "id" in item ? item.id : undefined)
-    }
+    void actions.remove(item.url, item.id)
     onRemoved?.()
   }
 
@@ -124,81 +107,66 @@ const LinkItemMenuContent = ({
           }
         />
         <DropdownMenuContent align="end" className="w-48">
-          {isDraft ? (
+          <>
             <DropdownMenuGroup>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setIsRemoveDialogOpen(true)}
-              >
-                <HugeiconsIcon icon={Delete02Icon} />
-                Remove draft
+              <DropdownMenuItem onClick={handleCopyLink}>
+                <HugeiconsIcon icon={CopyIcon} />
+                Copy Source link
               </DropdownMenuItem>
-            </DropdownMenuGroup>
-          ) : (
-            <>
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={handleCopyLink}>
-                  <HugeiconsIcon icon={CopyIcon} />
-                  Copy Source link
+              {!playableLink && (
+                <DropdownMenuItem onClick={() => actions.hardRefresh(item.url)}>
+                  <HugeiconsIcon icon={RefreshDotIcon} />
+                  Reload link choices
                 </DropdownMenuItem>
-                {!playableLink && (
-                  <DropdownMenuItem
-                    onClick={() => actions.hardRefresh(item.url)}
-                  >
-                    <HugeiconsIcon icon={RefreshDotIcon} />
-                    Reload link choices
-                  </DropdownMenuItem>
-                )}
-                {playableLink && !isPlayableLinkExpired && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <HugeiconsIcon icon={ArrowUpRight01Icon} />
-                      Open in
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="w-56">
-                      <DropdownMenuGroup>
-                        {PLAYER_DEFINITIONS.map((player) => (
-                          <DropdownMenuItem
-                            key={player.id}
-                            onClick={async () => {
-                              const playableUrl =
-                                getMediaNodeTarget(playableLink)
-                              const result = await openInSpecificPlayer(
-                                playableUrl,
-                                player
-                              )
-                              markAfterAcceptedHandoff({
-                                accepted: result.expectsNavigation,
-                                itemLabel: playableLink.label,
-                                markOpened: () =>
-                                  actions.markOpened(item.url, playableUrl),
-                              })
-                            }}
-                          >
-                            <PlayerOption player={player} />
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuGroup>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                )}
-              </DropdownMenuGroup>
-              {showRemove && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => setIsRemoveDialogOpen(true)}
-                    >
-                      <HugeiconsIcon icon={Delete02Icon} />
-                      Remove saved link
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </>
               )}
-            </>
-          )}
+              {playableLink && !isPlayableLinkExpired && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <HugeiconsIcon icon={ArrowUpRight01Icon} />
+                    Open in
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-56">
+                    <DropdownMenuGroup>
+                      {PLAYER_DEFINITIONS.map((player) => (
+                        <DropdownMenuItem
+                          key={player.id}
+                          onClick={async () => {
+                            const playableUrl = getMediaNodeTarget(playableLink)
+                            const result = await openInSpecificPlayer(
+                              playableUrl,
+                              player
+                            )
+                            markAfterAcceptedHandoff({
+                              accepted: result.expectsNavigation,
+                              itemLabel: playableLink.label,
+                              markOpened: () =>
+                                actions.markOpened(item.url, playableUrl),
+                            })
+                          }}
+                        >
+                          <PlayerOption player={player} />
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+            </DropdownMenuGroup>
+            {showRemove && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setIsRemoveDialogOpen(true)}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} />
+                    Remove saved link
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </>
+            )}
+          </>
         </DropdownMenuContent>
       </DropdownMenu>
       <RemoveLinkAlertDialog
@@ -211,10 +179,6 @@ const LinkItemMenuContent = ({
   )
 }
 
-export const DraftLinkItemMenu = (
-  props: Omit<LinkItemMenuProps, "item"> & { item: DraftListItem }
-) => <LinkItemMenuContent {...props} variant="draft" />
-
 export const LinkItemMenu = (
   props: Omit<LinkItemMenuProps, "item"> & { item: LinkViewItem }
-) => <LinkItemMenuContent {...props} variant="link" />
+) => <LinkItemMenuContent {...props} />

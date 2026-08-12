@@ -60,6 +60,12 @@ export const LinkSelectionTreeItem = ({
         ? FolderSymlinkIcon
         : Folder01Icon
     : Video02Icon
+  const hasTrailingContent = Boolean(
+    (isFolder && hasChildren) ||
+    (!isFolder && link.size) ||
+    canExpand ||
+    isResolving
+  )
 
   const [prevHasSelectedChild, setPrevHasSelectedChild] =
     React.useState(hasSelectedChild)
@@ -102,7 +108,10 @@ export const LinkSelectionTreeItem = ({
         data-folder-state={folderState}
         tabIndex={0}
         className={cn(
-          "grid min-w-0 grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem] items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
+          "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
+          hasTrailingContent
+            ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
+            : "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]",
           (canExpand || canResolve) && "hover:bg-muted/50 cursor-pointer",
           !canExpand && !canResolve && "cursor-default",
           isSelected && "bg-muted/30"
@@ -143,25 +152,27 @@ export const LinkSelectionTreeItem = ({
           />
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-2 text-xs font-normal text-muted-foreground">
-          {isFolder && hasChildren && (
-            <span className="truncate">{link.children?.length} items</span>
-          )}
-          {!isFolder && link.size && (
-            <span className="truncate">{link.size}</span>
-          )}
-          {isResolving ? (
-            <Spinner aria-label={`Loading ${link.label}…`} />
-          ) : canExpand ? (
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
-              className={cn(
-                "size-3.5 shrink-0 transition-transform duration-200",
-                isExpanded && "rotate-90"
-              )}
-            />
-          ) : null}
-        </div>
+        {hasTrailingContent && (
+          <div className="flex min-w-0 items-center justify-end gap-2 text-xs font-normal text-muted-foreground">
+            {isFolder && hasChildren && (
+              <span className="truncate">{link.children?.length} items</span>
+            )}
+            {!isFolder && link.size && (
+              <span className="truncate">{link.size}</span>
+            )}
+            {isResolving ? (
+              <Spinner aria-label={`Loading ${link.label}…`} />
+            ) : canExpand ? (
+              <HugeiconsIcon
+                icon={ArrowRight01Icon}
+                className={cn(
+                  "size-3.5 shrink-0 transition-transform duration-200",
+                  isExpanded && "rotate-90"
+                )}
+              />
+            ) : null}
+          </div>
+        )}
       </div>
 
       {canExpand && isExpanded && link.children && (

@@ -9,7 +9,6 @@ import {
 } from "./refresh-flow"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import { getDraftSelection } from "~/features/links/saved-link-interaction"
 import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
 export const useRefreshActions = ({
@@ -50,18 +49,14 @@ export const useRefreshActions = ({
     }),
     [openSelectionDialog, updateLinks]
   )
-  const savedLinks = useMemo(
-    () => links.filter((item) => item.kind === "saved"),
-    [links]
-  )
 
   const handleSoftRefresh = useCallback(
     async (itemUrl: string) => {
       await runWithExtractingItem(itemUrl, () =>
-        softRefreshLink({ itemUrl, links: savedLinks, reporter })
+        softRefreshLink({ itemUrl, links, reporter })
       )
     },
-    [reporter, runWithExtractingItem, savedLinks]
+    [links, reporter, runWithExtractingItem]
   )
 
   const handleHardRefresh = useCallback(
@@ -69,27 +64,19 @@ export const useRefreshActions = ({
       await runWithExtractingItem(itemUrl, () =>
         hardRefreshLink({
           itemUrl,
-          links: savedLinks,
+          links,
           reporter,
         })
       )
     },
-    [reporter, runWithExtractingItem, savedLinks]
+    [links, reporter, runWithExtractingItem]
   )
 
   const handleShowLinks = useCallback(
     async (itemUrl: string) => {
-      const item = links.find((linkItem) => linkItem.url === itemUrl)
-      if (item?.kind === "draft") {
-        reporter.publish({
-          kind: "selection-required",
-          selection: getDraftSelection(item),
-        })
-        return
-      }
       await handleHardRefresh(itemUrl)
     },
-    [handleHardRefresh, links, reporter]
+    [handleHardRefresh]
   )
 
   const handleMirrorExpand = useCallback(
@@ -117,7 +104,7 @@ export const useRefreshActions = ({
         const mirrors = await expandMirrorLinks({
           itemUrl,
           lazyItemUrl,
-          links: savedLinks,
+          links,
           reporter,
         })
         if (mirrors) {
@@ -132,7 +119,6 @@ export const useRefreshActions = ({
       links,
       reporter,
       runWithExtractingItem,
-      savedLinks,
     ]
   )
 
@@ -147,12 +133,12 @@ export const useRefreshActions = ({
           itemUrl,
           linkId,
           linkUrl,
-          links: savedLinks,
+          links,
           reporter,
         })
       )
     },
-    [extractingItems, reporter, runWithExtractingItem, savedLinks]
+    [extractingItems, links, reporter, runWithExtractingItem]
   )
 
   return {

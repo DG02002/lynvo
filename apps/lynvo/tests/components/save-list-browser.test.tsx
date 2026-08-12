@@ -3,11 +3,7 @@ import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type {
-  DraftListItem,
-  ExtractedLink,
-  LinkViewItem,
-} from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 
@@ -527,32 +523,6 @@ describe("SaveListBrowser", () => {
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     fireEvent.click(itemButton)
     expect(play).not.toHaveBeenCalled()
-  })
-
-  it("shows the expiration countdown for a draft", () => {
-    const now = Date.now()
-    const item: DraftListItem = {
-      kind: "draft",
-      url: "https://source.example/draft",
-      timestamp: now,
-      title: "Draft link",
-      expiresAt: now + 2 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000,
-      meta: {},
-    }
-
-    render(
-      <SaveListBrowser
-        items={[item]}
-        selectedItemUrl={null}
-        onSelectedItemUrlChange={vi.fn()}
-        actions={createActions()}
-        extractingItems={new Set()}
-        highlightedId={null}
-        isHydrating={false}
-      />
-    )
-
-    expect(screen.getByText("Expiring in 2 days 3 hours")).toBeVisible()
   })
 
   it("shows New on a root folder before it is opened and marks it opened on open", () => {

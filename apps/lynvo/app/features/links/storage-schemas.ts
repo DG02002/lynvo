@@ -99,17 +99,6 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
   pluginServerId: z.string().optional(),
 })
 
-export const draftSchema = z.strictObject({
-  links: z.array(extractedLinkSchema),
-  meta: metadataSchema,
-  originalUrl: z.string().min(1),
-  expiresAt: z.number(),
-})
-
-export const draftsSchema = z.record(z.string(), draftSchema)
-
-export type StoredDraft = z.infer<typeof draftSchema>
-
 export const linkMetadataSchema: z.ZodType<LinkMetadata> = z.strictObject({
   schemaVersion: z.literal(3),
   source: z.record(z.string(), z.unknown()),

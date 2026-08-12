@@ -9,7 +9,6 @@ interface LinkSelectionHeaderProps {
   pluginName?: string
   pageTitle?: string
   audioInfo?: string
-  isDraftMode: boolean
 }
 
 export const LinkSelectionHeader = ({

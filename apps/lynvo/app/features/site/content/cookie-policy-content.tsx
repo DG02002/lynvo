@@ -55,13 +55,6 @@ const browserStorageRows = [
   },
   {
     source: "Lynvo",
-    name: "lynvo:drafts:v2:<account-id>",
-    duration: "Up to 7 days per draft",
-    purpose: "Temporarily retaining link drafts before they are saved",
-    domain: "Lynvo origin",
-  },
-  {
-    source: "Lynvo",
     name: "lynvo:links:sync:v1:<account-id>",
     duration: "Until cleared",
     purpose: "Caching synchronized saved-link records for the account",
@@ -217,8 +210,8 @@ export const CookiePolicyContent = () => (
     <PolicySection title="Managing cookies and browser storage">
       <p>
         Lynvo currently uses only the cookies and browser storage required for
-        authentication, security, appearance, player defaults, drafts,
-        saved-link caching, and connected devices.
+        authentication, security, appearance, player defaults, saved-link
+        caching, and connected devices.
       </p>
       <p>
         Your browser settings can block or delete cookies and local storage.

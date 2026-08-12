@@ -10,11 +10,13 @@ const flattenLinks = (links: ExtractedLink[]): ExtractedLink[] =>
   ])
 
 describe("save-list UI test fixtures", () => {
-  it("uses a realistic multi-item selection tree for drafts", () => {
-    const draft = createSaveListTestItems().find(
-      (item) => item.kind === "draft"
+  it("uses a realistic multi-item saved-link tree", () => {
+    const savedSelection = createSaveListTestItems().find(
+      (item) => item.id === "multi-file-selection"
     )
-    const links = draft?.extractedLinks ?? []
+    const links = savedSelection
+      ? getLinkViewItemExtractedLinks(savedSelection)
+      : []
 
     expect(links.length).toBeGreaterThan(1)
     expect(

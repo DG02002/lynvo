@@ -147,9 +147,14 @@ describe("LinkInputSection", () => {
     expect(screen.getByLabelText("Routes to Source Beta")).toBeVisible()
     expect(screen.getByText("Source Beta")).toBeVisible()
     expect(screen.getByText("Example Plugin Server")).toBeVisible()
-    expect(screen.getByText(/^from/)).toHaveTextContent(
-      "from Example Plugin Server"
-    )
+    expect(screen.getByText("Plugin Server")).toBeVisible()
+    expect(screen.getByText("Source")).toBeVisible()
+    expect(screen.getByText("•••••")).toHaveClass("shimmer")
+    expect(screen.getByText("Example Plugin Server")).toHaveClass("shimmer")
+    expect(screen.getByText("Source Alpha")).toHaveClass("shimmer")
+    expect(
+      screen.getByRole("status", { name: /Source Alpha from/ })
+    ).toHaveClass("max-w-lg")
     expect(screen.queryByText(/1\.1\.0/)).not.toBeInTheDocument()
     expect(
       Array.from(container.querySelectorAll("img"), (image) => image.src)
@@ -177,8 +182,9 @@ describe("LinkInputSection", () => {
       />
     )
 
-    const helperRow = screen.getByText("Using").parentElement
-    const icon = helperRow?.querySelector("svg")
+    const icon = container.querySelector(
+      '[data-slot="extraction-source-flow"] svg'
+    )
 
     expect(icon).not.toHaveAttribute("data-icon-fallback")
     expect(icon).not.toHaveClass("ring-1")

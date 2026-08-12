@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
-  getDraftSelection,
   getSavedLinkInteractionState,
   shouldOfferPluginDomainSuggestion,
 } from "~/features/links/saved-link-interaction"
-import type { DraftListItem, LinkViewItem } from "~/features/links/types"
+import type { LinkViewItem } from "~/features/links/types"
 
 const createItem = (overrides: Partial<LinkViewItem> = {}): LinkViewItem => ({
   url: "https://example.com/item",
@@ -19,25 +18,6 @@ const createItem = (overrides: Partial<LinkViewItem> = {}): LinkViewItem => ({
 })
 
 describe("saved link interaction", () => {
-  it("keeps draft selection behavior separate from saved-link refresh", () => {
-    const item: DraftListItem = {
-      kind: "draft",
-      url: "https://example.com/item",
-      timestamp: 1,
-      title: "Draft source",
-      expiresAt: 10,
-      extractedLinks: [{ url: "https://files.example/a", label: "A" }],
-      meta: { sourceName: "Draft source" },
-    }
-
-    expect(getDraftSelection(item)).toEqual({
-      originalUrl: item.url,
-      links: item.extractedLinks,
-      meta: item.meta,
-      isDraftMode: true,
-    })
-  })
-
   it("calculates direct-play eligibility from an explicit clock", () => {
     const item = createItem({
       metadata: {
