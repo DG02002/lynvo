@@ -3,7 +3,9 @@ import { MemoryRouter, Route, Routes } from "react-router"
 import { vi } from "vitest"
 
 vi.mock("~/components/Header", () => ({
-  Header: () => <header data-testid="site-header" />,
+  Header: ({ showSaveAction }: { showSaveAction: boolean }) => (
+    <header data-testid="site-header" data-show-save-action={showSaveAction} />
+  ),
 }))
 vi.mock("~/components/Footer", () => ({
   Footer: () => <footer data-testid="site-footer" />,
@@ -18,6 +20,23 @@ vi.mock("~/components/ReceiverOverlay", () => ({
 import SiteLayout from "~/features/site/routes/_site"
 
 describe("SiteLayout", () => {
+  it("hides the header Save action on the Save page", () => {
+    render(
+      <MemoryRouter initialEntries={["/save"]}>
+        <Routes>
+          <Route element={<SiteLayout />}>
+            <Route path="/save" element={<div>Save page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId("site-header")).toHaveAttribute(
+      "data-show-save-action",
+      "false"
+    )
+  })
+
   it("renders only route content while a saved folder hydrates", () => {
     render(
       <MemoryRouter initialEntries={["/save/folder/saved-link-id"]}>

@@ -6,7 +6,7 @@ import { LogoutDialog } from "./header/LogoutDialog"
 import { UserNavActions } from "./header/UserNavActions"
 import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
 
-export function Header() {
+export function Header({ showSaveAction }: { showSaveAction: boolean }) {
   const navigate = useNavigate()
   const data = useRouteLoaderData("root") as
     | { user: { username: string } | null }
@@ -33,6 +33,7 @@ export function Header() {
             <>
               <UserNavActions
                 username={user.username}
+                showSaveAction={showSaveAction}
                 remotePlayOpen={remotePlayOpen}
                 onRemotePlayOpenChange={setRemotePlayOpen}
                 onLogoutDialogOpen={() => setLogoutDialogOpen(true)}
