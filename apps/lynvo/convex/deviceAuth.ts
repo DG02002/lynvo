@@ -547,31 +547,38 @@ export const cleanupExpiredCodes = internalMutation({
         queryBuilder.lt("expiresAt", Date.now())
       )
       .take(DEVICE_CODE_CLEANUP_BATCH_SIZE)
-    for (const record of expiredCodes) {
-      if (record.status !== "consumed") {
-        if (record.exchangeAttemptId) {
-          await enqueueWorkerSessionCleanup(
-            context,
-            [record.exchangeAttemptId],
-            record.exchangeGeneration
-          )
-        }
-        if (record.exchangeSessionId) {
-          const session = await context.db.get(
-            "authSessions",
-            record.exchangeSessionId
-          )
-          if (
-            session &&
-            session.userId === record.userId &&
-            session.deviceExchangeAttemptId === record.exchangeAttemptId
-          ) {
-            await revokeUserSession(context, session.userId, null, session._id)
+    await Promise.all(
+      expiredCodes.map(async (record) => {
+        if (record.status !== "consumed") {
+          if (record.exchangeAttemptId) {
+            await enqueueWorkerSessionCleanup(
+              context,
+              [record.exchangeAttemptId],
+              record.exchangeGeneration
+            )
+          }
+          if (record.exchangeSessionId) {
+            const session = await context.db.get(
+              "authSessions",
+              record.exchangeSessionId
+            )
+            if (
+              session &&
+              session.userId === record.userId &&
+              session.deviceExchangeAttemptId === record.exchangeAttemptId
+            ) {
+              await revokeUserSession(
+                context,
+                session.userId,
+                null,
+                session._id
+              )
+            }
           }
         }
-      }
-      await context.db.delete("deviceCodes", record._id)
-    }
+        await context.db.delete("deviceCodes", record._id)
+      })
+    )
     if (expiredCodes.length === DEVICE_CODE_CLEANUP_BATCH_SIZE) {
       await context.scheduler.runAfter(
         0,

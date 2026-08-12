@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "~/lib/utils"
+import { getFilenameBreakSegments } from "~/components/filename-text-segments"
 
 interface FilenameTextProps {
   value: string
@@ -12,42 +13,7 @@ interface FilenameSegmentsProps {
   value: string
 }
 
-const UNICODE_LETTER_PATTERN = /^\p{L}$/u
 const DEFAULT_CLAMP_CLASS_NAME = "line-clamp-2 md:line-clamp-3"
-
-const isFilenameBreakOpportunity = (value: string, index: number) => {
-  const character = value[index]
-
-  if (character === "_") {
-    return true
-  }
-
-  if (character !== "." || index === value.lastIndexOf(".")) {
-    return false
-  }
-
-  const nextCharacter = value[index + 1]
-  return (
-    nextCharacter !== undefined && UNICODE_LETTER_PATTERN.test(nextCharacter)
-  )
-}
-
-export const getFilenameBreakSegments = (value: string) => {
-  const segments: string[] = []
-  let segmentStart = 0
-
-  for (let index = 0; index < value.length; index += 1) {
-    if (!isFilenameBreakOpportunity(value, index)) {
-      continue
-    }
-
-    segments.push(value.slice(segmentStart, index + 1))
-    segmentStart = index + 1
-  }
-
-  segments.push(value.slice(segmentStart))
-  return segments
-}
 
 const FilenameSegments = ({ value }: FilenameSegmentsProps) => {
   const segments = getFilenameBreakSegments(value)
@@ -193,20 +159,14 @@ export const FilenameText = ({
         <FilenameSegments value={isExpanded ? value : collapsedValue} />
       </span>
       {isOverflowing && (
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           aria-expanded={isExpanded}
           className="ml-1 inline cursor-pointer font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={toggleExpanded}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              toggleExpanded(event)
-            }
-          }}
         >
           {isExpanded ? "See less" : "See more"}
-        </span>
+        </button>
       )}
     </span>
   )

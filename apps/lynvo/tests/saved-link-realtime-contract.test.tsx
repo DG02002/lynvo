@@ -1,7 +1,6 @@
 import { QueryClient } from "@tanstack/react-query"
 import { describe, expect, it } from "vitest"
 import type { SavedLink } from "~/features/links/links.mapper"
-import type { LinkViewItem } from "~/features/links/types"
 import { createSavedLinkSynchronization } from "~/features/links/use-links/synchronization"
 import { savedLinksQueryKey } from "~/features/links/use-links/query"
 
@@ -61,7 +60,9 @@ describe("Saved link realtime contract", () => {
       browser: ReturnType<typeof createClient>,
       revision: number
     ) => {
-      if (revision > browser.revision) await refresh(browser)
+      if (revision > browser.revision) {
+        await refresh(browser)
+      }
     }
     const commit = (results: SavedLink[]) => {
       server.revision += 1
@@ -109,7 +110,9 @@ describe("Saved link realtime contract", () => {
 
     const droppedRevision = commit([linkA])
     expect(browserB.revision).toBeLessThan(droppedRevision)
-    if (server.revision > browserB.revision) await refresh(browserB)
+    if (server.revision > browserB.revision) {
+      await refresh(browserB)
+    }
     expect(browserB.synchronization.getSnapshot()[0]?.id).toBe("link-a")
 
     const disconnectedRevision = commit([updated])

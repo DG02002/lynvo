@@ -76,7 +76,3 @@ export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
     return null
   }
 }
-
-export const isRemoteRealtimeMessage = (
-  message: RealtimeMessage
-): message is RemoteCommandWireMessage => message.type === "remote.event"

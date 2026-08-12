@@ -132,5 +132,3 @@ export const createRemoteControlPersistence = (
     },
   }
 }
-
-export const remoteControlPersistence = createRemoteControlPersistence()

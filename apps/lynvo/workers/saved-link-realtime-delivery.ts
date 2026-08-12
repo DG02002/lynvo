@@ -125,17 +125,28 @@ export const createSavedLinkRealtimeDelivery = (
     drain: async (): Promise<SavedLinkRealtimeDeliveryResult> => {
       try {
         const pending = await adapters.listPending()
-        const result = { ...emptyResult(), listed: pending.length }
-        for (const item of pending) {
-          try {
-            await adapters.broadcast(item.userId, item.revision)
-            result.broadcast += 1
-            await adapters.acknowledge(item.userId, item.revision)
-            result.acknowledged += 1
-          } catch {
-            result.failed += 1
-          }
-        }
+        const outcomes = await Promise.all(
+          pending.map(async (item) => {
+            let broadcast = 0
+            try {
+              await adapters.broadcast(item.userId, item.revision)
+              broadcast = 1
+              await adapters.acknowledge(item.userId, item.revision)
+              return { broadcast, acknowledged: 1, failed: 0 }
+            } catch {
+              return { broadcast, acknowledged: 0, failed: 1 }
+            }
+          })
+        )
+        const result = outcomes.reduce<SavedLinkRealtimeDeliveryResult>(
+          (currentResult, outcome) => ({
+            ...currentResult,
+            broadcast: currentResult.broadcast + outcome.broadcast,
+            acknowledged: currentResult.acknowledged + outcome.acknowledged,
+            failed: currentResult.failed + outcome.failed,
+          }),
+          { ...emptyResult(), listed: pending.length }
+        )
         console.info("saved_links.realtime_delivery", {
           operation: "scheduled_drain",
           ...result,

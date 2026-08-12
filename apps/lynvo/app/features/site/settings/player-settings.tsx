@@ -28,7 +28,7 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import { client } from "~/lib/effect/api/client"
-import { playerPreferencesQueryKey } from "~/root/account-settings-synchronization"
+import { playerPreferencesQueryKey } from "~/root/account-settings-query"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queue"
 
@@ -70,12 +70,16 @@ export function PlayerSettings() {
   const initializedEmptyCloudPreferences = React.useRef(false)
   const rangeSupportedMutationGeneration = React.useRef(0)
   const rangeUnsupportedMutationGeneration = React.useRef(0)
-  const rangeSupportedWriteQueue = React.useRef(
-    createPlayerPreferenceWriteQueue()
-  )
-  const rangeUnsupportedWriteQueue = React.useRef(
-    createPlayerPreferenceWriteQueue()
-  )
+  const rangeSupportedWriteQueue = React.useRef<ReturnType<
+    typeof createPlayerPreferenceWriteQueue
+  > | null>(null)
+  const rangeUnsupportedWriteQueue = React.useRef<ReturnType<
+    typeof createPlayerPreferenceWriteQueue
+  > | null>(null)
+  rangeSupportedWriteQueue.current ??= createPlayerPreferenceWriteQueue()
+  rangeUnsupportedWriteQueue.current ??= createPlayerPreferenceWriteQueue()
+  const supportedWriteQueue = rangeSupportedWriteQueue.current
+  const unsupportedWriteQueue = rangeUnsupportedWriteQueue.current
 
   React.useEffect(() => {
     if (!cloudPreferences) {
@@ -129,7 +133,7 @@ export function PlayerSettings() {
       return
     }
     setRangeSupportedPlayer(playerPreferenceIdentity, playerId)
-    const write = rangeSupportedWriteQueue.current.enqueue(() =>
+    const write = supportedWriteQueue.enqueue(() =>
       updateCloudPreferences({ rangeSupportedPlayerId: playerId })
     )
     void write
@@ -157,7 +161,7 @@ export function PlayerSettings() {
       return
     }
     setRangeUnsupportedPlayer(playerPreferenceIdentity, playerId)
-    const write = rangeUnsupportedWriteQueue.current.enqueue(() =>
+    const write = unsupportedWriteQueue.enqueue(() =>
       updateCloudPreferences({ rangeUnsupportedPlayerId: playerId })
     )
     void write

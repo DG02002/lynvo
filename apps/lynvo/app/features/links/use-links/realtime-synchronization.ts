@@ -13,7 +13,10 @@ export const useSavedLinkRealtimeSynchronization = (
   const queryClient = useQueryClient()
   const realtime = useOptionalRealtime()
   const revisionRef = useRef(revision ?? 0)
-  revisionRef.current = revision ?? 0
+
+  useEffect(() => {
+    revisionRef.current = revision ?? 0
+  }, [revision])
 
   useEffect(() => {
     if (!userId || !realtime) {

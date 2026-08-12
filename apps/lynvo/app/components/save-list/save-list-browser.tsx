@@ -748,14 +748,17 @@ export const SaveListBrowser = ({
                   onClick={() => {
                     if (directLink) {
                       const directLinkTarget = getMediaNodeTarget(directLink)
-                      void actions.play(directLink).then((result) =>
-                        markAfterAcceptedHandoff({
-                          ...result,
-                          itemLabel: directLink.label,
-                          markOpened: () =>
-                            actions.markOpened(item.url, directLinkTarget),
-                        })
-                      )
+                      void actions
+                        .play(directLink)
+                        .then((result) =>
+                          markAfterAcceptedHandoff({
+                            ...result,
+                            itemLabel: directLink.label,
+                            markOpened: () =>
+                              actions.markOpened(item.url, directLinkTarget),
+                          })
+                        )
+                        .catch(console.error)
                       return
                     }
                     actions.markOpened(item.url, item.url)

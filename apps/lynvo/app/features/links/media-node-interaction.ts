@@ -52,9 +52,6 @@ export const getMediaNodeKey = (link: ExtractedLink) =>
   link.resourceId ??
   link.label
 
-export const getResolvableMediaNodeTarget = (link: ExtractedLink) =>
-  link.nodeUrl ?? link.resourceId
-
 export const getMediaNodeTargetOrUndefined = (link: ExtractedLink) =>
   link.url ?? link.nodeUrl ?? link.resourceId
 

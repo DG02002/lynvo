@@ -16,29 +16,31 @@ export const enqueueWorkerSessionCleanup = async (
   workerSessionIds: ReadonlyArray<string>,
   issuanceGeneration?: number
 ) => {
-  for (const workerSessionId of workerSessionIds) {
-    const existing = await ctx.db
-      .query("workerSessionCleanupIntents")
-      .withIndex("by_workerSessionId", (queryBuilder) =>
-        queryBuilder.eq("workerSessionId", workerSessionId)
-      )
-      .unique()
-    if (!existing) {
-      await ctx.db.insert("workerSessionCleanupIntents", {
-        workerSessionId,
-        issuanceGeneration,
-        createdAt: Date.now(),
-      })
-    } else if (
-      existing.issuanceGeneration !== undefined &&
-      (issuanceGeneration === undefined ||
-        issuanceGeneration > existing.issuanceGeneration)
-    ) {
-      await ctx.db.patch("workerSessionCleanupIntents", existing._id, {
-        issuanceGeneration,
-      })
-    }
-  }
+  await Promise.all(
+    workerSessionIds.map(async (workerSessionId) => {
+      const existing = await ctx.db
+        .query("workerSessionCleanupIntents")
+        .withIndex("by_workerSessionId", (queryBuilder) =>
+          queryBuilder.eq("workerSessionId", workerSessionId)
+        )
+        .unique()
+      if (!existing) {
+        await ctx.db.insert("workerSessionCleanupIntents", {
+          workerSessionId,
+          issuanceGeneration,
+          createdAt: Date.now(),
+        })
+      } else if (
+        existing.issuanceGeneration !== undefined &&
+        (issuanceGeneration === undefined ||
+          issuanceGeneration > existing.issuanceGeneration)
+      ) {
+        await ctx.db.patch("workerSessionCleanupIntents", existing._id, {
+          issuanceGeneration,
+        })
+      }
+    })
+  )
 }
 
 export const listPending = query({

@@ -4,31 +4,6 @@ import {
   getMediaNodeTargetOrUndefined,
 } from "./media-node-interaction"
 
-export const collectOpened = (links: ExtractedLink[] = []) => {
-  const openedUrls = new Set<string>()
-  const openedIds = new Set<string>()
-
-  const visit = (items: ExtractedLink[]) => {
-    for (const link of items) {
-      if (link.opened) {
-        const target = getMediaNodeTargetOrUndefined(link)
-        if (target) {
-          openedUrls.add(target)
-        }
-        if (link.id) {
-          openedIds.add(link.id)
-        }
-      }
-      if (link.children?.length) {
-        visit(link.children)
-      }
-    }
-  }
-
-  visit(links)
-  return { openedUrls: [...openedUrls], openedIds: [...openedIds] }
-}
-
 export const stripOpenedFlags = (
   links: ExtractedLink[] = []
 ): ExtractedLink[] =>

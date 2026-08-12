@@ -51,14 +51,16 @@ export const list = query({
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = await getUserRetentionDays(ctx, userId)
     const cutoff = getRetentionCutoff(args.timeBucket, retentionDays)
-    const links = await ctx.db
-      .query("links")
-      .withIndex("by_userId_createdAt", (q) =>
-        q.eq("userId", userId).gte("createdAt", cutoff)
-      )
-      .order("desc")
-      .take(LINKS_MAX_COUNT)
-    const revision = await readSavedLinkRevision(ctx, userId)
+    const [links, revision] = await Promise.all([
+      ctx.db
+        .query("links")
+        .withIndex("by_userId_createdAt", (q) =>
+          q.eq("userId", userId).gte("createdAt", cutoff)
+        )
+        .order("desc")
+        .take(LINKS_MAX_COUNT),
+      readSavedLinkRevision(ctx, userId),
+    ])
     return {
       revision,
       results: links.map((link) => ({
@@ -157,8 +159,10 @@ export const createOrUpdate = mutation({
       await ctx.db.delete("links", oldestLink._id)
     }
 
-    const id = await ctx.db.insert("links", newDoc)
-    const revision = await advanceSavedLinkRevision(ctx, userId)
+    const [id, revision] = await Promise.all([
+      ctx.db.insert("links", newDoc),
+      advanceSavedLinkRevision(ctx, userId),
+    ])
     return { id, revision }
   },
 })

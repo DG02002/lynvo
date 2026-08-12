@@ -82,18 +82,21 @@ export const createDurableRealtimeSessionRevocation = (
           api.realtimeSessionRevocations.listPending,
           { serviceToken }
         )
-        let failed = 0
-        for (const intent of pending) {
-          try {
-            await attempt(intent)
-            await client.mutation(api.realtimeSessionRevocations.complete, {
-              serviceToken,
-              ...intent,
-            })
-          } catch {
-            failed += 1
-          }
-        }
+        const outcomes = await Promise.all(
+          pending.map(async (intent) => {
+            try {
+              await attempt(intent)
+              await client.mutation(api.realtimeSessionRevocations.complete, {
+                serviceToken,
+                ...intent,
+              })
+              return true
+            } catch {
+              return false
+            }
+          })
+        )
+        const failed = outcomes.filter((didRevoke) => !didRevoke).length
         return failed === 0
           ? { kind: "completed" as const }
           : { kind: "unavailable" as const }

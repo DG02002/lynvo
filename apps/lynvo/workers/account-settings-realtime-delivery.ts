@@ -58,15 +58,18 @@ export const createAccountSettingsRealtimeDelivery = (
             serviceToken: await createToken(),
           }
         )
-        let failed = 0
-        for (const item of pending) {
-          try {
-            await broadcast(item.userId, item.revision)
-            await acknowledge(item.userId, item.revision)
-          } catch {
-            failed += 1
-          }
-        }
+        const outcomes = await Promise.all(
+          pending.map(async (item) => {
+            try {
+              await broadcast(item.userId, item.revision)
+              await acknowledge(item.userId, item.revision)
+              return true
+            } catch {
+              return false
+            }
+          })
+        )
+        const failed = outcomes.filter((didDeliver) => !didDeliver).length
         return failed === 0
           ? { kind: "completed" as const }
           : { kind: "unavailable" as const }

@@ -70,7 +70,7 @@ const formatSessionDate = (lastActiveAt: number) =>
     .replace(",", " at")
 
 const orderSessions = (sessions: readonly UserSession[]) =>
-  [...sessions].sort(
+  sessions.toSorted(
     (left, right) =>
       Number(Boolean(right.isCurrent)) - Number(Boolean(left.isCurrent)) ||
       right.lastActiveAt - left.lastActiveAt

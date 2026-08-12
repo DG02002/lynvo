@@ -28,6 +28,13 @@
       {
         "files": ["convex/accountDataOwnership.ts"],
         "rules": ["react-doctor/js-combine-iterations"]
+      },
+      {
+        "files": [
+          "app/features/site/content/privacy-policy-content.tsx",
+          "app/features/site/home/home-save-demo.tsx"
+        ],
+        "rules": ["react-doctor/no-giant-component"]
       }
     ]
   },

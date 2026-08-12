@@ -249,7 +249,7 @@ export const HomeSaveDemo = () => {
     window.addEventListener("resize", updateCursorPosition)
 
     return () => window.removeEventListener("resize", updateCursorPosition)
-  }, [step])
+  }, [demoStageRef, step])
 
   const isCursorVisible =
     cursorPosition !== null &&
@@ -521,10 +521,9 @@ const DemoRemoveDialog = ({
   confirmButtonRef,
   isConfirmButtonPressed,
 }: DemoRemoveDialogProps) => (
-  <div
-    className="home-demo-remove-dialog absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-4 supports-backdrop-filter:backdrop-blur-xs sm:p-8"
-    role="dialog"
-    aria-modal="true"
+  <dialog
+    open
+    className="home-demo-remove-dialog absolute inset-0 z-50 m-0 flex h-full w-full max-w-none items-center justify-center border-0 bg-black/80 p-4 supports-backdrop-filter:backdrop-blur-xs sm:p-8"
     aria-label="Remove this link?"
   >
     <div className="home-demo-remove-dialog__surface grid w-full max-w-[calc(100%-2rem)] gap-6 rounded-4xl bg-popover p-10 text-popover-foreground shadow-2xl ring-1 ring-foreground/5 sm:max-w-md">
@@ -557,5 +556,5 @@ const DemoRemoveDialog = ({
         </Button>
       </div>
     </div>
-  </div>
+  </dialog>
 )

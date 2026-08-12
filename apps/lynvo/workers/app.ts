@@ -747,28 +747,36 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 
   async alarm(): Promise<void> {
     try {
-      for (const socket of this.ctx.getWebSockets()) {
-        try {
-          const attachment: unknown = socket.deserializeAttachment()
-          if (
-            typeof attachment !== "object" ||
-            attachment === null ||
-            !("workerSessionId" in attachment) ||
-            typeof attachment.workerSessionId !== "string"
-          ) {
-            socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session invalid")
-            continue
+      await Promise.all(
+        this.ctx.getWebSockets().map(async (socket) => {
+          try {
+            const attachment: unknown = socket.deserializeAttachment()
+            if (
+              typeof attachment !== "object" ||
+              attachment === null ||
+              !("workerSessionId" in attachment) ||
+              typeof attachment.workerSessionId !== "string"
+            ) {
+              socket.close(
+                REALTIME_SESSION_REVOKED_CLOSE_CODE,
+                "Session invalid"
+              )
+              return
+            }
+            const response = await this.env.WORKER_AUTH_SESSION.getByName(
+              attachment.workerSessionId
+            ).fetch("https://session.internal/session", { method: "HEAD" })
+            if (response.status === 401 || response.status === 404) {
+              socket.close(
+                REALTIME_SESSION_REVOKED_CLOSE_CODE,
+                "Session expired"
+              )
+            }
+          } catch {
+            return
           }
-          const response = await this.env.WORKER_AUTH_SESSION.getByName(
-            attachment.workerSessionId
-          ).fetch("https://session.internal/session", { method: "HEAD" })
-          if (response.status === 401 || response.status === 404) {
-            socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session expired")
-          }
-        } catch {
-          continue
-        }
-      }
+        })
+      )
     } finally {
       if (this.ctx.getWebSockets().length > 0) {
         await this.ctx.storage.setAlarm(

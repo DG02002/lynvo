@@ -10,12 +10,7 @@ import {
   setRangeUnsupportedPlayer,
 } from "~/lib/player-utils"
 import { ACCOUNT_SETTINGS_REFRESH_INTERVAL_MS } from "~/features/site/settings/constants"
-
-export const playerPreferencesQueryKey = (userId?: string) => [
-  "settings",
-  "player",
-  userId ?? "signed-out",
-]
+import { playerPreferencesQueryKey } from "~/root/account-settings-query"
 
 export const AccountSettingsSynchronization = ({
   userId,

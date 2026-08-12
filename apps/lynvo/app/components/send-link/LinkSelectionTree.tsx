@@ -16,9 +16,9 @@ export const LinkSelectionTree = ({
   onExpandFolder,
 }: LinkSelectionTreeProps) => (
   <div className="flex min-w-0 select-none flex-col gap-1">
-    {links.map((link, index) => (
+    {links.map((link) => (
       <LinkSelectionTreeItem
-        key={`${getMediaNodeKey(link)}:${index}`}
+        key={getMediaNodeKey(link)}
         link={link}
         selectedIds={selectedIds}
         onToggleSelect={onToggleSelect}

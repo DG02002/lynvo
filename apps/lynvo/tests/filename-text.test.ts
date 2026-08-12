@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getFilenameBreakSegments } from "~/components/filename-text"
+import { getFilenameBreakSegments } from "~/components/filename-text-segments"
 
 describe("getFilenameBreakSegments", () => {
   it("adds useful breaks throughout dot-separated media filenames", () => {

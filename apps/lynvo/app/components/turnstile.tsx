@@ -66,11 +66,7 @@ export const Turnstile = ({
 }: TurnstileProps) => {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const widgetIdRef = React.useRef<string | null>(null)
-  const [siteKey, setSiteKey] = React.useState("")
-
-  React.useEffect(() => {
-    setSiteKey(getTurnstileSiteKey())
-  }, [])
+  const siteKey = getTurnstileSiteKey()
 
   React.useImperativeHandle(ref, () => ({
     reset() {

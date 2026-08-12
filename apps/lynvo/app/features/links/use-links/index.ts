@@ -72,7 +72,9 @@ export const useLinks = () => {
       if (operation) {
         switch (operation.kind) {
           case "markOpened":
-            if (!operation.linkUrl) throw new Error("Link URL is required")
+            if (!operation.linkUrl) {
+              throw new Error("Link URL is required")
+            }
             await Effect.runPromise(
               client.links.applyMetadataOperation({
                 params: { linkId: item.id },
@@ -157,7 +159,7 @@ export const useLinks = () => {
   const identity = userId ?? "signed-out"
   const synchronization = useMemo(
     () => createSavedLinkSynchronization(adapter, identity, cachedItems),
-    [identity]
+    [adapter, cachedItems, identity]
   )
 
   useEffect(() => {
