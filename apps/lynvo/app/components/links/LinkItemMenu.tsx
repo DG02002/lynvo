@@ -33,6 +33,7 @@ import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { deleteDraft } from "~/features/links/drafts"
+import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 
 interface LinkItemMenuProps {
   item: LinkViewItem | DraftListItem
@@ -159,11 +160,19 @@ const LinkItemMenuContent = ({
                         {PLAYER_DEFINITIONS.map((player) => (
                           <DropdownMenuItem
                             key={player.id}
-                            onClick={() => {
+                            onClick={async () => {
                               const playableUrl =
                                 getMediaNodeTarget(playableLink)
-                              actions.markOpened(item.url, playableUrl)
-                              void openInSpecificPlayer(playableUrl, player)
+                              const result = await openInSpecificPlayer(
+                                playableUrl,
+                                player
+                              )
+                              markAfterAcceptedHandoff({
+                                accepted: result.expectsNavigation,
+                                itemLabel: playableLink.label,
+                                markOpened: () =>
+                                  actions.markOpened(item.url, playableUrl),
+                              })
                             }}
                           >
                             <PlayerOption player={player} />

@@ -1,7 +1,7 @@
 import type { ExtractedLink } from "./types"
 
 export interface LinkItemActions {
-  play: (target: string | ExtractedLink) => void
+  play: (target: string | ExtractedLink) => Promise<PlaybackHandoffResult>
   remove: (url: string, id?: string) => void
   showLinks: (url: string) => void
   markOpened: (itemUrl: string, linkUrl: string) => void

@@ -11,6 +11,7 @@ import {
   getLinksAtFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
+import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
@@ -81,8 +82,13 @@ export const useFinderBrowserState = ({
       return
     }
 
-    actions.markOpened(item.url, getMediaNodeTarget(link))
-    actions.play(link)
+    const linkTarget = getMediaNodeTarget(link)
+    const result = await actions.play(link)
+    markAfterAcceptedHandoff({
+      ...result,
+      itemLabel: link.label,
+      markOpened: () => actions.markOpened(item.url, linkTarget),
+    })
   }
 
   return {

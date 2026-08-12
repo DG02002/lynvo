@@ -11,6 +11,10 @@ export const remotePlaybackIntentSchema = z.object({
 })
 
 declare global {
+  interface PlaybackHandoffResult {
+    readonly accepted: boolean
+  }
+
   interface RemotePlaybackIntent {
     readonly url: string
     readonly rangeRequest: RangeRequestCapability
@@ -53,9 +57,16 @@ export const createPlayableLinkHandoff = ({
     const intent = toRemotePlaybackIntent(target)
     if (activeSessionId) {
       await sendRemotePlayback(intent)
-      return
+      return { accepted: true }
     }
-    await open({ ...intent, playerPreferenceUserId })
+    const launchResult = await open({ ...intent, playerPreferenceUserId })
+    return {
+      accepted:
+        typeof launchResult === "object" &&
+        launchResult !== null &&
+        "expectsNavigation" in launchResult &&
+        launchResult.expectsNavigation === true,
+    }
   },
   receive: async (value: unknown, playerPreferenceUserId?: string) => {
     const intent = remotePlaybackIntentSchema.parse(value)

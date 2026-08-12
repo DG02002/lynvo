@@ -19,12 +19,12 @@ export const usePlaybackActions = ({
   const handleLinkClick = useCallback(
     async (target: string | ExtractedLink) => {
       if (isOpeningRef.current) {
-        return
+        return { accepted: false }
       }
       setIsOpening(true)
 
       try {
-        await playbackTarget.handoff({
+        return await playbackTarget.handoff({
           target,
           activeSessionId,
           sendRemotePlayback,

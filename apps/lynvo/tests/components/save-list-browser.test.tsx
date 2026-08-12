@@ -14,7 +14,7 @@ import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
 const createActions = (
   overrides: Partial<LinkItemActions> = {}
 ): LinkItemActions => ({
-  play: vi.fn(),
+  play: vi.fn().mockResolvedValue({ accepted: true }),
   remove: vi.fn(),
   showLinks: vi.fn(),
   markOpened: vi.fn(),

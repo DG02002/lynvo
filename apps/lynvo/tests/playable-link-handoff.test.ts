@@ -14,7 +14,7 @@ describe("playable link handoff", () => {
     const sendRemotePlayback = vi.fn()
     const handoff = createPlayableLinkHandoff({ open })
 
-    await handoff.handoff({
+    const result = await handoff.handoff({
       target: PLAYABLE_LINK,
       activeSessionId: "remote-session",
       sendRemotePlayback,
@@ -25,13 +25,14 @@ describe("playable link handoff", () => {
       rangeRequest: "unsupported",
     })
     expect(open).not.toHaveBeenCalled()
+    expect(result).toEqual({ accepted: true })
   })
 
   it("uses the same intent for local playback", async () => {
-    const open = vi.fn()
+    const open = vi.fn().mockResolvedValue({ expectsNavigation: true })
     const handoff = createPlayableLinkHandoff({ open })
 
-    await handoff.handoff({
+    const result = await handoff.handoff({
       target: PLAYABLE_LINK,
       activeSessionId: null,
       sendRemotePlayback: vi.fn(),
@@ -41,6 +42,21 @@ describe("playable link handoff", () => {
       url: PLAYABLE_LINK.url,
       rangeRequest: "unsupported",
     })
+    expect(result).toEqual({ accepted: true })
+  })
+
+  it("reports a rejected local player launch", async () => {
+    const handoff = createPlayableLinkHandoff({
+      open: vi.fn().mockResolvedValue({ expectsNavigation: false }),
+    })
+
+    await expect(
+      handoff.handoff({
+        target: PLAYABLE_LINK,
+        activeSessionId: null,
+        sendRemotePlayback: vi.fn(),
+      })
+    ).resolves.toEqual({ accepted: false })
   })
 
   it("rejects an invalid received intent before player launch", async () => {

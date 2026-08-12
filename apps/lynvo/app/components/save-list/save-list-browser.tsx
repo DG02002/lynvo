@@ -49,6 +49,7 @@ import {
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
+import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -260,9 +261,14 @@ const ResolvedMirrorRows = ({
               onCopyLink={() =>
                 void navigator.clipboard.writeText(mirrorTarget)
               }
-              onOpenInPlayer={(player) => {
-                actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
-                void openInSpecificPlayer(mirrorTarget, player)
+              onOpenInPlayer={async (player) => {
+                const result = await openInSpecificPlayer(mirrorTarget, player)
+                markAfterAcceptedHandoff({
+                  accepted: result.expectsNavigation,
+                  itemLabel: mirror.label,
+                  markOpened: () =>
+                    actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
+                })
               }}
               className="size-9 shrink-0 text-foreground"
             />
@@ -456,9 +462,13 @@ const FinderBrowser = ({
             const copyLink = () => {
               void navigator.clipboard.writeText(linkTarget)
             }
-            const openLinkInPlayer = (player: PlayerDefinition) => {
-              actions.markOpened(item.url, linkTarget)
-              void openInSpecificPlayer(linkTarget, player)
+            const openLinkInPlayer = async (player: PlayerDefinition) => {
+              const result = await openInSpecificPlayer(linkTarget, player)
+              markAfterAcceptedHandoff({
+                accepted: result.expectsNavigation,
+                itemLabel: link.label,
+                markOpened: () => actions.markOpened(item.url, linkTarget),
+              })
             }
 
             return (
@@ -672,11 +682,15 @@ export const SaveListBrowser = ({
                       return
                     }
                     if (directLink) {
-                      actions.markOpened(
-                        item.url,
-                        getMediaNodeTarget(directLink)
+                      const directLinkTarget = getMediaNodeTarget(directLink)
+                      void actions.play(directLink).then((result) =>
+                        markAfterAcceptedHandoff({
+                          ...result,
+                          itemLabel: directLink.label,
+                          markOpened: () =>
+                            actions.markOpened(item.url, directLinkTarget),
+                        })
                       )
-                      actions.play(directLink)
                       return
                     }
                     actions.markOpened(item.url, item.url)

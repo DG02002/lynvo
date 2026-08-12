@@ -11,7 +11,7 @@ import type { ExtractedLink } from "~/features/links/types"
 const TEST_USER_ID = "test-user"
 
 const createActions = (): LinkItemActions => ({
-  play: vi.fn(),
+  play: vi.fn().mockResolvedValue({ accepted: true }),
   remove: vi.fn(),
   showLinks: vi.fn(),
   markOpened: vi.fn(),
