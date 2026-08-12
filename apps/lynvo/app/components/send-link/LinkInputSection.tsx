@@ -170,19 +170,19 @@ export function LinkInputSection({
           aria-invalid={Boolean(error && !isExistingLinkWarning)}
         />
         <InputGroupAddon align="inline-end">
-          {clipboardPermission !== "checking" &&
-            clipboardPermission !== "granted" && (
-              <InputGroupButton
-                type="button"
-                onClick={() => setIsClipboardDialogOpen(true)}
-                size="icon-xs"
-                title="Enable clipboard suggestions"
-                aria-label="Enable clipboard suggestions"
-                className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
-              >
-                <ClipboardAccessIcon className="size-6" />
-              </InputGroupButton>
-            )}
+          {(clipboardPermission === "prompt" ||
+            clipboardPermission === "denied") && (
+            <InputGroupButton
+              type="button"
+              onClick={() => setIsClipboardDialogOpen(true)}
+              size="icon-xs"
+              title="Enable clipboard suggestions"
+              aria-label="Enable clipboard suggestions"
+              className="size-11 rounded-full bg-transparent hover:bg-transparent hover:text-inherit dark:hover:bg-transparent active:scale-[0.96]"
+            >
+              <ClipboardAccessIcon className="size-6" />
+            </InputGroupButton>
+          )}
           <InputGroupButton
             type="button"
             onClick={() => onSave()}

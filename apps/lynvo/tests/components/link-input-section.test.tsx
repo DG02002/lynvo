@@ -83,6 +83,36 @@ describe("LinkInputSection", () => {
     expect(readText).toHaveBeenCalledTimes(1)
   })
 
+  it("hides clipboard suggestions when clipboard permissions are unsupported", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { readText: vi.fn() },
+    })
+    Object.defineProperty(navigator, "permissions", {
+      configurable: true,
+      value: {
+        query: vi.fn(() => Promise.reject(new TypeError("Unsupported name"))),
+      },
+    })
+
+    render(
+      <LinkInputSection
+        url=""
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={null}
+        setError={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    expect(
+      screen.queryByLabelText("Enable clipboard suggestions")
+    ).not.toBeInTheDocument()
+  })
+
   it("does not suggest a clipboard URL that is already saved", async () => {
     const savedUrl = "https://example.com/already-saved"
     Object.defineProperty(navigator, "clipboard", {
