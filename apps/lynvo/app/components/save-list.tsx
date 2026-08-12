@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { LinkInputSection } from "~/components/send-link/LinkInputSection"
 import { LinkSelectionDialog } from "~/components/send-link/LinkSelectionDialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
@@ -7,9 +7,9 @@ import { useLinks } from "~/hooks/useLinks"
 import { cn } from "~/lib/utils"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
+import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 
 const SaveList = () => {
-  const [selectedItemUrl, setSelectedItemUrl] = useState<string | null>(null)
   const {
     links,
     setCurrentPage,
@@ -20,6 +20,8 @@ const SaveList = () => {
     user,
     isHydrating,
   } = useLinks()
+  const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =
+    useSaveFolderRoute(links, isHydrating)
   const {
     input,
     isSaving,
@@ -36,7 +38,7 @@ const SaveList = () => {
     setCurrentPage,
   })
 
-  useSaveListFullscreen(Boolean(selectedItemUrl))
+  useSaveListFullscreen(isFolderRoute)
   const savedUrls = useMemo(
     () => new Set(links.map((link) => link.url)),
     [links]
@@ -46,11 +48,11 @@ const SaveList = () => {
     <div
       className={cn(
         "flex min-h-[calc(100vh-4rem)] w-full flex-col gap-6 overflow-x-hidden px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14",
-        selectedItemUrl &&
+        isFolderRoute &&
           "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background p-0 md:p-0"
       )}
     >
-      {!selectedItemUrl && (
+      {!isFolderRoute && (
         <div className="w-full">
           <LinkInputSection
             url={input.url}
@@ -69,7 +71,9 @@ const SaveList = () => {
         <SaveListBrowser
           items={links}
           selectedItemUrl={selectedItemUrl}
-          onSelectedItemUrlChange={setSelectedItemUrl}
+          onSelectedItemUrlChange={(itemUrl) =>
+            itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
+          }
           actions={linkItemActions}
           extractingItems={extractingItems}
           highlightedId={highlightedId}

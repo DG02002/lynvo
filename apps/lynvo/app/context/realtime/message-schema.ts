@@ -39,6 +39,19 @@ export const remoteInboxChangedRealtimeMessageSchema = z.strictObject({
   payload: z.strictObject({}),
 })
 
+const heartbeatResponseSchema = z.strictObject({
+  type: z.literal("pong"),
+  payload: z.strictObject({ at: z.number() }),
+})
+
+export const isRealtimeHeartbeatResponse = (value: string): boolean => {
+  try {
+    return heartbeatResponseSchema.safeParse(JSON.parse(value)).success
+  } catch {
+    return false
+  }
+}
+
 export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
   try {
     const parsed: unknown = JSON.parse(value)

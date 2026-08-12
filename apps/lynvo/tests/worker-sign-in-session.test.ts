@@ -210,4 +210,21 @@ describe("Worker sign-in session HTTP behavior", () => {
 
     expect(response.status).toBe(404)
   })
+
+  it("reports a signed-out session as a successful status check", async () => {
+    const { default: worker } = await import("../workers/app")
+    const response = await worker.fetch(
+      new Request("https://lynvo.dg02002.workers.dev/api/auth/session/status"),
+      {
+        ENVIRONMENT: "production",
+        VITE_CONVEX_URL: "https://convex.example",
+      } as Env,
+      { waitUntil: () => undefined } as ExecutionContext
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      status: "unauthenticated",
+    })
+  })
 })

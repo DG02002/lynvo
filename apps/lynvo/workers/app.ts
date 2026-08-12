@@ -383,7 +383,7 @@ app.get("/api/auth/session/status", async (context) => {
     return context.json({ status: "unavailable" }, 503)
   }
   if (!session.user) {
-    return context.json({ status: "unauthenticated" }, 401)
+    return context.json({ status: "unauthenticated" })
   }
   const expectedUserId = context.req.query("expectedUserId")
   const expectedSessionId = context.req.query("expectedSessionId")

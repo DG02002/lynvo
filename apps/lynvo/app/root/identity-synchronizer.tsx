@@ -45,11 +45,14 @@ export const IdentitySynchronizer = ({
           response.ok &&
           typeof payload === "object" &&
           payload !== null &&
-          "userId" in payload &&
-          "sessionId" in payload &&
-          payload.userId === user?.id &&
-          payload.sessionId === user?.sessionId
-        if (matches || (!user && response.status === 401)) {
+          ((!user &&
+            "status" in payload &&
+            payload.status === "unauthenticated") ||
+            ("userId" in payload &&
+              "sessionId" in payload &&
+              payload.userId === user?.id &&
+              payload.sessionId === user?.sessionId))
+        if (matches) {
           return
         }
         isReloading.current = true

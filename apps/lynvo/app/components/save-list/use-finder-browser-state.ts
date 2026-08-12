@@ -18,6 +18,50 @@ interface UseFinderBrowserStateOptions {
   actions: LinkItemActions
 }
 
+const getFolderPathStorageKey = (savedLinkId: string) =>
+  `lynvo:save-folder-path:${savedLinkId}`
+
+const restoreFolderPath = (
+  savedLinkId: string | undefined,
+  rootLinks: ExtractedLink[]
+): FolderLevel[] => {
+  if (!savedLinkId || typeof window === "undefined") {
+    return []
+  }
+
+  try {
+    const value: unknown = JSON.parse(
+      window.sessionStorage.getItem(getFolderPathStorageKey(savedLinkId)) ??
+        "[]"
+    )
+    if (!Array.isArray(value)) {
+      return []
+    }
+
+    const restoredPath: FolderLevel[] = []
+    let links = rootLinks
+    for (const level of value) {
+      if (
+        typeof level !== "object" ||
+        level === null ||
+        !("id" in level) ||
+        typeof level.id !== "string"
+      ) {
+        break
+      }
+      const folder = links.find((link) => getLinkKey(link) === level.id)
+      if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
+        break
+      }
+      restoredPath.push({ id: level.id, label: folder.label })
+      links = folder.children ?? []
+    }
+    return restoredPath
+  } catch {
+    return []
+  }
+}
+
 export const useFinderBrowserState = ({
   item,
   actions,
@@ -27,7 +71,9 @@ export const useFinderBrowserState = ({
     [item]
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)
-  const [folderPath, setFolderPath] = useState<FolderLevel[]>([])
+  const [folderPath, setFolderPath] = useState<FolderLevel[]>(() =>
+    restoreFolderPath(item.id, itemRootLinks)
+  )
   const contentRef = useRef<HTMLDivElement>(null)
   const scrollPositionsRef = useRef(new Map<string, number>())
   const currentLinks = useMemo(
@@ -39,6 +85,16 @@ export const useFinderBrowserState = ({
   useEffect(() => {
     setRootLinks(itemRootLinks)
   }, [itemRootLinks])
+
+  useEffect(() => {
+    if (!item.id || typeof window === "undefined") {
+      return
+    }
+    window.sessionStorage.setItem(
+      getFolderPathStorageKey(item.id),
+      JSON.stringify(folderPath)
+    )
+  }, [folderPath, item.id])
 
   useEffect(() => {
     contentRef.current?.scrollTo({

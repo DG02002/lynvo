@@ -13,6 +13,10 @@ export default [
     index("features/site/routes/_site._index.tsx"),
     route("save", "features/links/routes/_site.save.tsx"),
     route(
+      "save/folder/:savedLinkId",
+      "features/links/routes/_site.save-folder.tsx"
+    ),
+    route(
       "settings/:section?/:subview?",
       "features/site/routes/_site.settings.tsx"
     ),

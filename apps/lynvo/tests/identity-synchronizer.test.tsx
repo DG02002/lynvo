@@ -4,6 +4,26 @@ import { vi } from "vitest"
 import { IdentitySynchronizer } from "~/root/identity-synchronizer"
 
 describe("identity synchronization", () => {
+  it("accepts the successful signed-out session status", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json({ status: "unauthenticated" }))
+    vi.stubGlobal("fetch", fetchMock)
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(["public-page"], "retained")
+
+    render(
+      <IdentitySynchronizer user={null} queryClient={queryClient}>
+        {() => null}
+      </IdentitySynchronizer>
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(["public-page"])).toBe("retained")
+    )
+  })
+
   it("binds status validation to the rendered identity and coalesces races", async () => {
     let resolveStatus: (response: Response) => void = () => undefined
     const statusResponse = new Promise<Response>((resolve) => {

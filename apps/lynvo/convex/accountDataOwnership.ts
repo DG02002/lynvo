@@ -46,7 +46,9 @@ export const ACCOUNT_DATA_CATALOG = {
 
 type AccountDataTable = keyof typeof ACCOUNT_DATA_CATALOG
 type TablesWithLifecycle<Lifecycle extends AccountDataLifecycle> = {
-  [Table in AccountDataTable]: (typeof ACCOUNT_DATA_CATALOG)[Table]["lifecycle"] extends Lifecycle
+  [
+    Table in AccountDataTable
+  ]: (typeof ACCOUNT_DATA_CATALOG)[Table]["lifecycle"] extends Lifecycle
     ? Table
     : never
 }[AccountDataTable]

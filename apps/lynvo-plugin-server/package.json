@@ -23,7 +23,7 @@
     "hono": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.20.3",
+    "@cloudflare/vitest-pool-workers": "^0.21.0",
     "@cloudflare/workers-types": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

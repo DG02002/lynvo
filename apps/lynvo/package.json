@@ -54,7 +54,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.51.1",
+    "@cloudflare/vite-plugin": "^1.51.2",
     "@cloudflare/workers-types": "catalog:",
     "@edge-runtime/vm": "^5.0.0",
     "@mdx-js/rollup": "^3.1.1",

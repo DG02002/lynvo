@@ -1,5 +1,8 @@
 import type { RealtimeAction } from "./reducer"
-import { parseRealtimeMessage } from "./message-schema"
+import {
+  isRealtimeHeartbeatResponse,
+  parseRealtimeMessage,
+} from "./message-schema"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
@@ -38,6 +41,10 @@ export const deliverRealtimeMessage = (
   value: string,
   receiveMessage: (message: RealtimeMessage) => void
 ) => {
+  if (isRealtimeHeartbeatResponse(value)) {
+    return true
+  }
+
   const message = parseRealtimeMessage(value)
 
   if (!message) {

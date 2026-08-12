@@ -26,6 +26,69 @@ const createActions = (
 })
 
 describe("SaveListBrowser", () => {
+  it("restores the nested folder in the same tab after refresh", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const item: LinkViewItem = {
+      id: "saved-collection",
+      url: "https://media.example/collection",
+      timestamp: 1,
+      title: "Saved Collection",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "season-one",
+              url: "https://media.example/collection/season-one",
+              label: "Season One",
+              type: "folder",
+              children: [
+                {
+                  id: "episode-one",
+                  url: "https://media.example/collection/season-one/episode-one.mkv",
+                  label: "Episode One",
+                  type: "file",
+                },
+              ],
+            },
+          ],
+        },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+    const renderSavedFolder = () =>
+      render(
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+      )
+
+    const firstRender = renderSavedFolder()
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /Season One/ }).at(-1)!
+    )
+    expect(await screen.findByText("Episode One")).toBeVisible()
+
+    firstRender.unmount()
+    renderSavedFolder()
+
+    expect(screen.getByText("Episode One")).toBeVisible()
+    expect(screen.getByRole("button", { name: /Season One/ })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
+  })
+
   it("lazily extracts an unresolved folder when it is opened", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
