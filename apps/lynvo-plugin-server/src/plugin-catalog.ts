@@ -7,6 +7,7 @@ import {
   type ExtractRequest,
   type DiscoverResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { load } from "cheerio"
 import {
   BHADOO_SOURCE_ID,
   PLUGIN_SERVER_ID,
@@ -18,6 +19,13 @@ import {
 import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-index"
 import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
+import {
+  fetchValidatedUpstream,
+  readBoundedUpstreamText,
+} from "./upstream-response"
+
+const ONEDRIVE_INDEX_REPOSITORY_URL =
+  "https://github.com/spencerwooo/onedrive-vercel-index"
 
 export interface PluginAdapterOptions {
   request: ExtractRequest
@@ -155,18 +163,42 @@ export const createLynvoPluginServerManifest = (
   },
 })
 
-export const discoverLynvoPlugin = (targetUrl: string): DiscoverResponse => {
+export const discoverLynvoPlugin = async (
+  targetUrl: string
+): Promise<DiscoverResponse> => {
   const plugin = LYNVO_PLUGIN_CATALOG.find(
     (candidate) =>
       candidate.discovery && matchPluginServerUrl(targetUrl, candidate.matchers)
   )
-  return plugin?.discovery
-    ? {
+  if (plugin?.discovery) {
+    return {
+      matched: true,
+      pluginId: plugin.id,
+      confidence: plugin.discovery.confidence,
+    }
+  }
+
+  try {
+    const response = await fetchValidatedUpstream(targetUrl, {
+      headers: { Accept: "text/html" },
+    })
+    if (!response.ok) {
+      await response.body?.cancel()
+      return { matched: false }
+    }
+    const document = load(await readBoundedUpstreamText(response))
+    if (document(`a[href="${ONEDRIVE_INDEX_REPOSITORY_URL}"]`).length > 0) {
+      return {
         matched: true,
-        pluginId: plugin.id,
-        confidence: plugin.discovery.confidence,
+        pluginId: ONEDRIVE_SOURCE_ID,
+        confidence: "verified",
       }
-    : { matched: false }
+    }
+  } catch {
+    return { matched: false }
+  }
+
+  return { matched: false }
 }
 
 export const extractWithLynvoPlugin = async (

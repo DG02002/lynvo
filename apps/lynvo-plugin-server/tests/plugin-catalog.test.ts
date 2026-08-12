@@ -1,12 +1,17 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   LYNVO_PLUGIN_CATALOG,
   createLynvoPluginServerManifest,
+  discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("generates manifest plugin metadata and dispatch from one catalog", () => {
     const manifest = createLynvoPluginServerManifest("https://lynvo.example")
     const extension = getLynvoManifestExtension(manifest)
@@ -68,6 +73,28 @@ describe("Lynvo plugin catalog", () => {
         (plugin) => plugin.hasIcon === false && plugin.iconUrl === undefined
       )
     ).toBe(true)
+  })
+
+  it("discovers a OneDrive index from its upstream repository link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            '<html><a href="https://github.com/spencerwooo/onedrive-vercel-index">GitHub</a></html>',
+            { status: 200 }
+          )
+        )
+    )
+
+    await expect(
+      discoverLynvoPlugin("https://unknown.example/MEDIA/TV/Flames/")
+    ).resolves.toEqual({
+      matched: true,
+      pluginId: "onedrive-index",
+      confidence: "verified",
+    })
   })
 
   it("does not import application implementation modules", () => {
