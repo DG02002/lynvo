@@ -17,6 +17,11 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
+import { Switch } from "~/components/ui/switch"
+import {
+  setShouldHideTvBroSaveInput,
+  useShouldHideTvBroSaveInput,
+} from "./tvbro-save-input-preference"
 
 const appearanceOptions = [
   { value: "system", label: "System" },
@@ -24,8 +29,9 @@ const appearanceOptions = [
   { value: "light", label: "Light" },
 ] as const
 
-export function GeneralSettings() {
+export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
+  const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -57,6 +63,17 @@ export function GeneralSettings() {
               </SelectGroup>
             </SelectContent>
           </Select>
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo
+            label="Hide Add Link box in TV Bro"
+            description="Keep your saved links in focus on TV. Turn this off if you also want to add links using your TV remote."
+          />
+          <Switch
+            checked={shouldHideTvBroSaveInput}
+            onCheckedChange={setShouldHideTvBroSaveInput}
+            aria-label="Hide Add Link box in TV Bro"
+          />
         </SettingsRow>
       </SettingsList>
     </SettingsPanel>

@@ -165,6 +165,35 @@ Use `--no-usage` for repeated plugin testing without advancing account usage
 counters. Omit it to test the normal daily and monthly limits. The global
 extraction safety limit remains enabled in both modes.
 
+## Test TVBro-specific UI
+
+Install the [User-Agent Switcher and Manager browser extension](https://github.com/ray-lothian/UserAgent-Switcher/)
+to test TVBro-specific UI without an Android TV. Configure it to use TV Bro's
+legacy user agent:
+
+```text
+Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Mobile Safari/537.36
+```
+
+Lynvo also checks for TV Bro's JavaScript bridge so that the user agent alone
+cannot accidentally enable the TV interface. Open Lynvo on a route other than
+`/save`, then run this in the browser's developer console:
+
+```js
+Object.defineProperty(window, "TVBro", {
+  configurable: true,
+  value: {},
+})
+document.documentElement.setAttribute(
+  "data-lynvo-client-profile",
+  "tvbro-android-tv"
+)
+```
+
+Navigate to `/save` using Lynvo's Save link without reloading the page. A full
+page reload clears the simulated bridge, so repeat the console setup after a
+reload. Remove the user-agent override when testing the standard browser UI.
+
 Workspace dependencies use `workspace:*`; shared third-party versions belong
 in the root `pnpm-workspace.yaml` catalog. Do not upgrade TypeScript beyond the
 version supported by React Router.

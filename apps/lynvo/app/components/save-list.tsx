@@ -9,8 +9,19 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/ui/spinner"
+import {
+  shouldHideSaveInput,
+  useIsTvBroAndroidTv,
+  useShouldHideTvBroSaveInput,
+} from "~/features/site/settings/tvbro-save-input-preference"
 
 const SaveList = () => {
+  const isTvBroAndroidTv = useIsTvBroAndroidTv()
+  const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
+  const isSaveInputHidden = shouldHideSaveInput(
+    isTvBroAndroidTv,
+    shouldHideTvBroSaveInput
+  )
   const {
     links,
     setCurrentPage,
@@ -66,7 +77,7 @@ const SaveList = () => {
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
     >
-      {!isFolderRoute && (
+      {!isFolderRoute && !isSaveInputHidden && (
         <div className="w-full">
           <LinkInputSection
             url={input.url}
