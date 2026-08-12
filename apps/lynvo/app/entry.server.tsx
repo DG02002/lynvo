@@ -2,6 +2,7 @@ import type { EntryContext, RouterContextProvider } from "react-router"
 import { ServerRouter } from "react-router"
 import { isbot } from "isbot"
 import { renderToReadableStream } from "react-dom/server"
+import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
 import { createContentSecurityPolicy } from "~/lib/content-security-policy"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 
@@ -9,13 +10,10 @@ const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes))
 const NEXT_THEMES_BOOTSTRAP_HASH =
   "gb6dNSVZKu5ARVoUjTW1x8JnToWeIcP2K0lB6J49wPA="
 
-const getThemeBootstrapHash = async () =>
+const getInlineScriptHash = async (script: string) =>
   toBase64(
     new Uint8Array(
-      await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(THEME_BOOTSTRAP_SCRIPT)
-      )
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script))
     )
   )
 
@@ -29,28 +27,30 @@ export default async function handleRequest(
   let shellRendered = false
   const userAgent = request.headers.get("user-agent")
   const cspNonce = crypto.randomUUID()
-  const [themeBootstrapHash, body] = await Promise.all([
-    getThemeBootstrapHash(),
-    renderToReadableStream(
-      <ServerRouter
-        context={routerContext}
-        url={request.url}
-        nonce={cspNonce}
-      />,
-      {
-        nonce: cspNonce,
-        onError(error: unknown) {
-          responseStatusCode = 500
-          // Log streaming rendering errors from inside the shell.  Don't log
-          // errors encountered during initial shell rendering since they'll
-          // reject and get logged in handleDocumentRequest.
-          if (shellRendered) {
-            console.error(error)
-          }
-        },
-      }
-    ),
-  ])
+  const [clientProfileBootstrapHash, themeBootstrapHash, body] =
+    await Promise.all([
+      getInlineScriptHash(CLIENT_PROFILE_BOOTSTRAP_SCRIPT),
+      getInlineScriptHash(THEME_BOOTSTRAP_SCRIPT),
+      renderToReadableStream(
+        <ServerRouter
+          context={routerContext}
+          url={request.url}
+          nonce={cspNonce}
+        />,
+        {
+          nonce: cspNonce,
+          onError(error: unknown) {
+            responseStatusCode = 500
+            // Log streaming rendering errors from inside the shell.  Don't log
+            // errors encountered during initial shell rendering since they'll
+            // reject and get logged in handleDocumentRequest.
+            if (shellRendered) {
+              console.error(error)
+            }
+          },
+        }
+      ),
+    ])
   shellRendered = true
 
   // Ensure requests from bots and SPA Mode renders wait for all content to load before responding
@@ -70,6 +70,7 @@ export default async function handleRequest(
   responseHeaders.set(
     "Content-Security-Policy",
     createContentSecurityPolicy(request.url, import.meta.env.DEV, cspNonce, [
+      clientProfileBootstrapHash,
       themeBootstrapHash,
       NEXT_THEMES_BOOTSTRAP_HASH,
     ])

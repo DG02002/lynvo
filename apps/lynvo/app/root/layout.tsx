@@ -7,6 +7,7 @@ import {
 } from "react-router"
 
 import type * as React from "react"
+import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 import type { loader } from "../root"
 import { RouteSeoMetadata } from "./route-seo-metadata"
@@ -33,6 +34,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: CLIENT_PROFILE_BOOTSTRAP_SCRIPT,
+          }}
+        />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
         {csrfToken && <meta name="csrf-token" content={csrfToken} />}
         {user && <meta name="lynvo-user-id" content={user.sub} />}

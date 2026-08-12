@@ -135,6 +135,14 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+html[data-lynvo-client-profile="tvbro-android-tv"]
+  [data-slot="alert-dialog-overlay"],
+html[data-lynvo-client-profile="tvbro-android-tv"]
+  [data-slot="dialog-overlay"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 @keyframes page-fade {
   from {
     opacity: 0;

@@ -1,3 +1,9 @@
+import {
+  getCurrentClientProfile,
+  TVBRO_ANDROID_TV_PROFILE,
+  type ClientProfile,
+} from "~/lib/client-profile"
+
 const detectBrowser = (userAgent: string) => {
   if (/SamsungBrowser\//i.test(userAgent)) {
     return "Samsung Internet"
@@ -61,8 +67,12 @@ const detectOperatingSystem = (userAgent: string) => {
 }
 
 export const getBrowserDeviceName = (
-  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent
+  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent,
+  clientProfile: ClientProfile | null = getCurrentClientProfile(userAgent)
 ) => {
+  if (clientProfile === TVBRO_ANDROID_TV_PROFILE) {
+    return "TV Bro on Android TV"
+  }
   if (!userAgent.trim()) {
     return "Unnamed device"
   }

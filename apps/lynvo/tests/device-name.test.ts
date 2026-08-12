@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
 import { getBrowserDeviceName } from "~/lib/device-name"
+import {
+  LEGACY_TVBRO_MOBILE_USER_AGENT,
+  TVBRO_ANDROID_TV_PROFILE,
+} from "~/lib/client-profile"
 
 describe("browser device name", () => {
   it.each([
@@ -54,5 +58,14 @@ describe("browser device name", () => {
 
   it("uses a safe fallback when no user agent is available", () => {
     expect(getBrowserDeviceName("")).toBe("Unnamed device")
+  })
+
+  it("names the legacy TV Bro profile for sessions", () => {
+    expect(
+      getBrowserDeviceName(
+        LEGACY_TVBRO_MOBILE_USER_AGENT,
+        TVBRO_ANDROID_TV_PROFILE
+      )
+    ).toBe("TV Bro on Android TV")
   })
 })
