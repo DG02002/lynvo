@@ -93,4 +93,35 @@ describe("semantic saved-link metadata operations", () => {
     const metadata = JSON.parse(stored?.meta ?? "")
     expect(metadata.extraction.extractedLinks).toEqual([])
   })
+
+  it("clears cached mirrors when replacing source extraction", async () => {
+    const convex = createConvexTest()
+    const user = await insertTestUser(convex, "semantic-refresh-user")
+    const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
+    const { id } = await client.mutation(api.links.createOrUpdate, {
+      url: "https://source.example",
+      meta: createMetadataJson(),
+    })
+
+    await client.mutation(api.links.applyMetadataOperation, {
+      id,
+      operation: {
+        kind: "cacheMirrors",
+        lazyItemUrl: "https://lazy.example",
+        mirrorsJson: JSON.stringify([{ ...playableLink, size: "1 GB" }]),
+      },
+    })
+    await client.mutation(api.links.applyMetadataOperation, {
+      id,
+      operation: {
+        kind: "replaceExtraction",
+        expectedExtractionJson: JSON.stringify([playableLink]),
+        extractedLinksJson: JSON.stringify([playableLink]),
+      },
+    })
+
+    const stored = await convex.run((context) => context.db.get("links", id))
+    const metadata = JSON.parse(stored?.meta ?? "")
+    expect(metadata.playback.resolvedMirrors).toEqual({})
+  })
 })

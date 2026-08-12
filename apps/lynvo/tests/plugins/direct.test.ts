@@ -30,6 +30,7 @@ describe("direct media", () => {
       expect.objectContaining({
         url: "https://cdn.example.com/playable-item.mp4",
         label: "playable-item.mp4",
+        size: "100 B",
         status: "up",
         rangeRequest: "supported",
       }),
@@ -54,7 +55,16 @@ describe("direct media", () => {
   })
 
   it("keeps Direct Media links when byte range returns 200 and marks them unsupported", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(response(200))
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 200,
+        headers: {
+          "content-type": "video/mp4",
+          "content-disposition": 'attachment; filename="playable-item.mp4"',
+          "content-length": "203059200",
+        },
+      })
+    )
 
     const links = await directMedia.extract(
       "https://cdn.example.com/playable-item.mp4"
@@ -64,10 +74,31 @@ describe("direct media", () => {
       expect.objectContaining({
         url: "https://cdn.example.com/playable-item.mp4",
         label: "playable-item.mp4",
+        size: "193.65 MB",
         status: "up",
         rangeRequest: "unsupported",
       })
     )
+  })
+
+  it("does not mistake a partial response length for the file size", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 206,
+        headers: {
+          "content-type": "video/mp4",
+          "content-disposition": 'attachment; filename="playable-item.mp4"',
+          "content-length": "1",
+          "content-range": "bytes 0-0/*",
+        },
+      })
+    )
+
+    const links = await directMedia.extract(
+      "https://cdn.example.com/playable-item.mp4"
+    )
+
+    expect(links[0]).not.toHaveProperty("size")
   })
 
   it("does not treat Google cache revalidation headers as link expiry", async () => {

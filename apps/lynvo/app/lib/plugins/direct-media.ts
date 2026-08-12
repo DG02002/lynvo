@@ -8,6 +8,7 @@ import {
   createRangeHeaders,
   getContentDispositionFilename,
   getRangeRequestCapability,
+  getResponseFileSize,
   getResponseExpiry,
   getResponseFilename,
   getUrlFilename,
@@ -85,6 +86,7 @@ export const createDirectMediaModule = (
       if (filename !== "Unknown File") {
         assertSupportedFilename(filename)
       }
+      const size = getResponseFileSize(response.status, response.headers)
       return [
         {
           nodeKey: `direct:${url}`,
@@ -98,6 +100,7 @@ export const createDirectMediaModule = (
             response.status,
             response.headers
           ),
+          ...(size ? { size } : {}),
           ...getResponseExpiry(url, response.headers),
         },
       ]

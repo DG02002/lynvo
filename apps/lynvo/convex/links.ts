@@ -294,6 +294,7 @@ export const applyMetadataOperation = mutation({
         metadata.extraction.extractedLinks = extractedLinkSchema
           .array()
           .parse(JSON.parse(args.operation.extractedLinksJson))
+        metadata.playback.resolvedMirrors = {}
         break
       }
     }

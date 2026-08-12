@@ -146,7 +146,12 @@ describe("OneDrive source adapter", () => {
     const nodes = createOneDriveNodes(
       [
         { id: "folder-1", name: "Folder 1", folder: {} },
-        { id: "file-1", name: "playable-item.mp4", file: {} },
+        {
+          id: "file-1",
+          name: "playable-item.mp4",
+          file: {},
+          size: 203059200,
+        },
         { id: "image-1", name: "cover.jpg", file: {} },
       ],
       "/Collections",
@@ -159,7 +164,7 @@ describe("OneDrive source adapter", () => {
         label: "Folder 1",
         resolutionKind: "folder",
       },
-      { kind: "playable", label: "playable-item.mp4" },
+      { kind: "playable", label: "playable-item.mp4", size: "193.65 MB" },
     ])
   })
 
@@ -450,6 +455,40 @@ describe("Google Drive public files source adapter", () => {
     ])
   })
 
+  it("preserves a Drive resource key in the download URL", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Disposition": 'attachment; filename="legacy-video.m2ts"',
+          "Content-Range": "bytes 0-0/203059200",
+        },
+      })
+    )
+
+    const result = await extractGoogleDrivePublicFile({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl:
+            "https://drive.google.com/file/d/legacy-file-id/view?resourcekey=0-example-key",
+        },
+      },
+      targetUrl:
+        "https://drive.google.com/file/d/legacy-file-id/view?resourcekey=0-example-key",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    const expectedUrl =
+      "https://drive.usercontent.google.com/download?id=legacy-file-id&export=download&confirm=t&resourcekey=0-example-key"
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toBe(expectedUrl)
+    expect(result.nodes[0]).toMatchObject({
+      url: expectedUrl,
+      size: "193.65 MB",
+    })
+  })
+
   it("classifies an HTML download response as Google Drive rate limiting", async () => {
     const response = new Response("<html>quota exceeded</html>", {
       headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -468,5 +507,24 @@ describe("Google Drive public files source adapter", () => {
       "Google Drive file is rate-limited. Try again in 24 hours."
     )
     expect(cancel).toHaveBeenCalledOnce()
+  })
+
+  it("does not mistake a partial response length for the Drive file size", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Disposition": 'attachment; filename="example-video.mkv"',
+          "Content-Length": "1",
+          "Content-Range": "bytes 0-0/*",
+        },
+      })
+    )
+
+    await expect(
+      fetchGoogleDrivePublicFileMetadata(
+        "https://drive.usercontent.google.com/download?id=file-id"
+      )
+    ).resolves.toEqual({ filename: "example-video.mkv" })
   })
 })

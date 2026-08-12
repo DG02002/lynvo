@@ -14,6 +14,7 @@ import type { PluginAdapterOptions } from "../plugin-catalog"
 import { createPluginResponseMetadata } from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
+import { formatFileSize } from "./file-size"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
@@ -26,6 +27,7 @@ export interface OneDriveItem {
   id: string
   folder?: unknown
   file?: unknown
+  size?: string | number
 }
 
 export interface OneDriveApiResponse {
@@ -110,6 +112,7 @@ export const createOneDriveNodes = (
       return []
     }
 
+    const size = formatFileSize(item.size)
     const fullPath = currentPath.endsWith("/")
       ? currentPath + item.name
       : `${currentPath}/${item.name}`
@@ -124,6 +127,7 @@ export const createOneDriveNodes = (
         id: item.id,
         label: item.name,
         url: playableUrl.toString(),
+        ...(size ? { size } : {}),
         status: "unknown" as const,
       },
     ]

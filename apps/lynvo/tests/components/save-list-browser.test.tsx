@@ -285,11 +285,13 @@ describe("SaveListBrowser", () => {
               url: `${lazyItemUrl}/route-alpha`,
               label: "Play from Source Route Alpha",
               type: "file",
+              size: "1.2 GB",
             },
             {
               url: `${lazyItemUrl}/route-beta`,
               label: "Play from Source Route Beta Server",
               type: "file",
+              size: "1.4 GB",
             },
             {
               url: `${lazyItemUrl}/route-gamma`,
@@ -366,6 +368,8 @@ describe("SaveListBrowser", () => {
     expect(
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
+    expect(screen.getByText("1.2 GB")).toBeVisible()
+    expect(screen.getByText("1.4 GB")).toBeVisible()
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -438,6 +442,41 @@ describe("SaveListBrowser", () => {
       item.url,
       "https://resolver-beta.example/resolution-failure"
     )
+  })
+
+  it("shows the size of a single playable Google Drive item", () => {
+    const directLink: ExtractedLink = {
+      id: "google-drive-file",
+      url: "https://drive.usercontent.google.com/download?id=google-drive-file",
+      label: "Dolby ATMOS Helicopter.m2ts",
+      type: "file",
+      mediaNodeKind: "playable",
+      size: "193.65 MB",
+    }
+    const item: LinkViewItem = {
+      url: "https://drive.google.com/file/d/google-drive-file/view",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Google Drive" },
+        extraction: { extractedLinks: [directLink] },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(screen.getByText("193.65 MB")).toBeVisible()
   })
 
   it("renders an opened Direct Media root item with the opened background", () => {

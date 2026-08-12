@@ -23,7 +23,7 @@ export const useResolvableContainerState = ({
   )
   const [isExpanded, setIsExpanded] = useState(false)
   const [didResolutionFail, setDidResolutionFail] = useState(false)
-  const displaySize = link.size || mirrors.find((mirror) => mirror.size)?.size
+  const displaySize = link.size
 
   const resolveLink = async (bypassCache = false) => {
     setDidResolutionFail(false)

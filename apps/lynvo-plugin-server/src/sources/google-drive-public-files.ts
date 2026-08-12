@@ -35,11 +35,17 @@ export const extractGoogleDriveFileId = (value: string | URL): string => {
   return decodeURIComponent(fileId)
 }
 
-export const createGoogleDriveDownloadUrl = (fileId: string): string => {
+export const createGoogleDriveDownloadUrl = (
+  fileId: string,
+  resourceKey?: string
+): string => {
   const downloadUrl = new URL("https://drive.usercontent.google.com/download")
   downloadUrl.searchParams.set("id", fileId)
   downloadUrl.searchParams.set("export", "download")
   downloadUrl.searchParams.set("confirm", "t")
+  if (resourceKey) {
+    downloadUrl.searchParams.set("resourcekey", resourceKey)
+  }
   return downloadUrl.toString()
 }
 
@@ -98,7 +104,9 @@ export const fetchGoogleDrivePublicFileMetadata = async (
     ) ?? "Google Drive file"
   const totalBytes =
     /\/(\d+)$/.exec(response.headers.get("content-range") ?? "")?.[1] ??
-    response.headers.get("content-length") ??
+    (response.status === 200
+      ? response.headers.get("content-length")
+      : undefined) ??
     undefined
   return { filename, size: formatFileSize(totalBytes) }
 }
@@ -237,8 +245,10 @@ export const extractGoogleDrivePublicFile = async ({
   plugin,
   publicAssetOrigin,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
-  const fileId = extractGoogleDriveFileId(targetUrl)
-  const downloadUrl = createGoogleDriveDownloadUrl(fileId)
+  const sourceUrl = new URL(targetUrl)
+  const fileId = extractGoogleDriveFileId(sourceUrl)
+  const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
+  const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
   return {
     plugin: createPluginResponseMetadata(

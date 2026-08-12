@@ -306,6 +306,11 @@ const ResolvedMirrorRows = ({
               value={mirror.label}
               className="min-w-0 flex-1 text-sm md:text-lg"
             />
+            {mirror.size && (
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {mirror.size}
+              </span>
+            )}
           </Button>
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
             <LinkActionsDotMenu
@@ -789,6 +794,14 @@ export const SaveListBrowser = ({
                       <span className="min-w-0 truncate">
                         {view.sourceName || view.pluginName || item.url}
                       </span>
+                      {directLink?.size && (
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <span aria-hidden="true" className="hidden md:inline">
+                            ·
+                          </span>
+                          <span>{directLink.size}</span>
+                        </span>
+                      )}
                       {!directLink && (
                         <span className="flex items-center gap-2 md:hidden">
                           <span className="md:hidden">

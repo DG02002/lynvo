@@ -3,7 +3,11 @@ import type {
   ExpirySource,
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { MILLISECONDS_PER_SECOND } from "~/lib/constants"
+import {
+  BYTES_PER_KIBIBYTE,
+  FILE_SIZE_DECIMAL_PLACES,
+  MILLISECONDS_PER_SECOND,
+} from "~/lib/constants"
 
 export const DIRECT_LINK_EXTRACT_TIMEOUT_MS = 8000
 export const DIRECT_LINK_FETCH_TIMEOUT_MS = 10000
@@ -12,7 +16,9 @@ const REGEX_FILENAME_STAR = /filename\*=UTF-8''([^;]+)/i
 const REGEX_FILENAME_QUOTED = /filename="?([^"]+)"?/i
 const REGEX_AMZ_DATE = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/
 const REGEX_MAX_AGE = /(?:^|,)\s*max-age\s*=\s*"?(\d+)/i
+const REGEX_CONTENT_RANGE_TOTAL = /\/(\d+)$/
 const MILLISECONDS_EPOCH_THRESHOLD = 1_000_000_000_000
+const FILE_SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"]
 
 export const DIRECT_LINK_BASE_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; SendLinkToJustPlayer/1.0)",
@@ -101,6 +107,46 @@ export const getRangeRequestCapability = (
     return "unsupported"
   }
   return "unknown"
+}
+
+const formatFileSize = (bytes: string | undefined): string | undefined => {
+  if (!bytes) {
+    return undefined
+  }
+  let value = Number(bytes)
+  if (!Number.isFinite(value) || value < 0) {
+    return undefined
+  }
+  let unitIndex = 0
+  while (
+    value >= BYTES_PER_KIBIBYTE &&
+    unitIndex < FILE_SIZE_UNITS.length - 1
+  ) {
+    value /= BYTES_PER_KIBIBYTE
+    unitIndex += 1
+  }
+  const formattedValue =
+    unitIndex === 0
+      ? String(value)
+      : value
+          .toFixed(FILE_SIZE_DECIMAL_PLACES)
+          .replace(/\.0+$|(?<=\.[0-9])0+$/, "")
+  return `${formattedValue} ${FILE_SIZE_UNITS[unitIndex]}`
+}
+
+export const getResponseFileSize = (
+  status: number,
+  headers: Headers
+): string | undefined => {
+  const contentRangeTotal = REGEX_CONTENT_RANGE_TOTAL.exec(
+    headers.get("content-range") ?? ""
+  )?.[1]
+  return formatFileSize(
+    contentRangeTotal ??
+      (status === 200
+        ? (headers.get("content-length") ?? undefined)
+        : undefined)
+  )
 }
 
 const parseAmazonDate = (value: string): number | undefined => {
