@@ -46,7 +46,10 @@ export const LinkSelectionHeader = ({
       )}
 
       {pageTitle && (
-        <DialogTitle className="text-base font-normal leading-tight text-foreground sm:text-lg">
+        <DialogTitle
+          aria-label={pageTitle}
+          className="text-base font-normal leading-tight text-foreground sm:text-lg"
+        >
           <FilenameText value={pageTitle} />
         </DialogTitle>
       )}

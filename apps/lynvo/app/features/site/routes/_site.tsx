@@ -9,15 +9,19 @@ export default function SiteLayout() {
   const location = useLocation()
   const normalizedPathname = location.pathname.replace(/\/+$/, "") || "/"
   const isInnerDocsRoute = normalizedPathname.startsWith("/docs/")
+  const isSaveFolderRoute = normalizedPathname.startsWith("/save/folder/")
 
   return (
     <>
       <RemoteCommandListener />
-      <Header />
-      <main data-site-content className="flex-1 pt-14 md:pt-16">
+      {!isSaveFolderRoute && <Header />}
+      <main
+        data-site-content
+        className={isSaveFolderRoute ? "flex-1 pt-0" : "flex-1 pt-14 md:pt-16"}
+      >
         <Outlet />
       </main>
-      {!isInnerDocsRoute && <Footer />}
+      {!isInnerDocsRoute && !isSaveFolderRoute && <Footer />}
       <ReceiverOverlay />
     </>
   )

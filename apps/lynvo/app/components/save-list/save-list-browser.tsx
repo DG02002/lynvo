@@ -1,6 +1,7 @@
-import type { ComponentProps } from "react"
+import { useState, type ComponentProps } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
+  ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Archive04Icon,
@@ -76,6 +77,38 @@ interface FolderTreeProps {
   onSelectFolder: (link: ExtractedLink, path: FolderLevel[]) => void
 }
 
+interface MobileFolderTreeToggleProps {
+  currentFolderLabel: string
+  isOpen: boolean
+  onToggle: () => void
+}
+
+const isVisibleTreeFolder = (link: ExtractedLink) =>
+  getMediaNodeInteractionState(link).isFolder && !isMirrorResolvable(link)
+
+const MobileFolderTreeToggle = ({
+  currentFolderLabel,
+  isOpen,
+  onToggle,
+}: MobileFolderTreeToggleProps) => (
+  <Button
+    variant="ghost"
+    className="h-auto min-h-11 w-full justify-start gap-3 rounded-lg px-0 text-left font-normal md:hidden"
+    aria-expanded={isOpen}
+    aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
+    onClick={onToggle}
+  >
+    <SaveListRowIcon icon={Folder02Icon} />
+    <span className="min-w-0 flex-1 truncate">{currentFolderLabel}</span>
+    <span className="flex size-9 shrink-0 items-center justify-center">
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        className={cn("size-4 transition-transform", isOpen && "rotate-180")}
+      />
+    </span>
+  </Button>
+)
+
 const SaveListRowIcon = ({
   icon,
   className,
@@ -89,7 +122,7 @@ const SaveListRowIcon = ({
       className
     )}
   >
-    <HugeiconsIcon icon={icon} />
+    <HugeiconsIcon icon={icon} className="size-6" />
   </span>
 )
 
@@ -103,50 +136,67 @@ const FolderTree = ({
   const renderFolders = (
     folderLinks: ExtractedLink[],
     parentPath: FolderLevel[]
-  ) =>
-    folderLinks.flatMap((link) => {
-      if (
-        !getMediaNodeInteractionState(link).isFolder ||
-        isMirrorResolvable(link)
-      ) {
-        return []
-      }
+  ) => {
+    const visibleFolderLinks = folderLinks.filter(isVisibleTreeFolder)
+    const activeFolderIndex = visibleFolderLinks.findIndex((link) =>
+      folderPath.some((folder) => folder.id === getLinkKey(link))
+    )
+
+    return visibleFolderLinks.map((link, index) => {
       const linkKey = getLinkKey(link)
       const path = [...parentPath, { id: linkKey, label: link.label }]
       const isCurrent = folderPath.at(-1)?.id === linkKey
       const isInPath = folderPath.some((folder) => folder.id === linkKey)
+      const isLastFolder = index === visibleFolderLinks.length - 1
+      const doesActiveBranchContinue = activeFolderIndex > index
 
-      return [
-        <div key={linkKey} className="flex min-w-0 flex-col gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
+      return (
+        <div key={linkKey} className="relative flex min-w-0 flex-col gap-1">
+          {!isLastFolder && (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-y-0 -left-3 w-px",
+                doesActiveBranchContinue ? "bg-sky-500" : "bg-border/60"
+              )}
+            />
+          )}
+          <div
             className={cn(
-              "h-auto min-h-9 w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-              isCurrent && "bg-accent text-accent-foreground"
+              "relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
+              isInPath || doesActiveBranchContinue
+                ? "before:bg-sky-500"
+                : "before:bg-border/60",
+              isInPath ? "after:bg-sky-500" : "after:bg-border/60"
             )}
-            aria-current={isCurrent ? "page" : undefined}
-            data-folder-state={getFolderVisualState(link, isInPath)}
-            onClick={() => onSelectFolder(link, path)}
           >
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
-              className={cn("shrink-0", isInPath && "rotate-90")}
-            />
-            <HugeiconsIcon
-              icon={getFolderIcon(link, isInPath)}
-              className="shrink-0"
-            />
-            <FilenameText value={link.label} className="w-0 min-w-0 flex-1" />
-          </Button>
-          {link.children?.some((child) => child.type === "folder") && (
-            <div className="ml-5 flex min-w-0 flex-col gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
+                isCurrent && "bg-accent text-accent-foreground"
+              )}
+              aria-current={isCurrent ? "page" : undefined}
+              data-folder-state={getFolderVisualState(link, isInPath)}
+              onClick={() => onSelectFolder(link, path)}
+            >
+              <HugeiconsIcon
+                icon={getFolderIcon(link, isInPath)}
+                className="shrink-0"
+              />
+              <FilenameText value={link.label} className="w-0 min-w-0 flex-1" />
+            </Button>
+          </div>
+          {link.children?.some(isVisibleTreeFolder) && (
+            <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
               {renderFolders(link.children, path)}
             </div>
           )}
-        </div>,
-      ]
+        </div>
+      )
     })
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
@@ -154,20 +204,16 @@ const FolderTree = ({
         variant="ghost"
         size="sm"
         className={cn(
-          "h-auto min-h-9 w-full justify-start gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
+          "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
           folderPath.length === 0 && "bg-accent text-accent-foreground"
         )}
         aria-current={folderPath.length === 0 ? "page" : undefined}
         onClick={onSelectRoot}
       >
-        <HugeiconsIcon
-          icon={ArrowRight01Icon}
-          className={cn("shrink-0", folderPath.length > 0 && "rotate-90")}
-        />
         <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
         <FilenameText value={rootLabel} className="w-0 min-w-0 flex-1" />
       </Button>
-      <div className="ml-5 flex min-w-0 flex-col gap-1">
+      <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
         {renderFolders(links, [])}
       </div>
     </div>
@@ -180,28 +226,39 @@ const FinderEmptyState = ({
   extractingItems,
   onExit,
 }: FinderBrowserProps) => (
-  <section className="h-svh overflow-hidden bg-background">
-    <header className="flex h-16 items-center gap-3 border-b bg-background px-4 py-3">
-      <Button
-        variant="ghost"
-        className="hover:bg-transparent hover:text-foreground"
-        onClick={onExit}
+  <section className="flex h-svh flex-col overflow-hidden bg-background">
+    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+      <div className="contents md:block md:h-full md:border-r">
+        <Button
+          variant="ghost"
+          className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
+          onClick={onExit}
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
+          Back
+        </Button>
+      </div>
+      <h1
+        aria-label={getItemTitle(item)}
+        className="min-w-0 flex-1 text-base font-normal md:flex md:w-full md:items-center md:px-4 md:py-3"
       >
-        <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-        Back
-      </Button>
-      <h1 className="min-w-0 flex-1 line-clamp-2 break-words text-base font-normal md:text-xl">
-        {getItemTitle(item)}
+        <FilenameText
+          value={getItemTitle(item)}
+          clampClassName="line-clamp-1"
+          className="w-full"
+        />
       </h1>
-      <LinkItemMenu
-        item={item}
-        actions={actions}
-        showRemove
-        onRemoved={onExit}
-        isRefreshing={extractingItems.has(item.url)}
-      />
+      <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+        <LinkItemMenu
+          item={item}
+          actions={actions}
+          showRemove
+          onRemoved={onExit}
+          isRefreshing={extractingItems.has(item.url)}
+        />
+      </div>
     </header>
-    <div className="flex h-[calc(100svh-4rem)] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
         <p className="text-sm text-muted-foreground">
@@ -375,6 +432,7 @@ const FinderBrowser = ({
   extractingItems,
   onExit,
 }: FinderBrowserProps) => {
+  const [isMobileFolderTreeOpen, setIsMobileFolderTreeOpen] = useState(false)
   const {
     rootLinks,
     folderPath,
@@ -384,6 +442,7 @@ const FinderBrowser = ({
     openLink,
     selectRoot,
   } = useFinderBrowserState({ item, actions })
+  const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
 
   if (rootLinks.length === 0) {
     return (
@@ -398,43 +457,78 @@ const FinderBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3">
-        <Button
-          variant="ghost"
-          className="hover:bg-transparent hover:text-foreground"
-          onClick={onExit}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-          Back
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="line-clamp-2 break-words text-base font-normal md:text-xl">
-            {getItemTitle(item)}
+      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+        <div className="contents md:block md:h-full md:border-r">
+          <Button
+            variant="ghost"
+            className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
+            onClick={onExit}
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
+            Back
+          </Button>
+        </div>
+        <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
+          <h1
+            aria-label={getItemTitle(item)}
+            className="w-full min-w-0 text-base font-normal"
+          >
+            <FilenameText
+              value={getItemTitle(item)}
+              clampClassName="line-clamp-1"
+              className="w-full"
+            />
           </h1>
         </div>
-        <LinkItemMenu
-          item={item}
-          actions={actions}
-          showRemove
-          onRemoved={onExit}
-          isRefreshing={extractingItems.has(item.url)}
-        />
+        <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+          <LinkItemMenu
+            item={item}
+            actions={actions}
+            showRemove
+            onRemoved={onExit}
+            isRefreshing={extractingItems.has(item.url)}
+          />
+        </div>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
-        <aside className="min-w-0 overflow-x-hidden border-b p-3 md:border-r md:border-b-0">
-          <FolderTree
-            rootLabel={getItemTitle(item)}
-            folderPath={folderPath}
-            links={rootLinks}
-            onSelectRoot={selectRoot}
-            onSelectFolder={(link, path) => void openFolder(link, path)}
+        <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+          <MobileFolderTreeToggle
+            currentFolderLabel={currentFolderLabel}
+            isOpen={isMobileFolderTreeOpen}
+            onToggle={() =>
+              setIsMobileFolderTreeOpen(
+                (currentIsMobileFolderTreeOpen) =>
+                  !currentIsMobileFolderTreeOpen
+              )
+            }
           />
+          <div
+            className={cn(
+              "mt-2 max-h-[40svh] overflow-y-auto pr-1",
+              !isMobileFolderTreeOpen && "hidden",
+              "md:mt-0 md:block md:max-h-none md:overflow-visible md:pr-0"
+            )}
+          >
+            <FolderTree
+              rootLabel={getItemTitle(item)}
+              folderPath={folderPath}
+              links={rootLinks}
+              onSelectRoot={() => {
+                selectRoot()
+                setIsMobileFolderTreeOpen(false)
+              }}
+              onSelectFolder={(link, path) => {
+                void openFolder(link, path)
+                setIsMobileFolderTreeOpen(false)
+              }}
+            />
+          </div>
         </aside>
 
         <div
           ref={contentRef}
-          className="min-h-0 overflow-y-auto overscroll-contain p-2"
+          className="min-h-0 overflow-y-auto overscroll-contain"
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
@@ -504,10 +598,8 @@ const FinderBrowser = ({
                     <span className="min-w-0 flex-1">
                       <FilenameText
                         value={link.label}
-                        className={cn(
-                          "block text-sm md:text-lg",
-                          isExpired && "line-through"
-                        )}
+                        className="block text-sm md:text-lg"
+                        textClassName={isExpired ? "line-through" : undefined}
                       />
                       {!link.opened && !isExpired && (
                         <NewBadge className="mt-2 md:hidden" />
@@ -714,10 +806,10 @@ export const SaveListBrowser = ({
                   <span className="min-w-0 flex-1">
                     <FilenameText
                       value={directLink?.label || getItemTitle(item)}
-                      className={cn(
-                        "block text-sm font-normal md:text-lg",
-                        isDirectLinkExpired && "line-through"
-                      )}
+                      className="block text-sm font-normal md:text-lg"
+                      textClassName={
+                        isDirectLinkExpired ? "line-through" : undefined
+                      }
                     />
                     <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
                       <span className="min-w-0 truncate">

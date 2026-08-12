@@ -8,6 +8,7 @@ import { cn } from "~/lib/utils"
 import { useSaveListFullscreen } from "~/components/save-list/use-save-list-fullscreen"
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
+import { Spinner } from "~/components/ui/spinner"
 
 const SaveList = () => {
   const {
@@ -44,12 +45,25 @@ const SaveList = () => {
     [links]
   )
 
+  if (isFolderRoute && isHydrating) {
+    return (
+      <div
+        className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"
+        role="status"
+        aria-label="Loading saved folder…"
+      >
+        <Spinner aria-hidden="true" />
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
-        "flex min-h-[calc(100vh-4rem)] w-full flex-col gap-6 overflow-x-hidden px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14",
-        isFolderRoute &&
-          "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background p-0 md:p-0"
+        "flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-x-hidden",
+        isFolderRoute
+          ? "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background"
+          : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
     >
       {!isFolderRoute && (
