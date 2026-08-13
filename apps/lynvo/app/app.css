@@ -143,7 +143,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   backdrop-filter: none;
 }
 
-@media (orientation: landscape) and (min-width: 40rem) {
+@media (orientation: landscape) {
   html[data-lynvo-client-profile="tvbro-android-tv"] [data-device-sign-in-page],
   html[data-lynvo-client-profile="tvbro-android-tv"] [data-auth-form-page] {
     position: relative;
@@ -211,6 +211,11 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   html[data-lynvo-client-profile="tvbro-android-tv"]
     [data-device-sign-in-policies] {
     display: none;
+  }
+
+  html[data-lynvo-client-profile="tvbro-android-tv"] [data-device-login-state] {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   html[data-lynvo-client-profile="tvbro-android-tv"] [data-auth-form-intro] {

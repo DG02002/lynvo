@@ -1,4 +1,5 @@
 import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
+import { createSessionCookie } from "../app/lib/auth-cookie"
 import {
   SESSION_ABSOLUTE_LIFETIME_MS,
   SESSION_COOKIE_MAX_AGE_SECONDS,
@@ -144,8 +145,7 @@ export interface AuthSessionModule {
   readonly restoreCookie: (sessionId: string) => string
 }
 
-const createSessionCookie = (sessionId: string): string =>
-  `${WORKER_SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_COOKIE_MAX_AGE_SECONDS}`
+export { createSessionCookie }
 
 const createExpiredSessionCookie = (): string =>
   `${WORKER_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`

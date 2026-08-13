@@ -196,6 +196,7 @@ export function DeviceLoginQr() {
   if (phase === "loading") {
     return (
       <div
+        data-device-login-state="loading"
         className="flex items-center justify-center gap-2 p-10"
         role="status"
       >
@@ -207,7 +208,10 @@ export function DeviceLoginQr() {
 
   if (phase === "expired" || phase === "error") {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <div
+        data-device-login-state={phase}
+        className="flex flex-col items-center justify-center gap-4 p-6 text-center"
+      >
         <p className="text-destructive">
           {phase === "expired"
             ? "Code expired. Generate a new code."

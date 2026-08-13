@@ -1,4 +1,6 @@
 import { Schema } from "effect"
+import { WORKER_SESSION_COOKIE_NAME } from "./constants"
+import { SESSION_COOKIE_MAX_AGE_SECONDS } from "../../workers/constants"
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -97,6 +99,25 @@ export const getCookieValue = (
   }
   return undefined
 }
+
+/**
+ * Builds a Set-Cookie string for the opaque session ID.
+ * Pass `maxAgeSeconds` to honour the session's remaining absolute TTL rather
+ * than issuing a fresh full-lifetime cookie (important for cookie-refresh on
+ * every authenticated response). Defaults to SESSION_COOKIE_MAX_AGE_SECONDS
+ * (30 days) when no TTL is available, e.g. during initial sign-in.
+ *
+ * Note: `maxAgeSeconds` may be 0 only when the session's stored `expiresAt`
+ * is already in the past. In practice the Durable Object `read` rejects expired
+ * sessions (HTTP 401 → kind: "expired") before we reach this call, so a 0
+ * value is a safe-but-unreachable edge case — it immediately clears the cookie,
+ * which is the right behaviour if it ever did occur.
+ */
+export const createSessionCookie = (
+  sessionId: string,
+  maxAgeSeconds = SESSION_COOKIE_MAX_AGE_SECONDS
+): string =>
+  `${WORKER_SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}`
 
 export const normalizeReturnTo = (value: string | undefined): string => {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {

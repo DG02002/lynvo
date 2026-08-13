@@ -16,6 +16,7 @@ export interface SessionResult {
   readonly kind: "authenticated" | "unauthenticated" | "unavailable"
   readonly user: SessionUser | null
   readonly accessToken?: string
+  readonly expiresAt?: number
 }
 
 export interface AuthSessionServiceContract {
@@ -57,6 +58,7 @@ export class AuthSessionService extends Context.Service<
           const validate = (accessToken: string) =>
             convex.query(api.users.getSessionUser, {}, { accessToken })
           let accessToken = storedSession.session.accessToken
+          let sessionExpiresAt = storedSession.session.expiresAt
           let user = yield* Effect.option(validate(accessToken))
           if (user._tag === "None" || user.value === null) {
             const rotation = yield* Effect.promise(() =>
@@ -94,6 +96,7 @@ export class AuthSessionService extends Context.Service<
               }
             }
             accessToken = rotatedSession.session.accessToken
+            sessionExpiresAt = rotatedSession.session.expiresAt
             user = yield* Effect.option(validate(accessToken))
           }
 
@@ -121,6 +124,7 @@ export class AuthSessionService extends Context.Service<
               sid: authenticatedUser.sessionId,
             },
             accessToken,
+            expiresAt: sessionExpiresAt,
           }
         }
       )

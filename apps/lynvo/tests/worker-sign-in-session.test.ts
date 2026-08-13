@@ -87,6 +87,7 @@ describe("Worker sign-in session HTTP behavior", () => {
     expect(cookie).toContain("HttpOnly")
     expect(cookie).toContain("Secure")
     expect(cookie).toContain("SameSite=Lax")
+    expect(response.headers.get("Cache-Control")).toBe("no-store")
     expect(cookie).not.toContain(convexAccessToken)
     expect(cookie).not.toContain("convex-refresh-token")
     await expect(response.json()).resolves.toEqual({ signingIn: true })

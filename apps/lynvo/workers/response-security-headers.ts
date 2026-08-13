@@ -17,4 +17,7 @@ export const responseSecurityHeaders =
       "Permissions-Policy",
       "camera=(), microphone=(), geolocation=()"
     )
+    if (context.req.path.startsWith("/api/")) {
+      context.res.headers.set("Cache-Control", "no-store")
+    }
   }

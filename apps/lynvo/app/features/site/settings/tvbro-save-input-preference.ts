@@ -40,10 +40,10 @@ export const useShouldHideTvBroSaveInput = () =>
     () => true
   )
 
-const subscribeToClientProfile = () => () => undefined
-
 const getIsTvBroAndroidTv = () =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
+
+const subscribeToClientProfile = () => () => undefined
 
 export const useIsTvBroAndroidTv = () =>
   useSyncExternalStore(

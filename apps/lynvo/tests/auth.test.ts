@@ -12,6 +12,7 @@ import {
   validatePassword,
   validateUsername,
 } from "../app/lib/auth-policy"
+import { responseWithSession, requireGuestOrRedirect } from "../app/lib/auth"
 import { AuthSessionService } from "../app/lib/effect/services/AuthSessionService"
 import { ConvexService } from "../app/lib/effect/services/ConvexService"
 import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
@@ -94,6 +95,110 @@ describe("auth transaction helpers", () => {
       },
     })
     expect(getCookieValue(request, "exact-cookie")).toBe("access token")
+  })
+})
+
+describe("session-bearing responses", () => {
+  it("prevents the browser from restoring stale session markup", () => {
+    const response = responseWithSession(
+      { user: null },
+      { user: null },
+      new Request("https://lynvo.test")
+    )
+
+    expect(new Headers(response.init?.headers).get("Cache-Control")).toBe(
+      "no-store"
+    )
+  })
+
+  it("refreshes an authenticated opaque session cookie on document responses", () => {
+    const sessionExpiresAt = Date.now() + 60_000
+    const response = responseWithSession(
+      { user: { sub: "users:123", username: "darshan", sid: "sessions:456" } },
+      {
+        user: { sub: "users:123", username: "darshan", sid: "sessions:456" },
+        sessionExpiresAt,
+      },
+      new Request("https://lynvo.test/save", {
+        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
+      }),
+      { headers: { "Set-Cookie": "csrf-token=csrf-value" } }
+    )
+
+    const cookie = new Headers(response.init?.headers).get("Set-Cookie")
+    expect(cookie).toContain("csrf-token=csrf-value")
+    expect(cookie).toContain(`${WORKER_SESSION_COOKIE_NAME}=opaque-session-id`)
+    const maxAgeSeconds = Number(cookie?.match(/Max-Age=(\d+)/)?.[1])
+    expect(maxAgeSeconds).toBeGreaterThanOrEqual(59)
+    expect(maxAgeSeconds).toBeLessThanOrEqual(60)
+  })
+
+  it("does not create a session cookie for anonymous document responses", () => {
+    const response = responseWithSession(
+      { user: null },
+      { user: null },
+      new Request("https://lynvo.test/save")
+    )
+
+    expect(new Headers(response.init?.headers).get("Set-Cookie")).toBeNull()
+  })
+})
+
+describe("requireGuestOrRedirect", () => {
+  const authenticatedSession = {
+    user: { sub: "users:123", username: "darshan", sid: "sessions:456" },
+  }
+  const anonymousSession = { user: null }
+
+  it("redirects an authenticated user to the ?redirect= destination", () => {
+    expect(() =>
+      requireGuestOrRedirect(
+        authenticatedSession,
+        new Request("https://lynvo.test/auth/log-in?redirect=%2Fsave")
+      )
+    ).toThrow()
+
+    try {
+      requireGuestOrRedirect(
+        authenticatedSession,
+        new Request("https://lynvo.test/auth/log-in?redirect=%2Fsave")
+      )
+    } catch (response: any) {
+      expect(response.headers.get("Location")).toBe("/save")
+    }
+  })
+
+  it("redirects an authenticated user to /save when no valid redirect param is present", () => {
+    try {
+      requireGuestOrRedirect(
+        authenticatedSession,
+        new Request("https://lynvo.test/auth/log-in")
+      )
+    } catch (response: any) {
+      expect(response.headers.get("Location")).toBe("/save")
+    }
+  })
+
+  it("blocks an open-redirect attempt and falls back to /save", () => {
+    try {
+      requireGuestOrRedirect(
+        authenticatedSession,
+        new Request(
+          "https://lynvo.test/auth/log-in?redirect=https%3A%2F%2Fattacker.test"
+        )
+      )
+    } catch (response: any) {
+      expect(response.headers.get("Location")).toBe("/save")
+    }
+  })
+
+  it("does nothing for an unauthenticated user", () => {
+    expect(() =>
+      requireGuestOrRedirect(
+        anonymousSession,
+        new Request("https://lynvo.test/auth/log-in")
+      )
+    ).not.toThrow()
   })
 })
 
