@@ -26,7 +26,7 @@ export const useClipboardUrl = ({
     clipboardUrl && !savedUrls.has(clipboardUrl) ? clipboardUrl : null
 
   const readClipboard = React.useCallback(async () => {
-    if (typeof navigator === "undefined" || !navigator.clipboard) {
+    if (globalThis.navigator === undefined || !navigator.clipboard) {
       setClipboardPermission("unsupported")
       return
     }
@@ -70,7 +70,7 @@ export const useClipboardUrl = ({
 
   // react-doctor-disable-next-line react-doctor/effect-needs-cleanup -- the asynchronous listener is removed by this effect's teardown
   React.useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.clipboard) {
+    if (globalThis.navigator === undefined || !navigator.clipboard) {
       setClipboardPermission("unsupported")
       return
     }
@@ -84,6 +84,7 @@ export const useClipboardUrl = ({
     let permissionChangeHandler: (() => void) | undefined
     let isActive = true
 
+    // SAFETY: Chromium implements clipboard-read, but the shared DOM PermissionName union omits it.
     void navigator.permissions
       .query({ name: "clipboard-read" as PermissionName })
       .then((status) => {

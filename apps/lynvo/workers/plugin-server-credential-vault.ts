@@ -5,6 +5,7 @@ import {
   unsealRecord,
 } from "../app/lib/security/sealed-record"
 import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
+import { z } from "zod"
 
 interface EncryptedPluginServerCredential extends SealedRecord {}
 
@@ -18,21 +19,21 @@ type CredentialVaultEnvironment = Partial<
 >
 
 const UNAVAILABLE_RESPONSE = { error: "Credential protection is unavailable." }
+const credentialContextSchema = z.object({
+  userId: z.string().min(1),
+  pluginServerId: z.string().min(1),
+})
+const encryptCredentialPayloadSchema = credentialContextSchema.extend({
+  apiKey: z.string().min(1),
+})
 
 const additionalData = ({ userId, pluginServerId }: CredentialContext) =>
   new TextEncoder().encode(
     `plugin-server\u0000v${SEALED_RECORD_KEY_VERSION}\u0000${userId}\u0000${pluginServerId}`
   )
 
-const isContext = (value: unknown): value is CredentialContext =>
-  typeof value === "object" &&
-  value !== null &&
-  "userId" in value &&
-  "pluginServerId" in value &&
-  typeof value.userId === "string" &&
-  typeof value.pluginServerId === "string" &&
-  value.userId.length > 0 &&
-  value.pluginServerId.length > 0
+const isContext = <Value>(value: Value): value is Value & CredentialContext =>
+  credentialContextSchema.safeParse(value).success
 
 export class PluginServerCredentialVault implements DurableObject {
   constructor(
@@ -59,18 +60,15 @@ export class PluginServerCredentialVault implements DurableObject {
     }
     const pathname = new URL(request.url).pathname
     if (pathname === "/encrypt") {
-      if (
-        !("apiKey" in payload) ||
-        typeof payload.apiKey !== "string" ||
-        payload.apiKey.length === 0
-      ) {
+      const encryptPayload = encryptCredentialPayloadSchema.safeParse(payload)
+      if (!encryptPayload.success) {
         return new Response(null, { status: 400 })
       }
       try {
         const credential = await sealRecord({
           encodedKey,
-          additionalData: additionalData(payload),
-          plaintext: new TextEncoder().encode(payload.apiKey),
+          additionalData: additionalData(encryptPayload.data),
+          plaintext: new TextEncoder().encode(encryptPayload.data.apiKey),
         })
         return Response.json(
           credential satisfies EncryptedPluginServerCredential

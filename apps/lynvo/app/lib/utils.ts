@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getCsrfToken() {
-  if (typeof document !== "undefined") {
+  if (globalThis.document !== undefined) {
     const meta = document.querySelector('meta[name="csrf-token"]')
     if (meta) {
       return meta.getAttribute("content") || ""

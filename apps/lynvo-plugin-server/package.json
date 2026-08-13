@@ -20,7 +20,8 @@
     "@dg02002/lynvo-plugin-server-protocol": "workspace:*",
     "cheerio": "catalog:",
     "evlog": "^2.25.0",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.0",

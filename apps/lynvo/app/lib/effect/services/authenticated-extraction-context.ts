@@ -3,7 +3,7 @@ import { api } from "../../../../convex/_generated/api"
 import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
 import { signCredentialReadToken } from "../../../lib/auth-gateway"
 import type { ConvexError, CredentialVaultError } from "../errors"
-import type { ConvexServiceShape } from "./ConvexService"
+import type { ConvexServiceContract } from "./ConvexService"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import type { RegisteredPluginServer } from "./extraction-types"
 
@@ -15,7 +15,7 @@ export interface AuthenticatedExtractionContext {
 export const loadAuthenticatedExtractionContext = Effect.fn(
   "AuthenticatedExtractionContext.loadAuthenticatedExtractionContext"
 )(function* (
-  convex: ConvexServiceShape,
+  convex: ConvexServiceContract,
   environment: Env,
   userId: string,
   accessToken: string

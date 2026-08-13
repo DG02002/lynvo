@@ -7,6 +7,8 @@ interface RequestLoggingVariables {
   requestId: string
 }
 
+export type RequestContextFields = Parameters<AuditableLogger["set"]>[0]
+
 export interface RequestLoggingEnvironment {
   Bindings: Env
   Variables: RequestLoggingVariables
@@ -19,7 +21,7 @@ const incomingRequestId = (request: Request): string | undefined => {
 
 export const addRequestContext = (
   context: Context<RequestLoggingEnvironment>,
-  fields: Record<string, unknown>
+  fields: RequestContextFields
 ): void => {
   context.get("log")?.set(fields)
 }

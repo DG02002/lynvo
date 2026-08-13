@@ -35,14 +35,20 @@ export const manifest = {
 const hasValidBearer = (request: Request, env: Env): boolean => {
   const authorization = request.headers.get("authorization")
   const expected = env.LYNVO_PLUGIN_SERVER_API_KEY
-  if (!authorization || !expected) return false
+  if (!authorization || !expected) {
+    return false
+  }
 
   const match = /^Bearer\s+(.+)$/i.exec(authorization)
-  if (!match) return false
+  if (!match) {
+    return false
+  }
 
   const actualBytes = new TextEncoder().encode(match[1])
   const expectedBytes = new TextEncoder().encode(expected)
-  if (actualBytes.length !== expectedBytes.length) return false
+  if (actualBytes.length !== expectedBytes.length) {
+    return false
+  }
 
   let difference = 0
   for (let index = 0; index < actualBytes.length; index += 1) {

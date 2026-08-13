@@ -1,11 +1,12 @@
 import { Context } from "effect"
+import type { RequestContextFields } from "../../../../workers/request-logging"
 
-export interface RequestEventServiceShape {
+export interface RequestEventServiceContract {
   readonly requestId: string
-  readonly add: (fields: Record<string, unknown>) => void
+  readonly add: (fields: RequestContextFields) => void
 }
 
 export class RequestEventService extends Context.Service<
   RequestEventService,
-  RequestEventServiceShape
+  RequestEventServiceContract
 >()("app/effect/services/RequestEventService") {}

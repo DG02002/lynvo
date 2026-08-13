@@ -6,7 +6,7 @@ import {
 
 export const vibrate = (durationMs: number) => {
   try {
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
+    if (globalThis.navigator !== undefined && navigator.vibrate) {
       navigator.vibrate(durationMs)
     }
   } catch {}

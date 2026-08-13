@@ -1,5 +1,5 @@
 {
-  "ignorePatterns": ["app/components/ui/**"],
+  "ignorePatterns": ["apps/lynvo/app/components/ui/**"],
   "jsPlugins": [
     {
       "name": "anti-slop",

@@ -17,7 +17,7 @@ const subscribeToAutoSaveLinksPreference = (onStoreChange: () => void) => {
 }
 
 export const getShouldAutoSaveAllLinks = () => {
-  if (typeof localStorage === "undefined") {
+  if (globalThis.localStorage === undefined) {
     return true
   }
 

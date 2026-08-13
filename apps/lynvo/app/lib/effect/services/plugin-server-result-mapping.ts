@@ -31,28 +31,45 @@ export const getPluginServerMetadata = (
       )
     : undefined
 
-  return {
+  let metadata: MetadataResult = {
     filename: "",
     pluginName: decodeExtractionText(manifest.displayName),
-    ...(manifest.iconUrl ? { pluginIcon: manifest.iconUrl } : {}),
-    ...(source?.id ? { pluginId: source.id } : {}),
-    ...(source?.displayName
-      ? { sourceName: decodeExtractionText(source.displayName) }
-      : {}),
-    ...(source?.iconUrl ? { sourceIconUrl: source.iconUrl } : {}),
-    ...(source?.status ? { sourceStatus: source.status } : {}),
-    ...(source?.version ? { sourceVersion: source.version } : {}),
-    ...(source?.credential
-      ? { sourceCredentialKind: source.credential.kind }
-      : {}),
-    ...(routeSource?.displayName
-      ? { routeSourceName: decodeExtractionText(routeSource.displayName) }
-      : {}),
-    ...(routeSource?.iconUrl
-      ? { routeSourceIconUrl: routeSource.iconUrl }
-      : {}),
     pluginServerId,
   }
+  if (manifest.iconUrl) {
+    metadata = { ...metadata, pluginIcon: manifest.iconUrl }
+  }
+  if (source?.id) {
+    metadata = { ...metadata, pluginId: source.id }
+  }
+  if (source?.displayName) {
+    metadata = {
+      ...metadata,
+      sourceName: decodeExtractionText(source.displayName),
+    }
+  }
+  if (source?.iconUrl) {
+    metadata = { ...metadata, sourceIconUrl: source.iconUrl }
+  }
+  if (source?.status) {
+    metadata = { ...metadata, sourceStatus: source.status }
+  }
+  if (source?.version) {
+    metadata = { ...metadata, sourceVersion: source.version }
+  }
+  if (source?.credential) {
+    metadata = { ...metadata, sourceCredentialKind: source.credential.kind }
+  }
+  if (routeSource?.displayName) {
+    metadata = {
+      ...metadata,
+      routeSourceName: decodeExtractionText(routeSource.displayName),
+    }
+  }
+  if (routeSource?.iconUrl) {
+    metadata = { ...metadata, routeSourceIconUrl: routeSource.iconUrl }
+  }
+  return metadata
 }
 
 export const mapPluginServerExtractionResult = (
@@ -61,24 +78,31 @@ export const mapPluginServerExtractionResult = (
 ): ExtractionResult => {
   const result = normalizeExtractionText(resultValue)
 
+  const metadata: ExtractionResult["meta"] = {
+    pluginName: result.plugin.displayName || result.plugin.pluginServerId,
+    schemaVersion: 3,
+    pluginServerId,
+  }
+  if (result.plugin.iconUrl) {
+    metadata.pluginIcon = result.plugin.iconUrl
+  }
+  if (result.plugin.pluginId) {
+    metadata.pluginId = result.plugin.pluginId
+  }
+  if (result.plugin.pluginName) {
+    metadata.sourceName = result.plugin.pluginName
+  }
+  if (result.plugin.pluginIconUrl) {
+    metadata.sourceIconUrl = result.plugin.pluginIconUrl
+  }
+  if (result.plugin.pageTitle) {
+    metadata.pageTitle = result.plugin.pageTitle
+  }
+  if (result.plugin.audio) {
+    metadata.audio = result.plugin.audio
+  }
   return {
     links: mapNodesToExtractedLinks(result.nodes),
-    meta: {
-      pluginName: result.plugin.displayName || result.plugin.pluginServerId,
-      ...(result.plugin.iconUrl ? { pluginIcon: result.plugin.iconUrl } : {}),
-      ...(result.plugin.pluginId ? { pluginId: result.plugin.pluginId } : {}),
-      ...(result.plugin.pluginName
-        ? { sourceName: result.plugin.pluginName }
-        : {}),
-      ...(result.plugin.pluginIconUrl
-        ? { sourceIconUrl: result.plugin.pluginIconUrl }
-        : {}),
-      ...(result.plugin.pageTitle
-        ? { pageTitle: result.plugin.pageTitle }
-        : {}),
-      ...(result.plugin.audio ? { audio: result.plugin.audio } : {}),
-      schemaVersion: 3,
-      pluginServerId,
-    },
+    meta: metadata,
   }
 }

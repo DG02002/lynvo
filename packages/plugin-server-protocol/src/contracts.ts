@@ -3,6 +3,7 @@ import {
   pluginServerManifestSchema,
   usageResponseSchema,
 } from "./schemas.js"
+import { z } from "zod"
 import { getLynvoManifestExtension } from "./matching.js"
 import type {
   ContractIssue,
@@ -34,11 +35,9 @@ const mapSchemaIssues = (
   )
 
 const validateParsedPluginServerManifestContract = (
-  value: unknown,
+  didDeclareUsage: boolean,
   manifest: PluginServerManifest
 ): ContractValidationResult => {
-  const didDeclareUsage =
-    typeof value === "object" && value !== null && "usage" in value
   const issues: ContractIssue[] = []
   const pluginIds = new Set<string>()
   const extension = getLynvoManifestExtension(manifest)
@@ -131,9 +130,12 @@ const validateParsedPluginServerManifestContract = (
   }
 }
 
-export const parsePluginServerManifestContract = (
-  value: unknown
+export const parsePluginServerManifestContract = <Value>(
+  value: Value
 ): ContractParseResult<PluginServerManifest> => {
+  const didDeclareUsage = z
+    .object({ usage: z.json() })
+    .safeParse(value).success
   const parsed = pluginServerManifestSchema.safeParse(value)
   if (!parsed.success) {
     return {
@@ -142,14 +144,14 @@ export const parsePluginServerManifestContract = (
     }
   }
   const validation = validateParsedPluginServerManifestContract(
-    value,
+    didDeclareUsage,
     parsed.data
   )
   return validation.ok ? { ...validation, value: parsed.data } : validation
 }
 
-export const validatePluginServerManifestContract = (
-  value: unknown
+export const validatePluginServerManifestContract = <Value>(
+  value: Value
 ): ContractValidationResult => {
   const parsed = parsePluginServerManifestContract(value)
   return { ok: parsed.ok, issues: parsed.issues }
@@ -187,8 +189,8 @@ const validateParsedExtractSuccessContract = (
   }
 }
 
-export const parseExtractSuccessContract = (
-  value: unknown
+export const parseExtractSuccessContract = <Value>(
+  value: Value
 ): ContractParseResult<ExtractSuccessResponse> => {
   const parsed = extractSuccessSchema.safeParse(value)
   if (!parsed.success) {
@@ -201,8 +203,8 @@ export const parseExtractSuccessContract = (
   return validation.ok ? { ...validation, value: parsed.data } : validation
 }
 
-export const validateExtractSuccessContract = (
-  value: unknown
+export const validateExtractSuccessContract = <Value>(
+  value: Value
 ): ContractValidationResult => {
   const parsed = parseExtractSuccessContract(value)
   return { ok: parsed.ok, issues: parsed.issues }
@@ -230,8 +232,8 @@ const validateParsedUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
-export const parseUsageResponseContract = (
-  value: unknown
+export const parseUsageResponseContract = <Value>(
+  value: Value
 ): ContractParseResult<UsageResponse> => {
   const parsed = usageResponseSchema.safeParse(value)
   if (!parsed.success) {
@@ -244,8 +246,8 @@ export const parseUsageResponseContract = (
   return validation.ok ? { ...validation, value: parsed.data } : validation
 }
 
-export const validateUsageContract = (
-  value: unknown
+export const validateUsageContract = <Value>(
+  value: Value
 ): ContractValidationResult => {
   const parsed = parseUsageResponseContract(value)
   return { ok: parsed.ok, issues: parsed.issues }

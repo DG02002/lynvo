@@ -13,6 +13,9 @@ import {
   DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
   DEVICE_CODE_PREFLIGHT_TTL_MS,
 } from "../convex/constants"
+import { z } from "zod"
+
+type AuthenticationIntakeBody = object
 
 export interface AuthenticationIntakeRateLimitInput {
   readonly key: string
@@ -35,7 +38,7 @@ export interface AuthenticationIntakeDependencies {
   readonly generateDeviceCode: (
     deviceName: string,
     preflightToken: string
-  ) => Promise<Record<string, unknown>>
+  ) => Promise<AuthenticationIntakeBody>
 }
 
 export interface AuthenticationIntakeObservability {
@@ -48,7 +51,7 @@ export interface AuthenticationIntakeObservability {
 
 export interface AuthenticationIntakeSuccess {
   readonly kind: "success"
-  readonly body: Record<string, unknown>
+  readonly body: AuthenticationIntakeBody
   readonly observability: AuthenticationIntakeObservability
 }
 
@@ -106,9 +109,11 @@ const unavailable = (
     observability
   )
 
-const readJson = async (request: Request): Promise<unknown> => {
+const readJson = async (
+  request: Request
+): Promise<z.infer<ReturnType<typeof z.json>> | undefined> => {
   try {
-    return await request.json()
+    return z.json().parse(await request.json())
   } catch {
     return undefined
   }

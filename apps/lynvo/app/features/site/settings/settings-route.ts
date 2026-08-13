@@ -14,7 +14,7 @@ export interface SettingsRoute {
   showActiveSessions: boolean
 }
 
-const isSettingsTab = (value: string): value is SettingsTab =>
+export const isSettingsTab = (value: string): value is SettingsTab =>
   SETTINGS_TAB_VALUES.some((tab) => tab === value)
 
 export const getSettingsPath = (

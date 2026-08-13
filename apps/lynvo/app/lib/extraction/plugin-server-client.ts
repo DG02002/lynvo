@@ -15,6 +15,8 @@ import {
   type HttpBasicAuth,
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
+import { z } from "zod"
 import {
   PLUGIN_SERVER_INTERNAL_ORIGIN,
   PLUGIN_SERVER_REQUEST_TIMEOUT_MS,
@@ -93,9 +95,9 @@ export class ServiceBindingPluginServerTransport implements PluginServerTranspor
   fetch = (request: Request): Promise<Response> => this.binding.fetch(request)
 }
 
-const parseJson = async (response: Response): Promise<unknown> => {
+const parseJson = async (response: Response): Promise<JsonValue> => {
   try {
-    return await response.json()
+    return z.json().parse(await response.json())
   } catch {
     throw new PluginServerClientError({
       code: "PROTOCOL_MISMATCH",
@@ -105,7 +107,7 @@ const parseJson = async (response: Response): Promise<unknown> => {
   }
 }
 
-const throwResponseFailure = (value: unknown, status: number): never => {
+const throwResponseFailure = <Value>(value: Value, status: number): never => {
   const extractError = extractErrorSchema.safeParse(value)
   if (extractError.success) {
     throw new PluginServerClientError({
@@ -227,10 +229,11 @@ export class PluginServerClient {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: targetUrl,
-          ...(options.basicAuth ? { basicAuth: options.basicAuth } : {}),
-        }),
+        body: JSON.stringify(
+          options.basicAuth
+            ? { url: targetUrl, basicAuth: options.basicAuth }
+            : { url: targetUrl }
+        ),
       },
       options
     )

@@ -27,8 +27,8 @@ export const buildLinkViewItem = async ({
   }
 }
 
-export const showSaveError = (error: unknown) => {
-  console.error(error)
+export const showSaveError = (cause: unknown) => {
+  console.error(cause)
   toast.error(
     "The link couldn’t be saved. Check account storage, then try again."
   )

@@ -15,7 +15,7 @@ import { client } from "~/lib/effect/api/client"
 
 export default function DeviceApproval() {
   const params = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : ""
+    globalThis.window !== undefined ? window.location.search : ""
   )
   const code = params.get("user_code") ?? ""
   const hasValidCode = /^[A-Z]{4}-[A-Z]{4}$/.test(code)

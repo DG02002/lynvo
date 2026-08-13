@@ -4,7 +4,7 @@ const readIdentityMeta = (name: string) =>
   document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content
 
 export const getRemoteReceiverId = (): string | undefined => {
-  if (typeof document === "undefined") {
+  if (globalThis.document === undefined) {
     return undefined
   }
   const userId = readIdentityMeta("lynvo-user-id")

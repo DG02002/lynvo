@@ -1,4 +1,5 @@
 import type { UsageResponse } from "@dg02002/lynvo-plugin-server-protocol"
+import { z } from "zod"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   MILLISECONDS_PER_DAY,
@@ -30,6 +31,11 @@ export interface UsagePendingCountRow {
   [column: string]: SqlStorageValue
   pending: number
 }
+
+const settleRequestSchema = z.object({
+  reservationId: z.string(),
+  succeeded: z.boolean(),
+})
 
 const currentPeriodKey = (timestampMs: number): string =>
   new Date(timestampMs).toISOString().slice(0, 10)
@@ -164,16 +170,9 @@ export class LynvoPluginServerUsageLimiter {
       return Response.json(reservation)
     }
     if (pathname === "/settle" && request.method === "POST") {
-      const body: unknown = await request.json()
-      if (
-        typeof body === "object" &&
-        body !== null &&
-        "succeeded" in body &&
-        "reservationId" in body &&
-        typeof body.reservationId === "string" &&
-        typeof body.succeeded === "boolean"
-      ) {
-        this.settle(body.reservationId, body.succeeded)
+      const body = settleRequestSchema.safeParse(await request.json())
+      if (body.success) {
+        this.settle(body.data.reservationId, body.data.succeeded)
         await this.scheduleNextAlarm()
       }
       return new Response(null, { status: 204 })

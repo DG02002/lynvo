@@ -42,7 +42,7 @@ export interface LinkResponse {
 
 export interface LinkMetadata {
   schemaVersion: 3
-  source: Record<string, unknown>
+  source: Record<string, JsonValue>
   extraction: {
     extractedLinks: ExtractedLink[]
     extractedAt?: number
@@ -95,3 +95,4 @@ export interface LinkListItemMap {
 }
 
 export type LinkListItem = LinkListItemMap[keyof LinkListItemMap]
+import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"

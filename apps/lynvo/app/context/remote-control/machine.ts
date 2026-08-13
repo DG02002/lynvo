@@ -42,19 +42,19 @@ declare global {
   }
 
   interface RemoteControlTransport {
-    connect: (targetSessionId: string) => Promise<unknown>
-    disconnect: (targetSessionId: string) => Promise<unknown>
+    connect: (targetSessionId: string) => Promise<void>
+    disconnect: (targetSessionId: string) => Promise<void>
     send: (
       targetSessionId: string,
       intent: RemotePlaybackIntent
-    ) => Promise<unknown>
+    ) => Promise<void>
     poll: () => Promise<RemotePollResponse>
     reportResult: (
       commandId: string,
       claimToken: string,
       result: "applied" | "failed",
       message?: string
-    ) => Promise<unknown>
+    ) => Promise<void>
   }
 
   interface RemoteControlPersistence {
@@ -70,8 +70,8 @@ declare global {
 
   interface RemoteControlClock {
     now: () => number
-    setInterval: (callback: () => void, intervalMs: number) => unknown
-    clearInterval: (intervalId: unknown) => void
+    setInterval: (callback: () => void, intervalMs: number) => number
+    clearInterval: (intervalId: number) => void
   }
 
   interface RemoteControlOutcome {
@@ -161,8 +161,9 @@ export const createRemoteControlMachine = ({
   const listeners = new Set<() => void>()
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
   const delivery = createRemoteCommandDelivery({
-    reportApplied: (commandId, claimToken) =>
-      transport.reportResult(commandId, claimToken, "applied"),
+    reportApplied: async (commandId, claimToken) => {
+      await transport.reportResult(commandId, claimToken, "applied")
+    },
     now: clock.now,
     persistence,
   })

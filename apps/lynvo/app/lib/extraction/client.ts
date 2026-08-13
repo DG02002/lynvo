@@ -1,32 +1,36 @@
 import { Effect } from "effect"
-import type { ExtractedLink, MetaData } from "~/features/links/types"
 import { client } from "~/lib/effect/api/client"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
+import {
+  extractedLinkSchema,
+  metadataSchema,
+} from "~/features/links/storage-schemas"
+import { z } from "zod"
+import type { MetaData } from "~/features/links/types"
+
+const extractionResultSchema = z.object({
+  links: z.array(extractedLinkSchema),
+  meta: metadataSchema.optional(),
+})
 
 const resolveClientMetadataIconUrls = (metadata: MetaData) =>
-  typeof window === "undefined"
+  globalThis.window === undefined
     ? metadata
     : resolveMetadataIconUrls(metadata, window.location.href)
 
 export const defaultExtractionClient: ExtractionTransport = {
   extract: async (query) => {
-    const result = (await Effect.runPromise(
-      client.extraction.extract({ query })
-    )) as unknown as {
-      links: ExtractedLink[]
-      meta?: MetaData
-    }
-    return {
-      ...result,
-      ...(result.meta
-        ? { meta: resolveClientMetadataIconUrls(result.meta) }
-        : {}),
-    }
+    const result = extractionResultSchema.parse(
+      await Effect.runPromise(client.extraction.extract({ query }))
+    )
+    return result.meta
+      ? { ...result, meta: resolveClientMetadataIconUrls(result.meta) }
+      : result
   },
   getMetadata: async (query) => {
-    const metadata = (await Effect.runPromise(
-      client.extraction.getMetadata({ query })
-    )) as MetaData
+    const metadata = metadataSchema.parse(
+      await Effect.runPromise(client.extraction.getMetadata({ query }))
+    )
     return resolveClientMetadataIconUrls(metadata)
   },
 }

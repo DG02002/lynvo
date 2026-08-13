@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 export type AuthPreflightFlow = "signUp" | "signIn"
 
 export interface AuthPreflightPayload {
@@ -38,6 +40,32 @@ export interface RemoteCommandNotificationPayload {
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
+
+const unexpiredPayloadSchema = z
+  .object({ exp: z.number() })
+  .refine((payload) => payload.exp >= Date.now())
+const authPreflightPayloadSchema = unexpiredPayloadSchema.extend({
+  flow: z.enum(["signUp", "signIn"]),
+  normalizedUsername: z.string(),
+})
+const deviceCodePreflightPayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("deviceCode"),
+})
+const credentialReadPayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("credentialRead"),
+})
+const sessionCleanupPayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("sessionCleanup"),
+})
+const savedLinkRealtimePayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("savedLinkRealtime"),
+})
+const accountSettingsRealtimePayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("accountSettingsRealtime"),
+})
+const remoteCommandNotificationPayloadSchema = unexpiredPayloadSchema.extend({
+  purpose: z.literal("remoteCommandNotification"),
+})
 
 const encodeText = (value: string): Uint8Array<ArrayBuffer> => {
   const bytes: Uint8Array<ArrayBuffer> = new Uint8Array(
@@ -86,144 +114,98 @@ const verifyGatewayToken = async (token: string, secret: string) => {
     throw new Error("Invalid auth preflight token")
   }
 
-  return JSON.parse(decoder.decode(base64UrlToBytes(encodedPayload))) as unknown
+  return z
+    .json()
+    .parse(JSON.parse(decoder.decode(base64UrlToBytes(encodedPayload))))
 }
 
 export const verifyAuthPreflightToken = async (
   token: string,
   secret: string
 ): Promise<AuthPreflightPayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("flow" in payload) ||
-    !("normalizedUsername" in payload) ||
-    !("exp" in payload) ||
-    (payload.flow !== "signUp" && payload.flow !== "signIn") ||
-    typeof payload.normalizedUsername !== "string" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = authPreflightPayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired auth preflight token")
   }
-  return {
-    flow: payload.flow,
-    normalizedUsername: payload.normalizedUsername,
-    exp: payload.exp,
-  }
+  return payload.data
 }
 
 export const verifyDeviceCodePreflightToken = async (
   token: string,
   secret: string
 ): Promise<DeviceCodePreflightPayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "deviceCode" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = deviceCodePreflightPayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired device code preflight token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }
 
 export const verifyCredentialReadToken = async (
   token: string,
   secret: string
 ): Promise<CredentialReadPayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "credentialRead" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = credentialReadPayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired credential read token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }
 
 export const verifySessionCleanupToken = async (
   token: string,
   secret: string
 ): Promise<SessionCleanupPayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "sessionCleanup" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = sessionCleanupPayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired session cleanup token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }
 
 export const verifySavedLinkRealtimeToken = async (
   token: string,
   secret: string
 ): Promise<SavedLinkRealtimePayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "savedLinkRealtime" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = savedLinkRealtimePayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired Saved link realtime token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }
 
 export const verifyAccountSettingsRealtimeToken = async (
   token: string,
   secret: string
 ): Promise<AccountSettingsRealtimePayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "accountSettingsRealtime" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = accountSettingsRealtimePayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired account settings realtime token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }
 
 export const verifyRemoteCommandNotificationToken = async (
   token: string,
   secret: string
 ): Promise<RemoteCommandNotificationPayload> => {
-  const payload = await verifyGatewayToken(token, secret)
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("purpose" in payload) ||
-    !("exp" in payload) ||
-    payload.purpose !== "remoteCommandNotification" ||
-    typeof payload.exp !== "number" ||
-    payload.exp < Date.now()
-  ) {
+  const payload = remoteCommandNotificationPayloadSchema.safeParse(
+    await verifyGatewayToken(token, secret)
+  )
+  if (!payload.success) {
     throw new Error("Expired remote command notification token")
   }
-  return { purpose: payload.purpose, exp: payload.exp }
+  return payload.data
 }

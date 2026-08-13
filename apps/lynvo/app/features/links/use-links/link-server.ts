@@ -1,35 +1,35 @@
 import type { LinkMetadata, MetaData } from "~/features/links/types"
 import { metadataSchema } from "~/features/links/storage-schemas"
+import { z } from "zod"
 
 export type CreateLink = (input: {
   url: string
   title: string
   metadata: unknown
-}) => Promise<unknown>
+}) => Promise<string | z.infer<typeof createdLinkRecordSchema>>
 
 export const FETCH_METADATA_TIMEOUT_MS = 20000
 
-interface CreatedLinkRecord {
-  _id?: string
-  id?: string
-  link?: {
-    id?: string
-  }
-}
+const createdLinkRecordSchema = z.object({
+  _id: z.string().optional(),
+  id: z.string().optional(),
+  link: z.object({ id: z.string().optional() }).optional(),
+})
 
-const isCreatedLinkRecord = (value: unknown): value is CreatedLinkRecord =>
-  typeof value === "object" && value !== null
-
-export const getCreatedLinkId = (value: unknown) => {
-  if (typeof value === "string") {
-    return value
+export const getCreatedLinkId = <Value>(value: Value) => {
+  const stringValue = z.string().safeParse(value)
+  if (stringValue.success) {
+    return stringValue.data
   }
 
-  if (!isCreatedLinkRecord(value)) {
+  const record = createdLinkRecordSchema.safeParse(value)
+  if (!record.success) {
     return String(value)
   }
 
-  return value.link?.id || value._id || value.id || String(value)
+  return (
+    record.data.link?.id || record.data._id || record.data.id || String(value)
+  )
 }
 
 export const fetchMetaInternal = async (

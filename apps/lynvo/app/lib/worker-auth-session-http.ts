@@ -2,11 +2,14 @@ import { sessionIdentityHeaders } from "./session-identity"
 
 export const revokeWorkerSession = async (): Promise<void> => {
   const headers = sessionIdentityHeaders()
-  const response = await fetch("/api/auth/session", {
+  const options: RequestInit = {
     method: "DELETE",
     credentials: "same-origin",
-    ...(Object.keys(headers).length > 0 ? { headers } : {}),
-  })
+  }
+  if (Object.keys(headers).length > 0) {
+    options.headers = headers
+  }
+  const response = await fetch("/api/auth/session", options)
   if (!response.ok) {
     throw new Error("Unable to revoke the server session")
   }

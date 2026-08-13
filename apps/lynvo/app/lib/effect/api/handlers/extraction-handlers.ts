@@ -7,7 +7,7 @@ import { AuthSessionService } from "../../services/AuthSessionService"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { RequestEventService } from "../../services/request-event-service"
 
-const webRequestFromSource = (source: object) =>
+const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
     ? Effect.succeed(source)
     : Effect.die(new Error("HTTP server request source is not a Web Request"))

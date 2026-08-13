@@ -136,7 +136,7 @@ export const FilenameText = ({
     }
 
     updateOverflowState()
-    if (typeof ResizeObserver === "undefined") {
+    if (globalThis.ResizeObserver === undefined) {
       window.addEventListener("resize", updateOverflowState)
       return () => window.removeEventListener("resize", updateOverflowState)
     }

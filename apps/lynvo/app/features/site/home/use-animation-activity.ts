@@ -12,7 +12,8 @@ export const useAnimationActivity = <
   const [isInViewport, setIsInViewport] = useState(true)
   const [isPageVisible, setIsPageVisible] = useState(
     () =>
-      typeof document === "undefined" || document.visibilityState === "visible"
+      globalThis.document === undefined ||
+      document.visibilityState === "visible"
   )
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export const useAnimationActivity = <
     document.addEventListener("visibilitychange", updatePageVisibility)
 
     const animationContainer = animationContainerRef.current
-    if (!animationContainer || typeof IntersectionObserver === "undefined") {
+    if (!animationContainer || globalThis.IntersectionObserver === undefined) {
       return () =>
         document.removeEventListener("visibilitychange", updatePageVisibility)
     }

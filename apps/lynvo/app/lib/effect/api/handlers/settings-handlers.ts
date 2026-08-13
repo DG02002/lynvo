@@ -4,7 +4,7 @@ import { api } from "../../../../../convex/_generated/api"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
 import { ConvexService } from "../../services/ConvexService"
-import type { ConvexServiceShape } from "../../services/ConvexService"
+import type { ConvexServiceContract } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
@@ -16,7 +16,7 @@ import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in
 import { createSessionCleanupModule } from "../../../../../workers/session-cleanup"
 
 const getSignedInSessionLifecycle = (
-  convex: ConvexServiceShape,
+  convex: ConvexServiceContract,
   accessToken: string,
   environment: Cloudflare.Env,
   onSessionsRevoked?: (sessionIds: readonly string[]) => void

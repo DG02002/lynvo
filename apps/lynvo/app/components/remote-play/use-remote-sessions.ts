@@ -2,6 +2,7 @@ import { useState } from "react"
 import type { RemoteSession } from "./types"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+import { z } from "zod"
 
 declare global {
   interface RemoteSessionContract {
@@ -14,6 +15,18 @@ declare global {
   }
 }
 
+const remoteSessionContractSchema = z.object({
+  id: z.string(),
+  deviceName: z.string(),
+  lastActiveAt: z.number(),
+  receiverId: z.string().optional(),
+  createdAt: z.number().optional(),
+  isCurrent: z.boolean().optional(),
+})
+const remoteSessionsResponseSchema = z.object({
+  receivers: z.array(remoteSessionContractSchema),
+})
+
 export const loadRemoteSessions = async (
   listSessions: () => Promise<readonly RemoteSessionContract[]> = async () => {
     const url = new URL("/api/remote/receivers", window.location.href)
@@ -25,27 +38,14 @@ export const loadRemoteSessions = async (
     if (!response.ok) {
       throw new Error("Remote receiver presence is unavailable")
     }
-    const payload: unknown = await response.json()
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      !("receivers" in payload) ||
-      !Array.isArray(payload.receivers)
-    ) {
+    const payload = remoteSessionsResponseSchema.safeParse(
+      await response.json()
+    )
+    if (!payload.success) {
       throw new Error("Remote receiver presence is invalid")
     }
-    return payload.receivers.filter(
-      (receiver): receiver is RemoteSessionContract =>
-        typeof receiver === "object" &&
-        receiver !== null &&
-        "id" in receiver &&
-        "deviceName" in receiver &&
-        "lastActiveAt" in receiver &&
-        "receiverId" in receiver &&
-        typeof receiver.id === "string" &&
-        typeof receiver.deviceName === "string" &&
-        typeof receiver.lastActiveAt === "number" &&
-        typeof receiver.receiverId === "string"
+    return payload.data.receivers.filter(
+      (receiver) => receiver.receiverId !== undefined
     )
   }
 ): Promise<RemoteSession[]> => {

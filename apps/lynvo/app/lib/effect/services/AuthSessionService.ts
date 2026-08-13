@@ -18,13 +18,13 @@ export interface SessionResult {
   readonly accessToken?: string
 }
 
-export interface AuthSessionServiceShape {
+export interface AuthSessionServiceContract {
   readonly getSession: (request: Request) => Effect.Effect<SessionResult>
 }
 
 export class AuthSessionService extends Context.Service<
   AuthSessionService,
-  AuthSessionServiceShape
+  AuthSessionServiceContract
 >()("app/effect/services/AuthSessionService") {
   static readonly layer = Layer.effect(
     AuthSessionService,

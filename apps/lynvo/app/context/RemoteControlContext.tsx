@@ -37,7 +37,7 @@ const browserClock: RemoteControlClock = {
   now: Date.now,
   setInterval: (callback, intervalMs) =>
     window.setInterval(callback, intervalMs),
-  clearInterval: (intervalId) => window.clearInterval(Number(intervalId)),
+  clearInterval: (intervalId) => window.clearInterval(intervalId),
 }
 
 export const RemoteControlProvider = ({

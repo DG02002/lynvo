@@ -45,20 +45,23 @@ declare global {
 
 const encoder = new TextEncoder()
 
-export const byteLength = (value: unknown) =>
+export const byteLength = <Value>(value: Value) =>
   encoder.encode(
     JSON.stringify(value, (key, nestedValue) =>
       key === "_id" || key === "_creationTime" ? undefined : nestedValue
     )
   ).length
 
-const sumDocumentBytes = (documents: unknown[] | undefined) =>
+const sumDocumentBytes = <Document>(documents: Document[] | undefined) =>
   documents?.reduce<number>(
     (totalBytes, document) => totalBytes + byteLength(document),
     0
   ) ?? 0
 
-const assertBoundedInventory = (documents: unknown[], domain: string) => {
+const assertBoundedInventory = <Document>(
+  documents: Document[],
+  domain: string
+) => {
   if (documents.length > STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT) {
     throw new Error(`Storage ${domain} inventory requires reconciliation`)
   }
@@ -308,12 +311,12 @@ const getOrCreateStorageLedger = async (
   return ledger
 }
 
-export const applyStorageMutation = async (
+export const applyStorageMutation = async <CurrentDocument, NextDocument>(
   ctx: MutationCtx,
   userId: Id<"users">,
   domain: StorageLedgerDomain,
-  currentDocument: unknown | undefined,
-  nextDocument: unknown | undefined
+  currentDocument: CurrentDocument | undefined,
+  nextDocument: NextDocument | undefined
 ) => {
   const ledger = await getOrCreateStorageLedger(ctx, userId)
   const currentBytes = currentDocument ? byteLength(currentDocument) : 0
@@ -356,12 +359,12 @@ export const assertStorageGrowth = (
   }
 }
 
-export const assertStorageMutation = async (
+export const assertStorageMutation = async <CurrentDocument, NextDocument>(
   ctx: MutationCtx,
   userId: Id<"users">,
   domain: StorageLedgerDomain,
-  currentDocument: unknown | undefined,
-  nextDocument: unknown
+  currentDocument: CurrentDocument | undefined,
+  nextDocument: NextDocument
 ) => {
   return await applyStorageMutation(
     ctx,
@@ -372,11 +375,11 @@ export const assertStorageMutation = async (
   )
 }
 
-export const recordStorageDeletion = async (
+export const recordStorageDeletion = async <CurrentDocument>(
   ctx: MutationCtx,
   userId: Id<"users">,
   domain: StorageLedgerDomain,
-  currentDocument: unknown
+  currentDocument: CurrentDocument
 ) => await applyStorageMutation(ctx, userId, domain, currentDocument, undefined)
 
 export const assertLinkSize = (linkBytes: number) => {
@@ -385,11 +388,11 @@ export const assertLinkSize = (linkBytes: number) => {
   }
 }
 
-export const assertLinkMutation = async (
+export const assertLinkMutation = async <CurrentLink, NextLink>(
   ctx: MutationCtx,
   userId: Id<"users">,
-  currentLink: unknown | undefined,
-  nextLink: unknown
+  currentLink: CurrentLink | undefined,
+  nextLink: NextLink
 ) => {
   assertLinkSize(byteLength(nextLink))
   return await assertStorageMutation(

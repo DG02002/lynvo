@@ -5,6 +5,17 @@ export interface PluginServerMatcher {
   schemes?: string[]
 }
 
+export type JsonPrimitive = boolean | null | number | string
+
+export type JsonValue =
+  | JsonPrimitive
+  | JsonValue[]
+  | JsonObject
+
+export interface JsonObject {
+  [property: string]: JsonValue
+}
+
 export interface PluginServerManifest {
   protocolVersion: "1.0"
   pluginServerId: string
@@ -25,7 +36,7 @@ export interface PluginServerManifest {
     basicAuth?: boolean
     discovery?: boolean
   }
-  extensions: Record<string, unknown>
+  extensions: JsonObject
 }
 
 export interface UsageMetric {
@@ -126,7 +137,7 @@ export interface ExtractSuccessResponse {
     audio?: string
   }
   nodes: MediaNode[]
-  extensions: Record<string, unknown>
+  extensions: JsonObject
 }
 
 export interface ExtractProtocolError {
@@ -136,7 +147,7 @@ export interface ExtractProtocolError {
     message: string
     retryAfterSeconds?: number
   }
-  extensions: Record<string, unknown>
+  extensions: JsonObject
 }
 
 export interface VerifySuccessResponse {
@@ -245,7 +256,7 @@ export interface PluginServerRuntimeOptions<Env> {
   usage: (
     context: PluginServerRuntimeContext<Env>
   ) => Promise<UsageResponse> | UsageResponse
-  onError?: (error: unknown, context: PluginServerRuntimeContext<Env>) => void
+  onError?: (cause: unknown, context: PluginServerRuntimeContext<Env>) => void
 }
 
 export interface PluginServerRuntime<Env> {
@@ -280,4 +291,4 @@ export type SupportedProtocolVersion =
 export const isSupportedProtocolVersion = (
   version: string
 ): version is SupportedProtocolVersion =>
-  (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(version)
+  new Set<string>(SUPPORTED_PROTOCOL_VERSIONS).has(version)

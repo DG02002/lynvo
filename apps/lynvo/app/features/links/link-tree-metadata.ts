@@ -7,10 +7,12 @@ import {
 export const stripOpenedFlags = (
   links: ExtractedLink[] = []
 ): ExtractedLink[] =>
-  links.map(({ opened: _opened, children, ...link }) => ({
-    ...link,
-    ...(children ? { children: stripOpenedFlags(children) } : {}),
-  }))
+  links.map(({ opened: _opened, children, ...link }) => {
+    if (!children) {
+      return link
+    }
+    return { ...link, children: stripOpenedFlags(children) }
+  })
 
 export const removeLinkFromTree = (
   links: ExtractedLink[],
@@ -21,12 +23,11 @@ export const removeLinkFromTree = (
       return remainingLinks
     }
 
-    remainingLinks.push({
-      ...link,
-      ...(link.children
-        ? { children: removeLinkFromTree(link.children, linkKey) }
-        : {}),
-    })
+    remainingLinks.push(
+      link.children
+        ? { ...link, children: removeLinkFromTree(link.children, linkKey) }
+        : link
+    )
     return remainingLinks
   }, [])
 

@@ -16,14 +16,22 @@ import {
 } from "../upstream-response"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
+import { z } from "zod"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PAYLOAD_PATTERN =
   /window\['_DRIVE_ivd'\]\s*=\s*'((?:\\.|[^'])*)'/
 
+const googleDrivePublicFolderItemSchema = z
+  .tuple([z.string(), z.json(), z.string(), z.string()])
+  .rest(z.json())
+const googleDrivePublicFolderPayloadSchema = z
+  .tuple([z.array(googleDrivePublicFolderItemSchema)])
+  .rest(z.json())
+
 export const extractGoogleDriveFileId = (value: string | URL): string => {
-  const url = typeof value === "string" ? new URL(value) : value
+  const url = value instanceof URL ? value : new URL(value)
   if (url.protocol !== "https:" || url.hostname !== "drive.google.com") {
     throw new Error("UNSUPPORTED_URL")
   }
@@ -50,7 +58,7 @@ export const createGoogleDriveDownloadUrl = (
 }
 
 export const extractGoogleDriveFolderId = (value: string | URL): string => {
-  const url = typeof value === "string" ? new URL(value) : value
+  const url = value instanceof URL ? value : new URL(value)
   if (url.protocol !== "https:" || url.hostname !== "drive.google.com") {
     throw new Error("UNSUPPORTED_URL")
   }
@@ -132,32 +140,26 @@ export const parseGoogleDrivePublicFolderItems = (
   if (!encodedPayload) {
     throw new Error("Google Drive folder is not publicly accessible.")
   }
-  const parsedPayload: unknown = JSON.parse(
-    decodeGoogleDriveFolderPayload(encodedPayload)
+  const parsedPayload = googleDrivePublicFolderPayloadSchema.safeParse(
+    JSON.parse(decodeGoogleDriveFolderPayload(encodedPayload))
   )
-  if (!Array.isArray(parsedPayload) || !Array.isArray(parsedPayload[0])) {
+  if (!parsedPayload.success) {
     throw new Error("Google Drive returned a malformed public folder.")
   }
-  if (parsedPayload[0].length > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS) {
+  if (parsedPayload.data[0].length > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS) {
     throw new Error("Google Drive public folder contains too many items.")
   }
-  return parsedPayload[0].flatMap<GoogleDrivePublicFolderItem>((item) => {
-    if (
-      !Array.isArray(item) ||
-      typeof item[0] !== "string" ||
-      typeof item[2] !== "string" ||
-      typeof item[3] !== "string"
-    ) {
-      return []
+  return parsedPayload.data[0].map<GoogleDrivePublicFolderItem>((item) => {
+    const result: GoogleDrivePublicFolderItem = {
+      id: item[0],
+      name: item[2],
+      mimeType: item[3],
     }
-    return [
-      {
-        id: item[0],
-        name: item[2],
-        mimeType: item[3],
-        ...(typeof item[13] === "number" ? { size: item[13] } : {}),
-      },
-    ]
+    const size = z.number().safeParse(item[13])
+    if (size.success) {
+      result.size = size.data
+    }
+    return result
   })
 }
 
@@ -179,18 +181,18 @@ export const createGoogleDrivePublicFolderNodes = (
     if (!isVideoFile(item.name)) {
       return []
     }
-    return [
-      {
-        kind: "playable",
-        id: item.id,
-        label: item.name,
-        url: createGoogleDriveDownloadUrl(item.id),
-        ...(formatFileSize(item.size)
-          ? { size: formatFileSize(item.size) }
-          : {}),
-        status: "unknown",
-      },
-    ]
+    const node: MediaNode = {
+      kind: "playable",
+      id: item.id,
+      label: item.name,
+      url: createGoogleDriveDownloadUrl(item.id),
+      status: "unknown",
+    }
+    const size = formatFileSize(item.size)
+    if (size) {
+      node.size = size
+    }
+    return [node]
   })
 
 export const extractGoogleDrivePublicFolder = async ({
@@ -250,22 +252,23 @@ export const extractGoogleDrivePublicFile = async ({
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
+  const node: MediaNode = {
+    kind: "playable",
+    id: fileId,
+    label: metadata.filename,
+    url: downloadUrl,
+    status: "unknown",
+  }
+  if (metadata.size) {
+    node.size = metadata.size
+  }
   return {
     plugin: createPluginResponseMetadata(
       plugin,
       publicAssetOrigin,
       metadata.filename
     ),
-    nodes: [
-      {
-        kind: "playable",
-        id: fileId,
-        label: metadata.filename,
-        url: downloadUrl,
-        ...(metadata.size ? { size: metadata.size } : {}),
-        status: "unknown",
-      },
-    ],
+    nodes: [node],
     extensions: {},
   }
 }

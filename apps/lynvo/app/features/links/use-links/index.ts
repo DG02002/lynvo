@@ -17,6 +17,7 @@ import type {
   SavedLinkListItem,
 } from "~/features/links/types"
 import { useSavedLinkRealtimeSynchronization } from "./realtime-synchronization"
+import { linkMetadataSchema } from "~/features/links/storage-schemas"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined
@@ -24,7 +25,7 @@ const getHydratedSnapshot = () => true
 const getServerHydratedSnapshot = () => false
 
 const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
-  JSON.parse(JSON.stringify(metadata)) as LinkMetadata
+  linkMetadataSchema.parse(JSON.parse(JSON.stringify(metadata)))
 
 const toSavedLinkListItem = (item: LinkViewItem): SavedLinkListItem => ({
   ...item,

@@ -1,5 +1,6 @@
 import type { LinkMetadata, MetaData, LinkViewItem } from "./types"
 import { toFlatMeta } from "./link-metadata-normalization"
+import { z } from "zod"
 
 export const getMetadataPluginServerId = (
   metadata: LinkMetadata | MetaData | undefined
@@ -10,7 +11,7 @@ export const getMetadataPluginServerId = (
 
   if ("source" in metadata) {
     const pluginServerId = metadata.source.pluginServerId
-    return typeof pluginServerId === "string" ? pluginServerId : undefined
+    return z.string().safeParse(pluginServerId).data
   }
 
   return metadata.pluginServerId
@@ -26,7 +27,7 @@ export const getLinkViewItemSourceId = (item: LinkViewItem | undefined) => {
     return undefined
   }
   const pluginId = getLinkViewItemMetadata(item).source.pluginId
-  return typeof pluginId === "string" ? pluginId : undefined
+  return z.string().safeParse(pluginId).data
 }
 
 export const getLinkViewItemMetadata = (item: LinkViewItem): LinkMetadata =>

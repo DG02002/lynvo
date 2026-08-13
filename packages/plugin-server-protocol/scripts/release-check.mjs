@@ -10,10 +10,10 @@ const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"))
 const failures = []
 
 const assert = (condition, message) => {
-  if (!condition) failures.push(message)
+  if (!condition) {
+    failures.push(message)
+  }
 }
-
-const read = (path) => readFileSync(join(packageRoot, path), "utf8")
 
 assert(packageJson.private !== true, "package must not be private")
 assert(
@@ -44,11 +44,12 @@ assert(
 )
 
 for (const [section, dependencies] of Object.entries(packageJson)) {
-  if (!section.endsWith("Dependencies") || !dependencies) continue
+  if (!section.endsWith("Dependencies") || !dependencies) {
+    continue
+  }
   for (const [name, version] of Object.entries(dependencies)) {
     assert(
-      typeof version !== "string" ||
-        !/^(workspace:|link:|file:(?:\.\.?[/\\]|[/\\]))/.test(version),
+      !/^(workspace:|link:|file:(?:\.\.?[/\\]|[/\\]))/.test(String(version)),
       `${section}.${name} must not use a local dependency: ${version}`
     )
   }
@@ -75,7 +76,9 @@ const walk = (directory) =>
 
 const distFiles = walk(join(packageRoot, "dist"))
 for (const path of distFiles) {
-  if (path.endsWith(".map")) continue
+  if (path.endsWith(".map")) {
+    continue
+  }
   const content = readFileSync(path, "utf8")
   const relativePath = relative(packageRoot, path)
   assert(
@@ -94,7 +97,7 @@ for (const path of distFiles) {
   )) {
     const specifier = match[2]
     assert(
-      /\.js$/.test(specifier),
+      specifier.endsWith(".js"),
       `${relativePath} contains a source-only relative import: ${specifier}`
     )
   }
@@ -132,7 +135,9 @@ if (dryRun) {
 
 if (failures.length > 0) {
   console.error("Protocol package release check failed:")
-  for (const failure of failures) console.error(`- ${failure}`)
+  for (const failure of failures) {
+    console.error(`- ${failure}`)
+  }
   process.exit(1)
 }
 

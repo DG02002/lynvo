@@ -15,7 +15,7 @@ export const remoteApi: RemoteControlTransport = {
   connect: async () => undefined,
   disconnect: async () => undefined,
   send: async (targetSessionId, intent) => {
-    return await Effect.runPromise(
+    await Effect.runPromise(
       client.remote.send({
         payload: {
           target_session_id: targetSessionId,
@@ -39,7 +39,7 @@ export const remoteApi: RemoteControlTransport = {
     }
     return parsed.data
   },
-  reportResult: async (commandId, claimToken, result, message) =>
+  reportResult: async (commandId, claimToken, result, message) => {
     await Effect.runPromise(
       client.remote.reportResult({
         payload: {
@@ -50,5 +50,6 @@ export const remoteApi: RemoteControlTransport = {
           message,
         },
       })
-    ),
+    )
+  },
 }

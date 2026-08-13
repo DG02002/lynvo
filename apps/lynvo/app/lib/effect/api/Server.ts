@@ -18,7 +18,7 @@ import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
 
-const webRequestFromSource = (source: object) =>
+const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
     ? Effect.succeed(source)
     : Effect.die(new Error("HTTP server request source is not a Web Request"))

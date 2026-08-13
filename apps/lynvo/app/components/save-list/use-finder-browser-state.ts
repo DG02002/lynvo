@@ -12,6 +12,7 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { z } from "zod"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
@@ -21,34 +22,30 @@ interface UseFinderBrowserStateOptions {
 const getFolderPathStorageKey = (savedLinkId: string) =>
   `lynvo:save-folder-path:${savedLinkId}`
 
+const storedFolderPathSchema = z.array(z.object({ id: z.string() }))
+
 const restoreFolderPath = (
   savedLinkId: string | undefined,
   rootLinks: ExtractedLink[]
 ): FolderLevel[] => {
-  if (!savedLinkId || typeof window === "undefined") {
+  if (!savedLinkId || globalThis.window === undefined) {
     return []
   }
 
   try {
-    const value: unknown = JSON.parse(
-      window.sessionStorage.getItem(getFolderPathStorageKey(savedLinkId)) ??
-        "[]"
+    const value = storedFolderPathSchema.safeParse(
+      JSON.parse(
+        window.sessionStorage.getItem(getFolderPathStorageKey(savedLinkId)) ??
+          "[]"
+      )
     )
-    if (!Array.isArray(value)) {
+    if (!value.success) {
       return []
     }
 
     const restoredPath: FolderLevel[] = []
     let links = rootLinks
-    for (const level of value) {
-      if (
-        typeof level !== "object" ||
-        level === null ||
-        !("id" in level) ||
-        typeof level.id !== "string"
-      ) {
-        break
-      }
+    for (const level of value.data) {
       const folder = links.find((link) => getLinkKey(link) === level.id)
       if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
         break
@@ -87,7 +84,7 @@ export const useFinderBrowserState = ({
   }, [itemRootLinks])
 
   useEffect(() => {
-    if (!item.id || typeof window === "undefined") {
+    if (!item.id || globalThis.window === undefined) {
       return
     }
     window.sessionStorage.setItem(

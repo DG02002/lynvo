@@ -22,6 +22,7 @@ import {
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
+import { z } from "zod"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -38,8 +39,27 @@ export interface BhadooGoogleDriveListResponse {
   error?: { code?: number; message?: string }
 }
 
+const bhadooGoogleDriveItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mimeType: z.string(),
+  link: z.string().nullable().optional(),
+  size: z.string().optional(),
+})
+
+const bhadooGoogleDriveListResponseSchema = z.object({
+  nextPageToken: z.string().nullable(),
+  curPageIndex: z.number(),
+  data: z
+    .object({ files: z.array(bhadooGoogleDriveItemSchema).optional() })
+    .optional(),
+  error: z
+    .object({ code: z.number().optional(), message: z.string().optional() })
+    .optional(),
+})
+
 export const getBhadooPathFilename = (url: string | URL): string => {
-  const parsedUrl = typeof url === "string" ? new URL(url) : url
+  const parsedUrl = url instanceof URL ? url : new URL(url)
   const finalSegment = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
   return finalSegment ? decodeURIComponent(finalSegment) : "Google Drive Index"
 }
@@ -80,18 +100,18 @@ export const createBhadooNodes = (
         )
     playableUrl.username = ""
     playableUrl.password = ""
-    return [
-      {
-        kind: "playable" as const,
-        id: item.id,
-        label: item.name,
-        url: playableUrl.toString(),
-        ...(formatBhadooFileSize(item.size)
-          ? { size: formatBhadooFileSize(item.size) }
-          : {}),
-        status: "unknown" as const,
-      },
-    ]
+    const node: MediaNode = {
+      kind: "playable" as const,
+      id: item.id,
+      label: item.name,
+      url: playableUrl.toString(),
+      status: "unknown" as const,
+    }
+    const size = formatBhadooFileSize(item.size)
+    if (size) {
+      node.size = size
+    }
+    return [node]
   })
 
 export const decodeLegacyBhadooResponse = (
@@ -104,7 +124,9 @@ export const decodeLegacyBhadooResponse = (
   const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
     character.charCodeAt(0)
   )
-  return JSON.parse(new TextDecoder().decode(responseBytes))
+  return bhadooGoogleDriveListResponseSchema.parse(
+    JSON.parse(new TextDecoder().decode(responseBytes))
+  )
 }
 
 const createAuthorizationHeaders = (
@@ -137,11 +159,9 @@ const requestBhadooPage = async (
     }),
   })
   if (modernResponse.ok) {
-    const modernBody: unknown = await readBoundedUpstreamJson(modernResponse)
-    if (typeof modernBody !== "object" || modernBody === null) {
-      throw new Error("Bhadoo Index returned malformed JSON.")
-    }
-    return modernBody as BhadooGoogleDriveListResponse
+    return bhadooGoogleDriveListResponseSchema.parse(
+      await readBoundedUpstreamJson(modernResponse)
+    )
   }
 
   const legacyBody = new URLSearchParams({

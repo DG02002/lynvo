@@ -1,5 +1,10 @@
 const PLAYER_IDS = ["just", "vlc", "mpv", "mx"]
 
+interface PlayerPreferencesPatch {
+  rangeSupportedPlayerId?: string
+  rangeUnsupportedPlayerId?: string
+}
+
 export const normalizePlayerId = (playerId: string) => {
   if (!PLAYER_IDS.includes(playerId)) {
     throw new Error(
@@ -12,19 +17,17 @@ export const normalizePlayerId = (playerId: string) => {
 export const buildPlayerPreferencesPatch = (preferences: {
   rangeSupportedPlayerId?: string
   rangeUnsupportedPlayerId?: string
-}) => ({
-  ...(preferences.rangeSupportedPlayerId !== undefined
-    ? {
-        rangeSupportedPlayerId: normalizePlayerId(
-          preferences.rangeSupportedPlayerId
-        ),
-      }
-    : {}),
-  ...(preferences.rangeUnsupportedPlayerId !== undefined
-    ? {
-        rangeUnsupportedPlayerId: normalizePlayerId(
-          preferences.rangeUnsupportedPlayerId
-        ),
-      }
-    : {}),
-})
+}) => {
+  const patch: PlayerPreferencesPatch = {}
+  if (preferences.rangeSupportedPlayerId !== undefined) {
+    patch.rangeSupportedPlayerId = normalizePlayerId(
+      preferences.rangeSupportedPlayerId
+    )
+  }
+  if (preferences.rangeUnsupportedPlayerId !== undefined) {
+    patch.rangeUnsupportedPlayerId = normalizePlayerId(
+      preferences.rangeUnsupportedPlayerId
+    )
+  }
+  return patch
+}

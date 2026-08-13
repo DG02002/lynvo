@@ -3,12 +3,24 @@ import {
   REMOTE_DEVICE_NAME_KEY,
   REMOTE_SESSION_ID_KEY,
 } from "./constants"
+import { z } from "zod"
 
 const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
   processed: [],
   applied: [],
   pendingAcknowledgements: [],
 }
+
+const timedCommandEntrySchema = z.tuple([z.string(), z.number()])
+const pendingAcknowledgementSchema = z.union([
+  z.tuple([z.string(), z.string()]),
+  z.string(),
+])
+const deliveryRecordSchema = z.object({
+  processed: z.array(timedCommandEntrySchema),
+  applied: z.array(timedCommandEntrySchema),
+  pendingAcknowledgements: z.array(pendingAcknowledgementSchema),
+})
 
 const parseCommandIdentity = (
   identity: string
@@ -23,17 +35,10 @@ const parseCommandIdentity = (
 }
 
 const normalizeTimedCommandEntries = (
-  entries: unknown[]
+  entries: z.infer<typeof timedCommandEntrySchema>[]
 ): Array<[string, number]> => {
   const normalizedEntries = new Map<string, number>()
   for (const entry of entries) {
-    if (
-      !Array.isArray(entry) ||
-      typeof entry[0] !== "string" ||
-      typeof entry[1] !== "number"
-    ) {
-      continue
-    }
     const { commandId } = parseCommandIdentity(entry[0])
     const existingTimestamp = normalizedEntries.get(commandId)
     if (existingTimestamp === undefined || entry[1] > existingTimestamp) {
@@ -44,23 +49,17 @@ const normalizeTimedCommandEntries = (
 }
 
 const normalizePendingAcknowledgements = (
-  entries: unknown[]
+  entries: z.infer<typeof pendingAcknowledgementSchema>[]
 ): Array<[string, string]> => {
   const normalizedEntries = new Map<string, string>()
   for (const entry of entries) {
-    if (
-      Array.isArray(entry) &&
-      typeof entry[0] === "string" &&
-      typeof entry[1] === "string"
-    ) {
+    if (Array.isArray(entry)) {
       normalizedEntries.set(entry[0], entry[1])
       continue
     }
-    if (typeof entry === "string") {
-      const { commandId, claimToken } = parseCommandIdentity(entry)
-      if (claimToken) {
-        normalizedEntries.set(commandId, claimToken)
-      }
+    const { commandId, claimToken } = parseCommandIdentity(entry)
+    if (claimToken) {
+      normalizedEntries.set(commandId, claimToken)
     }
   }
   return [...normalizedEntries]
@@ -74,7 +73,7 @@ export const createRemoteControlPersistence = (
   const deliveryKey = `${REMOTE_COMMAND_DELIVERY_KEY}:${identity}`
   return {
     load: () => {
-      if (typeof window === "undefined") {
+      if (globalThis.window === undefined) {
         return { sessionId: null, deviceName: null }
       }
       const sessionId = localStorage.getItem(sessionIdKey)
@@ -95,7 +94,7 @@ export const createRemoteControlPersistence = (
       localStorage.removeItem(deviceNameKey)
     },
     loadDelivery: () => {
-      if (typeof window === "undefined") {
+      if (globalThis.window === undefined) {
         return EMPTY_DELIVERY_RECORD
       }
       try {
@@ -103,24 +102,15 @@ export const createRemoteControlPersistence = (
         if (!stored) {
           return EMPTY_DELIVERY_RECORD
         }
-        const parsed: unknown = JSON.parse(stored)
-        if (
-          typeof parsed !== "object" ||
-          parsed === null ||
-          !("processed" in parsed) ||
-          !("applied" in parsed) ||
-          !("pendingAcknowledgements" in parsed) ||
-          !Array.isArray(parsed.processed) ||
-          !Array.isArray(parsed.applied) ||
-          !Array.isArray(parsed.pendingAcknowledgements)
-        ) {
+        const parsed = deliveryRecordSchema.safeParse(JSON.parse(stored))
+        if (!parsed.success) {
           return EMPTY_DELIVERY_RECORD
         }
         return {
-          processed: normalizeTimedCommandEntries(parsed.processed),
-          applied: normalizeTimedCommandEntries(parsed.applied),
+          processed: normalizeTimedCommandEntries(parsed.data.processed),
+          applied: normalizeTimedCommandEntries(parsed.data.applied),
           pendingAcknowledgements: normalizePendingAcknowledgements(
-            parsed.pendingAcknowledgements
+            parsed.data.pendingAcknowledgements
           ),
         }
       } catch {

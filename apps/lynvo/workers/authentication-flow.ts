@@ -3,6 +3,7 @@ import { api } from "../convex/_generated/api"
 import { createAuthSessionModule, type AuthSessionState } from "./auth-session"
 import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
 import { createSessionCleanupModule } from "./session-cleanup"
+import { z } from "zod"
 
 interface AuthenticationFlowEnvironment {
   readonly VITE_CONVEX_URL: string
@@ -37,6 +38,18 @@ interface AuthenticationTokens {
   readonly refreshToken: string
 }
 
+const convexAccessTokenPayloadSchema = z.object({
+  sessionId: z.string().min(1),
+})
+const authenticationTokensSchema = z.object({
+  tokens: z.object({ token: z.string(), refreshToken: z.string() }),
+})
+const authenticationFlowBrowserStateSchema = z.object({
+  signingIn: z.boolean().optional(),
+  redirect: z.string().optional(),
+  started: z.boolean().optional(),
+})
+
 const readConvexSessionId = (accessToken: string): string | undefined => {
   const payloadSegment = accessToken.split(".")[1]
   if (!payloadSegment) {
@@ -47,14 +60,10 @@ const readConvexSessionId = (accessToken: string): string | undefined => {
       .replaceAll("-", "+")
       .replaceAll("_", "/")
       .padEnd(Math.ceil(payloadSegment.length / 4) * 4, "=")
-    const payload: unknown = JSON.parse(atob(normalizedSegment))
-    return typeof payload === "object" &&
-      payload !== null &&
-      "sessionId" in payload &&
-      typeof payload.sessionId === "string" &&
-      payload.sessionId.length > 0
-      ? payload.sessionId
-      : undefined
+    const payload = convexAccessTokenPayloadSchema.safeParse(
+      JSON.parse(atob(normalizedSegment))
+    )
+    return payload.success ? payload.data.sessionId : undefined
   } catch {
     return undefined
   }
@@ -69,44 +78,16 @@ interface WorkerAuthenticationFlow {
   ) => Promise<AuthenticationFlowCompleted | AuthenticationFlowUnavailable>
 }
 
-const readTokens = (value: unknown): AuthenticationTokens | undefined => {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("tokens" in value) ||
-    typeof value.tokens !== "object" ||
-    value.tokens === null ||
-    !("token" in value.tokens) ||
-    !("refreshToken" in value.tokens) ||
-    typeof value.tokens.token !== "string" ||
-    typeof value.tokens.refreshToken !== "string"
-  ) {
-    return undefined
-  }
-  return {
-    token: value.tokens.token,
-    refreshToken: value.tokens.refreshToken,
-  }
+const readTokens = <Value>(value: Value): AuthenticationTokens | undefined => {
+  const result = authenticationTokensSchema.safeParse(value)
+  return result.success ? result.data.tokens : undefined
 }
 
-const readBrowserState = (value: unknown): AuthenticationFlowBrowserState => {
-  if (typeof value !== "object" || value === null) {
-    return {}
-  }
-  return {
-    signingIn:
-      "signingIn" in value && typeof value.signingIn === "boolean"
-        ? value.signingIn
-        : undefined,
-    redirect:
-      "redirect" in value && typeof value.redirect === "string"
-        ? value.redirect
-        : undefined,
-    started:
-      "started" in value && typeof value.started === "boolean"
-        ? value.started
-        : undefined,
-  }
+const readBrowserState = <Value>(
+  value: Value
+): AuthenticationFlowBrowserState => {
+  const result = authenticationFlowBrowserStateSchema.safeParse(value)
+  return result.success ? result.data : {}
 }
 
 export const createWorkerAuthenticationFlow = (

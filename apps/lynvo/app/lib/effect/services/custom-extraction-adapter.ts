@@ -1,7 +1,7 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { ExtractionError, ValidationError } from "../errors"
-import type { ConvexServiceShape } from "./ConvexService"
+import type { ConvexServiceContract } from "./ConvexService"
 import {
   discoverCustomPlugin,
   extractFromCustomPluginServer,
@@ -15,7 +15,7 @@ import type {
   RegisteredPluginServer,
 } from "./extraction-types"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
-import type { PluginCredentialVaultShape } from "./plugin-credential-vault"
+import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface CustomExtractionAdapterOptions {
   readonly targetUrl: string
@@ -77,8 +77,8 @@ const selectCustomPlugin = Effect.fn(
 export const extractWithCustomPluginServer = Effect.fn(
   "CustomExtractionAdapter.extract"
 )(function* (
-  convex: ConvexServiceShape,
-  credentialVault: PluginCredentialVaultShape,
+  convex: ConvexServiceContract,
+  credentialVault: PluginCredentialVaultContract,
   pluginServers: ReadonlyArray<RegisteredPluginServer>,
   options: AuthenticatedCustomExtractionAdapterOptions
 ): Effect.fn.Return<

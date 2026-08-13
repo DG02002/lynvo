@@ -1,4 +1,10 @@
 import { useEffect, useState } from "react"
+import { z } from "zod"
+
+const playerLaunchErrorDetailSchema = z.object({
+  playerName: z.string(),
+  playerIconUrl: z.string(),
+})
 import { PluginIcon } from "~/components/plugin-icon"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import {
@@ -13,8 +19,11 @@ export function PlayerLaunchErrorDialog() {
   useEffect(() => {
     const handleLaunchError = (event: Event) => {
       if (event instanceof CustomEvent) {
-        const detail = event.detail as PlayerLaunchErrorDetail
-        setError(detail)
+        const detail = playerLaunchErrorDetailSchema.safeParse(event.detail)
+        if (!detail.success) {
+          return
+        }
+        setError(detail.data)
         setOpen(true)
       }
     }

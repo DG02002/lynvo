@@ -5,6 +5,7 @@ import {
   SEALED_RECORD_NONCE_LENGTH_BYTES,
   SEALED_RECORD_WEB_CRYPTO_ALGORITHM,
 } from "./constants"
+import { z } from "zod"
 
 export interface SealedRecord {
   readonly ciphertext: string
@@ -24,6 +25,13 @@ export interface UnsealRecordOptions {
   additionalData: Uint8Array<ArrayBuffer>
   record: SealedRecord
 }
+
+const sealedRecordSchema = z.object({
+  ciphertext: z.string(),
+  nonce: z.string(),
+  algorithm: z.literal(SEALED_RECORD_ALGORITHM),
+  keyVersion: z.literal(SEALED_RECORD_KEY_VERSION),
+})
 
 export const decodeSealedRecordBase64 = (
   value: string
@@ -58,17 +66,9 @@ const importEncryptionKey = async (encodedKey: string): Promise<CryptoKey> => {
   )
 }
 
-export const isSealedRecord = (value: unknown): value is SealedRecord =>
-  typeof value === "object" &&
-  value !== null &&
-  "ciphertext" in value &&
-  "nonce" in value &&
-  "algorithm" in value &&
-  "keyVersion" in value &&
-  typeof value.ciphertext === "string" &&
-  typeof value.nonce === "string" &&
-  value.algorithm === SEALED_RECORD_ALGORITHM &&
-  value.keyVersion === SEALED_RECORD_KEY_VERSION
+export const isSealedRecord = <Value>(
+  value: Value
+): value is Value & SealedRecord => sealedRecordSchema.safeParse(value).success
 
 export const sealRecord = async ({
   encodedKey,

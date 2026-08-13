@@ -101,7 +101,7 @@ export const metadataSchema: z.ZodType<MetaData> = z.object({
 
 export const linkMetadataSchema: z.ZodType<LinkMetadata> = z.strictObject({
   schemaVersion: z.literal(3),
-  source: z.record(z.string(), z.unknown()),
+  source: z.record(z.string(), z.json()),
   extraction: z.strictObject({
     extractedLinks: z.array(extractedLinkSchema),
     extractedAt: z.number().optional(),

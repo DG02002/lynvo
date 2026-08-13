@@ -23,7 +23,7 @@ export function PolicyLayout({
     if (
       !React.isValidElement<{ title?: string }>(child) ||
       child.type !== PolicySection ||
-      typeof child.props.title !== "string"
+      !child.props.title
     ) {
       return []
     }

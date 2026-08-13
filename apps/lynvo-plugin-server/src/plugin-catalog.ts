@@ -3,6 +3,7 @@ import {
   type PluginServerManifest,
   type PluginServerMatcher,
   type PluginCredential,
+  type PluginMetadata,
   type ExtractSuccessResponse,
   type ExtractRequest,
   type DiscoverResponse,
@@ -144,21 +145,26 @@ export const createLynvoPluginServerManifest = (
   },
   extensions: {
     lynvo: {
-      plugins: LYNVO_PLUGIN_CATALOG.map((plugin) => ({
-        id: plugin.id,
-        displayName: plugin.displayName,
-        description: plugin.description,
-        homepage: plugin.homepage,
-        hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
-        ...(publicAssetOrigin && plugin.iconPath
-          ? { iconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
-          : {}),
-        status: plugin.status,
-        version: plugin.version,
-        hosts: plugin.matchers.flatMap((matcher) => matcher.hosts),
-        matchers: plugin.matchers,
-        ...(plugin.credential ? { credential: plugin.credential } : {}),
-      })),
+      plugins: LYNVO_PLUGIN_CATALOG.map((plugin) => {
+        const metadata: PluginMetadata = {
+          id: plugin.id,
+          displayName: plugin.displayName,
+          description: plugin.description,
+          homepage: plugin.homepage,
+          hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
+          status: plugin.status,
+          version: plugin.version,
+          hosts: plugin.matchers.flatMap((matcher) => matcher.hosts),
+          matchers: plugin.matchers,
+        }
+        if (publicAssetOrigin && plugin.iconPath) {
+          metadata.iconUrl = `${publicAssetOrigin}${plugin.iconPath}`
+        }
+        if (plugin.credential) {
+          metadata.credential = plugin.credential
+        }
+        return metadata
+      }),
     },
   },
 })
@@ -217,13 +223,18 @@ export const createPluginResponseMetadata = (
   plugin: LynvoPluginDefinition,
   publicAssetOrigin?: string,
   pageTitle?: string
-): ExtractSuccessResponse["plugin"] => ({
-  pluginServerId: PLUGIN_SERVER_ID,
-  displayName: PLUGIN_SERVER_NAME,
-  pluginId: plugin.id,
-  pluginName: plugin.displayName,
-  ...(publicAssetOrigin && plugin.iconPath
-    ? { pluginIconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
-    : {}),
-  ...(pageTitle ? { pageTitle } : {}),
-})
+): ExtractSuccessResponse["plugin"] => {
+  const metadata: ExtractSuccessResponse["plugin"] = {
+    pluginServerId: PLUGIN_SERVER_ID,
+    displayName: PLUGIN_SERVER_NAME,
+    pluginId: plugin.id,
+    pluginName: plugin.displayName,
+  }
+  if (publicAssetOrigin && plugin.iconPath) {
+    metadata.pluginIconUrl = `${publicAssetOrigin}${plugin.iconPath}`
+  }
+  if (pageTitle) {
+    metadata.pageTitle = pageTitle
+  }
+  return metadata
+}

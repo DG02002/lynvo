@@ -20,20 +20,19 @@ const resolveIconUrl = (iconUrl: string | undefined, requestUrl: string) => {
 export const resolveMetadataIconUrls = (
   metadata: MetaData,
   requestUrl: string
-): MetaData => ({
-  ...metadata,
-  ...(metadata.pluginIcon
-    ? { pluginIcon: resolveIconUrl(metadata.pluginIcon, requestUrl) }
-    : {}),
-  ...(metadata.sourceIconUrl
-    ? { sourceIconUrl: resolveIconUrl(metadata.sourceIconUrl, requestUrl) }
-    : {}),
-  ...(metadata.routeSourceIconUrl
-    ? {
-        routeSourceIconUrl: resolveIconUrl(
-          metadata.routeSourceIconUrl,
-          requestUrl
-        ),
-      }
-    : {}),
-})
+): MetaData => {
+  const resolved = { ...metadata }
+  if (metadata.pluginIcon) {
+    resolved.pluginIcon = resolveIconUrl(metadata.pluginIcon, requestUrl)
+  }
+  if (metadata.sourceIconUrl) {
+    resolved.sourceIconUrl = resolveIconUrl(metadata.sourceIconUrl, requestUrl)
+  }
+  if (metadata.routeSourceIconUrl) {
+    resolved.routeSourceIconUrl = resolveIconUrl(
+      metadata.routeSourceIconUrl,
+      requestUrl
+    )
+  }
+  return resolved
+}

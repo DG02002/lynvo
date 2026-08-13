@@ -19,10 +19,11 @@ export const getClientProfile = ({
     ? TVBRO_ANDROID_TV_PROFILE
     : null
 
-const hasTvBroBridge = () => typeof window !== "undefined" && "TVBro" in window
+const hasTvBroBridge = () =>
+  globalThis.window !== undefined && "TVBro" in window
 
 export const getCurrentClientProfile = (
-  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent
+  userAgent = globalThis.navigator === undefined ? "" : navigator.userAgent
 ) => getClientProfile({ userAgent, hasTvBroBridge: hasTvBroBridge() })
 
 export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if("TVBro"in window&&navigator.userAgent===${JSON.stringify(LEGACY_TVBRO_MOBILE_USER_AGENT)})document.documentElement.setAttribute(${JSON.stringify(CLIENT_PROFILE_ATTRIBUTE)},${JSON.stringify(TVBRO_ANDROID_TV_PROFILE)})}catch{}})()`

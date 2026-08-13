@@ -11,45 +11,68 @@ export const createProtocolError = (
   code: ErrorCode,
   message: string,
   retryAfterSeconds?: number
-): ExtractProtocolError => ({
-  ok: false,
-  error: {
+): ExtractProtocolError => {
+  const error: ExtractProtocolError = {
+    ok: false,
+    error: {
     code,
     message,
-    ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
-  },
-  extensions: {},
-})
+    },
+    extensions: {},
+  }
+  if (retryAfterSeconds !== undefined) {
+    error.error.retryAfterSeconds = retryAfterSeconds
+  }
+  return error
+}
 
 export const createSourceExtractRequest = (
   sourceUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
   pluginId?: string
-): ExtractRequest => ({
-  input: {
+): ExtractRequest => {
+  const request: ExtractRequest = {
+    input: {
     kind: "source",
     sourceUrl,
-  },
-  ...(pluginId ? { pluginId } : {}),
-  ...(password ? { password } : {}),
-  ...(basicAuth ? { basicAuth } : {}),
-})
+    },
+  }
+  if (pluginId) {
+    request.pluginId = pluginId
+  }
+  if (password) {
+    request.password = password
+  }
+  if (basicAuth) {
+    request.basicAuth = basicAuth
+  }
+  return request
+}
 
 export const createNodeExtractRequest = (
   nodeUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
   pluginId?: string
-): ExtractRequest => ({
-  input: {
+): ExtractRequest => {
+  const request: ExtractRequest = {
+    input: {
     kind: "node",
     nodeUrl,
-  },
-  ...(pluginId ? { pluginId } : {}),
-  ...(password ? { password } : {}),
-  ...(basicAuth ? { basicAuth } : {}),
-})
+    },
+  }
+  if (pluginId) {
+    request.pluginId = pluginId
+  }
+  if (password) {
+    request.password = password
+  }
+  if (basicAuth) {
+    request.basicAuth = basicAuth
+  }
+  return request
+}
 
 export const extractHttpBasicAuth = (
   sourceUrl: string
@@ -83,4 +106,4 @@ export const applyHttpBasicAuth = (
 }
 
 export const isErrorCode = (code: string): code is ErrorCode =>
-  (ERROR_CODES as readonly string[]).includes(code)
+  new Set<string>(ERROR_CODES).has(code)

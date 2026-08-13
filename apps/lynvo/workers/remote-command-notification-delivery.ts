@@ -2,6 +2,11 @@ import { ConvexHttpClient } from "convex/browser"
 import { api } from "../convex/_generated/api"
 import { REMOTE_COMMAND_NOTIFICATION_TOKEN_TTL_MS } from "../convex/constants"
 import { signRemoteCommandNotificationToken } from "../app/lib/auth-gateway"
+import { z } from "zod"
+
+const remoteInboxDeliverySchema = z.object({
+  deliveredSocketCount: z.number().int().positive(),
+})
 
 declare global {
   interface PendingRemoteCommandNotification {
@@ -42,14 +47,7 @@ export const createRemoteCommandNotificationDelivery = (
     if (!response.ok) {
       throw new Error("Remote inbox notification failed")
     }
-    const result: unknown = await response.json()
-    if (
-      typeof result !== "object" ||
-      result === null ||
-      !("deliveredSocketCount" in result) ||
-      typeof result.deliveredSocketCount !== "number" ||
-      result.deliveredSocketCount < 1
-    ) {
+    if (!remoteInboxDeliverySchema.safeParse(await response.json()).success) {
       throw new Error("Remote inbox notification reached no receivers")
     }
   }

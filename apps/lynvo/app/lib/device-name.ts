@@ -67,7 +67,7 @@ const detectOperatingSystem = (userAgent: string) => {
 }
 
 export const getBrowserDeviceName = (
-  userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent,
+  userAgent = globalThis.navigator === undefined ? "" : navigator.userAgent,
   clientProfile: ClientProfile | null = getCurrentClientProfile(userAgent)
 ) => {
   if (clientProfile === TVBRO_ANDROID_TV_PROFILE) {

@@ -12,7 +12,7 @@ export interface ConvexRequestOptions {
   readonly accessToken?: string
 }
 
-export interface ConvexServiceShape {
+export interface ConvexServiceContract {
   readonly action: <Action extends FunctionReference<"action", "public">>(
     actionReference: Action,
     args: FunctionArgs<Action>,
@@ -37,7 +37,7 @@ const convexFailure =
 
 export class ConvexService extends Context.Service<
   ConvexService,
-  ConvexServiceShape
+  ConvexServiceContract
 >()("app/effect/services/ConvexService") {
   static readonly layer = Layer.effect(
     ConvexService,
@@ -52,7 +52,7 @@ export class ConvexService extends Context.Service<
         return client
       }
 
-      const query: ConvexServiceShape["query"] = (
+      const query: ConvexServiceContract["query"] = (
         queryReference,
         args,
         options
@@ -63,7 +63,7 @@ export class ConvexService extends Context.Service<
           catch: convexFailure("query"),
         })
 
-      const mutation: ConvexServiceShape["mutation"] = (
+      const mutation: ConvexServiceContract["mutation"] = (
         mutationReference,
         args,
         options
@@ -74,7 +74,7 @@ export class ConvexService extends Context.Service<
           catch: convexFailure("mutation"),
         })
 
-      const action: ConvexServiceShape["action"] = (
+      const action: ConvexServiceContract["action"] = (
         actionReference,
         args,
         options

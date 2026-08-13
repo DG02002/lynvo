@@ -52,19 +52,45 @@ type SettingsActionRowProps =
   | ({ as: "div" } & React.ComponentProps<"div">)
 
 export function SettingsActionRow(props: SettingsActionRowProps) {
-  const { as, className: customClassName, ...rest } = props as any
-  const className = cn(
-    settingsActionRowClass,
-    "cursor-pointer select-none",
-    customClassName
-  )
-  if (as === "link") {
-    return <Link viewTransition className={className} {...rest} />
-  } else if (as === "div") {
-    return <div className={className} {...rest} />
-  } else {
-    return <button type="button" className={className} {...rest} />
+  if (props.as === "link") {
+    const { as: _as, className, ...linkProps } = props
+    return (
+      <Link
+        viewTransition
+        className={cn(
+          settingsActionRowClass,
+          "cursor-pointer select-none",
+          className
+        )}
+        {...linkProps}
+      />
+    )
   }
+  if (props.as === "div") {
+    const { as: _as, className, ...divProps } = props
+    return (
+      <div
+        className={cn(
+          settingsActionRowClass,
+          "cursor-pointer select-none",
+          className
+        )}
+        {...divProps}
+      />
+    )
+  }
+  const { as: _as, className, ...buttonProps } = props
+  return (
+    <button
+      type="button"
+      className={cn(
+        settingsActionRowClass,
+        "cursor-pointer select-none",
+        className
+      )}
+      {...buttonProps}
+    />
+  )
 }
 
 export function SettingsRowInfo({

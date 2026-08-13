@@ -17,7 +17,7 @@ import type {
   VerifySuccessResponse,
 } from "./models.js"
 
-const jsonResponse = (value: unknown, status = 200): Response =>
+const jsonResponse = <Value>(value: Value, status = 200): Response =>
   Response.json(value, { status })
 
 export const createPluginServerRuntime = <Env>(
@@ -28,7 +28,7 @@ export const createPluginServerRuntime = <Env>(
     env: Env
   ): Promise<PluginServerManifest | undefined> => {
     const value =
-      typeof options.manifest === "function"
+      options.manifest instanceof Function
         ? await options.manifest({ request, env })
         : options.manifest
     const parsed = parsePluginServerManifestContract(value)

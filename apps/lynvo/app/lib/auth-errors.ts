@@ -1,10 +1,10 @@
 const INVALID_CREDENTIAL_MESSAGES = ["InvalidAccountId", "InvalidSecret"]
 
-const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error)
+const errorMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause)
 
-export const classifyAuthSignInError = (error: unknown, flow: string) => {
-  const message = errorMessage(error)
+export const classifyAuthSignInError = (cause: unknown, flow: string) => {
+  const message = errorMessage(cause)
 
   if (
     flow === "signIn" &&

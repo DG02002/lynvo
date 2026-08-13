@@ -6,8 +6,8 @@ import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
 import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { ExtractionError } from "../errors"
-import type { ConvexServiceShape } from "./ConvexService"
-import type { PluginCredentialVaultShape } from "./plugin-credential-vault"
+import type { ConvexServiceContract } from "./ConvexService"
+import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface ResolvedPluginCredential {
   readonly password?: string
@@ -27,8 +27,8 @@ export interface ResolvePluginCredentialOptions {
 export const resolvePluginCredential = Effect.fn(
   "PluginCredentialResolution.resolvePluginCredential"
 )(function* (
-  convex: ConvexServiceShape,
-  credentialVault: PluginCredentialVaultShape,
+  convex: ConvexServiceContract,
+  credentialVault: PluginCredentialVaultContract,
   options: ResolvePluginCredentialOptions
 ): Effect.fn.Return<ResolvedPluginCredential, ExtractionError> {
   if (!options.plugin.credential) {

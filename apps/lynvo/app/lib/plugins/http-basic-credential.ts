@@ -1,7 +1,14 @@
+import { z } from "zod"
+
 export interface HttpBasicCredential {
   password: string
   username: string
 }
+
+const httpBasicCredentialSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+})
 
 export const serializeHttpBasicCredential = (
   username: string,
@@ -11,18 +18,11 @@ export const serializeHttpBasicCredential = (
 export const parseHttpBasicCredential = (
   value: string
 ): HttpBasicCredential => {
-  const parsed: unknown = JSON.parse(value)
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    !("username" in parsed) ||
-    !("password" in parsed) ||
-    typeof parsed.username !== "string" ||
-    typeof parsed.password !== "string"
-  ) {
+  const parsed = httpBasicCredentialSchema.safeParse(JSON.parse(value))
+  if (!parsed.success) {
     throw new Error("Invalid HTTP Basic Auth credential")
   }
-  return { username: parsed.username, password: parsed.password }
+  return parsed.data
 }
 
 export const extractHttpBasicCredential = (sourceUrl: string) => {

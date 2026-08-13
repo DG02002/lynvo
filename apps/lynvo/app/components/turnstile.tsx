@@ -48,7 +48,7 @@ const loadTurnstileScript = () => {
 }
 
 const getTurnstileSiteKey = () => {
-  if (import.meta.env.DEV || typeof document === "undefined") {
+  if (import.meta.env.DEV || globalThis.document === undefined) {
     return ""
   }
   return (

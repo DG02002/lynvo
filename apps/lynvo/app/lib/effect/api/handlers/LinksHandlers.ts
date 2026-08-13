@@ -11,7 +11,7 @@ import { ValidationError } from "../../errors"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
 
-const encodeCanonicalMetadata = (metadata: unknown) =>
+const encodeCanonicalMetadata = <Value>(metadata: Value) =>
   Effect.try({
     try: () => JSON.stringify(linkMetadataSchema.parse(metadata)),
     catch: (details) =>

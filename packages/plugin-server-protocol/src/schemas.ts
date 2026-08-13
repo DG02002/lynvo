@@ -46,7 +46,7 @@ export const pluginServerManifestSchema = z.object({
     basicAuth: z.boolean().optional().default(false),
     discovery: z.boolean().optional().default(false),
   }),
-  extensions: z.record(z.string(), z.unknown()).optional().default({}),
+  extensions: z.record(z.string(), z.json()).optional().default({}),
 })
 
 export const usageMetricSchema = z.object({
@@ -132,22 +132,22 @@ export const mediaNodeSchema: z.ZodType<MediaNode> = z.lazy(() =>
   z.union([groupNodeSchema, resolvableNodeSchema, playableNodeSchema])
 )
 
-export const groupNodeSchema = z.object({
+export const groupNodeSchema: z.ZodType<GroupNode> = z.object({
   ...baseNodeFields,
   kind: z.literal("group"),
   selectable: z.boolean().optional().default(false),
   children: mediaNodeSchema.array(),
-}) as z.ZodType<GroupNode>
+})
 
-export const resolvableNodeSchema = z.object({
+export const resolvableNodeSchema: z.ZodType<ResolvableNode> = z.object({
   ...baseNodeFields,
   kind: z.literal("resolvable"),
   nodeUrl: z.string().optional(),
   resourceId: z.string().optional(),
   resolutionKind: z.enum(["folder", "mirrors"]).optional(),
-}) as z.ZodType<ResolvableNode>
+})
 
-export const playableNodeSchema = z.object({
+export const playableNodeSchema: z.ZodType<PlayableNode> = z.object({
   ...baseNodeFields,
   kind: z.literal("playable"),
   url: z.string(),
@@ -157,7 +157,7 @@ export const playableNodeSchema = z.object({
     .optional(),
   status: z.enum(["up", "down", "unknown"]).optional(),
   rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
-}) as z.ZodType<PlayableNode>
+})
 
 export const extractSuccessSchema = z.object({
   plugin: z.object({
@@ -171,7 +171,7 @@ export const extractSuccessSchema = z.object({
     audio: z.string().optional(),
   }),
   nodes: z.array(mediaNodeSchema),
-  extensions: z.record(z.string(), z.unknown()).optional().default({}),
+  extensions: z.record(z.string(), z.json()).optional().default({}),
 })
 
 export const extractErrorSchema = z.object({

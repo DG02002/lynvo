@@ -18,6 +18,7 @@ import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
   SESSION_TOTAL_DURATION_MS,
 } from "./constants"
+import { z } from "zod"
 
 declare const process: {
   env: {
@@ -28,15 +29,18 @@ declare const process: {
 const syntheticEmail = (normalizedUsername: string) =>
   `${normalizedUsername}@users.lynvo.local`
 
-const requireString = (value: unknown, message: string): string => {
-  if (typeof value !== "string" || !value) {
+const nonEmptyStringSchema = z.string().min(1)
+
+const requireString = <Value>(value: Value, message: string): string => {
+  const result = nonEmptyStringSchema.safeParse(value)
+  if (!result.success) {
     throw new Error(message)
   }
-  return value
+  return result.data
 }
 
-const requirePositiveSafeInteger = (
-  value: unknown,
+const requirePositiveSafeInteger = <Value>(
+  value: Value,
   message: string
 ): number => {
   const parsed = Number(requireString(value, message))
@@ -79,14 +83,11 @@ const credentialsProvider = ConvexCredentials<DataModel>({
     const flow = requireString(params.flow, "Missing auth flow")
     console.info("security.convex_auth.authorize_start", {
       flow,
-      hasUsername:
-        typeof params.username === "string" && params.username !== "",
-      hasPassword:
-        typeof params.password === "string" && params.password !== "",
-      hasPreflightToken:
-        typeof params.preflightToken === "string" &&
-        params.preflightToken !== "",
-      hasCode: typeof params.code === "string" && params.code !== "",
+      hasUsername: nonEmptyStringSchema.safeParse(params.username).success,
+      hasPassword: nonEmptyStringSchema.safeParse(params.password).success,
+      hasPreflightToken: nonEmptyStringSchema.safeParse(params.preflightToken)
+        .success,
+      hasCode: nonEmptyStringSchema.safeParse(params.code).success,
     })
 
     if (flow === "device") {

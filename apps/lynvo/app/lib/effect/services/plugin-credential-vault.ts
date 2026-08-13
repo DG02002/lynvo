@@ -14,7 +14,7 @@ export interface PluginCredentialContext {
   readonly domain: string
 }
 
-export interface PluginCredentialVaultShape {
+export interface PluginCredentialVaultContract {
   readonly encrypt: (
     password: string,
     context: PluginCredentialContext
@@ -34,7 +34,7 @@ export const createPluginCredentialAdditionalData = (
 
 export class PluginCredentialVault extends Context.Service<
   PluginCredentialVault,
-  PluginCredentialVaultShape
+  PluginCredentialVaultContract
 >()("app/effect/services/PluginCredentialVault") {
   static readonly layer = Layer.effect(
     PluginCredentialVault,

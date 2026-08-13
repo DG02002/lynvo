@@ -2,6 +2,7 @@ import type { SealedRecord } from "../app/lib/security/sealed-record"
 import { sealRecord, unsealRecord } from "../app/lib/security/sealed-record"
 import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
 import { AUTH_SESSION_ISSUANCE_GENERATION_RETENTION_MS } from "./constants"
+import { z } from "zod"
 
 interface SessionPayload {
   readonly convexSessionId: string
@@ -49,55 +50,41 @@ const SESSION_ISSUANCE_GENERATION_RETENTION_KEY =
   "session-issuance-generation-retention"
 const UNAVAILABLE_RESPONSE = { error: "Session service is unavailable." }
 
-const isSessionPayload = (payload: unknown): payload is SessionPayload =>
-  typeof payload === "object" &&
-  payload !== null &&
-  "accessToken" in payload &&
-  "convexSessionId" in payload &&
-  "refreshToken" in payload &&
-  "createdAt" in payload &&
-  "expiresAt" in payload &&
-  typeof payload.accessToken === "string" &&
-  typeof payload.convexSessionId === "string" &&
-  typeof payload.refreshToken === "string" &&
-  typeof payload.createdAt === "number" &&
-  typeof payload.expiresAt === "number" &&
-  payload.accessToken.length > 0 &&
-  payload.convexSessionId.length > 0 &&
-  payload.refreshToken.length > 0 &&
-  payload.expiresAt > payload.createdAt &&
-  (!("issuanceGeneration" in payload) ||
-    (typeof payload.issuanceGeneration === "number" &&
-      Number.isSafeInteger(payload.issuanceGeneration) &&
-      payload.issuanceGeneration > 0)) &&
-  (!("idleTimeoutMs" in payload) ||
-    (typeof payload.idleTimeoutMs === "number" && payload.idleTimeoutMs > 0))
+const sessionTokenUpdatePayloadSchema = z.object({
+  convexSessionId: z.string().min(1),
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+})
 
-const isSessionTokenUpdatePayload = (
-  payload: unknown
-): payload is SessionTokenUpdatePayload =>
-  typeof payload === "object" &&
-  payload !== null &&
-  "accessToken" in payload &&
-  "convexSessionId" in payload &&
-  "refreshToken" in payload &&
-  typeof payload.accessToken === "string" &&
-  typeof payload.convexSessionId === "string" &&
-  typeof payload.refreshToken === "string" &&
-  payload.accessToken.length > 0 &&
-  payload.convexSessionId.length > 0 &&
-  payload.refreshToken.length > 0
+const sessionPayloadSchema = sessionTokenUpdatePayloadSchema
+  .extend({
+    createdAt: z.number(),
+    expiresAt: z.number(),
+    idleTimeoutMs: z.number().positive().optional(),
+    issuanceGeneration: z.number().int().positive().optional(),
+  })
+  .refine((payload) => payload.expiresAt > payload.createdAt)
 
-const isSessionIssuancePayload = (
-  payload: unknown
-): payload is SessionIssuancePayload =>
-  typeof payload === "object" &&
-  payload !== null &&
-  "nowMs" in payload &&
-  "expiresAt" in payload &&
-  typeof payload.nowMs === "number" &&
-  typeof payload.expiresAt === "number" &&
-  payload.expiresAt > payload.nowMs
+const sessionIssuancePayloadSchema = z
+  .object({ nowMs: z.number(), expiresAt: z.number() })
+  .refine((payload) => payload.expiresAt > payload.nowMs)
+
+const activityTouchPayloadSchema = z.object({ touchedAt: z.number() })
+
+const isSessionPayload = <Value>(
+  payload: Value
+): payload is Value & SessionPayload =>
+  sessionPayloadSchema.safeParse(payload).success
+
+const isSessionTokenUpdatePayload = <Value>(
+  payload: Value
+): payload is Value & SessionTokenUpdatePayload =>
+  sessionTokenUpdatePayloadSchema.safeParse(payload).success
+
+const isSessionIssuancePayload = <Value>(
+  payload: Value
+): payload is Value & SessionIssuancePayload =>
+  sessionIssuancePayloadSchema.safeParse(payload).success
 
 export class WorkerAuthSession implements DurableObject {
   constructor(
@@ -262,15 +249,11 @@ export class WorkerAuthSession implements DurableObject {
       }
       if (request.method === "PUT") {
         const payload: unknown = await request.json()
-        if (
-          typeof payload !== "object" ||
-          payload === null ||
-          !("touchedAt" in payload) ||
-          typeof payload.touchedAt !== "number"
-        ) {
+        const parsedPayload = activityTouchPayloadSchema.safeParse(payload)
+        if (!parsedPayload.success) {
           return new Response(null, { status: 400 })
         }
-        const touchedAt = payload.touchedAt
+        const touchedAt = parsedPayload.data.touchedAt
         const didUpdate = await this.state.storage.transaction(
           async (storage) => {
             const currentSession =

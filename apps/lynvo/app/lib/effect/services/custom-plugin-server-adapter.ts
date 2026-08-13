@@ -31,7 +31,7 @@ import {
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
 
-const parseStoredPluginServerManifest = (value: unknown) => {
+const parseStoredPluginServerManifest = <Value>(value: Value) => {
   const parsed = parsePluginServerManifestContract(value)
   return parsed.ok ? parsed.value : undefined
 }
@@ -47,23 +47,24 @@ export const getCustomPluginServerUsage = Effect.fn(
     pluginServer.baseUrl
   )
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
-  return {
+  const baseUsage = {
     pluginServerId: pluginServer._id,
     name: manifest?.displayName ?? pluginServer.baseUrl,
-    ...(manifest?.iconUrl ? { iconUrl: manifest.iconUrl } : {}),
-    ...(manifest
-      ? {
-          plugins: (getLynvoManifestExtension(manifest).plugins ?? []).map(
-            (source) => ({
-              id: source.id,
-              name: source.displayName,
-              ...(source.iconUrl ? { iconUrl: source.iconUrl } : {}),
-            })
-          ),
-        }
-      : {}),
     metrics: usage.metrics,
   }
+  if (!manifest) {
+    return baseUsage
+  }
+  const plugins = (getLynvoManifestExtension(manifest).plugins ?? []).map(
+    (source) =>
+      source.iconUrl
+        ? { id: source.id, name: source.displayName, iconUrl: source.iconUrl }
+        : { id: source.id, name: source.displayName }
+  )
+  const usageWithPlugins = { ...baseUsage, plugins }
+  return manifest.iconUrl
+    ? { ...usageWithPlugins, iconUrl: manifest.iconUrl }
+    : usageWithPlugins
 })
 
 export const decodePluginServerManifest = Effect.fn(

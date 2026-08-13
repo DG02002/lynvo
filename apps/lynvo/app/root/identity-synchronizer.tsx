@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import type { QueryClient } from "@tanstack/react-query"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+import { z } from "zod"
+
+const identityStatusSchema = z.union([
+  z.object({ status: z.literal("unauthenticated") }),
+  z.object({ userId: z.string(), sessionId: z.string() }),
+])
 
 interface IdentitySynchronizerProps {
   user: { id: string; sessionId?: string } | null
@@ -40,18 +46,18 @@ export const IdentitySynchronizer = ({
         ) {
           return
         }
-        const payload: unknown = await response.json().catch(() => null)
+        const payload = identityStatusSchema.safeParse(
+          await response.json().catch(() => null)
+        )
         const matches =
           response.ok &&
-          typeof payload === "object" &&
-          payload !== null &&
+          payload.success &&
           ((!user &&
-            "status" in payload &&
-            payload.status === "unauthenticated") ||
-            ("userId" in payload &&
-              "sessionId" in payload &&
-              payload.userId === user?.id &&
-              payload.sessionId === user?.sessionId))
+            "status" in payload.data &&
+            payload.data.status === "unauthenticated") ||
+            ("userId" in payload.data &&
+              payload.data.userId === user?.id &&
+              payload.data.sessionId === user?.sessionId))
         if (matches) {
           return
         }

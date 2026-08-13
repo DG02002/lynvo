@@ -7,6 +7,13 @@ import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+import { z } from "zod"
+
+const sessionHelloSchema = z.object({
+  type: z.literal("session_hello"),
+  userId: z.string(),
+  sessionId: z.string(),
+})
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
@@ -83,15 +90,10 @@ export const openRealtimeSocket = ({
 
   const handleMessage = (event: MessageEvent) => {
     try {
-      const message: unknown = JSON.parse(String(event.data))
-      if (
-        typeof message === "object" &&
-        message !== null &&
-        "type" in message &&
-        message.type === "session_hello" &&
-        "userId" in message &&
-        "sessionId" in message
-      ) {
+      const message = sessionHelloSchema.safeParse(
+        JSON.parse(String(event.data))
+      )
+      if (message.success) {
         const expectedUserId = document.querySelector<HTMLMetaElement>(
           'meta[name="lynvo-user-id"]'
         )?.content
@@ -99,8 +101,8 @@ export const openRealtimeSocket = ({
           'meta[name="lynvo-session-id"]'
         )?.content
         if (
-          message.userId !== expectedUserId ||
-          message.sessionId !== expectedSessionId
+          message.data.userId !== expectedUserId ||
+          message.data.sessionId !== expectedSessionId
         ) {
           closed = true
           socket?.close()

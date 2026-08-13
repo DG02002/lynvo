@@ -55,10 +55,12 @@ type TablesWithLifecycle<Lifecycle extends AccountDataLifecycle> = {
 
 const tablesWithLifecycle = <Lifecycle extends AccountDataLifecycle>(
   lifecycle: Lifecycle
-) =>
-  Object.entries(ACCOUNT_DATA_CATALOG)
+) => {
+  // SAFETY: Object.entries erases keys, but every key originates from ACCOUNT_DATA_CATALOG and the filter establishes the requested lifecycle.
+  return Object.entries(ACCOUNT_DATA_CATALOG)
     .filter(([, entry]) => entry.lifecycle === lifecycle)
     .map(([table]) => table as TablesWithLifecycle<Lifecycle>)
+}
 
 export const ACCOUNT_DATA_OWNERSHIP = {
   erased: tablesWithLifecycle("erased"),
@@ -72,8 +74,23 @@ type StorageDomainRegistry = {
   [Table in AccountDataTable]: (typeof ACCOUNT_DATA_CATALOG)[Table]["storage"]
 }
 
-export const ACCOUNT_DATA_STORAGE_REGISTRY = Object.fromEntries(
-  Object.entries(ACCOUNT_DATA_CATALOG)
-    .filter(([, entry]) => entry.lifecycle === "erased")
-    .map(([table, entry]) => [table, entry.storage])
-) as Pick<StorageDomainRegistry, TablesWithLifecycle<"erased">>
+export const ACCOUNT_DATA_STORAGE_REGISTRY = {
+  users: ACCOUNT_DATA_CATALOG.users.storage,
+  authSessions: ACCOUNT_DATA_CATALOG.authSessions.storage,
+  authAccounts: ACCOUNT_DATA_CATALOG.authAccounts.storage,
+  authRefreshTokens: ACCOUNT_DATA_CATALOG.authRefreshTokens.storage,
+  authVerificationCodes: ACCOUNT_DATA_CATALOG.authVerificationCodes.storage,
+  authVerifiers: ACCOUNT_DATA_CATALOG.authVerifiers.storage,
+  links: ACCOUNT_DATA_CATALOG.links.storage,
+  savedLinkSynchronizationStates:
+    ACCOUNT_DATA_CATALOG.savedLinkSynchronizationStates.storage,
+  accountSettingsSynchronizationStates:
+    ACCOUNT_DATA_CATALOG.accountSettingsSynchronizationStates.storage,
+  userStorageLedgers: ACCOUNT_DATA_CATALOG.userStorageLedgers.storage,
+  userPluginServers: ACCOUNT_DATA_CATALOG.userPluginServers.storage,
+  userPluginDomains: ACCOUNT_DATA_CATALOG.userPluginDomains.storage,
+  userPluginCredentials: ACCOUNT_DATA_CATALOG.userPluginCredentials.storage,
+  usageCounters: ACCOUNT_DATA_CATALOG.usageCounters.storage,
+  deviceCodes: ACCOUNT_DATA_CATALOG.deviceCodes.storage,
+  remoteCommands: ACCOUNT_DATA_CATALOG.remoteCommands.storage,
+} satisfies Pick<StorageDomainRegistry, TablesWithLifecycle<"erased">>

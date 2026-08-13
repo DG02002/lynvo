@@ -87,23 +87,24 @@ export const createDirectMediaModule = (
         assertSupportedFilename(filename)
       }
       const size = getResponseFileSize(response.status, response.headers)
-      return [
-        {
-          nodeKey: `direct:${url}`,
-          url,
-          label: filename,
-          id: "direct",
-          type: "file",
-          mediaNodeKind: "playable",
-          status: "up",
-          rangeRequest: getRangeRequestCapability(
-            response.status,
-            response.headers
-          ),
-          ...(size ? { size } : {}),
-          ...getResponseExpiry(url, response.headers),
-        },
-      ]
+      const link: ExtractedLink = {
+        nodeKey: `direct:${url}`,
+        url,
+        label: filename,
+        id: "direct",
+        type: "file",
+        mediaNodeKind: "playable",
+        status: "up",
+        rangeRequest: getRangeRequestCapability(
+          response.status,
+          response.headers
+        ),
+        ...getResponseExpiry(url, response.headers),
+      }
+      if (size) {
+        link.size = size
+      }
+      return [link]
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === "AbortError") {
@@ -124,11 +125,13 @@ export const createDirectMediaModule = (
       DIRECT_LINK_FETCH_TIMEOUT_MS
     )
     validateDirectMediaResponse(response)
-    return {
+    const metadata: MetadataResult = {
       filename: getDirectFilename(url, response.headers),
       pluginId: "direct-link",
       pluginName: "Direct Media",
-      ...(DIRECT_MEDIA_ICON.url ? { pluginIcon: DIRECT_MEDIA_ICON.url } : {}),
     }
+    return DIRECT_MEDIA_ICON.url
+      ? { ...metadata, pluginIcon: DIRECT_MEDIA_ICON.url }
+      : metadata
   },
 })

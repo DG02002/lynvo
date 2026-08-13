@@ -19,6 +19,7 @@ import {
 import { Separator } from "~/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
+import { z } from "zod"
 
 export interface ChangelogEntry {
   type: ChangelogType
@@ -66,12 +67,15 @@ const changelogEntries: ChangelogEntry[] = [
   },
 ]
 
-const changelogTypes = new Set<ChangelogType>(["general", "plugin-server"])
+const changelogTypeSchema = z.enum(["general", "plugin-server"])
+const changelogTypes = changelogTypeSchema.options
+const changelogTabSchema = z.enum(["all", "general", "plugin-server"])
+const sortOrderSchema = z.enum(["newest", "oldest"])
 
-const getSelectedTab = (value: string | null): ChangelogTab =>
-  value && changelogTypes.has(value as ChangelogType)
-    ? (value as ChangelogType)
-    : "all"
+const getSelectedTab = (value: string | null): ChangelogTab => {
+  const result = changelogTypeSchema.safeParse(value)
+  return result.success ? result.data : "all"
+}
 
 const ChangelogDescription = ({
   description,
@@ -100,7 +104,7 @@ const ChangelogDescription = ({
 
     measureOverflow()
 
-    if (typeof ResizeObserver === "undefined") {
+    if (globalThis.ResizeObserver === undefined) {
       return
     }
 
@@ -225,8 +229,10 @@ export default function Changelog() {
   })
 
   const handleTabChange = (value: string | number) => {
-    const nextTab = value as ChangelogTab
-    setSearchParams(nextTab === "all" ? {} : { type: nextTab })
+    const nextTab = changelogTabSchema.safeParse(value)
+    if (nextTab.success) {
+      setSearchParams(nextTab.data === "all" ? {} : { type: nextTab.data })
+    }
   }
 
   return (
@@ -283,7 +289,12 @@ export default function Changelog() {
             <DropdownMenuContent align="end">
               <DropdownMenuRadioGroup
                 value={sortOrder}
-                onValueChange={(value) => setSortOrder(value as SortOrder)}
+                onValueChange={(value) => {
+                  const nextSortOrder = sortOrderSchema.safeParse(value)
+                  if (nextSortOrder.success) {
+                    setSortOrder(nextSortOrder.data)
+                  }
+                }}
               >
                 <DropdownMenuRadioItem
                   value="newest"
@@ -310,7 +321,7 @@ export default function Changelog() {
           <TabsContent value="all">
             <ChangelogList entries={sortedEntries} />
           </TabsContent>
-          {Array.from(changelogTypes).map((type) => (
+          {changelogTypes.map((type) => (
             <TabsContent key={type} value={type}>
               <ChangelogList
                 entries={sortedEntries.filter((entry) => entry.type === type)}

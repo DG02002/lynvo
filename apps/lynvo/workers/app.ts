@@ -50,6 +50,7 @@ import { createAccountSettingsRealtimeDelivery } from "./account-settings-realti
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
+import { z } from "zod"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 export { WorkerAuthSession } from "./worker-auth-session"
@@ -154,6 +155,7 @@ const runAuthenticationIntake = async (
   context: HonoContext<RequestLoggingEnvironment>,
   operation: "preflight" | "createDeviceCode"
 ) => {
+  // SAFETY: Hono supplies the configured Cloudflare bindings through context.env.
   const env = context.env as AuthEnv
   const intake = createAuthenticationIntake({
     gatewaySecret: env.AUTH_GATEWAY_SECRET,
@@ -609,11 +611,19 @@ app.all("*", async (context) => {
   return securedResponse
 })
 
-const isPingMessage = (value: unknown): boolean =>
-  typeof value === "object" &&
-  value !== null &&
-  "type" in value &&
-  value.type === "ping"
+const pingMessageSchema = z.object({ type: z.literal("ping") })
+const receiverNotificationSchema = z.object({ receiverId: z.string() })
+const sessionRevocationSchema = z.object({ sessionId: z.string() })
+const receiverAttachmentSchema = z.object({
+  receiverId: z.string(),
+  sessionId: z.string(),
+  deviceName: z.string(),
+  connectedAt: z.number(),
+})
+const workerSessionAttachmentSchema = z.object({ workerSessionId: z.string() })
+
+const isPingMessage = <Value>(value: Value): boolean =>
+  pingMessageSchema.safeParse(value).success
 
 export class UserRealtimeRoom extends DurableObject<Env> {
   constructor(context: DurableObjectState, env: Env) {
@@ -631,36 +641,26 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       return Response.json({ success: true })
     }
     if (pathname.endsWith("/notify-inbox")) {
-      const input: unknown = await request.json()
-      if (
-        typeof input !== "object" ||
-        input === null ||
-        !("receiverId" in input) ||
-        typeof input.receiverId !== "string"
-      ) {
+      const input = receiverNotificationSchema.safeParse(await request.json())
+      if (!input.success) {
         return new Response("Invalid receiver", { status: 400 })
       }
       const serialized = JSON.stringify({
         type: "remote-inbox.changed",
         payload: {},
       })
-      const sockets = this.ctx.getWebSockets(input.receiverId)
+      const sockets = this.ctx.getWebSockets(input.data.receiverId)
       for (const socket of sockets) {
         socket.send(serialized)
       }
       return Response.json({ deliveredSocketCount: sockets.length })
     }
     if (pathname.endsWith("/revoke-session")) {
-      const input: unknown = await request.json()
-      if (
-        typeof input !== "object" ||
-        input === null ||
-        !("sessionId" in input) ||
-        typeof input.sessionId !== "string"
-      ) {
+      const input = sessionRevocationSchema.safeParse(await request.json())
+      if (!input.success) {
         return new Response("Invalid session", { status: 400 })
       }
-      for (const socket of this.ctx.getWebSockets(input.sessionId)) {
+      for (const socket of this.ctx.getWebSockets(input.data.sessionId)) {
         socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
       }
       return Response.json({ success: true })
@@ -676,30 +676,21 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     }
     if (pathname.endsWith("/receivers")) {
       const receivers = this.ctx.getWebSockets().flatMap((socket) => {
-        const attachment: unknown = socket.deserializeAttachment()
-        if (
-          typeof attachment !== "object" ||
-          attachment === null ||
-          !("receiverId" in attachment) ||
-          !("sessionId" in attachment) ||
-          !("deviceName" in attachment) ||
-          !("connectedAt" in attachment) ||
-          typeof attachment.receiverId !== "string" ||
-          typeof attachment.sessionId !== "string" ||
-          typeof attachment.deviceName !== "string" ||
-          typeof attachment.connectedAt !== "number"
-        ) {
+        const attachment = receiverAttachmentSchema.safeParse(
+          socket.deserializeAttachment()
+        )
+        if (!attachment.success) {
           return []
         }
         return [
           {
             id: createRemoteTargetId(
-              attachment.sessionId,
-              attachment.receiverId
+              attachment.data.sessionId,
+              attachment.data.receiverId
             ),
-            receiverId: attachment.receiverId,
-            deviceName: attachment.deviceName,
-            lastActiveAt: attachment.connectedAt,
+            receiverId: attachment.data.receiverId,
+            deviceName: attachment.data.deviceName,
+            lastActiveAt: attachment.data.connectedAt,
           },
         ]
       })
@@ -750,13 +741,10 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       await Promise.all(
         this.ctx.getWebSockets().map(async (socket) => {
           try {
-            const attachment: unknown = socket.deserializeAttachment()
-            if (
-              typeof attachment !== "object" ||
-              attachment === null ||
-              !("workerSessionId" in attachment) ||
-              typeof attachment.workerSessionId !== "string"
-            ) {
+            const attachment = workerSessionAttachmentSchema.safeParse(
+              socket.deserializeAttachment()
+            )
+            if (!attachment.success) {
               socket.close(
                 REALTIME_SESSION_REVOKED_CLOSE_CODE,
                 "Session invalid"
@@ -764,7 +752,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
               return
             }
             const response = await this.env.WORKER_AUTH_SESSION.getByName(
-              attachment.workerSessionId
+              attachment.data.workerSessionId
             ).fetch("https://session.internal/session", { method: "HEAD" })
             if (response.status === 401 || response.status === 404) {
               socket.close(
@@ -787,11 +775,12 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): void {
-    if (typeof message !== "string") {
+    const textMessage = z.string().safeParse(message)
+    if (!textMessage.success) {
       return
     }
     try {
-      const parsed: unknown = JSON.parse(message)
+      const parsed = JSON.parse(textMessage.data)
       if (isPingMessage(parsed)) {
         socket.send(
           JSON.stringify({ type: "pong", payload: { at: Date.now() } })
@@ -810,7 +799,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     socket.close(1011, "WebSocket error")
   }
 
-  private broadcast(message: unknown): void {
+  private broadcast<Value>(message: Value): void {
     const serialized = JSON.stringify(message)
     for (const socket of this.ctx.getWebSockets()) {
       try {

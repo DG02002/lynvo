@@ -1,20 +1,25 @@
 import { ApiResponseError } from "./api-errors"
+import { z } from "zod"
 
-const taggedErrorMessage = (error: unknown): string | undefined => {
-  if (typeof error !== "object" || error === null || !("_tag" in error)) {
+const taggedErrorSchema = z.object({
+  _tag: z.string(),
+  message: z.string().optional(),
+})
+
+const taggedErrorMessage = <Value>(error: Value): string | undefined => {
+  const parsed = taggedErrorSchema.safeParse(error)
+  if (!parsed.success) {
     return undefined
   }
 
-  switch (error._tag) {
+  switch (parsed.data._tag) {
     case "UnauthorizedError":
       return "The session expired. Log in, then try again."
     case "CsrfError":
       return "The security session expired. Refresh the page, then try again."
     case "ValidationError":
     case "PluginServerRegistrationError":
-      return "message" in error && typeof error.message === "string"
-        ? error.message
-        : undefined
+      return parsed.data.message
     case "ExtractionError":
       return "Links couldn’t be loaded from this address. Check the link, then try again."
     default:
@@ -22,8 +27,8 @@ const taggedErrorMessage = (error: unknown): string | undefined => {
   }
 }
 
-export const getUserFacingErrorMessage = (
-  error: unknown,
+export const getUserFacingErrorMessage = <Value>(
+  error: Value,
   fallback: string
 ): string => {
   if (error instanceof ApiResponseError) {

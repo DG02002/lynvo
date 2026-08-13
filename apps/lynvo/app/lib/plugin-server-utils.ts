@@ -15,12 +15,9 @@ const getNodeIdentity = (node: MediaNode, treePath: string) =>
 
 const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
   if (node.kind === "group") {
-    return {
+    const link: ExtractedLink = {
       nodeKey: getNodeIdentity(node, treePath),
-      ...(node.id ? { id: node.id } : {}),
       label: node.label,
-      ...(node.size ? { size: node.size } : {}),
-      ...(node.sourceName ? { sourceName: node.sourceName } : {}),
       selectable: node.selectable !== false,
       type: "folder",
       mediaNodeKind: "group",
@@ -28,38 +25,74 @@ const mapNode = (node: MediaNode, treePath: string): ExtractedLink => {
         mapNode(child, `${treePath}.${childIndex}`)
       ),
     }
+    if (node.id) {
+      link.id = node.id
+    }
+    if (node.size) {
+      link.size = node.size
+    }
+    if (node.sourceName) {
+      link.sourceName = node.sourceName
+    }
+    return link
   }
   if (node.kind === "resolvable") {
-    return {
+    const link: ExtractedLink = {
       nodeKey: getNodeIdentity(node, treePath),
-      ...(node.id ? { id: node.id } : {}),
       label: node.label,
-      ...(node.size ? { size: node.size } : {}),
-      ...(node.sourceName ? { sourceName: node.sourceName } : {}),
-      ...(node.nodeUrl ? { nodeUrl: node.nodeUrl } : {}),
-      ...(node.resourceId ? { resourceId: node.resourceId } : {}),
       type: "folder",
       selectable: true,
       mediaNodeKind: "resolvable",
-      ...(node.resolutionKind ? { resolutionKind: node.resolutionKind } : {}),
     }
+    if (node.id) {
+      link.id = node.id
+    }
+    if (node.size) {
+      link.size = node.size
+    }
+    if (node.sourceName) {
+      link.sourceName = node.sourceName
+    }
+    if (node.nodeUrl) {
+      link.nodeUrl = node.nodeUrl
+    }
+    if (node.resourceId) {
+      link.resourceId = node.resourceId
+    }
+    if (node.resolutionKind) {
+      link.resolutionKind = node.resolutionKind
+    }
+    return link
   }
-  return {
+  const link: ExtractedLink = {
     nodeKey: getNodeIdentity(node, treePath),
-    ...(node.id ? { id: node.id } : {}),
     label: node.label,
-    ...(node.size ? { size: node.size } : {}),
-    ...(node.sourceName ? { sourceName: node.sourceName } : {}),
     url: node.url,
     type: "file",
     mediaNodeKind: "playable",
-    ...(node.expiry ? { expiry: node.expiry } : {}),
-    ...(node.expirySource ? { expirySource: node.expirySource } : {}),
-    ...(node.status && node.status !== "unknown"
-      ? { status: node.status }
-      : {}),
-    ...(node.rangeRequest ? { rangeRequest: node.rangeRequest } : {}),
   }
+  if (node.id) {
+    link.id = node.id
+  }
+  if (node.size) {
+    link.size = node.size
+  }
+  if (node.sourceName) {
+    link.sourceName = node.sourceName
+  }
+  if (node.expiry) {
+    link.expiry = node.expiry
+  }
+  if (node.expirySource) {
+    link.expirySource = node.expirySource
+  }
+  if (node.status && node.status !== "unknown") {
+    link.status = node.status
+  }
+  if (node.rangeRequest) {
+    link.rangeRequest = node.rangeRequest
+  }
+  return link
 }
 
 export const mapNodeToExtractedLink = (node: MediaNode): ExtractedLink =>

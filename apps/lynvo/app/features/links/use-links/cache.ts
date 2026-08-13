@@ -19,7 +19,7 @@ function linksCacheKey(userId: string) {
 }
 
 export function readLinksCache(userId?: string): LinksCache | undefined {
-  if (!userId || typeof window === "undefined") {
+  if (!userId || globalThis.window === undefined) {
     return undefined
   }
   try {

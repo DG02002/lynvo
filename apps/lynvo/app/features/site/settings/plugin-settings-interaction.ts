@@ -113,7 +113,7 @@ const defaultCommands: PluginSettingsCommands = {
     await Effect.runPromise(
       client.pluginDomains.setCredential({
         params: { domainId },
-        payload: { password, ...(username ? { username } : {}) },
+        payload: username ? { password, username } : { password },
       })
     ),
   deleteCredential: async (domainId) =>
@@ -139,8 +139,8 @@ const defaultCommands: PluginSettingsCommands = {
     ),
 }
 
-const failureMessage = (error: unknown, fallback: string) =>
-  getUserFacingErrorMessage(error, fallback)
+const failureMessage = (cause: unknown, fallback: string) =>
+  getUserFacingErrorMessage(cause, fallback)
 
 export const usePluginSettingsInteraction = ({
   commands: overrides,
@@ -247,13 +247,16 @@ export const usePluginSettingsInteraction = ({
       }
       const didAdd = await run(
         pluginId,
-        () =>
-          commands.createDomain({
-            domain,
-            pluginId,
-            ...(draft.username ? { username: draft.username } : {}),
-            ...(draft.password ? { password: draft.password } : {}),
-          }),
+        () => {
+          let input: CreatePluginDomainInput = { domain, pluginId }
+          if (draft.username) {
+            input = { ...input, username: draft.username }
+          }
+          if (draft.password) {
+            input = { ...input, password: draft.password }
+          }
+          return commands.createDomain(input)
+        },
         {
           success: "Plugin domain added",
           failure: "The domain couldn’t be added. Check it and try again.",

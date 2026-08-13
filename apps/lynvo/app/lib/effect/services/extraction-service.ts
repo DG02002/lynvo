@@ -6,7 +6,7 @@ import { createOutboundHttpTransport } from "../../outbound-http"
 import type {
   ExtractionResult,
   ExtractOptions,
-  ExtractionServiceShape,
+  ExtractionServiceContract,
   MetadataOptions,
   MetadataResult,
 } from "./extraction-types"
@@ -26,7 +26,7 @@ import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 
 export class ExtractionService extends Context.Service<
   ExtractionService,
-  ExtractionServiceShape
+  ExtractionServiceContract
 >()("app/effect/services/extraction-service") {
   static readonly layer = Layer.effect(
     ExtractionService,

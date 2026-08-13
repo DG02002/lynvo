@@ -7,7 +7,7 @@ import { Effect } from "effect"
 import { api } from "../../../../convex/_generated/api"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, ValidationError } from "../errors"
-import type { ConvexServiceShape } from "./ConvexService"
+import type { ConvexServiceContract } from "./ConvexService"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -17,7 +17,7 @@ import {
   getLynvoPluginServerMetadata,
 } from "./lynvo-plugin-server-adapter"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
-import type { PluginCredentialVaultShape } from "./plugin-credential-vault"
+import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface LynvoExtractionAdapterOptions {
   readonly targetUrl: string
@@ -40,7 +40,7 @@ export interface LynvoPluginRoute {
 
 const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   function* (
-    convex: ConvexServiceShape,
+    convex: ConvexServiceContract,
     environment: Env,
     options: LynvoExtractionAdapterOptions
   ): Effect.fn.Return<
@@ -105,8 +105,8 @@ const getMeteredPluginId = (pluginId: string) => {
 export const extractWithLynvoPluginServer = Effect.fn(
   "LynvoExtractionAdapter.extract"
 )(function* (
-  convex: ConvexServiceShape,
-  credentialVault: PluginCredentialVaultShape,
+  convex: ConvexServiceContract,
+  credentialVault: PluginCredentialVaultContract,
   environment: Env,
   options: AuthenticatedLynvoExtractionAdapterOptions
 ): Effect.fn.Return<
@@ -156,7 +156,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
 export const getLynvoRouteMetadata = Effect.fn(
   "LynvoExtractionAdapter.getMetadata"
 )(function* (
-  convex: ConvexServiceShape,
+  convex: ConvexServiceContract,
   environment: Env,
   options: LynvoExtractionAdapterOptions
 ): Effect.fn.Return<

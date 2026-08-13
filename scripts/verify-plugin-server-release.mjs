@@ -28,8 +28,9 @@ const findTarball = (packageDirectory, packagePrefix) => {
   const tarball = readdirSync(packageDirectory).find(
     (file) => file.startsWith(packagePrefix) && file.endsWith(".tgz")
   )
-  if (!tarball)
+  if (!tarball) {
     throw new Error(`could not find packed ${packagePrefix} tarball`)
+  }
   return join(packageDirectory, tarball)
 }
 

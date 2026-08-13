@@ -8,6 +8,11 @@ import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { ConvexError } from "../../errors"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
+import { z } from "zod"
+
+const remotePresenceSchema = z.object({
+  receivers: z.array(z.object({ id: z.string() })),
+})
 
 export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
@@ -38,17 +43,11 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
+        const parsedPresence = remotePresenceSchema.safeParse(presence)
         const receiverIsLive =
-          typeof presence === "object" &&
-          presence !== null &&
-          "receivers" in presence &&
-          Array.isArray(presence.receivers) &&
-          presence.receivers.some(
-            (receiver) =>
-              typeof receiver === "object" &&
-              receiver !== null &&
-              "id" in receiver &&
-              receiver.id === payload.target_session_id
+          parsedPresence.success &&
+          parsedPresence.data.receivers.some(
+            (receiver) => receiver.id === payload.target_session_id
           )
         if (!receiverIsLive) {
           return yield* Effect.fail(

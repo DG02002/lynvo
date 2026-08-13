@@ -31,8 +31,8 @@ import { getServerEnv } from "~/lib/env.server"
 import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
 import {
   getSettingsPath,
+  isSettingsTab,
   parseSettingsRoute,
-  type SettingsTab,
 } from "~/features/site/settings/settings-route"
 
 export function meta() {
@@ -111,7 +111,9 @@ export default function Settings() {
   const navigate = useNavigate()
 
   const handleTabChange = (tab: string) => {
-    navigate(getSettingsPath(tab as SettingsTab))
+    if (isSettingsTab(tab)) {
+      navigate(getSettingsPath(tab))
+    }
   }
 
   return (

@@ -27,7 +27,7 @@ declare global {
   }
 
   interface RemoteCommandDeliveryDependencies {
-    reportApplied: (commandId: string, claimToken: string) => Promise<unknown>
+    reportApplied: (commandId: string, claimToken: string) => Promise<void>
     now: () => number
     persistence: Pick<RemoteControlPersistence, "loadDelivery" | "saveDelivery">
   }
@@ -48,8 +48,8 @@ declare global {
   }
 }
 
-export const parseRemoteCommandWirePayload = (
-  value: unknown
+export const parseRemoteCommandWirePayload = <Value>(
+  value: Value
 ): RemoteCommandDeliveryInput | undefined => {
   const parsed = remoteCommandFieldsSchema.safeParse(value)
   if (!parsed.success) {

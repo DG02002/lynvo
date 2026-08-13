@@ -1,4 +1,5 @@
 import { lazy } from "react"
+import { z } from "zod"
 
 import pluginServerMeta from "./plugin-server/meta.json"
 import rootMeta from "./meta.json"
@@ -24,6 +25,7 @@ const lastModifiedModules = import.meta.glob<string>("./**/*.mdx", {
   import: "default",
   query: "?docs-last-modified",
 })
+const defaultContentModuleSchema = z.object({ default: z.unknown() })
 
 const createHeadingId = (heading: string) =>
   heading
@@ -37,25 +39,23 @@ const createHeadingId = (heading: string) =>
 const getRawContent = (path: string) => {
   let contentModule = rawContentModules[path]
 
-  while (
-    typeof contentModule === "object" &&
-    contentModule !== null &&
-    "default" in contentModule
-  ) {
-    contentModule = contentModule.default
+  while (true) {
+    const module = defaultContentModuleSchema.safeParse(contentModule)
+    if (!module.success) {
+      break
+    }
+    contentModule = module.data.default
   }
 
-  if (typeof contentModule !== "string") {
-    const contentKind =
-      typeof contentModule === "object" && contentModule !== null
-        ? `${contentModule.constructor.name}(${Object.keys(contentModule).join(",")})`
-        : typeof contentModule
+  const content = z.string().safeParse(contentModule)
+  if (!content.success) {
+    const contentKind = Object.prototype.toString.call(contentModule)
     throw new Error(
       `Documentation source could not be read: ${path} [${contentKind}]`
     )
   }
 
-  return contentModule
+  return content.data
 }
 
 const getContentFileName = (path: string) =>

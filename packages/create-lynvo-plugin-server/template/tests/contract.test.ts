@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
   parseUsageResponseContract,
-  validateExtractSuccessContract,
   validatePluginServerManifestContract,
   verifyErrorSchema,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -82,14 +81,14 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
       environment
     )
 
-    const body = (await response.json()) as {
-      nodes: Array<{ url: string }>
-    }
+    const parsedBody = parseExtractSuccessContract(await response.json())
     expect(response.status).toBe(200)
-    expect(validateExtractSuccessContract(body)).toEqual({
+    expect(parsedBody).toMatchObject({
       ok: true,
       issues: [],
     })
-    expect(body.nodes[0].url).toBe("https://media.example.com/video.mp4")
+    expect(parsedBody.value?.nodes[0]).toMatchObject({
+      url: "https://media.example.com/video.mp4",
+    })
   })
 })

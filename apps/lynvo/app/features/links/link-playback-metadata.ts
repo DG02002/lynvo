@@ -13,14 +13,16 @@ export const applyOpenedState = (
       (target ? openedUrls.has(target) : false) ||
       (link.id ? openedIds.has(link.id) : false)
 
-    return {
+    const updated = {
       ...link,
       opened: isOpened,
-      ...(link.children
-        ? {
-            children: applyOpenedState(link.children, openedUrls, openedIds),
-          }
-        : {}),
+    }
+    if (!link.children) {
+      return updated
+    }
+    return {
+      ...updated,
+      children: applyOpenedState(link.children, openedUrls, openedIds),
     }
   })
 

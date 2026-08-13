@@ -6,6 +6,7 @@ import {
   AUTH_ACTIVITY_TOUCH_INTERVAL_MS,
   AUTH_SESSION_ISSUANCE_LEASE_MS,
 } from "./constants"
+import { z } from "zod"
 
 interface AuthSessionStoreStub {
   readonly fetch: (url: string, init?: RequestInit) => Promise<Response>
@@ -154,43 +155,28 @@ const rotationRequests = new WeakMap<
   Map<string, ReturnType<AuthSessionModule["rotate"]>>
 >()
 
-const parseAuthSessionState = (
-  value: unknown
+const authSessionStateSchema = z
+  .object({
+    convexSessionId: z.string().min(1),
+    accessToken: z.string().min(1),
+    refreshToken: z.string().min(1),
+    createdAt: z.number(),
+    expiresAt: z.number(),
+    issuanceGeneration: z.number().int().positive().optional(),
+  })
+  .refine((session) => session.expiresAt > session.createdAt)
+
+const authSessionIssuanceSchema = z.object({
+  generation: z.number().int().positive(),
+})
+
+const authSessionActivitySchema = z.object({ lastActivityTouchAt: z.number() })
+
+const parseAuthSessionState = <Value>(
+  value: Value
 ): AuthSessionState | undefined => {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("accessToken" in value) ||
-    !("convexSessionId" in value) ||
-    !("refreshToken" in value) ||
-    !("createdAt" in value) ||
-    !("expiresAt" in value) ||
-    typeof value.accessToken !== "string" ||
-    typeof value.convexSessionId !== "string" ||
-    typeof value.refreshToken !== "string" ||
-    typeof value.createdAt !== "number" ||
-    typeof value.expiresAt !== "number" ||
-    value.accessToken.length === 0 ||
-    value.convexSessionId.length === 0 ||
-    value.refreshToken.length === 0 ||
-    value.expiresAt <= value.createdAt
-  ) {
-    return undefined
-  }
-  return {
-    convexSessionId: value.convexSessionId,
-    accessToken: value.accessToken,
-    refreshToken: value.refreshToken,
-    createdAt: value.createdAt,
-    expiresAt: value.expiresAt,
-    issuanceGeneration:
-      "issuanceGeneration" in value &&
-      typeof value.issuanceGeneration === "number" &&
-      Number.isSafeInteger(value.issuanceGeneration) &&
-      value.issuanceGeneration > 0
-        ? value.issuanceGeneration
-        : undefined,
-  }
+  const result = authSessionStateSchema.safeParse(value)
+  return result.success ? result.data : undefined
 }
 
 export const createAuthSessionModule = (
@@ -208,14 +194,9 @@ export const createAuthSessionModule = (
           }),
         })
       if (response.status === 201) {
-        const value: unknown = await response.json()
-        return typeof value === "object" &&
-          value !== null &&
-          "generation" in value &&
-          typeof value.generation === "number" &&
-          Number.isSafeInteger(value.generation) &&
-          value.generation > 0
-          ? { kind: "acquired", generation: value.generation }
+        const value = authSessionIssuanceSchema.safeParse(await response.json())
+        return value.success
+          ? { kind: "acquired", generation: value.data.generation }
           : { kind: "unavailable" }
       }
       if (response.status === 200) {
@@ -237,13 +218,12 @@ export const createAuthSessionModule = (
       if (!statusResponse.ok) {
         return
       }
-      const status: unknown = await statusResponse.json()
+      const status = authSessionActivitySchema.safeParse(
+        await statusResponse.json()
+      )
       if (
-        typeof status !== "object" ||
-        status === null ||
-        !("lastActivityTouchAt" in status) ||
-        typeof status.lastActivityTouchAt !== "number" ||
-        input.nowMs - status.lastActivityTouchAt <
+        !status.success ||
+        input.nowMs - status.data.lastActivityTouchAt <
           AUTH_ACTIVITY_TOUCH_INTERVAL_MS
       ) {
         return

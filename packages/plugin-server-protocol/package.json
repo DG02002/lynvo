@@ -1,24 +1,24 @@
 {
   "name": "@dg02002/lynvo-plugin-server-protocol",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lynvo Custom Plugin Server protocol schemas, runtime helpers, and metadata utilities.",
+  "keywords": [
+    "cloudflare-workers",
+    "hono",
+    "lynvo",
+    "plugin-server",
+    "protocol"
+  ],
+  "homepage": "https://github.com/DG02002/lynvo/tree/main/packages/plugin-server-protocol",
+  "bugs": {
+    "url": "https://github.com/DG02002/lynvo/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/DG02002/lynvo.git",
     "directory": "packages/plugin-server-protocol"
   },
-  "homepage": "https://github.com/DG02002/lynvo/tree/main/packages/plugin-server-protocol",
-  "bugs": {
-    "url": "https://github.com/DG02002/lynvo/issues"
-  },
-  "keywords": [
-    "lynvo",
-    "plugin-server",
-    "cloudflare-workers",
-    "hono",
-    "protocol"
-  ],
   "files": [
     "dist",
     "docs",
@@ -35,9 +35,6 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }
-  },
-  "engines": {
-    "node": ">=26.7.0"
   },
   "publishConfig": {
     "access": "public"
@@ -57,5 +54,8 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=26.7.0"
   }
 }

@@ -1,5 +1,7 @@
 import { Effect, Schema } from "effect"
 import { CredentialVaultError } from "../errors"
+import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
+import { z } from "zod"
 
 export interface EncryptedCustomPluginServerCredential {
   readonly apiKeyCiphertext: string
@@ -31,8 +33,8 @@ const vaultRequest = Effect.fn("CustomPluginServerCredentials.vaultRequest")(
     userId: string,
     pluginServerId: string,
     path: "/encrypt" | "/decrypt",
-    body: Record<string, unknown>
-  ): Effect.fn.Return<unknown, CredentialVaultError> {
+    body: Record<string, JsonValue>
+  ): Effect.fn.Return<JsonValue, CredentialVaultError> {
     const response = yield* Effect.tryPromise({
       try: () =>
         environment.PLUGIN_SERVER_CREDENTIAL_VAULT.getByName(
@@ -54,7 +56,7 @@ const vaultRequest = Effect.fn("CustomPluginServerCredentials.vaultRequest")(
       })
     }
     const payload = yield* Effect.tryPromise({
-      try: () => response.json(),
+      try: async () => z.json().parse(await response.json()),
       catch: (cause) =>
         new CredentialVaultError({
           message: "External pluginServer credential response is invalid",

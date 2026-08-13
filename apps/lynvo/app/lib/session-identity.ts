@@ -4,7 +4,7 @@ interface SessionIdentity {
 }
 
 const readIdentityMeta = (name: string) =>
-  typeof document === "undefined"
+  globalThis.document === undefined
     ? undefined
     : document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content
 

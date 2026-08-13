@@ -12,7 +12,9 @@ const readSecretFile = async (path) => {
   try {
     return await readFile(path, "utf8")
   } catch (error) {
-    if (error?.code === "ENOENT") return ""
+    if (error?.code === "ENOENT") {
+      return ""
+    }
     throw error
   }
 }

@@ -4,6 +4,8 @@ import {
   UPSTREAM_TIMEOUT_MS,
 } from "./constants"
 import { assertSafeUpstreamUrl } from "./url-policy"
+import { z } from "zod"
+import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
@@ -87,4 +89,5 @@ export const readBoundedUpstreamText = async (
 
 export const readBoundedUpstreamJson = async (
   response: Response
-): Promise<unknown> => JSON.parse(await readBoundedUpstreamText(response))
+): Promise<JsonValue> =>
+  z.json().parse(JSON.parse(await readBoundedUpstreamText(response)))

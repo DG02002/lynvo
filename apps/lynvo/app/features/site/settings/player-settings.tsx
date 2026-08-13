@@ -13,6 +13,7 @@ import {
   PLAYER_DEFINITIONS,
   getPlayerPreferences,
   normalizePlayerPreferences,
+  playerIdSchema,
   setRangeSupportedPlayer,
   setRangeUnsupportedPlayer,
   type PlayerId,
@@ -188,6 +189,18 @@ export function PlayerSettings() {
   const selectedRangeUnsupported = PLAYER_DEFINITIONS.find(
     (p) => p.id === rangeUnsupportedPlayerId
   )
+  const updateRangeSupportedPlayer = (value: string | null) => {
+    const playerId = playerIdSchema.safeParse(value)
+    if (playerId.success) {
+      handleRangeSupportedChange(playerId.data)
+    }
+  }
+  const updateRangeUnsupportedPlayer = (value: string | null) => {
+    const playerId = playerIdSchema.safeParse(value)
+    if (playerId.success) {
+      handleRangeUnsupportedChange(playerId.data)
+    }
+  }
 
   return (
     <SettingsPanel>
@@ -199,7 +212,7 @@ export function PlayerSettings() {
           />
           <Select
             value={rangeSupportedPlayerId}
-            onValueChange={(val) => handleRangeSupportedChange(val as PlayerId)}
+            onValueChange={updateRangeSupportedPlayer}
           >
             <SelectTrigger className={settingsSelectTriggerClass}>
               <SelectValue>
@@ -239,9 +252,7 @@ export function PlayerSettings() {
           />
           <Select
             value={rangeUnsupportedPlayerId}
-            onValueChange={(val) =>
-              handleRangeUnsupportedChange(val as PlayerId)
-            }
+            onValueChange={updateRangeUnsupportedPlayer}
           >
             <SelectTrigger className={settingsSelectTriggerClass}>
               <SelectValue>

@@ -7,35 +7,38 @@ import type {
 export const decodeExtractionText = (value: string): string =>
   cheerio.load(value, undefined, false).text()
 
-const normalizeNodeText = (node: MediaNode): MediaNode => ({
-  ...node,
-  label: decodeExtractionText(node.label),
-  ...(node.badge ? { badge: decodeExtractionText(node.badge) } : {}),
-  ...(node.size ? { size: decodeExtractionText(node.size) } : {}),
-  ...(node.sourceName
-    ? { sourceName: decodeExtractionText(node.sourceName) }
-    : {}),
-  ...(node.kind === "group"
-    ? { children: node.children.map(normalizeNodeText) }
-    : {}),
-})
+const normalizeNodeText = (node: MediaNode): MediaNode => {
+  const normalized = { ...node, label: decodeExtractionText(node.label) }
+  if (node.badge) {
+    normalized.badge = decodeExtractionText(node.badge)
+  }
+  if (node.size) {
+    normalized.size = decodeExtractionText(node.size)
+  }
+  if (node.sourceName) {
+    normalized.sourceName = decodeExtractionText(node.sourceName)
+  }
+  if (normalized.kind === "group") {
+    normalized.children = normalized.children.map(normalizeNodeText)
+  }
+  return normalized
+}
 
 export const normalizeExtractionText = (
   result: ExtractSuccessResponse
-): ExtractSuccessResponse => ({
-  ...result,
-  plugin: {
+): ExtractSuccessResponse => {
+  const plugin = {
     ...result.plugin,
     displayName: decodeExtractionText(result.plugin.displayName),
-    ...(result.plugin.pluginName
-      ? { pluginName: decodeExtractionText(result.plugin.pluginName) }
-      : {}),
-    ...(result.plugin.pageTitle
-      ? { pageTitle: decodeExtractionText(result.plugin.pageTitle) }
-      : {}),
-    ...(result.plugin.audio
-      ? { audio: decodeExtractionText(result.plugin.audio) }
-      : {}),
-  },
-  nodes: result.nodes.map(normalizeNodeText),
-})
+  }
+  if (result.plugin.pluginName) {
+    plugin.pluginName = decodeExtractionText(result.plugin.pluginName)
+  }
+  if (result.plugin.pageTitle) {
+    plugin.pageTitle = decodeExtractionText(result.plugin.pageTitle)
+  }
+  if (result.plugin.audio) {
+    plugin.audio = decodeExtractionText(result.plugin.audio)
+  }
+  return { ...result, plugin, nodes: result.nodes.map(normalizeNodeText) }
+}

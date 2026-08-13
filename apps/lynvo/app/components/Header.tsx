@@ -8,9 +8,7 @@ import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
 
 export function Header({ showSaveAction }: { showSaveAction: boolean }) {
   const navigate = useNavigate()
-  const data = useRouteLoaderData("root") as
-    | { user: { username: string } | null }
-    | undefined
+  const data = useRouteLoaderData<{ user: { username: string } | null }>("root")
   const user = data?.user
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)

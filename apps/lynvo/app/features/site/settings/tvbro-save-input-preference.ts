@@ -21,7 +21,7 @@ const subscribeToTvBroSaveInputPreference = (onStoreChange: () => void) => {
 }
 
 export const getShouldHideTvBroSaveInput = () => {
-  if (typeof localStorage === "undefined") {
+  if (globalThis.localStorage === undefined) {
     return true
   }
 

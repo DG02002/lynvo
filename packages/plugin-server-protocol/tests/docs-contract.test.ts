@@ -1,6 +1,12 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import { parseExtractSuccessContract } from "../src/index"
+import { z } from "zod"
+
+const documentedSuccessResponseSchema = z.looseObject({
+  nodes: z.array(z.json()),
+  extensions: z.record(z.string(), z.json()),
+})
 
 const documentationUrls = [
   new URL("../docs/spec.md", import.meta.url),
@@ -23,14 +29,11 @@ describe("published Plugin Server documentation", () => {
       expect(source).not.toMatch(/\bsource(?:Name|IconUrl)\b/)
       const jsonBlocks = [...source.matchAll(/```json[^\n]*\n([\s\S]*?)```/g)]
       for (const jsonBlock of jsonBlocks) {
-        const value: unknown = JSON.parse(jsonBlock[1])
-        if (
-          typeof value === "object" &&
-          value !== null &&
-          "nodes" in value &&
-          "extensions" in value
-        ) {
-          expect(parseExtractSuccessContract(value).ok).toBe(true)
+        const result = documentedSuccessResponseSchema.safeParse(
+          JSON.parse(jsonBlock[1])
+        )
+        if (result.success) {
+          expect(parseExtractSuccessContract(result.data).ok).toBe(true)
         }
       }
     }

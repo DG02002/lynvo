@@ -158,53 +158,55 @@ const CustomPluginServerRow = ({
           id={sourceListId}
           className="ml-9 divide-y divide-border border-t border-border"
         >
-          {manifest.plugins.map((source) => (
-            <SettingsRow key={source.id} className="gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <PluginIcon
-                  iconUrl={source.iconUrl}
-                  fallback="source"
-                  className="size-10"
-                />
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate text-sm text-foreground">
-                    {source.displayName}
-                  </span>
-                  {(source.homepage || source.hosts[0]) && (
-                    <a
-                      href={
-                        source.homepage ??
-                        `https://${source.hosts[0] as string}`
-                      }
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`View project for ${source.displayName}`}
-                      title="View project"
-                      className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      <HugeiconsIcon
-                        icon={LinkSquare02Icon}
-                        className="size-4"
-                      />
-                    </a>
+          {manifest.plugins.map((source) => {
+            const projectUrl = source.homepage ?? source.hosts.at(0)
+            return (
+              <SettingsRow key={source.id} className="gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <PluginIcon
+                    iconUrl={source.iconUrl}
+                    fallback="source"
+                    className="size-10"
+                  />
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-sm text-foreground">
+                      {source.displayName}
+                    </span>
+                    {projectUrl && (
+                      <a
+                        href={
+                          source.homepage ? projectUrl : `https://${projectUrl}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`View project for ${source.displayName}`}
+                        title="View project"
+                        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <HugeiconsIcon
+                          icon={LinkSquare02Icon}
+                          className="size-4"
+                        />
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 pr-1">
+                  {(source.status === "down" ||
+                    source.status === "maintenance") && (
+                    <Badge variant={sourceStatusVariant(source.status)}>
+                      {source.status === "down" ? "Unavailable" : "Maintenance"}
+                    </Badge>
+                  )}
+                  {source.version && (
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      v{source.version}
+                    </span>
                   )}
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2 pr-1">
-                {(source.status === "down" ||
-                  source.status === "maintenance") && (
-                  <Badge variant={sourceStatusVariant(source.status)}>
-                    {source.status === "down" ? "Unavailable" : "Maintenance"}
-                  </Badge>
-                )}
-                {source.version && (
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    v{source.version}
-                  </span>
-                )}
-              </div>
-            </SettingsRow>
-          ))}
+              </SettingsRow>
+            )
+          })}
         </div>
       )}
       <ConfirmationAlertDialog

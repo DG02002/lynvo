@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { useAnimationActivity } from "./use-animation-activity"
 
-const PLAYER_PREVIEWS: Partial<Record<string, string>> = {
+const PLAYER_PREVIEWS = {
   just: "/images/player-previews/just-player.webp",
   vlc: "/images/player-previews/vlc-player.webp",
   mpv: "/images/player-previews/mpv-player.webp",
   mx: "/images/player-previews/mx-player.webp",
-}
+} satisfies Partial<Record<(typeof PLAYER_DEFINITIONS)[number]["id"], string>>
 
 type Slot = {
   depth: number

@@ -35,11 +35,16 @@ export const parsePluginDomainInput = (
   parsedUrl.username = ""
   parsedUrl.password = ""
 
-  return {
+  const result: ParsedPluginDomainInput = {
     url: parsedUrl.toString(),
-    ...(username ? { username } : {}),
-    ...(password ? { password } : {}),
   }
+  if (username) {
+    result.username = username
+  }
+  if (password) {
+    result.password = password
+  }
+  return result
 }
 
 export const normalizePluginDomain = (value: string): string => {
@@ -75,12 +80,17 @@ export const parsePluginDomainCandidate = (
       : undefined
     parsed.username = ""
     parsed.password = ""
-    return {
+    const candidate: PluginDomainCandidate = {
       domain: parsed.hostname.toLowerCase().replace(/\.$/, ""),
       sanitizedUrl: parsed.toString(),
-      ...(username ? { username } : {}),
-      ...(password ? { password } : {}),
     }
+    if (username) {
+      candidate.username = username
+    }
+    if (password) {
+      candidate.password = password
+    }
+    return candidate
   } catch {
     return undefined
   }

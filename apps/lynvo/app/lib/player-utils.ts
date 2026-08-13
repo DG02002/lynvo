@@ -1,4 +1,5 @@
 import { showPlayerLaunchError } from "~/lib/player-launch-events"
+import { z } from "zod"
 
 export type PlayerId = "just" | "vlc" | "mpv" | "mx"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
@@ -50,15 +51,17 @@ const playerById = new Map(
   PLAYER_DEFINITIONS.map((player) => [player.id, player])
 )
 
-const isPlayerId = (value: unknown): value is PlayerId =>
-  typeof value === "string" && playerById.has(value as PlayerId)
+export const playerIdSchema = z.enum(["just", "vlc", "mpv", "mx"])
+
+const isPlayerId = <Value>(value: Value): value is Value & PlayerId =>
+  playerIdSchema.safeParse(value).success
 
 const getStoredPlayerId = (
   key: string,
   fallback: PlayerId,
   userId?: string
 ): PlayerId => {
-  if (typeof localStorage === "undefined") {
+  if (globalThis.localStorage === undefined) {
     return fallback
   }
 
@@ -75,7 +78,7 @@ const setStoredPlayerId = (
   playerId: PlayerId,
   userId?: string
 ) => {
-  if (typeof localStorage === "undefined") {
+  if (globalThis.localStorage === undefined) {
     return
   }
 
@@ -131,7 +134,12 @@ export const selectPlayerForRangeCapability = (
       ? preferences.rangeUnsupportedPlayerId
       : preferences.rangeSupportedPlayerId
 
-  return playerById.get(playerId) ?? playerById.get(DEFAULT_RANGE_PLAYER_ID)!
+  const player =
+    playerById.get(playerId) ?? playerById.get(DEFAULT_RANGE_PLAYER_ID)
+  if (!player) {
+    throw new Error("Default player configuration is missing")
+  }
+  return player
 }
 
 export const buildIntentUrl = (mediaUrl: string, player: PlayerDefinition) => {
@@ -202,7 +210,7 @@ export const openInSpecificPlayer = async (
   }
 
   const isAndroid =
-    typeof navigator !== "undefined" && /android/i.test(navigator.userAgent)
+    globalThis.navigator !== undefined && /android/i.test(navigator.userAgent)
 
   if (!isAndroid || !launchIntentViaAnchor(intent)) {
     document.removeEventListener("visibilitychange", visHandler)

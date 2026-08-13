@@ -9,7 +9,9 @@ const packageJson = JSON.parse(
 const failures = []
 
 const assert = (condition, message) => {
-  if (!condition) failures.push(message)
+  if (!condition) {
+    failures.push(message)
+  }
 }
 
 assert(packageJson.private !== true, "package must not be private")
@@ -92,7 +94,9 @@ assert(
 
 if (failures.length > 0) {
   console.error("Creator package check failed:")
-  for (const failure of failures) console.error(`- ${failure}`)
+  for (const failure of failures) {
+    console.error(`- ${failure}`)
+  }
   process.exit(1)
 }
 

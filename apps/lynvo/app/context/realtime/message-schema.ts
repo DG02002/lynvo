@@ -54,13 +54,8 @@ export const isRealtimeHeartbeatResponse = (value: string): boolean => {
 
 export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
   try {
-    const parsed: unknown = JSON.parse(value)
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "type" in parsed &&
-      parsed.type === "remote.event"
-    ) {
+    const parsed = JSON.parse(value)
+    if (remoteCommandWireMessageSchema.safeParse(parsed).success) {
       const remoteResult = remoteCommandWireMessageSchema.safeParse(parsed)
       return remoteResult.success ? remoteResult.data : null
     }

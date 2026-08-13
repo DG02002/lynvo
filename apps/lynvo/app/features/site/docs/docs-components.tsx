@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { isValidElement, useEffect, useId, useRef, useState } from "react"
 import type { ComponentProps, ReactNode } from "react"
 import {
   ApiIcon,
@@ -14,6 +14,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { MDXComponents } from "mdx/types.js"
 import { Link } from "react-router"
+import { z } from "zod"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
@@ -305,23 +306,17 @@ export const AndroidTvRemoteTroubleshooting = () => (
 )
 
 const getNodeText = (node: ReactNode): string => {
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node)
+  const primitive = z.union([z.string(), z.number()]).safeParse(node)
+  if (primitive.success) {
+    return String(primitive.data)
   }
 
   if (Array.isArray(node)) {
     return node.map((child) => getNodeText(child)).join("")
   }
 
-  if (
-    typeof node === "object" &&
-    node !== null &&
-    "props" in node &&
-    typeof node.props === "object" &&
-    node.props !== null &&
-    "children" in node.props
-  ) {
-    return getNodeText(node.props.children as ReactNode)
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return getNodeText(node.props.children)
   }
 
   return ""

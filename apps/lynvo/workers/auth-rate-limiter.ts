@@ -1,3 +1,11 @@
+import { z } from "zod"
+
+const rateLimitPayloadSchema = z.object({
+  limit: z.number().int().positive(),
+  nowMs: z.number().int().nonnegative(),
+  windowMs: z.number().int().positive(),
+})
+
 export class AuthRateLimiter implements DurableObject {
   constructor(private readonly state: DurableObjectState) {}
 
@@ -6,26 +14,12 @@ export class AuthRateLimiter implements DurableObject {
       return new Response(null, { status: 405 })
     }
 
-    const payload: unknown = await request.json()
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      !("limit" in payload) ||
-      !("nowMs" in payload) ||
-      !("windowMs" in payload) ||
-      !Number.isSafeInteger(payload.limit) ||
-      !Number.isSafeInteger(payload.nowMs) ||
-      !Number.isSafeInteger(payload.windowMs) ||
-      Number(payload.limit) < 1 ||
-      Number(payload.nowMs) < 0 ||
-      Number(payload.windowMs) < 1
-    ) {
+    const payload = rateLimitPayloadSchema.safeParse(await request.json())
+    if (!payload.success) {
       return new Response(null, { status: 400 })
     }
 
-    const limit = Number(payload.limit)
-    const nowMs = Number(payload.nowMs)
-    const windowMs = Number(payload.windowMs)
+    const { limit, nowMs, windowMs } = payload.data
     const result = await this.state.storage.transaction(async (storage) => {
       const current = await storage.get<{ count: number; expiresAt: number }>(
         "window"

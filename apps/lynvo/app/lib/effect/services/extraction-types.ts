@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import type { ExtractedLink } from "../../../features/links/types"
+import type { MetaData } from "../../../features/links/types"
 import type {
   ExtractionError,
   ValidationError,
@@ -19,7 +20,11 @@ export interface ExtractOptions {
 
 export interface ExtractionResult {
   readonly links: ReadonlyArray<ExtractedLink>
-  readonly meta?: Record<string, unknown>
+  readonly meta?: ExtractionMetadata
+}
+
+export interface ExtractionMetadata extends MetaData {
+  schemaVersion: 3
 }
 
 export interface MetadataOptions {
@@ -57,7 +62,7 @@ export interface RegisteredPluginServer {
   readonly lastManifestRefreshAt?: number
 }
 
-export interface ExtractionServiceShape {
+export interface ExtractionServiceContract {
   readonly extract: (
     options: ExtractOptions
   ) => Effect.Effect<

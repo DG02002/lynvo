@@ -30,20 +30,31 @@ declare global {
   interface PlayableLinkHandoffDependencies {
     readonly open: (
       intent: RemotePlaybackIntent & { playerPreferenceUserId?: string }
-    ) => Promise<unknown>
+    ) => Promise<PlayerLaunchOutcome>
+  }
+
+  interface PlayerLaunchOutcome {
+    readonly expectsNavigation: boolean
   }
 }
 
-export const parseRemotePlaybackIntent = (value: unknown) =>
+export const parseRemotePlaybackIntent = <Value>(value: Value) =>
   remotePlaybackIntentSchema.safeParse(value)
+
+const isString = <Value>(value: Value): value is Value & string =>
+  z.string().safeParse(value).success
 
 const toRemotePlaybackIntent = (
   target: string | ExtractedLink
-): RemotePlaybackIntent => ({
-  url: typeof target === "string" ? target : getMediaNodeTarget(target),
-  rangeRequest:
-    typeof target === "string" ? "unknown" : (target.rangeRequest ?? "unknown"),
-})
+): RemotePlaybackIntent => {
+  if (isString(target)) {
+    return { url: target, rangeRequest: "unknown" }
+  }
+  return {
+    url: getMediaNodeTarget(target),
+    rangeRequest: target.rangeRequest ?? "unknown",
+  }
+}
 
 export const createPlayableLinkHandoff = ({
   open,
@@ -60,15 +71,12 @@ export const createPlayableLinkHandoff = ({
       return { accepted: true }
     }
     const launchResult = await open({ ...intent, playerPreferenceUserId })
-    return {
-      accepted:
-        typeof launchResult === "object" &&
-        launchResult !== null &&
-        "expectsNavigation" in launchResult &&
-        launchResult.expectsNavigation === true,
-    }
+    const result = z
+      .object({ expectsNavigation: z.literal(true) })
+      .safeParse(launchResult)
+    return { accepted: result.success }
   },
-  receive: async (value: unknown, playerPreferenceUserId?: string) => {
+  receive: async <Value>(value: Value, playerPreferenceUserId?: string) => {
     const intent = remotePlaybackIntentSchema.parse(value)
     await open({ ...intent, playerPreferenceUserId })
   },

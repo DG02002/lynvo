@@ -1,4 +1,5 @@
 import { createCookie } from "react-router"
+import { z } from "zod"
 
 const isProd = import.meta.env.PROD
 
@@ -46,7 +47,7 @@ export async function validateCSRF(request: Request, formData?: FormData) {
   let token = request.headers.get("X-CSRF-Token")
 
   if (!token && formData) {
-    token = formData.get("csrf-token") as string
+    token = z.string().safeParse(formData.get("csrf-token")).data ?? null
   }
 
   if (!cookieToken || !token || cookieToken !== token) {

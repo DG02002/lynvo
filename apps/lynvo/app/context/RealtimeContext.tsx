@@ -53,7 +53,7 @@ export function RealtimeProvider({
   )
 
   useEffect(() => {
-    if (!userId || typeof window === "undefined") {
+    if (!userId || globalThis.window === undefined) {
       dispatch({ type: "SET_STATUS", status: "disabled" })
       return
     }

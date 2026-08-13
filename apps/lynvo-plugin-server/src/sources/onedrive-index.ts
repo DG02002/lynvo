@@ -21,6 +21,7 @@ import {
   readBoundedUpstreamText,
   UpstreamPolicyError,
 } from "../upstream-response"
+import { z } from "zod"
 
 export interface OneDriveItem {
   name: string
@@ -36,6 +37,29 @@ export interface OneDriveApiResponse {
   next?: string
   error?: string
 }
+
+const oneDriveItemSchema = z.object({
+  name: z.string(),
+  id: z.string(),
+  folder: z.json().optional(),
+  file: z.json().optional(),
+  size: z.union([z.string(), z.number()]).optional(),
+})
+
+const oneDriveApiResponseSchema = z.object({
+  folder: z.object({ value: z.array(oneDriveItemSchema) }).optional(),
+  file: oneDriveItemSchema.optional(),
+  next: z.string().optional(),
+  error: z.string().optional(),
+})
+
+const oneDriveNextDataSchema = z.object({
+  props: z.object({ pageProps: oneDriveApiResponseSchema }),
+})
+
+const passwordRequiredResponseSchema = z.object({
+  error: z.literal("Password required."),
+})
 
 export const sha256 = async (message: string): Promise<string> => {
   const hashBuffer = await crypto.subtle.digest(
@@ -121,16 +145,17 @@ export const createOneDriveNodes = (
     if (hashedPassword) {
       playableUrl.searchParams.set("odpt", hashedPassword)
     }
-    return [
-      {
-        kind: "playable" as const,
-        id: item.id,
-        label: item.name,
-        url: playableUrl.toString(),
-        ...(size ? { size } : {}),
-        status: "unknown" as const,
-      },
-    ]
+    const node: MediaNode = {
+      kind: "playable" as const,
+      id: item.id,
+      label: item.name,
+      url: playableUrl.toString(),
+      status: "unknown" as const,
+    }
+    if (size) {
+      node.size = size
+    }
+    return [node]
   })
 
 export const extractOneDriveNextData = (
@@ -141,19 +166,8 @@ export const extractOneDriveNextData = (
   if (!nextData) {
     return undefined
   }
-  const parsed: unknown = JSON.parse(nextData)
-  if (typeof parsed !== "object" || parsed === null || !("props" in parsed)) {
-    return undefined
-  }
-  const props = parsed.props
-  if (typeof props !== "object" || props === null || !("pageProps" in props)) {
-    return undefined
-  }
-  const pageProps = props.pageProps
-  if (typeof pageProps !== "object" || pageProps === null) {
-    return undefined
-  }
-  return pageProps
+  const parsed = oneDriveNextDataSchema.safeParse(JSON.parse(nextData))
+  return parsed.success ? parsed.data.props.pageProps : undefined
 }
 
 const fetchOneDrivePage = async (
@@ -189,15 +203,10 @@ const fetchOneDrivePage = async (
     }
     const response = await fetchOneDrive(apiUrl.toString(), { headers })
     if (response.status === 401) {
-      const errorBody: unknown = await readBoundedUpstreamJson(response).catch(
+      const errorBody = await readBoundedUpstreamJson(response).catch(
         () => undefined
       )
-      if (
-        typeof errorBody === "object" &&
-        errorBody !== null &&
-        "error" in errorBody &&
-        errorBody.error === "Password required."
-      ) {
+      if (passwordRequiredResponseSchema.safeParse(errorBody).success) {
         throw new Error("PASSWORD_REQUIRED")
       }
       throw new Error("INVALID_PASSWORD")
@@ -205,11 +214,13 @@ const fetchOneDrivePage = async (
     if (!response.ok) {
       throw new Error("OneDrive Index upstream request failed.")
     }
-    const data: unknown = await readBoundedUpstreamJson(response)
-    if (typeof data !== "object" || data === null) {
+    const data = oneDriveApiResponseSchema.safeParse(
+      await readBoundedUpstreamJson(response)
+    )
+    if (!data.success) {
       throw new Error("OneDrive Index returned malformed JSON.")
     }
-    const result = data as OneDriveApiResponse
+    const result = data.data
     if (result.folder && Array.isArray(result.folder.value)) {
       nodes.push(
         ...createOneDriveNodes(
@@ -232,7 +243,7 @@ const fetchOneDrivePage = async (
     } else {
       throw new Error("OneDrive Index returned an unsupported payload.")
     }
-    nextToken = typeof result.next === "string" ? result.next : ""
+    nextToken = result.next ?? ""
     if (nodes.length > EXTRACTION_NODE_LIMIT) {
       throw new Error("OneDrive Index returned too many nodes.")
     }

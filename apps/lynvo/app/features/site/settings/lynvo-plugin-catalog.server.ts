@@ -31,8 +31,8 @@ export const loadLynvoPlugins = async (
     const manifest = await new PluginServerClient(
       new ServiceBindingPluginServerTransport(environment.LYNVO_PLUGIN_SERVER)
     ).getManifest({ apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY })
-    return (getLynvoManifestExtension(manifest).plugins ?? []).map(
-      (plugin) => ({
+    return (getLynvoManifestExtension(manifest).plugins ?? []).map((plugin) => {
+      const result: LynvoPlugin = {
         id: plugin.id,
         name: plugin.displayName,
         sourceUrl:
@@ -50,13 +50,18 @@ export const loadLynvoPlugins = async (
             : plugin.credential
               ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
               : "",
-        ...(plugin.credential
-          ? { credentialKind: plugin.credential.kind }
-          : {}),
-        ...(plugin.status ? { status: plugin.status } : {}),
-        ...(plugin.version ? { version: plugin.version } : {}),
-      })
-    )
+      }
+      if (plugin.credential) {
+        result.credentialKind = plugin.credential.kind
+      }
+      if (plugin.status) {
+        result.status = plugin.status
+      }
+      if (plugin.version) {
+        result.version = plugin.version
+      }
+      return result
+    })
   } catch (error) {
     console.error({
       event: "lynvo_plugin_server_manifest_load_failed",
