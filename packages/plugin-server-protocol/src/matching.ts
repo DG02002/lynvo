@@ -1,4 +1,5 @@
 import { lynvoPluginCatalogSchema } from "./schemas.js"
+import { z } from "zod"
 import type {
   ExtractRequest,
   LynvoManifestExtension,
@@ -68,11 +69,14 @@ export const getExtractTargetUrl = (request: ExtractRequest): string =>
     ? request.input.sourceUrl
     : request.input.nodeUrl
 
+const readLynvoExtension = (manifest: PluginServerManifest) =>
+  z.record(z.string(), z.looseObject({})).parse(manifest.extensions).lynvo
+
 export const getLynvoManifestExtension = (
   manifest: PluginServerManifest
 ): LynvoManifestExtension => {
   const result = lynvoPluginCatalogSchema.safeParse(
-    manifest.extensions["lynvo"]
+    readLynvoExtension(manifest)
   )
   return result.success ? result.data : { plugins: [] }
 }
@@ -80,9 +84,9 @@ export const getLynvoManifestExtension = (
 export const parseLynvoManifestExtension = (
   manifest: PluginServerManifest
 ): LynvoManifestExtension =>
-  manifest.extensions["lynvo"] === undefined
+  readLynvoExtension(manifest) === undefined
     ? { plugins: [] }
-    : lynvoPluginCatalogSchema.parse(manifest.extensions["lynvo"])
+    : lynvoPluginCatalogSchema.parse(readLynvoExtension(manifest))
 
 export const getMatchedPlugin = (
   manifest: PluginServerManifest,

@@ -46,7 +46,7 @@ export const pluginServerManifestSchema = z.object({
     basicAuth: z.boolean().optional().default(false),
     discovery: z.boolean().optional().default(false),
   }),
-  extensions: z.record(z.string(), z.json()).optional().default({}),
+  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
 })
 
 export const usageMetricSchema = z.object({
@@ -171,7 +171,7 @@ export const extractSuccessSchema = z.object({
     audio: z.string().optional(),
   }),
   nodes: z.array(mediaNodeSchema),
-  extensions: z.record(z.string(), z.json()).optional().default({}),
+  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
 })
 
 export const extractErrorSchema = z.object({
@@ -181,7 +181,7 @@ export const extractErrorSchema = z.object({
     message: z.string(),
     retryAfterSeconds: z.number().optional(),
   }),
-  extensions: z.record(z.string(), z.unknown()).optional().default({}),
+  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
 })
 
 export const sourceInputSchema = z.object({

@@ -36,7 +36,7 @@ export interface PluginServerManifest {
     basicAuth?: boolean
     discovery?: boolean
   }
-  extensions: JsonObject
+  extensions: object
 }
 
 export interface UsageMetric {
@@ -137,7 +137,7 @@ export interface ExtractSuccessResponse {
     audio?: string
   }
   nodes: MediaNode[]
-  extensions: JsonObject
+  extensions: object
 }
 
 export interface ExtractProtocolError {
@@ -147,7 +147,7 @@ export interface ExtractProtocolError {
     message: string
     retryAfterSeconds?: number
   }
-  extensions: JsonObject
+  extensions: object
 }
 
 export interface VerifySuccessResponse {
