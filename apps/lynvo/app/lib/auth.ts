@@ -2,7 +2,11 @@ import { data, redirect } from "react-router"
 import { Effect } from "effect"
 import { AuthSessionService } from "./effect/services/AuthSessionService"
 import { getRuntime } from "./effect/runtime"
-import { getCookieValue, createSessionCookie, normalizeReturnTo } from "./auth-cookie"
+import {
+  getCookieValue,
+  createSessionCookie,
+  normalizeReturnTo,
+} from "./auth-cookie"
 import { WORKER_SESSION_COOKIE_NAME } from "./constants"
 
 export interface SessionResult {

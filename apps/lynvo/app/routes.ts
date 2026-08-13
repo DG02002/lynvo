@@ -48,6 +48,7 @@ export default [
       "features/site/routes/_site.policies.usage-policy.tsx"
     ),
     route("*", "features/site/routes/_site.not-found.tsx"),
+
   ]),
 
   layout("features/auth/routes/_auth.tsx", [
