@@ -230,7 +230,7 @@ describe("Convex storage ledger", () => {
           baseUrl: `https://quota-${serverIndex}.example`,
           normalizedBaseUrl: `https://quota-${serverIndex}.example`,
           credentialStatus: "pending",
-          manifest: "x".repeat(740_000),
+          manifest: "x".repeat(205_000),
           enabled: true,
           priority: serverIndex,
           verificationStatus: "verified",
@@ -254,7 +254,7 @@ describe("Convex storage ledger", () => {
     await expect(
       client.mutation(api.links.createOrUpdate, {
         url: "https://quota.example/rejected",
-        meta: createMetadataJson({ padding: "x".repeat(300_000) }),
+        meta: createMetadataJson({ padding: "x".repeat(240_000) }),
       })
     ).rejects.toThrow("Storage is full")
 

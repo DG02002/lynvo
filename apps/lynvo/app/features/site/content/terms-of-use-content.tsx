@@ -92,16 +92,16 @@ export const TermsOfUseContent = () => (
         credentials, and settings can&apos;t be recovered.
       </p>
       <p>
-        Saved-link records expire separately. The default retention period is 90
-        days. You can select 7, 30, 90, or 180 days in Settings. You can also
-        delete individual links or clear all saved links at any time.
+        Saved-link records expire separately. The default retention period is 30
+        days. You can select 7, 15, or 30 days in Settings. You can also delete
+        individual links or clear all saved links at any time.
       </p>
     </PolicySection>
 
     <PolicySection title="5. Account and request limits">
       <p>
-        Each account currently has a 3 MB storage limit for account records. A
-        single saved link can use up to 1 MB, and an account can contain up to
+        Each account currently has a 1 MB storage limit for account records. A
+        single saved link can use up to 256 KB, and an account can contain up to
         100 saved links. These limits cover stored records and metadata, not the
         size of a linked video file.
       </p>

@@ -34,9 +34,9 @@ describe("Storage settings browser data", () => {
             storageWarningBytes: 8_192,
             linkLimitBytes: 4_096,
             retentionDays: 30,
-            retentionDayOptions: [7, 30, 90],
+            retentionDayOptions: [7, 15, 30],
             defaultRetentionDays: 30,
-            maxRetentionDays: 90,
+            maxRetentionDays: 30,
           })
         }
         return new Response(null, { status: 404 })

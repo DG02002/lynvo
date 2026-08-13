@@ -144,7 +144,7 @@ export const PlanSection = () => {
 
         <div className="grid w-full grid-cols-1 gap-12 sm:grid-cols-3">
           <div className="flex flex-col items-center gap-3">
-            <span className="text-2xl text-foreground">3 MB of storage</span>
+            <span className="text-2xl text-foreground">1 MB of storage</span>
             <span className="text-sm text-muted-foreground text-center">
               Save up to 100 links, subject to the storage limit.
             </span>

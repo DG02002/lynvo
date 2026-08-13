@@ -85,8 +85,8 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="5. Follow account and request limits">
       <p>
-        Each account can store up to 100 saved links within 3 MB of
-        account-record storage. A single saved link can use up to 1 MB. Lynvo
+        Each account can store up to 100 saved links within 1 MB of
+        account-record storage. A single saved link can use up to 256 KB. Lynvo
         Plugin Server and Direct Media requests share an allowance of 15
         requests per day and 200 requests per month.
       </p>

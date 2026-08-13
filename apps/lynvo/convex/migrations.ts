@@ -1,4 +1,5 @@
 import { Migrations } from "@convex-dev/migrations"
+import { v } from "convex/values"
 import { components } from "./_generated/api"
 import type { DataModel } from "./_generated/dataModel"
 import { internalQuery } from "./_generated/server"
@@ -8,6 +9,9 @@ import {
   upsertUserStorageLedger,
 } from "./storagePolicy"
 import {
+  DEFAULT_RETENTION_DAYS,
+  MAX_REGISTERED_ACCOUNTS,
+  STORAGE_RETENTION_DAY_OPTIONS,
   STORAGE_LEDGER_SCHEMA_VERSION,
   STORAGE_LEDGER_VERIFICATION_USER_LIMIT,
 } from "./constants"
@@ -42,7 +46,53 @@ export const backfillUserStorageLedgers = migrations.define({
   },
 })
 
+export const normalizeSavedLinkRetention = migrations.define({
+  table: "users",
+  batchSize: 100,
+  migrateOne: async (ctx, user) => {
+    if (
+      user.storageRetentionDays !== undefined &&
+      STORAGE_RETENTION_DAY_OPTIONS.includes(user.storageRetentionDays)
+    ) {
+      return
+    }
+    await ctx.db.patch("users", user._id, {
+      storageRetentionDays: DEFAULT_RETENTION_DAYS,
+    })
+  },
+})
+
 export const run = migrations.runner()
+
+export const verifySavedLinkRetention = internalQuery({
+  args: {},
+  returns: v.object({
+    checkedCount: v.number(),
+    missingCount: v.number(),
+    unsupportedCount: v.number(),
+    isComplete: v.boolean(),
+  }),
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").take(MAX_REGISTERED_ACCOUNTS + 1)
+    const missingCount = users.filter(
+      (user) => user.storageRetentionDays === undefined
+    ).length
+    const unsupportedCount = users.filter(
+      (user) =>
+        user.storageRetentionDays !== undefined &&
+        !STORAGE_RETENTION_DAY_OPTIONS.includes(user.storageRetentionDays)
+    ).length
+    return {
+      checkedCount: users.length,
+      missingCount,
+      unsupportedCount,
+      isComplete:
+        users.length <= MAX_REGISTERED_ACCOUNTS &&
+        missingCount === 0 &&
+        unsupportedCount === 0,
+    }
+  },
+})
 
 export const verifyUserStorageLedgers = internalQuery({
   args: {},

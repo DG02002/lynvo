@@ -264,11 +264,11 @@ export const PrivacyPolicyContent = () => (
 
     <PolicySection title="7. Retention and automatic deletion">
       <p>
-        Saved links use a 90-day retention window by default. You can change the
-        window to 7, 30, 90, or 180 days in Settings. Lynvo checks daily for
-        saved links older than the selected window and deletes them. An account
-        can contain up to 100 saved links within 3 MB of account-record storage;
-        each saved link can use up to 1 MB.
+        Saved links use a 30-day retention window by default. You can change the
+        window to 7, 15, or 30 days in Settings. Lynvo checks daily for saved
+        links older than the selected window and deletes them. An account can
+        contain up to 100 saved links within 1 MB of account-record storage;
+        each saved link can use up to 256 KB.
       </p>
       <ul className="list-disc pl-6">
         <li>

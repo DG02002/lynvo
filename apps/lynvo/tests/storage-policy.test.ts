@@ -5,17 +5,38 @@ import {
   byteLength,
   calculateStorageUsage,
   getRetentionCutoff,
+  normalizeRetentionDays,
   projectStorageBytes,
   selectExpiredLinks,
   STORAGE_DOMAIN_NAMES,
 } from "../convex/storagePolicy"
 import {
   DAY_MS,
+  DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
+  MAX_REGISTERED_ACCOUNTS,
+  STORAGE_RETENTION_DAY_OPTIONS,
+  USER_STORAGE_WARNING_BYTES,
   USER_STORAGE_LIMIT_BYTES,
 } from "../convex/constants"
 
 describe("storage policy", () => {
+  it("uses the launch account and saved-link limits", () => {
+    expect(USER_STORAGE_LIMIT_BYTES).toBe(1024 * 1024)
+    expect(USER_STORAGE_WARNING_BYTES).toBe(Math.round(0.8 * 1024 * 1024))
+    expect(LINK_LIMIT_BYTES).toBe(256 * 1024)
+    expect(MAX_REGISTERED_ACCOUNTS).toBe(400)
+  })
+
+  it("offers only the supported saved-link retention windows", () => {
+    expect(STORAGE_RETENTION_DAY_OPTIONS).toEqual([7, 15, 30])
+    expect(DEFAULT_RETENTION_DAYS).toBe(30)
+    expect(normalizeRetentionDays(15)).toBe(15)
+    expect(() => normalizeRetentionDays(90)).toThrow(
+      "Choose an available auto-delete period"
+    )
+  })
+
   it("projects empty and combined storage from the canonical inventory", () => {
     expect(calculateStorageUsage({})).toEqual({
       estimatedBytes: 0,

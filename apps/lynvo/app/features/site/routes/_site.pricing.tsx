@@ -32,7 +32,7 @@ import { cn } from "~/lib/utils"
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",
   "15 Lynvo Plugin Server requests per day",
-  "3 MB of storage for up to 100 saved links",
+  "1 MB of storage for up to 100 saved links",
   "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
@@ -55,10 +55,10 @@ const planDetailSections = [
     title: "Account",
     details: [
       { feature: "Price", allowance: "₹0 per month" },
-      { feature: "Account storage", allowance: "3 MB" },
+      { feature: "Account storage", allowance: "1 MB" },
       { feature: "Saved links", allowance: "Up to 100" },
-      { feature: "Maximum saved-link record", allowance: "1 MB" },
-      { feature: "Default saved-link retention", allowance: "90 days" },
+      { feature: "Maximum saved-link record", allowance: "256 KB" },
+      { feature: "Default saved-link retention", allowance: "30 days" },
       { feature: "Inactive account deletion", allowance: "After 90 days" },
     ],
   },

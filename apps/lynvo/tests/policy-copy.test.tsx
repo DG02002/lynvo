@@ -17,8 +17,8 @@ describe("policy copy", () => {
     const usage = renderText(<UsagePolicyContent />)
 
     for (const policy of [terms, usage]) {
-      expect(policy).toContain("3 MB")
       expect(policy).toContain("1 MB")
+      expect(policy).toContain("256 KB")
       expect(policy).toContain("100 saved links")
       expect(policy).toContain("15 requests per day")
       expect(policy).toContain("200 requests per month")
@@ -30,8 +30,8 @@ describe("policy copy", () => {
   it("preserves retention and account-inactivity periods", () => {
     const privacy = renderText(<PrivacyPolicyContent />)
 
-    expect(privacy).toContain("90-day retention window")
-    expect(privacy).toContain("7, 30, 90, or 180 days")
+    expect(privacy).toContain("30-day retention window")
+    expect(privacy).toContain("7, 15, or 30 days")
     expect(privacy).toContain("90 days (3 months)")
     expect(privacy).toContain("Telegram")
     expect(privacy).not.toMatch(/Recent Link/i)
