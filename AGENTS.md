@@ -28,7 +28,6 @@ Long term maintainability is a core priority. If you add new functionality, firs
   - Example: for .map(), you can use `innerX` instead of `x`
   - Example: instead of `moved` use `didPositionChange`
 - MUST: Frequently re-evaluate and refactor variable names to be more accurate and descriptive.
-- MUST: Do not type cast ("as") unless absolutely necessary
 - MUST: Remove unused code and don't repeat yourself.
 - MUST: Always search the codebase, think of many solutions, then implement the most _elegant_ solution.
 - MUST: Put all magic numbers in `constants.ts` using `SCREAMING_SNAKE_CASE` with unit suffixes (`_MS`, `_PX`).

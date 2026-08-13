@@ -33,8 +33,9 @@
     "access": "public"
   },
   "scripts": {
-    "check": "pnpm run check:package && pnpm test",
+    "check": "pnpm run check:package && pnpm run lint && pnpm test",
     "check:package": "node scripts/check-package.mjs",
+    "lint": "oxlint scripts tests template/src template/tests template/scripts template/vitest.config.ts",
     "prepack": "pnpm run check:package",
     "test": "node --test tests/*.test.mjs"
   },

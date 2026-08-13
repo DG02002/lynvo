@@ -44,7 +44,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "pnpm run typecheck && pnpm run test",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test",
+    "lint": "oxlint src tests scripts",
     "prepack": "pnpm run release:check",
     "release:check": "pnpm run build && node scripts/release-check.mjs",
     "test": "vitest run",

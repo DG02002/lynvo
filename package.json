@@ -11,10 +11,12 @@
     "test": "pnpm --workspace-concurrency=1 -r --if-present run test --run",
     "deploy:lynvo": "pnpm --filter @lynvo/app run deploy",
     "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
+    "lint": "oxlint scripts && pnpm -r --if-present run lint",
     "sync:repos": "tsx scripts/sync-repos.ts",
     "secrets:local": "node scripts/ensure-lynvo-plugin-server-local-secret.mjs"
   },
   "devDependencies": {
+    "@oxlint/plugins": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "sharp": "catalog:",
