@@ -64,6 +64,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
         operationId: Schema.String,
+        clientRevision: Schema.Number,
         url: Schema.String,
         title: Schema.optional(Schema.String),
         meta: Schema.Unknown,
@@ -98,6 +99,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
       },
       payload: Schema.Struct({
         operationId: Schema.String,
+        clientRevision: Schema.Number,
         meta: Schema.Unknown,
       }),
       success: SavedLinkCommitSchema,
@@ -113,6 +115,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
       params: { linkId: Schema.String },
       payload: Schema.Struct({
         operationId: Schema.String,
+        clientRevision: Schema.Number,
         operation: LinkMetadataOperationSchema,
       }),
       success: SavedLinkCommitSchema,

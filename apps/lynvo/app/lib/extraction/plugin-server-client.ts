@@ -30,6 +30,7 @@ export interface PluginServerTransport {
 export interface PluginServerClientOptions {
   apiKey?: string
   requestId?: string
+  operationId?: string
 }
 
 export interface PluginServerRequestOptions extends PluginServerClientOptions {
@@ -146,6 +147,9 @@ export class PluginServerClient {
     }
     if (options.requestId) {
       headers.set("x-request-id", options.requestId)
+    }
+    if (options.operationId) {
+      headers.set("x-operation-id", options.operationId)
     }
     try {
       return await this.transport.fetch(

@@ -47,9 +47,11 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
     LynvoPluginRoute | undefined,
     ExtractionError | ValidationError
   > {
+    const operationId = `${options.requestId}:${options.kind}`
     const manifest = yield* getLynvoPluginServerManifest(
       environment,
-      options.requestId
+      options.requestId,
+      operationId
     )
     const configuredDomain = yield* convex
       .query(
@@ -76,7 +78,8 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
         environment,
         options.targetUrl,
         options.inlineBasicAuth,
-        options.requestId
+        options.requestId,
+        operationId
       )
       if (discovery.matched) {
         plugin = findLynvoPlugin(
@@ -154,7 +157,8 @@ export const extractWithLynvoPluginServer = Effect.fn(
     options.targetUrl,
     options.kind,
     { pluginId: route.plugin.id, ...credentials },
-    options.requestId
+    options.requestId,
+    operationId
   )
   if (!meteredPluginId) {
     return yield* extraction

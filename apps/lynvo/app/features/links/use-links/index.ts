@@ -61,14 +61,20 @@ export const useLinks = () => {
           const result = await runSavedLinkCommand(() =>
             Effect.runPromise(
               client.links.create({
-                payload: { operationId, url, title, meta: metadata },
+                payload: {
+                  operationId,
+                  clientRevision: cachedLinks?.revision ?? 0,
+                  url,
+                  title,
+                  meta: metadata,
+                },
               })
             )
           )
           return result.id
         },
       }),
-    []
+    [cachedLinks?.revision]
   )
   const updateLink = useCallback(
     async (
@@ -94,6 +100,7 @@ export const useLinks = () => {
                   params: { linkId },
                   payload: {
                     operationId,
+                    clientRevision: cachedLinks?.revision ?? 0,
                     operation: {
                       kind: "markOpened",
                       linkUrl: openedLinkUrl,
@@ -115,6 +122,7 @@ export const useLinks = () => {
                   params: { linkId },
                   payload: {
                     operationId,
+                    clientRevision: cachedLinks?.revision ?? 0,
                     operation: {
                       kind: "cacheMirrors",
                       lazyItemUrl,
@@ -137,6 +145,7 @@ export const useLinks = () => {
                   params: { linkId },
                   payload: {
                     operationId,
+                    clientRevision: cachedLinks?.revision ?? 0,
                     operation: {
                       kind: "removeExtractedLink",
                       linkKey,
@@ -159,6 +168,7 @@ export const useLinks = () => {
                   params: { linkId },
                   payload: {
                     operationId,
+                    clientRevision: cachedLinks?.revision ?? 0,
                     operation: {
                       kind: "replaceExtraction",
                       expectedExtraction,
@@ -177,13 +187,14 @@ export const useLinks = () => {
             params: { linkId },
             payload: {
               operationId,
+              clientRevision: cachedLinks?.revision ?? 0,
               meta: toJsonMetadata(metadata),
             },
           })
         )
       )
     },
-    []
+    [cachedLinks?.revision]
   )
 
   const adapter = useMemo(

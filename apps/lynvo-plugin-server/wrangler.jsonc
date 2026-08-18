@@ -5,8 +5,14 @@
   "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA",
+  },
   "observability": { "enabled": true },
   "vars": {
+    "ENVIRONMENT": "production",
+    "SERVICE_VERSION": "0.1.0",
+    "COMMIT_HASH": "unknown",
     "PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
   },
   "secrets": {
@@ -28,7 +34,13 @@
   ],
   "env": {
     "local": {
+      "version_metadata": {
+        "binding": "CF_VERSION_METADATA",
+      },
       "vars": {
+        "ENVIRONMENT": "development",
+        "SERVICE_VERSION": "0.1.0",
+        "COMMIT_HASH": "unknown",
         "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/lynvo-plugin-server-assets",
       },
       "secrets": {

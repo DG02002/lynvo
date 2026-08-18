@@ -79,6 +79,7 @@ describe("PluginServerClient", () => {
       await client.extractSource("https://source.example/file", {
         apiKey: "secret",
         requestId: "request-2",
+        operationId: "request-2:source",
         basicAuth: { username: "viewer", password: "safe" },
       })
 
@@ -87,6 +88,8 @@ describe("PluginServerClient", () => {
       )
       expect(requests[0].headers.get("x-request-id")).toBe("request-1")
       expect(requests[1].headers.get("Authorization")).toBe("Bearer secret")
+      expect(requests[1].headers.get("x-request-id")).toBe("request-2")
+      expect(requests[1].headers.get("x-operation-id")).toBe("request-2:source")
       expect(await requests[1].json()).toEqual({
         input: { kind: "source", sourceUrl: "https://source.example/file" },
         basicAuth: { username: "viewer", password: "safe" },

@@ -91,29 +91,12 @@ export const createSavedLinkRealtimeDelivery = (
       try {
         await adapters.broadcast(userId, revision)
       } catch {
-        console.error("saved_links.realtime_delivery", {
-          operation: "immediate_broadcast",
-          result: "failed",
-          failureClass: "broadcast",
-          revision,
-        })
         return { ...emptyResult(), kind: "unavailable" as const, failed: 1 }
       }
       try {
         await adapters.acknowledge(userId, revision)
-        console.info("saved_links.realtime_delivery", {
-          operation: "immediate_broadcast",
-          result: "acknowledged",
-          revision,
-        })
         return { ...emptyResult(), broadcast: 1, acknowledged: 1 }
       } catch {
-        console.error("saved_links.realtime_delivery", {
-          operation: "immediate_acknowledge",
-          result: "failed",
-          failureClass: "acknowledgement",
-          revision,
-        })
         return {
           ...emptyResult(),
           kind: "unavailable" as const,
@@ -147,11 +130,6 @@ export const createSavedLinkRealtimeDelivery = (
           }),
           { ...emptyResult(), listed: pending.length }
         )
-        console.info("saved_links.realtime_delivery", {
-          operation: "scheduled_drain",
-          ...result,
-          continued: result.listed > 0 && result.failed > 0,
-        })
         return result.failed > 0 ? { ...result, kind: "unavailable" } : result
       } catch {
         return { ...emptyResult(), kind: "unavailable", failed: 1 }

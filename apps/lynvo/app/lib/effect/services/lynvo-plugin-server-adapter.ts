@@ -29,12 +29,13 @@ const createLynvoPluginServerClient = (environment: Env) =>
 
 export const getLynvoPluginServerManifest = Effect.fn(
   "LynvoPluginServerAdapter.getLynvoPluginServerManifest"
-)(function* (environment: Env, requestId?: string) {
+)(function* (environment: Env, requestId?: string, operationId?: string) {
   return yield* requestPluginServer(
     () =>
       createLynvoPluginServerClient(environment).getManifest({
         apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         requestId,
+        operationId,
       }),
     "Lynvo Plugin Server"
   )
@@ -46,7 +47,8 @@ export const discoverLynvoPlugin = Effect.fn(
   environment: Env,
   targetUrl: string,
   basicAuth?: HttpBasicAuth,
-  requestId?: string
+  requestId?: string,
+  operationId?: string
 ) {
   return yield* requestPluginServer(
     () =>
@@ -54,6 +56,7 @@ export const discoverLynvoPlugin = Effect.fn(
         apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
         basicAuth,
         requestId,
+        operationId,
       }),
     targetUrl
   )
@@ -102,12 +105,14 @@ export const extractFromLynvoPluginServer = Effect.fn(
     password?: string
     basicAuth?: { username: string; password: string }
   },
-  requestId?: string
+  requestId?: string,
+  operationId?: string
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const client = createLynvoPluginServerClient(environment)
   const options = {
     apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
     requestId,
+    operationId,
     ...credentials,
   }
   const result = yield* requestPluginServer(

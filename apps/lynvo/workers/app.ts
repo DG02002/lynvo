@@ -64,6 +64,10 @@ const reactRouterHandler = createRequestHandler(
 
 initLogger({
   env: { service: "lynvo" },
+  sampling: {
+    rates: { info: 10, warn: 100, error: 100 },
+    keep: [{ status: 400 }],
+  },
 })
 
 const app = new Hono<RequestLoggingEnvironment>()
@@ -72,7 +76,7 @@ const TURNSTILE_HOSTNAME = "lynvo.dg02002.workers.dev"
 const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
 app.use("*", responseSecurityHeaders())
 
-app.use("/api/*", requestLogging())
+app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
 
 type AuthEnv = Env & {
   readonly AUTH_GATEWAY_SECRET?: string
@@ -176,7 +180,11 @@ const runAuthenticationIntake = async (
     },
   })
   const outcome = await intake[operation](context.req.raw)
-  addRequestContext(context, { ...outcome.observability })
+  addRequestContext(context, {
+    ...outcome.observability,
+    authentication_outcome:
+      outcome.kind === "success" ? "accepted" : outcome.error.code,
+  })
   return outcome.kind === "success"
     ? context.json(outcome.body)
     : context.json(requestApiError(context, outcome.error), outcome.status)
@@ -253,6 +261,10 @@ app.post("/api/auth/sign-in", async (context) => {
       params: payload.params,
     })
     if (result.kind === "unavailable") {
+      addRequestContext(context, {
+        auth_flow: flow,
+        authentication_outcome: "unavailable",
+      })
       return context.json(
         requestApiError(context, {
           code: "service_unavailable",
@@ -263,6 +275,10 @@ app.post("/api/auth/sign-in", async (context) => {
       )
     }
     if (result.kind === "invalid-credentials") {
+      addRequestContext(context, {
+        auth_flow: flow,
+        authentication_outcome: "invalid_credentials",
+      })
       return context.json(
         requestApiError(context, {
           code: "invalid_credentials",
@@ -274,6 +290,10 @@ app.post("/api/auth/sign-in", async (context) => {
       )
     }
     if (result.kind === "account-exists") {
+      addRequestContext(context, {
+        auth_flow: flow,
+        authentication_outcome: "account_exists",
+      })
       return context.json(
         requestApiError(context, {
           code: "account_exists",
@@ -288,6 +308,7 @@ app.post("/api/auth/sign-in", async (context) => {
     }
     addRequestContext(context, {
       auth_flow: flow,
+      authentication_outcome: "authenticated",
       has_tokens: result.hasTokens,
       worker_session_created: Boolean(result.cookie),
     })
@@ -295,6 +316,7 @@ app.post("/api/auth/sign-in", async (context) => {
   } catch (error) {
     addRequestContext(context, {
       auth_flow: flow,
+      authentication_outcome: "unavailable",
       auth_error_code: "service_unavailable",
       error: {
         type: error instanceof Error ? error.name : "UnknownError",
@@ -905,6 +927,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
   scheduled: async (_controller, env) => {
+    const startedAt = performance.now()
     const [
       sessionCleanupResult,
       savedLinkResult,
@@ -918,6 +941,20 @@ export default {
       createAccountSettingsRealtimeDelivery(env).drain(),
       createRemoteCommandNotificationDelivery(env).drain(),
     ])
+    const unavailable = [
+      sessionCleanupResult,
+      savedLinkResult,
+      realtimeRevocationResult,
+      accountSettingsResult,
+      remoteCommandNotificationResult,
+    ].filter((result) => result.kind === "unavailable").length
+    console.info("scheduled_delivery_drain", {
+      operation: "scheduled_delivery_drain",
+      outcome: unavailable > 0 ? "failure" : "success",
+      unavailable,
+      duration_ms: Math.max(0, performance.now() - startedAt),
+      saved_links: savedLinkResult,
+    })
     if (
       sessionCleanupResult.kind === "unavailable" ||
       savedLinkResult.kind === "unavailable" ||

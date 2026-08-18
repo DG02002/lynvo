@@ -14,6 +14,10 @@ export { Layout } from "./root/layout"
 
 initLogger({
   env: { service: "lynvo" },
+  sampling: {
+    rates: { info: 10, warn: 100, error: 100 },
+    keep: [{ status: 400 }],
+  },
 })
 
 export const middleware: Route.MiddlewareFunction[] = [evlog()]

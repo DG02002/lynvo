@@ -56,6 +56,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const requestEvent = yield* RequestEventService
+        requestEvent.add({ operation_id: payload.operationId })
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
         const result = yield* convex
           .mutation(
@@ -74,12 +75,22 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             )
           )
         const environment = yield* CloudflareEnv
-        yield* Effect.promise(() =>
+        const delivery = yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
             user.id,
             result.revision
           )
         )
+        requestEvent.add({
+          saved_link_synchronization: {
+            client_revision: payload.clientRevision,
+            server_revision: result.revision,
+            delivery_mode: "immediate",
+            delivery_outcome: delivery.kind,
+            reconciliation_outcome:
+              delivery.kind === "completed" ? "not_required" : "pending",
+          },
+        })
         return {
           id: result.id,
           synchronization: { revision: result.revision },
@@ -105,12 +116,21 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             )
           )
         const environment = yield* CloudflareEnv
-        yield* Effect.promise(() =>
+        const delivery = yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
             user.id,
             result.revision
           )
         )
+        requestEvent.add({
+          saved_link_synchronization: {
+            server_revision: result.revision,
+            delivery_mode: "immediate",
+            delivery_outcome: delivery.kind,
+            reconciliation_outcome:
+              delivery.kind === "completed" ? "not_required" : "pending",
+          },
+        })
         return {
           success: true,
           synchronization: { revision: result.revision },
@@ -122,6 +142,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const requestEvent = yield* RequestEventService
+        requestEvent.add({ operation_id: payload.operationId })
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
         const result = yield* convex
           .mutation(
@@ -139,12 +160,22 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             )
           )
         const environment = yield* CloudflareEnv
-        yield* Effect.promise(() =>
+        const delivery = yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
             user.id,
             result.revision
           )
         )
+        requestEvent.add({
+          saved_link_synchronization: {
+            client_revision: payload.clientRevision,
+            server_revision: result.revision,
+            delivery_mode: "immediate",
+            delivery_outcome: delivery.kind,
+            reconciliation_outcome:
+              delivery.kind === "completed" ? "not_required" : "pending",
+          },
+        })
         return {
           success: true,
           synchronization: { revision: result.revision },
@@ -156,6 +187,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const requestEvent = yield* RequestEventService
+        requestEvent.add({ operation_id: payload.operationId })
         const operation = yield* Effect.try({
           try: () => {
             switch (payload.operation.kind) {
@@ -204,12 +236,22 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             )
           )
         const environment = yield* CloudflareEnv
-        yield* Effect.promise(() =>
+        const delivery = yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
             user.id,
             result.revision
           )
         )
+        requestEvent.add({
+          saved_link_synchronization: {
+            client_revision: payload.clientRevision,
+            server_revision: result.revision,
+            delivery_mode: "immediate",
+            delivery_outcome: delivery.kind,
+            reconciliation_outcome:
+              delivery.kind === "completed" ? "not_required" : "pending",
+          },
+        })
         return {
           success: true,
           synchronization: { revision: result.revision },

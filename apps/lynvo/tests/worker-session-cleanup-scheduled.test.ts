@@ -97,11 +97,28 @@ describe("scheduled Worker Auth Session cleanup", () => {
     expect(pendingSessionIds.size).toBe(1)
     expect(revokedSessionIds).toEqual([])
 
-    await worker.scheduled(
-      { cron: "*/5 * * * *", scheduledTime: Date.now() } as ScheduledController,
-      environment,
-      { waitUntil: () => undefined } as ExecutionContext
-    )
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    try {
+      await worker.scheduled(
+        {
+          cron: "*/5 * * * *",
+          scheduledTime: Date.now(),
+        } as ScheduledController,
+        environment,
+        { waitUntil: () => undefined } as ExecutionContext
+      )
+      expect(info).toHaveBeenCalledOnce()
+      expect(info).toHaveBeenCalledWith(
+        "scheduled_delivery_drain",
+        expect.objectContaining({
+          operation: "scheduled_delivery_drain",
+          outcome: "success",
+          duration_ms: expect.any(Number),
+        })
+      )
+    } finally {
+      info.mockRestore()
+    }
 
     expect(revokedSessionIds).toHaveLength(1)
     expect(pendingSessionIds.size).toBe(0)

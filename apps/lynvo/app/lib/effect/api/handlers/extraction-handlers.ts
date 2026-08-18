@@ -31,13 +31,16 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           const webRequest = yield* webRequestFromSource(request.source)
           const auth = yield* authSession.getSession(webRequest)
           const userId = auth.user?.id
+          const inputKind = extractionKind(query.kind) ?? "source"
+          const operationId = `${requestEvent.requestId}:${inputKind}`
 
           requestEvent.add({
             operation: "link_extract",
+            operation_id: operationId,
             authenticated: Boolean(userId),
             user_id: userId,
             extraction: {
-              input_kind: extractionKind(query.kind) ?? "source",
+              input_kind: inputKind,
               target_host: new URL(query.url).hostname,
               plugin_server_id_requested: query.pluginServerId,
               source_id_requested: query.pluginId,
@@ -55,7 +58,7 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           })
           requestEvent.add({
             extraction: {
-              input_kind: extractionKind(query.kind) ?? "source",
+              input_kind: inputKind,
               target_host: new URL(query.url).hostname,
               plugin_server_id_requested: query.pluginServerId,
               source_id_requested: query.pluginId,

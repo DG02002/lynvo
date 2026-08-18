@@ -111,4 +111,104 @@ describe("request logging", () => {
       warn.mockRestore()
     }
   })
+
+  it("completes expected failures with canonical diagnostic fields", async () => {
+    const drained: DrainContext[] = []
+    const app = new Hono<RequestLoggingEnvironment>()
+    app.use(
+      "*",
+      requestLogging({
+        drain: (context) => drained.push(context),
+      })
+    )
+    app.get("/limited", (context) =>
+      context.json(
+        {
+          code: "rate_limited",
+          error: "Try again later.",
+          retryable: true,
+          requestId: context.get("requestId"),
+        },
+        429
+      )
+    )
+
+    const response = await app.request(
+      new Request("https://lynvo.example/limited", {
+        headers: { "x-request-id": "request-limited" },
+      }),
+      undefined,
+      environment
+    )
+
+    expect(response.headers.get("x-request-id")).toBe("request-limited")
+    expect(await response.clone().json()).toMatchObject({
+      requestId: "request-limited",
+    })
+    expect(drained).toHaveLength(1)
+    expect(drained[0]?.event).toMatchObject({
+      request_id: "request-limited",
+      outcome: "failure",
+      status: 429,
+      retryable: true,
+      failure_stage: "response",
+      error_code: "rate_limited",
+      duration_ms: expect.any(Number),
+    })
+  })
+
+  it("redacts secrets and raw user content before adding domain fields", async () => {
+    const drained: DrainContext[] = []
+    const app = new Hono<RequestLoggingEnvironment>()
+    app.use("*", requestLogging({ drain: (context) => drained.push(context) }))
+    app.post("/safe-event", (context) => {
+      addRequestContext(context, {
+        operation: "redaction_check",
+        user_id: "user-safe",
+        target_host: "example.com",
+        password: "password-value",
+        token: "token-value",
+        metadata: { title: "private-title" },
+        raw_message: "private-socket-message",
+        source_url: "https://example.com/private/path",
+      })
+      return context.json({ ok: true })
+    })
+
+    await app.request(
+      new Request("https://lynvo.example/safe-event", { method: "POST" }),
+      undefined,
+      environment
+    )
+
+    const serializedEvent = JSON.stringify(drained[0]?.event)
+    expect(serializedEvent).toContain("example.com")
+    expect(serializedEvent).not.toContain("password-value")
+    expect(serializedEvent).not.toContain("token-value")
+    expect(serializedEvent).not.toContain("private-title")
+    expect(serializedEvent).not.toContain("private-socket-message")
+    expect(serializedEvent).not.toContain("/private/path")
+  })
+
+  it("force-retains failures during tail sampling", async () => {
+    let shouldKeep: boolean | undefined
+    const app = new Hono<RequestLoggingEnvironment>()
+    app.use(
+      "*",
+      requestLogging({
+        keep: (context) => {
+          shouldKeep = context.shouldKeep
+        },
+      })
+    )
+    app.get("/failure", (context) => context.json({ ok: false }, 500))
+
+    await app.request(
+      new Request("https://lynvo.example/failure"),
+      undefined,
+      environment
+    )
+
+    expect(shouldKeep).toBe(true)
+  })
 })
