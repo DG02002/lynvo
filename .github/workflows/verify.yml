@@ -138,16 +138,48 @@ jobs:
       - name: Wait for production migrations and invariants
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
+          NODE_OPTIONS: --disable-warning=ExperimentalWarning
         run: |
-          for attempt in {1..60}; do
-            retention="$(pnpm --filter @lynvo/app exec convex run migrations:verifySavedLinkRetention '{}')"
-            ledgers="$(pnpm --filter @lynvo/app exec convex run migrations:verifyUserStorageLedgers '{}')"
-            if jq -e '.isComplete == true' <<< "$retention" >/dev/null && jq -e '.isComplete == true' <<< "$ledgers" >/dev/null; then
-              exit 0
+          migration_names='{"names":["migrations:normalizeSavedLinkRetention","migrations:backfillUserStorageLedgers"]}'
+
+          for attempt in {1..90}; do
+            migration_status="$(pnpm --filter @lynvo/app exec convex run --component migrations lib:getStatus "$migration_names")"
+            echo "Migration status (attempt ${attempt}/90):"
+            jq . <<< "$migration_status"
+
+            if jq -e 'any(.[]; .error != null)' <<< "$migration_status" >/dev/null; then
+              echo "::error::A production migration failed. See the status above."
+              exit 1
+            fi
+
+            if jq -e 'length == 2 and all(.[]; .isDone == true)' <<< "$migration_status" >/dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 90 ]; then
+              echo "::error::Production migrations did not complete within 15 minutes."
+              exit 1
             fi
             sleep 10
           done
-          exit 1
+
+          retention="$(pnpm --filter @lynvo/app exec convex run migrations:verifySavedLinkRetention '{}')"
+          ledgers="$(pnpm --filter @lynvo/app exec convex run migrations:verifyUserStorageLedgers '{}')"
+
+          echo "Saved-link retention invariant:"
+          jq . <<< "$retention"
+          echo "User storage-ledger invariant:"
+          jq . <<< "$ledgers"
+
+          if ! jq -e '.isComplete == true' <<< "$retention" >/dev/null; then
+            echo "::error::Saved-link retention invariant failed."
+            exit 1
+          fi
+
+          if ! jq -e '.isComplete == true' <<< "$ledgers" >/dev/null; then
+            echo "::error::User storage-ledger invariant failed."
+            exit 1
+          fi
 
       - name: Upload inactive Plugin Server version
         env:
