@@ -12,6 +12,13 @@ crons.interval(
 )
 
 crons.interval(
+  "release expired managed extractions",
+  { minutes: 5 },
+  internal.usage.releaseExpiredManagedExtractions,
+  {}
+)
+
+crons.interval(
   "cleanup expired device codes",
   { minutes: 10 },
   internal.deviceAuth.cleanupExpiredCodes

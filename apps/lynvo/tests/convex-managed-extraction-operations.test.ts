@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { internal } from "../convex/_generated/api"
 import { createConvexTest, insertTestUser } from "./convex-test-harness"
 
 describe("managed extraction operations", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("reserves the same operation once", async () => {
     const convex = createConvexTest()
     const { userId } = await insertTestUser(convex, "operation-owner")
@@ -92,5 +96,63 @@ describe("managed extraction operations", () => {
         pluginId: "direct-media",
       })
     ).rejects.toThrow("Daily Lynvo Plugin extraction limit reached.")
+  })
+
+  it("releases an abandoned reservation after its lease expires", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-08-18T00:00:00.000Z"))
+    const convex = createConvexTest()
+    const { userId } = await insertTestUser(convex, "expired-owner")
+    await convex.mutation(internal.usage.reserveManagedExtraction, {
+      userId,
+      operationId: "extract:abandoned",
+      pluginId: "direct-media",
+    })
+
+    vi.setSystemTime(new Date("2026-08-18T00:05:01.000Z"))
+    const result = await convex.mutation(
+      internal.usage.releaseExpiredManagedExtractions,
+      {}
+    )
+
+    expect(result).toEqual({ released: 1 })
+    const retry = await convex.mutation(
+      internal.usage.reserveManagedExtraction,
+      {
+        userId,
+        operationId: "extract:abandoned",
+        pluginId: "direct-media",
+      }
+    )
+    const counters = await convex.run(
+      async (context) => await context.db.query("usageCounters").collect()
+    )
+    expect(retry).toMatchObject({ status: "reserved", dailyUsed: 1 })
+    expect(counters.every((counter) => counter.used === 1)).toBe(true)
+  })
+
+  it("enforces the 200-operation monthly allowance across daily periods", async () => {
+    vi.useFakeTimers()
+    const convex = createConvexTest()
+    const { userId } = await insertTestUser(convex, "monthly-owner")
+
+    for (let index = 0; index < 200; index += 1) {
+      vi.setSystemTime(
+        new Date(Date.UTC(2026, 7, 1 + Math.floor(index / 30), 12))
+      )
+      await convex.mutation(internal.usage.reserveManagedExtraction, {
+        userId,
+        operationId: `monthly:${index}`,
+        pluginId: "direct-media",
+      })
+    }
+
+    await expect(
+      convex.mutation(internal.usage.reserveManagedExtraction, {
+        userId,
+        operationId: "monthly:201",
+        pluginId: "direct-media",
+      })
+    ).rejects.toThrow("Monthly Lynvo Plugin extraction limit reached.")
   })
 })

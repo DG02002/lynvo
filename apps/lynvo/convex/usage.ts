@@ -14,6 +14,7 @@ import { getAuthenticatedUserId } from "./authentication"
 import {
   GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
   MANAGED_EXTRACTION_RESERVATION_LEASE_MS,
+  MANAGED_EXTRACTION_RECOVERY_BATCH_SIZE,
   USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
   USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
 } from "./constants"
@@ -116,6 +117,45 @@ const incrementCounter = async (
   return USAGE_COUNTER_INITIAL_VALUE
 }
 
+const releaseManagedExtractionCounters = async (
+  ctx: MutationCtx,
+  operation: Doc<"managedExtractionOperations">
+) => {
+  const ownerKey = `user:${operation.userId}`
+  const counterKeys = [
+    ["global", LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID, operation.dailyPeriodKey],
+    ...(operation.userLimitsApplied
+      ? [
+          [
+            ownerKey,
+            LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+            operation.dailyPeriodKey,
+          ],
+          [
+            ownerKey,
+            LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+            operation.monthlyPeriodKey,
+          ],
+        ]
+      : []),
+  ]
+  for (const [owner, metric, period] of counterKeys) {
+    const counter = await getCounter(
+      ctx,
+      owner,
+      metric,
+      period,
+      operation.epoch
+    )
+    if (!counter || counter.used < 1) {
+      throw new ConvexError("Managed extraction counter is inconsistent.")
+    }
+    await ctx.db.patch("usageCounters", counter._id, {
+      used: counter.used - 1,
+    })
+  }
+}
+
 export const reserveManagedExtraction = internalMutation({
   args: {
     userId: v.id("users"),
@@ -139,7 +179,7 @@ export const reserveManagedExtraction = internalMutation({
           .eq("operationId", args.operationId)
       )
       .unique()
-    if (existing) {
+    if (existing && existing.state !== "released") {
       return { status: "already-reserved" as const }
     }
 
@@ -222,18 +262,28 @@ export const reserveManagedExtraction = internalMutation({
           )
         : (monthlyCounter?.used ?? 0),
     ])
-    await ctx.db.insert("managedExtractionOperations", {
+    const operationFields = {
       userId: args.userId,
       operationId: args.operationId,
       pluginId: args.pluginId,
-      state: "reserved",
+      state: "reserved" as const,
       epoch,
       dailyPeriodKey: daily.key,
       monthlyPeriodKey: monthly.key,
       userLimitsApplied: !usageLimitsDisabled,
       reservedAt: timestamp,
       leaseExpiresAt: timestamp + MANAGED_EXTRACTION_RESERVATION_LEASE_MS,
-    })
+      settledAt: undefined,
+    }
+    if (existing) {
+      await ctx.db.patch(
+        "managedExtractionOperations",
+        existing._id,
+        operationFields
+      )
+    } else {
+      await ctx.db.insert("managedExtractionOperations", operationFields)
+    }
     return { status: "reserved" as const, dailyUsed, monthlyUsed }
   },
 })
@@ -267,49 +317,35 @@ export const settleManagedExtraction = internalMutation({
       return { status: "already-settled" as const }
     }
     if (args.outcome === "released") {
-      const ownerKey = `user:${args.userId}`
-      const counterKeys = [
-        [
-          "global",
-          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-          operation.dailyPeriodKey,
-        ],
-        ...(operation.userLimitsApplied
-          ? [
-              [
-                ownerKey,
-                LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-                operation.dailyPeriodKey,
-              ],
-              [
-                ownerKey,
-                LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-                operation.monthlyPeriodKey,
-              ],
-            ]
-          : []),
-      ]
-      for (const [owner, metric, period] of counterKeys) {
-        const counter = await getCounter(
-          ctx,
-          owner,
-          metric,
-          period,
-          operation.epoch
-        )
-        if (!counter || counter.used < 1) {
-          throw new ConvexError("Managed extraction counter is inconsistent.")
-        }
-        await ctx.db.patch("usageCounters", counter._id, {
-          used: counter.used - 1,
-        })
-      }
+      await releaseManagedExtractionCounters(ctx, operation)
     }
     await ctx.db.patch("managedExtractionOperations", operation._id, {
       state: args.outcome,
       settledAt: Date.now(),
     })
     return { status: args.outcome }
+  },
+})
+
+export const releaseExpiredManagedExtractions = internalMutation({
+  args: {},
+  returns: v.object({ released: v.number() }),
+  handler: async (ctx) => {
+    const timestamp = Date.now()
+    const expired = await ctx.db
+      .query("managedExtractionOperations")
+      .withIndex("by_state_leaseExpiresAt", (operationQuery) =>
+        operationQuery.eq("state", "reserved").lte("leaseExpiresAt", timestamp)
+      )
+      .take(MANAGED_EXTRACTION_RECOVERY_BATCH_SIZE)
+    for (const operation of expired) {
+      await releaseManagedExtractionCounters(ctx, operation)
+      await ctx.db.patch("managedExtractionOperations", operation._id, {
+        state: "released",
+        settledAt: timestamp,
+      })
+    }
+    return { released: expired.length }
   },
 })
 

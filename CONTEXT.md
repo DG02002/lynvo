@@ -82,6 +82,11 @@ The Plugin Server managed by Lynvo for Lynvo Plugins.
 **Lynvo Plugin Server Binding**:
 The private connection from Lynvo to the Lynvo Plugin Server.
 
+**Managed extraction operation**:
+An idempotent, leased allowance reservation for one Lynvo Plugin extraction. A
+retry with the same operation ID does not consume twice; an abandoned
+reservation is released after its lease expires.
+
 **Plugin Server Protocol**:
 The versioned contract every Plugin Server follows when identifying Plugins, reporting usage, and returning Media Nodes.
 
