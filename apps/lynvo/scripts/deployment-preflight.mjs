@@ -49,6 +49,14 @@ const credentialVaultBindingCount =
   lynvoConfig.split('"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"').length - 1
 const sessionKeyDeclarationCount =
   lynvoConfig.split('"AUTH_SESSION_ENCRYPTION_KEY"').length - 1
+const commitHash = process.env.COMMIT_HASH
+const serviceVersion = process.env.SERVICE_VERSION
+const hasValidReleaseIdentity =
+  Boolean(commitHash) &&
+  commitHash !== "unknown" &&
+  Boolean(serviceVersion) &&
+  serviceVersion !== "0.1.0" &&
+  serviceVersion !== "unknown"
 
 if (
   hasMissingFragment(lynvoConfig, requiredLynvoFragments) ||
@@ -61,7 +69,8 @@ if (
   limiterBindingCount !== 2 ||
   sessionBindingCount !== 2 ||
   credentialVaultBindingCount !== 2 ||
-  sessionKeyDeclarationCount !== 2
+  sessionKeyDeclarationCount !== 2 ||
+  !hasValidReleaseIdentity
 ) {
   throw new Error("Production deployment configuration preflight failed.")
 }

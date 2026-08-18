@@ -57,10 +57,15 @@ describe("request logging", () => {
     expect(drained[0]?.event).toMatchObject({
       service: "lynvo",
       request_id: "request-123",
+      deployment_id: "worker-version-id",
+      commit_hash: "abc123",
+      service_version: "1.2.3",
       operation: "link_extract",
       user_id: "user-123",
       extraction: { target_host: "example.com", link_count: 4 },
     })
+    expect(drained[0]?.event).not.toHaveProperty("instance_id")
+    expect(drained[0]?.event).not.toHaveProperty("requestId")
   })
 
   it("emits a WebSocket upgrade without reusing the sealed logger", async () => {
@@ -210,5 +215,40 @@ describe("request logging", () => {
     )
 
     expect(shouldKeep).toBe(true)
+  })
+
+  it("finalizes route exceptions handled as failure responses", async () => {
+    const drained: DrainContext[] = []
+    const app = new Hono<RequestLoggingEnvironment>()
+    app.use(
+      "*",
+      requestLogging({
+        drain: (context) => drained.push(context),
+      })
+    )
+    app.get("/throws", () => {
+      throw new Error("deliberate failure")
+    })
+    app.onError(() => new Response("failed", { status: 500 }))
+
+    const response = await app.request(
+      new Request("https://lynvo.example/throws", {
+        headers: { "x-request-id": "request-thrown" },
+      }),
+      undefined,
+      environment
+    )
+
+    expect(response.status).toBe(500)
+    expect(drained).toHaveLength(1)
+    expect(drained[0]?.event).toMatchObject({
+      request_id: "request-thrown",
+      outcome: "failure",
+      status: 500,
+      retryable: true,
+      failure_stage: "response",
+      error_code: "http_500",
+      duration_ms: expect.any(Number),
+    })
   })
 })

@@ -64,8 +64,6 @@
   },
   "vars": {
     "ENVIRONMENT": "production",
-    "SERVICE_VERSION": "0.1.0",
-    "COMMIT_HASH": "unknown",
     "TURNSTILE_SITE_KEY": "0x4AAAAAAEC1SvszqvkGdIr2",
   },
   "env": {
@@ -111,8 +109,8 @@
       ],
       "vars": {
         "ENVIRONMENT": "development",
-        "SERVICE_VERSION": "0.1.0",
-        "COMMIT_HASH": "unknown",
+        "SERVICE_VERSION": "development",
+        "COMMIT_HASH": "development",
         "TURNSTILE_SITE_KEY": "",
       },
     },

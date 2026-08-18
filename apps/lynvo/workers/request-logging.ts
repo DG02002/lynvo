@@ -57,6 +57,7 @@ export const requestLogging = (
   options?: EvlogHonoOptions
 ): MiddlewareHandler<RequestLoggingEnvironment> => {
   const callerKeep = options?.keep
+  const callerEnrich = options?.enrich
   const evlogMiddleware = evlog({
     ...options,
     redact: {
@@ -73,6 +74,10 @@ export const requestLogging = (
         "**.url",
       ],
       patterns: [RAW_URL],
+    },
+    enrich: async (context) => {
+      await callerEnrich?.(context)
+      delete context.event.requestId
     },
     keep: async (context) => {
       if (
@@ -103,7 +108,7 @@ export const requestLogging = (
         service_version: context.env.SERVICE_VERSION ?? "development",
         commit_hash: context.env.COMMIT_HASH ?? "unknown",
         region: cloudflareRay?.split("-")[1] ?? "unknown",
-        instance_id: context.env.CF_VERSION_METADATA?.id ?? "development",
+        deployment_id: context.env.CF_VERSION_METADATA?.id ?? "development",
         request_id: requestId,
         host: new URL(request.url).hostname,
         cloudflare_ray: cloudflareRay,
