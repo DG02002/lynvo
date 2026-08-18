@@ -84,6 +84,27 @@ const optimizeWebp = async (filePath, cache) => {
   const shouldResize =
     (metadata.width ?? 0) > CONFIG.maxWidth ||
     (metadata.height ?? 0) > CONFIG.maxHeight
+  const isWebp = path.extname(filePath).toLowerCase() === ".webp"
+
+  // Lossy WebP encoding is not idempotent and can vary between native codec
+  // builds. Once a WebP satisfies the size contract, treat it as a final
+  // artifact instead of recompressing it on every clean machine or CI run.
+  if (isWebp && !shouldResize) {
+    cache[key] = {
+      configHash,
+      outputHash: inputHash,
+      bytes: input.length,
+      width: metadata.width,
+      height: metadata.height,
+      optimizedAt: new Date().toISOString(),
+    }
+    return {
+      status: "already-optimal",
+      key,
+      before: input.length,
+      after: input.length,
+    }
+  }
 
   const optimized = await image
     .resize({
@@ -95,19 +116,14 @@ const optimizeWebp = async (filePath, cache) => {
     .webp(CONFIG.webp)
     .toBuffer()
 
-  const isWebp = path.extname(filePath).toLowerCase() === ".webp"
-  const keepOptimized =
-    !isWebp || shouldResize || optimized.length < input.length
-  const output = keepOptimized ? optimized : input
+  const output = optimized
   const outputHash = hashBuffer(output)
 
-  if (keepOptimized) {
-    const tmpPath = `${outputPath}.tmp`
-    await writeFile(tmpPath, output)
-    await rename(tmpPath, outputPath)
-    if (filePath !== outputPath) {
-      await rm(filePath)
-    }
+  const tmpPath = `${outputPath}.tmp`
+  await writeFile(tmpPath, output)
+  await rename(tmpPath, outputPath)
+  if (filePath !== outputPath) {
+    await rm(filePath)
   }
 
   const currentStat = await stat(outputPath)
@@ -121,7 +137,7 @@ const optimizeWebp = async (filePath, cache) => {
   }
 
   return {
-    status: keepOptimized ? "optimized" : "already-optimal",
+    status: "optimized",
     key,
     before: input.length,
     after: currentStat.size,
