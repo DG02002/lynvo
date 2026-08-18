@@ -146,6 +146,22 @@ if (!storageRetentionSchemaVersion) {
       `convex/migrations.ts: runProduction must include ${expectedMigration}`
     )
   }
+  const migrationStart = migrationsSource.indexOf(
+    `export const ${expectedMigration} = migrations.define({`
+  )
+  const migrationEnd = migrationsSource.indexOf(
+    "\nexport const run =",
+    migrationStart
+  )
+  const migrationSource = migrationsSource.slice(migrationStart, migrationEnd)
+  if (
+    !migrationSource.includes("calculateAppOwnedStorageUsage(") ||
+    !migrationSource.includes("upsertUserStorageLedger(")
+  ) {
+    failures.push(
+      `convex/migrations.ts: ${expectedMigration} must reconcile the storage ledger in the same migration`
+    )
+  }
 }
 
 if (

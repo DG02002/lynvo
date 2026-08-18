@@ -46,26 +46,33 @@ export const backfillUserStorageLedgersV2 = migrations.define({
   },
 })
 
-export const normalizeSavedLinkRetentionV1 = migrations.define({
+export const normalizeSavedLinkRetentionV2 = migrations.define({
   table: "users",
   batchSize: 100,
   migrateOne: async (ctx, user) => {
     if (
-      user.storageRetentionDays !== undefined &&
-      STORAGE_RETENTION_DAY_OPTIONS.includes(user.storageRetentionDays)
+      user.storageRetentionDays === undefined ||
+      !STORAGE_RETENTION_DAY_OPTIONS.includes(user.storageRetentionDays)
     ) {
-      return
+      await ctx.db.patch("users", user._id, {
+        storageRetentionDays: DEFAULT_RETENTION_DAYS,
+      })
     }
-    await ctx.db.patch("users", user._id, {
-      storageRetentionDays: DEFAULT_RETENTION_DAYS,
-    })
+
+    const [usage, ledger] = await Promise.all([
+      calculateAppOwnedStorageUsage(ctx, user._id),
+      getUserStorageLedger(ctx, user._id),
+    ])
+    if (!ledger || !doesLedgerMatch(ledger, usage)) {
+      await upsertUserStorageLedger(ctx, user._id, usage, Date.now())
+    }
   },
 })
 
 export const run = migrations.runner()
 
 export const runProduction = migrations.runner([
-  internal.migrations.normalizeSavedLinkRetentionV1,
+  internal.migrations.normalizeSavedLinkRetentionV2,
   internal.migrations.backfillUserStorageLedgersV2,
 ])
 
