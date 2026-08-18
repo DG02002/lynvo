@@ -127,11 +127,16 @@ export const extractWithLynvoPluginServer = Effect.fn(
     inlineBasicAuth: options.inlineBasicAuth,
   })
   const meteredPluginId = getMeteredPluginId(route.plugin.id)
+  const operationId = `${options.requestId}:${options.kind}`
   if (meteredPluginId) {
     yield* convex
-      .mutation(
-        api.usage.consumeLynvoPlugin,
-        { pluginId: meteredPluginId },
+      .action(
+        api.usage.reserveLynvoPluginOperation,
+        {
+          serviceToken: options.serviceToken,
+          operationId,
+          pluginId: meteredPluginId,
+        },
         { accessToken: options.accessToken }
       )
       .pipe(
@@ -144,12 +149,30 @@ export const extractWithLynvoPluginServer = Effect.fn(
         )
       )
   }
-  return yield* extractFromLynvoPluginServer(
+  const extraction = extractFromLynvoPluginServer(
     environment,
     options.targetUrl,
     options.kind,
     { pluginId: route.plugin.id, ...credentials },
     options.requestId
+  )
+  if (!meteredPluginId) {
+    return yield* extraction
+  }
+  return yield* extraction.pipe(
+    Effect.ensuring(
+      convex
+        .action(
+          api.usage.settleLynvoPluginOperation,
+          {
+            serviceToken: options.serviceToken,
+            operationId,
+            outcome: "consumed",
+          },
+          { accessToken: options.accessToken }
+        )
+        .pipe(Effect.orElseSucceed(() => undefined))
+    )
   )
 })
 

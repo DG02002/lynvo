@@ -88,7 +88,7 @@ export const UsagePolicyContent = () => (
         Each account can store up to 100 saved links within 1 MB of
         account-record storage. A single saved link can use up to 256 KB. Lynvo
         Plugin Server extraction requests, including Direct Media, share an
-        allowance of 15 requests per day and 200 requests per month.
+        allowance of 30 requests per day and 200 requests per month.
       </p>
       <p>
         Custom Plugin Servers report and enforce their own finite limits. Do not

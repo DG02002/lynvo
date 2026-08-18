@@ -1,22 +1,43 @@
 import { ConvexError, v } from "convex/values"
 import type { Doc } from "./_generated/dataModel"
 import {
+  action,
   internalMutation,
-  mutation,
   query,
   env,
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server"
-import {
-  getAuthenticatedUserId,
-  getAuthenticatedWritableUserId,
-} from "./authentication"
+import { internal } from "./_generated/api"
+import { verifyCredentialReadToken } from "./authGateway"
+import { getAuthenticatedUserId } from "./authentication"
 import {
   GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
+  MANAGED_EXTRACTION_RESERVATION_LEASE_MS,
   USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
   USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
 } from "./constants"
+
+const managedPluginId = v.union(
+  v.literal("bhadoo-google-drive-index"),
+  v.literal("google-drive-public-files"),
+  v.literal("onedrive-index"),
+  v.literal("direct-media")
+)
+
+declare const process: {
+  env: { AUTH_GATEWAY_SECRET?: string }
+}
+
+interface ManagedExtractionReservationResult {
+  readonly status: "reserved" | "already-reserved"
+  readonly dailyUsed?: number
+  readonly monthlyUsed?: number
+}
+
+interface ManagedExtractionSettlementResult {
+  readonly status: "consumed" | "released" | "already-settled"
+}
 
 const DAILY_USAGE_PERIOD = "daily" as const
 const MONTHLY_USAGE_PERIOD = "monthly" as const
@@ -95,24 +116,39 @@ const incrementCounter = async (
   return USAGE_COUNTER_INITIAL_VALUE
 }
 
-export const consumeLynvoPlugin = mutation({
-  returns: v.any(),
+export const reserveManagedExtraction = internalMutation({
   args: {
-    pluginId: v.union(
-      v.literal("bhadoo-google-drive-index"),
-      v.literal("google-drive-public-files"),
-      v.literal("onedrive-index"),
-      v.literal("direct-media")
-    ),
+    userId: v.id("users"),
+    operationId: v.string(),
+    pluginId: managedPluginId,
   },
-  handler: async (ctx, _args) => {
-    const userId = await getAuthenticatedWritableUserId(ctx)
+  returns: v.union(
+    v.object({ status: v.literal("already-reserved") }),
+    v.object({
+      status: v.literal("reserved"),
+      dailyUsed: v.number(),
+      monthlyUsed: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("managedExtractionOperations")
+      .withIndex("by_userId_operationId", (operationQuery) =>
+        operationQuery
+          .eq("userId", args.userId)
+          .eq("operationId", args.operationId)
+      )
+      .unique()
+    if (existing) {
+      return { status: "already-reserved" as const }
+    }
+
     const usageLimitsDisabled = areUsageLimitsDisabled()
     const timestamp = Date.now()
     const daily = getDailyPeriod(timestamp)
     const monthly = getMonthlyPeriod(timestamp)
     const epoch = await getEpoch(ctx)
-    const ownerKey = `user:${userId}`
+    const ownerKey = `user:${args.userId}`
     const [userDaily, globalDaily, monthlyCounter] = await Promise.all([
       getCounter(
         ctx,
@@ -136,7 +172,6 @@ export const consumeLynvoPlugin = mutation({
         epoch
       ),
     ])
-    const monthlyUsed = monthlyCounter?.used ?? 0
     if (
       !usageLimitsDisabled &&
       (userDaily?.used ?? 0) >= USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
@@ -152,11 +187,12 @@ export const consumeLynvoPlugin = mutation({
     }
     if (
       !usageLimitsDisabled &&
-      monthlyUsed >= USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
+      (monthlyCounter?.used ?? 0) >= USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
     ) {
       throw new ConvexError("Monthly Lynvo Plugin extraction limit reached.")
     }
-    const [, dailyUsed, currentMonthlyUsed] = await Promise.all([
+
+    const [, dailyUsed, monthlyUsed] = await Promise.all([
       incrementCounter(
         ctx,
         "global",
@@ -186,10 +222,138 @@ export const consumeLynvoPlugin = mutation({
           )
         : (monthlyCounter?.used ?? 0),
     ])
-    return {
-      dailyUsed,
-      monthlyUsed: currentMonthlyUsed,
+    await ctx.db.insert("managedExtractionOperations", {
+      userId: args.userId,
+      operationId: args.operationId,
+      pluginId: args.pluginId,
+      state: "reserved",
+      epoch,
+      dailyPeriodKey: daily.key,
+      monthlyPeriodKey: monthly.key,
+      userLimitsApplied: !usageLimitsDisabled,
+      reservedAt: timestamp,
+      leaseExpiresAt: timestamp + MANAGED_EXTRACTION_RESERVATION_LEASE_MS,
+    })
+    return { status: "reserved" as const, dailyUsed, monthlyUsed }
+  },
+})
+
+export const settleManagedExtraction = internalMutation({
+  args: {
+    userId: v.id("users"),
+    operationId: v.string(),
+    outcome: v.union(v.literal("consumed"), v.literal("released")),
+  },
+  returns: v.object({
+    status: v.union(
+      v.literal("consumed"),
+      v.literal("released"),
+      v.literal("already-settled")
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const operation = await ctx.db
+      .query("managedExtractionOperations")
+      .withIndex("by_userId_operationId", (operationQuery) =>
+        operationQuery
+          .eq("userId", args.userId)
+          .eq("operationId", args.operationId)
+      )
+      .unique()
+    if (!operation) {
+      throw new ConvexError("Managed extraction reservation not found.")
     }
+    if (operation.state !== "reserved") {
+      return { status: "already-settled" as const }
+    }
+    if (args.outcome === "released") {
+      const ownerKey = `user:${args.userId}`
+      const counterKeys = [
+        [
+          "global",
+          LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+          operation.dailyPeriodKey,
+        ],
+        ...(operation.userLimitsApplied
+          ? [
+              [
+                ownerKey,
+                LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+                operation.dailyPeriodKey,
+              ],
+              [
+                ownerKey,
+                LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+                operation.monthlyPeriodKey,
+              ],
+            ]
+          : []),
+      ]
+      for (const [owner, metric, period] of counterKeys) {
+        const counter = await getCounter(
+          ctx,
+          owner,
+          metric,
+          period,
+          operation.epoch
+        )
+        if (!counter || counter.used < 1) {
+          throw new ConvexError("Managed extraction counter is inconsistent.")
+        }
+        await ctx.db.patch("usageCounters", counter._id, {
+          used: counter.used - 1,
+        })
+      }
+    }
+    await ctx.db.patch("managedExtractionOperations", operation._id, {
+      state: args.outcome,
+      settledAt: Date.now(),
+    })
+    return { status: args.outcome }
+  },
+})
+
+export const reserveLynvoPluginOperation = action({
+  args: {
+    serviceToken: v.string(),
+    operationId: v.string(),
+    pluginId: managedPluginId,
+  },
+  returns: v.any(),
+  handler: async (ctx, args): Promise<ManagedExtractionReservationResult> => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const secret = process.env.AUTH_GATEWAY_SECRET
+    if (!secret) {
+      throw new ConvexError("Auth gateway is unavailable.")
+    }
+    await verifyCredentialReadToken(args.serviceToken, secret)
+    return await ctx.runMutation(internal.usage.reserveManagedExtraction, {
+      userId,
+      operationId: args.operationId,
+      pluginId: args.pluginId,
+    })
+  },
+})
+
+export const settleLynvoPluginOperation = action({
+  args: {
+    serviceToken: v.string(),
+    operationId: v.string(),
+    outcome: v.union(v.literal("consumed"), v.literal("released")),
+  },
+  returns: v.any(),
+  handler: async (ctx, args): Promise<ManagedExtractionSettlementResult> => {
+    const userId = await getAuthenticatedUserId(ctx)
+    const secret = process.env.AUTH_GATEWAY_SECRET
+    if (!secret) {
+      throw new ConvexError("Auth gateway is unavailable.")
+    }
+    await verifyCredentialReadToken(args.serviceToken, secret)
+    return await ctx.runMutation(internal.usage.settleManagedExtraction, {
+      userId,
+      operationId: args.operationId,
+      outcome: args.outcome,
+    })
   },
 })
 

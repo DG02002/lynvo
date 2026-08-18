@@ -64,7 +64,7 @@ describe("marketing and pricing copy", () => {
     expect(faqCopy).toContain("256 KB")
     expect(faqCopy).toContain("100 saved links")
     expect(faqCopy).toContain("200-request monthly allowance")
-    expect(faqCopy).toContain("15-request daily limit")
+    expect(faqCopy).toContain("30-request daily limit")
   })
 
   it("keeps app metadata aligned with Lynvo's Android platforms", () => {

@@ -264,6 +264,31 @@ export default defineSchema({
     updatedAt: v.number(),
   }),
 
+  managedExtractionOperations: defineTable({
+    userId: v.id("users"),
+    operationId: v.string(),
+    pluginId: v.union(
+      v.literal("bhadoo-google-drive-index"),
+      v.literal("google-drive-public-files"),
+      v.literal("onedrive-index"),
+      v.literal("direct-media")
+    ),
+    state: v.union(
+      v.literal("reserved"),
+      v.literal("consumed"),
+      v.literal("released")
+    ),
+    epoch: v.number(),
+    dailyPeriodKey: v.string(),
+    monthlyPeriodKey: v.string(),
+    userLimitsApplied: v.boolean(),
+    reservedAt: v.number(),
+    leaseExpiresAt: v.number(),
+    settledAt: v.optional(v.number()),
+  })
+    .index("by_userId_operationId", ["userId", "operationId"])
+    .index("by_state_leaseExpiresAt", ["state", "leaseExpiresAt"]),
+
   deviceCodes: defineTable({
     code: v.string(),
     pollSecretDigest: v.string(),

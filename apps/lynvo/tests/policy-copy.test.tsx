@@ -20,7 +20,7 @@ describe("policy copy", () => {
       expect(policy).toContain("1 MB")
       expect(policy).toContain("256 KB")
       expect(policy).toContain("100 saved links")
-      expect(policy).toContain("15 requests per day")
+      expect(policy).toContain("30 requests per day")
       expect(policy).toContain("200 requests per month")
       expect(policy).toContain("Lynvo Plugin Server")
       expect(policy).toContain("Direct Media")

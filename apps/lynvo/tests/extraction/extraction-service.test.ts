@@ -80,7 +80,7 @@ describe("Extraction interface routing", () => {
           Layer.succeed(
             ConvexService,
             ConvexService.of({
-              action: () => Effect.die(new Error("Unexpected Convex action")),
+              action: () => Effect.succeed(undefined),
               query: () => {
                 queryCount += 1
                 return Effect.succeed(queryCount === 1 ? [] : undefined)
@@ -607,7 +607,7 @@ describe("Extraction interface routing", () => {
     })
   })
 
-  it("stops a metered Lynvo route when quota consumption fails", async () => {
+  it("stops a metered Lynvo route when quota reservation fails", async () => {
     let pluginExtractionCount = 0
     const environmentWithLynvo = {
       ...environment,
@@ -651,15 +651,15 @@ describe("Extraction interface routing", () => {
           Layer.succeed(
             ConvexService,
             ConvexService.of({
-              action: () => Effect.die(new Error("Unexpected Convex action")),
+              action: () =>
+                Effect.fail(
+                  new AppConvexError({ message: "Daily quota reached" })
+                ),
               query: () => {
                 queryCount += 1
                 return Effect.succeed(queryCount === 1 ? [] : undefined)
               },
-              mutation: () =>
-                Effect.fail(
-                  new AppConvexError({ message: "Daily quota reached" })
-                ),
+              mutation: () => Effect.succeed(undefined),
             })
           ),
           Layer.succeed(

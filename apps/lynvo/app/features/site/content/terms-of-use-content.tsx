@@ -107,7 +107,7 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Lynvo Plugin Server extraction requests, including Direct Media, share
-        an allowance of 15 requests per day and 200 requests per month. Custom
+        an allowance of 30 requests per day and 200 requests per month. Custom
         Plugin Servers report and enforce their own finite limits.
       </p>
       <p>

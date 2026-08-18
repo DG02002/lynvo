@@ -36,6 +36,7 @@ export const ACCOUNT_DATA_CATALOG = {
     storage: "pluginCredentialBytes",
   },
   usageCounters: { lifecycle: "erased", storage: null },
+  managedExtractionOperations: { lifecycle: "erased", storage: null },
   usageEpochs: { lifecycle: "global", storage: null },
   deviceCodes: { lifecycle: "erased", storage: null },
   remoteCommands: { lifecycle: "erased", storage: null },
@@ -91,6 +92,8 @@ export const ACCOUNT_DATA_STORAGE_REGISTRY = {
   userPluginDomains: ACCOUNT_DATA_CATALOG.userPluginDomains.storage,
   userPluginCredentials: ACCOUNT_DATA_CATALOG.userPluginCredentials.storage,
   usageCounters: ACCOUNT_DATA_CATALOG.usageCounters.storage,
+  managedExtractionOperations:
+    ACCOUNT_DATA_CATALOG.managedExtractionOperations.storage,
   deviceCodes: ACCOUNT_DATA_CATALOG.deviceCodes.storage,
   remoteCommands: ACCOUNT_DATA_CATALOG.remoteCommands.storage,
 } satisfies Pick<StorageDomainRegistry, TablesWithLifecycle<"erased">>

@@ -73,6 +73,19 @@ const deleteUsageCounterBatch = async (
   ctx: MutationCtx,
   progress: Doc<"accountErasures">
 ) => {
+  const operations = await ctx.db
+    .query("managedExtractionOperations")
+    .withIndex("by_userId_operationId", (queryBuilder) =>
+      queryBuilder.eq("userId", progress.userId)
+    )
+    .take(ACCOUNT_ERASURE_BATCH_SIZE)
+  for (const operation of operations) {
+    await ctx.db.delete("managedExtractionOperations", operation._id)
+  }
+  if (operations.length > 0) {
+    await scheduleContinuation(ctx, progress.userId)
+    return
+  }
   const counters = await ctx.db
     .query("usageCounters")
     .withIndex("by_owner_metric_period_epoch", (queryBuilder) =>
@@ -231,7 +244,13 @@ const getIncompleteStage = async (
       queryBuilder.eq("ownerKey", `user:${userId}`)
     )
     .take(1)
-  if (usageCounters.length > 0) {
+  const managedExtractionOperations = await ctx.db
+    .query("managedExtractionOperations")
+    .withIndex("by_userId_operationId", (queryBuilder) =>
+      queryBuilder.eq("userId", userId)
+    )
+    .take(1)
+  if (usageCounters.length > 0 || managedExtractionOperations.length > 0) {
     return "usageCounters"
   }
   const storageLedgers = await ctx.db
