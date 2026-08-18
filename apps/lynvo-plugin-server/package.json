@@ -19,12 +19,12 @@
   "dependencies": {
     "@dg02002/lynvo-plugin-server-protocol": "workspace:*",
     "cheerio": "catalog:",
-    "evlog": "^2.25.0",
+    "evlog": "^2.26.0",
     "hono": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.21.0",
+    "@cloudflare/vitest-pool-workers": "^0.21.3",
     "@cloudflare/workers-types": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

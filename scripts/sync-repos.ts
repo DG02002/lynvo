@@ -4,9 +4,9 @@ import { join } from "node:path"
 
 const REPOS = [
   {
-    id: "effect-smol",
-    repository: "https://github.com/Effect-TS/effect-smol.git",
-    path: ".repos/effect-smol",
+    id: "effect",
+    repository: "https://github.com/Effect-TS/effect.git",
+    path: ".repos/effect",
   },
 ]
 
