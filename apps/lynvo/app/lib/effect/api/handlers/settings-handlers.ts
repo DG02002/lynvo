@@ -165,7 +165,11 @@ export const SettingsHandlers = HttpApiBuilder.group(
               )
             )
           }
-          return { success: true, deletedLinks: result.deletedLinks }
+          return {
+            success: true,
+            deletedLinks: result.deletedLinks,
+            synchronization: { revision },
+          }
         })
       )
       .handle("clearLinks", () =>
@@ -187,7 +191,11 @@ export const SettingsHandlers = HttpApiBuilder.group(
               )
             )
           }
-          return { success: true, deletedLinks: result.deletedLinks }
+          return {
+            success: true,
+            deletedLinks: result.deletedLinks,
+            synchronization: { revision },
+          }
         })
       )
       .handle("listSessions", () =>

@@ -206,15 +206,63 @@ describe("useLinks", () => {
     )
   })
 
+  it("does not replace an applied snapshot with an older server revision", async () => {
+    storage.setItem(
+      "lynvo:links:sync:v2:user-1",
+      JSON.stringify({
+        results: [cacheEntry],
+        revision: 101,
+        etag: "101",
+      })
+    )
+    const setItem = vi.mocked(storage.setItem)
+    setItem.mockClear()
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          revision: 100,
+          results: [
+            {
+              _id: "older-link",
+              url: "https://example.com/older",
+              title: "Older server link",
+              meta: JSON.stringify(metadata("older-file")),
+              createdAt: 50,
+              updatedAt: 50,
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    )
+
+    const { result } = renderHook(() => useLinks(), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(setItem).toHaveBeenCalled())
+
+    expect(result.current.links[0].title).toBe("Cached link")
+    expect(setItem).not.toHaveBeenCalledWith(
+      "lynvo:links:sync:v2:user-1",
+      expect.stringContaining("Older server link")
+    )
+  })
+
   it("creates authenticated links through the Worker", async () => {
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       const request = input instanceof Request ? input : undefined
       const method = request?.method ?? init?.method ?? "GET"
       if (method === "POST") {
-        return new Response(JSON.stringify("link-worker"), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        })
+        return new Response(
+          JSON.stringify({
+            id: "link-worker",
+            synchronization: { revision: 1 },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
       }
       return new Response(JSON.stringify({ revision: 0, results: [] }), {
         status: 200,

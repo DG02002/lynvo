@@ -55,6 +55,9 @@ export function useLinksQuery(
     if (!snapshot) {
       return undefined
     }
+    if (cachedLinks && snapshot.revision < cachedLinks.revision) {
+      return cachedLinks
+    }
 
     return {
       results: snapshot.results.flatMap((link) => {
@@ -64,7 +67,7 @@ export function useLinksQuery(
       revision: snapshot.revision,
       etag: `${snapshot.revision}:${timeBucket}`,
     }
-  }, [snapshot, timeBucket])
+  }, [cachedLinks, snapshot, timeBucket])
 
   return {
     data: liveLinks ?? cachedLinks,

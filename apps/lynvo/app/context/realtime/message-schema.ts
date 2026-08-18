@@ -12,6 +12,11 @@ declare global {
     payload: { revision: number }
   }
 
+  interface SavedLinksSyncRealtimeMessage {
+    type: "saved-links.sync"
+    payload: { serverRevision: number; reconcile: boolean }
+  }
+
   interface RemoteInboxChangedRealtimeMessage {
     type: "remote-inbox.changed"
     payload: Record<string, never>
@@ -20,6 +25,7 @@ declare global {
   type RealtimeMessage =
     | RemoteCommandWireMessage
     | SavedLinksChangedRealtimeMessage
+    | SavedLinksSyncRealtimeMessage
     | AccountSettingsChangedRealtimeMessage
     | RemoteInboxChangedRealtimeMessage
 }
@@ -27,6 +33,14 @@ declare global {
 export const savedLinksChangedRealtimeMessageSchema = z.strictObject({
   type: z.literal("saved-links.changed"),
   payload: z.strictObject({ revision: z.number().int().nonnegative() }),
+})
+
+export const savedLinksSyncRealtimeMessageSchema = z.strictObject({
+  type: z.literal("saved-links.sync"),
+  payload: z.strictObject({
+    serverRevision: z.number().int().nonnegative(),
+    reconcile: z.boolean(),
+  }),
 })
 
 export const accountSettingsChangedRealtimeMessageSchema = z.strictObject({
@@ -62,6 +76,7 @@ export const parseRealtimeMessage = (value: string): RealtimeMessage | null => {
     const result = z
       .union([
         savedLinksChangedRealtimeMessageSchema,
+        savedLinksSyncRealtimeMessageSchema,
         accountSettingsChangedRealtimeMessageSchema,
         remoteInboxChangedRealtimeMessageSchema,
       ])

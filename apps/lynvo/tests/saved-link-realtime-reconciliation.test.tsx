@@ -32,6 +32,77 @@ describe("Saved link browser reconciliation", () => {
     })
   })
 
+  it("reconciles when the connection reports a newer saved-link revision", async () => {
+    const listeners = new Set<(message: RealtimeMessage) => void>()
+    const sendSavedLinkRevision = vi.fn()
+    const realtime = {
+      status: "connected",
+      connectionGeneration: 1,
+      sendSavedLinkRevision,
+      subscribe: (listener: (message: RealtimeMessage) => void) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      },
+    } as const
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    renderHook(
+      () => useSavedLinkRealtimeSynchronization("account-one", 3, realtime),
+      { wrapper }
+    )
+
+    expect(sendSavedLinkRevision).toHaveBeenCalledWith(3)
+    await act(async () => {
+      listeners.forEach((listener) =>
+        listener({
+          type: "saved-links.sync",
+          payload: { serverRevision: 4, reconcile: false },
+        })
+      )
+    })
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["links", "account-one"],
+      refetchType: "active",
+    })
+  })
+
+  it("does not fetch a snapshot when the connection revision is current", async () => {
+    const listeners = new Set<(message: RealtimeMessage) => void>()
+    const realtime = {
+      status: "connected",
+      connectionGeneration: 1,
+      sendSavedLinkRevision: vi.fn(),
+      subscribe: (listener: (message: RealtimeMessage) => void) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      },
+    } as const
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    renderHook(
+      () => useSavedLinkRealtimeSynchronization("account-one", 4, realtime),
+      { wrapper }
+    )
+
+    await act(async () => {
+      listeners.forEach((listener) =>
+        listener({
+          type: "saved-links.sync",
+          payload: { serverRevision: 4, reconcile: false },
+        })
+      )
+    })
+
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
   it("checks the lightweight revision while the realtime socket is unavailable", async () => {
     const queryClient = new QueryClient()
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
@@ -55,5 +126,23 @@ describe("Saved link browser reconciliation", () => {
     unmount()
     expect(vi.getTimerCount()).toBe(0)
     vi.useRealTimers()
+  })
+
+  it("reconciles after the browser regains focus", async () => {
+    const queryClient = new QueryClient()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+    renderHook(() => useSavedLinkRealtimeSynchronization("account-one", 2), {
+      wrapper,
+    })
+
+    window.dispatchEvent(new Event("focus"))
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["links", "account-one"],
+      refetchType: "active",
+    })
   })
 })

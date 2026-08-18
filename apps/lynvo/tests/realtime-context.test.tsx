@@ -5,9 +5,10 @@ const { closeSocket, openRealtimeSocket } = vi.hoisted(() => {
   const closeSocket = vi.fn()
   return {
     closeSocket,
-    openRealtimeSocket: vi.fn(
-      (_options: { onSessionRevoked: () => void }) => closeSocket
-    ),
+    openRealtimeSocket: vi.fn((_options: { onSessionRevoked: () => void }) => ({
+      close: closeSocket,
+      sendSavedLinkRevision: vi.fn(),
+    })),
   }
 })
 

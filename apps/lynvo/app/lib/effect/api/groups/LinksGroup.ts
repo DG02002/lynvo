@@ -22,6 +22,15 @@ const LinksSnapshotSchema = Schema.Struct({
   results: Schema.Array(LinkSchema),
 })
 
+const SavedLinkSynchronizationSchema = Schema.Struct({
+  revision: Schema.Number,
+})
+
+const SavedLinkCommitSchema = Schema.Struct({
+  success: Schema.Boolean,
+  synchronization: SavedLinkSynchronizationSchema,
+})
+
 const LinkMetadataOperationSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("markOpened"), linkUrl: Schema.String }),
   Schema.Struct({
@@ -57,7 +66,10 @@ export class LinksGroup extends HttpApiGroup.make("links")
         title: Schema.optional(Schema.String),
         meta: Schema.Unknown,
       }),
-      success: Schema.String,
+      success: Schema.Struct({
+        id: Schema.String,
+        synchronization: SavedLinkSynchronizationSchema,
+      }),
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -69,7 +81,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
       params: {
         linkId: Schema.String,
       },
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: SavedLinkCommitSchema,
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
     HttpApiEndpoint.post("updateMeta", "/:linkId/meta", {
@@ -79,7 +91,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
       payload: Schema.Struct({
         meta: Schema.Unknown,
       }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: SavedLinkCommitSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -90,7 +102,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
     HttpApiEndpoint.post("applyMetadataOperation", "/:linkId/meta-operation", {
       params: { linkId: Schema.String },
       payload: LinkMetadataOperationSchema,
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: SavedLinkCommitSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,

@@ -70,7 +70,10 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             result.revision
           )
         )
-        return result.id
+        return {
+          id: result.id,
+          synchronization: { revision: result.revision },
+        }
       })
     )
     .handle("delete", ({ params }) =>
@@ -91,7 +94,10 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             result.revision
           )
         )
-        return { success: true }
+        return {
+          success: true,
+          synchronization: { revision: result.revision },
+        }
       })
     )
     .handle("updateMeta", ({ params, payload }) =>
@@ -114,7 +120,10 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             result.revision
           )
         )
-        return { success: true }
+        return {
+          success: true,
+          synchronization: { revision: result.revision },
+        }
       })
     )
     .handle("applyMetadataOperation", ({ params, payload }) =>
@@ -167,7 +176,10 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
             result.revision
           )
         )
-        return { success: true }
+        return {
+          success: true,
+          synchronization: { revision: result.revision },
+        }
       })
     )
 )

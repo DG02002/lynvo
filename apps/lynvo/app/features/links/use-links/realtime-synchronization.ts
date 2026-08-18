@@ -2,16 +2,19 @@ import { useEffect, useRef } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { useOptionalRealtime } from "~/context/RealtimeContext"
+import type { RealtimeContextValue } from "~/context/RealtimeContext"
 import { client } from "~/lib/effect/api/client"
 import { SAVED_LINK_ANTI_ENTROPY_INTERVAL_MS } from "../constants"
 import { savedLinksQueryKey } from "./query"
 
 export const useSavedLinkRealtimeSynchronization = (
   userId: string | undefined,
-  revision: number | undefined
+  revision: number | undefined,
+  realtimeOverride?: RealtimeContextValue
 ) => {
   const queryClient = useQueryClient()
-  const realtime = useOptionalRealtime()
+  const contextRealtime = useOptionalRealtime()
+  const realtime = realtimeOverride ?? contextRealtime
   const revisionRef = useRef(revision ?? 0)
 
   useEffect(() => {
@@ -29,22 +32,17 @@ export const useSavedLinkRealtimeSynchronization = (
       })
     const unsubscribe = realtime.subscribe((message) => {
       if (
-        message.type === "saved-links.changed" &&
-        message.payload.revision > revisionRef.current
+        (message.type === "saved-links.changed" &&
+          message.payload.revision > revisionRef.current) ||
+        (message.type === "saved-links.sync" &&
+          (message.payload.reconcile ||
+            message.payload.serverRevision > revisionRef.current))
       ) {
         void invalidate()
       }
     })
+    realtime.sendSavedLinkRevision(revisionRef.current)
     return unsubscribe
-  }, [queryClient, realtime, userId])
-
-  useEffect(() => {
-    if (userId && realtime && realtime.connectionGeneration > 0) {
-      void queryClient.invalidateQueries({
-        queryKey: savedLinksQueryKey(userId),
-        refetchType: "active",
-      })
-    }
   }, [queryClient, realtime, userId])
 
   useEffect(() => {
@@ -63,9 +61,11 @@ export const useSavedLinkRealtimeSynchronization = (
       }
     }
     window.addEventListener("online", reconcile)
+    window.addEventListener("focus", reconcile)
     document.addEventListener("visibilitychange", handleVisibility)
     return () => {
       window.removeEventListener("online", reconcile)
+      window.removeEventListener("focus", reconcile)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [queryClient, userId])

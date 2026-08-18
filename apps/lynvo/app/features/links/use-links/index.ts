@@ -55,10 +55,12 @@ export const useLinks = () => {
         targetUrl: item.url,
         title: item.title ?? item.url,
         metadata: item.metadata!,
-        createLink: ({ url, title, metadata }) =>
-          Effect.runPromise(
+        createLink: async ({ url, title, metadata }) => {
+          const result = await Effect.runPromise(
             client.links.create({ payload: { url, title, meta: metadata } })
-          ),
+          )
+          return result.id
+        },
       }),
     []
   )

@@ -17,15 +17,21 @@ account’s collection advances one monotonic integer revision and coalesces one
 hibernatable account Durable Object, then acknowledges the attempted revision.
 The five-minute Worker cron retries pending rows in bounded batches.
 
-The event is only an invalidation hint. Browsers compare revisions and refetch
-an atomic `{ revision, results }` HTTP snapshot. They reconcile after every
-socket connection, online transition, and visible transition. While visible,
-online, signed in, and connected, a 30-second anti-entropy request reads only
-the account revision and fetches the full snapshot only when newer.
+The event is only an invalidation hint. On every socket connection, the browser
+sends its applied Saved link revision. The account room replies with its latest
+known revision or explicitly requests reconciliation when it has no durable
+revision yet. The browser fetches an atomic `{ revision, results }` HTTP
+snapshot only on mismatch, and never applies or persists a snapshot older than
+its applied revision. Online, visible, and focus transitions also reconcile.
+While visible, online, and signed in, a bounded anti-entropy request remains as
+defense in depth.
 
 Delivery is at least once. Duplicate, delayed, and out-of-order hints are
-harmless. `broadcastRevision` means the Worker successfully attempted room
-broadcast, not that every browser acknowledged it.
+harmless. The account room durably coalesces the latest revision when an
+immediate socket broadcast fails and retries it on a near-term alarm. The
+Convex pending intent and minute Worker drain remain the final recovery path.
+`broadcastRevision` means the Worker successfully attempted room broadcast,
+not that every browser acknowledged it.
 
 ## Rejected alternatives
 
@@ -39,8 +45,9 @@ broadcast, not that every browser acknowledged it.
 ## Failure and lifecycle semantics
 
 A commit and its pending intent are atomic. Broadcast or acknowledgement
-failure does not roll back a successful user mutation; the cron and browser
-anti-entropy repair it. An old acknowledgement cannot clear a newer revision.
+failure does not roll back a successful user mutation; the room alarm, Worker
+drain, connection revision exchange, and browser anti-entropy repair it. An old
+acknowledgement cannot clear a newer revision.
 During final account erasure, the synchronization row is deleted with account
 data and no new pending delivery is created after writes are disabled and valid
 sessions are removed.

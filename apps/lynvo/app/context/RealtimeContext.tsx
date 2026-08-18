@@ -10,10 +10,11 @@ import React, {
 import { realtimeReducer, type RealtimeStatus } from "./realtime/reducer"
 import { openRealtimeSocket } from "./realtime/socket"
 
-interface RealtimeContextValue {
+export interface RealtimeContextValue {
   status: RealtimeStatus
   connectionGeneration: number
   subscribe: (listener: (message: RealtimeMessage) => void) => () => void
+  sendSavedLinkRevision: (revision: number) => void
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | undefined>(
@@ -41,6 +42,7 @@ export function RealtimeProvider({
     0
   )
   const listeners = useRef(new Set<(message: RealtimeMessage) => void>())
+  const sendSavedLinkRevisionRef = useRef<(revision: number) => void>(() => {})
   const receiveMessage = useCallback((message: RealtimeMessage) => {
     listeners.current.forEach((listener) => listener(message))
   }, [])
@@ -58,7 +60,7 @@ export function RealtimeProvider({
       return
     }
 
-    return openRealtimeSocket({
+    const realtimeSocket = openRealtimeSocket({
       dispatch,
       receiveMessage,
       onOpen: () => {
@@ -69,11 +71,25 @@ export function RealtimeProvider({
         onSessionRevoked?.(userId)
       },
     })
+    sendSavedLinkRevisionRef.current = realtimeSocket.sendSavedLinkRevision
+    return () => {
+      sendSavedLinkRevisionRef.current = () => {}
+      realtimeSocket.close()
+    }
   }, [onConnectionOpen, onSessionRevoked, receiveMessage, sessionId, userId])
 
+  const sendSavedLinkRevision = useCallback((revision: number) => {
+    sendSavedLinkRevisionRef.current(revision)
+  }, [])
+
   const value = useMemo(
-    () => ({ status: state.status, connectionGeneration, subscribe }),
-    [connectionGeneration, state.status, subscribe]
+    () => ({
+      status: state.status,
+      connectionGeneration,
+      subscribe,
+      sendSavedLinkRevision,
+    }),
+    [connectionGeneration, sendSavedLinkRevision, state.status, subscribe]
   )
 
   return (

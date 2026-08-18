@@ -74,11 +74,27 @@ export const openRealtimeSocket = ({
   let reconnectTimer: number | undefined
   let heartbeatTimer: number | undefined
   let attempt = 0
+  let savedLinkRevision: number | undefined
+
+  const sendSavedLinkRevision = (revision: number) => {
+    savedLinkRevision = revision
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(
+        JSON.stringify({
+          type: "saved-links.sync",
+          payload: { revision },
+        })
+      )
+    }
+  }
 
   const handleOpen = () => {
     attempt = 0
     dispatch({ type: "SET_STATUS", status: "connected" })
     onOpen()
+    if (savedLinkRevision !== undefined) {
+      sendSavedLinkRevision(savedLinkRevision)
+    }
     heartbeatTimer = window.setInterval(() => {
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(
@@ -166,13 +182,16 @@ export const openRealtimeSocket = ({
 
   connect()
 
-  return () => {
-    closed = true
-    window.clearTimeout(reconnectTimer)
-    window.clearInterval(heartbeatTimer)
-    removeSocketListeners()
-    if (socket) {
-      closeSocket(socket)
-    }
+  return {
+    sendSavedLinkRevision,
+    close: () => {
+      closed = true
+      window.clearTimeout(reconnectTimer)
+      window.clearInterval(heartbeatTimer)
+      removeSocketListeners()
+      if (socket) {
+        closeSocket(socket)
+      }
+    },
   }
 }

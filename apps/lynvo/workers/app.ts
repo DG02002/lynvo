@@ -48,7 +48,10 @@ import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
 import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
 import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
-import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
+import {
+  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
+  SAVED_LINK_BROADCAST_RETRY_DELAY_MS,
+} from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 import { z } from "zod"
 export { AuthRateLimiter } from "./auth-rate-limiter"
@@ -612,6 +615,14 @@ app.all("*", async (context) => {
 })
 
 const pingMessageSchema = z.object({ type: z.literal("ping") })
+const savedLinkSyncRequestSchema = z.strictObject({
+  type: z.literal("saved-links.sync"),
+  payload: z.strictObject({ revision: z.number().int().nonnegative() }),
+})
+const savedLinksChangedBroadcastSchema = z.strictObject({
+  type: z.literal("saved-links.changed"),
+  payload: z.strictObject({ revision: z.number().int().nonnegative() }),
+})
 const receiverNotificationSchema = z.object({ receiverId: z.string() })
 const sessionRevocationSchema = z.object({ sessionId: z.string() })
 const receiverAttachmentSchema = z.object({
@@ -637,7 +648,26 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     const pathname = new URL(request.url).pathname
     if (pathname.endsWith("/broadcast")) {
       const message: unknown = await request.json()
-      this.broadcast(message)
+      const savedLinksChanged =
+        savedLinksChangedBroadcastSchema.safeParse(message)
+      if (savedLinksChanged.success) {
+        const currentRevision =
+          (await this.ctx.storage.get<number>("savedLinkRevision")) ?? 0
+        if (savedLinksChanged.data.payload.revision > currentRevision) {
+          await this.ctx.storage.put(
+            "savedLinkRevision",
+            savedLinksChanged.data.payload.revision
+          )
+        }
+      }
+      const failedSocketCount = this.broadcast(message)
+      if (savedLinksChanged.success && failedSocketCount > 0) {
+        await this.ctx.storage.put("pendingSavedLinkBroadcast", message)
+        await this.ctx.storage.setAlarm(
+          Date.now() + SAVED_LINK_BROADCAST_RETRY_DELAY_MS
+        )
+        return Response.json({ success: false }, { status: 503 })
+      }
       return Response.json({ success: true })
     }
     if (pathname.endsWith("/notify-inbox")) {
@@ -737,7 +767,18 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    let retryPending = false
     try {
+      const pendingBroadcast = savedLinksChangedBroadcastSchema.safeParse(
+        await this.ctx.storage.get("pendingSavedLinkBroadcast")
+      )
+      if (pendingBroadcast.success) {
+        if (this.broadcast(pendingBroadcast.data) === 0) {
+          await this.ctx.storage.delete("pendingSavedLinkBroadcast")
+        } else {
+          retryPending = true
+        }
+      }
       await Promise.all(
         this.ctx.getWebSockets().map(async (socket) => {
           try {
@@ -768,13 +809,19 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     } finally {
       if (this.ctx.getWebSockets().length > 0) {
         await this.ctx.storage.setAlarm(
-          Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
+          Date.now() +
+            (retryPending
+              ? SAVED_LINK_BROADCAST_RETRY_DELAY_MS
+              : REALTIME_SESSION_REVALIDATION_INTERVAL_MS)
         )
       }
     }
   }
 
-  webSocketMessage(socket: WebSocket, message: string | ArrayBuffer): void {
+  async webSocketMessage(
+    socket: WebSocket,
+    message: string | ArrayBuffer
+  ): Promise<void> {
     const textMessage = z.string().safeParse(message)
     if (!textMessage.success) {
       return
@@ -784,6 +831,25 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       if (isPingMessage(parsed)) {
         socket.send(
           JSON.stringify({ type: "pong", payload: { at: Date.now() } })
+        )
+        return
+      }
+      const savedLinkSync = savedLinkSyncRequestSchema.safeParse(parsed)
+      if (savedLinkSync.success) {
+        const knownServerRevision =
+          await this.ctx.storage.get<number>("savedLinkRevision")
+        const serverRevision =
+          knownServerRevision ?? savedLinkSync.data.payload.revision
+        socket.send(
+          JSON.stringify({
+            type: "saved-links.sync",
+            payload: {
+              serverRevision,
+              reconcile:
+                knownServerRevision === undefined ||
+                serverRevision > savedLinkSync.data.payload.revision,
+            },
+          })
         )
       }
     } catch {
@@ -799,15 +865,18 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     socket.close(1011, "WebSocket error")
   }
 
-  private broadcast<Value>(message: Value): void {
+  private broadcast<Value>(message: Value): number {
     const serialized = JSON.stringify(message)
+    let failedSocketCount = 0
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.send(serialized)
       } catch {
+        failedSocketCount += 1
         socket.close(1011, "Broadcast failed")
       }
     }
+    return failedSocketCount
   }
 }
 
