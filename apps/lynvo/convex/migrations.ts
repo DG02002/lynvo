@@ -31,7 +31,7 @@ const doesLedgerMatch = (
   ledger.savedLinkCount === usage.savedLinkCount &&
   ledger.totalEnforcedBytes === usage.totalEnforcedBytes
 
-export const backfillUserStorageLedgers = migrations.define({
+export const backfillUserStorageLedgersV2 = migrations.define({
   table: "users",
   batchSize: 10,
   migrateOne: async (ctx, user) => {
@@ -66,7 +66,7 @@ export const run = migrations.runner()
 
 export const runProduction = migrations.runner([
   internal.migrations.normalizeSavedLinkRetention,
-  internal.migrations.backfillUserStorageLedgers,
+  internal.migrations.backfillUserStorageLedgersV2,
 ])
 
 export const verifySavedLinkRetention = internalQuery({

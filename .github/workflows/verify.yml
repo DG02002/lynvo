@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: verify-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   workflow-security:
     runs-on: ubuntu-latest
@@ -56,6 +52,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    concurrency:
+      group: production
+      queue: max
     environment: production
     env:
       COMMIT_HASH: ${{ github.sha }}
@@ -140,19 +139,19 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
           NODE_OPTIONS: --disable-warning=ExperimentalWarning
         run: |
-          migration_names='{"names":["migrations:normalizeSavedLinkRetention","migrations:backfillUserStorageLedgers"]}'
+          migration_names='{"names":["migrations:normalizeSavedLinkRetention","migrations:backfillUserStorageLedgersV2"]}'
 
           for attempt in {1..90}; do
             migration_status="$(pnpm --filter @lynvo/app exec convex run --component migrations lib:getStatus "$migration_names")"
             echo "Migration status (attempt ${attempt}/90):"
             jq . <<< "$migration_status"
 
-            if jq -e 'any(.[]; .error != null)' <<< "$migration_status" >/dev/null; then
+            if jq -e 'any(.[]; .state == "failed" or .state == "canceled")' <<< "$migration_status" >/dev/null; then
               echo "::error::A production migration failed. See the status above."
               exit 1
             fi
 
-            if jq -e 'length == 2 and all(.[]; .isDone == true)' <<< "$migration_status" >/dev/null; then
+            if jq -e 'length == 2 and all(.[]; .state == "success" and .isDone == true)' <<< "$migration_status" >/dev/null; then
               break
             fi
 

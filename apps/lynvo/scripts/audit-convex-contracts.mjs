@@ -38,6 +38,14 @@ const storageSource = readFileSync(
   join(CONVEX_DIRECTORY, "storagePolicy.ts"),
   "utf8"
 )
+const constantsSource = readFileSync(
+  join(CONVEX_DIRECTORY, "constants.ts"),
+  "utf8"
+)
+const migrationsSource = readFileSync(
+  join(CONVEX_DIRECTORY, "migrations.ts"),
+  "utf8"
+)
 const erasureSource = readFileSync(
   join(CONVEX_DIRECTORY, "accountErasure.ts"),
   "utf8"
@@ -88,6 +96,31 @@ const usesSharedErasureRegistry =
 const erasureTables = usesSharedErasureRegistry
   ? new Set(erasedTables)
   : new Set()
+const storageLedgerSchemaVersion = constantsSource.match(
+  /export const STORAGE_LEDGER_SCHEMA_VERSION = (\d+)/
+)?.[1]
+
+if (!storageLedgerSchemaVersion) {
+  failures.push(
+    "convex/constants.ts: storage ledger schema version must be a numeric literal"
+  )
+} else {
+  const expectedMigration = `backfillUserStorageLedgersV${storageLedgerSchemaVersion}`
+  if (
+    !migrationsSource.includes(
+      `export const ${expectedMigration} = migrations.define({`
+    )
+  ) {
+    failures.push(
+      `convex/migrations.ts: storage ledger schema version ${storageLedgerSchemaVersion} requires ${expectedMigration}`
+    )
+  }
+  if (!migrationsSource.includes(`internal.migrations.${expectedMigration}`)) {
+    failures.push(
+      `convex/migrations.ts: runProduction must include ${expectedMigration}`
+    )
+  }
+}
 
 if (catalogEntries.length !== schemaTables.size) {
   failures.push(
