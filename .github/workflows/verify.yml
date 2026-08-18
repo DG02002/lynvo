@@ -203,7 +203,8 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions upload
-          --config wrangler.jsonc
+          --config build/server/wrangler.json
+          --env=""
           --tag "$RELEASE_TAG"
           --message "GitHub ${COMMIT_HASH}"
           --var "SERVICE_VERSION:$LYNVO_VERSION"
@@ -231,7 +232,8 @@ jobs:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions deploy
-          --config wrangler.jsonc
+          --config build/server/wrangler.json
+          --env=""
           --version-tag "$RELEASE_TAG"
           --message "GitHub ${COMMIT_HASH}"
           --yes

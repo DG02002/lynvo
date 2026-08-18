@@ -54,7 +54,7 @@ describe("deployment preflight command", () => {
 
   it("passes the verified release identity to Wrangler", () => {
     expect(packageConfig.scripts.deploy).toContain(
-      'wrangler deploy --var "COMMIT_HASH:$COMMIT_HASH" --var "SERVICE_VERSION:$SERVICE_VERSION"'
+      'wrangler deploy --config build/server/wrangler.json --env="" --var "COMMIT_HASH:$COMMIT_HASH" --var "SERVICE_VERSION:$SERVICE_VERSION"'
     )
   })
 
