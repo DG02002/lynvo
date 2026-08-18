@@ -1,6 +1,6 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Effect } from "effect"
+import { useMutation, useQuery } from "convex/react"
+import { api } from "../../../../convex/_generated/api"
 import { toast } from "sonner"
 import {
   Select,
@@ -28,35 +28,24 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { client } from "~/lib/effect/api/client"
-import { playerPreferencesQueryKey } from "~/root/account-settings-query"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queue"
 
-export function PlayerSettings() {
-  const queryClient = useQueryClient()
+export const PlayerSettings = () => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
-  const queryKey = React.useMemo(
-    () => playerPreferencesQueryKey(playerPreferenceIdentity),
-    [playerPreferenceIdentity]
+  const cloudPreferences = useQuery(
+    api.users.getPlayerPreferences,
+    playerPreferenceIdentity ? {} : "skip"
   )
-  const { data: cloudPreferences } = useQuery({
-    queryKey,
-    queryFn: () => Effect.runPromise(client.settings.getPlayerPreferences()),
-  })
+  const updatePlayerPreferences = useMutation(api.users.updatePlayerPreferences)
   const updateCloudPreferences = React.useCallback(
     async (preferences: {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
     }) => {
-      await Effect.runPromise(
-        client.settings.updatePlayerPreferences({ payload: preferences })
-      )
-      await queryClient.invalidateQueries({
-        queryKey,
-      })
+      await updatePlayerPreferences(preferences)
     },
-    [queryClient, queryKey]
+    [updatePlayerPreferences]
   )
   const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
     React.useState<PlayerId>(

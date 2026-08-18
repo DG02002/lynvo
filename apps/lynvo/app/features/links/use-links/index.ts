@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
-import { Effect } from "effect"
+import { useMutation as useConvexMutation } from "convex/react"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
-import { client } from "~/lib/effect/api/client"
-import { linksToLinkViewItems, readLinksCache } from "./cache"
+import { api } from "../../../../convex/_generated/api"
 import { useLinksQuery } from "./query"
 import { useLinksMutations } from "./mutations"
 import { useLinksPaginationAndSort } from "./pagination"
@@ -16,9 +15,7 @@ import type {
   LinkViewItem,
   SavedLinkListItem,
 } from "~/features/links/types"
-import { useSavedLinkRealtimeSynchronization } from "./realtime-synchronization"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
-import { runSavedLinkCommand } from "~/features/links/saved-link-command-adapter"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined
@@ -42,45 +39,36 @@ export const useLinks = () => {
   const rootData = useRouteLoaderData<typeof rootLoader>("root")
   const user = rootData?.user ?? null
   const userId = user?.sub
-  const cachedLinks = useMemo(() => readLinksCache(userId), [userId])
-  const cachedItems = useMemo(
-    () => linksToLinkViewItems(cachedLinks?.results ?? []),
-    [cachedLinks?.results]
+  const linksQuery = useLinksQuery(userId)
+  const createOrUpdateSavedLink = useConvexMutation(api.links.createOrUpdate)
+  const updateSavedLinkMetadata = useConvexMutation(api.links.updateMeta)
+  const applySavedLinkMetadataOperation = useConvexMutation(
+    api.links.applyMetadataOperation
   )
-  const linksQuery = useLinksQuery(userId, cachedLinks)
-  useSavedLinkRealtimeSynchronization(userId, linksQuery.data?.revision)
+  const deleteSavedLink = useConvexMutation(api.links.deleteById)
+  const clearSavedLinks = useConvexMutation(api.users.clearLinks)
 
   const createLink = useCallback(
-    async (item: (typeof cachedItems)[number]) =>
+    async (item: LinkViewItem) =>
       await createServerLink({
         targetUrl: item.url,
         title: item.title ?? item.url,
         metadata: item.metadata!,
         createLink: async ({ url, title, metadata }) => {
           const operationId = crypto.randomUUID()
-          const result = await runSavedLinkCommand(() =>
-            Effect.runPromise(
-              client.links.create({
-                payload: {
-                  operationId,
-                  clientRevision: cachedLinks?.revision ?? 0,
-                  url,
-                  title,
-                  meta: metadata,
-                },
-              })
-            )
-          )
+          const result = await createOrUpdateSavedLink({
+            operationId,
+            url,
+            title,
+            meta: JSON.stringify(metadata),
+          })
           return result.id
         },
       }),
-    [cachedLinks?.revision]
+    [createOrUpdateSavedLink]
   )
   const updateLink = useCallback(
-    async (
-      item: (typeof cachedItems)[number],
-      operation?: LinkMetadataOperation
-    ) => {
+    async (item: LinkViewItem, operation?: LinkMetadataOperation) => {
       if (!item.id || !item.metadata) {
         return
       }
@@ -94,21 +82,14 @@ export const useLinks = () => {
               throw new Error("Link URL is required")
             }
             const openedLinkUrl = operation.linkUrl
-            await runSavedLinkCommand(() =>
-              Effect.runPromise(
-                client.links.applyMetadataOperation({
-                  params: { linkId },
-                  payload: {
-                    operationId,
-                    clientRevision: cachedLinks?.revision ?? 0,
-                    operation: {
-                      kind: "markOpened",
-                      linkUrl: openedLinkUrl,
-                    },
-                  },
-                })
-              )
-            )
+            await applySavedLinkMetadataOperation({
+              operationId,
+              id: linkId,
+              operation: {
+                kind: "markOpened",
+                linkUrl: openedLinkUrl,
+              },
+            })
             return
           case "cacheMirrors":
             if (!operation.lazyItemUrl || !operation.mirrors) {
@@ -116,22 +97,15 @@ export const useLinks = () => {
             }
             const lazyItemUrl = operation.lazyItemUrl
             const mirrors = operation.mirrors
-            await runSavedLinkCommand(() =>
-              Effect.runPromise(
-                client.links.applyMetadataOperation({
-                  params: { linkId },
-                  payload: {
-                    operationId,
-                    clientRevision: cachedLinks?.revision ?? 0,
-                    operation: {
-                      kind: "cacheMirrors",
-                      lazyItemUrl,
-                      mirrors,
-                    },
-                  },
-                })
-              )
-            )
+            await applySavedLinkMetadataOperation({
+              operationId,
+              id: linkId,
+              operation: {
+                kind: "cacheMirrors",
+                lazyItemUrl,
+                mirrorsJson: JSON.stringify(mirrors),
+              },
+            })
             return
           case "removeExtractedLink":
             if (!operation.linkKey || !operation.linkUrl) {
@@ -139,22 +113,15 @@ export const useLinks = () => {
             }
             const linkKey = operation.linkKey
             const removedLinkUrl = operation.linkUrl
-            await runSavedLinkCommand(() =>
-              Effect.runPromise(
-                client.links.applyMetadataOperation({
-                  params: { linkId },
-                  payload: {
-                    operationId,
-                    clientRevision: cachedLinks?.revision ?? 0,
-                    operation: {
-                      kind: "removeExtractedLink",
-                      linkKey,
-                      linkUrl: removedLinkUrl,
-                    },
-                  },
-                })
-              )
-            )
+            await applySavedLinkMetadataOperation({
+              operationId,
+              id: linkId,
+              operation: {
+                kind: "removeExtractedLink",
+                linkKey,
+                linkUrl: removedLinkUrl,
+              },
+            })
             return
           case "replaceExtraction":
             if (!operation.expectedExtraction || !operation.extractedLinks) {
@@ -162,62 +129,46 @@ export const useLinks = () => {
             }
             const expectedExtraction = operation.expectedExtraction
             const extractedLinks = operation.extractedLinks
-            await runSavedLinkCommand(() =>
-              Effect.runPromise(
-                client.links.applyMetadataOperation({
-                  params: { linkId },
-                  payload: {
-                    operationId,
-                    clientRevision: cachedLinks?.revision ?? 0,
-                    operation: {
-                      kind: "replaceExtraction",
-                      expectedExtraction,
-                      extractedLinks,
-                    },
-                  },
-                })
-              )
-            )
+            await applySavedLinkMetadataOperation({
+              operationId,
+              id: linkId,
+              operation: {
+                kind: "replaceExtraction",
+                expectedExtractionJson: JSON.stringify(expectedExtraction),
+                extractedLinksJson: JSON.stringify(extractedLinks),
+              },
+            })
             return
         }
       }
-      await runSavedLinkCommand(() =>
-        Effect.runPromise(
-          client.links.updateMeta({
-            params: { linkId },
-            payload: {
-              operationId,
-              clientRevision: cachedLinks?.revision ?? 0,
-              meta: toJsonMetadata(metadata),
-            },
-          })
-        )
-      )
+      await updateSavedLinkMetadata({
+        operationId,
+        id: linkId,
+        meta: JSON.stringify(toJsonMetadata(metadata)),
+      })
     },
-    [cachedLinks?.revision]
+    [applySavedLinkMetadataOperation, updateSavedLinkMetadata]
   )
 
   const adapter = useMemo(
     () =>
       createServerLinksAdapter({
-        read: () => cachedItems,
+        read: () => EMPTY_LINKS,
         create: createLink,
         update: updateLink,
         delete: async (id) => {
-          await Effect.runPromise(
-            client.links.delete({ params: { linkId: id } })
-          )
+          await deleteSavedLink({ id })
         },
         clear: async () => {
-          await Effect.runPromise(client.settings.clearLinks())
+          await clearSavedLinks({})
         },
       }),
-    [cachedItems, createLink, updateLink, userId]
+    [clearSavedLinks, createLink, deleteSavedLink, updateLink]
   )
   const identity = userId ?? "signed-out"
   const synchronization = useMemo(
-    () => createSavedLinkSynchronization(adapter, identity, cachedItems),
-    [adapter, cachedItems, identity]
+    () => createSavedLinkSynchronization(adapter, identity, EMPTY_LINKS),
+    [adapter, identity]
   )
 
   useEffect(() => {
@@ -225,18 +176,11 @@ export const useLinks = () => {
       .synchronize({
         adapter,
         identity,
-        cachedItems,
+        cachedItems: EMPTY_LINKS,
         remote: linksQuery.isLive ? linksQuery.data : undefined,
       })
       .catch((error) => console.error(error))
-  }, [
-    adapter,
-    cachedItems,
-    identity,
-    linksQuery.data,
-    linksQuery.isLive,
-    synchronization,
-  ])
+  }, [adapter, identity, linksQuery.data, linksQuery.isLive, synchronization])
 
   const links = useSyncExternalStore(
     synchronization.subscribe,

@@ -1,9 +1,7 @@
 import { useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { Effect } from "effect"
-import { client } from "~/lib/effect/api/client"
+import { useQuery } from "convex/react"
+import { api } from "../../../../convex/_generated/api"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
-import type { LinksCache } from "./cache"
 import {
   parseLinkMetadata,
   type SavedLink,
@@ -40,23 +38,13 @@ const serverLinkToSavedLink = (link: LinkResult): SavedLink | undefined => {
   }
 }
 
-export function useLinksQuery(
-  userId: string | undefined,
-  cachedLinks: LinksCache | undefined
-) {
+export const useLinksQuery = (userId: string | undefined) => {
   const timeBucket = useDailyTimeBucket()
-  const { data: snapshot, isPending } = useQuery({
-    queryKey: savedLinksQueryKey(userId, timeBucket),
-    queryFn: () => Effect.runPromise(client.links.list()),
-    enabled: Boolean(userId),
-  })
+  const snapshot = useQuery(api.links.list, userId ? { timeBucket } : "skip")
 
-  const liveLinks = useMemo<LinksCache | undefined>(() => {
+  const liveLinks = useMemo(() => {
     if (!snapshot) {
       return undefined
-    }
-    if (cachedLinks && snapshot.revision < cachedLinks.revision) {
-      return cachedLinks
     }
 
     return {
@@ -67,11 +55,11 @@ export function useLinksQuery(
       revision: snapshot.revision,
       etag: `${snapshot.revision}:${timeBucket}`,
     }
-  }, [cachedLinks, snapshot, timeBucket])
+  }, [snapshot, timeBucket])
 
   return {
-    data: liveLinks ?? cachedLinks,
+    data: liveLinks,
     isLive: Boolean(liveLinks),
-    isLoading: Boolean(userId && isPending && !cachedLinks),
+    isLoading: Boolean(userId && snapshot === undefined),
   }
 }

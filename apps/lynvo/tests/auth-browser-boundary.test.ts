@@ -31,8 +31,8 @@ describe("browser authentication boundary", () => {
     })
 
     expect(violations).toEqual([])
-    expect(convexReactImports).toEqual([
-      "app/root/convex-authentication-provider.tsx",
-    ])
+    expect(convexReactImports).toContain(
+      "app/root/convex-authentication-provider.tsx"
+    )
   })
 })

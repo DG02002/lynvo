@@ -1,45 +1,35 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { PlayerSettings } from "~/features/site/settings/player-settings"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { createMemoryStorage } from "./memory-storage"
 
-describe("Player settings browser data", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
+const { convexMutationMock, convexQueryMock } = vi.hoisted(() => ({
+  convexMutationMock: vi.fn(),
+  convexQueryMock: vi.fn(),
+}))
 
-  it("loads Player settings through a same-origin Lynvo operation", async () => {
+vi.mock("convex/react", () => ({
+  useMutation: () => convexMutationMock,
+  useQuery: convexQueryMock,
+}))
+
+describe("Player settings browser data", () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it("loads Player settings from the native Convex subscription", async () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
-    const requestedPaths: Array<string> = []
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = new URL(
-          input instanceof Request ? input.url : String(input),
-          "https://lynvo.test"
-        )
-        requestedPaths.push(url.pathname)
-        if (url.pathname === "/api/settings/player") {
-          return Response.json({
-            rangeSupportedPlayerId: "mpv",
-            rangeUnsupportedPlayerId: "mx",
-          })
-        }
-        return new Response(null, { status: 404 })
-      })
-    )
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+    convexQueryMock.mockReturnValue({
+      rangeSupportedPlayerId: "mpv",
+      rangeUnsupportedPlayerId: "mx",
+      revision: 1,
     })
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <PlayerPreferenceProvider userId="test-user">
-          <PlayerSettings />
-        </PlayerPreferenceProvider>
-      </QueryClientProvider>
+      <PlayerPreferenceProvider userId="test-user">
+        <PlayerSettings />
+      </PlayerPreferenceProvider>
     )
 
     const playerSelectors = await screen.findAllByRole("combobox")
@@ -47,6 +37,6 @@ describe("Player settings browser data", () => {
       expect(playerSelectors[0]).toHaveTextContent("MPV")
       expect(playerSelectors[1]).toHaveTextContent("MX Player")
     })
-    expect(requestedPaths).toContain("/api/settings/player")
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
