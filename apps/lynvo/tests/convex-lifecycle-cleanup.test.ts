@@ -36,6 +36,7 @@ describe("bounded lifecycle cleanup", () => {
 
     await expect(
       client.mutation(api.links.createOrUpdate, {
+        operationId: crypto.randomUUID(),
         url: "https://pending.example/new",
       })
     ).rejects.toThrow("Account erasure is in progress")

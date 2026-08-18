@@ -1,11 +1,9 @@
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials"
-import {
-  createAccount,
-  retrieveAccount,
-  convexAuth,
-} from "@convex-dev/auth/server"
+import { createAccount, convexAuth } from "@convex-dev/auth/server"
 import type { DataModel } from "./_generated/dataModel"
 import { internal } from "./_generated/api"
+import { internalQuery } from "./_generated/server"
+import { v } from "convex/values"
 import {
   normalizeUsername,
   validatePassword,
@@ -13,6 +11,7 @@ import {
 } from "../app/lib/auth-policy"
 import { verifyAuthPreflightToken } from "./authGateway"
 import { hashPasswordSecret, verifyPasswordSecret } from "./passwordCrypto"
+import { verifyCredentialsAccount } from "./credentialsVerification"
 import { synchronizeAccountCapacityAfterCreation } from "./accountCapacity"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
@@ -76,6 +75,40 @@ const passwordCrypto = {
     return await verifyPasswordSecret(password, hash)
   },
 }
+
+export const getCredentialsAccount = internalQuery({
+  args: { normalizedUsername: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      userId: v.id("users"),
+      secret: v.optional(v.string()),
+      passwordChangePendingAt: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const account = await ctx.db
+      .query("authAccounts")
+      .withIndex("providerAndAccountId", (accountQuery) =>
+        accountQuery
+          .eq("provider", "credentials")
+          .eq("providerAccountId", args.normalizedUsername)
+      )
+      .unique()
+    if (!account) {
+      return null
+    }
+    const user = await ctx.db.get("users", account.userId)
+    if (!user) {
+      return null
+    }
+    return {
+      userId: user._id,
+      secret: account.secret,
+      passwordChangePendingAt: user.passwordChangePendingAt,
+    }
+  },
+})
 
 const credentialsProvider = ConvexCredentials<DataModel>({
   crypto: passwordCrypto,
@@ -144,6 +177,13 @@ const credentialsProvider = ConvexCredentials<DataModel>({
         console.info("security.signup_rejected", { reason: passwordError })
         throw new Error(passwordError)
       }
+      const existingAccount = await ctx.runQuery(
+        internal.auth.getCredentialsAccount,
+        { normalizedUsername }
+      )
+      if (existingAccount) {
+        return null
+      }
       const now = Date.now()
       const created = await createAccount(ctx, {
         provider: "credentials",
@@ -163,15 +203,23 @@ const credentialsProvider = ConvexCredentials<DataModel>({
       return { userId: created.user._id }
     }
 
-    const retrieved = await retrieveAccount(ctx, {
-      provider: "credentials",
-      account: { id: normalizedUsername, secret: password },
+    const account = await ctx.runQuery(internal.auth.getCredentialsAccount, {
+      normalizedUsername,
     })
-    if (retrieved.user.passwordChangePendingAt) {
+    const verification = await verifyCredentialsAccount(
+      account ?? undefined,
+      password
+    )
+    if (verification.kind === "invalid-credentials") {
+      return null
+    }
+    if (verification.account.passwordChangePendingAt) {
       throw new Error("Password change is in progress. Try again shortly.")
     }
-    console.info("security.signin_success", { userId: retrieved.user._id })
-    return { userId: retrieved.user._id }
+    console.info("security.signin_success", {
+      userId: verification.account.userId,
+    })
+    return { userId: verification.account.userId }
   },
 })
 

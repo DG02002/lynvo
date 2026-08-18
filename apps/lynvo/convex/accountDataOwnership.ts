@@ -19,6 +19,7 @@ export const ACCOUNT_DATA_CATALOG = {
   authRateLimits: { lifecycle: "operational", storage: null },
   links: { lifecycle: "erased", storage: "linkBytes" },
   savedLinkSynchronizationStates: { lifecycle: "erased", storage: null },
+  savedLinkCommandOperations: { lifecycle: "erased", storage: null },
   workerSessionCleanupIntents: { lifecycle: "operational", storage: null },
   realtimeSessionRevocationIntents: {
     lifecycle: "operational",
@@ -85,6 +86,8 @@ export const ACCOUNT_DATA_STORAGE_REGISTRY = {
   links: ACCOUNT_DATA_CATALOG.links.storage,
   savedLinkSynchronizationStates:
     ACCOUNT_DATA_CATALOG.savedLinkSynchronizationStates.storage,
+  savedLinkCommandOperations:
+    ACCOUNT_DATA_CATALOG.savedLinkCommandOperations.storage,
   accountSettingsSynchronizationStates:
     ACCOUNT_DATA_CATALOG.accountSettingsSynchronizationStates.storage,
   userStorageLedgers: ACCOUNT_DATA_CATALOG.userStorageLedgers.storage,

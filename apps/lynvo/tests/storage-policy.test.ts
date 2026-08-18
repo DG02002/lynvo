@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { ConvexError } from "convex/values"
 import {
   assertLinkSize,
   assertStorageGrowth,
@@ -74,9 +75,17 @@ describe("storage policy", () => {
 
   it("accepts the limit, rejects growth above it, and permits non-growing changes", () => {
     expect(() => assertStorageGrowth(USER_STORAGE_LIMIT_BYTES)).not.toThrow()
-    expect(() => assertStorageGrowth(USER_STORAGE_LIMIT_BYTES + 1)).toThrow(
-      "Storage is full. Remove saved links before adding another."
-    )
+    try {
+      assertStorageGrowth(USER_STORAGE_LIMIT_BYTES + 1)
+      expect.fail("Expected storage growth to be rejected")
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConvexError)
+      expect((error as ConvexError<unknown>).data).toEqual({
+        kind: "storage-limit",
+        usedBytes: USER_STORAGE_LIMIT_BYTES + 1,
+        limitBytes: USER_STORAGE_LIMIT_BYTES,
+      })
+    }
     expect(() =>
       assertStorageGrowth(USER_STORAGE_LIMIT_BYTES + 1, -1)
     ).not.toThrow()
@@ -87,9 +96,17 @@ describe("storage policy", () => {
 
   it("preserves the per-link limit", () => {
     expect(() => assertLinkSize(LINK_LIMIT_BYTES)).not.toThrow()
-    expect(() => assertLinkSize(LINK_LIMIT_BYTES + 1)).toThrow(
-      "This link contains too much data to save."
-    )
+    try {
+      assertLinkSize(LINK_LIMIT_BYTES + 1)
+      expect.fail("Expected the oversized link to be rejected")
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConvexError)
+      expect((error as ConvexError<unknown>).data).toEqual({
+        kind: "link-too-large",
+        sizeBytes: LINK_LIMIT_BYTES + 1,
+        limitBytes: LINK_LIMIT_BYTES,
+      })
+    }
   })
 
   it("selects only links older than the retention cutoff", () => {

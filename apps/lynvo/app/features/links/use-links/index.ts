@@ -18,6 +18,7 @@ import type {
 } from "~/features/links/types"
 import { useSavedLinkRealtimeSynchronization } from "./realtime-synchronization"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
+import { runSavedLinkCommand } from "~/features/links/saved-link-command-adapter"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined
@@ -56,8 +57,13 @@ export const useLinks = () => {
         title: item.title ?? item.url,
         metadata: item.metadata!,
         createLink: async ({ url, title, metadata }) => {
-          const result = await Effect.runPromise(
-            client.links.create({ payload: { url, title, meta: metadata } })
+          const operationId = crypto.randomUUID()
+          const result = await runSavedLinkCommand(() =>
+            Effect.runPromise(
+              client.links.create({
+                payload: { operationId, url, title, meta: metadata },
+              })
+            )
           )
           return result.id
         },
@@ -72,71 +78,109 @@ export const useLinks = () => {
       if (!item.id || !item.metadata) {
         return
       }
+      const linkId = item.id
+      const metadata = item.metadata
+      const operationId = crypto.randomUUID()
       if (operation) {
         switch (operation.kind) {
           case "markOpened":
             if (!operation.linkUrl) {
               throw new Error("Link URL is required")
             }
-            await Effect.runPromise(
-              client.links.applyMetadataOperation({
-                params: { linkId: item.id },
-                payload: { kind: operation.kind, linkUrl: operation.linkUrl },
-              })
+            const openedLinkUrl = operation.linkUrl
+            await runSavedLinkCommand(() =>
+              Effect.runPromise(
+                client.links.applyMetadataOperation({
+                  params: { linkId },
+                  payload: {
+                    operationId,
+                    operation: {
+                      kind: "markOpened",
+                      linkUrl: openedLinkUrl,
+                    },
+                  },
+                })
+              )
             )
             return
           case "cacheMirrors":
             if (!operation.lazyItemUrl || !operation.mirrors) {
               throw new Error("Mirror operation is incomplete")
             }
-            await Effect.runPromise(
-              client.links.applyMetadataOperation({
-                params: { linkId: item.id },
-                payload: {
-                  kind: operation.kind,
-                  lazyItemUrl: operation.lazyItemUrl,
-                  mirrors: operation.mirrors,
-                },
-              })
+            const lazyItemUrl = operation.lazyItemUrl
+            const mirrors = operation.mirrors
+            await runSavedLinkCommand(() =>
+              Effect.runPromise(
+                client.links.applyMetadataOperation({
+                  params: { linkId },
+                  payload: {
+                    operationId,
+                    operation: {
+                      kind: "cacheMirrors",
+                      lazyItemUrl,
+                      mirrors,
+                    },
+                  },
+                })
+              )
             )
             return
           case "removeExtractedLink":
             if (!operation.linkKey || !operation.linkUrl) {
               throw new Error("Remove operation is incomplete")
             }
-            await Effect.runPromise(
-              client.links.applyMetadataOperation({
-                params: { linkId: item.id },
-                payload: {
-                  kind: operation.kind,
-                  linkKey: operation.linkKey,
-                  linkUrl: operation.linkUrl,
-                },
-              })
+            const linkKey = operation.linkKey
+            const removedLinkUrl = operation.linkUrl
+            await runSavedLinkCommand(() =>
+              Effect.runPromise(
+                client.links.applyMetadataOperation({
+                  params: { linkId },
+                  payload: {
+                    operationId,
+                    operation: {
+                      kind: "removeExtractedLink",
+                      linkKey,
+                      linkUrl: removedLinkUrl,
+                    },
+                  },
+                })
+              )
             )
             return
           case "replaceExtraction":
             if (!operation.expectedExtraction || !operation.extractedLinks) {
               throw new Error("Extraction operation is incomplete")
             }
-            await Effect.runPromise(
-              client.links.applyMetadataOperation({
-                params: { linkId: item.id },
-                payload: {
-                  kind: operation.kind,
-                  expectedExtraction: operation.expectedExtraction,
-                  extractedLinks: operation.extractedLinks,
-                },
-              })
+            const expectedExtraction = operation.expectedExtraction
+            const extractedLinks = operation.extractedLinks
+            await runSavedLinkCommand(() =>
+              Effect.runPromise(
+                client.links.applyMetadataOperation({
+                  params: { linkId },
+                  payload: {
+                    operationId,
+                    operation: {
+                      kind: "replaceExtraction",
+                      expectedExtraction,
+                      extractedLinks,
+                    },
+                  },
+                })
+              )
             )
             return
         }
       }
-      await Effect.runPromise(
-        client.links.updateMeta({
-          params: { linkId: item.id },
-          payload: { meta: toJsonMetadata(item.metadata) },
-        })
+      await runSavedLinkCommand(() =>
+        Effect.runPromise(
+          client.links.updateMeta({
+            params: { linkId },
+            payload: {
+              operationId,
+              meta: toJsonMetadata(metadata),
+            },
+          })
+        )
       )
     },
     []

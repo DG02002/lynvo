@@ -3,6 +3,10 @@ import { createLinkMetadata } from "~/features/links/links.mapper"
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 import { createLinkViewItem, getLinkTitle } from "./link-items"
 import { fetchMetaInternal } from "./link-server"
+import {
+  presentSavedLinkCommandFailure,
+  SavedLinkCommandError,
+} from "../saved-link-command-failure"
 
 export const buildLinkViewItem = async ({
   targetUrl,
@@ -30,6 +34,8 @@ export const buildLinkViewItem = async ({
 export const showSaveError = (cause: unknown) => {
   console.error(cause)
   toast.error(
-    "The link couldn’t be saved. Check account storage, then try again."
+    cause instanceof SavedLinkCommandError
+      ? presentSavedLinkCommandFailure(cause.failure)
+      : "The link couldn’t be saved right now. Try again."
   )
 }

@@ -137,6 +137,22 @@ export default defineSchema({
       "updatedAt",
     ]),
 
+  savedLinkCommandOperations: defineTable({
+    userId: v.id("users"),
+    operationId: v.string(),
+    command: v.union(
+      v.literal("create-or-update"),
+      v.literal("update-meta"),
+      v.literal("apply-metadata-operation")
+    ),
+    linkId: v.id("links"),
+    revision: v.number(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_userId_operationId", ["userId", "operationId"])
+    .index("by_expiresAt", ["expiresAt"]),
+
   workerSessionCleanupIntents: defineTable({
     workerSessionId: v.string(),
     issuanceGeneration: v.optional(v.number()),

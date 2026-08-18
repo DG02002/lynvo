@@ -30,11 +30,13 @@ describe("semantic saved-link metadata operations", () => {
     const user = await insertTestUser(convex, "semantic-link-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const { id } = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://source.example",
       meta: createMetadataJson(),
     })
 
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: {
         kind: "cacheMirrors",
@@ -43,6 +45,7 @@ describe("semantic saved-link metadata operations", () => {
       },
     })
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: { kind: "markOpened", linkUrl: playableLink.url },
     })
@@ -61,11 +64,13 @@ describe("semantic saved-link metadata operations", () => {
     const user = await insertTestUser(convex, "semantic-remove-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const { id } = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://source.example",
       meta: createMetadataJson(),
     })
 
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: {
         kind: "removeExtractedLink",
@@ -74,11 +79,13 @@ describe("semantic saved-link metadata operations", () => {
       },
     })
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: { kind: "markOpened", linkUrl: playableLink.url },
     })
     await expect(
       client.mutation(api.links.applyMetadataOperation, {
+        operationId: crypto.randomUUID(),
         id,
         operation: {
           kind: "replaceExtraction",
@@ -99,11 +106,13 @@ describe("semantic saved-link metadata operations", () => {
     const user = await insertTestUser(convex, "semantic-refresh-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const { id } = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://source.example",
       meta: createMetadataJson(),
     })
 
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: {
         kind: "cacheMirrors",
@@ -112,6 +121,7 @@ describe("semantic saved-link metadata operations", () => {
       },
     })
     await client.mutation(api.links.applyMetadataOperation, {
+      operationId: crypto.randomUUID(),
       id,
       operation: {
         kind: "replaceExtraction",

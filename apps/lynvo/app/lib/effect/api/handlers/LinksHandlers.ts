@@ -10,6 +10,8 @@ import { extractedLinkSchema } from "~/features/links/storage-schemas"
 import { ValidationError } from "../../errors"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
+import { RequestEventService } from "../../services/request-event-service"
+import { toSavedLinkCommandError } from "~/features/links/saved-link-command-adapter"
 
 const encodeCanonicalMetadata = <Value>(metadata: Value) =>
   Effect.try({
@@ -53,16 +55,24 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const requestEvent = yield* RequestEventService
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
-        const result = yield* convex.mutation(
-          api.links.createOrUpdate,
-          {
-            url: payload.url,
-            title: payload.title,
-            meta: metadataJson,
-          },
-          { accessToken: user.accessToken }
-        )
+        const result = yield* convex
+          .mutation(
+            api.links.createOrUpdate,
+            {
+              operationId: payload.operationId,
+              url: payload.url,
+              title: payload.title,
+              meta: metadataJson,
+            },
+            { accessToken: user.accessToken }
+          )
+          .pipe(
+            Effect.mapError((error) =>
+              toSavedLinkCommandError(error.cause, requestEvent.requestId)
+            )
+          )
         const environment = yield* CloudflareEnv
         yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
@@ -80,13 +90,20 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
-        const result = yield* convex.mutation(
-          api.links.deleteById,
-          {
-            id: params.linkId,
-          },
-          { accessToken: user.accessToken }
-        )
+        const requestEvent = yield* RequestEventService
+        const result = yield* convex
+          .mutation(
+            api.links.deleteById,
+            {
+              id: params.linkId,
+            },
+            { accessToken: user.accessToken }
+          )
+          .pipe(
+            Effect.mapError((error) =>
+              toSavedLinkCommandError(error.cause, requestEvent.requestId)
+            )
+          )
         const environment = yield* CloudflareEnv
         yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
@@ -104,15 +121,23 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const requestEvent = yield* RequestEventService
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
-        const result = yield* convex.mutation(
-          api.links.updateMeta,
-          {
-            id: params.linkId,
-            meta: metadataJson,
-          },
-          { accessToken: user.accessToken }
-        )
+        const result = yield* convex
+          .mutation(
+            api.links.updateMeta,
+            {
+              operationId: payload.operationId,
+              id: params.linkId,
+              meta: metadataJson,
+            },
+            { accessToken: user.accessToken }
+          )
+          .pipe(
+            Effect.mapError((error) =>
+              toSavedLinkCommandError(error.cause, requestEvent.requestId)
+            )
+          )
         const environment = yield* CloudflareEnv
         yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(
@@ -130,30 +155,33 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
       Effect.gen(function* () {
         const convex = yield* ConvexService
         const user = yield* CurrentUser
+        const requestEvent = yield* RequestEventService
         const operation = yield* Effect.try({
           try: () => {
-            switch (payload.kind) {
+            switch (payload.operation.kind) {
               case "markOpened":
               case "removeExtractedLink":
-                return payload
+                return payload.operation
               case "cacheMirrors":
                 return {
-                  kind: payload.kind,
-                  lazyItemUrl: payload.lazyItemUrl,
+                  kind: payload.operation.kind,
+                  lazyItemUrl: payload.operation.lazyItemUrl,
                   mirrorsJson: JSON.stringify(
-                    extractedLinkSchema.array().parse(payload.mirrors)
+                    extractedLinkSchema.array().parse(payload.operation.mirrors)
                   ),
                 }
               case "replaceExtraction":
                 return {
-                  kind: payload.kind,
+                  kind: payload.operation.kind,
                   expectedExtractionJson: JSON.stringify(
                     extractedLinkSchema
                       .array()
-                      .parse(payload.expectedExtraction)
+                      .parse(payload.operation.expectedExtraction)
                   ),
                   extractedLinksJson: JSON.stringify(
-                    extractedLinkSchema.array().parse(payload.extractedLinks)
+                    extractedLinkSchema
+                      .array()
+                      .parse(payload.operation.extractedLinks)
                   ),
                 }
             }
@@ -164,11 +192,17 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               details,
             }),
         })
-        const result = yield* convex.mutation(
-          api.links.applyMetadataOperation,
-          { id: params.linkId, operation },
-          { accessToken: user.accessToken }
-        )
+        const result = yield* convex
+          .mutation(
+            api.links.applyMetadataOperation,
+            { operationId: payload.operationId, id: params.linkId, operation },
+            { accessToken: user.accessToken }
+          )
+          .pipe(
+            Effect.mapError((error) =>
+              toSavedLinkCommandError(error.cause, requestEvent.requestId)
+            )
+          )
         const environment = yield* CloudflareEnv
         yield* Effect.promise(() =>
           createSavedLinkRealtimeDelivery(environment).deliver(

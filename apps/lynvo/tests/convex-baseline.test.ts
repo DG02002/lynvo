@@ -66,6 +66,7 @@ describe("Convex function boundaries", () => {
 
     await expect(
       client.mutation(api.links.createOrUpdate, {
+        operationId: crypto.randomUUID(),
         url: "https://invalid.example",
         meta: "{}",
       })
@@ -130,6 +131,7 @@ describe("Convex function boundaries", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://bounded.example/new",
     })
     const links = await client.query(api.links.list, {
@@ -161,6 +163,7 @@ describe("Convex function boundaries", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://update.example/50",
       title: "Updated",
     })
@@ -210,10 +213,16 @@ describe("Convex function boundaries", () => {
 
     await expect(
       firstClient.mutation(api.links.createOrUpdate, {
+        operationId: crypto.randomUUID(),
         url: "https://eviction.example/rejected",
         meta: createMetadataJson({ padding: "x".repeat(1024 * 1024) }),
       })
-    ).rejects.toThrow("too much data")
+    ).rejects.toMatchObject({
+      data: {
+        kind: "link-too-large",
+        limitBytes: 262_144,
+      },
+    })
     const afterRejection = await firstClient.query(api.links.list, {
       timeBucket: LIST_TIME_BUCKET + 1,
     })
@@ -225,6 +234,7 @@ describe("Convex function boundaries", () => {
     ).toBe(true)
 
     await firstClient.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://eviction.example/accepted",
     })
     const isolatedLinks = await secondClient.query(api.links.list, {
@@ -274,10 +284,12 @@ describe("Convex function boundaries", () => {
     expect(await client.query(api.links.revision, {})).toEqual({ revision: 0 })
 
     const created = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://revision.example",
     })
     expect(created.revision).toBe(1)
     const updated = await client.mutation(api.links.updateMeta, {
+      operationId: crypto.randomUUID(),
       id: created.id,
       meta: EMPTY_LINK_METADATA_JSON,
     })

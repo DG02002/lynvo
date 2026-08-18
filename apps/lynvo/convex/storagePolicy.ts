@@ -1,5 +1,6 @@
 import type { Id } from "./_generated/dataModel"
 import type { MutationCtx, QueryCtx } from "./_generated/server"
+import { ConvexError } from "convex/values"
 import { ACCOUNT_DATA_STORAGE_REGISTRY } from "./accountDataOwnership"
 import {
   DAY_MS,
@@ -353,9 +354,11 @@ export const assertStorageGrowth = (
     storageDeltaBytes > 0 &&
     projectedStorageBytes > USER_STORAGE_LIMIT_BYTES
   ) {
-    throw new Error(
-      "Storage is full. Remove saved links before adding another."
-    )
+    throw new ConvexError({
+      kind: "storage-limit",
+      usedBytes: projectedStorageBytes,
+      limitBytes: USER_STORAGE_LIMIT_BYTES,
+    })
   }
 }
 
@@ -384,7 +387,11 @@ export const recordStorageDeletion = async <CurrentDocument>(
 
 export const assertLinkSize = (linkBytes: number) => {
   if (linkBytes > LINK_LIMIT_BYTES) {
-    throw new Error("This link contains too much data to save.")
+    throw new ConvexError({
+      kind: "link-too-large",
+      sizeBytes: linkBytes,
+      limitBytes: LINK_LIMIT_BYTES,
+    })
   }
 }
 

@@ -34,6 +34,13 @@ crons.interval(
 )
 
 crons.interval(
+  "cleanup saved-link command operations",
+  { hours: 1 },
+  internal.links.cleanupSavedLinkCommandOperations,
+  {}
+)
+
+crons.interval(
   "delete inactive users",
   { hours: 24 },
   internal.users.cleanupInactiveUsers,

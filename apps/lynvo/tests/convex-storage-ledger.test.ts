@@ -68,6 +68,7 @@ describe("Convex storage ledger", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://new.example",
     })
 
@@ -87,6 +88,7 @@ describe("Convex storage ledger", () => {
     const user = await insertTestUser(convex, "version-repair-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     const { id: linkId } = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://version.example",
     })
     await convex.run(async (context) => {
@@ -103,6 +105,7 @@ describe("Convex storage ledger", () => {
     })
 
     await client.mutation(api.links.updateMeta, {
+      operationId: crypto.randomUUID(),
       id: linkId,
       meta: EMPTY_LINK_METADATA_JSON,
     })
@@ -121,14 +124,17 @@ describe("Convex storage ledger", () => {
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     const { id: linkId } = await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://ledger.example/item",
       title: "Initial",
     })
     await client.mutation(api.links.updateMeta, {
+      operationId: crypto.randomUUID(),
       id: linkId,
       meta: createMetadataJson({ description: "A larger metadata value" }),
     })
     await client.mutation(api.links.updateMeta, {
+      operationId: crypto.randomUUID(),
       id: linkId,
       meta: EMPTY_LINK_METADATA_JSON,
     })
@@ -253,10 +259,13 @@ describe("Convex storage ledger", () => {
 
     await expect(
       client.mutation(api.links.createOrUpdate, {
+        operationId: crypto.randomUUID(),
         url: "https://quota.example/rejected",
         meta: createMetadataJson({ padding: "x".repeat(240_000) }),
       })
-    ).rejects.toThrow("Storage is full")
+    ).rejects.toMatchObject({
+      data: { kind: "storage-limit", limitBytes: 1_048_576 },
+    })
 
     const after = await convex.run(async (context) => ({
       ledger: await getUserStorageLedger(context, user.userId),
@@ -276,6 +285,7 @@ describe("Convex storage ledger", () => {
     const user = await insertTestUser(convex, "rollback-ledger-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
     await client.mutation(api.links.createOrUpdate, {
+      operationId: crypto.randomUUID(),
       url: "https://ledger.example/original",
     })
     const before = await convex.run(async (context) =>
@@ -284,10 +294,13 @@ describe("Convex storage ledger", () => {
 
     await expect(
       client.mutation(api.links.createOrUpdate, {
+        operationId: crypto.randomUUID(),
         url: "https://ledger.example/rejected",
         meta: createMetadataJson({ padding: "x".repeat(1024 * 1024) }),
       })
-    ).rejects.toThrow("too much data")
+    ).rejects.toMatchObject({
+      data: { kind: "link-too-large", limitBytes: 262_144 },
+    })
     const after = await convex.run(async (context) =>
       getUserStorageLedger(context, user.userId)
     )

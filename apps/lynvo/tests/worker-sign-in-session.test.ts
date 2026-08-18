@@ -14,12 +14,13 @@ const encodeTokenSegment = (value: unknown) =>
 
 const convexAccessToken = `${encodeTokenSegment({ alg: "none" })}.${encodeTokenSegment({ sessionId: "convex-session-id" })}.signature`
 
-const signInResult = {
+let signInResult: unknown = {
   tokens: {
     token: convexAccessToken,
     refreshToken: "convex-refresh-token",
   },
 }
+let signInFailure: Error | undefined
 
 vi.mock("virtual:react-router/server-build", () => ({}))
 vi.mock("cloudflare:workers", () => ({
@@ -27,8 +28,11 @@ vi.mock("cloudflare:workers", () => ({
 }))
 vi.mock("convex/browser", () => ({
   ConvexHttpClient: class {
-    action = async (_reference: unknown, args: Record<string, unknown>) =>
-      "refreshToken" in args
+    action = async (_reference: unknown, args: Record<string, unknown>) => {
+      if (signInFailure) {
+        throw signInFailure
+      }
+      return "refreshToken" in args
         ? {
             tokens: {
               token: "rotated-access-token",
@@ -36,6 +40,7 @@ vi.mock("convex/browser", () => ({
             },
           }
         : signInResult
+    }
     setAuth = () => undefined
     query = async () => currentSessionUser
     mutation = async (_reference: unknown, args: Record<string, unknown>) => {
@@ -91,6 +96,78 @@ describe("Worker sign-in session HTTP behavior", () => {
     expect(cookie).not.toContain(convexAccessToken)
     expect(cookie).not.toContain("convex-refresh-token")
     await expect(response.json()).resolves.toEqual({ signingIn: true })
+  })
+
+  it.each([
+    ["unknown-user", "wrong-password"],
+    ["darshan", "wrong-password"],
+  ])(
+    "returns the same 401 outcome for rejected credentials (%s)",
+    async (username, password) => {
+      signInResult = {}
+      const { default: worker } = await import("../workers/app")
+      const response = await worker.fetch(
+        new Request("https://lynvo.dg02002.workers.dev/api/auth/sign-in", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: "https://lynvo.dg02002.workers.dev",
+          },
+          body: JSON.stringify({
+            provider: "credentials",
+            params: { flow: "signIn", username, password },
+          }),
+        }),
+        {
+          ENVIRONMENT: "production",
+          VITE_CONVEX_URL: "https://convex.example",
+        } as Env,
+        { waitUntil: () => undefined } as ExecutionContext
+      )
+
+      expect(response.status).toBe(401)
+      await expect(response.json()).resolves.toMatchObject({
+        code: "invalid_credentials",
+        retryable: false,
+      })
+    }
+  )
+
+  it("returns a searchable request reference for an unavailable dependency", async () => {
+    signInFailure = new Error("dependency wording is not public policy")
+    const { default: worker } = await import("../workers/app")
+    const response = await worker.fetch(
+      new Request("https://lynvo.dg02002.workers.dev/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://lynvo.dg02002.workers.dev",
+          "X-Request-Id": "auth-reference-one",
+        },
+        body: JSON.stringify({
+          provider: "credentials",
+          params: {
+            flow: "signIn",
+            username: "darshan",
+            password: "password",
+          },
+        }),
+      }),
+      {
+        ENVIRONMENT: "production",
+        VITE_CONVEX_URL: "https://convex.example",
+      } as Env,
+      { waitUntil: () => undefined } as ExecutionContext
+    )
+    signInFailure = undefined
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get("x-request-id")).toBe("auth-reference-one")
+    await expect(response.json()).resolves.toMatchObject({
+      code: "service_unavailable",
+      retryable: true,
+      requestId: "auth-reference-one",
+    })
   })
 
   it("revokes an opaque session and expires its cookie", async () => {

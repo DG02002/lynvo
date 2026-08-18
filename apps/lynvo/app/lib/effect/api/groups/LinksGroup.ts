@@ -7,6 +7,7 @@ import {
   ConvexApiError,
   ValidationApiError,
 } from "../../errors"
+import { SavedLinkCommandApiError } from "~/features/links/saved-link-command-failure"
 
 const LinkSchema = Schema.Struct({
   _id: Schema.String,
@@ -62,6 +63,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
+        operationId: Schema.String,
         url: Schema.String,
         title: Schema.optional(Schema.String),
         meta: Schema.Unknown,
@@ -75,6 +77,7 @@ export class LinksGroup extends HttpApiGroup.make("links")
         CsrfApiError,
         ValidationApiError,
         ConvexApiError,
+        SavedLinkCommandApiError,
       ],
     }),
     HttpApiEndpoint.delete("delete", "/:linkId", {
@@ -82,13 +85,19 @@ export class LinksGroup extends HttpApiGroup.make("links")
         linkId: Schema.String,
       },
       success: SavedLinkCommitSchema,
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ConvexApiError,
+        SavedLinkCommandApiError,
+      ],
     }),
     HttpApiEndpoint.post("updateMeta", "/:linkId/meta", {
       params: {
         linkId: Schema.String,
       },
       payload: Schema.Struct({
+        operationId: Schema.String,
         meta: Schema.Unknown,
       }),
       success: SavedLinkCommitSchema,
@@ -97,17 +106,22 @@ export class LinksGroup extends HttpApiGroup.make("links")
         CsrfApiError,
         ValidationApiError,
         ConvexApiError,
+        SavedLinkCommandApiError,
       ],
     }),
     HttpApiEndpoint.post("applyMetadataOperation", "/:linkId/meta-operation", {
       params: { linkId: Schema.String },
-      payload: LinkMetadataOperationSchema,
+      payload: Schema.Struct({
+        operationId: Schema.String,
+        operation: LinkMetadataOperationSchema,
+      }),
       success: SavedLinkCommitSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
         ValidationApiError,
         ConvexApiError,
+        SavedLinkCommandApiError,
       ],
     })
   )

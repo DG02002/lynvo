@@ -33,6 +33,14 @@ interface AuthenticationFlowUnavailable {
   readonly kind: "unavailable"
 }
 
+interface AuthenticationFlowInvalidCredentials {
+  readonly kind: "invalid-credentials"
+}
+
+interface AuthenticationFlowAccountExists {
+  readonly kind: "account-exists"
+}
+
 interface AuthenticationTokens {
   readonly token: string
   readonly refreshToken: string
@@ -75,7 +83,12 @@ const readRefreshTokenId = (refreshToken: string): string | undefined =>
 interface WorkerAuthenticationFlow {
   readonly signIn: (
     input: AuthenticationFlowInput
-  ) => Promise<AuthenticationFlowCompleted | AuthenticationFlowUnavailable>
+  ) => Promise<
+    | AuthenticationFlowCompleted
+    | AuthenticationFlowAccountExists
+    | AuthenticationFlowInvalidCredentials
+    | AuthenticationFlowUnavailable
+  >
 }
 
 const readTokens = <Value>(value: Value): AuthenticationTokens | undefined => {
@@ -183,20 +196,31 @@ export const createWorkerAuthenticationFlow = (
       }
       issuanceGeneration = issuance.generation
     }
-    const result = await client.action(
-      api.auth.signIn,
-      issuanceGeneration
-        ? {
-            ...input,
-            params: {
-              ...input.params,
-              issuanceGeneration: String(issuanceGeneration),
-            },
-          }
-        : input
-    )
+    let result: unknown
+    try {
+      result = await client.action(
+        api.auth.signIn,
+        issuanceGeneration
+          ? {
+              ...input,
+              params: {
+                ...input.params,
+                issuanceGeneration: String(issuanceGeneration),
+              },
+            }
+          : input
+      )
+    } catch {
+      return { kind: "unavailable" }
+    }
     const tokens = readTokens(result)
     if (!tokens) {
+      if (input.params.flow === "signIn") {
+        return { kind: "invalid-credentials" }
+      }
+      if (input.params.flow === "signUp") {
+        return { kind: "account-exists" }
+      }
       return {
         kind: "completed",
         browserState: readBrowserState(result),

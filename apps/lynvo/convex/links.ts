@@ -18,6 +18,8 @@ import {
   EMPTY_LINK_METADATA_JSON,
   LINKS_MAX_COUNT,
   LINK_RETENTION_BATCH_SIZE,
+  SAVED_LINK_COMMAND_OPERATION_CLEANUP_BATCH_SIZE,
+  SAVED_LINK_COMMAND_OPERATION_TTL_MS,
 } from "./constants"
 import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
 import { extractedLinkSchema } from "../app/features/links/storage-schemas"
@@ -89,12 +91,25 @@ export const revision = query({
 export const createOrUpdate = mutation({
   returns: v.object({ id: v.id("links"), revision: v.number() }),
   args: {
+    operationId: v.string(),
     url: v.string(),
     title: v.optional(v.string()),
     meta: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
+    const completedOperation = await ctx.db
+      .query("savedLinkCommandOperations")
+      .withIndex("by_userId_operationId", (operationQuery) =>
+        operationQuery.eq("userId", userId).eq("operationId", args.operationId)
+      )
+      .unique()
+    if (completedOperation) {
+      return {
+        id: completedOperation.linkId,
+        revision: completedOperation.revision,
+      }
+    }
     const now = Date.now()
     const deletedExpiredLinks = await cleanupExpiredStoredLinks(
       ctx,
@@ -134,6 +149,15 @@ export const createOrUpdate = mutation({
         updatedAt: now,
       })
       const revision = await advanceSavedLinkRevision(ctx, userId)
+      await ctx.db.insert("savedLinkCommandOperations", {
+        userId,
+        operationId: args.operationId,
+        command: "create-or-update",
+        linkId: existing._id,
+        revision,
+        createdAt: now,
+        expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
+      })
       return { id: existing._id, revision }
     }
 
@@ -163,6 +187,15 @@ export const createOrUpdate = mutation({
       ctx.db.insert("links", newDoc),
       advanceSavedLinkRevision(ctx, userId),
     ])
+    await ctx.db.insert("savedLinkCommandOperations", {
+      userId,
+      operationId: args.operationId,
+      command: "create-or-update",
+      linkId: id,
+      revision,
+      createdAt: now,
+      expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
+    })
     return { id, revision }
   },
 })
@@ -193,11 +226,21 @@ export const deleteById = mutation({
 export const updateMeta = mutation({
   returns: v.object({ success: v.boolean(), revision: v.number() }),
   args: {
+    operationId: v.string(),
     id: v.string(),
     meta: v.string(), // JSON string
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
+    const completedOperation = await ctx.db
+      .query("savedLinkCommandOperations")
+      .withIndex("by_userId_operationId", (operationQuery) =>
+        operationQuery.eq("userId", userId).eq("operationId", args.operationId)
+      )
+      .unique()
+    if (completedOperation) {
+      return { success: true, revision: completedOperation.revision }
+    }
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
 
@@ -217,6 +260,15 @@ export const updateMeta = mutation({
       updatedAt: Date.now(),
     })
     const revision = await advanceSavedLinkRevision(ctx, userId)
+    await ctx.db.insert("savedLinkCommandOperations", {
+      userId,
+      operationId: args.operationId,
+      command: "update-meta",
+      linkId: existing._id,
+      revision,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
+    })
     return { success: true, revision }
   },
 })
@@ -224,6 +276,7 @@ export const updateMeta = mutation({
 export const applyMetadataOperation = mutation({
   returns: v.object({ success: v.boolean(), revision: v.number() }),
   args: {
+    operationId: v.string(),
     id: v.string(),
     operation: v.union(
       v.object({ kind: v.literal("markOpened"), linkUrl: v.string() }),
@@ -246,6 +299,15 @@ export const applyMetadataOperation = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedWritableUserId(ctx)
+    const completedOperation = await ctx.db
+      .query("savedLinkCommandOperations")
+      .withIndex("by_userId_operationId", (operationQuery) =>
+        operationQuery.eq("userId", userId).eq("operationId", args.operationId)
+      )
+      .unique()
+    if (completedOperation) {
+      return { success: true, revision: completedOperation.revision }
+    }
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
     if (!existing || existing.userId !== userId) {
@@ -311,7 +373,42 @@ export const applyMetadataOperation = mutation({
       updatedAt: now,
     })
     const revision = await advanceSavedLinkRevision(ctx, userId)
+    await ctx.db.insert("savedLinkCommandOperations", {
+      userId,
+      operationId: args.operationId,
+      command: "apply-metadata-operation",
+      linkId: existing._id,
+      revision,
+      createdAt: now,
+      expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
+    })
     return { success: true, revision }
+  },
+})
+
+export const cleanupSavedLinkCommandOperations = internalMutation({
+  args: {},
+  returns: v.object({ deleted: v.number(), continued: v.boolean() }),
+  handler: async (ctx) => {
+    const expired = await ctx.db
+      .query("savedLinkCommandOperations")
+      .withIndex("by_expiresAt", (operationQuery) =>
+        operationQuery.lte("expiresAt", Date.now())
+      )
+      .take(SAVED_LINK_COMMAND_OPERATION_CLEANUP_BATCH_SIZE)
+    for (const operation of expired) {
+      await ctx.db.delete("savedLinkCommandOperations", operation._id)
+    }
+    const continued =
+      expired.length === SAVED_LINK_COMMAND_OPERATION_CLEANUP_BATCH_SIZE
+    if (continued) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.links.cleanupSavedLinkCommandOperations,
+        {}
+      )
+    }
+    return { deleted: expired.length, continued }
   },
 })
 

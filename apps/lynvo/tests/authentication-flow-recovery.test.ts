@@ -215,3 +215,60 @@ describe("Worker device exchange recovery", () => {
     expect(mocks.mutation).toHaveBeenCalledTimes(3)
   })
 })
+
+describe("Worker credentials outcomes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("returns invalid credentials when the provider creates no session", async () => {
+    mocks.action.mockResolvedValue({})
+    const { createWorkerAuthenticationFlow } =
+      await import("../workers/authentication-flow")
+    const flow = createWorkerAuthenticationFlow({
+      VITE_CONVEX_URL: "https://test.convex.cloud",
+      AUTH_GATEWAY_SECRET: "gateway-secret",
+      WORKER_AUTH_SESSION: {
+        getByName: () => ({ fetch: vi.fn() }),
+      },
+    } as Env)
+
+    await expect(
+      flow.signIn({
+        provider: "credentials",
+        params: {
+          flow: "signIn",
+          username: "missing-user",
+          password: "wrong-password",
+        },
+      })
+    ).resolves.toEqual({ kind: "invalid-credentials" })
+  })
+
+  it.each(["InvalidSecret", "dependency wording changed"])(
+    "returns unavailable without classifying the dependency message %s",
+    async (message) => {
+      mocks.action.mockRejectedValue(new Error(message))
+      const { createWorkerAuthenticationFlow } =
+        await import("../workers/authentication-flow")
+      const flow = createWorkerAuthenticationFlow({
+        VITE_CONVEX_URL: "https://test.convex.cloud",
+        AUTH_GATEWAY_SECRET: "gateway-secret",
+        WORKER_AUTH_SESSION: {
+          getByName: () => ({ fetch: vi.fn() }),
+        },
+      } as Env)
+
+      await expect(
+        flow.signIn({
+          provider: "credentials",
+          params: {
+            flow: "signIn",
+            username: "user-one",
+            password: "password",
+          },
+        })
+      ).resolves.toEqual({ kind: "unavailable" })
+    }
+  )
+})

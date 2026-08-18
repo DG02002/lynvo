@@ -11,7 +11,6 @@ import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credent
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
-import { classifyAuthSignInError } from "../app/lib/auth-errors"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import {
   REALTIME_SESSION_REVOKED_CLOSE_CODE,
@@ -263,6 +262,27 @@ app.post("/api/auth/sign-in", async (context) => {
         503
       )
     }
+    if (result.kind === "invalid-credentials") {
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_credentials",
+          error:
+            "The username or password is incorrect. Check both fields, then try again.",
+          retryable: false,
+        }),
+        401
+      )
+    }
+    if (result.kind === "account-exists") {
+      return context.json(
+        requestApiError(context, {
+          code: "account_exists",
+          error: "An account with this username already exists.",
+          retryable: false,
+        }),
+        409
+      )
+    }
     if (result.cookie) {
       context.header("Set-Cookie", result.cookie)
     }
@@ -273,10 +293,9 @@ app.post("/api/auth/sign-in", async (context) => {
     })
     return context.json(result.browserState)
   } catch (error) {
-    const authError = classifyAuthSignInError(error, flow)
     addRequestContext(context, {
       auth_flow: flow,
-      auth_error_code: authError.code,
+      auth_error_code: "service_unavailable",
       error: {
         type: error instanceof Error ? error.name : "UnknownError",
         message: error instanceof Error ? error.message : String(error),
@@ -284,11 +303,14 @@ app.post("/api/auth/sign-in", async (context) => {
     })
     return context.json(
       requestApiError(context, {
-        code: authError.code,
-        error: authError.error,
-        retryable: authError.retryable,
+        code: "service_unavailable",
+        error:
+          flow === "signUp"
+            ? "Account creation is temporarily unavailable. Try again later."
+            : "Login is temporarily unavailable. Try again later.",
+        retryable: true,
       }),
-      authError.status
+      503
     )
   }
 })
