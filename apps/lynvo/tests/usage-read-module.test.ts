@@ -14,6 +14,48 @@ const lynvoPlugins = [
 ]
 
 describe("Usage Read module", () => {
+  it("recognizes the canonical Direct Media Plugin identity", async () => {
+    const usageRead = createUsageReadModule({
+      readLynvo: async () => ({
+        metrics: [
+          {
+            id: "direct-media-daily",
+            label: "Direct Media extractions",
+            used: 2,
+            limit: 30,
+            unit: "extractions",
+            period: "daily",
+            resetsAt: "2030-02-02T00:00:00.000Z",
+            pluginId: "direct-media",
+          },
+        ],
+      }),
+      readCustom: async () => [],
+    })
+
+    await expect(
+      usageRead.read({
+        lynvoPlugins: [
+          {
+            ...lynvoPlugins[0],
+            id: "direct-media",
+            name: "Direct Media",
+          },
+        ],
+        timeBucket: 1,
+      })
+    ).resolves.toMatchObject({
+      lynvo: {
+        entries: [
+          {
+            name: "Direct Media",
+            iconKind: "direct",
+          },
+        ],
+      },
+    })
+  })
+
   it("returns one normalized snapshot from Lynvo and Custom adapters", async () => {
     const usageRead = createUsageReadModule({
       readLynvo: async () => ({

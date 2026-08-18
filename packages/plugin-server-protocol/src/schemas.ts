@@ -105,7 +105,7 @@ export const pluginMetadataSchema = z.object({
   status: z.enum(["active", "maintenance", "degraded", "down"]).optional(),
   version: z.string().optional(),
   routesToPluginId: z.string().min(1).optional(),
-  matchStrategy: z.enum(["static", "probe"]).optional().default("static"),
+  matchStrategy: z.enum(["static", "probe"]).optional(),
   hosts: z.array(z.string()).default([]),
   matchers: z.array(pluginServerMatcherSchema).optional(),
   credential: z

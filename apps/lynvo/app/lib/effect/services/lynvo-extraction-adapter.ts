@@ -95,7 +95,7 @@ const getMeteredPluginId = (pluginId: string) => {
     pluginId === "bhadoo-google-drive-index" ||
     pluginId === "google-drive-public-files" ||
     pluginId === "onedrive-index" ||
-    pluginId === "direct"
+    pluginId === "direct-media"
   ) {
     return pluginId
   }

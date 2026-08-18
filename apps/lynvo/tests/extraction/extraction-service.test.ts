@@ -10,126 +10,193 @@ const environment = {
   AUTH_GATEWAY_SECRET: "test-auth-gateway-secret",
 } as Env
 
-const extractionLayer = ExtractionService.layer.pipe(
-  Layer.provide(
-    Layer.mergeAll(
-      Layer.succeed(CloudflareEnv, environment),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: () => Effect.die(new Error("Unexpected Convex query")),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      ),
-      Layer.succeed(
-        PluginCredentialVault,
-        PluginCredentialVault.of({
-          encrypt: () => Effect.die(new Error("Unexpected credential write")),
-          decrypt: () => Effect.die(new Error("Unexpected credential read")),
-        })
+describe("Extraction interface routing", () => {
+  it("routes an assigned Plugin before Direct Media probing", async () => {
+    const coreFetch = vi.spyOn(globalThis, "fetch")
+    const pluginServerRequests: Request[] = []
+    const environmentWithLynvo = {
+      ...environment,
+      LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+      LYNVO_PLUGIN_SERVER: {
+        fetch: async (request: Request) => {
+          pluginServerRequests.push(request.clone())
+          if (request.url.endsWith("/manifest")) {
+            return Response.json({
+              protocolVersion: "1.0",
+              pluginServerId: "dev.lynvo.plugin-server",
+              displayName: "Lynvo Plugin Server",
+              auth: { type: "bearer" },
+              usage: { endpoint: "/usage" },
+              matchers: [{ hosts: ["drive.example"] }],
+              features: {},
+              extensions: {
+                lynvo: {
+                  plugins: [
+                    {
+                      id: "bhadoo-google-drive-index",
+                      displayName: "Bhadoo",
+                      status: "active",
+                      version: "1.0.0",
+                      hosts: ["drive.example"],
+                      matchers: [{ hosts: ["drive.example"] }],
+                    },
+                    {
+                      id: "direct-media",
+                      displayName: "Direct Media",
+                      status: "active",
+                      version: "1.0.0",
+                      matchStrategy: "probe",
+                      hosts: [],
+                    },
+                  ],
+                },
+              },
+            })
+          }
+          return Response.json({
+            plugin: {
+              pluginServerId: "dev.lynvo.plugin-server",
+              displayName: "Lynvo Plugin Server",
+              pluginId: "bhadoo-google-drive-index",
+              pluginName: "Bhadoo",
+            },
+            nodes: [
+              {
+                kind: "playable",
+                label: "plugin-result.mkv",
+                url: "https://drive.example/plugin-result.mkv",
+              },
+            ],
+            extensions: {},
+          })
+        },
+      },
+    } as Env
+    let queryCount = 0
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithLynvo),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => {
+                queryCount += 1
+                return Effect.succeed(queryCount === 1 ? [] : undefined)
+              },
+              mutation: () => Effect.succeed(undefined),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
       )
     )
-  )
-)
 
-const runExtraction = <Result>(
-  use: (service: ExtractionService["Service"]) => Effect.Effect<Result, unknown>
-) =>
-  Effect.runPromise(
-    ExtractionService.use(use).pipe(Effect.provide(extractionLayer))
-  )
-
-describe("Extraction interface routing", () => {
-  it("prioritizes confirmed Direct Media over an assigned Plugin Domain", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, {
-        status: 206,
-        headers: {
-          "content-type": "video/x-matroska",
-          "content-disposition": 'attachment; filename="signed-video.mkv"',
-          "content-range": "bytes 0-0/404834455",
-        },
-      })
-    )
-
-    const result = await runExtraction((service) =>
-      service.extract({
-        url: "https://drive.example/download.aspx?file=signed",
-        requestId: "direct-media-plugin-domain",
-        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-        pluginId: "bhadoo-google-drive-index",
-        userId: "user-1",
-        accessToken: "access-token",
-      })
+    const result = await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.extract({
+          url: "https://drive.example/download.aspx?file=signed",
+          requestId: "assigned-plugin-domain",
+          pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+          pluginId: "bhadoo-google-drive-index",
+          userId: "user-1",
+          accessToken: "access-token",
+        })
+      ).pipe(Effect.provide(layer))
     )
 
     expect(result.links).toEqual([
-      expect.objectContaining({
-        label: "signed-video.mkv",
-        mediaNodeKind: "playable",
-        rangeRequest: "supported",
-      }),
+      expect.objectContaining({ label: "plugin-result.mkv" }),
     ])
+    expect(coreFetch).not.toHaveBeenCalled()
+    expect(
+      pluginServerRequests.some((request) => request.url.endsWith("/extract"))
+    ).toBe(true)
   })
 
-  it("prioritizes confirmed Direct Media metadata over an assigned Plugin Domain", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, {
-        status: 200,
-        headers: {
-          "content-type": "video/mp4",
-          "content-disposition": 'attachment; filename="signed-video.mp4"',
-        },
-      })
+  it("reads unauthenticated Direct Media metadata from the Plugin Server manifest", async () => {
+    const coreFetch = vi.spyOn(globalThis, "fetch")
+    const environmentWithLynvo = {
+      ...environment,
+      LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+      LYNVO_PLUGIN_SERVER: {
+        fetch: async () =>
+          Response.json({
+            protocolVersion: "1.0",
+            pluginServerId: "dev.lynvo.plugin-server",
+            displayName: "Lynvo Plugin Server",
+            auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
+            matchers: [{ hosts: ["drive.google.com"] }],
+            features: {},
+            extensions: {
+              lynvo: {
+                plugins: [
+                  {
+                    id: "direct-media",
+                    displayName: "Direct Media",
+                    status: "active",
+                    version: "1.0.0",
+                    matchStrategy: "probe",
+                    hosts: [],
+                  },
+                ],
+              },
+            },
+          }),
+      },
+    } as Env
+    const layer = ExtractionService.layer.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          Layer.succeed(CloudflareEnv, environmentWithLynvo),
+          Layer.succeed(
+            ConvexService,
+            ConvexService.of({
+              action: () => Effect.die(new Error("Unexpected Convex action")),
+              query: () => Effect.die(new Error("Unexpected Convex query")),
+              mutation: () =>
+                Effect.die(new Error("Unexpected Convex mutation")),
+            })
+          ),
+          Layer.succeed(
+            PluginCredentialVault,
+            PluginCredentialVault.of({
+              encrypt: () =>
+                Effect.die(new Error("Unexpected credential write")),
+              decrypt: () =>
+                Effect.die(new Error("Unexpected credential read")),
+            })
+          )
+        )
+      )
     )
 
-    const result = await runExtraction((service) =>
-      service.getMetadata({
-        url: "https://drive.example/download?file=signed",
-        requestId: "direct-media-metadata-plugin-domain",
-        userId: "user-1",
-        accessToken: "access-token",
-        env: environment,
-      })
+    const result = await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.getMetadata({
+          url: "https://media.example/video.mp4",
+          requestId: "direct-media-metadata",
+          env: environmentWithLynvo,
+        })
+      ).pipe(Effect.provide(layer))
     )
 
     expect(result).toMatchObject({
-      filename: "signed-video.mp4",
-      pluginId: "direct-link",
-      pluginName: "Direct Media",
+      pluginId: "direct-media",
+      pluginName: "Lynvo Plugin Server",
+      sourceName: "Direct Media",
     })
-  })
-
-  it("normalizes embedded HTTP Basic Auth before Extraction and metadata routing", async () => {
-    const requestedUrls: string[] = []
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async (input) => {
-        requestedUrls.push(input instanceof Request ? input.url : String(input))
-        return new Response(null, {
-          status: 206,
-          headers: { "Content-Type": "video/mp4" },
-        })
-      })
-    const credentialUrl = "https://viewer:secret@cdn.example/video.mp4"
-
-    await runExtraction((service) =>
-      service.extract({ url: credentialUrl, requestId: "extract-request" })
-    )
-    await runExtraction((service) =>
-      service.getMetadata({
-        url: credentialUrl,
-        requestId: "metadata-request",
-        env: environment,
-      })
-    )
-
-    expect(requestedUrls).toEqual([
-      "https://cdn.example/video.mp4",
-      "https://cdn.example/video.mp4",
-    ])
-    fetchMock.mockRestore()
+    expect(coreFetch).not.toHaveBeenCalled()
   })
 
   it("uses inline Basic Auth without reading a stored Lynvo credential", async () => {
@@ -481,12 +548,7 @@ describe("Extraction interface routing", () => {
     fetchMock.mockRestore()
   })
 
-  it("preserves a Lynvo route failure after an inconclusive Direct Media probe", async () => {
-    const directMediaFetch = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async () =>
-        Response.json({ unexpected: "Direct Media fallback" })
-      )
+  it("preserves a Lynvo Plugin Server route failure", async () => {
     const environmentWithUnavailableLynvo = {
       ...environment,
       LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -543,17 +605,10 @@ describe("Extraction interface routing", () => {
       _tag: "ExtractionError",
       message: "TEMPORARY_FAILURE",
     })
-    expect(directMediaFetch).toHaveBeenCalled()
-    directMediaFetch.mockRestore()
   })
 
   it("stops a metered Lynvo route when quota consumption fails", async () => {
     let pluginExtractionCount = 0
-    const directMediaFetch = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async () =>
-        Response.json({ unexpected: "Direct Media fallback" })
-      )
     const environmentWithLynvo = {
       ...environment,
       LYNVO_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -574,7 +629,7 @@ describe("Extraction interface routing", () => {
               lynvo: {
                 plugins: [
                   {
-                    id: "direct",
+                    id: "direct-media",
                     displayName: "Metered",
                     status: "active",
                     version: "1.0.0",
@@ -636,8 +691,6 @@ describe("Extraction interface routing", () => {
       message: "Daily quota reached",
     })
     expect(pluginExtractionCount).toBe(0)
-    expect(directMediaFetch).toHaveBeenCalled()
-    directMediaFetch.mockRestore()
   })
 
   it("does not invoke a Custom Plugin without its required credential", async () => {

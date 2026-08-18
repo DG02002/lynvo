@@ -83,11 +83,12 @@ export const findLynvoPlugin = (
   const sources = getLynvoManifestExtension(manifest).plugins ?? []
   return pluginId
     ? sources.find((candidate) => candidate.id === pluginId)
-    : sources.find(
+    : (sources.find(
         (candidate) =>
+          candidate.matchStrategy !== "probe" &&
           candidate.credential === undefined &&
           matchPluginServerUrl(targetUrl, candidate.matchers ?? [])
-      )
+      ) ?? sources.find((candidate) => candidate.matchStrategy === "probe"))
 }
 
 export const extractFromLynvoPluginServer = Effect.fn(

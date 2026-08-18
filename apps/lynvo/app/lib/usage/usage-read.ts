@@ -39,7 +39,7 @@ const normalizeLynvoSection = (
         (candidate) => candidate.id === metric.pluginId
       )
       const isDailyLimit = metric.id === LYNVO_DAILY_LIMIT_METRIC_ID
-      const isDirect = metric.pluginId === "direct"
+      const isDirect = metric.pluginId === "direct-media"
       const iconKind: UsageReadEntry["iconKind"] = isDailyLimit
         ? "hidden"
         : isDirect

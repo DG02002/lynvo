@@ -194,8 +194,8 @@ describe("LinkInputSection", () => {
     ])
   })
 
-  it("shows the Direct Media plugin icon without an icon card effect", () => {
-    const { container } = render(
+  it("shows Direct Media as a Lynvo Plugin Server Plugin", () => {
+    render(
       <LinkInputSection
         url="https://media.example/video.mp4"
         setUrl={vi.fn()}
@@ -203,8 +203,9 @@ describe("LinkInputSection", () => {
         isSaving
         extractionPreview={{
           meta: {
-            pluginId: "direct-link",
-            pluginName: "Direct Media",
+            pluginId: "direct-media",
+            pluginName: "Lynvo Plugin Server",
+            sourceName: "Direct Media",
           },
         }}
         error={null}
@@ -212,20 +213,14 @@ describe("LinkInputSection", () => {
       />
     )
 
-    const icon = container.querySelector(
-      '[data-slot="extraction-source-flow"] svg'
-    )
-
-    expect(icon).not.toHaveAttribute("data-icon-fallback")
-    expect(icon).not.toHaveClass("ring-1")
-    expect(icon).toHaveClass("text-foreground")
-    expect(icon).not.toHaveClass("text-muted-foreground")
-    expect(container.querySelector("img")).not.toBeInTheDocument()
-    expect(screen.getByText("From Lynvo")).toBeVisible()
-    expect(screen.getByText("Core")).toBeVisible()
+    expect(screen.getByText("Plugin Server")).toBeVisible()
+    expect(screen.getByText("Lynvo Plugin Server")).toBeVisible()
+    expect(screen.getByText("Source")).toBeVisible()
     expect(screen.getByText("Direct Media")).toBeVisible()
     expect(
-      screen.getByRole("status", { name: "Direct Media from Lynvo Core" })
+      screen.getByRole("status", {
+        name: "Direct Media from Lynvo Plugin Server",
+      })
     ).toBeVisible()
   })
 

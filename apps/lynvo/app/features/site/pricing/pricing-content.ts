@@ -9,7 +9,7 @@ export const pricingFaqs = [
     value: "lynvo-plugin-operation",
     question: "What counts as a Lynvo Plugin Server request?",
     answer:
-      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 15-request daily limit are shared across Lynvo Plugins and Direct Media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
+      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 15-request daily limit are shared across all Lynvo Plugins, including Direct Media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
   },
   {
     value: "limit-reached",

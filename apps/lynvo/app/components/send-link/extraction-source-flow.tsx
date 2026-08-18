@@ -2,7 +2,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { Route01Icon } from "@hugeicons/core-free-icons"
 import { PluginIcon } from "~/components/plugin-icon"
 import type { MetaData } from "~/features/links/types"
-import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 
 export const ExtractionSourceFlow = ({
   meta,
@@ -12,43 +11,6 @@ export const ExtractionSourceFlow = ({
   statusLabel?: string
 }) => {
   const sourceName = meta.sourceName || meta.pluginName || "Direct Media"
-
-  if (meta.pluginId === "direct-link") {
-    return (
-      <div
-        data-slot="extraction-source-flow"
-        className="mx-auto grid w-full max-w-lg min-w-0 grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] items-center gap-2 px-1"
-        role="status"
-        aria-label="Direct Media from Lynvo Core"
-      >
-        <span className="flex min-w-0 flex-col">
-          <span className="shimmer text-[10px] leading-none text-muted-foreground">
-            From Lynvo
-          </span>
-          <span className="shimmer mt-1 min-w-0 text-pretty font-medium leading-tight text-foreground">
-            Core
-          </span>
-        </span>
-
-        <span
-          className="shimmer overflow-hidden whitespace-nowrap text-center text-[10px] tracking-widest text-muted-foreground"
-          aria-hidden="true"
-        >
-          •••••
-        </span>
-
-        <div className="flex min-w-0 items-center justify-end gap-2 text-right">
-          <span className="shimmer min-w-0 text-pretty font-medium leading-tight text-foreground">
-            {sourceName}
-          </span>
-          <PluginIcon
-            icon={DIRECT_MEDIA_ICON}
-            className="size-4 shrink-0 text-foreground"
-          />
-        </div>
-      </div>
-    )
-  }
 
   if (!meta.sourceName || !meta.pluginName) {
     return (

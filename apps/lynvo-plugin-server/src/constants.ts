@@ -39,6 +39,33 @@ export const DIRECT_MEDIA_CONTENT_TYPES = [
   "binary/octet-stream",
   "video/",
 ]
+export const DIRECT_MEDIA_BLOCKED_EXTENSIONS = [
+  ".7z",
+  ".apk",
+  ".css",
+  ".csv",
+  ".doc",
+  ".docx",
+  ".exe",
+  ".gif",
+  ".html",
+  ".jpeg",
+  ".jpg",
+  ".js",
+  ".json",
+  ".md",
+  ".pdf",
+  ".png",
+  ".rar",
+  ".srt",
+  ".svg",
+  ".tar",
+  ".txt",
+  ".vtt",
+  ".webp",
+  ".xml",
+  ".zip",
+]
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES = 2 * 1024 * 1024
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS = 2_000
 export const PRIVATE_IPV4_PATTERNS = [

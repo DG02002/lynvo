@@ -67,7 +67,7 @@ const planDetailSections = [
     details: [
       {
         feature: "Monthly requests",
-        allowance: "200, shared across Lynvo Plugins and Direct Media",
+        allowance: "200, shared across all Lynvo Plugins",
       },
       { feature: "Daily requests", allowance: "15" },
       {

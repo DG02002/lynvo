@@ -1,8 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 import { ConvexService } from "./ConvexService"
 import { ConvexError, ExtractionError, ValidationError } from "../errors"
-import { createDirectMediaModule } from "../../plugins/direct-media"
-import { createOutboundHttpTransport } from "../../outbound-http"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -22,6 +20,10 @@ import {
   extractWithLynvoPluginServer,
   getLynvoRouteMetadata,
 } from "./lynvo-extraction-adapter"
+import {
+  getLynvoPluginServerManifest,
+  getLynvoPluginServerMetadata,
+} from "./lynvo-plugin-server-adapter"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 
 export class ExtractionService extends Context.Service<
@@ -34,35 +36,12 @@ export class ExtractionService extends Context.Service<
       const convex = yield* ConvexService
       const credentialVault = yield* PluginCredentialVault
       const environment = yield* CloudflareEnv
-      const directMedia = createDirectMediaModule(createOutboundHttpTransport())
-      const extractDirectMedia = (targetUrl: string) =>
-        Effect.tryPromise({
-          try: () => directMedia.extract(targetUrl),
-          catch: (cause) =>
-            new ExtractionError({
-              message: cause instanceof Error ? cause.message : String(cause),
-              url: targetUrl,
-            }),
-        })
-      const getDirectMediaMetadata = (targetUrl: string) =>
-        Effect.tryPromise({
-          try: () => directMedia.getMetadata(targetUrl),
-          catch: (cause) =>
-            new ConvexError({ message: "Metadata fetch failed", cause }),
-        })
 
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
       ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
-        const directMediaAttempt =
-          options.kind === "node"
-            ? undefined
-            : yield* Effect.result(extractDirectMedia(targetUrl))
-        if (directMediaAttempt?._tag === "Success") {
-          return { links: directMediaAttempt.success }
-        }
         if (options.userId && options.accessToken) {
           const context = yield* loadAuthenticatedExtractionContext(
             convex,
@@ -122,11 +101,9 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        if (directMediaAttempt?._tag === "Failure") {
-          return yield* directMediaAttempt.failure
-        }
-        const links = yield* extractDirectMedia(targetUrl)
-        return { links }
+        return yield* new ValidationError({
+          message: "Sign in to extract links with the Lynvo Plugin Server.",
+        })
       })
 
       const getMetadata = Effect.fn("ExtractionService.getMetadata")(function* (
@@ -134,12 +111,6 @@ export class ExtractionService extends Context.Service<
       ): Effect.fn.Return<MetadataResult, ValidationError | ConvexError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
-        const directMediaAttempt = yield* Effect.result(
-          getDirectMediaMetadata(targetUrl)
-        )
-        if (directMediaAttempt._tag === "Success") {
-          return directMediaAttempt.success
-        }
 
         if (options.userId && options.accessToken) {
           const context = yield* loadAuthenticatedExtractionContext(
@@ -192,7 +163,20 @@ export class ExtractionService extends Context.Service<
           }
         }
 
-        return yield* directMediaAttempt.failure
+        const manifest = yield* getLynvoPluginServerManifest(
+          environment,
+          options.requestId
+        ).pipe(
+          Effect.mapError(
+            (error) => new ConvexError({ message: error.message, cause: error })
+          )
+        )
+        const metadata = getLynvoPluginServerMetadata(manifest, targetUrl)
+        return metadata
+          ? metadata
+          : yield* new ConvexError({
+              message: "No Plugin is available for this URL.",
+            })
       })
 
       return ExtractionService.of({ extract, getMetadata })

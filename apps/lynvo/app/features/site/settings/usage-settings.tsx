@@ -135,7 +135,7 @@ export const UsageSettings = ({
         <SettingsPanel className="gap-4">
           <SectionHeading
             title="Lynvo Plugin Server usage"
-            description="One monthly allowance shared across Lynvo Plugins and Direct Media, plus a separate daily limit."
+            description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
           />
           <UsageSummary
             label="Lynvo Plugin Server"

@@ -102,7 +102,7 @@ export const consumeLynvoPlugin = mutation({
       v.literal("bhadoo-google-drive-index"),
       v.literal("google-drive-public-files"),
       v.literal("onedrive-index"),
-      v.literal("direct")
+      v.literal("direct-media")
     ),
   },
   handler: async (ctx, _args) => {

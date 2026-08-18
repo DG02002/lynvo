@@ -58,7 +58,9 @@ browser session. The connected session opens that URL in its external Android
 player. Lynvo does not stream or play the media.
 
 **Direct Media link**:
-A URL that already points to media and does not need Plugin Server extraction.
+A URL that already points to media and is validated by the Direct Media Plugin
+hosted on the Lynvo Plugin Server.
+_Avoid_: Core Direct Media flow, direct-link
 
 **Plugin Domain**:
 A normalized hostname that a user has assigned to a Lynvo Plugin.

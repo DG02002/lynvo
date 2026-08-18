@@ -5,7 +5,7 @@ workspace.
 
 ## Repository map
 
-- `apps/lynvo`: product application and direct-link extraction core.
+- `apps/lynvo`: product application and Plugin Server extraction orchestration.
 - `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
 - `packages/create-lynvo-plugin-server`: public standalone Worker generator and canonical template.
@@ -220,7 +220,7 @@ enforce their own finite counters through the mandatory authenticated
 ### Current Lynvo Plugin limits
 
 - 200 Lynvo Plugin extractions per account per UTC month, shared across all
-  Lynvo Plugins and Direct Media.
+  first-party Plugins hosted by the Lynvo Plugin Server.
 - 15 Lynvo Plugin extractions per account per UTC day.
 - 20,000 Lynvo Plugin extraction operations globally per UTC day.
 

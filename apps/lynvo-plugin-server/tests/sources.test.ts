@@ -97,6 +97,31 @@ describe("Direct Media source adapter", () => {
       expirySource: "signed-url",
     })
   })
+
+  it("rejects non-media files served as generic binary content", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Content-Disposition": 'attachment; filename="archive.zip"',
+        },
+      })
+    )
+
+    await expect(
+      extractDirectMedia({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/archive.zip",
+          },
+        },
+        targetUrl: "https://media.example/archive.zip",
+        plugin,
+      })
+    ).rejects.toThrow("UNSUPPORTED_URL")
+  })
 })
 
 describe("Bhadoo source adapter", () => {

@@ -183,13 +183,13 @@ describe("bounded lifecycle cleanup", () => {
         userId: target.userId,
         pluginServerId: "plugin-server-1",
         domain: "target.example",
-        pluginId: "direct",
+        pluginId: "direct-media",
       })
       await context.db.insert("userPluginCredentials", {
         userId: target.userId,
         pluginDomainId: domainId,
         pluginServerId: "plugin-server-1",
-        pluginId: "direct",
+        pluginId: "direct-media",
         domain: "target.example",
         ciphertext: "encrypted",
         nonce: "nonce",

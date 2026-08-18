@@ -1,4 +1,5 @@
 import {
+  DIRECT_MEDIA_BLOCKED_EXTENSIONS,
   DIRECT_MEDIA_CONTENT_TYPES,
   DIRECT_MEDIA_RANGE_HEADER,
   MILLISECONDS_EPOCH_THRESHOLD,
@@ -64,19 +65,24 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
   try {
     const contentType =
       response.headers.get("Content-Type")?.toLowerCase() ?? ""
+    const filename = getFilename(options.targetUrl, response.headers)
     const isSupportedContent = DIRECT_MEDIA_CONTENT_TYPES.some((candidate) =>
       contentType.startsWith(candidate)
     )
+    const isBlockedFilename = DIRECT_MEDIA_BLOCKED_EXTENSIONS.some(
+      (extension) => filename.toLowerCase().endsWith(extension)
+    )
     if (
       (response.status !== 200 && response.status !== 206) ||
-      !isSupportedContent
+      !isSupportedContent ||
+      isBlockedFilename
     ) {
       throw new Error("UNSUPPORTED_URL")
     }
 
     const node = {
       kind: "playable" as const,
-      label: getFilename(options.targetUrl, response.headers),
+      label: filename,
       url: options.targetUrl,
       status: "up" as const,
       rangeRequest:

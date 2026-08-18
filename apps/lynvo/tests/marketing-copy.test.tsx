@@ -36,7 +36,7 @@ describe("marketing and pricing copy", () => {
     )
 
     expect(
-      screen.getByText("200, shared across Lynvo Plugins and Direct Media")
+      screen.getByText("200, shared across all Lynvo Plugins")
     ).toBeVisible()
     expect(screen.getByText("Coming soon.")).toBeVisible()
     expect(screen.queryByText("Not available yet.")).not.toBeInTheDocument()
