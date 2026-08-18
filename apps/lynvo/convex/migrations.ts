@@ -1,6 +1,6 @@
 import { Migrations } from "@convex-dev/migrations"
 import { v } from "convex/values"
-import { components } from "./_generated/api"
+import { components, internal } from "./_generated/api"
 import type { DataModel } from "./_generated/dataModel"
 import { internalQuery } from "./_generated/server"
 import {
@@ -63,6 +63,11 @@ export const normalizeSavedLinkRetention = migrations.define({
 })
 
 export const run = migrations.runner()
+
+export const runProduction = migrations.runner([
+  internal.migrations.normalizeSavedLinkRetention,
+  internal.migrations.backfillUserStorageLedgers,
+])
 
 export const verifySavedLinkRetention = internalQuery({
   args: {},
