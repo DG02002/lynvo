@@ -112,6 +112,14 @@ jobs:
           test -f convex.json
           test -f convex/tsconfig.json
 
+      - name: Verify Convex generated code is committed
+        working-directory: apps/lynvo
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          pnpm exec convex codegen --typecheck enable
+          git diff --exit-code -- convex/_generated
+
       - name: Deploy backward-compatible Convex functions and schema
         working-directory: apps/lynvo
         env:
@@ -119,11 +127,8 @@ jobs:
         run: >-
           pnpm exec convex deploy
           --typecheck enable
-          --codegen enable
+          --codegen disable
           --message "GitHub ${COMMIT_HASH}"
-
-      - name: Verify Convex generated code is committed
-        run: git diff --exit-code -- apps/lynvo/convex/_generated
 
       - name: Start reviewed production migrations
         env:

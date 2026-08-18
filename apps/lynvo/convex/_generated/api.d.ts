@@ -18,6 +18,7 @@ import type * as authPolicy from "../authPolicy.js";
 import type * as authentication from "../authentication.js";
 import type * as commands from "../commands.js";
 import type * as constants from "../constants.js";
+import type * as credentialsVerification from "../credentialsVerification.js";
 import type * as crons from "../crons.js";
 import type * as deviceAuth from "../deviceAuth.js";
 import type * as http from "../http.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   authentication: typeof authentication;
   commands: typeof commands;
   constants: typeof constants;
+  credentialsVerification: typeof credentialsVerification;
   crons: typeof crons;
   deviceAuth: typeof deviceAuth;
   http: typeof http;
