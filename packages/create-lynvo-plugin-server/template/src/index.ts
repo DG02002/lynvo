@@ -25,6 +25,7 @@ export const manifest = {
           description: "Replace this example with your source implementation.",
           status: "active",
           version: "0.1.0",
+          matchStrategy: "static",
           hosts: ["media.example.com"],
         },
       ],

@@ -24,7 +24,9 @@ Use this before registering an Custom Plugin Server in Lynvo.
 - `pluginServerId` is stable and namespaced, for example `com.example.plugin-server`.
 - `displayName` is human readable.
 - `auth.type` is `bearer`.
-- `matchers` declare the URLs the Plugin Server can handle.
+- `matchers` declare the URLs statically matched by the Plugin Server.
+- `matchStrategy` is `static` by default or `probe` for a lowest-priority
+  bounded capability check.
 - `features.password`, `features.lazyNodes`, and `features.basicAuth` describe supported behavior.
 - `usage.endpoint` is `/usage`.
 - Plugin Servers declaring `features.basicAuth` receive Source credentials in `request.basicAuth`, never in the target URL.
@@ -40,7 +42,10 @@ Each source should include:
 - Direct HTTPS WebP `iconUrl`.
 - `status`: `active`, `maintenance`, `degraded`, or `down`.
 - `version`, updated when source behavior changes.
-- `hosts` or `matchers`, so Lynvo can match URLs to the correct source.
+- `hosts` or `matchers` when `matchStrategy` is `static`, so Lynvo can match
+  URLs to the correct Plugin.
+- Neither `hosts` nor `matchers` when `matchStrategy` is `probe`; probe Plugins
+  must not claim arbitrary URLs with wildcard matchers.
 
 ## Icon Rules
 

@@ -9,7 +9,7 @@ import {
   parseUsageResponseContract,
 } from "./contracts.js"
 import { createProtocolError } from "./requests.js"
-import { getExtractTargetUrl, matchPluginServerUrl } from "./matching.js"
+import { canPluginServerAttemptUrl, getExtractTargetUrl } from "./matching.js"
 import type {
   PluginServerManifest,
   PluginServerRuntime,
@@ -172,7 +172,9 @@ export const createPluginServerRuntime = <Env>(
           "Plugin Server Manifest does not match protocol v1."
         )
       }
-      if (!matchPluginServerUrl(targetUrl, manifest.matchers)) {
+      if (
+        !canPluginServerAttemptUrl(manifest, targetUrl, parsed.data.pluginId)
+      ) {
         return jsonResponse(
           createProtocolError(
             "UNSUPPORTED_URL",

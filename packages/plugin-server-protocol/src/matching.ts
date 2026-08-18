@@ -108,3 +108,17 @@ export const getMatchedPlugin = (
     return source.hosts.some((sourceHost) => sourceHost.toLowerCase() === host)
   })
 }
+
+export const canPluginServerAttemptUrl = (
+  manifest: PluginServerManifest,
+  targetUrl: string,
+  pluginId?: string
+): boolean => {
+  if (matchPluginServerUrl(targetUrl, manifest.matchers)) {
+    return true
+  }
+  const plugins = getLynvoManifestExtension(manifest).plugins ?? []
+  return pluginId
+    ? plugins.some((plugin) => plugin.id === pluginId)
+    : plugins.some((plugin) => plugin.matchStrategy === "probe")
+}

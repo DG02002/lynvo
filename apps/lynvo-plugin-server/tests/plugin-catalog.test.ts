@@ -37,6 +37,21 @@ describe("Lynvo plugin catalog", () => {
     ).toBe("google-drive-public-files")
   })
 
+  it("publishes Direct Media as the fallback probe Plugin", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
+    const directMedia = getLynvoManifestExtension(manifest).plugins?.find(
+      (plugin) => plugin.id === "direct-media"
+    )
+
+    expect(directMedia).toMatchObject({
+      id: "direct-media",
+      displayName: "Direct Media",
+      matchStrategy: "probe",
+      hosts: [],
+    })
+    expect(directMedia?.matchers).toBeUndefined()
+  })
+
   it("publishes only owned public WebP icon URLs", () => {
     const extension = getLynvoManifestExtension(
       createLynvoPluginServerManifest("http://localhost:5173")

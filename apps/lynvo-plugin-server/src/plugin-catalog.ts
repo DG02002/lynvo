@@ -11,6 +11,7 @@ import {
 import { load } from "cheerio"
 import {
   BHADOO_SOURCE_ID,
+  DIRECT_MEDIA_SOURCE_ID,
   PLUGIN_SERVER_ID,
   PLUGIN_SERVER_NAME,
   GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID,
@@ -20,6 +21,7 @@ import {
 import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-index"
 import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
+import { extractDirectMedia } from "./sources/direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
@@ -43,7 +45,8 @@ export interface LynvoPluginDefinition {
   iconPath?: string
   status: "active" | "maintenance" | "degraded" | "down"
   version: string
-  matchers: PluginServerMatcher[]
+  matchStrategy?: "static" | "probe"
+  matchers?: PluginServerMatcher[]
   credential?: PluginCredential
   discovery?: { confidence: "pattern" | "verified" }
   extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
@@ -114,6 +117,16 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     credential: { kind: "domain-password", scope: "domain", required: false },
     extract: extractOneDriveIndex,
   },
+  {
+    id: DIRECT_MEDIA_SOURCE_ID,
+    displayName: "Direct Media",
+    description: "Validates and opens direct audio and video URLs.",
+    homepage: "https://lynvo.dg02002.workers.dev",
+    status: "active",
+    version: SOURCE_IMPLEMENTATION_VERSION,
+    matchStrategy: "probe",
+    extract: extractDirectMedia,
+  },
 ]
 
 export const findLynvoPlugin = (
@@ -122,9 +135,13 @@ export const findLynvoPlugin = (
 ): LynvoPluginDefinition | undefined =>
   pluginId
     ? LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.id === pluginId)
-    : LYNVO_PLUGIN_CATALOG.find((plugin) =>
-        matchPluginServerUrl(targetUrl, plugin.matchers)
-      )
+    : (LYNVO_PLUGIN_CATALOG.find(
+        (plugin) =>
+          plugin.matchStrategy !== "probe" &&
+          plugin.matchers &&
+          matchPluginServerUrl(targetUrl, plugin.matchers)
+      ) ??
+      LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.matchStrategy === "probe"))
 
 export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string
@@ -136,7 +153,7 @@ export const createLynvoPluginServerManifest = (
   homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
-  matchers: LYNVO_PLUGIN_CATALOG.flatMap((plugin) => plugin.matchers),
+  matchers: LYNVO_PLUGIN_CATALOG.flatMap((plugin) => plugin.matchers ?? []),
   features: {
     password: true,
     lazyNodes: true,
@@ -154,8 +171,11 @@ export const createLynvoPluginServerManifest = (
           hasIcon: Boolean(publicAssetOrigin && plugin.iconPath),
           status: plugin.status,
           version: plugin.version,
-          hosts: plugin.matchers.flatMap((matcher) => matcher.hosts),
-          matchers: plugin.matchers,
+          matchStrategy: plugin.matchStrategy ?? "static",
+          hosts: plugin.matchers?.flatMap((matcher) => matcher.hosts) ?? [],
+        }
+        if (plugin.matchers) {
+          metadata.matchers = plugin.matchers
         }
         if (publicAssetOrigin && plugin.iconPath) {
           metadata.iconUrl = `${publicAssetOrigin}${plugin.iconPath}`
@@ -174,7 +194,9 @@ export const discoverLynvoPlugin = async (
 ): Promise<DiscoverResponse> => {
   const plugin = LYNVO_PLUGIN_CATALOG.find(
     (candidate) =>
-      candidate.discovery && matchPluginServerUrl(targetUrl, candidate.matchers)
+      candidate.discovery &&
+      candidate.matchers &&
+      matchPluginServerUrl(targetUrl, candidate.matchers)
   )
   if (plugin?.discovery) {
     return {

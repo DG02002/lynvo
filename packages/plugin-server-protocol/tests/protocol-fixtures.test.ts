@@ -11,6 +11,7 @@ import {
   validExtractSuccessFixture,
   validPluginServerManifestFixture,
   validUsageResponseFixture,
+  createPluginServerRuntime,
 } from "../src/index"
 
 describe("Plugin Server protocol fixtures", () => {
@@ -28,6 +29,57 @@ describe("Plugin Server protocol fixtures", () => {
     expect(extractErrorSchema.safeParse(validExtractErrorFixture).success).toBe(
       true
     )
+  })
+
+  it("allows an explicitly selected probe Plugin to inspect an unmatched URL", async () => {
+    const manifest = {
+      ...validPluginServerManifestFixture,
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "generic-media-probe",
+              displayName: "Generic Media Probe",
+              status: "active" as const,
+              version: "1.0.0",
+              matchStrategy: "probe" as const,
+              hosts: [],
+            },
+          ],
+        },
+      },
+    }
+    const runtime = createPluginServerRuntime({
+      manifest,
+      auth: { validate: () => true },
+      usage: () => validUsageResponseFixture,
+      extract: () => ({
+        ...validExtractSuccessFixture,
+        plugin: {
+          ...validExtractSuccessFixture.plugin,
+          pluginId: "generic-media-probe",
+        },
+      }),
+    })
+
+    const response = await runtime.handleExtract(
+      new Request("https://plugin-server.example/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          pluginId: "generic-media-probe",
+          input: {
+            kind: "source",
+            sourceUrl: "https://unmatched.example/video.mp4",
+          },
+        }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      plugin: { pluginId: "generic-media-probe" },
+    })
   })
 
   it("rejects the obsolete source response envelope", () => {
@@ -93,7 +145,9 @@ describe("Plugin Server protocol fixtures", () => {
       ],
     }
 
-    expect(validateUsageContract(duplicateMetricResponse).issues).toContainEqual({
+    expect(
+      validateUsageContract(duplicateMetricResponse).issues
+    ).toContainEqual({
       path: "metrics.1.id",
       message: "Duplicate metric id: example-operations-daily",
     })
@@ -120,7 +174,9 @@ describe("Plugin Server protocol fixtures", () => {
     expect(
       parseExtractSuccessContract(validExtractSuccessFixture).value?.plugin
     ).toMatchObject({ pluginServerId: "dev.lynvo.example-plugin-server" })
-    expect(parseExtractSuccessContract(invalidExtractSuccessResponse)).toMatchObject({
+    expect(
+      parseExtractSuccessContract(invalidExtractSuccessResponse)
+    ).toMatchObject({
       ok: false,
       issues: [
         {

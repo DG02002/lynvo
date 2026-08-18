@@ -19,8 +19,85 @@ import {
   fetchGoogleDrivePublicFileMetadata,
   parseGoogleDrivePublicFolderItems,
 } from "../src/sources/google-drive-public-files"
+import { extractDirectMedia } from "../src/sources/direct-media"
 
 afterEach(() => vi.restoreAllMocks())
+
+describe("Direct Media source adapter", () => {
+  const plugin = LYNVO_PLUGIN_CATALOG.find(
+    (candidate) => candidate.id === "direct-media"
+  )!
+
+  it("returns playable metadata when an upstream honors the range probe", async () => {
+    const upstreamResponse = new Response(new Uint8Array([0]), {
+      status: 206,
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Disposition": 'attachment; filename="example-video.mp4"',
+        "Content-Range": "bytes 0-0/1105713",
+      },
+    })
+    const cancel = vi.spyOn(upstreamResponse.body!, "cancel")
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(upstreamResponse)
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/example-video.mp4",
+        },
+      },
+      targetUrl: "https://media.example/example-video.mp4",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(result).toMatchObject({
+      plugin: { pluginId: "direct-media", pluginName: "Direct Media" },
+      nodes: [
+        {
+          kind: "playable",
+          label: "example-video.mp4",
+          url: "https://media.example/example-video.mp4",
+          size: "1.05 MB",
+          status: "up",
+          rangeRequest: "supported",
+        },
+      ],
+    })
+    expect(cancel).toHaveBeenCalledOnce()
+  })
+
+  it("marks ignored ranges unsupported and preserves signed URL expiry", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 200,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Length": "1105713",
+        },
+      })
+    )
+
+    const result = await extractDirectMedia({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://media.example/video.mp4?Expires=1798761600",
+        },
+      },
+      targetUrl: "https://media.example/video.mp4?Expires=1798761600",
+      plugin,
+    })
+
+    expect(result.nodes[0]).toMatchObject({
+      rangeRequest: "unsupported",
+      size: "1.05 MB",
+      expiry: 1_798_761_600_000,
+      expirySource: "signed-url",
+    })
+  })
+})
 
 describe("Bhadoo source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG[0]

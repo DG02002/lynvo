@@ -21,6 +21,7 @@ export const validPluginServerManifestFixture: PluginServerManifest = {
           displayName: "Example Media",
           status: "active",
           version: "1.0.0",
+          matchStrategy: "static",
           hosts: ["media.example.com"],
         },
       ],

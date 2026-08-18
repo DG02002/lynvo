@@ -15,8 +15,8 @@ export const createProtocolError = (
   const error: ExtractProtocolError = {
     ok: false,
     error: {
-    code,
-    message,
+      code,
+      message,
     },
     extensions: {},
   }
@@ -34,8 +34,8 @@ export const createSourceExtractRequest = (
 ): ExtractRequest => {
   const request: ExtractRequest = {
     input: {
-    kind: "source",
-    sourceUrl,
+      kind: "source",
+      sourceUrl,
     },
   }
   if (pluginId) {
@@ -58,8 +58,8 @@ export const createNodeExtractRequest = (
 ): ExtractRequest => {
   const request: ExtractRequest = {
     input: {
-    kind: "node",
-    nodeUrl,
+      kind: "node",
+      nodeUrl,
     },
   }
   if (pluginId) {

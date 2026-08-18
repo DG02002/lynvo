@@ -66,6 +66,11 @@ Replace the example matcher in `src/index.ts` and the implementation in
 Use the shared runtime for `/manifest`, `/verify`, `/usage`, and `/extract`
 instead of copying protocol validation into local route handlers.
 
+Keep `matchStrategy: "static"` when the Plugin has known hosts or matchers. A
+Plugin that can only identify support through a bounded capability probe may
+use `matchStrategy: "probe"`, an empty `hosts` array, and no `matchers`. Probe
+Plugins run as routing fallbacks and must not use wildcard matchers.
+
 ## Protocol references
 
 - [Protocol specification](https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/docs/spec.md)

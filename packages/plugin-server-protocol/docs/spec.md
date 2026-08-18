@@ -8,7 +8,7 @@
 - Recommended runtime: Cloudflare Workers
 - Recommended framework: Hono
 - Protocol scope: staged extraction by Plugin Servers
-- Out of scope: Lynvo Direct Media core flow
+- Direct Media is a first-party Plugin hosted by the Lynvo Plugin Server.
 
 ## Goal
 
@@ -252,7 +252,15 @@ Auth:
 - `features.basicAuth`: whether Lynvo may forward structured HTTP Basic Auth credentials to this Plugin Server.
 - `extensions`: optional vendor namespace for non-core data.
 
-Under `extensions.lynvo.plugins`, each source may declare optional `description`, HTTPS `homepage`, and `credential` capability metadata. A credential has `kind` (`domain-password` or `http-basic`), `scope` (`domain`), and `required` (boolean). These optional fields are backward-compatible protocol extensions and never contain credential values.
+Under `extensions.lynvo.plugins`, each Plugin may declare `matchStrategy` as
+`static` or `probe`. The default is `static`, which requires `hosts` or
+`matchers`. A `probe` Plugin declares neither because it performs a bounded
+capability check only after explicit selection, configured domains, and static
+matches have been considered. Probe matching is a generic fallback mechanism;
+it must not be represented by a wildcard matcher. Plugins may also declare
+optional `description`, HTTPS `homepage`, and `credential` capability metadata.
+A credential has `kind` (`domain-password` or `http-basic`), `scope` (`domain`),
+and `required` (boolean). These optional fields never contain credential values.
 
 ## Usage Response
 
@@ -282,9 +290,12 @@ exhausted.
 
 Lynvo should rank matches using:
 
-1. matcher specificity
-2. Custom Plugin Server priority
-3. stable deterministic tie-break
+1. saved Plugin affinity
+2. explicitly requested Plugin
+3. configured Plugin Domain
+4. static matcher specificity
+5. `matchStrategy: "probe"`
+6. stable deterministic tie-break
 
 Each matcher may contain:
 

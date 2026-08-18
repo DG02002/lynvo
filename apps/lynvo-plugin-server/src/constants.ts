@@ -3,10 +3,13 @@ export const PLUGIN_SERVER_NAME = "Lynvo Plugin Server"
 export const BHADOO_SOURCE_ID = "bhadoo-google-drive-index"
 export const GOOGLE_DRIVE_PUBLIC_FILES_SOURCE_ID = "google-drive-public-files"
 export const ONEDRIVE_SOURCE_ID = "onedrive-index"
+export const DIRECT_MEDIA_SOURCE_ID = "direct-media"
 export const SOURCE_IMPLEMENTATION_VERSION = "1.0.0"
 export const GLOBAL_DAILY_OPERATION_LIMIT = 20_000
 export const USAGE_LIMITER_NAME = "global"
 export const MILLISECONDS_PER_DAY = 86_400_000
+export const MILLISECONDS_PER_SECOND = 1_000
+export const MILLISECONDS_EPOCH_THRESHOLD = 1_000_000_000_000
 export const USAGE_RESERVATION_LEASE_MS = 120_000
 export const USAGE_RESERVATION_SETTLEMENT_GRACE_MS = 60_000
 export const BYTES_PER_KIBIBYTE = 1024
@@ -23,6 +26,19 @@ export const PAGINATION_PAGE_LIMIT = 100
 export const EXTRACTION_NODE_LIMIT = 5_000
 export const UPSTREAM_RESPONSE_BYTE_LIMIT = 2 * 1024 * 1024
 export const UPSTREAM_REDIRECT_LIMIT = 3
+export const DIRECT_MEDIA_RANGE_HEADER = "bytes=0-0"
+export const DIRECT_MEDIA_CONTENT_TYPES = [
+  "application/dash+xml",
+  "application/mp4",
+  "application/octet-stream",
+  "application/ogg",
+  "application/vnd.apple.mpegurl",
+  "application/x-matroska",
+  "application/x-mpegurl",
+  "audio/",
+  "binary/octet-stream",
+  "video/",
+]
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES = 2 * 1024 * 1024
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS = 2_000
 export const PRIVATE_IPV4_PATTERNS = [

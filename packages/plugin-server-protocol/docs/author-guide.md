@@ -267,7 +267,7 @@ Example:
 {
   "extensions": {
     "lynvo": {
-      "sources": [
+      "plugins": [
         {
           "id": "resolver-beta",
           "displayName": "Resolver Beta",
@@ -277,6 +277,7 @@ Example:
           "iconUrl": "https://example.com/icons/resolver-beta.webp",
           "status": "active",
           "version": "1.2.3",
+          "matchStrategy": "static",
           "hosts": ["resolver-beta.example"],
           "matchers": [
             {
@@ -304,6 +305,12 @@ Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Se
 `routesToPluginId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
 `matchers` is optional but recommended. Lynvo uses it to show which Plugin is likely to handle a URL before extraction starts.
+
+`matchStrategy` defaults to `static`. Static Plugins declare `hosts` or
+`matchers`. Set `matchStrategy` to `probe` only for a bounded capability probe
+that runs after explicit selection, configured Plugin Domains, and static
+matches. Probe Plugins must leave `hosts` empty and omit `matchers`; never use a
+wildcard matcher to claim every URL.
 
 `description`, `homepage`, and `credential` are optional source capability metadata. A credential `kind` is either `domain-password` or `http-basic`, its `scope` is `domain`, and `required` states whether every extraction needs it. These fields describe configuration requirements and must not contain credentials or UI layout instructions.
 

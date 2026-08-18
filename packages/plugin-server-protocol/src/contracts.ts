@@ -111,10 +111,17 @@ const validateParsedPluginServerManifestContract = (
     if (!source.version) {
       issues.push(issue(`${basePath}.version`, "Declare a Plugin version."))
     }
-    if (
-      source.hosts.length === 0 &&
-      (!source.matchers || source.matchers.length === 0)
-    ) {
+    const hasStaticMatchers =
+      source.hosts.length > 0 || Boolean(source.matchers?.length)
+    if (source.matchStrategy === "probe" && hasStaticMatchers) {
+      issues.push(
+        issue(
+          `${basePath}.matchers`,
+          "Probe-matched Plugins cannot declare hosts or matchers."
+        )
+      )
+    }
+    if (source.matchStrategy !== "probe" && !hasStaticMatchers) {
       issues.push(
         issue(
           `${basePath}.matchers`,
@@ -133,9 +140,7 @@ const validateParsedPluginServerManifestContract = (
 export const parsePluginServerManifestContract = <Value>(
   value: Value
 ): ContractParseResult<PluginServerManifest> => {
-  const didDeclareUsage = z
-    .object({ usage: z.json() })
-    .safeParse(value).success
+  const didDeclareUsage = z.object({ usage: z.json() }).safeParse(value).success
   const parsed = pluginServerManifestSchema.safeParse(value)
   if (!parsed.success) {
     return {

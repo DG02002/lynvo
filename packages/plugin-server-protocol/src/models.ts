@@ -7,10 +7,7 @@ export interface PluginServerMatcher {
 
 export type JsonPrimitive = boolean | null | number | string
 
-export type JsonValue =
-  | JsonPrimitive
-  | JsonValue[]
-  | JsonObject
+export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject
 
 export interface JsonObject {
   [property: string]: JsonValue
@@ -185,6 +182,7 @@ export interface PluginMetadata {
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
   routesToPluginId?: string
+  matchStrategy?: "static" | "probe"
   hosts: string[]
   matchers?: PluginServerMatcher[]
   credential?: PluginCredential
@@ -210,8 +208,7 @@ export interface ContractValidationResult {
   issues: ContractIssue[]
 }
 
-export interface ContractParseResult<Value>
-  extends ContractValidationResult {
+export interface ContractParseResult<Value> extends ContractValidationResult {
   value?: Value
 }
 

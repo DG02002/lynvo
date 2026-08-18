@@ -10,6 +10,7 @@ export {
   isErrorCode,
 } from "./requests.js"
 export {
+  canPluginServerAttemptUrl,
   getExtractTargetUrl,
   getLynvoManifestExtension,
   getMatchedPlugin,

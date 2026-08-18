@@ -92,17 +92,17 @@ describe("Lynvo manifest source credentials", () => {
       parsePluginServerManifestContract(validPluginServerManifestFixture).value
         ?.pluginServerId
     ).toBe("dev.lynvo.example-plugin-server")
-    expect(parsePluginServerManifestContract(manifestWithoutUsage)).toMatchObject(
-      {
-        ok: false,
-        issues: [
-          {
-            path: "usage",
-            message: "Declare the mandatory authenticated /usage endpoint.",
-          },
-        ],
-      }
-    )
+    expect(
+      parsePluginServerManifestContract(manifestWithoutUsage)
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "usage",
+          message: "Declare the mandatory authenticated /usage endpoint.",
+        },
+      ],
+    })
     expect(declaredUsage).toEqual({ endpoint: "/usage" })
   })
 
@@ -166,7 +166,9 @@ describe("Lynvo manifest source credentials", () => {
       },
     }
 
-    expect(validatePluginServerManifestContract(invalidIconManifest).issues).toEqual(
+    expect(
+      validatePluginServerManifestContract(invalidIconManifest).issues
+    ).toEqual(
       expect.arrayContaining([
         {
           path: "iconUrl",
@@ -196,5 +198,66 @@ describe("Lynvo manifest source credentials", () => {
       extensions: { lynvo: { plugins: [] } },
     })
     expect(getLynvoManifestExtension(manifest)).toEqual({ plugins: [] })
+  })
+
+  it("accepts probe-matched Plugins without URL matchers and rejects ambiguous combinations", () => {
+    const probePluginManifest = {
+      ...validPluginServerManifestFixture,
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "generic-media-probe",
+              displayName: "Generic Media Probe",
+              status: "active",
+              version: "1.0.0",
+              hosts: [],
+              matchStrategy: "probe",
+            },
+          ],
+        },
+      },
+    }
+
+    expect(
+      parsePluginServerManifestContract(probePluginManifest)
+    ).toMatchObject({
+      ok: true,
+      value: {
+        extensions: {
+          lynvo: {
+            plugins: [
+              {
+                id: "generic-media-probe",
+                matchStrategy: "probe",
+              },
+            ],
+          },
+        },
+      },
+    })
+    expect(
+      parsePluginServerManifestContract({
+        ...probePluginManifest,
+        extensions: {
+          lynvo: {
+            plugins: [
+              {
+                ...probePluginManifest.extensions.lynvo.plugins[0],
+                matchers: [{ hosts: ["*"] }],
+              },
+            ],
+          },
+        },
+      })
+    ).toMatchObject({
+      ok: false,
+      issues: [
+        {
+          path: "extensions.lynvo.plugins.0.matchers",
+          message: "Probe-matched Plugins cannot declare hosts or matchers.",
+        },
+      ],
+    })
   })
 })
