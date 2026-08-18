@@ -66,26 +66,42 @@ published semver range, not `link:../lynvo/packages/plugin-server-protocol`.
 Run its typecheck and tests from its own directory after installing the
 published package.
 
-## Manual package release
+## Automated package release
 
 Do not publish until the npm account, scope, license, repository URL, and
-maintainer details are confirmed. The packages are configured for public
-publishing and run release checks before packing.
+maintainer details are confirmed. Configure `publish-npm.yml` as the trusted
+GitHub publisher for both npm packages, restrict it to the `npm` GitHub
+Environment, and allow `npm publish`.
 
 ```sh
 pnpm --filter @dg02002/lynvo-plugin-server-protocol release:check
 pnpm --filter @dg02002/lynvo-plugin-server-protocol pack --dry-run
-pnpm --filter @dg02002/lynvo-plugin-server-protocol publish --access public
 
 pnpm --filter create-lynvo-plugin-server check
 pnpm --filter create-lynvo-plugin-server pack --dry-run
-pnpm --filter create-lynvo-plugin-server publish --access public
 ```
 
 Publish the protocol package first. Generated projects depend on that
 published semver version. Keep npm two-factor authentication enabled and
-credentials out of the repository. Publication is manual for now; add npm
-trusted publishing later when the project needs an automated release workflow.
+credentials out of the repository. GitHub publishes through npm trusted
+publishing and does not use a long-lived npm token.
+
+After the version bump is reviewed and merged, tag the exact commit:
+
+```sh
+git tag protocol-v0.1.3
+git push origin protocol-v0.1.3
+```
+
+or:
+
+```sh
+git tag creator-v0.1.1
+git push origin creator-v0.1.1
+```
+
+The tag version must exactly match the selected package's `package.json`.
+The tagged commit must already be part of `main`.
 
 ## Troubleshooting
 

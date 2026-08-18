@@ -24,8 +24,6 @@ jobs:
     timeout-minutes: 30
     environment: production
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       COMMIT_HASH: ${{ github.event.workflow_run.head_sha }}
     steps:
       - name: Check out the verified commit
@@ -91,6 +89,9 @@ jobs:
           exit 1
 
       - name: Upload inactive Plugin Server version
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions upload
           --config wrangler.jsonc
@@ -101,6 +102,9 @@ jobs:
           --var "COMMIT_HASH:$COMMIT_HASH"
 
       - name: Upload inactive Lynvo version
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions upload
           --config wrangler.jsonc
@@ -111,6 +115,9 @@ jobs:
 
       - name: Promote Plugin Server
         id: promote_plugin_server
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions deploy
           --config wrangler.jsonc
@@ -121,6 +128,9 @@ jobs:
 
       - name: Promote Lynvo
         id: promote_lynvo
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions deploy
           --config wrangler.jsonc
@@ -130,6 +140,9 @@ jobs:
 
       - name: Roll back Plugin Server if Lynvo promotion fails
         if: failure() && steps.promote_plugin_server.outcome == 'success' && steps.promote_lynvo.outcome == 'failure'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler rollback
           --config wrangler.jsonc

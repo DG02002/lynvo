@@ -1,0 +1,128 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - protocol-v*.*.*
+      - creator-v*.*.*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      package-version: ${{ steps.release.outputs.package-version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0609f0983b7a228f052f81ef4c3d6510cae254ad
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - name: Install the tagged dependency graph
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve and verify release identity
+        id: release
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          case "$GITHUB_REF_NAME" in
+            protocol-v*)
+              package_directory="packages/plugin-server-protocol"
+              package_filter="@dg02002/lynvo-plugin-server-protocol"
+              package_version="${GITHUB_REF_NAME#protocol-v}"
+              ;;
+            creator-v*)
+              package_directory="packages/create-lynvo-plugin-server"
+              package_filter="create-lynvo-plugin-server"
+              package_version="${GITHUB_REF_NAME#creator-v}"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
+          manifest_version="$(node -p "require('./${package_directory}/package.json').version")"
+          test "$package_version" = "$manifest_version"
+          echo "PACKAGE_DIRECTORY=$package_directory" >> "$GITHUB_ENV"
+          echo "PACKAGE_FILTER=$package_filter" >> "$GITHUB_ENV"
+          echo "PACKAGE_VERSION=$package_version" >> "$GITHUB_ENV"
+          echo "package-version=$package_version" >> "$GITHUB_OUTPUT"
+
+      - name: Run complete release checks
+        run: |
+          pnpm check
+          pnpm test
+          pnpm build
+          pnpm check:plugin-server-release
+
+      - name: Confirm this version is unpublished
+        run: |
+          package_name="$(node -p "require('./${PACKAGE_DIRECTORY}/package.json').name")"
+          if npm view "${package_name}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "${package_name}@${PACKAGE_VERSION} is already published" >&2
+            exit 1
+          fi
+
+      - name: Pack the reviewed package
+        run: |
+          mkdir release-artifacts
+          pnpm --filter "$PACKAGE_FILTER" pack --pack-destination "$GITHUB_WORKSPACE/release-artifacts"
+          cd release-artifacts
+          test "$(find . -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')" = "1"
+          sha256sum ./*.tgz > SHA256SUMS
+
+      - name: Store the release artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: npm-${{ github.ref_name }}
+          path: release-artifacts
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 26.7.0
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Verify npm supports trusted publishing
+        run: |
+          npm_version="$(npm --version)"
+          node -e 'const [major, minor] = process.argv[1].split(".").map(Number); if (major < 11 || (major === 11 && minor < 5)) process.exit(1)' "$npm_version"
+
+      - name: Download the verified package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-${{ github.ref_name }}
+          path: release-artifacts
+
+      - name: Verify and publish with trusted publishing
+        run: |
+          cd release-artifacts
+          sha256sum --check SHA256SUMS
+          test "$(find . -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')" = "1"
+          npm publish ./*.tgz --access public --provenance

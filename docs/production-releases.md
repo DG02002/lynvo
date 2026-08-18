@@ -101,3 +101,28 @@ state, and Cloudflare normally bypasses shared caching for authorized requests.
 Static assets can use Cloudflare's asset caching independently. Add runtime
 caching only endpoint by endpoint with explicit cache keys and invalidation;
 the Cache API is data-center-local and is not a durable coordination store.
+
+## npm package releases
+
+npm package publication is independent from production application deployment.
+Version changes are reviewed in pull requests, then an immutable tag starts the
+trusted-publishing workflow:
+
+- `protocol-v0.1.3` publishes
+  `@dg02002/lynvo-plugin-server-protocol@0.1.3`.
+- `creator-v0.1.1` publishes `create-lynvo-plugin-server@0.1.1`.
+
+The tag version must match the package manifest. The workflow rebuilds and
+rechecks the complete workspace, refuses an existing npm version, and publishes
+from a GitHub-hosted runner using npm OIDC provenance. Dependency installation,
+tests, builds, and packing run without OIDC permission. A separate minimal job
+receives the packed artifact and obtains OIDC only after the `npm` Environment
+gate. Configure both packages on npmjs.com with `publish-npm.yml` as their
+trusted GitHub publisher, the `npm` environment, and the `npm publish` action.
+No `NPM_TOKEN` is stored in GitHub.
+
+Install the Socket Security GitHub App for this repository and require `Socket
+Security: Pull Request Alerts` on `main`. The root `socket.yml` keeps pull
+request alerts, dependency reports, comments, and check runs enabled. Review
+Socket ignores like code changes; do not use `ignore-all` to make a blocked
+dependency update mergeable.
