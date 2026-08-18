@@ -1,11 +1,7 @@
 name: Deploy production
 
 on:
-  workflow_run:
-    workflows:
-      - Verify
-    types:
-      - completed
+  workflow_call:
 
 permissions:
   contents: read
@@ -16,41 +12,37 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
     env:
-      COMMIT_HASH: ${{ github.event.workflow_run.head_sha }}
+      COMMIT_HASH: ${{ github.sha }}
     steps:
       - name: Check out the verified commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - uses: pnpm/action-setup@0609f0983b7a228f052f81ef4c3d6510cae254ad
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          run_install: false
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version-file: .node-version
-          cache: pnpm
+          runtime: node@26.7.0
+          cache: true
+          install: false
 
       - name: Install the verified dependency graph
         run: pnpm install --frozen-lockfile
 
       - name: Set immutable release identity
+        id: release
         run: |
-          echo "RELEASE_TAG=${COMMIT_HASH::12}" >> "$GITHUB_ENV"
-          echo "LYNVO_VERSION=$(node -p 'require(\"./apps/lynvo/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_ENV"
-          echo "PLUGIN_SERVER_VERSION=$(node -p 'require(\"./apps/lynvo-plugin-server/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_ENV"
+          echo "tag=${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
+          echo "lynvo_version=$(node -p 'require(\"./apps/lynvo/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
+          echo "plugin_server_version=$(node -p 'require(\"./apps/lynvo-plugin-server/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
 
       - name: Verify deployment configuration
+        env:
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
         run: SERVICE_VERSION="$LYNVO_VERSION" pnpm --filter @lynvo/app preflight
 
       - name: Build release artifacts
@@ -92,6 +84,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PLUGIN_SERVER_VERSION: ${{ steps.release.outputs.plugin_server_version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions upload
           --config wrangler.jsonc
@@ -105,6 +99,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions upload
           --config wrangler.jsonc
@@ -118,6 +114,7 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions deploy
           --config wrangler.jsonc
@@ -131,6 +128,7 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
           pnpm --filter @lynvo/app exec wrangler versions deploy
           --config wrangler.jsonc

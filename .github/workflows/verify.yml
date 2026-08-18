@@ -32,13 +32,11 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@0609f0983b7a228f052f81ef4c3d6510cae254ad
+      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
         with:
-          run_install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version-file: .node-version
-          cache: pnpm
+          runtime: node@26.7.0
+          cache: true
+          install: false
       - run: pnpm install --frozen-lockfile
       - name: Verify generated assets are committed
         run: |
@@ -49,3 +47,13 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check:plugin-server-release
+
+  deploy-production:
+    name: Deploy production
+    needs:
+      - workflow-security
+      - verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-production.yml
+    permissions:
+      contents: read
