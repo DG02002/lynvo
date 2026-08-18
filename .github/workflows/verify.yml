@@ -92,9 +92,11 @@ jobs:
       - name: Set immutable release identity
         id: release
         run: |
-          echo "tag=${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
-          echo "lynvo_version=$(node -p 'require(\"./apps/lynvo/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
-          echo "plugin_server_version=$(node -p 'require(\"./apps/lynvo-plugin-server/package.json\").version')+${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
+          lynvo_package_version="$(node -p "require('./apps/lynvo/package.json').version")"
+          plugin_server_package_version="$(node -p "require('./apps/lynvo-plugin-server/package.json').version")"
+          printf 'tag=%s\n' "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
+          printf 'lynvo_version=%s+%s\n' "$lynvo_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
+          printf 'plugin_server_version=%s+%s\n' "$plugin_server_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
 
       - name: Verify deployment configuration
         env:
@@ -104,13 +106,19 @@ jobs:
       - name: Build release artifacts
         run: pnpm build
 
+      - name: Verify Convex deployment inputs
+        working-directory: apps/lynvo
+        run: |
+          test -f convex.json
+          test -f convex/tsconfig.json
+
       - name: Deploy backward-compatible Convex functions and schema
+        working-directory: apps/lynvo
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: >-
-          pnpm --filter @lynvo/app exec convex deploy
+          pnpm exec convex deploy
           --typecheck enable
-          --typecheck-components
           --codegen enable
           --message "GitHub ${COMMIT_HASH}"
 
