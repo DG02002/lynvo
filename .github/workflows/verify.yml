@@ -102,9 +102,6 @@ jobs:
           LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
         run: SERVICE_VERSION="$LYNVO_VERSION" pnpm --filter @lynvo/app preflight
 
-      - name: Build release artifacts
-        run: pnpm build
-
       - name: Verify Convex deployment inputs
         working-directory: apps/lynvo
         run: |
@@ -119,12 +116,14 @@ jobs:
           pnpm exec convex codegen --typecheck enable
           git diff --exit-code -- convex/_generated
 
-      - name: Deploy backward-compatible Convex functions and schema
+      - name: Build release artifacts and deploy backward-compatible Convex functions
         working-directory: apps/lynvo
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: >-
           pnpm exec convex deploy
+          --cmd "pnpm --workspace-root build"
+          --cmd-url-env-var-name VITE_CONVEX_URL
           --typecheck enable
           --codegen disable
           --message "GitHub ${COMMIT_HASH}"
@@ -259,7 +258,14 @@ jobs:
               if jq -e --arg commit "$COMMIT_HASH" --arg version "$LYNVO_VERSION" \
                 '.commitHash == $commit and .serviceVersion == $version and (.deploymentId | length > 0)' \
                 <<< "$response" >/dev/null; then
-                exit 0
+                echo "The expected release is active; verifying server-rendered application health."
+                if curl --fail --show-error --silent --output /dev/null \
+                  --retry 2 --retry-all-errors \
+                  "https://lynvo.dg02002.workers.dev/?release=${COMMIT_HASH}"; then
+                  exit 0
+                fi
+                echo "::error::The expected release is active, but the Lynvo homepage is unhealthy."
+                exit 1
               fi
             fi
             sleep 2
