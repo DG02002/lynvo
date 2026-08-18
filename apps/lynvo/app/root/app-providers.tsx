@@ -14,6 +14,7 @@ import { AccountSettingsSynchronization } from "./account-settings-synchronizati
 import { clearRevokedSessionState } from "./session-revocation"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { IdentitySynchronizer } from "./identity-synchronizer"
+import { ConvexAuthenticationProvider } from "./convex-authentication-provider"
 
 interface AppProvidersProps {
   buildTime: string
@@ -52,42 +53,52 @@ export const AppProviders = ({
     },
     [queryClient]
   )
+  const handleConvexSessionExpired = useCallback(() => {
+    if (providerUser) {
+      handleSessionRevoked(providerUser.id)
+    }
+  }, [handleSessionRevoked, providerUser])
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        enableColorScheme
-        disableTransitionOnChange
+      <ConvexAuthenticationProvider
+        isAuthenticated={Boolean(providerUser)}
+        onSessionExpired={handleConvexSessionExpired}
       >
-        <ThemeCookieSync />
-        <AuthActivityTouch isAuthenticated={Boolean(user)} />
-        <IdentitySynchronizer user={providerUser} queryClient={queryClient}>
-          {(validateIdentity) => (
-            <RealtimeProvider
-              user={providerUser}
-              onConnectionOpen={validateIdentity}
-              onSessionRevoked={handleSessionRevoked}
-            >
-              <PlayerPreferenceProvider
-                key={providerUser?.id ?? "signed-out"}
-                userId={providerUser?.id}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          enableColorScheme
+          disableTransitionOnChange
+        >
+          <ThemeCookieSync />
+          <AuthActivityTouch isAuthenticated={Boolean(user)} />
+          <IdentitySynchronizer user={providerUser} queryClient={queryClient}>
+            {(validateIdentity) => (
+              <RealtimeProvider
+                user={providerUser}
+                onConnectionOpen={validateIdentity}
+                onSessionRevoked={handleSessionRevoked}
               >
-                <AccountSettingsSynchronization userId={providerUser?.id} />
-                <RemoteControlProvider user={providerUser}>
-                  <VersionWatcher buildTime={buildTime} />
-                  {children ?? <Outlet />}
-                </RemoteControlProvider>
-              </PlayerPreferenceProvider>
-            </RealtimeProvider>
-          )}
-        </IdentitySynchronizer>
-        <PlayerLaunchErrorDialog />
-        <OpenedConfirmationDialog />
-        <Toaster />
-      </ThemeProvider>
+                <PlayerPreferenceProvider
+                  key={providerUser?.id ?? "signed-out"}
+                  userId={providerUser?.id}
+                >
+                  <AccountSettingsSynchronization userId={providerUser?.id} />
+                  <RemoteControlProvider user={providerUser}>
+                    <VersionWatcher buildTime={buildTime} />
+                    {children ?? <Outlet />}
+                  </RemoteControlProvider>
+                </PlayerPreferenceProvider>
+              </RealtimeProvider>
+            )}
+          </IdentitySynchronizer>
+          <PlayerLaunchErrorDialog />
+          <OpenedConfirmationDialog />
+          <Toaster />
+        </ThemeProvider>
+      </ConvexAuthenticationProvider>
     </QueryClientProvider>
   )
 }

@@ -48,9 +48,12 @@ import { createDurableRealtimeSessionRevocation } from "./realtime-session-revoc
 import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import {
+  CONVEX_ACCESS_TOKEN_RATE_LIMIT,
+  CONVEX_ACCESS_TOKEN_RATE_WINDOW_SECONDS,
   REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
   SAVED_LINK_BROADCAST_RETRY_DELAY_MS,
 } from "./constants"
+import { createConvexAccessTokenHandler } from "./convex-access-token"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 import { z } from "zod"
 export { AuthRateLimiter } from "./auth-rate-limiter"
@@ -423,6 +426,89 @@ app.get("/api/auth/session/status", async (context) => {
     userId: session.user.id,
     sessionId: session.user.sid,
   })
+})
+
+app.post("/api/auth/convex-token", async (context) => {
+  addRequestContext(context, { operation: "convex_access_token_issue" })
+  const handler = createConvexAccessTokenHandler({
+    checkRateLimit: (request) =>
+      checkAuthenticationRateLimit(
+        context.env,
+        `auth:convex-token:${clientIp(request)}`,
+        CONVEX_ACCESS_TOKEN_RATE_LIMIT,
+        CONVEX_ACCESS_TOKEN_RATE_WINDOW_SECONDS
+      ),
+    resolveAccessToken: async (request, forceRefresh) => {
+      const session = await getSession(request, context.env)
+      if (session.kind === "unavailable") {
+        addRequestContext(context, { token_issuance_outcome: "unavailable" })
+        return { kind: "unavailable" }
+      }
+      if (!session.user || !session.accessToken) {
+        addRequestContext(context, {
+          token_issuance_outcome: "unauthenticated",
+        })
+        return { kind: "unauthenticated" }
+      }
+      if (!forceRefresh) {
+        addRequestContext(context, {
+          token_issuance_outcome: "issued",
+          user_id: session.user.id,
+        })
+        return { kind: "authenticated", accessToken: session.accessToken }
+      }
+
+      const opaqueSessionId = getCookieValue(
+        request,
+        WORKER_SESSION_COOKIE_NAME
+      )
+      if (!opaqueSessionId) {
+        return { kind: "unauthenticated" }
+      }
+      const authSession = createAuthSessionModule(
+        context.env.WORKER_AUTH_SESSION
+      )
+      const rotation = await authSession.rotate({
+        sessionId: opaqueSessionId,
+        refresh: async (refreshToken) => {
+          const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+          const refreshed = await client.action(api.auth.signIn, {
+            refreshToken,
+          })
+          return refreshed.tokens
+            ? {
+                accessToken: refreshed.tokens.token,
+                refreshToken: refreshed.tokens.refreshToken,
+              }
+            : undefined
+        },
+      })
+      if (rotation.kind !== "rotated") {
+        addRequestContext(context, {
+          token_issuance_outcome:
+            rotation.kind === "unavailable" ? "unavailable" : "revoked",
+        })
+        return rotation.kind === "unavailable"
+          ? { kind: "unavailable" }
+          : { kind: "unauthenticated" }
+      }
+      const rotatedSession = await authSession.read(opaqueSessionId)
+      if (rotatedSession.kind !== "active") {
+        return rotatedSession.kind === "unavailable"
+          ? { kind: "unavailable" }
+          : { kind: "unauthenticated" }
+      }
+      addRequestContext(context, {
+        token_issuance_outcome: "rotated",
+        user_id: session.user.id,
+      })
+      return {
+        kind: "authenticated",
+        accessToken: rotatedSession.session.accessToken,
+      }
+    },
+  })
+  return await handler(context.req.raw)
 })
 
 app.get("/api/realtime", async (context) => {

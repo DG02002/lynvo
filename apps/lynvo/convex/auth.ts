@@ -16,6 +16,7 @@ import { synchronizeAccountCapacityAfterCreation } from "./accountCapacity"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
   SESSION_TOTAL_DURATION_MS,
+  CONVEX_ACCESS_TOKEN_TTL_MS,
 } from "./constants"
 import { z } from "zod"
 
@@ -240,6 +241,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     maxFailedAttempsPerHour: 10,
   },
   jwt: {
+    durationMs: CONVEX_ACCESS_TOKEN_TTL_MS,
     async customClaims(ctx, { userId, sessionId }) {
       const user = await ctx.db.get("users", userId)
       return {

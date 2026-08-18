@@ -11,20 +11,28 @@ const collectBrowserSources = (directory: string): string[] =>
   })
 
 describe("browser authentication boundary", () => {
-  it("contains no direct Convex auth, data hooks, or token persistence", () => {
+  it("allows one memory-only Convex provider and no token persistence", () => {
     const forbiddenPatterns = [
-      /from ["']convex\/react["']/,
       /from ["']@convex-dev\/auth\/react["']/,
       /__convexAuthJWT/,
       /__convexAuthRefreshToken/,
+      /localStorage.*[Tt]oken/,
+      /indexedDB.*[Tt]oken/,
     ]
+    const convexReactImports: string[] = []
     const violations = collectBrowserSources("app").flatMap((path) => {
       const source = readFileSync(path, "utf8")
+      if (/from ["']convex\/react["']/.test(source)) {
+        convexReactImports.push(path)
+      }
       return forbiddenPatterns.some((pattern) => pattern.test(source))
         ? [path]
         : []
     })
 
     expect(violations).toEqual([])
+    expect(convexReactImports).toEqual([
+      "app/root/convex-authentication-provider.tsx",
+    ])
   })
 })

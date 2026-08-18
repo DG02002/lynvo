@@ -1,6 +1,7 @@
 export const DAY_MS = 1000 * 60 * 60 * 24
 export const ACCOUNT_INACTIVITY_LIMIT_MS = DAY_MS * 90
 export const SESSION_TOTAL_DURATION_MS = DAY_MS * 365
+export const CONVEX_ACCESS_TOKEN_TTL_MS = 5 * 60 * 1_000
 export const USER_STORAGE_LIMIT_BYTES = 1024 * 1024
 export const USER_STORAGE_WARNING_BYTES = Math.round(0.8 * 1024 * 1024)
 export const MAX_REGISTERED_ACCOUNTS = 400
