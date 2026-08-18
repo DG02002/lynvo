@@ -45,7 +45,12 @@ const FooterLinkGroup = ({
     <ul className="flex flex-col items-start gap-4">
       {links.map((link) => (
         <li key={link.to}>
-          <Link to={link.to} viewTransition className={footerLinkClassName}>
+          <Link
+            to={link.to}
+            prefetch="intent"
+            viewTransition
+            className={footerLinkClassName}
+          >
             {link.label}
           </Link>
         </li>

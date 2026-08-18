@@ -8,6 +8,7 @@ export const GuestNavActions = () => (
   <div className="flex items-center gap-2">
     <Link
       to={authPaths.signIn}
+      prefetch="intent"
       viewTransition
       className={cn(buttonVariants({ variant: "default" }), "px-4")}
     >
@@ -15,6 +16,7 @@ export const GuestNavActions = () => (
     </Link>
     <Link
       to={authPaths.createAccount}
+      prefetch="intent"
       viewTransition
       className={cn(
         buttonVariants({ variant: "outline" }),

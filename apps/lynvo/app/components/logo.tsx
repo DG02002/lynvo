@@ -66,6 +66,7 @@ export const LogoLink = ({
   return (
     <Link
       to="/"
+      prefetch="intent"
       viewTransition
       className={cn(
         "flex items-center gap-2 hover:opacity-80 transition-opacity",

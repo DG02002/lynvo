@@ -23,6 +23,7 @@ export const UserNavActions = ({
     {showSaveAction && (
       <Link
         to="/save"
+        prefetch="intent"
         viewTransition
         className={cn(
           buttonVariants({ variant: "ghost" }),

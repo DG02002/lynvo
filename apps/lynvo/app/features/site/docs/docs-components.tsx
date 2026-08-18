@@ -364,7 +364,7 @@ const DocsLink = ({
   ...props
 }: ComponentProps<"a">) =>
   href?.startsWith("/") ? (
-    <Link to={href} className={className}>
+    <Link to={href} prefetch="intent" className={className}>
       {children}
     </Link>
   ) : (

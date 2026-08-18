@@ -8,6 +8,7 @@ export function LynvoLink({ className }: LynvoLinkProps) {
   return (
     <Link
       to="/"
+      prefetch="intent"
       viewTransition
       aria-label="Lynvo home"
       className={

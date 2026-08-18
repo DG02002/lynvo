@@ -3,9 +3,6 @@ import { Button } from "~/components/ui/button"
 import { DeviceLoginQr } from "~/components/auth/DeviceLoginQr"
 import { LynvoLink } from "~/components/LynvoLink"
 import { authPaths, policyPaths } from "~/lib/paths"
-import { getUserSession, requireGuestOrRedirect } from "~/lib/auth"
-import { getServerEnv } from "~/lib/env.server"
-import type { Route } from "./+types/_auth.sign-in-with-another-device"
 
 export function meta() {
   return [
@@ -15,15 +12,6 @@ export function meta() {
       content: "Scan a QR code to log in to Lynvo from another device.",
     },
   ]
-}
-
-export async function loader(args: Route.LoaderArgs) {
-  const sessionResult = await getUserSession(
-    args.request,
-    getServerEnv(args.context)
-  )
-  requireGuestOrRedirect(sessionResult, args.request)
-  return null
 }
 
 export default function SignInWithAnotherDevice() {

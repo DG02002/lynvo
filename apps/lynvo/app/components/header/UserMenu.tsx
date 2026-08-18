@@ -57,6 +57,7 @@ export const UserMenu = ({
         render={
           <Link
             to={sitePaths.settings}
+            prefetch="intent"
             viewTransition
             className="cursor-pointer"
           >

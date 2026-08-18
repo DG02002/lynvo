@@ -1,121 +1,103 @@
-import {
-  type LoaderFunctionArgs,
-  redirect,
-  useLoaderData,
-  useNavigate,
-} from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Activity03Icon,
-  ArrowLeft01Icon,
   HardDriveIcon,
   Key01Icon,
   PlayIcon,
   Plug02Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "~/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { GeneralSettings } from "~/features/site/settings/general-settings"
-import { PlayerSettings } from "~/features/site/settings/player-settings"
-import { PluginsSettings } from "~/features/site/settings/plugins-settings"
-import { SecuritySettings } from "~/features/site/settings/security-settings"
-import { StorageSettings } from "~/features/site/settings/storage-settings"
-import { UsageSettings } from "~/features/site/settings/usage-settings"
+import {
+  NavLink,
+  Outlet,
+  useLoaderData,
+  useNavigation,
+  type LoaderFunctionArgs,
+} from "react-router"
 import {
   getUserSession,
   responseWithSession,
   requireUserOrRedirect,
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
-import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
-import {
-  getSettingsPath,
-  isSettingsTab,
-  parseSettingsRoute,
-} from "~/features/site/settings/settings-route"
+import { cn } from "~/lib/utils"
 
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
 }
 
-export async function loader(args: LoaderFunctionArgs): Promise<any> {
+export async function loader(args: LoaderFunctionArgs) {
   const request = args.request
-  const env = getServerEnv(args.context)
-  const sessionResult = await getUserSession(request, env)
-
-  const pathname = new URL(request.url).pathname
-  requireUserOrRedirect(sessionResult, pathname)
-  const settingsRoute = parseSettingsRoute(
-    args.params.section,
-    args.params.subview
+  const sessionResult = await getUserSession(
+    request,
+    getServerEnv(args.context)
   )
-  if (!settingsRoute) {
-    throw redirect("/settings")
-  }
-
+  requireUserOrRedirect(sessionResult, new URL(request.url).pathname)
   const user = sessionResult.user!
-  const lynvoPlugins = await loadLynvoPlugins(env, request.url)
   return responseWithSession(
-    {
-      user: {
-        id: user.sub,
-        username: user.username,
-        sid: user.sid,
-      },
-      lynvoPlugins,
-      requestOrigin: new URL(request.url).origin,
-      ...settingsRoute,
-    },
+    { user: { id: user.sub, username: user.username, sid: user.sid } },
     sessionResult,
     request
   )
 }
 
+export interface SettingsOutletContext {
+  readonly user: {
+    readonly id: string
+    readonly username: string
+    readonly sid: string
+  }
+}
+
 const settingsTabs = [
-  {
-    value: "general",
-    label: "General",
-    icon: Settings01Icon,
-  },
-  {
-    value: "security",
-    label: "Security and login",
-    icon: Key01Icon,
-  },
-  {
-    value: "plugins",
-    label: "Plugins",
-    icon: Plug02Icon,
-  },
-  {
-    value: "usage",
-    label: "Usage",
-    icon: Activity03Icon,
-  },
-  {
-    value: "storage",
-    label: "Storage",
-    icon: HardDriveIcon,
-  },
-  {
-    value: "player",
-    label: "Player",
-    icon: PlayIcon,
-  },
+  { value: "general", label: "General", icon: Settings01Icon },
+  { value: "security", label: "Security and login", icon: Key01Icon },
+  { value: "plugins", label: "Plugins", icon: Plug02Icon },
+  { value: "usage", label: "Usage", icon: Activity03Icon },
+  { value: "storage", label: "Storage", icon: HardDriveIcon },
+  { value: "player", label: "Player", icon: PlayIcon },
 ] as const
 
-export default function Settings() {
-  const { user, lynvoPlugins, requestOrigin, activeTab, showActiveSessions } =
-    useLoaderData<typeof loader>()
-  const navigate = useNavigate()
+const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (
+  <nav
+    aria-label="Settings sections"
+    className={cn(
+      "gap-1 bg-transparent",
+      mobile
+        ? "flex min-w-max flex-row gap-1.5"
+        : "flex w-full flex-col items-stretch"
+    )}
+  >
+    {settingsTabs.map((item) => (
+      <NavLink
+        key={item.value}
+        to={`/settings/${item.value}`}
+        prefetch="intent"
+        viewTransition
+        className={({ isActive }) =>
+          cn(
+            "flex items-center text-foreground hover:text-foreground dark:text-foreground dark:hover:text-foreground",
+            mobile
+              ? "h-10 rounded-xl px-4 gap-2 text-sm"
+              : "h-11 justify-start rounded-2xl px-4 gap-2.5 text-base",
+            isActive && "bg-muted"
+          )
+        }
+      >
+        <HugeiconsIcon
+          icon={item.icon}
+          data-icon="inline-start"
+          className={mobile ? "size-5" : "size-6"}
+        />
+        {item.label}
+      </NavLink>
+    ))}
+  </nav>
+)
 
-  const handleTabChange = (tab: string) => {
-    if (isSettingsTab(tab)) {
-      navigate(getSettingsPath(tab))
-    }
-  }
-
+export default function SettingsLayout() {
+  const { user } = useLoaderData<typeof loader>()
+  const navigation = useNavigation()
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-6 md:px-8 md:py-10">
       <div className="mb-6 text-center md:mb-10">
@@ -123,129 +105,26 @@ export default function Settings() {
           Settings
         </h1>
       </div>
-
-      <Tabs
-        value={activeTab}
-        className="bg-background md:!flex-row md:gap-0"
-        onValueChange={handleTabChange}
-      >
+      <div className="bg-background md:flex md:flex-row md:gap-0">
         <aside className="hidden w-64 shrink-0 border-r pr-4 md:flex md:flex-col">
-          <TabsList className="!h-auto w-full !flex-col items-stretch justify-start gap-1 bg-transparent">
-            {settingsTabs.map((item) => (
-              <TabsTrigger
-                key={item.value}
-                value={item.value}
-                className="!h-11 !flex-none justify-start rounded-2xl !px-4 gap-2.5 text-base !font-normal text-foreground hover:text-foreground dark:text-foreground dark:hover:text-foreground transition-none data-active:bg-muted dark:data-active:bg-muted data-active:border-transparent dark:data-active:border-transparent after:hidden"
-              >
-                <HugeiconsIcon
-                  icon={item.icon}
-                  data-icon="inline-start"
-                  className="size-6"
-                />
-                {item.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <SettingsNavigation />
         </aside>
-
         <div className="border-b py-4 md:hidden">
           <div className="overflow-x-auto pb-1">
-            <TabsList className="!h-auto w-full justify-start gap-1.5 bg-transparent min-w-max p-0">
-              {settingsTabs.map((item) => (
-                <TabsTrigger
-                  key={item.value}
-                  value={item.value}
-                  className="!h-10 !flex-none rounded-xl !px-4 gap-2 text-sm !font-normal text-foreground hover:text-foreground dark:text-foreground dark:hover:text-foreground transition-none data-active:bg-muted dark:data-active:bg-muted data-active:border-transparent dark:data-active:border-transparent after:hidden"
-                >
-                  <HugeiconsIcon
-                    icon={item.icon}
-                    data-icon="inline-start"
-                    className="size-5"
-                  />
-                  {item.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <SettingsNavigation mobile />
           </div>
         </div>
-
         <div className="min-w-0 flex-1 py-2 sm:px-4 md:px-8 md:py-0">
-          <TabsContent value="general" className="flex flex-col">
-            <header className="pb-4">
-              <h1 className="text-2xl font-normal tracking-tight">General</h1>
-            </header>
-            <GeneralSettings />
-          </TabsContent>
-
-          <TabsContent value="security" className="flex flex-col">
-            <header className="flex items-center gap-3 pb-4">
-              {showActiveSessions && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="-ml-2 h-9 w-9"
-                  onClick={() =>
-                    navigate(getSettingsPath("security"), { replace: true })
-                  }
-                  aria-label="Back to Security and login"
-                >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
-                </Button>
-              )}
-              <h1 className="text-2xl font-normal tracking-tight">
-                {showActiveSessions ? "Active sessions" : "Security and login"}
-              </h1>
-            </header>
-            <SecuritySettings
-              user={user}
-              showActiveSessions={showActiveSessions}
-              onShowActiveSessionsChange={(show) =>
-                navigate(
-                  getSettingsPath(
-                    "security",
-                    show ? "active-sessions" : undefined
-                  ),
-                  show ? undefined : { replace: true }
-                )
-              }
-            />
-          </TabsContent>
-
-          <TabsContent value="plugins" className="flex flex-col">
-            <header className="pb-4">
-              <h1 className="text-2xl font-normal tracking-tight">Plugins</h1>
-            </header>
-            <PluginsSettings
-              lynvoPlugins={lynvoPlugins}
-              requestOrigin={requestOrigin}
-            />
-          </TabsContent>
-
-          <TabsContent value="storage" className="flex flex-col">
-            <header className="pb-4">
-              <h1 className="text-2xl font-normal tracking-tight">Storage</h1>
-            </header>
-            <StorageSettings />
-          </TabsContent>
-
-          <TabsContent value="usage" className="flex flex-col">
-            <header className="pb-4">
-              <h1 className="text-2xl font-normal tracking-tight">Usage</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Track extraction usage within service limits.
-              </p>
-            </header>
-            <UsageSettings lynvoPlugins={lynvoPlugins ?? []} />
-          </TabsContent>
-
-          <TabsContent value="player" className="flex flex-col">
-            <header className="pb-4">
-              <h1 className="text-2xl font-normal tracking-tight">Player</h1>
-            </header>
-            <PlayerSettings />
-          </TabsContent>
+          <div className="h-5" aria-live="polite" aria-atomic="true">
+            {navigation.state !== "idle" ? (
+              <span className="text-xs text-muted-foreground">
+                Loading settings…
+              </span>
+            ) : null}
+          </div>
+          <Outlet context={{ user } satisfies SettingsOutletContext} />
         </div>
-      </Tabs>
+      </div>
     </div>
   )
 }

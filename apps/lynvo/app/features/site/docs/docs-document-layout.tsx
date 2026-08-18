@@ -36,6 +36,7 @@ export const DocsDocumentLayout = ({
         >
           <Link
             to="/docs"
+            prefetch="intent"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >
             Docs

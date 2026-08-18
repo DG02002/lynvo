@@ -1,4 +1,5 @@
 import type { Route } from "./+types/root"
+import type { ShouldRevalidateFunction } from "react-router"
 import { initLogger } from "evlog"
 import { evlog, useLogger as getRequestLogger } from "evlog/react-router"
 import interLatinFontUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url"
@@ -9,6 +10,7 @@ import "~/global"
 import { getServerEnv } from "~/lib/env.server"
 import { getThemeFromCookieHeader } from "~/lib/theme"
 import { AppProviders } from "./root/app-providers"
+import { shouldRevalidateRoot } from "./root/root-revalidation"
 export { ErrorBoundary } from "./root/error-boundary"
 export { Layout } from "./root/layout"
 
@@ -41,14 +43,18 @@ export const links: Route.LinksFunction = () => [
 ]
 
 export const loader = async (args: Route.LoaderArgs) => {
-  getRequestLogger().set({ route: "root" })
+  const startedAt = performance.now()
+  const requestLogger = getRequestLogger()
+  requestLogger.set({ route: "root" })
   const request = args.request
   const env = getServerEnv(args.context)
   const cookieHeader = request.headers.get("Cookie")
   const csrfToken =
     (await csrfCookie.parse(cookieHeader)) || crypto.randomUUID()
 
+  const sessionStartedAt = performance.now()
   const sessionResult = await getUserSession(request, env)
+  const sessionDurationMs = Math.max(0, performance.now() - sessionStartedAt)
   const data = {
     user: sessionResult.user,
     csrfToken,
@@ -57,12 +63,23 @@ export const loader = async (args: Route.LoaderArgs) => {
     initialTheme: getThemeFromCookieHeader(cookieHeader),
   }
 
+  requestLogger.set({
+    navigation: {
+      loader: "root",
+      session_resolution_ms: sessionDurationMs,
+      loader_duration_ms: Math.max(0, performance.now() - startedAt),
+    },
+  })
   return responseWithSession(data, sessionResult, request, {
     headers: {
       "Set-Cookie": await csrfCookie.serialize(csrfToken),
+      "Server-Timing": `root-session;dur=${sessionDurationMs.toFixed(1)}`,
     },
   })
 }
+
+export const shouldRevalidate: ShouldRevalidateFunction = (args) =>
+  shouldRevalidateRoot(args)
 
 const App = ({ loaderData }: Route.ComponentProps) => {
   const { buildTime } = loaderData
