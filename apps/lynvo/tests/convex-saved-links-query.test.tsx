@@ -13,7 +13,6 @@ vi.mock("convex/react", () => ({
 describe("native Convex Saved links query", () => {
   it("maps the authenticated subscription result into the Saved link contract", () => {
     convexQueryMock.mockReturnValue({
-      revision: 4,
       results: [
         {
           _id: "saved-link-id",
@@ -35,7 +34,6 @@ describe("native Convex Saved links query", () => {
 
     expect(result.current.isLive).toBe(true)
     expect(result.current.data).toMatchObject({
-      revision: 4,
       results: [
         {
           id: "saved-link-id",

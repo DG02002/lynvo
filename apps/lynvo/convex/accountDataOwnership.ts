@@ -18,15 +18,10 @@ export const ACCOUNT_DATA_CATALOG = {
   authVerifiers: { lifecycle: "erased", storage: null },
   authRateLimits: { lifecycle: "operational", storage: null },
   links: { lifecycle: "erased", storage: "linkBytes" },
-  savedLinkSynchronizationStates: { lifecycle: "erased", storage: null },
   savedLinkCommandOperations: { lifecycle: "erased", storage: null },
   workerSessionCleanupIntents: { lifecycle: "operational", storage: null },
   realtimeSessionRevocationIntents: {
     lifecycle: "operational",
-    storage: null,
-  },
-  accountSettingsSynchronizationStates: {
-    lifecycle: "erased",
     storage: null,
   },
   userStorageLedgers: { lifecycle: "erased", storage: null },
@@ -84,12 +79,8 @@ export const ACCOUNT_DATA_STORAGE_REGISTRY = {
   authVerificationCodes: ACCOUNT_DATA_CATALOG.authVerificationCodes.storage,
   authVerifiers: ACCOUNT_DATA_CATALOG.authVerifiers.storage,
   links: ACCOUNT_DATA_CATALOG.links.storage,
-  savedLinkSynchronizationStates:
-    ACCOUNT_DATA_CATALOG.savedLinkSynchronizationStates.storage,
   savedLinkCommandOperations:
     ACCOUNT_DATA_CATALOG.savedLinkCommandOperations.storage,
-  accountSettingsSynchronizationStates:
-    ACCOUNT_DATA_CATALOG.accountSettingsSynchronizationStates.storage,
   userStorageLedgers: ACCOUNT_DATA_CATALOG.userStorageLedgers.storage,
   userPluginServers: ACCOUNT_DATA_CATALOG.userPluginServers.storage,
   userPluginDomains: ACCOUNT_DATA_CATALOG.userPluginDomains.storage,

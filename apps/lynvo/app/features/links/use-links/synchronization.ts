@@ -1,6 +1,6 @@
 import type { SavedLink } from "~/features/links/links.mapper"
 import type { LinkViewItem } from "~/features/links/types"
-import { linksToLinkViewItems, writeLinksCache, type LinksCache } from "./cache"
+import { linksToLinkViewItems, type SavedLinksSnapshot } from "./cache"
 import { createLinksPersistence } from "./persistence"
 
 declare global {
@@ -8,11 +8,7 @@ declare global {
     adapter: LinksPersistenceAdapter
     identity: string
     cachedItems: LinkViewItem[]
-    remote?: LinksCache
-  }
-
-  interface SavedLinkSynchronizationCache {
-    publish: (identity: string, cache: LinksCache) => void
+    remote?: SavedLinksSnapshot
   }
 
   interface SavedLinkSynchronization extends LinksMutationPersistence {
@@ -25,17 +21,15 @@ declare global {
 export const createSavedLinkSynchronization = (
   adapter: LinksPersistenceAdapter,
   identity: string,
-  cachedItems: LinkViewItem[],
-  cache: SavedLinkSynchronizationCache = { publish: writeLinksCache }
+  cachedItems: LinkViewItem[]
 ): SavedLinkSynchronization => {
   const persistence = createLinksPersistence(adapter, cachedItems, identity)
   let currentIdentity = identity
   let loadPromise: Promise<void> | undefined
 
-  const acceptRemote = (items: SavedLink[], revision?: number) => {
+  const acceptRemote = (items: SavedLink[]) => {
     persistence.reconcile(
-      linksToLinkViewItems(items, persistence.getSnapshot()),
-      revision
+      linksToLinkViewItems(items, persistence.getSnapshot())
     )
   }
 
@@ -54,10 +48,7 @@ export const createSavedLinkSynchronization = (
       persistence.reset(input.adapter, input.identity, input.cachedItems)
       loadPromise ??= persistence.load()
       if (input.remote) {
-        if (input.identity !== "signed-out") {
-          cache.publish(input.identity, input.remote)
-        }
-        acceptRemote(input.remote.results, input.remote.revision)
+        acceptRemote(input.remote.results)
       }
       await loadPromise
     },

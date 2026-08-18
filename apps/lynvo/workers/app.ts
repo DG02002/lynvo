@@ -43,15 +43,12 @@ import {
   checkRateLimit,
 } from "./authentication-rate-limit"
 import { createSessionCleanupModule } from "./session-cleanup"
-import { createSavedLinkRealtimeDelivery } from "./saved-link-realtime-delivery"
 import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
-import { createAccountSettingsRealtimeDelivery } from "./account-settings-realtime-delivery"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import {
   CONVEX_ACCESS_TOKEN_RATE_LIMIT,
   CONVEX_ACCESS_TOKEN_RATE_WINDOW_SECONDS,
   REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
-  SAVED_LINK_BROADCAST_RETRY_DELAY_MS,
 } from "./constants"
 import { createConvexAccessTokenHandler } from "./convex-access-token"
 import { createRemoteTargetId } from "../app/lib/remote-target"
@@ -745,14 +742,6 @@ app.all("*", async (context) => {
 })
 
 const pingMessageSchema = z.object({ type: z.literal("ping") })
-const savedLinkSyncRequestSchema = z.strictObject({
-  type: z.literal("saved-links.sync"),
-  payload: z.strictObject({ revision: z.number().int().nonnegative() }),
-})
-const savedLinksChangedBroadcastSchema = z.strictObject({
-  type: z.literal("saved-links.changed"),
-  payload: z.strictObject({ revision: z.number().int().nonnegative() }),
-})
 const receiverNotificationSchema = z.object({ receiverId: z.string() })
 const sessionRevocationSchema = z.object({ sessionId: z.string() })
 const receiverAttachmentSchema = z.object({
@@ -776,30 +765,6 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const pathname = new URL(request.url).pathname
-    if (pathname.endsWith("/broadcast")) {
-      const message: unknown = await request.json()
-      const savedLinksChanged =
-        savedLinksChangedBroadcastSchema.safeParse(message)
-      if (savedLinksChanged.success) {
-        const currentRevision =
-          (await this.ctx.storage.get<number>("savedLinkRevision")) ?? 0
-        if (savedLinksChanged.data.payload.revision > currentRevision) {
-          await this.ctx.storage.put(
-            "savedLinkRevision",
-            savedLinksChanged.data.payload.revision
-          )
-        }
-      }
-      const failedSocketCount = this.broadcast(message)
-      if (savedLinksChanged.success && failedSocketCount > 0) {
-        await this.ctx.storage.put("pendingSavedLinkBroadcast", message)
-        await this.ctx.storage.setAlarm(
-          Date.now() + SAVED_LINK_BROADCAST_RETRY_DELAY_MS
-        )
-        return Response.json({ success: false }, { status: 503 })
-      }
-      return Response.json({ success: true })
-    }
     if (pathname.endsWith("/notify-inbox")) {
       const input = receiverNotificationSchema.safeParse(await request.json())
       if (!input.success) {
@@ -897,18 +862,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
-    let retryPending = false
     try {
-      const pendingBroadcast = savedLinksChangedBroadcastSchema.safeParse(
-        await this.ctx.storage.get("pendingSavedLinkBroadcast")
-      )
-      if (pendingBroadcast.success) {
-        if (this.broadcast(pendingBroadcast.data) === 0) {
-          await this.ctx.storage.delete("pendingSavedLinkBroadcast")
-        } else {
-          retryPending = true
-        }
-      }
       await Promise.all(
         this.ctx.getWebSockets().map(async (socket) => {
           try {
@@ -939,10 +893,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     } finally {
       if (this.ctx.getWebSockets().length > 0) {
         await this.ctx.storage.setAlarm(
-          Date.now() +
-            (retryPending
-              ? SAVED_LINK_BROADCAST_RETRY_DELAY_MS
-              : REALTIME_SESSION_REVALIDATION_INTERVAL_MS)
+          Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
         )
       }
     }
@@ -964,24 +915,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
         )
         return
       }
-      const savedLinkSync = savedLinkSyncRequestSchema.safeParse(parsed)
-      if (savedLinkSync.success) {
-        const knownServerRevision =
-          await this.ctx.storage.get<number>("savedLinkRevision")
-        const serverRevision =
-          knownServerRevision ?? savedLinkSync.data.payload.revision
-        socket.send(
-          JSON.stringify({
-            type: "saved-links.sync",
-            payload: {
-              serverRevision,
-              reconcile:
-                knownServerRevision === undefined ||
-                serverRevision > savedLinkSync.data.payload.revision,
-            },
-          })
-        )
-      }
+      socket.close(1003, "Unsupported message")
     } catch {
       socket.close(1003, "Invalid message")
     }
@@ -994,20 +928,6 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   webSocketError(socket: WebSocket): void {
     socket.close(1011, "WebSocket error")
   }
-
-  private broadcast<Value>(message: Value): number {
-    const serialized = JSON.stringify(message)
-    let failedSocketCount = 0
-    for (const socket of this.ctx.getWebSockets()) {
-      try {
-        socket.send(serialized)
-      } catch {
-        failedSocketCount += 1
-        socket.close(1011, "Broadcast failed")
-      }
-    }
-    return failedSocketCount
-  }
 }
 
 export default {
@@ -1016,22 +936,16 @@ export default {
     const startedAt = performance.now()
     const [
       sessionCleanupResult,
-      savedLinkResult,
       realtimeRevocationResult,
-      accountSettingsResult,
       remoteCommandNotificationResult,
     ] = await Promise.all([
       createSessionCleanupModule(env).drain(),
-      createSavedLinkRealtimeDelivery(env).drain(),
       createDurableRealtimeSessionRevocation(env).drain(),
-      createAccountSettingsRealtimeDelivery(env).drain(),
       createRemoteCommandNotificationDelivery(env).drain(),
     ])
     const unavailable = [
       sessionCleanupResult,
-      savedLinkResult,
       realtimeRevocationResult,
-      accountSettingsResult,
       remoteCommandNotificationResult,
     ].filter((result) => result.kind === "unavailable").length
     console.info("scheduled_delivery_drain", {
@@ -1039,13 +953,10 @@ export default {
       outcome: unavailable > 0 ? "failure" : "success",
       unavailable,
       duration_ms: Math.max(0, performance.now() - startedAt),
-      saved_links: savedLinkResult,
     })
     if (
       sessionCleanupResult.kind === "unavailable" ||
-      savedLinkResult.kind === "unavailable" ||
       realtimeRevocationResult.kind === "unavailable" ||
-      accountSettingsResult.kind === "unavailable" ||
       remoteCommandNotificationResult.kind === "unavailable"
     ) {
       throw new Error("Worker Auth Session cleanup is unavailable")

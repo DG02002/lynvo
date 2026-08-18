@@ -115,12 +115,6 @@ export const linkMetadataSchema: z.ZodType<LinkMetadata> = z.strictObject({
   }),
 })
 
-export const linksCacheEnvelopeSchema = z.object({
-  results: z.array(z.unknown()),
-  revision: z.number().int().nonnegative(),
-  etag: z.string().optional().default(""),
-})
-
 export const storedSavedLinkSchema = z.strictObject({
   id: z.string(),
   url: z.string().min(1),

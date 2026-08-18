@@ -100,23 +100,6 @@ describe("Links optimistic state", () => {
     expect(persistence.getSnapshot()).toEqual([original])
   })
 
-  it("ignores stale reconciliation versions", () => {
-    const adapter = {
-      list: vi.fn(async () => []),
-      add: vi.fn(async (nextItem) => nextItem),
-      update: vi.fn(async (nextItem) => nextItem),
-      delete: vi.fn(async () => undefined),
-      clear: vi.fn(async () => undefined),
-    } satisfies LinksPersistenceAdapter
-    const persistence = createLinksPersistence(adapter)
-    const current = item("https://example.com/current")
-
-    persistence.reconcile([current], 2)
-    persistence.reconcile([item("https://example.com/stale")], 1)
-
-    expect(persistence.getSnapshot()).toEqual([current])
-  })
-
   it("keeps a newer successful mutation when an older mutation fails", async () => {
     let rejectFirstAdd: (error: Error) => void = () => undefined
     const firstAdd = new Promise<LinkViewItem>((_resolve, reject) => {
@@ -172,7 +155,7 @@ describe("Links optimistic state", () => {
     )
     const pendingAdd = persistence.add(optimistic)
 
-    persistence.reconcile([remote], 2)
+    persistence.reconcile([remote])
 
     expect(persistence.getSnapshot()).toEqual([optimistic, remote])
     addResult.resolve({ ...optimistic, id: "persisted" })
@@ -196,7 +179,7 @@ describe("Links optimistic state", () => {
       { kind: "markOpened", linkUrl: original.url }
     )
     const reconciled = { ...original, title: "Authoritative", timestamp: 1 }
-    persistence.reconcile([reconciled], 2)
+    persistence.reconcile([reconciled])
     updateResult.resolve({ ...original, timestamp: 2 })
     await pendingUpdate
 
@@ -283,7 +266,7 @@ describe("Links optimistic state", () => {
     )
     const pendingLoad = persistence.load()
     const live = item("https://example.com/live")
-    persistence.reconcile([live], 2)
+    persistence.reconcile([live])
     loadResult.resolve([item("https://example.com/stale")])
     await pendingLoad
     expect(persistence.getSnapshot()).toEqual([live])

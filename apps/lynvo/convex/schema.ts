@@ -124,19 +124,6 @@ export default defineSchema({
     .index("by_userId_createdAt", ["userId", "createdAt"])
     .index("by_userId_url", ["userId", "url"]),
 
-  savedLinkSynchronizationStates: defineTable({
-    userId: v.id("users"),
-    revision: v.number(),
-    broadcastRevision: v.number(),
-    pendingBroadcast: v.boolean(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_pendingBroadcast_and_updatedAt", [
-      "pendingBroadcast",
-      "updatedAt",
-    ]),
-
   savedLinkCommandOperations: defineTable({
     userId: v.id("users"),
     operationId: v.string(),
@@ -146,7 +133,6 @@ export default defineSchema({
       v.literal("apply-metadata-operation")
     ),
     linkId: v.id("links"),
-    revision: v.number(),
     createdAt: v.number(),
     expiresAt: v.number(),
   })
@@ -166,19 +152,6 @@ export default defineSchema({
   })
     .index("by_userId_sessionId", ["userId", "sessionId"])
     .index("by_createdAt", ["createdAt"]),
-
-  accountSettingsSynchronizationStates: defineTable({
-    userId: v.id("users"),
-    revision: v.number(),
-    broadcastRevision: v.number(),
-    pendingBroadcast: v.boolean(),
-    updatedAt: v.number(),
-  })
-    .index("by_userId", ["userId"])
-    .index("by_pendingBroadcast_and_updatedAt", [
-      "pendingBroadcast",
-      "updatedAt",
-    ]),
 
   userStorageLedgers: defineTable({
     userId: v.id("users"),

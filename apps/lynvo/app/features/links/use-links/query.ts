@@ -52,8 +52,6 @@ export const useLinksQuery = (userId: string | undefined) => {
         const savedLink = serverLinkToSavedLink(link)
         return savedLink ? [savedLink] : []
       }),
-      revision: snapshot.revision,
-      etag: `${snapshot.revision}:${timeBucket}`,
     }
   }, [snapshot, timeBucket])
 

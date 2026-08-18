@@ -38,49 +38,6 @@ describe("parseRealtimeMessage", () => {
     expect(parseRealtimeMessage(JSON.stringify(message))).toEqual(message)
   })
 
-  it("accepts only a valid nonnegative integer Saved link revision", () => {
-    expect(
-      parseRealtimeMessage(
-        JSON.stringify({
-          type: "saved-links.changed",
-          payload: { revision: 3 },
-        })
-      )
-    ).toEqual({ type: "saved-links.changed", payload: { revision: 3 } })
-    for (const revision of [-1, 1.5, "3", null]) {
-      expect(
-        parseRealtimeMessage(
-          JSON.stringify({
-            type: "saved-links.changed",
-            payload: { revision },
-          })
-        )
-      ).toBeNull()
-    }
-  })
-
-  it("accepts only a valid account settings revision hint", () => {
-    expect(
-      parseRealtimeMessage(
-        JSON.stringify({
-          type: "account-settings.changed",
-          payload: { revision: 4 },
-        })
-      )
-    ).toEqual({
-      type: "account-settings.changed",
-      payload: { revision: 4 },
-    })
-    expect(
-      parseRealtimeMessage(
-        JSON.stringify({
-          type: "account-settings.changed",
-          payload: { revision: -1 },
-        })
-      )
-    ).toBeNull()
-  })
-
   it("rejects malformed Remote Play commands", () => {
     expect(
       parseRealtimeMessage(

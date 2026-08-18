@@ -21,16 +21,6 @@ export interface SessionCleanupPayload {
   readonly exp: number
 }
 
-export interface SavedLinkRealtimePayload {
-  readonly purpose: "savedLinkRealtime"
-  readonly exp: number
-}
-
-export interface AccountSettingsRealtimePayload {
-  readonly purpose: "accountSettingsRealtime"
-  readonly exp: number
-}
-
 export interface RemoteCommandNotificationPayload {
   readonly purpose: "remoteCommandNotification"
   readonly exp: number
@@ -64,8 +54,6 @@ export const signAuthPreflightToken = async (
     | DeviceCodePreflightPayload
     | CredentialReadPayload
     | SessionCleanupPayload
-    | SavedLinkRealtimePayload
-    | AccountSettingsRealtimePayload
     | RemoteCommandNotificationPayload,
   secret: string
 ): Promise<string> => {
@@ -97,24 +85,6 @@ export const signSessionCleanupToken = async (
 ) =>
   await signAuthPreflightToken(
     { purpose: "sessionCleanup", exp: expiresAt },
-    secret
-  )
-
-export const signSavedLinkRealtimeToken = async (
-  secret: string,
-  expiresAt: number
-) =>
-  await signAuthPreflightToken(
-    { purpose: "savedLinkRealtime", exp: expiresAt },
-    secret
-  )
-
-export const signAccountSettingsRealtimeToken = async (
-  secret: string,
-  expiresAt: number
-) =>
-  await signAuthPreflightToken(
-    { purpose: "accountSettingsRealtime", exp: expiresAt },
     secret
   )
 

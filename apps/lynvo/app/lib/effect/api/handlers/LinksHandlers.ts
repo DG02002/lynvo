@@ -8,8 +8,6 @@ import { getDailyTimeBucket } from "../../../use-coarse-time-bucket"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
 import { extractedLinkSchema } from "~/features/links/storage-schemas"
 import { ValidationError } from "../../errors"
-import { CloudflareEnv } from "../../services/CloudflareEnv"
-import { createSavedLinkRealtimeDelivery } from "../../../../../workers/saved-link-realtime-delivery"
 import { RequestEventService } from "../../services/request-event-service"
 import { toSavedLinkCommandError } from "~/features/links/saved-link-command-adapter"
 
@@ -32,19 +30,6 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         return yield* convex.query(
           api.links.list,
           { timeBucket: getDailyTimeBucket(Date.now()) },
-          {
-            accessToken: user.accessToken,
-          }
-        )
-      })
-    )
-    .handle("revision", () =>
-      Effect.gen(function* () {
-        const convex = yield* ConvexService
-        const user = yield* CurrentUser
-        return yield* convex.query(
-          api.links.revision,
-          {},
           {
             accessToken: user.accessToken,
           }
@@ -74,27 +59,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               toSavedLinkCommandError(error.cause, requestEvent.requestId)
             )
           )
-        const environment = yield* CloudflareEnv
-        const delivery = yield* Effect.promise(() =>
-          createSavedLinkRealtimeDelivery(environment).deliver(
-            user.id,
-            result.revision
-          )
-        )
-        requestEvent.add({
-          saved_link_synchronization: {
-            client_revision: payload.clientRevision,
-            server_revision: result.revision,
-            delivery_mode: "immediate",
-            delivery_outcome: delivery.kind,
-            reconciliation_outcome:
-              delivery.kind === "completed" ? "not_required" : "pending",
-          },
-        })
-        return {
-          id: result.id,
-          synchronization: { revision: result.revision },
-        }
+        return { id: result.id }
       })
     )
     .handle("delete", ({ params }) =>
@@ -102,7 +67,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const convex = yield* ConvexService
         const user = yield* CurrentUser
         const requestEvent = yield* RequestEventService
-        const result = yield* convex
+        yield* convex
           .mutation(
             api.links.deleteById,
             {
@@ -115,26 +80,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               toSavedLinkCommandError(error.cause, requestEvent.requestId)
             )
           )
-        const environment = yield* CloudflareEnv
-        const delivery = yield* Effect.promise(() =>
-          createSavedLinkRealtimeDelivery(environment).deliver(
-            user.id,
-            result.revision
-          )
-        )
-        requestEvent.add({
-          saved_link_synchronization: {
-            server_revision: result.revision,
-            delivery_mode: "immediate",
-            delivery_outcome: delivery.kind,
-            reconciliation_outcome:
-              delivery.kind === "completed" ? "not_required" : "pending",
-          },
-        })
-        return {
-          success: true,
-          synchronization: { revision: result.revision },
-        }
+        return { success: true }
       })
     )
     .handle("updateMeta", ({ params, payload }) =>
@@ -144,7 +90,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
         const requestEvent = yield* RequestEventService
         requestEvent.add({ operation_id: payload.operationId })
         const metadataJson = yield* encodeCanonicalMetadata(payload.meta)
-        const result = yield* convex
+        yield* convex
           .mutation(
             api.links.updateMeta,
             {
@@ -159,27 +105,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               toSavedLinkCommandError(error.cause, requestEvent.requestId)
             )
           )
-        const environment = yield* CloudflareEnv
-        const delivery = yield* Effect.promise(() =>
-          createSavedLinkRealtimeDelivery(environment).deliver(
-            user.id,
-            result.revision
-          )
-        )
-        requestEvent.add({
-          saved_link_synchronization: {
-            client_revision: payload.clientRevision,
-            server_revision: result.revision,
-            delivery_mode: "immediate",
-            delivery_outcome: delivery.kind,
-            reconciliation_outcome:
-              delivery.kind === "completed" ? "not_required" : "pending",
-          },
-        })
-        return {
-          success: true,
-          synchronization: { revision: result.revision },
-        }
+        return { success: true }
       })
     )
     .handle("applyMetadataOperation", ({ params, payload }) =>
@@ -224,7 +150,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               details,
             }),
         })
-        const result = yield* convex
+        yield* convex
           .mutation(
             api.links.applyMetadataOperation,
             { operationId: payload.operationId, id: params.linkId, operation },
@@ -235,27 +161,7 @@ export const LinksHandlers = HttpApiBuilder.group(Api, "links", (handlers) =>
               toSavedLinkCommandError(error.cause, requestEvent.requestId)
             )
           )
-        const environment = yield* CloudflareEnv
-        const delivery = yield* Effect.promise(() =>
-          createSavedLinkRealtimeDelivery(environment).deliver(
-            user.id,
-            result.revision
-          )
-        )
-        requestEvent.add({
-          saved_link_synchronization: {
-            client_revision: payload.clientRevision,
-            server_revision: result.revision,
-            delivery_mode: "immediate",
-            delivery_outcome: delivery.kind,
-            reconciliation_outcome:
-              delivery.kind === "completed" ? "not_required" : "pending",
-          },
-        })
-        return {
-          success: true,
-          synchronization: { revision: result.revision },
-        }
+        return { success: true }
       })
     )
 )

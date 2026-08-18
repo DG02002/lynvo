@@ -43,7 +43,6 @@ const metadata = (label: string): LinkMetadata => ({
 })
 
 const nativeSnapshot = {
-  revision: 1,
   results: [
     {
       _id: "link-native",
@@ -62,7 +61,7 @@ describe("useLinks", () => {
     routeLoaderDataMock.mockReturnValue({ user: { sub: "user-1" } })
     convexQueryMock.mockReturnValue(nativeSnapshot)
     convexMutationMock.mockImplementation(async (input) =>
-      "url" in input ? { id: "created-link", revision: 2 } : { success: true }
+      "url" in input ? { id: "created-link" } : { success: true }
     )
   })
 

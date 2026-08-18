@@ -24,7 +24,6 @@ describe("saved-link command idempotency", () => {
     })
 
     expect(retry).toEqual(first)
-    expect(snapshot.revision).toBe(1)
     expect(snapshot.results).toHaveLength(1)
   })
 
@@ -33,7 +32,6 @@ describe("saved-link command idempotency", () => {
     const { userId, sessionId } = await insertTestUser(convex, "update-owner")
     const client = asAuthenticatedUser(convex, userId, sessionId)
     const created = await client.mutation(api.links.createOrUpdate, {
-      operationId: crypto.randomUUID(),
       operationId: "create:update-target",
       url: "https://example.com/update-target",
     })
@@ -50,9 +48,7 @@ describe("saved-link command idempotency", () => {
 
     const first = await client.mutation(api.links.updateMeta, command)
     const retry = await client.mutation(api.links.updateMeta, command)
-    const revision = await client.query(api.links.revision, {})
-
     expect(retry).toEqual(first)
-    expect(revision).toEqual({ revision: 2 })
+    expect(retry).toEqual({ success: true })
   })
 })

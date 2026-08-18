@@ -19,37 +19,24 @@ const createMetadataJson = (source: Record<string, unknown>) =>
   })
 
 describe("Convex function boundaries", () => {
-  it("advances and coalesces account settings revisions transactionally", async () => {
+  it("stores account settings through the authenticated mutation", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "settings-revision-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
 
     await expect(
       client.query(api.users.getPlayerPreferences, {})
-    ).resolves.toMatchObject({
-      revision: 0,
-    })
+    ).resolves.toEqual({})
     await expect(
       client.mutation(api.users.updatePlayerPreferences, {
         rangeSupportedPlayerId: "just",
       })
-    ).resolves.toEqual({ success: true, revision: 1 })
+    ).resolves.toEqual({ success: true })
     await expect(
       client.mutation(api.users.updatePlayerPreferences, {
         rangeUnsupportedPlayerId: "mpv",
       })
-    ).resolves.toEqual({ success: true, revision: 2 })
-
-    const states = await convex.run((context) =>
-      context.db.query("accountSettingsSynchronizationStates").collect()
-    )
-    expect(states).toHaveLength(1)
-    expect(states[0]).toMatchObject({
-      userId: user.userId,
-      revision: 2,
-      broadcastRevision: 0,
-      pendingBroadcast: true,
-    })
+    ).resolves.toEqual({ success: true })
   })
   it("rejects anonymous link reads", async () => {
     const convex = createConvexTest()
@@ -74,7 +61,7 @@ describe("Convex function boundaries", () => {
 
     await expect(
       client.query(api.links.list, { timeBucket: LIST_TIME_BUCKET })
-    ).resolves.toEqual({ revision: 0, results: [] })
+    ).resolves.toEqual({ results: [] })
   })
 
   it("isolates links by authenticated user", async () => {
@@ -111,7 +98,6 @@ describe("Convex function boundaries", () => {
 
     expect(links.results).toHaveLength(1)
     expect(links.results[0]?.url).toBe("https://first.example")
-    expect(links.revision).toBe(0)
   })
 
   it("bounds links and atomically evicts the oldest unique URL", async () => {
@@ -139,7 +125,6 @@ describe("Convex function boundaries", () => {
     })
 
     expect(links.results).toHaveLength(LINKS_MAX_COUNT)
-    expect(links.revision).toBe(1)
     expect(links.results[0]?.url).toBe("https://bounded.example/new")
     expect(
       links.results.some((link) => link.url === "https://bounded.example/0")
@@ -277,41 +262,24 @@ describe("Convex function boundaries", () => {
     })
   })
 
-  it("advances revisions monotonically and coalesces pending delivery", async () => {
+  it("applies create, update, and delete mutations", async () => {
     const convex = createConvexTest()
     const user = await insertTestUser(convex, "revision-user")
     const client = asAuthenticatedUser(convex, user.userId, user.sessionId)
-    expect(await client.query(api.links.revision, {})).toEqual({ revision: 0 })
-
     const created = await client.mutation(api.links.createOrUpdate, {
       operationId: crypto.randomUUID(),
       url: "https://revision.example",
     })
-    expect(created.revision).toBe(1)
+    expect(created.id).toBeDefined()
     const updated = await client.mutation(api.links.updateMeta, {
       operationId: crypto.randomUUID(),
       id: created.id,
       meta: EMPTY_LINK_METADATA_JSON,
     })
-    expect(updated.revision).toBe(2)
+    expect(updated).toEqual({ success: true })
     const deleted = await client.mutation(api.links.deleteById, {
       id: created.id,
     })
-    expect(deleted.revision).toBe(3)
-
-    const state = await convex.run(
-      async (context) =>
-        await context.db
-          .query("savedLinkSynchronizationStates")
-          .withIndex("by_userId", (queryBuilder) =>
-            queryBuilder.eq("userId", user.userId)
-          )
-          .unique()
-    )
-    expect(state).toMatchObject({
-      revision: 3,
-      broadcastRevision: 0,
-      pendingBroadcast: true,
-    })
+    expect(deleted).toEqual({ success: true })
   })
 })

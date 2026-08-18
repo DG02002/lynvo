@@ -293,13 +293,10 @@ Convex is the application database. Lynvo’s Durable Object coordinates realtim
 connections; the Lynvo Plugin Server’s Durable Object enforces global extraction
 capacity. Keep both Wrangler migrations intact.
 
-Saved link synchronization uses the authenticated account realtime room only
-for `saved-links.changed` revision hints. Convex remains authoritative: each
-committed collection change advances a per-account revision and coalesces a
-durable `pendingBroadcast` intent in the same transaction. Browsers recover with
-atomic HTTP snapshots and a lightweight revision check; they never receive
-Convex credentials. Read
-`docs/adr/0001-saved-link-realtime-synchronization.md` before changing this path.
+Saved links and account preferences use authenticated native Convex queries and
+mutations. Browser Convex credentials are short lived, held only in memory, and
+minted through the same-origin token endpoint. Read
+`docs/adr/0002-browser-convex-authentication.md` before changing this path.
 
 ## Deployment order
 

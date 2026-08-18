@@ -196,20 +196,6 @@ const getIncompleteStage = async (
   if (savedLinkCommandOperation) {
     return "links"
   }
-  const savedLinkSynchronizationState = await ctx.db
-    .query("savedLinkSynchronizationStates")
-    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
-    .unique()
-  if (savedLinkSynchronizationState) {
-    return "links"
-  }
-  const accountSettingsSynchronizationState = await ctx.db
-    .query("accountSettingsSynchronizationStates")
-    .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
-    .unique()
-  if (accountSettingsSynchronizationState) {
-    return "links"
-  }
   const pluginCredentials = await ctx.db
     .query("userPluginCredentials")
     .withIndex("by_userId", (queryBuilder) => queryBuilder.eq("userId", userId))
@@ -375,30 +361,6 @@ export const process = internalMutation({
           if (commandOperations.length > 0) {
             await scheduleContinuation(ctx, progress.userId)
             return progress.stage
-          }
-          const synchronizationState = await ctx.db
-            .query("savedLinkSynchronizationStates")
-            .withIndex("by_userId", (queryBuilder) =>
-              queryBuilder.eq("userId", progress.userId)
-            )
-            .unique()
-          if (synchronizationState) {
-            await ctx.db.delete(
-              "savedLinkSynchronizationStates",
-              synchronizationState._id
-            )
-          }
-          const accountSettingsSynchronizationState = await ctx.db
-            .query("accountSettingsSynchronizationStates")
-            .withIndex("by_userId", (queryBuilder) =>
-              queryBuilder.eq("userId", progress.userId)
-            )
-            .unique()
-          if (accountSettingsSynchronizationState) {
-            await ctx.db.delete(
-              "accountSettingsSynchronizationStates",
-              accountSettingsSynchronizationState._id
-            )
           }
         }
         await deleteBatch(

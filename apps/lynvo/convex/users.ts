@@ -51,11 +51,6 @@ import {
 } from "./storagePolicy"
 import { buildPlayerPreferencesPatch } from "./userPreferences"
 import { enqueueWorkerSessionCleanup } from "./sessionCleanup"
-import { advanceSavedLinkRevision } from "./savedLinkRevisions"
-import {
-  advanceAccountSettingsRevision,
-  readAccountSettingsRevision,
-} from "./accountSettingsRevisions"
 import { enqueueRealtimeSessionRevocation } from "./realtimeSessionRevocations"
 
 const assertCurrentUser = async (ctx: {
@@ -106,7 +101,6 @@ export const getPlayerPreferences = query({
   returns: v.object({
     rangeSupportedPlayerId: v.optional(v.string()),
     rangeUnsupportedPlayerId: v.optional(v.string()),
-    revision: v.number(),
   }),
   args: {},
   handler: async (ctx) => {
@@ -115,13 +109,12 @@ export const getPlayerPreferences = query({
     return {
       rangeSupportedPlayerId: user?.rangeSupportedPlayerId,
       rangeUnsupportedPlayerId: user?.rangeUnsupportedPlayerId,
-      revision: await readAccountSettingsRevision(ctx, userId),
     }
   },
 })
 
 export const updatePlayerPreferences = mutation({
-  returns: v.object({ success: v.boolean(), revision: v.number() }),
+  returns: v.object({ success: v.boolean() }),
   args: {
     rangeSupportedPlayerId: v.optional(v.string()),
     rangeUnsupportedPlayerId: v.optional(v.string()),
@@ -137,8 +130,7 @@ export const updatePlayerPreferences = mutation({
       ...buildPlayerPreferencesPatch(args),
     })
     await ctx.db.patch("users", userId, buildPlayerPreferencesPatch(args))
-    const revision = await advanceAccountSettingsRevision(ctx, userId)
-    return { success: true, revision }
+    return { success: true }
   },
 })
 
@@ -146,7 +138,6 @@ export const updateStorageRetentionDays = mutation({
   returns: v.object({
     success: v.boolean(),
     deletedLinks: v.number(),
-    revision: v.union(v.number(), v.null()),
   }),
   args: {
     days: v.number(),
@@ -160,14 +151,9 @@ export const updateStorageRetentionDays = mutation({
       throw new Error("Authentication required")
     }
     let deletedLinks = 0
-    let revision: number | null = null
-
     if (args.deleteExpiredLinks) {
       const now = Date.now()
       deletedLinks = await deleteExpiredLinks(ctx, userId, retentionDays, now)
-      if (deletedLinks > 0) {
-        revision = await advanceSavedLinkRevision(ctx, userId)
-      }
       if (deletedLinks === LINK_RETENTION_BATCH_SIZE) {
         await ctx.scheduler.runAfter(
           0,
@@ -184,7 +170,7 @@ export const updateStorageRetentionDays = mutation({
     await ctx.db.patch("users", userId, {
       storageRetentionDays: retentionDays,
     })
-    return { success: true, deletedLinks, revision }
+    return { success: true, deletedLinks }
   },
 })
 
@@ -212,7 +198,6 @@ export const clearLinks = mutation({
   returns: v.object({
     success: v.boolean(),
     deletedLinks: v.number(),
-    revision: v.union(v.number(), v.null()),
   }),
   args: {},
   handler: async (ctx) => {
@@ -227,9 +212,7 @@ export const clearLinks = mutation({
       await ctx.db.delete("links", link._id)
     }
 
-    const revision =
-      links.length > 0 ? await advanceSavedLinkRevision(ctx, userId) : null
-    return { success: true, deletedLinks: links.length, revision }
+    return { success: true, deletedLinks: links.length }
   },
 })
 

@@ -23,7 +23,6 @@ describe("Player settings browser data", () => {
     convexQueryMock.mockReturnValue({
       rangeSupportedPlayerId: "mpv",
       rangeUnsupportedPlayerId: "mx",
-      revision: 1,
     })
 
     render(

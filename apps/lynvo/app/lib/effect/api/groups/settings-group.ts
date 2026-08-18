@@ -79,9 +79,6 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
       success: Schema.Struct({
         success: Schema.Boolean,
         deletedLinks: Schema.Number,
-        synchronization: Schema.Struct({
-          revision: Schema.NullOr(Schema.Number),
-        }),
       }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),
@@ -89,9 +86,6 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
       success: Schema.Struct({
         success: Schema.Boolean,
         deletedLinks: Schema.Number,
-        synchronization: Schema.Struct({
-          revision: Schema.NullOr(Schema.Number),
-        }),
       }),
       error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
     }),

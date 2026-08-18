@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { LinkViewItem } from "~/features/links/types"
 import type { SavedLink } from "~/features/links/links.mapper"
 import { createSavedLinkSynchronization } from "~/features/links/use-links/synchronization"
@@ -38,15 +38,14 @@ describe("saved link synchronization", () => {
     const synchronization = createSavedLinkSynchronization(
       adapter,
       "user-one",
-      [],
-      { publish: vi.fn() }
+      []
     )
 
     const convergence = synchronization.synchronize({
       adapter,
       identity: "user-one",
       cachedItems: [],
-      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
+      remote: { results: [createSavedLink(2)] },
     })
     resolveLoad([{ url: "https://example.com/stale-cache", timestamp: 1 }])
     await convergence
@@ -73,8 +72,7 @@ describe("saved link synchronization", () => {
     const synchronization = createSavedLinkSynchronization(
       createAdapter([cachedItem]),
       "user-one",
-      [cachedItem],
-      { publish: vi.fn() }
+      [cachedItem]
     )
 
     await synchronization.synchronize({
@@ -83,8 +81,6 @@ describe("saved link synchronization", () => {
       cachedItems: [cachedItem],
       remote: {
         results: [createSavedLink(2)],
-        revision: 2,
-        etag: "2",
       },
     })
 
@@ -98,47 +94,17 @@ describe("saved link synchronization", () => {
     })
   })
 
-  it("rejects an older remote snapshot through the same interface", async () => {
-    const synchronization = createSavedLinkSynchronization(
-      createAdapter(),
-      "user-one",
-      [],
-      { publish: vi.fn() }
-    )
-
-    const adapter = createAdapter()
-    await synchronization.synchronize({
-      adapter,
-      identity: "user-one",
-      cachedItems: [],
-      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
-    })
-    await synchronization.synchronize({
-      adapter,
-      identity: "user-one",
-      cachedItems: [],
-      remote: {
-        results: [{ ...createSavedLink(1), title: "Stale" }],
-        revision: 1,
-        etag: "1",
-      },
-    })
-
-    expect(synchronization.getSnapshot()[0]?.title).toBe("Remote title")
-  })
-
   it("resets cached state when the signed-in identity changes", async () => {
     const synchronization = createSavedLinkSynchronization(
       createAdapter(),
       "user-one",
-      [],
-      { publish: vi.fn() }
+      []
     )
     await synchronization.synchronize({
       adapter: createAdapter(),
       identity: "user-one",
       cachedItems: [],
-      remote: { results: [createSavedLink(2)], revision: 2, etag: "2" },
+      remote: { results: [createSavedLink(2)] },
     })
     const userTwoItem: LinkViewItem = {
       url: "https://example.com/user-two",

@@ -19,17 +19,11 @@ const LinkSchema = Schema.Struct({
 })
 
 const LinksSnapshotSchema = Schema.Struct({
-  revision: Schema.Number,
   results: Schema.Array(LinkSchema),
-})
-
-const SavedLinkSynchronizationSchema = Schema.Struct({
-  revision: Schema.Number,
 })
 
 const SavedLinkCommitSchema = Schema.Struct({
   success: Schema.Boolean,
-  synchronization: SavedLinkSynchronizationSchema,
 })
 
 const LinkMetadataOperationSchema = Schema.Union([
@@ -57,22 +51,14 @@ export class LinksGroup extends HttpApiGroup.make("links")
       success: LinksSnapshotSchema,
       error: [UnauthorizedApiError, ConvexApiError],
     }),
-    HttpApiEndpoint.get("revision", "/revision", {
-      success: Schema.Struct({ revision: Schema.Number }),
-      error: [UnauthorizedApiError, ConvexApiError],
-    }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
         operationId: Schema.String,
-        clientRevision: Schema.Number,
         url: Schema.String,
         title: Schema.optional(Schema.String),
         meta: Schema.Unknown,
       }),
-      success: Schema.Struct({
-        id: Schema.String,
-        synchronization: SavedLinkSynchronizationSchema,
-      }),
+      success: Schema.Struct({ id: Schema.String }),
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -99,7 +85,6 @@ export class LinksGroup extends HttpApiGroup.make("links")
       },
       payload: Schema.Struct({
         operationId: Schema.String,
-        clientRevision: Schema.Number,
         meta: Schema.Unknown,
       }),
       success: SavedLinkCommitSchema,
@@ -115,7 +100,6 @@ export class LinksGroup extends HttpApiGroup.make("links")
       params: { linkId: Schema.String },
       payload: Schema.Struct({
         operationId: Schema.String,
-        clientRevision: Schema.Number,
         operation: LinkMetadataOperationSchema,
       }),
       success: SavedLinkCommitSchema,

@@ -1,5 +1,9 @@
 # ADR 0001: Saved link realtime synchronization
 
+## Status
+
+Superseded by [ADR 0002](0002-browser-convex-authentication.md).
+
 ## Context
 
 Lynvo keeps Convex access and refresh credentials behind the Worker in HttpOnly

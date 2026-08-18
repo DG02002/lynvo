@@ -23,16 +23,6 @@ export interface SessionCleanupPayload {
   readonly exp: number
 }
 
-export interface SavedLinkRealtimePayload {
-  readonly purpose: "savedLinkRealtime"
-  readonly exp: number
-}
-
-export interface AccountSettingsRealtimePayload {
-  readonly purpose: "accountSettingsRealtime"
-  readonly exp: number
-}
-
 export interface RemoteCommandNotificationPayload {
   readonly purpose: "remoteCommandNotification"
   readonly exp: number
@@ -56,12 +46,6 @@ const credentialReadPayloadSchema = unexpiredPayloadSchema.extend({
 })
 const sessionCleanupPayloadSchema = unexpiredPayloadSchema.extend({
   purpose: z.literal("sessionCleanup"),
-})
-const savedLinkRealtimePayloadSchema = unexpiredPayloadSchema.extend({
-  purpose: z.literal("savedLinkRealtime"),
-})
-const accountSettingsRealtimePayloadSchema = unexpiredPayloadSchema.extend({
-  purpose: z.literal("accountSettingsRealtime"),
 })
 const remoteCommandNotificationPayloadSchema = unexpiredPayloadSchema.extend({
   purpose: z.literal("remoteCommandNotification"),
@@ -167,32 +151,6 @@ export const verifySessionCleanupToken = async (
   )
   if (!payload.success) {
     throw new Error("Expired session cleanup token")
-  }
-  return payload.data
-}
-
-export const verifySavedLinkRealtimeToken = async (
-  token: string,
-  secret: string
-): Promise<SavedLinkRealtimePayload> => {
-  const payload = savedLinkRealtimePayloadSchema.safeParse(
-    await verifyGatewayToken(token, secret)
-  )
-  if (!payload.success) {
-    throw new Error("Expired Saved link realtime token")
-  }
-  return payload.data
-}
-
-export const verifyAccountSettingsRealtimeToken = async (
-  token: string,
-  secret: string
-): Promise<AccountSettingsRealtimePayload> => {
-  const payload = accountSettingsRealtimePayloadSchema.safeParse(
-    await verifyGatewayToken(token, secret)
-  )
-  if (!payload.success) {
-    throw new Error("Expired account settings realtime token")
   }
   return payload.data
 }

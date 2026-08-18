@@ -208,13 +208,6 @@ describe("bounded lifecycle cleanup", () => {
           updatedAt: now + index,
         })
       }
-      await context.db.insert("savedLinkSynchronizationStates", {
-        userId: target.userId,
-        revision: 4,
-        broadcastRevision: 3,
-        pendingBroadcast: true,
-        updatedAt: now,
-      })
       await context.db.insert("userPluginServers", {
         userId: target.userId,
         baseUrl: "https://plugin-server.target.example",
@@ -304,12 +297,6 @@ describe("bounded lifecycle cleanup", () => {
           queryBuilder.eq("userId", target.userId)
         )
         .collect(),
-      targetSynchronizationState: await context.db
-        .query("savedLinkSynchronizationStates")
-        .withIndex("by_userId", (queryBuilder) =>
-          queryBuilder.eq("userId", target.userId)
-        )
-        .unique(),
       preservedSessions: await context.db
         .query("authSessions")
         .withIndex("userId", (queryBuilder) =>
@@ -319,7 +306,6 @@ describe("bounded lifecycle cleanup", () => {
     }))
     expect(result.target).toBeNull()
     expect(result.targetLinks).toEqual([])
-    expect(result.targetSynchronizationState).toBeNull()
     expect(result.preserved).not.toBeNull()
     expect(result.preservedSessions).toHaveLength(1)
     vi.useRealTimers()

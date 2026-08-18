@@ -25,10 +25,6 @@ import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-sc
 import { extractedLinkSchema } from "../app/features/links/storage-schemas"
 import { removeLinkFromTree } from "../app/features/links/link-tree-metadata"
 import { mergeUnique } from "../app/features/links/link-tree-metadata"
-import {
-  advanceSavedLinkRevision,
-  readSavedLinkRevision,
-} from "./savedLinkRevisions"
 
 const canonicalizeLinkMetadataJson = (metadataJson: string) =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
@@ -45,7 +41,6 @@ const savedLinkResultValidator = v.object({
 // List retained links for a user, ordered by createdAt desc.
 export const list = query({
   returns: v.object({
-    revision: v.number(),
     results: v.array(savedLinkResultValidator),
   }),
   args: { timeBucket: v.number() },
@@ -53,18 +48,14 @@ export const list = query({
     const userId = await getAuthenticatedUserId(ctx)
     const retentionDays = await getUserRetentionDays(ctx, userId)
     const cutoff = getRetentionCutoff(args.timeBucket, retentionDays)
-    const [links, revision] = await Promise.all([
-      ctx.db
-        .query("links")
-        .withIndex("by_userId_createdAt", (q) =>
-          q.eq("userId", userId).gte("createdAt", cutoff)
-        )
-        .order("desc")
-        .take(LINKS_MAX_COUNT),
-      readSavedLinkRevision(ctx, userId),
-    ])
+    const links = await ctx.db
+      .query("links")
+      .withIndex("by_userId_createdAt", (q) =>
+        q.eq("userId", userId).gte("createdAt", cutoff)
+      )
+      .order("desc")
+      .take(LINKS_MAX_COUNT)
     return {
-      revision,
       results: links.map((link) => ({
         _id: link._id,
         url: link.url,
@@ -77,19 +68,10 @@ export const list = query({
   },
 })
 
-export const revision = query({
-  returns: v.object({ revision: v.number() }),
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getAuthenticatedUserId(ctx)
-    return { revision: await readSavedLinkRevision(ctx, userId) }
-  },
-})
-
 // Create a new link or update title/meta if the URL already exists.
 // Enforces per-link, per-user storage, and retention limits.
 export const createOrUpdate = mutation({
-  returns: v.object({ id: v.id("links"), revision: v.number() }),
+  returns: v.object({ id: v.id("links") }),
   args: {
     operationId: v.string(),
     url: v.string(),
@@ -105,10 +87,7 @@ export const createOrUpdate = mutation({
       )
       .unique()
     if (completedOperation) {
-      return {
-        id: completedOperation.linkId,
-        revision: completedOperation.revision,
-      }
+      return { id: completedOperation.linkId }
     }
     const now = Date.now()
     const deletedExpiredLinks = await cleanupExpiredStoredLinks(
@@ -148,17 +127,15 @@ export const createOrUpdate = mutation({
         meta: metadataJson,
         updatedAt: now,
       })
-      const revision = await advanceSavedLinkRevision(ctx, userId)
       await ctx.db.insert("savedLinkCommandOperations", {
         userId,
         operationId: args.operationId,
         command: "create-or-update",
         linkId: existing._id,
-        revision,
         createdAt: now,
         expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
       })
-      return { id: existing._id, revision }
+      return { id: existing._id }
     }
 
     const newDoc = {
@@ -183,26 +160,22 @@ export const createOrUpdate = mutation({
       await ctx.db.delete("links", oldestLink._id)
     }
 
-    const [id, revision] = await Promise.all([
-      ctx.db.insert("links", newDoc),
-      advanceSavedLinkRevision(ctx, userId),
-    ])
+    const id = await ctx.db.insert("links", newDoc)
     await ctx.db.insert("savedLinkCommandOperations", {
       userId,
       operationId: args.operationId,
       command: "create-or-update",
       linkId: id,
-      revision,
       createdAt: now,
       expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
     })
-    return { id, revision }
+    return { id }
   },
 })
 
 // Delete a link by ID
 export const deleteById = mutation({
-  returns: v.object({ success: v.boolean(), revision: v.number() }),
+  returns: v.object({ success: v.boolean() }),
   args: {
     id: v.string(),
   },
@@ -217,14 +190,13 @@ export const deleteById = mutation({
 
     await recordStorageDeletion(ctx, userId, "linkBytes", existing)
     await ctx.db.delete("links", existing._id)
-    const revision = await advanceSavedLinkRevision(ctx, userId)
-    return { success: true, revision }
+    return { success: true }
   },
 })
 
 // Update metadata for a link
 export const updateMeta = mutation({
-  returns: v.object({ success: v.boolean(), revision: v.number() }),
+  returns: v.object({ success: v.boolean() }),
   args: {
     operationId: v.string(),
     id: v.string(),
@@ -239,7 +211,7 @@ export const updateMeta = mutation({
       )
       .unique()
     if (completedOperation) {
-      return { success: true, revision: completedOperation.revision }
+      return { success: true }
     }
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
@@ -259,22 +231,20 @@ export const updateMeta = mutation({
       meta: metadataJson,
       updatedAt: Date.now(),
     })
-    const revision = await advanceSavedLinkRevision(ctx, userId)
     await ctx.db.insert("savedLinkCommandOperations", {
       userId,
       operationId: args.operationId,
       command: "update-meta",
       linkId: existing._id,
-      revision,
       createdAt: Date.now(),
       expiresAt: Date.now() + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
     })
-    return { success: true, revision }
+    return { success: true }
   },
 })
 
 export const applyMetadataOperation = mutation({
-  returns: v.object({ success: v.boolean(), revision: v.number() }),
+  returns: v.object({ success: v.boolean() }),
   args: {
     operationId: v.string(),
     id: v.string(),
@@ -306,7 +276,7 @@ export const applyMetadataOperation = mutation({
       )
       .unique()
     if (completedOperation) {
-      return { success: true, revision: completedOperation.revision }
+      return { success: true }
     }
     const linkId = ctx.db.normalizeId("links", args.id)
     const existing = linkId ? await ctx.db.get("links", linkId) : null
@@ -372,17 +342,15 @@ export const applyMetadataOperation = mutation({
       meta: nextDoc.meta,
       updatedAt: now,
     })
-    const revision = await advanceSavedLinkRevision(ctx, userId)
     await ctx.db.insert("savedLinkCommandOperations", {
       userId,
       operationId: args.operationId,
       command: "apply-metadata-operation",
       linkId: existing._id,
-      revision,
       createdAt: now,
       expiresAt: now + SAVED_LINK_COMMAND_OPERATION_TTL_MS,
     })
-    return { success: true, revision }
+    return { success: true }
   },
 })
 
@@ -427,9 +395,6 @@ export const cleanupExpiredLinks = internalMutation({
     const deletedInBatch = user
       ? await cleanupExpiredStoredLinks(ctx, user._id, now)
       : 0
-    if (user && deletedInBatch > 0) {
-      await advanceSavedLinkRevision(ctx, user._id)
-    }
     const didFinishUser = !user || deletedInBatch < LINK_RETENTION_BATCH_SIZE
     const processedUsers =
       (args.processedUsers ?? 0) + (user && didFinishUser ? 1 : 0)
@@ -476,9 +441,6 @@ export const cleanupExpiredLinksForUser = internalMutation({
       args.userId,
       args.now
     )
-    if (deletedLinks > 0) {
-      await advanceSavedLinkRevision(ctx, args.userId)
-    }
     const continued = deletedLinks === LINK_RETENTION_BATCH_SIZE
     if (continued) {
       await ctx.scheduler.runAfter(

@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest"
-import { readLinksCache } from "~/features/links/use-links/cache"
+import { describe, expect, it } from "vitest"
 import { authSignInResponseSchema } from "~/lib/auth-http-schema"
 import {
   authPreflightRequestSchema,
@@ -11,59 +10,6 @@ import {
   remotePollResponseSchema,
   remoteRealtimeEventSchema,
 } from "~/context/remote-control/schemas"
-
-const createMemoryStorage = () => {
-  const values = new Map<string, string>()
-  return {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => values.set(key, value),
-    removeItem: (key: string) => values.delete(key),
-    clear: () => values.clear(),
-  }
-}
-
-describe("browser storage boundaries", () => {
-  beforeEach(() => {
-    Object.defineProperty(globalThis, "localStorage", {
-      value: createMemoryStorage(),
-      configurable: true,
-    })
-  })
-
-  it("ignores v1 timestamp caches and drops invalid v2 Saved links", () => {
-    localStorage.setItem(
-      "lynvo:links:sync:v1:user-1",
-      JSON.stringify({
-        version: 2,
-        etag: "old",
-        results: [],
-      })
-    )
-    expect(readLinksCache("user-1")).toBeUndefined()
-
-    localStorage.setItem(
-      "lynvo:links:sync:v2:user-1",
-      JSON.stringify({
-        revision: 2,
-        etag: "etag",
-        results: [
-          {
-            id: "link-1",
-            url: "https://example.com",
-            created_at: 10,
-          },
-          { id: 42, url: null },
-        ],
-      })
-    )
-
-    expect(readLinksCache("user-1")).toMatchObject({
-      revision: 2,
-      etag: "etag",
-      results: [],
-    })
-  })
-})
 
 describe("HTTP and realtime boundaries", () => {
   it("validates Worker authentication requests", () => {
