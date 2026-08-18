@@ -21,16 +21,16 @@ strictDepBuilds: true
 
 catalog:
   '@oxlint/plugins': ^1.78.0
-  '@cloudflare/workers-types': ^5.20260817.1
+  '@cloudflare/workers-types': 5.20260811.1
   cheerio: ^1.2.0
-  hono: ^4.13.2
+  hono: 4.13.1
   oxfmt: ^0.63.0
   oxlint: ^1.78.0
   sharp: ^0.35.3
   typescript: ^7.0.2
   vite: ^8.2.1
   vitest: ^4.1.10
-  wrangler: ^4.123.0
+  wrangler: 4.120.1
   zod: ^4.4.3
 
 saveWorkspaceProtocol: rolling
