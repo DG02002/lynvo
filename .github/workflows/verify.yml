@@ -210,6 +210,15 @@ jobs:
           --var "SERVICE_VERSION:$LYNVO_VERSION"
           --var "COMMIT_HASH:$COMMIT_HASH"
 
+      - name: Synchronize Lynvo routes and cron triggers
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          pnpm --filter @lynvo/app exec wrangler triggers deploy
+          --config build/server/wrangler.json
+          --env=""
+
       - name: Promote Plugin Server
         id: promote_plugin_server
         env:
@@ -238,8 +247,40 @@ jobs:
           --message "GitHub ${COMMIT_HASH}"
           --yes
 
-      - name: Roll back Plugin Server if Lynvo promotion fails
-        if: failure() && steps.promote_plugin_server.outcome == 'success' && steps.promote_lynvo.outcome == 'failure'
+      - name: Verify the expected Lynvo release is serving
+        id: verify_release
+        env:
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
+        run: |
+          for attempt in {1..30}; do
+            if response="$(curl --fail --show-error --silent --retry 2 --retry-all-errors "https://lynvo.dg02002.workers.dev/api/version?release=${COMMIT_HASH}")"; then
+              echo "Release identity (attempt ${attempt}/30):"
+              jq . <<< "$response"
+              if jq -e --arg commit "$COMMIT_HASH" --arg version "$LYNVO_VERSION" \
+                '.commitHash == $commit and .serviceVersion == $version and (.deploymentId | length > 0)' \
+                <<< "$response" >/dev/null; then
+                exit 0
+              fi
+            fi
+            sleep 2
+          done
+          echo "::error::The expected Lynvo release did not become active within 60 seconds."
+          exit 1
+
+      - name: Roll back Lynvo after a post-promotion failure
+        if: failure() && steps.promote_lynvo.outcome == 'success'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          pnpm --filter @lynvo/app exec wrangler rollback
+          --config build/server/wrangler.json
+          --env=""
+          --message "Automatic rollback after release verification failed for ${COMMIT_HASH}"
+          --yes
+
+      - name: Roll back Plugin Server after a downstream failure
+        if: failure() && steps.promote_plugin_server.outcome == 'success'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -247,8 +288,5 @@ jobs:
           pnpm --filter @lynvo/lynvo-plugin-server exec wrangler rollback
           --config wrangler.jsonc
           --env=""
-          --message "Automatic rollback after Lynvo promotion failed for ${COMMIT_HASH}"
+          --message "Automatic rollback after downstream release failure for ${COMMIT_HASH}"
           --yes
-
-      - name: Verify production is reachable
-        run: curl --fail --show-error --silent --retry 5 --retry-all-errors https://lynvo.dg02002.workers.dev/api/version

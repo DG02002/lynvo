@@ -37,6 +37,7 @@ import {
   type RequestLoggingEnvironment,
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
+import { buildReleaseIdentity } from "./release-identity"
 import { createAuthenticationIntake } from "./authentication-intake"
 import {
   checkAuthenticationRateLimit,
@@ -205,7 +206,7 @@ app.onError((error, context) => {
 
 app.get("/api/version", (context) => {
   addRequestContext(context, { operation: "version_read" })
-  return context.json({ buildTime: __BUILD_TIME__ })
+  return context.json(buildReleaseIdentity(context.env, __BUILD_TIME__))
 })
 
 app.post("/api/auth/preflight", async (context) => {
