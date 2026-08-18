@@ -113,7 +113,7 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
-          pnpm exec convex codegen --typecheck enable
+          pnpm run convex:codegen
           git diff --exit-code -- convex/_generated
 
       - name: Build release artifacts and deploy backward-compatible Convex functions

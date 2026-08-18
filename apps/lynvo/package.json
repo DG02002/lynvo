@@ -18,7 +18,9 @@
     "audit:convex-contracts": "node scripts/audit-convex-contracts.mjs",
     "check": "pnpm run fmt:check && pnpm run lint && pnpm run audit:convex-contracts && pnpm run typecheck",
     "cf-typegen": "wrangler types",
+    "convex:codegen": "pnpm run prepare:protocol && convex codegen --typecheck enable",
     "deploy": "pnpm --workspace-root images:optimize && pnpm run preflight && pnpm run check && pnpm run test --run && pnpm run build && wrangler deploy --config build/server/wrangler.json --env=\"\" --var \"COMMIT_HASH:$COMMIT_HASH\" --var \"SERVICE_VERSION:$SERVICE_VERSION\"",
+    "prepare:protocol": "pnpm --filter @dg02002/lynvo-plugin-server-protocol build",
     "preflight": "node scripts/deployment-preflight.mjs",
     "usage:reset": "convex run usage:resetAll",
     "postinstall": "pnpm run cf-typegen"
