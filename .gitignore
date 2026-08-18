@@ -146,6 +146,8 @@ plans/
 !apps/lynvo/app/lib/**
 !apps/lynvo/scripts/
 !apps/lynvo/scripts/**
+!packages/create-lynvo-plugin-server/bin/
+!packages/create-lynvo-plugin-server/bin/**
 
 # Keep OS metadata ignored after source-directory exceptions
 .DS_Store
