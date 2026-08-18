@@ -139,7 +139,7 @@ jobs:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
           NODE_OPTIONS: --disable-warning=ExperimentalWarning
         run: |
-          migration_names='{"names":["migrations:normalizeSavedLinkRetention","migrations:backfillUserStorageLedgersV2"]}'
+          migration_names='{"names":["migrations:normalizeSavedLinkRetentionV1","migrations:backfillUserStorageLedgersV2"]}'
 
           for attempt in {1..90}; do
             migration_status="$(pnpm --filter @lynvo/app exec convex run --component migrations lib:getStatus "$migration_names")"

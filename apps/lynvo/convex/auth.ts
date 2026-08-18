@@ -15,6 +15,7 @@ import { verifyCredentialsAccount } from "./credentialsVerification"
 import { synchronizeAccountCapacityAfterCreation } from "./accountCapacity"
 import {
   ACCOUNT_INACTIVITY_LIMIT_MS,
+  DEFAULT_RETENTION_DAYS,
   SESSION_TOTAL_DURATION_MS,
   CONVEX_ACCESS_TOKEN_TTL_MS,
 } from "./constants"
@@ -194,6 +195,7 @@ const credentialsProvider = ConvexCredentials<DataModel>({
           name: username,
           username,
           normalizedUsername,
+          storageRetentionDays: DEFAULT_RETENTION_DAYS,
           createdAt: now,
           lastActiveAt: now,
         },

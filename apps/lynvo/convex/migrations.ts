@@ -46,7 +46,7 @@ export const backfillUserStorageLedgersV2 = migrations.define({
   },
 })
 
-export const normalizeSavedLinkRetention = migrations.define({
+export const normalizeSavedLinkRetentionV1 = migrations.define({
   table: "users",
   batchSize: 100,
   migrateOne: async (ctx, user) => {
@@ -65,7 +65,7 @@ export const normalizeSavedLinkRetention = migrations.define({
 export const run = migrations.runner()
 
 export const runProduction = migrations.runner([
-  internal.migrations.normalizeSavedLinkRetention,
+  internal.migrations.normalizeSavedLinkRetentionV1,
   internal.migrations.backfillUserStorageLedgersV2,
 ])
 

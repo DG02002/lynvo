@@ -46,6 +46,7 @@ const migrationsSource = readFileSync(
   join(CONVEX_DIRECTORY, "migrations.ts"),
   "utf8"
 )
+const authSource = readFileSync(join(CONVEX_DIRECTORY, "auth.ts"), "utf8")
 const erasureSource = readFileSync(
   join(CONVEX_DIRECTORY, "accountErasure.ts"),
   "utf8"
@@ -99,6 +100,9 @@ const erasureTables = usesSharedErasureRegistry
 const storageLedgerSchemaVersion = constantsSource.match(
   /export const STORAGE_LEDGER_SCHEMA_VERSION = (\d+)/
 )?.[1]
+const storageRetentionSchemaVersion = constantsSource.match(
+  /export const STORAGE_RETENTION_SCHEMA_VERSION = (\d+)/
+)?.[1]
 
 if (!storageLedgerSchemaVersion) {
   failures.push(
@@ -120,6 +124,38 @@ if (!storageLedgerSchemaVersion) {
       `convex/migrations.ts: runProduction must include ${expectedMigration}`
     )
   }
+}
+
+if (!storageRetentionSchemaVersion) {
+  failures.push(
+    "convex/constants.ts: storage retention schema version must be a numeric literal"
+  )
+} else {
+  const expectedMigration = `normalizeSavedLinkRetentionV${storageRetentionSchemaVersion}`
+  if (
+    !migrationsSource.includes(
+      `export const ${expectedMigration} = migrations.define({`
+    )
+  ) {
+    failures.push(
+      `convex/migrations.ts: storage retention schema version ${storageRetentionSchemaVersion} requires ${expectedMigration}`
+    )
+  }
+  if (!migrationsSource.includes(`internal.migrations.${expectedMigration}`)) {
+    failures.push(
+      `convex/migrations.ts: runProduction must include ${expectedMigration}`
+    )
+  }
+}
+
+if (
+  !/profile:\s*\{[\s\S]*storageRetentionDays:\s*DEFAULT_RETENTION_DAYS[\s\S]*\}/.test(
+    authSource
+  )
+) {
+  failures.push(
+    "convex/auth.ts: new accounts must persist DEFAULT_RETENTION_DAYS"
+  )
 }
 
 if (catalogEntries.length !== schemaTables.size) {
