@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process"
 import { readFileSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -103,34 +102,28 @@ for (const path of distFiles) {
   }
 }
 
-let dryRun
-try {
-  dryRun = execFileSync(
-    "npm",
-    ["pack", "--dry-run", "--json", "--ignore-scripts"],
-    { cwd: packageRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
-  )
-} catch (error) {
-  failures.push(`npm pack --dry-run failed: ${error.message}`)
-}
-
-if (dryRun) {
-  try {
-    const result = JSON.parse(dryRun)
-    const files = result[0]?.files?.map(({ path }) => path) ?? []
-    const allowed = /^(?:package\.json|README\.md|LICENSE|dist\/|docs\/)/
-    for (const path of files) {
-      assert(allowed.test(path), `unexpected file in package: ${path}`)
-      assert(
-        !/(?:\.dev\.vars|\.env(?:\.|$)|node_modules|src\/|scripts\/)/i.test(
-          path
-        ),
-        `private or source file would enter package: ${path}`
-      )
+const packageEntries = [
+  ...(packageJson.files ?? []).flatMap((entry) => {
+    const fullPath = join(packageRoot, entry)
+    const stats = statSync(fullPath, { throwIfNoEntry: false })
+    if (!stats) {
+      return []
     }
-  } catch (error) {
-    failures.push(`could not parse npm pack --dry-run output: ${error.message}`)
-  }
+    if (stats.isDirectory()) {
+      return walk(fullPath).map((file) => relative(packageRoot, file))
+    }
+    return [entry]
+  }),
+  "package.json",
+]
+
+const allowed = /^(?:package\.json|README\.md|LICENSE|dist\/|docs\/)/
+for (const path of packageEntries) {
+  assert(allowed.test(path), `unexpected file in package: ${path}`)
+  assert(
+    !/(?:\.dev\.vars|\.env(?:\.|$)|node_modules|src\/|scripts\/)/i.test(path),
+    `private or source file would enter package: ${path}`
+  )
 }
 
 if (failures.length > 0) {

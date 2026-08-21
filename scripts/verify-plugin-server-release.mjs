@@ -71,7 +71,11 @@ try {
     join(temporaryRoot, "package.json"),
     `${JSON.stringify(consumerPackage, null, 2)}\n`
   )
-  run("pnpm", ["add", creatorTarball, "--ignore-scripts"], temporaryRoot)
+  run(
+    "pnpm",
+    ["add", `create-lynvo-plugin-server@file:${creatorTarball}`, "--ignore-scripts"],
+    temporaryRoot
+  )
   run(
     "pnpm",
     [
