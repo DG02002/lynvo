@@ -6,9 +6,13 @@ import {
   createConvexTest,
   insertTestUser,
 } from "./convex-test-harness"
-import { EMPTY_LINK_METADATA_JSON, LINKS_MAX_COUNT } from "../convex/constants"
+import {
+  DAY_MS,
+  EMPTY_LINK_METADATA_JSON,
+  LINKS_MAX_COUNT,
+} from "../convex/constants"
 
-const LIST_TIME_BUCKET = Date.UTC(2026, 6, 22)
+const LIST_TIME_BUCKET = Date.now() - DAY_MS
 
 const createMetadataJson = (source: Record<string, unknown>) =>
   JSON.stringify({
