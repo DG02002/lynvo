@@ -153,7 +153,7 @@ export const useSaveActions = ({
         reporter,
         pluginDomainSuggestion: selectionSuggestion,
       })
-      await offerPluginDomainSuggestion(result.pluginDomainSuggestion)
+      await offerPluginDomainSuggestion(result?.pluginDomainSuggestion)
     } catch (error) {
       console.error(error)
       reporter.publish({

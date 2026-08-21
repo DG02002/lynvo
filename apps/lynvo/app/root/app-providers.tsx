@@ -19,6 +19,7 @@ import { ConvexAuthenticationProvider } from "./convex-authentication-provider"
 interface AppProvidersProps {
   buildTime: string
   user: { sub: string; sid?: string } | null
+  convexUrl?: string
   children?: ReactNode
 }
 
@@ -28,6 +29,7 @@ const toProviderUser = (user: AppProvidersProps["user"]) =>
 export const AppProviders = ({
   buildTime,
   user,
+  convexUrl,
   children,
 }: AppProvidersProps) => {
   const [queryClient] = useState(
@@ -64,6 +66,7 @@ export const AppProviders = ({
       <ConvexAuthenticationProvider
         isAuthenticated={Boolean(providerUser)}
         onSessionExpired={handleConvexSessionExpired}
+        convexUrl={convexUrl}
       >
         <ThemeProvider
           attribute="class"

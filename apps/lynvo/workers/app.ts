@@ -469,16 +469,20 @@ app.post("/api/auth/convex-token", async (context) => {
       const rotation = await authSession.rotate({
         sessionId: opaqueSessionId,
         refresh: async (refreshToken) => {
-          const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-          const refreshed = await client.action(api.auth.signIn, {
-            refreshToken,
-          })
-          return refreshed.tokens
-            ? {
-                accessToken: refreshed.tokens.token,
-                refreshToken: refreshed.tokens.refreshToken,
-              }
-            : undefined
+          try {
+            const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
+            const refreshed = await client.action(api.auth.signIn, {
+              refreshToken,
+            })
+            return refreshed?.tokens
+              ? {
+                  accessToken: refreshed.tokens.token,
+                  refreshToken: refreshed.tokens.refreshToken,
+                }
+              : undefined
+          } catch {
+            return undefined
+          }
         },
       })
       if (rotation.kind !== "rotated") {

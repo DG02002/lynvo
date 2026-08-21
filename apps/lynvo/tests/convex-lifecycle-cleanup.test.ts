@@ -320,11 +320,22 @@ describe("bounded lifecycle cleanup", () => {
     const first = await insertTestUser(convex, "inactive-first")
     const second = await insertTestUser(convex, "inactive-second")
     const active = await insertTestUser(convex, "still-active")
+    const recentZeroActive = await insertTestUser(convex, "recent-zero-active")
     await convex.run(async (context) => {
       const inactiveAt = now - ACCOUNT_INACTIVITY_LIMIT_MS - 1
-      await context.db.patch(first.userId, { lastActiveAt: inactiveAt })
-      await context.db.patch(second.userId, { lastActiveAt: inactiveAt })
+      await context.db.patch(first.userId, {
+        createdAt: inactiveAt,
+        lastActiveAt: inactiveAt,
+      })
+      await context.db.patch(second.userId, {
+        createdAt: inactiveAt,
+        lastActiveAt: inactiveAt,
+      })
       await context.db.patch(active.userId, { lastActiveAt: now })
+      await context.db.patch(recentZeroActive.userId, {
+        createdAt: now,
+        lastActiveAt: 0,
+      })
     })
 
     const firstBatch = await convex.mutation(
@@ -337,10 +348,12 @@ describe("bounded lifecycle cleanup", () => {
       first: await context.db.get(first.userId),
       second: await context.db.get(second.userId),
       active: await context.db.get(active.userId),
+      recentZeroActive: await context.db.get(recentZeroActive.userId),
     }))
     expect(remaining.first).toBeNull()
     expect(remaining.second).toBeNull()
     expect(remaining.active).not.toBeNull()
+    expect(remaining.recentZeroActive).not.toBeNull()
     const realtimeIntents = await convex.run((context) =>
       context.db.query("realtimeSessionRevocationIntents").collect()
     )

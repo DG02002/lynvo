@@ -37,21 +37,21 @@ export const createConvexAccessTokenFetcher =
         }
       )
     } catch {
-      throw new ConvexAccessUnavailableError()
+      return null
     }
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       dependencies.onSessionExpired()
       return null
     }
     if (!response.ok) {
-      throw new ConvexAccessUnavailableError()
+      return null
     }
     const result = convexAccessTokenResponseSchema.safeParse(
       await response.json()
     )
     if (!result.success) {
-      throw new ConvexAccessUnavailableError()
+      return null
     }
     return result.data.accessToken
   }

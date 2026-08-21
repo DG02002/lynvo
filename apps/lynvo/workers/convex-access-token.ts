@@ -39,8 +39,24 @@ export const createConvexAccessTokenHandler =
   async (request: Request): Promise<Response> => {
     const url = new URL(request.url)
     const origin = request.headers.get("Origin")
-    if (origin && origin !== url.origin) {
-      return noStoreResponse(JSON.stringify({ error: "Forbidden" }), 403)
+    const host = request.headers.get("Host")
+    if (origin) {
+      try {
+        const originUrl = new URL(origin)
+        const isSameOrigin =
+          origin === url.origin ||
+          Boolean(host && originUrl.host === host) ||
+          Boolean(
+            (originUrl.hostname === "localhost" &&
+              url.hostname === "127.0.0.1") ||
+            (originUrl.hostname === "127.0.0.1" && url.hostname === "localhost")
+          )
+        if (!isSameOrigin) {
+          return noStoreResponse(JSON.stringify({ error: "Forbidden" }), 403)
+        }
+      } catch {
+        return noStoreResponse(JSON.stringify({ error: "Forbidden" }), 403)
+      }
     }
 
     const rateLimit = await dependencies.checkRateLimit(request)

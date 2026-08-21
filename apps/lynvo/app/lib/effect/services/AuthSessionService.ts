@@ -65,15 +65,19 @@ export class AuthSessionService extends Context.Service<
               authSession.rotate({
                 sessionId: opaqueSessionId,
                 refresh: async (refreshToken) => {
-                  const refreshed = await Effect.runPromise(
-                    convex.action(api.auth.signIn, { refreshToken })
-                  )
-                  return refreshed.tokens
-                    ? {
-                        accessToken: refreshed.tokens.token,
-                        refreshToken: refreshed.tokens.refreshToken,
-                      }
-                    : undefined
+                  try {
+                    const refreshed = await Effect.runPromise(
+                      convex.action(api.auth.signIn, { refreshToken })
+                    )
+                    return refreshed?.tokens
+                      ? {
+                          accessToken: refreshed.tokens.token,
+                          refreshToken: refreshed.tokens.refreshToken,
+                        }
+                      : undefined
+                  } catch {
+                    return undefined
+                  }
                 },
               })
             )
@@ -101,7 +105,7 @@ export class AuthSessionService extends Context.Service<
           }
 
           if (user._tag === "None" || user.value === null) {
-            return { kind: "unavailable", user: null }
+            return { kind: "unauthenticated", user: null }
           }
           const authenticatedUser = user.value
 

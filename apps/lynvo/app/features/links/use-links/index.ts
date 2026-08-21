@@ -30,6 +30,29 @@ const toSavedLinkListItem = (item: LinkViewItem): SavedLinkListItem => ({
   kind: "saved",
 })
 
+const CONVEX_MUTATION_TIMEOUT_MS = 15_000
+
+const withMutationTimeout = <Result>(
+  operation: Promise<Result>,
+  timeoutMessage = "Convex mutation timed out"
+): Promise<Result> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(timeoutMessage)),
+      CONVEX_MUTATION_TIMEOUT_MS
+    )
+  })
+  return Promise.race([
+    operation.finally(() => {
+      if (timer !== undefined) {
+        clearTimeout(timer)
+      }
+    }),
+    timeoutPromise,
+  ])
+}
+
 export const useLinks = () => {
   const hasHydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -56,12 +79,14 @@ export const useLinks = () => {
         metadata: item.metadata!,
         createLink: async ({ url, title, metadata }) => {
           const operationId = crypto.randomUUID()
-          const result = await createOrUpdateSavedLink({
-            operationId,
-            url,
-            title,
-            meta: JSON.stringify(metadata),
-          })
+          const result = await withMutationTimeout(
+            createOrUpdateSavedLink({
+              operationId,
+              url,
+              title,
+              meta: JSON.stringify(metadata),
+            })
+          )
           return result.id
         },
       }),
@@ -82,14 +107,16 @@ export const useLinks = () => {
               throw new Error("Link URL is required")
             }
             const openedLinkUrl = operation.linkUrl
-            await applySavedLinkMetadataOperation({
-              operationId,
-              id: linkId,
-              operation: {
-                kind: "markOpened",
-                linkUrl: openedLinkUrl,
-              },
-            })
+            await withMutationTimeout(
+              applySavedLinkMetadataOperation({
+                operationId,
+                id: linkId,
+                operation: {
+                  kind: "markOpened",
+                  linkUrl: openedLinkUrl,
+                },
+              })
+            )
             return
           case "cacheMirrors":
             if (!operation.lazyItemUrl || !operation.mirrors) {
@@ -97,15 +124,17 @@ export const useLinks = () => {
             }
             const lazyItemUrl = operation.lazyItemUrl
             const mirrors = operation.mirrors
-            await applySavedLinkMetadataOperation({
-              operationId,
-              id: linkId,
-              operation: {
-                kind: "cacheMirrors",
-                lazyItemUrl,
-                mirrorsJson: JSON.stringify(mirrors),
-              },
-            })
+            await withMutationTimeout(
+              applySavedLinkMetadataOperation({
+                operationId,
+                id: linkId,
+                operation: {
+                  kind: "cacheMirrors",
+                  lazyItemUrl,
+                  mirrorsJson: JSON.stringify(mirrors),
+                },
+              })
+            )
             return
           case "removeExtractedLink":
             if (!operation.linkKey || !operation.linkUrl) {
@@ -113,15 +142,17 @@ export const useLinks = () => {
             }
             const linkKey = operation.linkKey
             const removedLinkUrl = operation.linkUrl
-            await applySavedLinkMetadataOperation({
-              operationId,
-              id: linkId,
-              operation: {
-                kind: "removeExtractedLink",
-                linkKey,
-                linkUrl: removedLinkUrl,
-              },
-            })
+            await withMutationTimeout(
+              applySavedLinkMetadataOperation({
+                operationId,
+                id: linkId,
+                operation: {
+                  kind: "removeExtractedLink",
+                  linkKey,
+                  linkUrl: removedLinkUrl,
+                },
+              })
+            )
             return
           case "replaceExtraction":
             if (!operation.expectedExtraction || !operation.extractedLinks) {
@@ -129,23 +160,27 @@ export const useLinks = () => {
             }
             const expectedExtraction = operation.expectedExtraction
             const extractedLinks = operation.extractedLinks
-            await applySavedLinkMetadataOperation({
-              operationId,
-              id: linkId,
-              operation: {
-                kind: "replaceExtraction",
-                expectedExtractionJson: JSON.stringify(expectedExtraction),
-                extractedLinksJson: JSON.stringify(extractedLinks),
-              },
-            })
+            await withMutationTimeout(
+              applySavedLinkMetadataOperation({
+                operationId,
+                id: linkId,
+                operation: {
+                  kind: "replaceExtraction",
+                  expectedExtractionJson: JSON.stringify(expectedExtraction),
+                  extractedLinksJson: JSON.stringify(extractedLinks),
+                },
+              })
+            )
             return
         }
       }
-      await updateSavedLinkMetadata({
-        operationId,
-        id: linkId,
-        meta: JSON.stringify(toJsonMetadata(metadata)),
-      })
+      await withMutationTimeout(
+        updateSavedLinkMetadata({
+          operationId,
+          id: linkId,
+          meta: JSON.stringify(toJsonMetadata(metadata)),
+        })
+      )
     },
     [applySavedLinkMetadataOperation, updateSavedLinkMetadata]
   )
@@ -157,10 +192,10 @@ export const useLinks = () => {
         create: createLink,
         update: updateLink,
         delete: async (id) => {
-          await deleteSavedLink({ id })
+          await withMutationTimeout(deleteSavedLink({ id }))
         },
         clear: async () => {
-          await clearSavedLinks({})
+          await withMutationTimeout(clearSavedLinks({}))
         },
       }),
     [clearSavedLinks, createLink, deleteSavedLink, updateLink]

@@ -107,4 +107,43 @@ describe("Bhadoo save flow", () => {
       expect.objectContaining({ kind: "selection-required" })
     )
   })
+
+  it("reports an error and does not reset view when addLink fails", async () => {
+    const sourceUrl = "https://example.com/video.mp4"
+    const metadata = { filename: "Video.mp4" }
+    vi.spyOn(extractionOrchestration, "getSourceMetadata").mockResolvedValue(
+      metadata
+    )
+    vi.spyOn(extractionOrchestration, "prepareSource").mockResolvedValue({
+      metadata,
+      mergedMeta: metadata,
+      presentation: {
+        kind: "directSave",
+        link: {
+          id: "video-1",
+          label: "Video.mp4",
+          url: sourceUrl,
+        },
+      },
+    })
+    const addLink = vi.fn().mockResolvedValue(undefined)
+    const reporter = createReporter()
+
+    await saveLink({
+      currentUrl: sourceUrl,
+      links: [],
+      addLink,
+      reporter,
+      shouldAutoSaveAllLinks: false,
+    })
+
+    expect(reporter.publish).toHaveBeenCalledWith({
+      kind: "error",
+      message: "Unable to save the link. Try again.",
+    })
+    expect(reporter.publish).toHaveBeenCalledWith({ kind: "clear-preview" })
+    expect(reporter.publish).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "view-reset" })
+    )
+  })
 })

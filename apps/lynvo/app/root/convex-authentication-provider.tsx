@@ -17,6 +17,7 @@ interface ConvexAuthenticationConfiguration {
 interface ConvexAuthenticationProviderProps {
   readonly isAuthenticated: boolean
   readonly onSessionExpired: () => void
+  readonly convexUrl?: string
   readonly children: ReactNode
 }
 
@@ -31,7 +32,7 @@ const useLynvoConvexAuth = () => {
   const fetchAccessToken = useMemo(
     () =>
       createConvexAccessTokenFetcher({
-        fetchRequest: fetch,
+        fetchRequest: (input, init) => fetch(input, init),
         onSessionExpired: configuration.onSessionExpired,
       }),
     [configuration.onSessionExpired]
@@ -49,11 +50,11 @@ const useLynvoConvexAuth = () => {
 export const ConvexAuthenticationProvider = ({
   isAuthenticated,
   onSessionExpired,
+  convexUrl,
   children,
 }: ConvexAuthenticationProviderProps) => {
-  const [client] = useState(
-    () => new ConvexReactClient(import.meta.env.VITE_CONVEX_URL)
-  )
+  const resolvedUrl = convexUrl || import.meta.env.VITE_CONVEX_URL || ""
+  const [client] = useState(() => new ConvexReactClient(resolvedUrl))
   const handleSessionExpired = useCallback(
     () => onSessionExpired(),
     [onSessionExpired]

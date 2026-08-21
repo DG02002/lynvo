@@ -157,11 +157,13 @@ export const cleanupInactiveUserAccounts = async (
   const inactiveUsers = await ctx.db
     .query("users")
     .withIndex("by_lastActiveAt", (queryBuilder) =>
-      queryBuilder.lt("lastActiveAt", cutoff)
+      queryBuilder.gt("lastActiveAt", 0).lt("lastActiveAt", cutoff)
     )
     .take(CLEANUP_USER_PAGE_SIZE)
-  const inactiveUser = inactiveUsers[0]
-  if (!inactiveUser || inactiveUser.lastActiveAt >= cutoff) {
+  const inactiveUser = inactiveUsers.find(
+    (user) => user.createdAt < cutoff && user.lastActiveAt < cutoff
+  )
+  if (!inactiveUser) {
     return 0
   }
   await deleteUserAccountData(ctx, inactiveUser._id, "inactive", {

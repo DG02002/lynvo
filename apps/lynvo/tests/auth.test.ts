@@ -260,4 +260,44 @@ describe("AuthSessionService", () => {
     expect(result).not.toHaveProperty("refreshToken")
     expect(result.user?.username).toBe("darshan")
   })
+
+  it("returns unauthenticated when access token expires and refresh rotation fails", async () => {
+    const result = await runSession(
+      new Request("https://lynvo.test", {
+        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
+      }),
+      Layer.succeed(
+        ConvexService,
+        ConvexService.of({
+          action: () => Effect.fail(new Error("Refresh token expired")),
+          query: () => Effect.succeed(null),
+          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
+        })
+      )
+    )
+    expect(result).toEqual({ kind: "unauthenticated", user: null })
+  })
+
+  it("returns unauthenticated when rotated token cannot find the user in Convex", async () => {
+    const result = await runSession(
+      new Request("https://lynvo.test", {
+        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
+      }),
+      Layer.succeed(
+        ConvexService,
+        ConvexService.of({
+          action: () =>
+            Effect.succeed({
+              tokens: {
+                token: "new-access-token",
+                refreshToken: "new-refresh-token",
+              },
+            }),
+          query: () => Effect.succeed(null),
+          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
+        })
+      )
+    )
+    expect(result).toEqual({ kind: "unauthenticated", user: null })
+  })
 })

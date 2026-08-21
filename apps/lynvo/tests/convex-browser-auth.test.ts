@@ -55,6 +55,6 @@ describe("Convex browser authentication", () => {
 
     await expect(
       fetchAccessToken({ forceRefreshToken: false })
-    ).rejects.toBeInstanceOf(ConvexAccessUnavailableError)
+    ).resolves.toBeNull()
   })
 })

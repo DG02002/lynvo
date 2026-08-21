@@ -93,7 +93,15 @@ export const saveLink = async ({
   if (presentation.kind === "selectionDialog") {
     if (shouldAutoSaveAllLinks) {
       const newId = await addLink(savedUrl, mergedMeta, presentation.links)
-      reporter.publish({ kind: "link-focused", linkId: newId || savedUrl })
+      if (!newId) {
+        reporter.publish({
+          kind: "error",
+          message: "Unable to save the link. Try again.",
+        })
+        reporter.publish({ kind: "clear-preview" })
+        return
+      }
+      reporter.publish({ kind: "link-focused", linkId: newId })
       reporter.publish({ kind: "view-reset" })
       reporter.publish({ kind: "clear-preview" })
       vibrateSaveSuccess()
@@ -112,7 +120,15 @@ export const saveLink = async ({
   }
 
   const newId = await addLink(savedUrl, mergedMeta, [presentation.link])
-  reporter.publish({ kind: "link-focused", linkId: newId || savedUrl })
+  if (!newId) {
+    reporter.publish({
+      kind: "error",
+      message: "Unable to save the link. Try again.",
+    })
+    reporter.publish({ kind: "clear-preview" })
+    return
+  }
+  reporter.publish({ kind: "link-focused", linkId: newId })
   reporter.publish({ kind: "view-reset" })
   reporter.publish({ kind: "clear-preview" })
   vibrateSaveSuccess()
@@ -137,7 +153,14 @@ export const confirmSelectedLinks = async ({
       links: selectedLinks,
     })
   } else {
-    await addLink(originalUrl, meta, selectedLinks)
+    const newId = await addLink(originalUrl, meta, selectedLinks)
+    if (!newId) {
+      reporter.publish({
+        kind: "error",
+        message: "Unable to save the selected links. Try again.",
+      })
+      return
+    }
   }
 
   reporter.publish({ kind: "selection-closed" })
