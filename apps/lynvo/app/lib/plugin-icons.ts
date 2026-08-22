@@ -6,7 +6,7 @@ export interface PluginIconSource {
 }
 
 export const DIRECT_MEDIA_ICON: PluginIconSource = {
-  url: "/lynvo-plugin-server-assets/icons/sources/direct-media.png",
+  url: "/lynvo-plugin-server-assets/icons/sources/direct-media.webp",
 }
 
 export const getPluginIconSource = (

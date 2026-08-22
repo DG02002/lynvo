@@ -123,7 +123,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     displayName: "Direct Media",
     description: "Validates and opens direct audio and video URLs.",
     homepage: "https://lynvo.dg02002.workers.dev",
-    iconPath: "/icons/sources/direct-media.png",
+    iconPath: "/icons/sources/direct-media.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
     matchStrategy: "probe",

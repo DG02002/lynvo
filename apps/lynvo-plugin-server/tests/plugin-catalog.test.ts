@@ -82,7 +82,7 @@ describe("Lynvo plugin catalog", () => {
       extension.plugins?.find((plugin) => plugin.id === "direct-media")
     ).toMatchObject({
       hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/direct-media.png",
+      iconUrl: "http://localhost:5173/icons/sources/direct-media.webp",
     })
   })
 
