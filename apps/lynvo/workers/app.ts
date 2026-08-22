@@ -2,13 +2,13 @@ import { Hono, type Context as HonoContext } from "hono"
 import { initLogger } from "evlog"
 import { DurableObject } from "cloudflare:workers"
 import { createRequestHandler, RouterContextProvider } from "react-router"
-import { Context, Effect } from "effect"
-import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
+import { Context, Effect, Result, Schema } from "effect"
+import { CloudflareEnv } from "../app/lib/effect/services/cloudflare-env"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credential-vault"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
-import { handler as apiHandler } from "../app/lib/effect/api/Server"
+import { handler as apiHandler } from "../app/lib/effect/api/server"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
 import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
@@ -29,7 +29,6 @@ import { closeRealtimeSession } from "./realtime-session-revocation"
 import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 import { isSameOriginRequest } from "./same-origin"
-import { z } from "zod"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
 import { registerD1DataRoutes } from "./d1/data-routes"
 import { getDataVersion } from "./d1/data-version"
@@ -162,8 +161,10 @@ app.post("/api/auth/device/code", async (context) => {
   }
   let deviceName: string
   try {
-    const result = deviceCodeRequestSchema.safeParse(await context.req.json())
-    if (!result.success) {
+    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
+      await context.req.json()
+    )
+    if (Result.isFailure(result)) {
       return context.json(
         requestApiError(context, {
           code: "invalid_request",
@@ -173,7 +174,7 @@ app.post("/api/auth/device/code", async (context) => {
         400
       )
     }
-    deviceName = result.data.deviceName
+    deviceName = result.success.deviceName
   } catch {
     return context.json(
       requestApiError(context, {
@@ -543,7 +544,7 @@ app.all("*", async (context) => {
   return securedResponse
 })
 
-const pingMessageSchema = z.object({ type: z.literal("ping") })
+const pingMessageSchema = Schema.Struct({ type: Schema.Literal("ping") })
 
 const sweepD1AuthData = async (
   database: D1Database
@@ -687,18 +688,20 @@ const runHighFrequencyD1Maintenance = async (
       cleanupRemoteCommandsJob(database, now)
     ),
   ])
-const receiverNotificationSchema = z.object({ receiverId: z.string() })
-const sessionRevocationSchema = z.object({ sessionId: z.string() })
-const dataChangedSchema = z.object({ version: z.number().int().positive() })
-const receiverAttachmentSchema = z.object({
-  receiverId: z.string(),
-  sessionId: z.string(),
-  deviceName: z.string(),
-  connectedAt: z.number(),
+const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
+const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
+const dataChangedSchema = Schema.Struct({
+  version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
+})
+const receiverAttachmentSchema = Schema.Struct({
+  receiverId: Schema.String,
+  sessionId: Schema.String,
+  deviceName: Schema.String,
+  connectedAt: Schema.Number,
 })
 
 const isPingMessage = <Value>(value: Value): boolean =>
-  pingMessageSchema.safeParse(value).success
+  Result.isSuccess(Schema.decodeUnknownResult(pingMessageSchema)(value))
 
 export class UserRealtimeRoom extends DurableObject<Env> {
   constructor(context: DurableObjectState, env: Env) {
@@ -711,13 +714,15 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const pathname = new URL(request.url).pathname
     if (pathname.endsWith("/notify-data-changed")) {
-      const input = dataChangedSchema.safeParse(await request.json())
-      if (!input.success) {
+      const input = Schema.decodeUnknownResult(dataChangedSchema)(
+        await request.json()
+      )
+      if (Result.isFailure(input)) {
         return new Response("Invalid data version", { status: 400 })
       }
       const serialized = JSON.stringify({
         type: "data-changed",
-        payload: { version: input.data.version },
+        payload: { version: input.success.version },
       })
       const sockets = this.ctx.getWebSockets()
       for (const socket of sockets) {
@@ -726,26 +731,30 @@ export class UserRealtimeRoom extends DurableObject<Env> {
       return Response.json({ deliveredSocketCount: sockets.length })
     }
     if (pathname.endsWith("/notify-inbox")) {
-      const input = receiverNotificationSchema.safeParse(await request.json())
-      if (!input.success) {
+      const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
+        await request.json()
+      )
+      if (Result.isFailure(input)) {
         return new Response("Invalid receiver", { status: 400 })
       }
       const serialized = JSON.stringify({
         type: "remote-inbox.changed",
         payload: {},
       })
-      const sockets = this.ctx.getWebSockets(input.data.receiverId)
+      const sockets = this.ctx.getWebSockets(input.success.receiverId)
       for (const socket of sockets) {
         socket.send(serialized)
       }
       return Response.json({ deliveredSocketCount: sockets.length })
     }
     if (pathname.endsWith("/revoke-session")) {
-      const input = sessionRevocationSchema.safeParse(await request.json())
-      if (!input.success) {
+      const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
+        await request.json()
+      )
+      if (Result.isFailure(input)) {
         return new Response("Invalid session", { status: 400 })
       }
-      for (const socket of this.ctx.getWebSockets(input.data.sessionId)) {
+      for (const socket of this.ctx.getWebSockets(input.success.sessionId)) {
         socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
       }
       return Response.json({ success: true })
@@ -761,21 +770,21 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     }
     if (pathname.endsWith("/receivers")) {
       const receivers = this.ctx.getWebSockets().flatMap((socket) => {
-        const attachment = receiverAttachmentSchema.safeParse(
+        const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
           socket.deserializeAttachment()
         )
-        if (!attachment.success) {
+        if (Result.isFailure(attachment)) {
           return []
         }
         return [
           {
             id: createRemoteTargetId(
-              attachment.data.sessionId,
-              attachment.data.receiverId
+              attachment.success.sessionId,
+              attachment.success.receiverId
             ),
-            receiverId: attachment.data.receiverId,
-            deviceName: attachment.data.deviceName,
-            lastActiveAt: attachment.data.connectedAt,
+            receiverId: attachment.success.receiverId,
+            deviceName: attachment.success.deviceName,
+            lastActiveAt: attachment.success.connectedAt,
           },
         ]
       })
@@ -841,10 +850,10 @@ export class UserRealtimeRoom extends DurableObject<Env> {
         await Promise.all(
           this.ctx.getWebSockets().map(async (socket) => {
             try {
-              const attachment = receiverAttachmentSchema.safeParse(
-                socket.deserializeAttachment()
-              )
-              if (!attachment.success) {
+              const attachment = Schema.decodeUnknownResult(
+                receiverAttachmentSchema
+              )(socket.deserializeAttachment())
+              if (Result.isFailure(attachment)) {
                 socket.close(
                   REALTIME_SESSION_REVOKED_CLOSE_CODE,
                   "Session invalid"
@@ -853,7 +862,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
               }
               const activeSession = await findActiveSessionById(
                 database,
-                attachment.data.sessionId,
+                attachment.success.sessionId,
                 Date.now()
               )
               if (!activeSession) {
@@ -881,12 +890,12 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     socket: WebSocket,
     message: string | ArrayBuffer
   ): Promise<void> {
-    const textMessage = z.string().safeParse(message)
-    if (!textMessage.success) {
+    const textMessage = Schema.decodeUnknownResult(Schema.String)(message)
+    if (Result.isFailure(textMessage)) {
       return
     }
     try {
-      const parsed = JSON.parse(textMessage.data)
+      const parsed = JSON.parse(textMessage.success)
       if (isPingMessage(parsed)) {
         socket.send(
           JSON.stringify({ type: "pong", payload: { at: Date.now() } })

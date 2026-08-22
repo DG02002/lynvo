@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import type { ExtractedLink } from "~/features/links/types"
-import { useRemoteControl } from "~/context/RemoteControlContext"
+import { useRemoteControl } from "~/context/remote-control-context"
 import { playbackTarget } from "./playback-flow"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 

@@ -100,14 +100,20 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   }
 )
 
-const MANAGED_PLUGIN_ID_STRINGS: readonly string[] = MANAGED_PLUGIN_IDS
+const isManagedPluginId = (
+  pluginIdentifier: string
+): pluginIdentifier is ManagedPluginId =>
+  MANAGED_PLUGIN_IDS.some(
+    (managedIdentifier) => managedIdentifier === pluginIdentifier
+  )
 
-const toMeteredPluginId = (pluginId: string): ManagedPluginId | undefined => {
-  if (!MANAGED_PLUGIN_ID_STRINGS.includes(pluginId)) {
+const toMeteredPluginId = (
+  pluginIdentifier: string
+): ManagedPluginId | undefined => {
+  if (!isManagedPluginId(pluginIdentifier)) {
     return undefined
   }
-  // SAFETY: membership was checked against MANAGED_PLUGIN_IDS above.
-  return pluginId as ManagedPluginId
+  return pluginIdentifier
 }
 
 export const extractWithLynvoPluginServer = Effect.fn(

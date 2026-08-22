@@ -1,9 +1,9 @@
 import { Link } from "react-router"
-import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
+import { PolicyLayout, PolicySection } from "~/components/policy-layout"
 import {
   SupportChannelLinks,
   TelegramSupportLink,
-} from "~/components/SupportChannelLinks"
+} from "~/components/support-channel-links"
 import { policyPaths } from "~/lib/paths"
 
 export const TermsOfUseContent = () => (

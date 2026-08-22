@@ -1,5 +1,6 @@
 import { readApiResponseError } from "~/lib/api-errors"
 import { deviceCodeResponseSchema } from "~/lib/auth-gateway-schemas"
+import { Result, Schema } from "effect"
 
 export const createDeviceCode = async (deviceName: string) => {
   const response = await fetch("/api/auth/device/code", {
@@ -15,9 +16,9 @@ export const createDeviceCode = async (deviceName: string) => {
     )
   }
   const result: unknown = await response.json()
-  const parsed = deviceCodeResponseSchema.safeParse(result)
-  if (!parsed.success) {
+  const parsed = Schema.decodeUnknownResult(deviceCodeResponseSchema)(result)
+  if (Result.isFailure(parsed)) {
     throw new Error("Unable to create a device code.")
   }
-  return parsed.data
+  return parsed.success
 }

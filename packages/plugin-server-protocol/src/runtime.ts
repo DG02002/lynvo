@@ -1,3 +1,4 @@
+import { Result, Schema } from "effect"
 import {
   discoverRequestSchema,
   discoverResponseSchema,
@@ -72,18 +73,26 @@ export const createPluginServerRuntime = <Env>(
       if (authFailure) {
         return authFailure
       }
-      const usage = await options.usage({ request, env })
-      const parsedUsage = parseUsageResponseContract(usage)
-      if (!parsedUsage.ok || !parsedUsage.value) {
+      try {
+        const usage = await options.usage({ request, env })
+        const parsed = parseUsageResponseContract(usage)
+        if (!parsed.ok || !parsed.value) {
+          return jsonResponse(
+            createProtocolError(
+              "PROTOCOL_MISMATCH",
+              "Plugin Server returned an invalid usage response."
+            ),
+            500
+          )
+        }
+        return jsonResponse(parsed.value)
+      } catch (error) {
+        options.onError?.(error, { request, env })
         return jsonResponse(
-          createProtocolError(
-            "PROTOCOL_MISMATCH",
-            "Plugin Server returned invalid usage metrics."
-          ),
+          createProtocolError("TEMPORARY_FAILURE", "Failed to retrieve usage."),
           500
         )
       }
-      return jsonResponse(parsedUsage.value)
     },
     handleDiscover: async (request, env) => {
       const authFailure = await authenticate(request, env)
@@ -109,8 +118,8 @@ export const createPluginServerRuntime = <Env>(
           400
         )
       }
-      const parsed = discoverRequestSchema.safeParse(body)
-      if (!parsed.success) {
+      const parsed = Schema.decodeUnknownResult(discoverRequestSchema)(body)
+      if (Result.isFailure(parsed)) {
         return jsonResponse(
           createProtocolError("BAD_REQUEST", "Invalid discovery request."),
           400
@@ -119,13 +128,14 @@ export const createPluginServerRuntime = <Env>(
 
       try {
         const result = await options.discover({
-          request: parsed.data,
-          targetUrl: parsed.data.url,
+          request: parsed.success,
+          targetUrl: parsed.success.url,
           env,
         })
-        const parsedResult = discoverResponseSchema.safeParse(result)
-        return parsedResult.success
-          ? jsonResponse(parsedResult.data)
+        const parsedResult =
+          Schema.decodeUnknownResult(discoverResponseSchema)(result)
+        return Result.isSuccess(parsedResult)
+          ? jsonResponse(parsedResult.success)
           : jsonResponse(
               createProtocolError(
                 "PROTOCOL_MISMATCH",
@@ -157,15 +167,15 @@ export const createPluginServerRuntime = <Env>(
         )
       }
 
-      const parsed = extractRequestSchema.safeParse(body)
-      if (!parsed.success) {
+      const parsed = Schema.decodeUnknownResult(extractRequestSchema)(body)
+      if (Result.isFailure(parsed)) {
         return jsonResponse(
           createProtocolError("BAD_REQUEST", "Invalid request body."),
           400
         )
       }
 
-      const targetUrl = getExtractTargetUrl(parsed.data)
+      const targetUrl = getExtractTargetUrl(parsed.success)
       const manifest = await resolveManifest(request, env)
       if (!manifest) {
         return protocolMismatchResponse(
@@ -173,7 +183,7 @@ export const createPluginServerRuntime = <Env>(
         )
       }
       if (
-        !canPluginServerAttemptUrl(manifest, targetUrl, parsed.data.pluginId)
+        !canPluginServerAttemptUrl(manifest, targetUrl, parsed.success.pluginId)
       ) {
         return jsonResponse(
           createProtocolError(
@@ -186,7 +196,7 @@ export const createPluginServerRuntime = <Env>(
 
       try {
         const result = await options.extract({
-          request: parsed.data,
+          request: parsed.success,
           targetUrl,
           env,
         })

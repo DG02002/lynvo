@@ -5,7 +5,7 @@ import {
   HttpClientRequest,
 } from "effect/unstable/http"
 import { HttpApiClient } from "effect/unstable/httpapi"
-import { Api } from "./Api"
+import { Api } from "./api"
 import { getCsrfToken } from "../../utils"
 import { sessionIdentityHeaders } from "../../session-identity"
 

@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react"
-import { FloatingLabel } from "~/components/FloatingLabel"
+import { FloatingLabel } from "~/components/floating-label"
 import { cn } from "~/lib/utils"
 
 export interface FormDialogInputProps extends ComponentProps<

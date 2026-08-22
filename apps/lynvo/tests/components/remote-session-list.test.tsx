@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import type { ComponentProps } from "react"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it, vi } from "vitest"
-import { RemoteSessionList } from "~/components/remote-play/RemoteSessionList"
+import { RemoteSessionList } from "~/components/remote-play/remote-session-list"
 
 const renderList = (
   overrides: Partial<ComponentProps<typeof RemoteSessionList>> = {}

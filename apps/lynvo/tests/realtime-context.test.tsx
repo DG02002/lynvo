@@ -14,7 +14,7 @@ const { closeSocket, openRealtimeSocket } = vi.hoisted(() => {
 
 vi.mock("~/context/realtime/socket", () => ({ openRealtimeSocket }))
 
-import { RealtimeProvider } from "~/context/RealtimeContext"
+import { RealtimeProvider } from "~/context/realtime-context"
 
 beforeEach(() => {
   vi.clearAllMocks()

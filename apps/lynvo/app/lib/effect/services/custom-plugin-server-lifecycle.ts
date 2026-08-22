@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { CloudflareEnv } from "./CloudflareEnv"
+import { CloudflareEnv } from "./cloudflare-env"
 import { getD1Database } from "../../../../workers/d1/db"
 import {
   beginPluginServerRegistration,

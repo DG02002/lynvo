@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 
-import { LogoutDialog } from "../app/components/header/LogoutDialog"
+import { LogoutDialog } from "../app/components/header/logout-dialog"
 
 describe("LogoutDialog", () => {
   it("presents logout as a destructive action", () => {

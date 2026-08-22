@@ -7,11 +7,17 @@ import {
   ArrowDown01Icon,
   Delete02Icon,
   Edit02Icon,
+  InformationCircleIcon,
   Link01Icon,
   LinkSquare02Icon,
   PlugSocketIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
@@ -21,6 +27,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
 import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
+import { DIRECT_MEDIA_PLUGIN_ID } from "./constants"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   SettingsPanel,
@@ -34,7 +41,7 @@ import {
   type PluginDomain,
 } from "./plugin-settings-interaction"
 import {
-  customPluginServerSchema,
+  customPluginServerStandardSchema,
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
 
@@ -122,19 +129,41 @@ export function PluginsSettings({
                       <span className="text-sm font-normal text-foreground">
                         {plugin.name}
                       </span>
-                      <a
-                        href={plugin.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={`View project for ${plugin.name}`}
-                        title="View project"
-                        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        <HugeiconsIcon
-                          icon={LinkSquare02Icon}
-                          className="size-4"
-                        />
-                      </a>
+                      {plugin.id === DIRECT_MEDIA_PLUGIN_ID ? (
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <button
+                                type="button"
+                                aria-label={`${plugin.name} info`}
+                                className="inline-flex shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none"
+                              />
+                            }
+                          >
+                            <HugeiconsIcon
+                              icon={InformationCircleIcon}
+                              className="size-4"
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{plugin.description}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <a
+                          href={plugin.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`View project for ${plugin.name}`}
+                          title="View project"
+                          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <HugeiconsIcon
+                            icon={LinkSquare02Icon}
+                            className="size-4"
+                          />
+                        </a>
+                      )}
                     </div>
                   </div>
                   {plugin.supportsDomains && (
@@ -453,7 +482,7 @@ export const CustomPluginServersSection = ({
       apiKey: "",
     },
     validators: {
-      onSubmit: customPluginServerSchema,
+      onSubmit: customPluginServerStandardSchema,
     },
     onSubmit: async ({ value }) => {
       setRegistrationError(null)

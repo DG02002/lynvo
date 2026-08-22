@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import { createError, initLogger } from "evlog"
 import { useLogger } from "evlog/hono"
+import { Result, Schema } from "effect"
 import {
   createPluginServerRuntime,
   extractErrorSchema,
@@ -120,18 +121,18 @@ app.post("/extract", async (context) => {
     .clone()
     .json()
     .catch(() => undefined)
-  const parsedRequest = extractRequestSchema.safeParse(requestBody)
-  const targetUrl = parsedRequest.success
-    ? parsedRequest.data.input.kind === "source"
-      ? parsedRequest.data.input.sourceUrl
-      : parsedRequest.data.input.nodeUrl
+  const parsedRequest =
+    Schema.decodeUnknownResult(extractRequestSchema)(requestBody)
+  const isRequestValid = Result.isSuccess(parsedRequest)
+  const targetUrl = isRequestValid
+    ? parsedRequest.success.input.kind === "source"
+      ? parsedRequest.success.input.sourceUrl
+      : parsedRequest.success.input.nodeUrl
     : undefined
   context.get("log").set({
     operation: "extract",
     extraction: {
-      input_kind: parsedRequest.success
-        ? parsedRequest.data.input.kind
-        : "invalid",
+      input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
       target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
     },
   })
@@ -140,20 +141,20 @@ app.post("/extract", async (context) => {
     .clone()
     .json()
     .catch(() => undefined)
-  const success = extractSuccessSchema.safeParse(responseBody)
-  const failure = extractErrorSchema.safeParse(responseBody)
+  const success = Schema.decodeUnknownResult(extractSuccessSchema)(responseBody)
+  const failure = Schema.decodeUnknownResult(extractErrorSchema)(responseBody)
+  const isSuccess = Result.isSuccess(success)
+  const isFailure = Result.isSuccess(failure)
   context.get("log").set({
     extraction: {
-      input_kind: parsedRequest.success
-        ? parsedRequest.data.input.kind
-        : "invalid",
+      input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
       target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
-      node_count: success.success ? success.data.nodes.length : undefined,
-      plugin_server_id: success.success
-        ? success.data.plugin.pluginServerId
+      node_count: isSuccess ? success.success.nodes.length : undefined,
+      plugin_server_id: isSuccess
+        ? success.success.plugin.pluginServerId
         : undefined,
-      plugin_id: success.success ? success.data.plugin.pluginId : undefined,
-      error_code: failure.success ? failure.data.error.code : undefined,
+      plugin_id: isSuccess ? success.success.plugin.pluginId : undefined,
+      error_code: isFailure ? failure.success.error.code : undefined,
     },
   })
   return response

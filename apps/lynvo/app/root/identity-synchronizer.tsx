@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const identityStatusSchema = z.union([
-  z.object({ status: z.literal("unauthenticated") }),
-  z.object({ userId: z.string(), sessionId: z.string() }),
+const identityStatusSchema = Schema.Union([
+  Schema.Struct({ status: Schema.Literal("unauthenticated") }),
+  Schema.Struct({ userId: Schema.String, sessionId: Schema.String }),
 ])
 
 interface IdentitySynchronizerProps {
@@ -42,18 +42,18 @@ export const IdentitySynchronizer = ({
         ) {
           return
         }
-        const payload = identityStatusSchema.safeParse(
+        const payload = Schema.decodeUnknownResult(identityStatusSchema)(
           await response.json().catch(() => null)
         )
         const matches =
           response.ok &&
-          payload.success &&
+          Result.isSuccess(payload) &&
           ((!userId &&
-            "status" in payload.data &&
-            payload.data.status === "unauthenticated") ||
-            ("userId" in payload.data &&
-              payload.data.userId === userId &&
-              payload.data.sessionId === sessionId))
+            "status" in payload.success &&
+            payload.success.status === "unauthenticated") ||
+            ("userId" in payload.success &&
+              payload.success.userId === userId &&
+              payload.success.sessionId === sessionId))
         if (matches) {
           return
         }

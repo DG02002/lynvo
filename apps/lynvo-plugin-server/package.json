@@ -21,9 +21,9 @@
   "dependencies": {
     "@dg02002/lynvo-plugin-server-protocol": "workspace:*",
     "cheerio": "catalog:",
+    "effect": "rc",
     "evlog": "2.25.0",
-    "hono": "catalog:",
-    "zod": "catalog:"
+    "hono": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.21.0",

@@ -1,13 +1,25 @@
-import { z } from "zod"
+import { Effect, Schema } from "effect"
 import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { openInPlayer, type RangeRequestCapability } from "~/lib/player-utils"
 
-export const remotePlaybackIntentSchema = z.object({
-  url: z.url(),
-  rangeRequest: z
-    .enum(["supported", "unsupported", "unknown"])
-    .default("unknown"),
+export const remotePlaybackIntentSchema = Schema.Struct({
+  url: Schema.String.pipe(
+    Schema.refine(
+      (val): val is string => {
+        try {
+          new URL(val)
+          return true
+        } catch {
+          return false
+        }
+      },
+      { message: "Invalid URL" }
+    )
+  ),
+  rangeRequest: Schema.Literals(["supported", "unsupported", "unknown"]).pipe(
+    Schema.withDecodingDefault(Effect.succeed("unknown" as const))
+  ),
 })
 
 declare global {
@@ -39,21 +51,22 @@ declare global {
 }
 
 export const parseRemotePlaybackIntent = <Value>(value: Value) =>
-  remotePlaybackIntentSchema.safeParse(value)
+  Schema.decodeUnknownResult(remotePlaybackIntentSchema)(value)
 
-const isString = <Value>(value: Value): value is Value & string =>
-  z.string().safeParse(value).success
+const isExtractedLink = (
+  target: string | ExtractedLink
+): target is ExtractedLink => String(target) !== target
 
 const toRemotePlaybackIntent = (
   target: string | ExtractedLink
 ): RemotePlaybackIntent => {
-  if (isString(target)) {
-    return { url: target, rangeRequest: "unknown" }
+  if (isExtractedLink(target)) {
+    return {
+      url: getMediaNodeTarget(target),
+      rangeRequest: target.rangeRequest ?? "unknown",
+    }
   }
-  return {
-    url: getMediaNodeTarget(target),
-    rangeRequest: target.rangeRequest ?? "unknown",
-  }
+  return { url: target, rangeRequest: "unknown" }
 }
 
 export const createPlayableLinkHandoff = ({
@@ -71,13 +84,10 @@ export const createPlayableLinkHandoff = ({
       return { accepted: true }
     }
     const launchResult = await open({ ...intent, playerPreferenceUserId })
-    const result = z
-      .object({ expectsNavigation: z.literal(true) })
-      .safeParse(launchResult)
-    return { accepted: result.success }
+    return { accepted: launchResult.expectsNavigation === true }
   },
   receive: async <Value>(value: Value, playerPreferenceUserId?: string) => {
-    const intent = remotePlaybackIntentSchema.parse(value)
+    const intent = Schema.decodeUnknownSync(remotePlaybackIntentSchema)(value)
     await open({ ...intent, playerPreferenceUserId })
   },
 })

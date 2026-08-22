@@ -2,18 +2,18 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router"
 import { vi } from "vitest"
 
-vi.mock("~/components/Header", () => ({
+vi.mock("~/components/header", () => ({
   Header: ({ showSaveAction }: { showSaveAction: boolean }) => (
     <header data-testid="site-header" data-show-save-action={showSaveAction} />
   ),
 }))
-vi.mock("~/components/Footer", () => ({
+vi.mock("~/components/footer", () => ({
   Footer: () => <footer data-testid="site-footer" />,
 }))
-vi.mock("~/components/RemoteCommandListener", () => ({
+vi.mock("~/components/remote-command-listener", () => ({
   RemoteCommandListener: () => null,
 }))
-vi.mock("~/components/ReceiverOverlay", () => ({
+vi.mock("~/components/receiver-overlay", () => ({
   ReceiverOverlay: () => null,
 }))
 

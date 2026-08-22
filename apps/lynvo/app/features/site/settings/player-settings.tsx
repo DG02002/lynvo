@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Effect } from "effect"
+import { Effect, Result, Schema } from "effect"
 import { toast } from "sonner"
 import {
   Select,
@@ -185,15 +185,15 @@ export const PlayerSettings = () => {
     (p) => p.id === rangeUnsupportedPlayerId
   )
   const updateRangeSupportedPlayer = (value: string | null) => {
-    const playerId = playerIdSchema.safeParse(value)
-    if (playerId.success) {
-      handleRangeSupportedChange(playerId.data)
+    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    if (Result.isSuccess(playerId)) {
+      handleRangeSupportedChange(playerId.success)
     }
   }
   const updateRangeUnsupportedPlayer = (value: string | null) => {
-    const playerId = playerIdSchema.safeParse(value)
-    if (playerId.success) {
-      handleRangeUnsupportedChange(playerId.data)
+    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    if (Result.isSuccess(playerId)) {
+      handleRangeUnsupportedChange(playerId.success)
     }
   }
 

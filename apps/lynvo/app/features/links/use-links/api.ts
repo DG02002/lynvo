@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import { SavedLinkCommandError } from "../saved-link-command-failure"
 import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
 import {
@@ -18,8 +18,8 @@ declare global {
   }
 
   interface SavedLinkListResponse {
-    links: SavedLinkApiRecord[]
-    dataVersion: number
+    readonly links: readonly SavedLinkApiRecord[]
+    readonly dataVersion: number
   }
 
   interface CreateOrUpdateSavedLinkResponse {
@@ -59,37 +59,37 @@ export const savedLinkApiRecordToViewItem = (record: SavedLinkApiRecord) => {
   }
 }
 
-const savedLinkApiRecordSchema = z.object({
-  id: z.string(),
-  url: z.string(),
-  title: z.string().nullable(),
-  metaJson: z.string().nullable(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+const savedLinkApiRecordSchema = Schema.Struct({
+  id: Schema.String,
+  url: Schema.String,
+  title: Schema.NullOr(Schema.String),
+  metaJson: Schema.NullOr(Schema.String),
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
 })
 
-const savedLinkListResponseSchema = z.object({
-  links: z.array(savedLinkApiRecordSchema),
+const savedLinkListResponseSchema = Schema.Struct({
+  links: Schema.Array(savedLinkApiRecordSchema),
 })
 
-const failureBodySchema = z.object({
-  failure: z.object({
-    kind: z.string(),
-    message: z.string().optional(),
-    usedBytes: z.number().optional(),
-    sizeBytes: z.number().optional(),
-    limitBytes: z.number().optional(),
-    reference: z.string().optional(),
+const failureBodySchema = Schema.Struct({
+  failure: Schema.Struct({
+    kind: Schema.String,
+    message: Schema.optional(Schema.String),
+    usedBytes: Schema.optional(Schema.Number),
+    sizeBytes: Schema.optional(Schema.Number),
+    limitBytes: Schema.optional(Schema.Number),
+    reference: Schema.optional(Schema.String),
   }),
 })
 
 const toCommandError = async (
   httpResponse: globalThis.Response
 ): Promise<SavedLinkCommandError> => {
-  const parsed = failureBodySchema.safeParse(
+  const parsed = Schema.decodeUnknownResult(failureBodySchema)(
     await httpResponse.json().catch(() => null)
   )
-  if (!parsed.success) {
+  if (Result.isFailure(parsed)) {
     return new SavedLinkCommandError({
       failure: {
         kind: "temporarily-unavailable",
@@ -97,7 +97,7 @@ const toCommandError = async (
       },
     })
   }
-  const failure = parsed.data.failure
+  const failure = parsed.success.failure
   switch (failure.kind) {
     case "storage-limit":
       if (failure.usedBytes !== undefined && failure.limitBytes !== undefined) {
@@ -229,7 +229,9 @@ export type SavedLinkApiMetadataOperation =
 export const linksDataApi = {
   listSavedLinks: async (): Promise<SavedLinkListResponse> => {
     const httpResponse = await sendDataRequest("/api/data/links")
-    const body = savedLinkListResponseSchema.parse(await httpResponse.json())
+    const body = Schema.decodeUnknownSync(savedLinkListResponseSchema)(
+      await httpResponse.json()
+    )
     return {
       links: body.links,
       dataVersion: Number(

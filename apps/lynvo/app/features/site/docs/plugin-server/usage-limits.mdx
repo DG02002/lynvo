@@ -14,21 +14,27 @@ Define the response schema:
 <CodeBlock label="src/protocol.ts">
 
 ```ts {3-11}
-export const usageResponseSchema = z.object({
-  metrics: z
-    .array(
-      z.object({
-        id: z.string().min(1),
-        label: z.string().min(1),
-        used: z.number().nonnegative().finite(),
-        limit: z.number().positive().finite(),
-        unit: z.string().min(1),
-        period: z.enum(["daily", "monthly"]),
-        resetsAt: z.string().datetime(),
-        pluginId: z.string().min(1).optional(),
-      })
-    )
-    .min(1),
+import { Schema } from "effect"
+
+export const usageResponseSchema = Schema.Struct({
+  metrics: Schema.NonEmptyArray(
+    Schema.Struct({
+      id: Schema.NonEmptyString,
+      label: Schema.NonEmptyString,
+      used: Schema.Number.pipe(
+        Schema.check(Schema.isNonNegative()),
+        Schema.check(Schema.isFinite())
+      ),
+      limit: Schema.Number.pipe(
+        Schema.check(Schema.isPositive()),
+        Schema.check(Schema.isFinite())
+      ),
+      unit: Schema.NonEmptyString,
+      period: Schema.Literals(["daily", "monthly"]),
+      resetsAt: Schema.String,
+      pluginId: Schema.optional(Schema.NonEmptyString),
+    })
+  ),
 })
 ```
 

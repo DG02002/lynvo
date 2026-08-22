@@ -16,19 +16,21 @@ import {
 } from "../upstream-response"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PAYLOAD_PATTERN =
   /window\['_DRIVE_ivd'\]\s*=\s*'((?:\\.|[^'])*)'/
 
-const googleDrivePublicFolderItemSchema = z
-  .tuple([z.string(), z.json(), z.string(), z.string()])
-  .rest(z.json())
-const googleDrivePublicFolderPayloadSchema = z
-  .tuple([z.array(googleDrivePublicFolderItemSchema)])
-  .rest(z.json())
+const googleDrivePublicFolderItemSchema = Schema.TupleWithRest(
+  Schema.Tuple([Schema.String, Schema.Unknown, Schema.String, Schema.String]),
+  [Schema.Unknown]
+)
+const googleDrivePublicFolderPayloadSchema = Schema.TupleWithRest(
+  Schema.Tuple([Schema.Array(googleDrivePublicFolderItemSchema)]),
+  [Schema.Unknown]
+)
 
 export const extractGoogleDriveFileId = (value: string | URL): string => {
   const url = value instanceof URL ? value : new URL(value)
@@ -140,24 +142,24 @@ export const parseGoogleDrivePublicFolderItems = (
   if (!encodedPayload) {
     throw new Error("Google Drive folder is not publicly accessible.")
   }
-  const parsedPayload = googleDrivePublicFolderPayloadSchema.safeParse(
-    JSON.parse(decodeGoogleDriveFolderPayload(encodedPayload))
-  )
-  if (!parsedPayload.success) {
+  const parsedPayload = Schema.decodeUnknownResult(
+    googleDrivePublicFolderPayloadSchema
+  )(JSON.parse(decodeGoogleDriveFolderPayload(encodedPayload)))
+  if (Result.isFailure(parsedPayload)) {
     throw new Error("Google Drive returned a malformed public folder.")
   }
-  if (parsedPayload.data[0].length > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS) {
+  if (parsedPayload.success[0].length > GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS) {
     throw new Error("Google Drive public folder contains too many items.")
   }
-  return parsedPayload.data[0].map<GoogleDrivePublicFolderItem>((item) => {
+  return parsedPayload.success[0].map<GoogleDrivePublicFolderItem>((item) => {
     const result: GoogleDrivePublicFolderItem = {
       id: item[0],
       name: item[2],
       mimeType: item[3],
     }
-    const size = z.number().safeParse(item[13])
-    if (size.success) {
-      result.size = size.data
+    const size = Schema.decodeUnknownResult(Schema.Number)(item[13])
+    if (Result.isSuccess(size)) {
+      result.size = size.success
     }
     return result
   })
@@ -181,17 +183,15 @@ export const createGoogleDrivePublicFolderNodes = (
     if (!isVideoFile(item.name)) {
       return []
     }
-    const node: MediaNode = {
-      kind: "playable",
+    const size = formatFileSize(item.size)
+    const baseNode = {
+      kind: "playable" as const,
       id: item.id,
       label: item.name,
       url: createGoogleDriveDownloadUrl(item.id),
-      status: "unknown",
+      status: "unknown" as const,
     }
-    const size = formatFileSize(item.size)
-    if (size) {
-      node.size = size
-    }
+    const node: MediaNode = size ? { ...baseNode, size } : baseNode
     return [node]
   })
 
@@ -252,16 +252,16 @@ export const extractGoogleDrivePublicFile = async ({
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
-  const node: MediaNode = {
-    kind: "playable",
+  const baseNode = {
+    kind: "playable" as const,
     id: fileId,
     label: metadata.filename,
     url: downloadUrl,
-    status: "unknown",
+    status: "unknown" as const,
   }
-  if (metadata.size) {
-    node.size = metadata.size
-  }
+  const node: MediaNode = metadata.size
+    ? { ...baseNode, size: metadata.size }
+    : baseNode
   return {
     plugin: createPluginResponseMetadata(
       plugin,

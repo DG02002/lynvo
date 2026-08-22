@@ -1,13 +1,13 @@
-import { z } from "zod"
+import { Schema } from "effect"
 
 export interface HttpBasicCredential {
   password: string
   username: string
 }
 
-const httpBasicCredentialSchema = z.object({
-  username: z.string(),
-  password: z.string(),
+const httpBasicCredentialSchema = Schema.Struct({
+  username: Schema.String,
+  password: Schema.String,
 })
 
 export const serializeHttpBasicCredential = (
@@ -18,11 +18,13 @@ export const serializeHttpBasicCredential = (
 export const parseHttpBasicCredential = (
   value: string
 ): HttpBasicCredential => {
-  const parsed = httpBasicCredentialSchema.safeParse(JSON.parse(value))
-  if (!parsed.success) {
+  try {
+    return Schema.decodeUnknownSync(httpBasicCredentialSchema)(
+      JSON.parse(value)
+    )
+  } catch {
     throw new Error("Invalid HTTP Basic Auth credential")
   }
-  return parsed.data
 }
 
 export const extractHttpBasicCredential = (sourceUrl: string) => {

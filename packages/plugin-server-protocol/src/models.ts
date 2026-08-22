@@ -1,54 +1,54 @@
 export interface PluginServerMatcher {
-  hosts: string[]
-  hostPatterns?: string[]
-  pathPatterns?: string[]
-  schemes?: string[]
+  readonly hosts: readonly string[]
+  readonly hostPatterns?: readonly string[]
+  readonly pathPatterns?: readonly string[]
+  readonly schemes?: readonly string[]
 }
 
 export type JsonPrimitive = boolean | null | number | string
 
-export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject
+export type JsonValue = JsonPrimitive | readonly JsonValue[] | JsonObject
 
 export interface JsonObject {
-  [property: string]: JsonValue
+  readonly [property: string]: JsonValue
 }
 
 export interface PluginServerManifest {
-  protocolVersion: "1.0"
-  pluginServerId: string
-  displayName: string
-  hasIcon?: boolean
-  iconUrl?: string
-  homepage?: string
-  auth: {
-    type: "bearer"
+  readonly protocolVersion: "1.0"
+  readonly pluginServerId: string
+  readonly displayName: string
+  readonly hasIcon?: boolean
+  readonly iconUrl?: string
+  readonly homepage?: string
+  readonly auth: {
+    readonly type: "bearer"
   }
-  usage: {
-    endpoint: "/usage"
+  readonly usage: {
+    readonly endpoint: "/usage"
   }
-  matchers: PluginServerMatcher[]
-  features: {
-    password: boolean
-    lazyNodes: boolean
-    basicAuth?: boolean
-    discovery?: boolean
+  readonly matchers: readonly PluginServerMatcher[]
+  readonly features: {
+    readonly password: boolean
+    readonly lazyNodes: boolean
+    readonly basicAuth?: boolean
+    readonly discovery?: boolean
   }
-  extensions: object
+  readonly extensions: object
 }
 
 export interface UsageMetric {
-  id: string
-  label: string
-  used: number
-  limit: number
-  unit: string
-  period: "daily" | "monthly"
-  resetsAt: string
-  pluginId?: string
+  readonly id: string
+  readonly label: string
+  readonly used: number
+  readonly limit: number
+  readonly unit: string
+  readonly period: "daily" | "monthly"
+  readonly resetsAt: string
+  readonly pluginId?: string
 }
 
 export interface UsageResponse {
-  metrics: UsageMetric[]
+  readonly metrics: readonly UsageMetric[]
 }
 
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
@@ -56,183 +56,183 @@ export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
 export type ExpirySource = "signed-url" | "expires-header" | "cache-control"
 
 export interface GroupNode {
-  kind: "group"
-  id?: string
-  label: string
-  badge?: string
-  size?: string
-  sourceName?: string
-  selectable?: boolean
-  children: MediaNode[]
+  readonly kind: "group"
+  readonly id?: string
+  readonly label: string
+  readonly badge?: string
+  readonly size?: string
+  readonly sourceName?: string
+  readonly selectable?: boolean
+  readonly children: readonly MediaNode[]
 }
 
 export interface ResolvableNode {
-  kind: "resolvable"
-  id?: string
-  label: string
-  nodeUrl?: string
-  resourceId?: string
-  resolutionKind?: "folder" | "mirrors"
-  badge?: string
-  size?: string
-  sourceName?: string
+  readonly kind: "resolvable"
+  readonly id?: string
+  readonly label: string
+  readonly nodeUrl?: string
+  readonly resourceId?: string
+  readonly resolutionKind?: "folder" | "mirrors"
+  readonly badge?: string
+  readonly size?: string
+  readonly sourceName?: string
 }
 
 export interface PlayableNode {
-  kind: "playable"
-  id?: string
-  label: string
-  url: string
-  badge?: string
-  size?: string
-  sourceName?: string
-  expiry?: number
-  expirySource?: ExpirySource
-  status?: "up" | "down" | "unknown"
-  rangeRequest?: RangeRequestCapability
+  readonly kind: "playable"
+  readonly id?: string
+  readonly label: string
+  readonly url: string
+  readonly badge?: string
+  readonly size?: string
+  readonly sourceName?: string
+  readonly expiry?: number
+  readonly expirySource?: ExpirySource
+  readonly status?: "up" | "down" | "unknown"
+  readonly rangeRequest?: RangeRequestCapability
 }
 
 export type MediaNode = GroupNode | ResolvableNode | PlayableNode
 
 export interface SourceInput {
-  kind: "source"
-  sourceUrl: string
+  readonly kind: "source"
+  readonly sourceUrl: string
 }
 
 export interface NodeInput {
-  kind: "node"
-  nodeUrl: string
-  resourceId?: string
+  readonly kind: "node"
+  readonly nodeUrl: string
+  readonly resourceId?: string
 }
 
 export interface ExtractRequest {
-  input: SourceInput | NodeInput
-  pluginId?: string
-  password?: string
-  basicAuth?: HttpBasicAuth
+  readonly input: SourceInput | NodeInput
+  readonly pluginId?: string
+  readonly password?: string
+  readonly basicAuth?: HttpBasicAuth
 }
 
 export interface HttpBasicAuth {
-  username: string
-  password: string
+  readonly username: string
+  readonly password: string
 }
 
 export interface ExtractedHttpBasicAuth {
-  basicAuth?: HttpBasicAuth
-  url: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly url: string
 }
 
 export interface ExtractSuccessResponse {
-  plugin: {
-    pluginServerId: string
-    displayName: string
-    iconUrl?: string
-    pluginId?: string
-    pluginName?: string
-    pluginIconUrl?: string
-    pageTitle?: string
-    audio?: string
+  readonly plugin: {
+    readonly pluginServerId: string
+    readonly displayName: string
+    readonly iconUrl?: string
+    readonly pluginId?: string
+    readonly pluginName?: string
+    readonly pluginIconUrl?: string
+    readonly pageTitle?: string
+    readonly audio?: string
   }
-  nodes: MediaNode[]
-  extensions: object
+  readonly nodes: readonly MediaNode[]
+  readonly extensions: object
 }
 
 export interface ExtractProtocolError {
-  ok: false
-  error: {
-    code: ErrorCode
-    message: string
-    retryAfterSeconds?: number
+  readonly ok: false
+  readonly error: {
+    readonly code: ErrorCode
+    readonly message: string
+    readonly retryAfterSeconds?: number
   }
-  extensions: object
+  readonly extensions: object
 }
 
 export interface VerifySuccessResponse {
-  ok: true
+  readonly ok: true
 }
 
 export interface VerifyErrorResponse {
-  ok: false
-  error: {
-    code: string
-    message: string
+  readonly ok: false
+  readonly error: {
+    readonly code: string
+    readonly message: string
   }
 }
 
 export interface DiscoverRequest {
-  url: string
-  basicAuth?: HttpBasicAuth
+  readonly url: string
+  readonly basicAuth?: HttpBasicAuth
 }
 
 export type DiscoverResponse =
-  | { matched: false }
+  | { readonly matched: false }
   | {
-      matched: true
-      pluginId: string
-      confidence: "pattern" | "verified"
+      readonly matched: true
+      readonly pluginId: string
+      readonly confidence: "pattern" | "verified"
     }
 
 export interface PluginMetadata {
-  id: string
-  displayName: string
-  description?: string
-  homepage?: string
-  hasIcon?: boolean
-  iconUrl?: string
-  status?: "active" | "maintenance" | "degraded" | "down"
-  version?: string
-  routesToPluginId?: string
-  matchStrategy?: "static" | "probe"
-  hosts: string[]
-  matchers?: PluginServerMatcher[]
-  credential?: PluginCredential
+  readonly id: string
+  readonly displayName: string
+  readonly description?: string
+  readonly homepage?: string
+  readonly hasIcon?: boolean
+  readonly iconUrl?: string
+  readonly status?: "active" | "maintenance" | "degraded" | "down"
+  readonly version?: string
+  readonly routesToPluginId?: string
+  readonly matchStrategy?: "static" | "probe"
+  readonly hosts: readonly string[]
+  readonly matchers?: readonly PluginServerMatcher[]
+  readonly credential?: PluginCredential
 }
 
 export interface PluginCredential {
-  kind: "domain-password" | "http-basic"
-  scope: "domain"
-  required: boolean
+  readonly kind: "domain-password" | "http-basic"
+  readonly scope: "domain"
+  readonly required: boolean
 }
 
 export interface LynvoManifestExtension {
-  plugins?: PluginMetadata[]
+  readonly plugins?: readonly PluginMetadata[]
 }
 
 export interface ContractIssue {
-  path: string
-  message: string
+  readonly path: string
+  readonly message: string
 }
 
 export interface ContractValidationResult {
-  ok: boolean
-  issues: ContractIssue[]
+  readonly ok: boolean
+  readonly issues: readonly ContractIssue[]
 }
 
 export interface ContractParseResult<Value> extends ContractValidationResult {
-  value?: Value
+  readonly value?: Value
 }
 
 export interface PluginServerRuntimeContext<Env> {
-  request: Request
-  env: Env
+  readonly request: Request
+  readonly env: Env
 }
 
 export interface PluginServerRuntimeAuth<Env> {
-  validate: (
+  readonly validate: (
     context: PluginServerRuntimeContext<Env>
   ) => Promise<boolean> | boolean
 }
 
 export interface PluginServerRuntimeExtractOptions<Env> {
-  request: ExtractRequest
-  targetUrl: string
-  env: Env
+  readonly request: ExtractRequest
+  readonly targetUrl: string
+  readonly env: Env
 }
 
 export interface PluginServerRuntimeDiscoverOptions<Env> {
-  request: DiscoverRequest
-  targetUrl: string
-  env: Env
+  readonly request: DiscoverRequest
+  readonly targetUrl: string
+  readonly env: Env
 }
 
 export type PluginServerRuntimeManifest<Env> =
@@ -242,18 +242,21 @@ export type PluginServerRuntimeManifest<Env> =
     ) => Promise<PluginServerManifest> | PluginServerManifest)
 
 export interface PluginServerRuntimeOptions<Env> {
-  manifest: PluginServerRuntimeManifest<Env>
-  auth: PluginServerRuntimeAuth<Env>
-  extract: (
+  readonly manifest: PluginServerRuntimeManifest<Env>
+  readonly auth: PluginServerRuntimeAuth<Env>
+  readonly extract: (
     options: PluginServerRuntimeExtractOptions<Env>
   ) => Promise<ExtractSuccessResponse> | ExtractSuccessResponse
-  discover?: (
+  readonly discover?: (
     options: PluginServerRuntimeDiscoverOptions<Env>
   ) => Promise<DiscoverResponse> | DiscoverResponse
-  usage: (
+  readonly usage: (
     context: PluginServerRuntimeContext<Env>
   ) => Promise<UsageResponse> | UsageResponse
-  onError?: (cause: unknown, context: PluginServerRuntimeContext<Env>) => void
+  readonly onError?: (
+    cause: unknown,
+    context: PluginServerRuntimeContext<Env>
+  ) => void
 }
 
 export interface PluginServerRuntime<Env> {

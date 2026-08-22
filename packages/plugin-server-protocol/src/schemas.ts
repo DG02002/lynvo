@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { Effect, Schema } from "effect"
 import { ERROR_CODES } from "./models.js"
 import type {
   GroupNode,
@@ -7,203 +7,274 @@ import type {
   ResolvableNode,
 } from "./models.js"
 
-export const pluginServerMatcherSchema = z.object({
-  hosts: z.array(z.string()).min(1),
-  hostPatterns: z.array(z.string()).optional(),
-  pathPatterns: z.array(z.string()).optional(),
-  schemes: z.array(z.string()).optional().default(["https"]),
+export const pluginServerMatcherSchema = Schema.Struct({
+  hosts: Schema.NonEmptyArray(Schema.String),
+  hostPatterns: Schema.optional(Schema.Array(Schema.String)),
+  pathPatterns: Schema.optional(Schema.Array(Schema.String)),
+  schemes: Schema.Array(Schema.String).pipe(
+    Schema.withDecodingDefault(Effect.succeed(["https"]))
+  ),
 })
 
-const iconUrlSchema = z.url().refine((value) => {
-  const url = new URL(value)
-  return (
-    url.protocol === "https:" ||
-    (url.protocol === "http:" &&
-      ["localhost", "127.0.0.1", "::1"].includes(url.hostname))
+const iconUrlSchema = Schema.String.pipe(
+  Schema.refine(
+    (value): value is string => {
+      try {
+        const url = new URL(value)
+        return (
+          url.protocol === "https:" ||
+          (url.protocol === "http:" &&
+            ["localhost", "127.0.0.1", "::1"].includes(url.hostname))
+        )
+      } catch {
+        return false
+      }
+    },
+    {
+      message:
+        "Icon URLs must use HTTPS, except on loopback development hosts",
+    }
   )
-}, "Icon URLs must use HTTPS, except on loopback development hosts")
+)
 
-export const pluginServerManifestSchema = z.object({
-  protocolVersion: z.literal("1.0"),
-  pluginServerId: z.string().min(1),
-  displayName: z.string().min(1),
-  hasIcon: z.boolean().optional(),
-  iconUrl: iconUrlSchema.optional(),
-  homepage: z.url().startsWith("https://").optional(),
-  auth: z.object({
-    type: z.literal("bearer"),
+const httpsUrlSchema = Schema.String.pipe(
+  Schema.refine(
+    (value): value is string => {
+      try {
+        const url = new URL(value)
+        return url.protocol === "https:"
+      } catch {
+        return false
+      }
+    },
+    { message: "Must be a valid HTTPS URL" }
+  )
+)
+
+const urlStringSchema = Schema.String.pipe(
+  Schema.refine(
+    (value): value is string => {
+      try {
+        new URL(value)
+        return true
+      } catch {
+        return false
+      }
+    },
+    { message: "Must be a valid URL" }
+  )
+)
+
+export const pluginServerManifestSchema = Schema.Struct({
+  protocolVersion: Schema.Literal("1.0"),
+  pluginServerId: Schema.NonEmptyString,
+  displayName: Schema.NonEmptyString,
+  hasIcon: Schema.optional(Schema.Boolean),
+  iconUrl: Schema.optional(iconUrlSchema),
+  homepage: Schema.optional(httpsUrlSchema),
+  auth: Schema.Struct({
+    type: Schema.Literal("bearer"),
   }),
-  usage: z
-    .object({
-      endpoint: z.literal("/usage"),
+  usage: Schema.Struct({
+    endpoint: Schema.Literal("/usage"),
+  }).pipe(
+    Schema.withDecodingDefault(Effect.succeed({ endpoint: "/usage" as const }))
+  ),
+  matchers: Schema.NonEmptyArray(pluginServerMatcherSchema),
+  features: Schema.Struct({
+    password: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false))
+    ),
+    lazyNodes: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false))
+    ),
+    basicAuth: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false))
+    ),
+    discovery: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false))
+    ),
+  }),
+  extensions: Schema.Record(Schema.String, Schema.Unknown).pipe(
+    Schema.withDecodingDefault(Effect.succeed({}))
+  ),
+})
+
+export const usageMetricSchema = Schema.Struct({
+  id: Schema.NonEmptyString,
+  label: Schema.NonEmptyString,
+  used: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  limit: Schema.Number.pipe(Schema.check(Schema.isGreaterThan(0))),
+  unit: Schema.NonEmptyString,
+  period: Schema.Literals(["daily", "monthly"]),
+  resetsAt: Schema.String,
+  pluginId: Schema.optional(Schema.NonEmptyString),
+})
+
+export const usageResponseSchema = Schema.Struct({
+  metrics: Schema.NonEmptyArray(usageMetricSchema),
+})
+
+export const verifySuccessSchema = Schema.Struct({
+  ok: Schema.Literal(true),
+})
+
+export const verifyErrorSchema = Schema.Struct({
+  ok: Schema.Literal(false),
+  error: Schema.Struct({
+    code: Schema.String,
+    message: Schema.String,
+  }),
+})
+
+export const discoverRequestSchema = Schema.Struct({
+  url: urlStringSchema,
+  basicAuth: Schema.optional(
+    Schema.Struct({
+      username: Schema.String,
+      password: Schema.String,
     })
-    .optional()
-    .default({ endpoint: "/usage" }),
-  matchers: z.array(pluginServerMatcherSchema).min(1),
-  features: z.object({
-    password: z.boolean().optional().default(false),
-    lazyNodes: z.boolean().optional().default(false),
-    basicAuth: z.boolean().optional().default(false),
-    discovery: z.boolean().optional().default(false),
-  }),
-  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
+  ),
 })
 
-export const usageMetricSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  used: z.number().nonnegative().finite(),
-  limit: z.number().positive().finite(),
-  unit: z.string().min(1),
-  period: z.enum(["daily", "monthly"]),
-  resetsAt: z.iso.datetime(),
-  pluginId: z.string().min(1).optional(),
-})
-
-export const usageResponseSchema = z.object({
-  metrics: z.array(usageMetricSchema).min(1),
-})
-
-export const verifySuccessSchema = z.object({
-  ok: z.literal(true),
-})
-
-export const verifyErrorSchema = z.object({
-  ok: z.literal(false),
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-  }),
-})
-
-export const discoverRequestSchema = z.object({
-  url: z.url(),
-  basicAuth: z
-    .object({
-      username: z.string(),
-      password: z.string(),
-    })
-    .optional(),
-})
-
-export const discoverResponseSchema = z.discriminatedUnion("matched", [
-  z.object({ matched: z.literal(false) }),
-  z.object({
-    matched: z.literal(true),
-    pluginId: z.string().min(1),
-    confidence: z.enum(["pattern", "verified"]),
+export const discoverResponseSchema = Schema.Union([
+  Schema.Struct({ matched: Schema.Literal(false) }),
+  Schema.Struct({
+    matched: Schema.Literal(true),
+    pluginId: Schema.NonEmptyString,
+    confidence: Schema.Literals(["pattern", "verified"]),
   }),
 ])
 
-export const pluginMetadataSchema = z.object({
-  id: z.string().min(1),
-  displayName: z.string().min(1),
-  description: z.string().min(1).optional(),
-  homepage: z.url().startsWith("https://").optional(),
-  hasIcon: z.boolean().optional(),
-  iconUrl: iconUrlSchema.optional(),
-  status: z.enum(["active", "maintenance", "degraded", "down"]).optional(),
-  version: z.string().optional(),
-  routesToPluginId: z.string().min(1).optional(),
-  matchStrategy: z.enum(["static", "probe"]).optional(),
-  hosts: z.array(z.string()).default([]),
-  matchers: z.array(pluginServerMatcherSchema).optional(),
-  credential: z
-    .object({
-      kind: z.enum(["domain-password", "http-basic"]),
-      scope: z.literal("domain"),
-      required: z.boolean(),
+export const pluginMetadataSchema = Schema.Struct({
+  id: Schema.NonEmptyString,
+  displayName: Schema.NonEmptyString,
+  description: Schema.optional(Schema.NonEmptyString),
+  homepage: Schema.optional(httpsUrlSchema),
+  hasIcon: Schema.optional(Schema.Boolean),
+  iconUrl: Schema.optional(iconUrlSchema),
+  status: Schema.optional(
+    Schema.Literals(["active", "maintenance", "degraded", "down"])
+  ),
+  version: Schema.optional(Schema.String),
+  routesToPluginId: Schema.optional(Schema.NonEmptyString),
+  matchStrategy: Schema.optional(Schema.Literals(["static", "probe"])),
+  hosts: Schema.Array(Schema.String).pipe(
+    Schema.withDecodingDefault(Effect.succeed([]))
+  ),
+  matchers: Schema.optional(Schema.Array(pluginServerMatcherSchema)),
+  credential: Schema.optional(
+    Schema.Struct({
+      kind: Schema.Literals(["domain-password", "http-basic"]),
+      scope: Schema.Literal("domain"),
+      required: Schema.Boolean,
     })
-    .optional(),
+  ),
 })
 
-export const lynvoPluginCatalogSchema = z.object({
-  plugins: z.array(pluginMetadataSchema).optional().default([]),
+export const lynvoPluginCatalogSchema = Schema.Struct({
+  plugins: Schema.Array(pluginMetadataSchema).pipe(
+    Schema.withDecodingDefault(Effect.succeed([]))
+  ),
 })
 
 const baseNodeFields = {
-  id: z.string().optional(),
-  label: z.string(),
-  badge: z.string().optional(),
-  size: z.string().optional(),
-  sourceName: z.string().optional(),
+  id: Schema.optional(Schema.String),
+  label: Schema.String,
+  badge: Schema.optional(Schema.String),
+  size: Schema.optional(Schema.String),
+  sourceName: Schema.optional(Schema.String),
 }
 
-export const mediaNodeSchema: z.ZodType<MediaNode> = z.lazy(() =>
-  z.union([groupNodeSchema, resolvableNodeSchema, playableNodeSchema])
+export const groupNodeSchema: Schema.Codec<GroupNode> = Schema.Struct({
+  ...baseNodeFields,
+  kind: Schema.Literal("group"),
+  selectable: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(Effect.succeed(false))
+  ),
+  children: Schema.Array(
+    Schema.suspend((): Schema.Codec<MediaNode> => mediaNodeSchema)
+  ),
+})
+
+export const resolvableNodeSchema: Schema.Codec<ResolvableNode> = Schema.Struct(
+  {
+    ...baseNodeFields,
+    kind: Schema.Literal("resolvable"),
+    nodeUrl: Schema.optional(Schema.String),
+    resourceId: Schema.optional(Schema.String),
+    resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
+  }
 )
 
-export const groupNodeSchema: z.ZodType<GroupNode> = z.object({
+export const playableNodeSchema: Schema.Codec<PlayableNode> = Schema.Struct({
   ...baseNodeFields,
-  kind: z.literal("group"),
-  selectable: z.boolean().optional().default(false),
-  children: mediaNodeSchema.array(),
+  kind: Schema.Literal("playable"),
+  url: Schema.String,
+  expiry: Schema.optional(Schema.Number),
+  expirySource: Schema.optional(
+    Schema.Literals(["signed-url", "expires-header", "cache-control"])
+  ),
+  status: Schema.optional(Schema.Literals(["up", "down", "unknown"])),
+  rangeRequest: Schema.optional(
+    Schema.Literals(["supported", "unsupported", "unknown"])
+  ),
 })
 
-export const resolvableNodeSchema: z.ZodType<ResolvableNode> = z.object({
-  ...baseNodeFields,
-  kind: z.literal("resolvable"),
-  nodeUrl: z.string().optional(),
-  resourceId: z.string().optional(),
-  resolutionKind: z.enum(["folder", "mirrors"]).optional(),
-})
+export const mediaNodeSchema: Schema.Codec<MediaNode> = Schema.Union([
+  groupNodeSchema,
+  resolvableNodeSchema,
+  playableNodeSchema,
+])
 
-export const playableNodeSchema: z.ZodType<PlayableNode> = z.object({
-  ...baseNodeFields,
-  kind: z.literal("playable"),
-  url: z.string(),
-  expiry: z.number().optional(),
-  expirySource: z
-    .enum(["signed-url", "expires-header", "cache-control"])
-    .optional(),
-  status: z.enum(["up", "down", "unknown"]).optional(),
-  rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
-})
-
-export const extractSuccessSchema = z.object({
-  plugin: z.object({
-    pluginServerId: z.string(),
-    displayName: z.string(),
-    iconUrl: iconUrlSchema.optional(),
-    pluginId: z.string().optional(),
-    pluginName: z.string().optional(),
-    pluginIconUrl: iconUrlSchema.optional(),
-    pageTitle: z.string().optional(),
-    audio: z.string().optional(),
+export const extractSuccessSchema = Schema.Struct({
+  plugin: Schema.Struct({
+    pluginServerId: Schema.String,
+    displayName: Schema.String,
+    iconUrl: Schema.optional(iconUrlSchema),
+    pluginId: Schema.optional(Schema.String),
+    pluginName: Schema.optional(Schema.String),
+    pluginIconUrl: Schema.optional(iconUrlSchema),
+    pageTitle: Schema.optional(Schema.String),
+    audio: Schema.optional(Schema.String),
   }),
-  nodes: z.array(mediaNodeSchema),
-  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
+  nodes: Schema.Array(mediaNodeSchema),
+  extensions: Schema.Record(Schema.String, Schema.Unknown).pipe(
+    Schema.withDecodingDefault(Effect.succeed({}))
+  ),
 })
 
-export const extractErrorSchema = z.object({
-  ok: z.literal(false),
-  error: z.object({
-    code: z.enum(ERROR_CODES),
-    message: z.string(),
-    retryAfterSeconds: z.number().optional(),
+export const extractErrorSchema = Schema.Struct({
+  ok: Schema.Literal(false),
+  error: Schema.Struct({
+    code: Schema.Literals(ERROR_CODES),
+    message: Schema.String,
+    retryAfterSeconds: Schema.optional(Schema.Number),
   }),
-  extensions: z.record(z.string(), z.looseObject({})).optional().default({}),
+  extensions: Schema.Record(Schema.String, Schema.Unknown).pipe(
+    Schema.withDecodingDefault(Effect.succeed({}))
+  ),
 })
 
-export const sourceInputSchema = z.object({
-  kind: z.literal("source"),
-  sourceUrl: z.string(),
+export const sourceInputSchema = Schema.Struct({
+  kind: Schema.Literal("source"),
+  sourceUrl: Schema.String,
 })
 
-export const nodeInputSchema = z.object({
-  kind: z.literal("node"),
-  nodeUrl: z.string(),
-  resourceId: z.string().optional(),
+export const nodeInputSchema = Schema.Struct({
+  kind: Schema.Literal("node"),
+  nodeUrl: Schema.String,
+  resourceId: Schema.optional(Schema.String),
 })
 
-export const extractRequestSchema = z.object({
-  input: z.discriminatedUnion("kind", [sourceInputSchema, nodeInputSchema]),
-  pluginId: z.string().min(1).optional(),
-  password: z.string().optional(),
-  basicAuth: z
-    .object({
-      username: z.string(),
-      password: z.string(),
+export const extractRequestSchema = Schema.Struct({
+  input: Schema.Union([sourceInputSchema, nodeInputSchema]),
+  pluginId: Schema.optional(Schema.NonEmptyString),
+  password: Schema.optional(Schema.String),
+  basicAuth: Schema.optional(
+    Schema.Struct({
+      username: Schema.String,
+      password: Schema.String,
     })
-    .optional(),
+  ),
 })

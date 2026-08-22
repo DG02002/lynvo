@@ -1,5 +1,5 @@
 import { Hono, type Context as HonoContext } from "hono"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,
@@ -63,55 +63,57 @@ const REMOTE_CLAIM_INACTIVE_MESSAGE = "Remote command claim is no longer active"
 const PLUGIN_SERVER_DELETE_LIMIT_MESSAGE =
   "Plugin server cleanup exceeds the synchronous limit"
 
-const validationFailure = (message: string): SavedLinkCommandFailure => ({
-  kind: "validation",
-  message,
-})
-
-const unavailableFailure = (reference: string): SavedLinkCommandFailure => ({
-  kind: "temporarily-unavailable",
-  reference,
-})
-
-const failureResponse = async (
+const respondDataFailure = async (
   context: DataRouteContext,
   status: DataFailureStatus,
-  failure: SavedLinkCommandFailure
-): Promise<Response> => await context.json({ failure }, status)
+  kind: string,
+  message: string
+): Promise<Response> =>
+  await context.json({ failure: { kind, message } }, status)
 
 const dataApp = new Hono<RequestLoggingEnvironment>()
 
 dataApp.onError(async (error, context) => {
   if (error instanceof StorageLimitError) {
-    return await failureResponse(context, 422, {
-      kind: "storage-limit",
-      usedBytes: error.usedBytes,
-      limitBytes: error.limitBytes,
-    })
+    return await context.json(
+      {
+        failure: {
+          kind: "storage-limit",
+          usedBytes: error.usedBytes,
+          limitBytes: error.limitBytes,
+        },
+      },
+      422
+    )
   }
   if (error instanceof LinkTooLargeError) {
-    return await failureResponse(context, 422, {
-      kind: "link-too-large",
-      sizeBytes: error.sizeBytes,
-      limitBytes: error.limitBytes,
-    })
+    return await context.json(
+      {
+        failure: {
+          kind: "link-too-large",
+          sizeBytes: error.sizeBytes,
+          limitBytes: error.limitBytes,
+        },
+      },
+      422
+    )
   }
   const message = error instanceof Error ? error.message : String(error)
   if (message === LINK_NOT_FOUND_MESSAGE) {
-    return await failureResponse(context, 404, validationFailure(message))
+    return await respondDataFailure(context, 404, "validation", message)
   }
   if (
     message === EXTRACTION_CONFLICT_MESSAGE ||
     message === REMOTE_CLAIM_INACTIVE_MESSAGE ||
     message === REMOTE_TARGET_MISSING_MESSAGE
   ) {
-    return await failureResponse(context, 409, validationFailure(message))
+    return await respondDataFailure(context, 409, "validation", message)
   }
   if (
     message === RETENTION_INVALID_MESSAGE ||
     message === PLUGIN_SERVER_DELETE_LIMIT_MESSAGE
   ) {
-    return await failureResponse(context, 400, validationFailure(message))
+    return await respondDataFailure(context, 400, "validation", message)
   }
   addRequestContext(context, {
     error: {
@@ -119,68 +121,78 @@ dataApp.onError(async (error, context) => {
       message,
     },
   })
-  return await failureResponse(
+  return await respondDataFailure(
     context,
     500,
-    unavailableFailure(context.get("requestId"))
+    "temporarily-unavailable",
+    context.get("requestId")
   )
 })
 
-interface ReadyDataRequest {
+interface DataRequestReady {
   readonly kind: "ready"
   readonly database: D1Database
   readonly session: SessionRecord
 }
 
-interface RespondedDataRequest {
-  readonly kind: "responded"
+interface DataRequestTerminated {
+  readonly kind: "terminated"
   readonly response: Response
 }
 
-type DataRequestPreparation = ReadyDataRequest | RespondedDataRequest
+type DataRequestPreparation = DataRequestReady | DataRequestTerminated
+
+const isReadyDataRequest = (
+  preparation: DataRequestPreparation
+): preparation is DataRequestReady => preparation.kind === "ready"
 
 const beginDataRequest = async (
   context: DataRouteContext,
-  input: { readonly mutating: boolean }
+  options: { mutating: boolean }
 ): Promise<DataRequestPreparation> => {
   const database = getD1Database(context.env)
   if (!database) {
     return {
-      kind: "responded",
-      response: await failureResponse(
+      kind: "terminated",
+      response: await respondDataFailure(
         context,
         503,
-        unavailableFailure("d1-unbound")
+        "service-unavailable",
+        "Data storage is temporarily unavailable"
       ),
     }
   }
-  if (input.mutating && !isSameOriginRequest(context.req.raw)) {
-    addRequestContext(context, { data_route_outcome: "cross_origin_rejected" })
+  if (options.mutating && !isSameOriginRequest(context.req.raw)) {
     return {
-      kind: "responded",
-      response: await failureResponse(context, 403, { kind: "csrf-expired" }),
+      kind: "terminated",
+      response: await respondDataFailure(
+        context,
+        403,
+        "csrf-expired",
+        "Mutation forbidden"
+      ),
     }
   }
   const session = await resolveD1Session(context.req.raw, database)
   if (!session) {
     return {
-      kind: "responded",
-      response: await failureResponse(context, 401, {
-        kind: "session-expired",
-      }),
+      kind: "terminated",
+      response: await respondDataFailure(
+        context,
+        401,
+        "session-expired",
+        "Session expired"
+      ),
     }
   }
+  addRequestContext(context, { user_id: session.userId })
   return { kind: "ready", database, session }
 }
-
-const isReadyDataRequest = (
-  preparation: DataRequestPreparation
-): preparation is ReadyDataRequest => preparation.kind === "ready"
 
 const respondInvalidBody = async (
   context: DataRouteContext
 ): Promise<Response> =>
-  failureResponse(context, 400, validationFailure("Send a valid request."))
+  respondDataFailure(context, 400, "validation", "Send a valid request.")
 
 interface DataRequestBody<Body> {
   readonly kind: "body"
@@ -194,19 +206,19 @@ interface DataRequestInvalid {
 
 type DataRequestBodyResult<Body> = DataRequestBody<Body> | DataRequestInvalid
 
-const readDataJsonBody = async <Schema extends z.ZodType>(
+const readDataJsonBody = async <S extends Schema.Decoder<any>>(
   context: DataRouteContext,
-  schema: Schema
-): Promise<DataRequestBodyResult<z.infer<Schema>>> => {
+  schema: S
+): Promise<DataRequestBodyResult<Schema.Schema.Type<S>>> => {
   let payload: unknown
   try {
     payload = await context.req.json()
   } catch {
     return { kind: "invalid", response: await respondInvalidBody(context) }
   }
-  const parsed = schema.safeParse(payload)
-  return parsed.success
-    ? { kind: "body", body: parsed.data }
+  const parsed = Schema.decodeUnknownResult(schema)(payload)
+  return Result.isSuccess(parsed)
+    ? { kind: "body", body: parsed.success }
     : { kind: "invalid", response: await respondInvalidBody(context) }
 }
 
@@ -223,78 +235,79 @@ const notifyAccountDataChanged = async (
   )
 }
 
-const operationIdSchema = z.object({ operationId: z.string().min(1) })
-
-const createOrUpdateSchema = operationIdSchema.extend({
-  url: z.string().min(1),
-  title: z.string().optional(),
-  meta: z.string().optional(),
+const createOrUpdateSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+  url: Schema.NonEmptyString,
+  title: Schema.optional(Schema.String),
+  meta: Schema.optional(Schema.String),
 })
 
-const updateMetaSchema = z.object({
-  operationId: z.string().min(1),
-  id: z.string().min(1),
-  meta: z.string().min(1),
+const updateMetaSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+  id: Schema.NonEmptyString,
+  meta: Schema.NonEmptyString,
 })
 
-const deleteLinkSchema = z.object({ id: z.string().min(1) })
+const deleteLinkSchema = Schema.Struct({ id: Schema.NonEmptyString })
 
-const metadataOperationSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("markOpened"),
-    linkUrl: z.string().min(1),
+const metadataOperationSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("markOpened"),
+    linkUrl: Schema.NonEmptyString,
   }),
-  z.object({
-    kind: z.literal("cacheMirrors"),
-    lazyItemUrl: z.string().min(1),
-    mirrorsJson: z.string().min(1),
+  Schema.Struct({
+    kind: Schema.Literal("cacheMirrors"),
+    lazyItemUrl: Schema.NonEmptyString,
+    mirrorsJson: Schema.NonEmptyString,
   }),
-  z.object({
-    kind: z.literal("removeExtractedLink"),
-    linkKey: z.string().min(1),
-    linkUrl: z.string().min(1),
+  Schema.Struct({
+    kind: Schema.Literal("removeExtractedLink"),
+    linkKey: Schema.NonEmptyString,
+    linkUrl: Schema.NonEmptyString,
   }),
-  z.object({
-    kind: z.literal("replaceExtraction"),
-    expectedExtractionJson: z.string(),
-    extractedLinksJson: z.string(),
+  Schema.Struct({
+    kind: Schema.Literal("replaceExtraction"),
+    expectedExtractionJson: Schema.String,
+    extractedLinksJson: Schema.String,
   }),
 ])
 
-const applyMetadataOperationSchema = z.object({
-  operationId: z.string().min(1),
-  id: z.string().min(1),
+const applyMetadataOperationSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+  id: Schema.NonEmptyString,
   operation: metadataOperationSchema,
 })
 
-const retentionDaysSchema = z.object({
-  days: z.number().int(),
-  deleteExpiredLinks: z.boolean().optional(),
+const retentionDaysSchema = Schema.Struct({
+  days: Schema.Int,
+  deleteExpiredLinks: Schema.optional(Schema.Boolean),
 })
 
-const pluginServerEnabledSchema = z.object({ enabled: z.boolean() })
+const pluginServerEnabledSchema = Schema.Struct({ enabled: Schema.Boolean })
 
-const pluginDomainUpsertSchema = z.object({
-  domain: z.string().min(1),
-  pluginServerId: z.string().min(1),
-  pluginId: z.string().min(1),
+const pluginDomainUpsertSchema = Schema.Struct({
+  domain: Schema.NonEmptyString,
+  pluginServerId: Schema.NonEmptyString,
+  pluginId: Schema.NonEmptyString,
 })
 
-const remoteCommandEnqueueSchema = z.object({
-  targetSessionId: z.string().min(1),
-  targetReceiverId: z.string().min(1),
-  command: z.literal("play"),
-  payload: z.string(),
+const remoteCommandEnqueueSchema = Schema.Struct({
+  targetSessionId: Schema.NonEmptyString,
+  targetReceiverId: Schema.NonEmptyString,
+  command: Schema.Literal("play"),
+  payload: Schema.String,
 })
 
-const remoteCommandClaimSchema = z.object({ receiverId: z.string().min(1) })
+const remoteCommandClaimSchema = Schema.Struct({
+  receiverId: Schema.NonEmptyString,
+})
 
-const remoteCommandResultSchema = z.object({
-  id: z.string().min(1),
-  receiverId: z.string().min(1),
-  claimToken: z.string().min(1),
-  result: z.enum(["applied", "failed"]),
-  message: z.string().optional(),
+const remoteCommandResultSchema = Schema.Struct({
+  id: Schema.NonEmptyString,
+  receiverId: Schema.NonEmptyString,
+  claimToken: Schema.NonEmptyString,
+  result: Schema.Literals(["applied", "failed"]),
+  message: Schema.optional(Schema.String),
 })
 
 dataApp.get("/links", async (context) => {

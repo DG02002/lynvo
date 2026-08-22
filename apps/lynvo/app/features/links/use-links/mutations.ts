@@ -9,6 +9,7 @@ import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessor
 import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
 import { withResolvedMirrors } from "~/features/links/link-playback-metadata"
 import { linkMetadataSchema } from "~/features/links/storage-schemas"
+import { Schema } from "effect"
 import {
   createUpdatedItemFromMetadata,
   createUpdatedItemWithLinks,
@@ -19,7 +20,9 @@ import { isTemporaryLinkId } from "./links-store"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 
 const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
-  linkMetadataSchema.parse(JSON.parse(JSON.stringify(metadata)))
+  Schema.decodeUnknownSync(linkMetadataSchema)(
+    JSON.parse(JSON.stringify(metadata))
+  )
 
 export interface LinksMutationTargets {
   readonly store: LinksSnapshotStore

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Result, Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 import {
   BackendApiError,
@@ -101,10 +102,12 @@ describe("API errors", () => {
 
   it("rejects unknown error codes at the HTTP boundary", () => {
     expect(
-      apiErrorResponseSchema.safeParse({
-        code: "unknown_auth_error",
-        error: "Authentication failed",
-      }).success
-    ).toBe(false)
+      Result.isFailure(
+        Schema.decodeUnknownResult(apiErrorResponseSchema)({
+          code: "unknown_auth_error",
+          error: "Authentication failed",
+        })
+      )
+    ).toBe(true)
   })
 })

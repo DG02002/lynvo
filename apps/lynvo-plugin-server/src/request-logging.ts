@@ -1,7 +1,7 @@
 import type { AuditableLogger } from "evlog"
 import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { MiddlewareHandler } from "hono"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 interface PluginServerRequestLoggingVariables {
   readonly log: AuditableLogger
@@ -15,8 +15,8 @@ export interface PluginServerRequestLoggingEnvironment {
 const safeCorrelationId = (value: string | undefined): string | undefined =>
   value && /^[a-zA-Z0-9._:-]{1,128}$/.test(value) ? value : undefined
 
-const protocolErrorSchema = z.object({
-  error: z.object({ code: z.string() }),
+const protocolErrorSchema = Schema.Struct({
+  error: Schema.Struct({ code: Schema.String }),
 })
 
 const readProtocolErrorCode = async (
@@ -26,8 +26,9 @@ const readProtocolErrorCode = async (
     return undefined
   }
   try {
-    const result = protocolErrorSchema.safeParse(await response.clone().json())
-    return result.success ? result.data.error.code : undefined
+    const body = await response.clone().json()
+    const result = Schema.decodeUnknownResult(protocolErrorSchema)(body)
+    return Result.isSuccess(result) ? result.success.error.code : undefined
   } catch {
     return undefined
   }

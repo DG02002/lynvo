@@ -1,128 +1,139 @@
-import { z } from "zod"
+import { Schema } from "effect"
 import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
 
-export const extractedLinkSchema: z.ZodType<ExtractedLink> = z.lazy(() =>
-  z
-    .object({
-      nodeKey: z.string().min(1),
-      url: z.string().min(1).optional(),
-      nodeUrl: z.string().min(1).optional(),
-      resourceId: z.string().min(1).optional(),
-      label: z.string(),
-      id: z.string().optional(),
-      badge: z.string().optional(),
-      type: z.enum(["file", "folder"]).optional(),
-      children: z.array(extractedLinkSchema).optional(),
-      childrenResolved: z.boolean().optional(),
-      rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
-      expiry: z.number().optional(),
-      expirySource: z
-        .enum(["signed-url", "expires-header", "cache-control"])
-        .optional(),
-      status: z.enum(["up", "down"]).optional(),
-      opened: z.boolean().optional(),
-      size: z.string().optional(),
-      sourceName: z.string().optional(),
-      selectable: z.boolean().optional(),
-      mediaNodeKind: z.enum(["group", "resolvable", "playable"]),
-      resolutionKind: z.enum(["folder", "mirrors"]).optional(),
-    })
-    .superRefine((link, context) => {
-      if (link.mediaNodeKind === "playable" && !link.url) {
-        context.addIssue({
-          code: "custom",
-          message: "Playable nodes require a URL",
-        })
-      }
-      if (link.mediaNodeKind === "playable" && link.type !== "file") {
-        context.addIssue({
-          code: "custom",
-          message: "Playable nodes require the file type",
-        })
-      }
-      if (
-        link.mediaNodeKind === "resolvable" &&
-        !link.nodeUrl &&
-        !link.resourceId
-      ) {
-        context.addIssue({
-          code: "custom",
-          message: "Resolvable nodes require a node URL or resource identifier",
-        })
-      }
-      if (link.mediaNodeKind === "group" && link.url) {
-        context.addIssue({
-          code: "custom",
-          message: "Group nodes cannot have a URL",
-        })
-      }
-      if (link.mediaNodeKind !== "playable" && link.type !== "folder") {
-        context.addIssue({
-          code: "custom",
-          message: "Container nodes require the folder type",
-        })
-      }
-      if (
-        link.mediaNodeKind !== "resolvable" &&
-        (link.nodeUrl || link.resourceId)
-      ) {
-        context.addIssue({
-          code: "custom",
-          message: "Only resolvable nodes can have resolution targets",
-        })
-      }
-    })
+export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
+  (): Schema.Codec<ExtractedLink> =>
+    Schema.Struct({
+      nodeKey: Schema.optional(Schema.NonEmptyString),
+      url: Schema.optional(Schema.NonEmptyString),
+      nodeUrl: Schema.optional(Schema.NonEmptyString),
+      resourceId: Schema.optional(Schema.NonEmptyString),
+      label: Schema.String,
+      id: Schema.optional(Schema.String),
+      badge: Schema.optional(Schema.String),
+      type: Schema.optional(Schema.Literals(["file", "folder"])),
+      children: Schema.optional(
+        Schema.mutable(
+          Schema.Array(
+            Schema.suspend(
+              (): Schema.Codec<ExtractedLink> => extractedLinkSchema
+            )
+          )
+        )
+      ),
+      childrenResolved: Schema.optional(Schema.Boolean),
+      rangeRequest: Schema.optional(
+        Schema.Literals(["supported", "unsupported", "unknown"])
+      ),
+      expiry: Schema.optional(Schema.Number),
+      expirySource: Schema.optional(
+        Schema.Literals(["signed-url", "expires-header", "cache-control"])
+      ),
+      status: Schema.optional(Schema.Literals(["up", "down"])),
+      opened: Schema.optional(Schema.Boolean),
+      size: Schema.optional(Schema.String),
+      sourceName: Schema.optional(Schema.String),
+      selectable: Schema.optional(Schema.Boolean),
+      mediaNodeKind: Schema.optional(
+        Schema.Literals(["group", "resolvable", "playable"])
+      ),
+      resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
+    }).pipe(
+      Schema.refine(
+        (link): link is ExtractedLink => {
+          if (link.mediaNodeKind === "playable" && !link.url) {
+            return false
+          }
+          if (link.mediaNodeKind === "playable" && link.type !== "file") {
+            return false
+          }
+          if (
+            link.mediaNodeKind === "resolvable" &&
+            !link.nodeUrl &&
+            !link.resourceId
+          ) {
+            return false
+          }
+          if (link.mediaNodeKind === "group" && link.url) {
+            return false
+          }
+          if (
+            link.mediaNodeKind !== undefined &&
+            link.mediaNodeKind !== "playable" &&
+            link.type !== "folder"
+          ) {
+            return false
+          }
+          if (
+            link.mediaNodeKind !== undefined &&
+            link.mediaNodeKind !== "resolvable" &&
+            (link.nodeUrl || link.resourceId)
+          ) {
+            return false
+          }
+          return true
+        },
+        { message: "Invalid media node invariants" }
+      )
+    )
 )
 
-export const metadataSchema: z.ZodType<MetaData> = z.object({
-  filename: z.string().optional(),
-  contentType: z.string().optional(),
-  contentLength: z.number().optional(),
-  lastModified: z.string().optional(),
-  rangeRequest: z.enum(["supported", "unsupported", "unknown"]).optional(),
-  pluginName: z.string().optional(),
-  pluginIcon: z.string().optional(),
-  pluginId: z.string().optional(),
-  sourceName: z.string().optional(),
-  sourceIconUrl: z.string().optional(),
-  sourceStatus: z
-    .enum(["active", "maintenance", "degraded", "down"])
-    .optional(),
-  sourceVersion: z.string().optional(),
-  sourceCredentialKind: z.enum(["domain-password", "http-basic"]).optional(),
-  routeSourceName: z.string().optional(),
-  routeSourceIconUrl: z.string().optional(),
-  audio: z.string().optional(),
-  pageTitle: z.string().optional(),
-  title: z.string().optional(),
-  badge: z.string().optional(),
-  pluginServerId: z.string().optional(),
+export const metadataSchema: Schema.Codec<MetaData> = Schema.Struct({
+  filename: Schema.optional(Schema.String),
+  contentType: Schema.optional(Schema.String),
+  contentLength: Schema.optional(Schema.Number),
+  lastModified: Schema.optional(Schema.String),
+  rangeRequest: Schema.optional(
+    Schema.Literals(["supported", "unsupported", "unknown"])
+  ),
+  pluginName: Schema.optional(Schema.String),
+  pluginIcon: Schema.optional(Schema.String),
+  pluginId: Schema.optional(Schema.String),
+  sourceName: Schema.optional(Schema.String),
+  sourceIconUrl: Schema.optional(Schema.String),
+  sourceStatus: Schema.optional(
+    Schema.Literals(["active", "maintenance", "degraded", "down"])
+  ),
+  sourceVersion: Schema.optional(Schema.String),
+  sourceCredentialKind: Schema.optional(
+    Schema.Literals(["domain-password", "http-basic"])
+  ),
+  routeSourceName: Schema.optional(Schema.String),
+  routeSourceIconUrl: Schema.optional(Schema.String),
+  audio: Schema.optional(Schema.String),
+  pageTitle: Schema.optional(Schema.String),
+  title: Schema.optional(Schema.String),
+  badge: Schema.optional(Schema.String),
+  pluginServerId: Schema.optional(Schema.String),
 })
 
-export const linkMetadataSchema: z.ZodType<LinkMetadata> = z.strictObject({
-  schemaVersion: z.literal(3),
-  source: z.record(z.string(), z.json()),
-  extraction: z.strictObject({
-    extractedLinks: z.array(extractedLinkSchema),
-    extractedAt: z.number().optional(),
+export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
+  schemaVersion: Schema.Literal(3),
+  source: Schema.Record(Schema.String, Schema.Json),
+  extraction: Schema.Struct({
+    extractedLinks: Schema.mutable(Schema.Array(extractedLinkSchema)),
+    extractedAt: Schema.optional(Schema.Number),
   }),
-  playback: z.strictObject({
-    openedUrls: z.array(z.string()),
-    openedIds: z.array(z.string()),
-    resolvedMirrors: z
-      .record(z.string(), z.array(extractedLinkSchema))
-      .optional(),
+  playback: Schema.Struct({
+    openedUrls: Schema.mutable(Schema.Array(Schema.String)),
+    openedIds: Schema.mutable(Schema.Array(Schema.String)),
+    resolvedMirrors: Schema.optional(
+      Schema.Record(
+        Schema.String,
+        Schema.mutable(Schema.Array(extractedLinkSchema))
+      )
+    ),
   }),
 })
 
-export const storedSavedLinkSchema = z.strictObject({
-  id: z.string(),
-  url: z.string().min(1),
-  createdAt: z.number(),
-  updatedAt: z.number(),
+export const storedSavedLinkSchema = Schema.Struct({
+  id: Schema.String,
+  url: Schema.NonEmptyString,
+  createdAt: Schema.Number,
+  updatedAt: Schema.Number,
   metadata: linkMetadataSchema,
-  title: z.string().optional(),
+  title: Schema.optional(Schema.String),
 })
 
 export const parseCanonicalLinkMetadataJson = (metadataJson: string) =>
-  linkMetadataSchema.parse(JSON.parse(metadataJson))
+  Schema.decodeUnknownSync(linkMetadataSchema)(JSON.parse(metadataJson))

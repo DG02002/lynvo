@@ -1,6 +1,6 @@
 import { renderToString } from "react-dom/server"
 
-import { PolicyLayout, PolicySection } from "../app/components/PolicyLayout"
+import { PolicyLayout, PolicySection } from "../app/components/policy-layout"
 
 describe("PolicyLayout", () => {
   it("reserves the mobile outline layout during server rendering", () => {

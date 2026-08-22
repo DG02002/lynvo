@@ -21,44 +21,47 @@ import {
   readBoundedUpstreamText,
   UpstreamPolicyError,
 } from "../upstream-response"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 export interface OneDriveItem {
-  name: string
-  id: string
-  folder?: unknown
-  file?: unknown
-  size?: string | number
+  readonly name: string
+  readonly id: string
+  readonly folder?: unknown
+  readonly file?: unknown
+  readonly size?: string | number
 }
 
 export interface OneDriveApiResponse {
-  folder?: { value: OneDriveItem[] }
-  file?: OneDriveItem
-  next?: string
-  error?: string
+  readonly folder?: { readonly value: readonly OneDriveItem[] }
+  readonly file?: OneDriveItem
+  readonly next?: string
+  readonly error?: string
 }
 
-const oneDriveItemSchema = z.object({
-  name: z.string(),
-  id: z.string(),
-  folder: z.json().optional(),
-  file: z.json().optional(),
-  size: z.union([z.string(), z.number()]).optional(),
+const oneDriveItemSchema: Schema.Codec<OneDriveItem> = Schema.Struct({
+  name: Schema.String,
+  id: Schema.String,
+  folder: Schema.optional(Schema.Unknown),
+  file: Schema.optional(Schema.Unknown),
+  size: Schema.optional(Schema.Union([Schema.String, Schema.Number])),
 })
 
-const oneDriveApiResponseSchema = z.object({
-  folder: z.object({ value: z.array(oneDriveItemSchema) }).optional(),
-  file: oneDriveItemSchema.optional(),
-  next: z.string().optional(),
-  error: z.string().optional(),
+const oneDriveApiResponseSchema: Schema.Codec<OneDriveApiResponse> =
+  Schema.Struct({
+    folder: Schema.optional(
+      Schema.Struct({ value: Schema.Array(oneDriveItemSchema) })
+    ),
+    file: Schema.optional(oneDriveItemSchema),
+    next: Schema.optional(Schema.String),
+    error: Schema.optional(Schema.String),
+  })
+
+const oneDriveNextDataSchema = Schema.Struct({
+  props: Schema.Struct({ pageProps: oneDriveApiResponseSchema }),
 })
 
-const oneDriveNextDataSchema = z.object({
-  props: z.object({ pageProps: oneDriveApiResponseSchema }),
-})
-
-const passwordRequiredResponseSchema = z.object({
-  error: z.literal("Password required."),
+const passwordRequiredResponseSchema = Schema.Struct({
+  error: Schema.Literal("Password required."),
 })
 
 export const sha256 = async (message: string): Promise<string> => {
@@ -145,16 +148,14 @@ export const createOneDriveNodes = (
     if (hashedPassword) {
       playableUrl.searchParams.set("odpt", hashedPassword)
     }
-    const node: MediaNode = {
+    const baseNode = {
       kind: "playable" as const,
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
       status: "unknown" as const,
     }
-    if (size) {
-      node.size = size
-    }
+    const node: MediaNode = size ? { ...baseNode, size } : baseNode
     return [node]
   })
 
@@ -166,8 +167,10 @@ export const extractOneDriveNextData = (
   if (!nextData) {
     return undefined
   }
-  const parsed = oneDriveNextDataSchema.safeParse(JSON.parse(nextData))
-  return parsed.success ? parsed.data.props.pageProps : undefined
+  const parsed = Schema.decodeUnknownResult(oneDriveNextDataSchema)(
+    JSON.parse(nextData)
+  )
+  return Result.isSuccess(parsed) ? parsed.success.props.pageProps : undefined
 }
 
 const fetchOneDrivePage = async (
@@ -206,7 +209,11 @@ const fetchOneDrivePage = async (
       const errorBody = await readBoundedUpstreamJson(response).catch(
         () => undefined
       )
-      if (passwordRequiredResponseSchema.safeParse(errorBody).success) {
+      if (
+        Result.isSuccess(
+          Schema.decodeUnknownResult(passwordRequiredResponseSchema)(errorBody)
+        )
+      ) {
         throw new Error("PASSWORD_REQUIRED")
       }
       throw new Error("INVALID_PASSWORD")
@@ -214,13 +221,13 @@ const fetchOneDrivePage = async (
     if (!response.ok) {
       throw new Error("OneDrive Index upstream request failed.")
     }
-    const data = oneDriveApiResponseSchema.safeParse(
+    const data = Schema.decodeUnknownResult(oneDriveApiResponseSchema)(
       await readBoundedUpstreamJson(response)
     )
-    if (!data.success) {
+    if (Result.isFailure(data)) {
       throw new Error("OneDrive Index returned malformed JSON.")
     }
-    const result = data.data
+    const result = data.success
     if (result.folder && Array.isArray(result.folder.value)) {
       nodes.push(
         ...createOneDriveNodes(

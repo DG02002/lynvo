@@ -1,3 +1,4 @@
+import { Result, Schema } from "effect"
 import {
   REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS,
   REMOTE_COMMAND_STALE_AFTER_MS,
@@ -51,17 +52,23 @@ declare global {
 export const parseRemoteCommandWirePayload = <Value>(
   value: Value
 ): RemoteCommandDeliveryInput | undefined => {
-  const parsed = remoteCommandFieldsSchema.safeParse(value)
-  if (!parsed.success) {
+  const parsed = Schema.decodeUnknownResult(remoteCommandFieldsSchema)(value)
+  if (Result.isFailure(parsed)) {
     return undefined
   }
-  const payload = parseRemotePlaybackIntent(JSON.parse(parsed.data.payload))
-  if (!payload.success) {
+  let jsonPayload: unknown
+  try {
+    jsonPayload = JSON.parse(parsed.success.payload)
+  } catch {
+    return undefined
+  }
+  const payload = parseRemotePlaybackIntent(jsonPayload)
+  if (Result.isFailure(payload)) {
     return undefined
   }
   return {
-    ...parsed.data,
-    payload: payload.data,
+    ...parsed.success,
+    payload: payload.success,
   }
 }
 

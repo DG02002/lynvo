@@ -1,12 +1,12 @@
-import { z } from "zod"
+import { Schema } from "effect"
 
-export const deviceCodeRequestSchema = z.strictObject({
-  deviceName: z.string().trim().min(1).max(256),
+export const deviceCodeRequestSchema = Schema.Struct({
+  deviceName: Schema.Trim.check(Schema.isMinLength(1), Schema.isMaxLength(256)),
 })
 
-export const deviceCodeResponseSchema = z.strictObject({
-  code: z.string().min(1),
-  pollSecret: z.string().min(1),
-  expiresAt: z.number(),
-  deviceName: z.string().min(1),
+export const deviceCodeResponseSchema = Schema.Struct({
+  code: Schema.NonEmptyString,
+  pollSecret: Schema.NonEmptyString,
+  expiresAt: Schema.Number,
+  deviceName: Schema.NonEmptyString,
 })

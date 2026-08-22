@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { LinkInputSection } from "~/components/send-link/LinkInputSection"
+import { LinkInputSection } from "~/components/send-link/link-input-section"
 
 describe("LinkInputSection", () => {
   it("presents an existing link as a warning", () => {

@@ -2,7 +2,7 @@ import { useState } from "react"
 import type { RemoteSession } from "./types"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 declare global {
   interface RemoteSessionContract {
@@ -15,16 +15,16 @@ declare global {
   }
 }
 
-const remoteSessionContractSchema = z.object({
-  id: z.string(),
-  deviceName: z.string(),
-  lastActiveAt: z.number(),
-  receiverId: z.string().optional(),
-  createdAt: z.number().optional(),
-  isCurrent: z.boolean().optional(),
+const remoteSessionContractSchema = Schema.Struct({
+  id: Schema.String,
+  deviceName: Schema.String,
+  lastActiveAt: Schema.Number,
+  receiverId: Schema.optional(Schema.String),
+  createdAt: Schema.optional(Schema.Number),
+  isCurrent: Schema.optional(Schema.Boolean),
 })
-const remoteSessionsResponseSchema = z.object({
-  receivers: z.array(remoteSessionContractSchema),
+const remoteSessionsResponseSchema = Schema.Struct({
+  receivers: Schema.Array(remoteSessionContractSchema),
 })
 
 export const loadRemoteSessions = async (
@@ -38,13 +38,13 @@ export const loadRemoteSessions = async (
     if (!response.ok) {
       throw new Error("Remote receiver presence is unavailable")
     }
-    const payload = remoteSessionsResponseSchema.safeParse(
+    const payload = Schema.decodeUnknownResult(remoteSessionsResponseSchema)(
       await response.json()
     )
-    if (!payload.success) {
+    if (Result.isFailure(payload)) {
       throw new Error("Remote receiver presence is invalid")
     }
-    return payload.data.receivers.filter(
+    return payload.success.receivers.filter(
       (receiver) => receiver.receiverId !== undefined
     )
   }

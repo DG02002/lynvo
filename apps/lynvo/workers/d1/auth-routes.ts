@@ -1,5 +1,5 @@
 import type { Hono } from "hono"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import {
   DEVICE_POLL_RATE_LIMIT,
   DEVICE_POLL_RATE_WINDOW_SECONDS,
@@ -57,20 +57,29 @@ const clientIp = (request: Request): string =>
 
 const unauthorizedResponse = () => new Response("Unauthorized", { status: 401 })
 
-const codeSchema = z.object({ code: z.string().min(1) })
+const codeSchema = Schema.Struct({ code: Schema.NonEmptyString })
 
-const exchangeStartSchema = z.object({
-  code: z.string().min(1),
-  pollSecret: z.string().min(1),
-  attemptId: z.string().min(1),
-  generation: z.number().int().positive(),
+const exchangeStartSchema = Schema.Struct({
+  code: Schema.NonEmptyString,
+  pollSecret: Schema.NonEmptyString,
+  attemptId: Schema.NonEmptyString,
+  generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
 })
 
-const finalizeSchema = exchangeStartSchema.extend({
-  sessionId: z.string().min(1),
+const finalizeSchema = Schema.Struct({
+  code: Schema.NonEmptyString,
+  pollSecret: Schema.NonEmptyString,
+  attemptId: Schema.NonEmptyString,
+  generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
+  sessionId: Schema.NonEmptyString,
 })
 
-const abortSchema = finalizeSchema.omit({ pollSecret: true })
+const abortSchema = Schema.Struct({
+  code: Schema.NonEmptyString,
+  attemptId: Schema.NonEmptyString,
+  generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
+  sessionId: Schema.NonEmptyString,
+})
 
 export const registerD1AuthRoutes = (
   app: Hono<RequestLoggingEnvironment>
@@ -239,12 +248,14 @@ export const registerD1AuthRoutes = (
     if (!session) {
       return unauthorizedResponse()
     }
-    const parsed = codeSchema.safeParse(await context.req.json())
-    if (!parsed.success) {
+    const parsed = Schema.decodeUnknownResult(codeSchema)(
+      await context.req.json().catch(() => null)
+    )
+    if (Result.isFailure(parsed)) {
       return context.json({ error: "Enter the code shown on the device" }, 400)
     }
     const outcome = await authorizeDeviceCode(database, {
-      code: parsed.data.code,
+      code: parsed.success.code,
       userId: session.userId,
       now: Date.now(),
     })
@@ -277,17 +288,17 @@ export const registerD1AuthRoutes = (
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
     }
-    const parsed = exchangeStartSchema.safeParse({
+    const parsed = Schema.decodeUnknownResult(exchangeStartSchema)({
       code: context.req.query("code"),
       pollSecret: context.req.query("pollSecret"),
       attemptId: context.req.query("attemptId"),
       generation: Number(context.req.query("generation")),
     })
-    if (!parsed.success) {
+    if (Result.isFailure(parsed)) {
       return context.json({ error: "Invalid exchange request" }, 400)
     }
     const outcome = await claimAuthorizedCode(database, {
-      ...parsed.data,
+      ...parsed.success,
       now: Date.now(),
     })
     if (outcome.kind === "claimed") {
@@ -312,15 +323,20 @@ export const registerD1AuthRoutes = (
     if (!isSameOriginRequest(context.req.raw)) {
       return context.text("Forbidden", 403)
     }
-    const parsed = finalizeSchema.safeParse(await context.req.json())
-    if (!parsed.success) {
+    const parsed = Schema.decodeUnknownResult(finalizeSchema)(
+      await context.req.json().catch(() => null)
+    )
+    if (Result.isFailure(parsed)) {
       return context.json({ error: "Invalid finalize request" }, 400)
     }
-    const outcome = await finalizeDeviceExchange(database, parsed.data)
+    const outcome = await finalizeDeviceExchange(database, parsed.success)
     if (outcome.kind === "superseded") {
       return context.json({ error: "Device code exchange was superseded" }, 409)
     }
-    context.header("Set-Cookie", createD1SessionCookie(parsed.data.sessionId))
+    context.header(
+      "Set-Cookie",
+      createD1SessionCookie(parsed.success.sessionId)
+    )
     return context.json({ success: true })
   })
 
@@ -363,16 +379,18 @@ export const registerD1AuthRoutes = (
     if (!session) {
       return unauthorizedResponse()
     }
-    const parsed = abortSchema.safeParse(await context.req.json())
-    if (!parsed.success) {
+    const parsed = Schema.decodeUnknownResult(abortSchema)(
+      await context.req.json().catch(() => null)
+    )
+    if (Result.isFailure(parsed)) {
       return context.json({ error: "Invalid abort request" }, 400)
     }
     const outcome = await abortDeviceExchange(database, {
       userId: session.userId,
       sessionId: session.id,
-      code: parsed.data.code,
-      attemptId: parsed.data.attemptId,
-      generation: parsed.data.generation,
+      code: parsed.success.code,
+      attemptId: parsed.success.attemptId,
+      generation: parsed.success.generation,
       now: Date.now(),
     })
     if (outcome.kind === "invalidSession") {

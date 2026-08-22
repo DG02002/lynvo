@@ -14,7 +14,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { MDXComponents } from "mdx/types.js"
 import { Link } from "react-router"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { cn } from "~/lib/utils"
@@ -305,10 +305,12 @@ export const AndroidTvRemoteTroubleshooting = () => (
   </aside>
 )
 
+const primitiveSchema = Schema.Union([Schema.String, Schema.Number])
+
 const getNodeText = (node: ReactNode): string => {
-  const primitive = z.union([z.string(), z.number()]).safeParse(node)
-  if (primitive.success) {
-    return String(primitive.data)
+  const primitive = Schema.decodeUnknownResult(primitiveSchema)(node)
+  if (Result.isSuccess(primitive)) {
+    return String(primitive.success)
   }
 
   if (Array.isArray(node)) {

@@ -12,17 +12,17 @@ contentType: Reference
 <CodeBlock label="src/protocol.ts">
 
 ```ts {3-11}
-import { z } from "zod"
+import { Schema } from "effect"
 
-const sourceInput = z.object({
-  kind: z.literal("source"),
-  sourceUrl: z.string(),
+const sourceInput = Schema.Struct({
+  kind: Schema.Literal("source"),
+  sourceUrl: Schema.String,
 })
 
-const nodeInput = z.object({
-  kind: z.literal("node"),
-  nodeUrl: z.string(),
-  resourceId: z.string().optional(),
+const nodeInput = Schema.Struct({
+  kind: Schema.Literal("node"),
+  nodeUrl: Schema.String,
+  resourceId: Schema.optional(Schema.String),
 })
 ```
 
@@ -33,16 +33,16 @@ Add optional Plugin selection and credential fields to the request envelope:
 <CodeBlock label="src/protocol.ts">
 
 ```ts {2,4-8}
-export const extractRequestSchema = z.object({
-  input: z.discriminatedUnion("kind", [sourceInput, nodeInput]),
-  pluginId: z.string().min(1).optional(),
-  password: z.string().optional(),
-  basicAuth: z
-    .object({
-      username: z.string(),
-      password: z.string(),
+export const extractRequestSchema = Schema.Struct({
+  input: Schema.Union([sourceInput, nodeInput]),
+  pluginId: Schema.optional(Schema.NonEmptyString),
+  password: Schema.optional(Schema.String),
+  basicAuth: Schema.optional(
+    Schema.Struct({
+      username: Schema.String,
+      password: Schema.String,
     })
-    .optional(),
+  ),
 })
 ```
 

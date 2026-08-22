@@ -1,6 +1,6 @@
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-export const apiErrorCodeSchema = z.enum([
+export const apiErrorCodeSchema = Schema.Literals([
   "invalid_request",
   "forbidden",
   "invalid_credentials",
@@ -10,20 +10,23 @@ export const apiErrorCodeSchema = z.enum([
   "service_unavailable",
 ])
 
-export const apiErrorResponseSchema = z.strictObject({
+export const apiErrorResponseSchema = Schema.Struct({
   code: apiErrorCodeSchema,
-  error: z.string().min(1),
-  retryable: z.boolean().optional(),
-  requestId: z.string().min(1).optional(),
+  error: Schema.NonEmptyString,
+  retryable: Schema.optional(Schema.Boolean),
+  requestId: Schema.optional(Schema.NonEmptyString),
 })
 
+export type ApiErrorCode = typeof apiErrorCodeSchema.Type
+export type ApiErrorResponse = typeof apiErrorResponseSchema.Type
+
 export class ApiResponseError extends Error {
-  readonly code: z.infer<typeof apiErrorCodeSchema> | "unknown"
+  readonly code: ApiErrorCode | "unknown"
   readonly retryable: boolean
   readonly requestId?: string
 
   constructor(
-    code: z.infer<typeof apiErrorCodeSchema> | "unknown",
+    code: ApiErrorCode | "unknown",
     message: string,
     retryable = false,
     requestId?: string
@@ -37,8 +40,8 @@ export class ApiResponseError extends Error {
 }
 
 export const createApiErrorResponse = (
-  error: z.infer<typeof apiErrorResponseSchema>
-) => apiErrorResponseSchema.parse(error)
+  error: ApiErrorResponse
+): ApiErrorResponse => Schema.decodeUnknownSync(apiErrorResponseSchema)(error)
 
 export const readApiResponseError = async (
   response: Response,
@@ -56,8 +59,8 @@ export const readApiResponseError = async (
     )
   }
 
-  const result = apiErrorResponseSchema.safeParse(value)
-  if (!result.success) {
+  const result = Schema.decodeUnknownResult(apiErrorResponseSchema)(value)
+  if (Result.isFailure(result)) {
     return new ApiResponseError(
       "unknown",
       fallback,
@@ -67,9 +70,11 @@ export const readApiResponseError = async (
   }
 
   return new ApiResponseError(
-    result.data.code,
-    result.data.error,
-    result.data.retryable,
-    result.data.requestId ?? response.headers.get("x-request-id") ?? undefined
+    result.success.code,
+    result.success.error,
+    result.success.retryable,
+    result.success.requestId ??
+      response.headers.get("x-request-id") ??
+      undefined
   )
 }

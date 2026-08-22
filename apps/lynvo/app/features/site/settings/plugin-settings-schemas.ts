@@ -1,34 +1,44 @@
-import { z } from "zod"
+import { Schema } from "effect"
 
 const PLUGIN_SERVER_URL_MAX_LENGTH = 2_048
 const PLUGIN_SERVER_API_KEY_MAX_LENGTH = 4_096
 
-const pluginServerUrlSchema = z
-  .string()
-  .trim()
-  .min(1, "Base URL is required.")
-  .pipe(
-    z
-      .url({ error: "Enter a valid plugin server URL." })
-      .max(PLUGIN_SERVER_URL_MAX_LENGTH, "Plugin server URL is too long.")
-      .superRefine((value, context) => {
+const pluginServerUrlSchema = Schema.Trim.pipe(
+  Schema.check(Schema.isMinLength(1, { message: "Base URL is required." })),
+  Schema.check(
+    Schema.isMaxLength(PLUGIN_SERVER_URL_MAX_LENGTH, {
+      message: "Plugin server URL is too long.",
+    })
+  ),
+  Schema.refine(
+    (value): value is string => {
+      if (value.length === 0) {
+        return true
+      }
+      try {
         const url = new URL(value)
-        if (url.protocol !== "https:" && url.hostname !== "localhost") {
-          context.addIssue({
-            code: "custom",
-            message: "Plugin server base URL must use HTTPS.",
-          })
-        }
-      })
+        return url.protocol === "https:" || url.hostname === "localhost"
+      } catch {
+        return false
+      }
+    },
+    { message: "Plugin server base URL must use HTTPS." }
   )
+)
 
-export const customPluginServerSchema = z.strictObject({
+export const customPluginServerSchema = Schema.Struct({
   baseUrl: pluginServerUrlSchema,
-  apiKey: z
-    .string()
-    .max(PLUGIN_SERVER_API_KEY_MAX_LENGTH, "API key is too long."),
+  apiKey: Schema.String.pipe(
+    Schema.check(
+      Schema.isMaxLength(PLUGIN_SERVER_API_KEY_MAX_LENGTH, {
+        message: "API key is too long.",
+      })
+    )
+  ),
 })
 
-export type CustomPluginServerFormValues = z.infer<
-  typeof customPluginServerSchema
->
+export const customPluginServerStandardSchema = Schema.toStandardSchemaV1(
+  customPluginServerSchema
+)
+
+export type CustomPluginServerFormValues = typeof customPluginServerSchema.Type

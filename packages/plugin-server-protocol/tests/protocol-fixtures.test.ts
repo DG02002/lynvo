@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Result, Schema } from "effect"
 import {
   extractErrorSchema,
   extractSuccessSchema,
@@ -17,18 +18,31 @@ import {
 describe("Plugin Server protocol fixtures", () => {
   it("keeps every canonical fixture executable", () => {
     expect(
-      pluginServerManifestSchema.safeParse(validPluginServerManifestFixture)
-        .success
+      Result.isSuccess(
+        Schema.decodeUnknownResult(pluginServerManifestSchema)(
+          validPluginServerManifestFixture
+        )
+      )
     ).toBe(true)
     expect(
-      usageResponseSchema.safeParse(validUsageResponseFixture).success
+      Result.isSuccess(
+        Schema.decodeUnknownResult(usageResponseSchema)(
+          validUsageResponseFixture
+        )
+      )
     ).toBe(true)
     expect(
-      extractSuccessSchema.safeParse(validExtractSuccessFixture).success
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)(
+          validExtractSuccessFixture
+        )
+      )
     ).toBe(true)
-    expect(extractErrorSchema.safeParse(validExtractErrorFixture).success).toBe(
-      true
-    )
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractErrorSchema)(validExtractErrorFixture)
+      )
+    ).toBe(true)
   })
 
   it("allows an explicitly selected probe Plugin to inspect an unmatched URL", async () => {
@@ -84,11 +98,13 @@ describe("Plugin Server protocol fixtures", () => {
 
   it("rejects the obsolete source response envelope", () => {
     expect(
-      extractSuccessSchema.safeParse({
-        source: validExtractSuccessFixture.plugin,
-        nodes: [],
-        extensions: {},
-      }).success
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)({
+          source: validExtractSuccessFixture.plugin,
+          nodes: [],
+          extensions: {},
+        })
+      )
     ).toBe(false)
   })
 
@@ -108,7 +124,11 @@ describe("Plugin Server protocol fixtures", () => {
       ],
     }
 
-    expect(extractSuccessSchema.safeParse(response).success).toBe(true)
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)(response)
+      )
+    ).toBe(true)
   })
 
   it("accepts only usage responses within their declared finite limits", () => {

@@ -3,7 +3,7 @@ import {
   REMOTE_DEVICE_NAME_KEY,
   REMOTE_SESSION_ID_KEY,
 } from "./constants"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
   processed: [],
@@ -11,15 +11,15 @@ const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
   pendingAcknowledgements: [],
 }
 
-const timedCommandEntrySchema = z.tuple([z.string(), z.number()])
-const pendingAcknowledgementSchema = z.union([
-  z.tuple([z.string(), z.string()]),
-  z.string(),
+const timedCommandEntrySchema = Schema.Tuple([Schema.String, Schema.Number])
+const pendingAcknowledgementSchema = Schema.Union([
+  Schema.Tuple([Schema.String, Schema.String]),
+  Schema.String,
 ])
-const deliveryRecordSchema = z.object({
-  processed: z.array(timedCommandEntrySchema),
-  applied: z.array(timedCommandEntrySchema),
-  pendingAcknowledgements: z.array(pendingAcknowledgementSchema),
+const deliveryRecordSchema = Schema.Struct({
+  processed: Schema.Array(timedCommandEntrySchema),
+  applied: Schema.Array(timedCommandEntrySchema),
+  pendingAcknowledgements: Schema.Array(pendingAcknowledgementSchema),
 })
 
 const parseCommandIdentity = (
@@ -35,7 +35,7 @@ const parseCommandIdentity = (
 }
 
 const normalizeTimedCommandEntries = (
-  entries: z.infer<typeof timedCommandEntrySchema>[]
+  entries: readonly (typeof timedCommandEntrySchema.Type)[]
 ): Array<[string, number]> => {
   const normalizedEntries = new Map<string, number>()
   for (const entry of entries) {
@@ -48,18 +48,22 @@ const normalizeTimedCommandEntries = (
   return [...normalizedEntries]
 }
 
+const isTupleEntry = (
+  entry: typeof pendingAcknowledgementSchema.Type
+): entry is readonly [string, string] => Array.isArray(entry)
+
 const normalizePendingAcknowledgements = (
-  entries: z.infer<typeof pendingAcknowledgementSchema>[]
+  entries: readonly (typeof pendingAcknowledgementSchema.Type)[]
 ): Array<[string, string]> => {
   const normalizedEntries = new Map<string, string>()
   for (const entry of entries) {
-    if (Array.isArray(entry)) {
+    if (isTupleEntry(entry)) {
       normalizedEntries.set(entry[0], entry[1])
-      continue
-    }
-    const { commandId, claimToken } = parseCommandIdentity(entry)
-    if (claimToken) {
-      normalizedEntries.set(commandId, claimToken)
+    } else {
+      const { commandId, claimToken } = parseCommandIdentity(entry)
+      if (claimToken) {
+        normalizedEntries.set(commandId, claimToken)
+      }
     }
   }
   return [...normalizedEntries]
@@ -102,15 +106,17 @@ export const createRemoteControlPersistence = (
         if (!stored) {
           return EMPTY_DELIVERY_RECORD
         }
-        const parsed = deliveryRecordSchema.safeParse(JSON.parse(stored))
-        if (!parsed.success) {
+        const parsed = Schema.decodeUnknownResult(deliveryRecordSchema)(
+          JSON.parse(stored)
+        )
+        if (Result.isFailure(parsed)) {
           return EMPTY_DELIVERY_RECORD
         }
         return {
-          processed: normalizeTimedCommandEntries(parsed.data.processed),
-          applied: normalizeTimedCommandEntries(parsed.data.applied),
+          processed: normalizeTimedCommandEntries(parsed.success.processed),
+          applied: normalizeTimedCommandEntries(parsed.success.applied),
           pendingAcknowledgements: normalizePendingAcknowledgements(
-            parsed.data.pendingAcknowledgements
+            parsed.success.pendingAcknowledgements
           ),
         }
       } catch {

@@ -6,7 +6,7 @@ import {
   preparePluginServerRegistration,
 } from "~/lib/effect/services/plugin-server-registration"
 import { registerCustomPluginServer } from "~/lib/effect/services/custom-plugin-server-lifecycle"
-import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { createFakeD1Database } from "../support/fake-d1"
 
 const createManifest = (

@@ -1,33 +1,33 @@
-import { z } from "zod"
+import { Schema } from "effect"
 import {
   remoteCommandFieldsSchema,
   remoteCommandWirePayloadSchema,
 } from "~/lib/remote-play/wire"
 
-export const remoteDeviceSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
+export const remoteDeviceSchema = Schema.Struct({
+  id: Schema.NonEmptyString,
+  name: Schema.NonEmptyString,
 })
 
-export const remotePollResponseSchema = z.object({
-  controlledBy: z.string().min(1).nullable().optional(),
-  controllerName: z.string().optional(),
-  controllingDevices: z.array(remoteDeviceSchema).optional(),
-  activeTargets: z.array(z.string().min(1)).optional(),
-  commands: z.array(remoteCommandFieldsSchema).optional(),
+export const remotePollResponseSchema = Schema.Struct({
+  controlledBy: Schema.optional(Schema.NullOr(Schema.NonEmptyString)),
+  controllerName: Schema.optional(Schema.String),
+  controllingDevices: Schema.optional(Schema.Array(remoteDeviceSchema)),
+  activeTargets: Schema.optional(Schema.Array(Schema.NonEmptyString)),
+  commands: Schema.optional(Schema.Array(remoteCommandFieldsSchema)),
 })
 
-export const remoteRealtimeEventSchema = z.discriminatedUnion("kind", [
+export const remoteRealtimeEventSchema = Schema.Union([
   remoteCommandWirePayloadSchema,
-  z.object({
-    kind: z.literal("connections"),
-    controllingDevices: z.array(remoteDeviceSchema),
+  Schema.Struct({
+    kind: Schema.Literal("connections"),
+    controllingDevices: Schema.Array(remoteDeviceSchema),
   }),
-  z.object({
-    kind: z.literal("targets"),
-    activeTargets: z.array(z.string().min(1)),
+  Schema.Struct({
+    kind: Schema.Literal("targets"),
+    activeTargets: Schema.Array(Schema.NonEmptyString),
   }),
 ])
 
-export type ValidRemotePollResponse = z.infer<typeof remotePollResponseSchema>
-export type ValidRemoteRealtimeEvent = z.infer<typeof remoteRealtimeEventSchema>
+export type ValidRemotePollResponse = typeof remotePollResponseSchema.Type
+export type ValidRemoteRealtimeEvent = typeof remoteRealtimeEventSchema.Type

@@ -16,7 +16,7 @@ import {
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import {
   PLUGIN_SERVER_INTERNAL_ORIGIN,
   PLUGIN_SERVER_REQUEST_TIMEOUT_MS,
@@ -98,7 +98,9 @@ export class ServiceBindingPluginServerTransport implements PluginServerTranspor
 
 const parseJson = async (response: Response): Promise<JsonValue> => {
   try {
-    return z.json().parse(await response.json())
+    const data = await response.json()
+    // SAFETY: Response JSON parsed from HTTP response is a valid JsonValue.
+    return data as JsonValue
   } catch {
     throw new PluginServerClientError({
       code: "PROTOCOL_MISMATCH",
@@ -109,21 +111,21 @@ const parseJson = async (response: Response): Promise<JsonValue> => {
 }
 
 const throwResponseFailure = <Value>(value: Value, status: number): never => {
-  const extractError = extractErrorSchema.safeParse(value)
-  if (extractError.success) {
+  const extractError = Schema.decodeUnknownResult(extractErrorSchema)(value)
+  if (Result.isSuccess(extractError)) {
     throw new PluginServerClientError({
-      code: extractError.data.error.code,
-      message: extractError.data.error.message,
+      code: extractError.success.error.code,
+      message: extractError.success.error.message,
       status,
     })
   }
-  const verifyError = verifyErrorSchema.safeParse(value)
+  const verifyError = Schema.decodeUnknownResult(verifyErrorSchema)(value)
   throw new PluginServerClientError({
-    code: verifyError.success
-      ? verifyError.data.error.code
+    code: Result.isSuccess(verifyError)
+      ? verifyError.success.error.code
       : "PROTOCOL_MISMATCH",
-    message: verifyError.success
-      ? verifyError.data.error.message
+    message: Result.isSuccess(verifyError)
+      ? verifyError.success.error.message
       : `Plugin Server request failed with HTTP ${status}.`,
     status,
   })
@@ -198,7 +200,9 @@ export class PluginServerClient {
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    if (!verifySuccessSchema.safeParse(value).success) {
+    if (
+      Result.isFailure(Schema.decodeUnknownResult(verifySuccessSchema)(value))
+    ) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Plugin Server verification response is invalid.",
@@ -245,14 +249,14 @@ export class PluginServerClient {
     if (!response.ok) {
       throwResponseFailure(value, response.status)
     }
-    const parsed = discoverResponseSchema.safeParse(value)
-    if (!parsed.success) {
+    const parsed = Schema.decodeUnknownResult(discoverResponseSchema)(value)
+    if (Result.isFailure(parsed)) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
         message: "Plugin Server discovery response does not match protocol v1.",
       })
     }
-    return parsed.data
+    return parsed.success
   }
 
   private extract = async (

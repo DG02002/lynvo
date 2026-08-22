@@ -1,4 +1,5 @@
 import type { RealtimeAction } from "./reducer"
+import { Result, Schema } from "effect"
 import {
   isRealtimeHeartbeatResponse,
   parseRealtimeMessage,
@@ -84,10 +85,10 @@ export const openRealtimeSocket = ({
 
   const handleMessage = (event: MessageEvent) => {
     try {
-      const message = sessionHelloRealtimeMessageSchema.safeParse(
-        JSON.parse(String(event.data))
-      )
-      if (message.success) {
+      const message = Schema.decodeUnknownResult(
+        sessionHelloRealtimeMessageSchema
+      )(JSON.parse(String(event.data)))
+      if (Result.isSuccess(message)) {
         const expectedUserId = document.querySelector<HTMLMetaElement>(
           'meta[name="lynvo-user-id"]'
         )?.content
@@ -95,8 +96,8 @@ export const openRealtimeSocket = ({
           'meta[name="lynvo-session-id"]'
         )?.content
         if (
-          message.data.userId !== expectedUserId ||
-          message.data.sessionId !== expectedSessionId
+          message.success.userId !== expectedUserId ||
+          message.success.sessionId !== expectedSessionId
         ) {
           closed = true
           socket?.close()

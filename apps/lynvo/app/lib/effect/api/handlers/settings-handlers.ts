@@ -1,9 +1,9 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../Api"
-import { CurrentUser } from "../Middleware"
+import { Api } from "../api"
+import { CurrentUser } from "../middleware"
 import { normalizePlayerPreferences } from "../../../player-utils"
-import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
 import { getD1Database } from "../../../../../workers/d1/db"
 import {

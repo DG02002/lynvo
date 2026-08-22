@@ -1,12 +1,13 @@
 import { useCallback, useMemo, type ReactNode } from "react"
 import { Outlet } from "react-router"
 import { ThemeProvider } from "next-themes"
-import { RemoteControlProvider } from "~/context/RemoteControlContext"
-import { RealtimeProvider } from "~/context/RealtimeContext"
-import { VersionWatcher } from "~/components/VersionWatcher"
+import { RemoteControlProvider } from "~/context/remote-control-context"
+import { RealtimeProvider } from "~/context/realtime-context"
+import { VersionWatcher } from "~/components/version-watcher"
 import { PlayerLaunchErrorDialog } from "~/components/player-launch-error-dialog"
 import { OpenedConfirmationDialog } from "~/components/opened-confirmation-dialog"
 import { Toaster } from "~/components/ui/sonner"
+import { TooltipProvider } from "~/components/ui/tooltip"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
 import { AccountSettingsSynchronization } from "./account-settings-synchronization"
@@ -41,31 +42,33 @@ export const AppProviders = ({
       enableColorScheme
       disableTransitionOnChange
     >
-      <ThemeCookieSync />
-      <AuthActivityTouch isAuthenticated={Boolean(user)} />
-      <IdentitySynchronizer user={providerUser}>
-        {(validateIdentity) => (
-          <RealtimeProvider
-            user={providerUser}
-            onConnectionOpen={validateIdentity}
-            onSessionRevoked={handleSessionRevoked}
-          >
-            <PlayerPreferenceProvider
-              key={providerUser?.id ?? "signed-out"}
-              userId={providerUser?.id}
+      <TooltipProvider>
+        <ThemeCookieSync />
+        <AuthActivityTouch isAuthenticated={Boolean(user)} />
+        <IdentitySynchronizer user={providerUser}>
+          {(validateIdentity) => (
+            <RealtimeProvider
+              user={providerUser}
+              onConnectionOpen={validateIdentity}
+              onSessionRevoked={handleSessionRevoked}
             >
-              <AccountSettingsSynchronization userId={providerUser?.id} />
-              <RemoteControlProvider user={providerUser}>
-                <VersionWatcher buildTime={buildTime} />
-                {children ?? <Outlet />}
-              </RemoteControlProvider>
-            </PlayerPreferenceProvider>
-          </RealtimeProvider>
-        )}
-      </IdentitySynchronizer>
-      <PlayerLaunchErrorDialog />
-      <OpenedConfirmationDialog />
-      <Toaster />
+              <PlayerPreferenceProvider
+                key={providerUser?.id ?? "signed-out"}
+                userId={providerUser?.id}
+              >
+                <AccountSettingsSynchronization userId={providerUser?.id} />
+                <RemoteControlProvider user={providerUser}>
+                  <VersionWatcher buildTime={buildTime} />
+                  {children ?? <Outlet />}
+                </RemoteControlProvider>
+              </PlayerPreferenceProvider>
+            </RealtimeProvider>
+          )}
+        </IdentitySynchronizer>
+        <PlayerLaunchErrorDialog />
+        <OpenedConfirmationDialog />
+        <Toaster />
+      </TooltipProvider>
     </ThemeProvider>
   )
 }

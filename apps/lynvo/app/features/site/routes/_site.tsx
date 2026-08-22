@@ -1,11 +1,11 @@
 import { Outlet, useLocation } from "react-router"
 
-import { Header } from "~/components/Header"
-import { Footer } from "~/components/Footer"
-import { RemoteCommandListener } from "~/components/RemoteCommandListener"
-import { ReceiverOverlay } from "~/components/ReceiverOverlay"
+import { Header } from "~/components/header"
+import { Footer } from "~/components/footer"
+import { RemoteCommandListener } from "~/components/remote-command-listener"
+import { ReceiverOverlay } from "~/components/receiver-overlay"
 
-export default function SiteLayout() {
+const SiteLayout = () => {
   const location = useLocation()
   const normalizedPathname = location.pathname.replace(/\/+$/, "") || "/"
   const isInnerDocsRoute = normalizedPathname.startsWith("/docs/")
@@ -27,3 +27,5 @@ export default function SiteLayout() {
     </>
   )
 }
+
+export default SiteLayout

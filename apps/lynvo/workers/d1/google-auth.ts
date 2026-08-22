@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import { getCookieValue } from "../../app/lib/auth-cookie"
 import {
   GOOGLE_OAUTH_AUTH_ENDPOINT,
@@ -31,26 +31,26 @@ interface StatePayload {
   expiresAt: number
 }
 
-const statePayloadSchema = z.object({
-  state: z.string().min(1),
-  codeVerifier: z.string().min(1),
-  returnTo: z.string(),
-  expiresAt: z.number(),
+const statePayloadSchema = Schema.Struct({
+  state: Schema.NonEmptyString,
+  codeVerifier: Schema.NonEmptyString,
+  returnTo: Schema.String,
+  expiresAt: Schema.Number,
 })
 
-const tokenResponseSchema = z.object({
-  id_token: z.string().min(1),
+const tokenResponseSchema = Schema.Struct({
+  id_token: Schema.NonEmptyString,
 })
 
-const idTokenPayloadSchema = z.object({
-  iss: z.string(),
-  aud: z.string(),
-  exp: z.number(),
-  sub: z.string().min(1),
-  email: z.string().min(1),
-  email_verified: z.boolean().optional(),
-  name: z.string().optional(),
-  picture: z.string().optional(),
+const idTokenPayloadSchema = Schema.Struct({
+  iss: Schema.String,
+  aud: Schema.String,
+  exp: Schema.Number,
+  sub: Schema.NonEmptyString,
+  email: Schema.NonEmptyString,
+  email_verified: Schema.optional(Schema.Boolean),
+  name: Schema.optional(Schema.String),
+  picture: Schema.optional(Schema.String),
 })
 
 const toBase64Url = (bytes: Uint8Array): string => {
@@ -116,10 +116,10 @@ export const decryptStatePayload = async (
       key,
       encrypted.slice(12)
     )
-    const parsed = statePayloadSchema.safeParse(
+    const parsed = Schema.decodeUnknownResult(statePayloadSchema)(
       JSON.parse(new TextDecoder().decode(plaintext))
     )
-    return parsed.success ? parsed.data : null
+    return Result.isSuccess(parsed) ? parsed.success : null
   } catch {
     return null
   }
@@ -198,8 +198,10 @@ export const exchangeGoogleAuthorizationCode = async (input: {
   if (!response.ok) {
     return null
   }
-  const parsed = tokenResponseSchema.safeParse(await response.json())
-  return parsed.success ? parsed.data.id_token : null
+  const parsed = Schema.decodeUnknownResult(tokenResponseSchema)(
+    await response.json()
+  )
+  return Result.isSuccess(parsed) ? parsed.success.id_token : null
 }
 
 export const parseVerifiedGoogleProfile = (
@@ -212,13 +214,13 @@ export const parseVerifiedGoogleProfile = (
     return null
   }
   try {
-    const parsed = idTokenPayloadSchema.safeParse(
+    const parsed = Schema.decodeUnknownResult(idTokenPayloadSchema)(
       JSON.parse(new TextDecoder().decode(fromBase64Url(payloadPart)))
     )
-    if (!parsed.success) {
+    if (Result.isFailure(parsed)) {
       return null
     }
-    const claims = parsed.data
+    const claims = parsed.success
     if (!GOOGLE_OAUTH_ISSUERS.includes(claims.iss)) {
       return null
     }

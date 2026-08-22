@@ -1,9 +1,9 @@
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const rateLimitPayloadSchema = z.object({
-  limit: z.number().int().positive(),
-  nowMs: z.number().int().nonnegative(),
-  windowMs: z.number().int().positive(),
+const rateLimitPayloadSchema = Schema.Struct({
+  limit: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
+  nowMs: Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+  windowMs: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
 })
 
 export class AuthRateLimiter implements DurableObject {
@@ -14,12 +14,14 @@ export class AuthRateLimiter implements DurableObject {
       return new Response(null, { status: 405 })
     }
 
-    const payload = rateLimitPayloadSchema.safeParse(await request.json())
-    if (!payload.success) {
+    const payload = Schema.decodeUnknownResult(rateLimitPayloadSchema)(
+      await request.json().catch(() => null)
+    )
+    if (Result.isFailure(payload)) {
       return new Response(null, { status: 400 })
     }
 
-    const { limit, nowMs, windowMs } = payload.data
+    const { limit, nowMs, windowMs } = payload.success
     const result = await this.state.storage.transaction(async (storage) => {
       const current = await storage.get<{ count: number; expiresAt: number }>(
         "window"

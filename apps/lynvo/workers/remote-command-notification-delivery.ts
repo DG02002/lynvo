@@ -3,10 +3,10 @@ import {
   listPendingRemoteCommandNotifications,
 } from "./d1/remote-commands"
 import type { PendingRemoteCommandNotification } from "./d1/remote-commands"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const remoteInboxDeliverySchema = z.object({
-  deliveredSocketCount: z.number().int().positive(),
+const remoteInboxDeliverySchema = Schema.Struct({
+  deliveredSocketCount: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
 })
 
 interface RemoteCommandNotificationEnvironment {
@@ -38,7 +38,13 @@ const broadcast = async (
   if (!response.ok) {
     throw new Error("Remote inbox notification failed")
   }
-  if (!remoteInboxDeliverySchema.safeParse(await response.json()).success) {
+  if (
+    Result.isFailure(
+      Schema.decodeUnknownResult(remoteInboxDeliverySchema)(
+        await response.json()
+      )
+    )
+  ) {
     throw new Error("Remote inbox notification reached no receivers")
   }
 }

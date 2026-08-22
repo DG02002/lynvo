@@ -1,7 +1,7 @@
 import { sessionIdentityHeaders } from "~/lib/session-identity"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const authorizeErrorResponseSchema = z.object({ error: z.string() })
+const authorizeErrorResponseSchema = Schema.Struct({ error: Schema.String })
 
 const sameOriginJson = async (
   input: string,
@@ -42,12 +42,12 @@ export const authorizeDeviceCode = async (code: string): Promise<void> => {
     body: JSON.stringify({ code }),
   })
   if (!response.ok) {
-    const payload = authorizeErrorResponseSchema.safeParse(
+    const payload = Schema.decodeUnknownResult(authorizeErrorResponseSchema)(
       await response.json().catch(() => null)
     )
     throw new Error(
-      payload.success
-        ? payload.data.error
+      Result.isSuccess(payload)
+        ? payload.success.error
         : "The login couldn’t be approved. Check the code, then try again."
     )
   }

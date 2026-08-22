@@ -13,8 +13,8 @@ import {
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import { LinkItemMenu } from "~/components/links/LinkItemMenu"
-import { LinkActionsDotMenu } from "~/components/links/LinkActionsContextMenu"
+import { LinkItemMenu } from "~/components/links/link-item-menu"
+import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { Spinner } from "~/components/ui/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type {

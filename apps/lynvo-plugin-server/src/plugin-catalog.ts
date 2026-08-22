@@ -164,8 +164,8 @@ export const createLynvoPluginServerManifest = (
   },
   extensions: {
     lynvo: {
-      plugins: LYNVO_PLUGIN_CATALOG.map((plugin) => {
-        const metadata: PluginMetadata = {
+      plugins: LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
+        const base = {
           id: plugin.id,
           displayName: plugin.displayName,
           description: plugin.description,
@@ -176,16 +176,20 @@ export const createLynvoPluginServerManifest = (
           matchStrategy: plugin.matchStrategy ?? "static",
           hosts: plugin.matchers?.flatMap((matcher) => matcher.hosts) ?? [],
         }
-        if (plugin.matchers) {
-          metadata.matchers = plugin.matchers
-        }
-        if (publicAssetOrigin && plugin.iconPath) {
-          metadata.iconUrl = `${publicAssetOrigin}${plugin.iconPath}`
-        }
-        if (plugin.credential) {
-          metadata.credential = plugin.credential
-        }
-        return metadata
+        const withMatchers = plugin.matchers
+          ? { ...base, matchers: plugin.matchers }
+          : base
+        const withIconUrl =
+          publicAssetOrigin && plugin.iconPath
+            ? {
+                ...withMatchers,
+                iconUrl: `${publicAssetOrigin}${plugin.iconPath}`,
+              }
+            : withMatchers
+        const withCredential = plugin.credential
+          ? { ...withIconUrl, credential: plugin.credential }
+          : withIconUrl
+        return withCredential
       }),
     },
   },
@@ -248,17 +252,16 @@ export const createPluginResponseMetadata = (
   publicAssetOrigin?: string,
   pageTitle?: string
 ): ExtractSuccessResponse["plugin"] => {
-  const metadata: ExtractSuccessResponse["plugin"] = {
+  const base = {
     pluginServerId: PLUGIN_SERVER_ID,
     displayName: PLUGIN_SERVER_NAME,
     pluginId: plugin.id,
     pluginName: plugin.displayName,
   }
-  if (publicAssetOrigin && plugin.iconPath) {
-    metadata.pluginIconUrl = `${publicAssetOrigin}${plugin.iconPath}`
-  }
-  if (pageTitle) {
-    metadata.pageTitle = pageTitle
-  }
-  return metadata
+  const withIcon =
+    publicAssetOrigin && plugin.iconPath
+      ? { ...base, pluginIconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
+      : base
+  const withTitle = pageTitle ? { ...withIcon, pageTitle } : withIcon
+  return withTitle
 }

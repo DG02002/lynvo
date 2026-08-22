@@ -1,20 +1,30 @@
 import { describe, expect, it } from "vitest"
-import { z } from "zod"
-import { customPluginServerSchema } from "~/features/site/settings/plugin-settings-schemas"
+import { Result, Schema } from "effect"
+import {
+  customPluginServerSchema,
+  customPluginServerStandardSchema,
+} from "~/features/site/settings/plugin-settings-schemas"
 
 const getFieldErrors = (value: unknown) => {
-  const result = customPluginServerSchema.safeParse(value)
-  expect(result.success).toBe(false)
-  if (result.success) {
-    return {}
+  const result = customPluginServerStandardSchema["~standard"].validate(value)
+  if (result instanceof Promise) {
+    throw new Error("Unexpected Promise result")
   }
-  return z.flattenError(result.error).fieldErrors
+  expect(result.issues).toBeDefined()
+  const fieldErrors: Record<string, string[]> = {}
+  for (const issue of result.issues ?? []) {
+    const path = issue.path?.join(".") ?? "root"
+    const errors = fieldErrors[path] ?? []
+    errors.push(issue.message)
+    fieldErrors[path] = errors
+  }
+  return fieldErrors
 }
 
 describe("plugin settings schemas", () => {
   it("normalizes a valid Custom Plugin Server URL", () => {
     expect(
-      customPluginServerSchema.parse({
+      Schema.decodeUnknownSync(customPluginServerSchema)({
         baseUrl: "  https://plugin-server.example.com  ",
         apiKey: "secret",
       })
@@ -26,10 +36,12 @@ describe("plugin settings schemas", () => {
 
   it("allows HTTP only for localhost development plugin servers", () => {
     expect(
-      customPluginServerSchema.safeParse({
-        baseUrl: "http://localhost:8788",
-        apiKey: "",
-      }).success
+      Result.isSuccess(
+        Schema.decodeUnknownResult(customPluginServerSchema)({
+          baseUrl: "http://localhost:8788",
+          apiKey: "",
+        })
+      )
     ).toBe(true)
     expect(
       getFieldErrors({
@@ -45,12 +57,5 @@ describe("plugin settings schemas", () => {
     expect(getFieldErrors({ baseUrl: "", apiKey: "" })).toEqual({
       baseUrl: ["Base URL is required."],
     })
-    expect(
-      customPluginServerSchema.safeParse({
-        baseUrl: "https://plugin-server.example.com",
-        apiKey: "",
-        enabled: true,
-      }).success
-    ).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { WebAuth, CsrfMiddleware } from "../Middleware"
+import { WebAuth, CsrfMiddleware } from "../middleware"
 import {
   UnauthorizedApiError,
   CsrfApiError,

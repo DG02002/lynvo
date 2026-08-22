@@ -1,8 +1,10 @@
+import { Result, Schema } from "effect"
 import { showPlayerLaunchError } from "~/lib/player-launch-events"
-import { z } from "zod"
 
 export type PlayerId = "just" | "vlc" | "mpv" | "mx"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
+
+export const playerIdSchema = Schema.Literals(["just", "vlc", "mpv", "mx"])
 
 export interface PlayerDefinition {
   id: PlayerId
@@ -20,13 +22,13 @@ export const PLAYER_DEFINITIONS: readonly PlayerDefinition[] = [
   },
   {
     id: "vlc",
-    name: "VLC for Android",
+    name: "VLC",
     packageName: "org.videolan.vlc",
     iconUrl: "/icons/players/vlc.webp",
   },
   {
     id: "mpv",
-    name: "MPV",
+    name: "mpv",
     packageName: "is.xyz.mpv",
     iconUrl: "/icons/players/mpv.webp",
   },
@@ -36,7 +38,7 @@ export const PLAYER_DEFINITIONS: readonly PlayerDefinition[] = [
     packageName: "com.mxtech.videoplayer.ad",
     iconUrl: "/icons/players/mx.webp",
   },
-] as const
+]
 
 export const DEFAULT_RANGE_PLAYER_ID: PlayerId = "just"
 export const DEFAULT_NON_RANGE_PLAYER_ID: PlayerId = "vlc"
@@ -51,10 +53,8 @@ const playerById = new Map(
   PLAYER_DEFINITIONS.map((player) => [player.id, player])
 )
 
-export const playerIdSchema = z.enum(["just", "vlc", "mpv", "mx"])
-
-const isPlayerId = <Value>(value: Value): value is Value & PlayerId =>
-  playerIdSchema.safeParse(value).success
+export const isPlayerId = <Value>(value: Value): value is Value & PlayerId =>
+  Result.isSuccess(Schema.decodeUnknownResult(playerIdSchema)(value))
 
 const getStoredPlayerId = (
   key: string,

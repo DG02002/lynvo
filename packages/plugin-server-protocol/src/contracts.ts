@@ -1,9 +1,9 @@
+import { Result, Schema, SchemaIssue } from "effect"
 import {
   extractSuccessSchema,
   pluginServerManifestSchema,
   usageResponseSchema,
 } from "./schemas.js"
-import { z } from "zod"
 import { getLynvoManifestExtension } from "./matching.js"
 import type {
   ContractIssue,
@@ -22,20 +22,23 @@ const issue = (path: string, message: string): ContractIssue => ({
 const isSupportedIconUrl = (url: string): boolean =>
   url.endsWith(".webp") || url.endsWith(".svg") || url.endsWith(".png")
 
+const formatStandardIssues = SchemaIssue.makeFormatterStandardSchemaV1()
+
 const mapSchemaIssues = (
-  schemaIssues: ReadonlyArray<{
-    path: ReadonlyArray<PropertyKey>
-    message: string
-  }>,
+  schemaIssue: SchemaIssue.Issue,
   fallbackPath: string
-): ContractIssue[] =>
-  schemaIssues.map((schemaIssue) =>
+): ContractIssue[] => {
+  const result = formatStandardIssues(schemaIssue)
+  return result.issues.map((standardIssue) =>
     issue(
-      schemaIssue.path.map((segment) => String(segment)).join(".") ||
-        fallbackPath,
-      schemaIssue.message
+      standardIssue.path
+        ? standardIssue.path.map((segment) => String(segment)).join(".") ||
+            fallbackPath
+        : fallbackPath,
+      standardIssue.message
     )
   )
+}
 
 const validateParsedPluginServerManifestContract = (
   didDeclareUsage: boolean,
@@ -149,22 +152,30 @@ const validateParsedPluginServerManifestContract = (
   }
 }
 
+const usageDeclarationSchema = Schema.Struct({
+  usage: Schema.Unknown,
+})
+
+const checkUsageDeclared = <Value>(value: Value): boolean =>
+  Result.isSuccess(Schema.decodeUnknownResult(usageDeclarationSchema)(value))
+
 export const parsePluginServerManifestContract = <Value>(
   value: Value
 ): ContractParseResult<PluginServerManifest> => {
-  const didDeclareUsage = z.object({ usage: z.json() }).safeParse(value).success
-  const parsed = pluginServerManifestSchema.safeParse(value)
-  if (!parsed.success) {
+  const didDeclareUsage = checkUsageDeclared(value)
+  const result = Schema.decodeUnknownResult(pluginServerManifestSchema)(value)
+  if (Result.isFailure(result)) {
     return {
       ok: false,
-      issues: mapSchemaIssues(parsed.error.issues, "manifest"),
+      issues: mapSchemaIssues(result.failure.issue, "manifest"),
     }
   }
+  const manifestData = result.success
   const validation = validateParsedPluginServerManifestContract(
     didDeclareUsage,
-    parsed.data
+    manifestData
   )
-  return validation.ok ? { ...validation, value: parsed.data } : validation
+  return validation.ok ? { ...validation, value: manifestData } : validation
 }
 
 export const validatePluginServerManifestContract = <Value>(
@@ -209,15 +220,16 @@ const validateParsedExtractSuccessContract = (
 export const parseExtractSuccessContract = <Value>(
   value: Value
 ): ContractParseResult<ExtractSuccessResponse> => {
-  const parsed = extractSuccessSchema.safeParse(value)
-  if (!parsed.success) {
+  const result = Schema.decodeUnknownResult(extractSuccessSchema)(value)
+  if (Result.isFailure(result)) {
     return {
       ok: false,
-      issues: mapSchemaIssues(parsed.error.issues, "extract"),
+      issues: mapSchemaIssues(result.failure.issue, "extract"),
     }
   }
-  const validation = validateParsedExtractSuccessContract(parsed.data)
-  return validation.ok ? { ...validation, value: parsed.data } : validation
+  const extractData = result.success
+  const validation = validateParsedExtractSuccessContract(extractData)
+  return validation.ok ? { ...validation, value: extractData } : validation
 }
 
 export const validateExtractSuccessContract = <Value>(
@@ -252,15 +264,16 @@ const validateParsedUsageContract = (
 export const parseUsageResponseContract = <Value>(
   value: Value
 ): ContractParseResult<UsageResponse> => {
-  const parsed = usageResponseSchema.safeParse(value)
-  if (!parsed.success) {
+  const result = Schema.decodeUnknownResult(usageResponseSchema)(value)
+  if (Result.isFailure(result)) {
     return {
       ok: false,
-      issues: mapSchemaIssues(parsed.error.issues, "usage"),
+      issues: mapSchemaIssues(result.failure.issue, "usage"),
     }
   }
-  const validation = validateParsedUsageContract(parsed.data)
-  return validation.ok ? { ...validation, value: parsed.data } : validation
+  const usageData = result.success
+  const validation = validateParsedUsageContract(usageData)
+  return validation.ok ? { ...validation, value: usageData } : validation
 }
 
 export const validateUsageContract = <Value>(

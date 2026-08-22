@@ -1,9 +1,27 @@
 {
-  "ignorePatterns": ["apps/lynvo/app/components/ui/**"],
+  "ignorePatterns": [
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+    "apps/lynvo/app/components/ui/**",
+    "tools/oxlint/anti-slop/**"
+  ],
   "jsPlugins": [
     {
       "name": "anti-slop",
       "specifier": "./tools/oxlint/anti-slop/index.ts"
+    },
+    {
+      "name": "anti-slop-effect",
+      "specifier": "./tools/oxlint/anti-slop/effect/index.ts"
     }
   ],
   "categories": {
@@ -25,6 +43,7 @@
     "anti-slop/no-unsafe-dictionary-type": "error",
     "anti-slop/no-widen-then-assert": "error",
     "anti-slop/require-safety-comment-for-type-assertion": "error",
+    "anti-slop-effect/no-service-constructor-imports": "error",
     "eqeqeq": "warn",
     "no-var": "warn",
     "prefer-const": "warn",

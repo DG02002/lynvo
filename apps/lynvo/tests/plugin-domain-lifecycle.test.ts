@@ -9,7 +9,7 @@ import {
   createPluginCredentialAdditionalData,
   PluginCredentialVault,
 } from "~/lib/effect/services/plugin-credential-vault"
-import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { buildCredentialDocument } from "../workers/d1/plugin-domains"
 import {
   parseHttpBasicCredential,

@@ -31,7 +31,6 @@ catalog:
   vite: ^8.2.1
   vitest: ^4.1.10
   wrangler: 4.120.1
-  zod: ^4.4.3
 
 saveWorkspaceProtocol: rolling
 

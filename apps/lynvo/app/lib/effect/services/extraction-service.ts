@@ -8,7 +8,7 @@ import type {
   MetadataResult,
 } from "./extraction-types"
 import { PluginCredentialVault } from "./plugin-credential-vault"
-import { CloudflareEnv } from "./CloudflareEnv"
+import { CloudflareEnv } from "./cloudflare-env"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
 import { loadRegisteredPluginServers } from "./authenticated-extraction-context"
 import {

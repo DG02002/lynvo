@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("sonner", () => ({ toast: {} }))
-vi.mock("~/context/RealtimeContext", () => ({
+vi.mock("~/context/realtime-context", () => ({
   useRealtime: () => ({
     status: "connected",
     connectionGeneration: 1,
@@ -34,7 +34,7 @@ vi.mock("~/context/remote-control/machine", () => ({
   }),
 }))
 
-import { RemoteControlProvider } from "~/context/RemoteControlContext"
+import { RemoteControlProvider } from "~/context/remote-control-context"
 
 describe("Remote Play reconnect convergence", () => {
   beforeEach(() => {

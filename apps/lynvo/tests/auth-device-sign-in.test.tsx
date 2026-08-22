@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { expect, it, vi } from "vitest"
 
-vi.mock("~/components/auth/DeviceLoginQr", () => ({
+vi.mock("~/components/auth/device-login-qr", () => ({
   DeviceLoginQr: () => <div>QR code</div>,
 }))
 

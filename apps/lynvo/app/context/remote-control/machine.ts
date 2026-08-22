@@ -15,7 +15,7 @@ declare global {
     connectedDeviceName: string | null
     controlledBy: string | null
     controllingDeviceName: string | null
-    controllingDevices: RemoteDevice[]
+    controllingDevices: readonly RemoteDevice[]
     lastCommand: RemoteCommand | null
     realtimeStatus: string
     isConnecting: boolean
@@ -23,11 +23,11 @@ declare global {
   }
 
   interface RemotePollResponse {
-    controlledBy?: string | null
-    controllerName?: string | null
-    controllingDevices?: RemoteDevice[]
-    activeTargets?: string[]
-    commands?: readonly RemoteCommandWireFields[]
+    readonly controlledBy?: string | null
+    readonly controllerName?: string | null
+    readonly controllingDevices?: readonly RemoteDevice[]
+    readonly activeTargets?: readonly string[]
+    readonly commands?: readonly RemoteCommandWireFields[]
   }
 
   interface RemoteRealtimeEvent {
@@ -36,8 +36,8 @@ declare global {
     command?: string
     payload?: unknown
     createdAt?: number
-    controllingDevices?: RemoteDevice[]
-    activeTargets?: string[]
+    controllingDevices?: readonly RemoteDevice[]
+    activeTargets?: readonly string[]
     targetSessionId?: string
   }
 
@@ -129,8 +129,8 @@ const EMPTY_STATE: RemoteControlMachineState = {
 }
 
 const haveSameDevices = (
-  currentDevices: RemoteDevice[],
-  nextDevices: RemoteDevice[]
+  currentDevices: readonly RemoteDevice[],
+  nextDevices: readonly RemoteDevice[]
 ) => {
   if (currentDevices.length !== nextDevices.length) {
     return false
@@ -195,7 +195,7 @@ export const createRemoteControlMachine = ({
     return didReceive
   }
 
-  const syncDevices = (nextDevices: RemoteDevice[]) => {
+  const syncDevices = (nextDevices: readonly RemoteDevice[]) => {
     if (haveSameDevices(state.controllingDevices, nextDevices)) {
       return
     }
@@ -216,7 +216,7 @@ export const createRemoteControlMachine = ({
     }
   }
 
-  const disconnectMissingTarget = (activeTargets?: string[]) => {
+  const disconnectMissingTarget = (activeTargets?: readonly string[]) => {
     if (
       activeTargets !== undefined &&
       state.activeSessionId &&

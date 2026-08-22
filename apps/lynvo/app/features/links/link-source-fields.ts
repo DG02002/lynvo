@@ -1,6 +1,6 @@
 import type { LinkMetadata } from "./types"
 import { getMetadataPluginServerId } from "./link-metadata-accessors"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 export interface LinkSourceFields {
   filename?: string
@@ -27,14 +27,16 @@ const getSourceString = (
   source: LinkMetadata["source"] | undefined,
   key: string
 ) => {
-  return z.string().safeParse(source?.[key]).data
+  const result = Schema.decodeUnknownResult(Schema.String)(source?.[key])
+  return Result.isSuccess(result) ? result.success : undefined
 }
 
 const getSourceNumber = (
   source: LinkMetadata["source"] | undefined,
   key: string
 ) => {
-  return z.number().safeParse(source?.[key]).data
+  const result = Schema.decodeUnknownResult(Schema.Number)(source?.[key])
+  return Result.isSuccess(result) ? result.success : undefined
 }
 
 const getRangeRequest = (source: LinkMetadata["source"] | undefined) => {

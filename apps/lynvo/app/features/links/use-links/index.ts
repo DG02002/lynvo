@@ -12,7 +12,7 @@ import {
   LINKS_OFFLINE_POLL_INTERVAL_MS,
   LINKS_REFETCH_DEBOUNCE_MS,
 } from "~/lib/constants"
-import { useOptionalRealtime } from "~/context/RealtimeContext"
+import { useOptionalRealtime } from "~/context/realtime-context"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
 import { createLinksSnapshotStore } from "./links-store"
 import { createLinksMutations } from "./mutations"

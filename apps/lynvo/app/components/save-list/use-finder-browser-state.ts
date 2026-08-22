@@ -12,7 +12,7 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
@@ -22,7 +22,9 @@ interface UseFinderBrowserStateOptions {
 const getFolderPathStorageKey = (savedLinkId: string) =>
   `lynvo:save-folder-path:${savedLinkId}`
 
-const storedFolderPathSchema = z.array(z.object({ id: z.string() }))
+const storedFolderPathSchema = Schema.Array(
+  Schema.Struct({ id: Schema.String })
+)
 
 const restoreFolderPath = (
   savedLinkId: string | undefined,
@@ -33,19 +35,19 @@ const restoreFolderPath = (
   }
 
   try {
-    const value = storedFolderPathSchema.safeParse(
+    const value = Schema.decodeUnknownResult(storedFolderPathSchema)(
       JSON.parse(
         window.sessionStorage.getItem(getFolderPathStorageKey(savedLinkId)) ??
           "[]"
       )
     )
-    if (!value.success) {
+    if (Result.isFailure(value)) {
       return []
     }
 
     const restoredPath: FolderLevel[] = []
     let links = rootLinks
-    for (const level of value.data) {
+    for (const level of value.success) {
       const folder = links.find((link) => getLinkKey(link) === level.id)
       if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
         break

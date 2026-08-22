@@ -11,20 +11,18 @@ export const createProtocolError = (
   code: ErrorCode,
   message: string,
   retryAfterSeconds?: number
-): ExtractProtocolError => {
-  const error: ExtractProtocolError = {
-    ok: false,
-    error: {
-      code,
-      message,
-    },
-    extensions: {},
-  }
-  if (retryAfterSeconds !== undefined) {
-    error.error.retryAfterSeconds = retryAfterSeconds
-  }
-  return error
-}
+): ExtractProtocolError =>
+  retryAfterSeconds === undefined
+    ? {
+        ok: false,
+        error: { code, message },
+        extensions: {},
+      }
+    : {
+        ok: false,
+        error: { code, message, retryAfterSeconds },
+        extensions: {},
+      }
 
 export const createSourceExtractRequest = (
   sourceUrl: string,
@@ -32,22 +30,14 @@ export const createSourceExtractRequest = (
   basicAuth?: HttpBasicAuth,
   pluginId?: string
 ): ExtractRequest => {
-  const request: ExtractRequest = {
-    input: {
-      kind: "source",
-      sourceUrl,
-    },
-  }
-  if (pluginId) {
-    request.pluginId = pluginId
-  }
-  if (password) {
-    request.password = password
-  }
-  if (basicAuth) {
-    request.basicAuth = basicAuth
-  }
-  return request
+  const input = { kind: "source" as const, sourceUrl }
+  const request = { input }
+  const withPluginId = pluginId ? { ...request, pluginId } : request
+  const withPassword = password ? { ...withPluginId, password } : withPluginId
+  const withBasicAuth = basicAuth
+    ? { ...withPassword, basicAuth }
+    : withPassword
+  return withBasicAuth
 }
 
 export const createNodeExtractRequest = (
@@ -56,22 +46,14 @@ export const createNodeExtractRequest = (
   basicAuth?: HttpBasicAuth,
   pluginId?: string
 ): ExtractRequest => {
-  const request: ExtractRequest = {
-    input: {
-      kind: "node",
-      nodeUrl,
-    },
-  }
-  if (pluginId) {
-    request.pluginId = pluginId
-  }
-  if (password) {
-    request.password = password
-  }
-  if (basicAuth) {
-    request.basicAuth = basicAuth
-  }
-  return request
+  const input = { kind: "node" as const, nodeUrl }
+  const request = { input }
+  const withPluginId = pluginId ? { ...request, pluginId } : request
+  const withPassword = password ? { ...withPluginId, password } : withPluginId
+  const withBasicAuth = basicAuth
+    ? { ...withPassword, basicAuth }
+    : withPassword
+  return withBasicAuth
 }
 
 export const extractHttpBasicAuth = (

@@ -1,7 +1,7 @@
 import { Link } from "react-router"
 
-import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
-import { SupportChannelLinks } from "~/components/SupportChannelLinks"
+import { PolicyLayout, PolicySection } from "~/components/policy-layout"
+import { SupportChannelLinks } from "~/components/support-channel-links"
 import { policyPaths } from "~/lib/paths"
 
 const cookieRows = [

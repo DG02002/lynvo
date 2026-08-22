@@ -1,4 +1,4 @@
-import DeviceApproval from "~/components/auth/DeviceApproval"
+import DeviceApproval from "~/components/auth/device-approval"
 import {
   getUserSession,
   responseWithSession,

@@ -1,7 +1,7 @@
 import type { AuditableLogger } from "evlog"
 import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { Context, MiddlewareHandler } from "hono"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 interface RequestLoggingVariables {
   log: AuditableLogger
@@ -16,9 +16,9 @@ export interface RequestLoggingEnvironment {
 }
 
 const RAW_URL = /https?:\/\/[^\s"']+/gi
-const errorResponseSchema = z.object({
-  code: z.string().optional(),
-  retryable: z.boolean().optional(),
+const errorResponseSchema = Schema.Struct({
+  code: Schema.optional(Schema.String),
+  retryable: Schema.optional(Schema.Boolean),
 })
 
 const incomingRequestId = (request: Request): string | undefined => {
@@ -33,13 +33,15 @@ const readErrorResponse = async (
     return {}
   }
   try {
-    const result = errorResponseSchema.safeParse(await response.clone().json())
-    if (!result.success) {
+    const result = Schema.decodeUnknownResult(errorResponseSchema)(
+      await response.clone().json()
+    )
+    if (Result.isFailure(result)) {
       return {}
     }
     return {
-      code: result.data.code,
-      retryable: result.data.retryable,
+      code: result.success.code,
+      retryable: result.success.retryable,
     }
   } catch {
     return {}

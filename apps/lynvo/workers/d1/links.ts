@@ -16,6 +16,7 @@ import {
   extractedLinkSchema,
   parseCanonicalLinkMetadataJson,
 } from "../../app/features/links/storage-schemas"
+import { Schema } from "effect"
 import {
   createDataVersionBumpStatement,
   executeOwnedWrite,
@@ -439,12 +440,12 @@ export const applySavedLinkMetadataOperation = async (
       break
     }
     case "cacheMirrors": {
-      const mirrors = extractedLinkSchema
-        .array()
-        .parse(JSON.parse(input.operation.mirrorsJson))
+      const mirrors = Schema.decodeUnknownSync(
+        Schema.Array(extractedLinkSchema)
+      )(JSON.parse(input.operation.mirrorsJson))
       metadata.playback.resolvedMirrors = {
         ...metadata.playback.resolvedMirrors,
-        [input.operation.lazyItemUrl]: mirrors,
+        [input.operation.lazyItemUrl]: [...mirrors],
       }
       break
     }
@@ -469,9 +470,10 @@ export const applySavedLinkMetadataOperation = async (
       if (currentExtractionJson !== input.operation.expectedExtractionJson) {
         throw new Error("Saved link extraction changed; refresh and retry")
       }
-      metadata.extraction.extractedLinks = extractedLinkSchema
-        .array()
-        .parse(JSON.parse(input.operation.extractedLinksJson))
+      const links = Schema.decodeUnknownSync(Schema.Array(extractedLinkSchema))(
+        JSON.parse(input.operation.extractedLinksJson)
+      )
+      metadata.extraction.extractedLinks = [...links]
       metadata.playback.resolvedMirrors = {}
       break
     }

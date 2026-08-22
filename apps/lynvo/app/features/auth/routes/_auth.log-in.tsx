@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router"
-import { LynvoLink } from "~/components/LynvoLink"
-import { GoogleSignInButton } from "~/components/auth/GoogleSignInButton"
+import { LynvoLink } from "~/components/lynvo-link"
+import { GoogleSignInButton } from "~/components/auth/google-sign-in-button"
 import {
   AuthDivider,
   AuthFormAlert,

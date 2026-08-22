@@ -1,34 +1,37 @@
 import type { LinkMetadata, MetaData } from "~/features/links/types"
 import { metadataSchema } from "~/features/links/storage-schemas"
-import { z } from "zod"
+import { Result, Schema } from "effect"
+
+const createdLinkRecordSchema = Schema.Struct({
+  _id: Schema.optional(Schema.String),
+  id: Schema.optional(Schema.String),
+  link: Schema.optional(Schema.Struct({ id: Schema.optional(Schema.String) })),
+})
 
 export type CreateLink = (input: {
   url: string
   title: string
   metadata: unknown
-}) => Promise<string | z.infer<typeof createdLinkRecordSchema>>
+}) => Promise<string | typeof createdLinkRecordSchema.Type>
 
 export const FETCH_METADATA_TIMEOUT_MS = 20000
 
-const createdLinkRecordSchema = z.object({
-  _id: z.string().optional(),
-  id: z.string().optional(),
-  link: z.object({ id: z.string().optional() }).optional(),
-})
-
 export const getCreatedLinkId = <Value>(value: Value) => {
-  const stringValue = z.string().safeParse(value)
-  if (stringValue.success) {
-    return stringValue.data
+  const stringResult = Schema.decodeUnknownResult(Schema.String)(value)
+  if (Result.isSuccess(stringResult)) {
+    return stringResult.success
   }
 
-  const record = createdLinkRecordSchema.safeParse(value)
-  if (!record.success) {
+  const record = Schema.decodeUnknownResult(createdLinkRecordSchema)(value)
+  if (Result.isFailure(record)) {
     return String(value)
   }
 
   return (
-    record.data.link?.id || record.data._id || record.data.id || String(value)
+    record.success.link?.id ||
+    record.success._id ||
+    record.success.id ||
+    String(value)
   )
 }
 
@@ -43,8 +46,10 @@ export const fetchMetaInternal = async (
       }
     )
     if (response.ok) {
-      const result = metadataSchema.safeParse(await response.json())
-      return result.success ? result.data : {}
+      const result = Schema.decodeUnknownResult(metadataSchema)(
+        await response.json()
+      )
+      return Result.isSuccess(result) ? result.success : {}
     }
   } catch (error) {
     console.warn("Unable to fetch link metadata", error)

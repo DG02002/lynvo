@@ -6,14 +6,14 @@ import { createMemoryStorage } from "./memory-storage"
 vi.mock("next-themes", () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
-vi.mock("~/context/RealtimeContext", () => ({
+vi.mock("~/context/realtime-context", () => ({
   RealtimeProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
-vi.mock("~/context/RemoteControlContext", () => ({
+vi.mock("~/context/remote-control-context", () => ({
   RemoteControlProvider: ({ children }: { children: React.ReactNode }) =>
     children,
 }))
-vi.mock("~/components/VersionWatcher", () => ({ VersionWatcher: () => null }))
+vi.mock("~/components/version-watcher", () => ({ VersionWatcher: () => null }))
 vi.mock("~/components/player-launch-error-dialog", () => ({
   PlayerLaunchErrorDialog: () => null,
 }))

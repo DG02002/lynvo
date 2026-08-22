@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect"
 import { ExtractionService } from "~/lib/effect/services/extraction-service"
-import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { createFakeD1Database } from "../support/fake-d1"

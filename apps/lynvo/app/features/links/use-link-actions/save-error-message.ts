@@ -1,26 +1,29 @@
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const taggedSaveErrorSchema = z.object({
-  _tag: z.string().optional(),
-  message: z.string().optional(),
+const taggedSaveErrorSchema = Schema.Struct({
+  _tag: Schema.optional(Schema.String),
+  message: Schema.optional(Schema.String),
 })
 
 export const getSaveErrorMessage = <Value>(error: Value): string => {
-  const parsedError = taggedSaveErrorSchema.safeParse(error)
-  if (!parsedError.success) {
+  const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
+  if (Result.isFailure(parsedError)) {
     return "The link couldn’t be opened. Check the link, then try again."
   }
 
-  if (parsedError.data._tag === "UnauthorizedError") {
+  if (parsedError.success._tag === "UnauthorizedError") {
     return "The session expired. Log in, then save the link again."
   }
 
-  if (parsedError.data._tag === "ValidationError" && parsedError.data.message) {
-    return parsedError.data.message
+  if (
+    parsedError.success._tag === "ValidationError" &&
+    parsedError.success.message
+  ) {
+    return parsedError.success.message
   }
 
-  if (parsedError.data._tag === "ExtractionError") {
+  if (parsedError.success._tag === "ExtractionError") {
     return "Links couldn’t be loaded from this address. Check the link, then try again."
   }
 

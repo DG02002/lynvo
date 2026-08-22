@@ -19,7 +19,7 @@ import {
 import { Separator } from "~/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 export interface ChangelogEntry {
   type: ChangelogType
@@ -33,6 +33,9 @@ export interface ChangelogEntry {
 type ChangelogType = "general" | "plugin-server"
 type ChangelogTab = ChangelogType | "all"
 type SortOrder = "newest" | "oldest"
+
+const changelogTabSchema = Schema.Literals(["all", "general", "plugin-server"])
+const sortOrderSchema = Schema.Literals(["newest", "oldest"])
 
 const INITIAL_ENTRY_COUNT = 5
 const ENTRY_BATCH_SIZE = 5
@@ -67,15 +70,10 @@ const changelogEntries: ChangelogEntry[] = [
   },
 ]
 
-const changelogTypeSchema = z.enum(["general", "plugin-server"])
-const changelogTypes = changelogTypeSchema.options
-const changelogTabSchema = z.enum(["all", "general", "plugin-server"])
-const sortOrderSchema = z.enum(["newest", "oldest"])
+const changelogTypes = ["general", "plugin-server"] as const
 
-const getSelectedTab = (value: string | null): ChangelogTab => {
-  const result = changelogTypeSchema.safeParse(value)
-  return result.success ? result.data : "all"
-}
+const getSelectedTab = (value: string | null): ChangelogTab =>
+  value === "general" || value === "plugin-server" ? value : "all"
 
 const ChangelogDescription = ({
   description,
@@ -229,9 +227,11 @@ export default function Changelog() {
   })
 
   const handleTabChange = (value: string | number) => {
-    const nextTab = changelogTabSchema.safeParse(value)
-    if (nextTab.success) {
-      setSearchParams(nextTab.data === "all" ? {} : { type: nextTab.data })
+    const nextTab = Schema.decodeUnknownResult(changelogTabSchema)(value)
+    if (Result.isSuccess(nextTab)) {
+      setSearchParams(
+        nextTab.success === "all" ? {} : { type: nextTab.success }
+      )
     }
   }
 
@@ -290,9 +290,10 @@ export default function Changelog() {
               <DropdownMenuRadioGroup
                 value={sortOrder}
                 onValueChange={(value) => {
-                  const nextSortOrder = sortOrderSchema.safeParse(value)
-                  if (nextSortOrder.success) {
-                    setSortOrder(nextSortOrder.data)
+                  const nextSortOrder =
+                    Schema.decodeUnknownResult(sortOrderSchema)(value)
+                  if (Result.isSuccess(nextSortOrder)) {
+                    setSortOrder(nextSortOrder.success)
                   }
                 }}
               >

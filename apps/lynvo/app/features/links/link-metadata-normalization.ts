@@ -2,12 +2,14 @@ import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
 import { getLinkSourceFields } from "./link-source-fields"
 import { stripOpenedFlags } from "./link-tree-metadata"
 import { linkMetadataSchema } from "./storage-schemas"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 export const parseLinkMetadata = <Value>(metadata: Value): LinkMetadata => {
-  const serialized = z.string().safeParse(metadata)
-  const parsed = serialized.success ? JSON.parse(serialized.data) : metadata
-  return linkMetadataSchema.parse(parsed)
+  const stringResult = Schema.decodeUnknownResult(Schema.String)(metadata)
+  const parsed = Result.isSuccess(stringResult)
+    ? JSON.parse(stringResult.success)
+    : metadata
+  return Schema.decodeUnknownSync(linkMetadataSchema)(parsed)
 }
 
 export const toFlatMeta = (metadata: LinkMetadata): MetaData => {

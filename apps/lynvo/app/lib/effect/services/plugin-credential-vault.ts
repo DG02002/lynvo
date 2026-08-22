@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 import { CredentialVaultError } from "../errors"
-import { CloudflareEnv } from "./CloudflareEnv"
+import { CloudflareEnv } from "./cloudflare-env"
 import type { SealedRecord } from "~/lib/security/sealed-record"
 import { sealRecord, unsealRecord } from "~/lib/security/sealed-record"
 import { SEALED_RECORD_KEY_VERSION } from "~/lib/security/constants"

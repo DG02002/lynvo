@@ -1,5 +1,5 @@
+import { Result, Schema } from "effect"
 import { lynvoPluginCatalogSchema } from "./schemas.js"
-import { z } from "zod"
 import type {
   ExtractRequest,
   LynvoManifestExtension,
@@ -69,24 +69,35 @@ export const getExtractTargetUrl = (request: ExtractRequest): string =>
     ? request.input.sourceUrl
     : request.input.nodeUrl
 
-const readLynvoExtension = (manifest: PluginServerManifest) =>
-  z.record(z.string(), z.looseObject({})).parse(manifest.extensions).lynvo
+const extensionsContainerSchema = Schema.Struct({
+  extensions: Schema.optional(
+    Schema.Struct({
+      lynvo: Schema.optional(Schema.Unknown),
+    })
+  ),
+})
+
+const readLynvoExtension = (manifest: PluginServerManifest) => {
+  const result = Schema.decodeUnknownResult(extensionsContainerSchema)(manifest)
+  return Result.isSuccess(result) ? result.success.extensions?.lynvo : undefined
+}
 
 export const getLynvoManifestExtension = (
   manifest: PluginServerManifest
 ): LynvoManifestExtension => {
-  const result = lynvoPluginCatalogSchema.safeParse(
-    readLynvoExtension(manifest)
-  )
-  return result.success ? result.data : { plugins: [] }
+  const extension = readLynvoExtension(manifest)
+  const result = Schema.decodeUnknownResult(lynvoPluginCatalogSchema)(extension)
+  return Result.isSuccess(result) ? result.success : { plugins: [] }
 }
 
 export const parseLynvoManifestExtension = (
   manifest: PluginServerManifest
-): LynvoManifestExtension =>
-  readLynvoExtension(manifest) === undefined
+): LynvoManifestExtension => {
+  const extension = readLynvoExtension(manifest)
+  return extension === undefined
     ? { plugins: [] }
-    : lynvoPluginCatalogSchema.parse(readLynvoExtension(manifest))
+    : Schema.decodeUnknownSync(lynvoPluginCatalogSchema)(extension)
+}
 
 export const getMatchedPlugin = (
   manifest: PluginServerManifest,

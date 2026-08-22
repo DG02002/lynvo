@@ -22,7 +22,7 @@ import {
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import { z } from "zod"
+import { Schema } from "effect"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -35,27 +35,32 @@ export interface BhadooGoogleDriveItem {
 export interface BhadooGoogleDriveListResponse {
   nextPageToken: string | null
   curPageIndex: number
-  data?: { files?: BhadooGoogleDriveItem[] }
+  data?: { files?: readonly BhadooGoogleDriveItem[] }
   error?: { code?: number; message?: string }
 }
 
-const bhadooGoogleDriveItemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  mimeType: z.string(),
-  link: z.string().nullable().optional(),
-  size: z.string().optional(),
+const bhadooGoogleDriveItemSchema = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  mimeType: Schema.String,
+  link: Schema.optional(Schema.NullOr(Schema.String)),
+  size: Schema.optional(Schema.String),
 })
 
-const bhadooGoogleDriveListResponseSchema = z.object({
-  nextPageToken: z.string().nullable(),
-  curPageIndex: z.number(),
-  data: z
-    .object({ files: z.array(bhadooGoogleDriveItemSchema).optional() })
-    .optional(),
-  error: z
-    .object({ code: z.number().optional(), message: z.string().optional() })
-    .optional(),
+const bhadooGoogleDriveListResponseSchema = Schema.Struct({
+  nextPageToken: Schema.NullOr(Schema.String),
+  curPageIndex: Schema.Number,
+  data: Schema.optional(
+    Schema.Struct({
+      files: Schema.optional(Schema.Array(bhadooGoogleDriveItemSchema)),
+    })
+  ),
+  error: Schema.optional(
+    Schema.Struct({
+      code: Schema.optional(Schema.Number),
+      message: Schema.optional(Schema.String),
+    })
+  ),
 })
 
 export const getBhadooPathFilename = (url: string | URL): string => {
@@ -100,17 +105,15 @@ export const createBhadooNodes = (
         )
     playableUrl.username = ""
     playableUrl.password = ""
-    const node: MediaNode = {
+    const size = formatBhadooFileSize(item.size)
+    const baseNode = {
       kind: "playable" as const,
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
       status: "unknown" as const,
     }
-    const size = formatBhadooFileSize(item.size)
-    if (size) {
-      node.size = size
-    }
+    const node: MediaNode = size ? { ...baseNode, size } : baseNode
     return [node]
   })
 
@@ -124,7 +127,7 @@ export const decodeLegacyBhadooResponse = (
   const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
     character.charCodeAt(0)
   )
-  return bhadooGoogleDriveListResponseSchema.parse(
+  return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
     JSON.parse(new TextDecoder().decode(responseBytes))
   )
 }
@@ -159,7 +162,7 @@ const requestBhadooPage = async (
     }),
   })
   if (modernResponse.ok) {
-    return bhadooGoogleDriveListResponseSchema.parse(
+    return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
       await readBoundedUpstreamJson(modernResponse)
     )
   }

@@ -47,7 +47,7 @@ describe("Player settings browser data", () => {
 
     const playerSelectors = await screen.findAllByRole("combobox")
     await waitFor(() => {
-      expect(playerSelectors[0]).toHaveTextContent("MPV")
+      expect(playerSelectors[0]).toHaveTextContent("mpv")
       expect(playerSelectors[1]).toHaveTextContent("MX Player")
     })
   })

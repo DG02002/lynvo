@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react"
-import { z } from "zod"
-
-const playerLaunchErrorDetailSchema = z.object({
-  playerName: z.string(),
-  playerIconUrl: z.string(),
-})
+import { Result, Schema } from "effect"
 import { PluginIcon } from "~/components/plugin-icon"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import {
   PLAYER_LAUNCH_ERROR_EVENT,
   type PlayerLaunchErrorDetail,
 } from "~/lib/player-launch-events"
+
+const playerLaunchErrorDetailSchema = Schema.Struct({
+  playerName: Schema.String,
+  playerIconUrl: Schema.String,
+})
 
 export function PlayerLaunchErrorDialog() {
   const [error, setError] = useState<PlayerLaunchErrorDetail | null>(null)
@@ -19,11 +19,13 @@ export function PlayerLaunchErrorDialog() {
   useEffect(() => {
     const handleLaunchError = (event: Event) => {
       if (event instanceof CustomEvent) {
-        const detail = playerLaunchErrorDetailSchema.safeParse(event.detail)
-        if (!detail.success) {
+        const detail = Schema.decodeUnknownResult(
+          playerLaunchErrorDetailSchema
+        )(event.detail)
+        if (Result.isFailure(detail)) {
           return
         }
-        setError(detail.data)
+        setError(detail.success)
         setOpen(true)
       }
     }

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { Result, Schema } from "effect"
 import { remoteCommandWireMessageSchema } from "~/lib/remote-play/wire"
 
 declare global {
@@ -26,35 +26,42 @@ declare global {
     | SessionHelloRealtimeMessage
 }
 
-export const remoteInboxChangedRealtimeMessageSchema = z.strictObject({
-  type: z.literal("remote-inbox.changed"),
-  payload: z.strictObject({}),
+export const remoteInboxChangedRealtimeMessageSchema = Schema.Struct({
+  type: Schema.Literal("remote-inbox.changed"),
+  payload: Schema.Struct({}),
 })
 
-export const sessionHelloRealtimeMessageSchema = z.object({
-  type: z.literal("session_hello"),
-  userId: z.string(),
-  sessionId: z.string(),
-  dataVersion: z.number().int().positive().optional(),
+export const sessionHelloRealtimeMessageSchema = Schema.Struct({
+  type: Schema.Literal("session_hello"),
+  userId: Schema.String,
+  sessionId: Schema.String,
+  dataVersion: Schema.optional(
+    Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0)))
+  ),
 })
 
-export const dataChangedRealtimeMessageSchema = z.strictObject({
-  type: z.literal("data-changed"),
-  payload: z.strictObject({ version: z.number().int().positive() }),
+export const dataChangedRealtimeMessageSchema = Schema.Struct({
+  type: Schema.Literal("data-changed"),
+  payload: Schema.Struct({
+    version: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
+  }),
 })
 
-const heartbeatResponseSchema = z.strictObject({
-  type: z.literal("pong"),
-  payload: z.strictObject({ at: z.number() }),
+const heartbeatResponseSchema = Schema.Struct({
+  type: Schema.Literal("pong"),
+  payload: Schema.Struct({ at: Schema.Number }),
 })
 
 export const isRealtimeHeartbeatResponse = (value: string): boolean => {
   try {
-    return heartbeatResponseSchema.safeParse(JSON.parse(value)).success
+    return Result.isSuccess(
+      Schema.decodeUnknownResult(heartbeatResponseSchema)(JSON.parse(value))
+    )
   } catch {
     return false
   }
 }
+
 const parseFirstMatchingRealtimeMessage = (
   value: string
 ): RealtimeMessage | null => {
@@ -64,21 +71,29 @@ const parseFirstMatchingRealtimeMessage = (
   } catch {
     return null
   }
-  const remoteResult = remoteCommandWireMessageSchema.safeParse(parsed)
-  if (remoteResult.success) {
-    return remoteResult.data
+  const remoteResult = Schema.decodeUnknownResult(
+    remoteCommandWireMessageSchema
+  )(parsed)
+  if (Result.isSuccess(remoteResult)) {
+    return remoteResult.success
   }
-  const inboxResult = remoteInboxChangedRealtimeMessageSchema.safeParse(parsed)
-  if (inboxResult.success) {
-    return inboxResult.data
+  const inboxResult = Schema.decodeUnknownResult(
+    remoteInboxChangedRealtimeMessageSchema
+  )(parsed)
+  if (Result.isSuccess(inboxResult)) {
+    return inboxResult.success
   }
-  const dataChangedResult = dataChangedRealtimeMessageSchema.safeParse(parsed)
-  if (dataChangedResult.success) {
-    return dataChangedResult.data
+  const dataChangedResult = Schema.decodeUnknownResult(
+    dataChangedRealtimeMessageSchema
+  )(parsed)
+  if (Result.isSuccess(dataChangedResult)) {
+    return dataChangedResult.success
   }
-  const helloResult = sessionHelloRealtimeMessageSchema.safeParse(parsed)
-  if (helloResult.success) {
-    return helloResult.data
+  const helloResult = Schema.decodeUnknownResult(
+    sessionHelloRealtimeMessageSchema
+  )(parsed)
+  if (Result.isSuccess(helloResult)) {
+    return helloResult.success
   }
   return null
 }

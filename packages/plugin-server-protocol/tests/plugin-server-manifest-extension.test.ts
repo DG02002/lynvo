@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Schema } from "effect"
 import {
   getLynvoManifestExtension,
   parsePluginServerManifestContract,
@@ -11,7 +12,7 @@ import {
 describe("Lynvo manifest source credentials", () => {
   it("preserves optional resolvable-node semantics", () => {
     expect(
-      resolvableNodeSchema.parse({
+      Schema.decodeUnknownSync(resolvableNodeSchema)({
         kind: "resolvable",
         label: "Lazy folder",
         nodeUrl: "https://example.com/folder/",
@@ -21,7 +22,7 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("accepts backward-compatible source capability metadata", () => {
-    const manifest = pluginServerManifestSchema.parse({
+    const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
       protocolVersion: "1.0",
       pluginServerId: "dev.lynvo.test",
       displayName: "Test",
@@ -64,7 +65,7 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("rejects explicit icon capabilities that disagree with iconUrl", () => {
-    const manifest = pluginServerManifestSchema.parse({
+    const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
       protocolVersion: "1.0",
       pluginServerId: "dev.lynvo.test",
       displayName: "Test",
@@ -188,7 +189,7 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("keeps the new fields optional for existing manifests", () => {
-    const manifest = pluginServerManifestSchema.parse({
+    const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
       protocolVersion: "1.0",
       pluginServerId: "dev.lynvo.test",
       displayName: "Test",

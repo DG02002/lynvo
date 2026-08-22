@@ -20,7 +20,7 @@ vi.mock("react-router", async (importOriginal) => {
   }
 })
 
-vi.mock("~/context/RealtimeContext", () => ({
+vi.mock("~/context/realtime-context", () => ({
   useOptionalRealtime: () => realtimeMock,
 }))
 

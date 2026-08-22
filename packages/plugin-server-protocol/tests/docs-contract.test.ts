@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import { parseExtractSuccessContract } from "../src/index"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
-const documentedSuccessResponseSchema = z.looseObject({
-  nodes: z.array(z.json()),
-  extensions: z.record(z.string(), z.json()),
+const documentedSuccessResponseSchema = Schema.Struct({
+  nodes: Schema.Array(Schema.Unknown),
+  extensions: Schema.Record(Schema.String, Schema.Unknown),
 })
 
 const documentationUrls = [
@@ -29,11 +29,12 @@ describe("published Plugin Server documentation", () => {
       expect(source).not.toMatch(/\bsource(?:Name|IconUrl)\b/)
       const jsonBlocks = [...source.matchAll(/```json[^\n]*\n([\s\S]*?)```/g)]
       for (const jsonBlock of jsonBlocks) {
-        const result = documentedSuccessResponseSchema.safeParse(
-          JSON.parse(jsonBlock[1])
-        )
-        if (result.success) {
-          expect(parseExtractSuccessContract(result.data).ok).toBe(true)
+        const parsedJson = JSON.parse(jsonBlock[1])
+        const result = Schema.decodeUnknownResult(
+          documentedSuccessResponseSchema
+        )(parsedJson)
+        if (Result.isSuccess(result)) {
+          expect(parseExtractSuccessContract(parsedJson).ok).toBe(true)
         }
       }
     }

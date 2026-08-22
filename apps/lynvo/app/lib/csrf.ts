@@ -1,5 +1,5 @@
 import { createCookie } from "react-router"
-import { z } from "zod"
+import { Result, Schema } from "effect"
 
 const isProd = import.meta.env.PROD
 
@@ -11,7 +11,7 @@ export const csrfCookie = createCookie("csrf-token", {
   maxAge: 60 * 60 * 24, // 1 day
 })
 
-export async function validateCSRF(request: Request, formData?: FormData) {
+export const validateCSRF = async (request: Request, formData?: FormData) => {
   // 1. Check Origin/Referer
   // Skip strict origin checks in DEV to allow local testing (e.g. --host, tunnels)
   if (!import.meta.env.DEV) {
@@ -47,7 +47,10 @@ export async function validateCSRF(request: Request, formData?: FormData) {
   let token = request.headers.get("X-CSRF-Token")
 
   if (!token && formData) {
-    token = z.string().safeParse(formData.get("csrf-token")).data ?? null
+    const formToken = Schema.decodeUnknownResult(Schema.String)(
+      formData.get("csrf-token")
+    )
+    token = Result.isSuccess(formToken) ? formToken.success : null
   }
 
   if (!cookieToken || !token || cookieToken !== token) {
