@@ -52,15 +52,17 @@ describe("Lynvo plugin catalog", () => {
     expect(directMedia?.matchers).toBeUndefined()
   })
 
-  it("publishes only owned public WebP icon URLs", () => {
+  it("publishes only owned public icon URLs", () => {
     const extension = getLynvoManifestExtension(
       createLynvoPluginServerManifest("http://localhost:5173")
     )
     const bhadooPlugin = extension.plugins?.find(
       (plugin) => plugin.id === "bhadoo-google-drive-index"
     )
-    expect(bhadooPlugin?.hasIcon).toBe(false)
-    expect(bhadooPlugin?.iconUrl).toBeUndefined()
+    expect(bhadooPlugin).toMatchObject({
+      hasIcon: true,
+      iconUrl: "http://localhost:5173/icons/sources/bhadoo-cloud.svg",
+    })
     expect(
       extension.plugins?.find((plugin) => plugin.id === "onedrive-index")
     ).toMatchObject({
@@ -75,6 +77,12 @@ describe("Lynvo plugin catalog", () => {
       hasIcon: true,
       iconUrl:
         "http://localhost:5173/icons/sources/google-drive-public-files.webp",
+    })
+    expect(
+      extension.plugins?.find((plugin) => plugin.id === "direct-media")
+    ).toMatchObject({
+      hasIcon: true,
+      iconUrl: "http://localhost:5173/icons/sources/direct-media.png",
     })
   })
 

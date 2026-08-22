@@ -3,10 +3,10 @@ import type {
   PluginMetadata,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
-import { api } from "../../../../convex/_generated/api"
+import { getD1Database } from "../../../../workers/d1/db"
+import { getPluginCredentialByDomainForService } from "../../../../workers/d1/plugin-domains"
 import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { ExtractionError } from "../errors"
-import type { ConvexServiceContract } from "./ConvexService"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface ResolvedPluginCredential {
@@ -15,10 +15,9 @@ export interface ResolvedPluginCredential {
 }
 
 export interface ResolvePluginCredentialOptions {
+  readonly environment: Env
   readonly targetUrl: string
   readonly userId: string
-  readonly accessToken: string
-  readonly serviceToken: string
   readonly pluginServerId: string
   readonly plugin: PluginMetadata
   readonly inlineBasicAuth?: HttpBasicAuth
@@ -27,7 +26,6 @@ export interface ResolvePluginCredentialOptions {
 export const resolvePluginCredential = Effect.fn(
   "PluginCredentialResolution.resolvePluginCredential"
 )(function* (
-  convex: ConvexServiceContract,
   credentialVault: PluginCredentialVaultContract,
   options: ResolvePluginCredentialOptions
 ): Effect.fn.Return<ResolvedPluginCredential, ExtractionError> {
@@ -41,26 +39,38 @@ export const resolvePluginCredential = Effect.fn(
     return { basicAuth: options.inlineBasicAuth }
   }
 
+  const database = getD1Database(options.environment)
+  if (!database) {
+    return yield* new ExtractionError({
+      message: "Stored Plugin credentials are unavailable.",
+      url: options.targetUrl,
+    })
+  }
+
   const domain = new URL(options.targetUrl).hostname
-  const encryptedCredential = yield* convex
-    .query(
-      api.pluginDomains.getCredentialByDomainForService,
-      {
+  const encryptedCredential = yield* Effect.tryPromise({
+    try: () =>
+      getPluginCredentialByDomainForService(database, options.userId, {
         domain,
         pluginServerId: options.pluginServerId,
-        serviceToken: options.serviceToken,
-      },
-      { accessToken: options.accessToken }
+      }),
+    catch: (cause) =>
+      new ExtractionError({
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Stored Plugin credentials are unavailable.",
+        url: options.targetUrl,
+      }),
+  }).pipe(
+    Effect.mapError(
+      (error) =>
+        new ExtractionError({
+          message: error.message,
+          url: options.targetUrl,
+        })
     )
-    .pipe(
-      Effect.mapError(
-        (error) =>
-          new ExtractionError({
-            message: error.message,
-            url: options.targetUrl,
-          })
-      )
-    )
+  )
   if (encryptedCredential?.pluginId !== options.plugin.id) {
     if (options.plugin.credential.required) {
       return yield* new ExtractionError({

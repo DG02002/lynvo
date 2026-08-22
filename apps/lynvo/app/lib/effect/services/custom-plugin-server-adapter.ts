@@ -48,7 +48,7 @@ export const getCustomPluginServerUsage = Effect.fn(
   )
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   const baseUsage = {
-    pluginServerId: pluginServer._id,
+    pluginServerId: pluginServer.id,
     name: manifest?.displayName ?? pluginServer.baseUrl,
     metrics: usage.metrics,
   }
@@ -89,8 +89,7 @@ export const selectCustomPluginServer = Effect.fn(
   if (pluginServerId) {
     return pluginServers.find(
       (pluginServer) =>
-        pluginServer._id === pluginServerId &&
-        isPluginServerUsable(pluginServer)
+        pluginServer.id === pluginServerId && isPluginServerUsable(pluginServer)
     )
   }
 
@@ -119,12 +118,7 @@ export const getCustomPluginServerMetadata = Effect.fn(
   if (!manifest) {
     return undefined
   }
-  return getPluginServerMetadata(
-    manifest,
-    pluginServer._id,
-    targetUrl,
-    pluginId
-  )
+  return getPluginServerMetadata(manifest, pluginServer.id, targetUrl, pluginId)
 })
 
 export const getCustomPlugin = Effect.fn(
@@ -197,5 +191,5 @@ export const extractFromCustomPluginServer = Effect.fn(
       }),
     targetUrl
   )
-  return mapPluginServerExtractionResult(resultValue, pluginServer._id)
+  return mapPluginServerExtractionResult(resultValue, pluginServer.id)
 })

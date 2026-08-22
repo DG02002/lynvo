@@ -17,9 +17,9 @@ describe("policy copy", () => {
     const usage = renderText(<UsagePolicyContent />)
 
     for (const policy of [terms, usage]) {
-      expect(policy).toContain("1 MB")
+      expect(policy).toContain("3 MB")
       expect(policy).toContain("256 KB")
-      expect(policy).toContain("100 saved links")
+      expect(policy).toContain("1,000 saved links")
       expect(policy).toContain("30 requests per day")
       expect(policy).toContain("200 requests per month")
       expect(policy).toContain("Lynvo Plugin Server")
@@ -69,16 +69,12 @@ describe("policy copy", () => {
     expect(cookiePolicy).not.toContain("Accept all cookies")
   })
 
-  it("describes Cloudflare and Convex provider processing", () => {
+  it("describes Cloudflare and Google provider processing", () => {
     const privacy = renderText(<PrivacyPolicyContent />)
-    const cookiePolicy = renderText(<CookiePolicyContent />)
 
-    expect(privacy).toContain("client IP address")
-    expect(privacy).toContain("TLS fingerprint")
-    expect(privacy).toContain("Convex Data Processing Addendum")
-    expect(privacy).toContain("processor or service provider")
-    expect(privacy).toContain("Standard Contractual Clauses")
-    expect(privacy).toContain("Europe (Ireland)")
-    expect(cookiePolicy).toContain("Turnstile Privacy Addendum")
+    expect(privacy).toContain("the D1 database that stores accounts")
+    expect(privacy).toContain("Google account identifier")
+    expect(privacy).toContain("Google's Privacy Policy")
+    expect(privacy).not.toContain("Convex")
   })
 })

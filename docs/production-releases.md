@@ -4,12 +4,11 @@ Lynvo uses GitHub Actions as the single production deployment authority. A
 push to `main` must pass the read-only `Verify` workflow before the exact
 verified commit can enter the `production` GitHub Environment.
 
-The deployment first pushes backward-compatible Convex functions and schema,
-runs the reviewed data migrations, and verifies their invariants. It then
-uploads inactive Cloudflare versions for both Workers before it changes
-production traffic. It promotes `lynvo-plugin-server` followed by `lynvo`. If
-Lynvo promotion fails, the workflow rolls the Plugin Server back to its
-preceding deployment.
+The deployment first applies pending D1 migrations to the production
+database. It then uploads inactive Cloudflare versions for both Workers before
+it changes production traffic. It promotes `lynvo-plugin-server` followed by
+`lynvo`. If Lynvo promotion fails, the workflow rolls the Plugin Server back to
+its preceding deployment.
 
 ## Version identities
 
@@ -39,15 +38,14 @@ secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
-- `CONVEX_DEPLOY_KEY`
-- `CONVEX_MIGRATION_KEY`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 
-Create `CONVEX_DEPLOY_KEY` for the production Convex deployment with only
-`deployment:deploy`. Create a separate `CONVEX_MIGRATION_KEY` scoped to the
-same deployment with only `deployment:data:write`,
-`deployment:functions:runInternalMutations`, and
-`deployment:functions:runInternalQueries`. Keeping these keys separate prevents
-the normal code-deployment credential from invoking data mutations.
+Configure Google OAuth credentials for sign-in and register the production
+callback URI (`https://lynvo.dg02002.workers.dev/api/auth/callback/google`)
+in the Google Cloud console. The remaining Worker secrets
+(`PLUGIN_CREDENTIAL_ENCRYPTION_KEY`, `LYNVO_PLUGIN_SERVER_API_KEY`) stay in
+Cloudflare and are inherited by new versions.
 
 Protect `main` and require the `Verify / verify` status check before merging.
 Disable direct pushes and require pull requests. Optionally require an approver
@@ -66,31 +64,28 @@ needs their plaintext value.
 4. GitHub uploads and promotes both Worker versions. No local deployment is
    required.
 
-## Convex schema and data migrations
+## D1 schema and data migrations
 
-Convex code and schema deploy before the Workers. Every Convex change must be
-compatible with the currently deployed Workers because Convex becomes live as
-soon as its deploy succeeds.
+Schema changes are versioned SQL files under `apps/lynvo/migrations/`, applied
+by CI through `wrangler d1 migrations apply DB --remote` before any new Worker
+version is promoted.
 
 Use an expand-and-contract migration:
 
-1. Add the new field as optional and deploy code that understands old and new
-   records.
-2. Define a resumable migration in `convex/migrations.ts` and add it to the
-   explicit `runProduction` sequence.
-3. Add an internal verification query that proves the migration invariant.
-4. Let CI run and verify the migration before promoting either Worker.
-5. In a later release, make the field required and remove compatibility code.
+1. Ship additive columns or tables first; deployed code ignores them until it
+   is updated.
+2. Deploy the Worker version that reads and writes the new shape.
+3. In a later release, remove compatibility code once no active version needs
+   the old representation.
 
-Never combine adding a required field, backfilling it, and removing the old
-representation in one release. Convex data is not rolled back when a Worker is
-rolled back. Before a destructive or unusually large migration, create a
-Convex backup and rehearse the migration against a separate preview or staging
-deployment.
+D1 provides Time Travel point-in-time recovery (7 days on the free tier) as
+the rollback story for data; Worker versions roll back independently through
+the Cloudflare dashboard or `wrangler rollback`. Before a destructive or
+unusually large migration, export the database and rehearse against a scratch
+D1 database first.
 
-Use the Cloudflare dashboard's deployment history for an emergency manual
-rollback. Do not run local production deploys during ordinary development,
-because that bypasses the verified commit and coordinated release sequence.
+Do not run local production deploys during ordinary development, because that
+bypasses the verified commit and coordinated release sequence.
 
 ## Caching policy
 

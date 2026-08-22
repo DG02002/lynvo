@@ -23,7 +23,7 @@ const environment: LynvoPluginServerBindings = {
   },
   PUBLIC_ASSET_ORIGIN:
     "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
-  LYNVO_PLUGIN_SERVER_API_KEY: "test-api-key",
+  PLUGIN_SERVER_AUTH_KEY: "test-api-key",
   LYNVO_PLUGIN_SERVER_USAGE_LIMITER: unusedUsageLimiter,
 }
 

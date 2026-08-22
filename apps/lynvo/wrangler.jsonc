@@ -3,152 +3,162 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "lynvo",
-  "workers_dev": true,
-  "compatibility_date": "2026-08-08",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "main": "./workers/app.ts",
-  "version_metadata": {
-    "binding": "CF_VERSION_METADATA",
-  },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "AUTH_RATE_LIMITER",
-        "class_name": "AuthRateLimiter",
-      },
-      {
-        "name": "WORKER_AUTH_SESSION",
-        "class_name": "WorkerAuthSession",
-      },
-      {
-        "name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
-        "class_name": "PluginServerCredentialVault",
-      },
-      {
-        "name": "USER_REALTIME_ROOM",
-        "class_name": "UserRealtimeRoom",
-      },
-    ],
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": [
-        "UserRealtimeRoom",
-        "AuthRateLimiter",
-        "WorkerAuthSession",
-        "PluginServerCredentialVault",
-      ],
-    },
-  ],
-  "secrets": {
-    "required": [
-      "VITE_CONVEX_URL",
-      "AUTH_GATEWAY_SECRET",
-      "AUTH_SESSION_ENCRYPTION_KEY",
-      "TURNSTILE_SECRET_KEY",
-      "PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
-      "LYNVO_PLUGIN_SERVER_API_KEY",
-    ],
-  },
-  "services": [
-    {
-      "binding": "LYNVO_PLUGIN_SERVER",
-      "service": "lynvo-plugin-server",
-    },
-  ],
-  "triggers": {
-    "crons": ["* * * * *"],
-  },
-  "vars": {
-    "ENVIRONMENT": "production",
-    "TURNSTILE_SITE_KEY": "0x4AAAAAAEC1SvszqvkGdIr2",
-  },
-  "env": {
-    "local": {
-      "version_metadata": {
-        "binding": "CF_VERSION_METADATA",
-      },
-      "durable_objects": {
-        "bindings": [
-          {
-            "name": "AUTH_RATE_LIMITER",
-            "class_name": "AuthRateLimiter",
-          },
-          {
-            "name": "WORKER_AUTH_SESSION",
-            "class_name": "WorkerAuthSession",
-          },
-          {
-            "name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
-            "class_name": "PluginServerCredentialVault",
-          },
-          {
-            "name": "USER_REALTIME_ROOM",
-            "class_name": "UserRealtimeRoom",
-          },
-        ],
-      },
-      "secrets": {
-        "required": [
-          "VITE_CONVEX_URL",
-          "AUTH_GATEWAY_SECRET",
-          "AUTH_SESSION_ENCRYPTION_KEY",
-          "TURNSTILE_SECRET_KEY",
-          "PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
-          "LYNVO_PLUGIN_SERVER_API_KEY",
-        ],
-      },
-      "services": [
-        {
-          "binding": "LYNVO_PLUGIN_SERVER",
-          "service": "lynvo-plugin-server-local",
-        },
-      ],
-      "vars": {
-        "ENVIRONMENT": "development",
-        "SERVICE_VERSION": "development",
-        "COMMIT_HASH": "development",
-        "TURNSTILE_SITE_KEY": "",
-      },
-    },
-  },
-  "observability": {
-    "enabled": true,
-  },
-  "placement": {
-    "mode": "smart",
-  },
-  /**
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "lynvo",
+	"workers_dev": true,
+	"compatibility_date": "2026-08-08",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"main": "./workers/app.ts",
+	// HUMAN: run `wrangler d1 create lynvo-db` and replace the placeholder database_id
+	// (same for the env.local copy) before deploying; local dev + vitest use Miniflare.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "lynvo-db",
+			"database_id": "3999f259-be6d-4a75-8eb6-8ae774574279",
+			"migrations_dir": "migrations",
+		},
+	],
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA",
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "AUTH_RATE_LIMITER",
+				"class_name": "AuthRateLimiter",
+			},
+			{
+				"name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
+				"class_name": "PluginServerCredentialVault",
+			},
+			{
+				"name": "USER_REALTIME_ROOM",
+				"class_name": "UserRealtimeRoom",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"UserRealtimeRoom",
+				"AuthRateLimiter",
+				"PluginServerCredentialVault",
+			],
+		},
+	],
+	"secrets": {
+		"required": [
+			"GOOGLE_CLIENT_ID",
+			"GOOGLE_CLIENT_SECRET",
+			"PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
+			"MANAGED_PLUGIN_SERVER_API_KEY",
+		],
+	},
+	"services": [
+		{
+			"binding": "LYNVO_PLUGIN_SERVER",
+			"service": "lynvo-plugin-server",
+		},
+	],
+	"triggers": {
+		"crons": [
+			"* * * * *",
+			"9 * * * *",
+			"41 3 * * *"
+		],
+	},
+	"vars": {
+		"ENVIRONMENT": "production",
+	},
+	"env": {
+		"local": {
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA",
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "lynvo-db",
+					"database_id": "3999f259-be6d-4a75-8eb6-8ae774574279",
+					"migrations_dir": "migrations",
+				},
+			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "AUTH_RATE_LIMITER",
+						"class_name": "AuthRateLimiter",
+					},
+					{
+						"name": "PLUGIN_SERVER_CREDENTIAL_VAULT",
+						"class_name": "PluginServerCredentialVault",
+					},
+					{
+						"name": "USER_REALTIME_ROOM",
+						"class_name": "UserRealtimeRoom",
+					},
+				],
+			},
+			"secrets": {
+				"required": [
+					"GOOGLE_CLIENT_ID",
+					"GOOGLE_CLIENT_SECRET",
+					"PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
+					"MANAGED_PLUGIN_SERVER_API_KEY",
+				],
+			},
+			"services": [
+				{
+					"binding": "LYNVO_PLUGIN_SERVER",
+					"service": "lynvo-plugin-server-local",
+				},
+			],
+			"vars": {
+				"ENVIRONMENT": "development",
+				"SERVICE_VERSION": "development",
+				"COMMIT_HASH": "development",
+			},
+		},
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"placement": {
+		"mode": "smart",
+	},
+	/**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
    */
-  // "placement": { "mode": "smart" }
-  /**
+	// "placement": { "mode": "smart" }
+	/**
    * Bindings
    * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
    * databases, object storage, AI inference, real-time communication and more.
    * https://developers.cloudflare.com/workers/runtime-apis/bindings/
    */
-  /**
+	/**
    * Environment Variables
    * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
    */
-  // "vars": { "MY_VARIABLE": "production_value" }
-  /**
+	// "vars": { "MY_VARIABLE": "production_value" }
+	/**
    * Note: Use secrets to store sensitive data.
    * https://developers.cloudflare.com/workers/configuration/secrets/
    */
-  /**
+	/**
    * Static Assets
    * https://developers.cloudflare.com/workers/static-assets/binding/
    */
-  // "assets": { "directory": "./public/", "binding": "ASSETS" }
-  /**
+	// "assets": { "directory": "./public/", "binding": "ASSETS" }
+	/**
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
-  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 }

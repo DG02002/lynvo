@@ -19,6 +19,9 @@ const issue = (path: string, message: string): ContractIssue => ({
   message,
 })
 
+const isSupportedIconUrl = (url: string): boolean =>
+  url.endsWith(".webp") || url.endsWith(".svg") || url.endsWith(".png")
+
 const mapSchemaIssues = (
   schemaIssues: ReadonlyArray<{
     path: ReadonlyArray<PropertyKey>
@@ -57,9 +60,12 @@ const validateParsedPluginServerManifestContract = (
     )
   }
 
-  if (manifest.iconUrl && !manifest.iconUrl.endsWith(".webp")) {
+  if (manifest.iconUrl && !isSupportedIconUrl(manifest.iconUrl)) {
     issues.push(
-      issue("iconUrl", "Use a direct HTTPS WebP URL for Plugin Server icons.")
+      issue(
+        "iconUrl",
+        "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons."
+      )
     )
   }
   if (manifest.hasIcon === true && !manifest.iconUrl) {
@@ -70,11 +76,12 @@ const validateParsedPluginServerManifestContract = (
       issue("hasIcon", "Set hasIcon to true when iconUrl is present.")
     )
   }
+  if (didDeclareUsage && !manifest.usage) {
+    issues.push(issue("usage", "Declare metrics when usage is provided."))
+  }
 
-  if (!extension.plugins || extension.plugins.length === 0) {
-    issues.push(
-      issue("extensions.lynvo.plugins", "Declare at least one Plugin.")
-    )
+  if (!extension) {
+    return { ok: issues.length === 0, issues }
   }
 
   extension.plugins?.forEach((source, index) => {
@@ -84,8 +91,13 @@ const validateParsedPluginServerManifestContract = (
     }
     pluginIds.add(source.id)
 
-    if (source.iconUrl && !source.iconUrl.endsWith(".webp")) {
-      issues.push(issue(`${basePath}.iconUrl`, "Use a direct HTTPS WebP URL."))
+    if (source.iconUrl && !isSupportedIconUrl(source.iconUrl)) {
+      issues.push(
+        issue(
+          `${basePath}.iconUrl`,
+          "Use a direct HTTPS WebP, PNG, or SVG URL."
+        )
+      )
     }
     if (source.hasIcon === true && !source.iconUrl) {
       issues.push(
@@ -167,23 +179,23 @@ const validateParsedExtractSuccessContract = (
 ): ContractValidationResult => {
   const issues: ContractIssue[] = []
 
-  if (result.plugin.iconUrl && !result.plugin.iconUrl.endsWith(".webp")) {
+  if (result.plugin.iconUrl && !isSupportedIconUrl(result.plugin.iconUrl)) {
     issues.push(
       issue(
         "plugin.iconUrl",
-        "Use a direct HTTPS WebP URL for Plugin Server icons."
+        "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons."
       )
     )
   }
 
   if (
     result.plugin.pluginIconUrl &&
-    !result.plugin.pluginIconUrl.endsWith(".webp")
+    !isSupportedIconUrl(result.plugin.pluginIconUrl)
   ) {
     issues.push(
       issue(
         "plugin.pluginIconUrl",
-        "Use a direct HTTPS WebP URL for Plugin icons."
+        "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons."
       )
     )
   }

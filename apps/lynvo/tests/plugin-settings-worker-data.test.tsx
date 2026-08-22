@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { PluginsSettings } from "~/features/site/settings/plugins-settings"
@@ -21,8 +20,7 @@ describe("Plugin settings browser data", () => {
         if (url.pathname === "/api/plugin-servers") {
           return Response.json([
             {
-              _id: "plugin-server-1",
-              _creationTime: 1,
+              id: "plugin-server-1",
               userId: "user-1",
               baseUrl: "https://plugins.example.com",
               manifest: "{}",
@@ -40,17 +38,11 @@ describe("Plugin settings browser data", () => {
         return new Response(null, { status: 404 })
       })
     )
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-
     render(
-      <QueryClientProvider client={queryClient}>
-        <PluginsSettings
-          lynvoPlugins={null}
-          requestOrigin="https://lynvo.test"
-        />
-      </QueryClientProvider>
+      <PluginsSettings
+        lynvoPlugins={null}
+        requestOrigin="https://lynvo.test"
+      />
     )
 
     expect(await screen.findByText("https://plugins.example.com")).toBeVisible()

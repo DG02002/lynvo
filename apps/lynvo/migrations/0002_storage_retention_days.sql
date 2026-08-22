@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN storage_retention_days INTEGER NOT NULL DEFAULT 30;

@@ -42,7 +42,6 @@ describe("Usage Read module", () => {
             name: "Direct Media",
           },
         ],
-        timeBucket: 1,
       })
     ).resolves.toMatchObject({
       lynvo: {
@@ -118,7 +117,7 @@ describe("Usage Read module", () => {
     })
 
     await expect(
-      usageRead.read({ lynvoPlugins, timeBucket: 1_700_000_000_000 })
+      usageRead.read({ lynvoPlugins })
     ).resolves.toMatchObject({
       lynvo: {
         total: { used: 20, limit: 200 },
@@ -157,7 +156,7 @@ describe("Usage Read module", () => {
     })
 
     await expect(
-      usageRead.read({ lynvoPlugins: [], timeBucket: 1 })
+      usageRead.read({ lynvoPlugins: [] })
     ).resolves.toMatchObject({
       lynvo: { entries: [] },
       custom: {

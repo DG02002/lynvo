@@ -164,7 +164,7 @@ describe("PluginServerClient", () => {
           plugin: {
             pluginServerId: "dev.example.plugin-server",
             displayName: "Example",
-            pluginIconUrl: "https://source.example/plugin.svg",
+            pluginIconUrl: "https://source.example/plugin.gif",
           },
           nodes: [],
           extensions: {},

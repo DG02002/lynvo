@@ -1,43 +1,41 @@
 import { Effect } from "effect"
-import { api } from "../../../../convex/_generated/api"
-import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
-import { signCredentialReadToken } from "../../../lib/auth-gateway"
-import type { ConvexError, CredentialVaultError } from "../errors"
-import type { ConvexServiceContract } from "./ConvexService"
+import { BackendError, type CredentialVaultError } from "../errors"
+import { getD1Database } from "../../../../workers/d1/db"
+import { listReadyPluginServersForService } from "../../../../workers/d1/plugin-servers"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import type { RegisteredPluginServer } from "./extraction-types"
 
-export interface AuthenticatedExtractionContext {
-  readonly serviceToken: string
+export interface RegisteredExtractionContext {
   readonly pluginServers: ReadonlyArray<RegisteredPluginServer>
 }
 
-export const loadAuthenticatedExtractionContext = Effect.fn(
-  "AuthenticatedExtractionContext.loadAuthenticatedExtractionContext"
+export const loadRegisteredPluginServers = Effect.fn(
+  "AuthenticatedExtractionContext.loadRegisteredPluginServers"
 )(function* (
-  convex: ConvexServiceContract,
   environment: Env,
-  userId: string,
-  accessToken: string
+  userId: string
 ): Effect.fn.Return<
-  AuthenticatedExtractionContext,
-  ConvexError | CredentialVaultError
+  RegisteredExtractionContext,
+  BackendError | CredentialVaultError
 > {
-  const serviceToken = yield* Effect.promise(() =>
-    signCredentialReadToken(
-      environment.AUTH_GATEWAY_SECRET,
-      Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS
-    )
-  )
-  const storedPluginServers = yield* convex.query(
-    api.userPluginServers.listForService,
-    { serviceToken },
-    { accessToken }
-  )
+  const database = getD1Database(environment)
+  if (!database) {
+    return yield* new BackendError({
+      message: "Account data is temporarily unavailable",
+    })
+  }
+  const storedPluginServers = yield* Effect.tryPromise({
+    try: () => listReadyPluginServersForService(database, userId),
+    catch: (cause) =>
+      new BackendError({
+        message: "Plugin servers are temporarily unavailable",
+        cause,
+      }),
+  })
   const pluginServers = yield* decryptCustomPluginServers(
     environment,
     userId,
     storedPluginServers
   )
-  return { serviceToken, pluginServers }
+  return { pluginServers }
 })

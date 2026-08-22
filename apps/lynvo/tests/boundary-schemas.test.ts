@@ -1,89 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { authSignInResponseSchema } from "~/lib/auth-http-schema"
-import {
-  authPreflightRequestSchema,
-  authSignInRequestSchema,
-  turnstileVerificationResponseSchema,
-} from "~/lib/auth-gateway-schemas"
-import { getSafeRedirectPath } from "~/components/auth/auth-form-actions"
 import {
   remotePollResponseSchema,
   remoteRealtimeEventSchema,
 } from "~/context/remote-control/schemas"
 
 describe("HTTP and realtime boundaries", () => {
-  it("validates Worker authentication requests", () => {
-    expect(
-      authPreflightRequestSchema.safeParse({
-        flow: "signIn",
-        username: "darshan",
-        turnstileToken: "token",
-      }).success
-    ).toBe(true)
-    expect(
-      authPreflightRequestSchema.safeParse({
-        flow: "resetPassword",
-        username: "darshan",
-        turnstileToken: "token",
-      }).success
-    ).toBe(false)
-    expect(
-      authSignInRequestSchema.safeParse({
-        provider: "credentials",
-        params: { flow: "signIn", username: "darshan" },
-      }).success
-    ).toBe(true)
-    expect(
-      authSignInRequestSchema.safeParse({
-        provider: "untrusted-provider",
-        params: {},
-      }).success
-    ).toBe(false)
-  })
-
-  it("enforces the Turnstile token protocol boundary", () => {
-    const request = {
-      flow: "signIn",
-      username: "darshan",
-      turnstileToken: "t".repeat(2_048),
-    }
-
-    expect(authPreflightRequestSchema.safeParse(request).success).toBe(true)
-    expect(
-      authPreflightRequestSchema.safeParse({
-        ...request,
-        turnstileToken: `${request.turnstileToken}t`,
-      }).success
-    ).toBe(false)
-    expect(
-      turnstileVerificationResponseSchema.safeParse({
-        success: true,
-        hostname: "lynvo.dg02002.workers.dev",
-        action: "lynvo-sign-in",
-      }).success
-    ).toBe(true)
-    expect(
-      turnstileVerificationResponseSchema.safeParse({
-        success: true,
-        hostname: "lynvo.dg02002.workers.dev",
-      }).success
-    ).toBe(false)
-  })
-
-  it("rejects tokens in browser auth responses", () => {
-    expect(
-      authSignInResponseSchema.safeParse({
-        signingIn: true,
-      }).success
-    ).toBe(true)
-    expect(
-      authSignInResponseSchema.safeParse({
-        signingIn: true,
-        tokens: { token: "access", refreshToken: "refresh" },
-      }).success
-    ).toBe(false)
-  })
-
   it("validates remote poll devices", () => {
     expect(
       remotePollResponseSchema.safeParse({
@@ -108,19 +29,6 @@ describe("HTTP and realtime boundaries", () => {
     ).toBe(false)
   })
 
-  it("validates Turnstile responses", () => {
-    expect(
-      turnstileVerificationResponseSchema.safeParse({
-        success: true,
-        hostname: "lynvo.dg02002.workers.dev",
-        action: "lynvo-sign-in",
-      }).success
-    ).toBe(true)
-    expect(
-      turnstileVerificationResponseSchema.safeParse({ success: "yes" }).success
-    ).toBe(false)
-  })
-
   it("uses a discriminated union for remote events", () => {
     expect(
       remoteRealtimeEventSchema.safeParse({
@@ -139,20 +47,5 @@ describe("HTTP and realtime boundaries", () => {
         command: "play",
       }).success
     ).toBe(false)
-  })
-})
-
-describe("safe authentication redirects", () => {
-  const origin = "https://lynvo.example"
-
-  it.each([
-    ["/save", "/save"],
-    ["/settings?tab=security#sessions", "/settings?tab=security#sessions"],
-    [null, "/save"],
-    ["https://evil.example/phishing", "/save"],
-    ["//evil.example/phishing", "/save"],
-    ["javascript:alert(1)", "/save"],
-  ])("maps %s to %s", (redirect, expected) => {
-    expect(getSafeRedirectPath(redirect, origin)).toBe(expected)
   })
 })

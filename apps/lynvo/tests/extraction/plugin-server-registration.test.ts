@@ -6,9 +6,8 @@ import {
   preparePluginServerRegistration,
 } from "~/lib/effect/services/plugin-server-registration"
 import { registerCustomPluginServer } from "~/lib/effect/services/custom-plugin-server-lifecycle"
-import { ConvexService } from "~/lib/effect/services/ConvexService"
 import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
-import { ConvexError } from "~/lib/effect/errors"
+import { createFakeD1Database } from "../support/fake-d1"
 
 const createManifest = (
   sourceIconUrl = "https://icons.example/resolver-beta.webp"
@@ -133,7 +132,7 @@ describe("Plugin Server registration", () => {
       vi
         .fn()
         .mockResolvedValueOnce(
-          Response.json(createManifest("http://icons.example/bad.svg"))
+          Response.json(createManifest("https://icons.example/bad.gif"))
         )
     )
 
@@ -158,7 +157,9 @@ describe("Plugin Server registration", () => {
         .mockResolvedValueOnce(Response.json({ ok: true }))
         .mockResolvedValueOnce(Response.json(createUsage()))
     )
-    let mutationCount = 0
+    let finalizedCount = 0
+    let recoveryCount = 0
+    let storedPendingRow: Record<string, unknown> | null = null
     const credentialVault = {
       getByName: () => ({
         fetch: () =>
@@ -172,37 +173,45 @@ describe("Plugin Server registration", () => {
           ),
       }),
     }
+    const database = createFakeD1Database((sql, args) => {
+      if (sql.includes("INSERT INTO user_plugin_servers")) {
+        storedPendingRow = {
+          id: args[0] as string,
+          user_id: args[1] as string,
+          credential_status: "pending",
+          credential_generation: args[9],
+          credential_attempt_id: args[10],
+        }
+        return undefined
+      }
+      if (sql.includes("FROM user_plugin_servers")) {
+        return storedPendingRow
+          ? { row: storedPendingRow }
+          : { rows: [] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers") &&
+        sql.includes("api_key_ciphertext")
+      ) {
+        finalizedCount += 1
+        return { error: new Error("Finalization mutation failed") }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers") &&
+        sql.includes("credential_status")
+      ) {
+        recoveryCount += 1
+        return { error: new Error("Recovery mutation failed") }
+      }
+      return undefined
+    })
     const layer = Layer.mergeAll(
       Layer.succeed(
         CloudflareEnv,
         CloudflareEnv.of({
-          AUTH_GATEWAY_SECRET: "test-secret",
           PLUGIN_SERVER_CREDENTIAL_VAULT: credentialVault,
+          DB: database,
         } as unknown as Env)
-      ),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: () => Effect.die(new Error("Unexpected Convex query")),
-          mutation: () => {
-            mutationCount += 1
-            if (mutationCount === 1) {
-              return Effect.succeed({
-                id: "plugin-server-1",
-                resumed: false,
-              })
-            }
-            return Effect.fail(
-              new ConvexError({
-                message:
-                  mutationCount === 2
-                    ? "Finalization mutation failed"
-                    : "Recovery mutation failed",
-              })
-            )
-          },
-        })
       )
     )
 
@@ -211,13 +220,14 @@ describe("Plugin Server registration", () => {
         registerCustomPluginServer({
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
-          user: { id: "user-1", accessToken: "access-token" },
+          user: { id: "user-1" },
         }).pipe(Effect.provide(layer))
       )
     ).rejects.toMatchObject({
       message: "Finalization mutation failed",
     })
-    expect(mutationCount).toBe(3)
+    expect(finalizedCount).toBe(1)
+    expect(recoveryCount).toBe(1)
   })
 
   it("refreshes a registered pluginServer manifest using the stored API key", async () => {
@@ -231,7 +241,7 @@ describe("Plugin Server registration", () => {
     const refresh = await Effect.runPromise(
       preparePluginServerRefresh({
         pluginServer: {
-          _id: "pluginServer-1",
+          id: "pluginServer-1",
           baseUrl: "https://plugin-server.example/",
           apiKey: "stored-secret",
           manifest: "{}",

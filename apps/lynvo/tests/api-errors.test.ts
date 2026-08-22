@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 import {
-  ConvexApiError,
+  BackendApiError,
   CsrfApiError,
   NotFoundApiError,
   UnauthorizedApiError,
@@ -96,7 +96,7 @@ describe("API errors", () => {
     expect(HttpApiSchema.getStatusError(UnauthorizedApiError.ast)).toBe(401)
     expect(HttpApiSchema.getStatusError(CsrfApiError.ast)).toBe(403)
     expect(HttpApiSchema.getStatusError(NotFoundApiError.ast)).toBe(404)
-    expect(HttpApiSchema.getStatusError(ConvexApiError.ast)).toBe(503)
+    expect(HttpApiSchema.getStatusError(BackendApiError.ast)).toBe(503)
   })
 
   it("rejects unknown error codes at the HTTP boundary", () => {

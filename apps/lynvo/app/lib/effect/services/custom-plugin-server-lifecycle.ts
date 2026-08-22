@@ -1,7 +1,15 @@
 import { Effect } from "effect"
-import { api } from "../../../../convex/_generated/api"
-import { ConvexService } from "./ConvexService"
 import { CloudflareEnv } from "./CloudflareEnv"
+import { getD1Database } from "../../../../workers/d1/db"
+import {
+  beginPluginServerRegistration,
+  finalizePluginServerCredential,
+  listReadyPluginServersForService,
+  markPluginServerRegistrationFailed,
+  recordPluginServerVerificationFailure,
+  recordPluginServerVerificationSuccess,
+  recordPluginServerRefreshSuccess,
+} from "../../../../workers/d1/plugin-servers"
 import {
   preparePluginServerRefresh,
   preparePluginServerRegistration,
@@ -11,16 +19,13 @@ import {
   decryptCustomPluginServers,
   encryptCustomPluginServerApiKey,
 } from "./custom-plugin-server-credentials"
-import { ConvexError, PluginServerRegistrationError } from "../errors"
-import { signCredentialReadToken } from "../../../lib/auth-gateway"
-import { CREDENTIAL_READ_TOKEN_TTL_MS } from "../../../../convex/constants"
+import { BackendError, PluginServerRegistrationError } from "../errors"
 import { getCustomPluginServerUsage } from "./custom-plugin-server-adapter"
 
 const CUSTOM_PLUGIN_SERVER_USAGE_CONCURRENCY = 3
 
 export interface CustomPluginServerLifecycleUser {
   readonly id: string
-  readonly accessToken: string
 }
 
 export interface RegisterCustomPluginServerInput {
@@ -51,24 +56,38 @@ const registrationError = (error: {
         : error.message,
   })
 
-const createCredentialReadToken = (secret: string) =>
-  Effect.promise(() =>
-    signCredentialReadToken(secret, Date.now() + CREDENTIAL_READ_TOKEN_TTL_MS)
-  )
+const requireDatabase = (environment: Cloudflare.Env) => {
+  const database = getD1Database(environment)
+  if (!database) {
+    return undefined
+  }
+  return database
+}
 
 export const registerCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.register"
 )(function* (input: RegisterCustomPluginServerInput) {
-  const convex = yield* ConvexService
   const environment = yield* CloudflareEnv
+  const database = requireDatabase(environment)
+  if (!database) {
+    return yield* new PluginServerRegistrationError({
+      message: "Account data is temporarily unavailable.",
+    })
+  }
   const normalizedBaseUrl = yield* normalizePluginServerBaseUrl(input.baseUrl)
-  const reservation = yield* convex
-    .mutation(
-      api.userPluginServers.beginRegistration,
-      { baseUrl: normalizedBaseUrl },
-      { accessToken: input.user.accessToken }
-    )
-    .pipe(Effect.mapError(registrationError))
+  const reservation = yield* Effect.tryPromise({
+    try: () =>
+      beginPluginServerRegistration(database, input.user.id, {
+        baseUrl: normalizedBaseUrl,
+        now: Date.now(),
+      }),
+    catch: (cause) =>
+      registrationError({
+        message:
+          cause instanceof Error ? cause.message : "Registration rejected",
+        cause,
+      }),
+  })
 
   return yield* Effect.gen(function* () {
     const prepared = yield* preparePluginServerRegistration({
@@ -81,42 +100,55 @@ export const registerCustomPluginServer = Effect.fn(
       input.user.id,
       reservation.id,
       prepared.apiKey
+    ).pipe(
+      Effect.mapError(
+        (error) => new PluginServerRegistrationError({ message: error.message })
+      )
     )
-    yield* convex.mutation(
-      api.userPluginServers.finalizeEncryptedCredential,
-      {
-        id: reservation.id,
-        generation: reservation.generation,
-        attemptId: reservation.attemptId,
-        manifest: prepared.manifestValue,
-        ...encryptedCredential,
-      },
-      { accessToken: input.user.accessToken }
-    )
+    yield* Effect.tryPromise({
+      try: () =>
+        finalizePluginServerCredential(database, input.user.id, {
+          id: reservation.id,
+          generation: reservation.generation,
+          attemptId: reservation.attemptId,
+          manifest: prepared.manifestValue,
+          ...encryptedCredential,
+          now: Date.now(),
+        }),
+      catch: (cause) =>
+        registrationError({
+          message:
+            cause instanceof Error
+              ? cause.message
+              : "Registration could not be finalized",
+          cause,
+        }),
+    })
     return { success: true }
   }).pipe(
-    Effect.mapError(registrationError),
     Effect.catch((primaryError) =>
-      convex
-        .mutation(
-          api.userPluginServers.markRegistrationFailed,
-          {
+      Effect.tryPromise({
+        try: () =>
+          markPluginServerRegistrationFailed(database, input.user.id, {
             id: reservation.id,
             reason: primaryError.message,
             generation: reservation.generation,
             attemptId: reservation.attemptId,
-          },
-          { accessToken: input.user.accessToken }
-        )
-        .pipe(
-          Effect.catch((cleanupError) =>
-            Effect.logError("Plugin Server registration recovery failed", {
-              pluginServerId: reservation.id,
-              error: cleanupError.message,
-            })
-          ),
-          Effect.andThen(Effect.fail(primaryError))
-        )
+            now: Date.now(),
+          }),
+        catch: (cleanupCause) => cleanupCause,
+      }).pipe(
+        Effect.catch((cleanupError) =>
+          Effect.logError("Plugin Server registration recovery failed", {
+            pluginServerId: reservation.id,
+            error:
+              cleanupError instanceof Error
+                ? cleanupError.message
+                : String(cleanupError),
+          })
+        ),
+        Effect.andThen(Effect.fail(primaryError))
+      )
     )
   )
 })
@@ -124,23 +156,31 @@ export const registerCustomPluginServer = Effect.fn(
 export const refreshCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.refresh"
 )(function* (input: RefreshCustomPluginServerInput) {
-  const convex = yield* ConvexService
   const environment = yield* CloudflareEnv
-  const serviceToken = yield* createCredentialReadToken(
-    environment.AUTH_GATEWAY_SECRET
-  )
-  const storedPluginServers = yield* convex.query(
-    api.userPluginServers.listForService,
-    { serviceToken },
-    { accessToken: input.user.accessToken }
-  )
+  const database = requireDatabase(environment)
+  if (!database) {
+    return yield* new PluginServerRegistrationError({
+      message: "Account data is temporarily unavailable.",
+    })
+  }
+  const storedPluginServers = yield* Effect.tryPromise({
+    try: () => listReadyPluginServersForService(database, input.user.id),
+    catch: (cause) =>
+      registrationError({
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Plugin servers are unavailable",
+        cause,
+      }),
+  })
   const pluginServers = yield* decryptCustomPluginServers(
     environment,
     input.user.id,
     storedPluginServers
   ).pipe(Effect.mapError(registrationError))
   const pluginServer = pluginServers.find(
-    (entry) => entry._id === input.pluginServerId
+    (entry) => entry.id === input.pluginServerId
   )
   if (!pluginServer) {
     return yield* new PluginServerRegistrationError({
@@ -152,52 +192,70 @@ export const refreshCustomPluginServer = Effect.fn(
     requestId: input.requestId,
   }).pipe(
     Effect.catch((primaryError) =>
-      convex
-        .mutation(
-          api.userPluginServers.recordVerificationFailure,
-          { id: pluginServer._id },
-          { accessToken: input.user.accessToken }
-        )
-        .pipe(
-          Effect.catch((transitionError) =>
-            Effect.logError("Plugin Server health transition failed", {
-              pluginServerId: pluginServer._id,
-              error: transitionError.message,
-            })
-          ),
-          Effect.andThen(Effect.fail(primaryError))
-        )
+      Effect.tryPromise({
+        try: () =>
+          recordPluginServerVerificationFailure(database, input.user.id, {
+            id: pluginServer.id,
+            now: Date.now(),
+          }),
+        catch: (transitionCause) => transitionCause,
+      }).pipe(
+        Effect.catch((transitionError) =>
+          Effect.logError("Plugin Server health transition failed", {
+            pluginServerId: pluginServer.id,
+            error:
+              transitionError instanceof Error
+                ? transitionError.message
+                : String(transitionError),
+          })
+        ),
+        Effect.andThen(Effect.fail(primaryError))
+      )
     )
   )
   const now = Date.now()
-  yield* convex.mutation(
-    api.userPluginServers.recordRefreshSuccess,
-    { id: pluginServer._id, manifest: refresh.manifestValue, now },
-    { accessToken: input.user.accessToken }
-  )
+  yield* Effect.tryPromise({
+    try: () =>
+      recordPluginServerRefreshSuccess(database, input.user.id, {
+        id: pluginServer.id,
+        manifest: refresh.manifestValue,
+        now,
+      }),
+    catch: (cause) =>
+      registrationError({
+        message:
+          cause instanceof Error ? cause.message : "Refresh could not be saved",
+        cause,
+      }),
+  })
   return { success: true }
 })
 
 export const readCustomPluginServerUsage = Effect.fn(
   "CustomPluginServerLifecycle.readUsage"
 )(function* (input: ReadCustomPluginServerUsageInput) {
-  const convex = yield* ConvexService
   const environment = yield* CloudflareEnv
-  const serviceToken = yield* createCredentialReadToken(
-    environment.AUTH_GATEWAY_SECRET
-  )
-  const storedPluginServers = yield* convex.query(
-    api.userPluginServers.listForService,
-    { serviceToken },
-    { accessToken: input.user.accessToken }
-  )
+  const database = requireDatabase(environment)
+  if (!database) {
+    return yield* new BackendError({
+      message: "Account data is temporarily unavailable",
+    })
+  }
+  const storedPluginServers = yield* Effect.tryPromise({
+    try: () => listReadyPluginServersForService(database, input.user.id),
+    catch: (cause) =>
+      new BackendError({
+        message: "Plugin servers are temporarily unavailable",
+        cause,
+      }),
+  })
   const pluginServers = yield* decryptCustomPluginServers(
     environment,
     input.user.id,
     storedPluginServers
   ).pipe(
     Effect.mapError(
-      (error) => new ConvexError({ message: error.message, cause: error })
+      (error) => new BackendError({ message: error.message, cause: error })
     )
   )
   return yield* Effect.all(
@@ -210,36 +268,52 @@ export const readCustomPluginServerUsage = Effect.fn(
                   return Effect.void
                 }
                 const now = Date.now()
-                return convex.mutation(
-                  api.userPluginServers.recordVerificationSuccess,
-                  { id: pluginServer._id, now },
-                  { accessToken: input.user.accessToken }
-                )
+                return Effect.tryPromise({
+                  try: () =>
+                    recordPluginServerVerificationSuccess(
+                      database,
+                      input.user.id,
+                      {
+                        id: pluginServer.id,
+                        now,
+                      }
+                    ),
+                  catch: (cause) =>
+                    new BackendError({
+                      message: "Plugin server health transition failed",
+                      cause,
+                    }),
+                })
               }),
               Effect.catch((primaryError) =>
-                convex
-                  .mutation(
-                    api.userPluginServers.recordVerificationFailure,
-                    { id: pluginServer._id },
-                    { accessToken: input.user.accessToken }
-                  )
-                  .pipe(
-                    Effect.catch((transitionError) =>
-                      Effect.logError(
-                        "Plugin Server health transition failed",
-                        {
-                          pluginServerId: pluginServer._id,
-                          error: transitionError.message,
-                        }
-                      )
+                Effect.tryPromise({
+                  try: () =>
+                    recordPluginServerVerificationFailure(
+                      database,
+                      input.user.id,
+                      {
+                        id: pluginServer.id,
+                        now: Date.now(),
+                      }
                     ),
-                    Effect.as({
-                      pluginServerId: pluginServer._id,
-                      name: pluginServer.baseUrl,
-                      metrics: [],
-                      error: primaryError.message,
+                  catch: (transitionCause) => transitionCause,
+                }).pipe(
+                  Effect.catch((transitionError) =>
+                    Effect.logError("Plugin Server health transition failed", {
+                      pluginServerId: pluginServer.id,
+                      error:
+                        transitionError instanceof Error
+                          ? transitionError.message
+                          : String(transitionError),
                     })
-                  )
+                  ),
+                  Effect.as({
+                    pluginServerId: pluginServer.id,
+                    name: pluginServer.baseUrl,
+                    metrics: [],
+                    error: primaryError.message,
+                  })
+                )
               )
             ),
           ]

@@ -4,7 +4,7 @@ import { WebAuth, CsrfMiddleware } from "../Middleware"
 import {
   UnauthorizedApiError,
   CsrfApiError,
-  ConvexApiError,
+  BackendApiError,
 } from "../../errors"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
@@ -16,7 +16,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
         data: Schema.optional(Schema.Unknown),
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
       query: Schema.Struct({ receiverId: Schema.String }),
@@ -31,7 +31,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
           })
         ),
       }),
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("reportResult", "/result", {
       payload: Schema.Struct({
@@ -45,7 +45,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
         message: Schema.optional(Schema.String),
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
   .middleware(WebAuth)

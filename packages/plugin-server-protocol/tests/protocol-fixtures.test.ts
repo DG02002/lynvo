@@ -167,7 +167,7 @@ describe("Plugin Server protocol fixtures", () => {
       ...validExtractSuccessFixture,
       plugin: {
         ...validExtractSuccessFixture.plugin,
-        pluginIconUrl: "https://media.example.com/plugin.svg",
+        pluginIconUrl: "https://media.example.com/plugin.jpg",
       },
     }
 
@@ -181,7 +181,8 @@ describe("Plugin Server protocol fixtures", () => {
       issues: [
         {
           path: "plugin.pluginIconUrl",
-          message: "Use a direct HTTPS WebP URL for Plugin icons.",
+          message:
+            "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons.",
         },
       ],
     })

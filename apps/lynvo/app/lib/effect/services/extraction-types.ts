@@ -5,7 +5,7 @@ import type {
   ExtractionError,
   ValidationError,
   UnauthorizedError,
-  ConvexError,
+  BackendError,
 } from "../errors"
 
 export interface ExtractOptions {
@@ -15,7 +15,6 @@ export interface ExtractOptions {
   readonly pluginId?: string
   readonly kind?: "source" | "node"
   readonly userId?: string
-  readonly accessToken?: string
 }
 
 export interface ExtractionResult {
@@ -31,7 +30,6 @@ export interface MetadataOptions {
   readonly url: string
   readonly requestId: string
   readonly userId?: string
-  readonly accessToken?: string
   readonly env: Env
 }
 
@@ -51,15 +49,15 @@ export interface MetadataResult {
 }
 
 export interface RegisteredPluginServer {
-  readonly _id: string
+  readonly id: string
   readonly baseUrl: string
   readonly apiKey: string
   readonly manifest: string
   readonly enabled: boolean
   readonly priority: number
   readonly verificationStatus?: string
-  readonly lastVerifiedAt?: number
-  readonly lastManifestRefreshAt?: number
+  readonly lastVerifiedAt?: number | null
+  readonly lastManifestRefreshAt?: number | null
 }
 
 export interface ExtractionServiceContract {
@@ -71,5 +69,5 @@ export interface ExtractionServiceContract {
   >
   readonly getMetadata: (
     options: MetadataOptions
-  ) => Effect.Effect<MetadataResult, ValidationError | ConvexError>
+  ) => Effect.Effect<MetadataResult, ValidationError | BackendError>
 }

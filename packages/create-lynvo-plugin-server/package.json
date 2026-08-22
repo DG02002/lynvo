@@ -43,6 +43,6 @@
     "node": ">=26.7.0"
   },
   "lynvo": {
-    "protocolPackageVersion": "0.1.2"
+    "protocolPackageVersion": "0.1.3"
   }
 }

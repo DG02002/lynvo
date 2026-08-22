@@ -1,21 +1,17 @@
 import { Layer, ManagedRuntime } from "effect"
-import { AuthSessionService } from "./services/AuthSessionService"
 import { CloudflareEnv } from "./services/CloudflareEnv"
-import { ConvexService } from "./services/ConvexService"
 import { ExtractionService } from "./services/extraction-service"
 import { PluginCredentialVault } from "./services/plugin-credential-vault"
 
 const createRuntime = (env: Env) => {
   const environmentLayer = Layer.succeed(CloudflareEnv, env)
-  const infrastructureLayer = Layer.mergeAll(
-    ConvexService.layer,
-    PluginCredentialVault.layer
-  ).pipe(Layer.provide(environmentLayer))
-  const applicationLayer = Layer.mergeAll(
-    AuthSessionService.layer,
-    ExtractionService.layer
-  ).pipe(Layer.provide(Layer.merge(environmentLayer, infrastructureLayer)))
-
+  const infrastructureLayer = PluginCredentialVault.layer.pipe(
+    Layer.provide(environmentLayer)
+  )
+  const applicationLayer = ExtractionService.layer.pipe(
+    Layer.provide(infrastructureLayer),
+    Layer.provide(environmentLayer)
+  )
   return ManagedRuntime.make(
     Layer.mergeAll(environmentLayer, infrastructureLayer, applicationLayer)
   )

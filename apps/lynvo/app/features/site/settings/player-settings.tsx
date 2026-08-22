@@ -1,6 +1,5 @@
 import * as React from "react"
-import { useMutation, useQuery } from "convex/react"
-import { api } from "../../../../convex/_generated/api"
+import { Effect } from "effect"
 import { toast } from "sonner"
 import {
   Select,
@@ -30,22 +29,29 @@ import {
 } from "./settings-layout-classes"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queue"
+import { useAsyncResource } from "~/hooks/use-async-resource"
+import { client } from "~/lib/effect/api/client"
 
 export const PlayerSettings = () => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
-  const cloudPreferences = useQuery(
-    api.users.getPlayerPreferences,
-    playerPreferenceIdentity ? {} : "skip"
+  const { data: cloudPreferencesData } = useAsyncResource(
+    () =>
+      playerPreferenceIdentity
+        ? Effect.runPromise(client.settings.getPlayerPreferences())
+        : Promise.resolve(undefined),
+    [playerPreferenceIdentity]
   )
-  const updatePlayerPreferences = useMutation(api.users.updatePlayerPreferences)
+  const cloudPreferences = cloudPreferencesData
   const updateCloudPreferences = React.useCallback(
     async (preferences: {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
     }) => {
-      await updatePlayerPreferences(preferences)
+      await Effect.runPromise(
+        client.settings.updatePlayerPreferences({ payload: preferences })
+      )
     },
-    [updatePlayerPreferences]
+    []
   )
   const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
     React.useState<PlayerId>(

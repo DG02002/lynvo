@@ -1,0 +1,11 @@
+# Google OAuth Credentials (from Google Cloud Console)
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Plugin Credential Vault 256-bit AES-GCM Key (Base64-encoded 32 bytes)
+# Generate with: openssl rand -base64 32
+PLUGIN_CREDENTIAL_ENCRYPTION_KEY=
+
+# Managed Plugin Server API Key (must match PLUGIN_SERVER_AUTH_KEY in lynvo-plugin-server)
+# Generate with: openssl rand -base64 32
+MANAGED_PLUGIN_SERVER_API_KEY=dev-local-api-key

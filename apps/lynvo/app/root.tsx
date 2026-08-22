@@ -58,10 +58,8 @@ export const loader = async (args: Route.LoaderArgs) => {
   const data = {
     user: sessionResult.user,
     csrfToken,
-    turnstileSiteKey: env.TURNSTILE_SITE_KEY,
     buildTime: __BUILD_TIME__,
     initialTheme: getThemeFromCookieHeader(cookieHeader),
-    convexUrl: env.VITE_CONVEX_URL,
   }
 
   requestLogger.set({
@@ -83,15 +81,9 @@ export const shouldRevalidate: ShouldRevalidateFunction = (args) =>
   shouldRevalidateRoot(args)
 
 const App = ({ loaderData }: Route.ComponentProps) => {
-  const { buildTime, convexUrl } = loaderData
+  const { buildTime } = loaderData
 
-  return (
-    <AppProviders
-      buildTime={buildTime}
-      user={loaderData.user}
-      convexUrl={convexUrl}
-    />
-  )
+  return <AppProviders buildTime={buildTime} user={loaderData.user} />
 }
 
 export default App

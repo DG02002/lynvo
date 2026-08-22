@@ -15,11 +15,13 @@ import {
 import { sitePaths } from "~/lib/paths"
 
 export const UserMenu = ({
-  username,
+  name,
+  email,
   onRemotePlay,
   onLogout,
 }: {
-  username: string
+  name?: string | null
+  email: string
   onRemotePlay: () => void
   onLogout: () => void
 }) => (
@@ -32,7 +34,7 @@ export const UserMenu = ({
         >
           <HugeiconsIcon icon={UserIcon} className="size-4" />
           <span className="hidden text-base font-normal sm:inline">
-            {username}
+            {name || email}
           </span>
         </button>
       }

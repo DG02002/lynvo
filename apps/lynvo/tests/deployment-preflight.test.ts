@@ -6,43 +6,33 @@ import { describe, expect, it } from "vitest"
 
 const scriptPath = resolve("scripts/deployment-preflight.mjs")
 const packageConfig = JSON.parse(readFileSync(resolve("package.json"), "utf8"))
-const productionWorkflow = readFileSync(
-  resolve("../../.github/workflows/verify.yml"),
-  "utf8"
-)
 const lynvoConfig = readFileSync(resolve("wrangler.jsonc"), "utf8")
-const lynvoPluginServerConfig = readFileSync(
-  resolve("../lynvo-plugin-server/wrangler.jsonc"),
-  "utf8"
-)
 
 const runPreflight = (
   lynvo: string,
-  lynvoPluginServer: string,
   identity = { commitHash: "abc123", serviceVersion: "2026.08.18" }
 ) => {
   const directory = mkdtempSync(join(tmpdir(), "lynvo-preflight-"))
   const lynvoPath = join(directory, "lynvo.jsonc")
-  const lynvoPluginServerPath = join(directory, "lynvo-plugin-server.jsonc")
   writeFileSync(lynvoPath, lynvo)
-  writeFileSync(lynvoPluginServerPath, lynvoPluginServer)
-  return spawnSync(
-    process.execPath,
-    [scriptPath, lynvoPath, lynvoPluginServerPath],
-    {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        COMMIT_HASH: identity.commitHash,
-        SERVICE_VERSION: identity.serviceVersion,
-      },
-    }
-  )
+  return spawnSync(process.execPath, [scriptPath, lynvoPath], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      COMMIT_HASH: identity.commitHash,
+      SERVICE_VERSION: identity.serviceVersion,
+    },
+  })
 }
+
+const validLynvoConfig = lynvoConfig.replace(
+  /"database_id":\s*"[^"]+"/,
+  '"database_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"'
+)
 
 describe("deployment preflight command", () => {
   it("accepts the intended private production topology", () => {
-    expect(runPreflight(lynvoConfig, lynvoPluginServerConfig).status).toBe(0)
+    expect(runPreflight(validLynvoConfig).status).toBe(0)
   })
 
   it.each([
@@ -51,9 +41,7 @@ describe("deployment preflight command", () => {
     ["fixed version", { commitHash: "abc123", serviceVersion: "0.1.0" }],
     ["missing version", { commitHash: "abc123", serviceVersion: "" }],
   ])("rejects %s release identity", (_name, identity) => {
-    expect(
-      runPreflight(lynvoConfig, lynvoPluginServerConfig, identity).status
-    ).not.toBe(0)
+    expect(runPreflight(validLynvoConfig, identity).status).not.toBe(0)
   })
 
   it("passes the verified release identity to Wrangler", () => {
@@ -62,94 +50,54 @@ describe("deployment preflight command", () => {
     )
   })
 
-  it("builds workspace protocol declarations before Convex code generation", () => {
-    expect(packageConfig.scripts["convex:codegen"]).toBe(
-      "pnpm run prepare:protocol && convex codegen --typecheck enable"
-    )
-    expect(packageConfig.scripts["prepare:protocol"]).toBe(
-      "pnpm --filter @dg02002/lynvo-plugin-server-protocol build"
-    )
-    expect(productionWorkflow).toContain("pnpm run convex:codegen")
-    expect(productionWorkflow).not.toContain(
-      "pnpm exec convex codegen --typecheck enable"
-    )
-  })
-
   it.each([
     [
-      "placeholder",
-      lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", "REPLACE_WITH_SITE_KEY"),
-      lynvoPluginServerConfig,
-    ],
-    [
-      "empty site key",
-      lynvoConfig.replace("0x4AAAAAAEC1SvszqvkGdIr2", ""),
-      lynvoPluginServerConfig,
+      "missing D1 binding",
+      validLynvoConfig.replace('"binding": "DB"', '"binding": "MISSING_DB"'),
     ],
     [
       "missing limiter",
-      lynvoConfig.replace(
+      validLynvoConfig.replace(
         '"name": "AUTH_RATE_LIMITER"',
         '"name": "MISSING_LIMITER"'
       ),
-      lynvoPluginServerConfig,
-    ],
-    [
-      "missing session binding",
-      lynvoConfig.replace(
-        '"name": "WORKER_AUTH_SESSION"',
-        '"name": "MISSING_SESSION"'
-      ),
-      lynvoPluginServerConfig,
     ],
     [
       "missing credential vault binding",
-      lynvoConfig.replace(
+      validLynvoConfig.replace(
         '"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"',
         '"name": "MISSING_CREDENTIAL_VAULT"'
       ),
-      lynvoPluginServerConfig,
     ],
     [
-      "missing session key declaration",
-      lynvoConfig.replace('"AUTH_SESSION_ENCRYPTION_KEY",', ""),
-      lynvoPluginServerConfig,
+      "missing realtime room binding",
+      validLynvoConfig.replace(
+        '"name": "USER_REALTIME_ROOM"',
+        '"name": "MISSING_REALTIME_ROOM"'
+      ),
     ],
     [
       "wrong service",
-      lynvoConfig.replace(
+      validLynvoConfig.replace(
         '"service": "lynvo-plugin-server"',
         '"service": "wrong-plugin-server"'
       ),
-      lynvoPluginServerConfig,
     ],
     [
-      "public Plugin Server",
-      lynvoConfig,
-      lynvoPluginServerConfig.replace(
-        '"workers_dev": false',
-        '"workers_dev": true'
+      "placeholder database id (REPLACE_WITH)",
+      validLynvoConfig.replace(
+        '"database_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"',
+        '"database_id": "REPLACE_WITH_DATABASE_ID"'
       ),
     ],
     [
-      "wrong origin",
-      lynvoConfig,
-      lynvoPluginServerConfig.replace(
-        "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
-        "https://wrong.example/assets"
+      "placeholder database id (zeroes)",
+      validLynvoConfig.replace(
+        '"database_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"',
+        '"database_id": "00000000-0000-0000-0000-000000000000"'
       ),
     ],
-    [
-      "empty origin",
-      lynvoConfig,
-      lynvoPluginServerConfig.replace(
-        "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
-        ""
-      ),
-    ],
-  ])("rejects %s configuration", (_name, lynvo, lynvoPluginServer) => {
-    const result = runPreflight(lynvo, lynvoPluginServer)
-    expect(result.status).not.toBe(0)
-    expect(result.stderr).not.toContain("0x4AAAAAAEC1SvszqvkGdIr2")
+  ])("rejects %s configuration", (_name, lynvo) => {
+    expect(runPreflight(lynvo).status).not.toBe(0)
   })
 })

@@ -1,147 +1,273 @@
-import { useCallback } from "react"
 import { toast } from "sonner"
-import type { ExtractedLink, MetaData } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkMetadata,
+  LinkViewItem,
+  MetaData,
+} from "~/features/links/types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
 import { withResolvedMirrors } from "~/features/links/link-playback-metadata"
+import { linkMetadataSchema } from "~/features/links/storage-schemas"
 import {
   createUpdatedItemFromMetadata,
   createUpdatedItemWithLinks,
 } from "./link-items"
 import { createOpenedLinkItem } from "./link-playback"
 import { buildLinkViewItem, showSaveError } from "./link-add"
+import { isTemporaryLinkId } from "./links-store"
+import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 
-const persistWithoutWaiting = (operation: Promise<void>) => {
-  operation.catch((error) => console.error(error))
+const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
+  linkMetadataSchema.parse(JSON.parse(JSON.stringify(metadata)))
+
+export interface LinksMutationTargets {
+  readonly store: LinksSnapshotStore
+  readonly runExclusive: <Result>(
+    operation: () => Promise<Result>
+  ) => Promise<Result>
+  readonly onSettled: () => void
 }
 
-export const useLinksMutations = (persistence: LinksMutationPersistence) => {
-  const remove = useCallback(
-    async (url: string, id?: string, silent = false) => {
-      try {
-        await persistence.delete(url, id)
-        if (!silent) {
-          toast.success("Link removed")
-        }
-      } catch {
-        if (!silent) {
-          toast.error("The saved link couldn’t be removed. Try again.")
-        }
-      }
-    },
-    [persistence]
-  )
+export const createLinksMutations = ({
+  store,
+  runExclusive,
+  onSettled,
+}: LinksMutationTargets) => {
+  const settleAndRefetch = () => {
+    onSettled()
+  }
 
-  const clearLinks = useCallback(async () => {
+  const remove = async (
+    itemUrl: string,
+    itemId?: string,
+    silent = false
+  ): Promise<void> => {
     try {
-      await persistence.clear()
+      await runExclusive(async () => {
+        const item = store.findVisibleItemByUrl(itemUrl, itemId)
+        if (!item?.id) {
+          return
+        }
+        if (isTemporaryLinkId(item.id)) {
+          store.discardPendingAdd(item.id)
+          return
+        }
+        if (!store.beginRemove(item.id)) {
+          return
+        }
+        try {
+          await linksDataApi.deleteById({ id: item.id })
+        } catch (error) {
+          settleAndRefetch()
+          throw error
+        }
+      })
+      settleAndRefetch()
+      if (!silent) {
+        toast.success("Link removed")
+      }
+    } catch {
+      if (!silent) {
+        toast.error("The saved link couldn’t be removed. Try again.")
+      }
+    }
+  }
+
+  const clearLinks = async (): Promise<void> => {
+    try {
+      await runExclusive(async () => {
+        store.beginClear()
+        try {
+          await linksDataApi.clearSavedLinks()
+        } catch (error) {
+          settleAndRefetch()
+          throw error
+        }
+      })
+      settleAndRefetch()
       toast.success("Saved links cleared")
     } catch {
       toast.error("Saved links couldn’t be cleared. Try again.")
     }
-  }, [persistence])
+  }
 
-  const addLink = useCallback(
-    async (
-      targetUrl: string,
-      meta?: MetaData,
-      extractedLinks?: ExtractedLink[]
-    ) => {
-      const { item } = await buildLinkViewItem({
-        targetUrl,
-        meta,
-        extractedLinks,
+  const addLink = async (
+    targetUrl: string,
+    meta?: MetaData,
+    extractedLinks?: ExtractedLink[]
+  ): Promise<string | undefined> => {
+    const { item } = await buildLinkViewItem({
+      targetUrl,
+      meta,
+      extractedLinks,
+    })
+    try {
+      return await runExclusive(async () => {
+        const temporaryItem = store.beginAdd(item)
+        try {
+          const result = await linksDataApi.createOrUpdate({
+            operationId: crypto.randomUUID(),
+            url: targetUrl,
+            title: temporaryItem.title ?? targetUrl,
+            meta: JSON.stringify(toJsonMetadata(temporaryItem.metadata)),
+          })
+          if (result.id) {
+            store.settleAdd(temporaryItem.id, result.id, result.dataVersion)
+          }
+          settleAndRefetch()
+          return result.id ?? undefined
+        } catch (error) {
+          store.discardPendingAdd(temporaryItem.id)
+          settleAndRefetch()
+          throw error
+        }
       })
-      try {
-        return (await persistence.add(item)).id
-      } catch (error) {
-        showSaveError(error)
-        return undefined
+    } catch (error) {
+      showSaveError(error)
+      return undefined
+    }
+  }
+
+  const toApiOperation = (
+    operation: LinkMetadataOperation,
+    expectedExtraction: readonly ExtractedLink[] | undefined
+  ): SavedLinkApiMetadataOperation | undefined => {
+    switch (operation.kind) {
+      case "markOpened": {
+        const { linkUrl } = operation
+        return linkUrl ? { kind: "markOpened", linkUrl } : undefined
       }
-    },
-    [persistence]
-  )
+      case "cacheMirrors": {
+        const { lazyItemUrl, mirrors } = operation
+        return lazyItemUrl && mirrors
+          ? {
+              kind: "cacheMirrors",
+              lazyItemUrl,
+              mirrorsJson: JSON.stringify(mirrors),
+            }
+          : undefined
+      }
+      case "removeExtractedLink": {
+        const { linkKey, linkUrl } = operation
+        return linkKey && linkUrl
+          ? { kind: "removeExtractedLink", linkKey, linkUrl }
+          : undefined
+      }
+      case "replaceExtraction": {
+        const { extractedLinks } = operation
+        return extractedLinks && expectedExtraction
+          ? {
+              kind: "replaceExtraction",
+              expectedExtractionJson: JSON.stringify(expectedExtraction),
+              extractedLinksJson: JSON.stringify(extractedLinks),
+            }
+          : undefined
+      }
+    }
+  }
 
-  const updateLinks = useCallback(
-    (targetUrl: string, links: ExtractedLink[]) => {
-      persistWithoutWaiting(
-        persistence.update(
-          targetUrl,
-          (item) => createUpdatedItemWithLinks({ item, links }),
-          { kind: "replaceExtraction", extractedLinks: links }
+  const runMetadataUpdate = async (
+    itemUrl: string,
+    metadataOperation: LinkMetadataOperation,
+    updateVisibleItem: (item: LinkViewItem) => LinkViewItem
+  ): Promise<void> => {
+    await runExclusive(async () => {
+      const currentItem = store.findVisibleItemByUrl(itemUrl)
+      if (!currentItem?.id || isTemporaryLinkId(currentItem.id)) {
+        return
+      }
+      const expectedExtraction =
+        metadataOperation.kind === "replaceExtraction"
+          ? currentItem.metadata.extraction.extractedLinks
+          : undefined
+      const updatedItem = store.beginUpdate(currentItem.id, updateVisibleItem)
+      if (!updatedItem) {
+        return
+      }
+      const apiOperation = toApiOperation(metadataOperation, expectedExtraction)
+      if (!apiOperation) {
+        settleAndRefetch()
+        return
+      }
+      try {
+        await linksDataApi.applyMetadataOperation({
+          operationId: crypto.randomUUID(),
+          id: currentItem.id,
+          operation: apiOperation,
+        })
+      } finally {
+        settleAndRefetch()
+      }
+    }).catch((error) => console.error(error))
+  }
+
+  const updateLinks = (targetUrl: string, links: ExtractedLink[]): void => {
+    void runMetadataUpdate(
+      targetUrl,
+      { kind: "replaceExtraction", extractedLinks: links },
+      (item) => createUpdatedItemWithLinks({ item, links })
+    )
+  }
+
+  const markLinkAsOpened = (itemUrl: string, linkUrl: string): void => {
+    void runMetadataUpdate(itemUrl, { kind: "markOpened", linkUrl }, (item) =>
+      createOpenedLinkItem(item, linkUrl)
+    )
+  }
+
+  const cacheResolvedMirrors = (
+    itemUrl: string,
+    lazyItemUrl: string,
+    mirrors: ExtractedLink[]
+  ): void => {
+    void runMetadataUpdate(
+      itemUrl,
+      { kind: "cacheMirrors", lazyItemUrl, mirrors },
+      (item) =>
+        createUpdatedItemFromMetadata(
+          item,
+          withResolvedMirrors(
+            getLinkViewItemMetadata(item),
+            lazyItemUrl,
+            mirrors
+          )
         )
-      )
-    },
-    [persistence]
-  )
+    )
+  }
 
-  const markLinkAsOpened = useCallback(
-    (itemUrl: string, linkUrl: string) => {
-      persistWithoutWaiting(
-        persistence.update(
-          itemUrl,
-          (item) => createOpenedLinkItem(item, linkUrl),
-          { kind: "markOpened", linkUrl }
-        )
-      )
-    },
-    [persistence]
-  )
-
-  const cacheResolvedMirrors = useCallback(
-    (itemUrl: string, lazyItemUrl: string, mirrors: ExtractedLink[]) => {
-      persistWithoutWaiting(
-        persistence.update(
-          itemUrl,
-          (item) =>
-            createUpdatedItemFromMetadata(
-              item,
-              withResolvedMirrors(
-                getLinkViewItemMetadata(item),
-                lazyItemUrl,
-                mirrors
-              )
+  const removeLink = (
+    itemUrl: string,
+    linkKey: string,
+    linkUrl: string
+  ): void => {
+    void runMetadataUpdate(
+      itemUrl,
+      { kind: "removeExtractedLink", linkKey, linkUrl },
+      (item) => {
+        const metadata = getLinkViewItemMetadata(item)
+        return createUpdatedItemFromMetadata(item, {
+          ...metadata,
+          extraction: {
+            ...metadata.extraction,
+            extractedLinks: removeLinkFromTree(
+              metadata.extraction.extractedLinks,
+              linkKey
             ),
-          { kind: "cacheMirrors", lazyItemUrl, mirrors }
-        )
-      )
-    },
-    [persistence]
-  )
-
-  const removeLink = useCallback(
-    (itemUrl: string, linkKey: string, linkUrl: string) => {
-      persistWithoutWaiting(
-        persistence.update(
-          itemUrl,
-          (item) => {
-            const metadata = getLinkViewItemMetadata(item)
-            return createUpdatedItemFromMetadata(item, {
-              ...metadata,
-              extraction: {
-                ...metadata.extraction,
-                extractedLinks: removeLinkFromTree(
-                  metadata.extraction.extractedLinks,
-                  linkKey
-                ),
-              },
-              playback: {
-                ...metadata.playback,
-                openedUrls: metadata.playback.openedUrls.filter(
-                  (openedUrl) => openedUrl !== linkUrl
-                ),
-                openedIds: metadata.playback.openedIds.filter(
-                  (openedId) => openedId !== linkKey
-                ),
-              },
-            })
           },
-          { kind: "removeExtractedLink", linkKey, linkUrl }
-        )
-      )
-    },
-    [persistence]
-  )
+          playback: {
+            ...metadata.playback,
+            openedUrls: metadata.playback.openedUrls.filter(
+              (openedUrl) => openedUrl !== linkUrl
+            ),
+            openedIds: metadata.playback.openedIds.filter(
+              (openedId) => openedId !== linkKey
+            ),
+          },
+        })
+      }
+    )
+  }
 
   return {
     remove,

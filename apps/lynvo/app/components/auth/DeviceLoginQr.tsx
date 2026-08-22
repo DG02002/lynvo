@@ -1,18 +1,20 @@
 import * as React from "react"
 import { QRCodeCanvas } from "qrcode.react"
-import { useQuery } from "@tanstack/react-query"
-import { Effect } from "effect"
 import { Spinner } from "~/components/ui/spinner"
 import { Button } from "~/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Refresh01Icon } from "@hugeicons/core-free-icons"
-import { signInWithConvexAuthHttp } from "~/lib/convex-auth-http"
 import { createDeviceCode } from "./device-code"
+import {
+  claimDeviceExchange,
+  finalizeDeviceExchangeOverHttp,
+  readDeviceCodeStatus,
+} from "./device-auth-http"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { getBrowserDeviceName } from "~/lib/device-name"
-import { client } from "~/lib/effect/api/client"
 import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -93,18 +95,19 @@ export function DeviceLoginQr() {
     isGenerating,
   } = state
   const codeRef = React.useRef<string | null>(null)
-  const exchangeAttemptIdRef = React.useRef<string | null>(null)
-  const { data: status } = useQuery({
-    queryKey: ["device-auth-status", code, pollSecret],
-    queryFn: () =>
-      Effect.runPromise(
-        client.device.status({
-          query: { code: code ?? "", pollSecret: pollSecret ?? "" },
-        })
-      ),
-    enabled: Boolean(code && pollSecret),
-    refetchInterval: DEVICE_AUTH_STATUS_POLL_INTERVAL_MS,
-  })
+  const exchangeAttemptIdRef = React.useRef<string>(crypto.randomUUID())
+  const exchangeGenerationRef = React.useRef(1)
+  const { data: status } = useAsyncResource(
+    () =>
+      code && pollSecret
+        ? readDeviceCodeStatus({
+            code: code ?? "",
+            pollSecret: pollSecret ?? "",
+          })
+        : Promise.resolve(undefined),
+    [code, pollSecret],
+    { pollIntervalMs: DEVICE_AUTH_STATUS_POLL_INTERVAL_MS }
+  )
   const hasExpired = useExpiryClock(expiresAt)
   const hasSignedInRef = React.useRef(false)
   const origin = React.useSyncExternalStore(
@@ -151,19 +154,21 @@ export function DeviceLoginQr() {
     ) {
       hasSignedInRef.current = true
       const currentCode = codeRef.current
+      const currentPollSecret = pollSecret ?? ""
       void (async () => {
-        const result = await signInWithConvexAuthHttp("credentials", {
-          flow: "device",
+        const claim = await claimDeviceExchange({
           code: currentCode,
-          pollSecret: pollSecret ?? "",
-          deviceName,
-          exchangeAttemptId: exchangeAttemptIdRef.current ?? "",
+          pollSecret: currentPollSecret,
+          attemptId: exchangeAttemptIdRef.current,
+          generation: exchangeGenerationRef.current,
         })
-        if (!result.signingIn) {
-          throw new Error(
-            "This device couldn’t log in. Generate a new code, then try again."
-          )
-        }
+        await finalizeDeviceExchangeOverHttp({
+          code: currentCode,
+          pollSecret: currentPollSecret,
+          attemptId: exchangeAttemptIdRef.current,
+          generation: exchangeGenerationRef.current,
+          sessionId: claim.sessionId,
+        })
         window.location.href = "/save?device_setup=true"
       })().catch((error) => {
         hasSignedInRef.current = false

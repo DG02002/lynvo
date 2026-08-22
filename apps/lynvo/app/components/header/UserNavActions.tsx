@@ -7,13 +7,15 @@ import { cn } from "~/lib/utils"
 import { UserMenu } from "./UserMenu"
 
 export const UserNavActions = ({
-  username,
+  name,
+  email,
   showSaveAction,
   remotePlayOpen,
   onRemotePlayOpenChange,
   onLogoutDialogOpen,
 }: {
-  username: string
+  name?: string | null
+  email: string
   showSaveAction: boolean
   remotePlayOpen: boolean
   onRemotePlayOpenChange: (open: boolean) => void
@@ -42,7 +44,8 @@ export const UserNavActions = ({
     />
 
     <UserMenu
-      username={username}
+      name={name}
+      email={email}
       onRemotePlay={() => onRemotePlayOpenChange(true)}
       onLogout={onLogoutDialogOpen}
     />

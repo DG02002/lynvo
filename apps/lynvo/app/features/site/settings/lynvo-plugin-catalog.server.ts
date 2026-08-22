@@ -30,7 +30,7 @@ export const loadLynvoPlugins = async (
   try {
     const manifest = await new PluginServerClient(
       new ServiceBindingPluginServerTransport(environment.LYNVO_PLUGIN_SERVER)
-    ).getManifest({ apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY })
+    ).getManifest({ apiKey: environment.MANAGED_PLUGIN_SERVER_API_KEY })
     return (getLynvoManifestExtension(manifest).plugins ?? []).map((plugin) => {
       const result: LynvoPlugin = {
         id: plugin.id,

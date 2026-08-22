@@ -1,6 +1,5 @@
 import { Context, Effect, Layer } from "effect"
-import { ConvexService } from "./ConvexService"
-import { ConvexError, ExtractionError, ValidationError } from "../errors"
+import { BackendError, ExtractionError, ValidationError } from "../errors"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -11,7 +10,7 @@ import type {
 import { PluginCredentialVault } from "./plugin-credential-vault"
 import { CloudflareEnv } from "./CloudflareEnv"
 import { prepareExtractionRouteInput } from "./extraction-route-input"
-import { loadAuthenticatedExtractionContext } from "./authenticated-extraction-context"
+import { loadRegisteredPluginServers } from "./authenticated-extraction-context"
 import {
   extractWithCustomPluginServer,
   getCustomRouteMetadata,
@@ -33,7 +32,6 @@ export class ExtractionService extends Context.Service<
   static readonly layer = Layer.effect(
     ExtractionService,
     Effect.gen(function* () {
-      const convex = yield* ConvexService
       const credentialVault = yield* PluginCredentialVault
       const environment = yield* CloudflareEnv
 
@@ -42,12 +40,10 @@ export class ExtractionService extends Context.Service<
       ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
-        if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionContext(
-            convex,
+        if (options.userId) {
+          const context = yield* loadRegisteredPluginServers(
             environment,
-            options.userId,
-            options.accessToken
+            options.userId
           ).pipe(
             Effect.mapError(
               (error) =>
@@ -58,10 +54,9 @@ export class ExtractionService extends Context.Service<
             )
           )
           const routeOptions = {
+            environment,
             targetUrl,
             userId: options.userId,
-            accessToken: options.accessToken,
-            serviceToken: context.serviceToken,
             requestId: options.requestId,
             pluginServerId: options.pluginServerId,
             pluginId: options.pluginId,
@@ -69,7 +64,6 @@ export class ExtractionService extends Context.Service<
             inlineBasicAuth: routeInput.basicAuth,
           }
           const customResult = yield* extractWithCustomPluginServer(
-            convex,
             credentialVault,
             context.pluginServers,
             routeOptions
@@ -86,9 +80,7 @@ export class ExtractionService extends Context.Service<
             })
           }
           const lynvoResult = yield* extractWithLynvoPluginServer(
-            convex,
             credentialVault,
-            environment,
             routeOptions
           )
           if (lynvoResult) {
@@ -108,28 +100,27 @@ export class ExtractionService extends Context.Service<
 
       const getMetadata = Effect.fn("ExtractionService.getMetadata")(function* (
         options: MetadataOptions
-      ): Effect.fn.Return<MetadataResult, ValidationError | ConvexError> {
+      ): Effect.fn.Return<MetadataResult, ValidationError | BackendError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
 
-        if (options.userId && options.accessToken) {
-          const context = yield* loadAuthenticatedExtractionContext(
-            convex,
-            environment,
-            options.userId,
-            options.accessToken
+        if (options.userId) {
+          const context = yield* loadRegisteredPluginServers(
+            options.env,
+            options.userId
           ).pipe(
             Effect.mapError(
               (error) =>
-                new ConvexError({
+                new BackendError({
                   message: error.message,
                   cause: error,
                 })
             )
           )
           const routeOptions = {
+            environment: options.env,
             targetUrl,
-            accessToken: options.accessToken,
+            userId: options.userId,
             requestId: options.requestId,
             kind: "source" as const,
             inlineBasicAuth: routeInput.basicAuth,
@@ -141,21 +132,17 @@ export class ExtractionService extends Context.Service<
             Effect.mapError((error) =>
               error._tag === "ValidationError"
                 ? error
-                : new ConvexError({ message: error.message, cause: error })
+                : new BackendError({ message: error.message, cause: error })
             )
           )
           if (customMetadata) {
             return customMetadata
           }
-          const lynvoMetadata = yield* getLynvoRouteMetadata(
-            convex,
-            environment,
-            routeOptions
-          ).pipe(
+          const lynvoMetadata = yield* getLynvoRouteMetadata(routeOptions).pipe(
             Effect.mapError((error) =>
               error._tag === "ValidationError"
                 ? error
-                : new ConvexError({ message: error.message, cause: error })
+                : new BackendError({ message: error.message, cause: error })
             )
           )
           if (lynvoMetadata) {
@@ -164,17 +151,18 @@ export class ExtractionService extends Context.Service<
         }
 
         const manifest = yield* getLynvoPluginServerManifest(
-          environment,
+          options.env,
           options.requestId
         ).pipe(
           Effect.mapError(
-            (error) => new ConvexError({ message: error.message, cause: error })
+            (error) =>
+              new BackendError({ message: error.message, cause: error })
           )
         )
         const metadata = getLynvoPluginServerMetadata(manifest, targetUrl)
         return metadata
           ? metadata
-          : yield* new ConvexError({
+          : yield* new BackendError({
               message: "No Plugin is available for this URL.",
             })
       })

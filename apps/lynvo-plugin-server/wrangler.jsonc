@@ -16,7 +16,7 @@
     "PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
   },
   "secrets": {
-    "required": ["LYNVO_PLUGIN_SERVER_API_KEY"],
+    "required": ["PLUGIN_SERVER_AUTH_KEY"],
   },
   "durable_objects": {
     "bindings": [
@@ -44,7 +44,7 @@
         "PUBLIC_ASSET_ORIGIN": "http://localhost:5173/lynvo-plugin-server-assets",
       },
       "secrets": {
-        "required": ["LYNVO_PLUGIN_SERVER_API_KEY"],
+        "required": ["PLUGIN_SERVER_AUTH_KEY"],
       },
       "durable_objects": {
         "bindings": [

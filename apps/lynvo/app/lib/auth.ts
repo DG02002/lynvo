@@ -1,18 +1,19 @@
 import { data, redirect } from "react-router"
-import { Effect } from "effect"
-import { AuthSessionService } from "./effect/services/AuthSessionService"
-import { getRuntime } from "./effect/runtime"
+import { normalizeReturnTo } from "./auth-cookie"
+import { getD1Database } from "../../workers/d1/db"
 import {
-  getCookieValue,
-  createSessionCookie,
-  normalizeReturnTo,
-} from "./auth-cookie"
-import { WORKER_SESSION_COOKIE_NAME } from "./constants"
+  createD1SessionCookie,
+  resolveSessionContext,
+} from "../../workers/d1/sessions"
+import { getCookieValue } from "./auth-cookie"
+import { MILLISECONDS_PER_SECOND } from "./constants"
+import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 
 export interface SessionResult {
   readonly user: {
     readonly sub: string
-    readonly username: string
+    readonly email: string
+    readonly name?: string | null
     readonly sid: string
   } | null
   readonly sessionExpiresAt?: number
@@ -26,18 +27,21 @@ export const responseWithSession = <ResponseData>(
 ) => {
   const headers = new Headers(init?.headers)
   headers.set("Cache-Control", "no-store")
-  const opaqueSessionId = getCookieValue(request, WORKER_SESSION_COOKIE_NAME)
+  const opaqueSessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)
   if (sessionResult.user && opaqueSessionId) {
     const maxAgeSeconds =
       sessionResult.sessionExpiresAt === undefined
         ? undefined
         : Math.max(
             0,
-            Math.ceil((sessionResult.sessionExpiresAt - Date.now()) / 1_000)
+            Math.ceil(
+              (sessionResult.sessionExpiresAt - Date.now()) /
+                MILLISECONDS_PER_SECOND
+            )
           )
     headers.append(
       "Set-Cookie",
-      createSessionCookie(opaqueSessionId, maxAgeSeconds)
+      createD1SessionCookie(opaqueSessionId, maxAgeSeconds)
     )
   }
   return data(responseData, { ...init, headers })
@@ -56,15 +60,6 @@ export const requireUserOrRedirect = (
   return sessionResult.user
 }
 
-/**
- * Throws a redirect if the request already carries a valid session.
- * Use this in auth-page loaders (log-in, create-account, sign-in-with-another-device)
- * to prevent authenticated users from being served a form they don't need.
- *
- * Redirect priority:
- *   1. The `?redirect=` query param, if it resolves to a valid app-relative path.
- *   2. "/save" — the primary authenticated landing page.
- */
 export const requireGuestOrRedirect = (
   sessionResult: SessionResult,
   request: Request
@@ -78,16 +73,44 @@ export const requireGuestOrRedirect = (
   }
 }
 
+export const getSessionContext = async (
+  request: Request,
+  env: Env
+): Promise<{
+  readonly user: {
+    readonly id: string
+    readonly email: string
+    readonly name?: string | null
+    readonly sid: string
+  } | null
+  readonly expiresAt?: number
+  readonly available: boolean
+}> => {
+  const database = getD1Database(env)
+  if (!database) {
+    return { user: null, available: false }
+  }
+  const session = await resolveSessionContext(request, database, Date.now())
+  return {
+    user: session
+      ? {
+          id: session.userId,
+          email: session.email,
+          name: session.displayName,
+          sid: session.sessionId,
+        }
+      : null,
+    expiresAt: session?.expiresAt,
+    available: true,
+  }
+}
+
 export const getUserSession = async (
   request: Request,
   env: Env
 ): Promise<SessionResult> => {
-  const result = await getRuntime(env).runPromise(
-    Effect.flatMap(AuthSessionService, (authSession) =>
-      authSession.getSession(request)
-    )
-  )
-  if (result.kind === "unavailable") {
+  const result = await getSessionContext(request, env)
+  if (!result.available) {
     throw data(
       { error: "Authentication is temporarily unavailable." },
       { status: 503 }
@@ -97,7 +120,8 @@ export const getUserSession = async (
     user: result.user
       ? {
           sub: result.user.id,
-          username: result.user.username,
+          email: result.user.email,
+          name: result.user.name,
           sid: result.user.sid,
         }
       : null,

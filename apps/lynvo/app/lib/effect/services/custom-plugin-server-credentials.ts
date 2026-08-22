@@ -11,7 +11,7 @@ export interface EncryptedCustomPluginServerCredential {
 }
 
 interface StoredCustomPluginServerCredential {
-  readonly _id: string
+  readonly id: string
   readonly apiKeyCiphertext?: string
   readonly apiKeyNonce?: string
   readonly apiKeyAlgorithm?: "AES-256-GCM"
@@ -127,7 +127,7 @@ export const decryptCustomPluginServer = Effect.fn(
   const decrypted = yield* vaultRequest(
     environment,
     userId,
-    pluginServer._id,
+    pluginServer.id,
     "/decrypt",
     {
       credential: {

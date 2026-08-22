@@ -1,8 +1,8 @@
 import { Effect, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
-  ConvexApiError,
-  ConvexError,
+  BackendApiError,
+  BackendError,
   PluginServerRegistrationApiError,
   PluginServerRegistrationError,
 } from "~/lib/effect/errors"
@@ -11,8 +11,8 @@ describe("public Effect API error contracts", () => {
   it("strips nested causes and internal details", async () => {
     const sentinel = "secret-shaped-sentinel"
     const convexEncoded = await Effect.runPromise(
-      Schema.encodeUnknownEffect(ConvexApiError)(
-        new ConvexError({
+      Schema.encodeUnknownEffect(BackendApiError)(
+        new BackendError({
           message: "Backend request failed",
           cause: { token: sentinel },
         })
@@ -28,7 +28,7 @@ describe("public Effect API error contracts", () => {
     )
 
     expect(convexEncoded).toEqual({
-      _tag: "ConvexError",
+      _tag: "BackendError",
       message: "Backend request failed",
     })
     expect(registrationEncoded).toEqual({

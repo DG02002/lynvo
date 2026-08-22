@@ -405,7 +405,7 @@ const PluginDomainList = ({
       <div className="min-w-0 divide-y">
         {domains.map((domain) => (
           <PluginCredentialEditor
-            key={domain._id}
+            key={domain.id}
             domain={domain}
             credentialKind={plugin.credentialKind}
             onSave={onSaveCredential}
@@ -622,7 +622,7 @@ const PluginCredentialEditor = ({
     event.preventDefault()
     setIsSaving(true)
     try {
-      const didSave = await onSave(domain._id, password, username || undefined)
+      const didSave = await onSave(domain.id, password, username || undefined)
       if (didSave) {
         setPassword("")
         setUsername("")
@@ -686,7 +686,7 @@ const PluginCredentialEditor = ({
                 {credentialKind === "http-basic" && (
                   <Field className="gap-1.5">
                     <FormDialogInput
-                      id={`credential-username-${domain._id}`}
+                      id={`credential-username-${domain.id}`}
                       label="Username"
                       autoComplete="username"
                       value={username}
@@ -698,7 +698,7 @@ const PluginCredentialEditor = ({
                 )}
                 <Field className="gap-1.5">
                   <FormDialogInput
-                    id={`credential-${domain._id}`}
+                    id={`credential-${domain.id}`}
                     label="Password"
                     type="password"
                     autoComplete="new-password"
@@ -749,7 +749,7 @@ const PluginCredentialEditor = ({
         disabled={isRemovingCredential}
         onConfirm={() => {
           setIsRemovingCredential(true)
-          void onDeleteCredential(domain._id).finally(() => {
+          void onDeleteCredential(domain.id).finally(() => {
             setIsRemovingCredential(false)
             setIsRemoveCredentialDialogOpen(false)
             setIsEditing(false)
@@ -772,7 +772,7 @@ const PluginCredentialEditor = ({
         disabled={isRemovingDomain}
         onConfirm={() => {
           setIsRemovingDomain(true)
-          void onDeleteDomain(domain._id).finally(() => {
+          void onDeleteDomain(domain.id).finally(() => {
             setIsRemovingDomain(false)
             setIsRemoveDomainDialogOpen(false)
           })

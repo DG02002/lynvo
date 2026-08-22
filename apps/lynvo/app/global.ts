@@ -32,13 +32,12 @@ declare global {
   }
 
   interface UsageReadAdapters {
-    readLynvo: (timeBucket: number) => Promise<UsageReadLynvoResult>
+    readLynvo: () => Promise<UsageReadLynvoResult>
     readCustom: () => Promise<readonly CustomPluginServerUsage[]>
   }
 
   interface UsageReadInput {
     lynvoPlugins: readonly import("./features/site/settings/plugin-settings-data").LynvoPlugin[]
-    timeBucket: number
   }
 
   interface UsageReadTotal {

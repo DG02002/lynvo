@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   SectionHeading,
@@ -116,10 +116,10 @@ export const UsageSettings = ({
   lynvoPlugins: LynvoPlugin[]
 }) => {
   const timeBucket = useDailyTimeBucket()
-  const { data: snapshot } = useQuery({
-    queryKey: ["settings", "usage", timeBucket],
-    queryFn: () => readUsageSnapshot({ lynvoPlugins, timeBucket }),
-  })
+  const { data: snapshot } = useAsyncResource(
+    () => readUsageSnapshot({ lynvoPlugins }),
+    [timeBucket]
+  )
 
   if (!snapshot) {
     return (

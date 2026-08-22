@@ -9,7 +9,7 @@
     "deploy": "pnpm run images:optimize && pnpm run check && pnpm run test && wrangler deploy --config wrangler.jsonc --env=\"\"",
     "images:optimize": "node ../../scripts/optimize-images.mjs public/icons/sources",
     "cf-typegen": "wrangler types --env-interface LynvoPluginServerBindings",
-    "check": "pnpm run prepare:protocol && pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
+    "check": "pnpm run prepare:protocol && pnpm run cf-typegen && pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
     "fmt": "oxfmt src tests vitest.config.ts",
     "fmt:check": "oxfmt src tests vitest.config.ts --check",
     "lint": "oxlint src tests",

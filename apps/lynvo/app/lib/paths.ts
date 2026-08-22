@@ -1,7 +1,6 @@
 export const authPaths = {
   signIn: "/auth/log-in",
   signInWithAnotherDevice: "/auth/sign-in-with-another-device",
-  createAccount: "/auth/create-account",
   logout: "/auth/logout",
 } as const
 

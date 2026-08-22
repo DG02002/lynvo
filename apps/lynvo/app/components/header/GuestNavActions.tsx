@@ -14,16 +14,5 @@ export const GuestNavActions = () => (
     >
       {authCopy.nav.signIn}
     </Link>
-    <Link
-      to={authPaths.createAccount}
-      prefetch="intent"
-      viewTransition
-      className={cn(
-        buttonVariants({ variant: "outline" }),
-        "hidden px-4 sm:inline-flex"
-      )}
-    >
-      {authCopy.nav.signUp}
-    </Link>
   </div>
 )

@@ -6,21 +6,20 @@ import {
   CsrfApiError,
   ValidationApiError,
   PluginServerRegistrationApiError,
-  ConvexApiError,
+  BackendApiError,
 } from "../../errors"
 import { PluginServerUsageSchema } from "../usage-schemas"
 
 const CustomPluginServerSchema = Schema.Struct({
-  _id: Schema.String,
-  _creationTime: Schema.Number,
+  id: Schema.String,
   userId: Schema.String,
   baseUrl: Schema.String,
   manifest: Schema.String,
   enabled: Schema.Boolean,
   priority: Schema.Number,
   verificationStatus: Schema.String,
-  lastVerifiedAt: Schema.optional(Schema.Number),
-  lastManifestRefreshAt: Schema.optional(Schema.Number),
+  lastVerifiedAt: Schema.optional(Schema.NullOr(Schema.Number)),
+  lastManifestRefreshAt: Schema.optional(Schema.NullOr(Schema.Number)),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
 })
@@ -29,11 +28,11 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
     HttpApiEndpoint.get("list", "/", {
       success: Schema.Array(CustomPluginServerSchema),
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("usage", "/usage", {
       success: Schema.Array(PluginServerUsageSchema),
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
@@ -45,7 +44,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         PluginServerRegistrationApiError,
         ValidationApiError,
         UnauthorizedApiError,
-        ConvexApiError,
+        BackendApiError,
         CsrfApiError,
       ],
     }),
@@ -57,7 +56,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         enabled: Schema.Boolean,
       }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("refresh", "/:pluginServerId/refresh", {
       params: {
@@ -67,7 +66,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       error: [
         PluginServerRegistrationApiError,
         UnauthorizedApiError,
-        ConvexApiError,
+        BackendApiError,
         CsrfApiError,
       ],
     }),
@@ -76,7 +75,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         pluginServerId: Schema.String,
       },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
   .middleware(WebAuth)

@@ -1,9 +1,9 @@
 export const pricingFaqs = [
   {
     value: "storage-cap",
-    question: "What counts toward the Free plan’s 1 MB storage limit?",
+    question: "What counts toward the Free plan’s 3 MB storage limit?",
     answer:
-      "Saved links, folders, and opened markers count toward the 1 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 256 KB, and the plan allows up to 100 saved links.",
+      "Saved links, folders, and opened markers count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 256 KB, and the plan allows up to 1,000 saved links.",
   },
   {
     value: "lynvo-plugin-operation",

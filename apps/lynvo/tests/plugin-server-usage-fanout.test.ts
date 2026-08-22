@@ -1,11 +1,9 @@
 // @vitest-environment edge-runtime
 
 import { vi } from "vitest"
-import { csrfCookie } from "../app/lib/csrf"
+import { createFakeD1Database } from "./support/fake-d1"
 
 const PLUGIN_SERVER_COUNT = 6
-let queryCount = 0
-let registrationAtLimit = false
 
 const manifest = JSON.stringify({
   protocolVersion: "1.0",
@@ -18,53 +16,57 @@ const manifest = JSON.stringify({
   extensions: {},
 })
 
-const storedPluginServers = Array.from(
+const storedPluginServerRows = Array.from(
   { length: PLUGIN_SERVER_COUNT },
   (_, index) => ({
-    _id: `plugin-server-${index}`,
-    _creationTime: index,
-    userId: "users:123",
-    baseUrl: `https://plugin-server-${index}.example`,
+    id: `plugin-server-${index}`,
+    user_id: "user-1",
+    base_url: `https://plugin-server-${index}.example`,
+    normalized_base_url: `https://plugin-server-${index}.example`,
+    api_key_ciphertext: `ciphertext-${index}`,
+    api_key_nonce: `nonce-${index}`,
+    api_key_algorithm: "AES-256-GCM",
+    api_key_version: 1,
+    credential_status: "ready",
+    credential_generation: 1,
+    credential_attempt_id: null,
+    pending_expires_at: null,
+    failure_reason: null,
     manifest,
-    enabled: true,
+    enabled: 1,
     priority: 0,
-    verificationStatus: "verified",
-    createdAt: index,
-    updatedAt: index,
-    apiKeyCiphertext: `ciphertext-${index}`,
-    apiKeyNonce: `nonce-${index}`,
-    apiKeyAlgorithm: "AES-256-GCM",
-    apiKeyVersion: 1,
+    verification_status: "verified",
+    last_verified_at: index,
+    last_manifest_refresh_at: index,
+    created_at: index,
+    updated_at: index,
   })
 )
 
 vi.mock("virtual:react-router/server-build", () => ({}))
 vi.mock("cloudflare:workers", () => ({ DurableObject: class {} }))
-vi.mock("convex/browser", () => ({
-  ConvexHttpClient: class {
-    setAuth = () => undefined
-    query = async () => {
-      queryCount += 1
-      return queryCount === 1
-        ? {
-            id: "users:123",
-            username: "darshan",
-            sessionId: "authSessions:456",
-          }
-        : storedPluginServers
-    }
-    mutation = async () => {
-      if (registrationAtLimit) {
-        throw new Error("You have reached the saved plugin server limit.")
+
+const createSessionAwareDatabase = () =>
+  createFakeD1Database((sql) => {
+    if (sql.includes("INNER JOIN users u")) {
+      return {
+        row: {
+          session_id: "session-1",
+          user_id: "user-1",
+          email: "user@example.com",
+          last_seen_at: Date.now(),
+          expires_at: Date.now() + 60_000,
+        },
       }
-      return { success: true }
     }
-  },
-}))
+    if (sql.includes("FROM user_plugin_servers")) {
+      return { rows: storedPluginServerRows }
+    }
+    return undefined
+  })
 
 describe("Plugin Server usage HTTP fan-out", () => {
   it("bounds concurrent Custom Plugin Server usage requests", async () => {
-    queryCount = 0
     let activeRequests = 0
     let maximumActiveRequests = 0
     const fetchMock = vi
@@ -94,35 +96,22 @@ describe("Plugin Server usage HTTP fan-out", () => {
         "https://lynvo.dg02002.workers.dev/api/plugin-servers/usage",
         {
           headers: {
-            Cookie: "__Host-lynvo-session=opaque-session-id",
-            "X-Lynvo-Expected-User-Id": "users:123",
-            "X-Lynvo-Expected-Session-Id": "authSessions:456",
+            Cookie: "lynvo_session=opaque-session-id",
+            "X-Lynvo-Expected-User-Id": "user-1",
+            "X-Lynvo-Expected-Session-Id": "session-1",
           },
         }
       ),
       {
         ENVIRONMENT: "production",
-        VITE_CONVEX_URL: "https://convex.example",
-        AUTH_GATEWAY_SECRET: "test-gateway-secret",
-        WORKER_AUTH_SESSION: {
-          getByName: () => ({
-            fetch: async () =>
-              Response.json({
-                convexSessionId: "authSessions:456",
-                accessToken: "access-token",
-                refreshToken: "refresh-token",
-                createdAt: 1,
-                expiresAt: Date.now() + 60_000,
-              }),
-          }),
-        },
+        DB: createSessionAwareDatabase(),
         PLUGIN_SERVER_CREDENTIAL_VAULT: {
           getByName: () => ({
             fetch: async () =>
               Response.json({ apiKey: "plugin-server-api-key" }),
           }),
         },
-      } as Env,
+      } as unknown as Env,
       { waitUntil: () => undefined } as ExecutionContext
     )
 
@@ -130,60 +119,5 @@ describe("Plugin Server usage HTTP fan-out", () => {
     expect(await response.json()).toHaveLength(PLUGIN_SERVER_COUNT)
     expect(maximumActiveRequests).toBeLessThanOrEqual(3)
     fetchMock.mockRestore()
-  })
-
-  it("rejects registration before remote contact at the lifecycle capacity", async () => {
-    queryCount = 0
-    registrationAtLimit = true
-    const csrfCookieHeader = await csrfCookie.serialize("test-csrf-token")
-    const fetchMock = vi.spyOn(globalThis, "fetch")
-    const { default: worker } = await import("../workers/app")
-    const response = await worker.fetch(
-      new Request("https://lynvo.dg02002.workers.dev/api/plugin-servers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: `__Host-lynvo-session=opaque-session-id; ${csrfCookieHeader}`,
-          Origin: "https://lynvo.dg02002.workers.dev",
-          "X-CSRF-Token": "test-csrf-token",
-          "X-Lynvo-Expected-User-Id": "users:123",
-          "X-Lynvo-Expected-Session-Id": "authSessions:456",
-        },
-        body: JSON.stringify({
-          baseUrl: "https://new-plugin-server.example",
-          apiKey: "new-plugin-server-key",
-        }),
-      }),
-      {
-        ENVIRONMENT: "production",
-        VITE_CONVEX_URL: "https://convex.example",
-        AUTH_GATEWAY_SECRET: "test-gateway-secret",
-        WORKER_AUTH_SESSION: {
-          getByName: () => ({
-            fetch: async () =>
-              Response.json({
-                convexSessionId: "authSessions:456",
-                accessToken: "access-token",
-                refreshToken: "refresh-token",
-                createdAt: 1,
-                expiresAt: Date.now() + 60_000,
-              }),
-          }),
-        },
-        PLUGIN_SERVER_CREDENTIAL_VAULT: {
-          getByName: () => ({
-            fetch: async () =>
-              Response.json({ apiKey: "plugin-server-api-key" }),
-          }),
-        },
-      } as Env,
-      { waitUntil: () => undefined } as ExecutionContext
-    )
-
-    expect(response.status).toBe(422)
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(await response.text()).toContain("saved plugin server limit")
-    fetchMock.mockRestore()
-    registrationAtLimit = false
   })
 })

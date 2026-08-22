@@ -148,7 +148,7 @@ describe("Lynvo manifest source credentials", () => {
     const invalidIconManifest = {
       ...validPluginServerManifestFixture,
       hasIcon: false,
-      iconUrl: "https://icons.example/server.svg",
+      iconUrl: "https://icons.example/server.jpg",
       extensions: {
         lynvo: {
           plugins: [
@@ -172,7 +172,8 @@ describe("Lynvo manifest source credentials", () => {
       expect.arrayContaining([
         {
           path: "iconUrl",
-          message: "Use a direct HTTPS WebP URL for Plugin Server icons.",
+          message:
+            "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin Server icons.",
         },
         {
           path: "hasIcon",

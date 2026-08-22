@@ -2,18 +2,12 @@ import type { RealtimeAction } from "./reducer"
 import {
   isRealtimeHeartbeatResponse,
   parseRealtimeMessage,
+  sessionHelloRealtimeMessageSchema,
 } from "./message-schema"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { z } from "zod"
-
-const sessionHelloSchema = z.object({
-  type: z.literal("session_hello"),
-  userId: z.string(),
-  sessionId: z.string(),
-})
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
@@ -90,7 +84,7 @@ export const openRealtimeSocket = ({
 
   const handleMessage = (event: MessageEvent) => {
     try {
-      const message = sessionHelloSchema.safeParse(
+      const message = sessionHelloRealtimeMessageSchema.safeParse(
         JSON.parse(String(event.data))
       )
       if (message.success) {
@@ -107,8 +101,8 @@ export const openRealtimeSocket = ({
           closed = true
           socket?.close()
           onSessionRevoked()
+          return
         }
-        return
       }
     } catch {}
     deliverRealtimeMessage(String(event.data), receiveMessage)

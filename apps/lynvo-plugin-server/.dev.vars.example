@@ -1,0 +1,2 @@
+# Plugin Server Authentication Key (must match MANAGED_PLUGIN_SERVER_API_KEY in lynvo)
+PLUGIN_SERVER_AUTH_KEY=dev-local-api-key

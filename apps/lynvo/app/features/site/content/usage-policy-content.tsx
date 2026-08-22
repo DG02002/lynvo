@@ -23,7 +23,7 @@ export const UsagePolicyContent = () => (
       .
     </p>
     <p>
-      An <strong>account</strong> is the username-based record used to access
+      An <strong>account</strong> is the Google-based record used to access
       Lynvo. A <strong>saved link</strong> is a saved URL and its related
       metadata. A <strong>Plugin Server</strong> processes supported URLs. A{" "}
       <strong>Plugin</strong> is the Source-specific integration inside that
@@ -85,7 +85,7 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="5. Follow account and request limits">
       <p>
-        Each account can store up to 100 saved links within 1 MB of
+        Each account can store up to 1,000 saved links within 3 MB of
         account-record storage. A single saved link can use up to 256 KB. Lynvo
         Plugin Server extraction requests, including Direct Media, share an
         allowance of 30 requests per day and 200 requests per month.
@@ -113,9 +113,9 @@ export const UsagePolicyContent = () => (
 
     <PolicySection title="7. Protect credentials">
       <p>
-        Protect your Lynvo password, sessions, Plugin Credentials, and Custom
-        Plugin Server API keys. Do not publish or share credentials, and revoke
-        or rotate them if you believe they have been exposed.
+        Protect your sessions, Plugin Credentials, and Custom Plugin Server API
+        keys. Do not publish or share credentials, and revoke or rotate them if
+        you believe they have been exposed.
       </p>
     </PolicySection>
 

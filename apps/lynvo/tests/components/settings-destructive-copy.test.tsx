@@ -7,19 +7,19 @@ describe("settings destructive actions", () => {
   it("labels the account confirmation field and states what deletion removes", () => {
     render(
       <DeleteAccountDialog
-        username="darshan"
+        email="darshan@example.com"
         busy={null}
         open
-        confirmUsername=""
+        confirmEmail=""
         onOpenChange={vi.fn()}
-        onConfirmUsernameChange={vi.fn()}
+        onConfirmEmailChange={vi.fn()}
         onDeleteAccount={vi.fn()}
       />
     )
 
-    expect(screen.getByLabelText("Type username to confirm")).toBeVisible()
+    expect(screen.getByLabelText("Type your email address to confirm")).toBeVisible()
     expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled()
-    expect(screen.getByText("darshan")).toBeVisible()
+    expect(screen.getByText("darshan@example.com")).toBeVisible()
     expect(screen.getByText(/Plugin Server connections/)).toBeVisible()
   })
 

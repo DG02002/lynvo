@@ -19,6 +19,7 @@ export default [
     route("settings", "features/site/routes/_site.settings.tsx", [
       index("features/site/routes/_site.settings._index.ts"),
       route("general", "features/site/routes/_site.settings.general.tsx"),
+      route("account", "features/site/routes/_site.settings.account.tsx"),
       route(
         "security/:subview?",
         "features/site/routes/_site.settings.security.tsx"
@@ -62,18 +63,10 @@ export default [
     layout("features/auth/routes/_auth.guest.tsx", [
       route("auth/log-in", "features/auth/routes/_auth.log-in.tsx"),
       route(
-        "auth/create-account",
-        "features/auth/routes/_auth.create-account.tsx"
-      ),
-      route(
         "auth/sign-in-with-another-device",
         "features/auth/routes/_auth.sign-in-with-another-device.tsx"
       ),
     ]),
-    route(
-      "auth/reset-password/new-password",
-      "features/auth/routes/_auth.new-password.tsx"
-    ),
     route("auth/device", "features/auth/routes/_auth.device.tsx"),
     route("auth/logout", "features/auth/routes/_auth.logout.tsx"),
   ]),

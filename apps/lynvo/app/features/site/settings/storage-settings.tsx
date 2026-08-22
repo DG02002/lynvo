@@ -1,8 +1,6 @@
 import * as React from "react"
 import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Effect } from "effect"
 import { toast } from "sonner"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
@@ -22,14 +20,18 @@ import {
   SettingsRowInfo,
 } from "./settings-layout"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import {
+  clearSavedLinksOverHttp,
+  previewStorageRetention,
+  readStorageSettings,
+  updateStorageRetention,
+} from "~/lib/settings/storage-http"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { client } from "~/lib/effect/api/client"
-
-const STORAGE_USAGE_QUERY_KEY = ["settings", "storage"]
+import { useAsyncResource } from "~/hooks/use-async-resource"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -51,11 +53,10 @@ const formatBytes = (bytes: number) => {
 
 export function StorageSettings() {
   const timeBucket = useMinuteTimeBucket()
-  const queryClient = useQueryClient()
-  const { data: usage } = useQuery({
-    queryKey: STORAGE_USAGE_QUERY_KEY,
-    queryFn: () => Effect.runPromise(client.settings.getStorageUsage()),
-  })
+  const { data: usage, reload } = useAsyncResource(
+    () => readStorageSettings(),
+    [timeBucket]
+  )
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
   const [isClearingLinks, setIsClearingLinks] = React.useState(false)
   const [isClearLinksDialogOpen, setIsClearLinksDialogOpen] =
@@ -86,11 +87,7 @@ export function StorageSettings() {
       return
     }
     const days = Number(value)
-    const preview = await Effect.runPromise(
-      client.settings.previewStorageRetention({
-        query: { days, timeBucket },
-      })
-    )
+    const preview = await previewStorageRetention(days)
     if (preview.expiredLinkCount > 0) {
       setPendingRetention({ days, expiredLinkCount: preview.expiredLinkCount })
       return
@@ -104,12 +101,8 @@ export function StorageSettings() {
   ) => {
     setIsUpdatingRetention(true)
     try {
-      const result = await Effect.runPromise(
-        client.settings.updateStorageRetention({
-          payload: { days, deleteExpiredLinks },
-        })
-      )
-      await queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_QUERY_KEY })
+      const result = await updateStorageRetention({ days, deleteExpiredLinks })
+      await reload()
       toast.success(
         result.deletedLinks > 0
           ? `Auto-delete period updated. Removed ${result.deletedLinks} old saved links.`
@@ -131,8 +124,8 @@ export function StorageSettings() {
   const handleClearLinks = async () => {
     setIsClearingLinks(true)
     try {
-      const result = await Effect.runPromise(client.settings.clearLinks())
-      await queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_QUERY_KEY })
+      const result = await clearSavedLinksOverHttp()
+      await reload()
       toast.success(
         result.deletedLinks > 0
           ? `Removed ${result.deletedLinks} saved links.`

@@ -1,47 +1,32 @@
-import { spawn, spawnSync } from "node:child_process"
-
-const disableUsageLimitsFlag = "--no-usage"
+import { spawn } from "node:child_process"
 
 const quoteShellArgument = (argument) =>
   `'${argument.replaceAll("'", "'\\''")}'`
 
-const developmentArguments = process.argv.slice(2)
-const disableUsageLimits = developmentArguments.includes(disableUsageLimitsFlag)
-const reactRouterArguments = developmentArguments
-  .filter((argument) => argument !== disableUsageLimitsFlag)
-  .map(quoteShellArgument)
-
-const usageEnvironmentResult = spawnSync(
-  "pnpm",
-  [
-    "exec",
-    "convex",
-    "env",
-    "set",
-    "DISABLE_USAGE_LIMITS",
-    String(disableUsageLimits),
-  ],
-  { stdio: "inherit" }
+const rawArguments = process.argv.slice(2)
+const isNoUsageEnabled =
+  rawArguments.includes("--no-usage") ||
+  rawArguments.includes("--disable-usage")
+const filteredArguments = rawArguments.filter(
+  (argument) => argument !== "--no-usage" && argument !== "--disable-usage"
 )
 
-if (usageEnvironmentResult.status !== 0) {
-  process.exitCode = usageEnvironmentResult.status ?? 1
-  process.exit()
-}
-const reactRouterCommand = [
-  "node scripts/prepare-local-dev-vars.mjs",
-  "&&",
-  "CLOUDFLARE_ENV=local react-router dev",
-  ...reactRouterArguments,
-].join(" ")
+const reactRouterArguments = filteredArguments.map(quoteShellArgument)
 
-const convexProcess = spawn(
-  "pnpm",
-  ["exec", "convex", "dev", "--start", reactRouterCommand],
-  { stdio: "inherit" }
+const reactRouterCommand = ["react-router dev", ...reactRouterArguments].join(
+  " "
 )
 
-convexProcess.on("exit", (exitCode, signal) => {
+const environmentPrefix = isNoUsageEnabled
+  ? "CLOUDFLARE_ENV=local DISABLE_USAGE_LIMITS=true"
+  : "CLOUDFLARE_ENV=local"
+
+const devProcess = spawn(`${environmentPrefix} ${reactRouterCommand}`, {
+  stdio: "inherit",
+  shell: true,
+})
+
+devProcess.on("exit", (exitCode, signal) => {
   if (signal) {
     process.kill(process.pid, signal)
     return

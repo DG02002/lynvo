@@ -80,4 +80,40 @@ describe("saved folder routes", () => {
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
     expect(result.current.folder.selectedItemUrl).toBeNull()
   })
+
+  it("does not redirect away from a saved folder route while items are still loading", async () => {
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <MemoryRouter
+        initialEntries={["/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"]}
+      >
+        <Routes>
+          <Route path="/save" element={children} />
+          <Route path="/save/folder/:savedLinkId" element={children} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const { result, rerender } = renderHook(
+      ({ items, isPending }: { items: SavedLinkListItem[]; isPending: boolean }) => ({
+        folder: useSaveFolderRoute(items, isPending),
+        pathname: useLocation().pathname,
+      }),
+      {
+        wrapper,
+        initialProps: { items: [], isPending: true },
+      }
+    )
+
+    expect(result.current.pathname).toBe(
+      "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"
+    )
+    expect(result.current.folder.isFolderRoute).toBe(true)
+    expect(result.current.folder.selectedItemUrl).toBeNull()
+
+    rerender({ items: [savedFolder], isPending: false })
+
+    expect(result.current.pathname).toBe(
+      "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"
+    )
+    expect(result.current.folder.selectedItemUrl).toBe(savedFolder.url)
+  })
 })

@@ -15,7 +15,6 @@ import { RouteSeoMetadata } from "./route-seo-metadata"
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const loaderData = useRouteLoaderData<typeof loader>("root")
   const csrfToken = loaderData?.csrfToken
-  const turnstileSiteKey = loaderData?.turnstileSiteKey
   const initialTheme = loaderData?.initialTheme
   const user = loaderData?.user
   const initialBackground = initialTheme === "dark" ? "#000" : "#fff"
@@ -43,9 +42,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         {csrfToken && <meta name="csrf-token" content={csrfToken} />}
         {user && <meta name="lynvo-user-id" content={user.sub} />}
         {user?.sid && <meta name="lynvo-session-id" content={user.sid} />}
-        {turnstileSiteKey && (
-          <meta name="turnstile-site-key" content={turnstileSiteKey} />
-        )}
         <RouteSeoMetadata />
         <Meta />
         <Links nonce="" />

@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { SecuritySettings } from "~/features/site/settings/security-settings"
@@ -32,18 +31,13 @@ describe("Security settings browser data", () => {
         return new Response(null, { status: 404 })
       })
     )
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <SecuritySettings
-          user={{ id: "user-1", username: "darshan", sid: "session-1" }}
-          showActiveSessions
-          onShowActiveSessionsChange={vi.fn()}
-        />
-      </QueryClientProvider>
+      <SecuritySettings
+        user={{ id: "user-1", email: "darshan@example.com", sid: "session-1" }}
+        showActiveSessions
+        onShowActiveSessionsChange={vi.fn()}
+      />
     )
 
     expect(await screen.findByText("Darshan’s MacBook")).toBeVisible()

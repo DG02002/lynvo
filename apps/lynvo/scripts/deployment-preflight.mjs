@@ -3,52 +3,34 @@ import { readFile } from "node:fs/promises"
 const lynvoConfigPath = process.argv[2]
   ? new URL(`file://${process.argv[2]}`)
   : new URL("../wrangler.jsonc", import.meta.url)
-const lynvoPluginServerConfigPath = process.argv[3]
-  ? new URL(`file://${process.argv[3]}`)
-  : new URL("../../lynvo-plugin-server/wrangler.jsonc", import.meta.url)
 
-const [lynvoConfig, lynvoPluginServerConfig] = await Promise.all([
-  readFile(lynvoConfigPath, "utf8"),
-  readFile(lynvoPluginServerConfigPath, "utf8"),
-])
+const lynvoConfig = await readFile(lynvoConfigPath, "utf8")
 
 const requiredLynvoFragments = [
   '"workers_dev": true',
   '"ENVIRONMENT": "production"',
-  '"TURNSTILE_SITE_KEY": "0x4AAAAAAEC1SvszqvkGdIr2"',
+  '"binding": "DB"',
+  '"database_name": "lynvo-db"',
   '"name": "AUTH_RATE_LIMITER"',
-  '"name": "WORKER_AUTH_SESSION"',
   '"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"',
   '"name": "USER_REALTIME_ROOM"',
   '"binding": "LYNVO_PLUGIN_SERVER"',
   '"service": "lynvo-plugin-server"',
-  '"VITE_CONVEX_URL"',
-  '"AUTH_GATEWAY_SECRET"',
-  '"AUTH_SESSION_ENCRYPTION_KEY"',
-  '"TURNSTILE_SECRET_KEY"',
+  '"GOOGLE_CLIENT_ID"',
+  '"GOOGLE_CLIENT_SECRET"',
   '"PLUGIN_CREDENTIAL_ENCRYPTION_KEY"',
-  '"LYNVO_PLUGIN_SERVER_API_KEY"',
-]
-const requiredLynvoPluginServerFragments = [
-  '"name": "lynvo-plugin-server"',
-  '"workers_dev": false',
-  '"name": "LYNVO_PLUGIN_SERVER_USAGE_LIMITER"',
-  '"PUBLIC_ASSET_ORIGIN": "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets"',
-  '"LYNVO_PLUGIN_SERVER_API_KEY"',
+  '"MANAGED_PLUGIN_SERVER_API_KEY"',
 ]
 
 const hasMissingFragment = (config, requiredFragments) =>
   requiredFragments.some((fragment) => !config.includes(fragment))
 const hasPlaceholder = (config) =>
-  /REPLACE_WITH_|00000000000000000000000000000000/.test(config)
-const limiterBindingCount =
-  lynvoConfig.split('"name": "AUTH_RATE_LIMITER"').length - 1
-const sessionBindingCount =
-  lynvoConfig.split('"name": "WORKER_AUTH_SESSION"').length - 1
-const credentialVaultBindingCount =
-  lynvoConfig.split('"name": "PLUGIN_SERVER_CREDENTIAL_VAULT"').length - 1
-const sessionKeyDeclarationCount =
-  lynvoConfig.split('"AUTH_SESSION_ENCRYPTION_KEY"').length - 1
+  /REPLACE_WITH_|00000000-0000-0000-0000-000000000000|00000000000000000000000000000000/.test(
+    config
+  )
+const dbBindingCount = lynvoConfig.split('"binding": "DB"').length - 1
+const doBindingCount = (bindingName) =>
+  lynvoConfig.split(`"name": "${bindingName}"`).length - 1
 const commitHash = process.env.COMMIT_HASH
 const serviceVersion = process.env.SERVICE_VERSION
 const hasValidReleaseIdentity =
@@ -60,16 +42,11 @@ const hasValidReleaseIdentity =
 
 if (
   hasMissingFragment(lynvoConfig, requiredLynvoFragments) ||
-  hasMissingFragment(
-    lynvoPluginServerConfig,
-    requiredLynvoPluginServerFragments
-  ) ||
   hasPlaceholder(lynvoConfig) ||
-  hasPlaceholder(lynvoPluginServerConfig) ||
-  limiterBindingCount !== 2 ||
-  sessionBindingCount !== 2 ||
-  credentialVaultBindingCount !== 2 ||
-  sessionKeyDeclarationCount !== 2 ||
+  dbBindingCount !== 2 ||
+  doBindingCount("AUTH_RATE_LIMITER") !== 2 ||
+  doBindingCount("PLUGIN_SERVER_CREDENTIAL_VAULT") !== 2 ||
+  doBindingCount("USER_REALTIME_ROOM") !== 2 ||
   !hasValidReleaseIdentity
 ) {
   throw new Error("Production deployment configuration preflight failed.")

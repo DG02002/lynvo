@@ -7,22 +7,22 @@ import { Field, FieldGroup } from "~/components/field"
 import { Dialog } from "~/components/ui/dialog"
 
 interface DeleteAccountDialogProps {
-  username: string
+  email: string
   busy: string | null
   open: boolean
-  confirmUsername: string
+  confirmEmail: string
   onOpenChange: (open: boolean) => void
-  onConfirmUsernameChange: (value: string) => void
+  onConfirmEmailChange: (value: string) => void
   onDeleteAccount: (event: React.FormEvent) => void
 }
 
 export const DeleteAccountDialog = ({
-  username,
+  email,
   busy,
   open,
-  confirmUsername,
+  confirmEmail,
   onOpenChange,
-  onConfirmUsernameChange,
+  onConfirmEmailChange,
   onDeleteAccount,
 }: DeleteAccountDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
@@ -40,9 +40,9 @@ export const DeleteAccountDialog = ({
           Server connections, credentials, and active sessions. This cannot be
           undone.
           <span className="mt-3 block font-medium text-foreground">
-            Enter this username exactly to confirm:{" "}
+            Enter this email address exactly to confirm:{" "}
             <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs select-all">
-              {username}
+              {email}
             </span>
           </span>
         </>
@@ -50,18 +50,18 @@ export const DeleteAccountDialog = ({
       onSubmit={onDeleteAccount}
       submitLabel={busy === "delete" ? "Deleting account…" : "Delete account"}
       submitVariant="destructive"
-      submitDisabled={confirmUsername.trim() !== username || busy === "delete"}
+      submitDisabled={confirmEmail.trim() !== email || busy === "delete"}
       cancelDisabled={busy === "delete"}
     >
       <FieldGroup className="gap-4">
         <Field className="gap-1.5">
           <FormDialogInput
-            id="delete-account-username"
-            label="Type username to confirm"
+            id="delete-account-email"
+            label="Type your email address to confirm"
             tone="destructive"
-            type="text"
-            value={confirmUsername}
-            onChange={(event) => onConfirmUsernameChange(event.target.value)}
+            type="email"
+            value={confirmEmail}
+            onChange={(event) => onConfirmEmailChange(event.target.value)}
             required
             autoComplete="off"
           />

@@ -2,11 +2,15 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
-import { ConvexService } from "../../services/ConvexService"
-import { api } from "../../../../../convex/_generated/api"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { parseRemoteTargetId } from "../../../remote-target"
-import { ConvexError } from "../../errors"
+import { BackendError } from "../../errors"
+import { getD1Database } from "../../../../../workers/d1/db"
+import {
+  claimNextRemoteCommand,
+  enqueueRemoteCommand,
+  reportRemoteCommandResult,
+} from "../../../../../workers/d1/remote-commands"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 import { z } from "zod"
 
@@ -18,17 +22,22 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
   handlers
     .handle("send", ({ payload }) =>
       Effect.gen(function* () {
-        const convex = yield* ConvexService
         const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
+        const database = getD1Database(environment)
+        if (!database) {
+          return yield* new BackendError({
+            message: "Remote commands are temporarily unavailable",
+          })
+        }
         const commandPayload = payload.data
           ? JSON.stringify(payload.data)
           : "{}"
         const target = parseRemoteTargetId(payload.target_session_id)
         if (!target) {
-          return yield* Effect.fail(
-            new ConvexError({ message: "Remote receiver target is invalid" })
-          )
+          return yield* new BackendError({
+            message: "Remote receiver target is invalid",
+          })
         }
         const presence: unknown = yield* Effect.tryPromise({
           try: async () => {
@@ -38,7 +47,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             return await response.json()
           },
           catch: (cause) =>
-            new ConvexError({
+            new BackendError({
               message: "Remote receiver presence is unavailable",
               cause,
             }),
@@ -50,48 +59,71 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             (receiver) => receiver.id === payload.target_session_id
           )
         if (!receiverIsLive) {
-          return yield* Effect.fail(
-            new ConvexError({ message: "Remote receiver is offline" })
-          )
-        }
-        const commandId = yield* convex.mutation(
-          api.commands.enqueue,
-          {
-            targetSessionId: target.sessionId,
-            targetReceiverId: target.receiverId,
-            command: payload.command,
-            payload: commandPayload,
-          },
-          { accessToken: user.accessToken }
-        )
-        yield* Effect.promise(() =>
-          createRemoteCommandNotificationDelivery(environment).deliver({
-            commandId,
-            userId: user.id,
-            receiverId: target.receiverId,
+          return yield* new BackendError({
+            message: "Remote receiver is offline",
           })
+        }
+        const enqueued = yield* Effect.tryPromise({
+          try: () =>
+            enqueueRemoteCommand(database, user.id, {
+              targetSessionId: target.sessionId,
+              targetReceiverId: target.receiverId,
+              command: payload.command,
+              payload: commandPayload,
+              now: Date.now(),
+            }),
+          catch: (cause) =>
+            new BackendError({
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "The remote command couldn’t be sent",
+              cause,
+            }),
+        })
+        yield* Effect.promise(() =>
+          createRemoteCommandNotificationDelivery(environment, database)
+            .deliver({
+              commandId: enqueued.id,
+              userId: user.id,
+              receiverId: target.receiverId,
+            })
+            .catch(() => ({ kind: "unavailable" as const }))
         )
         return { success: true }
       })
     )
     .handle("pollInbox", ({ query }) =>
       Effect.gen(function* () {
-        const convex = yield* ConvexService
+        const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
-        const command = yield* convex.mutation(
-          api.commands.claimNext,
-          { receiverId: query.receiverId },
-          { accessToken: user.accessToken }
-        )
+        const database = getD1Database(environment)
+        if (!database) {
+          return yield* new BackendError({
+            message: "Remote commands are temporarily unavailable",
+          })
+        }
+        const claim = yield* Effect.tryPromise({
+          try: () =>
+            claimNextRemoteCommand(database, user.id, user.sid, {
+              receiverId: query.receiverId,
+              now: Date.now(),
+            }),
+          catch: (cause) =>
+            new BackendError({
+              message: "The remote inbox is temporarily unavailable",
+              cause,
+            }),
+        })
         return {
-          commands: command
+          commands: claim
             ? [
                 {
-                  id: command.id,
-                  claimToken: command.claimToken,
-                  command: command.command,
-                  payload: command.payload,
-                  createdAt: command.createdAt,
+                  id: claim.id,
+                  claimToken: claim.claimToken,
+                  command: claim.command,
+                  payload: claim.payload,
+                  createdAt: claim.createdAt,
                 },
               ]
             : [],
@@ -100,19 +132,34 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
     )
     .handle("reportResult", ({ payload }) =>
       Effect.gen(function* () {
-        const convex = yield* ConvexService
+        const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
-        return yield* convex.mutation(
-          api.commands.reportResult,
-          {
-            id: payload.id,
-            claimToken: payload.claimToken,
-            receiverId: payload.receiverId,
-            result: payload.result,
-            message: payload.message,
-          },
-          { accessToken: user.accessToken }
-        )
+        const database = getD1Database(environment)
+        if (!database) {
+          return yield* new BackendError({
+            message: "Remote commands are temporarily unavailable",
+          })
+        }
+        yield* Effect.tryPromise({
+          try: () =>
+            reportRemoteCommandResult(database, user.id, user.sid, {
+              id: payload.id,
+              receiverId: payload.receiverId,
+              claimToken: payload.claimToken,
+              result: payload.result,
+              message: payload.message,
+              now: Date.now(),
+            }),
+          catch: (cause) =>
+            new BackendError({
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "The remote result could not be reported",
+              cause,
+            }),
+        })
+        return { success: true }
       })
     )
 )

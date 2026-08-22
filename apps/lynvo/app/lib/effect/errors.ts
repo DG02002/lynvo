@@ -1,8 +1,8 @@
 import { Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 
-export class ConvexError extends Schema.TaggedError<ConvexError>()(
-  "ConvexError",
+export class BackendError extends Schema.TaggedError<BackendError>()(
+  "BackendError",
   {
     message: Schema.String,
     cause: Schema.optional(Schema.Unknown),
@@ -63,7 +63,7 @@ export class CredentialVaultError extends Schema.TaggedError<CredentialVaultErro
 const publicError = <Tag extends string>(tag: Tag) =>
   Schema.Struct({ _tag: Schema.Literal(tag), message: Schema.String })
 
-export const ConvexApiError = publicError("ConvexError").pipe(
+export const BackendApiError = publicError("BackendError").pipe(
   HttpApiSchema.status(503)
 )
 export const ExtractionApiError = publicError("ExtractionError").pipe(

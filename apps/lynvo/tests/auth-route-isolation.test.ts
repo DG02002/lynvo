@@ -10,7 +10,6 @@ describe("Guest authentication route ownership", () => {
 
     expect(guestLayout?.children?.map((entry) => entry.path)).toEqual([
       "auth/log-in",
-      "auth/create-account",
       "auth/sign-in-with-another-device",
     ])
   })

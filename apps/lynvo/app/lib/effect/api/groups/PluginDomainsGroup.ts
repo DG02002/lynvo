@@ -4,7 +4,7 @@ import { WebAuth, CsrfMiddleware } from "../Middleware"
 import {
   UnauthorizedApiError,
   CsrfApiError,
-  ConvexApiError,
+  BackendApiError,
   CredentialVaultApiError,
   ValidationApiError,
 } from "../../errors"
@@ -14,8 +14,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     HttpApiEndpoint.get("list", "/", {
       success: Schema.Array(
         Schema.Struct({
-          _id: Schema.String,
-          _creationTime: Schema.Number,
+          id: Schema.String,
           userId: Schema.String,
           pluginServerId: Schema.String,
           domain: Schema.String,
@@ -23,7 +22,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
           hasCredential: Schema.Boolean,
         })
       ),
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: Schema.Struct({
@@ -37,7 +36,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
       error: [
         UnauthorizedApiError,
         CsrfApiError,
-        ConvexApiError,
+        BackendApiError,
         CredentialVaultApiError,
         ValidationApiError,
       ],
@@ -52,7 +51,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
       error: [
         UnauthorizedApiError,
         CsrfApiError,
-        ConvexApiError,
+        BackendApiError,
         CredentialVaultApiError,
         ValidationApiError,
       ],
@@ -60,14 +59,14 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,
       },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
   .middleware(WebAuth)

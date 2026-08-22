@@ -1,9 +1,9 @@
 import * as React from "react"
-import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
+import { signOut } from "~/lib/session-http"
 
 export default function Logout() {
   React.useEffect(() => {
-    void signOutWithWorkerSession().finally(() => {
+    void signOut().finally(() => {
       window.location.href = "/"
     })
   }, [])

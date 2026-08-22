@@ -4,10 +4,7 @@ import { TelegramSupportLink } from "~/components/SupportChannelLinks"
 import { policyPaths } from "~/lib/paths"
 
 const CLOUDFLARE_PRIVACY_URL = "https://www.cloudflare.com/policies/privacy/"
-const CLOUDFLARE_TURNSTILE_PRIVACY_URL =
-  "https://www.cloudflare.com/turnstile-privacy-policy/"
-const CONVEX_DPA_URL = "https://www.convex.dev/legal/dpa"
-const CONVEX_SUBPROCESSORS_URL = "https://www.convex.dev/legal/subprocessors"
+const GOOGLE_PRIVACY_URL = "https://policies.google.com/privacy"
 
 const ProviderPolicyLink = ({
   href,
@@ -35,7 +32,7 @@ export const PrivacyPolicyContent = () => (
     </p>
     <p>
       In this policy, <strong>Lynvo</strong> means the website and related
-      service. An <strong>account</strong> is the username-based record used to
+      service. An <strong>account</strong> is the Google-based record used to
       access Lynvo. A <strong>saved link</strong> is a saved URL and its related
       metadata. A <strong>Plugin Server</strong> processes supported URLs. A{" "}
       <strong>Plugin</strong> is a Source-specific integration inside a Plugin
@@ -82,8 +79,9 @@ export const PrivacyPolicyContent = () => (
       </p>
       <ul className="list-disc pl-6">
         <li>
-          <strong className="text-foreground">Account data:</strong> your
-          username, password hash, account creation date, and last-active date
+          <strong className="text-foreground">Account data:</strong> your Google
+          account identifier, email address, profile name, profile picture URL,
+          account creation date, and last-active date
         </li>
         <li>
           <strong className="text-foreground">Settings:</strong> player
@@ -120,13 +118,14 @@ export const PrivacyPolicyContent = () => (
       <ul className="list-disc pl-6">
         <li>
           Request details, error information, rate-limit records, and Cloudflare
-          Turnstile responses
+          security signals
         </li>
       </ul>
       <p>
-        Lynvo doesn&apos;t ask for an email address or phone number when you
-        create a username-and-password account. Lynvo doesn&apos;t ordinarily
-        store the video files referenced by your links.
+        Lynvo signs you in with Google and receives only the identifier and
+        basic profile fields described above; it never sees your Google
+        password. Lynvo doesn&apos;t ordinarily store the video files referenced
+        by your links.
       </p>
     </PolicySection>
 
@@ -178,29 +177,20 @@ export const PrivacyPolicyContent = () => (
       <ul className="list-disc pl-6">
         <li>
           <strong className="text-foreground">Cloudflare:</strong> website
-          hosting and delivery through Workers, request security, rate limiting,
-          real-time connections, and Turnstile verification. Cloudflare may
-          process IP addresses, traffic-routing data, system-configuration
-          information, request data, and security signals. Turnstile signals
-          include the client IP address, TLS fingerprint, user-agent header,
-          sitekey, and associated origin.
+          hosting and delivery through Workers, the D1 database that stores
+          accounts, settings, and saved links, request security, rate limiting,
+          and real-time connections. Cloudflare may process IP addresses,
+          traffic-routing data, system-configuration information, request data,
+          and security signals to deliver and protect those services.
         </li>
         <li>
-          <strong className="text-foreground">Convex:</strong> account, session,
-          settings, and saved-link database services. Under the{" "}
-          <ProviderPolicyLink href={CONVEX_DPA_URL}>
-            Convex Data Processing Addendum
+          <strong className="text-foreground">Google:</strong> account sign-in.
+          Google receives the sign-in request and may process your Google
+          account identity to authenticate you. See Google&apos;s{" "}
+          <ProviderPolicyLink href={GOOGLE_PRIVACY_URL}>
+            Privacy Policy
           </ProviderPolicyLink>
-          , Convex acts as a processor or service provider for personal data
-          Lynvo submits to the platform. Convex may use{" "}
-          <ProviderPolicyLink href={CONVEX_SUBPROCESSORS_URL}>
-            subprocessors
-          </ProviderPolicyLink>
-          , including Amazon Web Services for infrastructure and PlanetScale for
-          database services, to deliver those services. Convex says the
-          processing location for those two subprocessors is determined by the
-          customer&apos;s selected deployment region. Lynvo&apos;s Convex
-          deployment region is Europe (Ireland).
+          .
         </li>
         <li>
           <strong className="text-foreground">
@@ -231,16 +221,12 @@ export const PrivacyPolicyContent = () => (
       </p>
       <p>
         Provider roles can depend on the processing purpose. Cloudflare acts as
-        a processor when it handles customer content, customer logs, and
-        Turnstile signals to provide services to Lynvo. Cloudflare also acts as
-        a controller when it creates and uses network data or processes
-        Turnstile signals to improve bot detection. See Cloudflare&apos;s{" "}
+        a processor when it handles customer content and customer logs to
+        provide services to Lynvo. Cloudflare also acts as a controller when it
+        creates and uses network-level data for its own purposes. See
+        Cloudflare&apos;s{" "}
         <ProviderPolicyLink href={CLOUDFLARE_PRIVACY_URL}>
           Privacy Policy
-        </ProviderPolicyLink>{" "}
-        and{" "}
-        <ProviderPolicyLink href={CLOUDFLARE_TURNSTILE_PRIVACY_URL}>
-          Turnstile Privacy Addendum
         </ProviderPolicyLink>
         .
       </p>
@@ -248,17 +234,18 @@ export const PrivacyPolicyContent = () => (
 
     <PolicySection title="6. Credentials and security safeguards">
       <p>
-        Lynvo hashes account passwords and doesn&apos;t store them as readable
-        text. Lynvo encrypts Plugin Credentials with Advanced Encryption
-        Standard 256-bit Galois/Counter Mode (AES-256-GCM). Lynvo stores Plugin
-        Server API keys with your Plugin Server configuration and sends them to
-        that Plugin Server only when Lynvo makes an authorized request.
+        Lynvo never receives or stores your Google password. Sessions use an
+        opaque HttpOnly cookie, and Lynvo encrypts Plugin Credentials with
+        Advanced Encryption Standard 256-bit Galois/Counter Mode (AES-256-GCM).
+        Lynvo stores Plugin Server API keys with your Plugin Server
+        configuration and sends them to that Plugin Server only when Lynvo makes
+        an authorized request.
       </p>
       <p>
         Lynvo uses access controls, request validation, rate limiting, and
         session controls to reduce risk. No online service can guarantee
-        complete security. Use a unique password and revoke sessions you
-        don&apos;t recognize.
+        complete security. Review your active sessions in Settings and revoke
+        any you don&apos;t recognize.
       </p>
     </PolicySection>
 
@@ -267,7 +254,7 @@ export const PrivacyPolicyContent = () => (
         Saved links use a 30-day retention window by default. You can change the
         window to 7, 15, or 30 days in Settings. Lynvo checks daily for saved
         links older than the selected window and deletes them. An account can
-        contain up to 100 saved links within 1 MB of account-record storage;
+        contain up to 1,000 saved links within 3 MB of account-record storage;
         each saved link can use up to 256 KB.
       </p>
       <ul className="list-disc pl-6">
@@ -289,21 +276,16 @@ export const PrivacyPolicyContent = () => (
         </li>
       </ul>
       <p>
-        Lynvo doesn&apos;t collect an email address for inactivity notices. You
-        may not receive a warning before automatic deletion. Log in and use
+        You may not receive a warning before automatic deletion. Log in and use
         Lynvo before 90 days pass to keep the account active.
       </p>
     </PolicySection>
 
     <PolicySection title="8. Account recovery and deletion controls">
       <p>
-        <strong className="text-foreground">
-          Lynvo has no forgotten-password recovery process.
-        </strong>{" "}
-        If you&apos;re signed in and know your current password, you can change
-        it in Settings. If you sign out or lose every active session and forget
-        the password, Lynvo support can&apos;t reset the password or restore
-        access.
+        Sign-in is handled by Google. Access to your Lynvo account depends on
+        access to the Google account you used to sign in, so protect that
+        account and review its security settings with Google.
       </p>
       <p>
         You can delete saved links, clear your saved links, revoke other
@@ -336,14 +318,9 @@ export const PrivacyPolicyContent = () => (
         the country where you live. Those countries may have different
         data-protection laws. Cloudflare states that it primarily stores
         information in the United States and European Economic Area and may
-        transfer or access information globally with appropriate safeguards. The
-        Convex Data Processing Addendum authorizes international transfers,
-        including transfers to the United States, and incorporates the
-        applicable European Commission Standard Contractual Clauses for covered
-        transfers. Lynvo&apos;s selected Convex deployment region is Europe
-        (Ireland), which determines where deployments are created and the
-        processing location reported by Convex for its AWS and PlanetScale
-        subprocessors.
+        transfer or access information globally with appropriate safeguards.
+        Google also processes account identity data when you sign in, under the
+        safeguards described in its privacy policy.
       </p>
     </PolicySection>
 

@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import DeviceApproval from "~/components/auth/DeviceApproval"
 
 vi.mock("sonner", () => ({
@@ -31,11 +30,9 @@ describe("device approval route behavior", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     render(
-      <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter>
-          <DeviceApproval />
-        </MemoryRouter>
-      </QueryClientProvider>
+      <MemoryRouter>
+        <DeviceApproval />
+      </MemoryRouter>
     )
     const approveButton = await screen.findByRole("button", {
       name: "Approve login",

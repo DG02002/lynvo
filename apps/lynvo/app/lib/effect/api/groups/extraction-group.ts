@@ -4,7 +4,7 @@ import {
   ExtractionApiError,
   ValidationApiError,
   UnauthorizedApiError,
-  ConvexApiError,
+  BackendApiError,
 } from "../../errors"
 
 export class ExtractionGroup extends HttpApiGroup.make("extraction")
@@ -24,7 +24,7 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
         url: Schema.String,
       }),
       success: Schema.Unknown,
-      error: [ValidationApiError, ConvexApiError],
+      error: [ValidationApiError, BackendApiError],
     })
   )
   .prefix("/api") {}

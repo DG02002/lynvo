@@ -1,26 +1,18 @@
 export const authCopy = {
-  signup: {
-    metaTitle: "Create an account | Lynvo",
-    metaDescription:
-      "Create a Lynvo account to save links and open them in Android players.",
-    pageHeading: "Create an account",
-    submitButton: "Create account",
-    submittingButton: "Creating account…",
-    switchPrompt: "Already have an account?",
-    switchLink: "Log in",
-  },
   signin: {
     metaTitle: "Log in | Lynvo",
     metaDescription:
-      "Log in to Lynvo to save links and open them in Android players.",
+      "Log in to Lynvo with Google to save links and open them in Android players.",
     pageHeading: "Welcome back",
-    submitButton: "Log in",
-    submittingButton: "Logging in…",
-    switchPrompt: "Don't have an account?",
-    switchLink: "Create an account",
+    googleButton: "Continue with Google",
+    qrButton: "Use a QR Code",
+    expiredError: "The sign-in attempt expired. Start again to continue.",
+    exchangeError:
+      "Google sign-in couldn’t be completed. Start again to retry.",
+    invalidTokenError: "Google didn’t return a valid account. Start again.",
+    fallbackError: "The sign-in attempt was incomplete. Start again.",
   },
   nav: {
     signIn: "Log in",
-    signUp: "Sign up for free",
   },
 }

@@ -1,16 +1,11 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { toast } from "sonner"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
-import {
-  invalidatePluginSettings,
-  PLUGIN_DOMAINS_QUERY_KEY,
-  PLUGIN_SERVERS_QUERY_KEY,
-} from "./plugin-settings-queries"
 
 export interface PluginDomainDraft {
   readonly domain: string
@@ -20,7 +15,7 @@ export interface PluginDomainDraft {
 }
 
 export interface PluginDomain {
-  _id: string
+  id: string
   pluginServerId: string
   pluginId: string
   domain: string
@@ -28,12 +23,12 @@ export interface PluginDomain {
 }
 
 export interface CustomPluginServer {
-  _id: string
+  id: string
   baseUrl: string
   manifest: string
   enabled: boolean
   verificationStatus: string
-  lastManifestRefreshAt?: number
+  lastManifestRefreshAt?: number | null
 }
 
 export interface CreatePluginDomainInput {
@@ -151,17 +146,24 @@ export const usePluginSettingsInteraction = ({
     () => ({ ...defaultCommands, ...overrides }),
     [overrides]
   )
-  const queryClient = useQueryClient()
-  const { data: pluginServers = EMPTY_PLUGIN_SERVERS } = useQuery({
-    queryKey: PLUGIN_SERVERS_QUERY_KEY,
-    queryFn: () => Effect.runPromise(client.pluginServers.list()),
-    enabled: loadData,
-  })
-  const { data: allDomains = EMPTY_DOMAINS } = useQuery({
-    queryKey: PLUGIN_DOMAINS_QUERY_KEY,
-    queryFn: () => Effect.runPromise(client.pluginDomains.list({})),
-    enabled: loadData,
-  })
+  const {
+    data: fetchedPluginServers = EMPTY_PLUGIN_SERVERS,
+    reload: reloadPluginSettings,
+  } = useAsyncResource(
+    () =>
+      loadData
+        ? Effect.runPromise(client.pluginServers.list())
+        : Promise.resolve(EMPTY_PLUGIN_SERVERS),
+    [loadData]
+  )
+  const { data: allDomains = EMPTY_DOMAINS } = useAsyncResource(
+    () =>
+      loadData
+        ? Effect.runPromise(client.pluginDomains.list({}))
+        : Promise.resolve(EMPTY_DOMAINS),
+    [loadData]
+  )
+  const pluginServers = loadData ? fetchedPluginServers : EMPTY_PLUGIN_SERVERS
   const domains = React.useMemo(
     () =>
       allDomains.filter(
@@ -200,7 +202,7 @@ export const usePluginSettingsInteraction = ({
         if (!result.success) {
           throw new Error(messages.failure)
         }
-        await invalidatePluginSettings(queryClient)
+        await reloadPluginSettings()
         setter((current) => ({ ...current, [key]: { status: "success" } }))
         if (feedback && messages.success) {
           toast.success(messages.success)
@@ -220,7 +222,7 @@ export const usePluginSettingsInteraction = ({
         pending.current.delete(key)
       }
     },
-    [queryClient]
+    [reloadPluginSettings]
   )
 
   const updateDomainDraft = React.useCallback(
@@ -375,7 +377,7 @@ export const usePluginSettingsInteraction = ({
         !server.lastManifestRefreshAt ||
         now() - server.lastManifestRefreshAt >= MANIFEST_FRESHNESS_MS
       if (stale || server.verificationStatus !== "verified") {
-        void handleRefreshPluginServer(server._id, false)
+        void handleRefreshPluginServer(server.id, false)
       }
     }
   }, [handleRefreshPluginServer, loadData, now, pluginServers])

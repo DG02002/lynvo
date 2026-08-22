@@ -2,21 +2,21 @@ import { Effect, Layer, Option } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http"
 import { Api } from "./Api"
-import { LinksHandlers } from "./handlers/LinksHandlers"
 import { PluginServersHandlers } from "./handlers/plugin-servers-handlers"
 import { PluginDomainsHandlers } from "./handlers/PluginDomainsHandlers"
 import { ExtractionHandlers } from "./handlers/extraction-handlers"
-import { DeviceAuthHandlers } from "./handlers/DeviceAuthHandlers"
 import { RemoteHandlers } from "./handlers/RemoteHandlers"
 import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./Middleware"
 import { validateCSRF } from "../../csrf"
-import { AuthSessionService } from "../services/AuthSessionService"
-import { UnauthorizedError, CsrfError, ConvexError } from "../errors"
+import { CloudflareEnv } from "../services/CloudflareEnv"
+import { UnauthorizedError, CsrfError, BackendError } from "../errors"
 import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
+import { getD1Database } from "../../../../workers/d1/db"
+import { resolveSessionContext } from "../../../../workers/d1/sessions"
 
 const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
@@ -28,26 +28,28 @@ export const WebAuthLive = Layer.succeed(
   WebAuth,
   WebAuth.of((httpEffect) =>
     Effect.gen(function* () {
-      const authSessionOption = yield* Effect.serviceOption(AuthSessionService)
-      const authSession = Option.getOrThrow(authSessionOption)
+      const environmentOption = yield* Effect.serviceOption(CloudflareEnv)
+      const environment = Option.getOrThrow(environmentOption)
       const request = yield* HttpServerRequest.HttpServerRequest
       const webRequest = yield* webRequestFromSource(request.source)
-      const result = yield* authSession.getSession(webRequest)
-
-      if (result.kind === "unavailable") {
-        return yield* new ConvexError({
+      const database = getD1Database(environment)
+      if (!database) {
+        return yield* new BackendError({
           message: "Authentication is temporarily unavailable",
         })
       }
+      const session = yield* Effect.promise(() =>
+        resolveSessionContext(webRequest, database, Date.now())
+      )
 
-      if (!result.user || !result.accessToken) {
+      if (!session) {
         return yield* new UnauthorizedError({ message: "Unauthorized" })
       }
       const expectedUserId = request.headers["x-lynvo-expected-user-id"]
       const expectedSessionId = request.headers["x-lynvo-expected-session-id"]
       if (
-        expectedUserId !== result.user.id ||
-        expectedSessionId !== result.user.sid
+        expectedUserId !== session.userId ||
+        expectedSessionId !== session.sessionId
       ) {
         return yield* new UnauthorizedError({
           message: "Session identity changed",
@@ -55,8 +57,9 @@ export const WebAuthLive = Layer.succeed(
       }
 
       const response = yield* Effect.provideService(httpEffect, CurrentUser, {
-        ...result.user,
-        accessToken: result.accessToken,
+        id: session.userId,
+        email: session.email,
+        sid: session.sessionId,
       })
 
       return response
@@ -100,11 +103,9 @@ export const CsrfLive = Layer.succeed(
 const MiddlewaresLive = Layer.mergeAll(WebAuthLive, CsrfLive)
 
 const HandlersLive = Layer.mergeAll(
-  LinksHandlers,
   PluginServersHandlers,
   PluginDomainsHandlers,
   ExtractionHandlers,
-  DeviceAuthHandlers,
   RemoteHandlers,
   SettingsHandlers
 )

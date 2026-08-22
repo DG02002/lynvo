@@ -1,17 +1,8 @@
-import type { PropsWithChildren } from "react"
 import { act, renderHook } from "@testing-library/react"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   usePluginSettingsInteraction,
   type PluginSettingsCommands,
 } from "~/features/site/settings/plugin-settings-interaction"
-
-const createWrapper = (queryClient: QueryClient) =>
-  function QueryWrapper({ children }: PropsWithChildren) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
-  }
 
 describe("Plugin settings interaction", () => {
   it("clears a Plugin Domain draft only after confirmed success", async () => {
@@ -22,12 +13,8 @@ describe("Plugin settings interaction", () => {
         return { success: true }
       },
     }
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-    const { result } = renderHook(
-      () => usePluginSettingsInteraction({ commands, loadData: false }),
-      { wrapper: createWrapper(queryClient) }
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({ commands, loadData: false })
     )
 
     act(() => {
@@ -68,10 +55,8 @@ describe("Plugin settings interaction", () => {
     const commands: Partial<PluginSettingsCommands> = {
       createDomain: async () => ({ success: ++attempts > 1 }),
     }
-    const queryClient = new QueryClient()
-    const { result } = renderHook(
-      () => usePluginSettingsInteraction({ commands, loadData: false }),
-      { wrapper: createWrapper(queryClient) }
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({ commands, loadData: false })
     )
 
     act(() =>
@@ -99,10 +84,8 @@ describe("Plugin settings interaction", () => {
         })
       },
     }
-    const queryClient = new QueryClient()
-    const { result } = renderHook(
-      () => usePluginSettingsInteraction({ commands, loadData: false }),
-      { wrapper: createWrapper(queryClient) }
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({ commands, loadData: false })
     )
 
     let first: Promise<void>
@@ -134,10 +117,8 @@ describe("Plugin settings interaction", () => {
       refreshPluginServer: async () => await success("refresh-server"),
       deletePluginServer: async () => await success("delete-server"),
     }
-    const queryClient = new QueryClient()
-    const { result } = renderHook(
-      () => usePluginSettingsInteraction({ commands, loadData: false }),
-      { wrapper: createWrapper(queryClient) }
+    const { result } = renderHook(() =>
+      usePluginSettingsInteraction({ commands, loadData: false })
     )
 
     await act(async () => {

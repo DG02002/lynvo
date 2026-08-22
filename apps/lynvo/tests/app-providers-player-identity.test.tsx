@@ -23,10 +23,6 @@ vi.mock("~/root/theme-cookie-sync", () => ({ ThemeCookieSync: () => null }))
 vi.mock("~/root/account-settings-synchronization", () => ({
   AccountSettingsSynchronization: () => null,
 }))
-vi.mock("~/root/convex-authentication-provider", () => ({
-  ConvexAuthenticationProvider: ({ children }: { children: React.ReactNode }) =>
-    children,
-}))
 
 import { AppProviders } from "~/root/app-providers"
 

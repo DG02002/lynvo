@@ -1,5 +1,5 @@
 import * as React from "react"
-import { DAY_MS } from "../../convex/constants"
+import { DAY_MS } from "../../workers/constants"
 
 export const MINUTE_MS = 60 * 1000
 

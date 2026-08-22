@@ -8,7 +8,7 @@ describe("LogoutDialog", () => {
       <LogoutDialog
         open
         onOpenChange={() => undefined}
-        username="darshan"
+        email="darshan@example.com"
         onLogout={() => undefined}
       />
     )

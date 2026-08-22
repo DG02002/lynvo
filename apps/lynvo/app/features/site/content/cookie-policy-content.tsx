@@ -4,9 +4,6 @@ import { PolicyLayout, PolicySection } from "~/components/PolicyLayout"
 import { SupportChannelLinks } from "~/components/SupportChannelLinks"
 import { policyPaths } from "~/lib/paths"
 
-const CLOUDFLARE_TURNSTILE_PRIVACY_URL =
-  "https://www.cloudflare.com/turnstile-privacy-policy/"
-
 const cookieRows = [
   {
     source: "Lynvo",
@@ -17,8 +14,8 @@ const cookieRows = [
   },
   {
     source: "Lynvo",
-    name: "__Host-lynvo-session",
-    duration: "Up to 30 days; 7-day idle timeout",
+    name: "lynvo_session",
+    duration: "Up to 1 year; cleared when you log out or revoke the session",
     purpose: "Authentication and session continuity",
     domain: "Lynvo host",
   },
@@ -51,13 +48,6 @@ const browserStorageRows = [
     name: "lynvo:player:range-unsupported:v1",
     duration: "Until cleared",
     purpose: "Remembering the selected player for other links",
-    domain: "Lynvo origin",
-  },
-  {
-    source: "Lynvo",
-    name: "lynvo:links:sync:v1:<account-id>",
-    duration: "Until cleared",
-    purpose: "Caching synchronized saved-link records for the account",
     domain: "Lynvo origin",
   },
   {
@@ -143,21 +133,9 @@ export const CookiePolicyContent = () => (
 
       <p>
         Cloudflare may also use cookies or device signals when providing site
-        delivery, bot detection, rate limiting, and Turnstile verification.
-        According to Cloudflare&apos;s{" "}
-        <a
-          href={CLOUDFLARE_TURNSTILE_PRIVACY_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-4"
-        >
-          Turnstile Privacy Addendum
-        </a>
-        , Turnstile processes necessary signals such as the client IP address,
-        TLS fingerprint, user-agent header, sitekey, and associated origin to
-        distinguish people from bots and improve bot detection. Cloudflare
+        delivery, request security, and rate limiting for Lynvo. Cloudflare
         controls the exact cookie names and durations, which can vary with the
-        security check, browser, and region.
+        security features in use, your browser, and your region.
       </p>
     </PolicySection>
 

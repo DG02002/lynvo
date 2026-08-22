@@ -2,15 +2,23 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
-import { ConvexService } from "../../services/ConvexService"
-import { api } from "../../../../../convex/_generated/api"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
 } from "../../../plugin-domain"
-import { ValidationError } from "../../errors"
+import { BackendError, ValidationError } from "../../errors"
 import { PluginCredentialVault } from "../../services/plugin-credential-vault"
+import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
+import { getD1Database } from "../../../../../workers/d1/db"
+import {
+  beginPluginDomainCredentialChange,
+  deletePluginDomainById,
+  deletePluginDomainCredential,
+  finalizePluginDomainCredentialChange,
+  listPluginDomains,
+  upsertPluginDomain,
+} from "../../../../../workers/d1/plugin-domains"
 
 const validateDomain = (value: string) =>
   Effect.try({
@@ -33,22 +41,35 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
     handlers
       .handle("list", () =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.query(
-            api.pluginDomains.list,
-            {},
-            {
-              accessToken: user.accessToken,
-            }
-          )
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          return yield* Effect.tryPromise({
+            try: () => listPluginDomains(database, user.id),
+            catch: (cause) =>
+              new BackendError({
+                message: "Account data is temporarily unavailable",
+                cause,
+              }),
+          })
         })
       )
       .handle("create", ({ payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
           const vault = yield* PluginCredentialVault
+          const database = getD1Database(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
           const parsedInput = yield* validateDomainInput(payload.domain)
           const domain = yield* validateDomain(parsedInput.url)
           const username = payload.username || parsedInput.username
@@ -58,102 +79,154 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const credentialValue = username
             ? serializeHttpBasicCredential(username, password || "")
             : password || undefined
-          const domainId = yield* convex.mutation(
-            api.pluginDomains.create,
-            {
-              domain,
+          let credential:
+            | {
+                readonly ciphertext: string
+                readonly nonce: string
+                readonly algorithm: "AES-256-GCM"
+                readonly keyVersion: number
+              }
+            | undefined
+          if (credentialValue) {
+            const encrypted = yield* vault.encrypt(credentialValue, {
+              userId: user.id,
               pluginServerId: payload.pluginServerId,
               pluginId: payload.pluginId,
-            },
-            { accessToken: user.accessToken }
-          )
-          if (credentialValue) {
-            const attempt = yield* convex.mutation(
-              api.pluginDomains.beginCredentialChange,
-              { id: domainId },
-              { accessToken: user.accessToken }
-            )
-            const credential = yield* vault.encrypt(credentialValue, {
-              userId: user.id,
-              pluginServerId: attempt.pluginServerId,
-              pluginId: attempt.pluginId,
-              domain: attempt.domain,
+              domain,
             })
-            yield* convex.mutation(
-              api.pluginDomains.finalizeCredentialChange,
-              {
-                id: attempt.id,
-                generation: attempt.generation,
-                attemptId: attempt.attemptId,
-                credential,
-              },
-              { accessToken: user.accessToken }
-            )
+            credential = {
+              ciphertext: encrypted.ciphertext,
+              nonce: encrypted.nonce,
+              algorithm: encrypted.algorithm,
+              keyVersion: encrypted.keyVersion,
+            }
           }
+          yield* Effect.tryPromise({
+            try: () =>
+              upsertPluginDomain(database, user.id, {
+                domain,
+                pluginServerId: payload.pluginServerId,
+                pluginId: payload.pluginId,
+                credential,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin domain couldn’t be saved",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("setCredential", ({ params, payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
           const vault = yield* PluginCredentialVault
-          const attempt = yield* convex.mutation(
-            api.pluginDomains.beginCredentialChange,
-            { id: params.domainId },
-            { accessToken: user.accessToken }
-          )
+          const database = getD1Database(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
           const password = payload.password
           if (!password) {
             return yield* new ValidationError({
               message: "Password is required",
             })
           }
+          const attempt = yield* Effect.tryPromise({
+            try: () =>
+              beginPluginDomainCredentialChange(database, user.id, {
+                domainId: params.domainId,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin domain couldn’t be updated",
+                cause,
+              }),
+          })
           const credentialValue = payload.username
             ? serializeHttpBasicCredential(payload.username, password)
             : password
-          const credential = yield* vault.encrypt(credentialValue, {
+          const encrypted = yield* vault.encrypt(credentialValue, {
             userId: user.id,
             pluginServerId: attempt.pluginServerId,
             pluginId: attempt.pluginId,
             domain: attempt.domain,
           })
-          yield* convex.mutation(
-            api.pluginDomains.finalizeCredentialChange,
-            {
-              id: attempt.id,
-              generation: attempt.generation,
-              attemptId: attempt.attemptId,
-              credential,
-            },
-            { accessToken: user.accessToken }
-          )
+          yield* Effect.tryPromise({
+            try: () =>
+              finalizePluginDomainCredentialChange(database, user.id, {
+                domainId: attempt.id,
+                generation: attempt.generation,
+                attemptId: attempt.attemptId,
+                credential: {
+                  ciphertext: encrypted.ciphertext,
+                  nonce: encrypted.nonce,
+                  algorithm: encrypted.algorithm,
+                  keyVersion: encrypted.keyVersion,
+                },
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin credential couldn’t be saved",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("deleteCredential", ({ params }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* convex.mutation(
-            api.pluginDomains.deleteCredential,
-            { id: params.domainId },
-            { accessToken: user.accessToken }
-          )
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              deletePluginDomainCredential(database, user.id, {
+                domainId: params.domainId,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin credential couldn’t be removed",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("delete", ({ params }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* convex.mutation(
-            api.pluginDomains.deleteById,
-            {
-              id: params.domainId,
-            },
-            { accessToken: user.accessToken }
-          )
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              deletePluginDomainById(database, user.id, {
+                domainId: params.domainId,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin domain couldn’t be deleted",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )

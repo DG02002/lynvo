@@ -6,12 +6,12 @@ import {
   PlayIcon,
   Plug02Icon,
   Settings01Icon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons"
 import {
   NavLink,
   Outlet,
   useLoaderData,
-  useNavigation,
   type LoaderFunctionArgs,
 } from "react-router"
 import {
@@ -35,7 +35,14 @@ export async function loader(args: LoaderFunctionArgs) {
   requireUserOrRedirect(sessionResult, new URL(request.url).pathname)
   const user = sessionResult.user!
   return responseWithSession(
-    { user: { id: user.sub, username: user.username, sid: user.sid } },
+    {
+      user: {
+        id: user.sub,
+        email: user.email,
+        name: user.name,
+        sid: user.sid,
+      },
+    },
     sessionResult,
     request
   )
@@ -44,13 +51,15 @@ export async function loader(args: LoaderFunctionArgs) {
 export interface SettingsOutletContext {
   readonly user: {
     readonly id: string
-    readonly username: string
+    readonly email: string
+    readonly name?: string | null
     readonly sid: string
   }
 }
 
 const settingsTabs = [
   { value: "general", label: "General", icon: Settings01Icon },
+  { value: "account", label: "Account", icon: UserCircleIcon },
   { value: "security", label: "Security and login", icon: Key01Icon },
   { value: "plugins", label: "Plugins", icon: Plug02Icon },
   { value: "usage", label: "Usage", icon: Activity03Icon },
@@ -73,7 +82,6 @@ const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (
         key={item.value}
         to={`/settings/${item.value}`}
         prefetch="intent"
-        viewTransition
         className={({ isActive }) =>
           cn(
             "flex items-center text-foreground hover:text-foreground dark:text-foreground dark:hover:text-foreground",
@@ -97,7 +105,6 @@ const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (
 
 export default function SettingsLayout() {
   const { user } = useLoaderData<typeof loader>()
-  const navigation = useNavigation()
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-6 md:px-8 md:py-10">
       <div className="mb-6 text-center md:mb-10">
@@ -115,13 +122,6 @@ export default function SettingsLayout() {
           </div>
         </div>
         <div className="min-w-0 flex-1 py-2 sm:px-4 md:px-8 md:py-0">
-          <div className="h-5" aria-live="polite" aria-atomic="true">
-            {navigation.state !== "idle" ? (
-              <span className="text-xs text-muted-foreground">
-                Loading settings…
-              </span>
-            ) : null}
-          </div>
           <Outlet context={{ user } satisfies SettingsOutletContext} />
         </div>
       </div>

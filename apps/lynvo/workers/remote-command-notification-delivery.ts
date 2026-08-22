@@ -1,67 +1,63 @@
-import { ConvexHttpClient } from "convex/browser"
-import { api } from "../convex/_generated/api"
-import { REMOTE_COMMAND_NOTIFICATION_TOKEN_TTL_MS } from "../convex/constants"
-import { signRemoteCommandNotificationToken } from "../app/lib/auth-gateway"
+import {
+  acknowledgeRemoteCommandNotification,
+  listPendingRemoteCommandNotifications,
+} from "./d1/remote-commands"
+import type { PendingRemoteCommandNotification } from "./d1/remote-commands"
 import { z } from "zod"
 
 const remoteInboxDeliverySchema = z.object({
   deliveredSocketCount: z.number().int().positive(),
 })
 
-declare global {
-  interface PendingRemoteCommandNotification {
-    readonly commandId: string
-    readonly userId: string
-    readonly receiverId: string
-  }
+interface RemoteCommandNotificationEnvironment {
+  readonly USER_REALTIME_ROOM?: Env["USER_REALTIME_ROOM"]
+}
 
-  interface RemoteCommandNotificationEnvironment {
-    readonly VITE_CONVEX_URL: string
-    readonly AUTH_GATEWAY_SECRET?: string
-    readonly USER_REALTIME_ROOM?: Env["USER_REALTIME_ROOM"]
+export interface RemoteCommandNotificationDelivery {
+  deliver: (
+    notification: PendingRemoteCommandNotification
+  ) => Promise<{ kind: "completed" | "unavailable" }>
+  drain: () => Promise<{ kind: "completed" | "unavailable" }>
+}
+
+const broadcast = async (
+  environment: RemoteCommandNotificationEnvironment,
+  userId: string,
+  receiverId: string
+): Promise<void> => {
+  if (!environment.USER_REALTIME_ROOM) {
+    throw new Error("Remote command realtime room is unavailable")
+  }
+  const response = await environment.USER_REALTIME_ROOM.getByName(userId).fetch(
+    "https://realtime.internal/notify-inbox",
+    {
+      method: "POST",
+      body: JSON.stringify({ receiverId }),
+    }
+  )
+  if (!response.ok) {
+    throw new Error("Remote inbox notification failed")
+  }
+  if (!remoteInboxDeliverySchema.safeParse(await response.json()).success) {
+    throw new Error("Remote inbox notification reached no receivers")
   }
 }
 
 export const createRemoteCommandNotificationDelivery = (
-  environment: RemoteCommandNotificationEnvironment
-) => {
-  const createServiceToken = async () => {
-    if (!environment.AUTH_GATEWAY_SECRET) {
-      throw new Error("Remote command notification delivery is unavailable")
-    }
-    return await signRemoteCommandNotificationToken(
-      environment.AUTH_GATEWAY_SECRET,
-      Date.now() + REMOTE_COMMAND_NOTIFICATION_TOKEN_TTL_MS
-    )
-  }
-  const broadcast = async (notification: PendingRemoteCommandNotification) => {
-    if (!environment.USER_REALTIME_ROOM) {
-      throw new Error("Remote command realtime room is unavailable")
-    }
-    const response = await environment.USER_REALTIME_ROOM.getByName(
-      notification.userId
-    ).fetch("https://realtime.internal/notify-inbox", {
-      method: "POST",
-      body: JSON.stringify({ receiverId: notification.receiverId }),
-    })
-    if (!response.ok) {
-      throw new Error("Remote inbox notification failed")
-    }
-    if (!remoteInboxDeliverySchema.safeParse(await response.json()).success) {
-      throw new Error("Remote inbox notification reached no receivers")
-    }
-  }
-  const acknowledge = async (commandId: string) => {
-    const client = new ConvexHttpClient(environment.VITE_CONVEX_URL)
-    await client.mutation(api.remoteCommandNotifications.acknowledge, {
-      serviceToken: await createServiceToken(),
-      commandId,
-    })
-  }
-  const deliver = async (notification: PendingRemoteCommandNotification) => {
+  environment: RemoteCommandNotificationEnvironment,
+  database: D1Database | undefined
+): RemoteCommandNotificationDelivery => {
+  const deliver = async (
+    notification: PendingRemoteCommandNotification
+  ): Promise<{ kind: "completed" | "unavailable" }> => {
     try {
-      await broadcast(notification)
-      await acknowledge(notification.commandId)
+      await broadcast(environment, notification.userId, notification.receiverId)
+      if (database) {
+        await acknowledgeRemoteCommandNotification(
+          database,
+          notification.commandId
+        )
+      }
       return { kind: "completed" as const }
     } catch {
       return { kind: "unavailable" as const }
@@ -71,11 +67,10 @@ export const createRemoteCommandNotificationDelivery = (
     deliver,
     drain: async () => {
       try {
-        const client = new ConvexHttpClient(environment.VITE_CONVEX_URL)
-        const pending = await client.query(
-          api.remoteCommandNotifications.listPending,
-          { serviceToken: await createServiceToken() }
-        )
+        if (!database) {
+          return { kind: "completed" as const }
+        }
+        const pending = await listPendingRemoteCommandNotifications(database)
         const results = await Promise.all(pending.map(deliver))
         return results.some((result) => result.kind === "unavailable")
           ? { kind: "unavailable" as const }

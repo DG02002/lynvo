@@ -3,34 +3,16 @@ import { initLogger } from "evlog"
 import { DurableObject } from "cloudflare:workers"
 import { createRequestHandler, RouterContextProvider } from "react-router"
 import { Context, Effect } from "effect"
-import { AuthSessionService } from "../app/lib/effect/services/AuthSessionService"
 import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
-import { ConvexService } from "../app/lib/effect/services/ConvexService"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credential-vault"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/Server"
 import { createApiErrorResponse } from "../app/lib/api-errors"
-import {
-  REALTIME_SESSION_REVOKED_CLOSE_CODE,
-  WORKER_SESSION_COOKIE_NAME,
-} from "../app/lib/constants"
-import { getCookieValue } from "../app/lib/auth-cookie"
-import { createAuthSessionModule } from "./auth-session"
-import { createSignedInSessionLifecycle } from "./signed-in-session-lifecycle"
-import { createWorkerAuthenticationFlow } from "./authentication-flow"
-import {
-  authSignInRequestSchema,
-  turnstileVerificationResponseSchema,
-} from "../app/lib/auth-gateway-schemas"
+import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
+import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
-import { ConvexHttpClient } from "convex/browser"
-import { api } from "../convex/_generated/api"
-import {
-  EXTRACTION_ROUTE_RATE_LIMIT,
-  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-} from "../convex/constants"
 import {
   addRequestContext,
   requestLogging,
@@ -38,25 +20,47 @@ import {
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
 import { buildReleaseIdentity } from "./release-identity"
-import { createAuthenticationIntake } from "./authentication-intake"
 import {
   checkAuthenticationRateLimit,
   checkRateLimit,
 } from "./authentication-rate-limit"
-import { createSessionCleanupModule } from "./session-cleanup"
-import { createDurableRealtimeSessionRevocation } from "./realtime-session-revocation"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
-import {
-  CONVEX_ACCESS_TOKEN_RATE_LIMIT,
-  CONVEX_ACCESS_TOKEN_RATE_WINDOW_SECONDS,
-  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
-} from "./constants"
-import { createConvexAccessTokenHandler } from "./convex-access-token"
+import { closeRealtimeSession } from "./realtime-session-revocation"
+import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
+import { isSameOriginRequest } from "./same-origin"
 import { z } from "zod"
+import { registerD1AuthRoutes } from "./d1/auth-routes"
+import { registerD1DataRoutes } from "./d1/data-routes"
+import { getDataVersion } from "./d1/data-version"
+import { getD1Database } from "./d1/db"
+import { cleanupExpiredDeviceCodes, createDeviceCode } from "./d1/device-auth"
+import {
+  deleteStaleSessions,
+  expireD1SessionCookie,
+  findActiveSessionById,
+  resolveSessionContext,
+  revokeSessionById,
+} from "./d1/sessions"
+import {
+  cleanupSavedLinkCommandOperations,
+  sweepExpiredLinks,
+} from "./d1/links"
+import { releaseExpiredManagedExtractions } from "./d1/usage"
+import { cleanupExpiredRemoteCommands } from "./d1/remote-commands"
+import { drainAccountErasures } from "./d1/account-erasure"
+import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
+import { echoDataVersion } from "./d1/version-echo"
+import {
+  CRON_SCHEDULE_DAILY_RETENTION,
+  CRON_SCHEDULE_HOURLY_MAINTENANCE,
+  DEVICE_CODE_CREATION_RATE_LIMIT,
+  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  EXTRACTION_ROUTE_RATE_LIMIT,
+  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+} from "./constants"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
-export { WorkerAuthSession } from "./worker-auth-session"
 
 const reactRouterHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -73,17 +77,9 @@ initLogger({
 
 const app = new Hono<RequestLoggingEnvironment>()
 
-const TURNSTILE_HOSTNAME = "lynvo.dg02002.workers.dev"
-const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000
 app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
-
-type AuthEnv = Env & {
-  readonly AUTH_GATEWAY_SECRET?: string
-  readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
-  readonly TURNSTILE_SECRET_KEY?: string
-}
 
 const requestApiError = (
   context: HonoContext<RequestLoggingEnvironment>,
@@ -94,17 +90,9 @@ const requestApiError = (
     requestId: context.get("requestId"),
   })
 
-const isSameOriginRequest = (request: Request): boolean => {
-  const origin = request.headers.get("Origin")
-  return !origin || origin === new URL(request.url).origin
+type AuthEnv = Env & {
+  readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
-
-const getSession = (request: Request, env: Env) =>
-  getRuntime(env).runPromise(
-    Effect.flatMap(AuthSessionService, (authSession) =>
-      authSession.getSession(request)
-    )
-  )
 
 const clientIp = (request: Request): string =>
   request.headers.get("CF-Connecting-IP") ??
@@ -113,82 +101,33 @@ const clientIp = (request: Request): string =>
 
 const rateLimit = checkRateLimit
 
-const verifyTurnstile = async (
-  env: AuthEnv,
+const resolveRequestSession = async (
   request: Request,
-  token: string | undefined,
-  expectedAction: "lynvo-sign-in" | "lynvo-sign-up"
-): Promise<boolean> => {
-  if (import.meta.env.DEV && token === "dev-token") {
-    return true
+  env: AuthEnv
+): Promise<
+  | { readonly kind: "unavailable" }
+  | { readonly kind: "anonymous" }
+  | {
+      readonly kind: "authenticated"
+      readonly userId: string
+      readonly sessionId: string
+      readonly email: string
+    }
+> => {
+  const database = getD1Database(env)
+  if (!database) {
+    return { kind: "unavailable" }
   }
-  if (!token || !env.TURNSTILE_SECRET_KEY) {
-    return false
+  const session = await resolveSessionContext(request, database, Date.now())
+  if (!session) {
+    return { kind: "anonymous" }
   }
-  const form = new FormData()
-  form.set("secret", env.TURNSTILE_SECRET_KEY)
-  form.set("response", token)
-  form.set("remoteip", clientIp(request))
-  let response
-  try {
-    response = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        body: form,
-        signal: AbortSignal.timeout(TURNSTILE_SITEVERIFY_TIMEOUT_MS),
-      }
-    )
-  } catch {
-    return false
+  return {
+    kind: "authenticated",
+    userId: session.userId,
+    sessionId: session.sessionId,
+    email: session.email,
   }
-  if (!response.ok) {
-    return false
-  }
-  const result = turnstileVerificationResponseSchema.safeParse(
-    await response.json()
-  )
-  if (
-    !result.success ||
-    !result.data.success ||
-    result.data.action !== expectedAction
-  ) {
-    return false
-  }
-  return result.data.hostname === TURNSTILE_HOSTNAME
-}
-
-const runAuthenticationIntake = async (
-  context: HonoContext<RequestLoggingEnvironment>,
-  operation: "preflight" | "createDeviceCode"
-) => {
-  // SAFETY: Hono supplies the configured Cloudflare bindings through context.env.
-  const env = context.env as AuthEnv
-  const intake = createAuthenticationIntake({
-    gatewaySecret: env.AUTH_GATEWAY_SECRET,
-    now: Date.now,
-    clientIp,
-    rateLimit: ({ key, limit, windowSeconds }) =>
-      checkAuthenticationRateLimit(env, key, limit, windowSeconds),
-    verifyTurnstile: (request, token, expectedAction) =>
-      verifyTurnstile(env, request, token, expectedAction),
-    generateDeviceCode: async (deviceName, preflightToken) => {
-      const convex = new ConvexHttpClient(env.VITE_CONVEX_URL)
-      return await convex.mutation(api.deviceAuth.generateCode, {
-        deviceName,
-        preflightToken,
-      })
-    },
-  })
-  const outcome = await intake[operation](context.req.raw)
-  addRequestContext(context, {
-    ...outcome.observability,
-    authentication_outcome:
-      outcome.kind === "success" ? "accepted" : outcome.error.code,
-  })
-  return outcome.kind === "success"
-    ? context.json(outcome.body)
-    : context.json(requestApiError(context, outcome.error), outcome.status)
 }
 
 app.onError((error, context) => {
@@ -209,18 +148,8 @@ app.get("/api/version", (context) => {
   return context.json(buildReleaseIdentity(context.env, __BUILD_TIME__))
 })
 
-app.post("/api/auth/preflight", async (context) => {
-  addRequestContext(context, { operation: "auth_preflight" })
-  return await runAuthenticationIntake(context, "preflight")
-})
-
 app.post("/api/auth/device/code", async (context) => {
   addRequestContext(context, { operation: "device_code_create" })
-  return await runAuthenticationIntake(context, "createDeviceCode")
-})
-
-app.post("/api/auth/sign-in", async (context) => {
-  addRequestContext(context, { operation: "auth_sign_in" })
   if (!isSameOriginRequest(context.req.raw)) {
     return context.json(
       requestApiError(context, {
@@ -231,9 +160,9 @@ app.post("/api/auth/sign-in", async (context) => {
       403
     )
   }
-  let payload
+  let deviceName: string
   try {
-    const result = authSignInRequestSchema.safeParse(await context.req.json())
+    const result = deviceCodeRequestSchema.safeParse(await context.req.json())
     if (!result.success) {
       return context.json(
         requestApiError(context, {
@@ -244,7 +173,7 @@ app.post("/api/auth/sign-in", async (context) => {
         400
       )
     }
-    payload = result.data
+    deviceName = result.data.deviceName
   } catch {
     return context.json(
       requestApiError(context, {
@@ -255,70 +184,56 @@ app.post("/api/auth/sign-in", async (context) => {
       400
     )
   }
-  const flow = payload.params.flow
-  try {
-    const result = await createWorkerAuthenticationFlow(context.env).signIn({
-      provider: payload.provider,
-      params: payload.params,
-    })
-    if (result.kind === "unavailable") {
-      addRequestContext(context, {
-        auth_flow: flow,
-        authentication_outcome: "unavailable",
-      })
+  const rateLimitResult = await checkAuthenticationRateLimit(
+    context.env,
+    `auth:device-code:${clientIp(context.req.raw)}`,
+    DEVICE_CODE_CREATION_RATE_LIMIT,
+    DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
+  )
+  if (rateLimitResult !== "allowed") {
+    if (rateLimitResult === "limited") {
+      addRequestContext(context, { rate_limit: { allowed: false } })
       return context.json(
         requestApiError(context, {
-          code: "service_unavailable",
-          error: "Login is unavailable. Try again later.",
+          code: "rate_limited",
+          error: "Too many attempts. Try again later.",
           retryable: true,
         }),
-        503
+        429
       )
-    }
-    if (result.kind === "invalid-credentials") {
-      addRequestContext(context, {
-        auth_flow: flow,
-        authentication_outcome: "invalid_credentials",
-      })
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_credentials",
-          error:
-            "The username or password is incorrect. Check both fields, then try again.",
-          retryable: false,
-        }),
-        401
-      )
-    }
-    if (result.kind === "account-exists") {
-      addRequestContext(context, {
-        auth_flow: flow,
-        authentication_outcome: "account_exists",
-      })
-      return context.json(
-        requestApiError(context, {
-          code: "account_exists",
-          error: "An account with this username already exists.",
-          retryable: false,
-        }),
-        409
-      )
-    }
-    if (result.cookie) {
-      context.header("Set-Cookie", result.cookie)
     }
     addRequestContext(context, {
-      auth_flow: flow,
-      authentication_outcome: "authenticated",
-      has_tokens: result.hasTokens,
-      worker_session_created: Boolean(result.cookie),
+      configuration_error: "auth_rate_limiter_unavailable",
     })
-    return context.json(result.browserState)
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Device login is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  const database = getD1Database(context.env)
+  if (!database) {
+    return context.json(
+      requestApiError(context, {
+        code: "service_unavailable",
+        error: "Device login is unavailable. Try again later.",
+        retryable: true,
+      }),
+      503
+    )
+  }
+  try {
+    const code = await createDeviceCode(database, {
+      deviceName,
+      now: Date.now(),
+    })
+    addRequestContext(context, { device_code_created: true })
+    return context.json(code)
   } catch (error) {
     addRequestContext(context, {
-      auth_flow: flow,
-      authentication_outcome: "unavailable",
-      auth_error_code: "service_unavailable",
       error: {
         type: error instanceof Error ? error.name : "UnknownError",
         message: error instanceof Error ? error.message : String(error),
@@ -327,10 +242,7 @@ app.post("/api/auth/sign-in", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error:
-          flow === "signUp"
-            ? "Account creation is temporarily unavailable. Try again later."
-            : "Login is temporarily unavailable. Try again later.",
+        error: "Device login is temporarily unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -350,9 +262,8 @@ app.delete("/api/auth/session", async (context) => {
       403
     )
   }
-  const sessionId = getCookieValue(context.req.raw, WORKER_SESSION_COOKIE_NAME)
-  const authenticatedSession = await getSession(context.req.raw, context.env)
-  if (authenticatedSession.kind === "unavailable") {
+  const session = await resolveRequestSession(context.req.raw, context.env)
+  if (session.kind === "unavailable") {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
@@ -362,155 +273,47 @@ app.delete("/api/auth/session", async (context) => {
       503
     )
   }
-  if (
-    authenticatedSession.user &&
-    (context.req.header("X-Lynvo-Expected-User-Id") !==
-      authenticatedSession.user.id ||
-      context.req.header("X-Lynvo-Expected-Session-Id") !==
-        authenticatedSession.user.sid)
-  ) {
-    return context.text("Session identity changed", 409)
-  }
-  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
-  const sessionResult = await createSignedInSessionLifecycle(
-    authSession
-  ).terminate({
-    sessionId,
-    revokeConvexSession: async (accessToken) => {
-      const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-      client.setAuth(accessToken)
-      await client.mutation(api.users.revokeCurrentSessionFromWorker, {})
-    },
-  })
-  if (sessionResult.kind === "unavailable") {
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Logout is temporarily unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
-  }
-  if (authenticatedSession.user) {
-    await createDurableRealtimeSessionRevocation(context.env).deliver({
-      userId: authenticatedSession.user.id,
-      sessionId: authenticatedSession.user.sid,
+  const database = getD1Database(context.env)
+  if (session.kind === "authenticated" && database) {
+    if (
+      context.req.header("X-Lynvo-Expected-User-Id") !== session.userId ||
+      context.req.header("X-Lynvo-Expected-Session-Id") !== session.sessionId
+    ) {
+      return context.text("Session identity changed", 409)
+    }
+    await revokeSessionById(database, session.sessionId, Date.now())
+    await closeRealtimeSession(context.env, session.userId, session.sessionId)
+    addRequestContext(context, {
+      session_revoked: true,
+      user_id: session.userId,
     })
   }
-  context.header("Set-Cookie", sessionResult.cookie)
+  context.header("Set-Cookie", expireD1SessionCookie())
   return context.body(null, 204)
 })
 
 app.get("/api/auth/session/status", async (context) => {
   addRequestContext(context, { operation: "auth_session_status" })
-  const session = await getSession(context.req.raw, context.env)
+  const session = await resolveRequestSession(context.req.raw, context.env)
   if (session.kind === "unavailable") {
     return context.json({ status: "unavailable" }, 503)
   }
-  if (!session.user) {
+  if (session.kind === "anonymous") {
     return context.json({ status: "unauthenticated" })
   }
   const expectedUserId = context.req.query("expectedUserId")
   const expectedSessionId = context.req.query("expectedSessionId")
   if (
-    expectedUserId !== session.user.id ||
-    expectedSessionId !== session.user.sid
+    expectedUserId !== session.userId ||
+    expectedSessionId !== session.sessionId
   ) {
     return context.text("Session identity changed", 409)
   }
   return context.json({
     status: "authenticated",
-    userId: session.user.id,
-    sessionId: session.user.sid,
+    userId: session.userId,
+    sessionId: session.sessionId,
   })
-})
-
-app.post("/api/auth/convex-token", async (context) => {
-  addRequestContext(context, { operation: "convex_access_token_issue" })
-  const handler = createConvexAccessTokenHandler({
-    checkRateLimit: (request) =>
-      checkAuthenticationRateLimit(
-        context.env,
-        `auth:convex-token:${clientIp(request)}`,
-        CONVEX_ACCESS_TOKEN_RATE_LIMIT,
-        CONVEX_ACCESS_TOKEN_RATE_WINDOW_SECONDS
-      ),
-    resolveAccessToken: async (request, forceRefresh) => {
-      const session = await getSession(request, context.env)
-      if (session.kind === "unavailable") {
-        addRequestContext(context, { token_issuance_outcome: "unavailable" })
-        return { kind: "unavailable" }
-      }
-      if (!session.user || !session.accessToken) {
-        addRequestContext(context, {
-          token_issuance_outcome: "unauthenticated",
-        })
-        return { kind: "unauthenticated" }
-      }
-      if (!forceRefresh) {
-        addRequestContext(context, {
-          token_issuance_outcome: "issued",
-          user_id: session.user.id,
-        })
-        return { kind: "authenticated", accessToken: session.accessToken }
-      }
-
-      const opaqueSessionId = getCookieValue(
-        request,
-        WORKER_SESSION_COOKIE_NAME
-      )
-      if (!opaqueSessionId) {
-        return { kind: "unauthenticated" }
-      }
-      const authSession = createAuthSessionModule(
-        context.env.WORKER_AUTH_SESSION
-      )
-      const rotation = await authSession.rotate({
-        sessionId: opaqueSessionId,
-        refresh: async (refreshToken) => {
-          try {
-            const client = new ConvexHttpClient(context.env.VITE_CONVEX_URL)
-            const refreshed = await client.action(api.auth.signIn, {
-              refreshToken,
-            })
-            return refreshed?.tokens
-              ? {
-                  accessToken: refreshed.tokens.token,
-                  refreshToken: refreshed.tokens.refreshToken,
-                }
-              : undefined
-          } catch {
-            return undefined
-          }
-        },
-      })
-      if (rotation.kind !== "rotated") {
-        addRequestContext(context, {
-          token_issuance_outcome:
-            rotation.kind === "unavailable" ? "unavailable" : "revoked",
-        })
-        return rotation.kind === "unavailable"
-          ? { kind: "unavailable" }
-          : { kind: "unauthenticated" }
-      }
-      const rotatedSession = await authSession.read(opaqueSessionId)
-      if (rotatedSession.kind !== "active") {
-        return rotatedSession.kind === "unavailable"
-          ? { kind: "unavailable" }
-          : { kind: "unauthenticated" }
-      }
-      addRequestContext(context, {
-        token_issuance_outcome: "rotated",
-        user_id: session.user.id,
-      })
-      return {
-        kind: "authenticated",
-        accessToken: rotatedSession.session.accessToken,
-      }
-    },
-  })
-  return await handler(context.req.raw)
 })
 
 app.get("/api/realtime", async (context) => {
@@ -525,73 +328,69 @@ app.get("/api/realtime", async (context) => {
   if (!isSameOriginRequest(request)) {
     return context.text("Forbidden", 403)
   }
-  const session = await getSession(request, context.env)
+  const session = await resolveRequestSession(request, context.env)
   if (session.kind === "unavailable") {
     return context.text("Service unavailable", 503)
   }
-  if (!session.user) {
+  if (session.kind === "anonymous") {
     addRequestContext(context, { authenticated: false })
     return context.text("Unauthorized", 401)
   }
   if (
-    context.req.query("expectedUserId") !== session.user.id ||
-    context.req.query("expectedSessionId") !== session.user.sid
+    context.req.query("expectedUserId") !== session.userId ||
+    context.req.query("expectedSessionId") !== session.sessionId
   ) {
     return context.text("Session identity changed", 409)
   }
   addRequestContext(context, {
     authenticated: true,
-    user_id: session.user.id,
+    user_id: session.userId,
   })
   const headers = new Headers(request.headers)
-  headers.set("X-Lynvo-Session-Id", session.user.sid)
-  headers.set("X-Lynvo-User-Id", session.user.id)
-  const workerSessionId = getCookieValue(request, WORKER_SESSION_COOKIE_NAME)
-  if (workerSessionId) {
-    headers.set("X-Lynvo-Worker-Session-Id", workerSessionId)
-  }
+  headers.set("X-Lynvo-Session-Id", session.sessionId)
+  headers.set("X-Lynvo-User-Id", session.userId)
   const receiverId = context.req.query("receiverId")
   const deviceName = context.req.query("deviceName")
   if (receiverId) {
     headers.set("X-Lynvo-Receiver-Id", receiverId)
     headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
   }
-  return context.env.USER_REALTIME_ROOM.getByName(session.user.id).fetch(
+  return context.env.USER_REALTIME_ROOM.getByName(session.userId).fetch(
     new Request(request, { headers })
   )
 })
 
 app.get("/api/remote/receivers", async (context) => {
-  const session = await getSession(context.req.raw, context.env)
+  const session = await resolveRequestSession(context.req.raw, context.env)
   if (session.kind === "unavailable") {
     return context.json({ receivers: [] }, 503)
   }
-  if (!session.user) {
+  if (session.kind === "anonymous") {
     return context.json({ receivers: [] }, 401)
   }
   if (
-    context.req.query("expectedUserId") !== session.user.id ||
-    context.req.query("expectedSessionId") !== session.user.sid
+    context.req.query("expectedUserId") !== session.userId ||
+    context.req.query("expectedSessionId") !== session.sessionId
   ) {
     return context.json({ receivers: [] }, 409)
   }
   const response = await context.env.USER_REALTIME_ROOM.getByName(
-    session.user.id
+    session.userId
   ).fetch("https://realtime.internal/receivers")
   return new Response(response.body, response)
 })
 
 app.use("/api/auth/device/authorize", async (context, next) => {
-  const session = await getSession(context.req.raw, context.env)
+  const session = await resolveRequestSession(context.req.raw, context.env)
   if (session.kind === "unavailable") {
     return context.text("Service unavailable", 503)
   }
-  if (!session.user) {
+  if (session.kind === "anonymous") {
     return next()
   }
   const rateLimitResult = await rateLimit(
     context.env,
-    `auth:device-approval:${clientIp(context.req.raw)}:${session.user.id}`,
+    `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
     10,
     600
   )
@@ -682,23 +481,22 @@ app.use("/api/meta", async (context, next) => {
   return next()
 })
 
+registerD1AuthRoutes(app)
+
+app.use("/api/data/*", echoDataVersion())
+
+registerD1DataRoutes(app)
+
 app.all("/api/*", async (context) => {
   addRequestContext(context, { operation: context.req.path })
   const runtime = getRuntime(context.env)
   const services = await runtime.runPromise(
-    Effect.all([
-      AuthSessionService,
-      ConvexService,
-      ExtractionService,
-      PluginCredentialVault,
-    ])
+    Effect.all([ExtractionService, PluginCredentialVault])
   )
   const effectContext = Context.empty().pipe(
     Context.add(CloudflareEnv, context.env),
-    Context.add(AuthSessionService, services[0]),
-    Context.add(ConvexService, services[1]),
-    Context.add(ExtractionService, services[2]),
-    Context.add(PluginCredentialVault, services[3]),
+    Context.add(ExtractionService, services[0]),
+    Context.add(PluginCredentialVault, services[1]),
     Context.add(RequestEventService, {
       requestId: context.get("requestId"),
       add: (fields) => addRequestContext(context, fields),
@@ -712,11 +510,10 @@ app.all("/api/*", async (context) => {
   ) {
     return response
   }
-  const authSession = createAuthSessionModule(context.env.WORKER_AUTH_SESSION)
   const headers = new Headers(response.headers)
-  headers.set("Set-Cookie", authSession.expireCookie())
+  headers.set("Set-Cookie", expireD1SessionCookie())
   addRequestContext(context, {
-    worker_session_revoked: true,
+    session_cookie_expired: true,
   })
   return new Response(response.body, {
     status: response.status,
@@ -747,15 +544,158 @@ app.all("*", async (context) => {
 })
 
 const pingMessageSchema = z.object({ type: z.literal("ping") })
+
+const sweepD1AuthData = async (
+  database: D1Database
+): Promise<{ kind: "swept" } | { kind: "unavailable" }> => {
+  try {
+    const now = Date.now()
+    const [deletedSessions, deletedDeviceCodes] = await Promise.all([
+      deleteStaleSessions(database, now),
+      cleanupExpiredDeviceCodes(database, now),
+    ])
+    console.info("d1_auth_sweep", {
+      operation: "d1_auth_sweep",
+      deleted_sessions: deletedSessions,
+      deleted_device_codes: deletedDeviceCodes.deleted,
+    })
+    return { kind: "swept" }
+  } catch (error) {
+    console.error("d1_auth_sweep_failed", {
+      operation: "d1_auth_sweep",
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return { kind: "unavailable" }
+  }
+}
+
+type MaintenanceOutcome = { kind: "swept" } | { kind: "unavailable" }
+
+interface D1MaintenanceSummary {
+  readonly job: string
+  readonly deletedCount: number
+}
+
+const sweepLinkCommandOperationsJob = async (
+  database: D1Database,
+  now: number
+): Promise<D1MaintenanceSummary> => ({
+  job: "link_command_operations_ttl",
+  deletedCount: (await cleanupSavedLinkCommandOperations(database, now))
+    .deleted,
+})
+
+const expirePluginServerRegistrationsJob = async (
+  database: D1Database,
+  now: number
+): Promise<D1MaintenanceSummary> => ({
+  job: "plugin_server_registration_expiry",
+  deletedCount: (await expireStalePluginServerRegistrations(database, now))
+    .expired,
+})
+
+const sweepRetainedLinksJob = async (
+  database: D1Database,
+  now: number
+): Promise<D1MaintenanceSummary> => ({
+  job: "links_retention",
+  deletedCount: (await sweepExpiredLinks(database, now)).deletedLinks,
+})
+
+const releaseExpiredExtractionsJob = async (
+  database: D1Database,
+  now: number
+): Promise<D1MaintenanceSummary> => ({
+  job: "managed_extraction_lease_expiry",
+  deletedCount: (await releaseExpiredManagedExtractions(database, now))
+    .released,
+})
+
+const cleanupRemoteCommandsJob = async (
+  database: D1Database,
+  now: number
+): Promise<D1MaintenanceSummary> => ({
+  job: "remote_commands_ttl",
+  deletedCount: (await cleanupExpiredRemoteCommands(database, now))
+    .deletedCount,
+})
+
+const drainPendingAccountErasuresJob = async (
+  database: D1Database
+): Promise<MaintenanceOutcome> => {
+  try {
+    const outcome = await drainAccountErasures(database)
+    console.info("account_erasure_drain", {
+      operation: "account_erasure_drain",
+      processed_users: outcome.processedUsers,
+      steps_exhausted: outcome.stepsExhausted,
+    })
+    return { kind: "swept" }
+  } catch (error) {
+    console.error("account_erasure_drain_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return { kind: "unavailable" }
+  }
+}
+
+const runD1Maintenance = async (
+  database: D1Database,
+  maintenance: (now: number) => Promise<D1MaintenanceSummary>
+): Promise<MaintenanceOutcome> => {
+  try {
+    const summary = await maintenance(Date.now())
+    console.info("d1_maintenance", {
+      operation: summary.job,
+      deleted_count: summary.deletedCount,
+    })
+    return { kind: "swept" }
+  } catch (error) {
+    console.error("d1_maintenance_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return { kind: "unavailable" }
+  }
+}
+
+const runHourlyD1Maintenance = async (
+  database: D1Database
+): Promise<MaintenanceOutcome[]> =>
+  Promise.all([
+    runD1Maintenance(database, (now) =>
+      sweepLinkCommandOperationsJob(database, now)
+    ),
+    runD1Maintenance(database, (now) =>
+      expirePluginServerRegistrationsJob(database, now)
+    ),
+    drainPendingAccountErasuresJob(database),
+  ])
+
+const runDailyD1Maintenance = async (
+  database: D1Database
+): Promise<MaintenanceOutcome> =>
+  runD1Maintenance(database, (now) => sweepRetainedLinksJob(database, now))
+
+const runHighFrequencyD1Maintenance = async (
+  database: D1Database
+): Promise<MaintenanceOutcome[]> =>
+  Promise.all([
+    runD1Maintenance(database, (now) =>
+      releaseExpiredExtractionsJob(database, now)
+    ),
+    runD1Maintenance(database, (now) =>
+      cleanupRemoteCommandsJob(database, now)
+    ),
+  ])
 const receiverNotificationSchema = z.object({ receiverId: z.string() })
 const sessionRevocationSchema = z.object({ sessionId: z.string() })
+const dataChangedSchema = z.object({ version: z.number().int().positive() })
 const receiverAttachmentSchema = z.object({
   receiverId: z.string(),
   sessionId: z.string(),
   deviceName: z.string(),
   connectedAt: z.number(),
 })
-const workerSessionAttachmentSchema = z.object({ workerSessionId: z.string() })
 
 const isPingMessage = <Value>(value: Value): boolean =>
   pingMessageSchema.safeParse(value).success
@@ -770,6 +710,21 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const pathname = new URL(request.url).pathname
+    if (pathname.endsWith("/notify-data-changed")) {
+      const input = dataChangedSchema.safeParse(await request.json())
+      if (!input.success) {
+        return new Response("Invalid data version", { status: 400 })
+      }
+      const serialized = JSON.stringify({
+        type: "data-changed",
+        payload: { version: input.data.version },
+      })
+      const sockets = this.ctx.getWebSockets()
+      for (const socket of sockets) {
+        socket.send(serialized)
+      }
+      return Response.json({ deliveredSocketCount: sockets.length })
+    }
     if (pathname.endsWith("/notify-inbox")) {
       const input = receiverNotificationSchema.safeParse(await request.json())
       if (!input.success) {
@@ -834,16 +789,9 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     const server = pair[1]
     const sessionId = request.headers.get("X-Lynvo-Session-Id")
     const userId = request.headers.get("X-Lynvo-User-Id")
-    const workerSessionId = request.headers.get("X-Lynvo-Worker-Session-Id")
     const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
     const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
-    if (
-      !sessionId ||
-      !workerSessionId ||
-      !userId ||
-      !receiverId ||
-      !deviceName
-    ) {
+    if (!sessionId || !userId || !receiverId || !deviceName) {
       return new Response("Missing session", { status: 401 })
     }
     for (const existingSocket of this.ctx.getWebSockets(receiverId)) {
@@ -851,13 +799,33 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     }
     server.serializeAttachment({
       sessionId,
-      workerSessionId,
       receiverId,
       deviceName,
       connectedAt: Date.now(),
     })
     this.ctx.acceptWebSocket(server, [sessionId, receiverId])
-    server.send(JSON.stringify({ type: "session_hello", userId, sessionId }))
+    let currentDataVersion: number | undefined
+    const database = getD1Database(this.env)
+    if (database) {
+      try {
+        const dataVersion = await getDataVersion(database, userId)
+        if (dataVersion > 0) {
+          currentDataVersion = dataVersion
+        }
+      } catch {
+        currentDataVersion = undefined
+      }
+    }
+    const helloPayload =
+      currentDataVersion === undefined
+        ? { type: "session_hello" as const, userId, sessionId }
+        : {
+            type: "session_hello" as const,
+            userId,
+            sessionId,
+            dataVersion: currentDataVersion,
+          }
+    server.send(JSON.stringify(helloPayload))
     const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
     const existingAlarmAt = await this.ctx.storage.getAlarm()
     if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
@@ -867,34 +835,39 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    const database = getD1Database(this.env)
     try {
-      await Promise.all(
-        this.ctx.getWebSockets().map(async (socket) => {
-          try {
-            const attachment = workerSessionAttachmentSchema.safeParse(
-              socket.deserializeAttachment()
-            )
-            if (!attachment.success) {
-              socket.close(
-                REALTIME_SESSION_REVOKED_CLOSE_CODE,
-                "Session invalid"
+      if (database) {
+        await Promise.all(
+          this.ctx.getWebSockets().map(async (socket) => {
+            try {
+              const attachment = receiverAttachmentSchema.safeParse(
+                socket.deserializeAttachment()
               )
+              if (!attachment.success) {
+                socket.close(
+                  REALTIME_SESSION_REVOKED_CLOSE_CODE,
+                  "Session invalid"
+                )
+                return
+              }
+              const activeSession = await findActiveSessionById(
+                database,
+                attachment.data.sessionId,
+                Date.now()
+              )
+              if (!activeSession) {
+                socket.close(
+                  REALTIME_SESSION_REVOKED_CLOSE_CODE,
+                  "Session expired"
+                )
+              }
+            } catch {
               return
             }
-            const response = await this.env.WORKER_AUTH_SESSION.getByName(
-              attachment.data.workerSessionId
-            ).fetch("https://session.internal/session", { method: "HEAD" })
-            if (response.status === 401 || response.status === 404) {
-              socket.close(
-                REALTIME_SESSION_REVOKED_CLOSE_CODE,
-                "Session expired"
-              )
-            }
-          } catch {
-            return
-          }
-        })
-      )
+          })
+        )
+      }
     } finally {
       if (this.ctx.getWebSockets().length > 0) {
         await this.ctx.storage.setAlarm(
@@ -937,34 +910,68 @@ export class UserRealtimeRoom extends DurableObject<Env> {
 
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
-  scheduled: async (_controller, env) => {
+  scheduled: async (controller, env) => {
     const startedAt = performance.now()
-    const [
-      sessionCleanupResult,
-      realtimeRevocationResult,
-      remoteCommandNotificationResult,
-    ] = await Promise.all([
-      createSessionCleanupModule(env).drain(),
-      createDurableRealtimeSessionRevocation(env).drain(),
-      createRemoteCommandNotificationDelivery(env).drain(),
-    ])
-    const unavailable = [
-      sessionCleanupResult,
-      realtimeRevocationResult,
-      remoteCommandNotificationResult,
-    ].filter((result) => result.kind === "unavailable").length
+    const database = getD1Database(env)
+    if (controller.cron === CRON_SCHEDULE_HOURLY_MAINTENANCE) {
+      const outcomes = database ? await runHourlyD1Maintenance(database) : []
+      const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
+      console.info("scheduled_hourly_maintenance", {
+        operation: "scheduled_hourly_maintenance",
+        outcome: failed ? "failure" : "success",
+        duration_ms: Math.max(0, performance.now() - startedAt),
+      })
+      if (failed) {
+        throw new Error("D1 hourly maintenance is unavailable")
+      }
+      return
+    }
+    if (controller.cron === CRON_SCHEDULE_DAILY_RETENTION) {
+      const outcome = database
+        ? await runDailyD1Maintenance(database)
+        : { kind: "skipped" as const }
+      const failed = outcome.kind === "unavailable"
+      console.info("scheduled_daily_retention", {
+        operation: "scheduled_daily_retention",
+        outcome: failed ? "failure" : "success",
+        duration_ms: Math.max(0, performance.now() - startedAt),
+      })
+      if (failed) {
+        throw new Error("D1 daily retention maintenance is unavailable")
+      }
+      return
+    }
+    const [notificationResult, d1SweepOutcome, d1MaintenanceOutcomes] =
+      await Promise.all([
+        createRemoteCommandNotificationDelivery(env, database).drain(),
+        database
+          ? sweepD1AuthData(database)
+          : Promise.resolve({ kind: "skipped" as const }),
+        database
+          ? runHighFrequencyD1Maintenance(database)
+          : Promise.resolve<MaintenanceOutcome[]>([]),
+      ])
+    const unavailable = d1MaintenanceOutcomes.filter(
+      (outcome) => outcome.kind === "unavailable"
+    ).length
     console.info("scheduled_delivery_drain", {
       operation: "scheduled_delivery_drain",
-      outcome: unavailable > 0 ? "failure" : "success",
+      outcome:
+        notificationResult.kind === "unavailable" ||
+        d1SweepOutcome.kind === "unavailable" ||
+        unavailable > 0
+          ? "failure"
+          : "success",
       unavailable,
+      d1_sweep: d1SweepOutcome.kind,
       duration_ms: Math.max(0, performance.now() - startedAt),
     })
     if (
-      sessionCleanupResult.kind === "unavailable" ||
-      realtimeRevocationResult.kind === "unavailable" ||
-      remoteCommandNotificationResult.kind === "unavailable"
+      notificationResult.kind === "unavailable" ||
+      d1SweepOutcome.kind === "unavailable" ||
+      unavailable > 0
     ) {
-      throw new Error("Worker Auth Session cleanup is unavailable")
+      throw new Error("Scheduled maintenance drain failed")
     }
   },
 } satisfies ExportedHandler<Env>

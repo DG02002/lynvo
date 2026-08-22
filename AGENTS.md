@@ -35,9 +35,18 @@ Long term maintainability is a core priority. If you add new functionality, firs
 
 ## Saved link synchronization invariants
 
-- MUST: Browser code cannot own or persist Convex access or refresh credentials.
-- MUST: Two active sessions for the same account converge through monotonic Saved link revisions, realtime invalidation hints, and HTTP snapshot recovery.
-- MUST: Every Saved link collection mutation advances the revision and records coalesced pending delivery in the same Convex transaction.
+Design (plan 001, cutover complete): Cloudflare D1 is the only backend; Convex is removed.
+
+- MUST: One write path. Every Saved link mutation goes through the Worker API carrying a
+  client-generated `operationId`; the server-side idempotency ledger dedupes retries.
+- MUST: The server snapshot is the only persisted client state. UI renders last-known
+  snapshot plus in-flight markers; entities are keyed by server-assigned IDs, never URL.
+- MUST: Monotonic per-account `data_version` increments in the same D1 transaction as every
+  owned-data write and is echoed on every API response (`X-Lynvo-Data-Version` / body field).
+- MUST: Freshness by comparison, never by trust in push. WebSocket `data-changed` frames are
+  a latency optimization; a lost frame costs milliseconds, never correctness.
+- MUST: Browser code never owns or persists backend credentials; auth is an opaque HttpOnly
+  session cookie (`lynvo_session`) resolved to a D1 `sessions` row. Sign-in is Google-only.
 
 ## Shadcn Components
 

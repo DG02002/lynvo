@@ -28,11 +28,16 @@ export const PluginIcon = ({
   }
 
   if (resolvedIcon?.url) {
+    const isMonochrome = resolvedIcon.url.includes("direct-media")
     return (
       <img
         src={resolvedIcon.url}
         alt=""
-        className={cn("shrink-0 object-contain", className)}
+        className={cn(
+          "shrink-0 object-contain",
+          isMonochrome && "dark:invert",
+          className
+        )}
         loading="lazy"
       />
     )

@@ -10,7 +10,7 @@ import {
   PluginCredentialVault,
 } from "~/lib/effect/services/plugin-credential-vault"
 import { CloudflareEnv } from "~/lib/effect/services/CloudflareEnv"
-import { buildPluginCredentialDocument } from "../convex/pluginDomainLifecycle"
+import { buildCredentialDocument } from "../workers/d1/plugin-domains"
 import {
   parseHttpBasicCredential,
   serializeHttpBasicCredential,
@@ -84,30 +84,49 @@ describe("Plugin Domain lifecycle", () => {
       algorithm: "AES-256-GCM" as const,
       keyVersion: 1,
     }
-    const credentialDocument = buildPluginCredentialDocument({
-      userId: "user-1" as never,
-      pluginDomain: {
-        _id: "domain-1" as never,
-        pluginServerId: "plugin-server-1",
-        pluginId: "onedrive-index",
+    const credentialDocument = buildCredentialDocument(
+      "user-1",
+      {
+        id: "domain-1",
+        user_id: "user-1",
+        plugin_server_id: "plugin-server-1",
+        plugin_id: "onedrive-index",
         domain: "example.com",
+        credential_generation: 1,
+        credential_attempt_id: null,
+        credential_finalized_attempt_id: null,
       },
       credential,
-      existingCredential: {
-        createdAt: 10,
-      } as never,
-      now: 20,
-    })
+      {
+        id: "credential-1",
+        user_id: "user-1",
+        plugin_domain_id: "domain-1",
+        plugin_server_id: "plugin-server-1",
+        plugin_id: "onedrive-index",
+        domain: "example.com",
+        ciphertext: "old",
+        nonce: "old",
+        algorithm: "AES-256-GCM" as const,
+        key_version: 1,
+        created_at: 10,
+        updated_at: 10,
+      },
+      20
+    )
 
-    expect(credentialDocument).toEqual({
-      userId: "user-1",
-      pluginDomainId: "domain-1",
-      pluginServerId: "plugin-server-1",
-      pluginId: "onedrive-index",
+    expect(credentialDocument).toMatchObject({
+      id: "credential-1",
+      user_id: "user-1",
+      plugin_domain_id: "domain-1",
+      plugin_server_id: "plugin-server-1",
+      plugin_id: "onedrive-index",
       domain: "example.com",
-      ...credential,
-      createdAt: 10,
-      updatedAt: 20,
+      ciphertext: "ciphertext",
+      nonce: "nonce",
+      algorithm: "AES-256-GCM",
+      key_version: 1,
+      created_at: 10,
+      updated_at: 20,
     })
   })
 

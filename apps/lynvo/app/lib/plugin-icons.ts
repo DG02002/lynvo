@@ -1,4 +1,4 @@
-import { ThreeDViewIcon, Video01Icon } from "@hugeicons/core-free-icons"
+import type { ThreeDViewIcon } from "@hugeicons/core-free-icons"
 
 export interface PluginIconSource {
   hugeIcon?: typeof ThreeDViewIcon
@@ -6,7 +6,7 @@ export interface PluginIconSource {
 }
 
 export const DIRECT_MEDIA_ICON: PluginIconSource = {
-  hugeIcon: Video01Icon,
+  url: "/lynvo-plugin-server-assets/icons/sources/direct-media.png",
 }
 
 export const getPluginIconSource = (

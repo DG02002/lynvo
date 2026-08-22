@@ -1,6 +1,6 @@
 {
   "name": "@dg02002/lynvo-plugin-server-protocol",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Lynvo Custom Plugin Server protocol schemas, runtime helpers, and metadata utilities.",
   "keywords": [
     "cloudflare-workers",

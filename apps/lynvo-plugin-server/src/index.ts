@@ -37,7 +37,7 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
     createLynvoPluginServerManifest(env.PUBLIC_ASSET_ORIGIN),
   auth: {
     validate: ({ request, env }) => {
-      const apiKey = env.LYNVO_PLUGIN_SERVER_API_KEY
+      const apiKey = env.PLUGIN_SERVER_AUTH_KEY
       return apiKey ? validateBearerCredential(request, apiKey) : false
     },
   },

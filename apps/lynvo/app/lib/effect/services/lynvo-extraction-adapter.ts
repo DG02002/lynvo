@@ -4,10 +4,8 @@ import type {
   PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
-import { api } from "../../../../convex/_generated/api"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, ValidationError } from "../errors"
-import type { ConvexServiceContract } from "./ConvexService"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -18,19 +16,23 @@ import {
 } from "./lynvo-plugin-server-adapter"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
+import { getD1Database } from "../../../../workers/d1/db"
+import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
+import {
+  MANAGED_PLUGIN_IDS,
+  reserveManagedExtraction,
+  settleManagedExtraction,
+} from "../../../../workers/d1/usage"
+import type { ManagedPluginId } from "../../../../workers/d1/usage"
 
 export interface LynvoExtractionAdapterOptions {
+  readonly environment: Env
   readonly targetUrl: string
-  readonly accessToken: string
+  readonly userId: string
   readonly requestId: string
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
-}
-
-export interface AuthenticatedLynvoExtractionAdapterOptions extends LynvoExtractionAdapterOptions {
-  readonly userId: string
-  readonly serviceToken: string
 }
 
 export interface LynvoPluginRoute {
@@ -40,8 +42,6 @@ export interface LynvoPluginRoute {
 
 const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   function* (
-    convex: ConvexServiceContract,
-    environment: Env,
     options: LynvoExtractionAdapterOptions
   ): Effect.fn.Return<
     LynvoPluginRoute | undefined,
@@ -49,33 +49,37 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   > {
     const operationId = `${options.requestId}:${options.kind}`
     const manifest = yield* getLynvoPluginServerManifest(
-      environment,
+      options.environment,
       options.requestId,
       operationId
     )
-    const configuredDomain = yield* convex
-      .query(
-        api.pluginDomains.getByDomain,
-        {
-          domain: new URL(options.targetUrl).hostname,
-          pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-        },
-        { accessToken: options.accessToken }
-      )
-      .pipe(
-        Effect.mapError(
-          (error) =>
-            new ValidationError({ message: error.message, details: error })
-        )
-      )
+    const database = getD1Database(options.environment)
+    const configuredDomain = database
+      ? yield* Effect.tryPromise({
+          try: () =>
+            getPluginDomainByDomain(database, options.userId, {
+              domain: new URL(options.targetUrl).hostname,
+              pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+            }),
+          catch: (cause) =>
+            new ValidationError({
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "The saved Plugin configuration is unavailable.",
+              details: cause,
+            }),
+        })
+      : null
     let plugin = findLynvoPlugin(
       manifest,
       options.targetUrl,
-      options.pluginId ?? configuredDomain?.pluginId
+      options.pluginId ?? configuredDomain?.pluginId,
+      false
     )
     if (!plugin && manifest.features.discovery && options.kind === "source") {
       const discovery = yield* discoverLynvoPlugin(
-        environment,
+        options.environment,
         options.targetUrl,
         options.inlineBasicAuth,
         options.requestId,
@@ -89,71 +93,74 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
         )
       }
     }
+    if (!plugin) {
+      plugin = findLynvoPlugin(manifest, options.targetUrl, undefined, true)
+    }
     return plugin ? { manifest, plugin } : undefined
   }
 )
 
-const getMeteredPluginId = (pluginId: string) => {
-  if (
-    pluginId === "bhadoo-google-drive-index" ||
-    pluginId === "google-drive-public-files" ||
-    pluginId === "onedrive-index" ||
-    pluginId === "direct-media"
-  ) {
-    return pluginId
+const MANAGED_PLUGIN_ID_STRINGS: readonly string[] = MANAGED_PLUGIN_IDS
+
+const toMeteredPluginId = (pluginId: string): ManagedPluginId | undefined => {
+  if (!MANAGED_PLUGIN_ID_STRINGS.includes(pluginId)) {
+    return undefined
   }
-  return undefined
+  // SAFETY: membership was checked against MANAGED_PLUGIN_IDS above.
+  return pluginId as ManagedPluginId
 }
 
 export const extractWithLynvoPluginServer = Effect.fn(
   "LynvoExtractionAdapter.extract"
 )(function* (
-  convex: ConvexServiceContract,
   credentialVault: PluginCredentialVaultContract,
-  environment: Env,
-  options: AuthenticatedLynvoExtractionAdapterOptions
+  options: LynvoExtractionAdapterOptions
 ): Effect.fn.Return<
   ExtractionResult | undefined,
   ExtractionError | ValidationError
 > {
-  const route = yield* selectLynvoPlugin(convex, environment, options)
+  const route = yield* selectLynvoPlugin(options)
   if (!route) {
     return undefined
   }
-  const credentials = yield* resolvePluginCredential(convex, credentialVault, {
+  const credentials = yield* resolvePluginCredential(credentialVault, {
+    environment: options.environment,
     targetUrl: options.targetUrl,
     userId: options.userId,
-    accessToken: options.accessToken,
-    serviceToken: options.serviceToken,
     pluginServerId: LYNVO_PLUGIN_SERVER_ID,
     plugin: route.plugin,
     inlineBasicAuth: options.inlineBasicAuth,
   })
-  const meteredPluginId = getMeteredPluginId(route.plugin.id)
+  const meteredPluginId = toMeteredPluginId(route.plugin.id)
   const operationId = `${options.requestId}:${options.kind}`
   if (meteredPluginId) {
-    yield* convex
-      .action(
-        api.usage.reserveLynvoPluginOperation,
-        {
-          serviceToken: options.serviceToken,
+    const database = getD1Database(options.environment)
+    if (!database) {
+      return yield* new ExtractionError({
+        message: "Managed extraction metering is unavailable.",
+        url: options.targetUrl,
+      })
+    }
+    yield* Effect.tryPromise({
+      try: () =>
+        reserveManagedExtraction(database, options.userId, {
           operationId,
           pluginId: meteredPluginId,
-        },
-        { accessToken: options.accessToken }
-      )
-      .pipe(
-        Effect.mapError(
-          (error) =>
-            new ExtractionError({
-              message: error.message,
-              url: options.targetUrl,
-            })
-        )
-      )
+          usageLimitsDisabled: process.env.DISABLE_USAGE_LIMITS === "true",
+          now: Date.now(),
+        }),
+      catch: (cause) =>
+        new ExtractionError({
+          message:
+            cause instanceof Error
+              ? cause.message
+              : "Managed extraction reservation failed.",
+          url: options.targetUrl,
+        }),
+    })
   }
   const extraction = extractFromLynvoPluginServer(
-    environment,
+    options.environment,
     options.targetUrl,
     options.kind,
     { pluginId: route.plugin.id, ...credentials },
@@ -163,19 +170,18 @@ export const extractWithLynvoPluginServer = Effect.fn(
   if (!meteredPluginId) {
     return yield* extraction
   }
+  const database = getD1Database(options.environment)
   return yield* extraction.pipe(
     Effect.ensuring(
-      convex
-        .action(
-          api.usage.settleLynvoPluginOperation,
-          {
-            serviceToken: options.serviceToken,
-            operationId,
-            outcome: "consumed",
-          },
-          { accessToken: options.accessToken }
-        )
-        .pipe(Effect.orElseSucceed(() => undefined))
+      database
+        ? Effect.promise(() =>
+            settleManagedExtraction(database, options.userId, {
+              operationId,
+              outcome: "consumed",
+              now: Date.now(),
+            }).catch(() => undefined)
+          )
+        : Effect.succeed(undefined)
     )
   )
 })
@@ -183,14 +189,12 @@ export const extractWithLynvoPluginServer = Effect.fn(
 export const getLynvoRouteMetadata = Effect.fn(
   "LynvoExtractionAdapter.getMetadata"
 )(function* (
-  convex: ConvexServiceContract,
-  environment: Env,
   options: LynvoExtractionAdapterOptions
 ): Effect.fn.Return<
   MetadataResult | undefined,
   ExtractionError | ValidationError
 > {
-  const route = yield* selectLynvoPlugin(convex, environment, options)
+  const route = yield* selectLynvoPlugin(options)
   return route
     ? getLynvoPluginServerMetadata(
         route.manifest,

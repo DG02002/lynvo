@@ -1,7 +1,5 @@
 import * as React from "react"
 import { Link } from "react-router"
-import { useQuery } from "@tanstack/react-query"
-import { Effect } from "effect"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
 import { toast } from "sonner"
@@ -11,7 +9,8 @@ import { authPaths } from "~/lib/paths"
 import { AuthPolicyLinks } from "./auth-form-parts"
 import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { client } from "~/lib/effect/api/client"
+import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 
 export default function DeviceApproval() {
   const params = new URLSearchParams(
@@ -19,12 +18,11 @@ export default function DeviceApproval() {
   )
   const code = params.get("user_code") ?? ""
   const hasValidCode = /^[A-Z]{4}-[A-Z]{4}$/.test(code)
-  const { data: codeRecord, isPending: isCodeQueryPending } = useQuery({
-    queryKey: ["device-auth-approval", code],
-    queryFn: () =>
-      Effect.runPromise(client.device.approval({ query: { code } })),
-    enabled: hasValidCode,
-  })
+  const { data: codeRecord, isLoading: isCodeQueryPending } = useAsyncResource(
+    () =>
+      hasValidCode ? readDeviceCodeApproval(code) : Promise.resolve(undefined),
+    [code, hasValidCode]
+  )
   const isCheckingCode = hasValidCode && isCodeQueryPending
   const hasExpired = useExpiryClock(codeRecord?.expiresAt)
   const canApprove = codeRecord?.status === "pending" && !hasExpired
@@ -37,7 +35,7 @@ export default function DeviceApproval() {
     }
     setLoading(true)
     try {
-      await Effect.runPromise(client.device.authorize({ payload: { code } }))
+      await authorizeDeviceCode(code)
       setSuccess(true)
       toast.success("Login approved")
     } catch (error) {

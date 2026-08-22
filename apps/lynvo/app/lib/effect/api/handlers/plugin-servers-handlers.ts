@@ -2,9 +2,15 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
-import { ConvexService } from "../../services/ConvexService"
-import { api } from "../../../../../convex/_generated/api"
+import { CloudflareEnv } from "../../services/CloudflareEnv"
+import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
+import { getD1Database } from "../../../../../workers/d1/db"
+import {
+  deletePluginServerById,
+  listPluginServers,
+  setPluginServerEnabled,
+} from "../../../../../workers/d1/plugin-servers"
 import {
   readCustomPluginServerUsage,
   refreshCustomPluginServer,
@@ -18,20 +24,27 @@ export const PluginServersHandlers = HttpApiBuilder.group(
     handlers
       .handle("list", () =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_list",
             user_id: user.id,
           })
-          return yield* convex.query(
-            api.userPluginServers.list,
-            {},
-            {
-              accessToken: user.accessToken,
-            }
-          )
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          return yield* Effect.tryPromise({
+            try: () => listPluginServers(database, user.id),
+            catch: (cause) =>
+              new BackendError({
+                message: "Account data is temporarily unavailable",
+                cause,
+              }),
+          })
         })
       )
       .handle("usage", () =>
@@ -58,8 +71,9 @@ export const PluginServersHandlers = HttpApiBuilder.group(
       )
       .handle("toggle", ({ params, payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_toggle",
@@ -67,14 +81,24 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             plugin_server_id: params.pluginServerId,
             plugin_server_enabled: payload.enabled,
           })
-          yield* convex.mutation(
-            api.userPluginServers.setEnabled,
-            {
-              id: params.pluginServerId,
-              enabled: payload.enabled,
-            },
-            { accessToken: user.accessToken }
-          )
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              setPluginServerEnabled(database, user.id, {
+                id: params.pluginServerId,
+                enabled: payload.enabled,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The plugin server couldn’t be updated",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
@@ -96,21 +120,35 @@ export const PluginServersHandlers = HttpApiBuilder.group(
       )
       .handle("delete", ({ params }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_delete",
             user_id: user.id,
             plugin_server_id: params.pluginServerId,
           })
-          yield* convex.mutation(
-            api.userPluginServers.deleteById,
-            {
-              id: params.pluginServerId,
-            },
-            { accessToken: user.accessToken }
-          )
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              deletePluginServerById(database, user.id, {
+                id: params.pluginServerId,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message:
+                  cause instanceof Error
+                    ? cause.message
+                    : "The plugin server couldn’t be deleted",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )

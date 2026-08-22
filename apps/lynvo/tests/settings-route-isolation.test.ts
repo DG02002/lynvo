@@ -11,6 +11,7 @@ describe("Settings route ownership", () => {
     expect(settings?.children?.map((entry) => entry.path)).toEqual([
       undefined,
       "general",
+      "account",
       "security/:subview?",
       "plugins",
       "usage",
@@ -20,6 +21,7 @@ describe("Settings route ownership", () => {
     expect(settings?.children?.map((entry) => entry.file)).toEqual([
       "features/site/routes/_site.settings._index.ts",
       "features/site/routes/_site.settings.general.tsx",
+      "features/site/routes/_site.settings.account.tsx",
       "features/site/routes/_site.settings.security.tsx",
       "features/site/routes/_site.settings.plugins.tsx",
       "features/site/routes/_site.settings.usage.tsx",

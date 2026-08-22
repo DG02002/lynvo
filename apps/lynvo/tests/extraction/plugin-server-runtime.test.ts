@@ -358,7 +358,7 @@ describe("createPluginServerRuntime", () => {
       plugin: {
         pluginServerId: "dev.example.plugin-server",
         displayName: "Example Plugin Server",
-        pluginIconUrl: "https://source.example/plugin.svg",
+        pluginIconUrl: "https://source.example/plugin.gif",
       },
       nodes: [],
       extensions: {},

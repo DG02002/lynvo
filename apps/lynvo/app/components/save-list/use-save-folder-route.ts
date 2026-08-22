@@ -4,7 +4,7 @@ import type { LinkListItem, SavedLinkListItem } from "~/features/links/types"
 
 export const useSaveFolderRoute = (
   items: LinkListItem[],
-  isHydrating: boolean
+  isPending: boolean
 ) => {
   const { savedLinkId } = useParams<{ savedLinkId: string }>()
   const navigate = useNavigate()
@@ -19,10 +19,10 @@ export const useSaveFolderRoute = (
   }, [items, savedLinkId])
 
   useEffect(() => {
-    if (savedLinkId && !isHydrating && !selectedItemUrl) {
+    if (savedLinkId && !isPending && !selectedItemUrl) {
       void navigate("/save", { replace: true })
     }
-  }, [isHydrating, navigate, savedLinkId, selectedItemUrl])
+  }, [isPending, navigate, savedLinkId, selectedItemUrl])
 
   return {
     selectedItemUrl,

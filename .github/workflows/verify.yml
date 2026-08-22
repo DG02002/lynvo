@@ -69,10 +69,10 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-          CONVEX_MIGRATION_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
-          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN CONVEX_DEPLOY_KEY CONVEX_MIGRATION_KEY; do
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing production environment secret: ${name}"
               exit 1
@@ -102,82 +102,16 @@ jobs:
           LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
         run: SERVICE_VERSION="$LYNVO_VERSION" pnpm --filter @lynvo/app preflight
 
-      - name: Verify Convex deployment inputs
-        working-directory: apps/lynvo
-        run: |
-          test -f convex.json
-          test -f convex/tsconfig.json
-
-      - name: Verify Convex generated code is committed
+      - name: Apply pending D1 migrations to production
         working-directory: apps/lynvo
         env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: |
-          pnpm run convex:codegen
-          git diff --exit-code -- convex/_generated
-
-      - name: Build release artifacts and deploy backward-compatible Convex functions
-        working-directory: apps/lynvo
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
-          pnpm exec convex deploy
-          --cmd "pnpm --workspace-root build"
-          --cmd-url-env-var-name VITE_CONVEX_URL
-          --typecheck enable
-          --codegen disable
-          --message "GitHub ${COMMIT_HASH}"
-
-      - name: Start reviewed production migrations
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
-        run: pnpm --filter @lynvo/app exec convex run migrations:runProduction '{}'
-
-      - name: Wait for production migrations and invariants
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_MIGRATION_KEY }}
-          NODE_OPTIONS: --disable-warning=ExperimentalWarning
-        run: |
-          migration_names='{"names":["migrations:normalizeSavedLinkRetentionV2","migrations:backfillUserStorageLedgersV2"]}'
-
-          for attempt in {1..90}; do
-            migration_status="$(pnpm --filter @lynvo/app exec convex run --component migrations lib:getStatus "$migration_names")"
-            echo "Migration status (attempt ${attempt}/90):"
-            jq . <<< "$migration_status"
-
-            if jq -e 'any(.[]; .state == "failed" or .state == "canceled")' <<< "$migration_status" >/dev/null; then
-              echo "::error::A production migration failed. See the status above."
-              exit 1
-            fi
-
-            if jq -e 'length == 2 and all(.[]; .state == "success" and .isDone == true)' <<< "$migration_status" >/dev/null; then
-              break
-            fi
-
-            if [ "$attempt" -eq 90 ]; then
-              echo "::error::Production migrations did not complete within 15 minutes."
-              exit 1
-            fi
-            sleep 10
-          done
-
-          retention="$(pnpm --filter @lynvo/app exec convex run migrations:verifySavedLinkRetention '{}')"
-          ledgers="$(pnpm --filter @lynvo/app exec convex run migrations:verifyUserStorageLedgers '{}')"
-
-          echo "Saved-link retention invariant:"
-          jq . <<< "$retention"
-          echo "User storage-ledger invariant:"
-          jq . <<< "$ledgers"
-
-          if ! jq -e '.isComplete == true' <<< "$retention" >/dev/null; then
-            echo "::error::Saved-link retention invariant failed."
-            exit 1
-          fi
-
-          if ! jq -e '.isComplete == true' <<< "$ledgers" >/dev/null; then
-            echo "::error::User storage-ledger invariant failed."
-            exit 1
-          fi
+          pnpm exec wrangler d1 migrations apply DB
+          --config wrangler.jsonc
+          --env=""
+          --remote
 
       - name: Upload inactive Plugin Server version
         env:

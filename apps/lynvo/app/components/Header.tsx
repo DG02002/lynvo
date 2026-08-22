@@ -4,18 +4,20 @@ import { useState } from "react"
 import { GuestNavActions } from "./header/GuestNavActions"
 import { LogoutDialog } from "./header/LogoutDialog"
 import { UserNavActions } from "./header/UserNavActions"
-import { signOutWithWorkerSession } from "~/lib/worker-auth-session-http"
+import { signOut } from "~/lib/session-http"
 
 export function Header({ showSaveAction }: { showSaveAction: boolean }) {
   const navigate = useNavigate()
-  const data = useRouteLoaderData<{ user: { username: string } | null }>("root")
+  const data = useRouteLoaderData<{
+    user: { email: string; name?: string | null } | null
+  }>("root")
   const user = data?.user
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
-      await signOutWithWorkerSession()
+      await signOut()
       navigate("/", { viewTransition: true })
     } catch (error) {
       console.error("Logout failed:", error)
@@ -30,7 +32,8 @@ export function Header({ showSaveAction }: { showSaveAction: boolean }) {
           {user ? (
             <>
               <UserNavActions
-                username={user.username}
+                name={user.name}
+                email={user.email}
                 showSaveAction={showSaveAction}
                 remotePlayOpen={remotePlayOpen}
                 onRemotePlayOpenChange={setRemotePlayOpen}
@@ -39,7 +42,7 @@ export function Header({ showSaveAction }: { showSaveAction: boolean }) {
               <LogoutDialog
                 open={logoutDialogOpen}
                 onOpenChange={setLogoutDialogOpen}
-                username={user.username}
+                email={user.email}
                 onLogout={() => void handleLogout()}
               />
             </>

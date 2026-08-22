@@ -32,7 +32,7 @@ import { cn } from "~/lib/utils"
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",
   "15 Lynvo Plugin Server requests per day",
-  "1 MB of storage for up to 100 saved links",
+  "3 MB of storage for up to 1,000 saved links",
   "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
@@ -55,7 +55,7 @@ const planDetailSections = [
     title: "Account",
     details: [
       { feature: "Price", allowance: "₹0 per month" },
-      { feature: "Account storage", allowance: "1 MB" },
+      { feature: "Account storage", allowance: "3 MB" },
       { feature: "Saved links", allowance: "Up to 100" },
       { feature: "Maximum saved-link record", allowance: "256 KB" },
       { feature: "Default saved-link retention", allowance: "30 days" },
@@ -78,7 +78,9 @@ const planDetailSections = [
       {
         feature: "Bhadoo’s Google Drive Index",
         allowance: "Included",
-        icon: {},
+        icon: {
+          url: "/lynvo-plugin-server-assets/icons/sources/bhadoo-cloud.svg",
+        },
       },
       {
         feature: "Google Drive Public Folders & Files",
@@ -143,7 +145,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => (
       <span className="px-3 py-1 text-foreground">More soon</span>
     </div>
     <Link
-      to={authPaths.createAccount}
+      to={authPaths.signIn}
       viewTransition
       className={cn(buttonVariants({ size: "lg" }), "mx-auto w-full max-w-2xl")}
     >
@@ -233,7 +235,7 @@ export default function Pricing() {
               <span className="text-lg text-muted-foreground">/ month</span>
             </div>
             <Link
-              to={authPaths.createAccount}
+              to={authPaths.signIn}
               viewTransition
               className={cn(buttonVariants({ size: "lg" }), "w-full")}
             >
@@ -293,7 +295,7 @@ export default function Pricing() {
             <div className="flex flex-col items-start gap-3">
               <span className="text-lg">Free</span>
               <Link
-                to={authPaths.createAccount}
+                to={authPaths.signIn}
                 viewTransition
                 className={buttonVariants({ size: "sm" })}
               >

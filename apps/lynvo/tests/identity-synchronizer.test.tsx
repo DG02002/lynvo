@@ -1,5 +1,4 @@
 import { render, waitFor } from "@testing-library/react"
-import { QueryClient } from "@tanstack/react-query"
 import { vi } from "vitest"
 import { IdentitySynchronizer } from "~/root/identity-synchronizer"
 
@@ -9,19 +8,10 @@ describe("identity synchronization", () => {
       .fn()
       .mockResolvedValue(Response.json({ status: "unauthenticated" }))
     vi.stubGlobal("fetch", fetchMock)
-    const queryClient = new QueryClient()
-    queryClient.setQueryData(["public-page"], "retained")
 
-    render(
-      <IdentitySynchronizer user={null} queryClient={queryClient}>
-        {() => null}
-      </IdentitySynchronizer>
-    )
+    render(<IdentitySynchronizer user={null}>{() => null}</IdentitySynchronizer>)
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(queryClient.getQueryData(["public-page"])).toBe("retained")
-    )
   })
 
   it("binds status validation to the rendered identity and coalesces races", async () => {
@@ -32,11 +22,9 @@ describe("identity synchronization", () => {
     const fetchMock = vi.fn(() => statusResponse)
     vi.stubGlobal("fetch", fetchMock)
 
-    const queryClient = new QueryClient()
     render(
       <IdentitySynchronizer
         user={{ id: "rendered-user", sessionId: "rendered-session" }}
-        queryClient={queryClient}
       >
         {(validateIdentity) => (
           <button onClick={validateIdentity}>Validate</button>

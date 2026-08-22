@@ -1,5 +1,6 @@
 export const SETTINGS_TAB_VALUES = [
   "general",
+  "account",
   "security",
   "plugins",
   "usage",

@@ -71,7 +71,7 @@ describe("extractFromCustomPluginServer", () => {
     await Effect.runPromise(
       extractFromCustomPluginServer(
         {
-          _id: "pluginServer-one",
+          id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
           manifest: JSON.stringify({
@@ -156,7 +156,7 @@ describe("extractFromCustomPluginServer", () => {
     const result = await Effect.runPromise(
       extractFromCustomPluginServer(
         {
-          _id: "pluginServer-one",
+          id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
           manifest: "{}",
@@ -194,7 +194,7 @@ describe("extractFromCustomPluginServer", () => {
     const metadata = await Effect.runPromise(
       getCustomPluginServerMetadata(
         {
-          _id: "pluginServer-one",
+          id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
           manifest: JSON.stringify({
@@ -280,7 +280,7 @@ describe("extractFromCustomPluginServer", () => {
     const result = await Effect.runPromise(
       extractFromCustomPluginServer(
         {
-          _id: "pluginServer-one",
+          id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
           manifest: "{}",
@@ -306,7 +306,7 @@ describe("extractFromCustomPluginServer", () => {
 describe("selectCustomPluginServer", () => {
   it("does not select an enabled Plugin Server when it is unavailable", async () => {
     const pluginServer = {
-      _id: "pluginServer-one",
+      id: "pluginServer-one",
       baseUrl: "https://plugin-server.example",
       apiKey: "secret",
       manifest: createIncompleteStoredManifest("usage"),
@@ -322,7 +322,7 @@ describe("selectCustomPluginServer", () => {
       selectCustomPluginServer(
         [pluginServer],
         "https://source.example/title",
-        pluginServer._id
+        pluginServer.id
       )
     )
 
@@ -334,7 +334,7 @@ describe("selectCustomPluginServer", () => {
     "does not route through a verified stored manifest when %s is missing",
     async (missingField) => {
       const pluginServer = {
-        _id: "pluginServer-one",
+        id: "pluginServer-one",
         baseUrl: "https://plugin-server.example",
         apiKey: "secret",
         manifest: createIncompleteStoredManifest(missingField),
@@ -353,7 +353,7 @@ describe("selectCustomPluginServer", () => {
 
   it("does not select a verified Plugin Server with a malformed manifest", async () => {
     const pluginServer = {
-      _id: "pluginServer-one",
+      id: "pluginServer-one",
       baseUrl: "https://plugin-server.example",
       apiKey: "secret",
       manifest: "not-json",

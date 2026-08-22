@@ -1,23 +1,36 @@
 import { render, waitFor } from "@testing-library/react"
-import { vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getPlayerPreferences } from "~/lib/player-utils"
 import { createMemoryStorage } from "./memory-storage"
 
-const { convexQueryMock } = vi.hoisted(() => ({ convexQueryMock: vi.fn() }))
+const { cloudPlayerPreferences } = vi.hoisted(() => ({
+  cloudPlayerPreferences: vi.fn(),
+}))
 
-vi.mock("convex/react", () => ({ useQuery: convexQueryMock }))
+vi.mock("~/lib/effect/api/client", async () => {
+  const { Effect } = await import("effect")
+  return {
+    client: {
+      settings: {
+        getPlayerPreferences: () =>
+          Effect.tryPromise(() => cloudPlayerPreferences()),
+        updatePlayerPreferences: () => Effect.succeed({ success: true }),
+      },
+    },
+  }
+})
 
 import { AccountSettingsSynchronization } from "~/root/account-settings-synchronization"
 
 describe("account settings synchronization", () => {
+  beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.unstubAllGlobals())
 
-  it("reconciles player preferences from the native Convex subscription", async () => {
+  it("reconciles player preferences from the cloud snapshot", async () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
-    convexQueryMock.mockReturnValue({
+    cloudPlayerPreferences.mockResolvedValue({
       rangeSupportedPlayerId: "mpv",
       rangeUnsupportedPlayerId: "mx",
-      revision: 1,
     })
 
     render(<AccountSettingsSynchronization userId="user-one" />)
@@ -30,13 +43,12 @@ describe("account settings synchronization", () => {
     )
   })
 
-  it("skips the subscription and preserves defaults when signed out", () => {
+  it("preserves defaults when signed out", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
-    convexQueryMock.mockReturnValue(undefined)
 
     render(<AccountSettingsSynchronization />)
 
-    expect(convexQueryMock.mock.calls.at(-1)?.[1]).toBe("skip")
+    expect(cloudPlayerPreferences).not.toHaveBeenCalled()
     expect(getPlayerPreferences(undefined)).toEqual({
       rangeSupportedPlayerId: "just",
       rangeUnsupportedPlayerId: "vlc",

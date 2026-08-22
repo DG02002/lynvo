@@ -29,10 +29,12 @@ const SaveList = () => {
     highlightedId,
     setHighlightedId,
     actions,
+    isLoading,
     isHydrating,
   } = useLinks()
+  const isPending = isHydrating || isLoading
   const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =
-    useSaveFolderRoute(links, isHydrating)
+    useSaveFolderRoute(links, isPending)
   const {
     input,
     isSaving,
@@ -54,7 +56,7 @@ const SaveList = () => {
     [links]
   )
 
-  if (isFolderRoute && isHydrating) {
+  if (isFolderRoute && isPending) {
     return (
       <div
         className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"

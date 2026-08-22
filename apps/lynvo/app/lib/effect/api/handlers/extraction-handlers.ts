@@ -3,9 +3,10 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { HttpServerRequest } from "effect/unstable/http"
 import { Api } from "../Api"
 import { ExtractionService } from "../../services/extraction-service"
-import { AuthSessionService } from "../../services/AuthSessionService"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
 import { RequestEventService } from "../../services/request-event-service"
+import { getD1Database } from "../../../../../workers/d1/db"
+import { resolveSessionContext } from "../../../../../workers/d1/sessions"
 
 const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
@@ -26,11 +27,16 @@ export const ExtractionHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const extraction = yield* ExtractionService
           const requestEvent = yield* RequestEventService
-          const authSession = yield* AuthSessionService
+          const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
           const webRequest = yield* webRequestFromSource(request.source)
-          const auth = yield* authSession.getSession(webRequest)
-          const userId = auth.user?.id
+          const database = getD1Database(environment)
+          const session = database
+            ? yield* Effect.promise(() =>
+                resolveSessionContext(webRequest, database, Date.now())
+              )
+            : null
+          const userId = session?.userId
           const inputKind = extractionKind(query.kind) ?? "source"
           const operationId = `${requestEvent.requestId}:${inputKind}`
 
@@ -54,7 +60,6 @@ export const ExtractionHandlers = HttpApiBuilder.group(
             pluginId: query.pluginId,
             kind: extractionKind(query.kind),
             userId,
-            accessToken: auth.accessToken,
           })
           requestEvent.add({
             extraction: {
@@ -74,13 +79,16 @@ export const ExtractionHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const extraction = yield* ExtractionService
           const requestEvent = yield* RequestEventService
-          const authSession = yield* AuthSessionService
+          const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
           const webRequest = yield* webRequestFromSource(request.source)
-          const auth = yield* authSession.getSession(webRequest)
-          const userId = auth.user?.id
-
-          const env = yield* CloudflareEnv
+          const database = getD1Database(environment)
+          const session = database
+            ? yield* Effect.promise(() =>
+                resolveSessionContext(webRequest, database, Date.now())
+              )
+            : null
+          const userId = session?.userId
 
           requestEvent.add({
             operation: "link_metadata_read",
@@ -93,8 +101,7 @@ export const ExtractionHandlers = HttpApiBuilder.group(
             url: query.url,
             requestId: requestEvent.requestId,
             userId,
-            accessToken: auth.accessToken,
-            env,
+            env: environment,
           })
         })
       )

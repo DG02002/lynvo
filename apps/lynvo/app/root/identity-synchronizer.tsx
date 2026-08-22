@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react"
-import type { QueryClient } from "@tanstack/react-query"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 import { z } from "zod"
 
@@ -10,27 +9,24 @@ const identityStatusSchema = z.union([
 
 interface IdentitySynchronizerProps {
   user: { id: string; sessionId?: string } | null
-  queryClient: QueryClient
   children: (validateIdentity: () => void) => ReactNode
 }
 
 export const IdentitySynchronizer = ({
   user,
-  queryClient,
   children,
 }: IdentitySynchronizerProps) => {
   const isReloading = useRef(false)
   const validationGeneration = useRef(0)
   const validationRequest = useRef<Promise<void> | null>(null)
+  const userId = user?.id
+  const sessionId = user?.sessionId
   const validateIdentity = useCallback(() => {
     if (isReloading.current || validationRequest.current) {
       return
     }
     const generation = validationGeneration.current
-    const identity =
-      user?.id && user.sessionId
-        ? { userId: user.id, sessionId: user.sessionId }
-        : undefined
+    const identity = userId && sessionId ? { userId, sessionId } : undefined
     const url = bindSessionIdentityToUrl(
       new URL("/api/auth/session/status", window.location.href),
       identity
@@ -52,21 +48,20 @@ export const IdentitySynchronizer = ({
         const matches =
           response.ok &&
           payload.success &&
-          ((!user &&
+          ((!userId &&
             "status" in payload.data &&
             payload.data.status === "unauthenticated") ||
             ("userId" in payload.data &&
-              payload.data.userId === user?.id &&
-              payload.data.sessionId === user?.sessionId))
+              payload.data.userId === userId &&
+              payload.data.sessionId === sessionId))
         if (matches) {
           return
         }
         isReloading.current = true
-        queryClient.clear()
-        if (user) {
+        if (userId) {
           for (let index = localStorage.length - 1; index >= 0; index -= 1) {
             const key = localStorage.key(index)
-            if (key?.includes(user.id)) {
+            if (key?.includes(userId)) {
               localStorage.removeItem(key)
             }
           }
@@ -80,7 +75,7 @@ export const IdentitySynchronizer = ({
         }
       })
     validationRequest.current = request
-  }, [queryClient, user])
+  }, [sessionId, userId])
 
   useEffect(() => {
     validationGeneration.current += 1

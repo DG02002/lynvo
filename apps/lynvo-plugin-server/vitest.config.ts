@@ -7,7 +7,7 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
         bindings: {
-          LYNVO_PLUGIN_SERVER_API_KEY: "test-api-key",
+          PLUGIN_SERVER_AUTH_KEY: "test-api-key",
         },
       },
     }),

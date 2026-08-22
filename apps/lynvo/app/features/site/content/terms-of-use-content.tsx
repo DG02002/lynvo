@@ -16,7 +16,7 @@ export const TermsOfUseContent = () => (
     </p>
     <p>
       In these terms, <strong>Lynvo</strong> means the website and related
-      hosted service. An <strong>account</strong> is the username-based record
+      hosted service. An <strong>account</strong> is the Google-based record
       used to access Lynvo. A <strong>saved link</strong> is a saved URL and its
       related metadata. A <strong>Plugin Server</strong> processes supported
       URLs. A <strong>Plugin</strong> is a Source-specific integration inside a
@@ -56,21 +56,12 @@ export const TermsOfUseContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="3. Your account and password">
+    <PolicySection title="3. Your account">
       <p>
-        You must provide an available username and create a password that meets
-        Lynvo&apos;s security rules. Keep your credentials private. You&apos;re
-        responsible for activity performed through your account and sessions.
-      </p>
-      <p>
-        <strong className="text-foreground">
-          Lynvo doesn&apos;t collect an email address and can&apos;t recover a
-          forgotten password.
-        </strong>{" "}
-        You can change your password while signed in if you know the current
-        password. If you&apos;re signed out, have no active session, and forget
-        the password, you will permanently lose access to the account and its
-        data. Support can&apos;t reset or bypass the password.
+        Lynvo signs you in with Google. Keep your Google account secure; you
+        can&apos;t use Lynvo without access to the Google account you used to
+        sign in. You&apos;re responsible for activity performed through your
+        account and sessions.
       </p>
       <p>
         Review active sessions in Settings and revoke any session you don&apos;t
@@ -88,8 +79,8 @@ export const TermsOfUseContent = () => (
       </p>
       <p>
         Log in and use Lynvo before the 90-day limit to keep the account active.
-        An automatically deleted account, username configuration, saved links,
-        credentials, and settings can&apos;t be recovered.
+        An automatically deleted account and its saved links, credentials, and
+        settings can&apos;t be recovered.
       </p>
       <p>
         Saved-link records expire separately. The default retention period is 30
@@ -100,10 +91,10 @@ export const TermsOfUseContent = () => (
 
     <PolicySection title="5. Account and request limits">
       <p>
-        Each account currently has a 1 MB storage limit for account records. A
+        Each account currently has a 3 MB storage limit for account records. A
         single saved link can use up to 256 KB, and an account can contain up to
-        100 saved links. These limits cover stored records and metadata, not the
-        size of a linked video file.
+        1,000 saved links. These limits cover stored records and metadata, not
+        the size of a linked video file.
       </p>
       <p>
         Lynvo Plugin Server extraction requests, including Direct Media, share

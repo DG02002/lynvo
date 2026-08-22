@@ -20,9 +20,9 @@ describe("marketing and pricing copy", () => {
   it("states the implemented Free plan limits without unsupported claims", () => {
     render(<PlanSection />)
 
-    expect(screen.getByText("1 MB of storage")).toBeVisible()
+    expect(screen.getByText("3 MB of storage")).toBeVisible()
     expect(
-      screen.getByText("Save up to 100 links, subject to the storage limit.")
+      screen.getByText("Save up to 1,000 links, subject to the storage limit.")
     ).toBeVisible()
     expect(screen.queryByText(/limited time/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/flawlessly|instantly/i)).not.toBeInTheDocument()
@@ -60,9 +60,9 @@ describe("marketing and pricing copy", () => {
       .map((faq) => `${faq.question} ${faq.answer}`)
       .join(" ")
 
-    expect(faqCopy).toContain("1 MB")
+    expect(faqCopy).toContain("3 MB")
     expect(faqCopy).toContain("256 KB")
-    expect(faqCopy).toContain("100 saved links")
+    expect(faqCopy).toContain("1,000 saved links")
     expect(faqCopy).toContain("200-request monthly allowance")
     expect(faqCopy).toContain("30-request daily limit")
   })

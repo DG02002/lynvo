@@ -55,4 +55,46 @@ describe("parseRealtimeMessage", () => {
       )
     ).toBeNull()
   })
+
+  it("accepts data-changed frames carrying a version", () => {
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({ type: "data-changed", payload: { version: 12 } })
+      )
+    ).toEqual({ type: "data-changed", payload: { version: 12 } })
+    expect(
+      parseRealtimeMessage(JSON.stringify({ type: "data-changed" }))
+    ).toBeNull()
+  })
+
+  it("accepts session hello frames with an optional data version", () => {
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({
+          type: "session_hello",
+          userId: "user-1",
+          sessionId: "session-1",
+        })
+      )
+    ).toEqual({
+      type: "session_hello",
+      userId: "user-1",
+      sessionId: "session-1",
+    })
+    expect(
+      parseRealtimeMessage(
+        JSON.stringify({
+          type: "session_hello",
+          userId: "user-1",
+          sessionId: "session-1",
+          dataVersion: 9,
+        })
+      )
+    ).toEqual({
+      type: "session_hello",
+      userId: "user-1",
+      sessionId: "session-1",
+      dataVersion: 9,
+    })
+  })
 })

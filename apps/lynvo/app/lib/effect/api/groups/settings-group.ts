@@ -2,37 +2,16 @@ import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { CsrfMiddleware, WebAuth } from "../Middleware"
 import {
-  ConvexApiError,
+  BackendApiError,
   CsrfApiError,
   UnauthorizedApiError,
 } from "../../errors"
-import { LynvoUsageSchema } from "../usage-schemas"
 
 const PlayerIdSchema = Schema.Literals(["just", "vlc", "mpv", "mx"])
 
 const PlayerPreferencesSchema = Schema.Struct({
   rangeSupportedPlayerId: Schema.optional(PlayerIdSchema),
   rangeUnsupportedPlayerId: Schema.optional(PlayerIdSchema),
-})
-
-const StorageUsageSchema = Schema.Struct({
-  estimatedBytes: Schema.Number,
-  enforcedBytes: Schema.Number,
-  operationalBytes: Schema.Number,
-  linkBytes: Schema.Number,
-  pluginServerBytes: Schema.Number,
-  pluginDomainBytes: Schema.Number,
-  authBytes: Schema.Number,
-  profileBytes: Schema.Number,
-  savedLinkCount: Schema.Number,
-  averageLinkBytes: Schema.Number,
-  storageLimitBytes: Schema.Number,
-  storageWarningBytes: Schema.Number,
-  linkLimitBytes: Schema.Number,
-  retentionDays: Schema.Number,
-  retentionDayOptions: Schema.Array(Schema.Number),
-  defaultRetentionDays: Schema.Number,
-  maxRetentionDays: Schema.Number,
 })
 
 const UserSessionSchema = Schema.Struct({
@@ -48,77 +27,34 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
     HttpApiEndpoint.post("touchActivity", "/activity", {
       payload: Schema.Struct({ deviceName: Schema.String }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("getPlayerPreferences", "/player", {
       success: PlayerPreferencesSchema,
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.patch("updatePlayerPreferences", "/player", {
       payload: PlayerPreferencesSchema,
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.get("getStorageUsage", "/storage", {
-      success: StorageUsageSchema,
-      error: [UnauthorizedApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.get("previewStorageRetention", "/storage/retention", {
-      query: Schema.Struct({
-        days: Schema.NumberFromString,
-        timeBucket: Schema.NumberFromString,
-      }),
-      success: Schema.Struct({ expiredLinkCount: Schema.Number }),
-      error: [UnauthorizedApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.patch("updateStorageRetention", "/storage/retention", {
-      payload: Schema.Struct({
-        days: Schema.Number,
-        deleteExpiredLinks: Schema.Boolean,
-      }),
-      success: Schema.Struct({
-        success: Schema.Boolean,
-        deletedLinks: Schema.Number,
-      }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.delete("clearLinks", "/storage/links", {
-      success: Schema.Struct({
-        success: Schema.Boolean,
-        deletedLinks: Schema.Number,
-      }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("listSessions", "/security/sessions", {
       success: Schema.Array(UserSessionSchema),
-      error: [UnauthorizedApiError, ConvexApiError],
+      error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("revokeSession", "/security/sessions/:sessionId", {
       params: { sessionId: Schema.String },
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("revokeAllSessions", "/security/sessions", {
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("deleteAccount", "/security/account", {
-      payload: Schema.Struct({ confirmUsername: Schema.String }),
+      payload: Schema.Struct({ confirmEmail: Schema.String }),
       success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.get("getLynvoUsage", "/usage", {
-      query: Schema.Struct({ timeBucket: Schema.NumberFromString }),
-      success: LynvoUsageSchema,
-      error: [UnauthorizedApiError, ConvexApiError],
-    }),
-    HttpApiEndpoint.patch("changePassword", "/security/password", {
-      payload: Schema.Struct({
-        currentPassword: Schema.String,
-        newPassword: Schema.String,
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
-      error: [UnauthorizedApiError, CsrfApiError, ConvexApiError],
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
   .middleware(WebAuth)

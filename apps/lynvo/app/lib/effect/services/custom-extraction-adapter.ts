@@ -1,7 +1,6 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { ExtractionError, ValidationError } from "../errors"
-import type { ConvexServiceContract } from "./ConvexService"
 import {
   discoverCustomPlugin,
   extractFromCustomPluginServer,
@@ -18,18 +17,14 @@ import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface CustomExtractionAdapterOptions {
+  readonly environment: Env
   readonly targetUrl: string
+  readonly userId: string
   readonly requestId: string
   readonly pluginServerId?: string
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
-}
-
-export interface AuthenticatedCustomExtractionAdapterOptions extends CustomExtractionAdapterOptions {
-  readonly userId: string
-  readonly accessToken: string
-  readonly serviceToken: string
 }
 
 const selectCustomPlugin = Effect.fn(
@@ -77,10 +72,9 @@ const selectCustomPlugin = Effect.fn(
 export const extractWithCustomPluginServer = Effect.fn(
   "CustomExtractionAdapter.extract"
 )(function* (
-  convex: ConvexServiceContract,
   credentialVault: PluginCredentialVaultContract,
   pluginServers: ReadonlyArray<RegisteredPluginServer>,
-  options: AuthenticatedCustomExtractionAdapterOptions
+  options: CustomExtractionAdapterOptions
 ): Effect.fn.Return<
   ExtractionResult | undefined,
   ExtractionError | ValidationError
@@ -90,12 +84,11 @@ export const extractWithCustomPluginServer = Effect.fn(
     return undefined
   }
   const credentials = route.plugin
-    ? yield* resolvePluginCredential(convex, credentialVault, {
+    ? yield* resolvePluginCredential(credentialVault, {
+        environment: options.environment,
         targetUrl: options.targetUrl,
         userId: options.userId,
-        accessToken: options.accessToken,
-        serviceToken: options.serviceToken,
-        pluginServerId: route.pluginServer._id,
+        pluginServerId: route.pluginServer.id,
         plugin: route.plugin,
         inlineBasicAuth: options.inlineBasicAuth,
       })

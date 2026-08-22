@@ -55,7 +55,7 @@ const CustomPluginServerRow = ({
     pluginServer.manifest,
     requestOrigin
   )
-  const sourceListId = `custom-plugin-server-sources-${pluginServer._id}`
+  const sourceListId = `custom-plugin-server-sources-${pluginServer.id}`
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down
   const isUsable = isPluginServerUsable(pluginServer)
@@ -90,7 +90,7 @@ const CustomPluginServerRow = ({
             checked={isUsable}
             disabled={isDown}
             onCheckedChange={() =>
-              onTogglePluginServer(pluginServer._id, pluginServer.enabled)
+              onTogglePluginServer(pluginServer.id, pluginServer.enabled)
             }
             aria-label={
               isDown
@@ -115,7 +115,7 @@ const CustomPluginServerRow = ({
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuGroup>
                 <DropdownMenuItem
-                  onClick={() => onRefreshPluginServer(pluginServer._id)}
+                  onClick={() => onRefreshPluginServer(pluginServer.id)}
                 >
                   <HugeiconsIcon icon={Refresh01Icon} />
                   Refresh
@@ -225,7 +225,7 @@ const CustomPluginServerRow = ({
         disabled={isDeleting}
         onConfirm={() => {
           setIsDeleting(true)
-          void onDeletePluginServer(pluginServer._id).finally(() => {
+          void onDeletePluginServer(pluginServer.id).finally(() => {
             setIsDeleting(false)
             setIsDeleteDialogOpen(false)
           })
@@ -254,7 +254,7 @@ export const CustomPluginServerTable = ({
   <SettingsList>
     {pluginServers.map((pluginServer) => (
       <CustomPluginServerRow
-        key={pluginServer._id}
+        key={pluginServer.id}
         pluginServer={pluginServer}
         requestOrigin={requestOrigin}
         onDeletePluginServer={onDeletePluginServer}

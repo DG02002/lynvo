@@ -19,14 +19,13 @@ Use the latest Node.js and pnpm releases.
 
 Create the following accounts before setting up Lynvo:
 
-- [Convex](https://dashboard.convex.dev/) for the application database and
-  backend functions.
-- [Cloudflare](https://dash.cloudflare.com/sign-up) for Workers, Turnstile, KV,
-  and Durable Objects.
+- [Cloudflare](https://dash.cloudflare.com/sign-up) for Workers, D1, and
+  Durable Objects.
+- [Google](https://console.cloud.google.com/) for OAuth sign-in credentials.
 
-You need a Convex project and deployment, Cloudflare Turnstile keys, and a
-Cloudflare KV namespace for authentication rate limits. The free tiers are
-enough for local development.
+You need a local D1 database (Miniflare provisions one automatically for
+development) and Google OAuth client credentials. The free tiers are enough
+for local development.
 
 ## Install the workspace
 
@@ -37,85 +36,21 @@ pnpm install --frozen-lockfile
 pnpm secrets:local
 ```
 
-`pnpm secrets:local` configures one shared, cryptographically random
-`LYNVO_PLUGIN_SERVER_API_KEY` in the ignored local secret files for Lynvo and
-the Lynvo Plugin Server. It preserves existing variables, refuses to overwrite
+`pnpm secrets:local` configures matching local secret values
+(`MANAGED_PLUGIN_SERVER_API_KEY` for Lynvo and `PLUGIN_SERVER_AUTH_KEY` for
+the Lynvo Plugin Server). It preserves existing variables, refuses to overwrite
 conflicting keys, never prints the key, and sets both files to owner-only
 permissions (`0600`). It is safe to run repeatedly.
 
 Never commit `.dev.vars`, `.env`, credentials, test links, or `.repos/`.
 
-## Create and connect a Convex project
-
-1. Log in to the [Convex dashboard](https://dashboard.convex.dev/) and create
-   an account if you do not have one.
-2. Log the Convex CLI into that account. If this checkout already has an
-   anonymous local deployment, the CLI offers to link it to your account.
-3. Create a new Convex project or select an existing development project.
-
-```sh
-pnpm --filter @lynvo/app exec convex login
-pnpm --filter @lynvo/app exec convex dev --once
-```
-
-This command connects the checkout to the selected Convex project, creates
-`apps/lynvo/.env.local`, pushes the schema and backend functions, and generates
-the Convex client types. Keep `.env.local`; both `convex dev` and
-`pnpm dev:local` use the selected deployment from that file.
-
-Initialize Convex Auth from the app directory:
-
-```sh
-cd apps/lynvo
-pnpx @convex-dev/auth
-cd ../..
-```
-
-Use `http://localhost:5173` for `SITE_URL` unless you changed the local web
-server port. The initializer configures these values on the selected
-development deployment:
-
-- `SITE_URL`: browser-facing Lynvo URL
-- `JWT_PRIVATE_KEY`: private signing key
-- `JWKS`: public JSON Web Key Set
-
-The initializer detects the existing `convex/auth.config.ts`, `convex/auth.ts`,
-and `convex/http.ts` files. Do not replace their customized implementations.
-Confirm each file already satisfies the initializer prompt, then continue.
-
-Verify the deployment contains all three keys without copying their values:
-
-```sh
-pnpm --filter @lynvo/app exec convex env list | sed 's/=.*/=<redacted>/'
-```
-
-Keep `JWT_PRIVATE_KEY` and `JWKS` in the Convex deployment environment. Do not
-add them to `.dev.vars`; that file configures the Cloudflare Worker and cannot
-configure Convex functions.
-
-Create a random gateway secret and store the same value in Convex and
-`apps/lynvo/.dev.vars`:
-
-```sh
-openssl rand -base64 32
-pnpm --filter @lynvo/app exec convex env set AUTH_GATEWAY_SECRET
-```
-
-Paste the generated value when the Convex CLI prompts for it. Add the same
-value to `.dev.vars` in the next section.
-
-Run `convex dev --once` again whenever you want to push and validate Convex
-changes without leaving the watcher running.
-
 ## Local configuration
 
-Create `apps/lynvo/.dev.vars` with the Worker-only configuration:
+Create `apps/lynvo/.dev.vars` with the Worker configuration:
 
 ```env
-VITE_CONVEX_URL=https://your-deployment.convex.cloud
-AUTH_GATEWAY_SECRET=replace-with-the-same-secret-used-in-convex
-TURNSTILE_SITE_KEY=0x...
-TURNSTILE_SECRET_KEY=0x...
+GOOGLE_CLIENT_ID=your-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-oauth-client-secret
 PLUGIN_CREDENTIAL_ENCRYPTION_KEY=base64-encoded-32-byte-key
 ```
 
@@ -123,18 +58,17 @@ Generate `PLUGIN_CREDENTIAL_ENCRYPTION_KEY` with `openssl rand -base64 32`. Keep
 the same key for the lifetime of an environment; replacing it makes existing
 encrypted Plugin Credentials unreadable.
 
-Use the gateway secret generated in the previous section as
-`AUTH_GATEWAY_SECRET`. Copy `VITE_CONVEX_URL` from `apps/lynvo/.env.local`.
+Register `http://localhost:5173/api/auth/callback/google` as an authorized
+redirect URI on the Google OAuth client so local sign-in completes.
 
 Use unquoted values for URLs and ordinary single-line values. Use `""` for an
 intentionally empty value. Quote values that contain spaces, `#`, or leading
 or trailing whitespace.
 
 `pnpm dev` starts the Lynvo web application and the Lynvo Plugin Server as an
-auxiliary Worker, using the Convex URL in `.dev.vars`. `pnpm dev:local` starts
-those two processes plus the Convex watcher. It first validates the selected
-Convex deployment, then creates an ignored `.dev.vars.local` and replaces only
-`VITE_CONVEX_URL` with the URL from `.env.local`.
+auxiliary Worker. `pnpm dev:local` starts the same stack against the local
+Cloudflare environment (`CLOUDFLARE_ENV=local`), where Miniflare provides the
+D1 database and applies `apps/lynvo/migrations/` automatically.
 
 ## Development commands
 
@@ -142,14 +76,11 @@ Convex deployment, then creates an ignored `.dev.vars.local` and replaces only
 # Lynvo web application and auxiliary Lynvo Plugin Server using .dev.vars
 pnpm dev
 
-# Lynvo, auxiliary Lynvo Plugin Server, and Convex watcher using .env.local
+# Same stack against the local Cloudflare environment (Miniflare D1)
 pnpm dev:local
 
 # Same local stack, exposed to other devices on the local network
 pnpm dev:local --host
-
-# Same local stack without per-account usage limits for plugin testing
-pnpm dev:local --host --no-usage
 
 # Lynvo Plugin Server by itself for standalone debugging
 pnpm --filter @lynvo/lynvo-plugin-server dev
@@ -160,10 +91,6 @@ pnpm --filter @lynvo/app cf-typegen
 # Inspect dependency updates
 pnpm -r outdated
 ```
-
-Use `--no-usage` for repeated plugin testing without advancing account usage
-counters. Omit it to test the normal daily and monthly limits. The global
-extraction safety limit remains enabled in both modes.
 
 ## Test TVBro-specific UI
 
@@ -221,7 +148,7 @@ enforce their own finite counters through the mandatory authenticated
 
 - 200 Lynvo Plugin extractions per account per UTC month, shared across all
   first-party Plugins hosted by the Lynvo Plugin Server.
-- 15 Lynvo Plugin extractions per account per UTC day.
+- 30 Lynvo Plugin extractions per account per UTC day.
 - 20,000 Lynvo Plugin extraction operations globally per UTC day.
 
 The global daily ceiling intentionally reserves most of the Workers Free daily
@@ -234,21 +161,9 @@ Server Protocol. Lynvo separately keeps the per-account quotas above because
 the binding credential identifies Lynvo as a service, not an individual
 account.
 
-Use `pnpm dev:local --host --no-usage` for repeated Plugin Server testing
-without advancing account usage counters. Omit `--no-usage` to test the normal
-daily and monthly account quotas. The global daily extraction safety limit
-always remains enabled.
-
-### Reset every Lynvo account
-
-Run this from the repository root against the configured Convex deployment:
-
-```bash
-pnpm --filter @lynvo/app usage:reset
-```
-
-The reset advances a global usage epoch. Existing counter rows remain available
-for later cleanup but stop affecting every account immediately.
+The limit values live in `apps/lynvo/workers/constants.ts`. Adjust them there
+when a change is intended for review; do not disable limits locally through
+environment flags.
 
 ## Required quality gates
 
@@ -278,25 +193,23 @@ command.
 
 Before deployment:
 
-- Use `https://lynvo.dg02002.workers.dev` as the production Lynvo URL and
-  Convex Auth `SITE_URL`.
-- Replace the placeholder `AUTH_RATE_LIMITS` KV namespace id in `apps/lynvo/wrangler.jsonc`.
-- Configure the production Convex URL and Turnstile values.
-- Choose the production Lynvo URL before initializing production Convex Auth.
-- Use the same `AUTH_GATEWAY_SECRET` in Lynvo and Convex.
+- Run `wrangler d1 create lynvo-db` (plus a preview database) and replace the
+  placeholder database IDs in `apps/lynvo/wrangler.jsonc` (`d1_databases` block
+  at top level and under `env.local`).
+- Register `https://lynvo.dg02002.workers.dev/api/auth/callback/google` in the
+  Google Cloud console and configure the `GOOGLE_CLIENT_ID` /
+  `GOOGLE_CLIENT_SECRET` Worker secrets.
 - Generate a production-only `PLUGIN_CREDENTIAL_ENCRYPTION_KEY` and retain it securely.
-- Set `LYNVO_PLUGIN_SERVER_API_KEY` independently on both Workers with the same value.
+- Set `MANAGED_PLUGIN_SERVER_API_KEY` on Lynvo and `PLUGIN_SERVER_AUTH_KEY` on Lynvo Plugin Server with the same matching value.
 - Confirm the Lynvo Plugin Server has `workers_dev` disabled and no public route.
 - Confirm `LYNVO_PLUGIN_SERVER` targets the intended Worker in the same Cloudflare account.
 
-Convex is the application database. Lynvo’s Durable Object coordinates realtime
+D1 is the application database. Sessions are opaque HttpOnly cookies resolved
+to D1 rows; sign-in is Google-only. Lynvo’s Durable Object coordinates realtime
 connections; the Lynvo Plugin Server’s Durable Object enforces global extraction
-capacity. Keep both Wrangler migrations intact.
-
-Saved links and account preferences use authenticated native Convex queries and
-mutations. Browser Convex credentials are short lived, held only in memory, and
-minted through the same-origin token endpoint. Read
-`docs/adr/0002-browser-convex-authentication.md` before changing this path.
+capacity. Keep both Wrangler migrations intact. Schema changes ship as SQL
+files under `apps/lynvo/migrations/`; CI applies them with
+`wrangler d1 migrations apply DB --remote` before promoting a new version.
 
 ## Deployment order
 
@@ -304,38 +217,27 @@ Deployment requires explicit authorization. Never deploy as part of routine
 implementation or verification.
 
 1. Run `wrangler whoami` and verify the intended Cloudflare account.
-2. Configure the Lynvo Plugin Server secret and usage-limiter Durable Object migration.
-3. Deploy `@lynvo/lynvo-plugin-server` first.
-4. Validate `/manifest`, `/verify`, `/usage`, and `/extract` in a controlled environment.
-5. Deploy the Convex schema and functions to create or update the production deployment.
-6. Run the Convex Auth initializer with `--prod` from `apps/lynvo`.
-7. Generate a production gateway secret and set the same value in Convex and Lynvo.
-8. Configure the remaining Lynvo Worker secrets and production Convex URL.
-9. Confirm production contains `SITE_URL`, `JWT_PRIVATE_KEY`, `JWKS`, and `AUTH_GATEWAY_SECRET`.
-10. Deploy `@lynvo/app` with `LYNVO_PLUGIN_SERVER` bound to the exact target.
-11. Smoke-test account creation, login, device login, extraction, logs, and counters.
+2. Create the production D1 database and record its id in `wrangler.jsonc`.
+3. Configure the Lynvo Plugin Server `PLUGIN_SERVER_AUTH_KEY` secret and usage-limiter Durable Object migration.
+4. Deploy `@lynvo/lynvo-plugin-server` first.
+5. Validate `/manifest`, `/verify`, `/usage`, and `/extract` in a controlled environment.
+6. Apply D1 migrations: `pnpm --filter @lynvo/app exec wrangler d1 migrations apply DB --remote`.
+7. Configure the remaining Lynvo Worker secrets (`GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET`, `PLUGIN_CREDENTIAL_ENCRYPTION_KEY`,
+   `MANAGED_PLUGIN_SERVER_API_KEY`).
+8. Deploy `@lynvo/app` with `LYNVO_PLUGIN_SERVER` bound to the exact target.
+9. Smoke-test Google sign-in, device login, extraction, logs, and counters.
 
 ```sh
 pnpm --filter @lynvo/lynvo-plugin-server run deploy
-pnpm --filter @lynvo/app exec convex deploy
-cd apps/lynvo
-pnpx @convex-dev/auth --prod
-cd ../..
-openssl rand -base64 32
-pnpm --filter @lynvo/app exec convex env set --prod AUTH_GATEWAY_SECRET
-pnpm --filter @lynvo/app exec convex env list --prod | sed 's/=.*/=<redacted>/'
+pnpm --filter @lynvo/app exec wrangler d1 migrations apply DB --remote
 pnpm deploy:lynvo
 ```
 
-Enter the production Lynvo URL when the Auth initializer asks for `SITE_URL`.
-Paste the generated gateway secret when the Convex CLI prompts for it, then set
-the same value as the Lynvo Worker’s `AUTH_GATEWAY_SECRET`. Generate separate
-Auth keys for development and production. Never copy `JWT_PRIVATE_KEY` between
-deployments.
-
-For rollback, restore the recorded Lynvo Worker version before removing or
-rolling back a target version it still expects. Do not restore the deleted
-in-process Lynvo Plugin Servers as an emergency fallback.
+For data rollback, use D1 Time Travel point-in-time recovery. For code
+rollback, restore the recorded Lynvo Worker version before removing or rolling
+back a target version it still expects. Do not restore the deleted in-process
+Lynvo Plugin Servers as an emergency fallback.
 
 ## Cloudflare Builds monorepo setup
 

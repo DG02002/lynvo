@@ -33,7 +33,7 @@ export const getLynvoPluginServerManifest = Effect.fn(
   return yield* requestPluginServer(
     () =>
       createLynvoPluginServerClient(environment).getManifest({
-        apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
+        apiKey: environment.MANAGED_PLUGIN_SERVER_API_KEY,
         requestId,
         operationId,
       }),
@@ -53,7 +53,7 @@ export const discoverLynvoPlugin = Effect.fn(
   return yield* requestPluginServer(
     () =>
       createLynvoPluginServerClient(environment).discover(targetUrl, {
-        apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
+        apiKey: environment.MANAGED_PLUGIN_SERVER_API_KEY,
         basicAuth,
         requestId,
         operationId,
@@ -81,17 +81,25 @@ export const getLynvoPluginServerMetadata = (
 export const findLynvoPlugin = (
   manifest: PluginServerManifest,
   targetUrl: string,
-  pluginId?: string
+  pluginId?: string,
+  allowProbe = true
 ): PluginMetadata | undefined => {
   const sources = getLynvoManifestExtension(manifest).plugins ?? []
-  return pluginId
-    ? sources.find((candidate) => candidate.id === pluginId)
-    : (sources.find(
-        (candidate) =>
-          candidate.matchStrategy !== "probe" &&
-          candidate.credential === undefined &&
-          matchPluginServerUrl(targetUrl, candidate.matchers ?? [])
-      ) ?? sources.find((candidate) => candidate.matchStrategy === "probe"))
+  if (pluginId) {
+    return sources.find((candidate) => candidate.id === pluginId)
+  }
+  const staticMatch = sources.find(
+    (candidate) =>
+      candidate.matchStrategy !== "probe" &&
+      candidate.credential === undefined &&
+      matchPluginServerUrl(targetUrl, candidate.matchers ?? [])
+  )
+  if (staticMatch) {
+    return staticMatch
+  }
+  return allowProbe
+    ? sources.find((candidate) => candidate.matchStrategy === "probe")
+    : undefined
 }
 
 export const extractFromLynvoPluginServer = Effect.fn(
@@ -110,7 +118,7 @@ export const extractFromLynvoPluginServer = Effect.fn(
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const client = createLynvoPluginServerClient(environment)
   const options = {
-    apiKey: environment.LYNVO_PLUGIN_SERVER_API_KEY,
+    apiKey: environment.MANAGED_PLUGIN_SERVER_API_KEY,
     requestId,
     operationId,
     ...credentials,

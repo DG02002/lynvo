@@ -2,7 +2,8 @@
 
 ## Status
 
-Superseded by [ADR 0002](0002-browser-convex-authentication.md).
+Superseded by [ADR 0003](0003-replace-convex-with-d1.md) (realtime sections; the
+previously referenced browser-Convex authentication ADR was removed).
 
 ## Context
 

@@ -1,5 +1,4 @@
 import * as React from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
@@ -13,23 +12,16 @@ import {
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
-import { revokeWorkerSession } from "~/lib/worker-auth-session-http"
+import { revokeSession } from "~/lib/session-http"
 import { client } from "~/lib/effect/api/client"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { useAsyncResource } from "~/hooks/use-async-resource"
 
 type SettingsUser = {
   id: string
-  username: string
+  email: string
   sid: string
 }
-
-const getSecuritySessionsQueryKey = (userId: string, sessionId: string) => [
-  "settings",
-  "security",
-  "sessions",
-  userId,
-  sessionId,
-]
 
 export function SecuritySettings({
   user,
@@ -40,16 +32,11 @@ export function SecuritySettings({
   showActiveSessions: boolean
   onShowActiveSessionsChange: (showActiveSessions: boolean) => void
 }) {
-  const queryClient = useQueryClient()
-  const securitySessionsQueryKey = getSecuritySessionsQueryKey(
-    user.id,
-    user.sid
+  const { data, reload } = useAsyncResource(() =>
+    Effect.runPromise(client.settings.listSessions())
   )
-  const { data: sessions = [] } = useQuery({
-    queryKey: securitySessionsQueryKey,
-    queryFn: () => Effect.runPromise(client.settings.listSessions()),
-  })
-  const [deleteConfirmUsername, setDeleteConfirmUsername] = React.useState("")
+  const sessions = data ?? []
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [revokeAllDialogOpen, setRevokeAllDialogOpen] = React.useState(false)
   const [busy, setBusy] = React.useState<string | null>(null)
@@ -58,7 +45,7 @@ export function SecuritySettings({
     setBusy("revokeAll")
     try {
       await Effect.runPromise(client.settings.revokeAllSessions())
-      await revokeWorkerSession()
+      await revokeSession()
       window.location.href = "/"
     } catch (error) {
       toast.error(
@@ -74,15 +61,15 @@ export function SecuritySettings({
 
   const handleDeleteAccount = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (deleteConfirmUsername.trim() !== user.username) {
-      toast.error(`Enter ${user.username} exactly.`)
+    if (deleteConfirmEmail.trim() !== user.email) {
+      toast.error(`Enter ${user.email} exactly.`)
       return
     }
     setBusy("delete")
     try {
       await Effect.runPromise(
         client.settings.deleteAccount({
-          payload: { confirmUsername: deleteConfirmUsername },
+          payload: { confirmEmail: deleteConfirmEmail },
         })
       )
       toast.success("Account deleted")
@@ -112,9 +99,7 @@ export function SecuritySettings({
                   params: { sessionId },
                 })
               )
-              await queryClient.invalidateQueries({
-                queryKey: securitySessionsQueryKey,
-              })
+              await reload()
               toast.success("Session logged out")
             } catch (error) {
               toast.error(
@@ -155,18 +140,6 @@ export function SecuritySettings({
       <SettingsPanel>
         <SettingsList>
           <SettingsActionRow
-            as="link"
-            to="/auth/reset-password/new-password"
-            className="hover:bg-transparent cursor-pointer select-none"
-          >
-            <SettingsRowInfo label="Password" />
-            <div className="flex items-center gap-1.5 text-foreground">
-              <span className="text-sm tracking-widest">••••••</span>
-              <HugeiconsIcon icon={ChevronRightIcon} className="size-5" />
-            </div>
-          </SettingsActionRow>
-
-          <SettingsActionRow
             onClick={() => onShowActiveSessionsChange(true)}
             className="hover:bg-transparent cursor-pointer select-none"
           >
@@ -197,12 +170,12 @@ export function SecuritySettings({
       </SettingsPanel>
 
       <DeleteAccountDialog
-        username={user.username}
+        email={user.email}
         busy={busy}
         open={deleteDialogOpen}
-        confirmUsername={deleteConfirmUsername}
+        confirmEmail={deleteConfirmEmail}
         onOpenChange={setDeleteDialogOpen}
-        onConfirmUsernameChange={setDeleteConfirmUsername}
+        onConfirmEmailChange={setDeleteConfirmEmail}
         onDeleteAccount={handleDeleteAccount}
       />
     </>

@@ -2,22 +2,46 @@
 
 import { vi } from "vitest"
 import { csrfCookie } from "../app/lib/csrf"
+import { createFakeD1Database } from "./support/fake-d1"
 
 vi.mock("virtual:react-router/server-build", () => ({}))
 vi.mock("cloudflare:workers", () => ({ DurableObject: class {} }))
-vi.mock("convex/browser", () => ({
-  ConvexHttpClient: class {
-    setAuth = () => undefined
-    query = async () => [{ workerSessionId: "opaque-session-id" }]
-    action = async () => ({ success: true })
-    mutation = async () => ({ workerSessionIds: ["opaque-session-id"] })
-  },
-}))
 
-describe("Worker account erasure HTTP behavior", () => {
-  it("revokes the opaque Auth Session in the successful deletion response", async () => {
-    const revokedSessionIds: string[] = []
+describe("Account erasure HTTP behavior", () => {
+  it("expires the session cookie in the successful deletion response", async () => {
+    let didCloseRealtimeAccount = false
     const csrfCookieHeader = await csrfCookie.serialize("test-csrf-token")
+    const database = createFakeD1Database((sql) => {
+      if (sql.includes("INNER JOIN users u")) {
+        return {
+          row: {
+            session_id: "session-1",
+            user_id: "user-1",
+            email: "user@example.com",
+            last_seen_at: Date.now(),
+            expires_at: Date.now() + 60_000,
+          },
+        }
+      }
+      if (sql.includes("google_subject, email, display_name")) {
+        return {
+          row: {
+            id: "user-1",
+            google_subject: "google-subject",
+            email: "user@example.com",
+            display_name: null,
+            avatar_url: null,
+            data_version: 1,
+            erasure_pending_at: null,
+            storage_retention_days: 30,
+            range_supported_player_id: null,
+            range_unsupported_player_id: null,
+            created_at: Date.now(),
+          },
+        }
+      }
+      return undefined
+    })
     const { default: worker } = await import("../workers/app")
     const response = await worker.fetch(
       new Request(
@@ -26,45 +50,34 @@ describe("Worker account erasure HTTP behavior", () => {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Cookie: `__Host-lynvo-session=opaque-session-id; ${csrfCookieHeader}`,
+            Cookie: `lynvo_session=opaque-session-id; ${csrfCookieHeader}`,
             Origin: "https://lynvo.dg02002.workers.dev",
             "X-CSRF-Token": "test-csrf-token",
+            "X-Lynvo-Expected-User-Id": "user-1",
+            "X-Lynvo-Expected-Session-Id": "session-1",
           },
-          body: JSON.stringify({ confirmUsername: "darshan" }),
+          body: JSON.stringify({ confirmEmail: "user@example.com" }),
         }
       ),
       {
         ENVIRONMENT: "production",
-        VITE_CONVEX_URL: "https://convex.example",
-        AUTH_GATEWAY_SECRET: "test-gateway-secret",
-        WORKER_AUTH_SESSION: {
-          getByName: (sessionId: string) => ({
+        DB: database,
+        USER_REALTIME_ROOM: {
+          getByName: () => ({
             fetch: async (_url: string, init?: RequestInit) => {
-              if (init?.method === "DELETE") {
-                revokedSessionIds.push(sessionId)
-                return new Response(null, { status: 204 })
+              if (init?.method === "POST") {
+                didCloseRealtimeAccount = true
               }
-              return Response.json({
-                convexSessionId: "authSessions:456",
-                accessToken: "access-token",
-                refreshToken: "refresh-token",
-                createdAt: 1,
-                expiresAt: Date.now() + 60_000,
-              })
+              return Response.json({ success: true })
             },
           }),
         },
-        USER_REALTIME_ROOM: {
-          getByName: () => ({
-            fetch: async () => Response.json({ success: true }),
-          }),
-        },
-      } as Env,
+      } as unknown as Env,
       { waitUntil: () => undefined } as ExecutionContext
     )
 
     expect(response.status).toBe(200)
-    expect(revokedSessionIds).toEqual(["opaque-session-id"])
+    expect(didCloseRealtimeAccount).toBe(true)
     expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0")
     await expect(response.json()).resolves.toEqual({ success: true })
   })

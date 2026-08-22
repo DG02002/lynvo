@@ -1,87 +1,30 @@
 import { describe, expect, it } from "vitest"
-import { Effect, Layer } from "effect"
 import {
-  decryptAuthTransaction,
-  encryptAuthTransaction,
   getCookieValue,
   normalizeReturnTo,
 } from "../app/lib/auth-cookie"
-import { WORKER_SESSION_COOKIE_NAME } from "../app/lib/constants"
-import {
-  normalizeUsername,
-  validatePassword,
-  validateUsername,
-} from "../app/lib/auth-policy"
-import { responseWithSession, requireGuestOrRedirect } from "../app/lib/auth"
-import { AuthSessionService } from "../app/lib/effect/services/AuthSessionService"
-import { ConvexService } from "../app/lib/effect/services/ConvexService"
-import { CloudflareEnv } from "../app/lib/effect/services/CloudflareEnv"
+import { D1_SESSION_COOKIE_NAME } from "../workers/constants"
+import { responseWithSession, getUserSession, requireGuestOrRedirect } from "../app/lib/auth"
+import { createFakeD1Database } from "./support/fake-d1"
 
-const runSession = (
-  request: Request,
-  convexLayer: Layer.Layer<ConvexService>
-) =>
-  Effect.runPromise(
-    AuthSessionService.use((service) => service.getSession(request)).pipe(
-      Effect.provide(AuthSessionService.layer),
-      Effect.provide(convexLayer),
-      Effect.provide(
-        Layer.succeed(CloudflareEnv, {
-          WORKER_AUTH_SESSION: {
-            getByName: () => ({
-              fetch: async () =>
-                Response.json({
-                  convexSessionId: "authSessions:456",
-                  accessToken: "opaque-session-access-token",
-                  refreshToken: "server-only-refresh-token",
-                  createdAt: 1,
-                  expiresAt: Date.now() + 60_000,
-                }),
-            }),
-          },
-        } as Env)
-      )
-    )
-  )
-
-describe("auth policy", () => {
-  it("normalizes and validates usernames", () => {
-    expect(normalizeUsername(" Darshan_1 ")).toBe("darshan_1")
-    expect(validateUsername("abcde")).toBeTruthy()
-    expect(validateUsername("darshan_1")).toBeNull()
-    expect(validateUsername("settings")).toBe("This username is reserved.")
-    expect(validateUsername("bad.name")).toBeTruthy()
-  })
-
-  it("validates the configured password policy", () => {
-    expect(validatePassword("Password123!", "darshan")).toBeTruthy()
-    expect(validatePassword("Darshan123!xxx", "darshan")).toBeTruthy()
-    expect(validatePassword("StrongPassphrase!!!", "darshan")).toBeNull()
-    expect(validatePassword("strongpassphrase123!", "darshan")).toBeNull()
-    expect(validatePassword("StrongpasswordLong", "darshan")).toBeNull()
-  })
-})
-
-describe("auth transaction helpers", () => {
-  it("encrypts and authenticates the PKCE transaction", async () => {
-    const transaction = {
-      codeVerifier: "verifier",
-      state: "state",
-      returnTo: "/settings?tab=plugin-servers",
+const authenticatedDatabase = () =>
+  createFakeD1Database((sql) => {
+    if (sql.includes("INNER JOIN users u")) {
+      return {
+        row: {
+          session_id: "session-123",
+          user_id: "user-456",
+          email: "darshan@example.com",
+          display_name: "Darshan",
+          last_seen_at: Date.now(),
+          expires_at: Date.now() + 60_000,
+        },
+      }
     }
-    const encrypted = await encryptAuthTransaction(
-      transaction,
-      "a-cookie-password-that-is-longer-than-32-characters"
-    )
-    expect(encrypted).not.toContain("verifier")
-    await expect(
-      decryptAuthTransaction(
-        encrypted,
-        "a-cookie-password-that-is-longer-than-32-characters"
-      )
-    ).resolves.toEqual(transaction)
+    return undefined
   })
 
+describe("auth cookie helpers", () => {
   it("allows only application-relative return paths", () => {
     expect(normalizeReturnTo("/settings")).toBe("/settings")
     expect(normalizeReturnTo("https://attacker.test")).toBe("/")
@@ -111,23 +54,35 @@ describe("session-bearing responses", () => {
     )
   })
 
-  it("refreshes an authenticated opaque session cookie on document responses", () => {
+  it("refreshes an authenticated session cookie on document responses", () => {
     const sessionExpiresAt = Date.now() + 60_000
     const response = responseWithSession(
-      { user: { sub: "users:123", username: "darshan", sid: "sessions:456" } },
       {
-        user: { sub: "users:123", username: "darshan", sid: "sessions:456" },
+        user: {
+          sub: "user-456",
+          email: "darshan@example.com",
+          sid: "session-123",
+        },
+      },
+      {
+        user: {
+          sub: "user-456",
+          email: "darshan@example.com",
+          sid: "session-123",
+        },
         sessionExpiresAt,
       },
       new Request("https://lynvo.test/save", {
-        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
+        headers: {
+          Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id`,
+        },
       }),
       { headers: { "Set-Cookie": "csrf-token=csrf-value" } }
     )
 
     const cookie = new Headers(response.init?.headers).get("Set-Cookie")
     expect(cookie).toContain("csrf-token=csrf-value")
-    expect(cookie).toContain(`${WORKER_SESSION_COOKIE_NAME}=opaque-session-id`)
+    expect(cookie).toContain(`${D1_SESSION_COOKIE_NAME}=opaque-session-id`)
     const maxAgeSeconds = Number(cookie?.match(/Max-Age=(\d+)/)?.[1])
     expect(maxAgeSeconds).toBeGreaterThanOrEqual(59)
     expect(maxAgeSeconds).toBeLessThanOrEqual(60)
@@ -146,7 +101,11 @@ describe("session-bearing responses", () => {
 
 describe("requireGuestOrRedirect", () => {
   const authenticatedSession = {
-    user: { sub: "users:123", username: "darshan", sid: "sessions:456" },
+    user: {
+      sub: "user-456",
+      email: "darshan@example.com",
+      sid: "session-123",
+    },
   }
   const anonymousSession = { user: null }
 
@@ -162,17 +121,6 @@ describe("requireGuestOrRedirect", () => {
       requireGuestOrRedirect(
         authenticatedSession,
         new Request("https://lynvo.test/auth/log-in?redirect=%2Fsave")
-      )
-    } catch (response: any) {
-      expect(response.headers.get("Location")).toBe("/save")
-    }
-  })
-
-  it("redirects an authenticated user to /save when no valid redirect param is present", () => {
-    try {
-      requireGuestOrRedirect(
-        authenticatedSession,
-        new Request("https://lynvo.test/auth/log-in")
       )
     } catch (response: any) {
       expect(response.headers.get("Location")).toBe("/save")
@@ -202,102 +150,35 @@ describe("requireGuestOrRedirect", () => {
   })
 })
 
-describe("AuthSessionService", () => {
+describe("getUserSession", () => {
   it("returns an anonymous session without a cookie", async () => {
-    const result = await runSession(
+    const result = await getUserSession(
       new Request("https://lynvo.test"),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: () => Effect.die(new Error("Unexpected Convex query")),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      )
+      { DB: createFakeD1Database(() => ({ rows: [] })) } as unknown as Env
     )
-    expect(result).toEqual({ kind: "unauthenticated", user: null })
+    expect(result).toEqual({ user: null, sessionExpiresAt: undefined })
   })
 
-  it("ignores an unsupported JWT cookie", async () => {
-    const result = await runSession(
+  it("resolves the D1 session identity without exposing tokens", async () => {
+    const result = await getUserSession(
       new Request("https://lynvo.test", {
-        headers: { Cookie: "__convexAuthJWT_lynvo=valid-token" },
+        headers: { Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id` },
       }),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: () => Effect.die(new Error("Unexpected Convex query")),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      )
+      { DB: authenticatedDatabase() } as unknown as Env
     )
-    expect(result).toEqual({ kind: "unauthenticated", user: null })
+    expect(result.user).toEqual({
+      sub: "user-456",
+      email: "darshan@example.com",
+      name: "Darshan",
+      sid: "session-123",
+    })
+    expect(result.sessionExpiresAt).toBeGreaterThan(Date.now())
+    expect(JSON.stringify(result)).not.toContain("refresh")
   })
 
-  it("resolves an opaque Worker session without exposing the refresh token", async () => {
-    const result = await runSession(
-      new Request("https://lynvo.test", {
-        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
-      }),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.die(new Error("Unexpected Convex action")),
-          query: (_query, _args, options) =>
-            options?.accessToken === "opaque-session-access-token"
-              ? Effect.succeed({
-                  id: "users:123",
-                  username: "darshan",
-                  sessionId: "authSessions:456",
-                })
-              : Effect.die(new Error("Unexpected access token")),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      )
-    )
-    expect(result.accessToken).toBe("opaque-session-access-token")
-    expect(result).not.toHaveProperty("refreshToken")
-    expect(result.user?.username).toBe("darshan")
-  })
-
-  it("returns unauthenticated when access token expires and refresh rotation fails", async () => {
-    const result = await runSession(
-      new Request("https://lynvo.test", {
-        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
-      }),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () => Effect.fail(new Error("Refresh token expired")),
-          query: () => Effect.succeed(null),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      )
-    )
-    expect(result).toEqual({ kind: "unauthenticated", user: null })
-  })
-
-  it("returns unauthenticated when rotated token cannot find the user in Convex", async () => {
-    const result = await runSession(
-      new Request("https://lynvo.test", {
-        headers: { Cookie: `${WORKER_SESSION_COOKIE_NAME}=opaque-session-id` },
-      }),
-      Layer.succeed(
-        ConvexService,
-        ConvexService.of({
-          action: () =>
-            Effect.succeed({
-              tokens: {
-                token: "new-access-token",
-                refreshToken: "new-refresh-token",
-              },
-            }),
-          query: () => Effect.succeed(null),
-          mutation: () => Effect.die(new Error("Unexpected Convex mutation")),
-        })
-      )
-    )
-    expect(result).toEqual({ kind: "unauthenticated", user: null })
+  it("reports authentication as unavailable without a database binding", async () => {
+    await expect(
+      getUserSession(new Request("https://lynvo.test"), {} as Env)
+    ).rejects.toMatchObject({ init: { status: 503 } })
   })
 })

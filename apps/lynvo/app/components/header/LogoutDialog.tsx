@@ -5,12 +5,12 @@ import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 export const LogoutDialog = ({
   open,
   onOpenChange,
-  username,
+  email,
   onLogout,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  username: string
+  email: string
   onLogout: () => void
 }) => (
   <ConfirmationAlertDialog
@@ -23,7 +23,7 @@ export const LogoutDialog = ({
         className="mx-auto size-16 text-destructive"
       />
     }
-    description={<>Logged in as {username}.</>}
+    description={<>Logged in as {email}.</>}
     confirmLabel="Log out"
     confirmVariant="destructive"
     onConfirm={onLogout}

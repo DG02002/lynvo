@@ -130,7 +130,7 @@ export const createUsageReadModule = (
 ): UsageReadModule => ({
   read: async (input) => {
     const [lynvo, custom] = await Promise.allSettled([
-      adapters.readLynvo(input.timeBucket),
+      adapters.readLynvo(),
       adapters.readCustom(),
     ])
     if (lynvo.status === "rejected") {

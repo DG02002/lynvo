@@ -1,39 +1,45 @@
 import { useEffect } from "react"
-import { useQuery } from "convex/react"
-import { api } from "../../convex/_generated/api"
+import { Effect } from "effect"
 import {
   getPlayerPreferences,
   normalizePlayerPreferences,
   setRangeSupportedPlayer,
   setRangeUnsupportedPlayer,
 } from "~/lib/player-utils"
+import { client } from "~/lib/effect/api/client"
 
 export const AccountSettingsSynchronization = ({
   userId,
 }: {
   userId?: string
 }) => {
-  const cloudPreferences = useQuery(
-    api.users.getPlayerPreferences,
-    userId ? {} : "skip"
-  )
-
   useEffect(() => {
-    if (!cloudPreferences || !userId) {
+    if (!userId) {
       return
     }
-    const localPreferences = getPlayerPreferences(userId)
-    const preferences = normalizePlayerPreferences({
-      rangeSupportedPlayerId:
-        cloudPreferences.rangeSupportedPlayerId ??
-        localPreferences.rangeSupportedPlayerId,
-      rangeUnsupportedPlayerId:
-        cloudPreferences.rangeUnsupportedPlayerId ??
-        localPreferences.rangeUnsupportedPlayerId,
-    })
-    setRangeSupportedPlayer(userId, preferences.rangeSupportedPlayerId)
-    setRangeUnsupportedPlayer(userId, preferences.rangeUnsupportedPlayerId)
-  }, [cloudPreferences, userId])
+    let didCancel = false
+    Effect.runPromise(client.settings.getPlayerPreferences())
+      .then((cloudPreferences) => {
+        if (didCancel) {
+          return
+        }
+        const localPreferences = getPlayerPreferences(userId)
+        const preferences = normalizePlayerPreferences({
+          rangeSupportedPlayerId:
+            cloudPreferences.rangeSupportedPlayerId ??
+            localPreferences.rangeSupportedPlayerId,
+          rangeUnsupportedPlayerId:
+            cloudPreferences.rangeUnsupportedPlayerId ??
+            localPreferences.rangeUnsupportedPlayerId,
+        })
+        setRangeSupportedPlayer(userId, preferences.rangeSupportedPlayerId)
+        setRangeUnsupportedPlayer(userId, preferences.rangeUnsupportedPlayerId)
+      })
+      .catch((error) => console.error(error))
+    return () => {
+      didCancel = true
+    }
+  }, [userId])
 
   return null
 }

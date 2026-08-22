@@ -1,69 +1,40 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { api } from "../../../../../convex/_generated/api"
 import { Api } from "../Api"
 import { CurrentUser } from "../Middleware"
-import { ConvexService } from "../../services/ConvexService"
-import type { ConvexServiceContract } from "../../services/ConvexService"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/CloudflareEnv"
-import { createDurableRealtimeSessionRevocation } from "../../../../../workers/realtime-session-revocation"
-import { ConvexError } from "../../errors"
-import { createAuthSessionModule } from "../../../../../workers/auth-session"
-import { createSignedInSessionLifecycle } from "../../../../../workers/signed-in-session-lifecycle"
-import { createSessionCleanupModule } from "../../../../../workers/session-cleanup"
+import { BackendError } from "../../errors"
+import { getD1Database } from "../../../../../workers/d1/db"
+import {
+  findSessionOwnerById,
+  listSessionsForUser,
+  revokeAllSessionsForUser,
+  revokeSessionById,
+  touchSessionActivity,
+} from "../../../../../workers/d1/sessions"
+import {
+  getUserById,
+  getUserPlayerPreferences,
+  updateUserPlayerPreferences,
+} from "../../../../../workers/d1/users"
+import {
+  closeRealtimeAccount,
+  closeRealtimeSession,
+} from "../../../../../workers/realtime-session-revocation"
+import {
+  initiateAccountErasure,
+  processAccountErasureStep,
+} from "../../../../../workers/d1/account-erasure"
+import { ACCOUNT_ERASURE_MAX_STEPS_PER_RUN } from "../../../../../workers/constants"
 
-const getSignedInSessionLifecycle = (
-  convex: ConvexServiceContract,
-  accessToken: string,
-  environment: Cloudflare.Env,
-  onSessionsRevoked?: (sessionIds: readonly string[]) => void
-) =>
-  createSignedInSessionLifecycle(
-    createAuthSessionModule(environment.WORKER_AUTH_SESSION),
-    {
-      revokeSession: (sessionId) =>
-        Effect.runPromise(
-          convex
-            .mutation(api.users.revokeSession, { sessionId }, { accessToken })
-            .pipe(Effect.map((result) => result.workerSessionIds))
-        ),
-      revokeAllSessions: () =>
-        Effect.runPromise(
-          convex
-            .mutation(api.users.revokeAllSessions, {}, { accessToken })
-            .pipe(
-              Effect.map((result) => {
-                onSessionsRevoked?.(result.sessionIds)
-                return result.workerSessionIds
-              })
-            )
-        ),
-      beginAccountErasure: (confirmUsername) =>
-        Effect.runPromise(
-          convex
-            .mutation(
-              api.users.beginAccountErasure,
-              { confirmUsername },
-              { accessToken }
-            )
-            .pipe(Effect.map((result) => result.workerSessionIds))
-        ),
-    },
-    createSessionCleanupModule(environment)
-  )
-
-const runSignedInSessionLifecycle = (
-  operation: () => Promise<{ readonly kind: "completed" | "unavailable" }>
-) =>
-  Effect.gen(function* () {
-    const result = yield* Effect.promise(operation)
-    if (result.kind === "unavailable") {
-      return yield* new ConvexError({
-        message: "Session revocation is unavailable",
-      })
-    }
-  })
+const requireDatabase = (environment: Cloudflare.Env) => {
+  const database = getD1Database(environment)
+  if (!database) {
+    return undefined
+  }
+  return database
+}
 
 export const SettingsHandlers = HttpApiBuilder.group(
   Api,
@@ -72,217 +43,201 @@ export const SettingsHandlers = HttpApiBuilder.group(
     handlers
       .handle("touchActivity", ({ payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* Effect.all([
-            convex.mutation(
-              api.users.touchActivity,
-              {},
-              {
-                accessToken: user.accessToken,
-              }
-            ),
-            convex.mutation(
-              api.users.setCurrentSessionDevice,
-              { deviceName: payload.deviceName },
-              { accessToken: user.accessToken }
-            ),
-          ])
+          const environment = yield* CloudflareEnv
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              touchSessionActivity(database, user.sid, {
+                deviceName: payload.deviceName,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "Activity touch failed",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("getPlayerPreferences", () =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          const preferences = yield* convex.query(
-            api.users.getPlayerPreferences,
-            {},
-            { accessToken: user.accessToken }
-          )
+          const environment = yield* CloudflareEnv
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          const preferences = yield* Effect.tryPromise({
+            try: () => getUserPlayerPreferences(database, user.id),
+            catch: (cause) =>
+              new BackendError({
+                message: "Player preferences are unavailable",
+                cause,
+              }),
+          })
           return normalizePlayerPreferences(preferences)
         })
       )
       .handle("updatePlayerPreferences", ({ payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          yield* convex.mutation(api.users.updatePlayerPreferences, payload, {
-            accessToken: user.accessToken,
+          const environment = yield* CloudflareEnv
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: () =>
+              updateUserPlayerPreferences(database, user.id, {
+                ...payload,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message:
+                  cause instanceof Error
+                    ? cause.message
+                    : "Player preferences could not be updated",
+                cause,
+              }),
           })
           return { success: true }
         })
       )
-      .handle("getStorageUsage", () =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          return yield* convex.query(
-            api.users.getStorageUsage,
-            {},
-            { accessToken: user.accessToken }
-          )
-        })
-      )
-      .handle("previewStorageRetention", ({ query }) =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          return yield* convex.query(
-            api.users.previewStorageRetentionDays,
-            query,
-            { accessToken: user.accessToken }
-          )
-        })
-      )
-      .handle("updateStorageRetention", ({ payload }) =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          const result = yield* convex.mutation(
-            api.users.updateStorageRetentionDays,
-            payload,
-            { accessToken: user.accessToken }
-          )
-          return {
-            success: true,
-            deletedLinks: result.deletedLinks,
-          }
-        })
-      )
-      .handle("clearLinks", () =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          const result = yield* convex.mutation(
-            api.users.clearLinks,
-            {},
-            { accessToken: user.accessToken }
-          )
-          return {
-            success: true,
-            deletedLinks: result.deletedLinks,
-          }
-        })
-      )
       .handle("listSessions", () =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
-          return yield* convex.query(
-            api.users.listSessions,
-            {},
-            { accessToken: user.accessToken }
-          )
+          const environment = yield* CloudflareEnv
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          return yield* Effect.tryPromise({
+            try: () => listSessionsForUser(database, user.id, user.sid),
+            catch: (cause) =>
+              new BackendError({
+                message: "Account data is temporarily unavailable",
+                cause,
+              }),
+          })
         })
       )
       .handle("revokeSession", ({ params }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const lifecycle = getSignedInSessionLifecycle(
-            convex,
-            user.accessToken,
-            environment
-          )
-          yield* runSignedInSessionLifecycle(() =>
-            lifecycle.revokeSession(params.sessionId)
-          )
-          yield* Effect.promise(() =>
-            createDurableRealtimeSessionRevocation(environment).deliver({
-              userId: user.id,
-              sessionId: params.sessionId,
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
             })
+          }
+          const ownerId = yield* Effect.promise(() =>
+            findSessionOwnerById(database, params.sessionId)
           )
+          if (ownerId !== user.id) {
+            return yield* new BackendError({ message: "Session not found" })
+          }
+          yield* Effect.tryPromise({
+            try: async () => {
+              await revokeSessionById(database, params.sessionId, Date.now())
+              await closeRealtimeSession(environment, user.id, params.sessionId)
+            },
+            catch: (cause) =>
+              new BackendError({
+                message: "The session couldn’t be logged out",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("revokeAllSessions", () =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          let revokedSessionIds: readonly string[] = []
-          const lifecycle = getSignedInSessionLifecycle(
-            convex,
-            user.accessToken,
-            environment,
-            (sessionIds) => {
-              revokedSessionIds = sessionIds
-            }
-          )
-          yield* runSignedInSessionLifecycle(lifecycle.revokeAllSessions)
-          yield* Effect.promise(() =>
-            Promise.all(
-              revokedSessionIds.map((sessionId) =>
-                createDurableRealtimeSessionRevocation(environment).deliver({
-                  userId: user.id,
-                  sessionId,
-                })
-              )
-            )
-          )
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          yield* Effect.tryPromise({
+            try: async () => {
+              await revokeAllSessionsForUser(database, user.id, Date.now())
+              await closeRealtimeAccount(environment, user.id)
+            },
+            catch: (cause) =>
+              new BackendError({
+                message: "The sessions couldn’t be logged out",
+                cause,
+              }),
+          })
           return { success: true }
         })
       )
       .handle("deleteAccount", ({ payload }) =>
         Effect.gen(function* () {
-          const convex = yield* ConvexService
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const lifecycle = getSignedInSessionLifecycle(
-            convex,
-            user.accessToken,
-            environment
-          )
-          const result = yield* Effect.promise(() =>
-            lifecycle.eraseAccount(payload.confirmUsername)
-          )
-          if (result.kind === "unavailable") {
-            return yield* new ConvexError({
-              message: "Account erasure is unavailable",
+          const database = requireDatabase(environment)
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.promise(() =>
-            createDurableRealtimeSessionRevocation(environment).deliver({
-              userId: user.id,
+          const account = yield* Effect.promise(() =>
+            getUserById(database, user.id)
+          )
+          if (!account) {
+            return yield* new BackendError({
+              message: "Authentication required",
             })
-          )
-          return { success: true }
-        })
-      )
-      .handle("getLynvoUsage", ({ query }) =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          return yield* convex.query(api.usage.getUsage, query, {
-            accessToken: user.accessToken,
+          }
+          if (payload.confirmEmail.trim() !== account.email) {
+            return yield* new BackendError({ message: "Email does not match" })
+          }
+          const now = Date.now()
+          yield* Effect.tryPromise({
+            try: async () => {
+              await initiateAccountErasure(database, user.id, {
+                trigger: "manual",
+                now,
+              })
+              for (
+                let step = 0;
+                step < ACCOUNT_ERASURE_MAX_STEPS_PER_RUN;
+                step += 1
+              ) {
+                const outcome = await processAccountErasureStep(
+                  database,
+                  user.id
+                )
+                if (outcome.kind !== "stage") {
+                  break
+                }
+              }
+              await closeRealtimeAccount(environment, user.id)
+            },
+            catch: (cause) =>
+              new BackendError({
+                message: "The account couldn’t be deleted",
+                cause,
+              }),
           })
-        })
-      )
-      .handle("changePassword", ({ payload }) =>
-        Effect.gen(function* () {
-          const convex = yield* ConvexService
-          const user = yield* CurrentUser
-          const result = yield* convex.action(
-            api.users.changePassword,
-            payload,
-            {
-              accessToken: user.accessToken,
-            }
-          )
-          const environment = yield* CloudflareEnv
-          yield* Effect.promise(() =>
-            Promise.all(
-              result.sessionIds.map((sessionId) =>
-                createDurableRealtimeSessionRevocation(environment).deliver({
-                  userId: user.id,
-                  sessionId,
-                })
-              )
-            )
-          )
           return { success: true }
         })
       )
