@@ -5,10 +5,9 @@ push to `main` must pass the read-only `Verify` workflow before the exact
 verified commit can enter the `production` GitHub Environment.
 
 The deployment first applies pending D1 migrations to the production
-database. It then uploads inactive Cloudflare versions for both Workers before
-it changes production traffic. It promotes `lynvo-plugin-server` followed by
-`lynvo`. If Lynvo promotion fails, the workflow rolls the Plugin Server back to
-its preceding deployment.
+database. It then deploys `lynvo-plugin-server` followed by `lynvo`,
+applying any Durable Object migrations. If release verification fails,
+the workflow rolls the deployments back.
 
 ## Version identities
 

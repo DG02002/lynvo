@@ -116,72 +116,33 @@ jobs:
           --env=""
           --remote
 
-      - name: Upload inactive Plugin Server version
+      - name: Deploy Plugin Server
+        id: deploy_plugin_server
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PLUGIN_SERVER_VERSION: ${{ steps.release.outputs.plugin_server_version }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
-          pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions upload
+          pnpm --filter @lynvo/lynvo-plugin-server exec wrangler deploy
           --config wrangler.jsonc
           --env=""
-          --tag "$RELEASE_TAG"
           --message "GitHub ${COMMIT_HASH}"
           --var "SERVICE_VERSION:$PLUGIN_SERVER_VERSION"
           --var "COMMIT_HASH:$COMMIT_HASH"
 
-      - name: Upload inactive Lynvo version
+      - name: Deploy Lynvo
+        id: deploy_lynvo
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
-          pnpm --filter @lynvo/app exec wrangler versions upload
+          pnpm --filter @lynvo/app exec wrangler deploy
           --config build/server/wrangler.json
           --env=""
-          --tag "$RELEASE_TAG"
           --message "GitHub ${COMMIT_HASH}"
           --var "SERVICE_VERSION:$LYNVO_VERSION"
           --var "COMMIT_HASH:$COMMIT_HASH"
-
-      - name: Synchronize Lynvo routes and cron triggers
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: >-
-          pnpm --filter @lynvo/app exec wrangler triggers deploy
-          --config build/server/wrangler.json
-          --env=""
-
-      - name: Promote Plugin Server
-        id: promote_plugin_server
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: >-
-          pnpm --filter @lynvo/lynvo-plugin-server exec wrangler versions deploy
-          --config wrangler.jsonc
-          --env=""
-          --version-tag "$RELEASE_TAG"
-          --message "GitHub ${COMMIT_HASH}"
-          --yes
-
-      - name: Promote Lynvo
-        id: promote_lynvo
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-        run: >-
-          pnpm --filter @lynvo/app exec wrangler versions deploy
-          --config build/server/wrangler.json
-          --env=""
-          --version-tag "$RELEASE_TAG"
-          --message "GitHub ${COMMIT_HASH}"
-          --yes
 
       - name: Verify the expected Lynvo release is serving
         id: verify_release
@@ -211,7 +172,7 @@ jobs:
           exit 1
 
       - name: Roll back Lynvo after a post-promotion failure
-        if: failure() && steps.promote_lynvo.outcome == 'success'
+        if: failure() && steps.deploy_lynvo.outcome == 'success'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -223,7 +184,7 @@ jobs:
           --yes
 
       - name: Roll back Plugin Server after a downstream failure
-        if: failure() && steps.promote_plugin_server.outcome == 'success'
+        if: failure() && steps.deploy_plugin_server.outcome == 'success'
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
