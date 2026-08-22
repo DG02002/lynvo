@@ -47,8 +47,13 @@
 			"new_sqlite_classes": [
 				"UserRealtimeRoom",
 				"AuthRateLimiter",
+				"WorkerAuthSession",
 				"PluginServerCredentialVault",
 			],
+		},
+		{
+			"tag": "v2",
+			"deleted_classes": ["WorkerAuthSession"],
 		},
 	],
 	"secrets": {
