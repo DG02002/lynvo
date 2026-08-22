@@ -3,6 +3,8 @@ import {
   extractSuccessSchema,
   pluginServerManifestSchema,
   usageResponseSchema,
+  verifyErrorSchema,
+  verifySuccessSchema,
 } from "./schemas.js"
 import { getLynvoManifestExtension } from "./matching.js"
 import type {
@@ -12,6 +14,8 @@ import type {
   ExtractSuccessResponse,
   PluginServerManifest,
   UsageResponse,
+  VerifyErrorResponse,
+  VerifySuccessResponse,
 } from "./models.js"
 
 const issue = (path: string, message: string): ContractIssue => ({
@@ -282,3 +286,44 @@ export const validateUsageContract = <Value>(
   const parsed = parseUsageResponseContract(value)
   return { ok: parsed.ok, issues: parsed.issues }
 }
+
+export const parseVerifySuccessContract = <Value>(
+  value: Value
+): ContractParseResult<VerifySuccessResponse> => {
+  const result = Schema.decodeUnknownResult(verifySuccessSchema)(value)
+  if (Result.isFailure(result)) {
+    return {
+      ok: false,
+      issues: mapSchemaIssues(result.failure.issue, "verify"),
+    }
+  }
+  return { ok: true, issues: [], value: result.success }
+}
+
+export const validateVerifySuccessContract = <Value>(
+  value: Value
+): ContractValidationResult => {
+  const parsed = parseVerifySuccessContract(value)
+  return { ok: parsed.ok, issues: parsed.issues }
+}
+
+export const parseVerifyErrorContract = <Value>(
+  value: Value
+): ContractParseResult<VerifyErrorResponse> => {
+  const result = Schema.decodeUnknownResult(verifyErrorSchema)(value)
+  if (Result.isFailure(result)) {
+    return {
+      ok: false,
+      issues: mapSchemaIssues(result.failure.issue, "verifyError"),
+    }
+  }
+  return { ok: true, issues: [], value: result.success }
+}
+
+export const validateVerifyErrorContract = <Value>(
+  value: Value
+): ContractValidationResult => {
+  const parsed = parseVerifyErrorContract(value)
+  return { ok: parsed.ok, issues: parsed.issues }
+}
+

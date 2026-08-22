@@ -21,8 +21,12 @@ export {
   parseExtractSuccessContract,
   parsePluginServerManifestContract,
   parseUsageResponseContract,
+  parseVerifyErrorContract,
+  parseVerifySuccessContract,
   validateExtractSuccessContract,
   validatePluginServerManifestContract,
   validateUsageContract,
+  validateVerifyErrorContract,
+  validateVerifySuccessContract,
 } from "./contracts.js"
 export { createPluginServerRuntime } from "./runtime.js"

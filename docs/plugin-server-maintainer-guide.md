@@ -89,8 +89,8 @@ publishing and does not use a long-lived npm token.
 After the version bump is reviewed and merged, tag the exact commit:
 
 ```sh
-git tag protocol-v0.1.3
-git push origin protocol-v0.1.3
+git tag protocol-v0.1.4
+git push origin protocol-v0.1.4
 ```
 
 or:

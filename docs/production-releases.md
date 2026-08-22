@@ -102,8 +102,8 @@ npm package publication is independent from production application deployment.
 Version changes are reviewed in pull requests, then an immutable tag starts the
 trusted-publishing workflow:
 
-- `protocol-v0.1.3` publishes
-  `@dg02002/lynvo-plugin-server-protocol@0.1.3`.
+- `protocol-v0.1.4` publishes
+  `@dg02002/lynvo-plugin-server-protocol@0.1.4`.
 - `creator-v0.1.1` publishes `create-lynvo-plugin-server@0.1.1`.
 
 The tag version must match the package manifest. The workflow rebuilds and

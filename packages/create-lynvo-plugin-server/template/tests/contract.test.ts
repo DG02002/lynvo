@@ -3,7 +3,7 @@ import {
   parseExtractSuccessContract,
   parseUsageResponseContract,
   validatePluginServerManifestContract,
-  verifyErrorSchema,
+  validateVerifyErrorContract,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import app, { manifest } from "../src/index.js"
 
@@ -46,9 +46,10 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
     )
 
     expect(response.status).toBe(401)
-    expect(verifyErrorSchema.safeParse(await response.json()).success).toBe(
-      true
-    )
+    expect(validateVerifyErrorContract(await response.json())).toEqual({
+      ok: true,
+      issues: [],
+    })
   })
 
   it("publishes finite usage for an authorized request", async () => {
