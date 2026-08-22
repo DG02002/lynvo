@@ -102,6 +102,9 @@ jobs:
           LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
         run: SERVICE_VERSION="$LYNVO_VERSION" pnpm --filter @lynvo/app preflight
 
+      - name: Build release artifacts
+        run: pnpm build
+
       - name: Apply pending D1 migrations to production
         working-directory: apps/lynvo
         env:
