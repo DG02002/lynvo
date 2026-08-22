@@ -31,7 +31,7 @@ migration before either service is promoted.
 ## Required one-time setup
 
 Create a Cloudflare API token scoped to the one Cloudflare account with the
-`Workers Scripts: Edit` permission. Do not use a global API key.
+`Workers Scripts: Edit` and `D1: Edit` permissions. Do not use a global API key.
 
 Create a GitHub Environment named `production`, then add these environment
 secrets:
