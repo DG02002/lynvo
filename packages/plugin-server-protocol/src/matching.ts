@@ -8,15 +8,43 @@ import type {
   PluginServerMatcher,
 } from "./models.js"
 
+const REGULAR_EXPRESSION_SPECIAL_CHARACTERS = new Set([
+  "\\",
+  "^",
+  "$",
+  "+",
+  "?",
+  ".",
+  "(",
+  ")",
+  "[",
+  "]",
+  "{",
+  "}",
+  "|",
+])
+
 const patternToExpression = (
   pattern: string,
   segmentWildcard: string
 ): RegExp => {
-  const expression = pattern
-    .replace(/\./g, "\\.")
-    .replace(/\*\*/g, "TEMP_DBL_STAR")
-    .replace(/\*/g, segmentWildcard)
-    .replace(/TEMP_DBL_STAR/g, ".*")
+  let expression = ""
+  for (let patternIndex = 0; patternIndex < pattern.length; patternIndex += 1) {
+    const character = pattern[patternIndex]
+    if (character === "*") {
+      if (pattern[patternIndex + 1] === "*") {
+        expression += ".*"
+        patternIndex += 1
+      } else {
+        expression += segmentWildcard
+      }
+      continue
+    }
+
+    expression += REGULAR_EXPRESSION_SPECIAL_CHARACTERS.has(character)
+      ? "\\" + character
+      : character
+  }
   return new RegExp(`^${expression}$`, "i")
 }
 

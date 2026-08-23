@@ -21,7 +21,7 @@ import { Result, Schema } from "effect"
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PATH_PATTERN = /^\/drive\/folders\/([^/]+)(?:\/|$)/
 const GOOGLE_DRIVE_FOLDER_PAYLOAD_PATTERN =
-  /window\['_DRIVE_ivd'\]\s*=\s*'((?:\\.|[^'])*)'/
+  /window\['_DRIVE_ivd'\]\s*=\s*'((?:\\.|[^'\\])*)'/
 
 const googleDrivePublicFolderItemSchema = Schema.TupleWithRest(
   Schema.Tuple([Schema.String, Schema.Unknown, Schema.String, Schema.String]),
