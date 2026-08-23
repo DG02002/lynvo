@@ -15,7 +15,11 @@ import {
   createUpdatedItemWithLinks,
 } from "./link-items"
 import { createOpenedLinkItem } from "./link-playback"
-import { buildLinkViewItem, showSaveError } from "./link-add"
+import {
+  buildLinkViewItem,
+  buildQueuedLinkViewItem,
+  showSaveError,
+} from "./link-add"
 import { isTemporaryLinkId } from "./links-store"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 
@@ -95,16 +99,10 @@ export const createLinksMutations = ({
     }
   }
 
-  const addLink = async (
+  const persistLink = async (
     targetUrl: string,
-    meta?: MetaData,
-    extractedLinks?: ExtractedLink[]
+    item: LinkViewItem
   ): Promise<string | undefined> => {
-    const { item } = await buildLinkViewItem({
-      targetUrl,
-      meta,
-      extractedLinks,
-    })
     try {
       return await runExclusive(async () => {
         const temporaryItem = store.beginAdd(item)
@@ -114,6 +112,10 @@ export const createLinksMutations = ({
             url: targetUrl,
             title: temporaryItem.title ?? targetUrl,
             meta: JSON.stringify(toJsonMetadata(temporaryItem.metadata)),
+            extractionState:
+              temporaryItem.extractionStatus?.state === "queued"
+                ? "queued"
+                : undefined,
           })
           if (result.id) {
             store.settleAdd(temporaryItem.id, result.id, result.dataVersion)
@@ -130,6 +132,26 @@ export const createLinksMutations = ({
       showSaveError(error)
       return undefined
     }
+  }
+
+  const addLink = async (
+    targetUrl: string,
+    meta?: MetaData,
+    extractedLinks?: ExtractedLink[]
+  ): Promise<string | undefined> => {
+    const { item } = await buildLinkViewItem({
+      targetUrl,
+      meta,
+      extractedLinks,
+    })
+    return await persistLink(targetUrl, item)
+  }
+
+  const enqueueLink = async (
+    targetUrl: string
+  ): Promise<string | undefined> => {
+    const { item } = await buildQueuedLinkViewItem(targetUrl)
+    return await persistLink(targetUrl, item)
   }
 
   const toApiOperation = (
@@ -276,6 +298,7 @@ export const createLinksMutations = ({
     remove,
     clearLinks,
     addLink,
+    enqueueLink,
     updateLinks,
     markLinkAsOpened,
     cacheResolvedMirrors,

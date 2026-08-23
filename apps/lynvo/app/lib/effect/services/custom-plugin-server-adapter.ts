@@ -172,7 +172,8 @@ export const extractFromCustomPluginServer = Effect.fn(
     basicAuth?: HttpBasicAuth
     pluginId?: string
   },
-  requestId?: string
+  requestId?: string,
+  source?: PluginMetadata
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   const extractedAuth = extractHttpBasicCredential(targetUrl)
@@ -191,5 +192,5 @@ export const extractFromCustomPluginServer = Effect.fn(
       }),
     targetUrl
   )
-  return mapPluginServerExtractionResult(resultValue, pluginServer.id)
+  return mapPluginServerExtractionResult(resultValue, pluginServer.id, source)
 })

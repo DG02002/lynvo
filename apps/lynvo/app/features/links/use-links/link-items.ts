@@ -5,6 +5,7 @@ import {
 } from "~/features/links/link-metadata-accessors"
 import type {
   ExtractedLink,
+  LinkExtractionStatus,
   LinkMetadata,
   MetaData,
   LinkViewItem,
@@ -14,6 +15,7 @@ export interface CreateLinkViewItemOptions {
   targetUrl: string
   title: string
   metadata: LinkMetadata
+  extractionStatus?: LinkExtractionStatus
 }
 
 export interface CreateLinkUpdateOptions {
@@ -25,6 +27,7 @@ export const createLinkViewItem = ({
   targetUrl,
   title,
   metadata,
+  extractionStatus,
 }: CreateLinkViewItemOptions): LinkViewItem => {
   return {
     url: targetUrl,
@@ -32,6 +35,7 @@ export const createLinkViewItem = ({
     timestamp: Date.now(),
     updatedAt: Date.now(),
     metadata,
+    extractionStatus: extractionStatus ?? { state: "complete" },
   }
 }
 
@@ -46,7 +50,7 @@ export const createUpdatedItemFromMetadata = (
 export const createUpdatedItemWithLinks = ({
   item,
   links,
-}: CreateLinkUpdateOptions) => {
+}: CreateLinkUpdateOptions): LinkViewItem => {
   const previous = getLinkViewItemMetadata(item)
   const metadata = createLinkMetadata({
     meta: getLinkViewItemFlatMeta(item),
@@ -54,13 +58,16 @@ export const createUpdatedItemWithLinks = ({
     previous,
   })
 
-  return createUpdatedItemFromMetadata(item, metadata)
+  return {
+    ...createUpdatedItemFromMetadata(item, metadata),
+    extractionStatus: { state: "complete" },
+  }
 }
 
 export const getFilenameFromUrl = (url: string) => {
   try {
     const parsedUrl = new URL(url)
-    const lastPathPart = parsedUrl.pathname.split("/").at(-1)
+    const lastPathPart = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
     return lastPathPart && lastPathPart.length > 1
       ? decodeURIComponent(lastPathPart)
       : parsedUrl.hostname

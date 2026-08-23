@@ -26,6 +26,7 @@ import {
   listSavedLinks,
   updateSavedLinkMeta,
 } from "./links"
+import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
 import {
   deletePluginDomainById,
   listPluginDomains,
@@ -49,6 +50,8 @@ import {
 } from "./storage-ledger"
 import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
+import { notifyAccountDataChanged } from "./data-version-notification"
+import { processSavedLinkExtraction } from "../link-extraction-runner"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
@@ -222,24 +225,12 @@ const readDataJsonBody = async <S extends Schema.Decoder<any>>(
     : { kind: "invalid", response: await respondInvalidBody(context) }
 }
 
-const notifyAccountDataChanged = async (
-  env: Env,
-  userId: string,
-  version: number
-): Promise<void> => {
-  await env.USER_REALTIME_ROOM?.getByName(userId).fetch(
-    new Request("https://realtime.internal/notify-data-changed", {
-      method: "POST",
-      body: JSON.stringify({ version }),
-    })
-  )
-}
-
 const createOrUpdateSchema = Schema.Struct({
   operationId: Schema.NonEmptyString,
   url: Schema.NonEmptyString,
   title: Schema.optional(Schema.String),
   meta: Schema.optional(Schema.String),
+  extractionState: Schema.optional(Schema.Literal("queued")),
 })
 
 const updateMetaSchema = Schema.Struct({
@@ -335,16 +326,29 @@ dataApp.post("/links/create-or-update", async (context) => {
     return requestBody.response
   }
   const body = requestBody.body
-  const result = await createOrUpdateSavedLink(
-    preparation.database,
-    preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
+  const now = Date.now()
+  const result =
+    body.extractionState === "queued"
+      ? await enqueueSavedLinkExtraction(
+          preparation.database,
+          preparation.session.userId,
+          { ...body, now }
+        )
+      : await createOrUpdateSavedLink(
+          preparation.database,
+          preparation.session.userId,
+          { ...body, now }
+        )
   await notifyAccountDataChanged(
     context.env,
     preparation.session.userId,
     result.dataVersion
   )
+  if (result.id && body.extractionState === "queued") {
+    context.executionCtx.waitUntil(
+      processSavedLinkExtraction(context.env, preparation.database, result.id)
+    )
+  }
   return context.json(result)
 })
 

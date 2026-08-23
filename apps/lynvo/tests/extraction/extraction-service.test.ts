@@ -5,6 +5,7 @@ import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-v
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { createFakeD1Database } from "../support/fake-d1"
 
+// SAFETY: The shared test environment is intentionally empty; each test supplies the bindings it exercises.
 const environment = {} as Env
 
 const noCredentialVault = Layer.succeed(
@@ -25,10 +26,7 @@ const buildLayer = (testEnvironment: Env) =>
     )
   )
 
-const lynvoManifestResponse = (
-  plugins: unknown[],
-  hosts: string[]
-) =>
+const lynvoManifestResponse = (plugins: unknown[], hosts: string[]) =>
   Response.json({
     protocolVersion: "1.0",
     pluginServerId: "dev.lynvo.plugin-server",
@@ -82,6 +80,7 @@ describe("Extraction interface routing", () => {
   it("routes an assigned Plugin before Direct Media probing", async () => {
     const coreFetch = vi.spyOn(globalThis, "fetch")
     const pluginServerRequests: Request[] = []
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the routing test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -89,24 +88,27 @@ describe("Extraction interface routing", () => {
         fetch: async (request: Request) => {
           pluginServerRequests.push(request.clone())
           if (request.url.endsWith("/manifest")) {
-            return lynvoManifestResponse([
-              {
-                id: "bhadoo-google-drive-index",
-                displayName: "Bhadoo",
-                status: "active",
-                version: "1.0.0",
-                hosts: ["drive.example"],
-                matchers: [{ hosts: ["drive.example"] }],
-              },
-              {
-                id: "direct-media",
-                displayName: "Direct Media",
-                status: "active",
-                version: "1.0.0",
-                matchStrategy: "probe",
-                hosts: [],
-              },
-            ], ["drive.example"])
+            return lynvoManifestResponse(
+              [
+                {
+                  id: "bhadoo-google-drive-index",
+                  displayName: "Bhadoo",
+                  status: "active",
+                  version: "1.0.0",
+                  hosts: ["drive.example"],
+                  matchers: [{ hosts: ["drive.example"] }],
+                },
+                {
+                  id: "direct-media",
+                  displayName: "Direct Media",
+                  status: "active",
+                  version: "1.0.0",
+                  matchStrategy: "probe",
+                  hosts: [],
+                },
+              ],
+              ["drive.example"]
+            )
           }
           return Response.json({
             plugin: {
@@ -151,21 +153,25 @@ describe("Extraction interface routing", () => {
 
   it("reads unauthenticated Direct Media metadata from the Plugin Server manifest", async () => {
     const coreFetch = vi.spyOn(globalThis, "fetch")
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the metadata test.
     const environmentWithLynvo = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
       LYNVO_PLUGIN_SERVER: {
         fetch: async () =>
-          lynvoManifestResponse([
-            {
-              id: "direct-media",
-              displayName: "Direct Media",
-              status: "active",
-              version: "1.0.0",
-              matchStrategy: "probe",
-              hosts: [],
-            },
-          ], ["media.example"])
+          lynvoManifestResponse(
+            [
+              {
+                id: "direct-media",
+                displayName: "Direct Media",
+                status: "active",
+                version: "1.0.0",
+                matchStrategy: "probe",
+                hosts: [],
+              },
+            ],
+            ["media.example"]
+          ),
       },
     } as Env
 
@@ -190,6 +196,7 @@ describe("Extraction interface routing", () => {
   it("uses inline Basic Auth without reading a stored Lynvo credential", async () => {
     const pluginServerRequests: Request[] = []
     const credentialQueries: string[] = []
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the credential test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -288,22 +295,26 @@ describe("Extraction interface routing", () => {
 
   it("propagates the metadata request ID through Lynvo route selection", async () => {
     const manifestRequestIds: Array<string | null> = []
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the request ID test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
       LYNVO_PLUGIN_SERVER: {
         fetch: async (request: Request) => {
           manifestRequestIds.push(request.headers.get("x-request-id"))
-          return lynvoManifestResponse([
-            {
-              id: "media",
-              displayName: "Media",
-              status: "active",
-              version: "1.0.0",
-              hosts: ["media.example"],
-              matchers: [{ hosts: ["media.example"] }],
-            },
-          ], ["media.example"])
+          return lynvoManifestResponse(
+            [
+              {
+                id: "media",
+                displayName: "Media",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["media.example"],
+                matchers: [{ hosts: ["media.example"] }],
+              },
+            ],
+            ["media.example"]
+          )
         },
       },
       DB: createFakeD1Database(() => undefined),
@@ -376,6 +387,7 @@ describe("Extraction interface routing", () => {
         extractionPluginIds.push(body.pluginId)
         return emptyExtractionResponse("Custom")
       })
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the custom routing test.
     const testEnvironment = {
       ...environment,
       PLUGIN_SERVER_CREDENTIAL_VAULT: {
@@ -424,6 +436,7 @@ describe("Extraction interface routing", () => {
   })
 
   it("preserves a Lynvo Plugin Server route failure", async () => {
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the failure test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -459,6 +472,7 @@ describe("Extraction interface routing", () => {
 
   it("stops a metered Lynvo route when quota reservation fails", async () => {
     let pluginExtractionCount = 0
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the metering test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -467,21 +481,25 @@ describe("Extraction interface routing", () => {
           if (!request.url.endsWith("/manifest")) {
             pluginExtractionCount += 1
           }
-          return lynvoManifestResponse([
-            {
-              id: "direct-media",
-              displayName: "Metered",
-              status: "active",
-              version: "1.0.0",
-              hosts: ["metered.example"],
-              matchers: [{ hosts: ["metered.example"] }],
-            },
-          ], ["metered.example"])
+          return lynvoManifestResponse(
+            [
+              {
+                id: "direct-media",
+                displayName: "Metered",
+                status: "active",
+                version: "1.0.0",
+                hosts: ["metered.example"],
+                matchers: [{ hosts: ["metered.example"] }],
+              },
+            ],
+            ["metered.example"]
+          )
         },
       },
       DB: createFakeD1Database((sql) =>
         sql.includes("managed_extraction_operations") ||
-        sql.includes("usage_counters") || sql.includes("usage_epochs")
+        sql.includes("usage_counters") ||
+        sql.includes("usage_epochs")
           ? { error: new Error("Daily quota reached") }
           : undefined
       ),
@@ -547,6 +565,7 @@ describe("Extraction interface routing", () => {
         }
         return emptyExtractionResponse("Protected Custom")
       })
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the credential requirement test.
     const testEnvironment = {
       ...environment,
       PLUGIN_SERVER_CREDENTIAL_VAULT: {
@@ -630,6 +649,7 @@ describe("Extraction interface routing", () => {
         }
         return emptyExtractionResponse("Discovery Custom")
       })
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the discovery failure test.
     const testEnvironment = {
       ...environment,
       PLUGIN_SERVER_CREDENTIAL_VAULT: {
@@ -662,8 +682,9 @@ describe("Extraction interface routing", () => {
     fetchMock.mockRestore()
   })
 
-  it("auto-discovers Bhadoo Plugin for unassigned domains before Direct Media probe", async () => {
+  it("selects a matched Bhadoo Plugin before Direct Media probing", async () => {
     const pluginServerRequests: Request[] = []
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the Bhadoo routing test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -768,14 +789,15 @@ describe("Extraction interface routing", () => {
     })
     expect(
       pluginServerRequests.some((request) => request.url.endsWith("/discover"))
-    ).toBe(true)
+    ).toBe(false)
     expect(
       pluginServerRequests.some((request) => request.url.endsWith("/extract"))
     ).toBe(true)
   })
 
-  it("auto-discovers OneDrive Plugin for unassigned domains before Direct Media probe", async () => {
+  it("selects a matched OneDrive Plugin before Direct Media probing", async () => {
     const pluginServerRequests: Request[] = []
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the OneDrive routing test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -880,7 +902,7 @@ describe("Extraction interface routing", () => {
     })
     expect(
       pluginServerRequests.some((request) => request.url.endsWith("/discover"))
-    ).toBe(true)
+    ).toBe(false)
     expect(
       pluginServerRequests.some((request) => request.url.endsWith("/extract"))
     ).toBe(true)

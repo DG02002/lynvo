@@ -2,6 +2,7 @@ import {
   getLynvoManifestExtension,
   getMatchedPlugin,
   type ExtractSuccessResponse,
+  type PluginMetadata,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { mapNodesToExtractedLinks } from "~/lib/plugin-server-utils"
@@ -74,7 +75,8 @@ export const getPluginServerMetadata = (
 
 export const mapPluginServerExtractionResult = (
   resultValue: ExtractSuccessResponse,
-  pluginServerId: string
+  pluginServerId: string,
+  source?: PluginMetadata
 ): ExtractionResult => {
   const result = normalizeExtractionText(resultValue)
 
@@ -86,14 +88,26 @@ export const mapPluginServerExtractionResult = (
   if (result.plugin.iconUrl) {
     metadata.pluginIcon = result.plugin.iconUrl
   }
-  if (result.plugin.pluginId) {
-    metadata.pluginId = result.plugin.pluginId
+  const sourceId = result.plugin.pluginId || source?.id
+  if (sourceId) {
+    metadata.pluginId = sourceId
   }
-  if (result.plugin.pluginName) {
-    metadata.sourceName = result.plugin.pluginName
+  const sourceName = result.plugin.pluginName || source?.displayName
+  if (sourceName) {
+    metadata.sourceName = decodeExtractionText(sourceName)
   }
-  if (result.plugin.pluginIconUrl) {
-    metadata.sourceIconUrl = result.plugin.pluginIconUrl
+  const sourceIconUrl = result.plugin.pluginIconUrl || source?.iconUrl
+  if (sourceIconUrl) {
+    metadata.sourceIconUrl = sourceIconUrl
+  }
+  if (source?.status) {
+    metadata.sourceStatus = source.status
+  }
+  if (source?.version) {
+    metadata.sourceVersion = source.version
+  }
+  if (source?.credential) {
+    metadata.sourceCredentialKind = source.credential.kind
   }
   if (result.plugin.pageTitle) {
     metadata.pageTitle = result.plugin.pageTitle

@@ -30,6 +30,7 @@ export interface LynvoExtractionAdapterOptions {
   readonly targetUrl: string
   readonly userId: string
   readonly requestId: string
+  readonly pluginServerId?: string
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
@@ -47,6 +48,12 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
     LynvoPluginRoute | undefined,
     ExtractionError | ValidationError
   > {
+    if (
+      options.pluginServerId &&
+      options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+    ) {
+      return undefined
+    }
     const operationId = `${options.requestId}:${options.kind}`
     const manifest = yield* getLynvoPluginServerManifest(
       options.environment,
@@ -54,23 +61,24 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
       operationId
     )
     const database = getD1Database(options.environment)
-    const configuredDomain = database
-      ? yield* Effect.tryPromise({
-          try: () =>
-            getPluginDomainByDomain(database, options.userId, {
-              domain: new URL(options.targetUrl).hostname,
-              pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-            }),
-          catch: (cause) =>
-            new ValidationError({
-              message:
-                cause instanceof Error
-                  ? cause.message
-                  : "The saved Plugin configuration is unavailable.",
-              details: cause,
-            }),
-        })
-      : null
+    const configuredDomain =
+      database && !options.pluginId
+        ? yield* Effect.tryPromise({
+            try: () =>
+              getPluginDomainByDomain(database, options.userId, {
+                domain: new URL(options.targetUrl).hostname,
+                pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+              }),
+            catch: (cause) =>
+              new ValidationError({
+                message:
+                  cause instanceof Error
+                    ? cause.message
+                    : "The saved Plugin configuration is unavailable.",
+                details: cause,
+              }),
+          })
+        : null
     let plugin = findLynvoPlugin(
       manifest,
       options.targetUrl,
@@ -171,7 +179,8 @@ export const extractWithLynvoPluginServer = Effect.fn(
     options.kind,
     { pluginId: route.plugin.id, ...credentials },
     options.requestId,
-    operationId
+    operationId,
+    route.plugin
   )
   if (!meteredPluginId) {
     return yield* extraction

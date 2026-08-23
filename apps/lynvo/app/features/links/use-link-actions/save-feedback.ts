@@ -24,14 +24,8 @@ export const clearHighlightAfterDelay = (
 
 export const resetSaveView = ({
   setCurrentUrl,
-  setSortOrder,
-  setCurrentPage,
 }: {
   setCurrentUrl: (url: string) => void
-  setSortOrder: (order: "newest" | "oldest") => void
-  setCurrentPage: (page: number) => void
 }) => {
   setCurrentUrl("")
-  setSortOrder("newest")
-  setCurrentPage(1)
 }

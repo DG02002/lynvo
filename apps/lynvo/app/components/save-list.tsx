@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
@@ -22,16 +22,8 @@ const SaveList = () => {
     isTvBroAndroidTv,
     shouldHideTvBroSaveInput
   )
-  const {
-    links,
-    setCurrentPage,
-    setSortOrder,
-    highlightedId,
-    setHighlightedId,
-    actions,
-    isLoading,
-    isHydrating,
-  } = useLinks()
+  const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const { links, actions, isLoading, isHydrating } = useLinks()
   const isPending = isHydrating || isLoading
   const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =
     useSaveFolderRoute(links, isPending)
@@ -46,8 +38,6 @@ const SaveList = () => {
     links,
     linkActions: actions,
     setHighlightedId,
-    setSortOrder,
-    setCurrentPage,
   })
 
   useSaveListFullscreen(isFolderRoute)

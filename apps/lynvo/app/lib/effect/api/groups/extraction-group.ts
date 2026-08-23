@@ -22,6 +22,8 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
     HttpApiEndpoint.get("getMetadata", "/meta", {
       query: Schema.Struct({
         url: Schema.String,
+        pluginServerId: Schema.optional(Schema.String),
+        pluginId: Schema.optional(Schema.String),
       }),
       success: Schema.Unknown,
       error: [ValidationApiError, BackendApiError],

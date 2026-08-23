@@ -1,7 +1,15 @@
 import { toast } from "sonner"
 import { createLinkMetadata } from "~/features/links/links.mapper"
-import type { ExtractedLink, MetaData } from "~/features/links/types"
-import { createLinkViewItem, getLinkTitle } from "./link-items"
+import type {
+  ExtractedLink,
+  LinkExtractionStatus,
+  MetaData,
+} from "~/features/links/types"
+import {
+  createLinkViewItem,
+  getFilenameFromUrl,
+  getLinkTitle,
+} from "./link-items"
 import { fetchMetaInternal } from "./link-server"
 import {
   presentSavedLinkCommandFailure,
@@ -12,10 +20,12 @@ export const buildLinkViewItem = async ({
   targetUrl,
   meta,
   extractedLinks,
+  extractionStatus,
 }: {
   targetUrl: string
   meta?: MetaData
   extractedLinks?: ExtractedLink[]
+  extractionStatus?: LinkExtractionStatus
 }) => {
   const resolvedMeta = meta ?? (await fetchMetaInternal(targetUrl))
   const title = getLinkTitle(targetUrl, resolvedMeta)
@@ -27,15 +37,28 @@ export const buildLinkViewItem = async ({
   return {
     title,
     metadata,
-    item: createLinkViewItem({ targetUrl, title, metadata }),
+    item: createLinkViewItem({
+      targetUrl,
+      title,
+      metadata,
+      extractionStatus,
+    }),
   }
 }
+
+export const buildQueuedLinkViewItem = async (targetUrl: string) =>
+  buildLinkViewItem({
+    targetUrl,
+    meta: { title: getFilenameFromUrl(targetUrl) },
+    extractedLinks: [],
+    extractionStatus: { state: "queued" },
+  })
 
 export const showSaveError = (cause: unknown) => {
   console.error(cause)
   toast.error(
     cause instanceof SavedLinkCommandError
       ? presentSavedLinkCommandFailure(cause.failure)
-      : "The link couldn’t be saved right now. Try again."
+      : "Unable to save link. Try again."
   )
 }

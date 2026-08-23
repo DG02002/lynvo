@@ -122,6 +122,8 @@ export class ExtractionService extends Context.Service<
             targetUrl,
             userId: options.userId,
             requestId: options.requestId,
+            pluginServerId: options.pluginServerId,
+            pluginId: options.pluginId,
             kind: "source" as const,
             inlineBasicAuth: routeInput.basicAuth,
           }
@@ -137,6 +139,14 @@ export class ExtractionService extends Context.Service<
           )
           if (customMetadata) {
             return customMetadata
+          }
+          if (
+            options.pluginServerId &&
+            options.pluginServerId !== LYNVO_PLUGIN_SERVER_ID
+          ) {
+            return yield* new ValidationError({
+              message: "The saved Plugin Server is unavailable.",
+            })
           }
           const lynvoMetadata = yield* getLynvoRouteMetadata(routeOptions).pipe(
             Effect.mapError((error) =>

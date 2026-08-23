@@ -6,6 +6,7 @@ export interface LinksActions {
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
+  enqueue: (url: string) => Promise<string | undefined>
   remove: (url: string, id?: string, silent?: boolean) => Promise<void>
   updateLinks: (url: string, links: ExtractedLink[]) => void
   markOpened: (itemUrl: string, linkUrl: string) => void

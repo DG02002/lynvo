@@ -98,7 +98,8 @@ export const extractWithCustomPluginServer = Effect.fn(
     options.targetUrl,
     options.kind,
     { pluginId: route.plugin?.id, ...credentials },
-    options.requestId
+    options.requestId,
+    route.plugin
   )
 })
 

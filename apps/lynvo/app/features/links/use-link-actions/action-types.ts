@@ -5,6 +5,10 @@ import type {
 } from "~/features/links/types"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
+import type {
+  ConfirmSaveIntentOptions,
+  SaveIntentOptions,
+} from "~/features/links/save-intent"
 
 export interface OpenSelectionDialogOptions {
   originalUrl: string
@@ -22,32 +26,9 @@ export interface ExtractionPreview {
   meta: MetaData
 }
 
-export interface SaveLinkOptions {
-  overrideUrl?: string
-  currentUrl: string
-  links: LinkViewItem[]
-  addLink: (
-    url: string,
-    meta?: MetaData,
-    extractedLinks?: ExtractedLink[]
-  ) => Promise<string | undefined>
-  reporter: SavedLinkInteractionReporter
-  shouldAutoSaveAllLinks: boolean
-}
+export interface SaveLinkOptions extends SaveIntentOptions {}
 
-export interface ConfirmSelectionOptions {
-  selectedLinks: ExtractedLink[]
-  originalUrl: string
-  meta: MetaData
-  existingItemId?: string
-  addLink: (
-    url: string,
-    meta?: MetaData,
-    extractedLinks?: ExtractedLink[]
-  ) => Promise<string | undefined>
-  reporter: SavedLinkInteractionReporter
-  pluginDomainSuggestion?: PluginDomainSuggestion
-}
+export interface ConfirmSelectionOptions extends ConfirmSaveIntentOptions {}
 
 export interface SoftRefreshOptions {
   itemUrl: string

@@ -31,6 +31,8 @@ export interface MetadataOptions {
   readonly requestId: string
   readonly userId?: string
   readonly env: Env
+  readonly pluginServerId?: string
+  readonly pluginId?: string
 }
 
 export interface MetadataResult {

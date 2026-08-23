@@ -655,4 +655,41 @@ describe("SaveListBrowser", () => {
     ).not.toBeInTheDocument()
     expect(emptyHeading.parentElement).not.toHaveClass("border", "rounded-2xl")
   })
+
+  it("shows queue status and keeps an incomplete Saved link closed", () => {
+    const item: LinkViewItem = {
+      id: "queued-link",
+      url: "https://source.example/queued",
+      timestamp: Date.now(),
+      title: "Queued Source",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: { extractedLinks: [] },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+      extractionStatus: { state: "running" },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(screen.getByText("Loading links")).toBeVisible()
+    const row = screen
+      .getByText("Queued Source")
+      .closest("[data-extraction-state]")
+    expect(row).toHaveAttribute("data-extraction-state", "running")
+    expect(
+      screen.getByRole("button", { name: "Loading links for Queued Source" })
+    ).toBeDisabled()
+  })
 })

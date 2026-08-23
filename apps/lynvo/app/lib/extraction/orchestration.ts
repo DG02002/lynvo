@@ -20,7 +20,11 @@ declare global {
       pluginId?: string
       kind?: "source" | "node"
     }) => Promise<{ links: ExtractedLink[]; meta?: MetaData }>
-    getMetadata: (request: { url: string }) => Promise<MetaData>
+    getMetadata: (request: {
+      url: string
+      pluginServerId?: string
+      pluginId?: string
+    }) => Promise<MetaData>
   }
 
   interface PrepareExtractionOptions {
@@ -71,10 +75,15 @@ export const createExtractionOrchestration = (
     targetUrl: string,
     links: LinkViewItem[]
   ) => {
-    const metadata = await transport.getMetadata({ url: targetUrl })
     const existingItem = links.find((item) => item.url === targetUrl)
     const pluginServerId = getSavedPluginServerId(existingItem)
-    return pluginServerId ? { ...metadata, pluginServerId } : metadata
+    const pluginId = getSavedSourceId(existingItem)
+    const metadata = await transport.getMetadata({
+      url: targetUrl,
+      pluginServerId,
+      pluginId,
+    })
+    return mergeDefinedMeta(metadata, { pluginServerId, pluginId })
   }
   const extractSavedItemNode = async (
     item: LinkViewItem | undefined,
@@ -113,20 +122,24 @@ export const createExtractionOrchestration = (
       const metadata =
         sourceMetadata ?? (await getSourceMetadata(targetUrl, links))
       const existingItem = links.find((item) => item.url === targetUrl)
-      const pluginServerId = getSavedPluginServerId(existingItem)
-      const metadataWithPluginServer = pluginServerId
-        ? { ...metadata, pluginServerId }
-        : metadata
+      const pluginServerId =
+        getSavedPluginServerId(existingItem) ?? metadata.pluginServerId
+      const pluginId = getSavedSourceId(existingItem) ?? metadata.pluginId
+      const metadataWithRoute = mergeDefinedMeta(metadata, {
+        pluginServerId,
+        pluginId,
+      })
       const extraction = await transport.extract({
         url: targetUrl,
         pluginServerId,
+        pluginId,
       })
       const mergedMeta = mergeDefinedMeta(
-        mergeDefinedMeta(metadataWithPluginServer, existingMeta),
+        mergeDefinedMeta(metadataWithRoute, existingMeta),
         extraction.meta
       )
       return {
-        metadata: metadataWithPluginServer,
+        metadata: metadataWithRoute,
         mergedMeta,
         presentation: decideSavePresentation(extraction.links),
       }

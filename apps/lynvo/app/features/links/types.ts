@@ -40,6 +40,11 @@ export interface LinkResponse {
   meta: LinkMetadata | string
 }
 
+export interface LinkExtractionStatus {
+  state: "queued" | "running" | "complete" | "failed"
+  error?: string
+}
+
 export interface LinkMetadata {
   schemaVersion: 3
   source: Record<string, JsonValue>
@@ -84,6 +89,7 @@ export interface LinkViewItem {
   title?: string
   id?: string
   metadata: LinkMetadata
+  extractionStatus?: LinkExtractionStatus
 }
 
 export interface SavedLinkListItem extends LinkViewItem {

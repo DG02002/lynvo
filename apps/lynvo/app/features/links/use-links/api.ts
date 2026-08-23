@@ -6,6 +6,7 @@ import {
   toLinkViewItem,
   type SavedLink,
 } from "~/features/links/links.mapper"
+import type { LinkExtractionStatus } from "~/features/links/types"
 
 declare global {
   interface SavedLinkApiRecord {
@@ -15,6 +16,8 @@ declare global {
     metaJson: string | null
     createdAt: number
     updatedAt: number
+    extractionState?: LinkExtractionStatus["state"]
+    extractionError?: string | null
   }
 
   interface SavedLinkListResponse {
@@ -52,7 +55,16 @@ const toSavedLink = (record: SavedLinkApiRecord): SavedLink => ({
 
 export const savedLinkApiRecordToViewItem = (record: SavedLinkApiRecord) => {
   try {
-    return toLinkViewItem(toSavedLink(record))
+    const extractionStatus: LinkExtractionStatus = {
+      state: record.extractionState ?? "complete",
+    }
+    if (record.extractionError) {
+      extractionStatus.error = record.extractionError
+    }
+    return {
+      ...toLinkViewItem(toSavedLink(record)),
+      extractionStatus,
+    }
   } catch (error) {
     console.error("Unable to hydrate saved link", { linkId: record.id, error })
     return undefined
@@ -66,6 +78,10 @@ const savedLinkApiRecordSchema = Schema.Struct({
   metaJson: Schema.NullOr(Schema.String),
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
+  extractionState: Schema.optional(
+    Schema.Literals(["queued", "running", "complete", "failed"])
+  ),
+  extractionError: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
 const savedLinkListResponseSchema = Schema.Struct({
@@ -190,6 +206,7 @@ export interface CreateOrUpdateSavedLinkInput {
   readonly url: string
   readonly title?: string | undefined
   readonly meta?: string | undefined
+  readonly extractionState?: "queued"
 }
 
 export interface UpdateSavedLinkMetaInput {

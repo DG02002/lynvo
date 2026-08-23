@@ -26,6 +26,11 @@ A saved source URL with its extracted playable links, metadata, and opened
 markers.
 _Avoid_: card, history item, saved card, recent link
 
+**Save intent**:
+The user’s request to add a Source as a Saved link before Lynvo knows whether
+Extraction can finish immediately or needs link selection.
+_Avoid_: save request, background task
+
 **Selected links**:
 Links the user chooses in the link-selection dialog and saves as part of a
 saved link.
@@ -100,6 +105,10 @@ _Avoid_: provider, plugin server
 **Extraction**:
 The process of converting a Source URL or unresolved Media Node into normalized Media Nodes.
 _Avoid_: scraping when referring to the complete Lynvo operation
+
+**Extraction queue**:
+The account-visible lifecycle of a Saved link whose Extraction is waiting, running, or has failed and needs attention. It is part of the Saved link, not a separate user-facing item.
+_Avoid_: background task, extraction job
 
 **Media Node**:
 A normalized playable item, folder, group, or unresolved item returned by a Plugin Server.

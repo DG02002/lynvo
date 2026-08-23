@@ -10,7 +10,6 @@ import {
   LINKS_MAX_COUNT,
   RETENTION_SWEEP_MAX_BATCHES_PER_RUN,
   SAVED_LINK_COMMAND_OPERATION_CLEANUP_BATCH_SIZE,
-  SAVED_LINK_COMMAND_OPERATION_TTL_MS,
 } from "../constants"
 import {
   extractedLinkSchema,
@@ -30,6 +29,12 @@ import {
 } from "./storage-ledger"
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
+import {
+  createSavedLinkCommandOperationStatement,
+  findCompletedSavedLinkOperation,
+  requireOwnedSavedLink,
+  SAVED_LINK_COLUMNS,
+} from "./saved-link-storage"
 
 export interface SavedLinkRecord {
   id: string
@@ -40,6 +45,8 @@ export interface SavedLinkRecord {
   createdAt: number
   updatedAt: number
   expiresAt: number | null
+  extractionState: "queued" | "running" | "complete" | "failed"
+  extractionError: string | null
 }
 
 const mapLinkRow = (row: LinkRow): SavedLinkRecord => ({
@@ -51,10 +58,9 @@ const mapLinkRow = (row: LinkRow): SavedLinkRecord => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   expiresAt: row.expires_at,
+  extractionState: row.extraction_state,
+  extractionError: row.extraction_error,
 })
-
-const LINK_COLUMNS =
-  "id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at"
 
 export type SavedLinkMetadataOperation =
   | { kind: "markOpened"; linkUrl: string }
@@ -112,54 +118,6 @@ export const countExpiredLinksForUser = async (
   return row?.expired ?? 0
 }
 
-const findLinkById = async (
-  database: D1Database,
-  linkId: string
-): Promise<LinkRow | null> => {
-  const row = await database
-    .prepare(`SELECT ${LINK_COLUMNS} FROM links WHERE id = ?1`)
-    .bind(linkId)
-    .first<LinkRow>()
-  return row ?? null
-}
-
-const findCompletedOperation = async (
-  database: D1Database,
-  userId: string,
-  operationId: string
-): Promise<{ linkId: string | null } | null> => {
-  const row = await database
-    .prepare(
-      "SELECT link_id FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2"
-    )
-    .bind(userId, operationId)
-    .first<{ link_id: string | null }>()
-  return row ? { linkId: row.link_id } : null
-}
-
-const insertCommandOperationStatement = (
-  database: D1Database,
-  input: {
-    userId: string
-    operationId: string
-    linkId: string
-    command: string
-    now: number
-  }
-): D1PreparedStatement =>
-  database
-    .prepare(
-      "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
-    )
-    .bind(
-      input.userId,
-      input.operationId,
-      input.linkId,
-      input.command,
-      input.now,
-      input.now + SAVED_LINK_COMMAND_OPERATION_TTL_MS
-    )
-
 export const listSavedLinks = async (
   database: D1Database,
   userId: string,
@@ -169,7 +127,7 @@ export const listSavedLinks = async (
   const cutoff = getRetentionCutoff(now, retentionDays)
   const { results } = await database
     .prepare(
-      `SELECT ${LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at >= ?2 ORDER BY created_at DESC LIMIT ?3`
+      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at >= ?2 ORDER BY created_at DESC LIMIT ?3`
     )
     .bind(userId, cutoff, LINKS_MAX_COUNT)
     .all<LinkRow>()
@@ -184,10 +142,11 @@ export const createOrUpdateSavedLink = async (
     url: string
     title?: string | undefined
     meta?: string | undefined
+    extractionState?: "queued" | undefined
     now: number
   }
 ): Promise<SavedLinkCommandResult> => {
-  const completedOperation = await findCompletedOperation(
+  const completedOperation = await findCompletedSavedLinkOperation(
     database,
     userId,
     input.operationId
@@ -205,9 +164,10 @@ export const createOrUpdateSavedLink = async (
   const metadataJson = canonicalizeLinkMetadataJson(
     input.meta ?? EMPTY_LINK_METADATA_JSON
   )
+  const extractionState = input.extractionState ?? "complete"
   const existingRow = await database
     .prepare(
-      `SELECT ${LINK_COLUMNS} FROM links WHERE user_id = ?1 AND url = ?2`
+      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND url = ?2`
     )
     .bind(userId, input.url)
     .first<LinkRow>()
@@ -218,6 +178,12 @@ export const createOrUpdateSavedLink = async (
       title: input.title ?? existingRow.title,
       meta_json: metadataJson,
       updated_at: input.now,
+      extraction_state: extractionState,
+      extraction_error: null,
+      extraction_attempts:
+        extractionState === "queued" ? 0 : existingRow.extraction_attempts,
+      extraction_available_at: extractionState === "queued" ? input.now : null,
+      extraction_lease_expires_at: null,
     }
     const preparation = await ensureStorageLedger(database, userId, input.now)
     assertLinkSize(byteLength(nextRow))
@@ -236,11 +202,21 @@ export const createOrUpdateSavedLink = async (
       ...preparation.statements,
       database
         .prepare(
-          "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4 WHERE id = ?1"
+          "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, extraction_state = ?5, extraction_error = ?6, extraction_attempts = ?7, extraction_available_at = ?8, extraction_lease_expires_at = ?9 WHERE id = ?1"
         )
-        .bind(existingRow.id, nextRow.title, metadataJson, input.now),
+        .bind(
+          existingRow.id,
+          nextRow.title,
+          metadataJson,
+          input.now,
+          nextRow.extraction_state,
+          nextRow.extraction_error,
+          nextRow.extraction_attempts,
+          nextRow.extraction_available_at,
+          nextRow.extraction_lease_expires_at
+        ),
       ...ledgerMutation.statements,
-      insertCommandOperationStatement(database, {
+      createSavedLinkCommandOperationStatement(database, {
         userId,
         operationId: input.operationId,
         linkId: existingRow.id,
@@ -260,7 +236,7 @@ export const createOrUpdateSavedLink = async (
     userLinkCount >= LINKS_MAX_COUNT
       ? ((await database
           .prepare(
-            `SELECT ${LINK_COLUMNS} FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1`
+            `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1`
           )
           .bind(userId)
           .first<LinkRow>()) ?? undefined)
@@ -275,6 +251,11 @@ export const createOrUpdateSavedLink = async (
     created_at: input.now,
     updated_at: input.now,
     expires_at: input.now + retentionDays * DAY_MS,
+    extraction_state: extractionState,
+    extraction_error: null,
+    extraction_attempts: 0,
+    extraction_available_at: extractionState === "queued" ? input.now : null,
+    extraction_lease_expires_at: null,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(newRow))
@@ -310,7 +291,7 @@ export const createOrUpdateSavedLink = async (
     ...(evictionMutation?.statements ?? []),
     database
       .prepare(
-        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
       )
       .bind(
         newRow.id,
@@ -321,10 +302,15 @@ export const createOrUpdateSavedLink = async (
         newRow.opened_at,
         newRow.created_at,
         newRow.updated_at,
-        newRow.expires_at
+        newRow.expires_at,
+        newRow.extraction_state,
+        newRow.extraction_error,
+        newRow.extraction_attempts,
+        newRow.extraction_available_at,
+        newRow.extraction_lease_expires_at
       ),
     ...insertionMutation.statements,
-    insertCommandOperationStatement(database, {
+    createSavedLinkCommandOperationStatement(database, {
       userId,
       operationId: input.operationId,
       linkId: newRow.id,
@@ -333,18 +319,6 @@ export const createOrUpdateSavedLink = async (
     }),
   ])
   return { id: newRow.id, replayed: false, dataVersion }
-}
-
-const requireOwnedLink = async (
-  database: D1Database,
-  userId: string,
-  linkId: string
-): Promise<LinkRow> => {
-  const existing = await findLinkById(database, linkId)
-  if (!existing || existing.user_id !== userId) {
-    throw new Error("Link not found or no longer available")
-  }
-  return existing
 }
 
 export const updateSavedLinkMeta = async (
@@ -357,7 +331,7 @@ export const updateSavedLinkMeta = async (
     now: number
   }
 ): Promise<SavedLinkMutationResult> => {
-  const completedOperation = await findCompletedOperation(
+  const completedOperation = await findCompletedSavedLinkOperation(
     database,
     userId,
     input.operationId
@@ -369,7 +343,7 @@ export const updateSavedLinkMeta = async (
       dataVersion: await getDataVersion(database, userId),
     }
   }
-  const existingRow = await requireOwnedLink(database, userId, input.id)
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const metadataJson = canonicalizeLinkMetadataJson(input.meta)
   const nextRow = {
     ...existingRow,
@@ -395,7 +369,7 @@ export const updateSavedLinkMeta = async (
       .prepare("UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1")
       .bind(existingRow.id, metadataJson, input.now),
     ...ledgerMutation.statements,
-    insertCommandOperationStatement(database, {
+    createSavedLinkCommandOperationStatement(database, {
       userId,
       operationId: input.operationId,
       linkId: existingRow.id,
@@ -416,7 +390,7 @@ export const applySavedLinkMetadataOperation = async (
     now: number
   }
 ): Promise<SavedLinkMutationResult> => {
-  const completedOperation = await findCompletedOperation(
+  const completedOperation = await findCompletedSavedLinkOperation(
     database,
     userId,
     input.operationId
@@ -428,7 +402,7 @@ export const applySavedLinkMetadataOperation = async (
       dataVersion: await getDataVersion(database, userId),
     }
   }
-  const existingRow = await requireOwnedLink(database, userId, input.id)
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const metadata = parseCanonicalLinkMetadataJson(
     existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
   )
@@ -482,6 +456,22 @@ export const applySavedLinkMetadataOperation = async (
     ...existingRow,
     meta_json: JSON.stringify(metadata),
     updated_at: input.now,
+    extraction_state:
+      input.operation.kind === "replaceExtraction"
+        ? ("complete" as const)
+        : existingRow.extraction_state,
+    extraction_error:
+      input.operation.kind === "replaceExtraction"
+        ? null
+        : existingRow.extraction_error,
+    extraction_available_at:
+      input.operation.kind === "replaceExtraction"
+        ? null
+        : existingRow.extraction_available_at,
+    extraction_lease_expires_at:
+      input.operation.kind === "replaceExtraction"
+        ? null
+        : existingRow.extraction_lease_expires_at,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(nextRow))
@@ -499,10 +489,20 @@ export const applySavedLinkMetadataOperation = async (
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database
-      .prepare("UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1")
-      .bind(existingRow.id, nextRow.meta_json, input.now),
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.meta_json,
+        input.now,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at
+      ),
     ...ledgerMutation.statements,
-    insertCommandOperationStatement(database, {
+    createSavedLinkCommandOperationStatement(database, {
       userId,
       operationId: input.operationId,
       linkId: existingRow.id,
@@ -518,7 +518,7 @@ export const deleteSavedLinkById = async (
   userId: string,
   input: { id: string; now: number }
 ): Promise<SavedLinkMutationResult> => {
-  const existingRow = await requireOwnedLink(database, userId, input.id)
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const ledgerMutation = applyStorageMutation(
     database,
@@ -581,7 +581,7 @@ export const deleteExpiredLinksForUser = async (
   const cutoff = getRetentionCutoff(now, retentionDays)
   const { results } = await database
     .prepare(
-      `SELECT ${LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at < ?2 ORDER BY created_at ASC LIMIT ?3`
+      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at < ?2 ORDER BY created_at ASC LIMIT ?3`
     )
     .bind(userId, cutoff, LINK_RETENTION_BATCH_SIZE)
     .all<LinkRow>()
@@ -633,7 +633,7 @@ export const sweepExpiredLinks = async (
   ) {
     const { results } = await database
       .prepare(
-        `SELECT ${LINK_COLUMNS} FROM links WHERE expires_at IS NOT NULL AND expires_at <= ?1 LIMIT ?2`
+        `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE expires_at IS NOT NULL AND expires_at <= ?1 LIMIT ?2`
       )
       .bind(now, LINK_RETENTION_BATCH_SIZE)
       .all<LinkRow>()

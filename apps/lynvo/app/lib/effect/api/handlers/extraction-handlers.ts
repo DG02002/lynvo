@@ -102,6 +102,8 @@ export const ExtractionHandlers = HttpApiBuilder.group(
             requestId: requestEvent.requestId,
             userId,
             env: environment,
+            pluginServerId: query.pluginServerId,
+            pluginId: query.pluginId,
           })
         })
       )

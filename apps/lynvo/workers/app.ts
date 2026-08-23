@@ -50,6 +50,7 @@ import { cleanupExpiredRemoteCommands } from "./d1/remote-commands"
 import { drainAccountErasures } from "./d1/account-erasure"
 import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
 import { echoDataVersion } from "./d1/version-echo"
+import { processQueuedLinkExtractions } from "./link-extraction-runner"
 import {
   CRON_SCHEDULE_DAILY_RETENTION,
   CRON_SCHEDULE_HOURLY_MAINTENANCE,
@@ -959,6 +960,9 @@ export default {
         database
           ? runHighFrequencyD1Maintenance(database)
           : Promise.resolve<MaintenanceOutcome[]>([]),
+        database
+          ? processQueuedLinkExtractions(env, database)
+          : Promise.resolve(),
       ])
     const unavailable = d1MaintenanceOutcomes.filter(
       (outcome) => outcome.kind === "unavailable"

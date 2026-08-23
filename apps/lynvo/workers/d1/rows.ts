@@ -36,6 +36,11 @@ export interface LinkRow {
   created_at: number
   updated_at: number
   expires_at: number | null
+  extraction_state: "queued" | "running" | "complete" | "failed"
+  extraction_error: string | null
+  extraction_attempts: number
+  extraction_available_at: number | null
+  extraction_lease_expires_at: number | null
 }
 
 export interface PluginServerRow {

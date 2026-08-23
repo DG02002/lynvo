@@ -16,7 +16,6 @@ import { useOptionalRealtime } from "~/context/realtime-context"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
 import { createLinksSnapshotStore } from "./links-store"
 import { createLinksMutations } from "./mutations"
-import { useLinksPaginationAndSort } from "./pagination"
 import type { LinksActions } from "./actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
@@ -162,9 +161,9 @@ export const useLinks = () => {
     () => EMPTY_LINKS
   )
   const savedLinks = useMemo(() => links.map(toSavedLinkListItem), [links])
-  const pagination = useLinksPaginationAndSort(savedLinks)
   const actions: LinksActions = {
     add: mutations.addLink,
+    enqueue: mutations.enqueueLink,
     remove: mutations.remove,
     updateLinks: mutations.updateLinks,
     markOpened: mutations.markLinkAsOpened,
@@ -178,6 +177,5 @@ export const useLinks = () => {
     user,
     isLoading: Boolean(userId && !isInitialLoadComplete),
     isHydrating: Boolean(userId && !hasHydrated && links.length === 0),
-    ...pagination,
   }
 }

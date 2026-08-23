@@ -12,6 +12,11 @@ import {
   updateSavedLinkMeta,
 } from "../../workers/d1/links"
 import {
+  claimNextSavedLinkExtraction,
+  enqueueSavedLinkExtraction,
+  settleSavedLinkExtraction,
+} from "../../workers/d1/link-extraction-queue"
+import {
   EMPTY_LINK_METADATA_JSON,
   LINKS_MAX_COUNT,
 } from "../../workers/constants"
@@ -138,6 +143,95 @@ describe("d1 links", () => {
     expect(retry.success).toBe(true)
     expect(retry.replayed).toBe(true)
     expect(first.replayed).toBe(false)
+  })
+
+  it("keeps extraction state on the Saved link while the queue settles", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:queue",
+      url: "https://source.example/Shows/",
+      title: "Shows",
+      now: NOW,
+    })
+    const queuedSnapshot = await listSavedLinks(env.DB, user.id, NOW)
+    expect(queued.id).toBeDefined()
+    expect(queuedSnapshot.results[0]?.extractionState).toBe("queued")
+
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    expect(claim?.id).toBe(queued.id)
+    const runningSnapshot = await listSavedLinks(env.DB, user.id, NOW)
+    expect(runningSnapshot.results[0]?.extractionState).toBe("running")
+
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "complete",
+      extractedLinks: [playableLink],
+      now: NOW + 1_000,
+    })
+    const completeSnapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    expect(settled.success).toBe(true)
+    expect(completeSnapshot.results[0]?.extractionState).toBe("complete")
+    expect(completeSnapshot.results[0]?.title).toBe("Shows")
+    expect(completeSnapshot.results[0]?.metaJson).toContain(playableLink.url)
+  })
+
+  it("keeps a failed extraction visible without scheduling a retry", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:failed:queue",
+      url: "https://source.example/failed",
+      title: "Failed",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:failed:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      now: NOW + 1_000,
+    })
+
+    const failedSnapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    const retryClaim = await claimNextSavedLinkExtraction(env.DB, {
+      now: NOW + 60_000,
+    })
+    expect(settled.success).toBe(true)
+    expect(failedSnapshot.results[0]?.extractionState).toBe("failed")
+    expect(failedSnapshot.results[0]?.extractionError).toBe(
+      "Unable to load links."
+    )
+    expect(retryClaim).toBeUndefined()
+  })
+
+  it("ignores a late extraction result after a Saved link is deleted", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:deleted:queue",
+      url: "https://source.example/deleted",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    await deleteSavedLinkById(env.DB, user.id, {
+      id: queued.id ?? "",
+      now: NOW + 1_000,
+    })
+
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:deleted:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "complete",
+      extractedLinks: [playableLink],
+      now: NOW + 2_000,
+    })
+    expect(settled.success).toBe(false)
+    expect(
+      (await listSavedLinks(env.DB, user.id, NOW + 2_000)).results
+    ).toHaveLength(0)
   })
 
   it("lists retained links newest first", async () => {
@@ -317,8 +411,14 @@ describe("d1 links", () => {
       )
     }
     const batchChunkSize = 100
-    for (let batchOffset = 0; batchOffset < seedStatements.length; batchOffset += batchChunkSize) {
-      await env.DB.batch(seedStatements.slice(batchOffset, batchOffset + batchChunkSize))
+    for (
+      let batchOffset = 0;
+      batchOffset < seedStatements.length;
+      batchOffset += batchChunkSize
+    ) {
+      await env.DB.batch(
+        seedStatements.slice(batchOffset, batchOffset + batchChunkSize)
+      )
     }
     await createOrUpdateSavedLink(env.DB, user.id, {
       operationId: "lru:newest",
@@ -336,9 +436,7 @@ describe("d1 links", () => {
       snapshot.results.find((link) => link.url === "https://example.com/lru-0")
     ).toBeUndefined()
     expect(
-      snapshot.results.find(
-        (link) => link.url === "https://example.com/lru-1"
-      )
+      snapshot.results.find((link) => link.url === "https://example.com/lru-1")
     ).toBeDefined()
   })
 

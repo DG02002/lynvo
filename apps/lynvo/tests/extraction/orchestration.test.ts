@@ -105,6 +105,7 @@ describe("extraction orchestration", () => {
     expect(transport.extract).toHaveBeenCalledWith({
       url: "https://example.com/source",
       pluginServerId: "pluginServer-1",
+      pluginId: "bhadoo-google-drive-index",
     })
     expect(metadata).toEqual(
       expect.objectContaining({ pluginServerId: "pluginServer-1" })

@@ -20,16 +20,12 @@ interface UseLinkActionsProps {
   links: LinkListItem[]
   linkActions: LinksActions
   setHighlightedId: (id: string | null) => void
-  setSortOrder: (order: "newest" | "oldest") => void
-  setCurrentPage: (page: number) => void
 }
 
 export function useLinkActions({
   links,
   linkActions,
   setHighlightedId,
-  setSortOrder,
-  setCurrentPage,
 }: UseLinkActionsProps) {
   const [url, setUrl] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +78,7 @@ export function useLinkActions({
       url,
       links: savedLinks,
       addLink: linkActions.add,
+      enqueueLink: linkActions.enqueue,
       updateLinks: linkActions.updateLinks,
       openSelectionDialog,
       setExtractionPreview,
@@ -90,8 +87,6 @@ export function useLinkActions({
       setError,
       setCurrentUrl: setUrl,
       setHighlightedId,
-      setSortOrder,
-      setCurrentPage,
       shouldAutoSaveAllLinks,
     })
 

@@ -5,6 +5,8 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Archive04Icon,
+  AlertCircleIcon,
+  Clock01Icon,
   Folder01Icon,
   Folder02Icon,
   PackageIcon,
@@ -46,6 +48,7 @@ import {
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { groupSaveListItems } from "./save-list-groups"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -55,6 +58,7 @@ interface SaveListBrowserProps {
   extractingItems: Set<string>
   highlightedId: string | null
   isHydrating: boolean
+  currentTimeMs?: number
 }
 
 interface FinderBrowserProps {
@@ -76,6 +80,78 @@ interface MobileFolderTreeToggleProps {
   currentFolderLabel: string
   isOpen: boolean
   onToggle: () => void
+}
+
+interface SaveExtractionStatusProps {
+  item: LinkListItem
+  isRefreshing: boolean
+}
+
+const getExtractionStatusLabel = (
+  item: LinkListItem,
+  isRefreshing: boolean
+): string => {
+  if (isRefreshing) {
+    return "Loading links"
+  }
+  switch (item.extractionStatus?.state) {
+    case "queued":
+      return "Waiting to load"
+    case "running":
+      return "Loading links"
+    case "failed":
+      return item.extractionStatus.error || "Unable to load links"
+    default:
+      return ""
+  }
+}
+
+const SaveExtractionStatus = ({
+  item,
+  isRefreshing,
+}: SaveExtractionStatusProps) => {
+  const extractionState = item.extractionStatus?.state
+  const extractionError = item.extractionStatus?.error
+  if (!extractionState || extractionState === "complete") {
+    return null
+  }
+
+  if (isRefreshing) {
+    return (
+      <span
+        className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
+        role="status"
+      >
+        <Spinner aria-hidden="true" className="size-3" />
+        <span>{getExtractionStatusLabel(item, true)}</span>
+      </span>
+    )
+  }
+
+  if (extractionState === "failed") {
+    return (
+      <span
+        className="flex min-w-0 items-center gap-1.5 text-xs text-destructive"
+        role="alert"
+        title={extractionError || "Unable to load links"}
+      >
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
+        <span className="truncate">
+          {extractionError || getExtractionStatusLabel(item, false)}
+        </span>
+      </span>
+    )
+  }
+
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+      <HugeiconsIcon
+        icon={extractionState === "queued" ? Clock01Icon : PackageSearchIcon}
+        className="size-3.5 shrink-0"
+      />
+      <span>{getExtractionStatusLabel(item, false)}</span>
+    </span>
+  )
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -659,6 +735,7 @@ export const SaveListBrowser = ({
   extractingItems,
   highlightedId,
   isHydrating,
+  currentTimeMs = Date.now(),
 }: SaveListBrowserProps) => {
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
@@ -698,183 +775,232 @@ export const SaveListBrowser = ({
     )
   }
 
+  const groupedItems = groupSaveListItems(items, currentTimeMs)
+
   return (
-    <section className="border-t">
-      <div className="flex flex-col">
-        {items.map((item) => {
-          const itemKey = item.id ?? item.url
-          const view = toLinkViewModel(item)
-          const interactionState = getSavedLinkInteractionState(
-            item,
-            Date.now()
-          )
-          const { directLink, isDirectLinkExpired, isResolvableContainer } =
-            interactionState
-          const isExtracting = extractingItems.has(item.url)
-          const isRootItemNew = interactionState.isNew
+    <section className="flex flex-col gap-8">
+      {groupedItems.map((group) => (
+        <div key={group.key} className="flex flex-col gap-2">
+          <h2 className="px-2 text-sm font-medium text-muted-foreground">
+            {group.label}
+          </h2>
+          <div className="flex flex-col divide-y divide-border/70">
+            {group.items.map((item) => {
+              const itemKey = item.id ?? item.url
+              const view = toLinkViewModel(item)
+              const interactionState = getSavedLinkInteractionState(
+                item,
+                currentTimeMs
+              )
+              const { directLink, isDirectLinkExpired, isResolvableContainer } =
+                interactionState
+              const isExtracting = extractingItems.has(item.url)
+              const extractionState = item.extractionStatus?.state ?? "complete"
+              const isExtractionIncomplete = extractionState !== "complete"
+              const isRootItemNew =
+                !isExtractionIncomplete && interactionState.isNew
 
-          if (directLink && isResolvableContainer) {
-            const directLinkTarget = getMediaNodeTarget(directLink)
-            return (
-              <ResolvableContainerRow
-                key={itemKey}
-                item={item}
-                link={directLink}
-                actions={actions}
-                isResolving={extractingItems.has(directLinkTarget)}
-                onRemove={() => actions.remove(item.url, item.id)}
-              />
-            )
-          }
+              if (
+                directLink &&
+                isResolvableContainer &&
+                !isExtractionIncomplete
+              ) {
+                const directLinkTarget = getMediaNodeTarget(directLink)
+                return (
+                  <ResolvableContainerRow
+                    key={itemKey}
+                    item={item}
+                    link={directLink}
+                    actions={actions}
+                    isResolving={extractingItems.has(directLinkTarget)}
+                    onRemove={() => actions.remove(item.url, item.id)}
+                  />
+                )
+              }
 
-          return (
-            <div
-              key={itemKey}
-              className="border-b last:border-b-0"
-              data-highlighted={highlightedId === item.id ? true : undefined}
-            >
-              <div
-                className={cn(
-                  "relative flex min-h-24 w-full items-center gap-0 px-4 py-6 md:gap-3",
-                  !isDirectLinkExpired && "hover:bg-muted/70",
-                  directLink?.opened &&
-                    !isDirectLinkExpired &&
-                    "bg-sky-500/15 hover:bg-sky-500/20"
-                )}
-              >
-                <button
-                  type="button"
-                  disabled={isDirectLinkExpired}
-                  aria-label={
-                    directLink
-                      ? `Open ${directLink.label || getItemTitle(item)}`
-                      : `View ${getItemTitle(item)}`
-                  }
-                  className={cn(
-                    "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    isDirectLinkExpired && "cursor-not-allowed"
-                  )}
-                  onClick={() => {
-                    if (directLink) {
-                      const directLinkTarget = getMediaNodeTarget(directLink)
-                      void actions
-                        .play(directLink)
-                        .then((result) =>
-                          markAfterAcceptedHandoff({
-                            ...result,
-                            itemLabel: directLink.label,
-                            markOpened: () =>
-                              actions.markOpened(item.url, directLinkTarget),
-                          })
-                        )
-                        .catch(console.error)
-                      return
-                    }
-                    actions.markOpened(item.url, item.url)
-                    onSelectedItemUrlChange(item.url)
-                  }}
-                />
+              return (
                 <div
-                  className={cn(
-                    "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
-                    "flex",
-                    isDirectLinkExpired && "text-muted-foreground opacity-60"
-                  )}
+                  key={itemKey}
+                  className="group relative"
+                  data-highlighted={
+                    highlightedId === item.id ? true : undefined
+                  }
+                  data-extraction-state={extractionState}
                 >
-                  {directLink ? (
-                    <SaveListRowIcon
-                      icon={PlayIcon}
-                      className={
-                        isDirectLinkExpired
-                          ? "text-muted-foreground"
-                          : undefined
+                  <div
+                    className={cn(
+                      "relative flex min-h-20 w-full items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5",
+                      !isDirectLinkExpired &&
+                        !isExtractionIncomplete &&
+                        "hover:bg-muted/70",
+                      directLink?.opened &&
+                        !isDirectLinkExpired &&
+                        "bg-sky-500/15 hover:bg-sky-500/20"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      disabled={isDirectLinkExpired || isExtractionIncomplete}
+                      aria-label={
+                        isExtractionIncomplete
+                          ? `${getExtractionStatusLabel(item, isExtracting)} for ${getItemTitle(item)}`
+                          : directLink
+                            ? `Open ${directLink.label || getItemTitle(item)}`
+                            : `View ${getItemTitle(item)}`
                       }
+                      className={cn(
+                        "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        (isDirectLinkExpired || isExtractionIncomplete) &&
+                          "cursor-not-allowed"
+                      )}
+                      onClick={() => {
+                        if (isExtractionIncomplete) {
+                          return
+                        }
+                        if (directLink) {
+                          const directLinkTarget =
+                            getMediaNodeTarget(directLink)
+                          void actions
+                            .play(directLink)
+                            .then((result) =>
+                              markAfterAcceptedHandoff({
+                                ...result,
+                                itemLabel: directLink.label,
+                                markOpened: () =>
+                                  actions.markOpened(
+                                    item.url,
+                                    directLinkTarget
+                                  ),
+                              })
+                            )
+                            .catch(console.error)
+                          return
+                        }
+                        actions.markOpened(item.url, item.url)
+                        onSelectedItemUrlChange(item.url)
+                      }}
                     />
-                  ) : (
-                    <SaveListRowIcon icon={Folder01Icon} />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <FilenameText
-                      value={directLink?.label || getItemTitle(item)}
-                      className="block text-sm font-normal [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10 md:text-lg"
-                      textClassName={
-                        isDirectLinkExpired ? "line-through" : undefined
-                      }
-                    />
-                    <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="min-w-0 truncate">
-                          {view.sourceName || view.pluginName || item.url}
-                        </span>
-                        {directLink?.size && (
-                          <span className="flex shrink-0 items-center gap-1.5">
-                            <span aria-hidden="true">·</span>
-                            <span>{directLink.size}</span>
+                    <div
+                      className={cn(
+                        "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                        "flex",
+                        isDirectLinkExpired &&
+                          "text-muted-foreground opacity-60",
+                        isExtractionIncomplete && "text-muted-foreground"
+                      )}
+                    >
+                      {isExtractionIncomplete ? (
+                        <SaveListRowIcon icon={PackageSearchIcon} />
+                      ) : directLink ? (
+                        <SaveListRowIcon
+                          icon={PlayIcon}
+                          className={
+                            isDirectLinkExpired
+                              ? "text-muted-foreground"
+                              : undefined
+                          }
+                        />
+                      ) : (
+                        <SaveListRowIcon icon={Folder01Icon} />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <FilenameText
+                          value={directLink?.label || getItemTitle(item)}
+                          className="block text-sm font-normal [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10 md:text-base"
+                          textClassName={
+                            isDirectLinkExpired ? "line-through" : undefined
+                          }
+                        />
+                        {isExtractionIncomplete ? (
+                          <div className="mt-1 min-w-0">
+                            <SaveExtractionStatus
+                              item={item}
+                              isRefreshing={isExtracting}
+                            />
+                          </div>
+                        ) : (
+                          <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="min-w-0 truncate">
+                                {view.sourceName || view.pluginName || item.url}
+                              </span>
+                              {directLink?.size && (
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                  <span aria-hidden="true">·</span>
+                                  <span>{directLink.size}</span>
+                                </span>
+                              )}
+                            </span>
+                            {!directLink && (
+                              <span className="flex items-center gap-2 md:hidden">
+                                <span className="md:hidden">
+                                  {view.extractedLinks.length} items
+                                </span>
+                                {isRootItemNew && (
+                                  <NewBadge className="md:hidden" />
+                                )}
+                              </span>
+                            )}
+                            {directLink &&
+                              (isRootItemNew ||
+                                directLink.expiry !== undefined) && (
+                                <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
+                                  {directLink.expiry !== undefined && (
+                                    <>
+                                      <span
+                                        aria-hidden="true"
+                                        className="hidden md:inline"
+                                      >
+                                        ·
+                                      </span>
+                                      <PlayableExpiryBadge
+                                        expiresAt={directLink.expiry}
+                                        expirySource={directLink.expirySource}
+                                      />
+                                    </>
+                                  )}
+                                  {isRootItemNew && (
+                                    <NewBadge className="md:hidden" />
+                                  )}
+                                </span>
+                              )}
                           </span>
                         )}
                       </span>
-                      {!directLink && (
-                        <span className="flex items-center gap-2 md:hidden">
-                          <span className="md:hidden">
-                            {view.extractedLinks.length} items
-                          </span>
-                          {isRootItemNew && <NewBadge className="md:hidden" />}
-                        </span>
-                      )}
-                      {directLink &&
-                        (isRootItemNew || directLink.expiry !== undefined) && (
-                          <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                            {directLink?.expiry !== undefined && (
-                              <>
-                                <span
-                                  aria-hidden="true"
-                                  className="hidden md:inline"
-                                >
-                                  ·
-                                </span>
-                                <PlayableExpiryBadge
-                                  expiresAt={directLink.expiry}
-                                  expirySource={directLink.expirySource}
-                                />
-                              </>
-                            )}
-                            {isRootItemNew && (
-                              <NewBadge className="md:hidden" />
-                            )}
-                          </span>
-                        )}
+                    </div>
+                    {isRootItemNew && (
+                      <NewBadge className="relative z-10 hidden md:inline-flex" />
+                    )}
+                    {!directLink && !isExtractionIncomplete && (
+                      <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs text-muted-foreground md:inline">
+                        {view.extractedLinks.length} items
+                      </span>
+                    )}
+                    <span className="relative z-10">
+                      <LinkItemMenu
+                        item={item}
+                        actions={actions}
+                        playableLink={directLink}
+                        isPlayableLinkExpired={isDirectLinkExpired}
+                        showRemove
+                        isRefreshing={isExtracting}
+                      />
                     </span>
-                  </span>
+                    {!directLink &&
+                      !isExtractionIncomplete &&
+                      !isExtracting && (
+                        <HugeiconsIcon
+                          icon={ArrowRight01Icon}
+                          className="pointer-events-none relative z-10 shrink-0 text-foreground"
+                        />
+                      )}
+                  </div>
                 </div>
-                {isRootItemNew && (
-                  <NewBadge className="relative z-10 hidden md:inline-flex" />
-                )}
-                {!directLink && (
-                  <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs text-muted-foreground md:inline">
-                    {view.extractedLinks.length} items
-                  </span>
-                )}
-                <span className="relative z-10">
-                  <LinkItemMenu
-                    item={item}
-                    actions={actions}
-                    playableLink={directLink}
-                    isPlayableLinkExpired={isDirectLinkExpired}
-                    showRemove
-                    isRefreshing={isExtracting}
-                  />
-                </span>
-                {!directLink && !isExtracting && (
-                  <HugeiconsIcon
-                    icon={ArrowRight01Icon}
-                    className="pointer-events-none relative z-10 shrink-0 text-foreground"
-                  />
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </section>
   )
 }

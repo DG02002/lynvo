@@ -91,7 +91,6 @@ export const findLynvoPlugin = (
   const staticMatch = sources.find(
     (candidate) =>
       candidate.matchStrategy !== "probe" &&
-      candidate.credential === undefined &&
       matchPluginServerUrl(targetUrl, candidate.matchers ?? [])
   )
   if (staticMatch) {
@@ -114,7 +113,8 @@ export const extractFromLynvoPluginServer = Effect.fn(
     basicAuth?: { username: string; password: string }
   },
   requestId?: string,
-  operationId?: string
+  operationId?: string,
+  source?: PluginMetadata
 ): Effect.fn.Return<ExtractionResult, ExtractionError> {
   const client = createLynvoPluginServerClient(environment)
   const options = {
@@ -127,5 +127,5 @@ export const extractFromLynvoPluginServer = Effect.fn(
     () => extractPluginServerResponse(client, targetUrl, kind, options),
     targetUrl
   )
-  return mapPluginServerExtractionResult(result, LYNVO_PLUGIN_SERVER_ID)
+  return mapPluginServerExtractionResult(result, LYNVO_PLUGIN_SERVER_ID, source)
 })

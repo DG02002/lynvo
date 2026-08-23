@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { saveLink } from "~/features/links/use-link-actions/save-flow"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
-
-const createReporter = (): SavedLinkInteractionReporter => ({
-  publish: vi.fn(),
-})
 
 describe("Bhadoo save flow", () => {
   beforeEach(() => {
@@ -39,13 +34,13 @@ describe("Bhadoo save flow", () => {
       },
     })
     const addLink = vi.fn().mockResolvedValue("saved-id")
-    const reporter = createReporter()
+    const enqueueLink = vi.fn()
 
     const result = await saveLink({
       currentUrl: credentialedUrl,
       links: [],
       addLink,
-      reporter,
+      enqueueLink,
       shouldAutoSaveAllLinks: false,
     })
 
@@ -68,44 +63,22 @@ describe("Bhadoo save flow", () => {
     })
   })
 
-  it("saves every extracted link without opening selection when enabled", async () => {
+  it("queues a source immediately when auto-save is enabled", async () => {
     const sourceUrl = "https://index.example.com/0:/Shows/"
-    const metadata = { filename: "Shows" }
-    const extractedLinks = [
-      {
-        id: "episode-one",
-        label: "Episode One",
-        url: "https://index.example.com/0:/Shows/Episode-One.mkv",
-      },
-      {
-        id: "episode-two",
-        label: "Episode Two",
-        url: "https://index.example.com/0:/Shows/Episode-Two.mkv",
-      },
-    ]
-    vi.spyOn(extractionOrchestration, "getSourceMetadata").mockResolvedValue(
-      metadata
-    )
-    vi.spyOn(extractionOrchestration, "prepareSource").mockResolvedValue({
-      metadata,
-      mergedMeta: metadata,
-      presentation: { kind: "selectionDialog", links: extractedLinks },
-    })
-    const addLink = vi.fn().mockResolvedValue("saved-id")
-    const reporter = createReporter()
+    const addLink = vi.fn()
+    const enqueueLink = vi.fn().mockResolvedValue("saved-id")
 
-    await saveLink({
+    const result = await saveLink({
       currentUrl: sourceUrl,
       links: [],
       addLink,
-      reporter,
+      enqueueLink,
       shouldAutoSaveAllLinks: true,
     })
 
-    expect(addLink).toHaveBeenCalledWith(sourceUrl, metadata, extractedLinks)
-    expect(reporter.publish).not.toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "selection-required" })
-    )
+    expect(enqueueLink).toHaveBeenCalledWith(sourceUrl)
+    expect(addLink).not.toHaveBeenCalled()
+    expect(result).toEqual({ kind: "queued", linkId: "saved-id" })
   })
 
   it("reports an error and does not reset view when addLink fails", async () => {
@@ -127,23 +100,20 @@ describe("Bhadoo save flow", () => {
       },
     })
     const addLink = vi.fn().mockResolvedValue(undefined)
-    const reporter = createReporter()
+    const enqueueLink = vi.fn()
 
-    await saveLink({
+    const result = await saveLink({
       currentUrl: sourceUrl,
       links: [],
       addLink,
-      reporter,
+      enqueueLink,
       shouldAutoSaveAllLinks: false,
     })
 
-    expect(reporter.publish).toHaveBeenCalledWith({
+    expect(result).toEqual({
       kind: "error",
-      message: "Unable to save the link. Try again.",
+      message: "Unable to save link. Try again.",
+      previewMeta: metadata,
     })
-    expect(reporter.publish).toHaveBeenCalledWith({ kind: "clear-preview" })
-    expect(reporter.publish).not.toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "view-reset" })
-    )
   })
 })
