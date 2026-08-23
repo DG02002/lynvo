@@ -10,7 +10,7 @@ import {
 describe("public Effect API error contracts", () => {
   it("strips nested causes and internal details", async () => {
     const sentinel = "secret-shaped-sentinel"
-    const convexEncoded = await Effect.runPromise(
+    const backendEncoded = await Effect.runPromise(
       Schema.encodeUnknownEffect(BackendApiError)(
         new BackendError({
           message: "Backend request failed",
@@ -27,7 +27,7 @@ describe("public Effect API error contracts", () => {
       )
     )
 
-    expect(convexEncoded).toEqual({
+    expect(backendEncoded).toEqual({
       _tag: "BackendError",
       message: "Backend request failed",
     })
@@ -35,7 +35,7 @@ describe("public Effect API error contracts", () => {
       _tag: "PluginServerRegistrationError",
       message: "Plugin Server request failed",
     })
-    expect(JSON.stringify([convexEncoded, registrationEncoded])).not.toContain(
+    expect(JSON.stringify([backendEncoded, registrationEncoded])).not.toContain(
       sentinel
     )
   })

@@ -24,6 +24,8 @@ catalog:
   '@cloudflare/workers-types': 5.20260811.1
   cheerio: ^1.2.0
   hono: 4.13.1
+  husky: 9.1.7
+  lint-staged: 17.3.0
   oxfmt: ^0.63.0
   oxlint: ^1.78.0
   sharp: ^0.35.3

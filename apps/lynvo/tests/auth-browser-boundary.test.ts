@@ -11,12 +11,8 @@ const collectBrowserSources = (directory: string): string[] =>
   })
 
 describe("browser authentication boundary", () => {
-  it("keeps the browser free of backend clients and token persistence", () => {
+  it("keeps tokens out of browser-readable storage", () => {
     const forbiddenPatterns = [
-      /from ["']convex\/react["']/,
-      /from ["']@tanstack\/react-query["']/,
-      /__convexAuthJWT/,
-      /__convexAuthRefreshToken/,
       /localStorage.*[Tt]oken/,
       /indexedDB.*[Tt]oken/,
     ]

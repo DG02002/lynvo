@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  HUSKY: 0
+
 concurrency:
   group: npm-${{ github.ref_name }}
   cancel-in-progress: false
@@ -117,13 +120,8 @@ jobs:
           path: release-artifacts
 
       - name: Verify and publish with trusted publishing
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd release-artifacts
           sha256sum --check SHA256SUMS
           test "$(find . -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')" = "1"
-          if [ -n "$NODE_AUTH_TOKEN" ]; then
-            npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
-          fi
           npm publish ./*.tgz --access public --provenance
