@@ -1,7 +1,7 @@
 {
   "$schema": "https://react.doctor/schema/config.json",
   "ignore": {
-    "files": ["app/components/ui/**", "convex/_generated/**"],
+    "files": ["app/components/ui/**"],
     "overrides": [
       {
         "files": ["app/**/routes/*.tsx"],
@@ -13,21 +13,6 @@
           "app/root/route-seo-metadata.tsx"
         ],
         "rules": ["react-doctor/only-export-components"]
-      },
-      {
-        "files": [
-          "convex/accountErasure.ts",
-          "convex/accountLifecycle.ts",
-          "convex/migrations.ts",
-          "convex/storagePolicy.ts",
-          "convex/userPluginServers.ts",
-          "convex/users.ts"
-        ],
-        "rules": ["react-doctor/async-await-in-loop"]
-      },
-      {
-        "files": ["convex/accountDataOwnership.ts"],
-        "rules": ["react-doctor/js-combine-iterations"]
       },
       {
         "files": [
