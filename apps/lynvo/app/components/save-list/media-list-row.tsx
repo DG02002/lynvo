@@ -9,8 +9,17 @@ export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
 export const MEDIA_LIST_ROW_MENU_CELL_CLASS =
   "w-16 shrink-0 border-s border-border/70"
 
-export const MEDIA_LIST_ROW_MENU_TRIGGER_CLASS =
-  "size-full! rounded-none! bg-transparent text-foreground shadow-none hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50 [&_svg]:size-7!"
+export const MEDIA_LIST_HEADER_MENU_CELL_CLASS = cn(
+  "contents md:flex md:h-full md:items-center md:justify-center",
+  MEDIA_LIST_ROW_MENU_CELL_CLASS
+)
+
+const MEDIA_LIST_MENU_ICON_CLASS = "[&_svg]:size-7!"
+
+export const MEDIA_LIST_ROW_MENU_TRIGGER_CLASS = cn(
+  "size-full! rounded-none! bg-transparent text-foreground shadow-none hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50",
+  MEDIA_LIST_MENU_ICON_CLASS
+)
 
 interface SaveListRowIconProps {
   readonly children: ReactNode

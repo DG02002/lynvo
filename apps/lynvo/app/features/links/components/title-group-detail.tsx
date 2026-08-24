@@ -17,6 +17,7 @@ import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import {
+  MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   MediaListRow,
@@ -683,10 +684,13 @@ export const TitleGroupDetail = ({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header
-          className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:px-6"
+          className={cn(
+            "flex min-h-16 shrink-0 items-stretch gap-3 border-b bg-background px-4 py-3",
+            isDirectMediaGroup ? "pe-0 md:ps-6 md:py-0" : "md:px-6 md:py-0"
+          )}
           data-layout-guide-target="fullscreen-header"
         >
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col justify-center">
             <h1 className="truncate text-base font-normal">{headerTitle}</h1>
             {headerSubtitle && (
               <p className="truncate text-xs text-muted-foreground">
@@ -763,13 +767,15 @@ export const TitleGroupDetail = ({
                 <span className="hidden sm:inline">Real filename</span>
               </Button>
             )}
+          </div>
+          <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
             <TitleGroupMenu
               group={displayedGroup}
               savedLinks={groupSavedLinks}
               fallbackItem={links[0]}
               actions={actions}
               onRemoved={() => navigate("/save")}
-              triggerClassName="size-10 rounded-full bg-background/90 shadow-none hover:bg-background/95 aria-expanded:bg-background/95 dark:hover:bg-background/90 [&_svg]:size-7!"
+              triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             />
           </div>
         </header>

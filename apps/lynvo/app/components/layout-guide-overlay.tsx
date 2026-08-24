@@ -42,11 +42,21 @@ const targetSelectorsBySurface = {
 const getTargetSelector = (surface: LayoutGuideOverlayProps["surface"]) =>
   targetSelectorsBySurface[surface].join(",")
 
+const getTargetElements = (surface: LayoutGuideOverlayProps["surface"]) =>
+  Array.from(document.querySelectorAll<HTMLElement>(getTargetSelector(surface)))
+
+const isElementInMotion = (element: HTMLElement): boolean => {
+  const animations = element.getAnimations?.()
+  return (
+    animations?.some((animation) => animation.playState === "running") ?? false
+  )
+}
+
 const getTargetMeasurements = (
-  surface: LayoutGuideOverlayProps["surface"]
+  targetElements: readonly HTMLElement[]
 ): LayoutGuideMeasurement[] => {
-  const selector = getTargetSelector(surface)
-  return Array.from(document.querySelectorAll<HTMLElement>(selector))
+  return targetElements
+    .filter((element) => !isElementInMotion(element))
     .map((element, elementIndex) => {
       const rectangle = element.getBoundingClientRect()
       const target = element.dataset.layoutGuideTarget ?? "site-header"
@@ -106,8 +116,13 @@ export const LayoutGuideOverlay = ({ surface }: LayoutGuideOverlayProps) => {
   const [measurements, setMeasurements] = useState<LayoutGuideMeasurement[]>([])
 
   useLayoutEffect(() => {
+    let measurementFrameId: number | undefined
+
     const updateMeasurements = () => {
-      const nextMeasurements = getTargetMeasurements(surface)
+      const targetElements = getTargetElements(surface)
+      resizeObserver?.disconnect()
+      targetElements.forEach((element) => resizeObserver?.observe(element))
+      const nextMeasurements = getTargetMeasurements(targetElements)
       setMeasurements((currentMeasurements) =>
         areMeasurementsEqual(currentMeasurements, nextMeasurements)
           ? currentMeasurements
@@ -115,29 +130,48 @@ export const LayoutGuideOverlay = ({ surface }: LayoutGuideOverlayProps) => {
       )
     }
 
-    updateMeasurements()
-    window.addEventListener("resize", updateMeasurements)
+    const scheduleMeasurements = () => {
+      if (measurementFrameId !== undefined) {
+        return
+      }
+      measurementFrameId = window.requestAnimationFrame(() => {
+        measurementFrameId = undefined
+        updateMeasurements()
+      })
+    }
+
+    const handleMotionEnd = () => {
+      scheduleMeasurements()
+    }
 
     const resizeObserver = globalThis.ResizeObserver
-      ? new globalThis.ResizeObserver(updateMeasurements)
+      ? new globalThis.ResizeObserver(scheduleMeasurements)
       : undefined
     const mutationObserver = globalThis.MutationObserver
-      ? new globalThis.MutationObserver(updateMeasurements)
+      ? new globalThis.MutationObserver(scheduleMeasurements)
       : undefined
-    const targetSelector = getTargetSelector(surface)
-
-    document
-      .querySelectorAll<HTMLElement>(targetSelector)
-      .forEach((element) => {
-        resizeObserver?.observe(element)
-      })
+    window.addEventListener("resize", scheduleMeasurements)
+    document.addEventListener("animationend", handleMotionEnd, true)
+    document.addEventListener("animationcancel", handleMotionEnd, true)
+    document.addEventListener("transitionend", handleMotionEnd, true)
+    document.addEventListener("transitioncancel", handleMotionEnd, true)
     mutationObserver?.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
       childList: true,
       subtree: true,
     })
+    updateMeasurements()
 
     return () => {
-      window.removeEventListener("resize", updateMeasurements)
+      window.removeEventListener("resize", scheduleMeasurements)
+      document.removeEventListener("animationend", handleMotionEnd, true)
+      document.removeEventListener("animationcancel", handleMotionEnd, true)
+      document.removeEventListener("transitionend", handleMotionEnd, true)
+      document.removeEventListener("transitioncancel", handleMotionEnd, true)
+      if (measurementFrameId !== undefined) {
+        window.cancelAnimationFrame(measurementFrameId)
+      }
       resizeObserver?.disconnect()
       mutationObserver?.disconnect()
     }

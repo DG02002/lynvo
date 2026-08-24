@@ -51,6 +51,7 @@ import { useResolvableContainerState } from "./use-resolvable-container-state"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
 import {
+  MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
@@ -323,13 +324,14 @@ const FinderEmptyState = ({
           className="w-full"
         />
       </h1>
-      <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+      <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
         <LinkItemMenu
           item={item}
           actions={actions}
           showRemove
           onRemoved={onExit}
           isRefreshing={extractingItems.has(item.url)}
+          triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
         />
       </div>
     </header>
@@ -591,13 +593,14 @@ const FinderBrowser = ({
             />
           </h1>
         </div>
-        <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+        <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
           <LinkItemMenu
             item={item}
             actions={actions}
             showRemove
             onRemoved={onExit}
             isRefreshing={extractingItems.has(item.url)}
+            triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
           />
         </div>
       </header>

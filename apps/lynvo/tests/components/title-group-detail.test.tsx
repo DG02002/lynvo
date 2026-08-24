@@ -153,6 +153,25 @@ describe("TitleGroupDetail", () => {
     const directMediaMenu = screen.getByRole("button", {
       name: "Open menu for Direct media.mkv",
     })
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for https://source.example/show",
+    })
+    expect(headerMenu.closest("header")).toHaveClass(
+      "pe-0",
+      "md:ps-6",
+      "md:py-0"
+    )
+    expect(headerMenu).toHaveClass(
+      "size-full!",
+      "rounded-none!",
+      "[&_svg]:size-7!"
+    )
+    expect(headerMenu.parentElement).toHaveClass(
+      "w-16",
+      "md:h-full",
+      "border-s",
+      "border-border/70"
+    )
     expect(directMediaRow.querySelector("p")).toHaveClass(
       "text-sm",
       "md:text-lg",

@@ -70,6 +70,19 @@ describe("SaveListBrowser", () => {
       )
 
     const firstRender = renderSavedFolder()
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for Saved Collection",
+    })
+    expect(headerMenu).toHaveClass(
+      "size-full!",
+      "rounded-none!",
+      "[&_svg]:size-7!"
+    )
+    expect(headerMenu.parentElement).toHaveClass(
+      "w-16",
+      "border-s",
+      "border-border/70"
+    )
     fireEvent.click(
       screen.getAllByRole("button", { name: /Season One/ }).at(-1)!
     )
