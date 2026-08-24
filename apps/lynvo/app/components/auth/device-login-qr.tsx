@@ -95,7 +95,7 @@ export function DeviceLoginQr() {
     isGenerating,
   } = state
   const codeRef = React.useRef<string | null>(null)
-  const exchangeAttemptIdRef = React.useRef<string>(crypto.randomUUID())
+  const exchangeAttemptIdRef = React.useRef<string | null>(null)
   const exchangeGenerationRef = React.useRef(1)
   const { data: status } = useAsyncResource(
     () =>
@@ -149,23 +149,25 @@ export function DeviceLoginQr() {
   React.useEffect(() => {
     if (
       codeRef.current &&
+      exchangeAttemptIdRef.current &&
       (status?.status === "authorized" || status?.status === "consumed") &&
       !hasSignedInRef.current
     ) {
       hasSignedInRef.current = true
       const currentCode = codeRef.current
+      const currentExchangeAttemptId = exchangeAttemptIdRef.current
       const currentPollSecret = pollSecret ?? ""
       void (async () => {
         const claim = await claimDeviceExchange({
           code: currentCode,
           pollSecret: currentPollSecret,
-          attemptId: exchangeAttemptIdRef.current,
+          attemptId: currentExchangeAttemptId,
           generation: exchangeGenerationRef.current,
         })
         await finalizeDeviceExchangeOverHttp({
           code: currentCode,
           pollSecret: currentPollSecret,
-          attemptId: exchangeAttemptIdRef.current,
+          attemptId: currentExchangeAttemptId,
           generation: exchangeGenerationRef.current,
           sessionId: claim.sessionId,
         })

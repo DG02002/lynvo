@@ -29,6 +29,7 @@ import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { cn } from "~/lib/utils"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -38,6 +39,7 @@ interface LinkItemMenuProps {
   playableLink?: ExtractedLink
   isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
+  triggerClassName?: string
 }
 
 const LinkItemMenuContent = ({
@@ -48,6 +50,7 @@ const LinkItemMenuContent = ({
   playableLink,
   isPlayableLinkExpired = false,
   isRefreshing = false,
+  triggerClassName,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const itemLabel = item.title || item.url
@@ -91,7 +94,10 @@ const LinkItemMenuContent = ({
                   ? `Reloading link choices for ${itemLabel}…`
                   : `Open menu for ${itemLabel}`
               }
-              className="size-8 text-foreground shrink-0 hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground"
+              className={cn(
+                "size-8 shrink-0 text-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground",
+                triggerClassName
+              )}
             >
               {isRefreshing ? (
                 <Spinner aria-hidden="true" />

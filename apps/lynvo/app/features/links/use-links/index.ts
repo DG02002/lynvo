@@ -18,33 +18,60 @@ import { createLinksSnapshotStore } from "./links-store"
 import { createLinksMutations } from "./mutations"
 import type { LinksActions } from "./actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
+import type { RealtimeContextValue } from "~/context/realtime-context"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined
 const getHydratedSnapshot = () => true
 const getServerHydratedSnapshot = () => false
 
+declare global {
+  interface UseLinksOptions {
+    readonly initialItems?: LinkViewItem[]
+    readonly initialDataVersion?: number
+    readonly hasInitialSnapshot?: boolean
+  }
+
+  interface UseLinksRuntime {
+    readonly user: { readonly sub: string } | null
+    readonly realtime?: RealtimeContextValue
+  }
+}
+
 const toSavedLinkListItem = (item: LinkViewItem): SavedLinkListItem => ({
   ...item,
   kind: "saved",
 })
 
-export const useLinks = () => {
+export const useLinksWithRuntime = (
+  options: UseLinksOptions,
+  runtime: UseLinksRuntime
+) => {
   const hasHydrated = useSyncExternalStore(
     subscribeToHydration,
     getHydratedSnapshot,
     getServerHydratedSnapshot
   )
-  const rootData = useRouteLoaderData<typeof rootLoader>("root")
-  const user = rootData?.user ?? null
+  const user = runtime.user
   const userId = user?.sub
   const identity = userId ?? "signed-out"
-  const store = useMemo(() => createLinksSnapshotStore(), [identity])
-  const realtime = useOptionalRealtime()
-  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false)
+  const initialSnapshot = useRef(options).current
+  const store = useMemo(
+    () =>
+      createLinksSnapshotStore(
+        initialSnapshot.initialItems,
+        initialSnapshot.initialDataVersion
+      ),
+    [identity, initialSnapshot]
+  )
+  const realtime = runtime.realtime
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(
+    Boolean(initialSnapshot.hasInitialSnapshot)
+  )
   const fetchSequenceRef = useRef(0)
   const refetchTimerRef = useRef<number | undefined>(undefined)
-  const mutationChainRef = useRef<Promise<unknown>>(Promise.resolve())
+  const initialMutationChain = useMemo(() => Promise.resolve(), [])
+  const mutationChainRef = useRef<Promise<unknown>>(initialMutationChain)
 
   const applyFetchedSnapshot = useCallback(async () => {
     if (!userId) {
@@ -78,7 +105,9 @@ export const useLinks = () => {
       return
     }
     let didCancel = false
-    setIsInitialLoadComplete(false)
+    if (!initialSnapshot.hasInitialSnapshot) {
+      setIsInitialLoadComplete(false)
+    }
     applyFetchedSnapshot()
       .catch((error) => console.error("Unable to load saved links", error))
       .finally(() => {
@@ -89,7 +118,7 @@ export const useLinks = () => {
     return () => {
       didCancel = true
     }
-  }, [applyFetchedSnapshot, store, userId])
+  }, [applyFetchedSnapshot, initialSnapshot, store, userId])
 
   useEffect(() => {
     if (!userId || !realtime) {
@@ -158,7 +187,12 @@ export const useLinks = () => {
   const links = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,
-    () => EMPTY_LINKS
+    initialSnapshot.hasInitialSnapshot ? store.getSnapshot : () => EMPTY_LINKS
+  )
+  const dataVersion = useSyncExternalStore(
+    store.subscribe,
+    store.getVersion,
+    initialSnapshot.hasInitialSnapshot ? store.getVersion : () => 0
   )
   const savedLinks = useMemo(() => links.map(toSavedLinkListItem), [links])
   const actions: LinksActions = {
@@ -175,7 +209,17 @@ export const useLinks = () => {
     links: savedLinks,
     actions,
     user,
+    dataVersion,
     isLoading: Boolean(userId && !isInitialLoadComplete),
     isHydrating: Boolean(userId && !hasHydrated && links.length === 0),
   }
+}
+
+export const useLinks = (options: UseLinksOptions = {}) => {
+  const rootData = useRouteLoaderData<typeof rootLoader>("root")
+  const realtime = useOptionalRealtime()
+  return useLinksWithRuntime(options, {
+    user: rootData?.user ?? null,
+    realtime,
+  })
 }

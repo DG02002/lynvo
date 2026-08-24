@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 
 const quoteShellArgument = (argument) =>
   `'${argument.replaceAll("'", "'\\''")}'`
@@ -21,16 +21,39 @@ const environmentPrefix = isNoUsageEnabled
   ? "CLOUDFLARE_ENV=local DISABLE_USAGE_LIMITS=true"
   : "CLOUDFLARE_ENV=local"
 
-const devProcess = spawn(`${environmentPrefix} ${reactRouterCommand}`, {
-  stdio: "inherit",
-  shell: true,
-})
-
-devProcess.on("exit", (exitCode, signal) => {
-  if (signal) {
-    process.kill(process.pid, signal)
-    return
+const migrationProcess = spawnSync(
+  "pnpm",
+  [
+    "exec",
+    "wrangler",
+    "d1",
+    "migrations",
+    "apply",
+    "DB",
+    "--local",
+    "--env",
+    "local",
+  ],
+  {
+    stdio: "inherit",
+    env: { ...process.env, CI: "1" },
   }
+)
 
-  process.exitCode = exitCode ?? 1
-})
+if (migrationProcess.status !== 0) {
+  process.exitCode = migrationProcess.status ?? 1
+} else {
+  const devProcess = spawn(`${environmentPrefix} ${reactRouterCommand}`, {
+    stdio: "inherit",
+    shell: true,
+  })
+
+  devProcess.on("exit", (exitCode, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal)
+      return
+    }
+
+    process.exitCode = exitCode ?? 1
+  })
+}

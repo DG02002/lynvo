@@ -6,7 +6,10 @@ import React, {
   useSyncExternalStore,
 } from "react"
 import { toast } from "sonner"
-import { useRealtime } from "~/context/realtime-context"
+import {
+  useRealtime,
+  type RealtimeContextValue,
+} from "~/context/realtime-context"
 import { remoteApi } from "./remote-control/api"
 import { createRemoteControlMachine } from "./remote-control/machine"
 import { createRemoteControlPersistence } from "./remote-control/storage"
@@ -40,23 +43,28 @@ const browserClock: RemoteControlClock = {
   clearInterval: (intervalId) => window.clearInterval(intervalId),
 }
 
-export const RemoteControlProvider = ({
+const createBrowserRemoteControlMachine = (identity: string) =>
+  createRemoteControlMachine({
+    transport: remoteApi,
+    persistence: createRemoteControlPersistence(identity),
+    clock: browserClock,
+  })
+
+export const RemoteControlProviderContent = ({
   children,
   user,
+  realtime,
+  createMachine = createBrowserRemoteControlMachine,
 }: {
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
+  realtime: RealtimeContextValue
+  createMachine?: (identity: string) => RemoteControlMachine
 }) => {
-  const realtime = useRealtime()
   const identity = `${user?.id ?? "signed-out"}:${user?.sessionId ?? "none"}`
   const machine = useMemo(
-    () =>
-      createRemoteControlMachine({
-        transport: remoteApi,
-        persistence: createRemoteControlPersistence(identity),
-        clock: browserClock,
-      }),
-    [identity]
+    () => createMachine(identity),
+    [createMachine, identity]
   )
   const state = useSyncExternalStore(
     machine.subscribe,
@@ -184,6 +192,21 @@ export const RemoteControlProvider = ({
     <RemoteControlContext.Provider value={value}>
       {children}
     </RemoteControlContext.Provider>
+  )
+}
+
+export const RemoteControlProvider = ({
+  children,
+  user,
+}: {
+  children: React.ReactNode
+  user: { id: string; sessionId?: string } | null
+}) => {
+  const realtime = useRealtime()
+  return (
+    <RemoteControlProviderContent user={user} realtime={realtime}>
+      {children}
+    </RemoteControlProviderContent>
   )
 }
 

@@ -11,11 +11,11 @@ import {
   deleteSavedLinkById,
   updateSavedLinkMeta,
 } from "../../workers/d1/links"
-import { insertGoogleUser, updateUserStorageRetentionDays } from "../../workers/d1/users"
 import {
-  LinkTooLargeError,
-  StorageLimitError,
-} from "../../workers/d1/errors"
+  insertGoogleUser,
+  updateUserStorageRetentionDays,
+} from "../../workers/d1/users"
+import { LinkTooLargeError, StorageLimitError } from "../../workers/d1/errors"
 import { USER_STORAGE_LIMIT_BYTES } from "../../workers/constants"
 
 const NOW = 1_750_000_000_000
@@ -28,10 +28,10 @@ const createUser = async () =>
     now: NOW,
   })
 
-const emptyMetadataJson = (source: Record<string, unknown> = {}) =>
+const emptyMetadataJson = <Source>(source?: Source) =>
   JSON.stringify({
     schemaVersion: 3,
-    source,
+    source: source ?? {},
     extraction: { extractedLinks: [] },
     playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
   })
@@ -60,7 +60,13 @@ const seedPluginInventory = async (
   await env.DB.prepare(
     `INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id, credential_generation) VALUES (?1, ?2, ?3, ?4, ?5, 0)`
   )
-    .bind(`${indexPrefix}-domain`, userId, `${indexPrefix}-server-0`, `${indexPrefix}.example`, "plugin-1")
+    .bind(
+      `${indexPrefix}-domain`,
+      userId,
+      `${indexPrefix}-server-0`,
+      `${indexPrefix}.example`,
+      "plugin-1"
+    )
     .run()
   await env.DB.prepare(
     `INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at)
@@ -207,7 +213,10 @@ describe("d1 storage ledger", () => {
         rejection = error.rejection
       }
     }
-    expect(rejection).toMatchObject({ kind: "link-too-large", limitBytes: 262_144 })
+    expect(rejection).toMatchObject({
+      kind: "link-too-large",
+      limitBytes: 262_144,
+    })
     const after = await getStorageLedger(env.DB, user.id)
     expect(after).toEqual(before)
   })

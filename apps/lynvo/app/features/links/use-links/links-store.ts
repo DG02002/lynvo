@@ -51,9 +51,12 @@ export const createTemporaryLinkId = (): string =>
 export const isTemporaryLinkId = (linkId: string | undefined): boolean =>
   Boolean(linkId?.startsWith(TEMPORARY_ID_PREFIX))
 
-export const createLinksSnapshotStore = (): LinksSnapshotStore => {
-  let version = 0
-  let settledItems: LinkViewItem[] = []
+export const createLinksSnapshotStore = (
+  initialItems: LinkViewItem[] = [],
+  initialVersion = 0
+): LinksSnapshotStore => {
+  let version = initialVersion
+  let settledItems = initialItems.filter((item) => Boolean(item.id))
   let clearedFromVersion: number | null = null
   const pendingEntries = new Map<string, PendingEntry>()
   const pendingAddOrder: string[] = []

@@ -23,8 +23,22 @@ const getFilename = (targetUrl: string, headers: Headers): string => {
   if (headerFilename) {
     return decodeURIComponent(headerFilename)
   }
-  const pathname = new URL(targetUrl).pathname
-  const pathFilename = pathname.split("/").at(-1)
+  const parsedUrl = new URL(targetUrl)
+  const queryDisposition =
+    parsedUrl.searchParams.get("response-content-disposition") ??
+    parsedUrl.searchParams.get("content-disposition")
+  if (queryDisposition) {
+    const match = CONTENT_DISPOSITION_FILENAME.exec(queryDisposition)?.[1]
+    if (match) {
+      return decodeURIComponent(match)
+    }
+  }
+  const queryFilename =
+    parsedUrl.searchParams.get("filename") ?? parsedUrl.searchParams.get("file")
+  if (queryFilename) {
+    return decodeURIComponent(queryFilename)
+  }
+  const pathFilename = parsedUrl.pathname.split("/").at(-1)
   return pathFilename ? decodeURIComponent(pathFilename) : "Unknown File"
 }
 

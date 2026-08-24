@@ -207,7 +207,13 @@ describe("d1 remote commands", () => {
         `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status)
          VALUES (?1, ?2, ?3, 'receiver', 'play', '{}', ?4, ?5, 'applied')`
       )
-        .bind(`terminal-${index}`, owner.user.id, owner.session.id, index, NOW + REMOTE_COMMAND_TTL_MS)
+        .bind(
+          `terminal-${index}`,
+          owner.user.id,
+          owner.session.id,
+          index,
+          NOW + REMOTE_COMMAND_TTL_MS
+        )
         .run()
     }
     const enqueued = await enqueueRemoteCommand(env.DB, owner.user.id, {
@@ -241,6 +247,7 @@ describe("d1 remote commands", () => {
     await expect(
       enqueueRemoteCommand(env.DB, owner.user.id, {
         targetSessionId: owner.session.id,
+        // SAFETY: The invalid command is intentional input for runtime validation.
         command: "stop" as "play",
         payload: "{}",
         targetReceiverId: "receiver",
@@ -251,12 +258,22 @@ describe("d1 remote commands", () => {
 
   it("cleans expired commands in bounded batches", async () => {
     const owner = await createSessionForUser()
-    for (let index = 0; index < REMOTE_COMMAND_CLEANUP_BATCH_SIZE + 1; index += 1) {
+    for (
+      let index = 0;
+      index < REMOTE_COMMAND_CLEANUP_BATCH_SIZE + 1;
+      index += 1
+    ) {
       await env.DB.prepare(
         `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status)
          VALUES (?1, ?2, ?3, 'receiver', 'play', ?4, ?5, 999999, 'queued')`
       )
-        .bind(`expired-${index}`, owner.user.id, owner.session.id, String(index), index)
+        .bind(
+          `expired-${index}`,
+          owner.user.id,
+          owner.session.id,
+          String(index),
+          index
+        )
         .run()
     }
     const outcome = await cleanupExpiredRemoteCommands(env.DB, 1_000_000)
@@ -286,7 +303,9 @@ describe("d1 remote commands", () => {
     await acknowledgeRemoteCommandNotification(env.DB, enqueued.id)
     const afterAcknowledge = await listPendingRemoteCommandNotifications(env.DB)
     expect(
-      afterAcknowledge.some((notification) => notification.commandId === enqueued.id)
+      afterAcknowledge.some(
+        (notification) => notification.commandId === enqueued.id
+      )
     ).toBe(false)
   })
 })

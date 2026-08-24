@@ -29,6 +29,7 @@ const dataApiRequest = (
   return new Request(`https://lynvo.test${path}`, { ...init, headers })
 }
 
+// SAFETY: Callers provide the response body contract produced by the route under test.
 const readJsonBody = async <Body>(response: Response): Promise<Body> =>
   (await response.json()) as Body
 
@@ -76,8 +77,10 @@ describe("d1 data routes", () => {
       env
     )
     expect(listBefore.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe("1")
-    const beforeBody =
-      await readJsonBody<{ links: unknown[]; dataVersion: number }>(listBefore)
+    const beforeBody = await readJsonBody<{
+      links: unknown[]
+      dataVersion: number
+    }>(listBefore)
     expect(beforeBody.links).toHaveLength(0)
 
     const operationId = crypto.randomUUID()
@@ -127,10 +130,9 @@ describe("d1 data routes", () => {
       dataApiRequest("/api/data/links", sessionB),
       env
     )
-    const afterBody =
-      await readJsonBody<{
-        links: { id: string; url: string; title: string | null }[]
-      }>(listAfter)
+    const afterBody = await readJsonBody<{
+      links: { id: string; url: string; title: string | null }[]
+    }>(listAfter)
     expect(afterBody.links).toHaveLength(1)
     expect(afterBody.links[0]?.id).toBe(created.id)
     expect(afterBody.links[0]?.title).toBe("Route created")
@@ -166,7 +168,9 @@ describe("d1 data routes", () => {
       env
     )
     expect(deleteResponse.status).toBe(404)
-    const body = await readJsonBody<{ failure: { kind: string } }>(deleteResponse)
+    const body = await readJsonBody<{ failure: { kind: string } }>(
+      deleteResponse
+    )
     expect(body.failure.kind).toBe("validation")
 
     const updateResponse = await app.fetch(
@@ -216,9 +220,10 @@ describe("d1 data routes", () => {
       env
     )
     expect(markOpenedResponse.status).toBe(200)
-    const applied = await readJsonBody<{ success: boolean; dataVersion: number }>(
-      markOpenedResponse
-    )
+    const applied = await readJsonBody<{
+      success: boolean
+      dataVersion: number
+    }>(markOpenedResponse)
     expect(applied.success).toBe(true)
     expect(applied.dataVersion).toBe(created.dataVersion + 1)
   })
@@ -278,9 +283,10 @@ describe("d1 data routes", () => {
       }),
       env
     )
-    const deleted = await readJsonBody<{ success: boolean; dataVersion: number }>(
-      deleteResponse
-    )
+    const deleted = await readJsonBody<{
+      success: boolean
+      dataVersion: number
+    }>(deleteResponse)
     expect(deleted.success).toBe(true)
     expect(deleted.dataVersion).toBeGreaterThan(secondLink.dataVersion)
 
@@ -338,9 +344,10 @@ describe("d1 data routes", () => {
       env
     )
     expect(patchResponse.status).toBe(200)
-    const patched = await readJsonBody<{ success: boolean; dataVersion: number }>(
-      patchResponse
-    )
+    const patched = await readJsonBody<{
+      success: boolean
+      dataVersion: number
+    }>(patchResponse)
     expect(patched.success).toBe(true)
 
     const invalidPatch = await app.fetch(
@@ -370,9 +377,7 @@ describe("d1 data routes", () => {
     const servers = await readJsonBody<{
       servers: { id: string; enabled: boolean }[]
     }>(listServersResponse)
-    expect(servers.servers.map((server) => server.id)).toContain(
-      pluginServerId
-    )
+    expect(servers.servers.map((server) => server.id)).toContain(pluginServerId)
 
     const upsertDomainResponse = await app.fetch(
       dataApiRequest("/api/data/plugin-domains", session, {

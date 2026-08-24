@@ -241,18 +241,6 @@ export const listPluginDomains = async (
   }))
 }
 
-export const getPluginDomainById = async (
-  database: D1Database,
-  userId: string,
-  domainId: string
-): Promise<PluginDomainRecord | null> => {
-  const row = await findDomainRowById(database, domainId)
-  if (!row || row.user_id !== userId) {
-    return null
-  }
-  return mapDomainRow(row)
-}
-
 export const getPluginDomainByDomain = async (
   database: D1Database,
   userId: string,
@@ -442,11 +430,10 @@ const buildSetCredentialStatements = async (
   credential: EncryptedCredentialInput,
   now: number
 ): Promise<D1PreparedStatement[]> => {
-  const existingCredential = await findCredentialByDomainId(
-    database,
-    domainRow.id
-  )
-  const preparation = await ensureStorageLedger(database, userId, now)
+  const [existingCredential, preparation] = await Promise.all([
+    findCredentialByDomainId(database, domainRow.id),
+    ensureStorageLedger(database, userId, now),
+  ])
   const credentialMutations = buildReplaceCredentialMutations(
     database,
     preparation,
@@ -571,18 +558,17 @@ export const finalizePluginDomainCredentialChange = async (
   if (domainRow.credential_finalized_attempt_id === input.attemptId) {
     return await getDataVersion(database, userId)
   }
-  const preparedCredentialStatements = await buildSetCredentialStatements(
-    database,
-    userId,
-    domainRow,
-    input.credential,
-    input.now
-  )
-  const finalizationPreparation = await ensureStorageLedger(
-    database,
-    userId,
-    input.now
-  )
+  const [preparedCredentialStatements, finalizationPreparation] =
+    await Promise.all([
+      buildSetCredentialStatements(
+        database,
+        userId,
+        domainRow,
+        input.credential,
+        input.now
+      ),
+      ensureStorageLedger(database, userId, input.now),
+    ])
   const finalizedRow = {
     ...domainRow,
     credential_finalized_attempt_id: input.attemptId,

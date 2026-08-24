@@ -96,12 +96,12 @@ export const calculateAppOwnedStorageUsage = async (
   database: D1Database,
   userId: string
 ): Promise<AppOwnedStorageUsage> => {
-  const userRow = await database
-    .prepare("SELECT * FROM users WHERE id = ?1")
-    .bind(userId)
-    .first<ProfileUserRow>()
-  const [links, pluginServers, pluginDomains, pluginCredentials] =
+  const [userRow, links, pluginServers, pluginDomains, pluginCredentials] =
     await Promise.all([
+      database
+        .prepare("SELECT * FROM users WHERE id = ?1")
+        .bind(userId)
+        .first<ProfileUserRow>(),
       readBoundedRows<LinkRow>(database, "links", userId),
       readBoundedRows<PluginServerRow>(database, "user_plugin_servers", userId),
       readBoundedRows<PluginDomainRow>(database, "user_plugin_domains", userId),

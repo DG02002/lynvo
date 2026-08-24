@@ -5,7 +5,10 @@ import {
   discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
-import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  getLynvoManifestExtension,
+  validatePluginServerManifestContract,
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
   afterEach(() => {
@@ -35,6 +38,11 @@ describe("Lynvo plugin catalog", () => {
     expect(
       findLynvoPlugin("https://drive.google.com/drive/folders/1AbCdEfGh123")?.id
     ).toBe("google-drive-public-files")
+    expect(
+      findLynvoPlugin(
+        "https://bucket.r2.cloudflarestorage.com/media/example-video.mkv"
+      )?.id
+    ).toBe("direct-media")
   })
 
   it("publishes Direct Media as the fallback probe Plugin", () => {
@@ -50,6 +58,23 @@ describe("Lynvo plugin catalog", () => {
       hosts: [],
     })
     expect(directMedia?.matchers).toBeUndefined()
+    expect(
+      getLynvoManifestExtension(manifest).plugins?.find(
+        (plugin) => plugin.id === "onedrive-index"
+      )
+    ).toMatchObject({
+      matchStrategy: "probe",
+      hosts: [],
+    })
+    expect(
+      getLynvoManifestExtension(manifest).plugins?.find(
+        (plugin) => plugin.id === "onedrive-index"
+      )?.matchers
+    ).toBeUndefined()
+    expect(validatePluginServerManifestContract(manifest)).toEqual({
+      ok: true,
+      issues: [],
+    })
   })
 
   it("publishes only owned public icon URLs", () => {

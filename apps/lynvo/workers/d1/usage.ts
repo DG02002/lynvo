@@ -181,32 +181,33 @@ const buildReleaseStatements = async (
         ]
       : []),
   ] as const
-  const statements: D1PreparedStatement[] = []
-  for (const [ownerKeyPart, metricId] of counterKeys) {
-    const periodKey =
-      metricId === LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
-        ? operation.dailyPeriodKey
-        : operation.monthlyPeriodKey
-    const used = await readCounterValue(
-      database,
-      ownerKeyPart,
-      metricId,
-      periodKey,
-      operation.epoch
-    )
-    if (used === null || used < 1) {
-      throw new Error("Managed extraction counter is inconsistent.")
-    }
-    statements.push(
-      decrementCounterStatement(database, {
-        ownerKey: ownerKeyPart,
+  const counterStates = await Promise.all(
+    counterKeys.map(async ([ownerKeyPart, metricId]) => {
+      const periodKey =
+        metricId === LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
+          ? operation.dailyPeriodKey
+          : operation.monthlyPeriodKey
+      const used = await readCounterValue(
+        database,
+        ownerKeyPart,
         metricId,
         periodKey,
-        epoch: operation.epoch,
-      })
-    )
-  }
-  return statements
+        operation.epoch
+      )
+      if (used === null || used < 1) {
+        throw new Error("Managed extraction counter is inconsistent.")
+      }
+      return { ownerKeyPart, metricId, periodKey }
+    })
+  )
+  return counterStates.map(({ ownerKeyPart, metricId, periodKey }) =>
+    decrementCounterStatement(database, {
+      ownerKey: ownerKeyPart,
+      metricId,
+      periodKey,
+      epoch: operation.epoch,
+    })
+  )
 }
 
 export type ManagedExtractionReservationResult =
@@ -245,26 +246,30 @@ export const reserveManagedExtraction = async (
   const monthly = getMonthlyPeriod(input.now)
   const epoch = await getEpoch(database)
   const ownerKey = `user:${userId}`
-  const userDailyUsed = await readCounterValue(
-    database,
-    ownerKey,
-    LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-    daily.key,
-    epoch
-  )
-  const globalDailyUsed = await readCounterValue(
-    database,
-    GLOBAL_USAGE_OWNER_KEY,
-    LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-    daily.key,
-    epoch
-  )
-  const monthlyUsedBefore = await readCounterValue(
-    database,
-    ownerKey,
-    LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-    monthly.key,
-    epoch
+  const [userDailyUsed, globalDailyUsed, monthlyUsedBefore] = await Promise.all(
+    [
+      readCounterValue(
+        database,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        daily.key,
+        epoch
+      ),
+      readCounterValue(
+        database,
+        GLOBAL_USAGE_OWNER_KEY,
+        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        daily.key,
+        epoch
+      ),
+      readCounterValue(
+        database,
+        ownerKey,
+        LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+        monthly.key,
+        epoch
+      ),
+    ]
   )
   if (
     !usageLimitsDisabled &&
@@ -410,11 +415,14 @@ export const releaseExpiredManagedExtractions = async (
     return { released: 0 }
   }
   const operations = results.map(mapManagedOperationRow)
+  const releaseStatementsByOperation = await Promise.all(
+    operations.map((operation) => buildReleaseStatements(database, operation))
+  )
   const statements: D1PreparedStatement[] = []
   const affectedUserIds = new Set<string>()
-  for (const operation of operations) {
+  for (const [operationIndex, operation] of operations.entries()) {
     statements.push(
-      ...(await buildReleaseStatements(database, operation)),
+      ...(releaseStatementsByOperation[operationIndex] ?? []),
       database
         .prepare(
           "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2"

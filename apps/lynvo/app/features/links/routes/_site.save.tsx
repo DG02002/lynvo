@@ -1,29 +1,20 @@
+import { useLoaderData } from "react-router"
 import SaveList from "~/components/save-list"
-import {
-  getUserSession,
-  responseWithSession,
-  requireUserOrRedirect,
-} from "~/lib/auth"
-import { getServerEnv } from "~/lib/env.server"
-import type { Route } from "./+types/_site.save"
+import { saveRouteLoader } from "./save-route-loader.server"
+import { saveRouteMeta, toInitialSaveItems } from "./save-route-shared"
 
-export const meta = (_: Route.MetaArgs) => [{ title: "Save | Lynvo" }]
+export const loader = saveRouteLoader
+export const meta = saveRouteMeta
 
-export const loader = async (args: Route.LoaderArgs) => {
-  const request = args.request
-  const env = getServerEnv(args.context)
-  const sessionResult = await getUserSession(request, env)
-
-  const pathname = new URL(request.url).pathname
-  requireUserOrRedirect(sessionResult, pathname)
-
-  return responseWithSession(
-    { user: sessionResult.user },
-    sessionResult,
-    request
+const SaveRoute = () => {
+  const loaderData = useLoaderData<typeof loader>()
+  return (
+    <SaveList
+      initialItems={toInitialSaveItems(loaderData.savedLinks)}
+      initialDataVersion={loaderData.dataVersion}
+      initialTitleProjection={loaderData.titleProjection}
+    />
   )
 }
-
-const SaveRoute = () => <SaveList />
 
 export default SaveRoute

@@ -3,10 +3,6 @@ import { MemoryRouter } from "react-router"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import DeviceApproval from "~/components/auth/device-approval"
 
-vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
-}))
-
 describe("device approval route behavior", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/auth/device?user_code=NXSM-BKXB")

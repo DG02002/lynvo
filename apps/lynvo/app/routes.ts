@@ -16,6 +16,10 @@ export default [
       "save/folder/:savedLinkId",
       "features/links/routes/_site.save-folder.tsx"
     ),
+    route(
+      "save/title/:titleGroupId",
+      "features/links/routes/_site.save-title.tsx"
+    ),
     route("settings", "features/site/routes/_site.settings.tsx", [
       index("features/site/routes/_site.settings._index.ts"),
       route("general", "features/site/routes/_site.settings.general.tsx"),

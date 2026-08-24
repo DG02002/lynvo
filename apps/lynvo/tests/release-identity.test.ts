@@ -3,6 +3,7 @@ import { buildReleaseIdentity } from "../workers/release-identity"
 
 describe("buildReleaseIdentity", () => {
   it("exposes the immutable production release identity", () => {
+    // SAFETY: buildReleaseIdentity only reads the release metadata fields supplied below.
     const env = {
       COMMIT_HASH: "abc123",
       SERVICE_VERSION: "0.1.0",
@@ -22,7 +23,9 @@ describe("buildReleaseIdentity", () => {
   })
 
   it("uses explicit development values when release bindings are absent", () => {
-    expect(buildReleaseIdentity({} as Env, "local-build")).toEqual({
+    // SAFETY: Missing optional release bindings are the development case under test.
+    const env = {} as Env
+    expect(buildReleaseIdentity(env, "local-build")).toEqual({
       buildTime: "local-build",
       commitHash: "unknown",
       deploymentId: "development",

@@ -9,21 +9,42 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/ui/spinner"
+import { LibrarySaveList } from "~/features/links/components/library-save-list"
+import { useTitleGroups } from "~/features/links/title-grouping/use-title-groups"
+import { useShouldUseLibraryMediaView } from "~/features/site/settings/library-media-view-preference"
 import {
   shouldHideSaveInput,
   useIsTvBroAndroidTv,
   useShouldHideTvBroSaveInput,
 } from "~/features/site/settings/tvbro-save-input-preference"
+import type { LinkViewItem } from "~/features/links/types"
 
-const SaveList = () => {
+declare global {
+  interface SaveListProps {
+    readonly initialItems?: LinkViewItem[]
+    readonly initialDataVersion?: number
+    readonly initialTitleProjection?: TitleProjection
+  }
+}
+
+const SaveList = ({
+  initialItems,
+  initialDataVersion,
+  initialTitleProjection,
+}: SaveListProps) => {
   const isTvBroAndroidTv = useIsTvBroAndroidTv()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
+  const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
   const isSaveInputHidden = shouldHideSaveInput(
     isTvBroAndroidTv,
     shouldHideTvBroSaveInput
   )
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
-  const { links, actions, isLoading, isHydrating } = useLinks()
+  const { links, actions, isLoading, isHydrating, dataVersion } = useLinks({
+    initialItems,
+    initialDataVersion,
+    hasInitialSnapshot: initialItems !== undefined,
+  })
   const isPending = isHydrating || isLoading
   const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =
     useSaveFolderRoute(links, isPending)
@@ -45,6 +66,11 @@ const SaveList = () => {
     () => new Set(links.map((link) => link.url)),
     [links]
   )
+  const titleGroupsState = useTitleGroups({
+    enabled: shouldUseLibraryMediaView && !isFolderRoute,
+    dataVersion,
+    initialProjection: initialTitleProjection,
+  })
 
   if (isFolderRoute && isPending) {
     return (
@@ -83,17 +109,28 @@ const SaveList = () => {
       )}
 
       <div className="w-full">
-        <SaveListBrowser
-          items={links}
-          selectedItemUrl={selectedItemUrl}
-          onSelectedItemUrlChange={(itemUrl) =>
-            itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
-          }
-          actions={linkItemActions}
-          extractingItems={extractingItems}
-          highlightedId={highlightedId}
-          isHydrating={isHydrating}
-        />
+        {shouldUseLibraryMediaView && !isFolderRoute ? (
+          <LibrarySaveList
+            items={links}
+            isPending={isPending}
+            projection={titleGroupsState.projection}
+            error={titleGroupsState.error}
+            onRetry={titleGroupsState.retry}
+            actions={linkItemActions}
+          />
+        ) : (
+          <SaveListBrowser
+            items={links}
+            selectedItemUrl={selectedItemUrl}
+            onSelectedItemUrlChange={(itemUrl) =>
+              itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
+            }
+            actions={linkItemActions}
+            extractingItems={extractingItems}
+            highlightedId={highlightedId}
+            isHydrating={isHydrating}
+          />
+        )}
       </div>
 
       <LinkSelectionDialog

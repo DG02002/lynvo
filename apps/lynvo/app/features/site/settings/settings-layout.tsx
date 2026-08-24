@@ -96,11 +96,13 @@ export function SettingsActionRow(props: SettingsActionRowProps) {
 export function SettingsRowInfo({
   label,
   description,
+  note,
   destructive = false,
   className,
 }: {
   label: string
   description?: string
+  note?: string
   destructive?: boolean
   className?: string
 }) {
@@ -124,6 +126,11 @@ export function SettingsRowInfo({
           )}
         >
           {description}
+        </span>
+      )}
+      {note && (
+        <span className="text-xs leading-normal text-yellow-600 dark:text-yellow-400">
+          {note}
         </span>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Effect } from "effect"
 import { toast } from "sonner"
 import type {
@@ -66,9 +66,8 @@ export const useSaveActions = ({
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
   const [pluginDomainSuggestion, setPluginDomainSuggestion] =
     useState<PluginDomainSuggestion | null>(null)
-  const [pendingQueuedLinkIds, setPendingQueuedLinkIds] = useState<
-    ReadonlySet<string>
-  >(() => new Set())
+  const initialPendingQueuedLinkIds = useMemo(() => new Set<string>(), [])
+  const pendingQueuedLinkIdsRef = useRef(initialPendingQueuedLinkIds)
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
       publish: (outcome) => {
@@ -144,7 +143,7 @@ export const useSaveActions = ({
       const extractionState = item.extractionStatus?.state
       return (
         item.id !== undefined &&
-        pendingQueuedLinkIds.has(item.id) &&
+        pendingQueuedLinkIdsRef.current.has(item.id) &&
         (extractionState === "complete" || extractionState === "failed")
       )
     })
@@ -153,11 +152,7 @@ export const useSaveActions = ({
     }
     const completedQueuedLinkId = completedQueuedItem.id
 
-    setPendingQueuedLinkIds((currentIds) => {
-      const nextIds = new Set(currentIds)
-      nextIds.delete(completedQueuedLinkId)
-      return nextIds
-    })
+    pendingQueuedLinkIdsRef.current.delete(completedQueuedLinkId)
 
     if (completedQueuedItem.extractionStatus?.state !== "complete") {
       return
@@ -169,12 +164,7 @@ export const useSaveActions = ({
         getLinkViewItemFlatMeta(completedQueuedItem)
       )
     )
-  }, [
-    links,
-    offerPluginDomainSuggestion,
-    pendingQueuedLinkIds,
-    pluginDomainSuggestion,
-  ])
+  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion])
 
   const applySaveIntentResult = (
     result: SaveIntentResult
@@ -199,11 +189,7 @@ export const useSaveActions = ({
         })
         return result.selection.pluginDomainSuggestion
       case "queued":
-        setPendingQueuedLinkIds((currentIds) => {
-          const nextIds = new Set(currentIds)
-          nextIds.add(result.linkId)
-          return nextIds
-        })
+        pendingQueuedLinkIdsRef.current.add(result.linkId)
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         reporter.publish({ kind: "view-reset" })
         reporter.publish({ kind: "clear-preview" })

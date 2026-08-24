@@ -1,30 +1,9 @@
 import { render, screen } from "@testing-library/react"
-import { vi } from "vitest"
-import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
-import { createMemoryStorage } from "./memory-storage"
-
-vi.mock("next-themes", () => ({
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
-vi.mock("~/context/realtime-context", () => ({
-  RealtimeProvider: ({ children }: { children: React.ReactNode }) => children,
-}))
-vi.mock("~/context/remote-control-context", () => ({
-  RemoteControlProvider: ({ children }: { children: React.ReactNode }) =>
-    children,
-}))
-vi.mock("~/components/version-watcher", () => ({ VersionWatcher: () => null }))
-vi.mock("~/components/player-launch-error-dialog", () => ({
-  PlayerLaunchErrorDialog: () => null,
-}))
-vi.mock("~/components/ui/sonner", () => ({ Toaster: () => null }))
-vi.mock("~/root/auth-activity-touch", () => ({ AuthActivityTouch: () => null }))
-vi.mock("~/root/theme-cookie-sync", () => ({ ThemeCookieSync: () => null }))
-vi.mock("~/root/account-settings-synchronization", () => ({
-  AccountSettingsSynchronization: () => null,
-}))
-
-import { AppProviders } from "~/root/app-providers"
+import {
+  PlayerPreferenceProvider,
+  usePlayerPreferenceIdentity,
+} from "~/context/player-preference-context"
+import { toProviderUser } from "~/root/provider-user"
 
 const IdentityProbe = () => (
   <output data-testid="player-identity">
@@ -33,28 +12,27 @@ const IdentityProbe = () => (
 )
 
 describe("AppProviders player identity", () => {
-  afterEach(() => vi.unstubAllGlobals())
-
   it("reactively carries committed account transitions through the provider", () => {
-    vi.stubGlobal("localStorage", createMemoryStorage())
+    const firstUser = toProviderUser({ sub: "user-a" })
     const view = render(
-      <AppProviders buildTime="test" user={{ sub: "user-a" }}>
+      <PlayerPreferenceProvider userId={firstUser?.id}>
         <IdentityProbe />
-      </AppProviders>
+      </PlayerPreferenceProvider>
     )
     expect(screen.getByTestId("player-identity")).toHaveTextContent("user-a")
 
+    const secondUser = toProviderUser({ sub: "user-b" })
     view.rerender(
-      <AppProviders buildTime="test" user={{ sub: "user-b" }}>
+      <PlayerPreferenceProvider userId={secondUser?.id}>
         <IdentityProbe />
-      </AppProviders>
+      </PlayerPreferenceProvider>
     )
     expect(screen.getByTestId("player-identity")).toHaveTextContent("user-b")
 
     view.rerender(
-      <AppProviders buildTime="test" user={null}>
+      <PlayerPreferenceProvider userId={toProviderUser(null)?.id}>
         <IdentityProbe />
-      </AppProviders>
+      </PlayerPreferenceProvider>
     )
     expect(screen.getByTestId("player-identity")).toHaveTextContent(
       "signed-out"

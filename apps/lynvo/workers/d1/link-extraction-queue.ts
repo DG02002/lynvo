@@ -22,6 +22,10 @@ import {
 } from "./storage-ledger"
 import { executeOwnedWrite, getDataVersion } from "./data-version"
 import type { LinkRow } from "./rows"
+import {
+  getTitleGroupReconciliationStatements,
+  listAllLinkRowsForProjection,
+} from "./title-groups"
 
 export interface SavedLinkExtractionJob {
   id: string
@@ -310,6 +314,21 @@ export const settleSavedLinkExtraction = async (
     },
     input.now
   )
+  const projectionRows = (
+    await listAllLinkRowsForProjection(database, userId)
+  ).map((row) => (row.id === existingRow.id ? nextRow : row))
+  const titleGroupStatements = await getTitleGroupReconciliationStatements(
+    database,
+    userId,
+    projectionRows,
+    input.now,
+    {
+      linkId: nextRow.id,
+      extractionState: nextRow.extraction_state,
+      extractionAttempts: nextRow.extraction_attempts,
+      leaseExpiresAt: nextRow.extraction_lease_expires_at,
+    }
+  )
   const { dataVersion, statementResults } = await executeOwnedWrite(
     database,
     userId,
@@ -349,6 +368,7 @@ export const settleSavedLinkExtraction = async (
         extractionAttempts: nextRow.extraction_attempts,
         leaseExpiresAt: nextRow.extraction_lease_expires_at,
       }),
+      ...titleGroupStatements,
     ]
   )
   const updateResult = statementResults[preparation.statements.length]

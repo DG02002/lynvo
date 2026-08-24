@@ -93,7 +93,25 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
       throw extractionError
     }
   },
-  onError: () => {},
+  onError: (error) => {
+    console.error("Plugin extraction failed", {
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+              cause:
+                error.cause instanceof Error
+                  ? {
+                      name: error.cause.name,
+                      message: error.cause.message,
+                    }
+                  : error.cause,
+            }
+          : String(error),
+    })
+  },
 })
 
 const app = new Hono<PluginServerRequestLoggingEnvironment>()

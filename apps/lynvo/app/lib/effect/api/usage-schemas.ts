@@ -11,10 +11,6 @@ export const UsageMetricSchema = Schema.Struct({
   pluginId: Schema.optional(Schema.String),
 })
 
-export const LynvoUsageSchema = Schema.Struct({
-  metrics: Schema.Array(UsageMetricSchema),
-})
-
 export const PluginServerUsageSchema = Schema.Struct({
   pluginServerId: Schema.String,
   name: Schema.String,

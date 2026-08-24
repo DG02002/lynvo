@@ -36,10 +36,13 @@ describe("Pricing mobile controls", () => {
     )
 
     act(() => {
+      // SAFETY: The component only reads isIntersecting from this observer entry.
       observerCallbacks[0](
         [{ isIntersecting: true } as IntersectionObserverEntry],
+        // SAFETY: The component does not read the observer argument.
         {} as IntersectionObserver
       )
+      // SAFETY: The component only reads the two rectangle fields supplied by this entry.
       observerCallbacks[1](
         [
           {
@@ -47,6 +50,7 @@ describe("Pricing mobile controls", () => {
             rootBounds: { bottom: 800 },
           } as IntersectionObserverEntry,
         ],
+        // SAFETY: The component does not read the observer argument.
         {} as IntersectionObserver
       )
     })
@@ -61,6 +65,7 @@ describe("Pricing mobile controls", () => {
     })
 
     act(() => {
+      // SAFETY: The component only reads the two rectangle fields supplied by this entry.
       observerCallbacks[1](
         [
           {
@@ -68,6 +73,7 @@ describe("Pricing mobile controls", () => {
             rootBounds: { bottom: 800 },
           } as IntersectionObserverEntry,
         ],
+        // SAFETY: The component does not read the observer argument.
         {} as IntersectionObserver
       )
     })

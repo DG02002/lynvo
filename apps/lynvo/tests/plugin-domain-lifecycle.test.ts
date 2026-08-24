@@ -154,6 +154,7 @@ describe("Plugin Domain lifecycle", () => {
   })
 
   it("decrypts only with the exact owning context", async () => {
+    // SAFETY: The credential vault only reads the encryption-key binding supplied here.
     const environmentLayer = Layer.succeed(CloudflareEnv, {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
         "0123456789abcdef0123456789abcdef"

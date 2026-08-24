@@ -126,14 +126,5 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   }),
 })
 
-export const storedSavedLinkSchema = Schema.Struct({
-  id: Schema.String,
-  url: Schema.NonEmptyString,
-  createdAt: Schema.Number,
-  updatedAt: Schema.Number,
-  metadata: linkMetadataSchema,
-  title: Schema.optional(Schema.String),
-})
-
 export const parseCanonicalLinkMetadataJson = (metadataJson: string) =>
   Schema.decodeUnknownSync(linkMetadataSchema)(JSON.parse(metadataJson))

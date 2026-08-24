@@ -125,7 +125,7 @@ export const decryptStatePayload = async (
   }
 }
 
-export const normalizeGoogleReturnTo = (value: string | undefined): string =>
+export const getSafeGoogleReturnTo = (value: string | undefined): string =>
   value && value.startsWith("/") && !value.startsWith("//") ? value : "/"
 
 export const createGoogleSignInStart = async (input: {
@@ -137,19 +137,18 @@ export const createGoogleSignInStart = async (input: {
   const state = randomBase64Url(GOOGLE_OAUTH_STATE_BYTES)
   const codeVerifier = randomBase64Url(GOOGLE_OAUTH_CODE_VERIFIER_BYTES)
   const redirectUri = `${input.origin}/api/auth/callback/google`
-  const stateCookieValue = await encryptStatePayload(
-    {
-      state,
-      codeVerifier,
-      returnTo: input.returnTo,
-      expiresAt: input.now + GOOGLE_OAUTH_STATE_TTL_MS,
-    },
-    input.credentials.clientSecret
-  )
-  const challengeDigest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(codeVerifier)
-  )
+  const [stateCookieValue, challengeDigest] = await Promise.all([
+    encryptStatePayload(
+      {
+        state,
+        codeVerifier,
+        returnTo: input.returnTo,
+        expiresAt: input.now + GOOGLE_OAUTH_STATE_TTL_MS,
+      },
+      input.credentials.clientSecret
+    ),
+    crypto.subtle.digest("SHA-256", new TextEncoder().encode(codeVerifier)),
+  ])
   const url = new URL(GOOGLE_OAUTH_AUTH_ENDPOINT)
   url.searchParams.set("client_id", input.credentials.clientId)
   url.searchParams.set("redirect_uri", redirectUri)

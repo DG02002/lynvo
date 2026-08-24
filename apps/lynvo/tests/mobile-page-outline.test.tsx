@@ -60,8 +60,8 @@ describe("MobilePageOutline", () => {
       <h2 id="first-section">First section</h2>
     `
     const introduction = document.getElementById("introduction")
-    vi.spyOn(introduction!, "getBoundingClientRect").mockImplementation(
-      () => ({ bottom: introductionBottom }) as DOMRect
+    vi.spyOn(introduction!, "getBoundingClientRect").mockImplementation(() =>
+      DOMRect.fromRect({ height: introductionBottom })
     )
 
     render(

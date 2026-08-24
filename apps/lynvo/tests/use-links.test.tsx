@@ -1,28 +1,18 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { useLinks } from "~/features/links/use-links"
+import { useLinksWithRuntime } from "~/features/links/use-links"
 import type { LinkMetadata } from "~/features/links/types"
 
-const { routeLoaderDataMock, realtimeMock } = vi.hoisted(() => ({
-  routeLoaderDataMock: vi.fn(),
-  realtimeMock: {
-    status: "connected",
-    connectionGeneration: 1,
-    subscribe: vi.fn(() => () => undefined),
-  },
-}))
+const realtime = {
+  status: "connected" as const,
+  connectionGeneration: 1,
+  subscribe: vi.fn(() => () => undefined),
+}
 
-vi.mock("react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router")>()
-  return {
-    ...actual,
-    useRouteLoaderData: routeLoaderDataMock,
-  }
-})
-
-vi.mock("~/context/realtime-context", () => ({
-  useOptionalRealtime: () => realtimeMock,
-}))
+const renderLinksHook = () =>
+  renderHook(() =>
+    useLinksWithRuntime({}, { user: { sub: "user-1" }, realtime })
+  )
 
 const metadata = (label: string): LinkMetadata => ({
   schemaVersion: 3,
@@ -68,7 +58,7 @@ const fetchResponses = vi.fn()
 
 vi.stubGlobal("fetch", vi.fn(fetchResponses))
 
-const respondJson = (body: unknown, headers: Record<string, string> = {}) =>
+const respondJson = <Body,>(body: Body, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
     status: 200,
     headers: { "Content-Type": "application/json", ...headers },
@@ -77,7 +67,6 @@ const respondJson = (body: unknown, headers: Record<string, string> = {}) =>
 describe("useLinks", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    routeLoaderDataMock.mockReturnValue({ user: { sub: "user-1" } })
     fetchResponses.mockImplementation(async (input: RequestInfo | URL) => {
       const path = String(input)
       if (path === "/api/data/links") {
@@ -101,7 +90,7 @@ describe("useLinks", () => {
   })
 
   it("renders the authoritative server snapshot", async () => {
-    const { result } = renderHook(() => useLinks())
+    const { result } = renderLinksHook()
 
     await waitFor(() => expect(result.current.links).toHaveLength(1))
     expect(result.current.links[0]).toMatchObject({
@@ -113,7 +102,7 @@ describe("useLinks", () => {
   })
 
   it("creates links through the Worker API with a temporary prepend", async () => {
-    const { result } = renderHook(() => useLinks())
+    const { result } = renderLinksHook()
     await waitFor(() => expect(result.current.links).toHaveLength(1))
 
     let createdId: string | undefined
@@ -124,9 +113,13 @@ describe("useLinks", () => {
     })
 
     expect(createdId).toBe("created-link")
-    const [, createRequestInit] = fetchResponses.mock.calls.find(
+    const createRequest = fetchResponses.mock.calls.find(
       ([path]) => String(path) === "/api/data/links/create-or-update"
-    ) as [string, RequestInit]
+    )
+    if (!createRequest) {
+      throw new Error("Create-link request was not sent")
+    }
+    const [, createRequestInit] = createRequest
     const payload = JSON.parse(String(createRequestInit.body))
     expect(payload).toMatchObject({
       url: "https://example.com/new",
@@ -141,7 +134,7 @@ describe("useLinks", () => {
   })
 
   it("marks links opened through the metadata operation endpoint", async () => {
-    const { result } = renderHook(() => useLinks())
+    const { result } = renderLinksHook()
     await waitFor(() => expect(result.current.links).toHaveLength(1))
 
     act(() => {
@@ -152,9 +145,13 @@ describe("useLinks", () => {
     })
 
     await waitFor(() => {
-      const [, requestInit] = fetchResponses.mock.calls.find(
+      const metadataRequest = fetchResponses.mock.calls.find(
         ([path]) => String(path) === "/api/data/links/apply-metadata-operation"
-      ) as [string, RequestInit]
+      )
+      if (!metadataRequest) {
+        throw new Error("Metadata operation request was not sent")
+      }
+      const [, requestInit] = metadataRequest
       expect(JSON.parse(String(requestInit.body))).toMatchObject({
         id: "link-native",
         operation: {
@@ -165,9 +162,9 @@ describe("useLinks", () => {
       })
     })
     await waitFor(() => {
-      expect(
-        result.current.links[0]?.metadata.playback.openedUrls
-      ).toContain("https://cdn.example.com/native-file")
+      expect(result.current.links[0]?.metadata.playback.openedUrls).toContain(
+        "https://cdn.example.com/native-file"
+      )
     })
   })
 })

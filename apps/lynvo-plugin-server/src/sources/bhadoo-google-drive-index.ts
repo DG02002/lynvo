@@ -17,6 +17,7 @@ import { createPluginResponseMetadata } from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
+import { extractDirectMedia } from "./direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
@@ -197,6 +198,14 @@ export const extractBhadooGoogleDriveIndex = async ({
   const folderUrl = assertSafeUpstreamUrl(targetUrl)
   folderUrl.username = ""
   folderUrl.password = ""
+  if (folderUrl.pathname.toLowerCase().endsWith("/download.aspx")) {
+    return extractDirectMedia({
+      request,
+      targetUrl: folderUrl.toString(),
+      plugin,
+      publicAssetOrigin,
+    })
+  }
   const filename = getBhadooPathFilename(folderUrl)
   if (!folderUrl.pathname.endsWith("/") && isVideoFile(filename)) {
     const playableUrl = new URL(folderUrl)

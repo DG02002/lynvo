@@ -1,10 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { MemoryRouter, useLocation } from "react-router"
-import { describe, expect, it, vi } from "vitest"
-import Changelog, {
-  ChangelogList,
-  type ChangelogEntry,
-} from "~/features/site/routes/_site.changelog"
+import { describe, expect, it } from "vitest"
+import Changelog from "~/features/site/routes/_site.changelog"
 
 const CurrentLocation = () => {
   const location = useLocation()

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react"
+import { useCallback, type ReactNode } from "react"
 import { Outlet } from "react-router"
 import { ThemeProvider } from "next-themes"
 import { RemoteControlProvider } from "~/context/remote-control-context"
@@ -14,6 +14,7 @@ import { AccountSettingsSynchronization } from "./account-settings-synchronizati
 import { clearRevokedSessionState } from "./session-revocation"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { IdentitySynchronizer } from "./identity-synchronizer"
+import { toProviderUser } from "./provider-user"
 
 interface AppProvidersProps {
   buildTime: string
@@ -26,10 +27,7 @@ export const AppProviders = ({
   user,
   children,
 }: AppProvidersProps) => {
-  const providerUser = useMemo(
-    () => (user ? { id: user.sub, sessionId: user.sid } : null),
-    [user?.sid, user?.sub]
-  )
+  const providerUser = toProviderUser(user)
   const handleSessionRevoked = useCallback((userId: string) => {
     clearRevokedSessionState(localStorage, window.location, userId)
   }, [])

@@ -3,23 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { getPlayerPreferences } from "~/lib/player-utils"
 import { createMemoryStorage } from "./memory-storage"
 
-const { cloudPlayerPreferences } = vi.hoisted(() => ({
-  cloudPlayerPreferences: vi.fn(),
-}))
-
-vi.mock("~/lib/effect/api/client", async () => {
-  const { Effect } = await import("effect")
-  return {
-    client: {
-      settings: {
-        getPlayerPreferences: () =>
-          Effect.tryPromise(() => cloudPlayerPreferences()),
-        updatePlayerPreferences: () => Effect.succeed({ success: true }),
-      },
-    },
-  }
-})
-
 import { AccountSettingsSynchronization } from "~/root/account-settings-synchronization"
 
 describe("account settings synchronization", () => {
@@ -28,12 +11,17 @@ describe("account settings synchronization", () => {
 
   it("reconciles player preferences from the cloud snapshot", async () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
-    cloudPlayerPreferences.mockResolvedValue({
+    const cloudPlayerPreferences = vi.fn().mockResolvedValue({
       rangeSupportedPlayerId: "mpv",
       rangeUnsupportedPlayerId: "mx",
     })
 
-    render(<AccountSettingsSynchronization userId="user-one" />)
+    render(
+      <AccountSettingsSynchronization
+        userId="user-one"
+        loadPlayerPreferences={cloudPlayerPreferences}
+      />
+    )
 
     await waitFor(() =>
       expect(getPlayerPreferences("user-one")).toEqual({
@@ -45,8 +33,13 @@ describe("account settings synchronization", () => {
 
   it("preserves defaults when signed out", () => {
     vi.stubGlobal("localStorage", createMemoryStorage())
+    const cloudPlayerPreferences = vi.fn()
 
-    render(<AccountSettingsSynchronization />)
+    render(
+      <AccountSettingsSynchronization
+        loadPlayerPreferences={cloudPlayerPreferences}
+      />
+    )
 
     expect(cloudPlayerPreferences).not.toHaveBeenCalled()
     expect(getPlayerPreferences(undefined)).toEqual({

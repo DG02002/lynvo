@@ -261,8 +261,10 @@ export const claimAuthorizedCode = async (
     readonly now: number
   }
 ): Promise<ClaimOutcome> => {
-  const record = await findDeviceCodeRecord(database, input.code)
-  const pollSecretDigest = await digestPollSecret(input.pollSecret)
+  const [record, pollSecretDigest] = await Promise.all([
+    findDeviceCodeRecord(database, input.code),
+    digestPollSecret(input.pollSecret),
+  ])
   const isStaleGeneration =
     record?.exchangeAttemptId === input.attemptId &&
     record.exchangeGeneration !== null &&

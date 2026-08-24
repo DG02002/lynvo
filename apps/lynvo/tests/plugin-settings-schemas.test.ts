@@ -5,7 +5,7 @@ import {
   customPluginServerStandardSchema,
 } from "~/features/site/settings/plugin-settings-schemas"
 
-const getFieldErrors = (value: unknown) => {
+const getFieldErrors = <Value>(value: Value) => {
   const result = customPluginServerStandardSchema["~standard"].validate(value)
   if (result instanceof Promise) {
     throw new Error("Unexpected Promise result")

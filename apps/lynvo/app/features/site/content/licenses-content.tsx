@@ -9,6 +9,14 @@ const PROTOCOL_LICENSE_URL =
   "https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/LICENSE"
 const CREATOR_LICENSE_URL =
   "https://github.com/DG02002/lynvo/blob/main/packages/create-lynvo-plugin-server/LICENSE"
+const TMDB_WEBSITE_URL = "https://www.themoviedb.org"
+const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
+const TMDB_LOGOS_ATTRIBUTION_URL =
+  "https://www.themoviedb.org/about/logos-attribution"
+const TMDB_LOGO_URL =
+  "https://www.themoviedb.org/assets/2/v4/logos/v2/blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"
+const TMDB_ATTRIBUTION_NOTICE =
+  "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
 
 const ExternalLink = ({
   href,
@@ -101,6 +109,41 @@ export const LicensesContent = () => (
         A Custom Plugin Server may have its own license, terms, privacy policy,
         and source-site obligations. Review those terms before connecting to or
         distributing one.
+      </p>
+    </PolicySection>
+
+    <PolicySection title="TMDB attribution">
+      <p>
+        <a
+          href={TMDB_WEBSITE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex"
+        >
+          <img
+            src={TMDB_LOGO_URL}
+            alt="TMDB"
+            className="h-8 w-auto"
+            loading="lazy"
+          />
+        </a>
+      </p>
+      <p>
+        Lynvo can use TMDB for optional title metadata and artwork when a
+        server-side TMDB credential is configured. The credential is not
+        required for the media library to work.
+      </p>
+      <p>{TMDB_ATTRIBUTION_NOTICE}</p>
+      <p>
+        Read the{" "}
+        <ExternalLink href={TMDB_API_TERMS_URL}>
+          TMDB API terms of use
+        </ExternalLink>{" "}
+        and{" "}
+        <ExternalLink href={TMDB_LOGOS_ATTRIBUTION_URL}>
+          TMDB logos and attribution guidance
+        </ExternalLink>
+        .
       </p>
     </PolicySection>
 

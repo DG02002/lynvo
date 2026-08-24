@@ -18,7 +18,7 @@ import { getD1Database } from "./db"
 import {
   createGoogleSignInStart,
   exchangeGoogleAuthorizationCode,
-  normalizeGoogleReturnTo,
+  getSafeGoogleReturnTo,
   parseVerifiedGoogleProfile,
   readGoogleCallbackRequest,
   readGoogleStateCookie,
@@ -101,7 +101,7 @@ export const registerD1AuthRoutes = (
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
     }
-    const returnTo = normalizeGoogleReturnTo(
+    const returnTo = getSafeGoogleReturnTo(
       new URL(context.req.raw.url).searchParams.get("returnTo") ?? undefined
     )
     const { redirectUrl, stateCookie } = await createGoogleSignInStart({
@@ -177,7 +177,7 @@ export const registerD1AuthRoutes = (
       user_id: user.id,
     })
     context.header("Set-Cookie", createD1SessionCookie(session.id))
-    return context.redirect(statePayload.returnTo, 302)
+    return context.redirect(getSafeGoogleReturnTo(statePayload.returnTo), 302)
   })
 
   app.get("/api/auth/device/status", async (context) => {

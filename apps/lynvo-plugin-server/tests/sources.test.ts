@@ -127,6 +127,48 @@ describe("Direct Media source adapter", () => {
 describe("Bhadoo source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG[0]
 
+  it("extracts a Bhadoo download endpoint as direct media", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/x-matroska",
+          "Content-Disposition":
+            'attachment; filename="Doctor.Strange.2016.1080p.mkv"',
+          "Content-Range": "bytes 0-0/3912361197",
+        },
+      })
+    )
+
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://drive.example/download.aspx?file=signed",
+        },
+      },
+      targetUrl: "https://drive.example/download.aspx?file=signed",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+      headers: {
+        "Accept-Encoding": "identity",
+        Range: "bytes=0-0",
+      },
+    })
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        kind: "playable",
+        label: "Doctor.Strange.2016.1080p.mkv",
+        rangeRequest: "supported",
+        size: "3.64 GB",
+      }),
+    ])
+  })
+
   it("maps folders and playable files to protocol-native nodes", () => {
     const nodes = createBhadooNodes(
       [

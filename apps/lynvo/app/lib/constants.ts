@@ -1,4 +1,3 @@
-export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
@@ -14,8 +13,17 @@ export const LINKS_REFETCH_DEBOUNCE_MS = 50
 export const LINKS_OFFLINE_POLL_INTERVAL_MS = 25_000
 export const SAVE_LIST_OLDER_AFTER_DAY_COUNT = 7
 export const DATA_VERSION_RESPONSE_HEADER = "X-Lynvo-Data-Version"
+export const TITLE_GROUPS_API_TIMEOUT_MS = 15_000
+export const TMDB_IMAGE_CARD_BASE_URL = "https://image.tmdb.org/t/p/w342"
+export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
+export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
+export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
+  "https://image.tmdb.org/t/p/w342"
+export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
+export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
 export const MILLISECONDS_PER_SECOND = 1_000
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * MILLISECONDS_PER_SECOND
-export const BYTES_PER_KIBIBYTE = 1_024
-export const FILE_SIZE_DECIMAL_PLACES = 2
 export const MOBILE_PRICING_CONTROLS_HEIGHT_PX = 112
+export const MEDIA_FILENAME_MAX_EPISODE_DIGITS = 4
+export const MEDIA_YEAR_MIN = 1900
+export const MEDIA_YEAR_MAX = 2099

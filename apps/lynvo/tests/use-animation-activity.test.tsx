@@ -28,10 +28,11 @@ const setupIntersectionObserver = () => {
       throw new Error("Intersection observer was not created")
     }
 
-    callback(
-      [{ isIntersecting } as IntersectionObserverEntry],
-      {} as IntersectionObserver
-    )
+    // SAFETY: The hook only reads isIntersecting from this observer entry.
+    const entry = { isIntersecting } as IntersectionObserverEntry
+    // SAFETY: The hook does not read the observer argument.
+    const observer = {} as IntersectionObserver
+    callback([entry], observer)
   }
 }
 

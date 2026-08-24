@@ -32,14 +32,31 @@ import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queu
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { client } from "~/lib/effect/api/client"
 
-export const PlayerSettings = () => {
+const loadCloudPlayerPreferences = () =>
+  Effect.runPromise(client.settings.getPlayerPreferences())
+
+const saveCloudPlayerPreferences = (preferences: {
+  rangeSupportedPlayerId?: PlayerId
+  rangeUnsupportedPlayerId?: PlayerId
+}) =>
+  Effect.runPromise(
+    client.settings.updatePlayerPreferences({ payload: preferences })
+  ).then(() => undefined)
+
+export const PlayerSettings = ({
+  loadPlayerPreferences = loadCloudPlayerPreferences,
+  savePlayerPreferences = saveCloudPlayerPreferences,
+}: {
+  loadPlayerPreferences?: typeof loadCloudPlayerPreferences
+  savePlayerPreferences?: typeof saveCloudPlayerPreferences
+} = {}) => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
   const { data: cloudPreferencesData } = useAsyncResource(
     () =>
       playerPreferenceIdentity
-        ? Effect.runPromise(client.settings.getPlayerPreferences())
+        ? loadPlayerPreferences()
         : Promise.resolve(undefined),
-    [playerPreferenceIdentity]
+    [loadPlayerPreferences, playerPreferenceIdentity]
   )
   const cloudPreferences = cloudPreferencesData
   const updateCloudPreferences = React.useCallback(
@@ -47,11 +64,9 @@ export const PlayerSettings = () => {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
     }) => {
-      await Effect.runPromise(
-        client.settings.updatePlayerPreferences({ payload: preferences })
-      )
+      await savePlayerPreferences(preferences)
     },
-    []
+    [savePlayerPreferences]
   )
   const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
     React.useState<PlayerId>(

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
-import {
-  getCookieValue,
-  normalizeReturnTo,
-} from "../app/lib/auth-cookie"
+import { getCookieValue, normalizeReturnTo } from "../app/lib/auth-cookie"
 import { D1_SESSION_COOKIE_NAME } from "../workers/constants"
-import { responseWithSession, getUserSession, requireGuestOrRedirect } from "../app/lib/auth"
+import {
+  responseWithSession,
+  getUserSession,
+  requireGuestOrRedirect,
+} from "../app/lib/auth"
 import { createFakeD1Database } from "./support/fake-d1"
 
 const authenticatedDatabase = () =>
@@ -152,19 +153,25 @@ describe("requireGuestOrRedirect", () => {
 
 describe("getUserSession", () => {
   it("returns an anonymous session without a cookie", async () => {
+    // SAFETY: getUserSession only reads the DB binding from this test environment.
+    const environment = {
+      DB: createFakeD1Database(() => ({ rows: [] })),
+    } as Env
     const result = await getUserSession(
       new Request("https://lynvo.test"),
-      { DB: createFakeD1Database(() => ({ rows: [] })) } as unknown as Env
+      environment
     )
     expect(result).toEqual({ user: null, sessionExpiresAt: undefined })
   })
 
   it("resolves the D1 session identity without exposing tokens", async () => {
+    // SAFETY: getUserSession only reads the DB binding from this test environment.
+    const environment = { DB: authenticatedDatabase() } as Env
     const result = await getUserSession(
       new Request("https://lynvo.test", {
         headers: { Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id` },
       }),
-      { DB: authenticatedDatabase() } as unknown as Env
+      environment
     )
     expect(result.user).toEqual({
       sub: "user-456",
@@ -177,8 +184,10 @@ describe("getUserSession", () => {
   })
 
   it("reports authentication as unavailable without a database binding", async () => {
+    // SAFETY: The missing DB binding is the malformed environment under test.
+    const environment = {} as Env
     await expect(
-      getUserSession(new Request("https://lynvo.test"), {} as Env)
+      getUserSession(new Request("https://lynvo.test"), environment)
     ).rejects.toMatchObject({ init: { status: 503 } })
   })
 })

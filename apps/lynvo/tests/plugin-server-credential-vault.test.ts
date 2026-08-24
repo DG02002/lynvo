@@ -2,11 +2,21 @@
 
 import { PluginServerCredentialVault } from "../workers/plugin-server-credential-vault"
 
+declare global {
+  interface EncryptedCredentialTestResponse {
+    readonly ciphertext: string
+    readonly nonce: string
+    readonly algorithm: string
+    readonly keyVersion: number
+  }
+}
+
 const TEST_ENCRYPTION_KEY = btoa("0123456789abcdef0123456789abcdef")
 
+// SAFETY: The vault constructor does not read Durable Object state in these direct fetch tests.
 const createState = (): DurableObjectState => ({}) as DurableObjectState
 
-const request = (path: string, body: Record<string, unknown>) =>
+const request = <Body>(path: string, body: Body) =>
   new Request(`https://credential-vault.internal${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -15,6 +25,7 @@ const request = (path: string, body: Record<string, unknown>) =>
 
 describe("PluginServerCredentialVault HTTP behavior", () => {
   it("encrypts a credential without returning plaintext and decrypts it in the same context", async () => {
+    // SAFETY: The vault only reads the encryption-key binding supplied by this test.
     const vault = new PluginServerCredentialVault(createState(), {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
     } as Env)
@@ -27,7 +38,8 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
       })
     )
     expect(encryptedResponse.status).toBe(200)
-    const encrypted = await encryptedResponse.json<Record<string, unknown>>()
+    const encrypted =
+      await encryptedResponse.json<EncryptedCredentialTestResponse>()
     expect(encrypted).not.toHaveProperty("apiKey")
     expect(encrypted.ciphertext).not.toBe("plugin-server-key")
 
@@ -45,6 +57,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
   })
 
   it("rejects copied ciphertext in a different user or Plugin Server context", async () => {
+    // SAFETY: The vault only reads the encryption-key binding supplied by this test.
     const vault = new PluginServerCredentialVault(createState(), {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
     } as Env)
@@ -68,7 +81,9 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
   })
 
   it("fails closed when the production encryption key is unavailable", async () => {
-    const vault = new PluginServerCredentialVault(createState(), {} as Env)
+    // SAFETY: The missing encryption-key binding is the failure case under test.
+    const environment = {} as Env
+    const vault = new PluginServerCredentialVault(createState(), environment)
     const response = await vault.fetch(
       request("/encrypt", {
         userId: "user-1",

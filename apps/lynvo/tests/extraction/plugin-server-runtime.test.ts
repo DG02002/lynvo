@@ -11,7 +11,7 @@ interface TestEnv {
   validApiKey: string
 }
 
-const createRequest = (body: unknown, apiKey = "secret") =>
+const createRequest = <Body>(body: Body, apiKey = "secret") =>
   new Request("https://pluginServer.example/extract", {
     method: "POST",
     headers: {
@@ -79,6 +79,8 @@ describe("createPluginServerRuntime", () => {
 
   it("rejects a structurally valid manifest that fails semantic contract validation", async () => {
     const { usage: declaredUsage, ...manifestWithoutUsage } = manifest
+    // SAFETY: This test intentionally removes a required manifest field to exercise runtime validation.
+    const invalidManifest = manifestWithoutUsage as PluginServerManifest
     const runtime = createRuntime(
       () => ({
         plugin: {
@@ -89,7 +91,7 @@ describe("createPluginServerRuntime", () => {
         extensions: {},
       }),
       undefined,
-      manifestWithoutUsage as unknown as PluginServerManifest
+      invalidManifest
     )
 
     const response = await runtime.handleManifest(
@@ -304,6 +306,15 @@ describe("createPluginServerRuntime", () => {
   })
 
   it("returns protocol mismatch when extract returns invalid output", async () => {
+    // SAFETY: This malformed extraction result is intentional input for protocol validation.
+    const invalidExtraction = {
+      plugin: {
+        pluginServerId: "dev.example.plugin-server",
+        displayName: "Example Plugin Server",
+      },
+      nodes: [{ kind: "playable", id: "bad", label: "Bad" }],
+      extensions: {},
+    } as ExtractSuccessResponse
     const runtime = createPluginServerRuntime<TestEnv>({
       manifest: {
         protocolVersion: "1.0",
@@ -316,15 +327,7 @@ describe("createPluginServerRuntime", () => {
         extensions: {},
       },
       auth: { validate: () => true },
-      extract: () =>
-        ({
-          plugin: {
-            pluginServerId: "dev.example.plugin-server",
-            displayName: "Example Plugin Server",
-          },
-          nodes: [{ kind: "playable", id: "bad", label: "Bad" }],
-          extensions: {},
-        }) as unknown as ExtractSuccessResponse,
+      extract: () => invalidExtraction,
       usage: () => ({
         metrics: [
           {

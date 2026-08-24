@@ -4,9 +4,10 @@ import { checkAuthenticationRateLimit } from "../workers/authentication-rate-lim
 const createLimiter = (status: number) => {
   const fetch = vi.fn().mockResolvedValue(new Response(null, { status }))
   return {
+    // SAFETY: The rate-limit code only calls getByName and fetch on this namespace stub.
     namespace: {
       getByName: vi.fn().mockReturnValue({ fetch }),
-    } as unknown as DurableObjectNamespace,
+    } as DurableObjectNamespace,
     fetch,
   }
 }

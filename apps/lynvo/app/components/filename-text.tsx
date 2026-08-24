@@ -153,30 +153,20 @@ export const FilenameText = ({
     setIsExpanded((currentIsExpanded) => !currentIsExpanded)
   }
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsExpanded((currentIsExpanded) => !currentIsExpanded)
-    }
-  }
-
   return (
     <span ref={containerRef} className={cn("block min-w-0", className)}>
       <span className={cn("break-words", textClassName)}>
         <FilenameSegments value={isExpanded ? value : collapsedValue} />
       </span>
       {isOverflowing && (
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           aria-expanded={isExpanded}
-          className="ml-1 inline cursor-pointer font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="ml-1 inline cursor-pointer border-0 bg-transparent p-0 font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={toggleExpanded}
-          onKeyDown={handleKeyDown}
         >
           {isExpanded ? "See less" : "See more"}
-        </span>
+        </button>
       )}
     </span>
   )

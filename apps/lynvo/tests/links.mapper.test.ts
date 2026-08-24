@@ -90,9 +90,7 @@ describe("save-flow metadata preservation", () => {
       previous,
     })
 
-    expect(
-      (updated.source as Record<string, string | undefined>).pluginServerId
-    ).toBe("plugin-server-1")
+    expect(updated.source).toMatchObject({ pluginServerId: "plugin-server-1" })
     expect(updated.playback.openedUrls).toContain("https://old.test")
     expect(updated.playback.openedIds).toContain("old")
   })
@@ -149,9 +147,7 @@ describe("save-flow metadata preservation", () => {
       previous,
     })
 
-    expect(
-      (updated.source as Record<string, string | undefined>).pluginServerId
-    ).toBe("plugin-server-1")
+    expect(updated.source).toMatchObject({ pluginServerId: "plugin-server-1" })
   })
 
   it("does not erase manifest source metadata with undefined extraction metadata", () => {

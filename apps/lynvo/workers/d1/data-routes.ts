@@ -52,10 +52,46 @@ import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
+import { processMediaMetadataMaintenance } from "../media-metadata/media-metadata-coordinator"
+import { getDataVersion } from "./data-version"
+import { getTitleGroupById, listTitleGroups } from "./title-groups"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
 type DataFailureStatus = 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503
+
+const safeWaitUntil = (
+  context: DataRouteContext,
+  promise: Promise<unknown>
+): void => {
+  try {
+    if (context.executionCtx?.waitUntil) {
+      context.executionCtx.waitUntil(promise)
+    }
+  } catch {
+    // ExecutionContext not available in testing environment; ignore background work
+  }
+}
+
+interface TmdbEnvironment {
+  readonly TMDB_API_READ_ACCESS_TOKEN?: string
+}
+
+const triggerMetadataMaintenanceIfConfigured = (
+  context: DataRouteContext,
+  database: D1Database
+): void => {
+  const environmentWithOptionalToken: Env & TmdbEnvironment = context.env
+  if (!environmentWithOptionalToken.TMDB_API_READ_ACCESS_TOKEN?.trim()) {
+    return
+  }
+  safeWaitUntil(
+    context,
+    processMediaMetadataMaintenance(context.env, database).catch((error) => {
+      console.error("media_metadata_maintenance_failed", error)
+    })
+  )
+}
 
 const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
 const EXTRACTION_CONFLICT_MESSAGE =
@@ -315,6 +351,67 @@ dataApp.get("/links", async (context) => {
   return context.json({ links: snapshot.results })
 })
 
+dataApp.get("/title-groups", async (context) => {
+  addRequestContext(context, { operation: "data_title_groups_list" })
+  const preparation = await beginDataRequest(context, { mutating: false })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  const projection = await listTitleGroups(
+    preparation.database,
+    preparation.session.userId,
+    Date.now()
+  )
+  const hasPendingGroups =
+    projection.dateGroups.some((group) =>
+      group.groups.some((titleGroup) => titleGroup.metadataState === "pending")
+    ) ||
+    projection.unmatchedGroups.some(
+      (titleGroup) => titleGroup.metadataState === "pending"
+    )
+  if (hasPendingGroups) {
+    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
+  }
+  return context.json({
+    ...projection,
+    dataVersion: await getDataVersion(
+      preparation.database,
+      preparation.session.userId
+    ),
+  })
+})
+
+dataApp.get("/title-groups/:titleGroupId", async (context) => {
+  addRequestContext(context, { operation: "data_title_group_read" })
+  const preparation = await beginDataRequest(context, { mutating: false })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  const group = await getTitleGroupById(
+    preparation.database,
+    preparation.session.userId,
+    context.req.param("titleGroupId")
+  )
+  if (!group) {
+    return respondDataFailure(
+      context,
+      404,
+      "validation",
+      "Title group not found"
+    )
+  }
+  if (group.metadataState === "pending") {
+    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
+  }
+  return context.json({
+    group,
+    dataVersion: await getDataVersion(
+      preparation.database,
+      preparation.session.userId
+    ),
+  })
+})
+
 dataApp.post("/links/create-or-update", async (context) => {
   addRequestContext(context, { operation: "data_links_create_or_update" })
   const preparation = await beginDataRequest(context, { mutating: true })
@@ -345,9 +442,12 @@ dataApp.post("/links/create-or-update", async (context) => {
     result.dataVersion
   )
   if (result.id && body.extractionState === "queued") {
-    context.executionCtx.waitUntil(
+    safeWaitUntil(
+      context,
       processSavedLinkExtraction(context.env, preparation.database, result.id)
     )
+  } else {
+    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   }
   return context.json(result)
 })
@@ -373,6 +473,7 @@ dataApp.post("/links/update-meta", async (context) => {
     preparation.session.userId,
     result.dataVersion
   )
+  triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   return context.json(result)
 })
 
@@ -402,6 +503,7 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
     preparation.session.userId,
     result.dataVersion
   )
+  triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   return context.json(result)
 })
 

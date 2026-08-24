@@ -18,6 +18,7 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import { Switch } from "~/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import {
   setShouldHideTvBroSaveInput,
   useShouldHideTvBroSaveInput,
@@ -26,6 +27,10 @@ import {
   setShouldAutoSaveAllLinks,
   useShouldAutoSaveAllLinks,
 } from "./auto-save-links-preference"
+import {
+  setShouldUseLibraryMediaView,
+  useShouldUseLibraryMediaView,
+} from "./library-media-view-preference"
 
 const appearanceOptions = [
   { value: "system", label: "System" },
@@ -37,6 +42,7 @@ export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -90,6 +96,28 @@ export const GeneralSettings = () => {
             onCheckedChange={setShouldHideTvBroSaveInput}
             aria-label="Hide Add Link box in TV Bro"
           />
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo
+            label="Library UI mode"
+            description="List shows every saved link in a folder-style browser. Library groups movies and shows with artwork from TMDB."
+            note="Library mode is in beta."
+          />
+          <Tabs
+            value={shouldUseLibraryMediaView ? "library" : "list"}
+            onValueChange={(value) =>
+              setShouldUseLibraryMediaView(value === "library")
+            }
+          >
+            <TabsList aria-label="Library UI mode">
+              <TabsTrigger value="list" className="px-4">
+                List
+              </TabsTrigger>
+              <TabsTrigger value="library" className="px-4">
+                Library
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </SettingsRow>
       </SettingsList>
     </SettingsPanel>

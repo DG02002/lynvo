@@ -124,6 +124,19 @@ const toMeteredPluginId = (
   return pluginIdentifier
 }
 
+interface EnvironmentWithUsageFlags {
+  readonly DISABLE_USAGE_LIMITS?: string | boolean
+}
+
+const isUsageLimitsDisabled = (environment: Env): boolean => {
+  const envWithFlags: Env & EnvironmentWithUsageFlags = environment
+  return (
+    envWithFlags.DISABLE_USAGE_LIMITS === "true" ||
+    envWithFlags.DISABLE_USAGE_LIMITS === true ||
+    process.env.DISABLE_USAGE_LIMITS === "true"
+  )
+}
+
 export const extractWithLynvoPluginServer = Effect.fn(
   "LynvoExtractionAdapter.extract"
 )(function* (
@@ -160,7 +173,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
         reserveManagedExtraction(database, options.userId, {
           operationId,
           pluginId: meteredPluginId,
-          usageLimitsDisabled: process.env.DISABLE_USAGE_LIMITS === "true",
+          usageLimitsDisabled: isUsageLimitsDisabled(options.environment),
           now: Date.now(),
         }),
       catch: (cause) =>

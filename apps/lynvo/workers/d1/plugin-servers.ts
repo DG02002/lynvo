@@ -178,9 +178,13 @@ export const listPluginServers = async (
     .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1")
     .bind(userId)
     .all<PluginServerRow>()
-  return results
-    .filter((row) => row.credential_status === "ready")
-    .map((row) => toPublicPluginServer(mapPluginServerRow(row)))
+  const pluginServers: PublicPluginServerRecord[] = []
+  for (const row of results) {
+    if (row.credential_status === "ready") {
+      pluginServers.push(toPublicPluginServer(mapPluginServerRow(row)))
+    }
+  }
+  return pluginServers
 }
 
 export interface ServicePluginServerRecord extends PublicPluginServerRecord {
@@ -233,12 +237,15 @@ export const beginPluginServerRegistration = async (
   const normalizedBaseUrl = normalizeBaseUrl(input.baseUrl)
   const pendingExpiresAt = input.now + PLUGIN_SERVER_REGISTRATION_TTL_MS
   const attemptId = crypto.randomUUID()
-  const { results } = await database
-    .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2")
-    .bind(userId, CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT + 1)
-    .all<PluginServerRow>()
+  const [{ results }, initialPreparation] = await Promise.all([
+    database
+      .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2")
+      .bind(userId, CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT + 1)
+      .all<PluginServerRow>(),
+    ensureStorageLedger(database, userId, input.now),
+  ])
 
-  let preparation = await ensureStorageLedger(database, userId, input.now)
+  let preparation = initialPreparation
   const cleanupStatements: D1PreparedStatement[] = []
   const activeRows: PluginServerRow[] = []
   for (const row of results) {
@@ -530,8 +537,19 @@ export const expireStalePluginServerRegistrations = async (
   }
   const statements: D1PreparedStatement[] = []
   const affectedUserIds = new Set<string>()
+  const preparationsByUserId = new Map(
+    await Promise.all(
+      [...new Set(results.map((row) => row.user_id))].map(
+        async (userId) =>
+          [userId, await ensureStorageLedger(database, userId, now)] as const
+      )
+    )
+  )
   for (const row of results) {
-    const preparation = await ensureStorageLedger(database, row.user_id, now)
+    const preparation = preparationsByUserId.get(row.user_id)
+    if (!preparation) {
+      throw new Error("Storage ledger preparation is missing")
+    }
     statements.push(...preparation.statements)
     const ledgerMutation = applyStorageMutation(
       database,
