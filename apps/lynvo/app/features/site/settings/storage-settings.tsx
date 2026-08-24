@@ -147,7 +147,7 @@ export function StorageSettings() {
     <SettingsPanel>
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-normal text-foreground">
+          <span className="text-sm font-normal tabular-nums text-foreground">
             {formatBytes(usage.enforcedBytes)} of{" "}
             {formatBytes(usage.storageLimitBytes)} used
           </span>

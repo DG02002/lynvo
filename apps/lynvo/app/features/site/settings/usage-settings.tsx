@@ -54,7 +54,7 @@ const UsageSummary = ({
         <h2 className="text-base font-normal text-foreground">
           Monthly usage limit
         </h2>
-        <span className="shrink-0 text-base font-normal text-foreground">
+        <span className="shrink-0 text-base font-normal tabular-nums text-foreground">
           {remainingPercent}% remaining
         </span>
       </div>

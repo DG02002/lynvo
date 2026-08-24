@@ -27,6 +27,7 @@ import type {
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
+import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
@@ -368,7 +369,7 @@ const ResolvedMirrorRows = ({
   itemUrl,
   actions,
 }: ResolvedMirrorRowsProps) => (
-  <div className="flex flex-col border-t bg-sky-500/5">
+  <div className="stagger-children flex flex-col border-t bg-sky-500/5">
     {mirrors.map((mirror) => {
       const mirrorTarget = getMediaNodeTarget(mirror)
       return (
@@ -439,6 +440,8 @@ const ResolvableContainerRow = ({
     refreshLink,
   } = useResolvableContainerState({ item, link, actions })
   const resolutionState = isResolving ? "resolving" : resolvedState
+  const containerIconStateKey =
+    mirrors.length > 0 ? (isExpanded ? "open" : "closed") : "search"
 
   return (
     <div
@@ -460,16 +463,18 @@ const ResolvableContainerRow = ({
           onClick={openLink}
         >
           <SaveListRowIcon>
-            <HugeiconsIcon
-              icon={
-                mirrors.length > 0
-                  ? isExpanded
-                    ? PackageOpenIcon
-                    : PackageIcon
-                  : PackageSearchIcon
-              }
-              className="size-6"
-            />
+            <AnimatedStateIcon stateKey={containerIconStateKey}>
+              <HugeiconsIcon
+                icon={
+                  mirrors.length > 0
+                    ? isExpanded
+                      ? PackageOpenIcon
+                      : PackageIcon
+                    : PackageSearchIcon
+                }
+                className="size-6"
+              />
+            </AnimatedStateIcon>
           </SaveListRowIcon>
           <span className="min-w-0 flex-1">
             <FilenameText
@@ -811,7 +816,7 @@ export const SaveListBrowser = ({
     >
       {groupedItems.map((group) => (
         <SaveDateGroupSection key={group.key} label={group.label}>
-          <div className="flex flex-col divide-y divide-border/70">
+          <div className="stagger-children flex flex-col divide-y divide-border/70">
             {group.items.map((item) => {
               const itemKey = item.id ?? item.url
               const view = toLinkViewModel(item)
@@ -978,7 +983,7 @@ export const SaveListBrowser = ({
                             </span>
                             {!directLink && (
                               <span className="flex items-center gap-2 md:hidden">
-                                <span className="md:hidden">
+                                <span className="tabular-nums md:hidden">
                                   {view.extractedLinks.length} items
                                 </span>
                                 {isRootItemNew && (
@@ -1017,7 +1022,7 @@ export const SaveListBrowser = ({
                       <NewBadge className="relative z-10 hidden md:inline-flex" />
                     )}
                     {!directLink && !isExtractionIncomplete && (
-                      <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs text-muted-foreground md:inline">
+                      <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs tabular-nums text-muted-foreground md:inline">
                         {view.extractedLinks.length} items
                       </span>
                     )}

@@ -391,6 +391,14 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   * {
     @apply border-border outline-ring/50;
   }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
   ::selection {
     background: var(--foreground);
     color: var(--background);
@@ -401,6 +409,8 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -408,10 +418,6 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
   html {
     @apply font-sans;
-  }
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
   }
 }
 
@@ -874,6 +880,51 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 @layer utilities {
+  .icon-swap-enter {
+    animation: icon-swap-enter 150ms var(--ease-out-strong);
+  }
+
+  @keyframes icon-swap-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+      filter: blur(2px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+
+  .stagger-children > *:nth-child(6) {
+    animation-delay: 200ms;
+  }
+
+  .stagger-children > *:nth-child(7) {
+    animation-delay: 240ms;
+  }
+
+  .stagger-children > *:nth-child(8) {
+    animation-delay: 280ms;
+  }
+
   .t-stagger-line {
     opacity: 0;
     transform: translateY(16px);

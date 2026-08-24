@@ -15,7 +15,10 @@ export function SettingsPanel({
 }: React.ComponentProps<"section">) {
   return (
     <section
-      className={cn("flex flex-col gap-4 px-0 pb-5 pt-1 sm:pb-6", className)}
+      className={cn(
+        "flex flex-col gap-4 px-0 pb-5 pt-1 sm:pb-6 animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none",
+        className
+      )}
     >
       {children}
     </section>

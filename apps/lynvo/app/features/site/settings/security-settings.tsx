@@ -148,7 +148,9 @@ export function SecuritySettings({
               description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Log out all to end all sessions."
             />
             <div className="flex items-center gap-1.5 shrink-0 text-foreground">
-              <span className="text-sm font-normal">{sessions.length}</span>
+              <span className="text-sm font-normal tabular-nums">
+                {sessions.length}
+              </span>
               <HugeiconsIcon icon={ChevronRightIcon} className="size-5" />
             </div>
           </SettingsActionRow>

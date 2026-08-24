@@ -39,6 +39,7 @@ import {
 } from "~/components/save-list/save-list-browser-model"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { TMDB_ATTRIBUTION_LOGO_SRC } from "~/lib/constants"
+import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
@@ -713,10 +714,12 @@ export const TitleGroupDetail = ({
                   }
                   onClick={handleListGridToggle}
                 >
-                  <HugeiconsIcon
-                    icon={isListView ? GridViewIcon : ListViewIcon}
-                    className="size-5"
-                  />
+                  <AnimatedStateIcon stateKey={isListView ? "grid" : "list"}>
+                    <HugeiconsIcon
+                      icon={isListView ? GridViewIcon : ListViewIcon}
+                      className="size-5"
+                    />
+                  </AnimatedStateIcon>
                 </Button>
                 <Button
                   type="button"
@@ -797,7 +800,7 @@ export const TitleGroupDetail = ({
               )}
             </div>
             <div className="flex min-w-0 flex-col gap-3 md:w-full">
-              <p className="font-heading text-2xl font-normal tracking-tight md:text-3xl">
+              <p className="text-balance font-heading text-2xl font-normal tracking-tight md:text-3xl">
                 {displayedGroup.displayTitle}
               </p>
               <p className="text-sm font-medium text-muted-foreground">
@@ -886,7 +889,7 @@ export const TitleGroupDetail = ({
                     </span>
                   ))}
                 </nav>
-                <div className="flex flex-col gap-2">
+                <div className="stagger-children flex flex-col gap-2">
                   {currentFolderFrame.children.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       This folder is empty.

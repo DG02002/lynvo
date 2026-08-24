@@ -73,7 +73,7 @@ const PosterCard = ({ group, item, actions }: TitleGroupCardProps) => {
       ) : null}
       <div
         className={cn(
-          "relative aspect-2/3 overflow-hidden rounded-3xl border border-foreground/15 bg-muted",
+          "relative aspect-2/3 overflow-hidden rounded-3xl border border-foreground/15 bg-muted transition-colors duration-150 motion-reduce:transition-none",
           "group-hover:border-foreground/25 group-has-[:focus-visible]:border-foreground/25 has-aria-expanded:border-foreground/25"
         )}
       >
