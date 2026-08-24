@@ -11,6 +11,12 @@ const Header = ({ showSaveAction }: { showSaveAction: boolean }) => (
 const Footer = () => <footer data-testid="site-footer" />
 const EmptyComponent = () => null
 
+const TITLE_DETAIL_PATHS = [
+  "/save/title/group-id",
+  "/save/movie/group-id",
+  "/save/show/group-id",
+]
+
 const renderLayout = (pathname: string, content: ReactNode) =>
   render(
     <SiteLayoutContent
@@ -67,12 +73,26 @@ describe("SiteLayout", () => {
     )
 
     unmount()
-    renderLayout("/save/title/group-id", <div>Title page</div>)
+    for (const titleDetailPath of TITLE_DETAIL_PATHS) {
+      const detailView = renderLayout(titleDetailPath, <div>Title page</div>)
 
-    expect(document.querySelector("[data-layout-guide]")).toHaveAttribute(
-      "data-layout-guide-surface",
-      "fullscreen"
-    )
+      expect(document.querySelector("[data-layout-guide]")).toHaveAttribute(
+        "data-layout-guide-surface",
+        "fullscreen"
+      )
+      detailView.unmount()
+    }
+  })
+
+  it("hides the site chrome on every title detail route", () => {
+    for (const titleDetailPath of TITLE_DETAIL_PATHS) {
+      const detailView = renderLayout(titleDetailPath, <div>Title page</div>)
+
+      expect(screen.queryByTestId("site-header")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
+      expect(screen.getByRole("main")).toHaveClass("pt-0")
+      detailView.unmount()
+    }
   })
 
   it("keeps the layout guide visible on the saved folder surface", async () => {

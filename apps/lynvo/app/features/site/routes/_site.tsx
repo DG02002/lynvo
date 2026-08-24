@@ -6,6 +6,7 @@ import { Footer } from "~/components/footer"
 import { LayoutGuideOverlay } from "~/components/layout-guide-overlay"
 import { RemoteCommandListener } from "~/components/remote-command-listener"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
+import { isSaveTitleDetailPath } from "~/features/links/title-grouping/title-group-href"
 import { useShouldShowLayoutGuide } from "../settings/layout-guide-preference"
 
 declare global {
@@ -31,34 +32,34 @@ export const SiteLayoutContent = ({
   const isInnerDocsRoute = normalizedPathname.startsWith("/docs/")
   const isSaveRoute = normalizedPathname === "/save"
   const isSaveFolderRoute = normalizedPathname.startsWith("/save/folder/")
-  const isSaveTitleRoute = normalizedPathname.startsWith("/save/title/")
+  const isSaveTitleDetailRoute = isSaveTitleDetailPath(normalizedPathname)
   const isSaveDebugSurface =
-    isSaveRoute || isSaveFolderRoute || isSaveTitleRoute
+    isSaveRoute || isSaveFolderRoute || isSaveTitleDetailRoute
   const shouldShowLayoutGuide = useShouldShowLayoutGuide()
 
   return (
     <>
       <RemoteCommandListenerComponent />
-      {!isSaveFolderRoute && !isSaveTitleRoute && (
+      {!isSaveFolderRoute && !isSaveTitleDetailRoute && (
         <HeaderComponent showSaveAction={!isSaveRoute} />
       )}
       <main
         data-site-content
         className={
-          isSaveFolderRoute || isSaveTitleRoute
+          isSaveFolderRoute || isSaveTitleDetailRoute
             ? "flex-1 pt-0"
             : "flex-1 pt-14 md:pt-16"
         }
       >
         {children}
       </main>
-      {!isInnerDocsRoute && !isSaveFolderRoute && !isSaveTitleRoute && (
+      {!isInnerDocsRoute && !isSaveFolderRoute && !isSaveTitleDetailRoute && (
         <FooterComponent />
       )}
       <ReceiverOverlayComponent />
       {isSaveDebugSurface && shouldShowLayoutGuide && (
         <LayoutGuideOverlay
-          surface={isSaveTitleRoute ? "fullscreen" : "save"}
+          surface={isSaveTitleDetailRoute ? "fullscreen" : "save"}
         />
       )}
     </>

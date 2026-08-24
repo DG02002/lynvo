@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from "react"
+import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
@@ -49,6 +49,16 @@ import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
+import {
+  MEDIA_LIST_ROW_TITLE_CLASS,
+  MediaListRow,
+  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+  SaveListRowIcon,
+} from "./media-list-row"
+import {
+  SAVE_LIST_SECTION_STACK_CLASS,
+  SaveDateGroupSection,
+} from "./save-date-group-heading"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -169,7 +179,9 @@ const MobileFolderTreeToggle = ({
     aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
     onClick={onToggle}
   >
-    <SaveListRowIcon icon={Folder02Icon} />
+    <SaveListRowIcon>
+      <HugeiconsIcon icon={Folder02Icon} className="size-6" />
+    </SaveListRowIcon>
     <span className="min-w-0 flex-1 truncate">{currentFolderLabel}</span>
     <span className="flex size-9 shrink-0 items-center justify-center">
       <HugeiconsIcon
@@ -178,23 +190,6 @@ const MobileFolderTreeToggle = ({
       />
     </span>
   </Button>
-)
-
-const SaveListRowIcon = ({
-  icon,
-  className,
-}: {
-  icon: ComponentProps<typeof HugeiconsIcon>["icon"]
-  className?: string
-}) => (
-  <span
-    className={cn(
-      "flex size-10 shrink-0 items-center justify-center text-foreground md:size-14",
-      className
-    )}
-  >
-    <HugeiconsIcon icon={icon} className="size-6" />
-  </span>
 )
 
 const FolderTree = ({
@@ -379,17 +374,22 @@ const ResolvedMirrorRows = ({
       return (
         <div
           key={getLinkKey(mirror)}
-          className="relative border-b last:border-b-0"
+          className={cn(
+            "relative border-b last:border-b-0",
+            SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+          )}
         >
           <Button
             variant="ghost"
             className="h-auto min-h-20 w-full justify-start gap-3 rounded-none px-4 py-4 pr-16 text-left font-normal hover:bg-sky-500/10"
             onClick={() => actions.play(mirror)}
           >
-            <SaveListRowIcon icon={PlayIcon} />
+            <SaveListRowIcon>
+              <HugeiconsIcon icon={PlayIcon} className="size-6" />
+            </SaveListRowIcon>
             <FilenameText
               value={mirror.label}
-              className="min-w-0 flex-1 text-sm md:text-lg"
+              className={cn(MEDIA_LIST_ROW_TITLE_CLASS, "min-w-0 flex-1")}
             />
             {mirror.size && (
               <span className="shrink-0 text-xs text-muted-foreground">
@@ -441,7 +441,12 @@ const ResolvableContainerRow = ({
   const resolutionState = isResolving ? "resolving" : resolvedState
 
   return (
-    <div className="flex flex-col border-b last:border-b-0">
+    <div
+      className={cn(
+        "flex flex-col border-b last:border-b-0",
+        SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+      )}
+    >
       <div className="relative">
         <button
           type="button"
@@ -454,19 +459,22 @@ const ResolvableContainerRow = ({
           data-resolution-state={resolutionState}
           onClick={openLink}
         >
-          <SaveListRowIcon
-            icon={
-              mirrors.length > 0
-                ? isExpanded
-                  ? PackageOpenIcon
-                  : PackageIcon
-                : PackageSearchIcon
-            }
-          />
+          <SaveListRowIcon>
+            <HugeiconsIcon
+              icon={
+                mirrors.length > 0
+                  ? isExpanded
+                    ? PackageOpenIcon
+                    : PackageIcon
+                  : PackageSearchIcon
+              }
+              className="size-6"
+            />
+          </SaveListRowIcon>
           <span className="min-w-0 flex-1">
             <FilenameText
               value={link.label}
-              className="block text-sm md:text-lg"
+              className={MEDIA_LIST_ROW_TITLE_CLASS}
             />
             <span className="block truncate text-xs text-muted-foreground">
               {getResolvableSourceName(link, item)}
@@ -661,54 +669,42 @@ const FinderBrowser = ({
             }
 
             return (
-              <div
+              <MediaListRow
                 key={linkKey}
-                className="flex flex-col border-b last:border-b-0"
-                data-layout-guide-target="list-row"
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    disabled={isExpired}
-                    data-folder-state={
-                      isFolder ? getFolderVisualState(link, false) : undefined
-                    }
-                    className={cn(
-                      "flex min-h-24 w-full items-center gap-3 px-4 py-6 text-left",
-                      !isExpired && "hover:bg-muted",
-                      !isFolder && "pr-16",
-                      link.opened &&
-                        !isExpired &&
-                        "bg-sky-500/15 hover:bg-sky-500/20",
-                      isExpired &&
-                        "cursor-not-allowed text-muted-foreground opacity-60"
-                    )}
-                    onClick={() => void openLink(link)}
+                icon={
+                  <SaveListRowIcon
+                    className={isExpired ? "text-muted-foreground" : undefined}
                   >
-                    <SaveListRowIcon
+                    <HugeiconsIcon
                       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
-                      className={
-                        isExpired ? "text-muted-foreground" : undefined
-                      }
+                      className="size-6"
                     />
-                    <span className="min-w-0 flex-1">
-                      <FilenameText
-                        value={link.label}
-                        className="block text-sm md:text-lg"
-                        textClassName={isExpired ? "line-through" : undefined}
-                      />
-                      {!link.opened && !isExpired && (
-                        <NewBadge className="mt-2 md:hidden" />
-                      )}
-                      {link.expiry !== undefined && (
-                        <span className="mt-1 flex justify-end text-xs text-muted-foreground">
-                          <PlayableExpiryBadge
-                            expiresAt={link.expiry}
-                            expirySource={link.expirySource}
-                          />
-                        </span>
-                      )}
-                    </span>
+                  </SaveListRowIcon>
+                }
+                title={
+                  <FilenameText
+                    value={link.label}
+                    className={MEDIA_LIST_ROW_TITLE_CLASS}
+                    textClassName={isExpired ? "line-through" : undefined}
+                  />
+                }
+                meta={
+                  <>
+                    {!link.opened && !isExpired && (
+                      <NewBadge className="md:hidden" />
+                    )}
+                    {link.expiry !== undefined && (
+                      <span className="flex justify-end text-xs text-muted-foreground">
+                        <PlayableExpiryBadge
+                          expiresAt={link.expiry}
+                          expirySource={link.expirySource}
+                        />
+                      </span>
+                    )}
+                  </>
+                }
+                trailing={
+                  <>
                     {link.size && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {link.size}
@@ -725,20 +721,31 @@ const FinderBrowser = ({
                         className="shrink-0 text-foreground"
                       />
                     ) : null}
-                  </button>
-                  {!isFolder && !isResolving && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <LinkActionsDotMenu
-                        itemLabel={link.label}
-                        onCopyLink={copyLink}
-                        onOpenInPlayer={openLinkInPlayer}
-                        isPlayable={!isExpired}
-                        className="size-9 shrink-0 text-foreground"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </>
+                }
+                overlay={
+                  !isFolder && !isResolving ? (
+                    <LinkActionsDotMenu
+                      itemLabel={link.label}
+                      onCopyLink={copyLink}
+                      onOpenInPlayer={openLinkInPlayer}
+                      isPlayable={!isExpired}
+                      className="size-9 shrink-0 text-foreground"
+                    />
+                  ) : undefined
+                }
+                onActivate={() => void openLink(link)}
+                disabled={isExpired}
+                isOpened={link.opened === true}
+                buttonClassName={
+                  isExpired ? "text-muted-foreground" : undefined
+                }
+                buttonDataAttributes={{
+                  "data-folder-state": isFolder
+                    ? getFolderVisualState(link, false)
+                    : undefined,
+                }}
+              />
             )
           })}
         </div>
@@ -799,14 +806,11 @@ export const SaveListBrowser = ({
 
   return (
     <section
-      className="flex flex-col gap-8"
+      className={SAVE_LIST_SECTION_STACK_CLASS}
       data-layout-guide-target="list-view"
     >
       {groupedItems.map((group) => (
-        <div key={group.key} className="flex flex-col gap-2">
-          <h2 className="px-2 text-sm font-medium text-muted-foreground">
-            {group.label}
-          </h2>
+        <SaveDateGroupSection key={group.key} label={group.label}>
           <div className="flex flex-col divide-y divide-border/70">
             {group.items.map((item) => {
               const itemKey = item.id ?? item.url
@@ -844,7 +848,10 @@ export const SaveListBrowser = ({
               return (
                 <div
                   key={itemKey}
-                  className="group relative"
+                  className={cn(
+                    "group relative",
+                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+                  )}
                   data-layout-guide-target="list-row"
                   data-highlighted={
                     highlightedId === item.id ? true : undefined
@@ -914,23 +921,37 @@ export const SaveListBrowser = ({
                       )}
                     >
                       {isExtractionIncomplete ? (
-                        <SaveListRowIcon icon={PackageSearchIcon} />
+                        <SaveListRowIcon>
+                          <HugeiconsIcon
+                            icon={PackageSearchIcon}
+                            className="size-6"
+                          />
+                        </SaveListRowIcon>
                       ) : directLink ? (
                         <SaveListRowIcon
-                          icon={PlayIcon}
                           className={
                             isDirectLinkExpired
                               ? "text-muted-foreground"
                               : undefined
                           }
-                        />
+                        >
+                          <HugeiconsIcon icon={PlayIcon} className="size-6" />
+                        </SaveListRowIcon>
                       ) : (
-                        <SaveListRowIcon icon={Folder01Icon} />
+                        <SaveListRowIcon>
+                          <HugeiconsIcon
+                            icon={Folder01Icon}
+                            className="size-6"
+                          />
+                        </SaveListRowIcon>
                       )}
                       <span className="min-w-0 flex-1">
                         <FilenameText
                           value={directLink?.label || getItemTitle(item)}
-                          className="block text-sm font-normal [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10 md:text-base"
+                          className={cn(
+                            MEDIA_LIST_ROW_TITLE_CLASS,
+                            "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
+                          )}
                           textClassName={
                             isDirectLinkExpired ? "line-through" : undefined
                           }
@@ -1023,7 +1044,7 @@ export const SaveListBrowser = ({
               )
             })}
           </div>
-        </div>
+        </SaveDateGroupSection>
       ))}
     </section>
   )

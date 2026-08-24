@@ -203,4 +203,57 @@ describe("LibrarySaveList", () => {
     ).toHaveAttribute("href", "/save/title/direct-media-group")
     expect(screen.getByText("New")).toBeVisible()
   })
+
+  it("links matched movies and shows to their kind detail routes", () => {
+    const item = createItem("matched-media", "Example Movie (2026).mkv")
+    const movieGroup: TitleGroupProjection = {
+      id: "movie-group-id",
+      identityKey: "movie:example movie:2026",
+      mediaKind: "movie",
+      displayTitle: "Example Movie",
+      metadataState: "unavailable",
+      lastAddedAt: item.timestamp,
+      sourceCount: 1,
+      entries: [],
+    }
+    const showGroup: TitleGroupProjection = {
+      id: "show group id",
+      identityKey: "tv-season:example show:1",
+      mediaKind: "tv-season",
+      displayTitle: "Example Show",
+      metadataState: "unavailable",
+      lastAddedAt: item.timestamp,
+      sourceCount: 1,
+      entries: [],
+    }
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <TitleGroupCard
+          group={movieGroup}
+          item={item}
+          actions={createActions()}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/save/movie/movie-group-id"
+    )
+    unmount()
+
+    render(
+      <MemoryRouter>
+        <TitleGroupCard
+          group={showGroup}
+          item={item}
+          actions={createActions()}
+        />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/save/show/show%20group%20id"
+    )
+  })
 })

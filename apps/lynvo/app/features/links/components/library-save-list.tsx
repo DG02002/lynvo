@@ -1,6 +1,10 @@
 import { useMemo, useRef } from "react"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import { Skeleton } from "~/components/ui/skeleton"
+import {
+  SaveDateGroupSection,
+  SAVE_LIST_SECTION_STACK_CLASS,
+} from "~/components/save-list/save-date-group-heading"
 import type { LinkListItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { projectTitleGroups } from "~/features/links/title-grouping/title-group-projection"
@@ -35,23 +39,14 @@ const TitleSection = ({
   if (groups.length === 0) {
     return null
   }
-  const sectionId = `save-section-${label.toLowerCase().replaceAll(" ", "-")}`
   return (
-    <section
-      aria-labelledby={sectionId}
-      aria-label={label}
-      data-layout="poster-grid"
-      data-layout-guide-target="library-section"
-      className="animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none"
+    <SaveDateGroupSection
+      label={label}
+      sectionDataAttributes={{
+        "data-layout": "poster-grid",
+        "data-layout-guide-target": "library-section",
+      }}
     >
-      <div className="mb-4">
-        <h2
-          id={sectionId}
-          className="font-heading text-2xl font-bold tracking-tight"
-        >
-          {label}
-        </h2>
-      </div>
       <div
         ref={gridRef}
         className={POSTER_GRID_CLASS}
@@ -69,7 +64,7 @@ const TitleSection = ({
           )
         })}
       </div>
-    </section>
+    </SaveDateGroupSection>
   )
 }
 
@@ -186,7 +181,7 @@ export const LibrarySaveList = ({
     )
   }
   return (
-    <div className="flex flex-col gap-12 pb-10">
+    <div className={SAVE_LIST_SECTION_STACK_CLASS}>
       {currentProjection.dateGroups.map((dateGroup) => (
         <TitleSection
           key={dateGroup.key}

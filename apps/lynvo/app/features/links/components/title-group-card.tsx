@@ -6,6 +6,7 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
+import { getTitleGroupHref } from "~/features/links/title-grouping/title-group-href"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { cn } from "~/lib/utils"
@@ -25,7 +26,7 @@ const PosterCard = ({ group, item, actions }: TitleGroupCardProps) => {
   const isNew = interactionState?.isNew ?? false
   const isMetadataPending = group.metadataState === "pending"
   const titleGroupPath = group.id
-    ? `/save/title/${encodeURIComponent(group.id)}`
+    ? getTitleGroupHref(group.id, group.mediaKind)
     : undefined
 
   const handleDirectPlay = async () => {

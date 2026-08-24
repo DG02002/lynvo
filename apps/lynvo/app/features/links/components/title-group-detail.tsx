@@ -17,6 +17,12 @@ import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
+import {
+  MEDIA_LIST_ROW_TITLE_CLASS,
+  MediaListRow,
+  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+  SaveListRowIcon,
+} from "~/components/save-list/media-list-row"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
@@ -201,6 +207,78 @@ const EpisodeRow = ({
   const rowLabel = `${displayEpisodeNumber ?? ""} ${
     isShowingRealFilename ? displayEpisodeTitle : entry.displayLabel
   } ${source.sourceName}`.trim()
+
+  if (isCompactListView) {
+    return (
+      <MediaListRow
+        wrapperClassName="w-full shrink-0 border-b-0"
+        buttonClassName="md:px-6"
+        overlayClassName="md:right-6"
+        dataLayoutGuideTarget="fullscreen-row"
+        label={rowLabel}
+        icon={
+          <SaveListRowIcon>
+            {isWorking ? (
+              <Spinner className="size-6" />
+            ) : (
+              <HugeiconsIcon icon={PlayIcon} className="size-6" />
+            )}
+          </SaveListRowIcon>
+        }
+        title={
+          <p
+            className={cn(
+              MEDIA_LIST_ROW_TITLE_CLASS,
+              "line-clamp-2 font-heading leading-snug"
+            )}
+          >
+            {displayTitle}
+          </p>
+        }
+        meta={
+          <>
+            <p className="truncate text-xs text-muted-foreground">
+              {getSourceLabel(source)}
+            </p>
+            {isNew && <NewBadge className="mt-2 md:hidden" />}
+            {stateLabel && (
+              <Badge
+                variant={source.status === "down" ? "destructive" : "secondary"}
+                className="mt-1 w-fit"
+              >
+                {stateLabel}
+              </Badge>
+            )}
+            {error && (
+              <p className="mt-1 text-xs text-destructive" role="alert">
+                This source could not be opened. Try again.
+              </p>
+            )}
+          </>
+        }
+        trailing={
+          isNew ? (
+            <NewBadge className="relative z-10 hidden shrink-0 md:inline-flex" />
+          ) : undefined
+        }
+        overlay={
+          sourceTarget ? (
+            <LinkActionsDotMenu
+              itemLabel={source.label}
+              onCopyLink={handleCopyLink}
+              onOpenInPlayer={handleOpenInPlayer}
+              isPlayable={
+                source.mediaNodeKind === "playable" && source.status !== "down"
+              }
+              className="size-9 shrink-0 text-foreground"
+            />
+          ) : undefined
+        }
+        onActivate={() => void handleActivate()}
+        disabled={!savedLink || isWorking}
+      />
+    )
+  }
 
   return (
     <article
@@ -398,7 +476,7 @@ const FolderChildRow = ({
 }) => {
   const childState = getMediaNodeInteractionState(child)
   return (
-    <div className="animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
+    <div className={SAVE_LIST_ROW_ENTER_ANIMATION_CLASS}>
       <button
         type="button"
         onClick={onActivate}
@@ -699,7 +777,7 @@ export const TitleGroupDetail = ({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
           <section
-            className="flex w-full shrink-0 items-start gap-4 overflow-x-auto border-b px-4 py-4 md:w-72 md:flex-col md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:px-4 md:py-6 lg:w-80 lg:py-8 xl:w-96"
+            className="flex w-full shrink-0 items-start gap-4 overflow-x-auto border-b px-4 py-4 md:w-72 md:flex-col md:gap-6 md:overflow-x-hidden md:overflow-y-auto md:border-b-0 md:border-r md:px-6 md:py-6 lg:w-80 lg:py-8 xl:w-96"
             data-layout-guide-target="fullscreen-sidebar"
           >
             <div className="relative aspect-2/3 w-28 shrink-0 overflow-hidden rounded-3xl border border-foreground/15 bg-muted md:w-full">

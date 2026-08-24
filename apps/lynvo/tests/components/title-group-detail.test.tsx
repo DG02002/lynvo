@@ -153,14 +153,14 @@ describe("TitleGroupDetail", () => {
     const directMediaMenu = screen.getByRole("button", {
       name: "Open menu for Direct media.mkv",
     })
-    expect(directMediaRow.querySelector("p")).toHaveClass("font-normal")
-    expect(directMediaRow.querySelector("p")).not.toHaveClass("font-semibold")
-    expect(directMediaMenu).toHaveClass("size-full!", "rounded-none!")
-    expect(directMediaMenu.parentElement).toHaveClass(
-      "inset-y-0",
-      "end-0",
-      "w-16"
+    expect(directMediaRow.querySelector("p")).toHaveClass(
+      "text-sm",
+      "md:text-lg",
+      "font-heading"
     )
+    expect(directMediaRow.querySelector("p")).not.toHaveClass("font-semibold")
+    expect(directMediaMenu).toHaveClass("size-9")
+    expect(directMediaMenu.parentElement).toHaveClass("right-4", "top-1/2")
     expect(screen.getAllByText("New")).toHaveLength(2)
     expect(
       screen.queryByRole("button", { name: "Show episode titles" })

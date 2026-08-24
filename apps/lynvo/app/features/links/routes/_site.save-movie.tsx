@@ -5,18 +5,18 @@ import {
   SaveTitleRouteView,
 } from "~/features/links/components/save-title-route"
 import { createSaveTitleRouteLoader } from "./save-title-route-loader.server"
-import type { Route } from "./+types/_site.save-title"
+import type { Route } from "./+types/_site.save-movie"
 
 export const loader = createSaveTitleRouteLoader({
-  expectedMediaKind: "unmatched",
+  expectedMediaKind: "movie",
 })
-export const meta = (_: Route.MetaArgs) => [{ title: "Saved title | Lynvo" }]
+export const meta = (_: Route.MetaArgs) => [{ title: "Saved movie | Lynvo" }]
 export const HydrateFallback = SaveTitleRouteFallback
 export const ErrorBoundary = SaveTitleRouteErrorBoundary
 
-const SaveTitleRoute = () => {
+const SaveMovieRoute = () => {
   const { group } = useLoaderData<typeof loader>()
   return <SaveTitleRouteView group={group} />
 }
 
-export default SaveTitleRoute
+export default SaveMovieRoute
