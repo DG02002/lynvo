@@ -41,6 +41,7 @@ const TitleSection = ({
       aria-labelledby={sectionId}
       aria-label={label}
       data-layout="poster-grid"
+      data-layout-guide-target="library-section"
       className="animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none"
     >
       <div className="mb-4">
@@ -51,7 +52,11 @@ const TitleSection = ({
           {label}
         </h2>
       </div>
-      <div ref={gridRef} className={POSTER_GRID_CLASS}>
+      <div
+        ref={gridRef}
+        className={POSTER_GRID_CLASS}
+        data-layout-guide-target="library-grid"
+      >
         {groups.map((group) => {
           const savedLinkId = group.entries[0]?.sources[0]?.savedLinkId
           return (

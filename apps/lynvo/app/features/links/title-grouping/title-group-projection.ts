@@ -214,6 +214,10 @@ const getRootOccurrences = (item: LinkListItem): SourceOccurrence[] => {
   ]
 }
 
+const isExtractionPending = (item: LinkListItem): boolean =>
+  item.extractionStatus?.state === "queued" ||
+  item.extractionStatus?.state === "running"
+
 const toEntryDetails = (
   candidate: MediaClassificationCandidate,
   occurrenceKey: string,
@@ -390,7 +394,7 @@ export const projectTitleGroups = (
     if (!item.id) {
       continue
     }
-    const isQueued = item.extractionStatus?.state === "queued"
+    const isExtractionStillPending = isExtractionPending(item)
     const sourceFields = getLinkSourceFields(item.metadata)
     for (const occurrence of getRootOccurrences(item)) {
       const candidate = parseMediaFilename(
@@ -408,9 +412,9 @@ export const projectTitleGroups = (
         details,
         candidate,
         item.timestamp,
-        isQueued
+        isExtractionStillPending
       )
-      const entry = getOrCreateEntry(group, details, isQueued)
+      const entry = getOrCreateEntry(group, details, isExtractionStillPending)
       entry.sources.push(createSourceVariant(item, occurrence, sourceFields))
       group.sourceCount += 1
     }

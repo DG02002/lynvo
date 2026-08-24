@@ -5,12 +5,14 @@ import {
   TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
   TMDB_IMAGE_DETAIL_BASE_URL,
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
+  TMDB_IMAGE_WIDE_CARD_BASE_URL,
+  TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
 interface TmdbImageProps {
   readonly path: string | undefined
-  readonly variant: "card" | "detail"
+  readonly variant: "card" | "detail" | "wide-card"
   readonly alt: string
   readonly isLazy?: boolean
   readonly className?: string
@@ -25,16 +27,24 @@ interface TmdbImageBaseUrlPair {
 
 const getTmdbImageBaseUrlPair = (
   variant: TmdbImageProps["variant"]
-): TmdbImageBaseUrlPair =>
-  variant === "card"
-    ? {
-        full: TMDB_IMAGE_CARD_BASE_URL,
-        preview: TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
-      }
-    : {
-        full: TMDB_IMAGE_DETAIL_BASE_URL,
-        preview: TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
-      }
+): TmdbImageBaseUrlPair => {
+  if (variant === "card") {
+    return {
+      full: TMDB_IMAGE_CARD_BASE_URL,
+      preview: TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
+    }
+  }
+  if (variant === "wide-card") {
+    return {
+      full: TMDB_IMAGE_WIDE_CARD_BASE_URL,
+      preview: TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL,
+    }
+  }
+  return {
+    full: TMDB_IMAGE_DETAIL_BASE_URL,
+    preview: TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
+  }
+}
 
 const hasImageLoaded = (element: HTMLImageElement | null): boolean =>
   Boolean(element?.complete && element.naturalWidth > 0)

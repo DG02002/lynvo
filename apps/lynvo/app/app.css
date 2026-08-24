@@ -773,6 +773,88 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 }
 
+.library-episode-material {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 36%,
+    rgb(0 0 0 / 0.08) 48%,
+    rgb(0 0 0 / 0.32) 64%,
+    rgb(0 0 0 / 0.7) 82%,
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 36%,
+    rgb(0 0 0 / 0.08) 48%,
+    rgb(0 0 0 / 0.32) 64%,
+    rgb(0 0 0 / 0.7) 82%,
+    #000 100%
+  );
+}
+
+.library-episode-legibility {
+  background: linear-gradient(
+    180deg,
+    transparent 0,
+    rgb(0 0 0 / 0.13) 16px,
+    rgb(0 0 0 / 0.21) 27px,
+    rgb(0 0 0 / 0.3) 40px,
+    rgb(0 0 0 / 0.4)
+  );
+}
+
+.layout-guide-overlay {
+  --layout-guide-color: rgb(255 0 170 / 0.86);
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.layout-guide-overlay__marker {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2.5rem;
+  height: 0.5rem;
+  border-radius: 0 0 999px 999px;
+  background: #10b8ee;
+  transform: translateX(-50%);
+}
+
+.layout-guide-overlay__line {
+  position: absolute;
+  border-color: var(--layout-guide-color);
+  border-style: dashed;
+  border-width: 0;
+}
+
+.layout-guide-overlay__line--vertical {
+  inset-block: 0;
+  border-inline-start-width: 1px;
+}
+
+.layout-guide-overlay__line--horizontal {
+  inset-inline: 0;
+  border-block-start-width: 1px;
+}
+
+@media print {
+  .layout-guide-overlay {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .library-episode-material {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

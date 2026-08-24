@@ -3,8 +3,10 @@ import type { ComponentType, ReactNode } from "react"
 
 import { Header } from "~/components/header"
 import { Footer } from "~/components/footer"
+import { LayoutGuideOverlay } from "~/components/layout-guide-overlay"
 import { RemoteCommandListener } from "~/components/remote-command-listener"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
+import { useShouldShowLayoutGuide } from "../settings/layout-guide-preference"
 
 declare global {
   interface SiteLayoutContentProps {
@@ -30,6 +32,9 @@ export const SiteLayoutContent = ({
   const isSaveRoute = normalizedPathname === "/save"
   const isSaveFolderRoute = normalizedPathname.startsWith("/save/folder/")
   const isSaveTitleRoute = normalizedPathname.startsWith("/save/title/")
+  const isSaveDebugSurface =
+    isSaveRoute || isSaveFolderRoute || isSaveTitleRoute
+  const shouldShowLayoutGuide = useShouldShowLayoutGuide()
 
   return (
     <>
@@ -51,6 +56,11 @@ export const SiteLayoutContent = ({
         <FooterComponent />
       )}
       <ReceiverOverlayComponent />
+      {isSaveDebugSurface && shouldShowLayoutGuide && (
+        <LayoutGuideOverlay
+          surface={isSaveTitleRoute ? "fullscreen" : "save"}
+        />
+      )}
     </>
   )
 }

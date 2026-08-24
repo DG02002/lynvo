@@ -68,7 +68,11 @@ describe("LibrarySaveList", () => {
     ])
 
     expect(screen.getAllByTestId("title-group-card")).toHaveLength(1)
-    expect(screen.getByRole("heading", { name: "Example Show" })).toBeVisible()
+    expect(
+      screen
+        .getAllByTestId("title-group-card")[0]
+        ?.querySelectorAll('[data-slot="skeleton"]')
+    ).toHaveLength(2)
     expect(screen.queryByText("Season 1")).not.toBeInTheDocument()
     expect(screen.queryByText(/sources?/i)).not.toBeInTheDocument()
     expect(screen.getByRole("region", { name: "Today" })).toHaveAttribute(
@@ -110,8 +114,10 @@ describe("LibrarySaveList", () => {
 
     expect(screen.getAllByTestId("title-group-card")).toHaveLength(2)
     expect(
-      screen.getAllByRole("heading", { name: "Example Show" })
-    ).toHaveLength(2)
+      screen
+        .getAllByTestId("title-group-card")
+        .flatMap((card) => [...card.querySelectorAll('[data-slot="skeleton"]')])
+    ).toHaveLength(4)
   })
 
   it("keeps unmatched sources visible in an Unmatched rail", () => {
@@ -152,5 +158,49 @@ describe("LibrarySaveList", () => {
     expect(
       screen.getByRole("button", { name: /Open menu for/i })
     ).toBeInTheDocument()
+  })
+
+  it("opens a direct media card in the Library title detail view", () => {
+    const item = createItem("direct-media", "direct-media.mkv")
+    const group: TitleGroupProjection = {
+      id: "direct-media-group",
+      identityKey: "unmatched:direct-media",
+      mediaKind: "unmatched",
+      displayTitle: "direct-media.mkv",
+      metadataState: "unavailable",
+      lastAddedAt: item.timestamp,
+      sourceCount: 1,
+      entries: [
+        {
+          entryKey: "source:direct-media",
+          kind: "unknown",
+          displayLabel: "direct-media.mkv",
+          metadataState: "unavailable",
+          sources: [
+            {
+              savedLinkId: item.id!,
+              occurrenceKey: "direct-media",
+              nodeKey: "direct-media:node",
+              nodePath: "0",
+              label: "direct-media.mkv",
+              sourceName: "Direct Media",
+              node: item.metadata.extraction.extractedLinks[0]!,
+              timestamp: item.timestamp,
+            },
+          ],
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter>
+        <TitleGroupCard group={group} item={item} actions={createActions()} />
+      </MemoryRouter>
+    )
+
+    expect(
+      screen.getByRole("link", { name: "Open direct-media.mkv" })
+    ).toHaveAttribute("href", "/save/title/direct-media-group")
+    expect(screen.getByText("New")).toBeVisible()
   })
 })

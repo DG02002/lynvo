@@ -88,4 +88,15 @@ describe("TmdbImage", () => {
     expect(posterImage).toHaveAttribute("src", "https://example.com/poster.jpg")
     expect(screen.queryByRole("img", { name: "" })).not.toBeInTheDocument()
   })
+
+  it("uses the wide-card source size for landscape episode artwork", () => {
+    render(
+      <TmdbImage path="/still.jpg" variant="wide-card" alt="Episode still" />
+    )
+
+    expect(screen.getByAltText("Episode still")).toHaveAttribute(
+      "src",
+      "https://image.tmdb.org/t/p/w780/still.jpg"
+    )
+  })
 })

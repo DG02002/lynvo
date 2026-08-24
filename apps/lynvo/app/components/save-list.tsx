@@ -92,9 +92,10 @@ const SaveList = ({
           ? "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background"
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
+      data-layout-guide-target="save-frame"
     >
       {!isFolderRoute && !isSaveInputHidden && (
-        <div className="w-full">
+        <div className="w-full" data-layout-guide-target="save-input">
           <LinkInputSection
             url={input.url}
             setUrl={input.setUrl}
@@ -108,7 +109,7 @@ const SaveList = ({
         </div>
       )}
 
-      <div className="w-full">
+      <div className="w-full" data-layout-guide-target="save-content">
         {shouldUseLibraryMediaView && !isFolderRoute ? (
           <LibrarySaveList
             items={links}

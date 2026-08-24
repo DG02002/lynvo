@@ -63,6 +63,29 @@ const createGroup = (
   ],
 })
 
+const createDirectMediaGroup = (
+  source: SourceVariantProjection
+): TitleGroupProjection => ({
+  id: "direct-group-id",
+  identityKey: "movie:direct media:2026",
+  mediaKind: "movie",
+  displayTitle: "Clean direct title",
+  year: 2026,
+  metadataState: "unavailable",
+  lastAddedAt: 1,
+  sourceCount: 1,
+  entries: [
+    {
+      id: "direct-entry-id",
+      entryKey: `source:${source.occurrenceKey}`,
+      kind: "unknown",
+      displayLabel: "Clean direct title",
+      metadataState: "unavailable",
+      sources: [source],
+    },
+  ],
+})
+
 const createLinks = (node: ExtractedLink): LinkListItem[] => [
   {
     kind: "saved",
@@ -92,7 +115,64 @@ const renderDetail = (
     </MemoryRouter>
   )
 
+const renderDirectMediaDetail = (
+  source: SourceVariantProjection,
+  actions: LinkItemActions = createActions()
+) =>
+  render(
+    <MemoryRouter>
+      <TitleGroupDetail
+        group={createDirectMediaGroup(source)}
+        links={createLinks(source.node)}
+        actions={actions}
+      />
+    </MemoryRouter>
+  )
+
 describe("TitleGroupDetail", () => {
+  it("uses the compact real-filename list for direct media", () => {
+    const node: ExtractedLink = {
+      nodeKey: "direct-node",
+      url: "https://media.example/direct-media.mkv",
+      label: "Direct media.mkv",
+      type: "file",
+      mediaNodeKind: "playable",
+    }
+
+    renderDirectMediaDetail(createSource(node))
+
+    expect(
+      screen.getByRole("heading", { name: "Direct media.mkv" })
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Direct media.mkv Example source" })
+    ).toBeVisible()
+    const directMediaRow = screen.getByRole("button", {
+      name: "Direct media.mkv Example source",
+    })
+    const directMediaMenu = screen.getByRole("button", {
+      name: "Open menu for Direct media.mkv",
+    })
+    expect(directMediaRow.querySelector("p")).toHaveClass("font-normal")
+    expect(directMediaRow.querySelector("p")).not.toHaveClass("font-semibold")
+    expect(directMediaMenu).toHaveClass("size-full!", "rounded-none!")
+    expect(directMediaMenu.parentElement).toHaveClass(
+      "inset-y-0",
+      "end-0",
+      "w-16"
+    )
+    expect(screen.getAllByText("New")).toHaveLength(2)
+    expect(
+      screen.queryByRole("button", { name: "Show episode titles" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Switch to grid view" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Use card grid" })
+    ).not.toBeInTheDocument()
+  })
+
   it("plays a direct playable source", async () => {
     const node: ExtractedLink = {
       nodeKey: "playable-node",
@@ -104,7 +184,9 @@ describe("TitleGroupDetail", () => {
     const play = vi.fn().mockResolvedValue({ accepted: true })
     renderDetail(createSource(node), createActions({ play }))
 
-    fireEvent.click(screen.getByRole("button", { name: /Episode 1/i }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "EP 1 Episode 1 Example source" })
+    )
 
     await waitFor(() => expect(play).toHaveBeenCalledWith(node))
   })
@@ -129,7 +211,9 @@ describe("TitleGroupDetail", () => {
     const play = vi.fn().mockResolvedValue({ accepted: true })
     renderDetail(createSource(node), createActions({ expandMirror, play }))
 
-    fireEvent.click(screen.getByRole("button", { name: /Episode 1/i }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "EP 1 Episode 1 Example source" })
+    )
 
     await waitFor(() =>
       expect(expandMirror).toHaveBeenCalledWith(

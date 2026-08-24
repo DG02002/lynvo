@@ -19,6 +19,9 @@ export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
 export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
 export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
+export const TMDB_IMAGE_WIDE_CARD_BASE_URL = TMDB_IMAGE_DETAIL_BASE_URL
+export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
+  TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
 export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
 export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
 export const MILLISECONDS_PER_SECOND = 1_000

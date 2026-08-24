@@ -297,8 +297,14 @@ const FinderEmptyState = ({
   extractingItems,
   onExit,
 }: FinderBrowserProps) => (
-  <section className="flex h-svh flex-col overflow-hidden bg-background">
-    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+  <section
+    className="flex h-svh flex-col overflow-hidden bg-background"
+    data-layout-guide-target="list-view"
+  >
+    <header
+      className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
+      data-layout-guide-target="list-header"
+    >
       <div className="contents md:block md:h-full md:border-r">
         <Button
           variant="ghost"
@@ -329,7 +335,10 @@ const FinderEmptyState = ({
         />
       </div>
     </header>
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+    <div
+      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center"
+      data-layout-guide-target="list-content"
+    >
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
         <p className="text-sm text-muted-foreground">
@@ -532,8 +541,14 @@ const FinderBrowser = ({
   }
 
   return (
-    <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+    <section
+      className="flex h-svh flex-col overflow-hidden bg-background"
+      data-layout-guide-target="list-view"
+    >
+      <header
+        className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
+        data-layout-guide-target="list-header"
+      >
         <div className="contents md:block md:h-full md:border-r">
           <Button
             variant="ghost"
@@ -568,7 +583,10 @@ const FinderBrowser = ({
       </header>
 
       <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
-        <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+        <aside
+          className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3"
+          data-layout-guide-target="list-sidebar"
+        >
           <MobileFolderTreeToggle
             currentFolderLabel={currentFolderLabel}
             isOpen={isMobileFolderTreeOpen}
@@ -605,6 +623,7 @@ const FinderBrowser = ({
         <div
           ref={contentRef}
           className="min-h-0 overflow-y-auto overscroll-contain"
+          data-layout-guide-target="list-content"
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
@@ -645,6 +664,7 @@ const FinderBrowser = ({
               <div
                 key={linkKey}
                 className="flex flex-col border-b last:border-b-0"
+                data-layout-guide-target="list-row"
               >
                 <div className="relative">
                   <button
@@ -778,7 +798,10 @@ export const SaveListBrowser = ({
   const groupedItems = groupSaveListItems(items, currentTimeMs)
 
   return (
-    <section className="flex flex-col gap-8">
+    <section
+      className="flex flex-col gap-8"
+      data-layout-guide-target="list-view"
+    >
       {groupedItems.map((group) => (
         <div key={group.key} className="flex flex-col gap-2">
           <h2 className="px-2 text-sm font-medium text-muted-foreground">
@@ -822,6 +845,7 @@ export const SaveListBrowser = ({
                 <div
                   key={itemKey}
                   className="group relative"
+                  data-layout-guide-target="list-row"
                   data-highlighted={
                     highlightedId === item.id ? true : undefined
                   }
