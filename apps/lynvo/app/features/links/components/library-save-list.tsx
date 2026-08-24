@@ -8,6 +8,7 @@ import {
 import type { LinkListItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { projectTitleGroups } from "~/features/links/title-grouping/title-group-projection"
+import { getUniqueGroupSavedLinks } from "~/features/links/title-grouping/title-group-saved-links"
 import { useFlipGrid } from "~/hooks/use-flip-grid"
 import { TitleGroupCard } from "./title-group-card"
 
@@ -53,17 +54,14 @@ const TitleSection = ({
         className={POSTER_GRID_CLASS}
         data-layout-guide-target="library-grid"
       >
-        {groups.map((group) => {
-          const savedLinkId = group.entries[0]?.sources[0]?.savedLinkId
-          return (
-            <TitleGroupCard
-              key={group.identityKey}
-              group={group}
-              item={savedLinkId ? itemsById.get(savedLinkId) : undefined}
-              actions={actions}
-            />
-          )
-        })}
+        {groups.map((group) => (
+          <TitleGroupCard
+            key={group.identityKey}
+            group={group}
+            savedLinks={getUniqueGroupSavedLinks(group, itemsById)}
+            actions={actions}
+          />
+        ))}
       </div>
     </SaveDateGroupSection>
   )

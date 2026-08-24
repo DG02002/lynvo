@@ -159,8 +159,12 @@ describe("TitleGroupDetail", () => {
       "font-heading"
     )
     expect(directMediaRow.querySelector("p")).not.toHaveClass("font-semibold")
-    expect(directMediaMenu).toHaveClass("size-9")
-    expect(directMediaMenu.parentElement).toHaveClass("right-4", "top-1/2")
+    expect(directMediaMenu).toHaveClass("size-full!", "rounded-none!")
+    expect(directMediaMenu.parentElement).toHaveClass(
+      "w-16",
+      "border-s",
+      "border-border/70"
+    )
     expect(screen.getAllByText("New")).toHaveLength(2)
     expect(
       screen.queryByRole("button", { name: "Show episode titles" })

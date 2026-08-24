@@ -1,5 +1,4 @@
 import { Link } from "react-router"
-import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { Skeleton } from "~/components/ui/skeleton"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -8,16 +7,18 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import type { LinkListItem } from "~/features/links/types"
 import { getTitleGroupHref } from "~/features/links/title-grouping/title-group-href"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
+import { TitleGroupMenu } from "~/features/links/components/title-group-menu"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { cn } from "~/lib/utils"
 
 interface TitleGroupCardProps {
   readonly group: TitleGroupProjection
-  readonly item?: LinkListItem
+  readonly savedLinks: readonly LinkListItem[]
   readonly actions?: LinkItemActions
 }
 
-const PosterCard = ({ group, item, actions }: TitleGroupCardProps) => {
+const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
+  const item = savedLinks[0]
   const interactionState = item
     ? getSavedLinkInteractionState(item, Date.now())
     : undefined
@@ -112,14 +113,14 @@ const PosterCard = ({ group, item, actions }: TitleGroupCardProps) => {
               No artwork
             </span>
           )}
-        {item && actions && (
+        {savedLinks.length > 0 && actions && (
           <div className="absolute bottom-4 right-4 z-10 opacity-0 transition-opacity duration-150 group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
-            <LinkItemMenu
-              item={item}
+            <TitleGroupMenu
+              group={group}
+              savedLinks={savedLinks}
               actions={actions}
               playableLink={directLink}
               isPlayableLinkExpired={isDirectLinkExpired}
-              showRemove
               triggerClassName="size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
             />
           </div>
@@ -140,8 +141,8 @@ const PosterCard = ({ group, item, actions }: TitleGroupCardProps) => {
 
 export const TitleGroupCard = ({
   group,
-  item,
+  savedLinks,
   actions,
 }: TitleGroupCardProps) => {
-  return <PosterCard group={group} item={item} actions={actions} />
+  return <PosterCard group={group} savedLinks={savedLinks} actions={actions} />
 }

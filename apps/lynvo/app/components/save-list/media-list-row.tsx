@@ -6,6 +6,12 @@ export const MEDIA_LIST_ROW_TITLE_CLASS = "block text-sm md:text-lg"
 export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
   "animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
 
+export const MEDIA_LIST_ROW_MENU_CELL_CLASS =
+  "w-16 shrink-0 border-s border-border/70"
+
+export const MEDIA_LIST_ROW_MENU_TRIGGER_CLASS =
+  "size-full! rounded-none! bg-transparent text-foreground shadow-none hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50 [&_svg]:size-7!"
+
 interface SaveListRowIconProps {
   readonly children: ReactNode
   readonly className?: string
@@ -32,7 +38,6 @@ interface MediaListRowProps {
   readonly meta?: ReactNode
   readonly trailing?: ReactNode
   readonly overlay?: ReactNode
-  readonly overlayClassName?: string
   readonly onActivate: () => void
   readonly disabled?: boolean
   readonly isOpened?: boolean
@@ -49,7 +54,6 @@ export const MediaListRow = ({
   meta,
   trailing,
   overlay,
-  overlayClassName,
   onActivate,
   disabled = false,
   isOpened = false,
@@ -60,7 +64,7 @@ export const MediaListRow = ({
 }: MediaListRowProps) => (
   <div
     className={cn(
-      "relative flex w-full items-center border-b last:border-b-0",
+      "flex w-full items-stretch border-b last:border-b-0",
       SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
       wrapperClassName
     )}
@@ -71,9 +75,8 @@ export const MediaListRow = ({
       aria-label={label}
       disabled={disabled}
       className={cn(
-        "flex min-h-24 w-full cursor-pointer select-none items-center gap-3 px-4 py-6 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        "flex min-h-24 min-w-0 flex-1 cursor-pointer select-none items-center gap-3 px-4 py-6 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         !disabled && "hover:bg-muted",
-        overlay && "pr-16",
         isOpened && !disabled && "bg-sky-500/15 hover:bg-sky-500/20",
         disabled && "cursor-not-allowed opacity-60",
         buttonClassName
@@ -91,8 +94,8 @@ export const MediaListRow = ({
     {overlay && (
       <div
         className={cn(
-          "absolute right-4 top-1/2 -translate-y-1/2",
-          overlayClassName
+          "flex items-center justify-center",
+          MEDIA_LIST_ROW_MENU_CELL_CLASS
         )}
       >
         {overlay}

@@ -16,8 +16,8 @@ import { NewBadge } from "~/components/save-list/new-badge"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/ui/spinner"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
-import { LinkItemMenu } from "~/components/links/link-item-menu"
 import {
+  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   MediaListRow,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
@@ -38,6 +38,8 @@ import {
   getLinkKey,
 } from "~/components/save-list/save-list-browser-model"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
+import { TitleGroupMenu } from "~/features/links/components/title-group-menu"
+import { getUniqueGroupSavedLinks } from "~/features/links/title-grouping/title-group-saved-links"
 import { TMDB_ATTRIBUTION_LOGO_SRC } from "~/lib/constants"
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
@@ -98,6 +100,7 @@ const EpisodeRow = ({
   isDirectMediaGroup,
   isNetflixGridView,
   isShowingRealFilename,
+  isMultiSavedLinkGroup,
 }: {
   readonly entry: TitleEntryProjection
   readonly source: SourceVariantProjection
@@ -109,6 +112,7 @@ const EpisodeRow = ({
   readonly isDirectMediaGroup: boolean
   readonly isNetflixGridView: boolean
   readonly isShowingRealFilename: boolean
+  readonly isMultiSavedLinkGroup: boolean
 }) => {
   const [isWorking, setIsWorking] = useState(false)
   const [error, setError] = useState(false)
@@ -194,6 +198,15 @@ const EpisodeRow = ({
     }
   }
 
+  const sourceRemoveRequest =
+    isMultiSavedLinkGroup && savedLink
+      ? {
+          url: savedLink.url,
+          id: savedLink.id,
+          onRemove: () => actions.remove(savedLink.url, savedLink.id),
+        }
+      : undefined
+
   const displayEpisodeNumber =
     !isShowingRealFilename && entry.episodeStart !== undefined
       ? `EP ${entry.episodeStart}`
@@ -214,7 +227,6 @@ const EpisodeRow = ({
       <MediaListRow
         wrapperClassName="w-full shrink-0 border-b-0"
         buttonClassName="md:px-6"
-        overlayClassName="md:right-6"
         dataLayoutGuideTarget="fullscreen-row"
         label={rowLabel}
         icon={
@@ -263,7 +275,7 @@ const EpisodeRow = ({
           ) : undefined
         }
         overlay={
-          sourceTarget ? (
+          sourceTarget || sourceRemoveRequest ? (
             <LinkActionsDotMenu
               itemLabel={source.label}
               onCopyLink={handleCopyLink}
@@ -271,7 +283,8 @@ const EpisodeRow = ({
               isPlayable={
                 source.mediaNodeKind === "playable" && source.status !== "down"
               }
-              className="size-9 shrink-0 text-foreground"
+              className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+              removeRequest={sourceRemoveRequest}
             />
           ) : undefined
         }
@@ -285,13 +298,11 @@ const EpisodeRow = ({
     <article
       className={cn(
         "group relative w-full shrink-0",
-        isCompactListView
-          ? "flex min-h-24 w-full items-center"
-          : isListView
-            ? "flex h-36 items-stretch overflow-hidden rounded-3xl border border-foreground/15 bg-muted sm:h-44 md:h-48 lg:h-52"
-            : isNetflixGridView
-              ? "flex min-h-0 flex-col gap-4"
-              : "flex aspect-[4/3] min-h-0 flex-col overflow-hidden rounded-3xl border border-foreground/15 bg-muted"
+        isListView
+          ? "flex h-36 items-stretch overflow-hidden rounded-3xl border border-foreground/15 bg-muted sm:h-44 md:h-48 lg:h-52"
+          : isNetflixGridView
+            ? "flex min-h-0 flex-col gap-4"
+            : "flex aspect-[4/3] min-h-0 flex-col overflow-hidden rounded-3xl border border-foreground/15 bg-muted"
       )}
       data-layout-guide-target="fullscreen-row"
     >
@@ -302,54 +313,42 @@ const EpisodeRow = ({
         onClick={() => void handleActivate()}
         className={cn(
           "group/episode relative flex min-w-0 flex-1 cursor-pointer select-none text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-          isCompactListView
-            ? "items-center gap-3 px-4 py-6 pr-16 font-normal hover:bg-muted"
-            : isListView
-              ? "items-stretch overflow-hidden"
-              : "overflow-hidden flex-col gap-4"
+          isListView
+            ? "items-stretch overflow-hidden"
+            : "overflow-hidden flex-col gap-4"
         )}
       >
-        {isCompactListView ? (
-          <span className="pointer-events-none flex size-10 shrink-0 items-center justify-center text-foreground md:size-14">
-            {isWorking ? (
-              <Spinner className="size-6" />
-            ) : (
-              <HugeiconsIcon icon={PlayIcon} className="size-6" />
-            )}
-          </span>
-        ) : (
-          <div
-            className={cn(
-              "relative shrink-0 overflow-hidden bg-muted",
-              isListView
-                ? "aspect-video h-full"
-                : isNetflixGridView
-                  ? "aspect-video w-full rounded-2xl border border-foreground/15"
-                  : "absolute inset-0 size-full"
-            )}
-          >
-            {stillPath ? (
-              <TmdbImage
-                path={stillPath}
-                variant={isListView ? "card" : "wide-card"}
-                alt={`Still from ${entry.displayLabel}`}
-              />
-            ) : entry.metadataState === "pending" ? (
-              <Skeleton className="size-full" />
-            ) : (
-              <div className="flex size-full items-center justify-center text-base text-muted-foreground">
-                {entry.episodeStart !== undefined
-                  ? `EP ${entry.episodeStart}`
-                  : "No preview"}
-              </div>
-            )}
-            {isWorking && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-xs">
-                <Spinner className="size-7 text-foreground" />
-              </div>
-            )}
-          </div>
-        )}
+        <div
+          className={cn(
+            "relative shrink-0 overflow-hidden bg-muted",
+            isListView
+              ? "aspect-video h-full"
+              : isNetflixGridView
+                ? "aspect-video w-full rounded-2xl border border-foreground/15"
+                : "absolute inset-0 size-full"
+          )}
+        >
+          {stillPath ? (
+            <TmdbImage
+              path={stillPath}
+              variant={isListView ? "card" : "wide-card"}
+              alt={`Still from ${entry.displayLabel}`}
+            />
+          ) : entry.metadataState === "pending" ? (
+            <Skeleton className="size-full" />
+          ) : (
+            <div className="flex size-full items-center justify-center text-base text-muted-foreground">
+              {entry.episodeStart !== undefined
+                ? `EP ${entry.episodeStart}`
+                : "No preview"}
+            </div>
+          )}
+          {isWorking && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-xs">
+              <Spinner className="size-7 text-foreground" />
+            </div>
+          )}
+        </div>
 
         {!isListView && !isNetflixGridView && (
           <div
@@ -361,13 +360,11 @@ const EpisodeRow = ({
         <div
           className={cn(
             "relative flex min-w-0 flex-1 flex-col justify-center",
-            isCompactListView
-              ? "gap-1"
-              : isListView
-                ? "gap-1.5 px-6 py-4 pr-16"
-                : isNetflixGridView
-                  ? "gap-1.5 px-2 pb-2 pr-12 text-foreground"
-                  : "gap-1.5 absolute inset-x-0 bottom-0 z-20 justify-end px-5 pb-5 pt-16 text-white sm:pt-20"
+            isListView
+              ? "gap-1.5 px-6 py-4 pr-16"
+              : isNetflixGridView
+                ? "gap-1.5 px-2 pb-2 pr-12 text-foreground"
+                : "gap-1.5 absolute inset-x-0 bottom-0 z-20 justify-end px-5 pb-5 pt-16 text-white sm:pt-20"
           )}
         >
           {!isListView && !isNetflixGridView && (
@@ -429,21 +426,19 @@ const EpisodeRow = ({
         )}
       </button>
 
-      {(sourceTarget || (!isListView && isNew)) && (
+      {(sourceTarget || sourceRemoveRequest || (!isListView && isNew)) && (
         <div
           className={cn(
             "absolute z-30 flex items-center justify-center",
-            isCompactListView
-              ? "inset-y-0 end-0 w-16 border-s border-border/70"
-              : isListView
-                ? "right-4 top-1/2 -translate-y-1/2"
-                : isNetflixGridView
-                  ? "bottom-2 right-0"
-                  : "right-3 top-3"
+            isListView
+              ? "right-4 top-1/2 -translate-y-1/2"
+              : isNetflixGridView
+                ? "bottom-2 right-0"
+                : "right-3 top-3"
           )}
         >
           {!isListView && isNew && <NewBadge />}
-          {sourceTarget && (
+          {(sourceTarget || sourceRemoveRequest) && (
             <LinkActionsDotMenu
               itemLabel={source.label}
               onCopyLink={handleCopyLink}
@@ -451,11 +446,8 @@ const EpisodeRow = ({
               isPlayable={
                 source.mediaNodeKind === "playable" && source.status !== "down"
               }
-              className={cn(
-                isCompactListView
-                  ? "size-full! rounded-none! bg-transparent text-foreground shadow-none hover:bg-muted aria-expanded:bg-muted dark:hover:bg-muted/50 [&_svg]:size-7!"
-                  : "size-10 shrink-0 rounded-full bg-background/90 text-foreground shadow-none hover:bg-background/95 aria-expanded:bg-background/95 dark:hover:bg-background/90 [&_svg]:size-7!"
-              )}
+              className="size-10 shrink-0 rounded-full bg-background/90 text-foreground shadow-none hover:bg-background/95 aria-expanded:bg-background/95 dark:hover:bg-background/90 [&_svg]:size-7!"
+              removeRequest={sourceRemoveRequest}
             />
           )}
         </div>
@@ -554,6 +546,11 @@ export const TitleGroupDetail = ({
       savedLinksById.set(link.id, link)
     }
   }
+  const groupSavedLinks = getUniqueGroupSavedLinks(
+    displayedGroup,
+    savedLinksById
+  )
+  const isMultiSavedLinkGroup = groupSavedLinks.length > 1
   const headerSavedLink =
     displayedGroup.entries
       .flatMap((entry) => entry.sources)
@@ -766,15 +763,14 @@ export const TitleGroupDetail = ({
                 <span className="hidden sm:inline">Real filename</span>
               </Button>
             )}
-            {headerSavedLink && (
-              <LinkItemMenu
-                item={headerSavedLink}
-                actions={actions}
-                showRemove
-                onRemoved={() => navigate("/save")}
-                triggerClassName="size-10 rounded-full bg-background/90 shadow-none hover:bg-background/95 aria-expanded:bg-background/95 dark:hover:bg-background/90 [&_svg]:size-7!"
-              />
-            )}
+            <TitleGroupMenu
+              group={displayedGroup}
+              savedLinks={groupSavedLinks}
+              fallbackItem={links[0]}
+              actions={actions}
+              onRemoved={() => navigate("/save")}
+              triggerClassName="size-10 rounded-full bg-background/90 shadow-none hover:bg-background/95 aria-expanded:bg-background/95 dark:hover:bg-background/90 [&_svg]:size-7!"
+            />
           </div>
         </header>
 
@@ -939,6 +935,7 @@ export const TitleGroupDetail = ({
                     isDirectMediaGroup={isDirectMediaGroup}
                     isNetflixGridView={isNetflixGridView}
                     isShowingRealFilename={isShowingRealFilename}
+                    isMultiSavedLinkGroup={isMultiSavedLinkGroup}
                     onFolderOpened={(frame) => {
                       setFolderStack([frame])
                       setFailedFolderKey(null)

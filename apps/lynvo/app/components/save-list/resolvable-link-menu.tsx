@@ -23,6 +23,7 @@ interface ResolvableLinkMenuProps {
   onCopyLink: () => void
   onRefresh: () => void
   onRemove: () => void
+  triggerClassName: string
 }
 
 export const ResolvableLinkMenu = ({
@@ -30,6 +31,7 @@ export const ResolvableLinkMenu = ({
   onCopyLink,
   onRefresh,
   onRemove,
+  triggerClassName,
 }: ResolvableLinkMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
 
@@ -38,7 +40,7 @@ export const ResolvableLinkMenu = ({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" className="size-9">
+            <Button variant="ghost" size="icon" className={triggerClassName}>
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">Open menu for {itemLabel}</span>
             </Button>

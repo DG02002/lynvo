@@ -51,6 +51,8 @@ import { useResolvableContainerState } from "./use-resolvable-container-state"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
 import {
+  MEDIA_LIST_ROW_MENU_CELL_CLASS,
+  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   MediaListRow,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
@@ -373,32 +375,28 @@ const ResolvedMirrorRows = ({
     {mirrors.map((mirror) => {
       const mirrorTarget = getMediaNodeTarget(mirror)
       return (
-        <div
+        <MediaListRow
           key={getLinkKey(mirror)}
-          className={cn(
-            "relative border-b last:border-b-0",
-            SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
-          )}
-        >
-          <Button
-            variant="ghost"
-            className="h-auto min-h-20 w-full justify-start gap-3 rounded-none px-4 py-4 pr-16 text-left font-normal hover:bg-sky-500/10"
-            onClick={() => actions.play(mirror)}
-          >
+          buttonClassName="min-h-20 py-4 hover:bg-sky-500/10"
+          icon={
             <SaveListRowIcon>
               <HugeiconsIcon icon={PlayIcon} className="size-6" />
             </SaveListRowIcon>
+          }
+          title={
             <FilenameText
               value={mirror.label}
-              className={cn(MEDIA_LIST_ROW_TITLE_CLASS, "min-w-0 flex-1")}
+              className={MEDIA_LIST_ROW_TITLE_CLASS}
             />
-            {mirror.size && (
+          }
+          trailing={
+            mirror.size ? (
               <span className="shrink-0 text-xs text-muted-foreground">
                 {mirror.size}
               </span>
-            )}
-          </Button>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            ) : undefined
+          }
+          overlay={
             <LinkActionsDotMenu
               itemLabel={mirror.label}
               onCopyLink={() =>
@@ -413,10 +411,11 @@ const ResolvedMirrorRows = ({
                     actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
                 })
               }}
-              className="size-9 shrink-0 text-foreground"
+              className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             />
-          </div>
-        </div>
+          }
+          onActivate={() => void actions.play(mirror)}
+        />
       )
     })}
   </div>
@@ -450,18 +449,16 @@ const ResolvableContainerRow = ({
         SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
       )}
     >
-      <div className="relative">
-        <button
-          type="button"
-          className={cn(
-            "flex min-h-24 w-full items-center gap-3 px-4 py-6 pr-16 text-left",
-            "hover:bg-muted",
-            link.opened && "bg-sky-500/15 hover:bg-sky-500/20",
-            didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
-          )}
-          data-resolution-state={resolutionState}
-          onClick={openLink}
-        >
+      <MediaListRow
+        wrapperClassName="border-b-0"
+        isOpened={link.opened === true}
+        buttonClassName={cn(
+          didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
+        )}
+        buttonDataAttributes={{
+          "data-resolution-state": resolutionState,
+        }}
+        icon={
           <SaveListRowIcon>
             <AnimatedStateIcon stateKey={containerIconStateKey}>
               <HugeiconsIcon
@@ -476,42 +473,52 @@ const ResolvableContainerRow = ({
               />
             </AnimatedStateIcon>
           </SaveListRowIcon>
-          <span className="min-w-0 flex-1">
-            <FilenameText
-              value={link.label}
-              className={MEDIA_LIST_ROW_TITLE_CLASS}
-            />
-            <span className="block truncate text-xs text-muted-foreground">
-              {getResolvableSourceName(link, item)}
-            </span>
+        }
+        title={
+          <FilenameText
+            value={link.label}
+            className={MEDIA_LIST_ROW_TITLE_CLASS}
+          />
+        }
+        meta={
+          <span className="block truncate text-xs text-muted-foreground">
+            {getResolvableSourceName(link, item)}
           </span>
-          {Boolean(displaySize) && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {displaySize}
-            </span>
-          )}
-          {!link.opened && <NewBadge />}
-          {isResolving ? (
-            <Spinner aria-label={`Loading playable links for ${link.label}…`} />
-          ) : mirrors.length > 0 ? (
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
-              className={cn(
-                "shrink-0 transition-transform",
-                isExpanded && "rotate-90"
-              )}
-            />
-          ) : null}
-        </button>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        }
+        trailing={
+          <>
+            {Boolean(displaySize) && (
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {displaySize}
+              </span>
+            )}
+            {!link.opened && <NewBadge />}
+            {isResolving ? (
+              <Spinner
+                aria-label={`Loading playable links for ${link.label}…`}
+              />
+            ) : mirrors.length > 0 ? (
+              <HugeiconsIcon
+                icon={ArrowRight01Icon}
+                className={cn(
+                  "shrink-0 transition-transform",
+                  isExpanded && "rotate-90"
+                )}
+              />
+            ) : null}
+          </>
+        }
+        overlay={
           <ResolvableLinkMenu
             itemLabel={link.label}
             onCopyLink={() => void navigator.clipboard.writeText(linkTarget)}
             onRefresh={refreshLink}
             onRemove={onRemove}
+            triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
           />
-        </div>
-      </div>
+        }
+        onActivate={openLink}
+      />
       {mirrors.length > 0 && isExpanded && (
         <ResolvedMirrorRows
           mirrors={mirrors}
@@ -735,7 +742,7 @@ const FinderBrowser = ({
                       onCopyLink={copyLink}
                       onOpenInPlayer={openLinkInPlayer}
                       isPlayable={!isExpired}
-                      className="size-9 shrink-0 text-foreground"
+                      className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
                     />
                   ) : undefined
                 }
@@ -854,7 +861,7 @@ export const SaveListBrowser = ({
                 <div
                   key={itemKey}
                   className={cn(
-                    "group relative",
+                    "group relative flex items-stretch",
                     SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
                   )}
                   data-layout-guide-target="list-row"
@@ -865,7 +872,7 @@ export const SaveListBrowser = ({
                 >
                   <div
                     className={cn(
-                      "relative flex min-h-20 w-full items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5",
+                      "relative flex min-h-20 min-w-0 flex-1 items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5",
                       !isDirectLinkExpired &&
                         !isExtractionIncomplete &&
                         "hover:bg-muted/70",
@@ -1026,16 +1033,6 @@ export const SaveListBrowser = ({
                         {view.extractedLinks.length} items
                       </span>
                     )}
-                    <span className="relative z-10">
-                      <LinkItemMenu
-                        item={item}
-                        actions={actions}
-                        playableLink={directLink}
-                        isPlayableLinkExpired={isDirectLinkExpired}
-                        showRemove
-                        isRefreshing={isExtracting}
-                      />
-                    </span>
                     {!directLink &&
                       !isExtractionIncomplete &&
                       !isExtracting && (
@@ -1044,6 +1041,22 @@ export const SaveListBrowser = ({
                           className="pointer-events-none relative z-10 shrink-0 text-foreground"
                         />
                       )}
+                  </div>
+                  <div
+                    className={cn(
+                      "flex items-center justify-center",
+                      MEDIA_LIST_ROW_MENU_CELL_CLASS
+                    )}
+                  >
+                    <LinkItemMenu
+                      item={item}
+                      actions={actions}
+                      playableLink={directLink}
+                      isPlayableLinkExpired={isDirectLinkExpired}
+                      showRemove
+                      isRefreshing={isExtracting}
+                      triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+                    />
                   </div>
                 </div>
               )

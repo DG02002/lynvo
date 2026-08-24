@@ -81,7 +81,7 @@ describe("MediaListRow", () => {
     expect(screen.getByRole("button")).toHaveClass("bg-sky-500/15")
   })
 
-  it("renders the overlay and reserves trailing space for it", () => {
+  it("renders the overlay in a full-height trailing cell beside the button", () => {
     render(
       <MediaListRow
         icon={null}
@@ -91,11 +91,19 @@ describe("MediaListRow", () => {
       />
     )
 
-    expect(
-      screen.getByRole("button", { name: "Overlay action" })
-    ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Title text" })).toHaveClass(
-      "pr-16"
+    const overlayAction = screen.getByRole("button", {
+      name: "Overlay action",
+    })
+    expect(overlayAction).toBeInTheDocument()
+    expect(overlayAction.parentElement).toHaveClass(
+      "w-16",
+      "border-s",
+      "border-border/70"
+    )
+    const rowButton = screen.getByRole("button", { name: "Title text" })
+    expect(rowButton).toHaveClass("flex-1")
+    expect(rowButton.parentElement.lastElementChild).toBe(
+      overlayAction.parentElement
     )
   })
 })

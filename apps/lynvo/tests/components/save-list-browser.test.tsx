@@ -526,6 +526,46 @@ describe("SaveListBrowser", () => {
     )
   })
 
+  it("renders the root item menu as a full-height trailing cell", () => {
+    const directLink: ExtractedLink = {
+      url: "https://cdn.example.com/cell-menu.mp4",
+      label: "cell-menu.mp4",
+      type: "file",
+    }
+    const item: LinkViewItem = {
+      url: "https://source.example/cell-menu",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Direct Media" },
+        extraction: { extractedLinks: [directLink] },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    const menuTrigger = screen.getByRole("button", {
+      name: "Open menu for https://source.example/cell-menu",
+    })
+    expect(menuTrigger).toHaveClass("size-full!", "rounded-none!")
+    expect(menuTrigger.parentElement).toHaveClass(
+      "w-16",
+      "border-s",
+      "border-border/70"
+    )
+  })
+
   it("disables and mutes an expired playable link", () => {
     const play = vi.fn()
     const directLink: ExtractedLink = {

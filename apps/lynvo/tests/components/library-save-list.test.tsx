@@ -96,7 +96,7 @@ describe("LibrarySaveList", () => {
 
     const { container } = render(
       <MemoryRouter>
-        <TitleGroupCard group={group} />
+        <TitleGroupCard group={group} savedLinks={[]} />
       </MemoryRouter>
     )
 
@@ -194,7 +194,11 @@ describe("LibrarySaveList", () => {
 
     render(
       <MemoryRouter>
-        <TitleGroupCard group={group} item={item} actions={createActions()} />
+        <TitleGroupCard
+          group={group}
+          savedLinks={[item]}
+          actions={createActions()}
+        />
       </MemoryRouter>
     )
 
@@ -231,7 +235,7 @@ describe("LibrarySaveList", () => {
       <MemoryRouter>
         <TitleGroupCard
           group={movieGroup}
-          item={item}
+          savedLinks={[item]}
           actions={createActions()}
         />
       </MemoryRouter>
@@ -246,7 +250,7 @@ describe("LibrarySaveList", () => {
       <MemoryRouter>
         <TitleGroupCard
           group={showGroup}
-          item={item}
+          savedLinks={[item]}
           actions={createActions()}
         />
       </MemoryRouter>
