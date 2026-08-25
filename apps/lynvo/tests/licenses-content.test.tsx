@@ -13,10 +13,14 @@ describe("LicensesContent", () => {
 
     expect(markup).toContain("https://www.themoviedb.org")
     expect(markup).toContain(
-      "blue_long_2-9665a76b1ae401a510ec1e0ca40ddcb3b0cfe45f1d51b77a308fea0845885648.svg"
+      "blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"
     )
     expect(markup).toContain(
       "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
     )
+    const logoMarkup = markup.match(/<img[^>]+alt="TMDB"[^>]*>/)?.[0]
+    expect(logoMarkup).toContain('class="block h-32 w-auto"')
+    expect(logoMarkup).toContain("data-not-typeset")
+    expect(logoMarkup).not.toMatch(/rounded|border|bg-|shadow|ring/)
   })
 })

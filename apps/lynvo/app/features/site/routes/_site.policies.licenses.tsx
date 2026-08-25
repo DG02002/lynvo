@@ -7,7 +7,7 @@ export function meta(_: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "Licenses for the Lynvo core project and independently licensed Plugin Server packages.",
+        "Lynvo software licenses, TMDB attribution, and third-party content notices.",
     },
   ]
 }

@@ -6,8 +6,10 @@ import {
 } from "~/components/support-channel-links"
 import { policyPaths } from "~/lib/paths"
 
+const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
+
 export const TermsOfUseContent = () => (
-  <PolicyLayout title="Terms of use" updatedAt="August 8, 2026">
+  <PolicyLayout title="Terms of use" updatedAt="August 25, 2026">
     <p>
       These Terms of Use govern your use of Lynvo&apos;s website, account, saved
       links, Extraction tools, device synchronization, and Remote Play features.
@@ -38,6 +40,21 @@ export const TermsOfUseContent = () => (
         catalog, media seller, or subscription to third-party content.
       </p>
       <p>
+        When enabled, Lynvo may use TMDB to add title metadata and artwork to
+        your media library. TMDB is an independent service and does not supply
+        the videos that your links reference. TMDB data and images are governed
+        by TMDB&apos;s{" "}
+        <a
+          href={TMDB_API_TERMS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4"
+        >
+          API terms of use
+        </a>{" "}
+        and the rights of their respective owners.
+      </p>
+      <p>
         Lynvo doesn&apos;t control the websites, files, Plugins, Custom Plugin
         Servers, or video players used with Lynvo. Their own terms apply to your
         use of them.
@@ -58,10 +75,10 @@ export const TermsOfUseContent = () => (
 
     <PolicySection title="3. Your account">
       <p>
-        Lynvo signs you in with Google. Keep your Google account secure; you
-        can&apos;t use Lynvo without access to the Google account you used to
-        sign in. You&apos;re responsible for activity performed through your
-        account and sessions.
+        Lynvo uses Google OAuth only for account creation and login. Keep your
+        Google account secure; you can&apos;t use Lynvo without access to the
+        Google account you used to sign in. You&apos;re responsible for activity
+        performed through your account and sessions.
       </p>
       <p>
         Review active sessions in Settings and revoke any session you don&apos;t
@@ -73,9 +90,8 @@ export const TermsOfUseContent = () => (
     <PolicySection title="4. Inactive accounts and saved-link retention">
       <p>
         Lynvo permanently deletes accounts after 90 days (3 months) without
-        recorded account activity. An automated job checks once each day.
-        Because Lynvo doesn&apos;t collect your email address, deletion may
-        occur without a separate warning.
+        recorded account activity. An automated job checks once each day. Lynvo
+        does not currently send a separate warning before this deletion.
       </p>
       <p>
         Log in and use Lynvo before the 90-day limit to keep the account active.
@@ -113,6 +129,19 @@ export const TermsOfUseContent = () => (
         You keep any rights you have in URLs, labels, and other information you
         submit. You give Lynvo permission to store, process, display, and send
         that data as needed to operate the features you request.
+      </p>
+      <p>
+        TMDB metadata and artwork are third-party materials. Lynvo does not
+        grant you ownership of or a separate license to reuse them. Follow the
+        <a
+          href={TMDB_API_TERMS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4"
+        >
+          TMDB API terms of use
+        </a>{" "}
+        and the rights of the relevant content owners.
       </p>
       <p>
         You must use Lynvo lawfully and follow the{" "}
@@ -193,6 +222,18 @@ export const TermsOfUseContent = () => (
           Usage policy
         </Link>{" "}
         explains restricted uses of Lynvo and connected Plugin Servers.
+      </p>
+      <p>
+        The{" "}
+        <Link
+          to={policyPaths.licenses}
+          viewTransition
+          className="font-normal underline underline-offset-4"
+        >
+          Open-source licenses
+        </Link>{" "}
+        page lists the licenses for Lynvo software and the attribution for
+        third-party services such as TMDB.
       </p>
     </PolicySection>
 

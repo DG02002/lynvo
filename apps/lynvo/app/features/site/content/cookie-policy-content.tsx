@@ -21,6 +21,13 @@ const cookieRows = [
   },
   {
     source: "Lynvo",
+    name: "lynvo_oauth_state",
+    duration: "Up to 10 minutes; cleared after the Google sign-in callback",
+    purpose: "Protecting the Google sign-in request",
+    domain: "Lynvo host",
+  },
+  {
+    source: "Lynvo",
     name: "lynvo-theme",
     duration: "1 year",
     purpose: "Remembering light or dark appearance",
@@ -67,7 +74,7 @@ const browserStorageRows = [
 ] as const
 
 export const CookiePolicyContent = () => (
-  <PolicyLayout title="Cookie policy" updatedAt="August 8, 2026">
+  <PolicyLayout title="Cookie policy" updatedAt="August 25, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       This Cookie Policy explains what cookies and similar technologies Lynvo
       uses, why Lynvo uses them, and how you can manage them. Read it with the{" "}
@@ -91,6 +98,12 @@ export const CookiePolicyContent = () => (
         including local storage and identifiers used by service providers.
         First-party cookies are set by Lynvo. A service provider may set
         third-party cookies or identifiers to help deliver or secure Lynvo.
+      </p>
+      <p>
+        Google sign-in redirects your browser to Google to complete
+        authentication. Lynvo does not embed a Google sign-in widget or set
+        Google cookies on the Lynvo origin. Google may use cookies on its own
+        domains during sign-in under Google&apos;s policies.
       </p>
     </PolicySection>
 
@@ -200,6 +213,11 @@ export const CookiePolicyContent = () => (
         Cookie and browser-storage choices apply to the browser and device where
         you make them. You may need to repeat the choice on another browser or
         device.
+      </p>
+      <p>
+        Cookies that Google sets on Google domains are controlled by Google and
+        are not listed as Lynvo cookies. Review Google&apos;s privacy controls
+        for those cookies.
       </p>
     </PolicySection>
 
