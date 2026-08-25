@@ -36,12 +36,6 @@ declare global {
     replayed: boolean
     dataVersion: number
   }
-
-  interface ClearSavedLinksResponse {
-    success: boolean
-    deletedLinks: number
-    dataVersion: number
-  }
 }
 
 const toSavedLink = (record: SavedLinkApiRecord): SavedLink => ({
@@ -286,10 +280,5 @@ export const linksDataApi = {
     requestDataJson(
       "/api/data/links/delete",
       mutationRequest("/api/data/links/delete", JSON.stringify(input))
-    ),
-  clearSavedLinks: (): Promise<ClearSavedLinksResponse> =>
-    requestDataJson(
-      "/api/data/links/clear",
-      mutationRequest("/api/data/links/clear", "{}")
     ),
 }

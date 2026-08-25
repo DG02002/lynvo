@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ComputerIcon, Refresh03Icon } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
+import { Spinner } from "~/components/ui/spinner"
 import type { RemoteSession } from "./types"
 
 export const RemoteSessionList = ({
@@ -27,7 +28,7 @@ export const RemoteSessionList = ({
       <div className="flex flex-col gap-2">
         {loading ? (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <Spinner aria-hidden="true" />
             <p className="text-sm text-muted-foreground">
               Searching for Remote Play devices…
             </p>

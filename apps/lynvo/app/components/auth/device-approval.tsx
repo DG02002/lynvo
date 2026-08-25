@@ -2,7 +2,7 @@ import * as React from "react"
 import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/lynvo-link"
 import { authPaths } from "~/lib/paths"
@@ -37,14 +37,14 @@ export default function DeviceApproval() {
     try {
       await authorizeDeviceCode(code)
       setSuccess(true)
-      toast.success("Login approved")
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t approve the login",
+        description: getUserFacingErrorMessage(
           error,
           "The login couldn’t be approved. Check the code, then try again."
-        )
-      )
+        ),
+      })
     } finally {
       setLoading(false)
     }
@@ -114,7 +114,10 @@ export default function DeviceApproval() {
                     disabled={loading}
                     onClick={() => void handleAuthorize()}
                   >
-                    {loading ? "Approving login…" : "Approve login"}
+                    {loading && (
+                      <Spinner data-icon="inline-start" aria-hidden="true" />
+                    )}
+                    Approve login
                   </Button>
                 )}
                 <Button

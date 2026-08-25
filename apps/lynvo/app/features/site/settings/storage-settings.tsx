@@ -1,7 +1,6 @@
 import * as React from "react"
 import { Alert01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { toast } from "sonner"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
 import { Progress } from "~/components/ui/progress"
@@ -20,6 +19,11 @@ import {
   SettingsRowInfo,
 } from "./settings-layout"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from "~/lib/toast-notifications"
 import {
   clearSavedLinksOverHttp,
   previewStorageRetention,
@@ -103,19 +107,30 @@ export function StorageSettings() {
     try {
       const result = await updateStorageRetention({ days, deleteExpiredLinks })
       await reload()
-      toast.success(
-        result.deletedLinks > 0
-          ? `Auto-delete period updated. Removed ${result.deletedLinks} old saved links.`
-          : "Auto-delete period updated"
-      )
+      if (result.deletedLinks > 0) {
+        showSuccessToast({
+          title: `Deleted ${result.deletedLinks} old saved ${
+            result.deletedLinks === 1 ? "link" : "links"
+          }`,
+          description: "The auto-delete period was updated.",
+        })
+      } else {
+        showSuccessToast({
+          title: "Auto-delete period updated",
+          description: `Saved links older than ${days} ${
+            days === 1 ? "day" : "days"
+          } are removed automatically.`,
+        })
+      }
       setPendingRetention(null)
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t update the auto-delete period",
+        description: getUserFacingErrorMessage(
           error,
           "The auto-delete period couldn’t be updated. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setIsUpdatingRetention(false)
     }
@@ -126,18 +141,28 @@ export function StorageSettings() {
     try {
       const result = await clearSavedLinksOverHttp()
       await reload()
-      toast.success(
-        result.deletedLinks > 0
-          ? `Removed ${result.deletedLinks} saved links.`
-          : "No saved links to remove"
-      )
+      setIsClearLinksDialogOpen(false)
+      if (result.deletedLinks > 0) {
+        showSuccessToast({
+          title: `Deleted ${result.deletedLinks} saved ${
+            result.deletedLinks === 1 ? "link" : "links"
+          }`,
+          description: "All saved links were permanently removed.",
+        })
+      } else {
+        showWarningToast({
+          title: "No saved links to delete",
+          description: "There were no saved links left on the account.",
+        })
+      }
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t delete saved links",
+        description: getUserFacingErrorMessage(
           error,
           "Saved links couldn’t be removed. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setIsClearingLinks(false)
     }
@@ -201,11 +226,9 @@ export function StorageSettings() {
           />
         }
         description="This permanently removes every saved link and its extracted link data from the account. This cannot be undone."
-        confirmLabel={
-          isClearingLinks ? "Deleting saved links…" : "Delete all saved links"
-        }
+        confirmLabel="Delete all saved links"
         confirmVariant="destructive"
-        disabled={isClearingLinks}
+        pending={isClearingLinks}
         onConfirm={() => void handleClearLinks()}
       />
       <ConfirmationAlertDialog
@@ -224,11 +247,9 @@ export function StorageSettings() {
             the account. This cannot be undone.
           </>
         }
-        confirmLabel={
-          isUpdatingRetention ? "Deleting older links…" : "Delete older links"
-        }
+        confirmLabel="Delete older links"
         confirmVariant="destructive"
-        disabled={isUpdatingRetention}
+        pending={isUpdatingRetention}
         onConfirm={() => {
           if (pendingRetention) {
             void applyRetentionChange(pendingRetention.days, true)

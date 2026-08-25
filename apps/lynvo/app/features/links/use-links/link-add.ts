@@ -1,4 +1,4 @@
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import { createLinkMetadata } from "~/features/links/links.mapper"
 import type {
   ExtractedLink,
@@ -56,9 +56,11 @@ export const buildQueuedLinkViewItem = async (targetUrl: string) =>
 
 export const showSaveError = (cause: unknown) => {
   console.error(cause)
-  toast.error(
-    cause instanceof SavedLinkCommandError
-      ? presentSavedLinkCommandFailure(cause.failure)
-      : "Unable to save link. Try again."
-  )
+  showErrorToast({
+    title: "Couldn’t save the link",
+    description:
+      cause instanceof SavedLinkCommandError
+        ? presentSavedLinkCommandFailure(cause.failure)
+        : "Unable to save link. Try again.",
+  })
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Effect } from "effect"
-import { toast } from "sonner"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import type {
   ExtractedLink,
   MetaData,
@@ -99,7 +99,6 @@ export const useSaveActions = ({
             break
           case "links-updated":
             updateLinks(outcome.itemUrl, outcome.links)
-            toast.success("Links updated")
             break
           default:
             break
@@ -311,15 +310,18 @@ export const useSaveActions = ({
           },
         })
       )
-      toast.success(`${pluginDomainSuggestion.pluginName} domain added`)
+      showSuccessToast({
+        title: `${pluginDomainSuggestion.pluginName} domain added`,
+      })
       setPluginDomainSuggestion(null)
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t add the plugin domain",
+        description: getUserFacingErrorMessage(
           error,
           "Unable to add the plugin domain. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setIsAddingPluginDomain(false)
     }

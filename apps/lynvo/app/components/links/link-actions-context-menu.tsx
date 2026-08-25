@@ -6,7 +6,7 @@ import {
   Delete02Icon,
   EllipsisIcon,
 } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -49,7 +49,7 @@ export function LinkActionsDotMenu({
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const handleCopy = () => {
     onCopyLink()
-    toast.success("Link copied")
+    showLinkCopiedToast()
   }
 
   return (

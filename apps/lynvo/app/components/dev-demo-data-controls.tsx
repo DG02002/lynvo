@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { toast } from "sonner"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
 
@@ -17,9 +17,9 @@ export const DevDemoDataControls = ({ onLoad }: DevDemoDataControlsProps) => {
     setIsLoading(true)
     try {
       await onLoad()
-      toast.success("Demo links added")
+      showSuccessToast({ title: "Demo links added" })
     } catch {
-      toast.error("Unable to add demo links. Try again.")
+      showErrorToast({ title: "Unable to add demo links. Try again." })
     } finally {
       setIsLoading(false)
     }
@@ -36,7 +36,7 @@ export const DevDemoDataControls = ({ onLoad }: DevDemoDataControlsProps) => {
         onClick={() => void handleLoad()}
       >
         {isLoading && <Spinner aria-hidden="true" className="size-3.5" />}
-        {isLoading ? "Adding demo links…" : "Add demo links"}
+        Add demo links
       </Button>
       <p className="text-xs text-muted-foreground">
         Development only: TMDB examples for direct media, folders, containers,

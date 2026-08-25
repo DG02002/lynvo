@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import {
   expandFolderLink,
@@ -40,10 +40,11 @@ export const useRefreshActions = ({
           openSelectionDialog(outcome.selection)
         } else if (outcome.kind === "links-updated") {
           updateLinks(outcome.itemUrl, outcome.links)
-        } else if (outcome.kind === "refresh-succeeded") {
-          toast.success("Links refreshed")
         } else if (outcome.kind === "error") {
-          toast.error(outcome.message)
+          showErrorToast({
+            title: "Couldn’t refresh the link",
+            description: outcome.message,
+          })
         }
       },
     }),

@@ -220,9 +220,9 @@ const CustomPluginServerRow = ({
           />
         }
         description={`${manifest.name} and its server connection will be removed. You can add it again later.`}
-        confirmLabel={isDeleting ? "Deleting…" : "Delete server"}
+        confirmLabel="Delete server"
         confirmVariant="destructive"
-        disabled={isDeleting}
+        pending={isDeleting}
         onConfirm={() => {
           setIsDeleting(true)
           void onDeletePluginServer(pluginServer.id).finally(() => {

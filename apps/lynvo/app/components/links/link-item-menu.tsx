@@ -1,5 +1,5 @@
 import * as React from "react"
-import { toast } from "sonner"
+import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowUpRight01Icon,
@@ -80,9 +80,9 @@ const LinkItemMenuContent = ({
         document.body.removeChild(textArea)
       }
       notifyClipboardWrite()
-      toast.success("Link copied")
+      showLinkCopiedToast()
     } catch {
-      toast.error("Unable to copy the link. Try again.")
+      showErrorToast({ title: "Unable to copy the link. Try again." })
     }
   }
 

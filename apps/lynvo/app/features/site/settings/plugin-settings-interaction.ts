@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Effect } from "effect"
-import { toast } from "sonner"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { client } from "~/lib/effect/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
@@ -205,7 +205,7 @@ export const usePluginSettingsInteraction = ({
         await reloadPluginSettings()
         setter((current) => ({ ...current, [key]: { status: "success" } }))
         if (feedback && messages.success) {
-          toast.success(messages.success)
+          showSuccessToast({ title: messages.success })
         }
         return true
       } catch (error) {
@@ -215,7 +215,7 @@ export const usePluginSettingsInteraction = ({
           [key]: { status: "error", error: message },
         }))
         if (feedback) {
-          toast.error(message)
+          showErrorToast({ title: message })
         }
         return false
       } finally {

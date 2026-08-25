@@ -2,7 +2,11 @@ import * as React from "react"
 import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import {
+  showErrorToast,
+  showSuccessToast,
+  showWarningToast,
+} from "~/lib/toast-notifications"
 import {
   SettingsPanel,
   SettingsList,
@@ -48,12 +52,13 @@ export function SecuritySettings({
       await revokeSession()
       window.location.href = "/"
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t log out all sessions",
+        description: getUserFacingErrorMessage(
           error,
           "The sessions couldn’t be logged out. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setBusy(null)
     }
@@ -62,7 +67,10 @@ export function SecuritySettings({
   const handleDeleteAccount = async (event: React.FormEvent) => {
     event.preventDefault()
     if (deleteConfirmEmail.trim() !== user.email) {
-      toast.error(`Enter ${user.email} exactly.`)
+      showWarningToast({
+        title: "Email doesn’t match",
+        description: `Enter ${user.email} exactly.`,
+      })
       return
     }
     setBusy("delete")
@@ -72,15 +80,19 @@ export function SecuritySettings({
           payload: { confirmEmail: deleteConfirmEmail },
         })
       )
-      toast.success("Account deleted")
+      showSuccessToast({
+        title: "Account deleted",
+        description: "Your account has been permanently removed.",
+      })
       window.location.href = "/"
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t delete the account",
+        description: getUserFacingErrorMessage(
           error,
           "The account couldn’t be deleted. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setBusy(null)
     }
@@ -100,14 +112,14 @@ export function SecuritySettings({
                 })
               )
               await reload()
-              toast.success("Session logged out")
             } catch (error) {
-              toast.error(
-                getUserFacingErrorMessage(
+              showErrorToast({
+                title: "Couldn’t log out the session",
+                description: getUserFacingErrorMessage(
                   error,
                   "The session couldn’t be logged out. Try again."
-                )
-              )
+                ),
+              })
               throw error
             }
           }}
@@ -124,11 +136,9 @@ export function SecuritySettings({
             />
           }
           description="This logs out every device, including this one. Unsaved work on those devices may be lost. Session termination may take up to 30 minutes."
-          confirmLabel={
-            busy === "revokeAll" ? "Logging out…" : "Log out all sessions"
-          }
+          confirmLabel="Log out all sessions"
           confirmVariant="destructive"
-          disabled={busy === "revokeAll"}
+          pending={busy === "revokeAll"}
           onConfirm={() => void handleRevokeAllSessions()}
         />
       </>

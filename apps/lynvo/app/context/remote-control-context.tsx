@@ -5,7 +5,11 @@ import React, {
   useMemo,
   useSyncExternalStore,
 } from "react"
-import { toast } from "sonner"
+import {
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
+} from "~/lib/toast-notifications"
 import {
   useRealtime,
   type RealtimeContextValue,
@@ -118,36 +122,38 @@ export const RemoteControlProviderContent = ({
     () =>
       machine.subscribeOutcomes((outcome) => {
         if (outcome.type === "connected") {
-          toast.success(`Connected to ${outcome.deviceName}.`)
+          showSuccessToast({ title: `Connected to ${outcome.deviceName}` })
         } else if (outcome.type === "connect-failed") {
-          toast.error(
-            "Remote Play couldn’t connect. Keep Lynvo open on both devices, then try again."
-          )
+          showErrorToast({
+            title: "Remote Play couldn’t connect",
+            description: "Keep Lynvo open on both devices, then try again.",
+          })
         } else if (
           outcome.type === "disconnected" ||
           outcome.type === "receiver-disconnected"
         ) {
-          toast.info("Remote Play disconnected")
+          showInfoToast({ title: "Remote Play disconnected" })
         } else if (outcome.type === "disconnect-failed") {
-          toast.error(
-            "Remote Play couldn’t disconnect. Check the connection, then try again."
-          )
+          showErrorToast({
+            title: "Remote Play couldn’t disconnect",
+            description: "Check the connection, then try again.",
+          })
         } else if (outcome.type === "send-failed") {
-          toast.error(
-            "The Remote Play command couldn’t be sent. Check the connection, then try again."
-          )
+          showErrorToast({
+            title: "Couldn’t send the Remote Play command",
+            description: "Check the connection, then try again.",
+          })
         } else if (outcome.type === "delivery-unavailable") {
-          toast.error(
-            "Remote Play updates are temporarily unavailable. Check the connection."
-          )
+          showErrorToast({
+            title: "Remote Play is temporarily unavailable",
+            description:
+              "Remote Play updates are temporarily unavailable. Check the connection.",
+          })
         } else if (outcome.type === "invalid-command") {
-          toast.error("Remote Play received an invalid playback request.")
-        } else if (outcome.type === "receiver-connected") {
-          toast.info(`Connected to ${outcome.deviceName}`)
-        } else if (outcome.type === "receiver-ended") {
-          toast.info("Remote Play connection ended")
-        } else if (outcome.command === "play") {
-          toast.info("Playing on the connected device")
+          showErrorToast({
+            title: "Invalid playback request",
+            description: "Remote Play received an invalid playback request.",
+          })
         }
       }),
     [machine]

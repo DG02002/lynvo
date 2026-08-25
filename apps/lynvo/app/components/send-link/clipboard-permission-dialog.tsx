@@ -19,6 +19,7 @@ export function ClipboardPermissionDialog({
   onAllow,
 }: ClipboardPermissionDialogProps) {
   const [step, setStep] = React.useState(0)
+  const [isAllowing, setIsAllowing] = React.useState(false)
 
   React.useEffect(() => {
     if (!open) {
@@ -33,8 +34,13 @@ export function ClipboardPermissionDialog({
   }, [open])
 
   const handleAllow = async () => {
-    await onAllow()
-    onOpenChange(false)
+    setIsAllowing(true)
+    try {
+      await onAllow()
+      onOpenChange(false)
+    } finally {
+      setIsAllowing(false)
+    }
   }
 
   const preview = (
@@ -105,6 +111,7 @@ export function ClipboardPermissionDialog({
       media={preview}
       confirmLabel="Allow clipboard access"
       cancelLabel="Not now"
+      pending={isAllowing}
       onConfirm={handleAllow}
     />
   )

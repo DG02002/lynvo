@@ -1,4 +1,4 @@
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import type {
   ExtractedLink,
   LinkMetadata,
@@ -71,31 +71,13 @@ export const createLinksMutations = ({
         }
       })
       settleAndRefetch()
-      if (!silent) {
-        toast.success("Link removed")
-      }
     } catch {
       if (!silent) {
-        toast.error("The saved link couldn’t be removed. Try again.")
+        showErrorToast({
+          title: "Couldn’t remove the link",
+          description: "The saved link couldn’t be removed. Try again.",
+        })
       }
-    }
-  }
-
-  const clearLinks = async (): Promise<void> => {
-    try {
-      await runExclusive(async () => {
-        store.beginClear()
-        try {
-          await linksDataApi.clearSavedLinks()
-        } catch (error) {
-          settleAndRefetch()
-          throw error
-        }
-      })
-      settleAndRefetch()
-      toast.success("Saved links cleared")
-    } catch {
-      toast.error("Saved links couldn’t be cleared. Try again.")
     }
   }
 
@@ -296,7 +278,6 @@ export const createLinksMutations = ({
 
   return {
     remove,
-    clearLinks,
     addLink,
     enqueueLink,
     updateLinks,

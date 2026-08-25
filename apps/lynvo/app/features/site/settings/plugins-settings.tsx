@@ -309,7 +309,8 @@ const AddPluginDomainDialog = ({
             setOpen(false)
           }
         }}
-        submitLabel={isAdding ? "Adding…" : "Add domain"}
+        submitLabel="Add domain"
+        submitPending={isAdding}
         submitDisabled={isAdding}
         cancelDisabled={isAdding}
       >
@@ -537,9 +538,8 @@ export const CustomPluginServersSection = ({
                   event.preventDefault()
                   void form.handleSubmit()
                 }}
-                submitLabel={
-                  isSubmitting ? "Adding…" : "Add Custom Plugin Server"
-                }
+                submitLabel="Add Custom Plugin Server"
+                submitPending={isSubmitting}
                 submitDisabled={isSubmitting}
                 cancelDisabled={isSubmitting}
               >
@@ -707,7 +707,8 @@ const PluginCredentialEditor = ({
                 />
               }
               onSubmit={handleSubmit}
-              submitLabel={isSaving ? "Saving…" : "Save credentials"}
+              submitLabel="Save credentials"
+              submitPending={isSaving}
               submitDisabled={isSaving}
               cancelDisabled={isSaving}
             >
@@ -773,9 +774,9 @@ const PluginCredentialEditor = ({
           />
         }
         description={`Lynvo will no longer use the saved credentials for ${domain.domain}.`}
-        confirmLabel={isRemovingCredential ? "Removing…" : "Remove credentials"}
+        confirmLabel="Remove credentials"
         confirmVariant="destructive"
-        disabled={isRemovingCredential}
+        pending={isRemovingCredential}
         onConfirm={() => {
           setIsRemovingCredential(true)
           void onDeleteCredential(domain.id).finally(() => {
@@ -796,9 +797,9 @@ const PluginCredentialEditor = ({
           />
         }
         description={`${domain.domain} and its Plugin Credentials will be removed from this plugin.`}
-        confirmLabel={isRemovingDomain ? "Removing…" : "Remove domain"}
+        confirmLabel="Remove domain"
         confirmVariant="destructive"
-        disabled={isRemovingDomain}
+        pending={isRemovingDomain}
         onConfirm={() => {
           setIsRemovingDomain(true)
           void onDeleteDomain(domain.id).finally(() => {

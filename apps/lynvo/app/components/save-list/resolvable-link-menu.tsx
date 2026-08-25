@@ -6,7 +6,7 @@ import {
   EllipsisIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
 import { cn } from "~/lib/utils"
@@ -59,7 +59,7 @@ export const ResolvableLinkMenu = ({
             <DropdownMenuItem
               onClick={() => {
                 onCopyLink()
-                toast.success("Link copied")
+                showLinkCopiedToast()
               }}
             >
               <HugeiconsIcon icon={CopyIcon} />

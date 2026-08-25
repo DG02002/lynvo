@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Effect, Result, Schema } from "effect"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import {
   Select,
   SelectContent,
@@ -131,7 +131,7 @@ export const PlayerSettings = ({
     }
     initializedEmptyCloudPreferences.current = true
     void updateCloudPreferences(localPreferences).catch(() => {
-      toast.error("Player settings couldn’t be saved. Try again.")
+      showErrorToast({ title: "Player settings couldn’t be saved. Try again." })
     })
   }, [cloudPreferences, playerPreferenceIdentity, updateCloudPreferences])
 
@@ -147,20 +147,16 @@ export const PlayerSettings = ({
     const write = supportedWriteQueue.enqueue(() =>
       updateCloudPreferences({ rangeSupportedPlayerId: playerId })
     )
-    void write
-      .then(() => {
-        if (rangeSupportedMutationGeneration.current === mutationGeneration) {
-          toast.success("Player for links with HTTP byte-range support updated")
-        }
+    void write.catch(() => {
+      if (rangeSupportedMutationGeneration.current !== mutationGeneration) {
+        return
+      }
+      setRangeSupportedPlayerId(previousPlayerId)
+      setRangeSupportedPlayer(playerPreferenceIdentity, previousPlayerId)
+      showErrorToast({
+        title: "The player setting couldn’t be saved. Try again.",
       })
-      .catch(() => {
-        if (rangeSupportedMutationGeneration.current !== mutationGeneration) {
-          return
-        }
-        setRangeSupportedPlayerId(previousPlayerId)
-        setRangeSupportedPlayer(playerPreferenceIdentity, previousPlayerId)
-        toast.error("The player setting couldn’t be saved. Try again.")
-      })
+    })
   }
 
   const handleRangeUnsupportedChange = (playerId: PlayerId) => {
@@ -175,22 +171,16 @@ export const PlayerSettings = ({
     const write = unsupportedWriteQueue.enqueue(() =>
       updateCloudPreferences({ rangeUnsupportedPlayerId: playerId })
     )
-    void write
-      .then(() => {
-        if (rangeUnsupportedMutationGeneration.current === mutationGeneration) {
-          toast.success(
-            "Player for links without HTTP byte-range support updated"
-          )
-        }
+    void write.catch(() => {
+      if (rangeUnsupportedMutationGeneration.current !== mutationGeneration) {
+        return
+      }
+      setRangeUnsupportedPlayerId(previousPlayerId)
+      setRangeUnsupportedPlayer(playerPreferenceIdentity, previousPlayerId)
+      showErrorToast({
+        title: "The player setting couldn’t be saved. Try again.",
       })
-      .catch(() => {
-        if (rangeUnsupportedMutationGeneration.current !== mutationGeneration) {
-          return
-        }
-        setRangeUnsupportedPlayerId(previousPlayerId)
-        setRangeUnsupportedPlayer(playerPreferenceIdentity, previousPlayerId)
-        toast.error("The player setting couldn’t be saved. Try again.")
-      })
+    })
   }
 
   const selectedRangeSupported = PLAYER_DEFINITIONS.find(

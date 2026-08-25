@@ -3,6 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { SmartPhone02Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
+import { Spinner } from "~/components/ui/spinner"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
@@ -181,7 +182,10 @@ export const ActiveSessionsView = ({
           onClick={onRevokeAllSessions}
           disabled={busy === "revokeAll"}
         >
-          {busy === "revokeAll" ? "Logging out…" : "Log out all"}
+          {busy === "revokeAll" && (
+            <Spinner data-icon="inline-start" aria-hidden="true" />
+          )}
+          Log out all
         </Button>
       </div>
 
@@ -199,9 +203,9 @@ export const ActiveSessionsView = ({
             Lynvo.
           </>
         }
-        confirmLabel={isRevoking ? "Logging out…" : "Log out"}
+        confirmLabel="Log out"
         confirmVariant="destructive"
-        disabled={isRevoking}
+        pending={isRevoking}
         onConfirm={() => void handleConfirmRevoke()}
       />
     </div>

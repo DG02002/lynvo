@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { Spinner } from "~/components/ui/spinner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ interface ConfirmationAlertDialogProps {
   cancelLabel?: ReactNode | null
   confirmVariant?: React.ComponentProps<typeof Button>["variant"]
   disabled?: boolean
+  pending?: boolean
 }
 
 export function ConfirmationAlertDialog({
@@ -34,6 +36,7 @@ export function ConfirmationAlertDialog({
   cancelLabel = "Cancel",
   confirmVariant = "default",
   disabled = false,
+  pending = false,
 }: ConfirmationAlertDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -52,9 +55,10 @@ export function ConfirmationAlertDialog({
             size="lg"
             className="h-13.5 w-full"
             variant={confirmVariant}
-            disabled={disabled}
+            disabled={disabled || pending}
             onClick={onConfirm}
           >
+            {pending && <Spinner data-icon="inline-start" aria-hidden="true" />}
             {confirmLabel}
           </AlertDialogAction>
           {cancelLabel !== null && (
@@ -62,7 +66,7 @@ export function ConfirmationAlertDialog({
               variant="outline"
               size="lg"
               className="h-13.5 w-full border-muted-foreground/20"
-              disabled={disabled}
+              disabled={disabled || pending}
             >
               {cancelLabel}
             </AlertDialogCancel>

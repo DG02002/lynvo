@@ -6,7 +6,7 @@ import { RealtimeProvider } from "~/context/realtime-context"
 import { VersionWatcher } from "~/components/version-watcher"
 import { PlayerLaunchErrorDialog } from "~/components/player-launch-error-dialog"
 import { OpenedConfirmationDialog } from "~/components/opened-confirmation-dialog"
-import { Toaster } from "~/components/ui/sonner"
+import { AppToaster } from "~/components/app-toaster"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
@@ -65,8 +65,8 @@ export const AppProviders = ({
         </IdentitySynchronizer>
         <PlayerLaunchErrorDialog />
         <OpenedConfirmationDialog />
-        <Toaster />
-      </TooltipProvider>
+        <AppToaster />
+      </TooltipProvider>{" "}
     </ThemeProvider>
   )
 }

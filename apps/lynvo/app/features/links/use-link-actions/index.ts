@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import type { LinkListItem } from "~/features/links/types"
 import type { ExtractionPreview } from "./action-types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -115,7 +115,7 @@ export function useLinkActions({
         return resolvedChildren
       } catch (error) {
         console.error(error)
-        toast.error("The folder couldn’t be opened. Try again.")
+        showErrorToast({ title: "The folder couldn’t be opened. Try again." })
         return null
       }
     },
