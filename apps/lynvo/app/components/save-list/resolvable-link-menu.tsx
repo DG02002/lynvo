@@ -67,7 +67,7 @@ export const ResolvableLinkMenu = ({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onRefresh}>
               <HugeiconsIcon icon={Refresh01Icon} />
-              Refresh playable links
+              Refresh
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

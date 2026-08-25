@@ -31,6 +31,7 @@ import { projectTitleGroups } from "~/features/links/title-grouping/title-group-
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
+  isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
 import {
   getFolderIcon,
@@ -46,6 +47,7 @@ import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
+import { ResolvableContainerRow } from "~/components/save-list/resolvable-container-row"
 
 interface TitleGroupDetailProps {
   readonly group: TitleGroupProjection
@@ -71,9 +73,6 @@ const getSourceStateLabel = (
 ): string | undefined => {
   if (source.status === "down") {
     return "Unavailable"
-  }
-  if (source.mediaNodeKind === "resolvable") {
-    return "Needs loading"
   }
   return undefined
 }
@@ -288,6 +287,9 @@ const EpisodeRow = ({
               removeRequest={sourceRemoveRequest}
             />
           ) : undefined
+        }
+        overlayClassName={
+          isDirectMediaGroup ? "border-s border-border/70" : undefined
         }
         onActivate={() => void handleActivate()}
         disabled={!savedLink || isWorking}
@@ -768,7 +770,12 @@ export const TitleGroupDetail = ({
               </Button>
             )}
           </div>
-          <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
+          <div
+            className={cn(
+              MEDIA_LIST_HEADER_MENU_CELL_CLASS,
+              isDirectMediaGroup && "border-s border-border/70"
+            )}
+          >
             <TitleGroupMenu
               group={displayedGroup}
               savedLinks={groupSavedLinks}
@@ -929,25 +936,47 @@ export const TitleGroupDetail = ({
               )}
             >
               {displayedGroup.entries.map((entry) => {
-                return entry.sources.map((source) => (
-                  <EpisodeRow
-                    key={source.occurrenceKey}
-                    entry={entry}
-                    source={source}
-                    stillPath={entry.stillPath}
-                    savedLink={savedLinksById.get(source.savedLinkId)}
-                    actions={actions}
-                    isListView={isListView}
-                    isDirectMediaGroup={isDirectMediaGroup}
-                    isNetflixGridView={isNetflixGridView}
-                    isShowingRealFilename={isShowingRealFilename}
-                    isMultiSavedLinkGroup={isMultiSavedLinkGroup}
-                    onFolderOpened={(frame) => {
-                      setFolderStack([frame])
-                      setFailedFolderKey(null)
-                    }}
-                  />
-                ))
+                return entry.sources.map((source) => {
+                  const savedLink = savedLinksById.get(source.savedLinkId)
+                  if (
+                    isListView &&
+                    isDirectMediaGroup &&
+                    savedLink &&
+                    isMirrorResolvableMediaNode(source.node)
+                  ) {
+                    return (
+                      <ResolvableContainerRow
+                        key={source.occurrenceKey}
+                        item={savedLink}
+                        link={source.node}
+                        actions={actions}
+                        isResolving={false}
+                        onRemove={() =>
+                          actions.remove(savedLink.url, savedLink.id)
+                        }
+                      />
+                    )
+                  }
+                  return (
+                    <EpisodeRow
+                      key={source.occurrenceKey}
+                      entry={entry}
+                      source={source}
+                      stillPath={entry.stillPath}
+                      savedLink={savedLink}
+                      actions={actions}
+                      isListView={isListView}
+                      isDirectMediaGroup={isDirectMediaGroup}
+                      isNetflixGridView={isNetflixGridView}
+                      isShowingRealFilename={isShowingRealFilename}
+                      isMultiSavedLinkGroup={isMultiSavedLinkGroup}
+                      onFolderOpened={(frame) => {
+                        setFolderStack([frame])
+                        setFailedFolderKey(null)
+                      }}
+                    />
+                  )
+                })
               })}
             </div>
           </div>

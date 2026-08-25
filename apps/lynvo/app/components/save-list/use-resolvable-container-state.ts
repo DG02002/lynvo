@@ -23,22 +23,28 @@ export const useResolvableContainerState = ({
   )
   const [isExpanded, setIsExpanded] = useState(false)
   const [didResolutionFail, setDidResolutionFail] = useState(false)
+  const [isResolving, setIsResolving] = useState(false)
   const displaySize = link.size
 
   const resolveLink = async (bypassCache = false) => {
     setDidResolutionFail(false)
     setIsExpanded(true)
-    const resolvedLinks = await actions.expandMirror(
-      item.url,
-      linkTarget,
-      bypassCache
-    )
-    const availableMirrors =
-      resolvedLinks?.filter((mirror) => mirror.status !== "down") ?? []
-    setMirrors(availableMirrors)
-    if (!availableMirrors.length) {
-      setIsExpanded(false)
-      setDidResolutionFail(true)
+    setIsResolving(true)
+    try {
+      const resolvedLinks = await actions.expandMirror(
+        item.url,
+        linkTarget,
+        bypassCache
+      )
+      const availableMirrors =
+        resolvedLinks?.filter((mirror) => mirror.status !== "down") ?? []
+      setMirrors(availableMirrors)
+      if (!availableMirrors.length) {
+        setIsExpanded(false)
+        setDidResolutionFail(true)
+      }
+    } finally {
+      setIsResolving(false)
     }
   }
 
@@ -59,6 +65,7 @@ export const useResolvableContainerState = ({
     mirrors,
     isExpanded,
     didResolutionFail,
+    isResolving,
     displaySize,
     resolutionState: didResolutionFail
       ? "failed"

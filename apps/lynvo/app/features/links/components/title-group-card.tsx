@@ -100,30 +100,14 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
             height={513}
           />
         ) : (
-          <div className="flex size-full items-end bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
-            <span className="font-heading text-lg font-normal leading-tight text-foreground">
-              {group.displayTitle}
-            </span>
+          <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
+            No poster found
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {isNew && !isMetadataPending && (
           <NewBadge className="absolute left-3 top-3 z-10" />
         )}
-        {!isMetadataPending &&
-          group.metadataState === "failed" &&
-          !group.posterPath && (
-            <span className="absolute right-2 top-2 rounded-full bg-destructive/90 px-2 py-1 text-[11px] font-medium text-destructive-foreground shadow-sm backdrop-blur-sm">
-              Not found
-            </span>
-          )}
-        {!isMetadataPending &&
-          group.metadataState === "unavailable" &&
-          !group.posterPath && (
-            <span className="absolute right-2 top-2 rounded-full bg-background/90 px-2 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
-              No artwork
-            </span>
-          )}
         {savedLinks.length > 0 && actions && (
           <div className="absolute bottom-4 right-4 z-10 opacity-0 transition-opacity duration-150 group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
             <TitleGroupMenu

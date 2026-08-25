@@ -109,6 +109,38 @@ describe("LibrarySaveList", () => {
     expect(screen.queryByText("Finding artwork")).not.toBeInTheDocument()
   })
 
+  it("shows a centered missing-poster message without repeating the title", () => {
+    const group: TitleGroupProjection = {
+      id: "missing-poster-group",
+      identityKey: "movie:the lord of the rings:2002",
+      mediaKind: "movie",
+      displayTitle: "The Lord of the Rings: The Two Towers",
+      year: 2002,
+      metadataState: "failed",
+      lastAddedAt: 1,
+      sourceCount: 0,
+      entries: [],
+    }
+
+    render(
+      <MemoryRouter>
+        <TitleGroupCard group={group} savedLinks={[]} />
+      </MemoryRouter>
+    )
+
+    const card = screen.getByTestId("title-group-card")
+    const posterArea = card.querySelector('[class~="aspect-2/3"]')
+    expect(screen.getByText("No poster found")).toHaveClass(
+      "items-center",
+      "justify-center"
+    )
+    expect(posterArea).toBeInTheDocument()
+    expect(posterArea).not.toHaveTextContent(group.displayTitle)
+    expect(screen.getAllByText(group.displayTitle)).toHaveLength(1)
+    expect(screen.queryByText("Not found")).not.toBeInTheDocument()
+    expect(screen.queryByText("No artwork")).not.toBeInTheDocument()
+  })
+
   it("keeps different seasons as separate title cards", () => {
     renderList([
       createItem("season-one", "Example Show S01E01.mkv"),
@@ -127,7 +159,7 @@ describe("LibrarySaveList", () => {
     renderList([createItem("unknown", "video.mkv")])
 
     expect(screen.getByRole("heading", { name: "Unmatched" })).toBeVisible()
-    expect(screen.getAllByText("video.mkv")).toHaveLength(2)
+    expect(screen.getAllByText("video.mkv")).toHaveLength(1)
   })
 
   it("shows a clear empty state", () => {

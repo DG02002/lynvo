@@ -78,6 +78,29 @@ describe("TitleGroupMenu", () => {
     menu.unmount()
   })
 
+  it("uses Refresh for an automatically saved link", async () => {
+    const softRefresh = vi.fn()
+    const hardRefresh = vi.fn()
+    const menu = render(
+      <TitleGroupMenu
+        group={createGroup()}
+        savedLinks={[createSavedLink("auto-saved-link")]}
+        actions={createActions({ softRefresh, hardRefresh })}
+      />
+    )
+
+    const dropdownMenu = await openMenu()
+    expect(dropdownMenu).toHaveTextContent("Refresh")
+    expect(dropdownMenu).not.toHaveTextContent("Reload link choices")
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Refresh" }))
+    expect(softRefresh).toHaveBeenCalledWith(
+      "https://source.example/auto-saved-link"
+    )
+    expect(hardRefresh).not.toHaveBeenCalled()
+    menu.unmount()
+  })
+
   it("offers a group-scoped remove when multiple saved links back the group", async () => {
     const remove = vi.fn()
     const menu = render(

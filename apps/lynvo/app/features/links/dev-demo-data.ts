@@ -17,6 +17,14 @@ const DEMO_FOLDER_URL = "https://demo.lynvo.local/fixtures/loaded-folder"
 const DEMO_MIRROR_CONTAINER_NODE_URL = DEMO_MIRROR_CONTAINER_URL
 const DEMO_LAZY_FOLDER_SOURCE_URL =
   "https://demo.lynvo.local/fixtures/lazy-folder-source"
+const DEMO_BREAKING_BAD_SOURCE_URL =
+  "https://demo.lynvo.local/fixtures/breaking-bad"
+const DEMO_BREAKING_BAD_SEASON_ONE_URL = `${DEMO_BREAKING_BAD_SOURCE_URL}/season-1`
+const DEMO_BREAKING_BAD_SEASON_TWO_URL = `${DEMO_BREAKING_BAD_SOURCE_URL}/season-2`
+const DEMO_BREAKING_BAD_EPISODE_ONE_URL = `${DEMO_BREAKING_BAD_SEASON_ONE_URL}/s01e01`
+const DEMO_BREAKING_BAD_EPISODE_TWO_URL = `${DEMO_BREAKING_BAD_SEASON_ONE_URL}/s01e02`
+const DEMO_BREAKING_BAD_EPISODE_THREE_URL = `${DEMO_BREAKING_BAD_SEASON_TWO_URL}/s02e01`
+const DEMO_BREAKING_BAD_EPISODE_FOUR_URL = `${DEMO_BREAKING_BAD_SEASON_TWO_URL}/s02e02`
 const DEMO_MATRIX_MIRROR_ALPHA_URL =
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
 const DEMO_MATRIX_MIRROR_BETA_URL =
@@ -133,6 +141,70 @@ export const getDemoSavedLinkSeeds = (): DemoSavedLinkSeed[] => [
       },
     ],
   },
+  {
+    url: DEMO_BREAKING_BAD_SOURCE_URL,
+    meta: createDemoMeta("Breaking Bad"),
+    extractedLinks: [
+      {
+        id: "demo-breaking-bad-season-one",
+        nodeKey: "demo:breaking-bad:season-one",
+        url: DEMO_BREAKING_BAD_SEASON_ONE_URL,
+        label: "Breaking Bad (2008) Season 1",
+        type: "folder",
+        children: [
+          {
+            id: "demo-breaking-bad-episode-one",
+            nodeKey: "demo:breaking-bad:season-one:episode-one",
+            nodeUrl: DEMO_BREAKING_BAD_EPISODE_ONE_URL,
+            label: "Breaking Bad (2008) S01E01 - Pilot",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+            size: "1.1 GB",
+          },
+          {
+            id: "demo-breaking-bad-episode-two",
+            nodeKey: "demo:breaking-bad:season-one:episode-two",
+            nodeUrl: DEMO_BREAKING_BAD_EPISODE_TWO_URL,
+            label: "Breaking Bad (2008) S01E02 - Cat's in the Bag...",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+            size: "1.3 GB",
+          },
+        ],
+      },
+      {
+        id: "demo-breaking-bad-season-two",
+        nodeKey: "demo:breaking-bad:season-two",
+        url: DEMO_BREAKING_BAD_SEASON_TWO_URL,
+        label: "Breaking Bad (2008) Season 2",
+        type: "folder",
+        children: [
+          {
+            id: "demo-breaking-bad-episode-three",
+            nodeKey: "demo:breaking-bad:season-two:episode-one",
+            nodeUrl: DEMO_BREAKING_BAD_EPISODE_THREE_URL,
+            label: "Breaking Bad (2008) S02E01 - Seven Thirty-Seven",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+            size: "1.2 GB",
+          },
+          {
+            id: "demo-breaking-bad-episode-four",
+            nodeKey: "demo:breaking-bad:season-two:episode-two",
+            nodeUrl: DEMO_BREAKING_BAD_EPISODE_FOUR_URL,
+            label: "Breaking Bad (2008) S02E02 - Grilled",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+            size: "1.4 GB",
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 export const getDemoMirrorLinks = (): ExtractedLink[] => [
@@ -199,3 +271,71 @@ export const getDemoLazyFolderChildren = (): ExtractedLink[] => [
     status: "up",
   },
 ]
+
+export const getDemoShowEpisodeMirrors = (
+  episodeUrl: string
+): ExtractedLink[] | undefined => {
+  const mirrorsByEpisodeUrl = new Map<string, ExtractedLink[]>([
+    [
+      DEMO_BREAKING_BAD_EPISODE_ONE_URL,
+      [
+        {
+          id: "demo-breaking-bad-episode-one-mirror",
+          nodeKey: "demo:breaking-bad:episode-one:mirror",
+          url: DEMO_MATRIX_MIRROR_ALPHA_URL,
+          label: "Breaking Bad (2008) S01E01 - Pilot.mp4",
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "1.1 GB",
+          status: "up",
+        },
+      ],
+    ],
+    [
+      DEMO_BREAKING_BAD_EPISODE_TWO_URL,
+      [
+        {
+          id: "demo-breaking-bad-episode-two-mirror",
+          nodeKey: "demo:breaking-bad:episode-two:mirror",
+          url: DEMO_MATRIX_MIRROR_BETA_URL,
+          label: "Breaking Bad (2008) S01E02 - Cat's in the Bag....mp4",
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "1.3 GB",
+          status: "up",
+        },
+      ],
+    ],
+    [
+      DEMO_BREAKING_BAD_EPISODE_THREE_URL,
+      [
+        {
+          id: "demo-breaking-bad-episode-three-mirror",
+          nodeKey: "demo:breaking-bad:episode-three:mirror",
+          url: DEMO_TWO_TOWERS_VIDEO_URL,
+          label: "Breaking Bad (2008) S02E01 - Seven Thirty-Seven.mp4",
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "1.2 GB",
+          status: "up",
+        },
+      ],
+    ],
+    [
+      DEMO_BREAKING_BAD_EPISODE_FOUR_URL,
+      [
+        {
+          id: "demo-breaking-bad-episode-four-mirror",
+          nodeKey: "demo:breaking-bad:episode-four:mirror",
+          url: DEMO_DARK_KNIGHT_MEDIA_URL,
+          label: "Breaking Bad (2008) S02E02 - Grilled.mp4",
+          type: "file",
+          mediaNodeKind: "playable",
+          size: "1.4 GB",
+          status: "up",
+        },
+      ],
+    ],
+  ])
+  return mirrorsByEpisodeUrl.get(episodeUrl)
+}

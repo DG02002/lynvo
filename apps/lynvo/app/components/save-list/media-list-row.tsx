@@ -80,6 +80,7 @@ interface MediaListRowProps {
   readonly isOpened?: boolean
   readonly wrapperClassName?: string
   readonly buttonClassName?: string
+  readonly overlayClassName?: string
   readonly buttonDataAttributes?: Readonly<Record<string, string | undefined>>
   readonly dataLayoutGuideTarget?: string
 }
@@ -96,6 +97,7 @@ export const MediaListRow = ({
   isOpened = false,
   wrapperClassName,
   buttonClassName,
+  overlayClassName,
   buttonDataAttributes,
   dataLayoutGuideTarget = "list-row",
 }: MediaListRowProps) => (
@@ -133,6 +135,7 @@ export const MediaListRow = ({
         className={cn(
           "flex items-center justify-center",
           MEDIA_LIST_ROW_MENU_CELL_CLASS,
+          overlayClassName,
           isOpened && !disabled && "bg-sky-500/15"
         )}
       >

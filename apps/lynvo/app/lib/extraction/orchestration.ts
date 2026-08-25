@@ -14,6 +14,7 @@ import {
   DEMO_MIRROR_CONTAINER_URL,
   getDemoLazyFolderChildren,
   getDemoMirrorLinks,
+  getDemoShowEpisodeMirrors,
 } from "~/features/links/dev-demo-data"
 import { decideSavePresentation } from "./presentation"
 import { defaultExtractionClient } from "./client"
@@ -86,7 +87,9 @@ const getDevelopmentDemoMirrorLinks = (
 ): ExtractedLink[] | undefined =>
   import.meta.env.DEV && lazyItemUrl === DEMO_MIRROR_CONTAINER_URL
     ? getDemoMirrorLinks()
-    : undefined
+    : import.meta.env.DEV
+      ? getDemoShowEpisodeMirrors(lazyItemUrl)
+      : undefined
 
 export const createExtractionOrchestration = (
   transport: ExtractionTransport

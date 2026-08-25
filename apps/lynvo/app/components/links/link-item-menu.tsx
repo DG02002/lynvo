@@ -30,6 +30,7 @@ import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { cn } from "~/lib/utils"
+import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -53,7 +54,17 @@ const LinkItemMenuContent = ({
   triggerClassName,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const itemLabel = item.title || item.url
+  const refreshActionLabel = shouldAutoSaveAllLinks
+    ? "Refresh"
+    : "Reload link choices"
+  const refreshingLabel = shouldAutoSaveAllLinks
+    ? `Refreshing ${itemLabel}…`
+    : `Reloading link choices for ${itemLabel}…`
+  const refreshLink = shouldAutoSaveAllLinks
+    ? actions.softRefresh
+    : actions.hardRefresh
   const handleCopyLink = async () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -90,9 +101,7 @@ const LinkItemMenuContent = ({
               size="icon"
               disabled={isRefreshing}
               aria-label={
-                isRefreshing
-                  ? `Reloading link choices for ${itemLabel}…`
-                  : `Open menu for ${itemLabel}`
+                isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`
               }
               className={cn(
                 "size-8 shrink-0 text-foreground! hover:bg-transparent hover:text-foreground! aria-expanded:bg-transparent aria-expanded:text-foreground!",
@@ -105,9 +114,7 @@ const LinkItemMenuContent = ({
                 <HugeiconsIcon icon={EllipsisIcon} />
               )}
               <span className="sr-only">
-                {isRefreshing
-                  ? `Reloading link choices for ${itemLabel}…`
-                  : `Open menu for ${itemLabel}`}
+                {isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`}
               </span>
             </Button>
           }
@@ -120,9 +127,9 @@ const LinkItemMenuContent = ({
                 Copy Source link
               </DropdownMenuItem>
               {!playableLink && (
-                <DropdownMenuItem onClick={() => actions.hardRefresh(item.url)}>
+                <DropdownMenuItem onClick={() => refreshLink(item.url)}>
                   <HugeiconsIcon icon={RefreshDotIcon} />
-                  Reload link choices
+                  {refreshActionLabel}
                 </DropdownMenuItem>
               )}
               {playableLink && !isPlayableLinkExpired && (

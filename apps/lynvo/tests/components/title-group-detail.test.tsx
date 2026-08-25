@@ -214,6 +214,56 @@ describe("TitleGroupDetail", () => {
     await waitFor(() => expect(play).toHaveBeenCalledWith(node))
   })
 
+  it("uses the shared container row for a direct movie mirror source", async () => {
+    const node: ExtractedLink = {
+      id: "movie-container-node",
+      nodeKey: "movie-container-node",
+      url: "https://media.example/the-matrix",
+      label: "The Matrix (1999)",
+      type: "folder",
+      mediaNodeKind: "resolvable",
+      resolutionKind: "mirrors",
+      size: "8.2 GB",
+    }
+    const mirror: ExtractedLink = {
+      nodeKey: "matrix-1080p",
+      url: "https://media.example/the-matrix-1080p.mp4",
+      label: "The Matrix (1999) - 1080p.mp4",
+      type: "file",
+      mediaNodeKind: "playable",
+      size: "15 MB",
+    }
+    const expandMirror = vi.fn().mockResolvedValue([mirror])
+
+    renderDirectMediaDetail(createSource(node), createActions({ expandMirror }))
+
+    const containerButton = screen
+      .getAllByRole("button", { name: /The Matrix \(1999\)/ })
+      .find((button) => button.hasAttribute("data-resolution-state"))
+    if (!containerButton) {
+      throw new Error("The movie container row was not rendered")
+    }
+    expect(containerButton).toHaveAttribute(
+      "data-resolution-state",
+      "unresolved"
+    )
+    expect(screen.getByText("Example source")).toBeVisible()
+    expect(screen.getByText("8.2 GB")).toBeVisible()
+    expect(screen.queryByText("Needs loading")).not.toBeInTheDocument()
+
+    fireEvent.click(containerButton)
+
+    await waitFor(() =>
+      expect(expandMirror).toHaveBeenCalledWith(
+        "https://source.example/show",
+        "https://media.example/the-matrix",
+        false
+      )
+    )
+    expect(await screen.findByText(mirror.label)).toBeVisible()
+    expect(containerButton).toHaveAttribute("data-resolution-state", "expanded")
+  })
+
   it("resolves a mirror source before playing", async () => {
     const node: ExtractedLink = {
       nodeKey: "resolvable-node",
