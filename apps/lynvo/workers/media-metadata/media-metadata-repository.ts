@@ -7,6 +7,7 @@ import {
   MEDIA_METADATA_GLOBAL_DAILY_REQUEST_LIMIT,
   MEDIA_METADATA_JOB_LEASE_MS,
   MEDIA_METADATA_MAX_ATTEMPTS,
+  MEDIA_METADATA_REQUEST_LOG_RETENTION_MS,
   MEDIA_METADATA_RETRY_BASE_DELAY_MS,
   MEDIA_METADATA_RETRY_MAX_DELAY_MS,
   MEDIA_METADATA_RETRY_JITTER_RATIO,
@@ -170,6 +171,7 @@ const toJob = (row: MediaMetadataJobRow): MediaMetadataJob => ({
 })
 
 export const createMediaMetadataJobKey = (input: {
+  readonly userId: string
   readonly provider: string
   readonly mediaKind: string
   readonly title: string
@@ -178,6 +180,7 @@ export const createMediaMetadataJobKey = (input: {
   readonly episodeNumber?: number
 }): string =>
   `${MEDIA_METADATA_JOB_KEY_PREFIX}${[
+    input.userId,
     input.provider,
     input.mediaKind,
     input.title.trim().toLocaleLowerCase(),
@@ -442,6 +445,17 @@ export const unparkQuotaLimitedMediaMetadataJobs = async (
        WHERE state = 'pending' AND available_at > ?1 AND last_error = 'Metadata request limit reached'`
     )
     .bind(now)
+    .run()
+  return result.meta.changes ?? 0
+}
+
+export const pruneMediaMetadataRequestLog = async (
+  database: D1Database,
+  now: number
+): Promise<number> => {
+  const result = await database
+    .prepare("DELETE FROM media_metadata_request_log WHERE created_at < ?1")
+    .bind(now - MEDIA_METADATA_REQUEST_LOG_RETENTION_MS)
     .run()
   return result.meta.changes ?? 0
 }

@@ -48,7 +48,7 @@ const createMovieMetadata = (label: string) =>
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 describe("media metadata coordinator", () => {
@@ -100,7 +100,7 @@ describe("media metadata coordinator", () => {
     })
     const environment = Object.create(env)
     environment.TMDB_API_READ_ACCESS_TOKEN = "test-token"
-    const responses = [
+    const searchResponse = () =>
       new Response(
         JSON.stringify({
           results: [
@@ -113,7 +113,9 @@ describe("media metadata coordinator", () => {
           ],
         }),
         { status: 200 }
-      ),
+      )
+    const responses = [
+      searchResponse(),
       new Response(
         JSON.stringify({
           id: 42,
@@ -124,6 +126,7 @@ describe("media metadata coordinator", () => {
         }),
         { status: 200 }
       ),
+      searchResponse(),
     ]
     let responseIndex = 0
     const fetch = vi.fn(function (this: typeof globalThis) {
@@ -154,13 +157,13 @@ describe("media metadata coordinator", () => {
       expect(outcome).toMatchObject({
         disabled: false,
         enqueuedJobs: 0,
-        processedJobs: 1,
+        processedJobs: 2,
       })
       expect(group?.metadataState).toBe("available")
       expect(group?.posterPath).toBe("/poster.jpg")
       expect(secondGroup?.metadataState).toBe("available")
       expect(secondGroup?.posterPath).toBe("/poster.jpg")
-      expect(fetch).toHaveBeenCalledTimes(2)
+      expect(fetch).toHaveBeenCalledTimes(3)
       expect(String(fetch.mock.calls[1]?.[0])).toContain("/movie/42")
     } finally {
       vi.unstubAllGlobals()
@@ -187,7 +190,7 @@ describe("media metadata coordinator", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+        playback: { openedUrls: [], resolvedMirrors: {} },
       }),
       now: NOW,
     })
@@ -280,6 +283,7 @@ describe("media metadata coordinator", () => {
       .first<{ id: string }>()
     expect(group?.id).toBeDefined()
     const jobKey = createMediaMetadataJobKey({
+      userId: user.id,
       provider: "tmdb",
       mediaKind: "movie",
       title: "Requeued Movie",
@@ -338,6 +342,7 @@ describe("media metadata coordinator", () => {
       .bind(user.id)
       .first<{ id: string }>()
     const jobKey = createMediaMetadataJobKey({
+      userId: user.id,
       provider: "tmdb",
       mediaKind: "movie",
       title: "Claimable Movie",
@@ -453,6 +458,7 @@ describe("media metadata coordinator", () => {
       .bind(user.id)
       .first<{ id: string }>()
     const jobKey = createMediaMetadataJobKey({
+      userId: user.id,
       provider: "tmdb",
       mediaKind: "movie",
       title: "Unparked Movie",
@@ -514,5 +520,120 @@ describe("media metadata coordinator", () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  it("enqueues follow-up season jobs with the backfilled series year", async () => {
+    const user = await createUser()
+    await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: crypto.randomUUID(),
+      url: "https://source.example/yearless-series",
+      meta: JSON.stringify({
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              nodeKey: "yearless-series-s01e01",
+              url: "https://media.example/yearless-s01e01.mkv",
+              label: "Yearless Show S01E01 720p.mkv",
+              type: "file",
+              mediaNodeKind: "playable",
+            },
+          ],
+        },
+        playback: { openedUrls: [], resolvedMirrors: {} },
+      }),
+      now: NOW,
+    })
+    const environment = Object.create(env)
+    environment.TMDB_API_READ_ACCESS_TOKEN = "test-token"
+    const responses = [
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              id: 90,
+              name: "Yearless Show",
+              first_air_date: "2022-04-01",
+            },
+          ],
+        }),
+        { status: 200 }
+      ),
+      new Response(
+        JSON.stringify({
+          id: 90,
+          name: "Yearless Show",
+          first_air_date: "2022-04-01",
+          poster_path: "/yearless.jpg",
+        }),
+        { status: 200 }
+      ),
+      new Response(
+        JSON.stringify({
+          id: 1,
+          name: "Season 1",
+          season_number: 1,
+          poster_path: "/yearless-season-one.jpg",
+        }),
+        { status: 200 }
+      ),
+      new Response(
+        JSON.stringify({
+          id: 1,
+          name: "Episode One",
+          season_number: 1,
+          episode_number: 1,
+          still_path: "/yearless-episode-one.jpg",
+        }),
+        { status: 200 }
+      ),
+    ]
+    let responseIndex = 0
+    const fetch = vi.fn(() => {
+      const response = responses[responseIndex]
+      responseIndex += 1
+      if (!response) {
+        throw new Error("Missing metadata coordinator fixture response")
+      }
+      return Promise.resolve(response)
+    })
+    vi.stubGlobal("fetch", fetch)
+
+    try {
+      await processMediaMetadataMaintenance(environment, env.DB, NOW + 1)
+      const seasonJobKeys = await env.DB.prepare(
+        "SELECT job_key FROM media_metadata_jobs WHERE media_kind = 'season' AND requested_user_id = ?1"
+      )
+        .bind(user.id)
+        .all<{ job_key: string }>()
+
+      expect(seasonJobKeys.results).toHaveLength(1)
+      expect(seasonJobKeys.results[0]?.job_key).toContain(":2022:1:")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("prunes stale request log rows during maintenance", async () => {
+    const user = await createUser()
+    const insertRequestLogRow = async (createdAt: number) => {
+      await env.DB.prepare(
+        "INSERT INTO media_metadata_request_log (id, user_id, created_at) VALUES (?1, ?2, ?3)"
+      )
+        .bind(crypto.randomUUID(), user.id, createdAt)
+        .run()
+    }
+    await insertRequestLogRow(NOW - 3 * DAY_MS)
+    await insertRequestLogRow(NOW)
+
+    await processMediaMetadataMaintenance(env, env.DB, NOW + 1)
+
+    const remaining = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM media_metadata_request_log WHERE user_id = ?1"
+    )
+      .bind(user.id)
+      .first<{ count: number }>()
+    expect(remaining?.count).toBe(1)
   })
 })

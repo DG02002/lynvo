@@ -446,6 +446,7 @@ export const getTitleGroupReconciliationStatements = async (
       statements.push(
         createMediaMetadataJobStatement(database, {
           jobKey: createMediaMetadataJobKey({
+            userId,
             provider: "tmdb",
             mediaKind,
             title: reconciledGroup.projection.displayTitle,

@@ -12,6 +12,7 @@ import {
   createMediaMetadataJobKey,
   enqueueMediaMetadataJob,
   MEDIA_METADATA_JOB_KEY_PREFIX,
+  pruneMediaMetadataRequestLog,
   readMediaMetadataCache,
   reserveMediaMetadataRequest,
   settleMediaMetadataJob,
@@ -325,6 +326,7 @@ const enqueueFollowUpJobs = async (
   }
   const seasonJob = await enqueueMediaMetadataJob(database, {
     jobKey: createMediaMetadataJobKey({
+      userId: group.user_id,
       provider: "tmdb",
       mediaKind: "season",
       title: group.display_title,
@@ -364,6 +366,7 @@ const enqueueFollowUpJobs = async (
   )) {
     const episodeJob = await enqueueMediaMetadataJob(database, {
       jobKey: createMediaMetadataJobKey({
+        userId: group.user_id,
         provider: "tmdb",
         mediaKind: "episode",
         title: group.display_title,
@@ -525,7 +528,8 @@ const processJob = async (
     )
   )
   if (job.mediaKind === "movie" || job.mediaKind === "tv") {
-    await enqueueFollowUpJobs(database, targetGroups, now)
+    const refreshedGroups = await getTargetGroups(database, job)
+    await enqueueFollowUpJobs(database, refreshedGroups, now)
   }
   return settleMediaMetadataJob(database, {
     id: job.id,
@@ -653,6 +657,7 @@ const enqueuePendingGroups = async (
     const mediaKind = group.media_kind === "movie" ? "movie" : "tv"
     const result = await enqueueMediaMetadataJob(database, {
       jobKey: createMediaMetadataJobKey({
+        userId: group.user_id,
         provider: "tmdb",
         mediaKind,
         title: group.display_title,
@@ -717,6 +722,7 @@ const enqueueMissingEpisodeJobs = async (
       break
     }
     const jobKey = createMediaMetadataJobKey({
+      userId: episode.user_id,
       provider: "tmdb",
       mediaKind: "episode",
       title: episode.display_title,
@@ -814,6 +820,7 @@ export const processMediaMetadataMaintenance = async (
   await reenableProviderGroups(environment, database, now)
   await markExpiredMetadataGroupsPending(environment, database, now)
   await removeObsoleteMetadataJobs(database)
+  await pruneMediaMetadataRequestLog(database, now)
   if (isUsageLimitsDisabled(environment)) {
     await unparkQuotaLimitedMediaMetadataJobs(database, now)
   }

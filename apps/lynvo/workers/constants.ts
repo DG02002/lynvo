@@ -72,7 +72,7 @@ export const MEDIA_METADATA_JOB_LEASE_MS = 2 * 60 * 1000
 export const MEDIA_METADATA_REQUEST_TIMEOUT_MS = 8 * 1000
 export const MEDIA_METADATA_REQUEST_ATTEMPTS = 3
 export const MEDIA_METADATA_REQUEST_RETRY_DELAY_MS = 2 * 1000
-export const MEDIA_METADATA_RESOLVER_VERSION = 2
+export const MEDIA_METADATA_RESOLVER_VERSION = 3
 export const MEDIA_METADATA_RETRY_BASE_DELAY_MS = 30 * 1000
 export const MEDIA_METADATA_RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000
 export const MEDIA_METADATA_RETRY_JITTER_RATIO = 0.2
@@ -82,6 +82,7 @@ export const MEDIA_METADATA_GLOBAL_JOB_LIMIT = 2_000
 export const MEDIA_METADATA_ACCOUNT_JOB_LIMIT = 25
 export const MEDIA_METADATA_GLOBAL_DAILY_REQUEST_LIMIT = 10_000
 export const MEDIA_METADATA_ACCOUNT_DAILY_REQUEST_LIMIT = 100
+export const MEDIA_METADATA_REQUEST_LOG_RETENTION_MS = 2 * DAY_MS
 export const REMOTE_COMMAND_TTL_MS = 5 * 60 * 1000
 export const REMOTE_COMMAND_CLAIM_LEASE_MS = 30 * 1000
 export const REMOTE_COMMAND_MAX_PAYLOAD_BYTES = 16 * 1024
@@ -96,7 +97,7 @@ export const EMPTY_LINK_METADATA_JSON = JSON.stringify({
   schemaVersion: 3,
   source: {},
   extraction: { extractedLinks: [] },
-  playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+  playback: { openedUrls: [], resolvedMirrors: {} },
 })
 export { DATA_VERSION_RESPONSE_HEADER } from "../app/lib/constants"
 

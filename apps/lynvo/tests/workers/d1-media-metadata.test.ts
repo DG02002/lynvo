@@ -63,6 +63,7 @@ describe("media metadata repository", () => {
   it("deduplicates jobs and recovers an expired lease", async () => {
     const user = await createUser()
     const jobKey = createMediaMetadataJobKey({
+      userId: user.id,
       provider: "tmdb",
       mediaKind: "movie",
       title: "Example Movie",
