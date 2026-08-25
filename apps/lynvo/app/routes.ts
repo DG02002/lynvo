@@ -31,6 +31,10 @@ export default [
     route("settings", "features/site/routes/_site.settings.tsx", [
       index("features/site/routes/_site.settings._index.ts"),
       route("general", "features/site/routes/_site.settings.general.tsx"),
+      route(
+        "miscellaneous",
+        "features/site/routes/_site.settings.miscellaneous.tsx"
+      ),
       route("account", "features/site/routes/_site.settings.account.tsx"),
       route(
         "security/:subview?",

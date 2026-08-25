@@ -10,6 +10,10 @@ describe("settings routes", () => {
       activeTab: "plugins",
       showActiveSessions: false,
     })
+    expect(parseSettingsRoute("miscellaneous")).toEqual({
+      activeTab: "miscellaneous",
+      showActiveSessions: false,
+    })
     expect(parseSettingsRoute("security", "active-sessions")).toEqual({
       activeTab: "security",
       showActiveSessions: true,
@@ -30,6 +34,7 @@ describe("settings routes", () => {
 
   it("builds canonical path-based settings URLs", () => {
     expect(getSettingsPath("plugins")).toBe("/settings/plugins")
+    expect(getSettingsPath("miscellaneous")).toBe("/settings/miscellaneous")
     expect(getSettingsPath("security", "active-sessions")).toBe(
       "/settings/security/active-sessions"
     )

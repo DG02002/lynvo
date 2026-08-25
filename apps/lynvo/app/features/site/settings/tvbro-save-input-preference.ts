@@ -4,34 +4,9 @@ import {
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
 
-export const TVBRO_SAVE_INPUT_STORAGE_KEY =
-  "lynvo:settings:tvbro-hide-save-input"
+const subscribeToTvBroSaveInputPreference = () => () => undefined
 
-const TVBRO_SAVE_INPUT_PREFERENCE_EVENT =
-  "lynvo:tvbro-save-input-preference-changed"
-
-const subscribeToTvBroSaveInputPreference = (onStoreChange: () => void) => {
-  window.addEventListener("storage", onStoreChange)
-  window.addEventListener(TVBRO_SAVE_INPUT_PREFERENCE_EVENT, onStoreChange)
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange)
-    window.removeEventListener(TVBRO_SAVE_INPUT_PREFERENCE_EVENT, onStoreChange)
-  }
-}
-
-export const getShouldHideTvBroSaveInput = () => {
-  if (globalThis.localStorage === undefined) {
-    return true
-  }
-
-  return localStorage.getItem(TVBRO_SAVE_INPUT_STORAGE_KEY) !== "false"
-}
-
-export const setShouldHideTvBroSaveInput = (shouldHide: boolean) => {
-  localStorage.setItem(TVBRO_SAVE_INPUT_STORAGE_KEY, String(shouldHide))
-  window.dispatchEvent(new Event(TVBRO_SAVE_INPUT_PREFERENCE_EVENT))
-}
+export const getShouldHideTvBroSaveInput = (): boolean => true
 
 export const useShouldHideTvBroSaveInput = () =>
   useSyncExternalStore(
