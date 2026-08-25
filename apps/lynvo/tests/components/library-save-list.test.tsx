@@ -130,14 +130,103 @@ describe("LibrarySaveList", () => {
   it("shows a clear empty state", () => {
     renderList([])
 
-    expect(screen.getByText("No saved media yet")).toBeVisible()
     expect(
-      screen.getByText("Save a movie, show, or folder to organize it here.")
+      screen.getByRole("heading", { name: "No saved links yet" })
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "Save a movie, show, or folder to start building your library."
+      )
     ).toBeVisible()
   })
 
-  it("keeps the loading state visible until saved links finish loading", () => {
+  it("shows a centered recovery state when the library cannot load", () => {
     render(
+      <MemoryRouter>
+        <LibrarySaveList
+          items={[]}
+          isPending={false}
+          error="Unable to load media library"
+          onRetry={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+
+    expect(
+      screen.getByRole("alert", {
+        name: "Library temporarily unavailable",
+      })
+    ).toHaveClass("items-center")
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible()
+  })
+
+  it("keeps the cached library visible when a refresh fails", () => {
+    const cachedProjection: TitleProjection = {
+      dateGroups: [
+        {
+          key: "today",
+          label: "Today",
+          groups: [
+            {
+              identityKey: "movie:cached-library:2026",
+              mediaKind: "movie",
+              displayTitle: "Cached library",
+              year: 2026,
+              metadataState: "unavailable",
+              lastAddedAt: 1,
+              sourceCount: 0,
+              entries: [],
+            },
+          ],
+        },
+      ],
+      unmatchedGroups: [],
+    }
+
+    render(
+      <MemoryRouter>
+        <LibrarySaveList
+          items={[]}
+          isPending={false}
+          projection={cachedProjection}
+          error="Unable to load media library"
+          onRetry={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId("title-group-card")).toBeVisible()
+    expect(screen.getByRole("status")).toBeVisible()
+    expect(screen.getByText(/Showing your last saved library/i)).toBeVisible()
+    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("keeps the shared empty state when a cached empty library cannot refresh", () => {
+    render(
+      <MemoryRouter>
+        <LibrarySaveList
+          items={[]}
+          isPending={false}
+          projection={{ dateGroups: [], unmatchedGroups: [] }}
+          error="Unable to load media library"
+          onRetry={vi.fn()}
+        />
+      </MemoryRouter>
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "No saved links yet" })
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Try again" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("uses a spinner instead of poster skeletons while saved links load", () => {
+    const { container } = render(
       <MemoryRouter>
         <LibrarySaveList items={[]} isPending={true} />
       </MemoryRouter>
@@ -146,7 +235,10 @@ describe("LibrarySaveList", () => {
     expect(
       screen.getByRole("status", { name: "Loading media library" })
     ).toBeVisible()
-    expect(screen.queryByText("No saved media yet")).not.toBeInTheDocument()
+    expect(
+      container.querySelector('[data-slot="skeleton"]')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("No saved links yet")).not.toBeInTheDocument()
   })
 
   it("reuses the saved-link menu on a media card", () => {

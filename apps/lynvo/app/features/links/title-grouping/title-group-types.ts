@@ -92,7 +92,26 @@ declare global {
   interface TitleGroupsState {
     readonly projection?: TitleProjection
     readonly error?: string
+    readonly isLoading: boolean
     readonly retry: () => void
+  }
+
+  interface TitleGroupsDataSource {
+    readonly list: () => Promise<{
+      readonly projection: TitleProjection
+      readonly dataVersion: number
+    }>
+  }
+
+  interface UseTitleGroupsOptions {
+    readonly enabled: boolean
+    readonly dataVersion: number
+    readonly initialProjection?: TitleProjection
+  }
+
+  interface UseTitleGroupsRuntime {
+    readonly userId?: string
+    readonly dataSource: TitleGroupsDataSource
   }
 
   interface TitleGroupReconciliationGuard {

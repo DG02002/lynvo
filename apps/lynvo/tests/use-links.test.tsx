@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
+import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useLinksWithRuntime } from "~/features/links/use-links"
 import type { LinkMetadata } from "~/features/links/types"
@@ -87,6 +88,23 @@ describe("useLinks", () => {
       }
       throw new Error(`Unexpected request: ${path}`)
     })
+  })
+
+  it("does not treat an authoritative empty snapshot as hydration", () => {
+    const HydrationProbe = () => {
+      const { isHydrating } = useLinksWithRuntime(
+        {
+          initialItems: [],
+          initialDataVersion: 1,
+          hasInitialSnapshot: true,
+        },
+        { user: { sub: "user-1" } }
+      )
+
+      return <span>{String(isHydrating)}</span>
+    }
+
+    expect(renderToString(<HydrationProbe />)).toContain("<span>false</span>")
   })
 
   it("renders the authoritative server snapshot", async () => {

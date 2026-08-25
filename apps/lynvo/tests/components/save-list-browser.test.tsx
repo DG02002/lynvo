@@ -680,7 +680,7 @@ describe("SaveListBrowser", () => {
     expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
   })
 
-  it("uses a spinner for hydration and a plain empty state", () => {
+  it("uses a spinner for hydration and the shared empty state", () => {
     const commonProps = {
       selectedItemUrl: null,
       onSelectedItemUrlChange: vi.fn(),
@@ -699,7 +699,9 @@ describe("SaveListBrowser", () => {
     rerender(
       <SaveListBrowser items={[]} isHydrating={false} {...commonProps} />
     )
-    const emptyHeading = screen.getByText("No saved links")
+    const emptyHeading = screen.getByRole("heading", {
+      name: "No saved links yet",
+    })
     expect(
       screen.queryByText("Add a link to save it for later.")
     ).not.toBeInTheDocument()

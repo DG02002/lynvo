@@ -114,6 +114,7 @@ const SaveList = ({
           <LibrarySaveList
             items={links}
             isPending={isPending}
+            isLoading={titleGroupsState.isLoading}
             projection={titleGroupsState.projection}
             error={titleGroupsState.error}
             onRetry={titleGroupsState.retry}

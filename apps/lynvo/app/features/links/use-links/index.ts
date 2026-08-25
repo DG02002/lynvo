@@ -211,7 +211,12 @@ export const useLinksWithRuntime = (
     user,
     dataVersion,
     isLoading: Boolean(userId && !isInitialLoadComplete),
-    isHydrating: Boolean(userId && !hasHydrated && links.length === 0),
+    isHydrating: Boolean(
+      userId &&
+      !hasHydrated &&
+      !initialSnapshot.hasInitialSnapshot &&
+      links.length === 0
+    ),
   }
 }
 

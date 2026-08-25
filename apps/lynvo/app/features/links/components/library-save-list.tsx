@@ -1,10 +1,14 @@
 import { useMemo, useRef } from "react"
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
-import { Skeleton } from "~/components/ui/skeleton"
 import {
   SaveDateGroupSection,
   SAVE_LIST_SECTION_STACK_CLASS,
 } from "~/components/save-list/save-date-group-heading"
+import {
+  SaveListEmptyState,
+  SaveListErrorState,
+  SaveListLoadingState,
+  SaveListStaleState,
+} from "~/components/save-list/save-list-state"
 import type { LinkListItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { projectTitleGroups } from "~/features/links/title-grouping/title-group-projection"
@@ -15,6 +19,7 @@ import { TitleGroupCard } from "./title-group-card"
 interface LibrarySaveListProps {
   readonly items: LinkListItem[]
   readonly isPending: boolean
+  readonly isLoading?: boolean
   readonly projection?: TitleProjection
   readonly error?: string
   readonly onRetry?: () => void
@@ -67,22 +72,6 @@ const TitleSection = ({
   )
 }
 
-const LoadingState = () => (
-  <div
-    className={POSTER_GRID_CLASS}
-    aria-label="Loading media library"
-    role="status"
-  >
-    {Array.from({ length: 12 }, (_, cardIndex) => (
-      <div key={cardIndex}>
-        <Skeleton className="aspect-2/3 rounded-3xl" />
-        <Skeleton className="mt-3 h-5 w-4/5" />
-        <Skeleton className="mt-2 h-4 w-3/5" />
-      </div>
-    ))}
-  </div>
-)
-
 const hasProjectionGroups = (candidate: TitleProjection): boolean =>
   candidate.dateGroups.some((dateGroup) => dateGroup.groups.length > 0) ||
   candidate.unmatchedGroups.length > 0
@@ -90,6 +79,7 @@ const hasProjectionGroups = (candidate: TitleProjection): boolean =>
 export const LibrarySaveList = ({
   items,
   isPending,
+  isLoading = false,
   projection,
   error,
   onRetry,
@@ -147,55 +137,42 @@ export const LibrarySaveList = ({
       ),
     [items]
   )
-  if (isPending) {
-    return <LoadingState />
+  const hasCachedProjection = projection !== undefined
+  const hasVisibleProjection = hasProjectionGroups(currentProjection)
+  if (
+    (isPending || isLoading) &&
+    !hasCachedProjection &&
+    !hasVisibleProjection
+  ) {
+    return <SaveListLoadingState label="Loading media library" />
   }
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>Couldn’t load your media library</AlertTitle>
-        <AlertDescription className="flex flex-col items-start gap-3">
-          <span>Your saved links are safe. Try loading the library again.</span>
-          {onRetry && (
-            <button
-              type="button"
-              className="font-medium underline underline-offset-4"
-              onClick={onRetry}
-            >
-              Try again
-            </button>
-          )}
-        </AlertDescription>
-      </Alert>
-    )
+  if (error && !hasCachedProjection && !hasVisibleProjection) {
+    return <SaveListErrorState onRetry={onRetry} />
   }
-  if (!hasProjectionGroups(currentProjection)) {
-    return (
-      <Alert>
-        <AlertTitle>No saved media yet</AlertTitle>
-        <AlertDescription>
-          Save a movie, show, or folder to organize it here.
-        </AlertDescription>
-      </Alert>
-    )
+  if (!hasVisibleProjection) {
+    return <SaveListEmptyState />
   }
+  const staleState = error ? <SaveListStaleState onRetry={onRetry} /> : null
   return (
-    <div className={SAVE_LIST_SECTION_STACK_CLASS}>
-      {currentProjection.dateGroups.map((dateGroup) => (
+    <>
+      {staleState}
+      <div className={SAVE_LIST_SECTION_STACK_CLASS}>
+        {currentProjection.dateGroups.map((dateGroup) => (
+          <TitleSection
+            key={dateGroup.key}
+            label={dateGroup.label}
+            groups={dateGroup.groups}
+            itemsById={itemsById}
+            actions={actions}
+          />
+        ))}
         <TitleSection
-          key={dateGroup.key}
-          label={dateGroup.label}
-          groups={dateGroup.groups}
+          label="Unmatched"
+          groups={currentProjection.unmatchedGroups}
           itemsById={itemsById}
           actions={actions}
         />
-      ))}
-      <TitleSection
-        label="Unmatched"
-        groups={currentProjection.unmatchedGroups}
-        itemsById={itemsById}
-        actions={actions}
-      />
-    </div>
+      </div>
+    </>
   )
 }

@@ -4,7 +4,6 @@ import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  Archive04Icon,
   AlertCircleIcon,
   Clock01Icon,
   Folder01Icon,
@@ -63,6 +62,7 @@ import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
+import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -794,27 +794,11 @@ export const SaveListBrowser = ({
   }
 
   if (isHydrating) {
-    return (
-      <div
-        className="flex min-h-56 items-center justify-center"
-        role="status"
-        aria-label="Loading saved links…"
-      >
-        <Spinner aria-hidden="true" />
-      </div>
-    )
+    return <SaveListLoadingState label="Loading saved links…" />
   }
 
   if (items.length === 0) {
-    return (
-      <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
-        <HugeiconsIcon
-          icon={Archive04Icon}
-          className="size-7 text-foreground"
-        />
-        <p className="font-medium">No saved links</p>
-      </div>
-    )
+    return <SaveListEmptyState />
   }
 
   const groupedItems = groupSaveListItems(items, currentTimeMs)
