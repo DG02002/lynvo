@@ -92,7 +92,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
     {
@@ -117,7 +117,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
     {
@@ -176,7 +176,6 @@ export const createSaveListTestItems = (): LinkListItem[] => {
           openedUrls: [
             "https://media.example/library/folder-one/playable-item-one.mp4",
           ],
-          openedIds: [],
         },
       },
     },
@@ -212,7 +211,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
     {
@@ -241,7 +240,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
     {
@@ -261,7 +260,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
     {
@@ -329,7 +328,7 @@ export const createSaveListTestItems = (): LinkListItem[] => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     },
   ]

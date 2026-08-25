@@ -23,7 +23,7 @@ const createSavedLink = (id: string): LinkListItem => ({
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 

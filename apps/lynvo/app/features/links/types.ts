@@ -54,7 +54,6 @@ export interface LinkMetadata {
   }
   playback: {
     openedUrls: string[]
-    openedIds: string[]
     resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
   }
 }

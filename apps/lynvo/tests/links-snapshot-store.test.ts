@@ -13,7 +13,7 @@ const viewItem = (
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
   ...overrides,
 })

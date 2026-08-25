@@ -85,11 +85,7 @@ describe("media node interaction", () => {
     })
     const target = getMediaNodeTargetOrUndefined(group)
     expect(target).toBeDefined()
-    const [openedGroup] = applyOpenedState(
-      [group],
-      new Set([target ?? ""]),
-      new Set()
-    )
+    const [openedGroup] = applyOpenedState([group], new Set([target ?? ""]))
     expect(openedGroup.opened).toBe(true)
   })
 

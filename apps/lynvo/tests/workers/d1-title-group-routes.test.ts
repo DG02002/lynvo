@@ -37,7 +37,7 @@ const mediaMetadata = () =>
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 describe("title group data routes", () => {

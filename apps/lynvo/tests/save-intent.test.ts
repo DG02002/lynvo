@@ -14,7 +14,7 @@ const createLink = (url: string, id?: string): LinkViewItem => ({
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 

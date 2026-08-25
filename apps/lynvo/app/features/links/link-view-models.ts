@@ -66,7 +66,6 @@ const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
 export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
   const dto = toSavedLinkDTOFromLinkViewItem(item)
   const openedUrls = new Set(dto.metadata.playback.openedUrls)
-  const openedIds = new Set(dto.metadata.playback.openedIds)
   const source = getLinkSourceFields(dto.metadata)
 
   return {
@@ -85,8 +84,7 @@ export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
     sourceVersion: source.sourceVersion,
     extractedLinks: applyOpenedState(
       dto.metadata.extraction.extractedLinks,
-      openedUrls,
-      openedIds
+      openedUrls
     ),
   }
 }

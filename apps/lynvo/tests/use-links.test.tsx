@@ -30,7 +30,7 @@ const metadata = (label: string): LinkMetadata => ({
       },
     ],
   },
-  playback: { openedUrls: [], openedIds: [] },
+  playback: { openedUrls: [] },
 })
 
 const serverRecord = (

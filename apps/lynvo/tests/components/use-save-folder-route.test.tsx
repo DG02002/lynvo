@@ -29,7 +29,7 @@ const savedFolder: SavedLinkListItem = {
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 }
 

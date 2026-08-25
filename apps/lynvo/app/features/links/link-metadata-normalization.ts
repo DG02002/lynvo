@@ -67,7 +67,6 @@ export const createLinkMetadata = (input: {
   },
   playback: input.previous?.playback ?? {
     openedUrls: [],
-    openedIds: [],
     resolvedMirrors: {},
   },
 })

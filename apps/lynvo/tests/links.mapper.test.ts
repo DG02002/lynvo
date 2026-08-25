@@ -31,7 +31,7 @@ describe("links mapper metadata boundary", () => {
         extraction: {
           extractedLinks: [playableLink("a", "https://a.test", "A")],
         },
-        playback: { openedUrls: ["https://a.test"], openedIds: ["a"] },
+        playback: { openedUrls: ["https://a.test"] },
       })
     )
 
@@ -62,7 +62,7 @@ describe("links mapper metadata boundary", () => {
         extraction: {
           extractedLinks: [playableLink("x", "https://x.test", "X")],
         },
-        playback: { openedUrls: ["https://x.test"], openedIds: [] },
+        playback: { openedUrls: ["https://x.test"] },
       },
     }
 
@@ -83,7 +83,6 @@ describe("save-flow metadata preservation", () => {
       extractedLinks: [playableLink("old", "https://old.test", "Old")],
     })
     previous.playback.openedUrls = ["https://old.test"]
-    previous.playback.openedIds = ["old"]
 
     const updated = createLinkMetadata({
       extractedLinks: [playableLink("new", "https://new.test", "New")],
@@ -92,7 +91,6 @@ describe("save-flow metadata preservation", () => {
 
     expect(updated.source).toMatchObject({ pluginServerId: "plugin-server-1" })
     expect(updated.playback.openedUrls).toContain("https://old.test")
-    expect(updated.playback.openedIds).toContain("old")
   })
 
   it("preserves Plugin Server source identity metadata", () => {

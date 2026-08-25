@@ -116,7 +116,6 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   }),
   playback: Schema.Struct({
     openedUrls: Schema.mutable(Schema.Array(Schema.String)),
-    openedIds: Schema.mutable(Schema.Array(Schema.String)),
     resolvedMirrors: Schema.optional(
       Schema.Record(
         Schema.String,

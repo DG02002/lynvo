@@ -267,9 +267,6 @@ export const createLinksMutations = ({
             openedUrls: metadata.playback.openedUrls.filter(
               (openedUrl) => openedUrl !== linkUrl
             ),
-            openedIds: metadata.playback.openedIds.filter(
-              (openedId) => openedId !== linkKey
-            ),
           },
         })
       }

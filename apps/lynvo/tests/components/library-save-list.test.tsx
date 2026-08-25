@@ -29,7 +29,7 @@ const createItem = (
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 

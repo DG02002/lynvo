@@ -22,7 +22,6 @@ describe("resolved mirror cache", () => {
         extraction: { extractedLinks: [] },
         playback: {
           openedUrls: [],
-          openedIds: [],
           resolvedMirrors: { [lazyItemUrl]: mirrors },
         },
       },
@@ -70,7 +69,6 @@ describe("resolved mirror cache", () => {
         extraction: { extractedLinks: [] },
         playback: {
           openedUrls: [],
-          openedIds: [],
           resolvedMirrors: { [lazyItemUrl]: cachedMirrors },
         },
       },

@@ -467,9 +467,6 @@ export const applySavedLinkMetadataOperation = async (
       metadata.playback.openedUrls = metadata.playback.openedUrls.filter(
         (openedUrl) => openedUrl !== operation.linkUrl
       )
-      metadata.playback.openedIds = metadata.playback.openedIds.filter(
-        (openedId) => openedId !== operation.linkKey
-      )
       break
     }
     case "replaceExtraction": {

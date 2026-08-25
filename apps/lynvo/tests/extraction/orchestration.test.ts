@@ -23,7 +23,7 @@ const savedWorkerItem = (): LinkViewItem => ({
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
   extractedLinks: [
     {

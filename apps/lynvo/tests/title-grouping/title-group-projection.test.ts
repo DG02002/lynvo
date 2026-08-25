@@ -24,7 +24,7 @@ const createSavedLink = ({
     schemaVersion: 3,
     source: { sourceName: `Source ${id}` },
     extraction: { extractedLinks },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 

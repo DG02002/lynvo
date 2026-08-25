@@ -50,7 +50,7 @@ const metadataJson = () =>
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [playableLink] },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 const emptyMetadataJson = () =>
@@ -58,7 +58,7 @@ const emptyMetadataJson = () =>
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 describe("d1 links", () => {

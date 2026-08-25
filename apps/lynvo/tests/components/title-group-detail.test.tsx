@@ -96,7 +96,7 @@ const createLinks = (node: ExtractedLink): LinkListItem[] => [
       schemaVersion: 3,
       source: { sourceName: "Example source" },
       extraction: { extractedLinks: [node] },
-      playback: { openedUrls: [], openedIds: [] },
+      playback: { openedUrls: [] },
     },
   },
 ]

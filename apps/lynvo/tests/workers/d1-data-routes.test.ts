@@ -38,7 +38,7 @@ const emptyMetadataJson = () =>
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 describe("d1 data routes", () => {
@@ -235,7 +235,7 @@ describe("d1 data routes", () => {
       schemaVersion: 3,
       source: { padding: "x".repeat(LINK_LIMIT_BYTES) },
       extraction: { extractedLinks: [] },
-      playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+      playback: { openedUrls: [], resolvedMirrors: {} },
     })
     const response = await app.fetch(
       dataApiRequest("/api/data/links/create-or-update", session, {

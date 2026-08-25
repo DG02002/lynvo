@@ -34,7 +34,7 @@ const metadataJson = (label: string, target: string) =>
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 const getRows = async (userId: string): Promise<LinkRow[]> => {

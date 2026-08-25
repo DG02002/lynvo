@@ -33,7 +33,7 @@ const emptyMetadataJson = <Source>(source?: Source) =>
     schemaVersion: 3,
     source: source ?? {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [], resolvedMirrors: {} },
+    playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
 const seedPluginInventory = async (
