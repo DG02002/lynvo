@@ -15,6 +15,7 @@ import {
   readMediaMetadataCache,
   reserveMediaMetadataRequest,
   settleMediaMetadataJob,
+  unparkQuotaLimitedMediaMetadataJobs,
   writeMediaMetadataCache,
   type MediaMetadataJob,
 } from "./media-metadata-repository"
@@ -28,6 +29,10 @@ import {
 
 interface TmdbEnvironment {
   readonly TMDB_API_READ_ACCESS_TOKEN?: string
+}
+
+interface UsageLimitsEnvironment {
+  readonly DISABLE_USAGE_LIMITS?: string | boolean
 }
 
 interface PendingTitleGroupRow {
@@ -64,6 +69,15 @@ const getProviderToken = (environment: Env): string | undefined => {
   const environmentWithOptionalToken: Env & TmdbEnvironment = environment
   return (
     environmentWithOptionalToken.TMDB_API_READ_ACCESS_TOKEN?.trim() || undefined
+  )
+}
+
+const isUsageLimitsDisabled = (environment: Env): boolean => {
+  const environmentWithUsageFlags: Env & UsageLimitsEnvironment = environment
+  return (
+    environmentWithUsageFlags.DISABLE_USAGE_LIMITS === "true" ||
+    environmentWithUsageFlags.DISABLE_USAGE_LIMITS === true ||
+    process.env.DISABLE_USAGE_LIMITS === "true"
   )
 }
 
@@ -240,7 +254,8 @@ const fetchCachedDetails = async (
   providerId: number,
   userId: string,
   now: number,
-  hasReservation = false
+  hasReservation = false,
+  usageLimitsDisabled = false
 ): Promise<TmdbAdapterResult<TmdbMediaMetadata>> => {
   const cacheKey = getCacheKey(job, providerId)
   const cached = await readMediaMetadataCache(database, cacheKey, now)
@@ -249,7 +264,12 @@ const fetchCachedDetails = async (
   }
   if (
     !hasReservation &&
-    !(await reserveMediaMetadataRequest(database, userId, now))
+    !(await reserveMediaMetadataRequest(
+      database,
+      userId,
+      now,
+      usageLimitsDisabled
+    ))
   ) {
     return {
       kind: "failure",
@@ -388,9 +408,15 @@ const processJob = async (
     })
   }
   let metadataResult: TmdbAdapterResult<TmdbMediaMetadata>
+  const usageLimitsDisabled = isUsageLimitsDisabled(environment)
   if (job.mediaKind === "movie" || job.mediaKind === "tv") {
     if (
-      !(await reserveMediaMetadataRequest(database, targetGroup.user_id, now))
+      !(await reserveMediaMetadataRequest(
+        database,
+        targetGroup.user_id,
+        now,
+        usageLimitsDisabled
+      ))
     ) {
       return settleMediaMetadataJob(database, {
         id: job.id,
@@ -452,7 +478,9 @@ const processJob = async (
       job,
       providerId,
       targetGroup.user_id,
-      now
+      now,
+      false,
+      usageLimitsDisabled
     )
   }
   const failure = getAdapterFailure(metadataResult)
@@ -786,6 +814,9 @@ export const processMediaMetadataMaintenance = async (
   await reenableProviderGroups(environment, database, now)
   await markExpiredMetadataGroupsPending(environment, database, now)
   await removeObsoleteMetadataJobs(database)
+  if (isUsageLimitsDisabled(environment)) {
+    await unparkQuotaLimitedMediaMetadataJobs(database, now)
+  }
   const enqueuedJobs =
     (await enqueuePendingGroups(database, now)) +
     (await enqueueMissingEpisodeJobs(database, now))

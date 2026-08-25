@@ -155,7 +155,7 @@ describe("media metadata repository", () => {
       .run()
 
     expect(refresh).toEqual({ inserted: false, requeued: true })
-    expect(refreshClaim?.attemptCount).toBe(2)
+    expect(refreshClaim?.attemptCount).toBe(1)
     expect(blocked.inserted).toBe(false)
     expect(blocked.requeued).toBe(false)
   })

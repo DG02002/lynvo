@@ -290,7 +290,7 @@ export const createMediaMetadataJobStatement = (
            WHERE id = ?4 AND user_id = ?3
              AND (metadata_state = 'pending' OR ?6 IN ('season', 'episode'))
          ))
-       ON CONFLICT(job_key) DO UPDATE SET requested_user_id = excluded.requested_user_id, title_group_id = excluded.title_group_id, state = 'pending', available_at = excluded.available_at, lease_expires_at = NULL, last_error = NULL, updated_at = excluded.updated_at
+       ON CONFLICT(job_key) DO UPDATE SET requested_user_id = excluded.requested_user_id, title_group_id = excluded.title_group_id, state = 'pending', attempt_count = 0, available_at = excluded.available_at, lease_expires_at = NULL, last_error = NULL, updated_at = excluded.updated_at
        WHERE media_metadata_jobs.state IN ('succeeded', 'failed')`
     )
     .bind(
@@ -406,8 +406,12 @@ export const settleMediaMetadataJob = async (
 export const reserveMediaMetadataRequest = async (
   database: D1Database,
   userId: string | undefined,
-  now: number
+  now: number,
+  usageLimitsDisabled = false
 ): Promise<boolean> => {
+  if (usageLimitsDisabled) {
+    return true
+  }
   const cutoff = now - DAY_MS
   const result = await database
     .prepare(
@@ -426,4 +430,18 @@ export const reserveMediaMetadataRequest = async (
     )
     .run()
   return (result.meta.changes ?? 0) > 0
+}
+
+export const unparkQuotaLimitedMediaMetadataJobs = async (
+  database: D1Database,
+  now: number
+): Promise<number> => {
+  const result = await database
+    .prepare(
+      `UPDATE media_metadata_jobs SET available_at = ?1, updated_at = ?1
+       WHERE state = 'pending' AND available_at > ?1 AND last_error = 'Metadata request limit reached'`
+    )
+    .bind(now)
+    .run()
+  return result.meta.changes ?? 0
 }
