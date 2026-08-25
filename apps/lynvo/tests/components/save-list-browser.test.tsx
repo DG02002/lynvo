@@ -127,6 +127,85 @@ describe("SaveListBrowser", () => {
     expect(onSelectedItemUrlChange).toHaveBeenCalledWith(null)
   })
 
+  it("renders protocol group folders without url targets and marks them opened by id", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const markOpened = vi.fn()
+    const item: LinkViewItem = {
+      id: "plugin-series-item",
+      url: "https://source.example/plugin-series",
+      timestamp: 1,
+      title: "Plugin Series",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              nodeKey: "0:group:folder-S01",
+              id: "folder-S01",
+              label: "Season 1",
+              type: "folder",
+              mediaNodeKind: "group",
+              selectable: false,
+              children: [
+                {
+                  nodeKey: "0.0:resolvable:episode-one",
+                  id: "episode-one",
+                  nodeUrl: "https://files.example/drive/episode-one",
+                  label: "Episode One",
+                  type: "folder",
+                  mediaNodeKind: "resolvable",
+                  resolutionKind: "mirrors",
+                },
+              ],
+            },
+            {
+              nodeKey: "1:group:identifier-less",
+              label: "Identifier-less Group",
+              type: "folder",
+              mediaNodeKind: "group",
+              selectable: false,
+              children: [],
+            },
+          ],
+        },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions({ markOpened })}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: /Season 1/ }).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: /Identifier-less Group/ }).length
+    ).toBeGreaterThan(0)
+
+    const contentSeasonButton = screen
+      .getAllByRole("button", { name: /Season 1/ })
+      .at(-1)!
+    fireEvent.click(contentSeasonButton)
+
+    expect(await screen.findByText("Episode One")).toBeVisible()
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(item.url, "folder-S01")
+    )
+  })
+
   it("registers navigation wheel events as non-passive", () => {
     const item: LinkViewItem = {
       id: "wheel-listener-item",

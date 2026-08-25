@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
+  getMediaNodeTargetOrUndefined,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
+import { applyOpenedState } from "~/features/links/link-playback-metadata"
 import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
 
 describe("media node interaction", () => {
@@ -62,6 +64,42 @@ describe("media node interaction", () => {
       throw new Error("Expected both group children")
     }
     expect(getMediaNodeKey(firstChild)).not.toBe(getMediaNodeKey(secondChild))
+  })
+
+  it("uses the node id as the target for group nodes without urls", () => {
+    const group = mapNodeToExtractedLink({
+      kind: "group",
+      id: "folder-S01",
+      label: "Season 1",
+      children: [],
+    })
+    expect(getMediaNodeTargetOrUndefined(group)).toBe("folder-S01")
+  })
+
+  it("round-trips opened state for id-only group nodes", () => {
+    const group = mapNodeToExtractedLink({
+      kind: "group",
+      id: "folder-S01",
+      label: "Season 1",
+      children: [],
+    })
+    const target = getMediaNodeTargetOrUndefined(group)
+    expect(target).toBeDefined()
+    const [openedGroup] = applyOpenedState(
+      [group],
+      new Set([target ?? ""]),
+      new Set()
+    )
+    expect(openedGroup.opened).toBe(true)
+  })
+
+  it("has no target for identifier-less groups", () => {
+    const group = mapNodeToExtractedLink({
+      kind: "group",
+      label: "Season",
+      children: [],
+    })
+    expect(getMediaNodeTargetOrUndefined(group)).toBeUndefined()
   })
 
   it("supports app-native folder and playable shapes", () => {

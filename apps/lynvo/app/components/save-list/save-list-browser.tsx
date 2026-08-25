@@ -31,6 +31,7 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import {
   getMediaNodeInteractionState,
   getMediaNodeTarget,
+  getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import {
   getFolderIcon,
@@ -479,8 +480,8 @@ const FinderBrowser = ({
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
-            const linkTarget = getMediaNodeTarget(link)
-            if (isMirrorResolvable(link)) {
+            const linkTarget = getMediaNodeTargetOrUndefined(link)
+            if (linkTarget !== undefined && isMirrorResolvable(link)) {
               return (
                 <ResolvableContainerRow
                   key={linkKey}
@@ -499,11 +500,18 @@ const FinderBrowser = ({
               !isFolder &&
               link.expiry !== undefined &&
               link.expiry <= Date.now()
-            const isResolving = extractingItems.has(linkTarget)
+            const isResolving =
+              linkTarget !== undefined && extractingItems.has(linkTarget)
             const copyLink = () => {
+              if (linkTarget === undefined) {
+                return
+              }
               void navigator.clipboard.writeText(linkTarget)
             }
             const openLinkInPlayer = async (player: PlayerDefinition) => {
+              if (linkTarget === undefined) {
+                return
+              }
               const result = await openInSpecificPlayer(linkTarget, player)
               markAfterAcceptedHandoff({
                 accepted: result.expectsNavigation,

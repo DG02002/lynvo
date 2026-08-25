@@ -4,7 +4,7 @@ import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import {
   getMediaNodeInteractionState,
-  getMediaNodeTarget,
+  getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import {
   getLinkKey,
@@ -230,9 +230,14 @@ export const useFinderBrowserState = ({
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
     resetHorizontalGesture()
     const linkKey = getLinkKey(link)
-    const linkTarget = getMediaNodeTarget(link)
-    actions.markOpened(item.url, linkTarget)
-    if (getMediaNodeInteractionState(link).needsResolution) {
+    const linkTarget = getMediaNodeTargetOrUndefined(link)
+    if (linkTarget !== undefined) {
+      actions.markOpened(item.url, linkTarget)
+    }
+    if (
+      getMediaNodeInteractionState(link).needsResolution &&
+      linkTarget !== undefined
+    ) {
       const resolvedLinks = await actions.expandFolder(
         item.url,
         linkKey,
@@ -258,12 +263,16 @@ export const useFinderBrowserState = ({
       return
     }
 
-    const linkTarget = getMediaNodeTarget(link)
+    const linkTarget = getMediaNodeTargetOrUndefined(link)
     const result = await actions.play(link)
     markAfterAcceptedHandoff({
       ...result,
       itemLabel: link.label,
-      markOpened: () => actions.markOpened(item.url, linkTarget),
+      markOpened: () => {
+        if (linkTarget !== undefined) {
+          actions.markOpened(item.url, linkTarget)
+        }
+      },
     })
   }
 

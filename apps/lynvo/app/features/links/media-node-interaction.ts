@@ -53,7 +53,7 @@ export const getMediaNodeKey = (link: ExtractedLink) =>
   link.label
 
 export const getMediaNodeTargetOrUndefined = (link: ExtractedLink) =>
-  link.url ?? link.nodeUrl ?? link.resourceId
+  link.url ?? link.nodeUrl ?? link.resourceId ?? link.id
 
 export const getMediaNodeTarget = (link: ExtractedLink): string => {
   const target = getMediaNodeTargetOrUndefined(link)
