@@ -8,6 +8,7 @@ import type { LinkListItem } from "~/features/links/types"
 import { getTitleGroupHref } from "~/features/links/title-grouping/title-group-href"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { TitleGroupMenu } from "~/features/links/components/title-group-menu"
+import { TITLE_GROUP_CARD_SHIMMER_DURATION_MS } from "~/lib/constants"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { cn } from "~/lib/utils"
 
@@ -15,6 +16,10 @@ interface TitleGroupCardProps {
   readonly group: TitleGroupProjection
   readonly savedLinks: readonly LinkListItem[]
   readonly actions?: LinkItemActions
+}
+
+interface TitleGroupCardStyle extends React.CSSProperties {
+  readonly "--title-group-card-shimmer-duration": string
 }
 
 const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
@@ -28,6 +33,11 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
   const isMetadataPending = group.metadataState === "pending"
   const titleGroupPath = group.id
     ? getTitleGroupHref(group.id, group.mediaKind)
+    : undefined
+  const cardStyle: TitleGroupCardStyle | undefined = isMetadataPending
+    ? {
+        "--title-group-card-shimmer-duration": `${TITLE_GROUP_CARD_SHIMMER_DURATION_MS}ms`,
+      }
     : undefined
 
   const handleDirectPlay = async () => {
@@ -56,6 +66,7 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
       data-testid="title-group-card"
       data-layout-guide-target="library-card"
       className="group relative w-full animate-in fade-in fill-mode-both slide-in-from-bottom-4 zoom-in-95 duration-500 motion-reduce:animate-none"
+      style={cardStyle}
     >
       {titleGroupPath && !isDirectLinkExpired ? (
         <Link
@@ -79,7 +90,7 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
         )}
       >
         {isMetadataPending ? (
-          <Skeleton className="size-full" />
+          <Skeleton className="title-group-card__skeleton size-full" />
         ) : group.posterPath ? (
           <TmdbImage
             path={group.posterPath}
@@ -128,7 +139,7 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
       </div>
       <div className="px-1 pt-3 text-center">
         {isMetadataPending ? (
-          <Skeleton className="mx-auto h-5 w-3/4" />
+          <Skeleton className="title-group-card__skeleton mx-auto h-5 w-3/4" />
         ) : (
           <h3 className="font-heading text-base font-normal break-words">
             {group.displayTitle}

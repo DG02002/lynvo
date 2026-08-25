@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 
 export const MEDIA_LIST_ROW_TITLE_CLASS = "block text-sm md:text-lg"
@@ -6,8 +7,7 @@ export const MEDIA_LIST_ROW_TITLE_CLASS = "block text-sm md:text-lg"
 export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
   "animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
 
-export const MEDIA_LIST_ROW_MENU_CELL_CLASS =
-  "w-16 shrink-0 border-s border-border/70"
+export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 
 export const MEDIA_LIST_HEADER_MENU_CELL_CLASS = cn(
   "contents md:flex md:h-full md:items-center md:justify-center",
@@ -25,6 +25,34 @@ interface SaveListRowIconProps {
   readonly children: ReactNode
   readonly className?: string
 }
+
+interface MediaListRowMetaProps {
+  readonly sourceName: ReactNode
+  readonly size?: string
+  readonly itemCount?: number
+}
+
+export const MediaListRowMeta = ({
+  sourceName,
+  size,
+  itemCount,
+}: MediaListRowMetaProps) => (
+  <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+    <span className="min-w-0 truncate">{sourceName}</span>
+    {Boolean(size) && (
+      <span className="flex shrink-0 items-center gap-1.5">
+        <span aria-hidden="true">·</span>
+        <span>{size}</span>
+      </span>
+    )}
+    {itemCount !== undefined && (
+      <span className="flex shrink-0 items-center gap-1.5">
+        <span aria-hidden="true">·</span>
+        <span>{formatItemCount(itemCount)}</span>
+      </span>
+    )}
+  </span>
+)
 
 export const SaveListRowIcon = ({
   children,
@@ -104,7 +132,8 @@ export const MediaListRow = ({
       <div
         className={cn(
           "flex items-center justify-center",
-          MEDIA_LIST_ROW_MENU_CELL_CLASS
+          MEDIA_LIST_ROW_MENU_CELL_CLASS,
+          isOpened && !disabled && "bg-sky-500/15"
         )}
       >
         {overlay}

@@ -36,6 +36,6 @@ export const useSaveFolderRoute = (
         void navigate(`/save/folder/${encodeURIComponent(savedLink.id)}`)
       }
     },
-    closeSavedFolder: () => void navigate("/save"),
+    closeSavedFolder: () => void navigate("/save", { replace: true }),
   }
 }

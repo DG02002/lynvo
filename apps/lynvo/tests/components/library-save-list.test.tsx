@@ -103,6 +103,9 @@ describe("LibrarySaveList", () => {
     expect(
       container.querySelector('[data-slot="skeleton"]')
     ).toBeInTheDocument()
+    expect(
+      container.querySelectorAll(".title-group-card__skeleton")
+    ).toHaveLength(2)
     expect(screen.queryByText("Finding artwork")).not.toBeInTheDocument()
   })
 

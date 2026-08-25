@@ -271,6 +271,42 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   animation: clipboard-icon-shimmer 4s linear infinite;
 }
 
+@keyframes title-group-card-skeleton-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.title-group-card__skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.title-group-card__skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    color-mix(in oklab, var(--foreground) 8%, transparent) 44%,
+    color-mix(in oklab, var(--foreground) 16%, transparent) 50%,
+    transparent 76%
+  );
+  content: "";
+  pointer-events: none;
+  transform: translateX(-100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .title-group-card__skeleton::after {
+    animation: title-group-card-skeleton-shimmer
+      var(--title-group-card-shimmer-duration) linear infinite;
+  }
+}
+
 .home-demo-cursor {
   top: 0;
   left: 0;

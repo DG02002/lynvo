@@ -1,9 +1,9 @@
 import { useState } from "react"
+import type { RefObject } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
-  ArrowRight01Icon,
   AlertCircleIcon,
   Clock01Icon,
   Folder01Icon,
@@ -54,6 +54,7 @@ import {
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
+  MediaListRowMeta,
   MediaListRow,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
   SaveListRowIcon,
@@ -82,6 +83,14 @@ interface FinderBrowserProps {
   onExit: () => void
 }
 
+interface FinderEmptyStateProps {
+  item: LinkViewItem
+  actions: LinkItemActions
+  extractingItems: Set<string>
+  onExit: () => void
+  contentRef: RefObject<HTMLDivElement | null>
+}
+
 interface FolderTreeProps {
   rootLabel: string
   folderPath: FolderLevel[]
@@ -99,6 +108,10 @@ interface MobileFolderTreeToggleProps {
 interface SaveExtractionStatusProps {
   item: LinkListItem
   isRefreshing: boolean
+}
+
+interface FinderBackButtonProps {
+  readonly onExit: () => void
 }
 
 const getExtractionStatusLabel = (
@@ -194,6 +207,23 @@ const MobileFolderTreeToggle = ({
       />
     </span>
   </Button>
+)
+
+const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
+  <div className="contents md:block md:h-full md:border-r">
+    <Button
+      variant="ghost"
+      className="text-lg text-foreground hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
+      onClick={onExit}
+    >
+      <HugeiconsIcon
+        icon={ArrowLeft01Icon}
+        className="size-6 text-foreground"
+        data-icon="inline-start"
+      />
+      Back
+    </Button>
+  </div>
 )
 
 const FolderTree = ({
@@ -295,7 +325,8 @@ const FinderEmptyState = ({
   actions,
   extractingItems,
   onExit,
-}: FinderBrowserProps) => (
+  contentRef,
+}: FinderEmptyStateProps) => (
   <section
     className="flex h-svh flex-col overflow-hidden bg-background"
     data-layout-guide-target="list-view"
@@ -304,16 +335,7 @@ const FinderEmptyState = ({
       className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
       data-layout-guide-target="list-header"
     >
-      <div className="contents md:block md:h-full md:border-r">
-        <Button
-          variant="ghost"
-          className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
-          onClick={onExit}
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-          Back
-        </Button>
-      </div>
+      <FinderBackButton onExit={onExit} />
       <h1
         aria-label={getItemTitle(item)}
         className="min-w-0 flex-1 text-base font-normal md:flex md:w-full md:items-center md:px-4 md:py-3"
@@ -336,7 +358,8 @@ const FinderEmptyState = ({
       </div>
     </header>
     <div
-      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center"
+      ref={contentRef}
+      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-x-hidden px-6 py-10 text-center"
       data-layout-guide-target="list-content"
     >
       <div className="flex flex-col gap-1">
@@ -373,51 +396,81 @@ const ResolvedMirrorRows = ({
   itemUrl,
   actions,
 }: ResolvedMirrorRowsProps) => (
-  <div className="stagger-children flex flex-col border-t bg-sky-500/5">
+  <div
+    className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
+    data-container-children
+  >
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-0 start-9 z-10 w-0.5 bg-sky-500 md:start-11"
+      data-container-connector
+    />
     {mirrors.map((mirror) => {
       const mirrorTarget = getMediaNodeTarget(mirror)
+      const playMirror = async () => {
+        const result = await actions.play(mirror)
+        markAfterAcceptedHandoff({
+          ...result,
+          itemLabel: mirror.label,
+          markOpened: () =>
+            actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
+        })
+      }
       return (
-        <MediaListRow
-          key={getLinkKey(mirror)}
-          buttonClassName="min-h-20 py-4 hover:bg-sky-500/10"
-          icon={
-            <SaveListRowIcon>
-              <HugeiconsIcon icon={PlayIcon} className="size-6" />
-            </SaveListRowIcon>
-          }
-          title={
-            <FilenameText
-              value={mirror.label}
-              className={MEDIA_LIST_ROW_TITLE_CLASS}
-            />
-          }
-          trailing={
-            mirror.size ? (
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {mirror.size}
-              </span>
-            ) : undefined
-          }
-          overlay={
-            <LinkActionsDotMenu
-              itemLabel={mirror.label}
-              onCopyLink={() =>
-                void navigator.clipboard.writeText(mirrorTarget)
-              }
-              onOpenInPlayer={async (player) => {
-                const result = await openInSpecificPlayer(mirrorTarget, player)
-                markAfterAcceptedHandoff({
-                  accepted: result.expectsNavigation,
-                  itemLabel: mirror.label,
-                  markOpened: () =>
-                    actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
-                })
-              }}
-              className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
-            />
-          }
-          onActivate={() => void actions.play(mirror)}
-        />
+        <div key={getLinkKey(mirror)} className="relative">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-sky-500"
+            data-container-connector
+          />
+          <MediaListRow
+            wrapperClassName="border-b-0"
+            buttonClassName="min-h-20 bg-transparent py-4 hover:bg-muted/80"
+            icon={
+              <SaveListRowIcon>
+                <HugeiconsIcon icon={PlayIcon} className="size-6" />
+              </SaveListRowIcon>
+            }
+            title={
+              <FilenameText
+                value={mirror.label}
+                className={MEDIA_LIST_ROW_TITLE_CLASS}
+              />
+            }
+            trailing={
+              mirror.size ? (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {mirror.size}
+                </span>
+              ) : undefined
+            }
+            overlay={
+              <LinkActionsDotMenu
+                itemLabel={mirror.label}
+                onCopyLink={() =>
+                  void navigator.clipboard.writeText(mirrorTarget)
+                }
+                onOpenInPlayer={async (player) => {
+                  const result = await openInSpecificPlayer(
+                    mirrorTarget,
+                    player
+                  )
+                  markAfterAcceptedHandoff({
+                    accepted: result.expectsNavigation,
+                    itemLabel: mirror.label,
+                    markOpened: () =>
+                      actions.markOpened(
+                        itemUrl,
+                        getMediaNodeTarget(sourceLink)
+                      ),
+                  })
+                }}
+                className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+              />
+            }
+            onActivate={() => void playMirror().catch(console.error)}
+          />
+        </div>
       )
     })}
   </div>
@@ -452,9 +505,14 @@ const ResolvableContainerRow = ({
       )}
     >
       <MediaListRow
-        wrapperClassName="border-b-0"
+        wrapperClassName={cn(
+          "border-b-0",
+          isExpanded && !link.opened && "bg-muted/60",
+          didResolutionFail && "bg-destructive/15"
+        )}
         isOpened={link.opened === true}
         buttonClassName={cn(
+          isExpanded && !link.opened && "bg-transparent hover:bg-muted/80",
           didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
         )}
         buttonDataAttributes={{
@@ -483,29 +541,17 @@ const ResolvableContainerRow = ({
           />
         }
         meta={
-          <span className="block truncate text-xs text-muted-foreground">
-            {getResolvableSourceName(link, item)}
-          </span>
+          <MediaListRowMeta
+            sourceName={getResolvableSourceName(link, item)}
+            size={displaySize}
+          />
         }
         trailing={
           <>
-            {Boolean(displaySize) && (
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {displaySize}
-              </span>
-            )}
             {!link.opened && <NewBadge />}
             {isResolving ? (
               <Spinner
                 aria-label={`Loading playable links for ${link.label}…`}
-              />
-            ) : mirrors.length > 0 ? (
-              <HugeiconsIcon
-                icon={ArrowRight01Icon}
-                className={cn(
-                  "shrink-0 transition-transform",
-                  isExpanded && "rotate-90"
-                )}
               />
             ) : null}
           </>
@@ -548,7 +594,7 @@ const FinderBrowser = ({
     openFolder,
     openLink,
     selectRoot,
-  } = useFinderBrowserState({ item, actions })
+  } = useFinderBrowserState({ item, actions, onExit })
   const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
 
   if (rootLinks.length === 0) {
@@ -558,6 +604,7 @@ const FinderBrowser = ({
         actions={actions}
         extractingItems={extractingItems}
         onExit={onExit}
+        contentRef={contentRef}
       />
     )
   }
@@ -571,16 +618,7 @@ const FinderBrowser = ({
         className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
         data-layout-guide-target="list-header"
       >
-        <div className="contents md:block md:h-full md:border-r">
-          <Button
-            variant="ghost"
-            className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
-            onClick={onExit}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-            Back
-          </Button>
-        </div>
+        <FinderBackButton onExit={onExit} />
         <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={getItemTitle(item)}
@@ -645,7 +683,7 @@ const FinderBrowser = ({
 
         <div
           ref={contentRef}
-          className="min-h-0 overflow-y-auto overscroll-contain"
+          className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain"
           data-layout-guide-target="list-content"
         >
           {currentLinks.map((link) => {
@@ -730,11 +768,6 @@ const FinderBrowser = ({
                     )}
                     {isResolving ? (
                       <Spinner aria-label={`Loading ${link.label}…`} />
-                    ) : isFolder ? (
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        className="shrink-0 text-foreground"
-                      />
                     ) : null}
                   </>
                 }
@@ -964,25 +997,20 @@ export const SaveListBrowser = ({
                           </div>
                         ) : (
                           <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <span className="min-w-0 truncate">
-                                {view.sourceName || view.pluginName || item.url}
-                              </span>
-                              {directLink?.size && (
-                                <span className="flex shrink-0 items-center gap-1.5">
-                                  <span aria-hidden="true">·</span>
-                                  <span>{directLink.size}</span>
-                                </span>
-                              )}
-                            </span>
-                            {!directLink && (
+                            <MediaListRowMeta
+                              sourceName={
+                                view.sourceName || view.pluginName || item.url
+                              }
+                              size={directLink?.size}
+                              itemCount={
+                                directLink
+                                  ? undefined
+                                  : view.extractedLinks.length
+                              }
+                            />
+                            {!directLink && isRootItemNew && (
                               <span className="flex items-center gap-2 md:hidden">
-                                <span className="tabular-nums md:hidden">
-                                  {view.extractedLinks.length} items
-                                </span>
-                                {isRootItemNew && (
-                                  <NewBadge className="md:hidden" />
-                                )}
+                                <NewBadge className="md:hidden" />
                               </span>
                             )}
                             {directLink &&
@@ -1015,19 +1043,6 @@ export const SaveListBrowser = ({
                     {isRootItemNew && (
                       <NewBadge className="relative z-10 hidden md:inline-flex" />
                     )}
-                    {!directLink && !isExtractionIncomplete && (
-                      <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs tabular-nums text-muted-foreground md:inline">
-                        {view.extractedLinks.length} items
-                      </span>
-                    )}
-                    {!directLink &&
-                      !isExtractionIncomplete &&
-                      !isExtracting && (
-                        <HugeiconsIcon
-                          icon={ArrowRight01Icon}
-                          className="pointer-events-none relative z-10 shrink-0 text-foreground"
-                        />
-                      )}
                   </div>
                   <div
                     className={cn(

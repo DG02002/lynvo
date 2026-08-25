@@ -16,6 +16,7 @@ import {
   getMediaNodeTarget,
 } from "~/features/links/media-node-interaction"
 import { cn } from "~/lib/utils"
+import { formatItemCount } from "~/lib/format-item-count"
 import { getLinkSelectionState } from "./link-selection-state"
 import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
@@ -155,7 +156,9 @@ export const LinkSelectionTreeItem = ({
         {hasTrailingContent && (
           <div className="flex min-w-0 items-center justify-end gap-2 text-xs font-normal text-muted-foreground">
             {isFolder && hasChildren && (
-              <span className="truncate">{link.children?.length} items</span>
+              <span className="truncate">
+                {formatItemCount(link.children?.length ?? 0)}
+              </span>
             )}
             {!isFolder && link.size && (
               <span className="truncate">{link.size}</span>

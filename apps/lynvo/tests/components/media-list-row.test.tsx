@@ -95,11 +95,8 @@ describe("MediaListRow", () => {
       name: "Overlay action",
     })
     expect(overlayAction).toBeInTheDocument()
-    expect(overlayAction.parentElement).toHaveClass(
-      "w-16",
-      "border-s",
-      "border-border/70"
-    )
+    expect(overlayAction.parentElement).toHaveClass("w-16", "text-foreground")
+    expect(overlayAction.parentElement).not.toHaveClass("border-s")
     const rowButton = screen.getByRole("button", { name: "Title text" })
     expect(rowButton).toHaveClass("flex-1")
     expect(rowButton.parentElement.lastElementChild).toBe(

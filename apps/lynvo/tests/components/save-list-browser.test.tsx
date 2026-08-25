@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
@@ -22,6 +22,13 @@ const createActions = (
 })
 
 describe("SaveListBrowser", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: false }),
+    })
+  })
+
   it("restores the nested folder in the same tab after refresh", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
@@ -56,12 +63,13 @@ describe("SaveListBrowser", () => {
         playback: { openedUrls: [], openedIds: [] },
       },
     }
+    const onSelectedItemUrlChange = vi.fn()
     const renderSavedFolder = () =>
       render(
         <SaveListBrowser
           items={[{ ...item, kind: "saved" }]}
           selectedItemUrl={item.url}
-          onSelectedItemUrlChange={vi.fn()}
+          onSelectedItemUrlChange={onSelectedItemUrlChange}
           actions={createActions()}
           extractingItems={new Set()}
           highlightedId={null}
@@ -76,16 +84,22 @@ describe("SaveListBrowser", () => {
     expect(headerMenu).toHaveClass(
       "size-full!",
       "rounded-none!",
-      "[&_svg]:size-7!"
+      "[&_svg]:size-7!",
+      "text-foreground!"
     )
-    expect(headerMenu.parentElement).toHaveClass(
-      "w-16",
-      "border-s",
-      "border-border/70"
+    expect(headerMenu.parentElement).toHaveClass("w-16", "text-foreground")
+    expect(headerMenu.parentElement).not.toHaveClass("border-s")
+    const backButton = screen.getByRole("button", { name: "Back" })
+    expect(backButton).toHaveClass("text-lg", "text-foreground")
+    expect(backButton.querySelector("svg")).toHaveClass(
+      "size-6",
+      "text-foreground"
     )
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /Season One/ }).at(-1)!
-    )
+    const seasonFolderButton = screen
+      .getAllByRole("button", { name: /Season One/ })
+      .at(-1)
+    expect(seasonFolderButton?.querySelectorAll("svg")).toHaveLength(1)
+    fireEvent.click(seasonFolderButton!)
     expect(await screen.findByText("Episode One")).toBeVisible()
 
     firstRender.unmount()
@@ -96,6 +110,71 @@ describe("SaveListBrowser", () => {
       "aria-current",
       "page"
     )
+
+    const contentList = document.querySelector<HTMLElement>(
+      '[data-layout-guide-target="list-content"]'
+    )
+    expect(contentList).toBeInTheDocument()
+    expect(contentList).toHaveClass("overflow-x-hidden")
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+    fireEvent.wheel(contentList!, { deltaX: 48, deltaY: 0 })
+    expect(screen.getByText("Episode One")).toBeVisible()
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+    fireEvent.wheel(contentList!, { deltaX: 0, deltaY: 1 })
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(onSelectedItemUrlChange).toHaveBeenCalledWith(null)
+  })
+
+  it("registers navigation wheel events as non-passive", () => {
+    const item: LinkViewItem = {
+      id: "wheel-listener-item",
+      url: "https://media.example/wheel-listener",
+      timestamp: 1,
+      title: "Wheel Listener Item",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "wheel-listener-file",
+              url: "https://media.example/wheel-listener/file.mp4",
+              label: "File.mp4",
+              type: "file",
+            },
+          ],
+        },
+        playback: { openedUrls: [], openedIds: [] },
+      },
+    }
+    const addEventListenerSpy = vi.spyOn(
+      HTMLElement.prototype,
+      "addEventListener"
+    )
+
+    try {
+      render(
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+      )
+
+      expect(addEventListenerSpy.mock.calls).toContainEqual([
+        "wheel",
+        expect.any(Function),
+        { passive: false },
+      ])
+    } finally {
+      addEventListenerSpy.mockRestore()
+    }
   })
 
   it("lazily extracts an unresolved folder when it is opened", async () => {
@@ -181,6 +260,7 @@ describe("SaveListBrowser", () => {
 
   it("shows a single resolvable container directly on the save page", async () => {
     const onSelectedItemUrlChange = vi.fn()
+    const markOpened = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([
       {
         url: "https://files.example/route-alpha",
@@ -204,6 +284,7 @@ describe("SaveListBrowser", () => {
               label: "Playable Item Alpha.mkv",
               type: "folder",
               mediaNodeKind: "resolvable",
+              size: "8.2 GB",
             },
           ],
         },
@@ -216,7 +297,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={onSelectedItemUrlChange}
-        actions={createActions({ expandMirror })}
+        actions={createActions({ expandMirror, markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -227,13 +308,23 @@ describe("SaveListBrowser", () => {
       screen.getByText("Playable Item Alpha.mkv").closest("button")!
     )
 
+    expect(markOpened).not.toHaveBeenCalled()
     expect(
       await screen.findByText("Play from Source Route Alpha")
     ).toBeVisible()
-    expect(screen.getByText("Source Beta")).toBeVisible()
+    const sourceName = screen.getByText("Source Beta")
+    expect(sourceName).toBeVisible()
+    expect(sourceName.parentElement).toHaveTextContent("Source Beta·8.2 GB")
     expect(screen.getByText("1.2 GB")).toBeVisible()
     expect(onSelectedItemUrlChange).not.toHaveBeenCalled()
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
+
+    fireEvent.click(
+      screen.getByText("Play from Source Route Alpha").closest("button")!
+    )
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
+    )
   })
 
   it("resolves a Resolver Beta playable-item inline with loading and opened feedback", async () => {
@@ -344,10 +435,7 @@ describe("SaveListBrowser", () => {
       "data-resolution-state",
       "resolving"
     )
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/playable-item-one"
-    )
+    expect(markOpened).not.toHaveBeenCalled()
 
     finishResolution?.()
 
@@ -364,11 +452,10 @@ describe("SaveListBrowser", () => {
     expect(
       screen.queryByText("Play from CF Server (404)")
     ).not.toBeInTheDocument()
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/playable-item-one"
-    )
-    expect(playableItemButton).toHaveClass("bg-sky-500/15")
+    expect(markOpened).not.toHaveBeenCalled()
+    expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).toHaveClass("bg-transparent")
+    expect(playableItemButton.parentElement).toHaveClass("bg-muted/60")
     expect(playableItemButton).toHaveAttribute(
       "data-resolution-state",
       "expanded"
@@ -379,10 +466,63 @@ describe("SaveListBrowser", () => {
       })
     ).toHaveLength(2)
     expect(
+      screen
+        .getAllByRole("button", {
+          name: /Open menu for Play from Source Route/,
+        })
+        .every((menuButton) =>
+          menuButton.classList.contains("text-foreground!")
+        )
+    ).toBe(true)
+    expect(
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
     expect(screen.getByText("1.2 GB")).toBeVisible()
+    expect(playableItemButton.querySelectorAll("svg")).toHaveLength(1)
     expect(screen.getByText("1.4 GB")).toBeVisible()
+    const mirrorGroup = screen
+      .getByText("Play from Source Route Alpha")
+      .closest('[data-layout-guide-target="list-row"]')
+      ?.parentElement?.parentElement
+    expect(mirrorGroup).toHaveClass("bg-muted/60", "ps-12", "md:ps-14")
+    const connectors = mirrorGroup?.querySelectorAll(
+      "[data-container-connector]"
+    )
+    expect(connectors).toHaveLength(3)
+    expect(connectors?.[0]).toHaveClass("w-0.5", "bg-sky-500")
+    expect(connectors?.[1]).toHaveClass(
+      "-start-3",
+      "h-0.5",
+      "w-3",
+      "bg-sky-500"
+    )
+    expect(
+      screen
+        .getAllByRole("button", {
+          name: /Open menu for Play from Source Route/,
+        })
+        .every((menuButton) =>
+          menuButton
+            .closest("[data-container-children]")
+            ?.classList.contains("bg-muted/60")
+        )
+    ).toBe(true)
+
+    fireEvent.click(
+      screen.getByText("Play from Source Route Alpha").closest("button")!
+    )
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(
+        item.url,
+        "https://resolver-beta.example/playable-item-one"
+      )
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "Open menu for Playable Item One",
+      }).parentElement
+    ).toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).toHaveClass("bg-sky-500/15")
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -451,10 +591,7 @@ describe("SaveListBrowser", () => {
       )
     })
     expect(failedPlayableItemButton).toHaveClass("bg-destructive/15")
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/resolution-failure"
-    )
+    expect(markOpened).not.toHaveBeenCalled()
   })
 
   it("shows the size of a single playable Google Drive item", () => {
@@ -572,11 +709,8 @@ describe("SaveListBrowser", () => {
       name: "Open menu for https://source.example/cell-menu",
     })
     expect(menuTrigger).toHaveClass("size-full!", "rounded-none!")
-    expect(menuTrigger.parentElement).toHaveClass(
-      "w-16",
-      "border-s",
-      "border-border/70"
-    )
+    expect(menuTrigger.parentElement).toHaveClass("w-16", "text-foreground")
+    expect(menuTrigger.parentElement).not.toHaveClass("border-s")
   })
 
   it("disables and mutes an expired playable link", () => {
@@ -666,17 +800,19 @@ describe("SaveListBrowser", () => {
     expect(newBadges).toHaveLength(2)
     expect(newBadges[0]).toHaveClass("md:hidden")
     expect(newBadges[1]).toHaveClass("hidden", "md:inline-flex")
-    const itemCounts = screen.getAllByText("1 items")
-    expect(itemCounts).toHaveLength(2)
-    expect(itemCounts[0]).toHaveClass("md:hidden")
-    expect(itemCounts[1]).toHaveClass("hidden", "md:inline")
+    const itemCounts = screen.getAllByText("1 item")
+    expect(itemCounts).toHaveLength(1)
     expect(
       Boolean(
         itemCounts[0].compareDocumentPosition(newBadges[0]) &
         Node.DOCUMENT_POSITION_FOLLOWING
       )
     ).toBe(true)
-    fireEvent.click(screen.getByRole("button", { name: "View source.example" }))
+    const folderButton = screen.getByRole("button", {
+      name: "View source.example",
+    })
+    expect(folderButton.parentElement?.querySelectorAll("svg")).toHaveLength(1)
+    fireEvent.click(folderButton)
     expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
   })
 

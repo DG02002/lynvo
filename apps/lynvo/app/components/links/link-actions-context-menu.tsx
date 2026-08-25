@@ -21,6 +21,7 @@ import {
 import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { RemoveLinkAlertDialog } from "~/components/links/remove-link-alert-dialog"
+import { cn } from "~/lib/utils"
 
 interface LinkActionsRemoveRequest {
   readonly url: string
@@ -59,7 +60,10 @@ export function LinkActionsDotMenu({
             type="button"
             variant="ghost"
             size="icon"
-            className={className}
+            className={cn(
+              "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
+              className
+            )}
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />

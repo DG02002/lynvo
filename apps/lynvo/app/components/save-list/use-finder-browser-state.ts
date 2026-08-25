@@ -12,11 +12,16 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import {
+  FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS,
+  FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX,
+} from "~/lib/constants"
 import { Result, Schema } from "effect"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
   actions: LinkItemActions
+  onExit: () => void
 }
 
 const getFolderPathStorageKey = (savedLinkId: string) =>
@@ -64,6 +69,7 @@ const restoreFolderPath = (
 export const useFinderBrowserState = ({
   item,
   actions,
+  onExit,
 }: UseFinderBrowserStateOptions) => {
   const itemRootLinks = useMemo(
     () => toLinkViewModel(item).extractedLinks,
@@ -73,8 +79,18 @@ export const useFinderBrowserState = ({
   const [folderPath, setFolderPath] = useState<FolderLevel[]>(() =>
     restoreFolderPath(item.id, itemRootLinks)
   )
+  const [forwardFolderPaths, setForwardFolderPaths] = useState<FolderLevel[][]>(
+    []
+  )
   const contentRef = useRef<HTMLDivElement>(null)
   const scrollPositionsRef = useRef(new Map<string, number>())
+  const horizontalGestureDistanceRef = useRef(0)
+  const horizontalGestureTriggeredRef = useRef(false)
+  const lastHorizontalGestureEventAtRef = useRef(0)
+  const lastGestureWasBackRef = useRef<boolean | null>(null)
+  const latestContentWheelHandlerRef = useRef<(event: WheelEvent) => void>(
+    () => undefined
+  )
   const currentLinks = useMemo(
     () => getLinksAtFolderPath(rootLinks, folderPath),
     [folderPath, rootLinks]
@@ -108,7 +124,111 @@ export const useFinderBrowserState = ({
     )
   }
 
+  const resetHorizontalGesture = () => {
+    horizontalGestureDistanceRef.current = 0
+    horizontalGestureTriggeredRef.current = false
+    lastHorizontalGestureEventAtRef.current = 0
+    lastGestureWasBackRef.current = null
+  }
+
+  const navigateToParentFolder = () => {
+    if (folderPath.length === 0) {
+      onExit()
+      return
+    }
+    const previousFolderPath = folderPath
+    rememberScrollPosition()
+    setForwardFolderPaths((currentForwardFolderPaths) => [
+      previousFolderPath,
+      ...currentForwardFolderPaths,
+    ])
+    setFolderPath((currentFolderPath) => currentFolderPath.slice(0, -1))
+  }
+
+  const navigateToNextFolder = () => {
+    const nextFolderPath = forwardFolderPaths[0]
+    if (!nextFolderPath) {
+      return
+    }
+    rememberScrollPosition()
+    setForwardFolderPaths((currentForwardFolderPaths) =>
+      currentForwardFolderPaths.slice(1)
+    )
+    setFolderPath(nextFolderPath)
+  }
+
+  const handleContentWheel = (event: WheelEvent) => {
+    const currentTimeMs = Date.now()
+    if (
+      currentTimeMs - lastHorizontalGestureEventAtRef.current >
+      FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS
+    ) {
+      resetHorizontalGesture()
+    }
+
+    const isHorizontalGesture = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+    if (!isHorizontalGesture || event.deltaX === 0) {
+      resetHorizontalGesture()
+      return
+    }
+
+    const isBackGesture = event.deltaX < 0
+    if (
+      lastGestureWasBackRef.current !== null &&
+      lastGestureWasBackRef.current !== isBackGesture
+    ) {
+      resetHorizontalGesture()
+    }
+    lastGestureWasBackRef.current = isBackGesture
+    lastHorizontalGestureEventAtRef.current = currentTimeMs
+
+    if (!isBackGesture && forwardFolderPaths.length === 0) {
+      resetHorizontalGesture()
+      return
+    }
+
+    event.preventDefault()
+    if (horizontalGestureTriggeredRef.current) {
+      return
+    }
+
+    horizontalGestureDistanceRef.current += Math.abs(event.deltaX)
+    if (
+      horizontalGestureDistanceRef.current <
+      FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX
+    ) {
+      return
+    }
+
+    horizontalGestureTriggeredRef.current = true
+    horizontalGestureDistanceRef.current = 0
+    if (isBackGesture) {
+      navigateToParentFolder()
+    } else {
+      navigateToNextFolder()
+    }
+  }
+
+  useEffect(() => {
+    latestContentWheelHandlerRef.current = handleContentWheel
+  }, [handleContentWheel])
+
+  useEffect(() => {
+    const contentElement = contentRef.current
+    if (!contentElement) {
+      return
+    }
+    const handleNativeWheel = (event: WheelEvent) => {
+      latestContentWheelHandlerRef.current(event)
+    }
+    contentElement.addEventListener("wheel", handleNativeWheel, {
+      passive: false,
+    })
+    return () => contentElement.removeEventListener("wheel", handleNativeWheel)
+  }, [rootLinks.length === 0])
+
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
+    resetHorizontalGesture()
     const linkKey = getLinkKey(link)
     const linkTarget = getMediaNodeTarget(link)
     actions.markOpened(item.url, linkTarget)
@@ -123,6 +243,7 @@ export const useFinderBrowserState = ({
       }
       setRootLinks(resolvedLinks)
     }
+    setForwardFolderPaths([])
     rememberScrollPosition()
     setFolderPath(targetPath)
   }
@@ -154,6 +275,8 @@ export const useFinderBrowserState = ({
     openFolder,
     openLink,
     selectRoot: () => {
+      resetHorizontalGesture()
+      setForwardFolderPaths([])
       rememberScrollPosition()
       setFolderPath([])
     },

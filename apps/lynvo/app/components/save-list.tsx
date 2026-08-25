@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
+import { DevDemoDataControls } from "~/components/dev-demo-data-controls"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { useLinkActions } from "~/hooks/use-link-actions"
 import { useLinks } from "~/hooks/use-links"
@@ -12,6 +13,7 @@ import { Spinner } from "~/components/ui/spinner"
 import { LibrarySaveList } from "~/features/links/components/library-save-list"
 import { useTitleGroups } from "~/features/links/title-grouping/use-title-groups"
 import { useShouldUseLibraryMediaView } from "~/features/site/settings/library-media-view-preference"
+import { getDemoSavedLinkSeeds } from "~/features/links/dev-demo-data"
 import {
   shouldHideSaveInput,
   useIsTvBroAndroidTv,
@@ -66,6 +68,18 @@ const SaveList = ({
     () => new Set(links.map((link) => link.url)),
     [links]
   )
+  const handleLoadDemoLinks = async () => {
+    for (const demoLink of getDemoSavedLinkSeeds()) {
+      const savedLinkId = await actions.add(
+        demoLink.url,
+        demoLink.meta,
+        demoLink.extractedLinks
+      )
+      if (!savedLinkId) {
+        throw new Error(`Unable to save demo link ${demoLink.url}`)
+      }
+    }
+  }
   const titleGroupsState = useTitleGroups({
     enabled: shouldUseLibraryMediaView && !isFolderRoute,
     dataVersion,
@@ -107,6 +121,9 @@ const SaveList = ({
             savedUrls={savedUrls}
           />
         </div>
+      )}
+      {import.meta.env.DEV && !isFolderRoute && (
+        <DevDemoDataControls onLoad={handleLoadDemoLinks} />
       )}
 
       <div className="w-full" data-layout-guide-target="save-content">

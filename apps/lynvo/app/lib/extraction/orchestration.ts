@@ -9,6 +9,12 @@ import {
   getLinkViewItemPluginServerId,
 } from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
+import {
+  DEMO_LAZY_FOLDER_URL,
+  DEMO_MIRROR_CONTAINER_URL,
+  getDemoLazyFolderChildren,
+  getDemoMirrorLinks,
+} from "~/features/links/dev-demo-data"
 import { decideSavePresentation } from "./presentation"
 import { defaultExtractionClient } from "./client"
 
@@ -67,6 +73,20 @@ const getSavedPluginServerId = (item: LinkViewItem | undefined) =>
 
 const getSavedSourceId = (item: LinkViewItem | undefined) =>
   getLinkViewItemSourceId(item) || undefined
+
+const getDevelopmentDemoFolderChildren = (
+  folderUrl: string
+): ExtractedLink[] | undefined =>
+  import.meta.env.DEV && folderUrl === DEMO_LAZY_FOLDER_URL
+    ? getDemoLazyFolderChildren()
+    : undefined
+
+const getDevelopmentDemoMirrorLinks = (
+  lazyItemUrl: string
+): ExtractedLink[] | undefined =>
+  import.meta.env.DEV && lazyItemUrl === DEMO_MIRROR_CONTAINER_URL
+    ? getDemoMirrorLinks()
+    : undefined
 
 export const createExtractionOrchestration = (
   transport: ExtractionTransport
@@ -153,15 +173,19 @@ export const createExtractionOrchestration = (
       return result.links
     },
     resolveMirror: async (item, lazyItemUrl) =>
+      getDevelopmentDemoMirrorLinks(lazyItemUrl) ??
       (await extractSavedItemNode(item, lazyItemUrl)).links,
     resolveFolder: async ({ folderUrl, pluginServerId, pluginId }) =>
-      await extractFolder(folderUrl, pluginServerId, pluginId),
+      getDevelopmentDemoFolderChildren(folderUrl) ??
+      (await extractFolder(folderUrl, pluginServerId, pluginId)),
     expandFolder: async ({ item, linkId, linkUrl }) => {
-      const resolvedChildren = await extractFolder(
-        linkUrl,
-        getSavedPluginServerId(item),
-        getSavedSourceId(item)
-      )
+      const resolvedChildren =
+        getDevelopmentDemoFolderChildren(linkUrl) ??
+        (await extractFolder(
+          linkUrl,
+          getSavedPluginServerId(item),
+          getSavedSourceId(item)
+        ))
       return attachResolvedChildren({
         links: item.metadata.extraction.extractedLinks,
         linkId,

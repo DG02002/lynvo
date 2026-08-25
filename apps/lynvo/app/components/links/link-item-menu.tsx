@@ -95,7 +95,7 @@ const LinkItemMenuContent = ({
                   : `Open menu for ${itemLabel}`
               }
               className={cn(
-                "size-8 shrink-0 text-foreground hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground",
+                "size-8 shrink-0 text-foreground! hover:bg-transparent hover:text-foreground! aria-expanded:bg-transparent aria-expanded:text-foreground!",
                 triggerClassName
               )}
             >
