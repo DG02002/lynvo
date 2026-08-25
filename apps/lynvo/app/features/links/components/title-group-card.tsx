@@ -2,7 +2,7 @@ import { Link } from "react-router"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { Skeleton } from "~/components/ui/skeleton"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
+import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { getTitleGroupHref } from "~/features/links/title-grouping/title-group-href"
@@ -44,15 +44,18 @@ const PosterCard = ({ group, savedLinks, actions }: TitleGroupCardProps) => {
     if (!actions || !directLink || isDirectLinkExpired) {
       return
     }
-    const currentDirectLinkTarget = getMediaNodeTarget(directLink)
+    const currentDirectLinkTarget = getMediaNodeTargetOrUndefined(directLink)
     try {
       const result = await actions.play(directLink)
       if (item) {
         markAfterAcceptedHandoff({
           ...result,
           itemLabel: directLink.label,
-          markOpened: () =>
-            actions.markOpened(item.url, currentDirectLinkTarget),
+          markOpened: () => {
+            if (currentDirectLinkTarget !== undefined) {
+              actions.markOpened(item.url, currentDirectLinkTarget)
+            }
+          },
         })
       }
     } catch (error) {

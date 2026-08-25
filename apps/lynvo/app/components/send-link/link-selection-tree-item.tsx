@@ -13,7 +13,7 @@ import { FilenameText } from "~/components/filename-text"
 import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeKey,
-  getMediaNodeTarget,
+  getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import { cn } from "~/lib/utils"
 import { formatItemCount } from "~/lib/format-item-count"
@@ -79,15 +79,20 @@ export const LinkSelectionTreeItem = ({
 
   const handleRowAction = async () => {
     if (canExpand) {
-      setIsExpanded((current) => !current)
+      setIsExpanded((currentValue) => !currentValue)
       return
     }
     if (!canResolve || isResolving || !onExpandFolder) {
       return
     }
 
+    const linkTarget = getMediaNodeTargetOrUndefined(link)
+    if (linkTarget === undefined) {
+      return
+    }
+
     setIsResolving(true)
-    const didResolve = await onExpandFolder(linkId, getMediaNodeTarget(link))
+    const didResolve = await onExpandFolder(linkId, linkTarget)
     setIsResolving(false)
     if (didResolve) {
       setIsExpanded(true)

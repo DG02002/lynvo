@@ -30,7 +30,6 @@ import { FilenameText } from "~/components/filename-text"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
   getMediaNodeInteractionState,
-  getMediaNodeTarget,
   getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import {
@@ -658,12 +657,15 @@ export const SaveListBrowser = ({
               const isRootItemNew =
                 !isExtractionIncomplete && interactionState.isNew
 
+              const directLinkTarget = directLink
+                ? getMediaNodeTargetOrUndefined(directLink)
+                : undefined
               if (
                 directLink &&
                 isResolvableContainer &&
+                directLinkTarget !== undefined &&
                 !isExtractionIncomplete
               ) {
-                const directLinkTarget = getMediaNodeTarget(directLink)
                 return (
                   <ResolvableContainerRow
                     key={itemKey}
@@ -720,19 +722,20 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          const directLinkTarget =
-                            getMediaNodeTarget(directLink)
                           void actions
                             .play(directLink)
                             .then((result) =>
                               markAfterAcceptedHandoff({
                                 ...result,
                                 itemLabel: directLink.label,
-                                markOpened: () =>
-                                  actions.markOpened(
-                                    item.url,
-                                    directLinkTarget
-                                  ),
+                                markOpened: () => {
+                                  if (directLinkTarget !== undefined) {
+                                    actions.markOpened(
+                                      item.url,
+                                      directLinkTarget
+                                    )
+                                  }
+                                },
                               })
                             )
                             .catch(console.error)

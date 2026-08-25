@@ -60,7 +60,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
     const onSelectedItemUrlChange = vi.fn()
@@ -172,7 +172,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -206,6 +206,46 @@ describe("SaveListBrowser", () => {
     )
   })
 
+  it("renders a target-less mirror resolvable root without crashing the list", () => {
+    const item: LinkViewItem = {
+      id: "target-less-resolvable-item",
+      url: "https://source.example/target-less-resolvable",
+      timestamp: 1,
+      title: "Target-less Resolvable",
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Gamma" },
+        extraction: {
+          extractedLinks: [
+            {
+              nodeKey: "0:resolvable:target-less",
+              label: "Target-less Container",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "mirrors",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(screen.getByText("Target-less Container")).toBeVisible()
+    expect(screen.getByText("Source Gamma")).toBeVisible()
+  })
+
   it("registers navigation wheel events as non-passive", () => {
     const item: LinkViewItem = {
       id: "wheel-listener-item",
@@ -225,7 +265,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
     const addEventListenerSpy = vi.spyOn(
@@ -297,7 +337,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -367,7 +407,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -433,7 +473,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -639,7 +679,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -689,7 +729,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Google Drive" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -726,7 +766,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [directLink.url], openedIds: [] },
+        playback: { openedUrls: [directLink.url] },
       },
     }
 
@@ -768,7 +808,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -807,7 +847,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -859,7 +899,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -936,7 +976,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: {},
         extraction: { extractedLinks: [] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
       extractionStatus: { state: "running" },
     }

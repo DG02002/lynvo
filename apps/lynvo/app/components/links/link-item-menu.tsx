@@ -22,7 +22,7 @@ import {
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/ui/spinner"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
+import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
@@ -144,7 +144,11 @@ const LinkItemMenuContent = ({
                         <DropdownMenuItem
                           key={player.id}
                           onClick={async () => {
-                            const playableUrl = getMediaNodeTarget(playableLink)
+                            const playableUrl =
+                              getMediaNodeTargetOrUndefined(playableLink)
+                            if (playableUrl === undefined) {
+                              return
+                            }
                             const result = await openInSpecificPlayer(
                               playableUrl,
                               player
