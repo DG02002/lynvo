@@ -1,4 +1,5 @@
 import { useTheme } from "next-themes"
+import { Switch } from "~/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -22,6 +23,10 @@ import {
   useShouldUseLibraryMediaView,
 } from "./library-media-view-preference"
 import { LibraryMediaViewSelector } from "./library-media-view-selector"
+import {
+  setShouldAutoSaveAllLinks,
+  useShouldAutoSaveAllLinks,
+} from "./auto-save-links-preference"
 
 const appearanceOptions = [
   { value: "system", label: "System" },
@@ -31,6 +36,7 @@ const appearanceOptions = [
 
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
 
   const handleAppearanceChange = (value: string | null) => {
@@ -63,6 +69,17 @@ export const GeneralSettings = () => {
               </SelectGroup>
             </SelectContent>
           </Select>
+        </SettingsRow>
+        <SettingsRow>
+          <SettingsRowInfo
+            label="Save all links automatically"
+            description="Save every extracted link without a selection step."
+          />
+          <Switch
+            checked={shouldAutoSaveAllLinks}
+            onCheckedChange={setShouldAutoSaveAllLinks}
+            aria-label="Save all links automatically"
+          />
         </SettingsRow>
         <SettingsRow className="items-start flex-col gap-4">
           <SettingsRowInfo

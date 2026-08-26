@@ -1,8 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { TitleGroupMenu } from "~/features/links/components/title-group-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
+import { setShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
+import { createMemoryStorage } from "../memory-storage"
+
+beforeEach(() => {
+  vi.stubGlobal("localStorage", createMemoryStorage())
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 const createSavedLink = (id: string): LinkListItem => ({
   kind: "saved",
@@ -81,6 +91,7 @@ describe("TitleGroupMenu", () => {
   it("uses Refresh for an automatically saved link", async () => {
     const softRefresh = vi.fn()
     const hardRefresh = vi.fn()
+    setShouldAutoSaveAllLinks(true)
     const menu = render(
       <TitleGroupMenu
         group={createGroup()}
