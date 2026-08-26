@@ -180,14 +180,8 @@ export const HybridGroupBrowser = ({
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
 
   return (
-    <section
-      className="flex h-svh flex-col overflow-hidden bg-background"
-      data-layout-guide-target="list-view"
-    >
-      <header
-        className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:hidden"
-        data-layout-guide-target="list-header"
-      >
+    <section className="flex h-svh flex-col overflow-hidden bg-background">
+      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:hidden">
         <Button
           variant="ghost"
           onClick={onExit}
@@ -222,10 +216,7 @@ export const HybridGroupBrowser = ({
             Back
           </Button>
         </div>
-        <div
-          className="flex items-start gap-4 border-b p-4 md:block md:border-b-0 md:border-r md:p-6"
-          data-layout-guide-target="list-sidebar"
-        >
+        <div className="flex items-start gap-4 border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
           <div className="w-24 shrink-0 md:w-full">
             <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
               {imagePath ? (
@@ -271,10 +262,7 @@ export const HybridGroupBrowser = ({
             )}
           </div>
         </div>
-        <div
-          className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain"
-          data-layout-guide-target="list-content"
-        >
+        <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
             {group.items.map((item) => (
               <HybridGroupItemRow

@@ -260,14 +260,8 @@ const FinderEmptyState = ({
   onExit,
   contentRef,
 }: FinderEmptyStateProps) => (
-  <section
-    className="flex h-svh flex-col overflow-hidden bg-background"
-    data-layout-guide-target="list-view"
-  >
-    <header
-      className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
-      data-layout-guide-target="list-header"
-    >
+  <section className="flex h-svh flex-col overflow-hidden bg-background">
+    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
       <FinderBackButton onExit={onExit} />
       <h1
         aria-label={getItemTitle(item)}
@@ -293,7 +287,6 @@ const FinderEmptyState = ({
     <div
       ref={contentRef}
       className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-x-hidden px-6 py-10 text-center"
-      data-layout-guide-target="list-content"
     >
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
@@ -346,14 +339,8 @@ const FinderBrowser = ({
   }
 
   return (
-    <section
-      className="flex h-svh flex-col overflow-hidden bg-background"
-      data-layout-guide-target="list-view"
-    >
-      <header
-        className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0"
-        data-layout-guide-target="list-header"
-      >
+    <section className="flex h-svh flex-col overflow-hidden bg-background">
+      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
         <FinderBackButton onExit={onExit} />
         <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -380,10 +367,7 @@ const FinderBrowser = ({
       </header>
 
       <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
-        <aside
-          className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3"
-          data-layout-guide-target="list-sidebar"
-        >
+        <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
           <MobileFolderTreeToggle
             currentFolderLabel={currentFolderLabel}
             isOpen={isMobileFolderTreeOpen}
@@ -420,7 +404,6 @@ const FinderBrowser = ({
         <div
           ref={contentRef}
           className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain"
-          data-layout-guide-target="list-content"
         >
           {currentLinks.map((link) => {
             const linkKey = getLinkKey(link)
@@ -681,10 +664,7 @@ export const SaveListBrowser = ({
   const groupedItems = groupSaveListItems(items, currentTimeMs)
 
   return (
-    <section
-      className={SAVE_LIST_SECTION_STACK_CLASS}
-      data-layout-guide-target="list-view"
-    >
+    <section className={SAVE_LIST_SECTION_STACK_CLASS}>
       {groupedItems.map((group) => (
         <SaveDateGroupSection key={group.key} label={group.label}>
           <div className="stagger-children flex flex-col divide-y divide-border/70">
@@ -732,7 +712,6 @@ export const SaveListBrowser = ({
                     "group relative flex items-stretch",
                     SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
                   )}
-                  data-layout-guide-target="list-row"
                   data-highlighted={
                     highlightedId === item.id ? true : undefined
                   }

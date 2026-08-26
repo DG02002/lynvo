@@ -9,7 +9,7 @@ import { getUserSession, responseWithSession } from "~/lib/auth"
 import "~/global"
 import { getServerEnv } from "~/lib/env.server"
 import { getThemeFromCookieHeader } from "~/lib/theme"
-import { getLibraryMediaViewFromCookieHeader } from "~/features/site/settings/library-media-view-preference"
+import { getMediaViewFromCookieHeader } from "~/features/site/settings/media-view-preference"
 import { AppProviders } from "./root/app-providers"
 import { shouldRevalidateRoot } from "./root/root-revalidation"
 export { ErrorBoundary } from "./root/error-boundary"
@@ -61,7 +61,7 @@ export const loader = async (args: Route.LoaderArgs) => {
     csrfToken,
     buildTime: __BUILD_TIME__,
     initialTheme: getThemeFromCookieHeader(cookieHeader),
-    mediaView: getLibraryMediaViewFromCookieHeader(cookieHeader) ?? "library",
+    mediaView: getMediaViewFromCookieHeader(cookieHeader) ?? "hybrid",
   }
 
   requestLogger.set({

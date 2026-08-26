@@ -13,7 +13,6 @@ import {
   settleSavedLinkExtraction,
 } from "./d1/link-extraction-queue"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
-import { processMediaMetadataMaintenance } from "./media-metadata/media-metadata-coordinator"
 
 const savedExtractionIdentitySchema = Schema.Struct({
   pluginServerId: Schema.optional(Schema.String),
@@ -38,17 +37,6 @@ const notifySafely = async (
     await notifyAccountDataChanged(env, userId, dataVersion)
   } catch (error) {
     console.error("Unable to notify saved link extraction change", error)
-  }
-}
-
-const processMetadataSafely = async (
-  env: Env,
-  database: D1Database
-): Promise<void> => {
-  try {
-    await processMediaMetadataMaintenance(env, database)
-  } catch (error) {
-    console.error("Unable to process media metadata after extraction", error)
   }
 }
 
@@ -105,9 +93,6 @@ export const processSavedLinkExtraction = async (
       now: Date.now(),
     })
     await notifySafely(env, claim.userId, settled.dataVersion)
-    if (settled.success) {
-      await processMetadataSafely(env, database)
-    }
   } catch (error) {
     const extractionError =
       error instanceof Error ? error : new Error("Unable to load links.")

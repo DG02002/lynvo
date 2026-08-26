@@ -1,7 +1,7 @@
 import {
   getMediaFilenameMatchingText,
   parseMediaFilename,
-} from "../title-grouping/filename-media-parser"
+} from "./media-filename-parser"
 
 interface MediaArtworkRequestOptions {
   readonly isContainer?: boolean

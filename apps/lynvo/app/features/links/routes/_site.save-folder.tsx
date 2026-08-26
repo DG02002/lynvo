@@ -13,7 +13,6 @@ const SaveFolderRoute = (_: Route.ComponentProps) => {
     <SaveList
       initialItems={toInitialSaveItems(loaderData.savedLinks)}
       initialDataVersion={loaderData.dataVersion}
-      initialTitleProjection={loaderData.titleProjection}
     />
   )
 }

@@ -108,7 +108,6 @@ const HybridSaveCard = ({
   return (
     <article
       data-testid="hybrid-save-card"
-      data-layout-guide-target="library-card"
       data-highlighted={isHighlighted ? true : undefined}
       data-extraction-state={extractionState}
       className="group relative w-full animate-in fade-in fill-mode-both slide-in-from-bottom-4 zoom-in-95 duration-500 motion-reduce:animate-none"
@@ -241,18 +240,8 @@ export const HybridSaveGrid = ({
   return (
     <div className={SAVE_LIST_SECTION_STACK_CLASS}>
       {groupedSections.map((section) => (
-        <SaveDateGroupSection
-          key={section.key}
-          label={section.label}
-          sectionDataAttributes={{
-            "data-layout": "poster-grid",
-            "data-layout-guide-target": "library-section",
-          }}
-        >
-          <div
-            className={HYBRID_CARD_GRID_CLASS}
-            data-layout-guide-target="library-grid"
-          >
+        <SaveDateGroupSection key={section.key} label={section.label}>
+          <div className={HYBRID_CARD_GRID_CLASS}>
             {section.groups.map((group) => (
               <HybridSaveCard
                 key={group.key}

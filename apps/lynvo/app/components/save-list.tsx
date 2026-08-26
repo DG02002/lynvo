@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
-import { DevDemoDataControls } from "~/components/dev-demo-data-controls"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
 import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
@@ -13,11 +12,8 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/spinner"
-import { LibrarySaveList } from "~/features/links/components/library-save-list"
-import { useTitleGroups } from "~/features/links/title-grouping/use-title-groups"
 import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
-import { useLibraryMediaView } from "~/features/site/settings/library-media-view-preference"
-import { getDemoSavedLinkSeeds } from "~/features/links/dev-demo-data"
+import { useMediaView } from "~/features/site/settings/media-view-preference"
 import {
   shouldHideSaveInput,
   useIsTvBroAndroidTv,
@@ -29,25 +25,20 @@ declare global {
   interface SaveListProps {
     readonly initialItems?: LinkViewItem[]
     readonly initialDataVersion?: number
-    readonly initialTitleProjection?: TitleProjection
   }
 }
 
-const SaveList = ({
-  initialItems,
-  initialDataVersion,
-  initialTitleProjection,
-}: SaveListProps) => {
+const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
   const isTvBroAndroidTv = useIsTvBroAndroidTv()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
-  const mediaView = useLibraryMediaView()
+  const mediaView = useMediaView()
   const [searchParams, setSearchParams] = useSearchParams()
   const isSaveInputHidden = shouldHideSaveInput(
     isTvBroAndroidTv,
     shouldHideTvBroSaveInput
   )
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
-  const { links, actions, isLoading, isHydrating, dataVersion } = useLinks({
+  const { links, actions, isLoading, isHydrating } = useLinks({
     initialItems,
     initialDataVersion,
     hasInitialSnapshot: initialItems !== undefined,
@@ -68,11 +59,6 @@ const SaveList = ({
     setHighlightedId,
   })
 
-  const titleGroupsState = useTitleGroups({
-    enabled: mediaView === "library" && !isFolderRoute,
-    dataVersion,
-    initialProjection: initialTitleProjection,
-  })
   const isHybridMediaView = mediaView === "hybrid"
   const hybridGroupKey = isHybridMediaView ? searchParams.get("group") : null
   const hybridCardGroups = useMemo(
@@ -99,19 +85,6 @@ const SaveList = ({
     () => new Set(links.map((link) => link.url)),
     [links]
   )
-  const handleLoadDemoLinks = async () => {
-    for (const demoLink of getDemoSavedLinkSeeds()) {
-      const savedLinkId = await actions.add(
-        demoLink.url,
-        demoLink.meta,
-        demoLink.extractedLinks
-      )
-      if (!savedLinkId) {
-        throw new Error(`Unable to save demo link ${demoLink.url}`)
-      }
-    }
-  }
-
   if (isImmersiveRoute && isPending) {
     return (
       <div
@@ -132,10 +105,9 @@ const SaveList = ({
           ? "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background"
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
-      data-layout-guide-target="save-frame"
     >
       {!isImmersiveRoute && !isSaveInputHidden && (
-        <div className="w-full" data-layout-guide-target="save-input">
+        <div className="w-full">
           <LinkInputSection
             url={input.url}
             setUrl={input.setUrl}
@@ -148,22 +120,9 @@ const SaveList = ({
           />
         </div>
       )}
-      {import.meta.env.DEV && !isImmersiveRoute && (
-        <DevDemoDataControls onLoad={handleLoadDemoLinks} />
-      )}
 
-      <div className="w-full" data-layout-guide-target="save-content">
-        {mediaView === "library" && !isFolderRoute ? (
-          <LibrarySaveList
-            items={links}
-            isPending={isPending}
-            isLoading={titleGroupsState.isLoading}
-            projection={titleGroupsState.projection}
-            error={titleGroupsState.error}
-            onRetry={titleGroupsState.retry}
-            actions={linkItemActions}
-          />
-        ) : isGroupRoute && openHybridGroup ? (
+      <div className="w-full">
+        {isGroupRoute && openHybridGroup ? (
           <HybridGroupBrowser
             group={openHybridGroup}
             actions={linkItemActions}

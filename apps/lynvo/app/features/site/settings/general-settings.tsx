@@ -18,11 +18,8 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import {
-  setLibraryMediaView,
-  useLibraryMediaView,
-} from "./library-media-view-preference"
-import { LibraryMediaViewSelector } from "./library-media-view-selector"
+import { setMediaView, useMediaView } from "./media-view-preference"
+import { MediaViewSelector } from "./media-view-selector"
 import {
   setShouldAutoSaveAllLinks,
   useShouldAutoSaveAllLinks,
@@ -37,7 +34,7 @@ const appearanceOptions = [
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
-  const mediaView = useLibraryMediaView()
+  const mediaView = useMediaView()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -84,13 +81,10 @@ export const GeneralSettings = () => {
         <SettingsRow className="items-start flex-col gap-4">
           <SettingsRowInfo
             className="w-full pr-0"
-            label="Library UI mode"
+            label="Saved links view"
             description="Choose how saved links appear on the Save page."
           />
-          <LibraryMediaViewSelector
-            value={mediaView}
-            onValueChange={setLibraryMediaView}
-          />
+          <MediaViewSelector value={mediaView} onValueChange={setMediaView} />
         </SettingsRow>
       </SettingsList>
     </SettingsPanel>

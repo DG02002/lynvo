@@ -106,14 +106,14 @@ export const SaveListEmptyState = () => (
   <SaveListState
     title="No saved links yet"
     titleId="save-list-empty-title"
-    description="Save a movie, show, or folder to start building your library."
+    description="Save a movie, show, or folder to see it here."
     icon={Archive04Icon}
   />
 )
 
 export const SaveListErrorState = ({ onRetry }: SaveListErrorStateProps) => (
   <SaveListState
-    title="Library temporarily unavailable"
+    title="Saved links temporarily unavailable"
     titleId="save-list-error-title"
     description="Your saved links are safe. Check your connection or try again in a moment."
     icon={CloudOffIcon}
@@ -137,7 +137,7 @@ export const SaveListStaleState = ({ onRetry }: SaveListStaleStateProps) => (
         aria-hidden="true"
       />
       <span>
-        Showing your last saved library. We’ll refresh when the connection is
+        Showing your last saved links. We’ll refresh when the connection is
         restored.
       </span>
     </p>

@@ -13,7 +13,6 @@ export const LINKS_REFETCH_DEBOUNCE_MS = 50
 export const LINKS_OFFLINE_POLL_INTERVAL_MS = 25_000
 export const SAVE_LIST_OLDER_AFTER_DAY_COUNT = 7
 export const DATA_VERSION_RESPONSE_HEADER = "X-Lynvo-Data-Version"
-export const TITLE_GROUPS_API_TIMEOUT_MS = 15_000
 export const MEDIA_ARTWORK_API_TIMEOUT_MS = 15_000
 export const MEDIA_ARTWORK_BATCH_SIZE = 12
 export const MEDIA_ARTWORK_FLUSH_DELAY_MS = 150
@@ -27,7 +26,6 @@ export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
 export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
 export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
-export const TITLE_GROUP_CARD_SHIMMER_DURATION_MS = 1_800
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
 export const EXTRACTION_STATUS_MESSAGES = [
   "Getting link info…",
@@ -43,9 +41,9 @@ export const EXTRACTION_STATUS_MESSAGES = [
   "Doing a little link detective work…",
   "Giving the metadata a gentle nudge…",
   "Putting the pieces together…",
-  "Making everything library-ready…",
+  "Finishing link details…",
   "Polishing the final details…",
-  "Teaching the library a new trick…",
+  "Wrapping up link extraction…",
 ] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160

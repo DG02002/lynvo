@@ -152,9 +152,9 @@ export const LicensesContent = () => (
         TMDB through Lynvo.
       </p>
       <p>
-        The current Lynvo implementation marks TMDB metadata cache entries as
-        stale after 180 days. Lynvo may retain title metadata in the media
-        library until the related title group or account data is deleted.
+        The current Lynvo implementation resolves TMDB artwork on demand and
+        keeps returned image paths in browser memory while the page is open.
+        Lynvo does not store TMDB metadata or image files in account records.
       </p>
       <p>
         Read the{" "}

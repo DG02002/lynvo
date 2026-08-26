@@ -1,8 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReactNode } from "react"
 import { SiteLayoutContent } from "~/features/site/routes/_site"
-import { setShouldShowLayoutGuide } from "~/features/site/settings/layout-guide-preference"
 import { createMemoryStorage } from "../memory-storage"
 
 const Header = ({ showSaveAction }: { showSaveAction: boolean }) => (
@@ -10,12 +9,6 @@ const Header = ({ showSaveAction }: { showSaveAction: boolean }) => (
 )
 const Footer = () => <footer data-testid="site-footer" />
 const EmptyComponent = () => null
-
-const TITLE_DETAIL_PATHS = [
-  "/save/title/group-id",
-  "/save/movie/group-id",
-  "/save/show/group-id",
-]
 
 const renderLayout = (pathname: string, content: ReactNode) =>
   render(
@@ -33,12 +26,10 @@ const renderLayout = (pathname: string, content: ReactNode) =>
 describe("SiteLayout", () => {
   beforeEach(() => {
     vi.stubGlobal("localStorage", createMemoryStorage())
-    setShouldShowLayoutGuide(false)
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    setShouldShowLayoutGuide(false)
     vi.unstubAllGlobals()
   })
 
@@ -63,69 +54,13 @@ describe("SiteLayout", () => {
     expect(screen.getByRole("main")).toHaveClass("pt-0")
   })
 
-  it("shows the layout guide across save and full-screen surfaces", () => {
-    setShouldShowLayoutGuide(true)
-    const { unmount } = renderLayout("/save", <div>Save page</div>)
+  it("keeps the site chrome on non-folder routes", () => {
+    renderLayout("/about", <div>About page</div>)
 
-    expect(document.querySelector("[data-layout-guide]")).toHaveAttribute(
-      "data-layout-guide-surface",
-      "save"
+    expect(screen.getByTestId("site-header")).toHaveAttribute(
+      "data-show-save-action",
+      "true"
     )
-
-    unmount()
-    for (const titleDetailPath of TITLE_DETAIL_PATHS) {
-      const detailView = renderLayout(titleDetailPath, <div>Title page</div>)
-
-      expect(document.querySelector("[data-layout-guide]")).toHaveAttribute(
-        "data-layout-guide-surface",
-        "fullscreen"
-      )
-      detailView.unmount()
-    }
-  })
-
-  it("hides the site chrome on every title detail route", () => {
-    for (const titleDetailPath of TITLE_DETAIL_PATHS) {
-      const detailView = renderLayout(titleDetailPath, <div>Title page</div>)
-
-      expect(screen.queryByTestId("site-header")).not.toBeInTheDocument()
-      expect(screen.queryByTestId("site-footer")).not.toBeInTheDocument()
-      expect(screen.getByRole("main")).toHaveClass("pt-0")
-      detailView.unmount()
-    }
-  })
-
-  it("keeps the layout guide visible on the saved folder surface", async () => {
-    setShouldShowLayoutGuide(true)
-    const guideRects = new Map([
-      ["list-header", new DOMRect(0, 0, 1024, 64)],
-      ["list-sidebar", new DOMRect(0, 64, 256, 704)],
-      ["list-content", new DOMRect(256, 64, 768, 704)],
-    ])
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-      function () {
-        return (
-          guideRects.get(this.dataset.layoutGuideTarget ?? "") ?? new DOMRect()
-        )
-      }
-    )
-
-    renderLayout(
-      "/save/folder/saved-link-id",
-      <>
-        <header data-layout-guide-target="list-header" />
-        <aside data-layout-guide-target="list-sidebar" />
-        <div data-layout-guide-target="list-content" />
-      </>
-    )
-
-    await waitFor(() =>
-      expect(
-        document.querySelectorAll('[data-layout-guide-line="vertical"]')
-      ).not.toHaveLength(0)
-    )
-    expect(
-      document.querySelectorAll('[data-layout-guide-line="horizontal"]')
-    ).not.toHaveLength(0)
+    expect(screen.getByTestId("site-footer")).toBeInTheDocument()
   })
 })

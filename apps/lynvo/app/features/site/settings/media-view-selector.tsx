@@ -1,30 +1,26 @@
-import {
-  GridViewIcon,
-  Image01Icon,
-  ListViewIcon,
-} from "@hugeicons/core-free-icons"
+import { GridViewIcon, ListViewIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
-interface LibraryMediaViewOption {
-  value: LibraryMediaView
+interface MediaViewOption {
+  value: MediaView
   label: string
   description: string
   icon: IconSvgElement
   isBeta: boolean
 }
 
-interface LibraryMediaViewSelectorProps {
-  value: LibraryMediaView
-  onValueChange: (value: LibraryMediaView) => void
+interface MediaViewSelectorProps {
+  value: MediaView
+  onValueChange: (value: MediaView) => void
 }
 
-interface LibraryViewPreviewProps {
-  view: LibraryMediaView
+interface MediaViewPreviewProps {
+  view: MediaView
 }
 
-const libraryMediaViewOptions: LibraryMediaViewOption[] = [
+const mediaViewOptions: readonly MediaViewOption[] = [
   {
     value: "list",
     label: "List view",
@@ -34,14 +30,7 @@ const libraryMediaViewOptions: LibraryMediaViewOption[] = [
   },
   {
     value: "hybrid",
-    label: "Library Hybrid",
-    description: "List rows with posters and episode art.",
-    icon: Image01Icon,
-    isBeta: true,
-  },
-  {
-    value: "library",
-    label: "Library view",
+    label: "Hybrid view",
     description: "Group movies and shows with artwork.",
     icon: GridViewIcon,
     isBeta: true,
@@ -71,56 +60,24 @@ const ListViewPreview = () => (
 const HybridViewPreview = () => (
   <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
     <span className="h-2 w-16 rounded-full bg-foreground/20" />
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 items-center gap-2 border-b border-border/70">
-        <span className="aspect-2/3 w-5 shrink-0 rounded-sm border border-foreground/15 bg-foreground/15" />
-        <span className="h-1.5 w-2/3 rounded-full bg-foreground/15" />
-      </div>
-      <div className="flex min-h-0 flex-1 items-center gap-2 border-b border-border/70">
-        <span className="aspect-2/3 w-5 shrink-0 rounded-sm border border-foreground/15 bg-foreground/15" />
-        <span className="h-1.5 w-1/2 rounded-full bg-foreground/15" />
-      </div>
-      <div className="flex min-h-0 flex-1 items-center gap-2">
-        <span className="aspect-2/3 w-5 shrink-0 rounded-sm border border-foreground/15 bg-foreground/15" />
-        <span className="h-1.5 w-3/5 rounded-full bg-foreground/15" />
-      </div>
-    </div>
-  </div>
-)
-
-const MediaLibraryViewPreview = () => (
-  <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
-    <span className="h-2 w-16 rounded-full bg-foreground/20" />
     <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
-      <div className="min-w-0">
-        <span className="block aspect-2/3 rounded-lg border border-foreground/15 bg-foreground/10" />
-      </div>
-      <div className="min-w-0">
-        <span className="block aspect-2/3 rounded-lg border border-foreground/15 bg-foreground/10" />
-      </div>
-      <div className="min-w-0">
-        <span className="block aspect-2/3 rounded-lg border border-foreground/15 bg-foreground/10" />
-      </div>
+      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
+      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
+      <span className="min-w-0 rounded-lg border border-foreground/15 bg-foreground/10" />
     </div>
   </div>
 )
 
-const LibraryViewPreview = ({ view }: LibraryViewPreviewProps) =>
-  view === "list" ? (
-    <ListViewPreview />
-  ) : view === "hybrid" ? (
-    <HybridViewPreview />
-  ) : (
-    <MediaLibraryViewPreview />
-  )
+const MediaViewPreview = ({ view }: MediaViewPreviewProps) =>
+  view === "list" ? <ListViewPreview /> : <HybridViewPreview />
 
-export const LibraryMediaViewSelector = ({
+export const MediaViewSelector = ({
   value,
   onValueChange,
-}: LibraryMediaViewSelectorProps) => (
-  <fieldset className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
-    <legend className="sr-only">Library UI mode</legend>
-    {libraryMediaViewOptions.map((option) => {
+}: MediaViewSelectorProps) => (
+  <fieldset className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+    <legend className="sr-only">Saved links view</legend>
+    {mediaViewOptions.map((option) => {
       const isSelected = value === option.value
 
       return (
@@ -136,14 +93,14 @@ export const LibraryMediaViewSelector = ({
           <input
             className="peer sr-only"
             type="radio"
-            name="library-ui-mode"
+            name="media-view"
             value={option.value}
             aria-label={option.label}
             checked={isSelected}
             onChange={() => onValueChange(option.value)}
           />
           <span className="block aspect-video min-h-0 overflow-hidden rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
-            <LibraryViewPreview view={option.value} />
+            <MediaViewPreview view={option.value} />
           </span>
           <span className="flex min-w-0 flex-col gap-1 px-1 pb-1">
             <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">

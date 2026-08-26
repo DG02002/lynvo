@@ -27,13 +27,11 @@ export const SaveDateGroupHeading = ({
 
 interface SaveDateGroupSectionProps {
   readonly label: string
-  readonly sectionDataAttributes?: Readonly<Record<string, string | undefined>>
   readonly children: ReactNode
 }
 
 export const SaveDateGroupSection = ({
   label,
-  sectionDataAttributes,
   children,
 }: SaveDateGroupSectionProps) => {
   const headingId = `save-section-${label.toLowerCase().replaceAll(" ", "-")}`
@@ -42,7 +40,6 @@ export const SaveDateGroupSection = ({
     <section
       aria-labelledby={headingId}
       aria-label={label}
-      {...sectionDataAttributes}
       className={cn(
         "flex flex-col gap-4",
         SAVE_LIST_SECTION_ENTER_ANIMATION_CLASS

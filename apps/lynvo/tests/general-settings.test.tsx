@@ -30,7 +30,7 @@ describe("GeneralSettings", () => {
       [
         {
           id: "root",
-          loader: () => ({ mediaView: "library" }),
+          loader: () => ({ mediaView: "hybrid" }),
           children: [{ path: "/", element: <GeneralSettings /> }],
         },
       ],

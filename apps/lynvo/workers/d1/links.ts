@@ -35,10 +35,6 @@ import {
   requireOwnedSavedLink,
   SAVED_LINK_COLUMNS,
 } from "./saved-link-storage"
-import {
-  getTitleGroupReconciliationStatements,
-  listAllLinkRowsForProjection,
-} from "./title-groups"
 
 export interface SavedLinkRecord {
   id: string
@@ -202,15 +198,6 @@ export const createOrUpdateSavedLink = async (
       },
       input.now
     )
-    const projectionRows = (
-      await listAllLinkRowsForProjection(database, userId)
-    ).map((row) => (row.id === existingRow.id ? nextRow : row))
-    const titleGroupStatements = await getTitleGroupReconciliationStatements(
-      database,
-      userId,
-      projectionRows,
-      input.now
-    )
     const { dataVersion } = await executeOwnedWrite(database, userId, [
       ...preparation.statements,
       database
@@ -236,7 +223,6 @@ export const createOrUpdateSavedLink = async (
         command: "create-or-update",
         now: input.now,
       }),
-      ...titleGroupStatements,
     ])
     return { id: existingRow.id, replayed: false, dataVersion }
   }
@@ -297,16 +283,6 @@ export const createOrUpdateSavedLink = async (
     },
     input.now
   )
-  const projectionRows = (
-    await listAllLinkRowsForProjection(database, userId)
-  ).filter((row) => row.id !== oldestRow?.id)
-  projectionRows.push(newRow)
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    projectionRows,
-    input.now
-  )
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     ...(oldestRow
@@ -341,7 +317,6 @@ export const createOrUpdateSavedLink = async (
       command: "create-or-update",
       now: input.now,
     }),
-    ...titleGroupStatements,
   ])
   return { id: newRow.id, replayed: false, dataVersion }
 }
@@ -388,15 +363,6 @@ export const updateSavedLinkMeta = async (
     },
     input.now
   )
-  const projectionRows = (
-    await listAllLinkRowsForProjection(database, userId)
-  ).map((row) => (row.id === existingRow.id ? nextRow : row))
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    projectionRows,
-    input.now
-  )
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database
@@ -410,7 +376,6 @@ export const updateSavedLinkMeta = async (
       command: "update-meta",
       now: input.now,
     }),
-    ...titleGroupStatements,
   ])
   return { success: true, replayed: false, dataVersion }
 }
@@ -518,15 +483,6 @@ export const applySavedLinkMetadataOperation = async (
     },
     input.now
   )
-  const projectionRows = (
-    await listAllLinkRowsForProjection(database, userId)
-  ).map((row) => (row.id === existingRow.id ? nextRow : row))
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    projectionRows,
-    input.now
-  )
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database
@@ -550,7 +506,6 @@ export const applySavedLinkMetadataOperation = async (
       command: "apply-metadata-operation",
       now: input.now,
     }),
-    ...titleGroupStatements,
   ])
   return { success: true, replayed: false, dataVersion }
 }
@@ -573,20 +528,10 @@ export const deleteSavedLinkById = async (
     },
     input.now
   )
-  const projectionRows = (
-    await listAllLinkRowsForProjection(database, userId)
-  ).filter((row) => row.id !== existingRow.id)
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    projectionRows,
-    input.now
-  )
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
     ...ledgerMutation.statements,
-    ...titleGroupStatements,
   ])
   return { success: true, replayed: false, dataVersion }
 }
@@ -616,17 +561,10 @@ export const clearSavedLinks = async (
     },
     input.now
   )
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    [],
-    input.now
-  )
   const { dataVersion } = await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
     ...ledgerMutation.statements,
-    ...titleGroupStatements,
   ])
   return { success: true, deletedLinks: savedLinkCount, dataVersion }
 }
@@ -664,23 +602,12 @@ export const deleteExpiredLinksForUser = async (
     },
     now
   )
-  const expiredIds = new Set(results.map((row) => row.id))
-  const projectionRows = (
-    await listAllLinkRowsForProjection(database, userId)
-  ).filter((row) => !expiredIds.has(row.id))
-  const titleGroupStatements = await getTitleGroupReconciliationStatements(
-    database,
-    userId,
-    projectionRows,
-    now
-  )
   await executeOwnedWrite(database, userId, [
     ...preparation.statements,
     database
       .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
       .bind(...results.map((row) => row.id)),
     ...ledgerMutation.statements,
-    ...titleGroupStatements,
   ])
   return results.length
 }
@@ -720,49 +647,30 @@ export const sweepExpiredLinks = async (
       )
     }
     const statements: D1PreparedStatement[] = []
-    const titleGroupStatements: D1PreparedStatement[] = []
     const dataVersionStatements: D1PreparedStatement[] = []
     const expiredUsers = [...bytesByUser].map(
       ([expiredUserId, expiredBytes]) => ({ expiredUserId, expiredBytes })
     )
     const preparations = await Promise.all(
       expiredUsers.map(async ({ expiredUserId, expiredBytes }) => {
-        const expiredIds = new Set<string>()
-        for (const row of results) {
-          if (row.user_id === expiredUserId) {
-            expiredIds.add(row.id)
-          }
-        }
-        const [preparation, projectionRows] = await Promise.all([
-          ensureStorageLedger(database, expiredUserId, now),
-          listAllLinkRowsForProjection(database, expiredUserId).then((rows) =>
-            rows.filter((row) => !expiredIds.has(row.id))
-          ),
-        ])
-        const reconciliationStatements =
-          await getTitleGroupReconciliationStatements(
-            database,
-            expiredUserId,
-            projectionRows,
-            now
-          )
+        const preparation = await ensureStorageLedger(
+          database,
+          expiredUserId,
+          now
+        )
         return {
           expiredBytes,
-          expiredLinkCount: expiredIds.size,
+          expiredLinkCount: results.filter(
+            (row) => row.user_id === expiredUserId
+          ).length,
           expiredUserId,
           preparation,
-          reconciliationStatements,
         }
       })
     )
     for (const preparedUser of preparations) {
-      const {
-        expiredBytes,
-        expiredLinkCount,
-        expiredUserId,
-        preparation,
-        reconciliationStatements,
-      } = preparedUser
+      const { expiredBytes, expiredLinkCount, expiredUserId, preparation } =
+        preparedUser
       statements.push(...preparation.statements)
       const ledgerMutation = applyStorageMutation(
         database,
@@ -776,7 +684,6 @@ export const sweepExpiredLinks = async (
         now
       )
       statements.push(...ledgerMutation.statements)
-      titleGroupStatements.push(...reconciliationStatements)
       dataVersionStatements.push(
         createDataVersionBumpStatement(database, expiredUserId)
       )
@@ -787,7 +694,7 @@ export const sweepExpiredLinks = async (
         .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
         .bind(...results.map((row) => row.id))
     )
-    statements.push(...titleGroupStatements, ...dataVersionStatements)
+    statements.push(...dataVersionStatements)
     await database.batch(statements)
     if (!continued) {
       break

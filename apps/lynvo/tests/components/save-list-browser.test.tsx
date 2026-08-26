@@ -112,7 +112,7 @@ describe("SaveListBrowser", () => {
     )
 
     const contentList = document.querySelector<HTMLElement>(
-      '[data-layout-guide-target="list-content"]'
+      ".overscroll-y-contain"
     )
     expect(contentList).toBeInTheDocument()
     expect(contentList).toHaveClass("overflow-x-hidden")
@@ -606,8 +606,7 @@ describe("SaveListBrowser", () => {
     expect(screen.getByText("1.4 GB")).toBeVisible()
     const mirrorGroup = screen
       .getByText("Play from Source Route Alpha")
-      .closest('[data-layout-guide-target="list-row"]')
-      ?.parentElement?.parentElement
+      .closest("[data-container-children]")
     expect(mirrorGroup).toHaveClass("bg-muted/60", "ps-12", "md:ps-14")
     const connectors = mirrorGroup?.querySelectorAll(
       "[data-container-connector]"

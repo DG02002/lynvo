@@ -82,7 +82,6 @@ interface MediaListRowProps {
   readonly buttonClassName?: string
   readonly overlayClassName?: string
   readonly buttonDataAttributes?: Readonly<Record<string, string | undefined>>
-  readonly dataLayoutGuideTarget?: string
   readonly shouldStackIconOnMobile?: boolean
 }
 
@@ -100,7 +99,6 @@ export const MediaListRow = ({
   buttonClassName,
   overlayClassName,
   buttonDataAttributes,
-  dataLayoutGuideTarget = "list-row",
   shouldStackIconOnMobile = false,
 }: MediaListRowProps) => (
   <div
@@ -109,7 +107,6 @@ export const MediaListRow = ({
       SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
       wrapperClassName
     )}
-    data-layout-guide-target={dataLayoutGuideTarget}
   >
     <button
       type="button"

@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  getDemoLazyFolderChildren,
-  getDemoMirrorLinks,
-  getDemoSavedLinkSeeds,
-} from "~/features/links/dev-demo-data"
-import { parseMediaFilename } from "~/features/links/title-grouping/filename-media-parser"
+import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
 
 describe("parseMediaFilename", () => {
   it("classifies representative movie filenames", () => {
@@ -96,52 +91,6 @@ describe("parseMediaFilename", () => {
       seasonNumber: 6,
       episodeNumber: 129,
       episodeEnd: 143,
-    })
-  })
-
-  it("keeps TMDB demo titles parseable", () => {
-    const demoSeeds = getDemoSavedLinkSeeds()
-    const loadedFolderEpisode = demoSeeds[1]?.extractedLinks[0]?.children?.[0]
-    const mirrorLink = getDemoMirrorLinks()[0]
-    const lazyFolderChild = getDemoLazyFolderChildren()[0]?.children?.[0]
-
-    expect(parseMediaFilename(demoSeeds[0]?.meta.filename ?? "")).toMatchObject(
-      {
-        kind: "movie",
-        title: "The Dark Knight",
-        year: 2008,
-      }
-    )
-    expect(parseMediaFilename(loadedFolderEpisode?.label ?? "")).toMatchObject({
-      kind: "episode",
-      title: "Stranger Things",
-      seasonNumber: 1,
-      episodeNumber: 1,
-      year: 2016,
-    })
-    expect(
-      parseMediaFilename(demoSeeds[2]?.extractedLinks[0]?.label ?? "")
-    ).toMatchObject({
-      kind: "movie",
-      title: "The Matrix",
-      year: 1999,
-    })
-    expect(
-      parseMediaFilename(demoSeeds[3]?.extractedLinks[0]?.label ?? "")
-    ).toMatchObject({
-      kind: "movie",
-      title: "The Lord of the Rings: The Fellowship of the Ring",
-      year: 2001,
-    })
-    expect(parseMediaFilename(mirrorLink?.label ?? "")).toMatchObject({
-      kind: "movie",
-      title: "The Matrix",
-      year: 1999,
-    })
-    expect(parseMediaFilename(lazyFolderChild?.label ?? "")).toMatchObject({
-      kind: "movie",
-      title: "The Lord of the Rings: The Two Towers",
-      year: 2002,
     })
   })
 

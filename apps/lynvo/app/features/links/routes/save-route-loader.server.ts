@@ -8,7 +8,6 @@ import { getServerEnv } from "~/lib/env.server"
 import { getD1Database } from "../../../../workers/d1/db"
 import { getDataVersion } from "../../../../workers/d1/data-version"
 import { listSavedLinks } from "../../../../workers/d1/links"
-import { listTitleGroups } from "../../../../workers/d1/title-groups"
 import type { Route } from "./+types/_site.save"
 
 export const saveRouteLoader = async (args: Route.LoaderArgs) => {
@@ -26,17 +25,13 @@ export const saveRouteLoader = async (args: Route.LoaderArgs) => {
     )
   }
   const now = Date.now()
-  const [savedLinks, titleProjection] = await Promise.all([
-    listSavedLinks(database, user.sub, now),
-    listTitleGroups(database, user.sub, now),
-  ])
+  const savedLinks = await listSavedLinks(database, user.sub, now)
   const dataVersion = await getDataVersion(database, user.sub)
 
   return responseWithSession(
     {
       user: sessionResult.user,
       savedLinks: savedLinks.results,
-      titleProjection,
       dataVersion,
     },
     sessionResult,

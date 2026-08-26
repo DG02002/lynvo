@@ -52,10 +52,7 @@ import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
-import { processMediaMetadataMaintenance } from "../media-metadata/media-metadata-coordinator"
 import { lookupMediaArtwork } from "../media-metadata/media-artwork-lookup"
-import { getDataVersion } from "./data-version"
-import { getTitleGroupById, listTitleGroups } from "./title-groups"
 import { MEDIA_ARTWORK_REQUEST_BATCH_LIMIT } from "../constants"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
@@ -73,26 +70,6 @@ const safeWaitUntil = (
   } catch {
     // ExecutionContext not available in testing environment; ignore background work
   }
-}
-
-interface TmdbEnvironment {
-  readonly TMDB_API_READ_ACCESS_TOKEN?: string
-}
-
-const triggerMetadataMaintenanceIfConfigured = (
-  context: DataRouteContext,
-  database: D1Database
-): void => {
-  const environmentWithOptionalToken: Env & TmdbEnvironment = context.env
-  if (!environmentWithOptionalToken.TMDB_API_READ_ACCESS_TOKEN?.trim()) {
-    return
-  }
-  safeWaitUntil(
-    context,
-    processMediaMetadataMaintenance(context.env, database).catch((error) => {
-      console.error("media_metadata_maintenance_failed", error)
-    })
-  )
 }
 
 const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
@@ -365,67 +342,6 @@ dataApp.get("/links", async (context) => {
   return context.json({ links: snapshot.results })
 })
 
-dataApp.get("/title-groups", async (context) => {
-  addRequestContext(context, { operation: "data_title_groups_list" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const projection = await listTitleGroups(
-    preparation.database,
-    preparation.session.userId,
-    Date.now()
-  )
-  const hasPendingGroups =
-    projection.dateGroups.some((group) =>
-      group.groups.some((titleGroup) => titleGroup.metadataState === "pending")
-    ) ||
-    projection.unmatchedGroups.some(
-      (titleGroup) => titleGroup.metadataState === "pending"
-    )
-  if (hasPendingGroups) {
-    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
-  }
-  return context.json({
-    ...projection,
-    dataVersion: await getDataVersion(
-      preparation.database,
-      preparation.session.userId
-    ),
-  })
-})
-
-dataApp.get("/title-groups/:titleGroupId", async (context) => {
-  addRequestContext(context, { operation: "data_title_group_read" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const group = await getTitleGroupById(
-    preparation.database,
-    preparation.session.userId,
-    context.req.param("titleGroupId")
-  )
-  if (!group) {
-    return respondDataFailure(
-      context,
-      404,
-      "validation",
-      "Title group not found"
-    )
-  }
-  if (group.metadataState === "pending") {
-    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
-  }
-  return context.json({
-    group,
-    dataVersion: await getDataVersion(
-      preparation.database,
-      preparation.session.userId
-    ),
-  })
-})
-
 dataApp.post("/media-artwork", async (context) => {
   addRequestContext(context, { operation: "data_media_artwork_lookup" })
   const preparation = await beginDataRequest(context, { mutating: true })
@@ -482,8 +398,6 @@ dataApp.post("/links/create-or-update", async (context) => {
       context,
       processSavedLinkExtraction(context.env, preparation.database, result.id)
     )
-  } else {
-    triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   }
   return context.json(result)
 })
@@ -509,7 +423,6 @@ dataApp.post("/links/update-meta", async (context) => {
     preparation.session.userId,
     result.dataVersion
   )
-  triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   return context.json(result)
 })
 
@@ -539,7 +452,6 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
     preparation.session.userId,
     result.dataVersion
   )
-  triggerMetadataMaintenanceIfConfigured(context, preparation.database)
   return context.json(result)
 })
 

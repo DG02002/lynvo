@@ -110,10 +110,10 @@ export const PrivacyPolicyContent = () => (
           markers, and record timestamps
         </li>
         <li>
-          <strong className="text-foreground">Media-library metadata:</strong>{" "}
-          when enabled, TMDB title IDs, titles, years, overviews, and poster,
-          backdrop, and episode image paths associated with title groups and
-          entries
+          <strong className="text-foreground">Optional artwork lookups:</strong>{" "}
+          when enabled, parsed media titles, years, and episode details are sent
+          to TMDB; returned image paths are kept in memory for the current page
+          and are not added to account records
         </li>
         <li>
           <strong className="text-foreground">Session data:</strong> session
@@ -299,11 +299,9 @@ export const PrivacyPolicyContent = () => (
         each saved link can use up to 256 KB.
       </p>
       <p>
-        When TMDB metadata is enabled, Lynvo stores returned title metadata and
-        image paths in the media library and a metadata cache. The current cache
-        freshness window is 180 days. Lynvo stores image paths rather than
-        poster, backdrop, or episode image files. Title-group metadata may
-        remain until you delete the title group or the associated account data.
+        When TMDB artwork is enabled, Lynvo resolves artwork on demand for the
+        current page. Returned image paths are held in browser memory for that
+        page and are not stored in account records.
       </p>
       <ul className="list-disc pl-6">
         <li>

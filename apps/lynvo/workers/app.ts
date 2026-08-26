@@ -51,7 +51,6 @@ import { drainAccountErasures } from "./d1/account-erasure"
 import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
 import { echoDataVersion } from "./d1/version-echo"
 import { processQueuedLinkExtractions } from "./link-extraction-runner"
-import { processMediaMetadataMaintenance } from "./media-metadata/media-metadata-coordinator"
 import {
   CRON_SCHEDULE_DAILY_RETENTION,
   CRON_SCHEDULE_HOURLY_MAINTENANCE,
@@ -680,7 +679,6 @@ const runDailyD1Maintenance = async (
   runD1Maintenance(database, (now) => sweepRetainedLinksJob(database, now))
 
 const runHighFrequencyD1Maintenance = async (
-  environment: Env,
   database: D1Database
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
@@ -690,26 +688,6 @@ const runHighFrequencyD1Maintenance = async (
     runD1Maintenance(database, (now) =>
       cleanupRemoteCommandsJob(database, now)
     ),
-    (async (): Promise<MaintenanceOutcome> => {
-      try {
-        const outcome = await processMediaMetadataMaintenance(
-          environment,
-          database
-        )
-        console.info("media_metadata_maintenance", {
-          operation: "media_metadata_maintenance",
-          disabled: outcome.disabled,
-          enqueued_jobs: outcome.enqueuedJobs,
-          processed_jobs: outcome.processedJobs,
-        })
-        return { kind: "swept" }
-      } catch (error) {
-        console.error("media_metadata_maintenance_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        })
-        return { kind: "unavailable" }
-      }
-    })(),
   ])
 const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
 const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
@@ -980,7 +958,7 @@ export default {
           ? sweepD1AuthData(database)
           : Promise.resolve({ kind: "skipped" as const }),
         database
-          ? runHighFrequencyD1Maintenance(env, database)
+          ? runHighFrequencyD1Maintenance(database)
           : Promise.resolve<MaintenanceOutcome[]>([]),
         database
           ? processQueuedLinkExtractions(env, database)

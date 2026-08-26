@@ -12,7 +12,6 @@ const SaveRoute = () => {
     <SaveList
       initialItems={toInitialSaveItems(loaderData.savedLinks)}
       initialDataVersion={loaderData.dataVersion}
-      initialTitleProjection={loaderData.titleProjection}
     />
   )
 }

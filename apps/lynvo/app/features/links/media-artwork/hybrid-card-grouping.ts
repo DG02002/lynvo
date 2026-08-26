@@ -1,7 +1,7 @@
 import { getLinkViewItemExtractedLinks } from "../link-metadata-accessors"
 import { toLinkViewModel } from "../link-view-models"
 import { getSavedLinkInteractionState } from "../saved-link-interaction"
-import { parseMediaFilename } from "../title-grouping/filename-media-parser"
+import { parseMediaFilename } from "./media-filename-parser"
 import type { ExtractedLink, LinkListItem } from "../types"
 import {
   getSaveDateGroupKey,
