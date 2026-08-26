@@ -5,6 +5,7 @@ import {
   parsePluginServerManifestContract,
   type PluginMetadata,
   type HttpBasicAuth,
+  type ProxyCredential,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { matchUrl } from "../../../lib/plugin-server-utils"
@@ -180,6 +181,12 @@ export const extractFromCustomPluginServer = Effect.fn(
   const basicAuth = manifest?.features.basicAuth
     ? (extractedAuth.basicAuth ?? credentials?.basicAuth)
     : undefined
+  const proxy: ProxyCredential | undefined =
+    manifest &&
+    getLynvoManifestExtension(manifest).proxyProvider === "scrape-do" &&
+    pluginServer.proxyToken
+      ? { provider: "scrape-do", token: pluginServer.proxyToken }
+      : undefined
   const client = createCustomPluginServerClient(pluginServer)
   const resultValue = yield* requestPluginServer(
     () =>
@@ -188,6 +195,7 @@ export const extractFromCustomPluginServer = Effect.fn(
         password: credentials?.password,
         basicAuth,
         pluginId: credentials?.pluginId,
+        proxy,
         requestId,
       }),
     targetUrl

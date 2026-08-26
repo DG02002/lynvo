@@ -110,6 +110,12 @@ export interface ExtractRequest {
   readonly pluginId?: string
   readonly password?: string
   readonly basicAuth?: HttpBasicAuth
+  readonly proxy?: ProxyCredential
+}
+
+export interface ProxyCredential {
+  readonly provider: "scrape-do"
+  readonly token: string
 }
 
 export interface HttpBasicAuth {
@@ -183,6 +189,7 @@ export interface PluginMetadata {
   readonly version?: string
   readonly routesToPluginId?: string
   readonly matchStrategy?: "static" | "probe"
+  readonly usageMultiplier?: number
   readonly hosts: readonly string[]
   readonly matchers?: readonly PluginServerMatcher[]
   readonly credential?: PluginCredential
@@ -196,6 +203,7 @@ export interface PluginCredential {
 
 export interface LynvoManifestExtension {
   readonly plugins?: readonly PluginMetadata[]
+  readonly proxyProvider?: "scrape-do"
 }
 
 export interface ContractIssue {

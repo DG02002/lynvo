@@ -51,6 +51,11 @@ The final URL Lynvo sends to an Android player.
 A link that must be resolved before Lynvo can send a final URL to an Android
 player.
 
+**Media container**:
+A Resolvable link that represents one media item and resolves into one or more
+Playable links, such as 1080p and 2160p variants. It is not a Folder.
+_Avoid_: folder, lazy folder, mirror
+
 **HTTP byte-range support**:
 A link server supports HTTP byte-range requests when it can answer a request
 such as `Range: bytes=0-1` with a partial-content response. The server may not
@@ -80,6 +85,10 @@ A deployed service that runs one or more Plugins and follows the Plugin Server P
 
 **Custom Plugin Server**:
 A Plugin Server connected and managed by a Lynvo user.
+
+**Proxy key**:
+A user-supplied proxy provider token attached to a Custom Plugin Server, so its extractions bill the user's own proxy account instead of the server's shared proxy credits.
+_Avoid_: proxy API key, proxy token (confusable with the Plugin Server's own API key)
 
 **Lynvo Plugin Server**:
 The Plugin Server managed by Lynvo for Lynvo Plugins.

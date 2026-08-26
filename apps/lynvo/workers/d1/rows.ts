@@ -52,6 +52,13 @@ export interface PluginServerRow {
   api_key_nonce: string | null
   api_key_algorithm: "AES-256-GCM" | null
   api_key_version: number | null
+  proxy_token_ciphertext: string | null
+  proxy_token_nonce: string | null
+  proxy_token_algorithm: "AES-256-GCM" | null
+  proxy_token_version: number | null
+  proxy_balance_remaining: number | null
+  proxy_balance_limit: number | null
+  proxy_balance_checked_at: number | null
   credential_status: "pending" | "ready" | "failed"
   credential_generation: number | null
   credential_attempt_id: string | null

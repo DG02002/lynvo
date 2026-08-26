@@ -116,9 +116,7 @@ describe("Usage Read module", () => {
       ],
     })
 
-    await expect(
-      usageRead.read({ lynvoPlugins })
-    ).resolves.toMatchObject({
+    await expect(usageRead.read({ lynvoPlugins })).resolves.toMatchObject({
       lynvo: {
         total: { used: 20, limit: 200 },
         entries: [{ name: "Daily extraction limit", used: 3, limit: 15 }],
@@ -126,23 +124,79 @@ describe("Usage Read module", () => {
       custom: {
         groups: [
           {
+            key: "custom-1",
             serverName: "Custom One",
-            unit: "bytes",
-            period: "monthly",
-            total: { used: 4, limit: 40 },
+            remainingPercent: 90,
             resetsAt: undefined,
-            entries: [{ name: "Transferred bytes", used: 4, limit: 40 }],
-          },
-          {
-            serverName: "Custom One",
-            unit: "operations",
-            period: "daily",
-            total: { used: 2, limit: 20 },
-            resetsAt: "2030-02-03T00:00:00.000Z",
-            entries: [{ name: "Media Plugin", used: 2, limit: 20 }],
+            entries: [
+              { name: "Transferred bytes", used: 4, limit: 40 },
+              { name: "Media Plugin", used: 2, limit: 20 },
+            ],
           },
         ],
         failures: ["Usage for Custom Two couldn’t be loaded."],
+      },
+    })
+  })
+
+  it("drives each Custom Plugin Server bar by its tightest quota", async () => {
+    const usageRead = createUsageReadModule({
+      readLynvo: async () => ({ metrics: [] }),
+      readCustom: async () => [
+        {
+          pluginServerId: "first10",
+          name: "First10 Plugin Server",
+          metrics: [
+            {
+              id: "proxy-credits",
+              label: "Monthly proxy credits",
+              used: 90,
+              limit: 100,
+              unit: "credits",
+              period: "monthly",
+              resetsAt: "2030-03-01T00:00:00.000Z",
+            },
+            {
+              id: "first10-direct-extractions",
+              label: "Monthly direct extractions",
+              used: 50,
+              limit: 500,
+              unit: "extractions",
+              period: "monthly",
+              resetsAt: "2030-03-01T00:00:00.000Z",
+            },
+            {
+              id: "plugin-server-operations",
+              label: "Daily requests",
+              used: 12,
+              limit: 100,
+              unit: "operations",
+              period: "daily",
+              resetsAt: "2030-02-03T00:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    })
+
+    await expect(usageRead.read({ lynvoPlugins: [] })).resolves.toMatchObject({
+      custom: {
+        groups: [
+          {
+            serverName: "First10 Plugin Server",
+            remainingPercent: 10,
+            resetsAt: "2030-03-01T00:00:00.000Z",
+            entries: [
+              { name: "Monthly proxy credits", used: 90, limit: 100 },
+              {
+                name: "Monthly direct extractions",
+                used: 50,
+                limit: 500,
+              },
+              { name: "Daily requests", used: 12, limit: 100 },
+            ],
+          },
+        ],
       },
     })
   })
@@ -155,9 +209,7 @@ describe("Usage Read module", () => {
       },
     })
 
-    await expect(
-      usageRead.read({ lynvoPlugins: [] })
-    ).resolves.toMatchObject({
+    await expect(usageRead.read({ lynvoPlugins: [] })).resolves.toMatchObject({
       lynvo: { entries: [] },
       custom: {
         groups: [],

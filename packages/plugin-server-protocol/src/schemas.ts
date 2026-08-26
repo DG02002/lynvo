@@ -31,8 +31,7 @@ const iconUrlSchema = Schema.String.pipe(
       }
     },
     {
-      message:
-        "Icon URLs must use HTTPS, except on loopback development hosts",
+      message: "Icon URLs must use HTTPS, except on loopback development hosts",
     }
   )
 )
@@ -159,6 +158,9 @@ export const pluginMetadataSchema = Schema.Struct({
   version: Schema.optional(Schema.String),
   routesToPluginId: Schema.optional(Schema.NonEmptyString),
   matchStrategy: Schema.optional(Schema.Literals(["static", "probe"])),
+  usageMultiplier: Schema.optional(
+    Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1)))
+  ),
   hosts: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([]))
   ),
@@ -176,6 +178,7 @@ export const lynvoPluginCatalogSchema = Schema.Struct({
   plugins: Schema.Array(pluginMetadataSchema).pipe(
     Schema.withDecodingDefault(Effect.succeed([]))
   ),
+  proxyProvider: Schema.optional(Schema.Literal("scrape-do")),
 })
 
 const baseNodeFields = {
@@ -275,6 +278,12 @@ export const extractRequestSchema = Schema.Struct({
     Schema.Struct({
       username: Schema.String,
       password: Schema.String,
+    })
+  ),
+  proxy: Schema.optional(
+    Schema.Struct({
+      provider: Schema.Literal("scrape-do"),
+      token: Schema.NonEmptyString,
     })
   ),
 })

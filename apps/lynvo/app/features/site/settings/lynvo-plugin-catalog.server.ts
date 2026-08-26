@@ -60,6 +60,9 @@ export const loadLynvoPlugins = async (
       if (plugin.version) {
         result.version = plugin.version
       }
+      if (plugin.usageMultiplier) {
+        result.usageMultiplier = plugin.usageMultiplier
+      }
       return result
     })
   } catch (error) {

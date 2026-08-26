@@ -16,6 +16,7 @@ import {
   refreshCustomPluginServer,
   registerCustomPluginServer,
 } from "../../services/custom-plugin-server-lifecycle"
+import { saveCustomPluginServerProxyKey } from "../../services/custom-plugin-server-proxy-key"
 
 export const PluginServersHandlers = HttpApiBuilder.group(
   Api,
@@ -116,6 +117,23 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             requestId: requestEvent.requestId,
             user,
           })
+        })
+      )
+      .handle("setProxyKey", ({ params, payload }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          const requestEvent = yield* RequestEventService
+          requestEvent.add({
+            operation: "plugin_server_proxy_key",
+            user_id: user.id,
+            plugin_server_id: params.pluginServerId,
+          })
+          const balance = yield* saveCustomPluginServerProxyKey({
+            pluginServerId: params.pluginServerId,
+            token: payload.token,
+            user,
+          })
+          return { success: true, ...balance }
         })
       )
       .handle("delete", ({ params }) =>

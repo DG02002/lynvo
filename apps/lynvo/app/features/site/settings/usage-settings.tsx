@@ -36,16 +36,13 @@ const formatResetDate = (resetsAt?: string): string | undefined =>
 
 const UsageSummary = ({
   label,
-  total,
+  remainingPercent,
   resetsAt,
 }: {
   label: string
-  total: UsageReadTotal
+  remainingPercent: number
   resetsAt?: string
 }) => {
-  const usedPercent =
-    total.limit > 0 ? Math.min((total.used / total.limit) * 100, 100) : 0
-  const remainingPercent = Math.max(Math.round(100 - usedPercent), 0)
   const resetDate = formatResetDate(resetsAt)
 
   return (
@@ -60,7 +57,7 @@ const UsageSummary = ({
       </div>
       <Progress
         value={remainingPercent}
-        aria-label={`${label} monthly extraction usage remaining`}
+        aria-label={`${label} monthly usage remaining`}
       />
       {resetDate && (
         <span className="text-sm text-muted-foreground">
@@ -70,6 +67,11 @@ const UsageSummary = ({
     </div>
   )
 }
+
+const remainingPercentOfTotal = (total: UsageReadTotal): number =>
+  total.limit > 0
+    ? Math.max(Math.round(100 - (total.used / total.limit) * 100), 0)
+    : 0
 
 const UsageItem = ({
   icon,
@@ -139,7 +141,7 @@ export const UsageSettings = ({
           />
           <UsageSummary
             label="Lynvo Plugin Server"
-            total={snapshot.lynvo.total}
+            remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
             resetsAt={snapshot.lynvo.resetsAt}
           />
           <SettingsList>
@@ -162,13 +164,23 @@ export const UsageSettings = ({
           <SettingsPanel className="gap-4">
             <SectionHeading
               title="Custom Plugin Server usage"
-              description="Each Custom Plugin Server has separate usage limits."
+              description="Each Custom Plugin Server keeps its own monthly usage."
             />
             {snapshot.custom.groups.map((group) => (
               <div key={group.key} className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <PluginIcon
+                    iconUrl={group.iconUrl}
+                    fallback="plugin-server"
+                    className="size-10 shrink-0 text-foreground"
+                  />
+                  <span className="text-base font-normal text-foreground">
+                    {group.serverName}
+                  </span>
+                </div>
                 <UsageSummary
-                  label={`${group.serverName} · ${group.period} ${group.unit}`}
-                  total={group.total}
+                  label={group.serverName}
+                  remainingPercent={group.remainingPercent}
                   resetsAt={group.resetsAt}
                 />
                 <SettingsList>
@@ -177,23 +189,21 @@ export const UsageSettings = ({
                       {...item}
                       key={item.key}
                       hideIcon={item.iconKind === "hidden"}
-                      fallback={
-                        item.iconKind === "plugin-server"
-                          ? "plugin-server"
-                          : "source"
-                      }
+                      fallback="source"
                     />
                   ))}
                 </SettingsList>
               </div>
             ))}
-            <SettingsList>
-              {snapshot.custom.failures.map((failure) => (
-                <SettingsRow key={failure} className="py-2">
-                  <span className="text-sm text-destructive">{failure}</span>
-                </SettingsRow>
-              ))}
-            </SettingsList>
+            {snapshot.custom.failures.length > 0 && (
+              <SettingsList>
+                {snapshot.custom.failures.map((failure) => (
+                  <SettingsRow key={failure} className="py-2">
+                    <span className="text-sm text-destructive">{failure}</span>
+                  </SettingsRow>
+                ))}
+              </SettingsList>
+            )}
           </SettingsPanel>
         )}
       </>

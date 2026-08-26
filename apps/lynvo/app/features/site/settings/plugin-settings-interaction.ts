@@ -28,7 +28,15 @@ export interface CustomPluginServer {
   manifest: string
   enabled: boolean
   verificationStatus: string
+  hasProxyKey: boolean
+  proxyBalanceRemaining?: number | null
+  proxyBalanceLimit?: number | null
   lastManifestRefreshAt?: number | null
+}
+
+export interface ProxyKeyMutationResult {
+  readonly remaining: number | null
+  readonly limit: number | null
 }
 
 export interface CreatePluginDomainInput {
@@ -70,6 +78,10 @@ export interface PluginSettingsCommands {
   readonly refreshPluginServer: (
     pluginServerId: string
   ) => Promise<PluginSettingsMutationResult>
+  readonly setPluginServerProxyKey: (
+    pluginServerId: string,
+    token: string
+  ) => Promise<PluginSettingsMutationResult & ProxyKeyMutationResult>
 }
 
 export interface PluginSettingsOperation {
@@ -131,6 +143,13 @@ const defaultCommands: PluginSettingsCommands = {
   refreshPluginServer: async (pluginServerId) =>
     await Effect.runPromise(
       client.pluginServers.refresh({ params: { pluginServerId } })
+    ),
+  setPluginServerProxyKey: async (pluginServerId, token) =>
+    await Effect.runPromise(
+      client.pluginServers.setProxyKey({
+        params: { pluginServerId },
+        payload: { token },
+      })
     ),
 }
 
@@ -368,6 +387,23 @@ export const usePluginSettingsInteraction = ({
     [commands, run]
   )
 
+  const handleSetPluginServerProxyKey = React.useCallback(
+    async (id: string, token: string) => {
+      const balance = await run(
+        `proxy-key:${id}`,
+        () => commands.setPluginServerProxyKey(id, token),
+        {
+          success:
+            token.trim() === "" ? "Proxy key removed" : "Proxy key saved",
+          failure: "The proxy key couldn’t be saved. Try again.",
+        },
+        "server"
+      )
+      return balance
+    },
+    [commands, run]
+  )
+
   React.useEffect(() => {
     if (!loadData) {
       return
@@ -396,6 +432,7 @@ export const usePluginSettingsInteraction = ({
     handleAddPluginServer,
     handleDeletePluginServer,
     handleRefreshPluginServer,
+    handleSetPluginServerProxyKey,
     handleTogglePluginServer,
   }
 }

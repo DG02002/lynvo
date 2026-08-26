@@ -27,6 +27,9 @@ describe("Plugin settings browser data", () => {
               enabled: false,
               priority: 0,
               verificationStatus: "verified",
+              hasProxyKey: false,
+              proxyBalanceRemaining: null,
+              proxyBalanceLimit: null,
               createdAt: 1,
               updatedAt: 1,
             },
@@ -39,10 +42,7 @@ describe("Plugin settings browser data", () => {
       })
     )
     render(
-      <PluginsSettings
-        lynvoPlugins={null}
-        requestOrigin="https://lynvo.test"
-      />
+      <PluginsSettings lynvoPlugins={null} requestOrigin="https://lynvo.test" />
     )
 
     expect(await screen.findByText("https://plugins.example.com")).toBeVisible()

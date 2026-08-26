@@ -52,7 +52,7 @@ declare global {
     limit: number
     icon?: import("./lib/plugin-icons").PluginIconSource
     iconUrl?: string
-    iconKind: "hidden" | "plugin-server" | "source" | "direct"
+    iconKind: "hidden" | "source" | "direct"
   }
 
   interface UsageReadSection {
@@ -65,9 +65,8 @@ declare global {
   interface UsageReadCustomGroup {
     key: string
     serverName: string
-    unit: string
-    period: UsageMetric["period"]
-    total: UsageReadTotal
+    iconUrl?: string
+    remainingPercent: number
     resetsAt?: string
     entries: readonly UsageReadEntry[]
   }

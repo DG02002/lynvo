@@ -304,6 +304,8 @@ Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Se
 
 `routesToPluginId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
+`usageMultiplier` is optional. Set it to a positive integer when one extraction through this source can consume multiple units of your metered extraction limit (for example `5` when the source requires a headless-browser rendering proxy). Lynvo surfaces this in the Plugin info tooltip so people know the Plugin may use more of their usage allowance. Omit it when an extraction always costs one unit.
+
 `matchers` is optional but recommended. Lynvo uses it to show which Plugin is likely to handle a URL before extraction starts.
 
 `matchStrategy` defaults to `static`. Static Plugins declare `hosts` or

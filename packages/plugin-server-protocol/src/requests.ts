@@ -4,6 +4,7 @@ import type {
   ExtractRequest,
   ExtractedHttpBasicAuth,
   HttpBasicAuth,
+  ProxyCredential,
 } from "./models.js"
 import { ERROR_CODES } from "./models.js"
 
@@ -28,7 +29,8 @@ export const createSourceExtractRequest = (
   sourceUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
-  pluginId?: string
+  pluginId?: string,
+  proxy?: ProxyCredential
 ): ExtractRequest => {
   const input = { kind: "source" as const, sourceUrl }
   const request = { input }
@@ -37,14 +39,15 @@ export const createSourceExtractRequest = (
   const withBasicAuth = basicAuth
     ? { ...withPassword, basicAuth }
     : withPassword
-  return withBasicAuth
+  return proxy ? { ...withBasicAuth, proxy } : withBasicAuth
 }
 
 export const createNodeExtractRequest = (
   nodeUrl: string,
   password?: string,
   basicAuth?: HttpBasicAuth,
-  pluginId?: string
+  pluginId?: string,
+  proxy?: ProxyCredential
 ): ExtractRequest => {
   const input = { kind: "node" as const, nodeUrl }
   const request = { input }
@@ -53,7 +56,7 @@ export const createNodeExtractRequest = (
   const withBasicAuth = basicAuth
     ? { ...withPassword, basicAuth }
     : withPassword
-  return withBasicAuth
+  return proxy ? { ...withBasicAuth, proxy } : withBasicAuth
 }
 
 export const extractHttpBasicAuth = (

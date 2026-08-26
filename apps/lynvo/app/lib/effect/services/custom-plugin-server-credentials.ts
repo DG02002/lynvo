@@ -15,6 +15,10 @@ interface StoredCustomPluginServerCredential {
   readonly apiKeyNonce?: string
   readonly apiKeyAlgorithm?: "AES-256-GCM"
   readonly apiKeyVersion?: number
+  readonly proxyTokenCiphertext?: string | null
+  readonly proxyTokenNonce?: string | null
+  readonly proxyTokenAlgorithm?: "AES-256-GCM" | null
+  readonly proxyTokenVersion?: number | null
 }
 
 const EncryptedResponse = Schema.Struct({
@@ -155,6 +159,50 @@ export const decryptCustomPluginServer = Effect.fn(
   return { ...pluginServer, apiKey: decoded.apiKey }
 })
 
+export const decryptCustomPluginServerProxyToken = Effect.fn(
+  "CustomPluginServerCredentials.decryptCustomPluginServerProxyToken"
+)(function* (
+  environment: Env,
+  userId: string,
+  pluginServer: StoredCustomPluginServerCredential
+): Effect.fn.Return<string | undefined, CredentialVaultError> {
+  if (
+    !pluginServer.proxyTokenCiphertext ||
+    !pluginServer.proxyTokenNonce ||
+    !pluginServer.proxyTokenAlgorithm ||
+    pluginServer.proxyTokenVersion === undefined ||
+    pluginServer.proxyTokenVersion === null
+  ) {
+    return undefined
+  }
+  const decrypted = yield* vaultRequest(
+    environment,
+    userId,
+    pluginServer.id,
+    "/decrypt",
+    {
+      credential: {
+        ciphertext: pluginServer.proxyTokenCiphertext,
+        nonce: pluginServer.proxyTokenNonce,
+        algorithm: pluginServer.proxyTokenAlgorithm,
+        keyVersion: pluginServer.proxyTokenVersion,
+      },
+    }
+  )
+  const decoded = yield* Schema.decodeUnknownEffect(DecryptedResponse)(
+    decrypted
+  ).pipe(
+    Effect.mapError(
+      (cause) =>
+        new CredentialVaultError({
+          message: "External pluginServer credential response is invalid",
+          cause,
+        })
+    )
+  )
+  return decoded.apiKey
+})
+
 export const decryptCustomPluginServers = Effect.fn(
   "CustomPluginServerCredentials.decryptCustomPluginServers"
 )(function* <PluginServer extends StoredCustomPluginServerCredential>(
@@ -165,7 +213,21 @@ export const decryptCustomPluginServers = Effect.fn(
   return yield* Effect.forEach(
     pluginServers,
     (pluginServer) =>
-      decryptCustomPluginServer(environment, userId, pluginServer),
+      Effect.gen(function* () {
+        const decrypted = yield* decryptCustomPluginServer(
+          environment,
+          userId,
+          pluginServer
+        )
+        const proxyToken = yield* decryptCustomPluginServerProxyToken(
+          environment,
+          userId,
+          pluginServer
+        )
+        return proxyToken === undefined
+          ? decrypted
+          : { ...decrypted, proxyToken }
+      }),
     { concurrency: 8 }
   )
 })

@@ -54,6 +54,8 @@ export interface RegisteredPluginServer {
   readonly id: string
   readonly baseUrl: string
   readonly apiKey: string
+  /** Decrypted user proxy key; sent per extraction when the server declares the capability. */
+  readonly proxyToken?: string
   readonly manifest: string
   readonly enabled: boolean
   readonly priority: number

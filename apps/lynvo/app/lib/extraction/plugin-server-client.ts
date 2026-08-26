@@ -13,6 +13,7 @@ import {
   type DiscoverResponse,
   type PluginServerManifest,
   type HttpBasicAuth,
+  type ProxyCredential,
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
@@ -37,6 +38,7 @@ export interface PluginServerRequestOptions extends PluginServerClientOptions {
   pluginId?: string
   password?: string
   basicAuth?: HttpBasicAuth
+  proxy?: ProxyCredential
 }
 
 export interface PluginServerFailureDetails {
@@ -270,13 +272,15 @@ export class PluginServerClient {
             targetUrl,
             options.password,
             options.basicAuth,
-            options.pluginId
+            options.pluginId,
+            options.proxy
           )
         : createNodeExtractRequest(
             targetUrl,
             options.password,
             options.basicAuth,
-            options.pluginId
+            options.pluginId,
+            options.proxy
           )
     const response = await this.request(
       "/extract",
