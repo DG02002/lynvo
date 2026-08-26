@@ -2,7 +2,22 @@ import { describe, expect, it } from "vitest"
 import {
   getMediaArtworkRequest,
   getMediaDisplayTitle,
+  hasEpisodeMarker,
 } from "~/features/links/media-artwork/media-artwork-identity"
+
+describe("Episode marker detection", () => {
+  it("detects episode and episode-range labels", () => {
+    expect(hasEpisodeMarker("Reacher.S01E01.2160p.REMUX.mkv")).toBe(true)
+    expect(hasEpisodeMarker("Show.S01E02-E04.mkv")).toBe(true)
+    expect(hasEpisodeMarker("Episode 02.mkv", "Slow Horses S03")).toBe(true)
+  })
+
+  it("rejects movies, folders, and junk labels", () => {
+    expect(hasEpisodeMarker("The.Matrix.1999.1080p.mkv")).toBe(false)
+    expect(hasEpisodeMarker("Season 2", "Slow Horses")).toBe(false)
+    expect(hasEpisodeMarker("2160p HDR BluRay REMUX H.265")).toBe(false)
+  })
+})
 
 describe("Media artwork identity", () => {
   it("maps movie filenames to movie artwork requests", () => {

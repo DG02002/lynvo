@@ -83,6 +83,7 @@ interface MediaListRowProps {
   readonly overlayClassName?: string
   readonly buttonDataAttributes?: Readonly<Record<string, string | undefined>>
   readonly dataLayoutGuideTarget?: string
+  readonly shouldStackIconOnMobile?: boolean
 }
 
 export const MediaListRow = ({
@@ -100,6 +101,7 @@ export const MediaListRow = ({
   overlayClassName,
   buttonDataAttributes,
   dataLayoutGuideTarget = "list-row",
+  shouldStackIconOnMobile = false,
 }: MediaListRowProps) => (
   <div
     className={cn(
@@ -118,6 +120,8 @@ export const MediaListRow = ({
         !disabled && "hover:bg-muted",
         isOpened && !disabled && "bg-sky-500/15 hover:bg-sky-500/20",
         disabled && "cursor-not-allowed opacity-60",
+        shouldStackIconOnMobile &&
+          "flex-col items-stretch gap-4 md:flex-row md:items-center",
         buttonClassName
       )}
       onClick={onActivate}

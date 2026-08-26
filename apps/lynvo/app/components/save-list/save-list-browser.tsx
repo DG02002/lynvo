@@ -26,7 +26,10 @@ import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badg
 import { NewBadge } from "~/components/save-list/new-badge"
 import { FilenameText } from "~/components/filename-text"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
-import { getMediaDisplayTitle } from "~/features/links/media-artwork/media-artwork-identity"
+import {
+  getMediaDisplayTitle,
+  hasEpisodeMarker,
+} from "~/features/links/media-artwork/media-artwork-identity"
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
@@ -43,6 +46,7 @@ import { useFinderBrowserState } from "./use-finder-browser-state"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
 import { ResolvableContainerRow } from "./resolvable-container-row"
+import { FinderEpisodeStill } from "./finder-episode-still"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
@@ -324,6 +328,10 @@ const FinderBrowser = ({
   const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
   const parentFolderName =
     folderPath.map((folderLevel) => folderLevel.label).join(" ") || undefined
+  const shouldShowEpisodeStills =
+    shouldShowRowPosters &&
+    currentLinks.length > 0 &&
+    currentLinks.every((link) => hasEpisodeMarker(link.label, parentFolderName))
 
   if (rootLinks.length === 0) {
     return (
@@ -426,6 +434,14 @@ const FinderBrowser = ({
                   actions={actions}
                   isResolving={extractingItems.has(linkTarget)}
                   shouldShowRowPosters={shouldShowRowPosters}
+                  episodeStill={
+                    shouldShowEpisodeStills
+                      ? {
+                          label: link.label,
+                          parentFolderName,
+                        }
+                      : undefined
+                  }
                   onRemove={() =>
                     actions.removeLink?.(item.url, linkKey, linkTarget)
                   }
@@ -471,8 +487,17 @@ const FinderBrowser = ({
             return (
               <MediaListRow
                 key={linkKey}
+                shouldStackIconOnMobile={shouldShowEpisodeStills}
                 icon={
-                  shouldShowRowPosters && !isFolder ? (
+                  shouldShowEpisodeStills ? (
+                    <FinderEpisodeStill
+                      label={link.label}
+                      parentFolderName={parentFolderName}
+                      fallbackIcon={rowFallbackIcon}
+                      isResolving={isResolving}
+                      isDimmed={isExpired}
+                    />
+                  ) : shouldShowRowPosters && !isFolder ? (
                     <SaveListRowPoster
                       label={link.label}
                       parentFolderName={parentFolderName}

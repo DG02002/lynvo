@@ -57,6 +57,14 @@ export const getMediaArtworkRequest = (
   return undefined
 }
 
+export const hasEpisodeMarker = (
+  label: string,
+  parentFolderName?: string
+): boolean => {
+  const candidate = parseMediaFilename(label, parentFolderName)
+  return candidate.kind === "episode" || candidate.kind === "episode-range"
+}
+
 export const getMediaDisplayTitle = (
   label: string,
   parentFolderName?: string

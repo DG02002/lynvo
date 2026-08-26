@@ -18,6 +18,7 @@ import {
   SaveListRowIcon,
 } from "~/components/save-list/media-list-row"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
+import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
 import { SaveListRowPoster } from "~/components/save-list/save-list-row-poster"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -37,6 +38,11 @@ interface ResolvedMirrorRowsProps {
   readonly shouldShowRowPosters?: boolean
 }
 
+interface ResolvableContainerEpisodeStill {
+  readonly label: string
+  readonly parentFolderName?: string
+}
+
 interface ResolvableContainerRowProps {
   readonly item: LinkViewItem
   readonly link: ExtractedLink
@@ -44,6 +50,7 @@ interface ResolvableContainerRowProps {
   readonly isResolving: boolean
   readonly onRemove: () => void
   readonly shouldShowRowPosters?: boolean
+  readonly episodeStill?: ResolvableContainerEpisodeStill
 }
 
 const ResolvedMirrorRows = ({
@@ -147,6 +154,7 @@ export const ResolvableContainerRow = ({
   isResolving,
   onRemove,
   shouldShowRowPosters = false,
+  episodeStill,
 }: ResolvableContainerRowProps) => {
   const linkTarget = getMediaNodeTarget(link)
   const {
@@ -197,6 +205,7 @@ export const ResolvableContainerRow = ({
           didResolutionFail && "bg-destructive/15"
         )}
         isOpened={link.opened === true}
+        shouldStackIconOnMobile={Boolean(episodeStill)}
         buttonClassName={cn(
           isExpanded && !link.opened && "bg-transparent hover:bg-muted/80",
           didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
@@ -205,7 +214,14 @@ export const ResolvableContainerRow = ({
           "data-resolution-state": resolutionState,
         }}
         icon={
-          shouldShowRowPosters ? (
+          episodeStill ? (
+            <FinderEpisodeStill
+              label={episodeStill.label}
+              parentFolderName={episodeStill.parentFolderName}
+              fallbackIcon={containerIcon}
+              isResolving={shouldShowResolving}
+            />
+          ) : shouldShowRowPosters ? (
             <SaveListRowPoster
               label={link.label}
               isContainer
@@ -245,7 +261,7 @@ export const ResolvableContainerRow = ({
           sourceLink={link}
           itemUrl={item.url}
           actions={actions}
-          shouldShowRowPosters={shouldShowRowPosters}
+          shouldShowRowPosters={shouldShowRowPosters && !episodeStill}
         />
       )}
     </div>
