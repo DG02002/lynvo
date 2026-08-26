@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 
 interface DevDemoDataControlsProps {
   readonly onLoad: () => Promise<void>

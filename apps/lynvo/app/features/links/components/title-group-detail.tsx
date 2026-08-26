@@ -14,7 +14,7 @@ import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { NewBadge } from "~/components/save-list/new-badge"
 import { Skeleton } from "~/components/ui/skeleton"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,

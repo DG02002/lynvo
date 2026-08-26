@@ -6,7 +6,7 @@ import {
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { ReactNode } from "react"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 
 interface SaveListStateProps {
   readonly title: string

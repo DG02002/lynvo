@@ -3,7 +3,7 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { SmartPhone02Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { SettingsList, SettingsRow } from "./settings-layout"
 

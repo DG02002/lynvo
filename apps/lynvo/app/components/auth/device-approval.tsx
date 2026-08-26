@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { showErrorToast } from "~/lib/toast-notifications"
 import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/lynvo-link"

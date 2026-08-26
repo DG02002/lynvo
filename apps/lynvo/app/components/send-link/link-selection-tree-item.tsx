@@ -8,7 +8,7 @@ import {
   Video02Icon,
 } from "@hugeicons/core-free-icons"
 import { Checkbox } from "~/components/ui/checkbox"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { FilenameText } from "~/components/filename-text"
 import type { ExtractedLink } from "~/features/links/types"
 import {

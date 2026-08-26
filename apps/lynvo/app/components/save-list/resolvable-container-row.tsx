@@ -18,7 +18,7 @@ import {
   SaveListRowIcon,
 } from "~/components/save-list/media-list-row"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"

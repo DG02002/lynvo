@@ -25,6 +25,25 @@ export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
 export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
 export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
 export const TITLE_GROUP_CARD_SHIMMER_DURATION_MS = 1_800
+export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
+export const EXTRACTION_STATUS_MESSAGES = [
+  "Getting link info…",
+  "Extracting links…",
+  "Finding playable links…",
+  "Getting things ready…",
+  "Following the link trail…",
+  "Asking the internet nicely…",
+  "Checking promising routes…",
+  "Looking for playable links…",
+  "Checking whether this link has friends…",
+  "Sorting the useful bits…",
+  "Doing a little link detective work…",
+  "Giving the metadata a gentle nudge…",
+  "Putting the pieces together…",
+  "Making everything library-ready…",
+  "Polishing the final details…",
+  "Teaching the library a new trick…",
+] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160
 export const MILLISECONDS_PER_SECOND = 1_000

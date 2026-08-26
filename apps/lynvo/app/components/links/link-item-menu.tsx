@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"

@@ -993,13 +993,17 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByText("Loading links")).toBeVisible()
+    const loadingLabel = screen.getByText("Loading links…")
+    expect(loadingLabel).toBeVisible()
+    expect(loadingLabel).toHaveClass("shimmer")
+    expect(screen.queryByText("Queued Source")).not.toBeInTheDocument()
     const row = screen
-      .getByText("Queued Source")
+      .getByRole("button", { name: "Loading links… for Queued Source" })
       .closest("[data-extraction-state]")
     expect(row).toHaveAttribute("data-extraction-state", "running")
     expect(
-      screen.getByRole("button", { name: "Loading links for Queued Source" })
+      screen.getByRole("button", { name: "Loading links… for Queued Source" })
     ).toBeDisabled()
+    expect(row?.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
   })
 })

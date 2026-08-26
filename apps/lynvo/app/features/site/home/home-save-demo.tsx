@@ -26,7 +26,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import {
   HOME_DEMO_BROWSER_URL,
   HOME_DEMO_CLIPBOARD_URL,

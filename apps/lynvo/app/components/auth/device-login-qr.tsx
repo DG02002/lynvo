@@ -1,6 +1,6 @@
 import * as React from "react"
 import { QRCodeCanvas } from "qrcode.react"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Refresh01Icon } from "@hugeicons/core-free-icons"

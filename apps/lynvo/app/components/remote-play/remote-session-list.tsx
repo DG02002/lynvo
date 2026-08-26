@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ComputerIcon, Refresh03Icon } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { RemoteSession } from "./types"
 
 export const RemoteSessionList = ({

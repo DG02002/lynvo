@@ -5,16 +5,14 @@ import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   AlertCircleIcon,
-  Clock01Icon,
   Folder01Icon,
   Folder02Icon,
-  PackageSearchIcon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type {
   ExtractedLink,
@@ -58,6 +56,10 @@ import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
+import {
+  SaveExtractionStatus,
+  getExtractionStatusLabel,
+} from "./extraction-status"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
 interface SaveListBrowserProps {
@@ -100,80 +102,8 @@ interface MobileFolderTreeToggleProps {
   onToggle: () => void
 }
 
-interface SaveExtractionStatusProps {
-  item: LinkListItem
-  isRefreshing: boolean
-}
-
 interface FinderBackButtonProps {
   readonly onExit: () => void
-}
-
-const getExtractionStatusLabel = (
-  item: LinkListItem,
-  isRefreshing: boolean
-): string => {
-  if (isRefreshing) {
-    return "Loading links"
-  }
-  switch (item.extractionStatus?.state) {
-    case "queued":
-      return "Waiting to load"
-    case "running":
-      return "Loading links"
-    case "failed":
-      return item.extractionStatus.error || "Unable to load links"
-    default:
-      return ""
-  }
-}
-
-const SaveExtractionStatus = ({
-  item,
-  isRefreshing,
-}: SaveExtractionStatusProps) => {
-  const extractionState = item.extractionStatus?.state
-  const extractionError = item.extractionStatus?.error
-  if (!extractionState || extractionState === "complete") {
-    return null
-  }
-
-  if (isRefreshing) {
-    return (
-      <span
-        className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
-        role="status"
-      >
-        <Spinner aria-hidden="true" className="size-3" />
-        <span>{getExtractionStatusLabel(item, true)}</span>
-      </span>
-    )
-  }
-
-  if (extractionState === "failed") {
-    return (
-      <span
-        className="flex min-w-0 items-center gap-1.5 text-xs text-destructive"
-        role="alert"
-        title={extractionError || "Unable to load links"}
-      >
-        <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
-        <span className="truncate">
-          {extractionError || getExtractionStatusLabel(item, false)}
-        </span>
-      </span>
-    )
-  }
-
-  return (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-      <HugeiconsIcon
-        icon={extractionState === "queued" ? Clock01Icon : PackageSearchIcon}
-        className="size-3.5 shrink-0"
-      />
-      <span>{getExtractionStatusLabel(item, false)}</span>
-    </span>
-  )
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -756,10 +686,14 @@ export const SaveListBrowser = ({
                     >
                       {isExtractionIncomplete ? (
                         <SaveListRowIcon>
-                          <HugeiconsIcon
-                            icon={PackageSearchIcon}
-                            className="size-6"
-                          />
+                          {extractionState === "failed" ? (
+                            <HugeiconsIcon
+                              icon={AlertCircleIcon}
+                              className="size-6"
+                            />
+                          ) : (
+                            <Spinner aria-hidden="true" className="size-6" />
+                          )}
                         </SaveListRowIcon>
                       ) : directLink ? (
                         <SaveListRowIcon
@@ -780,65 +714,66 @@ export const SaveListBrowser = ({
                         </SaveListRowIcon>
                       )}
                       <span className="min-w-0 flex-1">
-                        <FilenameText
-                          value={directLink?.label || getItemTitle(item)}
-                          className={cn(
-                            MEDIA_LIST_ROW_TITLE_CLASS,
-                            "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
-                          )}
-                          textClassName={
-                            isDirectLinkExpired ? "line-through" : undefined
-                          }
-                        />
                         {isExtractionIncomplete ? (
-                          <div className="mt-1 min-w-0">
-                            <SaveExtractionStatus
-                              item={item}
-                              isRefreshing={isExtracting}
-                            />
-                          </div>
+                          <SaveExtractionStatus
+                            item={item}
+                            isRefreshing={isExtracting}
+                            isTitle
+                          />
                         ) : (
-                          <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                            <MediaListRowMeta
-                              sourceName={
-                                view.sourceName || view.pluginName || item.url
-                              }
-                              size={directLink?.size}
-                              itemCount={
-                                directLink
-                                  ? undefined
-                                  : view.extractedLinks.length
+                          <>
+                            <FilenameText
+                              value={directLink?.label || getItemTitle(item)}
+                              className={cn(
+                                MEDIA_LIST_ROW_TITLE_CLASS,
+                                "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
+                              )}
+                              textClassName={
+                                isDirectLinkExpired ? "line-through" : undefined
                               }
                             />
-                            {!directLink && isRootItemNew && (
-                              <span className="flex items-center gap-2 md:hidden">
-                                <NewBadge className="md:hidden" />
-                              </span>
-                            )}
-                            {directLink &&
-                              (isRootItemNew ||
-                                directLink.expiry !== undefined) && (
-                                <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                                  {directLink.expiry !== undefined && (
-                                    <>
-                                      <span
-                                        aria-hidden="true"
-                                        className="hidden md:inline"
-                                      >
-                                        ·
-                                      </span>
-                                      <PlayableExpiryBadge
-                                        expiresAt={directLink.expiry}
-                                        expirySource={directLink.expirySource}
-                                      />
-                                    </>
-                                  )}
-                                  {isRootItemNew && (
-                                    <NewBadge className="md:hidden" />
-                                  )}
+                            <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
+                              <MediaListRowMeta
+                                sourceName={
+                                  view.sourceName || view.pluginName || item.url
+                                }
+                                size={directLink?.size}
+                                itemCount={
+                                  directLink
+                                    ? undefined
+                                    : view.extractedLinks.length
+                                }
+                              />
+                              {!directLink && isRootItemNew && (
+                                <span className="flex items-center gap-2 md:hidden">
+                                  <NewBadge className="md:hidden" />
                                 </span>
                               )}
-                          </span>
+                              {directLink &&
+                                (isRootItemNew ||
+                                  directLink.expiry !== undefined) && (
+                                  <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
+                                    {directLink.expiry !== undefined && (
+                                      <>
+                                        <span
+                                          aria-hidden="true"
+                                          className="hidden md:inline"
+                                        >
+                                          ·
+                                        </span>
+                                        <PlayableExpiryBadge
+                                          expiresAt={directLink.expiry}
+                                          expirySource={directLink.expirySource}
+                                        />
+                                      </>
+                                    )}
+                                    {isRootItemNew && (
+                                      <NewBadge className="md:hidden" />
+                                    )}
+                                  </span>
+                                )}
+                            </span>
+                          </>
                         )}
                       </span>
                     </div>

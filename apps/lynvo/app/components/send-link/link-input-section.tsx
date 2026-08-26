@@ -2,7 +2,7 @@ import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight02Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
 
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import {
   InputGroup,
