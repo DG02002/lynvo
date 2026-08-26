@@ -34,7 +34,7 @@ export const FinderEpisodeStill = ({
     >
       <span className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60">
         {imagePath ? (
-          <TmdbImage path={imagePath} variant="card" alt="" />
+          <TmdbImage path={imagePath} variant="wide-card" alt="" />
         ) : (
           fallbackIcon
         )}

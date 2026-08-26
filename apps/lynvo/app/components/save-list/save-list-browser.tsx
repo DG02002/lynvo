@@ -263,16 +263,18 @@ const FinderEmptyState = ({
   <section className="flex h-svh flex-col overflow-hidden bg-background">
     <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
       <FinderBackButton onExit={onExit} />
-      <h1
-        aria-label={getItemTitle(item)}
-        className="min-w-0 flex-1 text-base font-normal md:flex md:w-full md:items-center md:px-4 md:py-3"
-      >
-        <FilenameText
-          value={getItemTitle(item)}
-          clampClassName="line-clamp-1"
-          className="w-full"
-        />
-      </h1>
+      <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
+        <h1
+          aria-label={getItemTitle(item)}
+          className="hidden text-base font-normal md:block"
+        >
+          <FilenameText
+            value={getItemTitle(item)}
+            clampClassName="line-clamp-1"
+            className="w-full"
+          />
+        </h1>
+      </div>
       <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
         <LinkItemMenu
           item={item}
@@ -345,7 +347,7 @@ const FinderBrowser = ({
         <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={getItemTitle(item)}
-            className="w-full min-w-0 text-base font-normal"
+            className="hidden w-full min-w-0 text-base font-normal md:block"
           >
             <FilenameText
               value={getItemTitle(item)}

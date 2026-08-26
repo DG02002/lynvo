@@ -89,6 +89,9 @@ describe("SaveListBrowser", () => {
     )
     expect(headerMenu.parentElement).toHaveClass("w-16", "text-foreground")
     expect(headerMenu.parentElement).not.toHaveClass("border-s")
+    expect(
+      screen.getByRole("heading", { name: "Saved Collection" })
+    ).toHaveClass("hidden", "md:block")
     const backButton = screen.getByRole("button", { name: "Back" })
     expect(backButton).toHaveClass("text-lg", "text-foreground")
     expect(backButton.querySelector("svg")).toHaveClass(
