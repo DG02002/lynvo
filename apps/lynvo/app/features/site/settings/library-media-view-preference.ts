@@ -3,12 +3,21 @@ import { useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
 
+declare global {
+  type LibraryMediaView = "list" | "hybrid" | "library"
+}
+
 export const LIBRARY_MEDIA_VIEW_STORAGE_KEY =
   "lynvo:settings:library-media-view"
 export const LIBRARY_MEDIA_VIEW_PREFERENCE_EVENT =
   "lynvo:library-media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
 export const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
+
+const libraryMediaViewValues: readonly string[] = ["list", "hybrid", "library"]
+
+export const isLibraryMediaView = (value: string): value is LibraryMediaView =>
+  libraryMediaViewValues.includes(value)
 
 const subscribeToLibraryMediaViewPreference = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange)
@@ -23,28 +32,31 @@ const subscribeToLibraryMediaViewPreference = (onStoreChange: () => void) => {
   }
 }
 
-export const getShouldUseLibraryMediaView = (): boolean => {
+export const getLibraryMediaView = (): LibraryMediaView => {
   if (globalThis.localStorage === undefined) {
-    return true
+    return "library"
   }
 
-  return localStorage.getItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY) !== "false"
+  const storedValue = localStorage.getItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY)
+  if (storedValue === "false") {
+    return "list"
+  }
+  if (storedValue !== null && isLibraryMediaView(storedValue)) {
+    return storedValue
+  }
+  return "library"
 }
 
-export const writeMediaViewCookie = (
-  shouldUseLibraryMediaView: boolean
-): void => {
+export const writeMediaViewCookie = (mediaView: LibraryMediaView): void => {
   if (globalThis.document === undefined) {
     return
   }
-  globalThis.document.cookie = `${MEDIA_VIEW_COOKIE_NAME}=${
-    shouldUseLibraryMediaView ? "library" : "list"
-  }; Path=/; Max-Age=${MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`
+  globalThis.document.cookie = `${MEDIA_VIEW_COOKIE_NAME}=${mediaView}; Path=/; Max-Age=${MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`
 }
 
-export const getMediaViewIsLibraryFromCookieHeader = (
+export const getLibraryMediaViewFromCookieHeader = (
   cookieHeader: string | null
-): boolean | undefined => {
+): LibraryMediaView | undefined => {
   const mediaViewCookie = cookieHeader
     ?.split(";")
     .map((cookie) => cookie.trim())
@@ -53,38 +65,33 @@ export const getMediaViewIsLibraryFromCookieHeader = (
     MEDIA_VIEW_COOKIE_NAME.length + 1
   )
 
-  if (mediaViewCookieValue === "library") {
-    return true
-  }
-  if (mediaViewCookieValue === "list") {
-    return false
+  if (
+    mediaViewCookieValue !== undefined &&
+    isLibraryMediaView(mediaViewCookieValue)
+  ) {
+    return mediaViewCookieValue
   }
   return undefined
 }
 
-export const setShouldUseLibraryMediaView = (
-  shouldUseLibraryMediaView: boolean
-): void => {
-  localStorage.setItem(
-    LIBRARY_MEDIA_VIEW_STORAGE_KEY,
-    String(shouldUseLibraryMediaView)
-  )
-  writeMediaViewCookie(shouldUseLibraryMediaView)
+export const setLibraryMediaView = (mediaView: LibraryMediaView): void => {
+  localStorage.setItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY, mediaView)
+  writeMediaViewCookie(mediaView)
   window.dispatchEvent(new Event(LIBRARY_MEDIA_VIEW_PREFERENCE_EVENT))
 }
 
-export const useShouldUseLibraryMediaView = (): boolean => {
+export const useLibraryMediaView = (): LibraryMediaView => {
   const rootData = useRouteLoaderData<typeof rootLoader>("root")
-  const serverMediaViewIsLibrary = rootData?.mediaViewIsLibrary ?? true
-  const shouldUseLibraryMediaView = useSyncExternalStore(
+  const serverMediaView = rootData?.mediaView ?? "library"
+  const mediaView = useSyncExternalStore(
     subscribeToLibraryMediaViewPreference,
-    getShouldUseLibraryMediaView,
-    () => serverMediaViewIsLibrary
+    getLibraryMediaView,
+    () => serverMediaView
   )
 
   useEffect(() => {
-    writeMediaViewCookie(shouldUseLibraryMediaView)
-  }, [shouldUseLibraryMediaView])
+    writeMediaViewCookie(mediaView)
+  }, [mediaView])
 
-  return shouldUseLibraryMediaView
+  return mediaView
 }

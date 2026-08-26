@@ -3,8 +3,9 @@ import { LogoLink } from "~/components/logo"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { Switch } from "~/components/ui/switch"
 import {
-  setShouldUseLibraryMediaView,
-  useShouldUseLibraryMediaView,
+  isLibraryMediaView,
+  setLibraryMediaView,
+  useLibraryMediaView,
 } from "~/features/site/settings/library-media-view-preference"
 import {
   setShouldShowLayoutGuide,
@@ -24,7 +25,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   }>("root")
   const user = data?.user
   const isSaveRoute = (location.pathname.replace(/\/+$/, "") || "/") === "/save"
-  const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
+  const mediaView = useLibraryMediaView()
   const shouldShowLayoutGuide = useShouldShowLayoutGuide()
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
@@ -46,14 +47,19 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
           <div className="flex shrink-0 items-center gap-2">
             {isSaveRoute && (
               <Tabs
-                value={shouldUseLibraryMediaView ? "library" : "list"}
-                onValueChange={(value) =>
-                  setShouldUseLibraryMediaView(value === "library")
-                }
+                value={mediaView}
+                onValueChange={(value) => {
+                  if (isLibraryMediaView(value)) {
+                    setLibraryMediaView(value)
+                  }
+                }}
               >
                 <TabsList aria-label="Save page view" className="h-10">
                   <TabsTrigger value="list" className="min-h-9 px-3 sm:px-4">
                     List
+                  </TabsTrigger>
+                  <TabsTrigger value="hybrid" className="min-h-9 px-3 sm:px-4">
+                    Hybrid
                   </TabsTrigger>
                   <TabsTrigger value="library" className="min-h-9 px-3 sm:px-4">
                     Library

@@ -3,9 +3,9 @@ import {
   LIBRARY_MEDIA_VIEW_PREFERENCE_EVENT,
   LIBRARY_MEDIA_VIEW_STORAGE_KEY,
   MEDIA_VIEW_COOKIE_NAME,
-  getMediaViewIsLibraryFromCookieHeader,
-  getShouldUseLibraryMediaView,
-  setShouldUseLibraryMediaView,
+  getLibraryMediaView,
+  getLibraryMediaViewFromCookieHeader,
+  setLibraryMediaView,
 } from "~/features/site/settings/library-media-view-preference"
 import { createMemoryStorage } from "./memory-storage"
 
@@ -18,38 +18,50 @@ afterEach(() => {
 })
 
 describe("Library media view preference", () => {
-  it("is enabled by default", () => {
-    expect(getShouldUseLibraryMediaView()).toBe(true)
+  it("defaults to the library view", () => {
+    expect(getLibraryMediaView()).toBe("library")
   })
 
-  it("persists the disabled value without touching account data", () => {
-    setShouldUseLibraryMediaView(false)
+  it("persists the hybrid value without touching account data", () => {
+    setLibraryMediaView("hybrid")
 
-    expect(getShouldUseLibraryMediaView()).toBe(false)
-    expect(localStorage.getItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY)).toBe("false")
+    expect(getLibraryMediaView()).toBe("hybrid")
+    expect(localStorage.getItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY)).toBe("hybrid")
+  })
+
+  it("treats the legacy disabled value as the list view", () => {
+    localStorage.setItem(LIBRARY_MEDIA_VIEW_STORAGE_KEY, "false")
+
+    expect(getLibraryMediaView()).toBe("list")
   })
 
   it("mirrors the preference into the media view cookie", () => {
-    setShouldUseLibraryMediaView(false)
+    setLibraryMediaView("list")
     expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=list`)
 
-    setShouldUseLibraryMediaView(true)
+    setLibraryMediaView("hybrid")
+    expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=hybrid`)
+
+    setLibraryMediaView("library")
     expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=library`)
   })
 
   it("reads the server-side view from the cookie header", () => {
     expect(
-      getMediaViewIsLibraryFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=list`)
-    ).toBe(false)
+      getLibraryMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=list`)
+    ).toBe("list")
     expect(
-      getMediaViewIsLibraryFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=library`)
-    ).toBe(true)
+      getLibraryMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=hybrid`)
+    ).toBe("hybrid")
     expect(
-      getMediaViewIsLibraryFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=junk`)
+      getLibraryMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=library`)
+    ).toBe("library")
+    expect(
+      getLibraryMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=junk`)
     ).toBeUndefined()
-    expect(getMediaViewIsLibraryFromCookieHeader(null)).toBeUndefined()
+    expect(getLibraryMediaViewFromCookieHeader(null)).toBeUndefined()
     expect(
-      getMediaViewIsLibraryFromCookieHeader("lynvo-session=abc")
+      getLibraryMediaViewFromCookieHeader("lynvo-session=abc")
     ).toBeUndefined()
   })
 
@@ -57,7 +69,7 @@ describe("Library media view preference", () => {
     const listener = vi.fn()
     window.addEventListener(LIBRARY_MEDIA_VIEW_PREFERENCE_EVENT, listener)
 
-    setShouldUseLibraryMediaView(false)
+    setLibraryMediaView("hybrid")
 
     expect(listener).toHaveBeenCalledOnce()
     window.removeEventListener(LIBRARY_MEDIA_VIEW_PREFERENCE_EVENT, listener)

@@ -285,6 +285,9 @@ const parseFilename = (
   })
 }
 
+export const getMediaFilenameMatchingText = (filename: string): string =>
+  getMatchingText(filename)
+
 export const parseMediaFilename = (
   filename: string,
   parentFolderName?: string

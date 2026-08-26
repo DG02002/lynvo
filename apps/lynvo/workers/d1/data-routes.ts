@@ -53,8 +53,10 @@ import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
 import { processMediaMetadataMaintenance } from "../media-metadata/media-metadata-coordinator"
+import { lookupMediaArtwork } from "../media-metadata/media-artwork-lookup"
 import { getDataVersion } from "./data-version"
 import { getTitleGroupById, listTitleGroups } from "./title-groups"
+import { MEDIA_ARTWORK_REQUEST_BATCH_LIMIT } from "../constants"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
@@ -337,6 +339,18 @@ const remoteCommandResultSchema = Schema.Struct({
   message: Schema.optional(Schema.String),
 })
 
+const mediaArtworkRequestItemSchema = Schema.Struct({
+  title: Schema.NonEmptyString,
+  mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
+  year: Schema.optional(Schema.Number),
+  seasonNumber: Schema.optional(Schema.Number),
+  episodeNumber: Schema.optional(Schema.Number),
+})
+
+const mediaArtworkRequestSchema = Schema.Struct({
+  requests: Schema.Array(mediaArtworkRequestItemSchema),
+})
+
 dataApp.get("/links", async (context) => {
   addRequestContext(context, { operation: "data_links_list" })
   const preparation = await beginDataRequest(context, { mutating: false })
@@ -410,6 +424,28 @@ dataApp.get("/title-groups/:titleGroupId", async (context) => {
       preparation.session.userId
     ),
   })
+})
+
+dataApp.post("/media-artwork", async (context) => {
+  addRequestContext(context, { operation: "data_media_artwork_lookup" })
+  const preparation = await beginDataRequest(context, { mutating: true })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  const body = await readDataJsonBody(context, mediaArtworkRequestSchema)
+  if (body.kind === "invalid") {
+    return body.response
+  }
+  if (body.body.requests.length > MEDIA_ARTWORK_REQUEST_BATCH_LIMIT) {
+    return await respondDataFailure(
+      context,
+      400,
+      "validation",
+      "Too many artwork requests"
+    )
+  }
+  const results = await lookupMediaArtwork(context.env, body.body.requests)
+  return context.json({ results })
 })
 
 dataApp.post("/links/create-or-update", async (context) => {

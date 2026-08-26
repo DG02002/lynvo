@@ -19,8 +19,8 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import {
-  setShouldUseLibraryMediaView,
-  useShouldUseLibraryMediaView,
+  setLibraryMediaView,
+  useLibraryMediaView,
 } from "./library-media-view-preference"
 import { LibraryMediaViewSelector } from "./library-media-view-selector"
 import {
@@ -37,7 +37,7 @@ const appearanceOptions = [
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
-  const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
+  const mediaView = useLibraryMediaView()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -88,10 +88,8 @@ export const GeneralSettings = () => {
             description="Choose how saved links appear on the Save page."
           />
           <LibraryMediaViewSelector
-            value={shouldUseLibraryMediaView ? "library" : "list"}
-            onValueChange={(value) =>
-              setShouldUseLibraryMediaView(value === "library")
-            }
+            value={mediaView}
+            onValueChange={setLibraryMediaView}
           />
         </SettingsRow>
       </SettingsList>

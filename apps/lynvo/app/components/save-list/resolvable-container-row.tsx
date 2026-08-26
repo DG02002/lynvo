@@ -18,6 +18,7 @@ import {
   SaveListRowIcon,
 } from "~/components/save-list/media-list-row"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
+import { SaveListRowPoster } from "~/components/save-list/save-list-row-poster"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
@@ -33,6 +34,7 @@ interface ResolvedMirrorRowsProps {
   readonly sourceLink: ExtractedLink
   readonly itemUrl: string
   readonly actions: LinkItemActions
+  readonly shouldShowRowPosters?: boolean
 }
 
 interface ResolvableContainerRowProps {
@@ -41,6 +43,7 @@ interface ResolvableContainerRowProps {
   readonly actions: LinkItemActions
   readonly isResolving: boolean
   readonly onRemove: () => void
+  readonly shouldShowRowPosters?: boolean
 }
 
 const ResolvedMirrorRows = ({
@@ -48,6 +51,7 @@ const ResolvedMirrorRows = ({
   sourceLink,
   itemUrl,
   actions,
+  shouldShowRowPosters = false,
 }: ResolvedMirrorRowsProps) => (
   <div
     className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
@@ -69,6 +73,7 @@ const ResolvedMirrorRows = ({
             actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
         })
       }
+      const mirrorIcon = <HugeiconsIcon icon={PlayIcon} className="size-6" />
       return (
         <div key={getLinkKey(mirror)} className="relative">
           <span
@@ -80,9 +85,15 @@ const ResolvedMirrorRows = ({
             wrapperClassName="border-b-0"
             buttonClassName="min-h-20 bg-transparent py-4 hover:bg-muted/80"
             icon={
-              <SaveListRowIcon>
-                <HugeiconsIcon icon={PlayIcon} className="size-6" />
-              </SaveListRowIcon>
+              shouldShowRowPosters ? (
+                <SaveListRowPoster
+                  label={sourceLink.label}
+                  isContainer
+                  fallbackIcon={mirrorIcon}
+                />
+              ) : (
+                <SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>
+              )
             }
             title={
               <FilenameText
@@ -135,6 +146,7 @@ export const ResolvableContainerRow = ({
   actions,
   isResolving,
   onRemove,
+  shouldShowRowPosters = false,
 }: ResolvableContainerRowProps) => {
   const linkTarget = getMediaNodeTarget(link)
   const {
@@ -151,6 +163,25 @@ export const ResolvableContainerRow = ({
   const resolutionState = shouldShowResolving ? "resolving" : resolvedState
   const containerIconStateKey =
     mirrors.length > 0 ? (isExpanded ? "open" : "closed") : "search"
+  const containerIcon = shouldShowResolving ? (
+    <Spinner
+      aria-label={`Loading playable links for ${link.label}…`}
+      className="size-6"
+    />
+  ) : (
+    <AnimatedStateIcon stateKey={containerIconStateKey}>
+      <HugeiconsIcon
+        icon={
+          mirrors.length > 0
+            ? isExpanded
+              ? PackageOpenIcon
+              : PackageIcon
+            : PackageSearchIcon
+        }
+        className="size-6"
+      />
+    </AnimatedStateIcon>
+  )
 
   return (
     <div
@@ -174,27 +205,15 @@ export const ResolvableContainerRow = ({
           "data-resolution-state": resolutionState,
         }}
         icon={
-          <SaveListRowIcon>
-            {shouldShowResolving ? (
-              <Spinner
-                aria-label={`Loading playable links for ${link.label}…`}
-                className="size-6"
-              />
-            ) : (
-              <AnimatedStateIcon stateKey={containerIconStateKey}>
-                <HugeiconsIcon
-                  icon={
-                    mirrors.length > 0
-                      ? isExpanded
-                        ? PackageOpenIcon
-                        : PackageIcon
-                      : PackageSearchIcon
-                  }
-                  className="size-6"
-                />
-              </AnimatedStateIcon>
-            )}
-          </SaveListRowIcon>
+          shouldShowRowPosters ? (
+            <SaveListRowPoster
+              label={link.label}
+              isContainer
+              fallbackIcon={containerIcon}
+            />
+          ) : (
+            <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
+          )
         }
         title={
           <FilenameText
@@ -226,6 +245,7 @@ export const ResolvableContainerRow = ({
           sourceLink={link}
           itemUrl={item.url}
           actions={actions}
+          shouldShowRowPosters={shouldShowRowPosters}
         />
       )}
     </div>

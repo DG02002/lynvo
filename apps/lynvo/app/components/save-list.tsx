@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { DevDemoDataControls } from "~/components/dev-demo-data-controls"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
+import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
+import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
 import { useLinkActions } from "~/hooks/use-link-actions"
 import { useLinks } from "~/hooks/use-links"
 import { cn } from "~/lib/utils"
@@ -12,7 +15,8 @@ import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route
 import { Spinner } from "~/components/spinner"
 import { LibrarySaveList } from "~/features/links/components/library-save-list"
 import { useTitleGroups } from "~/features/links/title-grouping/use-title-groups"
-import { useShouldUseLibraryMediaView } from "~/features/site/settings/library-media-view-preference"
+import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { useLibraryMediaView } from "~/features/site/settings/library-media-view-preference"
 import { getDemoSavedLinkSeeds } from "~/features/links/dev-demo-data"
 import {
   shouldHideSaveInput,
@@ -36,7 +40,8 @@ const SaveList = ({
 }: SaveListProps) => {
   const isTvBroAndroidTv = useIsTvBroAndroidTv()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
-  const shouldUseLibraryMediaView = useShouldUseLibraryMediaView()
+  const mediaView = useLibraryMediaView()
+  const [searchParams, setSearchParams] = useSearchParams()
   const isSaveInputHidden = shouldHideSaveInput(
     isTvBroAndroidTv,
     shouldHideTvBroSaveInput
@@ -63,7 +68,33 @@ const SaveList = ({
     setHighlightedId,
   })
 
-  useSaveListFullscreen(isFolderRoute)
+  const titleGroupsState = useTitleGroups({
+    enabled: mediaView === "library" && !isFolderRoute,
+    dataVersion,
+    initialProjection: initialTitleProjection,
+  })
+  const isHybridMediaView = mediaView === "hybrid"
+  const hybridGroupKey = isHybridMediaView ? searchParams.get("group") : null
+  const hybridCardGroups = useMemo(
+    () =>
+      isHybridMediaView && !isFolderRoute
+        ? getHybridCardGroups(links)
+        : undefined,
+    [isHybridMediaView, isFolderRoute, links]
+  )
+  const openHybridGroup = hybridCardGroups?.find(
+    (group) => group.key === hybridGroupKey
+  )
+  const isGroupRoute = hybridGroupKey !== null
+  const isImmersiveRoute = isFolderRoute || isGroupRoute
+
+  useEffect(() => {
+    if (hybridGroupKey && !isPending && !openHybridGroup) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [hybridGroupKey, isPending, openHybridGroup, setSearchParams])
+
+  useSaveListFullscreen(isImmersiveRoute)
   const savedUrls = useMemo(
     () => new Set(links.map((link) => link.url)),
     [links]
@@ -80,13 +111,8 @@ const SaveList = ({
       }
     }
   }
-  const titleGroupsState = useTitleGroups({
-    enabled: shouldUseLibraryMediaView && !isFolderRoute,
-    dataVersion,
-    initialProjection: initialTitleProjection,
-  })
 
-  if (isFolderRoute && isPending) {
+  if (isImmersiveRoute && isPending) {
     return (
       <div
         className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"
@@ -102,13 +128,13 @@ const SaveList = ({
     <div
       className={cn(
         "flex min-h-[calc(100vh-4rem)] w-full flex-col overflow-x-hidden",
-        isFolderRoute
+        isImmersiveRoute
           ? "fixed inset-0 min-h-svh max-w-none gap-0 overflow-hidden bg-background"
           : "gap-6 px-6 py-8 md:px-8 md:py-12 lg:px-10 xl:px-14"
       )}
       data-layout-guide-target="save-frame"
     >
-      {!isFolderRoute && !isSaveInputHidden && (
+      {!isImmersiveRoute && !isSaveInputHidden && (
         <div className="w-full" data-layout-guide-target="save-input">
           <LinkInputSection
             url={input.url}
@@ -122,12 +148,12 @@ const SaveList = ({
           />
         </div>
       )}
-      {import.meta.env.DEV && !isFolderRoute && (
+      {import.meta.env.DEV && !isImmersiveRoute && (
         <DevDemoDataControls onLoad={handleLoadDemoLinks} />
       )}
 
       <div className="w-full" data-layout-guide-target="save-content">
-        {shouldUseLibraryMediaView && !isFolderRoute ? (
+        {mediaView === "library" && !isFolderRoute ? (
           <LibrarySaveList
             items={links}
             isPending={isPending}
@@ -136,6 +162,24 @@ const SaveList = ({
             error={titleGroupsState.error}
             onRetry={titleGroupsState.retry}
             actions={linkItemActions}
+          />
+        ) : isGroupRoute && openHybridGroup ? (
+          <HybridGroupBrowser
+            group={openHybridGroup}
+            actions={linkItemActions}
+            extractingItems={extractingItems}
+            onExit={() => setSearchParams({}, { replace: true })}
+            onOpenItem={openSavedFolder}
+          />
+        ) : isHybridMediaView && !isFolderRoute && hybridCardGroups ? (
+          <HybridSaveGrid
+            groups={hybridCardGroups}
+            actions={linkItemActions}
+            extractingItems={extractingItems}
+            isHydrating={isHydrating}
+            highlightedId={highlightedId}
+            onOpenItem={openSavedFolder}
+            onOpenGroup={(groupKey) => setSearchParams({ group: groupKey })}
           />
         ) : (
           <SaveListBrowser
@@ -148,6 +192,7 @@ const SaveList = ({
             extractingItems={extractingItems}
             highlightedId={highlightedId}
             isHydrating={isHydrating}
+            shouldShowRowPosters={mediaView === "hybrid"}
           />
         )}
       </div>

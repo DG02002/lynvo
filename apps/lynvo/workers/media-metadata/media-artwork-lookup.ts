@@ -1,0 +1,123 @@
+import { createTmdbAdapter, type TmdbAdapter } from "./tmdb-adapter"
+
+interface MediaArtworkLookupRequest {
+  readonly title: string
+  readonly mediaKind?: "movie" | "tv"
+  readonly year?: number
+  readonly seasonNumber?: number
+  readonly episodeNumber?: number
+}
+
+interface MediaArtworkLookupResult {
+  readonly posterPath?: string
+  readonly stillPath?: string
+}
+
+interface MediaArtworkLookupEnvironment {
+  readonly TMDB_API_READ_ACCESS_TOKEN?: string
+}
+
+interface MediaArtworkLookupDependencies {
+  readonly fetch: typeof globalThis.fetch
+}
+
+const lookupEpisodeArtwork = async (
+  adapter: TmdbAdapter,
+  request: MediaArtworkLookupRequest
+): Promise<MediaArtworkLookupResult> => {
+  if (
+    request.seasonNumber === undefined ||
+    request.episodeNumber === undefined
+  ) {
+    return {}
+  }
+  const search = await adapter.searchTv(request.title, request.year)
+  if (search.kind !== "success" || !search.value || search.value.length === 0) {
+    return {}
+  }
+  const show = search.value[0]
+  const episode = await adapter.getTvEpisodeDetails(
+    show.providerId,
+    request.seasonNumber,
+    request.episodeNumber
+  )
+  const stillPath =
+    episode.kind === "success" ? episode.value?.stillPath : undefined
+  return {
+    posterPath: show.posterPath,
+    stillPath: stillPath ?? undefined,
+  }
+}
+
+const lookupSeasonArtwork = async (
+  adapter: TmdbAdapter,
+  request: MediaArtworkLookupRequest
+): Promise<MediaArtworkLookupResult> => {
+  if (request.seasonNumber === undefined) {
+    return {}
+  }
+  const search = await adapter.searchTv(request.title, request.year)
+  if (search.kind !== "success" || !search.value || search.value.length === 0) {
+    return {}
+  }
+  const show = search.value[0]
+  const season = await adapter.getTvSeasonDetails(
+    show.providerId,
+    request.seasonNumber
+  )
+  const seasonPosterPath =
+    season.kind === "success" ? season.value?.posterPath : undefined
+  return { posterPath: seasonPosterPath ?? show.posterPath }
+}
+
+const lookupTvArtwork = async (
+  adapter: TmdbAdapter,
+  request: MediaArtworkLookupRequest
+): Promise<MediaArtworkLookupResult> => {
+  const search = await adapter.searchTv(request.title, request.year)
+  if (search.kind !== "success" || !search.value || search.value.length === 0) {
+    return {}
+  }
+  return { posterPath: search.value[0].posterPath }
+}
+
+const lookupMovieArtwork = async (
+  adapter: TmdbAdapter,
+  request: MediaArtworkLookupRequest
+): Promise<MediaArtworkLookupResult> => {
+  const search = await adapter.searchMovie(request.title, request.year)
+  if (search.kind !== "success" || !search.value || search.value.length === 0) {
+    return {}
+  }
+  return { posterPath: search.value[0].posterPath }
+}
+
+export const lookupMediaArtwork = async (
+  environment: MediaArtworkLookupEnvironment,
+  requests: readonly MediaArtworkLookupRequest[],
+  dependencies: MediaArtworkLookupDependencies = {
+    fetch: globalThis.fetch.bind(globalThis),
+  }
+): Promise<readonly MediaArtworkLookupResult[]> => {
+  const token = environment.TMDB_API_READ_ACCESS_TOKEN?.trim() || undefined
+  if (!token || requests.length === 0) {
+    return requests.map(() => ({}))
+  }
+  const adapter = createTmdbAdapter({ fetch: dependencies.fetch, token })
+  return Promise.all(
+    requests.map((request) => {
+      if (
+        request.seasonNumber !== undefined &&
+        request.episodeNumber !== undefined
+      ) {
+        return lookupEpisodeArtwork(adapter, request)
+      }
+      if (request.seasonNumber !== undefined) {
+        return lookupSeasonArtwork(adapter, request)
+      }
+      return request.mediaKind === "tv"
+        ? lookupTvArtwork(adapter, request)
+        : lookupMovieArtwork(adapter, request)
+    })
+  )
+}
