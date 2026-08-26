@@ -175,18 +175,25 @@ export const ResolvableContainerRow = ({
         }}
         icon={
           <SaveListRowIcon>
-            <AnimatedStateIcon stateKey={containerIconStateKey}>
-              <HugeiconsIcon
-                icon={
-                  mirrors.length > 0
-                    ? isExpanded
-                      ? PackageOpenIcon
-                      : PackageIcon
-                    : PackageSearchIcon
-                }
+            {shouldShowResolving ? (
+              <Spinner
+                aria-label={`Loading playable links for ${link.label}…`}
                 className="size-6"
               />
-            </AnimatedStateIcon>
+            ) : (
+              <AnimatedStateIcon stateKey={containerIconStateKey}>
+                <HugeiconsIcon
+                  icon={
+                    mirrors.length > 0
+                      ? isExpanded
+                        ? PackageOpenIcon
+                        : PackageIcon
+                      : PackageSearchIcon
+                  }
+                  className="size-6"
+                />
+              </AnimatedStateIcon>
+            )}
           </SaveListRowIcon>
         }
         title={
@@ -201,16 +208,7 @@ export const ResolvableContainerRow = ({
             size={displaySize}
           />
         }
-        trailing={
-          <>
-            {!link.opened && <NewBadge />}
-            {shouldShowResolving ? (
-              <Spinner
-                aria-label={`Loading playable links for ${link.label}…`}
-              />
-            ) : null}
-          </>
-        }
+        trailing={!link.opened ? <NewBadge /> : undefined}
         overlay={
           <ResolvableLinkMenu
             itemLabel={link.label}

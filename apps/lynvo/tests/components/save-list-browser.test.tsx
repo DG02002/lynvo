@@ -550,6 +550,11 @@ describe("SaveListBrowser", () => {
         name: "Loading playable links for Playable Item One…",
       })
     ).toBeVisible()
+    const resolvingSpinner = playableItemButton.querySelector(
+      '[data-slot="spinner"]'
+    )
+    expect(resolvingSpinner).toHaveClass("size-6")
+    expect(resolvingSpinner?.parentElement).toHaveClass("size-10", "md:size-14")
     expect(playableItemButton).toHaveAttribute(
       "data-resolution-state",
       "resolving"

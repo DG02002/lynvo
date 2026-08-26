@@ -62,10 +62,7 @@ export const LinkSelectionTreeItem = ({
         : Folder01Icon
     : Video02Icon
   const hasTrailingContent = Boolean(
-    (isFolder && hasChildren) ||
-    (!isFolder && link.size) ||
-    canExpand ||
-    isResolving
+    (isFolder && hasChildren) || (!isFolder && link.size) || canExpand
   )
 
   const [prevHasSelectedChild, setPrevHasSelectedChild] =
@@ -146,10 +143,17 @@ export const LinkSelectionTreeItem = ({
           )}
         </div>
 
-        <HugeiconsIcon
-          icon={itemIcon}
-          className="size-5 shrink-0 justify-self-center text-foreground"
-        />
+        {isResolving ? (
+          <Spinner
+            aria-label={`Loading ${link.label}…`}
+            className="size-5 shrink-0 justify-self-center"
+          />
+        ) : (
+          <HugeiconsIcon
+            icon={itemIcon}
+            className="size-5 shrink-0 justify-self-center text-foreground"
+          />
+        )}
 
         <div className="min-w-0">
           <FilenameText
@@ -168,9 +172,7 @@ export const LinkSelectionTreeItem = ({
             {!isFolder && link.size && (
               <span className="truncate">{link.size}</span>
             )}
-            {isResolving ? (
-              <Spinner aria-label={`Loading ${link.label}…`} />
-            ) : canExpand ? (
+            {canExpand ? (
               <HugeiconsIcon
                 icon={ArrowRight01Icon}
                 className={cn(

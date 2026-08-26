@@ -154,7 +154,30 @@ describe("LinkSelectionDialog", () => {
   })
 
   it("loads and expands a lazy folder when its row is opened", async () => {
-    const resolveFolder = vi.fn().mockResolvedValue([
+    let finishFolderResolution: ((links: ExtractedLink[]) => void) | undefined
+    const resolveFolder = vi.fn(
+      () =>
+        new Promise<ExtractedLink[]>((resolve) => {
+          finishFolderResolution = resolve
+        })
+    )
+    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+
+    fireEvent.click(screen.getByText("Lazy folder"))
+
+    const folderTreeItem = screen.getByRole("treeitem", {
+      name: /Lazy folder/,
+    })
+    expect(
+      await screen.findByRole("status", { name: "Loading Lazy folder…" })
+    ).toBeVisible()
+    const resolvingSpinner = folderTreeItem.querySelector(
+      '[data-slot="spinner"]'
+    )
+    expect(resolvingSpinner).toHaveClass("size-5")
+    expect(resolvingSpinner?.parentElement).toBe(folderTreeItem)
+
+    finishFolderResolution?.([
       {
         id: "video-one",
         url: "https://cdn.example/video-one.mkv",
@@ -163,15 +186,9 @@ describe("LinkSelectionDialog", () => {
         size: "2.4 GB",
       },
     ])
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
-
-    fireEvent.click(screen.getByText("Lazy folder"))
-
     expect(await screen.findByText("Video One")).toBeVisible()
     expect(resolveFolder).toHaveBeenCalledTimes(1)
-    expect(
-      screen.getByRole("treeitem", { name: /Lazy folder/ })
-    ).toHaveAttribute("aria-expanded", "true")
+    expect(folderTreeItem).toHaveAttribute("aria-expanded", "true")
   })
 
   it("matches the save page responsive content width", () => {

@@ -456,10 +456,17 @@ const FinderBrowser = ({
                   <SaveListRowIcon
                     className={isExpired ? "text-muted-foreground" : undefined}
                   >
-                    <HugeiconsIcon
-                      icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
-                      className="size-6"
-                    />
+                    {isResolving ? (
+                      <Spinner
+                        aria-label={`Loading ${link.label}…`}
+                        className="size-6"
+                      />
+                    ) : (
+                      <HugeiconsIcon
+                        icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
+                        className="size-6"
+                      />
+                    )}
                   </SaveListRowIcon>
                 }
                 title={
@@ -494,9 +501,6 @@ const FinderBrowser = ({
                     {!link.opened && !isExpired && (
                       <NewBadge className="hidden md:inline-flex" />
                     )}
-                    {isResolving ? (
-                      <Spinner aria-label={`Loading ${link.label}…`} />
-                    ) : null}
                   </>
                 }
                 overlay={
