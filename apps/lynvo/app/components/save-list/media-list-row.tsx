@@ -10,7 +10,7 @@ export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
 export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 
 export const MEDIA_LIST_HEADER_MENU_CELL_CLASS = cn(
-  "contents md:flex md:h-full md:items-center md:justify-center",
+  "flex self-stretch items-center justify-center",
   MEDIA_LIST_ROW_MENU_CELL_CLASS
 )
 

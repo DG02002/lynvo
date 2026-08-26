@@ -261,9 +261,9 @@ const FinderEmptyState = ({
   contentRef,
 }: FinderEmptyStateProps) => (
   <section className="flex h-svh flex-col overflow-hidden bg-background">
-    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+    <header className="grid min-h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)_4rem] items-center border-b bg-background pl-4 pr-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
       <FinderBackButton onExit={onExit} />
-      <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
+      <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
           aria-label={getItemTitle(item)}
           className="hidden text-base font-normal md:block"
@@ -342,9 +342,9 @@ const FinderBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+      <header className="grid min-h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)_4rem] items-center border-b bg-background pl-4 pr-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
         <FinderBackButton onExit={onExit} />
-        <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={getItemTitle(item)}
             className="hidden w-full min-w-0 text-base font-normal md:block"

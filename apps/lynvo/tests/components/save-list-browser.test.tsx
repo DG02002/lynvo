@@ -87,8 +87,23 @@ describe("SaveListBrowser", () => {
       "[&_svg]:size-7!",
       "text-foreground!"
     )
-    expect(headerMenu.parentElement).toHaveClass("w-16", "text-foreground")
+    expect(headerMenu.parentElement).toHaveClass(
+      "flex",
+      "self-stretch",
+      "items-center",
+      "justify-center",
+      "w-16",
+      "text-foreground"
+    )
+    expect(headerMenu.parentElement).not.toHaveClass("contents")
     expect(headerMenu.parentElement).not.toHaveClass("border-s")
+    expect(headerMenu.closest("header")).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)_4rem]",
+      "pl-4",
+      "pr-0"
+    )
+    expect(headerMenu.closest("header")).not.toHaveClass("py-3")
     expect(
       screen.getByRole("heading", { name: "Saved Collection" })
     ).toHaveClass("hidden", "md:block")
