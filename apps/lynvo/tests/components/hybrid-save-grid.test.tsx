@@ -132,6 +132,9 @@ describe("HybridSaveGrid", () => {
 
     expect(screen.getByRole("heading", { name: "Queued item" })).toBeVisible()
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Queued item" }).parentElement
+    ).toHaveClass("animate-in", "fade-in", "slide-in-from-bottom-1")
   })
 
   it("opens the group page for a single movie and uses mobile card polish", () => {

@@ -42,6 +42,7 @@ interface ExtractionStatusLifecycle {
   readonly phase: ExtractionStatusPhase
   readonly message: string
   readonly isFadingOut: boolean
+  readonly shouldAnimateEntrance: boolean
 }
 
 const PREFERS_REDUCED_MOTION_MEDIA_QUERY = "(prefers-reduced-motion: reduce)"
@@ -100,6 +101,7 @@ const useExtractionStatusLifecycle = ({
     null
   )
   const [isCompletionFadingOut, setIsCompletionFadingOut] = useState(false)
+  const [shouldAnimateEntrance, setShouldAnimateEntrance] = useState(false)
   const prefersReducedMotion = usePrefersReducedMotion()
   const wasWaitingRef = useRef(false)
 
@@ -121,6 +123,7 @@ const useExtractionStatusLifecycle = ({
   useEffect(() => {
     if (isWaiting) {
       wasWaitingRef.current = true
+      setShouldAnimateEntrance(false)
       return
     }
     const shouldCelebrateCompletion =
@@ -138,6 +141,7 @@ const useExtractionStatusLifecycle = ({
     const clearTimeoutId = window.setTimeout(() => {
       setCompletionMessage(null)
       setIsCompletionFadingOut(false)
+      setShouldAnimateEntrance(true)
     }, EXTRACTION_COMPLETE_DISPLAY_MS)
     return () => {
       window.clearTimeout(fadeTimeoutId)
@@ -153,12 +157,18 @@ const useExtractionStatusLifecycle = ({
 
   if (isWaiting) {
     if (!shouldRotateMessages || prefersReducedMotion || messageIndex === 0) {
-      return { phase: "waiting", message: fallbackLabel, isFadingOut: false }
+      return {
+        phase: "waiting",
+        message: fallbackLabel,
+        isFadingOut: false,
+        shouldAnimateEntrance,
+      }
     }
     return {
       phase: "waiting",
       message: EXTRACTION_STATUS_MESSAGES[messageIndex - 1] || fallbackLabel,
       isFadingOut: false,
+      shouldAnimateEntrance,
     }
   }
 
@@ -167,10 +177,16 @@ const useExtractionStatusLifecycle = ({
       phase: "complete",
       message: completionMessage,
       isFadingOut: isCompletionFadingOut,
+      shouldAnimateEntrance,
     }
   }
 
-  return { phase: "idle", message: "", isFadingOut: false }
+  return {
+    phase: "idle",
+    message: "",
+    isFadingOut: false,
+    shouldAnimateEntrance,
+  }
 }
 
 interface ExtractionStatusTextProps {
@@ -265,7 +281,17 @@ export const SaveExtractionStatus = ({
   }
 
   if (lifecycle.phase === "idle") {
-    return <>{children ?? null}</>
+    if (children === undefined) {
+      return null
+    }
+    if (lifecycle.shouldAnimateEntrance) {
+      return (
+        <div className="min-w-0 animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
+          {children}
+        </div>
+      )
+    }
+    return <>{children}</>
   }
 
   return (
@@ -293,6 +319,13 @@ export const ExtractionWaitStatus = ({
   })
 
   if (lifecycle.phase === "idle") {
+    if (lifecycle.shouldAnimateEntrance) {
+      return (
+        <div className="min-w-0 animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
+          {children}
+        </div>
+      )
+    }
     return <>{children}</>
   }
 
