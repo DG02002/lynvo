@@ -85,7 +85,7 @@ describe("LinkSelectionDialog", () => {
       })
     )
     expect(screen.getByText("2 selected")).toBeVisible()
-    expect(screen.getAllByRole("checkbox")).toHaveLength(3)
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2)
     expect(
       screen
         .getAllByRole("checkbox")
@@ -109,6 +109,155 @@ describe("LinkSelectionDialog", () => {
         .getAllByRole("checkbox")
         .every((checkbox) => !checkbox.hasAttribute("data-checked"))
     ).toBe(true)
+  })
+
+  it("uses a non-selectable group checkbox to toggle its selectable children", () => {
+    const onConfirm = vi.fn()
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            nodeKey: "0:group:season-one",
+            id: "season-one",
+            label: "Season 1",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                nodeKey: "0.0:group:quality-folder",
+                id: "quality-folder",
+                label: "2160p",
+                type: "folder",
+                selectable: true,
+                children: [
+                  {
+                    nodeKey:
+                      "0.0.0:playable:https://cdn.example/episode-one.mkv",
+                    id: "episode-one",
+                    url: "https://cdn.example/episode-one.mkv",
+                    label: "Episode One",
+                    type: "file",
+                  },
+                ],
+              },
+              {
+                nodeKey: "0.1:playable:https://cdn.example/episode-two.mkv",
+                id: "episode-two",
+                url: "https://cdn.example/episode-two.mkv",
+                label: "Episode Two",
+                type: "file",
+              },
+            ],
+          },
+        ]}
+        onConfirm={onConfirm}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    fireEvent.click(seasonRow)
+    expect(seasonRow).toHaveAttribute("aria-expanded", "true")
+    const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
+    fireEvent.click(qualityFolderRow)
+    expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    expect(screen.getByText("3 selected")).toBeVisible()
+    expect(seasonRow).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Select 2160p" })
+    ).toHaveAttribute("data-checked")
+    expect(
+      screen.getByRole("checkbox", { name: "Select Episode One" })
+    ).toHaveAttribute("data-checked")
+    expect(
+      screen.getByRole("checkbox", { name: "Select Episode Two" })
+    ).toHaveAttribute("data-checked")
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "quality-folder" }),
+      expect.objectContaining({ id: "episode-two" }),
+    ])
+  })
+
+  it("does not expand a collapsed folder when its checkbox is selected", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "season-one",
+            label: "Season 1",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                id: "episode-one",
+                url: "https://cdn.example/episode-one.mkv",
+                label: "Episode One",
+                type: "file",
+              },
+            ],
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+
+    expect(screen.getByText("1 selected")).toBeVisible()
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+  })
+
+  it("does not expand selected child folders when their parent is opened", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "season-one",
+            label: "Season 1",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                id: "quality-folder",
+                label: "2160p",
+                type: "folder",
+                selectable: true,
+                children: [
+                  {
+                    id: "episode-one",
+                    url: "https://cdn.example/episode-one.mkv",
+                    label: "Episode One",
+                    type: "file",
+                  },
+                ],
+              },
+            ],
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    fireEvent.click(seasonRow)
+
+    const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
+    expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
   })
 
   it("toggles a file when its row is clicked or activated with the keyboard", () => {

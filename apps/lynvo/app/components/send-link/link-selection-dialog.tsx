@@ -74,7 +74,7 @@ export function LinkSelectionDialog({
           targetId: string
         ): ExtractedLink | undefined => {
           for (const item of items) {
-            const itemId = item.id || item.url
+            const itemId = getMediaNodeKey(item)
             if (itemId === targetId) {
               return item
             }
@@ -98,7 +98,7 @@ export function LinkSelectionDialog({
           return next
         }
 
-        const descendantIds = collectLinkAndDescendantIds(targetLink)
+        const descendantIds = collectSelectableLinkIds([targetLink])
         const isSelecting = !isAllChildrenSelected(targetLink, prev)
 
         if (isSelecting) {

@@ -36,13 +36,12 @@ export const LinkSelectionTreeItem = ({
   const {
     linkId,
     isFolder,
-    isSelectable,
+    isSelectionControlAvailable,
     hasChildren,
     canExpand,
     isSelected,
-    hasSelectedChild,
   } = getLinkSelectionState(link, selectedIds)
-  const [isExpanded, setIsExpanded] = React.useState(hasSelectedChild)
+  const [isExpanded, setIsExpanded] = React.useState(false)
   const [isResolving, setIsResolving] = React.useState(false)
   const canResolve =
     getMediaNodeInteractionState(link).needsResolution &&
@@ -65,15 +64,6 @@ export const LinkSelectionTreeItem = ({
     (isFolder && hasChildren) || (!isFolder && link.size) || canExpand
   )
 
-  const [prevHasSelectedChild, setPrevHasSelectedChild] =
-    React.useState(hasSelectedChild)
-  if (hasSelectedChild !== prevHasSelectedChild) {
-    setPrevHasSelectedChild(hasSelectedChild)
-    if (hasSelectedChild) {
-      setIsExpanded(true)
-    }
-  }
-
   const handleRowAction = async () => {
     if (canExpand) {
       setIsExpanded((currentValue) => !currentValue)
@@ -93,13 +83,13 @@ export const LinkSelectionTreeItem = ({
       }
       return
     }
-    if (isSelectable) {
+    if (isSelectionControlAvailable) {
       onToggleSelect(linkId)
     }
   }
 
   const handleCheckedChange = () => {
-    if (isSelectable) {
+    if (isSelectionControlAvailable) {
       onToggleSelect(linkId)
     }
   }
@@ -109,17 +99,25 @@ export const LinkSelectionTreeItem = ({
       <div
         role="treeitem"
         aria-expanded={canExpand || canResolve ? isExpanded : undefined}
-        aria-selected={isSelectable ? isSelected : undefined}
+        aria-selected={isSelectionControlAvailable ? isSelected : undefined}
         data-folder-state={folderState}
         tabIndex={0}
         className={cn(
           "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
-          hasTrailingContent
-            ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
-            : "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]",
-          (canExpand || canResolve || isSelectable) &&
+          isSelectionControlAvailable &&
+            (hasTrailingContent
+              ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
+              : "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]"),
+          !isSelectionControlAvailable &&
+            (hasTrailingContent
+              ? "grid-cols-[1.5rem_minmax(0,1fr)_4rem]"
+              : "grid-cols-[1.5rem_minmax(0,1fr)]"),
+          (canExpand || canResolve || isSelectionControlAvailable) &&
             "hover:bg-muted/50 cursor-pointer",
-          !canExpand && !canResolve && !isSelectable && "cursor-default",
+          !canExpand &&
+            !canResolve &&
+            !isSelectionControlAvailable &&
+            "cursor-default",
           isSelected && "bg-muted/30"
         )}
         onClick={() => void handleRowAction()}
@@ -131,20 +129,20 @@ export const LinkSelectionTreeItem = ({
           void handleRowAction()
         }}
       >
-        <div
-          className="flex size-5 items-center justify-center"
-          onClick={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
-          {isSelectable && (
+        {isSelectionControlAvailable && (
+          <div
+            className="flex size-5 items-center justify-center"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
             <Checkbox
               aria-label={`Select ${link.label}`}
               checked={isSelected}
               onCheckedChange={handleCheckedChange}
               className="shrink-0"
             />
-          )}
-        </div>
+          </div>
+        )}
 
         {isResolving ? (
           <Spinner

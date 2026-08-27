@@ -22,30 +22,6 @@ export const collectSelectableLinkIds = (
     ]
   })
 
-const isLinkOrDescendantSelected = (
-  link: ExtractedLink,
-  selectedIds: Set<string>
-): boolean => {
-  const linkId = getSelectableLinkId(link)
-  if (selectedIds.has(linkId)) {
-    return true
-  }
-
-  return (
-    link.children?.some((child) =>
-      isLinkOrDescendantSelected(child, selectedIds)
-    ) ?? false
-  )
-}
-
-export const hasSelectedDescendant = (
-  link: ExtractedLink,
-  selectedIds: Set<string>
-): boolean =>
-  link.children?.some((child) =>
-    isLinkOrDescendantSelected(child, selectedIds)
-  ) ?? false
-
 export const collectSelectedLinks = (
   links: ExtractedLink[],
   selectedIds: Set<string>
