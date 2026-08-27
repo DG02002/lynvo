@@ -9,6 +9,7 @@ import {
   EXTRACTION_COMPLETE_FADE_OUT_MS,
   EXTRACTION_COMPLETE_MESSAGES,
   EXTRACTION_STATUS_MESSAGES,
+  EXTRACTION_STATUS_MIN_WORD_DISPLAY_MS,
   EXTRACTION_STATUS_ROTATION_INTERVAL_MS,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
@@ -104,6 +105,7 @@ const useExtractionStatusLifecycle = ({
   const [shouldAnimateEntrance, setShouldAnimateEntrance] = useState(false)
   const prefersReducedMotion = usePrefersReducedMotion()
   const wasWaitingRef = useRef(false)
+  const currentWordShownAtRef = useRef(0)
 
   useEffect(() => {
     if (!isWaiting || prefersReducedMotion) {
@@ -111,6 +113,7 @@ const useExtractionStatusLifecycle = ({
     }
 
     const intervalId = window.setInterval(() => {
+      currentWordShownAtRef.current = Date.now()
       setMessageIndex(
         (currentIndex) =>
           (currentIndex + 1) % (EXTRACTION_STATUS_MESSAGES.length + 1)
@@ -123,6 +126,7 @@ const useExtractionStatusLifecycle = ({
   useEffect(() => {
     if (isWaiting) {
       wasWaitingRef.current = true
+      currentWordShownAtRef.current = Date.now()
       setShouldAnimateEntrance(false)
       return
     }
@@ -133,19 +137,35 @@ const useExtractionStatusLifecycle = ({
       return
     }
 
-    setCompletionMessage(pickRandomCompletionMessage())
-    setIsCompletionFadingOut(false)
-    const fadeTimeoutId = window.setTimeout(() => {
-      setIsCompletionFadingOut(true)
-    }, EXTRACTION_COMPLETE_DISPLAY_MS - EXTRACTION_COMPLETE_FADE_OUT_MS)
-    const clearTimeoutId = window.setTimeout(() => {
-      setCompletionMessage(null)
-      setIsCompletionFadingOut(false)
-      setShouldAnimateEntrance(true)
-    }, EXTRACTION_COMPLETE_DISPLAY_MS)
+    const completionDelayMs = Math.max(
+      0,
+      EXTRACTION_STATUS_MIN_WORD_DISPLAY_MS -
+        (Date.now() - currentWordShownAtRef.current)
+    )
+    const completionTimeoutIds: number[] = []
+    completionTimeoutIds.push(
+      window.setTimeout(() => {
+        setCompletionMessage(pickRandomCompletionMessage())
+        setIsCompletionFadingOut(false)
+        completionTimeoutIds.push(
+          window.setTimeout(
+            () => setIsCompletionFadingOut(true),
+            EXTRACTION_COMPLETE_DISPLAY_MS - EXTRACTION_COMPLETE_FADE_OUT_MS
+          )
+        )
+        completionTimeoutIds.push(
+          window.setTimeout(() => {
+            setCompletionMessage(null)
+            setIsCompletionFadingOut(false)
+            setShouldAnimateEntrance(true)
+          }, EXTRACTION_COMPLETE_DISPLAY_MS)
+        )
+      }, completionDelayMs)
+    )
     return () => {
-      window.clearTimeout(fadeTimeoutId)
-      window.clearTimeout(clearTimeoutId)
+      for (const completionTimeoutId of completionTimeoutIds) {
+        window.clearTimeout(completionTimeoutId)
+      }
     }
   }, [isWaiting, status])
 
@@ -214,7 +234,9 @@ const ExtractionStatusText = ({
         )}
         role="status"
       >
-        <span className="shimmer min-w-0">{message}</span>
+        <span className="animate-in fade-in duration-300 motion-reduce:animate-none shimmer min-w-0">
+          {message}
+        </span>
       </span>
     )
   }
@@ -228,7 +250,13 @@ const ExtractionStatusText = ({
       role={isTitle ? undefined : "status"}
     >
       {!isTitle && <Spinner aria-hidden="true" className="size-3" />}
-      <span className={cn("min-w-0", phase === "waiting" && "shimmer")}>
+      <span
+        key={message}
+        className={cn(
+          "animate-in fade-in duration-300 motion-reduce:animate-none min-w-0",
+          phase === "waiting" && "shimmer"
+        )}
+      >
         {message}
       </span>
     </span>

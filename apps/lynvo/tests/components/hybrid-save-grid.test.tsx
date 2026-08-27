@@ -119,6 +119,10 @@ describe("HybridSaveGrid", () => {
       />
     )
 
+    act(() => {
+      vi.advanceTimersByTime(1_200)
+    })
+
     const completionStatus = screen.getByRole("status")
     expect([...EXTRACTION_COMPLETE_MESSAGES]).toContain(
       completionStatus.textContent
