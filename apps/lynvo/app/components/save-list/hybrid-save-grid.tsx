@@ -6,7 +6,10 @@ import { getHybridCardGroupSections } from "~/features/links/media-artwork/hybri
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import { cn } from "~/lib/utils"
-import { SaveExtractionStatus } from "./extraction-status"
+import {
+  SaveExtractionStatus,
+  useIsExtractionStatusPresented,
+} from "./extraction-status"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { getItemTitle } from "./save-list-browser-model"
 import {
@@ -53,6 +56,15 @@ const HybridSaveCard = ({
   const isExtractionIncomplete = extractionState !== "complete"
   const isExtracting =
     isSingleItem && item ? extractingItems.has(item.url) : false
+  const isExtractionStatusPresented = useIsExtractionStatusPresented({
+    isWaiting:
+      isExtracting ||
+      extractionState === "queued" ||
+      extractionState === "running",
+    didFail: extractionState === "failed",
+  })
+  const isExtractionVisual =
+    isExtractionIncomplete || isExtractionStatusPresented
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const isArtworkPending =
@@ -63,7 +75,7 @@ const HybridSaveCard = ({
       onOpenGroup(group.key)
       return
     }
-    if (!item || isExtractionIncomplete) {
+    if (!item || isExtractionVisual) {
       return
     }
     actions.markOpened(item.url, item.url)
@@ -77,7 +89,7 @@ const HybridSaveCard = ({
       data-extraction-state={extractionState}
       className="group relative w-full animate-in fade-in fill-mode-both slide-in-from-bottom-4 zoom-in-95 duration-500 motion-reduce:animate-none"
     >
-      {isExtractionIncomplete ? null : (
+      {isExtractionVisual ? null : (
         <button
           type="button"
           onClick={handleActivate}
@@ -96,7 +108,7 @@ const HybridSaveCard = ({
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
       >
-        {isExtractionIncomplete ? (
+        {isExtractionVisual ? (
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
             <Spinner aria-hidden="true" className="size-8" />
           </div>

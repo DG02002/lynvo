@@ -19,7 +19,10 @@ import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwor
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import { SaveExtractionStatus } from "./extraction-status"
+import {
+  SaveExtractionStatus,
+  useIsExtractionStatusPresented,
+} from "./extraction-status"
 import {
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
@@ -49,6 +52,13 @@ const HybridGroupItemRow = ({
   const { directLink, isDirectLinkExpired } = interactionState
   const extractionState = item.extractionStatus?.state ?? "complete"
   const isExtractionIncomplete = extractionState !== "complete"
+  const isExtractionStatusPresented = useIsExtractionStatusPresented({
+    isWaiting:
+      isExtracting || (isExtractionIncomplete && extractionState !== "failed"),
+    didFail: extractionState === "failed",
+  })
+  const isExtractionVisual =
+    isExtractionIncomplete || isExtractionStatusPresented
   const itemLabel = getHybridItemLabel(item)
   const view = toLinkViewModel(item)
   const directLinkTarget = directLink
@@ -56,7 +66,7 @@ const HybridGroupItemRow = ({
     : undefined
 
   const handleActivate = () => {
-    if (isExtractionIncomplete) {
+    if (isExtractionVisual) {
       return
     }
     if (directLink) {
@@ -83,7 +93,7 @@ const HybridGroupItemRow = ({
   return (
     <MediaListRow
       icon={
-        isExtractionIncomplete ? (
+        isExtractionVisual ? (
           <SaveListRowIcon>
             {extractionState === "failed" ? (
               <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
@@ -130,7 +140,7 @@ const HybridGroupItemRow = ({
       }
       trailing={
         !isDirectLinkExpired &&
-        !isExtractionIncomplete &&
+        !isExtractionVisual &&
         interactionState.isNew ? (
           <NewBadge />
         ) : undefined

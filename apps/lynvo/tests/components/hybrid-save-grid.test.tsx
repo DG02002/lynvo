@@ -126,6 +126,10 @@ describe("HybridSaveGrid", () => {
     expect(completionStatus.firstElementChild).toHaveClass("shimmer")
     expect(completionStatus).toHaveClass("opacity-100")
 
+    const flashCard = screen.getByTestId("hybrid-save-card")
+    expect(flashCard.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    expect(screen.queryByText("No poster found")).not.toBeInTheDocument()
+
     act(() => {
       vi.advanceTimersByTime(2_400)
     })

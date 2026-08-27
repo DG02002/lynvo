@@ -66,6 +66,7 @@ import {
   ExtractionWaitStatus,
   SaveExtractionStatus,
   getExtractionStatusLabel,
+  useIsExtractionStatusPresented,
 } from "./extraction-status"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
@@ -580,6 +581,7 @@ interface SaveListRootRowIconProps {
   readonly shouldShowRowPosters: boolean
   readonly didExtractionFail: boolean
   readonly isExtractionIncomplete: boolean
+  readonly isExtracting: boolean
   readonly directLinkLabel: string | undefined
   readonly itemTitle: string
   readonly isDirectLinkExpired: boolean
@@ -589,11 +591,18 @@ const SaveListRootRowIcon = ({
   shouldShowRowPosters,
   didExtractionFail,
   isExtractionIncomplete,
+  isExtracting,
   directLinkLabel,
   itemTitle,
   isDirectLinkExpired,
 }: SaveListRootRowIconProps) => {
-  const fallbackIcon = isExtractionIncomplete ? (
+  const isExtractionStatusPresented = useIsExtractionStatusPresented({
+    isWaiting: isExtracting || (isExtractionIncomplete && !didExtractionFail),
+    didFail: didExtractionFail,
+  })
+  const isExtractionVisual =
+    isExtractionIncomplete || isExtractionStatusPresented
+  const fallbackIcon = isExtractionVisual ? (
     didExtractionFail ? (
       <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
     ) : (
@@ -784,6 +793,7 @@ export const SaveListBrowser = ({
                         shouldShowRowPosters={shouldShowRowPosters}
                         didExtractionFail={extractionState === "failed"}
                         isExtractionIncomplete={isExtractionIncomplete}
+                        isExtracting={isExtracting}
                         directLinkLabel={directLink?.label}
                         itemTitle={getItemTitle(item)}
                         isDirectLinkExpired={isDirectLinkExpired}
@@ -804,8 +814,6 @@ export const SaveListBrowser = ({
                               isDirectLinkExpired ? "line-through" : undefined
                             }
                           />
-                        </SaveExtractionStatus>
-                        {!isExtractionIncomplete && (
                           <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
                             <MediaListRowMeta
                               sourceName={
@@ -847,7 +855,7 @@ export const SaveListBrowser = ({
                                 </span>
                               )}
                           </span>
-                        )}
+                        </SaveExtractionStatus>
                       </span>
                     </div>
                     {isRootItemNew && (

@@ -235,6 +235,23 @@ const ExtractionStatusText = ({
   )
 }
 
+interface IsExtractionStatusPresentedOptions {
+  readonly isWaiting: boolean
+  readonly didFail?: boolean
+}
+
+export const useIsExtractionStatusPresented = ({
+  isWaiting,
+  didFail = false,
+}: IsExtractionStatusPresentedOptions): boolean => {
+  const lifecycle = useExtractionStatusLifecycle({
+    status: isWaiting ? "waiting" : didFail ? "failed" : "idle",
+    fallbackLabel: "",
+    shouldRotateMessages: false,
+  })
+  return lifecycle.phase !== "idle"
+}
+
 export const SaveExtractionStatus = ({
   item,
   isRefreshing,
