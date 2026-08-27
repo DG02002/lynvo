@@ -16,10 +16,10 @@ const subscribeToAutoSaveLinksPreference = (onStoreChange: () => void) => {
 
 export const getShouldAutoSaveAllLinks = (): boolean => {
   if (globalThis.localStorage === undefined) {
-    return false
+    return true
   }
 
-  return localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY) === "true"
+  return localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY) !== "false"
 }
 
 export const setShouldAutoSaveAllLinks = (
@@ -40,5 +40,5 @@ export const useShouldAutoSaveAllLinks = () =>
   useSyncExternalStore(
     subscribeToAutoSaveLinksPreference,
     getShouldAutoSaveAllLinks,
-    () => false
+    () => true
   )

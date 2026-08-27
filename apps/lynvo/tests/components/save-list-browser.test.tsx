@@ -99,9 +99,9 @@ describe("SaveListBrowser", () => {
     expect(headerMenu.parentElement).not.toHaveClass("border-s")
     expect(headerMenu.closest("header")).toHaveClass(
       "grid",
-      "grid-cols-[auto_minmax(0,1fr)_4rem]",
-      "pl-4",
-      "pr-0"
+      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "items-stretch",
+      "p-0"
     )
     expect(headerMenu.closest("header")).not.toHaveClass("py-3")
     expect(

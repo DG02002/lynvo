@@ -16,8 +16,8 @@ afterEach(() => {
 })
 
 describe("Auto-save links preference", () => {
-  it("is disabled by default", () => {
-    expect(getShouldAutoSaveAllLinks()).toBe(false)
+  it("is enabled by default", () => {
+    expect(getShouldAutoSaveAllLinks()).toBe(true)
   })
 
   it("persists and broadcasts changes", () => {

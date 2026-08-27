@@ -16,6 +16,9 @@ export const DATA_VERSION_RESPONSE_HEADER = "X-Lynvo-Data-Version"
 export const MEDIA_ARTWORK_API_TIMEOUT_MS = 15_000
 export const MEDIA_ARTWORK_BATCH_SIZE = 12
 export const MEDIA_ARTWORK_FLUSH_DELAY_MS = 150
+export const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
+export const MILLISECONDS_PER_SECOND = 1_000
+export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * MILLISECONDS_PER_SECOND
 export const TMDB_IMAGE_CARD_BASE_URL = "https://image.tmdb.org/t/p/w342"
 export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
 export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
@@ -24,6 +27,11 @@ export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
 export const TMDB_IMAGE_WIDE_CARD_BASE_URL = TMDB_IMAGE_DETAIL_BASE_URL
 export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
+export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
+export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
+export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = "lynvo:media-artwork:v1:"
+export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * MILLISECONDS_PER_DAY
+export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = MILLISECONDS_PER_DAY
 export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
 export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
@@ -45,10 +53,22 @@ export const EXTRACTION_STATUS_MESSAGES = [
   "Polishing the final details…",
   "Wrapping up link extraction…",
 ] as const
+export const EXTRACTION_COMPLETE_DISPLAY_MS = 2_400
+export const EXTRACTION_COMPLETE_FADE_OUT_MS = 400
+export const EXTRACTION_COMPLETE_MESSAGES = [
+  "Done and dusted.",
+  "Links found. You’re welcome.",
+  "Fresh links, still warm.",
+  "That went surprisingly well.",
+  "All wrapped up.",
+  "Nailed it.",
+  "Links acquired. Enjoy.",
+  "Sorted. Easy.",
+  "Mission accomplished.",
+  "The internet delivered.",
+] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160
-export const MILLISECONDS_PER_SECOND = 1_000
-export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * MILLISECONDS_PER_SECOND
 export const MOBILE_PRICING_CONTROLS_HEIGHT_PX = 112
 export const MEDIA_FILENAME_MAX_EPISODE_DIGITS = 4
 export const MEDIA_YEAR_MIN = 1900

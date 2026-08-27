@@ -7,6 +7,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import { FilenameText } from "~/components/filename-text"
+import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
@@ -18,7 +19,6 @@ import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwor
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import { TMDB_ATTRIBUTION_LOGO_SRC } from "~/lib/constants"
 import { SaveExtractionStatus } from "./extraction-status"
 import {
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
@@ -105,19 +105,13 @@ const HybridGroupItemRow = ({
         )
       }
       title={
-        isExtractionIncomplete ? (
-          <SaveExtractionStatus
-            item={item}
-            isRefreshing={isExtracting}
-            isTitle
-          />
-        ) : (
+        <SaveExtractionStatus item={item} isRefreshing={isExtracting} isTitle>
           <FilenameText
             value={itemLabel}
             className={MEDIA_LIST_ROW_TITLE_CLASS}
             textClassName={isDirectLinkExpired ? "line-through" : undefined}
           />
-        )
+        </SaveExtractionStatus>
       }
       meta={
         <>
@@ -178,28 +172,15 @@ export const HybridGroupBrowser = ({
 }: HybridGroupBrowserProps) => {
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
+  const isArtworkPending =
+    group.artworkRequest !== undefined && artwork === undefined
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:hidden">
-        <Button
-          variant="ghost"
-          onClick={onExit}
-          className="text-lg text-foreground hover:bg-transparent hover:text-foreground"
-        >
-          <HugeiconsIcon
-            icon={ArrowLeft01Icon}
-            className="size-6 text-foreground"
-            data-icon="inline-start"
-          />
-          Back
-        </Button>
-        <h1
-          aria-label={group.displayTitle}
-          className="min-w-0 flex-1 truncate text-base font-normal"
-        >
-          {group.displayTitle}
-        </h1>
+      <header className="flex min-h-16 shrink-0 items-stretch border-b bg-background md:hidden">
+        <div className="w-16 shrink-0">
+          <ImmersiveBackButton onExit={onExit} />
+        </div>
       </header>
       <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[8rem_minmax(0,22rem)_minmax(0,1fr)] md:grid-rows-1">
         <div className="hidden md:block">
@@ -216,17 +197,25 @@ export const HybridGroupBrowser = ({
             Back
           </Button>
         </div>
-        <div className="flex items-start gap-4 border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
-          <div className="w-24 shrink-0 md:w-full">
+        <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
+          <div className="mx-auto w-80 md:mx-0 md:w-full">
             <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
               {imagePath ? (
                 <TmdbImage
                   path={imagePath}
                   variant="card"
+                  imageType={artwork?.stillPath ? "still" : "poster"}
+                  sizes="(min-width: 768px) 22rem, 20rem"
                   alt={`Artwork for ${group.displayTitle}`}
                   width={342}
                   height={513}
                 />
+              ) : isArtworkPending ? (
+                <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
+                  <Spinner
+                    aria-label={`Loading artwork for ${group.displayTitle}…`}
+                  />
+                </div>
               ) : (
                 <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
                   No poster found
@@ -236,31 +225,13 @@ export const HybridGroupBrowser = ({
             <h2 className="hidden pt-3 text-center font-heading text-base font-normal break-words md:block">
               {group.displayTitle}
             </h2>
-            {imagePath && (
-              <img
-                src={TMDB_ATTRIBUTION_LOGO_SRC}
-                alt="Metadata by TMDB"
-                className="mx-auto mt-2 h-5 w-auto"
-                decoding="async"
-              />
-            )}
           </div>
-          <div className="min-w-0 flex-1 md:hidden">
-            <h1
-              aria-label={group.displayTitle}
-              className="font-heading text-lg font-normal break-words"
-            >
-              {group.displayTitle}
-            </h1>
-            {imagePath && (
-              <img
-                src={TMDB_ATTRIBUTION_LOGO_SRC}
-                alt="Metadata by TMDB"
-                className="mt-2 h-5 w-auto"
-                decoding="async"
-              />
-            )}
-          </div>
+          <h1
+            aria-label={group.displayTitle}
+            className="mt-3 text-center font-heading text-lg font-normal break-words md:hidden"
+          >
+            {group.displayTitle}
+          </h1>
         </div>
         <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">

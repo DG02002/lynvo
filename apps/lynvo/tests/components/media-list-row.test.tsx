@@ -103,4 +103,42 @@ describe("MediaListRow", () => {
       overlayAction.parentElement
     )
   })
+
+  it("stacks the icon full width with the overlay beside the title on mobile", () => {
+    render(
+      <MediaListRow
+        icon={<span data-testid="row-icon" />}
+        title={<span>Title text</span>}
+        meta={<span>Meta text</span>}
+        onActivate={() => {}}
+        overlay={<button type="button">Overlay action</button>}
+        shouldStackIconOnMobile
+      />
+    )
+
+    const activationButton = screen
+      .getAllByRole("button")
+      .find((button) => button.className.includes("absolute inset-0"))
+    expect(activationButton).toBeDefined()
+    const row = activationButton?.parentElement
+    expect(row).toHaveClass("flex-col", "md:flex-row")
+
+    const content = screen.getByTestId("row-icon").parentElement
+    expect(content).toHaveClass("pointer-events-none")
+
+    const overlayActions = screen.getAllByRole("button", {
+      name: "Overlay action",
+    })
+    const mobileOverlay = overlayActions.find((button) =>
+      button.parentElement?.className.includes("md:hidden")
+    )
+    expect(mobileOverlay?.parentElement).toHaveClass(
+      "pointer-events-auto",
+      "shrink-0"
+    )
+    const desktopOverlay = overlayActions.find(
+      (button) => button !== mobileOverlay
+    )
+    expect(desktopOverlay?.parentElement).toHaveClass("hidden", "md:flex")
+  })
 })

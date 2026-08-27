@@ -44,13 +44,15 @@ export const LinkSelectionHeader = ({
         </div>
       )}
 
-      {pageTitle && (
+      {pageTitle ? (
         <DialogTitle
           aria-label={pageTitle}
           className="text-base font-normal leading-tight text-foreground sm:text-lg"
         >
           <FilenameText value={pageTitle} />
         </DialogTitle>
+      ) : (
+        <DialogTitle className="sr-only">Select links</DialogTitle>
       )}
 
       {normalizedAudio && (

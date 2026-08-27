@@ -79,20 +79,22 @@ export const LinkSelectionTreeItem = ({
       setIsExpanded((currentValue) => !currentValue)
       return
     }
-    if (!canResolve || isResolving || !onExpandFolder) {
+    if (canResolve && !isResolving && onExpandFolder) {
+      const linkTarget = getMediaNodeTargetOrUndefined(link)
+      if (linkTarget === undefined) {
+        return
+      }
+
+      setIsResolving(true)
+      const didResolve = await onExpandFolder(linkId, linkTarget)
+      setIsResolving(false)
+      if (didResolve) {
+        setIsExpanded(true)
+      }
       return
     }
-
-    const linkTarget = getMediaNodeTargetOrUndefined(link)
-    if (linkTarget === undefined) {
-      return
-    }
-
-    setIsResolving(true)
-    const didResolve = await onExpandFolder(linkId, linkTarget)
-    setIsResolving(false)
-    if (didResolve) {
-      setIsExpanded(true)
+    if (isSelectable) {
+      onToggleSelect(linkId)
     }
   }
 
@@ -115,8 +117,9 @@ export const LinkSelectionTreeItem = ({
           hasTrailingContent
             ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
             : "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]",
-          (canExpand || canResolve) && "hover:bg-muted/50 cursor-pointer",
-          !canExpand && !canResolve && "cursor-default",
+          (canExpand || canResolve || isSelectable) &&
+            "hover:bg-muted/50 cursor-pointer",
+          !canExpand && !canResolve && !isSelectable && "cursor-default",
           isSelected && "bg-muted/30"
         )}
         onClick={() => void handleRowAction()}

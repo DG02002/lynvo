@@ -99,4 +99,35 @@ describe("TmdbImage", () => {
       "https://image.tmdb.org/t/p/w780/still.jpg"
     )
   })
+
+  it("offers poster and still source sets for resolution-appropriate downloads", () => {
+    render(
+      <TmdbImage
+        path="/poster.jpg"
+        variant="card"
+        alt="Poster"
+        imageType="poster"
+        sizes="45vw"
+      />
+    )
+    render(
+      <TmdbImage
+        path="/still.jpg"
+        variant="wide-card"
+        alt="Episode still"
+        imageType="still"
+        sizes="100vw"
+      />
+    )
+
+    expect(screen.getByAltText("Poster")).toHaveAttribute(
+      "srcSet",
+      "https://image.tmdb.org/t/p/w342/poster.jpg 342w, https://image.tmdb.org/t/p/w500/poster.jpg 500w, https://image.tmdb.org/t/p/w780/poster.jpg 780w"
+    )
+    expect(screen.getByAltText("Poster")).toHaveAttribute("sizes", "45vw")
+    expect(screen.getByAltText("Episode still")).toHaveAttribute(
+      "srcSet",
+      "https://image.tmdb.org/t/p/w300/still.jpg 300w, https://image.tmdb.org/t/p/w780/still.jpg 780w, https://image.tmdb.org/t/p/w1280/still.jpg 1280w"
+    )
+  })
 })

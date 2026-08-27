@@ -25,7 +25,7 @@ afterEach(() => {
 })
 
 describe("GeneralSettings", () => {
-  it("shows auto-save as an editable setting that is off by default", async () => {
+  it("shows auto-save as an editable setting that is on by default", async () => {
     const router = createMemoryRouter(
       [
         {
@@ -46,12 +46,12 @@ describe("GeneralSettings", () => {
       name: "Save all links automatically",
     })
 
-    expect(autoSaveSwitch).not.toBeChecked()
+    expect(autoSaveSwitch).toBeChecked()
     expect(autoSaveSwitch).not.toHaveAttribute("aria-disabled", "true")
 
     fireEvent.click(autoSaveSwitch)
 
-    expect(autoSaveSwitch).toBeChecked()
-    expect(localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY)).toBe("true")
+    expect(autoSaveSwitch).not.toBeChecked()
+    expect(localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY)).toBe("false")
   })
 })

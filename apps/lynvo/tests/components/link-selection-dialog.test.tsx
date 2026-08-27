@@ -111,6 +111,67 @@ describe("LinkSelectionDialog", () => {
     ).toBe(true)
   })
 
+  it("toggles a file when its row is clicked or activated with the keyboard", () => {
+    const onConfirm = vi.fn()
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "video-one",
+            url: "https://cdn.example/video-one.mkv",
+            label: "Video One",
+            type: "file",
+          },
+        ]}
+        onConfirm={onConfirm}
+      />
+    )
+
+    const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
+    fireEvent.click(fileRow)
+    expect(screen.getByText("1 selected")).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "video-one" }),
+    ])
+
+    fireEvent.keyDown(fileRow, { key: "Enter" })
+    expect(screen.getByText("0 selected")).toBeVisible()
+  })
+
+  it("toggles every link when the Select all label text is clicked", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "video-one",
+            url: "https://cdn.example/video-one.mkv",
+            label: "Video One",
+            type: "file",
+          },
+          {
+            id: "video-two",
+            url: "https://cdn.example/video-two.mkv",
+            label: "Video Two",
+            type: "file",
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByText("Select all"))
+    expect(screen.getByText("2 selected")).toBeVisible()
+
+    fireEvent.click(screen.getByText("Select all"))
+    expect(screen.getByText("0 selected")).toBeVisible()
+  })
+
   it("selects children discovered after a selected lazy folder is expanded", async () => {
     const resolveFolder = vi.fn().mockResolvedValue([
       {

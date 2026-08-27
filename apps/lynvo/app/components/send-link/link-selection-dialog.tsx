@@ -207,7 +207,19 @@ export function LinkSelectionDialog({
         <div className="z-10 flex flex-col gap-3 border-t bg-popover px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8 md:py-6">
           {selectableIds.length > 0 && (
             <div className="flex min-h-11 w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
-              <label className="grid cursor-pointer grid-cols-[1.25rem_auto] items-center gap-x-3 pl-2">
+              <label
+                className="grid cursor-pointer grid-cols-[1.25rem_auto] items-center gap-x-3 rounded-lg pl-2 focus-within:ring-2 focus-within:ring-ring"
+                onClick={(event) => {
+                  if (
+                    event.target instanceof Element &&
+                    event.target.closest('[data-slot="checkbox"]')
+                  ) {
+                    return
+                  }
+                  event.preventDefault()
+                  handleToggleSelectAll()
+                }}
+              >
                 <span className="flex size-5 items-center justify-center">
                   <Checkbox
                     checked={isAllSelected}

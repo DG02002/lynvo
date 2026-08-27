@@ -6,6 +6,7 @@ import {
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
+import { ExtractionWaitStatus } from "~/components/save-list/extraction-status"
 import { FilenameText } from "~/components/filename-text"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
@@ -220,6 +221,7 @@ export const ResolvableContainerRow = ({
               parentFolderName={episodeStill.parentFolderName}
               fallbackIcon={containerIcon}
               isResolving={shouldShowResolving}
+              isWatched={link.opened === true}
             />
           ) : shouldShowRowPosters ? (
             <SaveListRowPoster
@@ -232,10 +234,16 @@ export const ResolvableContainerRow = ({
           )
         }
         title={
-          <FilenameText
-            value={link.label}
-            className={MEDIA_LIST_ROW_TITLE_CLASS}
-          />
+          <ExtractionWaitStatus
+            isWaiting={shouldShowResolving}
+            didFail={didResolutionFail}
+            titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
+          >
+            <FilenameText
+              value={link.label}
+              className={MEDIA_LIST_ROW_TITLE_CLASS}
+            />
+          </ExtractionWaitStatus>
         }
         meta={
           <MediaListRowMeta

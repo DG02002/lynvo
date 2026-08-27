@@ -100,48 +100,107 @@ export const MediaListRow = ({
   overlayClassName,
   buttonDataAttributes,
   shouldStackIconOnMobile = false,
-}: MediaListRowProps) => (
-  <div
-    className={cn(
-      "flex w-full items-stretch border-b last:border-b-0",
-      SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
-      wrapperClassName
-    )}
-  >
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      className={cn(
-        "flex min-h-24 min-w-0 flex-1 cursor-pointer select-none items-center gap-3 px-4 py-6 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        !disabled && "hover:bg-muted",
-        isOpened && !disabled && "bg-sky-500/15 hover:bg-sky-500/20",
-        disabled && "cursor-not-allowed opacity-60",
-        shouldStackIconOnMobile &&
-          "flex-col items-stretch gap-4 md:flex-row md:items-center",
-        buttonClassName
-      )}
-      onClick={onActivate}
-      {...buttonDataAttributes}
-    >
-      {icon}
-      <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-        {title}
-        {meta}
-      </span>
-      {trailing}
-    </button>
-    {overlay && (
+}: MediaListRowProps) => {
+  if (shouldStackIconOnMobile) {
+    return (
       <div
         className={cn(
-          "flex items-center justify-center",
-          MEDIA_LIST_ROW_MENU_CELL_CLASS,
-          overlayClassName,
-          isOpened && !disabled && "bg-sky-500/15"
+          "relative flex flex-col border-b last:border-b-0 md:flex-row md:items-stretch",
+          SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+          wrapperClassName
         )}
+        {...buttonDataAttributes}
       >
-        {overlay}
+        <button
+          type="button"
+          aria-label={label}
+          disabled={disabled}
+          className={cn(
+            "absolute inset-0 z-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+            !disabled && "hover:bg-muted",
+            isOpened && !disabled && "bg-sky-500/15 hover:bg-sky-500/20",
+            disabled && "cursor-not-allowed",
+            buttonClassName
+          )}
+          onClick={onActivate}
+        />
+        <div
+          className={cn(
+            "pointer-events-none relative z-2 flex min-h-24 flex-1 flex-col gap-3 p-3 md:flex-row md:items-center md:gap-3 md:p-0 md:px-4 md:py-6",
+            disabled && "opacity-60"
+          )}
+        >
+          {icon}
+          <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="min-w-0 flex-1">{title}</span>
+              {overlay && (
+                <span className="pointer-events-auto -me-1 shrink-0 md:hidden">
+                  {overlay}
+                </span>
+              )}
+            </span>
+            {meta}
+          </span>
+          {trailing}
+        </div>
+        {overlay && (
+          <div
+            className={cn(
+              "relative z-2 hidden items-center justify-center md:flex",
+              MEDIA_LIST_ROW_MENU_CELL_CLASS,
+              overlayClassName,
+              isOpened && !disabled && "bg-sky-500/15"
+            )}
+          >
+            {overlay}
+          </div>
+        )}
       </div>
-    )}
-  </div>
-)
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex w-full items-stretch border-b last:border-b-0",
+        SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+        wrapperClassName
+      )}
+    >
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        className={cn(
+          "flex min-h-24 min-w-0 flex-1 cursor-pointer select-none items-center gap-3 px-4 py-6 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          !disabled && "hover:bg-muted",
+          isOpened && !disabled && "bg-sky-500/15 hover:bg-sky-500/20",
+          disabled && "cursor-not-allowed opacity-60",
+          buttonClassName
+        )}
+        onClick={onActivate}
+        {...buttonDataAttributes}
+      >
+        {icon}
+        <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+          {title}
+          {meta}
+        </span>
+        {trailing}
+      </button>
+      {overlay && (
+        <div
+          className={cn(
+            "flex items-center justify-center",
+            MEDIA_LIST_ROW_MENU_CELL_CLASS,
+            overlayClassName,
+            isOpened && !disabled && "bg-sky-500/15"
+          )}
+        >
+          {overlay}
+        </div>
+      )}
+    </div>
+  )
+}

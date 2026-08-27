@@ -4,6 +4,7 @@ import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { getMediaArtworkRequest } from "~/features/links/media-artwork/media-artwork-identity"
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { cn } from "~/lib/utils"
+import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/spinner"
 
 interface FinderEpisodeStillProps {
@@ -12,6 +13,7 @@ interface FinderEpisodeStillProps {
   readonly fallbackIcon: ReactNode
   readonly isResolving?: boolean
   readonly isDimmed?: boolean
+  readonly isWatched?: boolean
 }
 
 export const FinderEpisodeStill = ({
@@ -20,6 +22,7 @@ export const FinderEpisodeStill = ({
   fallbackIcon,
   isResolving = false,
   isDimmed = false,
+  isWatched = false,
 }: FinderEpisodeStillProps) => {
   const artworkRequest = useMemo(
     () => getMediaArtworkRequest(label, parentFolderName),
@@ -27,14 +30,28 @@ export const FinderEpisodeStill = ({
   )
   const artwork = useMediaArtwork(artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
+  const isLookupPending = artworkRequest !== undefined && artwork === undefined
 
   return (
     <span
       className={cn("block w-full shrink-0 md:w-96", isDimmed && "opacity-60")}
     >
-      <span className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60">
+      <span
+        className={cn(
+          "relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60",
+          isWatched && "grayscale"
+        )}
+      >
         {imagePath ? (
-          <TmdbImage path={imagePath} variant="wide-card" alt="" />
+          <TmdbImage
+            path={imagePath}
+            variant="wide-card"
+            imageType={artwork?.stillPath ? "still" : "poster"}
+            sizes="(min-width: 768px) 24rem, calc(100vw - 1.5rem)"
+            alt=""
+          />
+        ) : isLookupPending ? (
+          <Skeleton className="absolute inset-0 size-full" />
         ) : (
           fallbackIcon
         )}

@@ -3,13 +3,13 @@ import type { RefObject } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
-  ArrowLeft01Icon,
   AlertCircleIcon,
   Folder01Icon,
   Folder02Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
+import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { Spinner } from "~/components/spinner"
@@ -63,6 +63,7 @@ import {
   SaveDateGroupSection,
 } from "./save-date-group-heading"
 import {
+  ExtractionWaitStatus,
   SaveExtractionStatus,
   getExtractionStatusLabel,
 } from "./extraction-status"
@@ -144,18 +145,7 @@ const MobileFolderTreeToggle = ({
 
 export const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
   <div className="contents md:block md:h-full md:border-r">
-    <Button
-      variant="ghost"
-      className="text-lg text-foreground hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
-      onClick={onExit}
-    >
-      <HugeiconsIcon
-        icon={ArrowLeft01Icon}
-        className="size-6 text-foreground"
-        data-icon="inline-start"
-      />
-      Back
-    </Button>
+    <ImmersiveBackButton onExit={onExit} />
   </div>
 )
 
@@ -261,7 +251,7 @@ const FinderEmptyState = ({
   contentRef,
 }: FinderEmptyStateProps) => (
   <section className="flex h-svh flex-col overflow-hidden bg-background">
-    <header className="grid min-h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)_4rem] items-center border-b bg-background pl-4 pr-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+    <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:gap-0">
       <FinderBackButton onExit={onExit} />
       <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
@@ -342,7 +332,7 @@ const FinderBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="grid min-h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)_4rem] items-center border-b bg-background pl-4 pr-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
+      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:gap-0">
         <FinderBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -481,6 +471,7 @@ const FinderBrowser = ({
                       fallbackIcon={rowFallbackIcon}
                       isResolving={isResolving}
                       isDimmed={isExpired}
+                      isWatched={link.opened === true}
                     />
                   ) : shouldShowRowPosters && !isFolder ? (
                     <SaveListRowPoster
@@ -509,16 +500,23 @@ const FinderBrowser = ({
                   )
                 }
                 title={
-                  <FilenameText
-                    value={
-                      shouldShowRowPosters
-                        ? (getMediaDisplayTitle(link.label, parentFolderName) ??
-                          link.label)
-                        : link.label
-                    }
-                    className={MEDIA_LIST_ROW_TITLE_CLASS}
-                    textClassName={isExpired ? "line-through" : undefined}
-                  />
+                  <ExtractionWaitStatus
+                    isWaiting={isResolving}
+                    titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
+                  >
+                    <FilenameText
+                      value={
+                        shouldShowRowPosters
+                          ? (getMediaDisplayTitle(
+                              link.label,
+                              parentFolderName
+                            ) ?? link.label)
+                          : link.label
+                      }
+                      className={MEDIA_LIST_ROW_TITLE_CLASS}
+                      textClassName={isExpired ? "line-through" : undefined}
+                    />
+                  </ExtractionWaitStatus>
                 }
                 meta={
                   <>
@@ -791,66 +789,64 @@ export const SaveListBrowser = ({
                         isDirectLinkExpired={isDirectLinkExpired}
                       />
                       <span className="min-w-0 flex-1">
-                        {isExtractionIncomplete ? (
-                          <SaveExtractionStatus
-                            item={item}
-                            isRefreshing={isExtracting}
-                            isTitle
+                        <SaveExtractionStatus
+                          item={item}
+                          isRefreshing={isExtracting}
+                          isTitle
+                        >
+                          <FilenameText
+                            value={directLink?.label || getItemTitle(item)}
+                            className={cn(
+                              MEDIA_LIST_ROW_TITLE_CLASS,
+                              "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
+                            )}
+                            textClassName={
+                              isDirectLinkExpired ? "line-through" : undefined
+                            }
                           />
-                        ) : (
-                          <>
-                            <FilenameText
-                              value={directLink?.label || getItemTitle(item)}
-                              className={cn(
-                                MEDIA_LIST_ROW_TITLE_CLASS,
-                                "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
-                              )}
-                              textClassName={
-                                isDirectLinkExpired ? "line-through" : undefined
+                        </SaveExtractionStatus>
+                        {!isExtractionIncomplete && (
+                          <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
+                            <MediaListRowMeta
+                              sourceName={
+                                view.sourceName || view.pluginName || item.url
+                              }
+                              size={directLink?.size}
+                              itemCount={
+                                directLink
+                                  ? undefined
+                                  : view.extractedLinks.length
                               }
                             />
-                            <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                              <MediaListRowMeta
-                                sourceName={
-                                  view.sourceName || view.pluginName || item.url
-                                }
-                                size={directLink?.size}
-                                itemCount={
-                                  directLink
-                                    ? undefined
-                                    : view.extractedLinks.length
-                                }
-                              />
-                              {!directLink && isRootItemNew && (
-                                <span className="flex items-center gap-2 md:hidden">
-                                  <NewBadge className="md:hidden" />
+                            {!directLink && isRootItemNew && (
+                              <span className="flex items-center gap-2 md:hidden">
+                                <NewBadge className="md:hidden" />
+                              </span>
+                            )}
+                            {directLink &&
+                              (isRootItemNew ||
+                                directLink.expiry !== undefined) && (
+                                <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
+                                  {directLink.expiry !== undefined && (
+                                    <>
+                                      <span
+                                        aria-hidden="true"
+                                        className="hidden md:inline"
+                                      >
+                                        ·
+                                      </span>
+                                      <PlayableExpiryBadge
+                                        expiresAt={directLink.expiry}
+                                        expirySource={directLink.expirySource}
+                                      />
+                                    </>
+                                  )}
+                                  {isRootItemNew && (
+                                    <NewBadge className="md:hidden" />
+                                  )}
                                 </span>
                               )}
-                              {directLink &&
-                                (isRootItemNew ||
-                                  directLink.expiry !== undefined) && (
-                                  <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                                    {directLink.expiry !== undefined && (
-                                      <>
-                                        <span
-                                          aria-hidden="true"
-                                          className="hidden md:inline"
-                                        >
-                                          ·
-                                        </span>
-                                        <PlayableExpiryBadge
-                                          expiresAt={directLink.expiry}
-                                          expirySource={directLink.expirySource}
-                                        />
-                                      </>
-                                    )}
-                                    {isRootItemNew && (
-                                      <NewBadge className="md:hidden" />
-                                    )}
-                                  </span>
-                                )}
-                            </span>
-                          </>
+                          </span>
                         )}
                       </span>
                     </div>

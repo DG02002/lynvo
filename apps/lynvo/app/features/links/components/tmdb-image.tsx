@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react"
 import { Skeleton } from "~/components/ui/skeleton"
 import {
+  TMDB_IMAGE_BASE_URL,
   TMDB_IMAGE_CARD_BASE_URL,
   TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
   TMDB_IMAGE_DETAIL_BASE_URL,
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
   TMDB_IMAGE_WIDE_CARD_BASE_URL,
   TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL,
+  TMDB_POSTER_SRC_WIDTHS_PX,
+  TMDB_STILL_SRC_WIDTHS_PX,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
@@ -18,6 +21,8 @@ interface TmdbImageProps {
   readonly className?: string
   readonly width?: number
   readonly height?: number
+  readonly imageType?: "poster" | "still"
+  readonly sizes?: string
 }
 
 interface TmdbImageBaseUrlPair {
@@ -49,6 +54,19 @@ const getTmdbImageBaseUrlPair = (
 const hasImageLoaded = (element: HTMLImageElement | null): boolean =>
   Boolean(element?.complete && element.naturalWidth > 0)
 
+const getTmdbImageSrcSet = (
+  path: string,
+  imageType: "poster" | "still"
+): string => {
+  const srcWidths =
+    imageType === "still" ? TMDB_STILL_SRC_WIDTHS_PX : TMDB_POSTER_SRC_WIDTHS_PX
+  return srcWidths
+    .map(
+      (srcWidth) => `${TMDB_IMAGE_BASE_URL}/w${srcWidth}${path} ${srcWidth}w`
+    )
+    .join(", ")
+}
+
 export const TmdbImage = ({
   path,
   variant,
@@ -57,6 +75,8 @@ export const TmdbImage = ({
   className,
   width,
   height,
+  imageType = "poster",
+  sizes,
 }: TmdbImageProps) => {
   const [isPreviewLoaded, setIsPreviewLoaded] = useState(false)
   const [isFullLoaded, setIsFullLoaded] = useState(false)
@@ -72,6 +92,8 @@ export const TmdbImage = ({
       : `${baseUrlPair.full}${path}`
   const previewUrl =
     !path || isRemotePath ? undefined : `${baseUrlPair.preview}${path}`
+  const fullSrcSet =
+    path && !isRemotePath ? getTmdbImageSrcSet(path, imageType) : undefined
 
   useEffect(() => {
     if (hasImageLoaded(previewImageRef.current)) {
@@ -115,6 +137,8 @@ export const TmdbImage = ({
       <img
         ref={fullImageRef}
         src={fullUrl}
+        srcSet={fullSrcSet}
+        sizes={sizes}
         alt={alt}
         width={width}
         height={height}

@@ -49,7 +49,12 @@ export const SaveListRowPoster = ({
         )}
       >
         {imagePath ? (
-          <TmdbImage path={imagePath} variant="card" alt="" />
+          <TmdbImage
+            path={imagePath}
+            variant="card"
+            sizes="(min-width: 768px) 3.5rem, 2.5rem"
+            alt=""
+          />
         ) : (
           fallbackIcon
         )}
