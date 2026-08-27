@@ -88,6 +88,11 @@ describe("HybridSaveGrid", () => {
     const queuedTitle = screen.getByText("Waiting to load…")
     expect(queuedTitle).toHaveClass("shimmer")
     expect(queuedTitle.parentElement).toHaveClass(
+      "animate-in",
+      "fade-in",
+      "duration-500"
+    )
+    expect(queuedTitle.parentElement?.parentElement).toHaveClass(
       "font-heading",
       "text-base",
       "font-normal"
@@ -127,7 +132,9 @@ describe("HybridSaveGrid", () => {
     expect([...EXTRACTION_COMPLETE_MESSAGES]).toContain(
       completionStatus.textContent
     )
-    expect(completionStatus.firstElementChild).toHaveClass("shimmer")
+    expect(completionStatus.firstElementChild?.firstElementChild).toHaveClass(
+      "shimmer"
+    )
     expect(completionStatus).toHaveClass("opacity-100")
 
     const flashCard = screen.getByTestId("hybrid-save-card")

@@ -234,8 +234,8 @@ const ExtractionStatusText = ({
         )}
         role="status"
       >
-        <span className="animate-in fade-in duration-300 motion-reduce:animate-none shimmer min-w-0">
-          {message}
+        <span className="animate-in fade-in duration-500 motion-reduce:animate-none min-w-0">
+          <span className="shimmer">{message}</span>
         </span>
       </span>
     )
@@ -252,12 +252,9 @@ const ExtractionStatusText = ({
       {!isTitle && <Spinner aria-hidden="true" className="size-3" />}
       <span
         key={message}
-        className={cn(
-          "animate-in fade-in duration-300 motion-reduce:animate-none min-w-0",
-          phase === "waiting" && "shimmer"
-        )}
+        className="animate-in fade-in duration-500 motion-reduce:animate-none min-w-0"
       >
-        {message}
+        <span className="shimmer">{message}</span>
       </span>
     </span>
   )
