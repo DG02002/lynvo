@@ -65,8 +65,8 @@ import {
 import {
   ExtractionWaitStatus,
   SaveExtractionStatus,
+  getExtractionStatusInput,
   getExtractionStatusLabel,
-  useIsExtractionStatusPresented,
 } from "./extraction-status"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
@@ -578,30 +578,25 @@ const FinderBrowser = ({
 }
 
 interface SaveListRootRowIconProps {
-  readonly shouldShowRowPosters: boolean
-  readonly didExtractionFail: boolean
-  readonly isExtractionIncomplete: boolean
+  readonly item: LinkListItem
   readonly isExtracting: boolean
+  readonly shouldShowRowPosters: boolean
   readonly directLinkLabel: string | undefined
   readonly itemTitle: string
   readonly isDirectLinkExpired: boolean
 }
 
 const SaveListRootRowIcon = ({
-  shouldShowRowPosters,
-  didExtractionFail,
-  isExtractionIncomplete,
+  item,
   isExtracting,
+  shouldShowRowPosters,
   directLinkLabel,
   itemTitle,
   isDirectLinkExpired,
 }: SaveListRootRowIconProps) => {
-  const isExtractionStatusPresented = useIsExtractionStatusPresented({
-    isWaiting: isExtracting || (isExtractionIncomplete && !didExtractionFail),
-    didFail: didExtractionFail,
-  })
-  const isExtractionVisual =
-    isExtractionIncomplete || isExtractionStatusPresented
+  const extractionInput = getExtractionStatusInput(item, isExtracting)
+  const didExtractionFail = extractionInput === "failed"
+  const isExtractionVisual = extractionInput !== "idle"
   const fallbackIcon = isExtractionVisual ? (
     didExtractionFail ? (
       <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
@@ -790,10 +785,9 @@ export const SaveListBrowser = ({
                       )}
                     >
                       <SaveListRootRowIcon
-                        shouldShowRowPosters={shouldShowRowPosters}
-                        didExtractionFail={extractionState === "failed"}
-                        isExtractionIncomplete={isExtractionIncomplete}
+                        item={item}
                         isExtracting={isExtracting}
+                        shouldShowRowPosters={shouldShowRowPosters}
                         directLinkLabel={directLink?.label}
                         itemTitle={getItemTitle(item)}
                         isDirectLinkExpired={isDirectLinkExpired}

@@ -21,7 +21,7 @@ import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import {
   SaveExtractionStatus,
-  useIsExtractionStatusPresented,
+  getExtractionStatusInput,
 } from "./extraction-status"
 import {
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
@@ -51,14 +51,8 @@ const HybridGroupItemRow = ({
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
   const extractionState = item.extractionStatus?.state ?? "complete"
-  const isExtractionIncomplete = extractionState !== "complete"
-  const isExtractionStatusPresented = useIsExtractionStatusPresented({
-    isWaiting:
-      isExtracting || (isExtractionIncomplete && extractionState !== "failed"),
-    didFail: extractionState === "failed",
-  })
   const isExtractionVisual =
-    isExtractionIncomplete || isExtractionStatusPresented
+    getExtractionStatusInput(item, isExtracting) !== "idle"
   const itemLabel = getHybridItemLabel(item)
   const view = toLinkViewModel(item)
   const directLinkTarget = directLink

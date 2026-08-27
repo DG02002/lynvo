@@ -1,9 +1,8 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
-import { EXTRACTION_COMPLETE_MESSAGES } from "~/lib/constants"
 
 const createActions = (): LinkItemActions => ({
   play: vi.fn().mockResolvedValue({ accepted: true }),
@@ -100,8 +99,7 @@ describe("HybridSaveGrid", () => {
     expect(queuedCard.className).not.toContain("shimmer")
   })
 
-  it("flashes a completion message before showing the real title", () => {
-    vi.useFakeTimers()
+  it("closes the loading state and animates the real title in when extraction ends", () => {
     const view = renderQueuedGrid(createQueuedItem({ state: "running" }))
 
     view.rerender(
@@ -124,32 +122,19 @@ describe("HybridSaveGrid", () => {
       />
     )
 
-    act(() => {
-      vi.advanceTimersByTime(1_200)
-    })
-
-    const completionStatus = screen.getByRole("status")
-    expect([...EXTRACTION_COMPLETE_MESSAGES]).toContain(
-      completionStatus.textContent
-    )
-    expect(completionStatus.firstElementChild?.firstElementChild).toHaveClass(
-      "shimmer"
-    )
-    expect(completionStatus).toHaveClass("opacity-100")
-
-    const flashCard = screen.getByTestId("hybrid-save-card")
-    expect(flashCard.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
-    expect(screen.queryByText("No poster found")).not.toBeInTheDocument()
-
-    act(() => {
-      vi.advanceTimersByTime(2_400)
-    })
-
-    expect(screen.getByRole("heading", { name: "Queued item" })).toBeVisible()
-    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    const settledCard = screen.getByTestId("hybrid-save-card")
     expect(
-      screen.getByRole("heading", { name: "Queued item" }).parentElement
-    ).toHaveClass("animate-in", "fade-in", "slide-in-from-bottom-1")
+      settledCard.querySelector('[data-slot="spinner"]')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("Waiting to load…")).not.toBeInTheDocument()
+
+    const settledHeading = screen.getByRole("heading", { name: "Queued item" })
+    expect(settledHeading).toBeVisible()
+    expect(settledHeading.parentElement).toHaveClass(
+      "animate-in",
+      "fade-in",
+      "slide-in-from-bottom-1"
+    )
   })
 
   it("opens the group page for a single movie and uses mobile card polish", () => {

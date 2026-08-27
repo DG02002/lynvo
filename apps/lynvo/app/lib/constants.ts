@@ -35,7 +35,6 @@ export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = MILLISECONDS_PER_DAY
 export const TMDB_ATTRIBUTION_LOGO_SRC = "/images/tmdb-attribution.svg"
 export const SAVE_GRID_CARD_SHIFT_DURATION_MS = 300
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
-export const EXTRACTION_STATUS_MIN_WORD_DISPLAY_MS = 1_200
 export const EXTRACTION_STATUS_MESSAGES = [
   "Getting link info…",
   "Extracting links…",
@@ -53,20 +52,6 @@ export const EXTRACTION_STATUS_MESSAGES = [
   "Finishing link details…",
   "Polishing the final details…",
   "Wrapping up link extraction…",
-] as const
-export const EXTRACTION_COMPLETE_DISPLAY_MS = 2_400
-export const EXTRACTION_COMPLETE_FADE_OUT_MS = 400
-export const EXTRACTION_COMPLETE_MESSAGES = [
-  "Done and dusted.",
-  "Links found. You’re welcome.",
-  "Fresh links, still warm.",
-  "That went surprisingly well.",
-  "All wrapped up.",
-  "Nailed it.",
-  "Links acquired. Enjoy.",
-  "Sorted. Easy.",
-  "Mission accomplished.",
-  "The internet delivered.",
 ] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160

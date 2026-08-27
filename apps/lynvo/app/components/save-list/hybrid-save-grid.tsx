@@ -8,7 +8,7 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import { cn } from "~/lib/utils"
 import {
   SaveExtractionStatus,
-  useIsExtractionStatusPresented,
+  getExtractionStatusInput,
 } from "./extraction-status"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { getItemTitle } from "./save-list-browser-model"
@@ -53,18 +53,10 @@ const HybridSaveCard = ({
   const extractionState = isSingleItem
     ? (item?.extractionStatus?.state ?? "complete")
     : "complete"
-  const isExtractionIncomplete = extractionState !== "complete"
   const isExtracting =
     isSingleItem && item ? extractingItems.has(item.url) : false
-  const isExtractionStatusPresented = useIsExtractionStatusPresented({
-    isWaiting:
-      isExtracting ||
-      extractionState === "queued" ||
-      extractionState === "running",
-    didFail: extractionState === "failed",
-  })
   const isExtractionVisual =
-    isExtractionIncomplete || isExtractionStatusPresented
+    getExtractionStatusInput(item, isExtracting) !== "idle"
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const isArtworkPending =
