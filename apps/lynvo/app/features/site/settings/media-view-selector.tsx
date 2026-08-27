@@ -75,7 +75,7 @@ export const MediaViewSelector = ({
   value,
   onValueChange,
 }: MediaViewSelectorProps) => (
-  <fieldset className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+  <fieldset className="grid w-full max-w-2xl grid-cols-2 gap-3">
     <legend className="sr-only">Saved links view</legend>
     {mediaViewOptions.map((option) => {
       const isSelected = value === option.value
