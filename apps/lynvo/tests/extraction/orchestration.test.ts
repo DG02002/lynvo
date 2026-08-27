@@ -41,7 +41,7 @@ const createTransport = () => ({
 })
 
 describe("extraction presentation", () => {
-  it("direct-saves one file and selects multiple or folder results", () => {
+  it("direct-saves one file or mirror container and selects folders", () => {
     const file = { url: "https://cdn.example/one.mp4", label: "One" }
     expect(decideSavePresentation([file])).toEqual({
       kind: "directSave",
@@ -59,6 +59,16 @@ describe("extraction presentation", () => {
           ...file,
           type: "folder",
           mediaNodeKind: "resolvable",
+        },
+      ]).kind
+    ).toBe("directSave")
+    expect(
+      decideSavePresentation([
+        {
+          ...file,
+          type: "folder",
+          mediaNodeKind: "resolvable",
+          resolutionKind: "folder",
         },
       ]).kind
     ).toBe("selectionDialog")

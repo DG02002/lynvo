@@ -1,5 +1,8 @@
 import type { ExtractedLink } from "~/features/links/types"
-import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
+import {
+  getMediaNodeInteractionState,
+  isMirrorResolvableMediaNode,
+} from "~/features/links/media-node-interaction"
 
 export interface DirectSavePresentation {
   readonly kind: "directSave"
@@ -32,11 +35,14 @@ export const decideSavePresentation = (
     }
   }
 
-  const hasFolder = links.some(
-    (link) => getMediaNodeInteractionState(link).isFolder
-  )
+  const hasFolder = links.some((link) => {
+    const state = getMediaNodeInteractionState(link)
+    return state.isFolder && !isMirrorResolvableMediaNode(link)
+  })
   const directFiles = links.filter(
-    (link) => !getMediaNodeInteractionState(link).isFolder
+    (link) =>
+      !getMediaNodeInteractionState(link).isFolder ||
+      isMirrorResolvableMediaNode(link)
   )
 
   if (hasFolder || directFiles.length > 1) {
