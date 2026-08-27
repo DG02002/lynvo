@@ -1,7 +1,7 @@
 {
   "name": "lynvo-workspace",
   "private": true,
-  "packageManager": "pnpm@12.0.0-rc.8+sha512.mmOJqeXlh1fc2f4BG6gmN9tGQOD9+zc+wzVuXK9s+cvWrXaQsDD2eRU7M9QMJKm+blPnU0/B8Q3cqFXn8dci1g==",
+  "packageManager": "pnpm@12.0.0-rc.11+sha512-bvsp9IFNxLmnHWBzjpjPuWNPYuepSrKyMUcYDRuA+1+u1gBKQHvzymWkuBAbn/lmIHj6OnD0vbBc/15D1npf5g==",
   "engines": {
     "node": "26.7.0"
   },

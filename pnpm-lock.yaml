@@ -106,7 +106,7 @@ importers:
         version: 2.1.1
       effect:
         specifier: rc
-        version: 4.0.0-rc.110
+        version: 4.0.0-rc.112
       evlog:
         specifier: 2.25.0
         version: 2.25.0(express@5.2.1(supports-color@10.2.2))(hono@4.13.1)(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -251,7 +251,7 @@ importers:
         version: 1.2.0
       effect:
         specifier: rc
-        version: 4.0.0-rc.110
+        version: 4.0.0-rc.112
       evlog:
         specifier: 2.25.0
         version: 2.25.0(express@5.2.1(supports-color@10.2.2))(hono@4.13.1)(react-router@8.3.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
@@ -293,7 +293,7 @@ importers:
     dependencies:
       effect:
         specifier: rc
-        version: 4.0.0-rc.110
+        version: 4.0.0-rc.112
     devDependencies:
       typescript:
         specifier: 'catalog:'
@@ -2738,8 +2738,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-rc.110:
-    resolution: {integrity: sha512-ega6FTJ8CS2of7tHZiADvgyJyV999Q6tZ9juE56V81O0jw6flRwydaPNtyfvP2a5LL9PZrse8A1jnNUD5sWVHg==}
+  effect@4.0.0-rc.112:
+    resolution: {integrity: sha512-wXxwuh1Ywnv4cPRM3Wfa0vDwuOHnZ1TsTgHJkG9XgzND6inhBH9n1vBxhg3iIXOia/OrpmvVmd3lrD4vq6bF3A==}
 
   electron-to-chromium@1.5.404:
     resolution: {integrity: sha512-3WJtd7/lVq2Jnuz6wed1l9+1ZD2u2Tet1/1NBc4Iedkmgbu+I7YuAqdAQ8T+VZtnwysMsAf3IqSq9D1gyZjA2g==}
@@ -6633,9 +6633,8 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-rc.110:
+  effect@4.0.0-rc.112:
     dependencies:
-      '@standard-schema/spec': 1.1.0
       fast-check: 4.9.0
       msgpackr: 2.0.5
 
