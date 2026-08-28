@@ -10,6 +10,7 @@ import {
   parseUsageResponseContract,
 } from "./contracts.js"
 import { createProtocolError } from "./requests.js"
+import { isProtocolError, toProtocolErrorResponse } from "./errors.js"
 import { canPluginServerAttemptUrl, getExtractTargetUrl } from "./matching.js"
 import type {
   PluginServerManifest,
@@ -132,8 +133,9 @@ export const createPluginServerRuntime = <Env>(
           targetUrl: parsed.success.url,
           env,
         })
-        const parsedResult =
-          Schema.decodeUnknownResult(discoverResponseSchema)(result)
+        const parsedResult = Schema.decodeUnknownResult(discoverResponseSchema)(
+          result
+        )
         return Result.isSuccess(parsedResult)
           ? jsonResponse(parsedResult.success)
           : jsonResponse(
@@ -213,6 +215,9 @@ export const createPluginServerRuntime = <Env>(
         return jsonResponse(parsedResult.value)
       } catch (error) {
         options.onError?.(error, { request, env })
+        if (isProtocolError(error)) {
+          return toProtocolErrorResponse(error)
+        }
         const message = error instanceof Error ? error.message : String(error)
         if (message === "PASSWORD_REQUIRED") {
           return jsonResponse(

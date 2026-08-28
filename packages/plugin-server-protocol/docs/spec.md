@@ -238,7 +238,14 @@ Auth:
 
 ### Manifest Field Rules
 
-- `protocolVersion`: required string. Lynvo must enforce compatibility at add-time and refresh-time.
+- `protocolVersion`: required string in `MAJOR.MINOR` form. A manifest is
+  wire-compatible when its major version matches the protocol major Lynvo
+  implements; minor versions are additive by contract, so Lynvo accepts any
+  `1.x` manifest and must ignore fields it does not know. Lynvo enforces
+  compatibility at add-time and refresh-time and sends its own version on
+  every request via the `X-Lynvo-Protocol-Version` header so servers can
+  adapt responses. A major-version mismatch is reported as
+  `PROTOCOL_MISMATCH`.
 - `pluginServerId`: required stable identifier. Do not use `displayName` as the stable id.
 - `displayName`: required human-readable name.
 - `hasIcon`: optional boolean. When present, `true` requires `iconUrl`; `false` forbids it.
@@ -579,9 +586,35 @@ Lynvo should validate:
 
 Validation policy:
 
-- core schema is strict
+- core schema is strict about the fields it knows
+- unknown non-extension fields are ignored by Lynvo (minor versions are
+  additive, so newer servers may emit fields an older Lynvo has not seen yet)
 - optional custom data must live under `extensions`
-- unknown non-extension fields should be rejected
+- Plugin Servers must not attach meaning to unknown fields they receive
+
+### HTTP Status Mapping
+
+Protocol error codes map to HTTP statuses on every endpoint. Lynvo prefers
+the response body's `code` over the HTTP status when classifying failures.
+
+| Code                 | HTTP |
+| -------------------- | ---- |
+| `BAD_REQUEST`        | 400  |
+| `UNSUPPORTED_URL`    | 400  |
+| `AUTH_INVALID`       | 401  |
+| `AUTH_REQUIRED`      | 401  |
+| `PASSWORD_REQUIRED`  | 401  |
+| `INVALID_PASSWORD`   | 401  |
+| `NODE_EXPIRED`       | 410  |
+| `RATE_LIMITED`       | 429  |
+| `TEMPORARY_FAILURE`  | 500  |
+| `PERMANENT_FAILURE`  | 500  |
+| `PROTOCOL_MISMATCH`  | 500  |
+
+A `RATE_LIMITED` response should include `error.retryAfterSeconds` and a
+`Retry-After` header so clients can back off to the reset boundary. Extract
+implementations signal these failures by throwing the packaged
+`ProtocolError`, which the runtime maps to this table.
 
 ## Registration Flow
 

@@ -1,6 +1,8 @@
 export * from "./models.js"
 export * from "./schemas.js"
 export * from "./fixtures.js"
+export * from "./errors.js"
+export * from "./nodes.js"
 export {
   applyHttpBasicAuth,
   createNodeExtractRequest,

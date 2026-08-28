@@ -1,10 +1,12 @@
 import { Effect, Schema } from "effect"
-import { ERROR_CODES } from "./models.js"
-import type {
-  GroupNode,
-  MediaNode,
-  PlayableNode,
-  ResolvableNode,
+import {
+  ERROR_CODES,
+  isCompatibleProtocolVersion,
+  PROTOCOL_VERSION,
+  type GroupNode,
+  type MediaNode,
+  type PlayableNode,
+  type ResolvableNode,
 } from "./models.js"
 
 export const pluginServerMatcherSchema = Schema.Struct({
@@ -64,8 +66,20 @@ const urlStringSchema = Schema.String.pipe(
   )
 )
 
+// Minor wire versions are additive by contract, so any 1.x manifest whose
+// major matches the current protocol major is accepted; a major mismatch is
+// the only wire-level break.
+const protocolVersionSchema = Schema.String.pipe(
+  Schema.refine(
+    (value): value is string => isCompatibleProtocolVersion(value),
+    {
+      message: `protocolVersion must be a ${PROTOCOL_VERSION.split(".")[0]}.x version`,
+    }
+  )
+)
+
 export const pluginServerManifestSchema = Schema.Struct({
-  protocolVersion: Schema.Literal("1.0"),
+  protocolVersion: protocolVersionSchema,
   pluginServerId: Schema.NonEmptyString,
   displayName: Schema.NonEmptyString,
   hasIcon: Schema.optional(Schema.Boolean),
@@ -99,6 +113,12 @@ export const pluginServerManifestSchema = Schema.Struct({
   ),
 })
 
+const isoTimestampSchema = Schema.String.pipe(
+  Schema.refine((value): value is string => !Number.isNaN(Date.parse(value)), {
+    message: "Must be an ISO 8601 timestamp",
+  })
+)
+
 export const usageMetricSchema = Schema.Struct({
   id: Schema.NonEmptyString,
   label: Schema.NonEmptyString,
@@ -106,7 +126,7 @@ export const usageMetricSchema = Schema.Struct({
   limit: Schema.Number.pipe(Schema.check(Schema.isGreaterThan(0))),
   unit: Schema.NonEmptyString,
   period: Schema.Literals(["daily", "monthly"]),
-  resetsAt: Schema.String,
+  resetsAt: isoTimestampSchema,
   pluginId: Schema.optional(Schema.NonEmptyString),
 })
 

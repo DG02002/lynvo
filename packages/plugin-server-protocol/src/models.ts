@@ -14,7 +14,7 @@ export interface JsonObject {
 }
 
 export interface PluginServerManifest {
-  readonly protocolVersion: "1.0"
+  readonly protocolVersion: string
   readonly pluginServerId: string
   readonly displayName: string
   readonly hasIcon?: boolean
@@ -276,6 +276,8 @@ export interface PluginServerRuntime<Env> {
   handleExtract: (request: Request, env: Env) => Promise<Response>
 }
 
+export const PROTOCOL_VERSION = "1.0" as const
+
 export const ERROR_CODES = [
   "UNSUPPORTED_URL",
   "AUTH_INVALID",
@@ -301,3 +303,15 @@ export const isSupportedProtocolVersion = (
   version: string
 ): version is SupportedProtocolVersion =>
   new Set<string>(SUPPORTED_PROTOCOL_VERSIONS).has(version)
+
+/**
+ * A manifest version is wire-compatible when its major version matches the
+ * protocol major version: minor versions are additive by contract, so a
+ * server on a newer minor within the same major must still satisfy an older
+ * client. Unknown fields are ignored; custom data rides `extensions`.
+ */
+export const isCompatibleProtocolVersion = (version: string): boolean => {
+  const parsed = /^(\d+)\.(\d+)$/.exec(version)
+  const current = /^(\d+)\.(\d+)$/.exec(PROTOCOL_VERSION)
+  return parsed !== null && current !== null && parsed[1] === current[1]
+}

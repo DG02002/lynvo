@@ -3,7 +3,8 @@ import {
   createSourceExtractRequest,
   discoverResponseSchema,
   extractErrorSchema,
-  isSupportedProtocolVersion,
+  isCompatibleProtocolVersion,
+  PROTOCOL_VERSION,
   parseExtractSuccessContract,
   parsePluginServerManifestContract,
   parseUsageResponseContract,
@@ -45,17 +46,20 @@ export interface PluginServerFailureDetails {
   code: string
   message: string
   status?: number
+  retryAfterSeconds?: number
 }
 
 export class PluginServerClientError extends Error {
   readonly code: string
   readonly status?: number
+  readonly retryAfterSeconds?: number
 
   constructor(details: PluginServerFailureDetails) {
     super(details.message)
     this.name = "PluginServerClientError"
     this.code = details.code
     this.status = details.status
+    this.retryAfterSeconds = details.retryAfterSeconds
   }
 }
 
@@ -119,6 +123,7 @@ const throwResponseFailure = <Value>(value: Value, status: number): never => {
       code: extractError.success.error.code,
       message: extractError.success.error.message,
       status,
+      retryAfterSeconds: extractError.success.error.retryAfterSeconds,
     })
   }
   const verifyError = Schema.decodeUnknownResult(verifyErrorSchema)(value)
@@ -146,6 +151,7 @@ export class PluginServerClient {
     options: PluginServerClientOptions
   ): Promise<Response> => {
     const headers = new Headers(init.headers)
+    headers.set("x-lynvo-protocol-version", PROTOCOL_VERSION)
     if (options.apiKey) {
       headers.set("Authorization", `Bearer ${options.apiKey}`)
     }
@@ -186,7 +192,7 @@ export class PluginServerClient {
     if (
       !parsed.ok ||
       !parsed.value ||
-      !isSupportedProtocolVersion(parsed.value.protocolVersion)
+      !isCompatibleProtocolVersion(parsed.value.protocolVersion)
     ) {
       throw new PluginServerClientError({
         code: "PROTOCOL_MISMATCH",
