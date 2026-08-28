@@ -44,8 +44,3 @@ highest-volume rules (`one-var`, `sort-keys`, `sort-imports`, `func-style`)
 contradict the conventions in AGENTS.md (arrow functions, descriptive names)
 and produce thousands of counterproductive warnings. Enable rules deliberately,
 with the measured warning count in hand, not by flipping a category on.
-
-Known gap: `pnpm lint` currently covers only `scripts/`; application code is
-linted solely through the pre-commit hook on changed files. When adding a
-package-level lint script, run oxlint from that package directory so the root
-`.oxlintrc.json` applies.

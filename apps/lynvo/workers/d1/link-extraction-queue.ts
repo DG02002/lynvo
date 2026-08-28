@@ -215,7 +215,17 @@ export const claimNextSavedLinkExtraction = async (
         extractionAttempts: nextRow.extraction_attempts,
         leaseExpiresAt: nextRow.extraction_lease_expires_at,
       }),
-    ]
+    ],
+    {
+      conditionSql:
+        "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND extraction_state = ?3 AND extraction_attempts = ?4 AND extraction_lease_expires_at = ?5",
+      conditionBindings: [
+        candidate.id,
+        nextRow.extraction_state,
+        nextAttempts,
+        leaseExpiresAt,
+      ],
+    }
   )
   const updateResult = statementResults[preparation.statements.length]
   if ((updateResult?.meta.changes ?? 0) === 0) {
@@ -349,7 +359,16 @@ export const settleSavedLinkExtraction = async (
         extractionAttempts: nextRow.extraction_attempts,
         leaseExpiresAt: nextRow.extraction_lease_expires_at,
       }),
-    ]
+    ],
+    {
+      conditionSql:
+        "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND extraction_state = ?3 AND extraction_attempts = ?4 AND extraction_lease_expires_at IS NULL",
+      conditionBindings: [
+        nextRow.id,
+        nextRow.extraction_state,
+        existingRow.extraction_attempts,
+      ],
+    }
   )
   const updateResult = statementResults[preparation.statements.length]
   return {

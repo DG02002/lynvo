@@ -7,6 +7,7 @@ import {
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
+  DATA_VERSION_RESPONSE_HEADER,
 } from "../constants"
 import {
   addRequestContext,
@@ -24,6 +25,7 @@ import {
   deleteSavedLinkById,
   getUserRetentionDays,
   listSavedLinks,
+  listSavedLinksWithDataVersion,
   updateSavedLinkMeta,
 } from "./links"
 import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
@@ -334,12 +336,17 @@ dataApp.get("/links", async (context) => {
   if (!isReadyDataRequest(preparation)) {
     return preparation.response
   }
-  const snapshot = await listSavedLinks(
+  const snapshot = await listSavedLinksWithDataVersion(
     preparation.database,
     preparation.session.userId,
     Date.now()
   )
-  return context.json({ links: snapshot.results })
+  const response = context.json({ links: snapshot.results })
+  response.headers.set(
+    DATA_VERSION_RESPONSE_HEADER,
+    String(snapshot.dataVersion)
+  )
+  return response
 })
 
 dataApp.post("/media-artwork", async (context) => {

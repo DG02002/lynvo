@@ -6,8 +6,7 @@ import {
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import { getD1Database } from "../../../../workers/d1/db"
-import { getDataVersion } from "../../../../workers/d1/data-version"
-import { listSavedLinks } from "../../../../workers/d1/links"
+import { listSavedLinksWithDataVersion } from "../../../../workers/d1/links"
 import type { Route } from "./+types/_site.save"
 
 export const saveRouteLoader = async (args: Route.LoaderArgs) => {
@@ -24,14 +23,13 @@ export const saveRouteLoader = async (args: Route.LoaderArgs) => {
       { status: 503 }
     )
   }
-  const now = Date.now()
-  const savedLinks = await listSavedLinks(database, user.sub, now)
-  const dataVersion = await getDataVersion(database, user.sub)
+  const { results: savedLinks, dataVersion } =
+    await listSavedLinksWithDataVersion(database, user.sub, Date.now())
 
   return responseWithSession(
     {
       user: sessionResult.user,
-      savedLinks: savedLinks.results,
+      savedLinks,
       dataVersion,
     },
     sessionResult,

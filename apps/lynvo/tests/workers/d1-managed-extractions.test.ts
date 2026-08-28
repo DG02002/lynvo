@@ -42,8 +42,18 @@ const reserve = (
 describe("d1 managed extraction operations", () => {
   it("reserves the same operation once", async () => {
     const user = await createUser()
-    const first = await reserve(user.id, "extract:one", "direct-media", BASE_NOW)
-    const retry = await reserve(user.id, "extract:one", "direct-media", BASE_NOW)
+    const first = await reserve(
+      user.id,
+      "extract:one",
+      "direct-media",
+      BASE_NOW
+    )
+    const retry = await reserve(
+      user.id,
+      "extract:one",
+      "direct-media",
+      BASE_NOW
+    )
     expect(first).toMatchObject({ status: "reserved", dailyUsed: 1 })
     expect(retry.status).toBe("already-reserved")
     const counters = await readUserCounters(user.id)
@@ -68,6 +78,49 @@ describe("d1 managed extraction operations", () => {
     const counters = await readUserCounters(user.id)
     expect(counters).toHaveLength(2)
     expect(counters.every((counter) => counter.used === 1)).toBe(true)
+  })
+
+  it("settles the same reservation idempotently without double refunds", async () => {
+    const user = await createUser()
+    await reserve(user.id, "extract:double-settle", "direct-media", BASE_NOW)
+    const first = await settleManagedExtraction(env.DB, user.id, {
+      operationId: "extract:double-settle",
+      outcome: "released",
+      now: BASE_NOW + 1_000,
+    })
+    const second = await settleManagedExtraction(env.DB, user.id, {
+      operationId: "extract:double-settle",
+      outcome: "released",
+      now: BASE_NOW + 2_000,
+    })
+    expect(first.status).toBe("released")
+    expect(second.status).toBe("already-settled")
+    const usage = await getUsage(env.DB, user.id, BASE_NOW)
+    expect(usage.metrics.every((metric) => metric.used === 0)).toBe(true)
+  })
+
+  it("isolates inconsistent counters instead of blocking the lease sweep", async () => {
+    const healthyUser = await createUser()
+    const poisonedUser = await createUser()
+    await reserve(healthyUser.id, "sweep:healthy", "direct-media", BASE_NOW)
+    await reserve(poisonedUser.id, "sweep:poisoned", "direct-media", BASE_NOW)
+    await env.DB.prepare(
+      "UPDATE usage_counters SET used = 0 WHERE owner_key = ?1"
+    )
+      .bind(`user:${poisonedUser.id}`)
+      .run()
+    const sweepNow = BASE_NOW + 5 * 60 * 1000 + 1_000
+    await expect(
+      releaseExpiredManagedExtractions(env.DB, sweepNow)
+    ).resolves.toMatchObject({ released: expect.any(Number) })
+    const healthyUsage = await getUsage(env.DB, healthyUser.id, sweepNow)
+    expect(healthyUsage.metrics.every((metric) => metric.used === 0)).toBe(true)
+    const poisonedOperation = await env.DB.prepare(
+      "SELECT state FROM managed_extraction_operations WHERE user_id = ?1 AND operation_id = 'sweep:poisoned'"
+    )
+      .bind(poisonedUser.id)
+      .first<{ state: string }>()
+    expect(poisonedOperation?.state).toBe("released")
   })
 
   it("shares one 30-operation daily allowance across managed plugins", async () => {

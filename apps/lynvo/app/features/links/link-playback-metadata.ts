@@ -50,3 +50,8 @@ export const withResolvedMirrors = (
     },
   }
 }
+
+export const isPlayableLinkFresh = (
+  link: ExtractedLink,
+  currentTimeMs: number = Date.now()
+): boolean => link.expiry === undefined || link.expiry > currentTimeMs

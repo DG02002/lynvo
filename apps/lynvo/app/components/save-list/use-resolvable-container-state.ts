@@ -3,6 +3,7 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 
 interface UseResolvableContainerStateOptions {
   item: LinkViewItem
@@ -18,8 +19,10 @@ export const useResolvableContainerState = ({
   const linkTarget = getMediaNodeTarget(link)
   const savedMirrors =
     getLinkViewItemMetadata(item).playback.resolvedMirrors?.[linkTarget] ?? []
+  const isMirrorAvailable = (mirror: ExtractedLink): boolean =>
+    mirror.status !== "down" && isPlayableLinkFresh(mirror)
   const [mirrors, setMirrors] = useState(() =>
-    savedMirrors.filter((mirror) => mirror.status !== "down")
+    savedMirrors.filter(isMirrorAvailable)
   )
   const [isExpanded, setIsExpanded] = useState(false)
   const [didResolutionFail, setDidResolutionFail] = useState(false)
@@ -36,8 +39,7 @@ export const useResolvableContainerState = ({
         linkTarget,
         bypassCache
       )
-      const availableMirrors =
-        resolvedLinks?.filter((mirror) => mirror.status !== "down") ?? []
+      const availableMirrors = resolvedLinks?.filter(isMirrorAvailable) ?? []
       setMirrors(availableMirrors)
       if (!availableMirrors.length) {
         setIsExpanded(false)

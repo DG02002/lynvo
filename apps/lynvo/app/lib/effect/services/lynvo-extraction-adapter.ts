@@ -199,13 +199,22 @@ export const extractWithLynvoPluginServer = Effect.fn(
     return yield* extraction
   }
   const database = getD1Database(options.environment)
+  // The managed plugin server refunds its own counter when an extraction
+  // fails, so Lynvo mirrors that on the user's side: only completed
+  // extractions are consumed.
+  let didExtractionSucceed = false
   return yield* extraction.pipe(
+    Effect.tap(() =>
+      Effect.sync(() => {
+        didExtractionSucceed = true
+      })
+    ),
     Effect.ensuring(
       database
         ? Effect.promise(() =>
             settleManagedExtraction(database, options.userId, {
               operationId,
-              outcome: "consumed",
+              outcome: didExtractionSucceed ? "consumed" : "released",
               now: Date.now(),
             }).catch(() => undefined)
           )

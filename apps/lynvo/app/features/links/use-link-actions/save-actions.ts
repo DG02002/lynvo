@@ -6,7 +6,10 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemFlatMeta,
+} from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
 import { parsePluginDomainCandidate } from "~/lib/plugin-domain"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
@@ -68,6 +71,8 @@ export const useSaveActions = ({
     useState<PluginDomainSuggestion | null>(null)
   const initialPendingQueuedLinkIds = useMemo(() => new Set<string>(), [])
   const pendingQueuedLinkIdsRef = useRef(initialPendingQueuedLinkIds)
+  const initialPromptedSelectionLinkIds = useMemo(() => new Set<string>(), [])
+  const promptedSelectionLinkIdsRef = useRef(initialPromptedSelectionLinkIds)
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
       publish: (outcome) => {
@@ -134,36 +139,60 @@ export const useSaveActions = ({
   )
 
   useEffect(() => {
-    if (pluginDomainSuggestion) {
-      return
-    }
+    for (const completedQueuedItem of links) {
+      const extractionState = completedQueuedItem.extractionStatus?.state
+      const completedQueuedLinkId = completedQueuedItem.id
+      if (
+        !completedQueuedLinkId ||
+        !pendingQueuedLinkIdsRef.current.has(completedQueuedLinkId) ||
+        (extractionState !== "complete" && extractionState !== "failed")
+      ) {
+        continue
+      }
 
-    const completedQueuedItem = links.find((item) => {
-      const extractionState = item.extractionStatus?.state
-      return (
-        item.id !== undefined &&
-        pendingQueuedLinkIdsRef.current.has(item.id) &&
-        (extractionState === "complete" || extractionState === "failed")
+      pendingQueuedLinkIdsRef.current.delete(completedQueuedLinkId)
+
+      if (extractionState !== "complete") {
+        continue
+      }
+
+      // Manual mode saves through the queue too; when the persisted
+      // extraction offers several links, selection trims the saved link.
+      if (
+        !shouldAutoSaveAllLinks &&
+        !promptedSelectionLinkIdsRef.current.has(completedQueuedLinkId)
+      ) {
+        promptedSelectionLinkIdsRef.current.add(completedQueuedLinkId)
+        const extractedLinks =
+          getLinkViewItemExtractedLinks(completedQueuedItem)
+        if (extractedLinks.length > 1) {
+          openSelectionDialog({
+            originalUrl: completedQueuedItem.url,
+            links: extractedLinks,
+            meta: getLinkViewItemFlatMeta(completedQueuedItem),
+            existingItemId: completedQueuedLinkId,
+          })
+        }
+      }
+
+      if (pluginDomainSuggestion) {
+        continue
+      }
+
+      void offerPluginDomainSuggestion(
+        createPluginDomainSuggestion(
+          parsePluginDomainCandidate(completedQueuedItem.url),
+          getLinkViewItemFlatMeta(completedQueuedItem)
+        )
       )
-    })
-    if (!completedQueuedItem?.id) {
-      return
     }
-    const completedQueuedLinkId = completedQueuedItem.id
-
-    pendingQueuedLinkIdsRef.current.delete(completedQueuedLinkId)
-
-    if (completedQueuedItem.extractionStatus?.state !== "complete") {
-      return
-    }
-
-    void offerPluginDomainSuggestion(
-      createPluginDomainSuggestion(
-        parsePluginDomainCandidate(completedQueuedItem.url),
-        getLinkViewItemFlatMeta(completedQueuedItem)
-      )
-    )
-  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion])
+  }, [
+    links,
+    offerPluginDomainSuggestion,
+    openSelectionDialog,
+    pluginDomainSuggestion,
+    shouldAutoSaveAllLinks,
+  ])
 
   const applySaveIntentResult = (
     result: SaveIntentResult
@@ -246,7 +275,6 @@ export const useSaveActions = ({
         links,
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks,
       })
       await offerPluginDomainSuggestion(applySaveIntentResult(result))
     } catch (error) {

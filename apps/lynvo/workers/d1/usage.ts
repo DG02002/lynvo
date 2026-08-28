@@ -101,7 +101,7 @@ const getMonthlyPeriod = (timestamp: number): UsagePeriod => {
 
 const getEpoch = async (database: D1Database): Promise<number> => {
   const row = await database
-    .prepare("SELECT epoch FROM usage_epochs LIMIT 1")
+    .prepare("SELECT COALESCE(MAX(epoch), 0) AS epoch FROM usage_epochs")
     .first<{ epoch: number }>()
   return row?.epoch ?? 0
 }
@@ -129,14 +129,21 @@ const incrementCounterStatement = (
     metricId: string
     periodKey: string
     epoch: number
+    limit: number
   }
 ): D1PreparedStatement =>
   database
     .prepare(
       `INSERT INTO usage_counters (owner_key, metric_id, period_key, epoch, used) VALUES (?1, ?2, ?3, ?4, ${USAGE_COUNTER_INITIAL_VALUE})
-       ON CONFLICT(owner_key, metric_id, period_key, epoch) DO UPDATE SET used = used + 1 RETURNING used`
+       ON CONFLICT(owner_key, metric_id, period_key, epoch) DO UPDATE SET used = used + 1 WHERE used + 1 <= ?5 RETURNING used`
     )
-    .bind(input.ownerKey, input.metricId, input.periodKey, input.epoch)
+    .bind(
+      input.ownerKey,
+      input.metricId,
+      input.periodKey,
+      input.epoch,
+      input.limit
+    )
 
 const decrementCounterStatement = (
   database: D1Database,
@@ -145,13 +152,27 @@ const decrementCounterStatement = (
     metricId: string
     periodKey: string
     epoch: number
+    userId: string
+    operationId: string
   }
 ): D1PreparedStatement =>
   database
     .prepare(
-      "UPDATE usage_counters SET used = used - 1 WHERE owner_key = ?1 AND metric_id = ?2 AND period_key = ?3 AND epoch = ?4"
+      `UPDATE usage_counters SET used = used - 1
+       WHERE owner_key = ?1 AND metric_id = ?2 AND period_key = ?3 AND epoch = ?4 AND used > 0
+         AND EXISTS (
+           SELECT 1 FROM managed_extraction_operations
+           WHERE user_id = ?5 AND operation_id = ?6 AND state = 'reserved'
+         )`
     )
-    .bind(input.ownerKey, input.metricId, input.periodKey, input.epoch)
+    .bind(
+      input.ownerKey,
+      input.metricId,
+      input.periodKey,
+      input.epoch,
+      input.userId,
+      input.operationId
+    )
 
 const findManagedOperation = async (
   database: D1Database,
@@ -206,6 +227,8 @@ const buildReleaseStatements = async (
       metricId,
       periodKey,
       epoch: operation.epoch,
+      userId: operation.userId,
+      operationId: operation.operationId,
     })
   )
 }
@@ -290,30 +313,31 @@ export const reserveManagedExtraction = async (
   }
 
   const statements = [
+    ...(usageLimitsDisabled
+      ? []
+      : [
+          incrementCounterStatement(database, {
+            ownerKey,
+            metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+            periodKey: daily.key,
+            epoch,
+            limit: USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
+          }),
+          incrementCounterStatement(database, {
+            ownerKey,
+            metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+            periodKey: monthly.key,
+            epoch,
+            limit: USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
+          }),
+        ]),
     incrementCounterStatement(database, {
       ownerKey: GLOBAL_USAGE_OWNER_KEY,
       metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
       periodKey: daily.key,
       epoch,
+      limit: GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
     }),
-  ]
-  if (!usageLimitsDisabled) {
-    statements.push(
-      incrementCounterStatement(database, {
-        ownerKey,
-        metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-        periodKey: daily.key,
-        epoch,
-      }),
-      incrementCounterStatement(database, {
-        ownerKey,
-        metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-        periodKey: monthly.key,
-        epoch,
-      })
-    )
-  }
-  statements.push(
     database
       .prepare(
         `INSERT INTO managed_extraction_operations (user_id, operation_id, plugin_id, state, epoch, daily_period_key, monthly_period_key, user_limits_applied, reserved_at, lease_expires_at, settled_at) VALUES (?1, ?2, ?3, 'reserved', ?4, ?5, ?6, ?7, ?8, ?9, NULL)
@@ -329,34 +353,113 @@ export const reserveManagedExtraction = async (
         usageLimitsDisabled ? 0 : 1,
         input.now,
         input.now + MANAGED_EXTRACTION_RESERVATION_LEASE_MS
-      )
-  )
+      ),
+  ]
   const { dataVersion, statementResults } = await executeOwnedWrite(
     database,
     userId,
     statements
   )
-  let dailyUsed: number
-  let monthlyUsed: number
-  if (usageLimitsDisabled) {
-    dailyUsed = userDailyUsed ?? 0
-    monthlyUsed = monthlyUsedBefore ?? 0
-  } else {
-    // SAFETY: both user counter increments RETURNING exactly one row inside the committed batch.
-    const dailyRow = statementResults[1]?.results?.[0] as
-      | { used: number }
-      | undefined
-    // SAFETY: see dailyRow; the monthly increment is statement index 2 by construction.
-    const monthlyRow = statementResults[2]?.results?.[0] as
-      | { used: number }
-      | undefined
-    if (!dailyRow || !monthlyRow) {
-      throw new Error("Managed extraction counter is inconsistent.")
+  // SAFETY: a conditional increment that hit its limit returns no row; the
+  // batch still commits, so the sibling statements are compensated below.
+  const rowAt = (index: number): { used: number } | undefined =>
+    statementResults[index]?.results?.[0] as { used: number } | undefined
+  const compensate = () =>
+    compensateReservedManagedExtraction(database, {
+      userId,
+      operationId: input.operationId,
+      epoch,
+      dailyPeriodKey: daily.key,
+      monthlyPeriodKey: monthly.key,
+      userLimitsApplied: !usageLimitsDisabled,
+    })
+  if (!usageLimitsDisabled) {
+    const userDailyRow = rowAt(0)
+    const monthlyRow = rowAt(1)
+    const globalRow = rowAt(2)
+    if (!userDailyRow) {
+      await compensate()
+      throw new Error("Daily Lynvo Plugin extraction limit reached.")
     }
-    dailyUsed = dailyRow.used
-    monthlyUsed = monthlyRow.used
+    if (!monthlyRow) {
+      await compensate()
+      throw new Error("Monthly Lynvo Plugin extraction limit reached.")
+    }
+    if (!globalRow) {
+      await compensate()
+      throw new Error(
+        "Lynvo Plugin extraction capacity is unavailable until tomorrow."
+      )
+    }
+    return {
+      status: "reserved",
+      dailyUsed: userDailyRow.used,
+      monthlyUsed: monthlyRow.used,
+      dataVersion,
+    }
   }
-  return { status: "reserved", dailyUsed, monthlyUsed, dataVersion }
+  const globalOnlyRow = rowAt(0)
+  if (!globalOnlyRow) {
+    await compensate()
+    throw new Error(
+      "Lynvo Plugin extraction capacity is unavailable until tomorrow."
+    )
+  }
+  return {
+    status: "reserved",
+    dailyUsed: userDailyUsed ?? 0,
+    monthlyUsed: monthlyUsedBefore ?? 0,
+    dataVersion,
+  }
+}
+
+const compensateReservedManagedExtraction = async (
+  database: D1Database,
+  input: {
+    userId: string
+    operationId: string
+    epoch: number
+    dailyPeriodKey: string
+    monthlyPeriodKey: string
+    userLimitsApplied: boolean
+  }
+): Promise<void> => {
+  const ownerKey = `user:${input.userId}`
+  await database.batch([
+    decrementCounterStatement(database, {
+      ownerKey: GLOBAL_USAGE_OWNER_KEY,
+      metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+      periodKey: input.dailyPeriodKey,
+      epoch: input.epoch,
+      userId: input.userId,
+      operationId: input.operationId,
+    }),
+    ...(input.userLimitsApplied
+      ? [
+          decrementCounterStatement(database, {
+            ownerKey,
+            metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+            periodKey: input.dailyPeriodKey,
+            epoch: input.epoch,
+            userId: input.userId,
+            operationId: input.operationId,
+          }),
+          decrementCounterStatement(database, {
+            ownerKey,
+            metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+            periodKey: input.monthlyPeriodKey,
+            epoch: input.epoch,
+            userId: input.userId,
+            operationId: input.operationId,
+          }),
+        ]
+      : []),
+    database
+      .prepare(
+        "DELETE FROM managed_extraction_operations WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved'"
+      )
+      .bind(input.userId, input.operationId),
+  ])
 }
 
 export type ManagedExtractionSettlementResult =
@@ -390,14 +493,25 @@ export const settleManagedExtraction = async (
     input.outcome === "released"
       ? await buildReleaseStatements(database, operation)
       : []
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...releaseStatements,
-    database
-      .prepare(
-        "UPDATE managed_extraction_operations SET state = ?3, settled_at = ?2 WHERE user_id = ?1 AND operation_id = ?4"
-      )
-      .bind(userId, input.now, input.outcome, input.operationId),
-  ])
+  const { dataVersion, statementResults } = await executeOwnedWrite(
+    database,
+    userId,
+    [
+      ...releaseStatements,
+      database
+        .prepare(
+          "UPDATE managed_extraction_operations SET state = ?3, settled_at = ?2 WHERE user_id = ?1 AND operation_id = ?4 AND state = 'reserved'"
+        )
+        .bind(userId, input.now, input.outcome, input.operationId),
+    ]
+  )
+  const settleResult = statementResults[releaseStatements.length]
+  if ((settleResult?.meta.changes ?? 0) === 0) {
+    return {
+      status: "already-settled",
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
   return { status: input.outcome, dataVersion }
 }
 
@@ -415,17 +529,23 @@ export const releaseExpiredManagedExtractions = async (
     return { released: 0 }
   }
   const operations = results.map(mapManagedOperationRow)
-  const releaseStatementsByOperation = await Promise.all(
-    operations.map((operation) => buildReleaseStatements(database, operation))
-  )
   const statements: D1PreparedStatement[] = []
   const affectedUserIds = new Set<string>()
-  for (const [operationIndex, operation] of operations.entries()) {
+  for (const operation of operations) {
+    let releaseStatements: D1PreparedStatement[]
+    try {
+      releaseStatements = await buildReleaseStatements(database, operation)
+    } catch {
+      // SAFETY: one inconsistent counter row must not block the whole sweep;
+      // force the release without decrementing so abandoned reservations stop
+      // consuming quota while the drift stays visible for reconciliation.
+      releaseStatements = []
+    }
     statements.push(
-      ...(releaseStatementsByOperation[operationIndex] ?? []),
+      ...releaseStatements,
       database
         .prepare(
-          "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2"
+          "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved'"
         )
         .bind(operation.userId, operation.operationId, now)
     )

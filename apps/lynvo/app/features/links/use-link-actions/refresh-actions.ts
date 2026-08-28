@@ -9,6 +9,7 @@ import {
 } from "./refresh-flow"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
 export const useRefreshActions = ({
@@ -98,7 +99,12 @@ export const useRefreshActions = ({
             ]
           : undefined
       if (cachedMirrors && !bypassCache) {
-        return cachedMirrors
+        const freshCachedMirrors = cachedMirrors.filter((mirror) =>
+          isPlayableLinkFresh(mirror)
+        )
+        if (freshCachedMirrors.length > 0) {
+          return freshCachedMirrors
+        }
       }
 
       return runWithExtractingItem(lazyItemUrl, async () => {

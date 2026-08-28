@@ -8,6 +8,7 @@ import {
   deleteExpiredLinksForUser,
   deleteSavedLinkById,
   listSavedLinks,
+  listSavedLinksWithDataVersion,
   sweepExpiredLinks,
   updateSavedLinkMeta,
 } from "../../workers/d1/links"
@@ -24,7 +25,10 @@ import {
   insertGoogleUser,
   updateUserStorageRetentionDays,
 } from "../../workers/d1/users"
-import { getDataVersion } from "../../workers/d1/data-version"
+import {
+  executeOwnedWrite,
+  getDataVersion,
+} from "../../workers/d1/data-version"
 import type { ExtractedLink } from "../../app/features/links/types"
 
 const NOW = 1_750_000_000_000
@@ -522,5 +526,103 @@ describe("d1 links", () => {
       .bind(user.id)
       .first<{ count: number }>()
     expect(remaining?.count).toBe(0)
+  })
+
+  it("drops expired mirrors when caching resolved mirrors", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "expiry:create",
+      url: "https://source.example",
+      meta: metadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const expiredMirror = {
+      ...playableLink,
+      url: "https://mirror.example/expired.mp4",
+      expiry: NOW + 1_000,
+    }
+    const freshMirror = {
+      ...playableLink,
+      url: "https://mirror.example/fresh.mp4",
+      expiry: NOW + DAY_MS,
+    }
+    await applySavedLinkMetadataOperation(env.DB, user.id, {
+      operationId: "expiry:cache",
+      id: linkId,
+      operation: {
+        kind: "cacheMirrors",
+        lazyItemUrl: "https://lazy.example",
+        mirrorsJson: JSON.stringify([expiredMirror, freshMirror]),
+      },
+      now: NOW + 2_000,
+    })
+    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 2_000)
+    const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
+    expect(metadata.playback.resolvedMirrors["https://lazy.example"]).toEqual([
+      freshMirror,
+    ])
+
+    await applySavedLinkMetadataOperation(env.DB, user.id, {
+      operationId: "expiry:stale",
+      id: linkId,
+      operation: {
+        kind: "cacheMirrors",
+        lazyItemUrl: "https://other.example",
+        mirrorsJson: JSON.stringify([
+          { ...freshMirror, expiry: NOW + 2 * DAY_MS },
+        ]),
+      },
+      now: NOW + DAY_MS + 3_000,
+    })
+    const prunedSnapshot = await listSavedLinks(
+      env.DB,
+      user.id,
+      NOW + DAY_MS + 3_000
+    )
+    const prunedMetadata = JSON.parse(prunedSnapshot.results[0]?.metaJson ?? "")
+    expect(
+      prunedMetadata.playback.resolvedMirrors["https://lazy.example"]
+    ).toBeUndefined()
+    expect(
+      prunedMetadata.playback.resolvedMirrors["https://other.example"]
+    ).toEqual([{ ...freshMirror, expiry: NOW + 2 * DAY_MS }])
+  })
+
+  it("reads items and data_version atomically", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "atomic:create",
+      url: "https://example.com/atomic",
+      now: NOW,
+    })
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 1_000
+    )
+    expect(snapshot.results).toHaveLength(1)
+    expect(snapshot.results[0]?.id).toBe(created.id)
+    expect(snapshot.dataVersion).toBe(created.dataVersion)
+  })
+
+  it("does not bump data_version when a guarded write loses its race", async () => {
+    const user = await createUser()
+    const before = await getDataVersion(env.DB, user.id)
+    const { changed, dataVersion } = await executeOwnedWrite(
+      env.DB,
+      user.id,
+      [
+        env.DB.prepare(
+          "UPDATE links SET title = 'lost' WHERE id = 'missing-link'"
+        ),
+      ],
+      {
+        conditionSql: "SELECT 1 FROM links WHERE id = 'missing-link'",
+        conditionBindings: [],
+      }
+    )
+    expect(changed).toBe(false)
+    expect(dataVersion).toBe(before)
   })
 })
