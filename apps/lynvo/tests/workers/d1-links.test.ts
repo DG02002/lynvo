@@ -220,6 +220,7 @@ describe("d1 links", () => {
     })
     const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
     await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "extraction:deleted:remove",
       id: queued.id ?? "",
       now: NOW + 1_000,
     })
@@ -374,6 +375,7 @@ describe("d1 links", () => {
     })
     await expect(
       deleteSavedLinkById(env.DB, attacker.id, {
+        operationId: "authz:delete-attack",
         id: created.id ?? "",
         now: NOW,
       })
@@ -391,8 +393,32 @@ describe("d1 links", () => {
         now: NOW,
       })
     }
-    const outcome = await clearSavedLinks(env.DB, user.id, { now: NOW })
+    const outcome = await clearSavedLinks(env.DB, user.id, {
+      operationId: "clear:all",
+      now: NOW,
+    })
     expect(outcome.deletedLinks).toBe(2)
+    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    expect(snapshot.results).toHaveLength(0)
+  })
+
+  it("replays a delete instead of reporting a missing link when a retry lands", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "delete-replay:create",
+      url: "https://example.com/delete-replay",
+      now: NOW,
+    })
+    const command = {
+      operationId: "delete-replay:remove",
+      id: created.id ?? "",
+      now: NOW + 1_000,
+    }
+    const first = await deleteSavedLinkById(env.DB, user.id, command)
+    const retry = await deleteSavedLinkById(env.DB, user.id, command)
+    expect(first.replayed).toBe(false)
+    expect(retry.success).toBe(true)
+    expect(retry.replayed).toBe(true)
     const snapshot = await listSavedLinks(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
   })

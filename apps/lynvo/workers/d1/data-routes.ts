@@ -256,7 +256,14 @@ const updateMetaSchema = Schema.Struct({
   meta: Schema.NonEmptyString,
 })
 
-const deleteLinkSchema = Schema.Struct({ id: Schema.NonEmptyString })
+const deleteLinkSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+  id: Schema.NonEmptyString,
+})
+
+const clearLinksSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+})
 
 const metadataOperationSchema = Schema.Union([
   Schema.Struct({
@@ -476,7 +483,7 @@ dataApp.post("/links/delete", async (context) => {
   const result = await deleteSavedLinkById(
     preparation.database,
     preparation.session.userId,
-    { id: body.id, now: Date.now() }
+    { operationId: body.operationId, id: body.id, now: Date.now() }
   )
   await notifyAccountDataChanged(
     context.env,
@@ -492,10 +499,14 @@ dataApp.post("/links/clear", async (context) => {
   if (!isReadyDataRequest(preparation)) {
     return preparation.response
   }
+  const requestBody = await readDataJsonBody(context, clearLinksSchema)
+  if (requestBody.kind === "invalid") {
+    return requestBody.response
+  }
   const result = await clearSavedLinks(
     preparation.database,
     preparation.session.userId,
-    { now: Date.now() }
+    { operationId: requestBody.body.operationId, now: Date.now() }
   )
   await notifyAccountDataChanged(
     context.env,

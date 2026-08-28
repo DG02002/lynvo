@@ -163,7 +163,10 @@ describe("d1 data routes", () => {
     const deleteResponse = await app.fetch(
       dataApiRequest("/api/data/links/delete", strangerSession, {
         method: "POST",
-        body: JSON.stringify({ id: created.id }),
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: created.id,
+        }),
       }),
       env
     )
@@ -279,7 +282,10 @@ describe("d1 data routes", () => {
     const deleteResponse = await app.fetch(
       dataApiRequest("/api/data/links/delete", session, {
         method: "POST",
-        body: JSON.stringify({ id: firstLink.id }),
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: firstLink.id,
+        }),
       }),
       env
     )
@@ -291,7 +297,10 @@ describe("d1 data routes", () => {
     expect(deleted.dataVersion).toBeGreaterThan(secondLink.dataVersion)
 
     const clearResponse = await app.fetch(
-      dataApiRequest("/api/data/links/clear", session, { method: "POST" }),
+      dataApiRequest("/api/data/links/clear", session, {
+        method: "POST",
+        body: JSON.stringify({ operationId: crypto.randomUUID() }),
+      }),
       env
     )
     const cleared = await readJsonBody<{

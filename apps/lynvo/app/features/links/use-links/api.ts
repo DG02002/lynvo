@@ -279,6 +279,12 @@ export const linksDataApi = {
   }): Promise<SavedLinkMutationResponse> =>
     requestDataJson(
       "/api/data/links/delete",
-      mutationRequest("/api/data/links/delete", JSON.stringify(input))
+      mutationRequest(
+        "/api/data/links/delete",
+        JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: input.id,
+        })
+      )
     ),
 }

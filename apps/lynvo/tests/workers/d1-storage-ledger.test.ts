@@ -160,6 +160,7 @@ describe("d1 storage ledger", () => {
     const beforeDelete = await expectLedgerMatchesInventory(user.id)
     expect(beforeDelete.ledger?.savedLinkCount).toBe(1)
     await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "lifecycle:delete",
       id: linkId,
       now: NOW + 3_000,
     })

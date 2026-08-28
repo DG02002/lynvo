@@ -707,60 +707,139 @@ export const applySavedLinkMetadataOperation = async (
 export const deleteSavedLinkById = async (
   database: D1Database,
   userId: string,
-  input: { id: string; now: number }
+  input: { operationId: string; id: string; now: number }
 ): Promise<SavedLinkMutationResult> => {
-  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const ledgerMutation = applyStorageMutation(
+  const completedOperation = await findCompletedSavedLinkOperation(
     database,
-    preparation,
-    {
-      domain: "linkBytes",
-      currentBytes: byteLength(existingRow),
-      nextBytes: 0,
-      savedLinkCountDelta: -1,
-    },
-    input.now
+    userId,
+    input.operationId
   )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
-    ...ledgerMutation.statements,
-  ])
-  return { success: true, replayed: false, dataVersion }
+  if (completedOperation) {
+    return {
+      success: true,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const reserved = await reserveSavedLinkCommandOperation(database, {
+    userId,
+    operationId: input.operationId,
+    command: "delete",
+    now: input.now,
+  })
+  if (!reserved) {
+    return {
+      success: true,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  try {
+    const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+    const preparation = await ensureStorageLedger(database, userId, input.now)
+    const ledgerMutation = applyStorageMutation(
+      database,
+      preparation,
+      {
+        domain: "linkBytes",
+        currentBytes: byteLength(existingRow),
+        nextBytes: 0,
+        savedLinkCountDelta: -1,
+      },
+      input.now
+    )
+    const { dataVersion } = await executeOwnedWrite(database, userId, [
+      ...preparation.statements,
+      database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
+      ...ledgerMutation.statements,
+    ])
+    return { success: true, replayed: false, dataVersion }
+  } catch (error) {
+    await releaseReservedSavedLinkCommandOperation(database, {
+      userId,
+      operationId: input.operationId,
+    })
+    throw error
+  }
 }
 
 export const clearSavedLinks = async (
   database: D1Database,
   userId: string,
-  input: { now: number }
-): Promise<{ success: boolean; deletedLinks: number; dataVersion: number }> => {
+  input: { operationId: string; now: number }
+): Promise<{
+  success: boolean
+  replayed: boolean
+  deletedLinks: number
+  dataVersion: number
+}> => {
+  const completedOperation = await findCompletedSavedLinkOperation(
+    database,
+    userId,
+    input.operationId
+  )
+  if (completedOperation) {
+    return {
+      success: true,
+      replayed: true,
+      deletedLinks: 0,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const reserved = await reserveSavedLinkCommandOperation(database, {
+    userId,
+    operationId: input.operationId,
+    command: "clear",
+    now: input.now,
+  })
+  if (!reserved) {
+    return {
+      success: true,
+      replayed: true,
+      deletedLinks: 0,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const savedLinkCount = preparation.ledger.savedLinkCount
   if (savedLinkCount === 0) {
     return {
       success: true,
+      replayed: false,
       deletedLinks: 0,
       dataVersion: await getDataVersion(database, userId),
     }
   }
-  const ledgerMutation = applyStorageMutation(
-    database,
-    preparation,
-    {
-      domain: "linkBytes",
-      currentBytes: preparation.ledger.linkBytes,
-      nextBytes: 0,
-      savedLinkCountDelta: -savedLinkCount,
-    },
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
-    ...ledgerMutation.statements,
-  ])
-  return { success: true, deletedLinks: savedLinkCount, dataVersion }
+  try {
+    const ledgerMutation = applyStorageMutation(
+      database,
+      preparation,
+      {
+        domain: "linkBytes",
+        currentBytes: preparation.ledger.linkBytes,
+        nextBytes: 0,
+        savedLinkCountDelta: -savedLinkCount,
+      },
+      input.now
+    )
+    const { dataVersion } = await executeOwnedWrite(database, userId, [
+      ...preparation.statements,
+      database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
+      ...ledgerMutation.statements,
+    ])
+    return {
+      success: true,
+      replayed: false,
+      deletedLinks: savedLinkCount,
+      dataVersion,
+    }
+  } catch (error) {
+    await releaseReservedSavedLinkCommandOperation(database, {
+      userId,
+      operationId: input.operationId,
+    })
+    throw error
+  }
 }
 
 export const deleteExpiredLinksForUser = async (
