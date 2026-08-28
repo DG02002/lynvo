@@ -1,5 +1,5 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
-import { Effect } from "effect"
+import { Effect, Result } from "effect"
 import { ExtractionError, ValidationError } from "../errors"
 import {
   discoverCustomPlugin,
@@ -15,6 +15,8 @@ import type {
 } from "./extraction-types"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
+import { getD1Database } from "../../../../workers/d1/db"
+import { recordPluginServerVerificationFailure } from "../../../../workers/d1/plugin-servers"
 
 export interface CustomExtractionAdapterOptions {
   readonly environment: Env
@@ -93,15 +95,55 @@ export const extractWithCustomPluginServer = Effect.fn(
         inlineBasicAuth: options.inlineBasicAuth,
       })
     : {}
-  return yield* extractFromCustomPluginServer(
-    route.pluginServer,
-    options.targetUrl,
-    options.kind,
-    { pluginId: route.plugin?.id, ...credentials },
-    options.requestId,
-    route.plugin
+  const outcome = yield* Effect.result(
+    extractFromCustomPluginServer(
+      route.pluginServer,
+      options.targetUrl,
+      options.kind,
+      { pluginId: route.plugin?.id, ...credentials },
+      options.requestId,
+      route.plugin
+    )
   )
+  if (Result.isFailure(outcome)) {
+    tripCircuitBreakerOnTransportFailure(
+      options,
+      route.pluginServer.id,
+      outcome.failure
+    )
+    return yield* Effect.fail(outcome.failure)
+  }
+  return outcome.success
 })
+
+/**
+ * Transport-level custom server failures (timeouts, 5xx) mark the server
+ * down so subsequent extractions deroute to other matching servers instead
+ * of pinning a worker on a hanging origin. Content-level failures and rate
+ * limits do not trip the breaker; background refresh re-verifies and
+ * restores the server automatically.
+ */
+const tripCircuitBreakerOnTransportFailure = (
+  options: CustomExtractionAdapterOptions,
+  pluginServerId: string,
+  error: ExtractionError | ValidationError
+): void => {
+  if (
+    !(error instanceof ExtractionError) ||
+    error.message !== "TEMPORARY_FAILURE" ||
+    !options.userId
+  ) {
+    return
+  }
+  const database = getD1Database(options.environment)
+  if (!database) {
+    return
+  }
+  void recordPluginServerVerificationFailure(database, options.userId, {
+    id: pluginServerId,
+    now: Date.now(),
+  }).catch(() => undefined)
+}
 
 export const getCustomRouteMetadata = Effect.fn(
   "CustomExtractionAdapter.getMetadata"

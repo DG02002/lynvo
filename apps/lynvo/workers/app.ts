@@ -9,6 +9,7 @@ import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credent
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/server"
+import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
 import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
@@ -924,6 +925,22 @@ export default {
     const startedAt = performance.now()
     const database = getD1Database(env)
     if (controller.cron === CRON_SCHEDULE_HOURLY_MAINTENANCE) {
+      const manifestRefresh = database
+        ? await refreshCustomPluginServerManifests(env, database).catch(
+            (error) => {
+              console.warn("plugin_server_manifest_refresh_unavailable", {
+                operation: "plugin_server_manifest_refresh_unavailable",
+                error: error instanceof Error ? error.message : String(error),
+              })
+              return { refreshed: 0, failed: 0 }
+            }
+          )
+        : { refreshed: 0, failed: 0 }
+      console.info("plugin_server_manifest_refresh", {
+        operation: "plugin_server_manifest_refresh",
+        refreshed_count: manifestRefresh.refreshed,
+        failed_count: manifestRefresh.failed,
+      })
       const outcomes = database ? await runHourlyD1Maintenance(database) : []
       const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
       console.info("scheduled_hourly_maintenance", {
