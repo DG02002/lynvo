@@ -54,7 +54,7 @@ import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
-import { lookupMediaArtwork } from "../media-metadata/media-artwork-lookup"
+import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
 import { MEDIA_ARTWORK_REQUEST_BATCH_LIMIT } from "../constants"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
@@ -374,7 +374,13 @@ dataApp.post("/media-artwork", async (context) => {
       "Too many artwork requests"
     )
   }
-  const results = await lookupMediaArtwork(context.env, body.body.requests)
+  const results = await lookupMediaArtworkCached(
+    context.env,
+    body.body.requests,
+    {
+      waitUntil: (promise) => safeWaitUntil(context, promise),
+    }
+  )
   return context.json({ results })
 })
 
