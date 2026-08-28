@@ -2,24 +2,21 @@ import { describe, expect, it } from "vitest"
 import { buildReleaseIdentity } from "../workers/release-identity"
 
 describe("buildReleaseIdentity", () => {
-  it("exposes the immutable production release identity", () => {
+  it("prefers explicit release bindings over version metadata", () => {
     // SAFETY: buildReleaseIdentity only reads the release metadata fields supplied below.
     const env = {
-      COMMIT_HASH: "abc123",
-      SERVICE_VERSION: "0.1.0",
+      COMMIT_HASH: "explicit-commit",
+      SERVICE_VERSION: "9.9.9",
       CF_VERSION_METADATA: {
         id: "worker-version-id",
-        tag: "abc123",
+        tag: "metadata-commit",
         timestamp: "2026-08-18T00:00:00.000Z",
       },
     } as Env
 
-    expect(buildReleaseIdentity(env, "2026-08-18T00:00:00.000Z")).toEqual({
-      buildTime: "2026-08-18T00:00:00.000Z",
-      commitHash: "abc123",
-      deploymentId: "worker-version-id",
-      serviceVersion: "0.1.0",
-    })
+    const identity = buildReleaseIdentity(env, "2026-08-18T00:00:00.000Z")
+    expect(identity.commitHash).toBe("explicit-commit")
+    expect(identity.serviceVersion).toBe("9.9.9")
   })
 
   it("uses explicit development values when release bindings are absent", () => {

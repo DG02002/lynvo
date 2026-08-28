@@ -36,7 +36,7 @@ describe("Remote Play Worker contract", () => {
     ["POST", "/api/remote/send"],
     ["GET", "/api/remote/inbox"],
     ["POST", "/api/remote/result"],
-  ])("registers %s %s", async (method, path) => {
+  ])("refuses unauthenticated %s %s", async (method, path) => {
     const { default: worker } = await import("../../workers/app")
     // SAFETY: Route registration only reads ENVIRONMENT in this smoke test.
     const environment = { ENVIRONMENT: "development" } as Env
@@ -51,6 +51,10 @@ describe("Remote Play Worker contract", () => {
       executionContext
     )
 
+    // Without a session, CSRF, database, or auth must refuse the request —
+    // whichever guard fires first depends on the environment, but the route
+    // can never succeed (2xx) or be missing (404).
+    expect(response.ok).toBe(false)
     expect(response.status).not.toBe(404)
   })
 })
