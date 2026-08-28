@@ -39,6 +39,45 @@ interface CachedMediaArtworkEntry {
 const toMediaArtworkCacheKey = (key: string): string =>
   `${MEDIA_ARTWORK_CACHE_STORAGE_PREFIX}${key}`
 
+const sweepExpiredMediaArtworkCache = (): void => {
+  if (globalThis.localStorage === undefined) {
+    return
+  }
+  try {
+    const expiredKeys: string[] = []
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const storageKey = localStorage.key(index)
+      if (!storageKey?.startsWith(MEDIA_ARTWORK_CACHE_STORAGE_PREFIX)) {
+        continue
+      }
+      const cachedEntry = localStorage.getItem(storageKey)
+      if (cachedEntry === null) {
+        continue
+      }
+      try {
+        // SAFETY: untrusted storage JSON; unreadable entries are swept too
+        const parsedEntry = JSON.parse(cachedEntry) as CachedMediaArtworkEntry
+        if (
+          !parsedEntry ||
+          !Number.isFinite(parsedEntry.expiresAt) ||
+          parsedEntry.expiresAt <= Date.now()
+        ) {
+          expiredKeys.push(storageKey)
+        }
+      } catch {
+        expiredKeys.push(storageKey)
+      }
+    }
+    for (const storageKey of expiredKeys) {
+      localStorage.removeItem(storageKey)
+    }
+  } catch {
+    // Storage access can throw in private modes; the sweep is best-effort.
+  }
+}
+
+sweepExpiredMediaArtworkCache()
+
 const readCachedMediaArtwork = (
   key: string
 ): MediaArtworkResult | null | undefined => {
@@ -189,7 +228,10 @@ const flushPendingMediaArtwork = async (): Promise<void> => {
     })
   } catch {
     batchEntries.forEach(([key]) => {
-      mediaArtworkResults.set(key, null)
+      // Transient failures are not negative-cached: the entry stays absent so
+      // the next mount retries instead of hiding posters for the whole
+      // session.
+      mediaArtworkResults.delete(key)
       notifyMediaArtworkListeners(key)
     })
   }

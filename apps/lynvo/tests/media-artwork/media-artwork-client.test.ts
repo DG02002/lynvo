@@ -100,7 +100,7 @@ describe("media artwork client cache", () => {
     client.requestMediaArtwork(artworkKey, artworkRequest)
     await flushArtworkRequests()
 
-    expect(client.getMediaArtworkForKey(artworkKey)).toBeNull()
+    expect(client.getMediaArtworkForKey(artworkKey)).toBeUndefined()
     expect(
       localStorage.getItem(MEDIA_ARTWORK_CACHE_STORAGE_PREFIX + artworkKey)
     ).toBeNull()
