@@ -32,7 +32,6 @@ describe("d1 sessions", () => {
     const found = await findActiveSessionById(env.DB, session.id, NOW + 1)
     expect(found?.userId).toBe(user.id)
     expect(found?.userAgent).toBe("test-agent")
-    expect(found?.generation).toBe(1)
     expect(found?.revokedAt).toBeNull()
   })
 
@@ -43,11 +42,7 @@ describe("d1 sessions", () => {
       now: NOW,
       ttlMs: 1_000,
     })
-    const found = await findActiveSessionById(
-      env.DB,
-      session.id,
-      NOW + 2_000
-    )
+    const found = await findActiveSessionById(env.DB, session.id, NOW + 2_000)
     expect(found).toBeNull()
   })
 

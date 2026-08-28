@@ -12,7 +12,6 @@ import {
 export interface SessionRecord {
   id: string
   userId: string
-  generation: number
   createdAt: number
   lastSeenAt: number
   expiresAt: number
@@ -24,7 +23,6 @@ export interface SessionRecord {
 interface SessionRow {
   id: string
   user_id: string
-  generation: number
   created_at: number
   last_seen_at: number
   expires_at: number
@@ -36,7 +34,6 @@ interface SessionRow {
 const mapSessionRow = (row: SessionRow): SessionRecord => ({
   id: row.id,
   userId: row.user_id,
-  generation: row.generation,
   createdAt: row.created_at,
   lastSeenAt: row.last_seen_at,
   expiresAt: row.expires_at,
@@ -46,7 +43,7 @@ const mapSessionRow = (row: SessionRow): SessionRecord => ({
 })
 
 const SESSION_COLUMNS =
-  "id, user_id, generation, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name"
+  "id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name"
 
 export const createSession = async (
   database: D1Database,
@@ -54,7 +51,6 @@ export const createSession = async (
     readonly userId: string
     readonly userAgent?: string | undefined
     readonly deviceName?: string | undefined
-    readonly generation?: number | undefined
     readonly now: number
     readonly ttlMs?: number | undefined
   }
@@ -62,7 +58,6 @@ export const createSession = async (
   const record: SessionRecord = {
     id: createOpaqueId(),
     userId: input.userId,
-    generation: input.generation ?? 1,
     createdAt: input.now,
     lastSeenAt: input.now,
     expiresAt: input.now + (input.ttlMs ?? D1_SESSION_TOTAL_DURATION_MS),
@@ -72,12 +67,11 @@ export const createSession = async (
   }
   await database
     .prepare(
-      "INSERT INTO sessions (id, user_id, generation, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+      "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
     )
     .bind(
       record.id,
       record.userId,
-      record.generation,
       record.createdAt,
       record.lastSeenAt,
       record.expiresAt,
