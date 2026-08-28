@@ -25,6 +25,7 @@ const pluginServer = {
             status: "active",
             version: "1.0.0",
             usageMultiplier: 5,
+            proxyCreditUsage: "Uses 5 proxy credits for rendering.",
             hosts: ["source-alpha.example"],
           },
         ],
@@ -68,7 +69,7 @@ describe("CustomPluginServerTable", () => {
     expect(screen.queryByText(/Version 1\.0\.0/)).not.toBeInTheDocument()
   })
 
-  it("moves Plugin version, usage, and project details into an info tooltip", () => {
+  it("moves Plugin version, proxy usage, and project details into an info tooltip", () => {
     renderTable()
 
     expect(
@@ -84,8 +85,11 @@ describe("CustomPluginServerTable", () => {
 
     expect(screen.getByText("Version 1.0.0")).toBeInTheDocument()
     expect(
-      screen.getByText("Might use up to 5x usage per extraction")
+      screen.getByText("Proxy usage: Uses 5 proxy credits for rendering.")
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Might use up to 5x usage per extraction")
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("link", {
         name: "https://source-alpha.example/project",

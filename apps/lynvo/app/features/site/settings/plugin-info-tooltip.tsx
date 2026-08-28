@@ -11,6 +11,7 @@ interface PluginInfoTooltipProps {
   description?: string
   version?: string
   usageMultiplier?: number
+  proxyCreditUsage?: string
   projectUrl?: string
 }
 
@@ -19,10 +20,17 @@ export function PluginInfoTooltip({
   description,
   version,
   usageMultiplier,
+  proxyCreditUsage,
   projectUrl,
 }: PluginInfoTooltipProps) {
   const hasUsageHint = usageMultiplier !== undefined && usageMultiplier > 1
-  if (!description && !version && !hasUsageHint && !projectUrl) {
+  if (
+    !description &&
+    !version &&
+    !hasUsageHint &&
+    !proxyCreditUsage &&
+    !projectUrl
+  ) {
     return null
   }
 
@@ -46,9 +54,11 @@ export function PluginInfoTooltip({
       <TooltipContent className="flex-col items-start gap-1 py-2 text-left">
         {description && <p>{description}</p>}
         {version && <p>Version {version}</p>}
-        {hasUsageHint && (
+        {proxyCreditUsage ? (
+          <p>Proxy usage: {proxyCreditUsage}</p>
+        ) : hasUsageHint ? (
           <p>Might use up to {usageMultiplier}x usage per extraction</p>
-        )}
+        ) : null}
         {projectUrl && (
           <a
             href={projectUrl}

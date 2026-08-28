@@ -222,6 +222,7 @@ describe("Lynvo manifest source credentials", () => {
               displayName: "Render Plugin",
               version: "1.0.0",
               usageMultiplier: 5,
+              proxyCreditUsage: "Uses 5 proxy credits for rendering.",
               hosts: ["example.com"],
             },
           ],
@@ -231,6 +232,7 @@ describe("Lynvo manifest source credentials", () => {
 
     expect(getLynvoManifestExtension(manifest).plugins?.[0]).toMatchObject({
       usageMultiplier: 5,
+      proxyCreditUsage: "Uses 5 proxy credits for rendering.",
     })
     expect(
       Result.isFailure(

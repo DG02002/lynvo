@@ -306,6 +306,8 @@ Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Se
 
 `usageMultiplier` is optional. Set it to a positive integer when one extraction through this source can consume multiple units of your metered extraction limit (for example `5` when the source requires a headless-browser rendering proxy). Lynvo surfaces this in the Plugin info tooltip so people know the Plugin may use more of their usage allowance. Omit it when an extraction always costs one unit.
 
+`proxyCreditUsage` is optional human-readable text describing how one extraction uses proxy credits. Use it when the total depends on the selected link, redirects, mirrors, cache state, or another runtime condition. Describe fixed request costs and variable requests separately, and do not present a fixed total unless the Plugin guarantees it. Lynvo surfaces this text in the Plugin info tooltip.
+
 `matchers` is optional but recommended. Lynvo uses it to show which Plugin is likely to handle a URL before extraction starts.
 
 `matchStrategy` defaults to `static`. Static Plugins declare `hosts` or

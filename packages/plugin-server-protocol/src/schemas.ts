@@ -161,6 +161,7 @@ export const pluginMetadataSchema = Schema.Struct({
   usageMultiplier: Schema.optional(
     Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1)))
   ),
+  proxyCreditUsage: Schema.optional(Schema.NonEmptyString),
   hosts: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([]))
   ),

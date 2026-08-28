@@ -200,6 +200,7 @@ const CustomPluginServerRow = ({
                       description={source.description}
                       version={source.version}
                       usageMultiplier={source.usageMultiplier}
+                      proxyCreditUsage={source.proxyCreditUsage}
                       projectUrl={
                         projectUrl &&
                         (source.homepage ? projectUrl : `https://${projectUrl}`)

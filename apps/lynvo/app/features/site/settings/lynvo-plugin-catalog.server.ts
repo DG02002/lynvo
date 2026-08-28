@@ -63,6 +63,9 @@ export const loadLynvoPlugins = async (
       if (plugin.usageMultiplier) {
         result.usageMultiplier = plugin.usageMultiplier
       }
+      if (plugin.proxyCreditUsage) {
+        result.proxyCreditUsage = plugin.proxyCreditUsage
+      }
       return result
     })
   } catch (error) {

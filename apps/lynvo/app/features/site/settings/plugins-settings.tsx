@@ -128,6 +128,7 @@ export function PluginsSettings({
                         description={plugin.description}
                         version={plugin.version}
                         usageMultiplier={plugin.usageMultiplier}
+                        proxyCreditUsage={plugin.proxyCreditUsage}
                         projectUrl={plugin.sourceUrl}
                       />
                     </div>

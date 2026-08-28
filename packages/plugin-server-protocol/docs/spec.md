@@ -264,6 +264,10 @@ and `required` (boolean). These optional fields never contain credential values.
 Plugins may also declare an optional `usageMultiplier`: a positive integer that
 states how many units of the Plugin Server's metered extraction limit a single
 extraction through that Plugin can consume, so Lynvo can warn before use.
+`proxyCreditUsage` may describe the Plugin's proxy-credit request pattern in
+human-readable text. Use it when the total varies by redirects, mirrors, cache
+state, or another runtime condition. Lynvo displays this text in the Plugin
+info tooltip.
 The Lynvo extension may also declare `proxyProvider: "scrape-do"` when the
 Plugin Server accepts a user-supplied Scrape.do token per extract request and
 uses it for that request's proxy calls; Lynvo only offers the proxy-key field

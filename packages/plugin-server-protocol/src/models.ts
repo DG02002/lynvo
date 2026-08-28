@@ -190,6 +190,7 @@ export interface PluginMetadata {
   readonly routesToPluginId?: string
   readonly matchStrategy?: "static" | "probe"
   readonly usageMultiplier?: number
+  readonly proxyCreditUsage?: string
   readonly hosts: readonly string[]
   readonly matchers?: readonly PluginServerMatcher[]
   readonly credential?: PluginCredential

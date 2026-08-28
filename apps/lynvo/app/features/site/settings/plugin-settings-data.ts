@@ -12,4 +12,5 @@ export interface LynvoPlugin {
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
   usageMultiplier?: number
+  proxyCreditUsage?: string
 }
