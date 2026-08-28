@@ -5,6 +5,7 @@ import {
   ValidationApiError,
   UnauthorizedApiError,
   BackendApiError,
+  UsageLimitApiError,
 } from "../../errors"
 
 export class ExtractionGroup extends HttpApiGroup.make("extraction")
@@ -17,7 +18,12 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
         kind: Schema.optional(Schema.String),
       }),
       success: Schema.Unknown,
-      error: [ExtractionApiError, ValidationApiError, UnauthorizedApiError],
+      error: [
+        ExtractionApiError,
+        ValidationApiError,
+        UnauthorizedApiError,
+        UsageLimitApiError,
+      ],
     }),
     HttpApiEndpoint.get("getMetadata", "/meta", {
       query: Schema.Struct({

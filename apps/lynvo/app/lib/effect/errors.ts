@@ -25,6 +25,14 @@ export class ValidationError extends Schema.TaggedError<ValidationError>()(
   }
 ) {}
 
+export class UsageLimitError extends Schema.TaggedError<UsageLimitError>()(
+  "UsageLimitError",
+  {
+    message: Schema.String,
+    retryAfterSeconds: Schema.Number,
+  }
+) {}
+
 export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>()(
   "UnauthorizedError",
   {
@@ -72,6 +80,11 @@ export const ExtractionApiError = publicError("ExtractionError").pipe(
 export const ValidationApiError = publicError("ValidationError").pipe(
   HttpApiSchema.status(400)
 )
+export const UsageLimitApiError = Schema.Struct({
+  _tag: Schema.Literal("UsageLimitError"),
+  message: Schema.String,
+  retryAfterSeconds: Schema.Number,
+}).pipe(HttpApiSchema.status(429))
 export const UnauthorizedApiError = publicError("UnauthorizedError").pipe(
   HttpApiSchema.status(401)
 )

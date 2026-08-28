@@ -3,6 +3,7 @@ import type { ExtractedLink } from "../../../features/links/types"
 import type { MetaData } from "../../../features/links/types"
 import type {
   ExtractionError,
+  UsageLimitError,
   ValidationError,
   UnauthorizedError,
   BackendError,
@@ -80,7 +81,7 @@ export interface ExtractionServiceContract {
     options: ExtractOptions
   ) => Effect.Effect<
     ExtractionResult,
-    ExtractionError | ValidationError | UnauthorizedError
+    ExtractionError | UsageLimitError | ValidationError | UnauthorizedError
   >
   readonly getMetadata: (
     options: MetadataOptions

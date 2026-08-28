@@ -1,5 +1,10 @@
 import { Context, Effect, Layer } from "effect"
-import { BackendError, ExtractionError, ValidationError } from "../errors"
+import {
+  BackendError,
+  ExtractionError,
+  UsageLimitError,
+  ValidationError,
+} from "../errors"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -37,7 +42,10 @@ export class ExtractionService extends Context.Service<
 
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
-      ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
+      ): Effect.fn.Return<
+        ExtractionResult,
+        ExtractionError | UsageLimitError | ValidationError
+      > {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
         const targetUrl = routeInput.targetUrl
         if (options.userId) {

@@ -77,6 +77,17 @@ const mapManagedOperationRow = (
   settledAt: row.settled_at,
 })
 
+/** Quota exhaustion carrying the seconds until the limiting period resets. */
+export class UsageLimitExhaustedError extends Error {
+  readonly retryAfterSeconds: number
+
+  constructor(message: string, resetsAt: number, now: number) {
+    super(message)
+    this.name = "UsageLimitExhaustedError"
+    this.retryAfterSeconds = Math.max(1, Math.ceil((resetsAt - now) / 1000))
+  }
+}
+
 const getDailyPeriod = (timestamp: number): UsagePeriod => {
   const now = new Date(timestamp)
   const start = Date.UTC(
@@ -298,18 +309,28 @@ export const reserveManagedExtraction = async (
     !usageLimitsDisabled &&
     (userDailyUsed ?? 0) >= USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
   ) {
-    throw new Error("Daily Lynvo Plugin extraction limit reached.")
+    throw new UsageLimitExhaustedError(
+      "Daily Lynvo Plugin extraction limit reached.",
+      daily.resetsAt,
+      input.now
+    )
   }
   if ((globalDailyUsed ?? 0) >= GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT) {
-    throw new Error(
-      "Lynvo Plugin extraction capacity is unavailable until tomorrow."
+    throw new UsageLimitExhaustedError(
+      "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
+      daily.resetsAt,
+      input.now
     )
   }
   if (
     !usageLimitsDisabled &&
     (monthlyUsedBefore ?? 0) >= USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
   ) {
-    throw new Error("Monthly Lynvo Plugin extraction limit reached.")
+    throw new UsageLimitExhaustedError(
+      "Monthly Lynvo Plugin extraction limit reached.",
+      monthly.resetsAt,
+      input.now
+    )
   }
 
   const statements = [
@@ -379,16 +400,26 @@ export const reserveManagedExtraction = async (
     const globalRow = rowAt(2)
     if (!userDailyRow) {
       await compensate()
-      throw new Error("Daily Lynvo Plugin extraction limit reached.")
+      throw new UsageLimitExhaustedError(
+        "Daily Lynvo Plugin extraction limit reached.",
+        daily.resetsAt,
+        input.now
+      )
     }
     if (!monthlyRow) {
       await compensate()
-      throw new Error("Monthly Lynvo Plugin extraction limit reached.")
+      throw new UsageLimitExhaustedError(
+        "Monthly Lynvo Plugin extraction limit reached.",
+        monthly.resetsAt,
+        input.now
+      )
     }
     if (!globalRow) {
       await compensate()
-      throw new Error(
-        "Lynvo Plugin extraction capacity is unavailable until tomorrow."
+      throw new UsageLimitExhaustedError(
+        "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
+        daily.resetsAt,
+        input.now
       )
     }
     return {
@@ -401,8 +432,10 @@ export const reserveManagedExtraction = async (
   const globalOnlyRow = rowAt(0)
   if (!globalOnlyRow) {
     await compensate()
-    throw new Error(
-      "Lynvo Plugin extraction capacity is unavailable until tomorrow."
+    throw new UsageLimitExhaustedError(
+      "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
+      daily.resetsAt,
+      input.now
     )
   }
   return {

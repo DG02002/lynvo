@@ -5,7 +5,8 @@ import type {
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import { ExtractionError, ValidationError } from "../errors"
+import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
+import { UsageLimitExhaustedError } from "../../../../workers/d1/usage"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -144,7 +145,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
   options: LynvoExtractionAdapterOptions
 ): Effect.fn.Return<
   ExtractionResult | undefined,
-  ExtractionError | ValidationError
+  ExtractionError | UsageLimitError | ValidationError
 > {
   const route = yield* selectLynvoPlugin(options)
   if (!route) {
@@ -177,13 +178,18 @@ export const extractWithLynvoPluginServer = Effect.fn(
           now: Date.now(),
         }),
       catch: (cause) =>
-        new ExtractionError({
-          message:
-            cause instanceof Error
-              ? cause.message
-              : "Managed extraction reservation failed.",
-          url: options.targetUrl,
-        }),
+        cause instanceof UsageLimitExhaustedError
+          ? new UsageLimitError({
+              message: cause.message,
+              retryAfterSeconds: cause.retryAfterSeconds,
+            })
+          : new ExtractionError({
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "Managed extraction reservation failed.",
+              url: options.targetUrl,
+            }),
     })
   }
   const extraction = extractFromLynvoPluginServer(
