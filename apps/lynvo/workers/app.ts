@@ -666,9 +666,6 @@ const runHourlyD1Maintenance = async (
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
     runD1Maintenance(database, (now) =>
-      sweepLinkCommandOperationsJob(database, now)
-    ),
-    runD1Maintenance(database, (now) =>
       expirePluginServerRegistrationsJob(database, now)
     ),
     drainPendingAccountErasuresJob(database),
@@ -688,6 +685,9 @@ const runHighFrequencyD1Maintenance = async (
     ),
     runD1Maintenance(database, (now) =>
       cleanupRemoteCommandsJob(database, now)
+    ),
+    runD1Maintenance(database, (now) =>
+      sweepLinkCommandOperationsJob(database, now)
     ),
   ])
 const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })

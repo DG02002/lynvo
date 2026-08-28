@@ -231,6 +231,9 @@ export const createOrUpdateSavedLink = async (
           title: input.title ?? existingRow.title,
           meta_json: metadataJson,
           updated_at: input.now,
+          // Re-saving refreshes the retention clock: the countdown runs from
+          // the last save, not the first.
+          expires_at: input.now + retentionDays * DAY_MS,
           extraction_state: extractionState,
           extraction_error: null,
           extraction_attempts:
@@ -263,13 +266,14 @@ export const createOrUpdateSavedLink = async (
             ...preparation.statements,
             database
               .prepare(
-                "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, extraction_state = ?5, extraction_error = ?6, extraction_attempts = ?7, extraction_available_at = ?8, extraction_lease_expires_at = ?9 WHERE id = ?1 AND meta_json IS ?10"
+                "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
               )
               .bind(
                 existingRow.id,
                 nextRow.title,
                 metadataJson,
                 input.now,
+                nextRow.expires_at,
                 nextRow.extraction_state,
                 nextRow.extraction_error,
                 nextRow.extraction_attempts,
