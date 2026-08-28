@@ -319,7 +319,7 @@ export const extractRequestSchema = Schema.Struct({
   ),
   proxy: Schema.optional(
     Schema.Struct({
-      provider: Schema.Literal("scrape-do"),
+      provider: Schema.NonEmptyString,
       token: Schema.NonEmptyString,
     })
   ),

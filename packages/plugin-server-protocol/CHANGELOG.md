@@ -31,6 +31,9 @@ bump is a breaking change that requires a new major of this package.
   the `X-Lynvo-Protocol-Version` request header Lynvo sends on every
   request.
 
+- Proxy credentials are vendor-neutral on the wire: `proxy.provider` is an
+  opaque identifier gated by the server's manifest declaration, so new
+  providers need no protocol change.
 - Per-extraction usage deltas: extract success responses may carry
   `usageDelta` entries (`id`, `used`, optional `unit`) matching `/usage`
   metric ids, so clients can update displayed allowances without polling.

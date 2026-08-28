@@ -117,7 +117,8 @@ export interface ExtractRequest {
 }
 
 export interface ProxyCredential {
-  readonly provider: "scrape-do"
+  /** Opaque provider identifier the manifest declared support for. */
+  readonly provider: string
   readonly token: string
 }
 

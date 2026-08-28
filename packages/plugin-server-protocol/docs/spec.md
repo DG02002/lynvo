@@ -394,7 +394,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - `resourceId` is optional in v1.
 - `password` is optional and attempt-scoped.
 - `basicAuth` is optional and contains `username` and `password` for source-side HTTP Basic Auth.
-- `proxy` is optional and contains `provider` (`"scrape-do"`) plus the user's own Scrape.do `token`. Lynvo sends it only when the Plugin Server's manifest declares `extensions.lynvo.proxyProvider: "scrape-do"` and the user saved a proxy key for that server. Plugin Servers must use it for that request's upstream proxy calls instead of their own shared proxy credentials, and must never log the token.
+- `proxy` is optional and contains `provider` plus the user's own provider `token`. `provider` is an opaque identifier: Lynvo only sends providers the server's manifest declares support for (v1 declares `extensions.lynvo.proxyProvider: "scrape-do"`), and servers must use the token for that request's upstream proxy calls instead of their own shared proxy credentials, and must never log it.
 - Lynvo removes URL userinfo before forwarding a target and sends `basicAuth` only when the Plugin Server declares `features.basicAuth`.
 - The Plugin Server bearer token authenticates Lynvo to the Plugin Server; `basicAuth` authenticates the Plugin Server to the source. They are separate credentials.
 - Lynvo should not send the original top-level source URL on lazy follow-up requests.
