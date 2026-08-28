@@ -56,7 +56,9 @@ const findErasureProgress = async (
   userId: string
 ): Promise<AccountErasureProgress | null> => {
   const row = await database
-    .prepare("SELECT * FROM account_erasures WHERE user_id = ?1 LIMIT 1")
+    .prepare(
+      "SELECT id, user_id, stage, trigger_kind, started_at, cleanup_processed_users, cleanup_started_at FROM account_erasures WHERE user_id = ?1 LIMIT 1"
+    )
     .bind(userId)
     .first<AccountErasureRow>()
   return row ? mapErasureRow(row) : null

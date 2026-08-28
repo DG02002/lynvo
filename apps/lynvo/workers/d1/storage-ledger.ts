@@ -5,14 +5,19 @@ import {
   USER_STORAGE_LIMIT_BYTES,
 } from "../constants"
 import { LinkTooLargeError, StorageLimitError } from "./errors"
-import { profileStorageDocument } from "./rows"
-import type {
-  LinkRow,
-  PluginCredentialRow,
-  PluginDomainRow,
-  PluginServerRow,
-  ProfileUserRow,
+import {
+  PLUGIN_CREDENTIAL_COLUMNS,
+  PLUGIN_DOMAIN_COLUMNS,
+  PLUGIN_SERVER_COLUMNS,
+  USER_COLUMNS,
+  profileStorageDocument,
+  type LinkRow,
+  type PluginCredentialRow,
+  type PluginDomainRow,
+  type PluginServerRow,
+  type ProfileUserRow,
 } from "./rows"
+import { SAVED_LINK_COLUMNS } from "./saved-link-storage"
 
 export const LEDGER_DOMAIN_COLUMNS = {
   profileBytes: "profile_bytes",
@@ -39,6 +44,9 @@ export interface StorageLedgerRecord extends AppOwnedStorageUsage {
   readonly schemaVersion: number
   readonly updatedAt: number
 }
+
+const STORAGE_LEDGER_COLUMNS =
+  "user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at"
 
 interface StorageLedgerRow {
   user_id: string
@@ -80,10 +88,11 @@ const sumDocumentBytes = <Document>(documents: readonly Document[]): number =>
 const readBoundedRows = async <Row>(
   database: D1Database,
   table: string,
+  columns: string,
   userId: string
 ): Promise<Row[]> => {
   const result = await database
-    .prepare(`SELECT * FROM ${table} WHERE user_id = ?1 LIMIT ?2`)
+    .prepare(`SELECT ${columns} FROM ${table} WHERE user_id = ?1 LIMIT ?2`)
     .bind(userId, STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT + 1)
     .all<Row>()
   if (result.results.length > STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT) {
@@ -99,15 +108,26 @@ export const calculateAppOwnedStorageUsage = async (
   const [userRow, links, pluginServers, pluginDomains, pluginCredentials] =
     await Promise.all([
       database
-        .prepare("SELECT * FROM users WHERE id = ?1")
+        .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
         .bind(userId)
         .first<ProfileUserRow>(),
-      readBoundedRows<LinkRow>(database, "links", userId),
-      readBoundedRows<PluginServerRow>(database, "user_plugin_servers", userId),
-      readBoundedRows<PluginDomainRow>(database, "user_plugin_domains", userId),
+      readBoundedRows<LinkRow>(database, "links", SAVED_LINK_COLUMNS, userId),
+      readBoundedRows<PluginServerRow>(
+        database,
+        "user_plugin_servers",
+        PLUGIN_SERVER_COLUMNS,
+        userId
+      ),
+      readBoundedRows<PluginDomainRow>(
+        database,
+        "user_plugin_domains",
+        PLUGIN_DOMAIN_COLUMNS,
+        userId
+      ),
       readBoundedRows<PluginCredentialRow>(
         database,
         "user_plugin_credentials",
+        PLUGIN_CREDENTIAL_COLUMNS,
         userId
       ),
     ])
@@ -137,7 +157,9 @@ export const getStorageLedger = async (
   userId: string
 ): Promise<StorageLedgerRecord | null> => {
   const row = await database
-    .prepare("SELECT * FROM storage_ledgers WHERE user_id = ?1")
+    .prepare(
+      `SELECT ${STORAGE_LEDGER_COLUMNS} FROM storage_ledgers WHERE user_id = ?1`
+    )
     .bind(userId)
     .first<StorageLedgerRow>()
   return row ? mapLedgerRow(row) : null

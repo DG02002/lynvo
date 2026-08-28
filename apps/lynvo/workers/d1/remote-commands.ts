@@ -216,7 +216,9 @@ export const reportRemoteCommandResult = async (
   }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const row = await database
-    .prepare("SELECT * FROM remote_commands WHERE id = ?1")
+    .prepare(
+      "SELECT id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status, available_at, notification_pending, claim_token, claim_expires_at, result_message FROM remote_commands WHERE id = ?1"
+    )
     .bind(input.id)
     .first<RemoteCommandRow>()
   if (

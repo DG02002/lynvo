@@ -1,6 +1,11 @@
 import { normalizePluginDomain } from "../../app/lib/plugin-domain"
 import { createOpaqueId } from "./ids"
-import type { PluginCredentialRow, PluginDomainRow } from "./rows"
+import {
+  PLUGIN_CREDENTIAL_COLUMNS,
+  PLUGIN_DOMAIN_COLUMNS,
+  type PluginCredentialRow,
+  type PluginDomainRow,
+} from "./rows"
 import { executeOwnedWrite, getDataVersion } from "./data-version"
 import {
   applyStorageMutation,
@@ -76,7 +81,9 @@ const findDomainRowById = async (
   domainId: string
 ): Promise<PluginDomainRow | null> => {
   const row = await database
-    .prepare("SELECT * FROM user_plugin_domains WHERE id = ?1")
+    .prepare(
+      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE id = ?1`
+    )
     .bind(domainId)
     .first<PluginDomainRow>()
   return row ?? null
@@ -100,7 +107,7 @@ const findCredentialByDomainId = async (
 ): Promise<PluginCredentialRow | null> => {
   const row = await database
     .prepare(
-      "SELECT * FROM user_plugin_credentials WHERE plugin_domain_id = ?1 LIMIT 1"
+      `SELECT ${PLUGIN_CREDENTIAL_COLUMNS} FROM user_plugin_credentials WHERE plugin_domain_id = ?1 LIMIT 1`
     )
     .bind(pluginDomainId)
     .first<PluginCredentialRow>()
@@ -211,11 +218,15 @@ export const listPluginDomains = async (
 ): Promise<PluginDomainListEntry[]> => {
   const [domainRows, credentialRows] = await Promise.all([
     database
-      .prepare("SELECT * FROM user_plugin_domains WHERE user_id = ?1")
+      .prepare(
+        `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1`
+      )
       .bind(userId)
       .all<PluginDomainRow>(),
     database
-      .prepare("SELECT * FROM user_plugin_credentials WHERE user_id = ?1")
+      .prepare(
+        `SELECT ${PLUGIN_CREDENTIAL_COLUMNS} FROM user_plugin_credentials WHERE user_id = ?1`
+      )
       .bind(userId)
       .all<{ plugin_domain_id: string }>(),
   ])
@@ -235,7 +246,7 @@ export const getPluginDomainByDomain = async (
 ): Promise<PluginDomainRecord | null> => {
   const row = await database
     .prepare(
-      "SELECT * FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3"
+      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3`
     )
     .bind(userId, input.pluginServerId, normalizePluginDomain(input.domain))
     .first<PluginDomainRow>()
@@ -249,7 +260,7 @@ export const getPluginCredentialByDomainForService = async (
 ): Promise<PluginCredentialRecord | null> => {
   const row = await database
     .prepare(
-      "SELECT * FROM user_plugin_credentials WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3 LIMIT 1"
+      `SELECT ${PLUGIN_CREDENTIAL_COLUMNS} FROM user_plugin_credentials WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3 LIMIT 1`
     )
     .bind(userId, input.pluginServerId, normalizePluginDomain(input.domain))
     .first<PluginCredentialRow>()
@@ -275,7 +286,7 @@ const upsertPluginDomainOnce = async (
   const domain = normalizePluginDomain(input.domain)
   const existingDomainRow = await database
     .prepare(
-      "SELECT * FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3"
+      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3`
     )
     .bind(userId, input.pluginServerId, domain)
     .first<PluginDomainRow>()

@@ -33,6 +33,9 @@ interface UsagePeriod {
   resetsAt: number
 }
 
+const MANAGED_OPERATION_COLUMNS =
+  "user_id, operation_id, plugin_id, state, epoch, daily_period_key, monthly_period_key, user_limits_applied, reserved_at, lease_expires_at, settled_at"
+
 interface ManagedOperationRow {
   user_id: string
   operation_id: string
@@ -192,7 +195,7 @@ const findManagedOperation = async (
 ): Promise<ManagedOperationRecord | null> => {
   const row = await database
     .prepare(
-      "SELECT * FROM managed_extraction_operations WHERE user_id = ?1 AND operation_id = ?2"
+      `SELECT ${MANAGED_OPERATION_COLUMNS} FROM managed_extraction_operations WHERE user_id = ?1 AND operation_id = ?2`
     )
     .bind(userId, operationId)
     .first<ManagedOperationRow>()
@@ -554,7 +557,7 @@ export const releaseExpiredManagedExtractions = async (
 ): Promise<{ released: number }> => {
   const { results } = await database
     .prepare(
-      "SELECT * FROM managed_extraction_operations WHERE state = 'reserved' AND lease_expires_at <= ?1 LIMIT ?2"
+      `SELECT ${MANAGED_OPERATION_COLUMNS} FROM managed_extraction_operations WHERE state = 'reserved' AND lease_expires_at <= ?1 LIMIT ?2`
     )
     .bind(now, MANAGED_EXTRACTION_RECOVERY_BATCH_SIZE)
     .all<ManagedOperationRow>()

@@ -43,6 +43,18 @@ export interface LinkRow {
   extraction_lease_expires_at: number | null
 }
 
+export const USER_COLUMNS =
+  "id, google_subject, email, display_name, avatar_url, data_version, erasure_pending_at, storage_retention_days, range_supported_player_id, range_unsupported_player_id, created_at"
+
+export const PLUGIN_SERVER_COLUMNS =
+  "id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, proxy_token_ciphertext, proxy_token_nonce, proxy_token_algorithm, proxy_token_version, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at"
+
+export const PLUGIN_DOMAIN_COLUMNS =
+  "id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id"
+
+export const PLUGIN_CREDENTIAL_COLUMNS =
+  "id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at"
+
 export interface PluginServerRow {
   id: string
   user_id: string

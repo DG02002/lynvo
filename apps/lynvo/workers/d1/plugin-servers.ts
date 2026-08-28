@@ -10,7 +10,11 @@ import {
   getDataVersion,
 } from "./data-version"
 import { createOpaqueId } from "./ids"
-import type { PluginServerRow } from "./rows"
+import {
+  PLUGIN_DOMAIN_COLUMNS,
+  PLUGIN_SERVER_COLUMNS,
+  type PluginServerRow,
+} from "./rows"
 import {
   applyStorageMutation,
   byteLength,
@@ -98,7 +102,9 @@ const findPluginServerRow = async (
   pluginServerId: string
 ): Promise<PluginServerRow | null> => {
   const row = await database
-    .prepare("SELECT * FROM user_plugin_servers WHERE id = ?1")
+    .prepare(
+      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1`
+    )
     .bind(pluginServerId)
     .first<PluginServerRow>()
   return row ?? null
@@ -195,7 +201,9 @@ export const listPluginServers = async (
   userId: string
 ): Promise<PublicPluginServerRecord[]> => {
   const { results } = await database
-    .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1")
+    .prepare(
+      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
+    )
     .bind(userId)
     .all<PluginServerRow>()
   const pluginServers: PublicPluginServerRecord[] = []
@@ -223,7 +231,9 @@ export const listReadyPluginServersForService = async (
   userId: string
 ): Promise<ServicePluginServerRecord[]> => {
   const { results } = await database
-    .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1")
+    .prepare(
+      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
+    )
     .bind(userId)
     .all<PluginServerRow>()
   return results.flatMap((row) =>
@@ -267,7 +277,9 @@ export const beginPluginServerRegistration = async (
   const attemptId = crypto.randomUUID()
   const [{ results }, initialPreparation] = await Promise.all([
     database
-      .prepare("SELECT * FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2")
+      .prepare(
+        `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2`
+      )
       .bind(userId, CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT + 1)
       .all<PluginServerRow>(),
     ensureStorageLedger(database, userId, input.now),
@@ -563,7 +575,7 @@ export const expireStalePluginServerRegistrations = async (
 ): Promise<{ expired: number }> => {
   const { results } = await database
     .prepare(
-      `SELECT * FROM user_plugin_servers WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
+      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
     )
     .bind(now, PLUGIN_SERVER_REGISTRATION_SWEEP_BATCH_SIZE)
     .all<PluginServerRow>()
@@ -826,7 +838,7 @@ export const deletePluginServerById = async (
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
   const { results: domainRows } = await database
     .prepare(
-      "SELECT * FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 LIMIT ?3"
+      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 LIMIT ?3`
     )
     .bind(userId, existing.id, PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT + 1)
     .all<{

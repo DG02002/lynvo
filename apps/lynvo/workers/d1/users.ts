@@ -11,7 +11,7 @@ import {
   ensureStorageLedger,
 } from "./storage-ledger"
 import { profileStorageDocument } from "./rows"
-import type { ProfileUserRow } from "./rows"
+import { USER_COLUMNS, type ProfileUserRow } from "./rows"
 
 export interface UserRecord {
   id: string
@@ -54,9 +54,6 @@ const mapUserRow = (row: UserRow): UserRecord => ({
   rangeUnsupportedPlayerId: row.range_unsupported_player_id,
   createdAt: row.created_at,
 })
-
-const USER_COLUMNS =
-  "id, google_subject, email, display_name, avatar_url, data_version, erasure_pending_at, storage_retention_days, range_supported_player_id, range_unsupported_player_id, created_at"
 
 export const findUserByGoogleSubject = async (
   database: D1Database,
@@ -158,7 +155,7 @@ const readRawUserRow = async (
   userId: string
 ): Promise<ProfileUserRow | null> =>
   database
-    .prepare("SELECT * FROM users WHERE id = ?1")
+    .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
     .bind(userId)
     .first<ProfileUserRow>()
 
