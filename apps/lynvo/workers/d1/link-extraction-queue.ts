@@ -5,6 +5,7 @@ import type { ExtractedLink, MetaData } from "../../app/features/links/types"
 import {
   EMPTY_LINK_METADATA_JSON,
   LINK_EXTRACTION_LEASE_MS,
+  LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS,
 } from "../constants"
 import { createOrUpdateSavedLink, type SavedLinkMutationResult } from "./links"
 import {
@@ -376,6 +377,106 @@ export const settleSavedLinkExtraction = async (
     replayed: false,
     dataVersion,
   }
+}
+
+export const requeuePendingSavedLinkExtraction = async (
+  database: D1Database,
+  userId: string,
+  input: {
+    operationId: string
+    id: string
+    leaseExpiresAt: number
+    retryAfterSeconds: number
+    now: number
+  }
+): Promise<SavedLinkMutationResult> => {
+  const existingRow = await findSavedLinkById(database, input.id)
+  if (
+    !existingRow ||
+    existingRow.user_id !== userId ||
+    existingRow.extraction_state !== "running" ||
+    existingRow.extraction_lease_expires_at !== input.leaseExpiresAt
+  ) {
+    return {
+      success: false,
+      replayed: false,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const retryDelayMs =
+    Math.min(
+      Math.max(input.retryAfterSeconds, 1),
+      LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS
+    ) * 1000
+  const nextRow: LinkRow = {
+    ...existingRow,
+    updated_at: input.now,
+    extraction_state: "queued",
+    extraction_error: null,
+    extraction_available_at: input.now + retryDelayMs,
+    extraction_lease_expires_at: null,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  assertLinkSize(byteLength(nextRow))
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: byteLength(existingRow),
+      nextBytes: byteLength(nextRow),
+      savedLinkCountDelta: 0,
+    },
+    input.now
+  )
+  const { dataVersion, changed } = await executeOwnedWrite(
+    database,
+    userId,
+    [
+      ...preparation.statements,
+      database
+        .prepare(
+          "UPDATE links SET extraction_state = 'queued', extraction_error = NULL, extraction_available_at = ?3, extraction_lease_expires_at = NULL, updated_at = ?4 WHERE id = ?1 AND user_id = ?2 AND extraction_state = 'running' AND extraction_lease_expires_at = ?5"
+        )
+        .bind(
+          nextRow.id,
+          userId,
+          nextRow.extraction_available_at,
+          input.now,
+          input.leaseExpiresAt
+        ),
+      createConditionalLinkStorageStatement(database, {
+        userId,
+        linkId: nextRow.id,
+        extractionState: nextRow.extraction_state,
+        extractionAttempts: nextRow.extraction_attempts,
+        leaseExpiresAt: nextRow.extraction_lease_expires_at,
+        deltaBytes: ledgerMutation.deltaBytes,
+        now: input.now,
+      }),
+      createConditionalSavedLinkCommandOperationStatement(database, {
+        userId,
+        operationId: input.operationId,
+        linkId: nextRow.id,
+        command: "link-extraction-pending",
+        now: input.now,
+        extractionState: nextRow.extraction_state,
+        extractionAttempts: nextRow.extraction_attempts,
+        leaseExpiresAt: nextRow.extraction_lease_expires_at,
+      }),
+    ],
+    {
+      conditionSql:
+        "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND extraction_state = ?3 AND extraction_attempts = ?4 AND extraction_available_at = ?5 AND extraction_lease_expires_at IS NULL",
+      conditionBindings: [
+        nextRow.id,
+        nextRow.extraction_state,
+        nextRow.extraction_attempts,
+        nextRow.extraction_available_at,
+      ],
+    }
+  )
+  return { success: changed, replayed: false, dataVersion }
 }
 
 export const getSavedLinkQueueError = (error: Error): string => {

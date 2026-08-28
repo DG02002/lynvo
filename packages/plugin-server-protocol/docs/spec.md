@@ -399,6 +399,31 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - The Plugin Server bearer token authenticates Lynvo to the Plugin Server; `basicAuth` authenticates the Plugin Server to the source. They are separate credentials.
 - Lynvo should not send the original top-level source URL on lazy follow-up requests.
 
+## Deferred Extraction
+
+Some sources complete work asynchronously (deferred downloads, poll-based
+mirrors) and cannot finish inside one request. Instead of holding the
+request open, a Plugin Server returns a success response with empty
+`nodes` and a `pending` object:
+
+```json
+{
+  "plugin": { "pluginServerId": "example", "displayName": "Example" },
+  "nodes": [],
+  "extensions": {},
+  "pending": { "retryAfterSeconds": 30, "resumeNodeId": "task-42" }
+}
+```
+
+- `pending.retryAfterSeconds`: positive seconds after which the client must
+  re-issue the same extract request. Servers should keep it under 300.
+- `pending.resumeNodeId`: optional opaque handle; the client echoes it back
+  untouched as the node input's `resourceId` on the retry.
+- A pending response is not an error and not an empty success; clients that
+  cannot defer must map it to `TEMPORARY_FAILURE` with the given retry hint.
+- Servers must eventually resolve a retry into nodes or an error; clients
+  may cap the number of pending cycles and surface a failure past the cap.
+
 ## Extract Success Response Schema
 
 ```json

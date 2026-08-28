@@ -128,6 +128,17 @@ export interface ExtractedHttpBasicAuth {
   readonly url: string
 }
 
+export interface ExtractPending {
+  /** Seconds until the client should re-issue the same extract request. */
+  readonly retryAfterSeconds: number
+  /**
+   * Optional opaque handle the server can use to correlate the retry with
+   * the deferred work; clients send it back untouched on the retry's node
+   * input `resourceId`.
+   */
+  readonly resumeNodeId?: string
+}
+
 export interface ExtractSuccessResponse {
   readonly plugin: {
     readonly pluginServerId: string
@@ -141,6 +152,12 @@ export interface ExtractSuccessResponse {
   }
   readonly nodes: readonly MediaNode[]
   readonly extensions: object
+  /**
+   * Present when extraction was accepted but cannot finish within this
+   * request. `nodes` is empty and the client must retry after the given
+   * interval instead of treating the response as an empty success.
+   */
+  readonly pending?: ExtractPending
 }
 
 export interface ExtractProtocolError {
@@ -250,6 +267,20 @@ export type PluginServerRuntimeManifest<Env> =
       context: PluginServerRuntimeContext<Env>
     ) => Promise<PluginServerManifest> | PluginServerManifest)
 
+export interface PluginServerRuntimeAcceptedContext<Env> {
+  readonly request: ExtractRequest
+  readonly targetUrl: string
+  readonly manifest: PluginServerManifest
+  readonly matchedPluginId?: string
+  readonly runtimeContext: PluginServerRuntimeContext<Env>
+}
+
+export interface PluginServerRuntimeResultContext<Env> {
+  readonly request: ExtractRequest
+  readonly result: ExtractSuccessResponse | ExtractProtocolError
+  readonly runtimeContext: PluginServerRuntimeContext<Env>
+}
+
 export interface PluginServerRuntimeOptions<Env> {
   readonly manifest: PluginServerRuntimeManifest<Env>
   readonly auth: PluginServerRuntimeAuth<Env>
@@ -266,6 +297,18 @@ export interface PluginServerRuntimeOptions<Env> {
     cause: unknown,
     context: PluginServerRuntimeContext<Env>
   ) => void
+  /**
+   * Observability hooks. They observe values the runtime already decoded
+   * (request, matched plugin, result) so servers can log and meter without
+   * re-parsing bodies or re-running matchers. Hook failures never fail the
+   * request; they are routed to onError.
+   */
+  readonly onExtractAccepted?: (
+    context: PluginServerRuntimeAcceptedContext<Env>
+  ) => void | Promise<void>
+  readonly onExtractResult?: (
+    context: PluginServerRuntimeResultContext<Env>
+  ) => void | Promise<void>
 }
 
 export interface PluginServerRuntime<Env> {

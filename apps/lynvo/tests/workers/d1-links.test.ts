@@ -15,6 +15,7 @@ import {
 import {
   claimNextSavedLinkExtraction,
   enqueueSavedLinkExtraction,
+  requeuePendingSavedLinkExtraction,
   settleSavedLinkExtraction,
 } from "../../workers/d1/link-extraction-queue"
 import {
@@ -400,6 +401,39 @@ describe("d1 links", () => {
     expect(outcome.deletedLinks).toBe(2)
     const snapshot = await listSavedLinks(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
+  })
+
+  it("requeues a pending extraction with a delayed retry slot", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      operationId: "pending:enqueue",
+      url: "https://source.example/pending",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    expect(claim?.id).toBe(queued.id)
+
+    const requeued = await requeuePendingSavedLinkExtraction(env.DB, user.id, {
+      operationId: "pending:requeue",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      retryAfterSeconds: 30,
+      now: NOW + 1_000,
+    })
+    expect(requeued.success).toBe(true)
+
+    const tooEarly = await claimNextSavedLinkExtraction(env.DB, {
+      now: NOW + 1_000,
+    })
+    expect(tooEarly?.id).toBeUndefined()
+    const later = await claimNextSavedLinkExtraction(env.DB, {
+      now: NOW + 31_000,
+    })
+    expect(later?.id).toBe(queued.id)
+    expect(later?.extractionAttempts).toBe(2)
+
+    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 31_000)
+    expect(snapshot.results[0]?.extractionState).toBe("running")
   })
 
   it("replays a delete instead of reporting a missing link when a retry lands", async () => {

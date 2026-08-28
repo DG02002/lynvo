@@ -6,11 +6,16 @@ import {
   createGroupNode,
   createPlayableNode,
   createResolvableNode,
+  extractSuccessSchema,
   isCompatibleProtocolVersion,
   isProtocolError,
   mediaNodeSchema,
   toProtocolErrorResponse,
   usageResponseSchema,
+  validExtractPendingFixture,
+  validPluginServerManifestFixture,
+  validUsageResponseFixture,
+  createPluginServerRuntime,
 } from "../src/index"
 
 describe("protocol errors", () => {
@@ -114,6 +119,68 @@ describe("usage resetsAt validation", () => {
         })
       )
     ).toBe(false)
+  })
+})
+
+describe("deferred extraction", () => {
+  it("accepts a pending response with retry guidance", () => {
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)(
+          validExtractPendingFixture
+        )
+      )
+    ).toBe(true)
+    expect(validExtractPendingFixture.pending?.retryAfterSeconds).toBe(30)
+  })
+
+  it("rejects pending responses without a positive retry interval", () => {
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)({
+          ...validExtractPendingFixture,
+          pending: { retryAfterSeconds: 0 },
+        })
+      )
+    ).toBe(false)
+  })
+})
+
+describe("runtime lifecycle hooks", () => {
+  it("observes accepted requests and decoded results without re-parsing", async () => {
+    const accepted: string[] = []
+    const results: string[] = []
+    const runtime = createPluginServerRuntime({
+      manifest: validPluginServerManifestFixture,
+      auth: { validate: () => true },
+      usage: () => ({ metrics: validUsageResponseFixture.metrics }),
+      extract: () => ({
+        plugin: {
+          pluginServerId: "example-media",
+          displayName: "Example Media",
+        },
+        nodes: [],
+        extensions: {},
+      }),
+      onExtractAccepted: (context) => {
+        accepted.push(context.targetUrl)
+      },
+      onExtractResult: (context) => {
+        results.push(
+          context.result.ok === false ? context.result.error.code : "success"
+        )
+      },
+    })
+    const request = new Request("https://server.example/extract", {
+      method: "POST",
+      body: JSON.stringify({
+        input: { kind: "source", sourceUrl: "https://media.example.com/video" },
+      }),
+    })
+    const response = await runtime.handleExtract(request, {})
+    expect(response.status).toBe(200)
+    expect(accepted).toEqual(["https://media.example.com/video"])
+    expect(results).toEqual(["success"])
   })
 })
 

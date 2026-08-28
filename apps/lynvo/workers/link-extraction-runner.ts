@@ -5,11 +5,13 @@ import { ExtractionService } from "../app/lib/effect/services/extraction-service
 import { getRuntime } from "../app/lib/effect/runtime"
 import {
   LINK_EXTRACTION_BATCH_SIZE,
+  LINK_EXTRACTION_MAX_ATTEMPTS,
   EMPTY_LINK_METADATA_JSON,
 } from "./constants"
 import {
   claimNextSavedLinkExtraction,
   getSavedLinkQueueError,
+  requeuePendingSavedLinkExtraction,
   settleSavedLinkExtraction,
 } from "./d1/link-extraction-queue"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
@@ -70,6 +72,24 @@ export const processSavedLinkExtraction = async (
         })
       )
     )
+    if (
+      extraction.pending &&
+      claim.extractionAttempts < LINK_EXTRACTION_MAX_ATTEMPTS
+    ) {
+      const requeued = await requeuePendingSavedLinkExtraction(
+        database,
+        claim.userId,
+        {
+          operationId: `link-extraction:pending:${claim.id}:${claim.extractionAttempts}`,
+          id: claim.id,
+          leaseExpiresAt: claim.leaseExpiresAt,
+          retryAfterSeconds: extraction.pending.retryAfterSeconds,
+          now: Date.now(),
+        }
+      )
+      await notifySafely(env, claim.userId, requeued.dataVersion)
+      return true
+    }
     const presentation = decideSavePresentation([...extraction.links])
     if (presentation.kind === "error") {
       const settled = await settleSavedLinkExtraction(database, claim.userId, {

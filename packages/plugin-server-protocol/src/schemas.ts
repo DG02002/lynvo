@@ -251,6 +251,11 @@ export const mediaNodeSchema: Schema.Codec<MediaNode> = Schema.Union([
   playableNodeSchema,
 ])
 
+export const extractPendingSchema = Schema.Struct({
+  retryAfterSeconds: Schema.Number.pipe(Schema.check(Schema.isGreaterThan(0))),
+  resumeNodeId: Schema.optional(Schema.NonEmptyString),
+})
+
 export const extractSuccessSchema = Schema.Struct({
   plugin: Schema.Struct({
     pluginServerId: Schema.String,
@@ -266,6 +271,7 @@ export const extractSuccessSchema = Schema.Struct({
   extensions: Schema.Record(Schema.String, Schema.Unknown).pipe(
     Schema.withDecodingDefault(Effect.succeed({}))
   ),
+  pending: Schema.optional(extractPendingSchema),
 })
 
 export const extractErrorSchema = Schema.Struct({

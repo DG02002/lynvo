@@ -31,6 +31,12 @@ bump is a breaking change that requires a new major of this package.
   the `X-Lynvo-Protocol-Version` request header Lynvo sends on every
   request.
 
+- Deferred extraction: extract success responses may carry a `pending`
+  object (`retryAfterSeconds`, optional `resumeNodeId`) so poll-based
+  sources can answer immediately instead of holding the request open.
+  Clients re-issue the same request after the interval; the spec section
+  "Deferred Extraction" defines the contract.
+
 ### Changed
 
 - Usage metric `resetsAt` must now be an ISO 8601 timestamp; the spec

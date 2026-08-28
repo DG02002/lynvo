@@ -17,9 +17,20 @@ export interface ExtractOptions {
   readonly userId?: string
 }
 
+export interface ExtractionPending {
+  readonly retryAfterSeconds: number
+  readonly resumeNodeId?: string
+}
+
 export interface ExtractionResult {
   readonly links: ReadonlyArray<ExtractedLink>
   readonly meta?: ExtractionMetadata
+  /**
+   * Present when the Plugin Server accepted the extraction but deferred it;
+   * consumers must retry after the interval instead of treating the empty
+   * link list as a completed extraction.
+   */
+  readonly pending?: ExtractionPending
 }
 
 export interface ExtractionMetadata extends MetaData {

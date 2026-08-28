@@ -115,8 +115,9 @@ export const mapPluginServerExtractionResult = (
   if (result.plugin.audio) {
     metadata.audio = result.plugin.audio
   }
-  return {
-    links: mapNodesToExtractedLinks(result.nodes),
-    meta: metadata,
+  const links = mapNodesToExtractedLinks(result.nodes)
+  if (resultValue.pending) {
+    return { links, meta: metadata, pending: resultValue.pending }
   }
+  return { links, meta: metadata }
 }
