@@ -25,7 +25,9 @@
     }
   ],
   "categories": {
-    "correctness": "warn"
+    "correctness": "warn",
+    "suspicious": "warn",
+    "perf": "warn"
   },
   "rules": {
     "anti-slop/no-chained-type-assertions": "error",
@@ -50,6 +52,15 @@
     "curly": "warn",
     "no-eval": "warn",
     "no-implied-eval": "warn",
+    "max-statements": "warn",
+    "max-params": "warn",
+    "no-nested-ternary": "warn",
+    "no-extra-boolean-cast": "warn",
+    "no-await-in-loop": "warn",
+    "prefer-destructuring": "warn",
+    "no-duplicate-imports": "warn",
+    "no-useless-catch": "warn",
+    "consistent-type-imports": "warn",
     "@typescript-eslint/no-unused-vars": "warn"
   }
 }
