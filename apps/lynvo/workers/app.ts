@@ -95,6 +95,9 @@ type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
+const toFailureMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause)
+
 const clientIp = (request: Request): string =>
   request.headers.get("CF-Connecting-IP") ??
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -330,6 +333,16 @@ app.get("/api/realtime", async (context) => {
   }
   if (!isSameOriginRequest(request)) {
     return context.text("Forbidden", 403)
+  }
+  const handshakeRateLimit = await rateLimit(
+    context.env,
+    `realtime:${clientIp(request)}`,
+    EXTRACTION_ROUTE_RATE_LIMIT,
+    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
+  )
+  if (handshakeRateLimit === "limited") {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.text("Too many connection attempts", 429)
   }
   const session = await resolveRequestSession(request, context.env)
   if (session.kind === "unavailable") {
@@ -968,9 +981,19 @@ export default {
       }
       return
     }
+    // A rejection in any branch must not skip the outcome logging of the
+    // others, so each branch carries its own catch.
     const [notificationResult, d1SweepOutcome, d1MaintenanceOutcomes] =
       await Promise.all([
-        createRemoteCommandNotificationDelivery(env, database).drain(),
+        createRemoteCommandNotificationDelivery(env, database)
+          .drain()
+          .catch((cause: unknown) => {
+            console.error("remote_command_drain_failed", {
+              operation: "remote_command_drain_failed",
+              error: toFailureMessage(cause),
+            })
+            return { kind: "unavailable" as const }
+          }),
         database
           ? sweepD1AuthData(database)
           : Promise.resolve({ kind: "skipped" as const }),
@@ -978,7 +1001,14 @@ export default {
           ? runHighFrequencyD1Maintenance(database)
           : Promise.resolve<MaintenanceOutcome[]>([]),
         database
-          ? processQueuedLinkExtractions(env, database)
+          ? processQueuedLinkExtractions(env, database).catch(
+              (cause: unknown) => {
+                console.error("queued_extraction_drain_failed", {
+                  operation: "queued_extraction_drain_failed",
+                  error: toFailureMessage(cause),
+                })
+              }
+            )
           : Promise.resolve(),
       ])
     const unavailable = d1MaintenanceOutcomes.filter(

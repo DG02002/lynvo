@@ -147,13 +147,14 @@ export interface AccountSessionEntry {
 export const listSessionsForUser = async (
   database: D1Database,
   userId: string,
-  currentSessionId: string | null
+  currentSessionId: string | null,
+  now: number
 ): Promise<AccountSessionEntry[]> => {
   const { results } = await database
     .prepare(
-      `SELECT ${SESSION_COLUMNS} FROM sessions WHERE user_id = ?1 AND revoked_at IS NULL ORDER BY last_seen_at DESC`
+      `SELECT ${SESSION_COLUMNS} FROM sessions WHERE user_id = ?1 AND revoked_at IS NULL AND expires_at > ?2 ORDER BY last_seen_at DESC LIMIT 50`
     )
-    .bind(userId)
+    .bind(userId, now)
     .all<SessionRow>()
   return results.map((row) => ({
     id: row.id,

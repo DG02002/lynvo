@@ -733,6 +733,12 @@ export const setPluginServerEnabled = async (
   input: { id: string; enabled: boolean; now: number }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
+  if ((existing.enabled === 1) === input.enabled) {
+    return {
+      success: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
   const nextRow: PluginServerRow = {
     ...existing,
     enabled: input.enabled ? 1 : 0,
