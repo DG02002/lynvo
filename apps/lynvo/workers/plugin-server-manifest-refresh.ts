@@ -2,17 +2,24 @@ import {
   HttpPluginServerTransport,
   PluginServerClient,
 } from "../app/lib/extraction/plugin-server-client"
+import {
+  getLynvoManifestExtension,
+  type PluginServerManifest,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { loadRegisteredPluginServers } from "../app/lib/effect/services/authenticated-extraction-context"
 import {
   PLUGIN_SERVER_MANIFEST_REFRESH_BATCH_SIZE,
   PLUGIN_SERVER_MANIFEST_REFRESH_RETRY_DOWN_INTERVAL_MS,
   PLUGIN_SERVER_MANIFEST_REFRESH_INTERVAL_MS,
+  PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS,
 } from "./constants"
 import {
   recordPluginServerRefreshSuccess,
   recordPluginServerVerificationFailure,
+  updatePluginServerProxyBalance,
 } from "./d1/plugin-servers"
+import { readScrapeDoAccountInfo } from "../app/lib/effect/services/custom-plugin-server-proxy-key"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
 
 const refreshOnePluginServer = async (
@@ -37,6 +44,14 @@ const refreshOnePluginServer = async (
       new HttpPluginServerTransport(pluginServer.baseUrl)
     )
     const manifest = await client.getManifest({ apiKey: pluginServer.apiKey })
+    await refreshProxyBalanceIfDue(
+      runtime,
+      database,
+      userId,
+      manifest,
+      pluginServer,
+      now
+    )
     const result = await recordPluginServerRefreshSuccess(database, userId, {
       id: pluginServerId,
       manifest: JSON.stringify(manifest),
@@ -58,6 +73,40 @@ const refreshOnePluginServer = async (
       now,
     }).catch(() => undefined)
     return false
+  }
+}
+
+const refreshProxyBalanceIfDue = async (
+  runtime: ReturnType<typeof getRuntime>,
+  database: D1Database,
+  userId: string,
+  manifest: PluginServerManifest,
+  pluginServer: {
+    id: string
+    proxyToken?: string
+    proxyBalanceCheckedAt?: number | null
+  },
+  now: number
+): Promise<void> => {
+  if (
+    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do" ||
+    !pluginServer.proxyToken ||
+    (pluginServer.proxyBalanceCheckedAt !== null &&
+      pluginServer.proxyBalanceCheckedAt !== undefined &&
+      now - pluginServer.proxyBalanceCheckedAt <
+        PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS)
+  ) {
+    return
+  }
+  const balance = await runtime
+    .runPromise(readScrapeDoAccountInfo(pluginServer.proxyToken))
+    .catch(() => undefined)
+  if (balance) {
+    await updatePluginServerProxyBalance(database, userId, {
+      id: pluginServer.id,
+      balance,
+      now,
+    }).catch(() => undefined)
   }
 }
 

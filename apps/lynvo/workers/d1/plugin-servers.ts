@@ -773,6 +773,34 @@ export const setPluginServerEnabled = async (
   return { success: true, dataVersion }
 }
 
+export interface PluginServerProxyBalanceUpdate {
+  readonly id: string
+  readonly balance: {
+    readonly remaining: number
+    readonly limit: number
+  }
+  readonly now: number
+}
+
+export const updatePluginServerProxyBalance = async (
+  database: D1Database,
+  userId: string,
+  input: PluginServerProxyBalanceUpdate
+): Promise<void> => {
+  await database
+    .prepare(
+      "UPDATE user_plugin_servers SET proxy_balance_remaining = ?2, proxy_balance_limit = ?3, proxy_balance_checked_at = ?4 WHERE id = ?1 AND user_id = ?5"
+    )
+    .bind(
+      input.id,
+      input.balance.remaining,
+      input.balance.limit,
+      input.now,
+      userId
+    )
+    .run()
+}
+
 export interface PluginServerProxyKeyUpdate {
   readonly id: string
   readonly encrypted: {
