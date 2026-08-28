@@ -219,7 +219,10 @@ describe("d1 plugin registry", () => {
 
   it("tracks verification state and manifest refreshes", async () => {
     const user = await createUser()
-    const registration = await registerReadyServer(user.id, "https://health.example")
+    const registration = await registerReadyServer(
+      user.id,
+      "https://health.example"
+    )
     await recordPluginServerVerificationFailure(env.DB, user.id, {
       id: registration.id,
       now: NOW + 1_000,
@@ -437,5 +440,35 @@ describe("d1 plugin registry", () => {
         now: NOW,
       })
     ).rejects.toThrow("Plugin domain not found")
+  })
+
+  it("keeps one plugin domain row per user, server, and domain", async () => {
+    const user = await createUser()
+    const first = await upsertPluginDomain(env.DB, user.id, {
+      domain: "source.example",
+      pluginServerId: "server-one",
+      pluginId: "plugin-one",
+      now: NOW,
+    })
+    const second = await upsertPluginDomain(env.DB, user.id, {
+      domain: "source.example",
+      pluginServerId: "server-one",
+      pluginId: "plugin-one",
+      now: NOW + 1_000,
+    })
+    expect(second.id).toBe(first.id)
+    const domains = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM user_plugin_domains WHERE user_id = ?1 AND domain = 'source.example'"
+    )
+      .bind(user.id)
+      .first<{ count: number }>()
+    expect(domains?.count).toBe(1)
+    await expect(
+      env.DB.prepare(
+        "INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id) VALUES ('dup', ?1, 'server-one', 'source.example', 'plugin-one')"
+      )
+        .bind(user.id)
+        .run()
+    ).rejects.toThrow("UNIQUE constraint failed")
   })
 })

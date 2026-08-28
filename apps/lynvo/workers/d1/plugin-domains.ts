@@ -155,37 +155,24 @@ const buildReplaceCredentialMutations = (
     },
     now
   )
-  const writeStatement = existingCredential
-    ? database
-        .prepare(
-          "UPDATE user_plugin_credentials SET ciphertext = ?2, nonce = ?3, algorithm = ?4, key_version = ?5, updated_at = ?6 WHERE id = ?1"
-        )
-        .bind(
-          credentialDocument.id,
-          credentialDocument.ciphertext,
-          credentialDocument.nonce,
-          credentialDocument.algorithm,
-          credentialDocument.key_version,
-          credentialDocument.updated_at
-        )
-    : database
-        .prepare(
-          "INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
-        )
-        .bind(
-          credentialDocument.id,
-          credentialDocument.user_id,
-          credentialDocument.plugin_domain_id,
-          credentialDocument.plugin_server_id,
-          credentialDocument.plugin_id,
-          credentialDocument.domain,
-          credentialDocument.ciphertext,
-          credentialDocument.nonce,
-          credentialDocument.algorithm,
-          credentialDocument.key_version,
-          credentialDocument.created_at,
-          credentialDocument.updated_at
-        )
+  const writeStatement = database
+    .prepare(
+      "INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) ON CONFLICT(plugin_domain_id) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, algorithm = excluded.algorithm, key_version = excluded.key_version, updated_at = excluded.updated_at"
+    )
+    .bind(
+      credentialDocument.id,
+      credentialDocument.user_id,
+      credentialDocument.plugin_domain_id,
+      credentialDocument.plugin_server_id,
+      credentialDocument.plugin_id,
+      credentialDocument.domain,
+      credentialDocument.ciphertext,
+      credentialDocument.nonce,
+      credentialDocument.algorithm,
+      credentialDocument.key_version,
+      credentialDocument.created_at,
+      credentialDocument.updated_at
+    )
   return [...ledgerMutation.statements, writeStatement]
 }
 
@@ -274,7 +261,7 @@ export interface UpsertPluginDomainResult {
   dataVersion: number
 }
 
-export const upsertPluginDomain = async (
+const upsertPluginDomainOnce = async (
   database: D1Database,
   userId: string,
   input: {
@@ -421,6 +408,33 @@ export const upsertPluginDomain = async (
   }
   const { dataVersion } = await executeOwnedWrite(database, userId, statements)
   return { id: existingDomainRow.id, dataVersion }
+}
+
+export const upsertPluginDomain = async (
+  database: D1Database,
+  userId: string,
+  input: {
+    domain: string
+    pluginServerId: string
+    pluginId: string
+    credential?: EncryptedCredentialInput | undefined
+    now: number
+  }
+): Promise<UpsertPluginDomainResult> => {
+  try {
+    return await upsertPluginDomainOnce(database, userId, input)
+  } catch (error) {
+    // SAFETY: D1 surfaces constraint failures as message strings only; a
+    // concurrent upsert of the same (user, server, domain) hit the unique
+    // index first, so one retry converges on the update branch.
+    if (
+      error instanceof Error &&
+      error.message.includes("UNIQUE constraint failed: user_plugin_domains")
+    ) {
+      return await upsertPluginDomainOnce(database, userId, input)
+    }
+    throw error
+  }
 }
 
 const buildSetCredentialStatements = async (
