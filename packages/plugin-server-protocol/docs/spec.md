@@ -424,6 +424,22 @@ request open, a Plugin Server returns a success response with empty
 - Servers must eventually resolve a retry into nodes or an error; clients
   may cap the number of pending cycles and surface a failure past the cap.
 
+### Usage Deltas
+
+Extract success responses may carry `usageDelta`: an array of
+`{ id, used, unit? }` entries reporting the units this specific extraction
+consumed, with `id` matching the server's `/usage` metric ids. Clients can
+use it to update displayed allowances without polling `/usage`; it is
+advisory and never replaces the authoritative `/usage` response.
+
+### Per-Node Extensions
+
+Every Media Node accepts an optional `extensions` object with the same
+rules as the response-level `extensions`: vendor-scoped, additive data that
+clients must ignore when they do not understand it. New node-level facts
+(sponsors, languages, subtitles) belong there rather than in new top-level
+node fields.
+
 ## Extract Success Response Schema
 
 ```json

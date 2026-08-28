@@ -31,6 +31,11 @@ bump is a breaking change that requires a new major of this package.
   the `X-Lynvo-Protocol-Version` request header Lynvo sends on every
   request.
 
+- Per-extraction usage deltas: extract success responses may carry
+  `usageDelta` entries (`id`, `used`, optional `unit`) matching `/usage`
+  metric ids, so clients can update displayed allowances without polling.
+- Every Media Node accepts an optional vendor `extensions` object, giving
+  node-level data an additive home instead of new top-level fields.
 - Deferred extraction: extract success responses may carry a `pending`
   object (`retryAfterSeconds`, optional `resumeNodeId`) so poll-based
   sources can answer immediately instead of holding the request open.

@@ -184,6 +184,49 @@ describe("runtime lifecycle hooks", () => {
   })
 })
 
+describe("usage deltas and node extensions", () => {
+  it("accepts usage deltas and node extensions on extract success", () => {
+    const response = {
+      plugin: {
+        pluginServerId: "dev.lynvo.example-plugin-server",
+        displayName: "Example Plugin Server",
+      },
+      nodes: [
+        {
+          kind: "playable",
+          label: "Video",
+          url: "https://media.example.com/v.mp4",
+          extensions: { vendor: { subtitle: "en" } },
+        },
+      ],
+      extensions: {},
+      usageDelta: [{ id: "proxy-credits", used: 2, unit: "credits" }],
+    }
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)(response)
+      )
+    ).toBe(true)
+  })
+
+  it("rejects negative usage deltas", () => {
+    const response = {
+      plugin: {
+        pluginServerId: "dev.lynvo.example-plugin-server",
+        displayName: "Example Plugin Server",
+      },
+      nodes: [],
+      extensions: {},
+      usageDelta: [{ id: "proxy-credits", used: -1 }],
+    }
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(extractSuccessSchema)(response)
+      )
+    ).toBe(false)
+  })
+})
+
 describe("protocol version compatibility", () => {
   it("accepts any minor within the current major", () => {
     expect(isCompatibleProtocolVersion("1.0")).toBe(true)

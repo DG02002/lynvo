@@ -57,6 +57,7 @@ export type ExpirySource = "signed-url" | "expires-header" | "cache-control"
 
 export interface GroupNode {
   readonly kind: "group"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly badge?: string
@@ -68,6 +69,7 @@ export interface GroupNode {
 
 export interface ResolvableNode {
   readonly kind: "resolvable"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly nodeUrl?: string
@@ -80,6 +82,7 @@ export interface ResolvableNode {
 
 export interface PlayableNode {
   readonly kind: "playable"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly url: string
@@ -128,6 +131,14 @@ export interface ExtractedHttpBasicAuth {
   readonly url: string
 }
 
+export interface ExtractUsageDelta {
+  /** Metric id matching the server's /usage metric ids. */
+  readonly id: string
+  /** Units consumed by this specific extraction. */
+  readonly used: number
+  readonly unit?: string
+}
+
 export interface ExtractPending {
   /** Seconds until the client should re-issue the same extract request. */
   readonly retryAfterSeconds: number
@@ -154,10 +165,15 @@ export interface ExtractSuccessResponse {
   readonly extensions: object
   /**
    * Present when extraction was accepted but cannot finish within this
-   * request. `nodes` is empty and the client must retry after the given
+   * request. `nodes` are empty and the client must retry after the given
    * interval instead of treating the response as an empty success.
    */
   readonly pending?: ExtractPending
+  /**
+   * Optional per-extraction usage accounting, so clients can show current
+   * allowance without polling /usage. Ids match the /usage metric ids.
+   */
+  readonly usageDelta?: readonly ExtractUsageDelta[]
 }
 
 export interface ExtractProtocolError {

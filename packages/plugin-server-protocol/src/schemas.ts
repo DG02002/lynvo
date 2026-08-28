@@ -208,6 +208,7 @@ const baseNodeFields = {
   badge: Schema.optional(Schema.String),
   size: Schema.optional(Schema.String),
   sourceName: Schema.optional(Schema.String),
+  extensions: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }
 
 export const groupNodeSchema: Schema.Codec<GroupNode> = Schema.Struct({
@@ -256,6 +257,14 @@ export const extractPendingSchema = Schema.Struct({
   resumeNodeId: Schema.optional(Schema.NonEmptyString),
 })
 
+export const extractUsageDeltaSchema = Schema.Array(
+  Schema.Struct({
+    id: Schema.NonEmptyString,
+    used: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+    unit: Schema.optional(Schema.String),
+  })
+)
+
 export const extractSuccessSchema = Schema.Struct({
   plugin: Schema.Struct({
     pluginServerId: Schema.String,
@@ -272,6 +281,7 @@ export const extractSuccessSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed({}))
   ),
   pending: Schema.optional(extractPendingSchema),
+  usageDelta: Schema.optional(extractUsageDeltaSchema),
 })
 
 export const extractErrorSchema = Schema.Struct({
