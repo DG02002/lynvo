@@ -45,6 +45,19 @@ export interface LinkExtractionStatus {
   error?: string
 }
 
+/** One credential-free communication record with a Plugin Server. */
+export interface LinkDebugLogEntry {
+  at: number
+  pluginServerId?: string
+  pluginId?: string
+  outcome: "complete" | "failed" | "pending" | "requeued"
+  errorCode?: string
+  nodeCount?: number
+  durationMs?: number
+  attempt?: number
+  detail?: string
+}
+
 export interface LinkMetadata {
   schemaVersion: 3
   source: Record<string, JsonValue>
@@ -56,6 +69,8 @@ export interface LinkMetadata {
     openedUrls: string[]
     resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
   }
+  /** Bounded, newest-last record of Plugin Server communication. */
+  debugLog?: LinkDebugLogEntry[]
 }
 
 export interface MetaData {

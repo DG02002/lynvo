@@ -36,6 +36,7 @@ interface LinkActionsDotMenuProps {
   isPlayable?: boolean
   className?: string
   removeRequest?: LinkActionsRemoveRequest
+  removeLabel?: string
 }
 
 export function LinkActionsDotMenu({
@@ -45,6 +46,7 @@ export function LinkActionsDotMenu({
   isPlayable = true,
   className,
   removeRequest,
+  removeLabel = "Remove saved link",
 }: LinkActionsDotMenuProps) {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const handleCopy = () => {
@@ -102,7 +104,7 @@ export function LinkActionsDotMenu({
               onClick={() => setIsRemoveDialogOpen(true)}
             >
               <HugeiconsIcon icon={Delete02Icon} />
-              Remove saved link
+              {removeLabel}
             </DropdownMenuItem>
           </>
         )}

@@ -547,13 +547,27 @@ const FinderBrowser = ({
                   </>
                 }
                 overlay={
-                  !isFolder && !isResolving ? (
+                  !isResolving && linkTarget !== undefined ? (
                     <LinkActionsDotMenu
                       itemLabel={link.label}
                       onCopyLink={copyLink}
                       onOpenInPlayer={openLinkInPlayer}
-                      isPlayable={!isExpired}
+                      isPlayable={!isFolder && !isExpired}
                       className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+                      removeRequest={
+                        isFolder
+                          ? {
+                              url: linkTarget,
+                              onRemove: () =>
+                                actions.removeLink?.(
+                                  item.url,
+                                  linkKey,
+                                  linkTarget
+                                ),
+                            }
+                          : undefined
+                      }
+                      removeLabel={isFolder ? "Remove folder" : undefined}
                     />
                   ) : undefined
                 }

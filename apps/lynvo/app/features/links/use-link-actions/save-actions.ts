@@ -6,10 +6,7 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import {
-  getLinkViewItemExtractedLinks,
-  getLinkViewItemFlatMeta,
-} from "~/features/links/link-metadata-accessors"
+import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
 import { parsePluginDomainCandidate } from "~/lib/plugin-domain"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
@@ -71,8 +68,6 @@ export const useSaveActions = ({
     useState<PluginDomainSuggestion | null>(null)
   const initialPendingQueuedLinkIds = useMemo(() => new Set<string>(), [])
   const pendingQueuedLinkIdsRef = useRef(initialPendingQueuedLinkIds)
-  const initialPromptedSelectionLinkIds = useMemo(() => new Set<string>(), [])
-  const promptedSelectionLinkIdsRef = useRef(initialPromptedSelectionLinkIds)
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
       publish: (outcome) => {
@@ -156,24 +151,9 @@ export const useSaveActions = ({
         continue
       }
 
-      // Manual mode saves through the queue too; when the persisted
-      // extraction offers several links, selection trims the saved link.
-      if (
-        !shouldAutoSaveAllLinks &&
-        !promptedSelectionLinkIdsRef.current.has(completedQueuedLinkId)
-      ) {
-        promptedSelectionLinkIdsRef.current.add(completedQueuedLinkId)
-        const extractedLinks =
-          getLinkViewItemExtractedLinks(completedQueuedItem)
-        if (extractedLinks.length > 1) {
-          openSelectionDialog({
-            originalUrl: completedQueuedItem.url,
-            links: extractedLinks,
-            meta: getLinkViewItemFlatMeta(completedQueuedItem),
-            existingItemId: completedQueuedLinkId,
-          })
-        }
-      }
+      // Manual mode saves through the queue too; the card surfaces a
+      // persistent Choose links action instead of interrupting with a
+      // dialog the moment extraction completes.
 
       if (pluginDomainSuggestion) {
         continue
@@ -186,13 +166,7 @@ export const useSaveActions = ({
         )
       )
     }
-  }, [
-    links,
-    offerPluginDomainSuggestion,
-    openSelectionDialog,
-    pluginDomainSuggestion,
-    shouldAutoSaveAllLinks,
-  ])
+  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion])
 
   const applySaveIntentResult = (
     result: SaveIntentResult

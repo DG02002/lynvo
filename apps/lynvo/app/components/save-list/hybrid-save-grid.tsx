@@ -1,4 +1,14 @@
+import React from "react"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  AlertCircleIcon,
+  Delete02Icon,
+  SourceCodeSquareIcon,
+} from "@hugeicons/core-free-icons"
+import { Button } from "~/components/ui/button"
+import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
+import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 import { Spinner } from "~/components/spinner"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -61,6 +71,15 @@ const HybridSaveCard = ({
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const isArtworkPending =
     group.artworkRequest !== undefined && artwork === undefined
+  const isExtractionFailed = extractionState === "failed"
+  const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  const shouldOfferLinkChoice =
+    !shouldAutoSaveAllLinks &&
+    isSingleItem &&
+    item !== undefined &&
+    !isExtractionVisual &&
+    (item.metadata?.extraction?.extractedLinks?.length ?? 0) > 1
 
   const handleActivate = () => {
     if (!isSingleItem || directLink) {
@@ -101,8 +120,42 @@ const HybridSaveCard = ({
         )}
       >
         {isExtractionVisual ? (
-          <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-            <Spinner aria-hidden="true" className="size-8" />
+          <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
+            {isExtractionFailed ? (
+              <>
+                <HugeiconsIcon
+                  icon={AlertCircleIcon}
+                  aria-label="Extraction failed"
+                  className="size-8 text-muted-foreground"
+                />
+                <div className="z-10 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (item) {
+                        actions.remove(item.url, item.id)
+                      }
+                    }}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} />
+                    Delete
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsLogDialogOpen(true)}
+                  >
+                    <HugeiconsIcon icon={SourceCodeSquareIcon} />
+                    Log
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Spinner aria-hidden="true" className="size-8" />
+            )}
           </div>
         ) : imagePath ? (
           <TmdbImage
@@ -118,6 +171,7 @@ const HybridSaveCard = ({
           <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
             <Spinner
               aria-label={`Loading artwork for ${group.displayTitle}…`}
+              className="size-8"
             />
           </div>
         ) : (
@@ -126,6 +180,22 @@ const HybridSaveCard = ({
           </div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
+        {shouldOfferLinkChoice && item && actions.chooseLinks && (
+          <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-black/50 to-transparent p-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 gap-1 rounded-full px-3 text-xs"
+              onClick={(event) => {
+                event.stopPropagation()
+                actions.chooseLinks?.(item)
+              }}
+            >
+              Choose links
+            </Button>
+          </div>
+        )}
         {isSingleItem && item && (
           <div className="absolute bottom-4 right-4 z-10 hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none sm:block [&_svg]:size-7!">
             <LinkItemMenu
@@ -171,6 +241,11 @@ const HybridSaveCard = ({
           </h3>
         )}
       </div>
+      <LinkDebugLogDialog
+        item={item}
+        open={isLogDialogOpen}
+        onOpenChange={setIsLogDialogOpen}
+      />
     </article>
   )
 }

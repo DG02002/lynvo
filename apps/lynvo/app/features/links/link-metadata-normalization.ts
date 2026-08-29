@@ -1,4 +1,9 @@
-import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkMetadata,
+  MetaData,
+} from "./types"
 import { getLinkSourceFields } from "./link-source-fields"
 import { stripOpenedFlags } from "./link-tree-metadata"
 import { linkMetadataSchema } from "./storage-schemas"
@@ -47,26 +52,41 @@ export const mergeDefinedMeta = (
   ),
 })
 
+export const LINK_DEBUG_LOG_ENTRY_LIMIT = 20
+
+export const appendLinkDebugLog = (
+  previous: LinkMetadata | undefined,
+  entry: LinkDebugLogEntry
+): LinkDebugLogEntry[] =>
+  [...(previous?.debugLog ?? []), entry].slice(-LINK_DEBUG_LOG_ENTRY_LIMIT)
+
 export const createLinkMetadata = (input: {
   meta?: MetaData
   extractedLinks?: ExtractedLink[]
   previous?: LinkMetadata
-}): LinkMetadata => ({
-  schemaVersion: 3,
-  source: {
-    ...input.previous?.source,
-    ...Object.fromEntries(
-      Object.entries(input.meta ?? {}).filter(
-        ([, value]) => value !== undefined
-      )
-    ),
-  },
-  extraction: {
-    extractedLinks: stripOpenedFlags(input.extractedLinks ?? []),
-    extractedAt: Date.now(),
-  },
-  playback: input.previous?.playback ?? {
-    openedUrls: [],
-    resolvedMirrors: {},
-  },
-})
+  debugLog?: LinkDebugLogEntry[]
+}): LinkMetadata => {
+  const metadata: LinkMetadata = {
+    schemaVersion: 3,
+    source: {
+      ...input.previous?.source,
+      ...Object.fromEntries(
+        Object.entries(input.meta ?? {}).filter(
+          ([, value]) => value !== undefined
+        )
+      ),
+    },
+    extraction: {
+      extractedLinks: stripOpenedFlags(input.extractedLinks ?? []),
+      extractedAt: Date.now(),
+    },
+    playback: input.previous?.playback ?? {
+      openedUrls: [],
+      resolvedMirrors: {},
+    },
+  }
+  if (input.debugLog) {
+    metadata.debugLog = input.debugLog
+  }
+  return metadata
+}

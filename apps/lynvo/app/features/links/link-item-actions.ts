@@ -1,4 +1,4 @@
-import type { ExtractedLink } from "./types"
+import type { ExtractedLink, LinkViewItem } from "./types"
 
 export interface LinkItemActions {
   play: (target: string | ExtractedLink) => Promise<PlaybackHandoffResult>
@@ -18,4 +18,6 @@ export interface LinkItemActions {
     lazyItemUrl: string,
     bypassCache?: boolean
   ) => Promise<ExtractedLink[] | null>
+  /** Opens the link selection dialog to re-choose which links to keep. */
+  chooseLinks?: (item: LinkViewItem) => void
 }

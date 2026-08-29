@@ -15,6 +15,11 @@ import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemFlatMeta,
+} from "~/features/links/link-metadata-accessors"
+import type { LinkViewItem } from "~/features/links/types"
 
 interface UseLinkActionsProps {
   links: LinkListItem[]
@@ -62,6 +67,22 @@ export function useLinkActions({
     extractingItems,
     runWithExtractingItem,
   })
+  const handleChooseLinks = useCallback(
+    (item: LinkViewItem) => {
+      const extractedLinks = getLinkViewItemExtractedLinks(item)
+      if (extractedLinks.length < 2) {
+        return
+      }
+      openSelectionDialog({
+        originalUrl: item.url,
+        links: extractedLinks,
+        meta: getLinkViewItemFlatMeta(item),
+        existingItemId: item.id,
+      })
+    },
+    [openSelectionDialog]
+  )
+
   const linkItemActions: LinkItemActions = {
     play: handleLinkClick,
     showLinks: handleShowLinks,
@@ -72,6 +93,7 @@ export function useLinkActions({
     softRefresh: handleSoftRefresh,
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
+    chooseLinks: handleChooseLinks,
   }
   const { isSaving, handleSave, confirmSelection, pluginDomainDialog } =
     useSaveActions({

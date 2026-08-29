@@ -1,7 +1,13 @@
 import { createLinkMetadata } from "../../app/features/links/links.mapper"
+import { appendLinkDebugLog } from "../../app/features/links/link-metadata-normalization"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkMetadata,
+  MetaData,
+} from "../../app/features/links/types"
 import { parseCanonicalLinkMetadataJson } from "../../app/features/links/storage-schemas"
 import { getLinkTitle } from "../../app/features/links/use-links/link-items"
-import type { ExtractedLink, MetaData } from "../../app/features/links/types"
 import {
   EMPTY_LINK_METADATA_JSON,
   LINK_EXTRACTION_LEASE_MS,
@@ -246,6 +252,7 @@ export const settleSavedLinkExtraction = async (
     meta?: MetaData
     extractedLinks?: ExtractedLink[]
     error?: string
+    debugLogEntry?: LinkDebugLogEntry
     now: number
   }
 ): Promise<SavedLinkMutationResult> => {
@@ -276,14 +283,18 @@ export const settleSavedLinkExtraction = async (
   }
 
   let nextRow: LinkRow
+  const previousMetadata = parseCanonicalLinkMetadataJson(
+    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
+  )
   if (input.state === "complete") {
-    const previousMetadata = parseCanonicalLinkMetadataJson(
-      existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
-    )
+    const debugLog = input.debugLogEntry
+      ? appendLinkDebugLog(previousMetadata, input.debugLogEntry)
+      : undefined
     const metadata = createLinkMetadata({
       meta: input.meta ?? {},
       extractedLinks: input.extractedLinks ?? [],
       previous: previousMetadata,
+      debugLog,
     })
     nextRow = {
       ...existingRow,
@@ -298,8 +309,18 @@ export const settleSavedLinkExtraction = async (
       extraction_lease_expires_at: null,
     }
   } else {
+    const failedMetadata: LinkMetadata = {
+      ...previousMetadata,
+    }
+    if (input.debugLogEntry) {
+      failedMetadata.debugLog = appendLinkDebugLog(
+        previousMetadata,
+        input.debugLogEntry
+      )
+    }
     nextRow = {
       ...existingRow,
+      meta_json: JSON.stringify(failedMetadata),
       updated_at: input.now,
       extraction_state: "failed",
       extraction_error: input.error ?? "Unable to load links.",
@@ -387,6 +408,7 @@ export const requeuePendingSavedLinkExtraction = async (
     id: string
     leaseExpiresAt: number
     retryAfterSeconds: number
+    debugLogEntry?: LinkDebugLogEntry
     now: number
   }
 ): Promise<SavedLinkMutationResult> => {
@@ -408,8 +430,21 @@ export const requeuePendingSavedLinkExtraction = async (
       Math.max(input.retryAfterSeconds, 1),
       LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS
     ) * 1000
+  const previousMetadata = parseCanonicalLinkMetadataJson(
+    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
+  )
+  const metadata: LinkMetadata = {
+    ...previousMetadata,
+  }
+  if (input.debugLogEntry) {
+    metadata.debugLog = appendLinkDebugLog(
+      previousMetadata,
+      input.debugLogEntry
+    )
+  }
   const nextRow: LinkRow = {
     ...existingRow,
+    meta_json: JSON.stringify(metadata),
     updated_at: input.now,
     extraction_state: "queued",
     extraction_error: null,

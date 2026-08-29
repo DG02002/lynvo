@@ -1,5 +1,10 @@
 import { Schema } from "effect"
-import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkMetadata,
+  MetaData,
+} from "./types"
 
 export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
   (): Schema.Codec<ExtractedLink> =>
@@ -107,6 +112,19 @@ export const metadataSchema: Schema.Codec<MetaData> = Schema.Struct({
   pluginServerId: Schema.optional(Schema.String),
 })
 
+export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
+  Schema.Struct({
+    at: Schema.Number,
+    pluginServerId: Schema.optional(Schema.String),
+    pluginId: Schema.optional(Schema.String),
+    outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
+    errorCode: Schema.optional(Schema.String),
+    nodeCount: Schema.optional(Schema.Number),
+    durationMs: Schema.optional(Schema.Number),
+    attempt: Schema.optional(Schema.Number),
+    detail: Schema.optional(Schema.String),
+  })
+
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   schemaVersion: Schema.Literal(3),
   source: Schema.Record(Schema.String, Schema.Json),
@@ -123,6 +141,9 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
       )
     ),
   }),
+  debugLog: Schema.optional(
+    Schema.mutable(Schema.Array(linkDebugLogEntrySchema))
+  ),
 })
 
 export const parseCanonicalLinkMetadataJson = (metadataJson: string) =>

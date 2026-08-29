@@ -114,7 +114,7 @@ describe("SaveListBrowser", () => {
       "text-foreground"
     )
     const seasonFolderButton = screen
-      .getAllByRole("button", { name: /Season One/ })
+      .getAllByRole("button", { name: /^Season One/ })
       .at(-1)
     expect(seasonFolderButton?.querySelectorAll("svg")).toHaveLength(1)
     fireEvent.click(seasonFolderButton!)
@@ -124,7 +124,7 @@ describe("SaveListBrowser", () => {
     renderSavedFolder()
 
     expect(screen.getByText("Episode One")).toBeVisible()
-    expect(screen.getByRole("button", { name: /Season One/ })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /^Season One/ })).toHaveAttribute(
       "aria-current",
       "page"
     )
@@ -207,14 +207,14 @@ describe("SaveListBrowser", () => {
     )
 
     expect(
-      screen.getAllByRole("button", { name: /Season 1/ }).length
+      screen.getAllByRole("button", { name: /^Season 1/ }).length
     ).toBeGreaterThan(0)
     expect(
       screen.getAllByRole("button", { name: /Identifier-less Group/ }).length
     ).toBeGreaterThan(0)
 
     const contentSeasonButton = screen
-      .getAllByRole("button", { name: /Season 1/ })
+      .getAllByRole("button", { name: /^Season 1/ })
       .at(-1)!
     fireEvent.click(contentSeasonButton)
 
@@ -372,7 +372,7 @@ describe("SaveListBrowser", () => {
     )
 
     const folderButtons = screen.getAllByRole("button", {
-      name: /Folder Alpha/,
+      name: /^Folder Alpha/,
     })
     expect(folderButtons).toHaveLength(2)
     expect(

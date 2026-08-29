@@ -15,6 +15,7 @@ import {
   settleSavedLinkExtraction,
 } from "./d1/link-extraction-queue"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
+import type { LinkDebugLogEntry } from "../app/features/links/types"
 
 const savedExtractionIdentitySchema = Schema.Struct({
   pluginServerId: Schema.optional(Schema.String),
@@ -59,6 +60,7 @@ export const processSavedLinkExtraction = async (
   const requestId = `background-link-extraction:${claim.id}:${claim.extractionAttempts}`
   const identity = getSavedExtractionIdentity(claim.metaJson)
   const runtime = getRuntime(env)
+  const startedAt = Date.now()
 
   try {
     const extraction = await runtime.runPromise(
@@ -85,6 +87,15 @@ export const processSavedLinkExtraction = async (
           leaseExpiresAt: claim.leaseExpiresAt,
           retryAfterSeconds: extraction.pending.retryAfterSeconds,
           now: Date.now(),
+          debugLogEntry: {
+            at: Date.now(),
+            pluginServerId: extraction.meta?.pluginServerId,
+            pluginId: extraction.meta?.pluginId,
+            outcome: "pending",
+            attempt: claim.extractionAttempts,
+            durationMs: Date.now() - startedAt,
+            detail: `Server deferred extraction; retrying in ${extraction.pending.retryAfterSeconds}s`,
+          },
         }
       )
       await notifySafely(env, claim.userId, requeued.dataVersion)
@@ -98,6 +109,17 @@ export const processSavedLinkExtraction = async (
         leaseExpiresAt: claim.leaseExpiresAt,
         state: "failed",
         error: "No playable links found. Try a different link.",
+        debugLogEntry: {
+          at: Date.now(),
+          pluginServerId: extraction.meta?.pluginServerId,
+          pluginId: extraction.meta?.pluginId,
+          outcome: "failed",
+          errorCode: "EMPTY_RESULT",
+          nodeCount: extraction.links.length,
+          attempt: claim.extractionAttempts,
+          durationMs: Date.now() - startedAt,
+          detail: "Extraction succeeded but produced no playable links",
+        },
         now: Date.now(),
       })
       await notifySafely(env, claim.userId, settled.dataVersion)
@@ -110,6 +132,15 @@ export const processSavedLinkExtraction = async (
       state: "complete",
       meta: extraction.meta,
       extractedLinks: [...extraction.links],
+      debugLogEntry: {
+        at: Date.now(),
+        pluginServerId: extraction.meta?.pluginServerId,
+        pluginId: extraction.meta?.pluginId,
+        outcome: "complete",
+        nodeCount: extraction.links.length,
+        attempt: claim.extractionAttempts,
+        durationMs: Date.now() - startedAt,
+      },
       now: Date.now(),
     })
     await notifySafely(env, claim.userId, settled.dataVersion)
@@ -127,6 +158,16 @@ export const processSavedLinkExtraction = async (
       leaseExpiresAt: claim.leaseExpiresAt,
       state: "failed",
       error: getSavedLinkQueueError(extractionError),
+      debugLogEntry: {
+        at: Date.now(),
+        pluginServerId: identity.pluginServerId,
+        pluginId: identity.pluginId,
+        outcome: "failed",
+        errorCode: extractionError.message.split(".")[0],
+        attempt: claim.extractionAttempts,
+        durationMs: Date.now() - startedAt,
+        detail: extractionError.message,
+      },
       now: Date.now(),
     })
     await notifySafely(env, claim.userId, settled.dataVersion)

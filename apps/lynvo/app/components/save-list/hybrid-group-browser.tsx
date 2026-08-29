@@ -218,6 +218,7 @@ export const HybridGroupBrowser = ({
                 <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
                   <Spinner
                     aria-label={`Loading artwork for ${group.displayTitle}…`}
+                    className="size-8"
                   />
                 </div>
               ) : (

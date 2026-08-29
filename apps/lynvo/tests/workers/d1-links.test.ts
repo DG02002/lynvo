@@ -649,6 +649,49 @@ describe("d1 links", () => {
     ).toEqual([{ ...freshMirror, expiry: NOW + 2 * DAY_MS }])
   })
 
+  it("records the communication log across extraction outcomes", async () => {
+    const user = await createUser()
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      operationId: "log:enqueue",
+      url: "https://source.example/logged",
+      now: NOW,
+    })
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    const settled = await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "log:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "failed",
+      error: "Unable to load links.",
+      debugLogEntry: {
+        at: NOW + 1_000,
+        pluginServerId: "lynvo-plugin-server",
+        pluginId: "direct-media",
+        outcome: "failed",
+        errorCode: "TEMPORARY_FAILURE",
+        attempt: 1,
+        durationMs: 250,
+        detail: "TEMPORARY_FAILURE",
+      },
+      now: NOW + 1_000,
+    })
+    expect(settled.success).toBe(true)
+    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
+    expect(metadata.debugLog).toEqual([
+      {
+        at: NOW + 1_000,
+        pluginServerId: "lynvo-plugin-server",
+        pluginId: "direct-media",
+        outcome: "failed",
+        errorCode: "TEMPORARY_FAILURE",
+        attempt: 1,
+        durationMs: 250,
+        detail: "TEMPORARY_FAILURE",
+      },
+    ])
+  })
+
   it("reads items and data_version atomically", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
