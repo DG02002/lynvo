@@ -12,12 +12,12 @@ import {
   verifySuccessSchema,
   type ExtractSuccessResponse,
   type DiscoverResponse,
+  type JsonValue,
   type PluginServerManifest,
   type HttpBasicAuth,
   type ProxyCredential,
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 import {
   PLUGIN_SERVER_INTERNAL_ORIGIN,
@@ -72,7 +72,7 @@ export class HttpPluginServerTransport implements PluginServerTransport {
 
   fetch = async (request: Request): Promise<Response> => {
     const internalUrl = new URL(request.url)
-    const method = request.method
+    const { method } = request
     const body =
       method === "GET" || method === "HEAD"
         ? undefined

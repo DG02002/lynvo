@@ -1,6 +1,5 @@
-import { Effect } from "effect"
-import type { ExtractedLink } from "../../../features/links/types"
-import type { MetaData } from "../../../features/links/types"
+import type { Effect } from "effect"
+import type { ExtractedLink, MetaData } from "../../../features/links/types"
 import type {
   ExtractionError,
   UsageLimitError,

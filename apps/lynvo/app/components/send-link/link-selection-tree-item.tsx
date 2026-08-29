@@ -14,17 +14,95 @@ import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeKey,
   getMediaNodeTargetOrUndefined,
+  getMediaNodeInteractionState,
 } from "~/features/links/media-node-interaction"
 import { cn } from "~/lib/utils"
 import { formatItemCount } from "~/lib/format-item-count"
 import { getLinkSelectionState } from "./link-selection-state"
-import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
 interface LinkSelectionTreeItemProps {
   link: ExtractedLink
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onExpandFolder?: (linkId: string, linkUrl: string) => Promise<boolean>
+}
+
+const getLinkSelectionFolderState = (
+  isFolder: boolean,
+  isExpanded: boolean,
+  needsResolution: boolean
+) => {
+  if (!isFolder) {
+    return undefined
+  }
+
+  if (isExpanded) {
+    return "open"
+  }
+
+  if (needsResolution) {
+    return "lazy-closed"
+  }
+
+  return "closed"
+}
+
+const getLinkSelectionItemIcon = (
+  isFolder: boolean,
+  folderState: ReturnType<typeof getLinkSelectionFolderState>
+) => {
+  if (!isFolder) {
+    return Video02Icon
+  }
+
+  if (folderState === "open") {
+    return Folder02Icon
+  }
+
+  if (folderState === "lazy-closed") {
+    return FolderSymlinkIcon
+  }
+
+  return Folder01Icon
+}
+
+interface LinkSelectionVisualState {
+  readonly canResolve: boolean
+  readonly folderState: ReturnType<typeof getLinkSelectionFolderState>
+  readonly itemIcon: ReturnType<typeof getLinkSelectionItemIcon>
+  readonly hasTrailingContent: boolean
+}
+
+interface LinkSelectionVisualStateOptions {
+  readonly link: ExtractedLink
+  readonly isFolder: boolean
+  readonly hasChildren: boolean
+  readonly canExpand: boolean
+  readonly isExpanded: boolean
+  readonly onExpandFolder: LinkSelectionTreeItemProps["onExpandFolder"]
+}
+
+const getLinkSelectionVisualState = ({
+  link,
+  isFolder,
+  hasChildren,
+  canExpand,
+  isExpanded,
+  onExpandFolder,
+}: LinkSelectionVisualStateOptions): LinkSelectionVisualState => {
+  const interactionState = getMediaNodeInteractionState(link)
+  const canResolve = interactionState.needsResolution && Boolean(onExpandFolder)
+  const folderState = getLinkSelectionFolderState(
+    isFolder,
+    isExpanded,
+    interactionState.needsResolution
+  )
+  const itemIcon = getLinkSelectionItemIcon(isFolder, folderState)
+  const hasTrailingContent = Boolean(
+    (isFolder && hasChildren) || (!isFolder && link.size) || canExpand
+  )
+
+  return { canResolve, folderState, itemIcon, hasTrailingContent }
 }
 
 export const LinkSelectionTreeItem = ({
@@ -43,26 +121,15 @@ export const LinkSelectionTreeItem = ({
   } = getLinkSelectionState(link, selectedIds)
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [isResolving, setIsResolving] = React.useState(false)
-  const canResolve =
-    getMediaNodeInteractionState(link).needsResolution &&
-    Boolean(onExpandFolder)
-  const folderState = !isFolder
-    ? undefined
-    : isExpanded
-      ? "open"
-      : getMediaNodeInteractionState(link).needsResolution
-        ? "lazy-closed"
-        : "closed"
-  const itemIcon = isFolder
-    ? folderState === "open"
-      ? Folder02Icon
-      : folderState === "lazy-closed"
-        ? FolderSymlinkIcon
-        : Folder01Icon
-    : Video02Icon
-  const hasTrailingContent = Boolean(
-    (isFolder && hasChildren) || (!isFolder && link.size) || canExpand
-  )
+  const { canResolve, folderState, itemIcon, hasTrailingContent } =
+    getLinkSelectionVisualState({
+      link,
+      isFolder,
+      hasChildren,
+      canExpand,
+      isExpanded,
+      onExpandFolder,
+    })
 
   const handleRowAction = async () => {
     if (canExpand) {

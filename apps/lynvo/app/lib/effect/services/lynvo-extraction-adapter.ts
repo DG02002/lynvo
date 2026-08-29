@@ -6,7 +6,13 @@ import type {
 import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
-import { UsageLimitExhaustedError } from "../../../../workers/d1/usage"
+import {
+  MANAGED_PLUGIN_IDS,
+  reserveManagedExtraction,
+  settleManagedExtraction,
+  UsageLimitExhaustedError,
+  type ManagedPluginId,
+} from "../../../../workers/d1/usage"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -19,12 +25,6 @@ import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 import { getD1Database } from "../../../../workers/d1/db"
 import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
-import {
-  MANAGED_PLUGIN_IDS,
-  reserveManagedExtraction,
-  settleManagedExtraction,
-} from "../../../../workers/d1/usage"
-import type { ManagedPluginId } from "../../../../workers/d1/usage"
 
 export interface LynvoExtractionAdapterOptions {
   readonly environment: Env

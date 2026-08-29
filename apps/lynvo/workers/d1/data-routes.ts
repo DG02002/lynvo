@@ -8,6 +8,7 @@ import {
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
   DATA_VERSION_RESPONSE_HEADER,
+  MEDIA_ARTWORK_REQUEST_BATCH_LIMIT,
 } from "../constants"
 import {
   addRequestContext,
@@ -24,7 +25,6 @@ import {
   deleteExpiredLinksForUser,
   deleteSavedLinkById,
   getUserRetentionDays,
-  listSavedLinks,
   listSavedLinksWithDataVersion,
   updateSavedLinkMeta,
 } from "./links"
@@ -44,8 +44,7 @@ import {
   enqueueRemoteCommand,
   reportRemoteCommandResult,
 } from "./remote-commands"
-import { resolveD1Session } from "./sessions"
-import type { SessionRecord } from "./sessions"
+import { resolveD1Session, type SessionRecord } from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
@@ -55,7 +54,6 @@ import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
 import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
-import { MEDIA_ARTWORK_REQUEST_BATCH_LIMIT } from "../constants"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
@@ -402,7 +400,7 @@ dataApp.post("/links/create-or-update", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const now = Date.now()
   const result =
     body.extractionState === "queued"
@@ -440,7 +438,7 @@ dataApp.post("/links/update-meta", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await updateSavedLinkMeta(
     preparation.database,
     preparation.session.userId,
@@ -469,7 +467,7 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await applySavedLinkMetadataOperation(
     preparation.database,
     preparation.session.userId,
@@ -493,7 +491,7 @@ dataApp.post("/links/delete", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await deleteSavedLinkById(
     preparation.database,
     preparation.session.userId,
@@ -592,7 +590,7 @@ dataApp.patch("/storage-settings", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await updateUserStorageRetentionDays(
     preparation.database,
     preparation.session.userId,
@@ -652,7 +650,7 @@ dataApp.post("/plugin-servers/:pluginServerId/enabled", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await setPluginServerEnabled(
     preparation.database,
     preparation.session.userId,
@@ -715,7 +713,7 @@ dataApp.post("/plugin-domains", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await upsertPluginDomain(
     preparation.database,
     preparation.session.userId,
@@ -764,7 +762,7 @@ dataApp.post("/remote-commands/enqueue", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await enqueueRemoteCommand(
     preparation.database,
     preparation.session.userId,
@@ -788,7 +786,7 @@ dataApp.post("/remote-commands/claim", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const claim = await claimNextRemoteCommand(
     preparation.database,
     preparation.session.userId,
@@ -821,7 +819,7 @@ dataApp.post("/remote-commands/result", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await reportRemoteCommandResult(
     preparation.database,
     preparation.session.userId,

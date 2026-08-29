@@ -144,11 +144,10 @@ export const selectPlayerForRangeCapability = (
 
 export const buildIntentUrl = (mediaUrl: string, player: PlayerDefinition) => {
   try {
-    const u = new URL(mediaUrl)
-    const scheme = u.protocol.replace(":", "")
-    const host = u.host
-    const path = u.pathname || "/"
-    const query = u.search || ""
+    const { protocol, host, pathname, search } = new URL(mediaUrl)
+    const scheme = protocol.replace(":", "")
+    const path = pathname || "/"
+    const query = search || ""
     return (
       "intent://" +
       host +

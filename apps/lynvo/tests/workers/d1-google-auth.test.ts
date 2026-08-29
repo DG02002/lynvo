@@ -66,7 +66,8 @@ describe("google oauth state cookie", () => {
     expect(stateCookie).toContain("HttpOnly")
     expect(stateCookie).toContain("SameSite=Lax")
 
-    const stateCookieValue = stateCookie.split(";")[0].split("=")[1]
+    const [stateCookiePair] = stateCookie.split(";")
+    const [, stateCookieValue] = stateCookiePair.split("=")
     const decrypted = await decryptStatePayload(
       decodeURIComponent(stateCookieValue),
       CLIENT_SECRET

@@ -10,8 +10,11 @@ import {
   byteLength,
   ensureStorageLedger,
 } from "./storage-ledger"
-import { profileStorageDocument } from "./rows"
-import { USER_COLUMNS, type ProfileUserRow } from "./rows"
+import {
+  profileStorageDocument,
+  USER_COLUMNS,
+  type ProfileUserRow,
+} from "./rows"
 
 export interface UserRecord {
   id: string

@@ -1,5 +1,8 @@
-import type { EntryContext, RouterContextProvider } from "react-router"
-import { ServerRouter } from "react-router"
+import {
+  ServerRouter,
+  type EntryContext,
+  type RouterContextProvider,
+} from "react-router"
 import { isbot } from "isbot"
 import { renderToReadableStream } from "react-dom/server"
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"

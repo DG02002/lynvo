@@ -22,44 +22,119 @@ import {
 import { readScrapeDoAccountInfo } from "../app/lib/effect/services/custom-plugin-server-proxy-key"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
 
-const refreshOnePluginServer = async (
-  env: Env,
-  database: D1Database,
-  userId: string,
-  pluginServerId: string,
+interface RefreshablePluginServer {
+  readonly id: string
+  readonly baseUrl: string
+  readonly apiKey: string
+  readonly proxyToken?: string
+  readonly proxyBalanceCheckedAt?: number | null
+}
+
+interface RefreshOnePluginServerInput {
+  env: Env
+  database: D1Database
+  userId: string
+  pluginServerId: string
   now: number
-): Promise<boolean> => {
+}
+
+interface LoadRefreshablePluginServerInput {
+  runtime: ReturnType<typeof getRuntime>
+  env: Env
+  userId: string
+  pluginServerId: string
+}
+
+interface RefreshPluginServerInput {
+  env: Env
+  database: D1Database
+  runtime: ReturnType<typeof getRuntime>
+  userId: string
+  pluginServer: RefreshablePluginServer
+  now: number
+}
+
+interface RefreshProxyBalanceInput {
+  runtime: ReturnType<typeof getRuntime>
+  database: D1Database
+  userId: string
+  manifest: PluginServerManifest
+  pluginServer: RefreshablePluginServer
+  now: number
+}
+
+const loadRefreshablePluginServer = async ({
+  runtime,
+  env,
+  userId,
+  pluginServerId,
+}: LoadRefreshablePluginServerInput): Promise<
+  RefreshablePluginServer | undefined
+> => {
+  const context = await runtime.runPromise(
+    loadRegisteredPluginServers(env, userId)
+  )
+  return context.pluginServers.find(
+    (candidate) => candidate.id === pluginServerId
+  )
+}
+
+const refreshPluginServer = async ({
+  env,
+  database,
+  runtime,
+  userId,
+  pluginServer,
+  now,
+}: RefreshPluginServerInput): Promise<void> => {
+  const client = new PluginServerClient(
+    new HttpPluginServerTransport(pluginServer.baseUrl)
+  )
+  const manifest = await client.getManifest({ apiKey: pluginServer.apiKey })
+  await refreshProxyBalanceIfDue({
+    runtime,
+    database,
+    userId,
+    manifest,
+    pluginServer,
+    now,
+  })
+  const result = await recordPluginServerRefreshSuccess(database, userId, {
+    id: pluginServer.id,
+    manifest: JSON.stringify(manifest),
+    now,
+  })
+  await notifyAccountDataChanged(env, userId, result.dataVersion).catch(
+    () => undefined
+  )
+}
+
+const refreshOnePluginServer = async ({
+  env,
+  database,
+  userId,
+  pluginServerId,
+  now,
+}: RefreshOnePluginServerInput): Promise<boolean> => {
   try {
     const runtime = getRuntime(env)
-    const context = await runtime.runPromise(
-      loadRegisteredPluginServers(env, userId)
-    )
-    const pluginServer = context.pluginServers.find(
-      (candidate) => candidate.id === pluginServerId
-    )
+    const pluginServer = await loadRefreshablePluginServer({
+      runtime,
+      env,
+      userId,
+      pluginServerId,
+    })
     if (!pluginServer) {
       return false
     }
-    const client = new PluginServerClient(
-      new HttpPluginServerTransport(pluginServer.baseUrl)
-    )
-    const manifest = await client.getManifest({ apiKey: pluginServer.apiKey })
-    await refreshProxyBalanceIfDue(
-      runtime,
+    await refreshPluginServer({
+      env,
       database,
+      runtime,
       userId,
-      manifest,
       pluginServer,
-      now
-    )
-    const result = await recordPluginServerRefreshSuccess(database, userId, {
-      id: pluginServerId,
-      manifest: JSON.stringify(manifest),
       now,
     })
-    await notifyAccountDataChanged(env, userId, result.dataVersion).catch(
-      () => undefined
-    )
     return true
   } catch (error) {
     console.warn("plugin_server_manifest_refresh_failed", {
@@ -76,18 +151,14 @@ const refreshOnePluginServer = async (
   }
 }
 
-const refreshProxyBalanceIfDue = async (
-  runtime: ReturnType<typeof getRuntime>,
-  database: D1Database,
-  userId: string,
-  manifest: PluginServerManifest,
-  pluginServer: {
-    id: string
-    proxyToken?: string
-    proxyBalanceCheckedAt?: number | null
-  },
-  now: number
-): Promise<void> => {
+const refreshProxyBalanceIfDue = async ({
+  runtime,
+  database,
+  userId,
+  manifest,
+  pluginServer,
+  now,
+}: RefreshProxyBalanceInput): Promise<void> => {
   if (
     getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do" ||
     !pluginServer.proxyToken ||
@@ -138,13 +209,13 @@ export const refreshCustomPluginServerManifests = async (
   let refreshed = 0
   let failed = 0
   for (const row of results) {
-    const didRefresh = await refreshOnePluginServer(
+    const didRefresh = await refreshOnePluginServer({
       env,
       database,
-      row.user_id,
-      row.id,
-      now
-    )
+      userId: row.user_id,
+      pluginServerId: row.id,
+      now,
+    })
     if (didRefresh) {
       refreshed += 1
     } else {

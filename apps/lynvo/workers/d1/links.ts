@@ -10,12 +10,16 @@ import {
   LINKS_MAX_COUNT,
   RETENTION_SWEEP_MAX_BATCHES_PER_RUN,
   SAVED_LINK_COMMAND_OPERATION_CLEANUP_BATCH_SIZE,
+  SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS,
 } from "../constants"
 import {
   extractedLinkSchema,
   parseCanonicalLinkMetadataJson,
 } from "../../app/features/links/storage-schemas"
-import type { ExtractedLink } from "../../app/features/links/types"
+import type {
+  ExtractedLink,
+  LinkMetadata,
+} from "../../app/features/links/types"
 import { Schema } from "effect"
 import {
   createDataVersionBumpStatement,
@@ -94,8 +98,885 @@ export interface SavedLinkMutationResult {
   replayed: boolean
 }
 
+interface ResolvedMirrorsByUrl {
+  [lazyItemUrl: string]: ExtractedLink[]
+}
+
+interface SavedLinkMetadataWriteInput {
+  database: D1Database
+  userId: string
+  operationId: string
+  existingRow: LinkRow
+  nextRow: LinkRow
+  now: number
+}
+
+interface CreateOrUpdateSavedLinkInput {
+  operationId: string
+  url: string
+  title?: string | undefined
+  meta?: string | undefined
+  extractionState?: "queued" | undefined
+  now: number
+}
+
+interface CreateOrUpdateSavedLinkAttemptInput {
+  database: D1Database
+  userId: string
+  input: CreateOrUpdateSavedLinkInput
+  metadataJson: string
+  extractionState: "queued" | "complete"
+  retentionDays: number
+}
+
+interface CreateOrUpdateSavedLinkAttemptResult {
+  id: string
+  dataVersion: number
+  changed: boolean
+}
+
+interface RunCreateOrUpdateSavedLinkAttemptsInput {
+  database: D1Database
+  userId: string
+  operationId: string
+  attempt: () => Promise<CreateOrUpdateSavedLinkAttemptResult>
+}
+
+interface ExecuteCreateOrUpdateSavedLinkAttemptInput {
+  database: D1Database
+  userId: string
+  operationId: string
+  attemptIndex: number
+  attempt: () => Promise<CreateOrUpdateSavedLinkAttemptResult>
+}
+
+interface UpdateExistingSavedLinkInput {
+  database: D1Database
+  userId: string
+  input: CreateOrUpdateSavedLinkInput
+  existingRow: LinkRow
+  metadataJson: string
+  extractionState: "queued" | "complete"
+  retentionDays: number
+}
+
+interface InsertNewSavedLinkInput {
+  database: D1Database
+  userId: string
+  input: CreateOrUpdateSavedLinkInput
+  metadataJson: string
+  extractionState: "queued" | "complete"
+  retentionDays: number
+}
+
+interface CreateNewSavedLinkRowInput {
+  userId: string
+  input: CreateOrUpdateSavedLinkInput
+  metadataJson: string
+  extractionState: "queued" | "complete"
+  retentionDays: number
+}
+
+interface GetOldestSavedLinkInput {
+  database: D1Database
+  userId: string
+  userLinkCount: number
+}
+
+interface SavedLinkMutationReservationInput {
+  operationId: string
+  command: string
+  now: number
+}
+
+interface SavedLinkOptimisticMutationAttemptResult {
+  dataVersion: number
+  changed: boolean
+}
+
+interface RunSavedLinkOptimisticMutationInput {
+  database: D1Database
+  userId: string
+  operationId: string
+  attempt: () => Promise<SavedLinkOptimisticMutationAttemptResult>
+}
+
+interface UpdateSavedLinkMetaInput {
+  operationId: string
+  id: string
+  meta: string
+  now: number
+}
+
+interface UpdateSavedLinkMetaAttemptInput {
+  database: D1Database
+  userId: string
+  input: UpdateSavedLinkMetaInput
+  metadataJson: string
+}
+
+interface ApplySavedLinkMetadataOperationInput {
+  operationId: string
+  id: string
+  operation: SavedLinkMetadataOperation
+  now: number
+}
+
+interface ClearSavedLinksInput {
+  operationId: string
+  now: number
+}
+
+interface ClearSavedLinksResult {
+  success: boolean
+  replayed: boolean
+  deletedLinks: number
+  dataVersion: number
+}
+
+interface ExpiredLinkUserSummary {
+  userId: string
+  totalBytes: number
+  linkCount: number
+}
+
+interface PreparedExpiredLinkUserMutation {
+  statements: D1PreparedStatement[]
+  dataVersionStatement: D1PreparedStatement
+}
+
+interface ExpiredLinkBatchOutcome {
+  deletedLinks: number
+  continued: boolean
+}
+
+const parseExtractedLinks = (serializedLinks: string): ExtractedLink[] => [
+  ...Schema.decodeUnknownSync(Schema.Array(extractedLinkSchema))(
+    JSON.parse(serializedLinks)
+  ),
+]
+
+const applyMarkOpened = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "markOpened" }>
+): void => {
+  metadata.playback.openedUrls = mergeUnique(metadata.playback.openedUrls, [
+    operation.linkUrl,
+  ])
+}
+
+const applySetArtwork = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "setArtwork" }>
+): void => {
+  metadata.artwork = {
+    providerId: operation.providerId,
+    title: operation.title,
+    year: operation.year,
+    mediaKind: operation.mediaKind,
+  }
+}
+
+const pruneFreshMirrors = (
+  resolvedMirrors: Readonly<ResolvedMirrorsByUrl>,
+  isMirrorFresh: (mirror: ExtractedLink) => boolean
+): ResolvedMirrorsByUrl => {
+  const prunedResolvedMirrors: ResolvedMirrorsByUrl = {}
+  for (const [lazyItemUrl, cachedMirrors] of Object.entries(resolvedMirrors)) {
+    const freshCachedMirrors = cachedMirrors.filter(isMirrorFresh)
+    if (freshCachedMirrors.length > 0) {
+      prunedResolvedMirrors[lazyItemUrl] = freshCachedMirrors
+    }
+  }
+  return prunedResolvedMirrors
+}
+
+const applyCacheMirrors = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "cacheMirrors" }>,
+  now: number
+): void => {
+  const mirrors = parseExtractedLinks(operation.mirrorsJson)
+  const isMirrorFresh = (mirror: ExtractedLink): boolean =>
+    mirror.expiry === undefined || mirror.expiry > now
+  const prunedResolvedMirrors = pruneFreshMirrors(
+    metadata.playback.resolvedMirrors ?? {},
+    isMirrorFresh
+  )
+  const freshMirrors = mirrors.filter(isMirrorFresh)
+  if (freshMirrors.length > 0) {
+    prunedResolvedMirrors[operation.lazyItemUrl] = freshMirrors
+  }
+  metadata.playback.resolvedMirrors = prunedResolvedMirrors
+}
+
+const applyRemoveExtractedLink = (
+  metadata: LinkMetadata,
+  operation: Extract<
+    SavedLinkMetadataOperation,
+    { kind: "removeExtractedLink" }
+  >
+): void => {
+  metadata.extraction.extractedLinks = removeLinkFromTree(
+    metadata.extraction.extractedLinks,
+    operation.linkKey
+  )
+  metadata.playback.openedUrls = metadata.playback.openedUrls.filter(
+    (openedUrl) => openedUrl !== operation.linkUrl
+  )
+}
+
+const applyReplaceExtraction = (
+  metadata: LinkMetadata,
+  operation: Extract<SavedLinkMetadataOperation, { kind: "replaceExtraction" }>
+): void => {
+  const currentExtractionJson = JSON.stringify(
+    metadata.extraction.extractedLinks
+  )
+  if (currentExtractionJson !== operation.expectedExtractionJson) {
+    throw new Error("Saved link extraction changed; refresh and retry")
+  }
+  metadata.extraction.extractedLinks = parseExtractedLinks(
+    operation.extractedLinksJson
+  )
+  metadata.playback.resolvedMirrors = {}
+}
+
+const applySavedLinkMetadataOperationToMetadata = (
+  metadata: LinkMetadata,
+  operation: SavedLinkMetadataOperation,
+  now: number
+): void => {
+  switch (operation.kind) {
+    case "markOpened":
+      return applyMarkOpened(metadata, operation)
+    case "setArtwork":
+      return applySetArtwork(metadata, operation)
+    case "cacheMirrors":
+      return applyCacheMirrors(metadata, operation, now)
+    case "removeExtractedLink":
+      return applyRemoveExtractedLink(metadata, operation)
+    case "replaceExtraction":
+      return applyReplaceExtraction(metadata, operation)
+  }
+}
+
+const createSavedLinkMetadataNextRow = (
+  existingRow: LinkRow,
+  metadata: LinkMetadata,
+  operation: SavedLinkMetadataOperation,
+  now: number
+): LinkRow => {
+  const isExtractionReplacement = operation.kind === "replaceExtraction"
+  return {
+    ...existingRow,
+    meta_json: JSON.stringify(metadata),
+    updated_at: now,
+    extraction_state: isExtractionReplacement
+      ? "complete"
+      : existingRow.extraction_state,
+    extraction_error: isExtractionReplacement
+      ? null
+      : existingRow.extraction_error,
+    extraction_available_at: isExtractionReplacement
+      ? null
+      : existingRow.extraction_available_at,
+    extraction_lease_expires_at: isExtractionReplacement
+      ? null
+      : existingRow.extraction_lease_expires_at,
+  }
+}
+
+const executeSavedLinkMetadataWrite = async ({
+  database,
+  userId,
+  operationId,
+  existingRow,
+  nextRow,
+  now,
+}: SavedLinkMetadataWriteInput): Promise<{
+  dataVersion: number
+  changed: boolean
+}> => {
+  const preparation = await ensureStorageLedger(database, userId, now)
+  assertLinkSize(byteLength(nextRow))
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: byteLength(existingRow),
+      nextBytes: byteLength(nextRow),
+      savedLinkCountDelta: 0,
+    },
+    now
+  )
+  return executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.meta_json,
+        now,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at,
+        existingRow.meta_json
+      ),
+    ...ledgerMutation.statements,
+    createReservedSavedLinkOperationLinkStatement(database, {
+      userId,
+      operationId,
+      linkId: existingRow.id,
+    }),
+  ])
+}
+
 const canonicalizeLinkMetadataJson = (metadataJson: string): string =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
+
+const executeUpdateSavedLinkMetaAttempt = async ({
+  database,
+  userId,
+  input,
+  metadataJson,
+}: UpdateSavedLinkMetaAttemptInput): Promise<SavedLinkOptimisticMutationAttemptResult> => {
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+  const nextRow: LinkRow = {
+    ...existingRow,
+    meta_json: metadataJson,
+    updated_at: input.now,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  assertLinkSize(byteLength(nextRow))
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: byteLength(existingRow),
+      nextBytes: byteLength(nextRow),
+      savedLinkCountDelta: 0,
+    },
+    input.now
+  )
+  return executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
+      )
+      .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
+    ...ledgerMutation.statements,
+    createReservedSavedLinkOperationLinkStatement(database, {
+      userId,
+      operationId: input.operationId,
+      linkId: existingRow.id,
+    }),
+  ])
+}
+
+const executeApplySavedLinkMetadataAttempt = async (
+  database: D1Database,
+  userId: string,
+  input: ApplySavedLinkMetadataOperationInput
+): Promise<SavedLinkOptimisticMutationAttemptResult> => {
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+  const metadata = parseCanonicalLinkMetadataJson(
+    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
+  )
+  applySavedLinkMetadataOperationToMetadata(
+    metadata,
+    input.operation,
+    input.now
+  )
+  const nextRow = createSavedLinkMetadataNextRow(
+    existingRow,
+    metadata,
+    input.operation,
+    input.now
+  )
+  return executeSavedLinkMetadataWrite({
+    database,
+    userId,
+    operationId: input.operationId,
+    existingRow,
+    nextRow,
+    now: input.now,
+  })
+}
+
+const executeDeleteSavedLink = async (
+  database: D1Database,
+  userId: string,
+  input: { operationId: string; id: string; now: number }
+): Promise<SavedLinkMutationResult> => {
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: byteLength(existingRow),
+      nextBytes: 0,
+      savedLinkCountDelta: -1,
+    },
+    input.now
+  )
+  const { dataVersion } = await executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
+    ...ledgerMutation.statements,
+  ])
+  return { success: true, replayed: false, dataVersion }
+}
+
+const executeClearSavedLinks = async (
+  database: D1Database,
+  userId: string,
+  input: ClearSavedLinksInput
+): Promise<ClearSavedLinksResult> => {
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  const { savedLinkCount } = preparation.ledger
+  if (savedLinkCount === 0) {
+    return {
+      success: true,
+      replayed: false,
+      deletedLinks: 0,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: preparation.ledger.linkBytes,
+      nextBytes: 0,
+      savedLinkCountDelta: -savedLinkCount,
+    },
+    input.now
+  )
+  const { dataVersion } = await executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
+    ...ledgerMutation.statements,
+  ])
+  return {
+    success: true,
+    replayed: false,
+    deletedLinks: savedLinkCount,
+    dataVersion,
+  }
+}
+
+const reserveSavedLinkMutation = async (
+  database: D1Database,
+  userId: string,
+  input: SavedLinkMutationReservationInput
+): Promise<SavedLinkMutationResult | undefined> => {
+  const completedOperation = await findCompletedSavedLinkOperation(
+    database,
+    userId,
+    input.operationId
+  )
+  if (completedOperation) {
+    return {
+      success: true,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const reserved = await reserveSavedLinkCommandOperation(database, {
+    userId,
+    operationId: input.operationId,
+    command: input.command,
+    now: input.now,
+  })
+  if (!reserved) {
+    return {
+      success: true,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  return undefined
+}
+
+const reserveCreateOrUpdateSavedLink = async (
+  database: D1Database,
+  userId: string,
+  input: CreateOrUpdateSavedLinkInput
+): Promise<SavedLinkCommandResult | undefined> => {
+  const completedOperation = await findCompletedSavedLinkOperation(
+    database,
+    userId,
+    input.operationId
+  )
+  if (completedOperation) {
+    return {
+      id: completedOperation.linkId,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const reserved = await reserveSavedLinkCommandOperation(database, {
+    userId,
+    operationId: input.operationId,
+    command: "create-or-update",
+    now: input.now,
+  })
+  if (!reserved) {
+    const concurrentOperation = await findCompletedSavedLinkOperation(
+      database,
+      userId,
+      input.operationId
+    )
+    return {
+      id: concurrentOperation?.linkId ?? null,
+      replayed: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  return undefined
+}
+
+const runSavedLinkOptimisticMutation = async ({
+  database,
+  userId,
+  operationId,
+  attempt,
+}: RunSavedLinkOptimisticMutationInput): Promise<SavedLinkMutationResult> => {
+  for (
+    let attemptIndex = 0;
+    attemptIndex < SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS;
+    attemptIndex += 1
+  ) {
+    try {
+      const result = await attempt()
+      if (result.changed) {
+        return {
+          success: true,
+          replayed: false,
+          dataVersion: result.dataVersion,
+        }
+      }
+    } catch (error) {
+      await releaseReservedSavedLinkCommandOperation(database, {
+        userId,
+        operationId,
+      })
+      throw error
+    }
+  }
+  await releaseReservedSavedLinkCommandOperation(database, {
+    userId,
+    operationId,
+  })
+  return {
+    success: false,
+    replayed: false,
+    dataVersion: await getDataVersion(database, userId),
+  }
+}
+
+const updateExistingSavedLink = async ({
+  database,
+  userId,
+  input,
+  existingRow,
+  metadataJson,
+  extractionState,
+  retentionDays,
+}: UpdateExistingSavedLinkInput): Promise<CreateOrUpdateSavedLinkAttemptResult> => {
+  const nextRow: LinkRow = {
+    ...existingRow,
+    title: input.title ?? existingRow.title,
+    meta_json: metadataJson,
+    updated_at: input.now,
+    expires_at: input.now + retentionDays * DAY_MS,
+    extraction_state: extractionState,
+    extraction_error: null,
+    extraction_attempts:
+      extractionState === "queued" ? 0 : existingRow.extraction_attempts,
+    extraction_available_at: extractionState === "queued" ? input.now : null,
+    extraction_lease_expires_at: null,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  assertLinkSize(byteLength(nextRow))
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: byteLength(existingRow),
+      nextBytes: byteLength(nextRow),
+      savedLinkCountDelta: 0,
+    },
+    input.now
+  )
+  const { dataVersion, changed } = await executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    database
+      .prepare(
+        "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.title,
+        metadataJson,
+        input.now,
+        nextRow.expires_at,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_attempts,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at,
+        existingRow.meta_json
+      ),
+    ...ledgerMutation.statements,
+    createReservedSavedLinkOperationLinkStatement(database, {
+      userId,
+      operationId: input.operationId,
+      linkId: existingRow.id,
+    }),
+  ])
+  return { id: existingRow.id, dataVersion, changed }
+}
+
+const getOldestSavedLinkIfAtCapacity = async ({
+  database,
+  userId,
+  userLinkCount,
+}: GetOldestSavedLinkInput): Promise<LinkRow | undefined> => {
+  if (userLinkCount < LINKS_MAX_COUNT) {
+    return undefined
+  }
+  return (
+    (await database
+      .prepare(
+        `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1`
+      )
+      .bind(userId)
+      .first<LinkRow>()) ?? undefined
+  )
+}
+
+const createNewSavedLinkRow = ({
+  userId,
+  input,
+  metadataJson,
+  extractionState,
+  retentionDays,
+}: CreateNewSavedLinkRowInput): LinkRow => ({
+  id: createOpaqueId(),
+  user_id: userId,
+  url: input.url,
+  title: input.title ?? null,
+  meta_json: metadataJson,
+  opened_at: null,
+  created_at: input.now,
+  updated_at: input.now,
+  expires_at: input.now + retentionDays * DAY_MS,
+  extraction_state: extractionState,
+  extraction_error: null,
+  extraction_attempts: 0,
+  extraction_available_at: extractionState === "queued" ? input.now : null,
+  extraction_lease_expires_at: null,
+})
+
+const insertNewSavedLink = async ({
+  database,
+  userId,
+  input,
+  metadataJson,
+  extractionState,
+  retentionDays,
+}: InsertNewSavedLinkInput): Promise<CreateOrUpdateSavedLinkAttemptResult> => {
+  const countRow = await database
+    .prepare("SELECT COUNT(*) AS count FROM links WHERE user_id = ?1")
+    .bind(userId)
+    .first<{ count: number }>()
+  const userLinkCount = countRow?.count ?? 0
+  const oldestRow = await getOldestSavedLinkIfAtCapacity({
+    database,
+    userId,
+    userLinkCount,
+  })
+  const newRow = createNewSavedLinkRow({
+    userId,
+    input,
+    metadataJson,
+    extractionState,
+    retentionDays,
+  })
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  assertLinkSize(byteLength(newRow))
+  const evictionMutation = oldestRow
+    ? applyStorageMutation(
+        database,
+        preparation,
+        {
+          domain: "linkBytes",
+          currentBytes: byteLength(oldestRow),
+          nextBytes: 0,
+          savedLinkCountDelta: -1,
+        },
+        input.now
+      )
+    : undefined
+  const insertionMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: 0,
+      nextBytes: byteLength(newRow),
+      savedLinkCountDelta: 1,
+    },
+    input.now
+  )
+  const { dataVersion } = await executeOwnedWrite(database, userId, [
+    ...preparation.statements,
+    ...(oldestRow
+      ? [database.prepare("DELETE FROM links WHERE id = ?1").bind(oldestRow.id)]
+      : []),
+    ...(evictionMutation?.statements ?? []),
+    database
+      .prepare(
+        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
+      )
+      .bind(
+        newRow.id,
+        newRow.user_id,
+        newRow.url,
+        newRow.title,
+        newRow.meta_json,
+        newRow.opened_at,
+        newRow.created_at,
+        newRow.updated_at,
+        newRow.expires_at,
+        newRow.extraction_state,
+        newRow.extraction_error,
+        newRow.extraction_attempts,
+        newRow.extraction_available_at,
+        newRow.extraction_lease_expires_at
+      ),
+    ...insertionMutation.statements,
+    createReservedSavedLinkOperationLinkStatement(database, {
+      userId,
+      operationId: input.operationId,
+      linkId: newRow.id,
+    }),
+  ])
+  return { id: newRow.id, dataVersion, changed: true }
+}
+
+const createOrUpdateSavedLinkAttempt = async ({
+  database,
+  userId,
+  input,
+  metadataJson,
+  extractionState,
+  retentionDays,
+}: CreateOrUpdateSavedLinkAttemptInput): Promise<CreateOrUpdateSavedLinkAttemptResult> => {
+  const existingRow = await database
+    .prepare(
+      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND url = ?2`
+    )
+    .bind(userId, input.url)
+    .first<LinkRow>()
+  if (existingRow) {
+    return updateExistingSavedLink({
+      database,
+      userId,
+      input,
+      existingRow,
+      metadataJson,
+      extractionState,
+      retentionDays,
+    })
+  }
+  return insertNewSavedLink({
+    database,
+    userId,
+    input,
+    metadataJson,
+    extractionState,
+    retentionDays,
+  })
+}
+
+const isConcurrentCreateConflict = (error: Error): boolean =>
+  error.message.includes("UNIQUE constraint failed: links.url")
+
+const executeCreateOrUpdateSavedLinkAttempt = async ({
+  database,
+  userId,
+  operationId,
+  attemptIndex,
+  attempt,
+}: ExecuteCreateOrUpdateSavedLinkAttemptInput): Promise<
+  CreateOrUpdateSavedLinkAttemptResult | undefined
+> => {
+  try {
+    return await attempt()
+  } catch (error) {
+    if (
+      attemptIndex === 0 &&
+      error instanceof Error &&
+      isConcurrentCreateConflict(error)
+    ) {
+      return undefined
+    }
+    await releaseReservedSavedLinkCommandOperation(database, {
+      userId,
+      operationId,
+    })
+    throw error
+  }
+}
+
+const runCreateOrUpdateSavedLinkAttempts = async ({
+  database,
+  userId,
+  operationId,
+  attempt,
+}: RunCreateOrUpdateSavedLinkAttemptsInput): Promise<SavedLinkCommandResult> => {
+  for (
+    let attemptIndex = 0;
+    attemptIndex < SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS;
+    attemptIndex += 1
+  ) {
+    const result = await executeCreateOrUpdateSavedLinkAttempt({
+      database,
+      userId,
+      operationId,
+      attemptIndex,
+      attempt,
+    })
+    if (!result) {
+      continue
+    }
+    if (result.changed) {
+      return {
+        id: result.id,
+        replayed: false,
+        dataVersion: result.dataVersion,
+      }
+    }
+  }
+  await releaseReservedSavedLinkCommandOperation(database, {
+    userId,
+    operationId,
+  })
+  throw new Error("Saved link changed while saving; retry")
+}
 
 export const getUserRetentionDays = async (
   database: D1Database,
@@ -177,44 +1058,11 @@ export const listSavedLinksWithDataVersion = async (
 export const createOrUpdateSavedLink = async (
   database: D1Database,
   userId: string,
-  input: {
-    operationId: string
-    url: string
-    title?: string | undefined
-    meta?: string | undefined
-    extractionState?: "queued" | undefined
-    now: number
-  }
+  input: CreateOrUpdateSavedLinkInput
 ): Promise<SavedLinkCommandResult> => {
-  const completedOperation = await findCompletedSavedLinkOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (completedOperation) {
-    return {
-      id: completedOperation.linkId,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
-    operationId: input.operationId,
-    command: "create-or-update",
-    now: input.now,
-  })
-  if (!reserved) {
-    const twinOperation = await findCompletedSavedLinkOperation(
-      database,
-      userId,
-      input.operationId
-    )
-    return {
-      id: twinOperation?.linkId ?? null,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
+  const replayed = await reserveCreateOrUpdateSavedLink(database, userId, input)
+  if (replayed) {
+    return replayed
   }
   const retentionDays = await getUserRetentionDays(database, userId)
   await deleteExpiredLinksForUser(database, userId, retentionDays, input.now)
@@ -223,505 +1071,70 @@ export const createOrUpdateSavedLink = async (
     input.meta ?? EMPTY_LINK_METADATA_JSON
   )
   const extractionState = input.extractionState ?? "complete"
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const existingRow = await database
-        .prepare(
-          `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND url = ?2`
-        )
-        .bind(userId, input.url)
-        .first<LinkRow>()
-
-      if (existingRow) {
-        const nextRow: LinkRow = {
-          ...existingRow,
-          title: input.title ?? existingRow.title,
-          meta_json: metadataJson,
-          updated_at: input.now,
-          // Re-saving refreshes the retention clock: the countdown runs from
-          // the last save, not the first.
-          expires_at: input.now + retentionDays * DAY_MS,
-          extraction_state: extractionState,
-          extraction_error: null,
-          extraction_attempts:
-            extractionState === "queued" ? 0 : existingRow.extraction_attempts,
-          extraction_available_at:
-            extractionState === "queued" ? input.now : null,
-          extraction_lease_expires_at: null,
-        }
-        const preparation = await ensureStorageLedger(
-          database,
-          userId,
-          input.now
-        )
-        assertLinkSize(byteLength(nextRow))
-        const ledgerMutation = applyStorageMutation(
-          database,
-          preparation,
-          {
-            domain: "linkBytes",
-            currentBytes: byteLength(existingRow),
-            nextBytes: byteLength(nextRow),
-            savedLinkCountDelta: 0,
-          },
-          input.now
-        )
-        const { dataVersion, changed } = await executeOwnedWrite(
-          database,
-          userId,
-          [
-            ...preparation.statements,
-            database
-              .prepare(
-                "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
-              )
-              .bind(
-                existingRow.id,
-                nextRow.title,
-                metadataJson,
-                input.now,
-                nextRow.expires_at,
-                nextRow.extraction_state,
-                nextRow.extraction_error,
-                nextRow.extraction_attempts,
-                nextRow.extraction_available_at,
-                nextRow.extraction_lease_expires_at,
-                existingRow.meta_json
-              ),
-            ...ledgerMutation.statements,
-            createReservedSavedLinkOperationLinkStatement(database, {
-              userId,
-              operationId: input.operationId,
-              linkId: existingRow.id,
-            }),
-          ]
-        )
-        if (!changed) {
-          continue
-        }
-        return { id: existingRow.id, replayed: false, dataVersion }
-      }
-
-      const countRow = await database
-        .prepare("SELECT COUNT(*) AS count FROM links WHERE user_id = ?1")
-        .bind(userId)
-        .first<{ count: number }>()
-      const userLinkCount = countRow?.count ?? 0
-      const oldestRow =
-        userLinkCount >= LINKS_MAX_COUNT
-          ? ((await database
-              .prepare(
-                `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1`
-              )
-              .bind(userId)
-              .first<LinkRow>()) ?? undefined)
-          : undefined
-      const newRow: LinkRow = {
-        id: createOpaqueId(),
-        user_id: userId,
-        url: input.url,
-        title: input.title ?? null,
-        meta_json: metadataJson,
-        opened_at: null,
-        created_at: input.now,
-        updated_at: input.now,
-        expires_at: input.now + retentionDays * DAY_MS,
-        extraction_state: extractionState,
-        extraction_error: null,
-        extraction_attempts: 0,
-        extraction_available_at:
-          extractionState === "queued" ? input.now : null,
-        extraction_lease_expires_at: null,
-      }
-      const preparation = await ensureStorageLedger(database, userId, input.now)
-      assertLinkSize(byteLength(newRow))
-      const evictionMutation = oldestRow
-        ? applyStorageMutation(
-            database,
-            preparation,
-            {
-              domain: "linkBytes",
-              currentBytes: byteLength(oldestRow),
-              nextBytes: 0,
-              savedLinkCountDelta: -1,
-            },
-            input.now
-          )
-        : undefined
-      const insertionMutation = applyStorageMutation(
-        database,
-        preparation,
-        {
-          domain: "linkBytes",
-          currentBytes: 0,
-          nextBytes: byteLength(newRow),
-          savedLinkCountDelta: 1,
-        },
-        input.now
-      )
-      const { dataVersion } = await executeOwnedWrite(database, userId, [
-        ...preparation.statements,
-        ...(oldestRow
-          ? [
-              database
-                .prepare("DELETE FROM links WHERE id = ?1")
-                .bind(oldestRow.id),
-            ]
-          : []),
-        ...(evictionMutation?.statements ?? []),
-        database
-          .prepare(
-            "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
-          )
-          .bind(
-            newRow.id,
-            newRow.user_id,
-            newRow.url,
-            newRow.title,
-            newRow.meta_json,
-            newRow.opened_at,
-            newRow.created_at,
-            newRow.updated_at,
-            newRow.expires_at,
-            newRow.extraction_state,
-            newRow.extraction_error,
-            newRow.extraction_attempts,
-            newRow.extraction_available_at,
-            newRow.extraction_lease_expires_at
-          ),
-        ...insertionMutation.statements,
-        createReservedSavedLinkOperationLinkStatement(database, {
-          userId,
-          operationId: input.operationId,
-          linkId: newRow.id,
-        }),
-      ])
-      return { id: newRow.id, replayed: false, dataVersion }
-    } catch (error) {
-      // SAFETY: D1 surfaces constraint failures as message strings only; this is
-      // the sole signal that a concurrent save inserted the same URL first.
-      if (
-        attempt === 0 &&
-        error instanceof Error &&
-        error.message.includes("UNIQUE constraint failed: links.url")
-      ) {
-        continue
-      }
-      await releaseReservedSavedLinkCommandOperation(database, {
-        userId,
-        operationId: input.operationId,
-      })
-      throw error
-    }
-  }
-  await releaseReservedSavedLinkCommandOperation(database, {
+  return runCreateOrUpdateSavedLinkAttempts({
+    database,
     userId,
     operationId: input.operationId,
+    attempt: () =>
+      createOrUpdateSavedLinkAttempt({
+        database,
+        userId,
+        input,
+        metadataJson,
+        extractionState,
+        retentionDays,
+      }),
   })
-  throw new Error("Saved link changed while saving; retry")
 }
 
 export const updateSavedLinkMeta = async (
   database: D1Database,
   userId: string,
-  input: {
-    operationId: string
-    id: string
-    meta: string
-    now: number
-  }
+  input: UpdateSavedLinkMetaInput
 ): Promise<SavedLinkMutationResult> => {
-  const completedOperation = await findCompletedSavedLinkOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (completedOperation) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
+  const replayed = await reserveSavedLinkMutation(database, userId, {
     operationId: input.operationId,
     command: "update-meta",
     now: input.now,
   })
-  if (!reserved) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
+  if (replayed) {
+    return replayed
   }
   const metadataJson = canonicalizeLinkMetadataJson(input.meta)
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const existingRow = await requireOwnedSavedLink(
-        database,
-        userId,
-        input.id
-      )
-      const nextRow = {
-        ...existingRow,
-        meta_json: metadataJson,
-        updated_at: input.now,
-      }
-      const preparation = await ensureStorageLedger(database, userId, input.now)
-      assertLinkSize(byteLength(nextRow))
-      const ledgerMutation = applyStorageMutation(
-        database,
-        preparation,
-        {
-          domain: "linkBytes",
-          currentBytes: byteLength(existingRow),
-          nextBytes: byteLength(nextRow),
-          savedLinkCountDelta: 0,
-        },
-        input.now
-      )
-      const { dataVersion, changed } = await executeOwnedWrite(
-        database,
-        userId,
-        [
-          ...preparation.statements,
-          database
-            .prepare(
-              "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
-            )
-            .bind(
-              existingRow.id,
-              metadataJson,
-              input.now,
-              existingRow.meta_json
-            ),
-          ...ledgerMutation.statements,
-          createReservedSavedLinkOperationLinkStatement(database, {
-            userId,
-            operationId: input.operationId,
-            linkId: existingRow.id,
-          }),
-        ]
-      )
-      if (!changed) {
-        continue
-      }
-      return { success: true, replayed: false, dataVersion }
-    } catch (error) {
-      await releaseReservedSavedLinkCommandOperation(database, {
-        userId,
-        operationId: input.operationId,
-      })
-      throw error
-    }
-  }
-  await releaseReservedSavedLinkCommandOperation(database, {
+  return runSavedLinkOptimisticMutation({
+    database,
     userId,
     operationId: input.operationId,
+    attempt: () =>
+      executeUpdateSavedLinkMetaAttempt({
+        database,
+        userId,
+        input,
+        metadataJson,
+      }),
   })
-  return {
-    success: false,
-    replayed: false,
-    dataVersion: await getDataVersion(database, userId),
-  }
 }
 
 export const applySavedLinkMetadataOperation = async (
   database: D1Database,
   userId: string,
-  input: {
-    operationId: string
-    id: string
-    operation: SavedLinkMetadataOperation
-    now: number
-  }
+  input: ApplySavedLinkMetadataOperationInput
 ): Promise<SavedLinkMutationResult> => {
-  const completedOperation = await findCompletedSavedLinkOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (completedOperation) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
+  const replayed = await reserveSavedLinkMutation(database, userId, {
     operationId: input.operationId,
     command: "apply-metadata-operation",
     now: input.now,
   })
-  if (!reserved) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
+  if (replayed) {
+    return replayed
   }
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const existingRow = await requireOwnedSavedLink(
-        database,
-        userId,
-        input.id
-      )
-      const metadata = parseCanonicalLinkMetadataJson(
-        existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
-      )
-      switch (input.operation.kind) {
-        case "markOpened": {
-          metadata.playback.openedUrls = mergeUnique(
-            metadata.playback.openedUrls,
-            [input.operation.linkUrl]
-          )
-          break
-        }
-        case "setArtwork": {
-          metadata.artwork = {
-            providerId: input.operation.providerId,
-            title: input.operation.title,
-            year: input.operation.year,
-            mediaKind: input.operation.mediaKind,
-          }
-          break
-        }
-        case "cacheMirrors": {
-          const mirrors = Schema.decodeUnknownSync(
-            Schema.Array(extractedLinkSchema)
-          )(JSON.parse(input.operation.mirrorsJson))
-          const isMirrorFresh = (mirror: ExtractedLink): boolean =>
-            mirror.expiry === undefined || mirror.expiry > input.now
-          const prunedResolvedMirrors: Record<string, ExtractedLink[]> = {}
-          for (const [lazyItemUrl, cachedMirrors] of Object.entries(
-            metadata.playback.resolvedMirrors ?? {}
-          )) {
-            const freshCachedMirrors = cachedMirrors.filter(isMirrorFresh)
-            if (freshCachedMirrors.length > 0) {
-              prunedResolvedMirrors[lazyItemUrl] = freshCachedMirrors
-            }
-          }
-          const freshMirrors = mirrors.filter(isMirrorFresh)
-          if (freshMirrors.length > 0) {
-            prunedResolvedMirrors[input.operation.lazyItemUrl] = freshMirrors
-          }
-          metadata.playback.resolvedMirrors = prunedResolvedMirrors
-          break
-        }
-        case "removeExtractedLink": {
-          const operation = input.operation
-          metadata.extraction.extractedLinks = removeLinkFromTree(
-            metadata.extraction.extractedLinks,
-            operation.linkKey
-          )
-          metadata.playback.openedUrls = metadata.playback.openedUrls.filter(
-            (openedUrl) => openedUrl !== operation.linkUrl
-          )
-          break
-        }
-        case "replaceExtraction": {
-          const currentExtractionJson = JSON.stringify(
-            metadata.extraction.extractedLinks
-          )
-          if (
-            currentExtractionJson !== input.operation.expectedExtractionJson
-          ) {
-            throw new Error("Saved link extraction changed; refresh and retry")
-          }
-          const links = Schema.decodeUnknownSync(
-            Schema.Array(extractedLinkSchema)
-          )(JSON.parse(input.operation.extractedLinksJson))
-          metadata.extraction.extractedLinks = [...links]
-          metadata.playback.resolvedMirrors = {}
-          break
-        }
-      }
-      const nextRow = {
-        ...existingRow,
-        meta_json: JSON.stringify(metadata),
-        updated_at: input.now,
-        extraction_state:
-          input.operation.kind === "replaceExtraction"
-            ? ("complete" as const)
-            : existingRow.extraction_state,
-        extraction_error:
-          input.operation.kind === "replaceExtraction"
-            ? null
-            : existingRow.extraction_error,
-        extraction_available_at:
-          input.operation.kind === "replaceExtraction"
-            ? null
-            : existingRow.extraction_available_at,
-        extraction_lease_expires_at:
-          input.operation.kind === "replaceExtraction"
-            ? null
-            : existingRow.extraction_lease_expires_at,
-      }
-      const preparation = await ensureStorageLedger(database, userId, input.now)
-      assertLinkSize(byteLength(nextRow))
-      const ledgerMutation = applyStorageMutation(
-        database,
-        preparation,
-        {
-          domain: "linkBytes",
-          currentBytes: byteLength(existingRow),
-          nextBytes: byteLength(nextRow),
-          savedLinkCountDelta: 0,
-        },
-        input.now
-      )
-      const { dataVersion, changed } = await executeOwnedWrite(
-        database,
-        userId,
-        [
-          ...preparation.statements,
-          database
-            .prepare(
-              "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
-            )
-            .bind(
-              existingRow.id,
-              nextRow.meta_json,
-              input.now,
-              nextRow.extraction_state,
-              nextRow.extraction_error,
-              nextRow.extraction_available_at,
-              nextRow.extraction_lease_expires_at,
-              existingRow.meta_json
-            ),
-          ...ledgerMutation.statements,
-          createReservedSavedLinkOperationLinkStatement(database, {
-            userId,
-            operationId: input.operationId,
-            linkId: existingRow.id,
-          }),
-        ]
-      )
-      if (!changed) {
-        continue
-      }
-      return { success: true, replayed: false, dataVersion }
-    } catch (error) {
-      await releaseReservedSavedLinkCommandOperation(database, {
-        userId,
-        operationId: input.operationId,
-      })
-      throw error
-    }
-  }
-  await releaseReservedSavedLinkCommandOperation(database, {
+  return runSavedLinkOptimisticMutation({
+    database,
     userId,
     operationId: input.operationId,
+    attempt: () =>
+      executeApplySavedLinkMetadataAttempt(database, userId, input),
   })
-  return {
-    success: false,
-    replayed: false,
-    dataVersion: await getDataVersion(database, userId),
-  }
 }
 
 export const deleteSavedLinkById = async (
@@ -729,51 +1142,16 @@ export const deleteSavedLinkById = async (
   userId: string,
   input: { operationId: string; id: string; now: number }
 ): Promise<SavedLinkMutationResult> => {
-  const completedOperation = await findCompletedSavedLinkOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (completedOperation) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
+  const replayed = await reserveSavedLinkMutation(database, userId, {
     operationId: input.operationId,
     command: "delete",
     now: input.now,
   })
-  if (!reserved) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
+  if (replayed) {
+    return replayed
   }
   try {
-    const existingRow = await requireOwnedSavedLink(database, userId, input.id)
-    const preparation = await ensureStorageLedger(database, userId, input.now)
-    const ledgerMutation = applyStorageMutation(
-      database,
-      preparation,
-      {
-        domain: "linkBytes",
-        currentBytes: byteLength(existingRow),
-        nextBytes: 0,
-        savedLinkCountDelta: -1,
-      },
-      input.now
-    )
-    const { dataVersion } = await executeOwnedWrite(database, userId, [
-      ...preparation.statements,
-      database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
-      ...ledgerMutation.statements,
-    ])
-    return { success: true, replayed: false, dataVersion }
+    return await executeDeleteSavedLink(database, userId, input)
   } catch (error) {
     await releaseReservedSavedLinkCommandOperation(database, {
       userId,
@@ -786,73 +1164,18 @@ export const deleteSavedLinkById = async (
 export const clearSavedLinks = async (
   database: D1Database,
   userId: string,
-  input: { operationId: string; now: number }
-): Promise<{
-  success: boolean
-  replayed: boolean
-  deletedLinks: number
-  dataVersion: number
-}> => {
-  const completedOperation = await findCompletedSavedLinkOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (completedOperation) {
-    return {
-      success: true,
-      replayed: true,
-      deletedLinks: 0,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const reserved = await reserveSavedLinkCommandOperation(database, {
-    userId,
+  input: ClearSavedLinksInput
+): Promise<ClearSavedLinksResult> => {
+  const replayed = await reserveSavedLinkMutation(database, userId, {
     operationId: input.operationId,
     command: "clear",
     now: input.now,
   })
-  if (!reserved) {
-    return {
-      success: true,
-      replayed: true,
-      deletedLinks: 0,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const savedLinkCount = preparation.ledger.savedLinkCount
-  if (savedLinkCount === 0) {
-    return {
-      success: true,
-      replayed: false,
-      deletedLinks: 0,
-      dataVersion: await getDataVersion(database, userId),
-    }
+  if (replayed) {
+    return { ...replayed, deletedLinks: 0 }
   }
   try {
-    const ledgerMutation = applyStorageMutation(
-      database,
-      preparation,
-      {
-        domain: "linkBytes",
-        currentBytes: preparation.ledger.linkBytes,
-        nextBytes: 0,
-        savedLinkCountDelta: -savedLinkCount,
-      },
-      input.now
-    )
-    const { dataVersion } = await executeOwnedWrite(database, userId, [
-      ...preparation.statements,
-      database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
-      ...ledgerMutation.statements,
-    ])
-    return {
-      success: true,
-      replayed: false,
-      deletedLinks: savedLinkCount,
-      dataVersion,
-    }
+    return await executeClearSavedLinks(database, userId, input)
   } catch (error) {
     await releaseReservedSavedLinkCommandOperation(database, {
       userId,
@@ -905,6 +1228,112 @@ export const deleteExpiredLinksForUser = async (
   return results.length
 }
 
+const loadExpiredLinkBatch = async (
+  database: D1Database,
+  now: number
+): Promise<LinkRow[] | undefined> => {
+  const { results } = await database
+    .prepare(
+      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE expires_at IS NOT NULL AND expires_at <= ?1 LIMIT ?2`
+    )
+    .bind(now, LINK_RETENTION_BATCH_SIZE)
+    .all<LinkRow>()
+  return results.length === 0 ? undefined : results
+}
+
+const summarizeExpiredLinksByUser = (
+  rows: readonly LinkRow[]
+): ExpiredLinkUserSummary[] => {
+  const summariesByUser = new Map<string, ExpiredLinkUserSummary>()
+  for (const row of rows) {
+    const existingSummary = summariesByUser.get(row.user_id)
+    if (existingSummary) {
+      existingSummary.totalBytes += byteLength(row)
+      existingSummary.linkCount += 1
+      continue
+    }
+    summariesByUser.set(row.user_id, {
+      userId: row.user_id,
+      totalBytes: byteLength(row),
+      linkCount: 1,
+    })
+  }
+  return [...summariesByUser.values()]
+}
+
+const prepareExpiredLinkUserMutation = async (
+  database: D1Database,
+  summary: ExpiredLinkUserSummary,
+  now: number
+): Promise<PreparedExpiredLinkUserMutation> => {
+  const preparation = await ensureStorageLedger(database, summary.userId, now)
+  const ledgerMutation = applyStorageMutation(
+    database,
+    preparation,
+    {
+      domain: "linkBytes",
+      currentBytes: summary.totalBytes,
+      nextBytes: 0,
+      savedLinkCountDelta: -summary.linkCount,
+    },
+    now
+  )
+  return {
+    statements: [...preparation.statements, ...ledgerMutation.statements],
+    dataVersionStatement: createDataVersionBumpStatement(
+      database,
+      summary.userId
+    ),
+  }
+}
+
+const prepareExpiredLinkBatchStatements = async (
+  database: D1Database,
+  rows: readonly LinkRow[],
+  now: number
+): Promise<{
+  statements: D1PreparedStatement[]
+  dataVersionStatements: D1PreparedStatement[]
+}> => {
+  const summaries = summarizeExpiredLinksByUser(rows)
+  const preparedUsers = await Promise.all(
+    summaries.map((summary) =>
+      prepareExpiredLinkUserMutation(database, summary, now)
+    )
+  )
+  const statements: D1PreparedStatement[] = []
+  const dataVersionStatements: D1PreparedStatement[] = []
+  for (const preparedUser of preparedUsers) {
+    statements.push(...preparedUser.statements)
+    dataVersionStatements.push(preparedUser.dataVersionStatement)
+  }
+  return { statements, dataVersionStatements }
+}
+
+const processExpiredLinkBatch = async (
+  database: D1Database,
+  now: number
+): Promise<ExpiredLinkBatchOutcome | undefined> => {
+  const rows = await loadExpiredLinkBatch(database, now)
+  if (!rows) {
+    return undefined
+  }
+  const { statements, dataVersionStatements } =
+    await prepareExpiredLinkBatchStatements(database, rows, now)
+  const placeholders = rows.map((_, index) => `?${index + 1}`).join(", ")
+  statements.push(
+    database
+      .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
+      .bind(...rows.map((row) => row.id))
+  )
+  statements.push(...dataVersionStatements)
+  await database.batch(statements)
+  return {
+    deletedLinks: rows.length,
+    continued: rows.length === LINK_RETENTION_BATCH_SIZE,
+  }
+}
+
 export interface RetentionSweepOutcome {
   deletedLinks: number
   continued: boolean
@@ -915,85 +1344,23 @@ export const sweepExpiredLinks = async (
   now: number
 ): Promise<RetentionSweepOutcome> => {
   let deletedLinks = 0
-  let continued = false
+  let didReachBatchLimit = false
   for (
     let batchIndex = 0;
     batchIndex < RETENTION_SWEEP_MAX_BATCHES_PER_RUN;
     batchIndex += 1
   ) {
-    const { results } = await database
-      .prepare(
-        `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE expires_at IS NOT NULL AND expires_at <= ?1 LIMIT ?2`
-      )
-      .bind(now, LINK_RETENTION_BATCH_SIZE)
-      .all<LinkRow>()
-    if (results.length === 0) {
+    const batchOutcome = await processExpiredLinkBatch(database, now)
+    if (!batchOutcome) {
       break
     }
-    deletedLinks += results.length
-    continued = results.length === LINK_RETENTION_BATCH_SIZE
-    const bytesByUser = new Map<string, number>()
-    for (const row of results) {
-      bytesByUser.set(
-        row.user_id,
-        (bytesByUser.get(row.user_id) ?? 0) + byteLength(row)
-      )
-    }
-    const statements: D1PreparedStatement[] = []
-    const dataVersionStatements: D1PreparedStatement[] = []
-    const expiredUsers = [...bytesByUser].map(
-      ([expiredUserId, expiredBytes]) => ({ expiredUserId, expiredBytes })
-    )
-    const preparations = await Promise.all(
-      expiredUsers.map(async ({ expiredUserId, expiredBytes }) => {
-        const preparation = await ensureStorageLedger(
-          database,
-          expiredUserId,
-          now
-        )
-        return {
-          expiredBytes,
-          expiredLinkCount: results.filter(
-            (row) => row.user_id === expiredUserId
-          ).length,
-          expiredUserId,
-          preparation,
-        }
-      })
-    )
-    for (const preparedUser of preparations) {
-      const { expiredBytes, expiredLinkCount, expiredUserId, preparation } =
-        preparedUser
-      statements.push(...preparation.statements)
-      const ledgerMutation = applyStorageMutation(
-        database,
-        preparation,
-        {
-          domain: "linkBytes",
-          currentBytes: expiredBytes,
-          nextBytes: 0,
-          savedLinkCountDelta: -expiredLinkCount,
-        },
-        now
-      )
-      statements.push(...ledgerMutation.statements)
-      dataVersionStatements.push(
-        createDataVersionBumpStatement(database, expiredUserId)
-      )
-    }
-    const placeholders = results.map((_, index) => `?${index + 1}`).join(", ")
-    statements.push(
-      database
-        .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
-        .bind(...results.map((row) => row.id))
-    )
-    statements.push(...dataVersionStatements)
-    await database.batch(statements)
-    if (!continued) {
+    deletedLinks += batchOutcome.deletedLinks
+    didReachBatchLimit = batchOutcome.continued
+    if (!didReachBatchLimit) {
       break
     }
   }
-  return { deletedLinks, continued }
+  return { deletedLinks, continued: didReachBatchLimit }
 }
 
 export const cleanupSavedLinkCommandOperations = async (

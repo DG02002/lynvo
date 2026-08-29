@@ -1,3 +1,8 @@
+import type { ComponentType, LazyExoticComponent } from "react"
+import type { MDXComponents } from "mdx/types.js"
+import type { LynvoPlugin } from "./features/site/settings/plugin-settings-data"
+import type { PluginIconSource } from "./lib/plugin-icons"
+
 export {}
 
 declare global {
@@ -37,7 +42,7 @@ declare global {
   }
 
   interface UsageReadInput {
-    lynvoPlugins: readonly import("./features/site/settings/plugin-settings-data").LynvoPlugin[]
+    lynvoPlugins: readonly LynvoPlugin[]
   }
 
   interface UsageReadTotal {
@@ -50,7 +55,7 @@ declare global {
     name: string
     used: number
     limit: number
-    icon?: import("./lib/plugin-icons").PluginIconSource
+    icon?: PluginIconSource
     iconUrl?: string
     iconKind: "hidden" | "source" | "direct"
   }
@@ -96,9 +101,7 @@ declare global {
     lastModified: string
     headings: readonly DocumentationHeading[]
     rawContent: string
-    Content: import("react").LazyExoticComponent<
-      DocumentationMdxModule["default"]
-    >
+    Content: LazyExoticComponent<DocumentationMdxModule["default"]>
   }
 
   interface DocumentationHeading {
@@ -127,9 +130,7 @@ declare global {
   }
 
   interface DocumentationMdxModule {
-    default: import("react").ComponentType<{
-      components?: import("mdx/types.js").MDXComponents
-    }>
+    default: ComponentType<{ components?: MDXComponents }>
     frontmatter: DocumentationFrontmatter
   }
 

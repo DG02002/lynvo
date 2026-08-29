@@ -160,7 +160,7 @@ const findMarkerMatch = (matchingText: string): MarkerMatch | undefined => {
 
   EPISODE_PATTERN.lastIndex = 0
   const episodeMatches = [...matchingText.matchAll(EPISODE_PATTERN)]
-  const firstEpisodeMatch = episodeMatches[0]
+  const [firstEpisodeMatch] = episodeMatches
   if (firstEpisodeMatch && episodeMatches.length === 1) {
     return {
       kind: "episode",

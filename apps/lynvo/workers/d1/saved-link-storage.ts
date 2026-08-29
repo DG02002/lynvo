@@ -33,29 +33,6 @@ export const findCompletedSavedLinkOperation = async (
   return row ? { linkId: row.link_id } : null
 }
 
-export const createSavedLinkCommandOperationStatement = (
-  database: D1Database,
-  input: {
-    userId: string
-    operationId: string
-    linkId: string
-    command: string
-    now: number
-  }
-): D1PreparedStatement =>
-  database
-    .prepare(
-      "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
-    )
-    .bind(
-      input.userId,
-      input.operationId,
-      input.linkId,
-      input.command,
-      input.now,
-      input.now + SAVED_LINK_COMMAND_OPERATION_TTL_MS
-    )
-
 export const reserveSavedLinkCommandOperation = async (
   database: D1Database,
   input: {

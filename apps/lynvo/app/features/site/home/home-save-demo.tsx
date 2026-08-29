@@ -69,6 +69,24 @@ interface DemoMenuItemProps {
   showArrow?: boolean
 }
 
+const getDemoMenuItemTextClassName = (isDestructive: boolean) =>
+  isDestructive ? "text-destructive" : "text-popover-foreground"
+
+const getDemoMenuItemHighlightClassName = (
+  isDestructive: boolean,
+  isHighlighted: boolean
+) => {
+  if (!isHighlighted) {
+    return ""
+  }
+
+  if (isDestructive) {
+    return "bg-destructive/10"
+  }
+
+  return "bg-accent"
+}
+
 interface DemoLinkMenuProps {
   removeMenuItemRef: RefObject<HTMLDivElement | null>
   isRemoveMenuItemFocused: boolean
@@ -480,7 +498,7 @@ const DemoMenuItem = ({
 }: DemoMenuItemProps) => (
   <div
     ref={itemRef}
-    className={`group/dropdown-menu-item relative flex cursor-default items-center gap-2.5 rounded-xl px-3 py-2 text-sm outline-hidden select-none ${isDestructive ? "text-destructive" : "text-popover-foreground"} ${isHighlighted ? (isDestructive ? "bg-destructive/10" : "bg-accent") : ""}`}
+    className={`group/dropdown-menu-item relative flex cursor-default items-center gap-2.5 rounded-xl px-3 py-2 text-sm outline-hidden select-none ${getDemoMenuItemTextClassName(isDestructive)} ${getDemoMenuItemHighlightClassName(isDestructive, isHighlighted)}`}
   >
     <HugeiconsIcon icon={icon} className="size-4 shrink-0" />
     <span>{label}</span>

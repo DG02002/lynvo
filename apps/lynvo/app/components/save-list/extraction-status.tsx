@@ -2,7 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 import { AlertCircleIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Spinner } from "~/components/spinner"
-import { MEDIA_LIST_ROW_TITLE_CLASS } from "~/components/save-list/media-list-row"
+import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
+import {
+  getExtractionStatusInput,
+  getExtractionStatusLabel,
+  type ExtractionStatusInput,
+} from "./extraction-status-utils"
 import type { LinkListItem } from "~/features/links/types"
 import {
   EXTRACTION_STATUS_MESSAGES,
@@ -26,7 +31,6 @@ interface ExtractionWaitStatusProps {
   readonly children: ReactNode
 }
 
-type ExtractionStatusInput = "idle" | "waiting" | "failed"
 type ExtractionStatusPhase = "idle" | "waiting"
 
 interface UseExtractionStatusLifecycleOptions {
@@ -48,38 +52,6 @@ interface ExtractionStatusTextProps {
 }
 
 const PREFERS_REDUCED_MOTION_MEDIA_QUERY = "(prefers-reduced-motion: reduce)"
-
-export const getExtractionStatusInput = (
-  item: LinkListItem | undefined,
-  isRefreshing: boolean
-): ExtractionStatusInput => {
-  const extractionState = item?.extractionStatus?.state
-  if (
-    isRefreshing ||
-    extractionState === "queued" ||
-    extractionState === "running"
-  ) {
-    return "waiting"
-  }
-  return extractionState === "failed" ? "failed" : "idle"
-}
-
-export const getExtractionStatusLabel = (
-  item: LinkListItem,
-  isRefreshing: boolean
-): string => {
-  if (isRefreshing || item.extractionStatus?.state === "running") {
-    return "Loading links…"
-  }
-  switch (item.extractionStatus?.state) {
-    case "queued":
-      return "Waiting to load…"
-    case "failed":
-      return item.extractionStatus.error || "Unable to load links"
-    default:
-      return ""
-  }
-}
 
 const usePrefersReducedMotion = (): boolean => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
@@ -197,6 +169,19 @@ const renderExtractionStatusChildren = (
   return <>{children}</>
 }
 
+const getExtractionWaitStatusInput = (
+  isWaiting: boolean,
+  didFail: boolean
+): ExtractionStatusInput => {
+  if (isWaiting) {
+    return "waiting"
+  }
+  if (didFail) {
+    return "failed"
+  }
+  return "idle"
+}
+
 export const SaveExtractionStatus = ({
   item,
   isRefreshing,
@@ -260,7 +245,7 @@ export const ExtractionWaitStatus = ({
   children,
 }: ExtractionWaitStatusProps) => {
   const lifecycle = useExtractionStatusLifecycle({
-    status: isWaiting ? "waiting" : didFail ? "failed" : "idle",
+    status: getExtractionWaitStatusInput(isWaiting, didFail),
     fallbackLabel,
     shouldRotateMessages: true,
   })

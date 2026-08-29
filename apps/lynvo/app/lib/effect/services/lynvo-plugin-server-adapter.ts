@@ -11,7 +11,7 @@ import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,
 } from "../../extraction/plugin-server-client"
-import { ExtractionError } from "../errors"
+import type { ExtractionError } from "../errors"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   extractPluginServerResponse,
@@ -69,12 +69,12 @@ export const getLynvoPluginServerMetadata = (
 ): MetadataResult | undefined => {
   const source = findLynvoPlugin(manifest, targetUrl, pluginId)
   return source
-    ? getPluginServerMetadata(
+    ? getPluginServerMetadata({
         manifest,
-        LYNVO_PLUGIN_SERVER_ID,
+        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
         targetUrl,
-        source.id
-      )
+        pluginId: source.id,
+      })
     : undefined
 }
 

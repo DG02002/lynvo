@@ -86,7 +86,7 @@ export const registerD1AuthRoutes = (
 ): void => {
   app.get("/api/auth/sign-in/google", async (context) => {
     addRequestContext(context, { operation: "google_sign_in_start" })
-    const env = context.env
+    const { env } = context
     const database = getD1Database(env)
     const credentials = resolveGoogleCredentials(env)
     if (!database || !credentials) {
@@ -116,7 +116,7 @@ export const registerD1AuthRoutes = (
 
   app.get("/api/auth/callback/google", async (context) => {
     addRequestContext(context, { operation: "google_sign_in_callback" })
-    const env = context.env
+    const { env } = context
     const database = getD1Database(env)
     const credentials = resolveGoogleCredentials(env)
     if (!database || !credentials) {

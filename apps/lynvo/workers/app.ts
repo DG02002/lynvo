@@ -27,7 +27,15 @@ import {
 } from "./authentication-rate-limit"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { closeRealtimeSession } from "./realtime-session-revocation"
-import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
+import {
+  CRON_SCHEDULE_DAILY_RETENTION,
+  CRON_SCHEDULE_HOURLY_MAINTENANCE,
+  DEVICE_CODE_CREATION_RATE_LIMIT,
+  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  EXTRACTION_ROUTE_RATE_LIMIT,
+  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
+} from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 import { isSameOriginRequest } from "./same-origin"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
@@ -52,14 +60,6 @@ import { drainAccountErasures } from "./d1/account-erasure"
 import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
 import { echoDataVersion } from "./d1/version-echo"
 import { processQueuedLinkExtractions } from "./link-extraction-runner"
-import {
-  CRON_SCHEDULE_DAILY_RETENTION,
-  CRON_SCHEDULE_HOURLY_MAINTENANCE,
-  DEVICE_CODE_CREATION_RATE_LIMIT,
-  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
-  EXTRACTION_ROUTE_RATE_LIMIT,
-  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-} from "./constants"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 
@@ -179,7 +179,8 @@ app.post("/api/auth/device/code", async (context) => {
         400
       )
     }
-    deviceName = result.success.deviceName
+    const { deviceName: decodedDeviceName } = result.success
+    deviceName = decodedDeviceName
   } catch {
     return context.json(
       requestApiError(context, {
@@ -718,6 +719,203 @@ const receiverAttachmentSchema = Schema.Struct({
 const isPingMessage = <Value>(value: Value): boolean =>
   Result.isSuccess(Schema.decodeUnknownResult(pingMessageSchema)(value))
 
+interface RealtimeWebSocketSession {
+  sessionId: string
+  userId: string
+  receiverId: string
+  deviceName: string
+}
+
+interface RealtimeSessionHelloPayload {
+  type: "session_hello"
+  userId: string
+  sessionId: string
+  dataVersion?: number
+}
+
+const handleRealtimeDataChanged = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(dataChangedSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid data version", { status: 400 })
+  }
+  const serialized = JSON.stringify({
+    type: "data-changed",
+    payload: { version: input.success.version },
+  })
+  const sockets = context.getWebSockets()
+  for (const socket of sockets) {
+    socket.send(serialized)
+  }
+  return Response.json({ deliveredSocketCount: sockets.length })
+}
+
+const handleRealtimeInboxNotification = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid receiver", { status: 400 })
+  }
+  const serialized = JSON.stringify({
+    type: "remote-inbox.changed",
+    payload: {},
+  })
+  const sockets = context.getWebSockets(input.success.receiverId)
+  for (const socket of sockets) {
+    socket.send(serialized)
+  }
+  return Response.json({ deliveredSocketCount: sockets.length })
+}
+
+const handleRealtimeSessionRevocation = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid session", { status: 400 })
+  }
+  for (const socket of context.getWebSockets(input.success.sessionId)) {
+    socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
+  }
+  return Response.json({ success: true })
+}
+
+const handleRealtimeAccountRevocation = (
+  context: DurableObjectState
+): Response => {
+  for (const socket of context.getWebSockets()) {
+    socket.close(
+      REALTIME_SESSION_REVOKED_CLOSE_CODE,
+      "Account sessions revoked"
+    )
+  }
+  return Response.json({ success: true })
+}
+
+const handleRealtimeReceivers = (context: DurableObjectState): Response => {
+  const receivers = context.getWebSockets().flatMap((socket) => {
+    const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
+      socket.deserializeAttachment()
+    )
+    if (Result.isFailure(attachment)) {
+      return []
+    }
+    return [
+      {
+        id: createRemoteTargetId(
+          attachment.success.sessionId,
+          attachment.success.receiverId
+        ),
+        receiverId: attachment.success.receiverId,
+        deviceName: attachment.success.deviceName,
+        lastActiveAt: attachment.success.connectedAt,
+      },
+    ]
+  })
+  return Response.json({ receivers })
+}
+
+const readRealtimeWebSocketSession = (
+  request: Request
+): RealtimeWebSocketSession | undefined => {
+  const sessionId = request.headers.get("X-Lynvo-Session-Id")
+  const userId = request.headers.get("X-Lynvo-User-Id")
+  const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
+  const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
+  if (!sessionId || !userId || !receiverId || !deviceName) {
+    return undefined
+  }
+  return { sessionId, userId, receiverId, deviceName }
+}
+
+const configureRealtimeWebSocket = (
+  context: DurableObjectState,
+  server: WebSocket,
+  session: RealtimeWebSocketSession
+): void => {
+  for (const existingSocket of context.getWebSockets(session.receiverId)) {
+    existingSocket.close(1000, "Receiver replaced")
+  }
+  server.serializeAttachment({
+    sessionId: session.sessionId,
+    receiverId: session.receiverId,
+    deviceName: session.deviceName,
+    connectedAt: Date.now(),
+  })
+  context.acceptWebSocket(server, [session.sessionId, session.receiverId])
+}
+
+const readRealtimeDataVersion = async (
+  env: Env,
+  userId: string
+): Promise<number | undefined> => {
+  const database = getD1Database(env)
+  if (!database) {
+    return undefined
+  }
+  try {
+    const dataVersion = await getDataVersion(database, userId)
+    return dataVersion > 0 ? dataVersion : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const sendRealtimeSessionHello = (
+  server: WebSocket,
+  session: RealtimeWebSocketSession,
+  dataVersion: number | undefined
+): void => {
+  const helloPayload: RealtimeSessionHelloPayload = {
+    type: "session_hello",
+    userId: session.userId,
+    sessionId: session.sessionId,
+  }
+  if (dataVersion !== undefined) {
+    helloPayload.dataVersion = dataVersion
+  }
+  server.send(JSON.stringify(helloPayload))
+}
+
+const scheduleRealtimeSessionAlarm = async (
+  storage: DurableObjectStorage
+): Promise<void> => {
+  const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
+  const existingAlarmAt = await storage.getAlarm()
+  if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
+    await storage.setAlarm(nextAlarmAt)
+  }
+}
+
+const acceptRealtimeWebSocket = async (
+  context: DurableObjectState,
+  env: Env,
+  request: Request
+): Promise<Response> => {
+  const pair = new WebSocketPair()
+  const [client, server] = Object.values(pair)
+  const session = readRealtimeWebSocketSession(request)
+  if (!session) {
+    return new Response("Missing session", { status: 401 })
+  }
+  configureRealtimeWebSocket(context, server, session)
+  const dataVersion = await readRealtimeDataVersion(env, session.userId)
+  sendRealtimeSessionHello(server, session, dataVersion)
+  await scheduleRealtimeSessionAlarm(context.storage)
+  return new Response(null, { status: 101, webSocket: client })
+}
+
 export class UserRealtimeRoom extends DurableObject<Env> {
   constructor(context: DurableObjectState, env: Env) {
     super(context, env)
@@ -727,135 +925,26 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const pathname = new URL(request.url).pathname
+    const { pathname } = new URL(request.url)
     if (pathname.endsWith("/notify-data-changed")) {
-      const input = Schema.decodeUnknownResult(dataChangedSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid data version", { status: 400 })
-      }
-      const serialized = JSON.stringify({
-        type: "data-changed",
-        payload: { version: input.success.version },
-      })
-      const sockets = this.ctx.getWebSockets()
-      for (const socket of sockets) {
-        socket.send(serialized)
-      }
-      return Response.json({ deliveredSocketCount: sockets.length })
+      return handleRealtimeDataChanged(this.ctx, request)
     }
     if (pathname.endsWith("/notify-inbox")) {
-      const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid receiver", { status: 400 })
-      }
-      const serialized = JSON.stringify({
-        type: "remote-inbox.changed",
-        payload: {},
-      })
-      const sockets = this.ctx.getWebSockets(input.success.receiverId)
-      for (const socket of sockets) {
-        socket.send(serialized)
-      }
-      return Response.json({ deliveredSocketCount: sockets.length })
+      return handleRealtimeInboxNotification(this.ctx, request)
     }
     if (pathname.endsWith("/revoke-session")) {
-      const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid session", { status: 400 })
-      }
-      for (const socket of this.ctx.getWebSockets(input.success.sessionId)) {
-        socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
-      }
-      return Response.json({ success: true })
+      return handleRealtimeSessionRevocation(this.ctx, request)
     }
     if (pathname.endsWith("/revoke-account")) {
-      for (const socket of this.ctx.getWebSockets()) {
-        socket.close(
-          REALTIME_SESSION_REVOKED_CLOSE_CODE,
-          "Account sessions revoked"
-        )
-      }
-      return Response.json({ success: true })
+      return handleRealtimeAccountRevocation(this.ctx)
     }
     if (pathname.endsWith("/receivers")) {
-      const receivers = this.ctx.getWebSockets().flatMap((socket) => {
-        const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
-          socket.deserializeAttachment()
-        )
-        if (Result.isFailure(attachment)) {
-          return []
-        }
-        return [
-          {
-            id: createRemoteTargetId(
-              attachment.success.sessionId,
-              attachment.success.receiverId
-            ),
-            receiverId: attachment.success.receiverId,
-            deviceName: attachment.success.deviceName,
-            lastActiveAt: attachment.success.connectedAt,
-          },
-        ]
-      })
-      return Response.json({ receivers })
+      return handleRealtimeReceivers(this.ctx)
     }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 426 })
     }
-    const pair = new WebSocketPair()
-    const client = pair[0]
-    const server = pair[1]
-    const sessionId = request.headers.get("X-Lynvo-Session-Id")
-    const userId = request.headers.get("X-Lynvo-User-Id")
-    const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
-    const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
-    if (!sessionId || !userId || !receiverId || !deviceName) {
-      return new Response("Missing session", { status: 401 })
-    }
-    for (const existingSocket of this.ctx.getWebSockets(receiverId)) {
-      existingSocket.close(1000, "Receiver replaced")
-    }
-    server.serializeAttachment({
-      sessionId,
-      receiverId,
-      deviceName,
-      connectedAt: Date.now(),
-    })
-    this.ctx.acceptWebSocket(server, [sessionId, receiverId])
-    let currentDataVersion: number | undefined
-    const database = getD1Database(this.env)
-    if (database) {
-      try {
-        const dataVersion = await getDataVersion(database, userId)
-        if (dataVersion > 0) {
-          currentDataVersion = dataVersion
-        }
-      } catch {
-        currentDataVersion = undefined
-      }
-    }
-    const helloPayload =
-      currentDataVersion === undefined
-        ? { type: "session_hello" as const, userId, sessionId }
-        : {
-            type: "session_hello" as const,
-            userId,
-            sessionId,
-            dataVersion: currentDataVersion,
-          }
-    server.send(JSON.stringify(helloPayload))
-    const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
-    const existingAlarmAt = await this.ctx.storage.getAlarm()
-    if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
-      await this.ctx.storage.setAlarm(nextAlarmAt)
-    }
-    return new Response(null, { status: 101, webSocket: client })
+    return acceptRealtimeWebSocket(this.ctx, this.env, request)
   }
 
   async alarm(): Promise<void> {

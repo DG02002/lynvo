@@ -86,6 +86,14 @@ const ERASURE_TABLE_KEYS = {
   sessions: "id",
 } as const
 
+const ERASURE_STAGE_TABLES = {
+  pluginCredentials: "user_plugin_credentials",
+  pluginDomains: "user_plugin_domains",
+  pluginServers: "user_plugin_servers",
+  deviceCodes: "device_codes",
+  remoteCommands: "remote_commands",
+} as const
+
 type ErasureTableKey = keyof typeof ERASURE_TABLE_KEYS
 
 const deleteOwnedBatch = async (
@@ -191,6 +199,163 @@ export type AccountErasureStepOutcome =
   | { kind: "done" }
   | { kind: "missing" }
 
+interface AccountErasureStageProcessorInput {
+  database: D1Database
+  userId: string
+  progress: AccountErasureProgress
+}
+
+interface AccountErasureStageProcessor {
+  (input: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome>
+}
+
+interface AccountErasureStageProcessorMap {
+  links: AccountErasureStageProcessor
+  pluginCredentials: AccountErasureStageProcessor
+  pluginDomains: AccountErasureStageProcessor
+  pluginServers: AccountErasureStageProcessor
+  deviceCodes: AccountErasureStageProcessor
+  remoteCommands: AccountErasureStageProcessor
+  usageCounters: AccountErasureStageProcessor
+  storageLedgers: AccountErasureStageProcessor
+  accounts: AccountErasureStageProcessor
+  sessions: AccountErasureStageProcessor
+  finalize: AccountErasureStageProcessor
+}
+
+const processLinksErasureStage = async ({
+  database,
+  userId,
+  progress,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  if ((await deleteOwnedBatch(database, "links", userId)) > 0) {
+    return { kind: "stage", stage: "links" }
+  }
+  if ((await deleteLinkCommandOperationBatch(database, userId)) > 0) {
+    return { kind: "stage", stage: "links" }
+  }
+  const nextStage = nextStageAfter("links")
+  await advanceStage(database, progress.id, nextStage)
+  return { kind: "stage", stage: nextStage }
+}
+
+const processPluginServerDataErasureStage = async (
+  { database, userId, progress }: AccountErasureStageProcessorInput,
+  table: ErasureTableKey
+): Promise<AccountErasureStepOutcome> => {
+  if ((await deleteOwnedBatch(database, table, userId)) > 0) {
+    return { kind: "stage", stage: progress.stage }
+  }
+  const nextStage = nextStageAfter(progress.stage)
+  await advanceStage(database, progress.id, nextStage)
+  return { kind: "stage", stage: nextStage }
+}
+
+const processUsageCountersErasureStage = async ({
+  database,
+  userId,
+  progress,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  if (
+    (await deleteOwnedBatch(
+      database,
+      "managed_extraction_operations",
+      userId
+    )) > 0
+  ) {
+    return { kind: "stage", stage: "usageCounters" }
+  }
+  if ((await deleteUsageCounterBatch(database, userId)) > 0) {
+    return { kind: "stage", stage: "usageCounters" }
+  }
+  const nextStage = nextStageAfter("usageCounters")
+  await advanceStage(database, progress.id, nextStage)
+  return { kind: "stage", stage: nextStage }
+}
+
+const processStorageLedgersErasureStage = async ({
+  database,
+  progress,
+  userId,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  await database
+    .prepare("DELETE FROM storage_ledgers WHERE user_id = ?1")
+    .bind(userId)
+    .run()
+  const nextStage = nextStageAfter("storageLedgers")
+  await advanceStage(database, progress.id, nextStage)
+  return { kind: "stage", stage: nextStage }
+}
+
+const processAccountsErasureStage = async ({
+  database,
+  userId,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  await eraseUserRow(database, userId)
+  return { kind: "done" }
+}
+
+const processSessionsErasureStage = async ({
+  database,
+  userId,
+  progress,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  if ((await deleteOwnedBatch(database, "sessions", userId)) > 0) {
+    return { kind: "stage", stage: "sessions" }
+  }
+  const nextStage = nextStageAfter("sessions")
+  await advanceStage(database, progress.id, nextStage)
+  return { kind: "stage", stage: nextStage }
+}
+
+const processFinalizeErasureStage = async ({
+  database,
+  userId,
+  progress,
+}: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  const incompleteStage = await getIncompleteDataStage(database, userId)
+  if (incompleteStage) {
+    await advanceStage(database, progress.id, incompleteStage)
+    return { kind: "stage", stage: incompleteStage }
+  }
+  await eraseUserRow(database, userId)
+  return { kind: "done" }
+}
+
+const ACCOUNT_ERASURE_STAGE_PROCESSORS: AccountErasureStageProcessorMap = {
+  links: processLinksErasureStage,
+  pluginCredentials: (input) =>
+    processPluginServerDataErasureStage(
+      input,
+      ERASURE_STAGE_TABLES.pluginCredentials
+    ),
+  pluginDomains: (input) =>
+    processPluginServerDataErasureStage(
+      input,
+      ERASURE_STAGE_TABLES.pluginDomains
+    ),
+  pluginServers: (input) =>
+    processPluginServerDataErasureStage(
+      input,
+      ERASURE_STAGE_TABLES.pluginServers
+    ),
+  deviceCodes: (input) =>
+    processPluginServerDataErasureStage(
+      input,
+      ERASURE_STAGE_TABLES.deviceCodes
+    ),
+  remoteCommands: (input) =>
+    processPluginServerDataErasureStage(
+      input,
+      ERASURE_STAGE_TABLES.remoteCommands
+    ),
+  usageCounters: processUsageCountersErasureStage,
+  storageLedgers: processStorageLedgersErasureStage,
+  accounts: processAccountsErasureStage,
+  sessions: processSessionsErasureStage,
+  finalize: processFinalizeErasureStage,
+}
+
 export const processAccountErasureStep = async (
   database: D1Database,
   userId: string
@@ -199,91 +364,11 @@ export const processAccountErasureStep = async (
   if (!progress) {
     return { kind: "missing" }
   }
-  switch (progress.stage) {
-    case "links": {
-      if ((await deleteOwnedBatch(database, "links", userId)) > 0) {
-        return { kind: "stage", stage: "links" }
-      }
-      if ((await deleteLinkCommandOperationBatch(database, userId)) > 0) {
-        return { kind: "stage", stage: "links" }
-      }
-      const nextStage = nextStageAfter("links")
-      await advanceStage(database, progress.id, nextStage)
-      return { kind: "stage", stage: nextStage }
-    }
-    case "pluginCredentials":
-    case "pluginDomains":
-    case "pluginServers":
-    case "deviceCodes":
-    case "remoteCommands": {
-      const stageTables = {
-        pluginCredentials: "user_plugin_credentials",
-        pluginDomains: "user_plugin_domains",
-        pluginServers: "user_plugin_servers",
-        deviceCodes: "device_codes",
-        remoteCommands: "remote_commands",
-      } as const
-      if (
-        (await deleteOwnedBatch(
-          database,
-          stageTables[progress.stage],
-          userId
-        )) > 0
-      ) {
-        return { kind: "stage", stage: progress.stage }
-      }
-      const nextStage = nextStageAfter(progress.stage)
-      await advanceStage(database, progress.id, nextStage)
-      return { kind: "stage", stage: nextStage }
-    }
-    case "usageCounters": {
-      if (
-        (await deleteOwnedBatch(
-          database,
-          "managed_extraction_operations",
-          userId
-        )) > 0
-      ) {
-        return { kind: "stage", stage: "usageCounters" }
-      }
-      if ((await deleteUsageCounterBatch(database, userId)) > 0) {
-        return { kind: "stage", stage: "usageCounters" }
-      }
-      const nextStage = nextStageAfter("usageCounters")
-      await advanceStage(database, progress.id, nextStage)
-      return { kind: "stage", stage: nextStage }
-    }
-    case "storageLedgers": {
-      await database
-        .prepare("DELETE FROM storage_ledgers WHERE user_id = ?1")
-        .bind(userId)
-        .run()
-      const nextStage = nextStageAfter("storageLedgers")
-      await advanceStage(database, progress.id, nextStage)
-      return { kind: "stage", stage: nextStage }
-    }
-    case "accounts": {
-      await eraseUserRow(database, userId)
-      return { kind: "done" }
-    }
-    case "sessions": {
-      if ((await deleteOwnedBatch(database, "sessions", userId)) > 0) {
-        return { kind: "stage", stage: "sessions" }
-      }
-      const nextStage = nextStageAfter("sessions")
-      await advanceStage(database, progress.id, nextStage)
-      return { kind: "stage", stage: nextStage }
-    }
-    case "finalize": {
-      const incompleteStage = await getIncompleteDataStage(database, userId)
-      if (incompleteStage) {
-        await advanceStage(database, progress.id, incompleteStage)
-        return { kind: "stage", stage: incompleteStage }
-      }
-      await eraseUserRow(database, userId)
-      return { kind: "done" }
-    }
-  }
+  return ACCOUNT_ERASURE_STAGE_PROCESSORS[progress.stage]({
+    database,
+    userId,
+    progress,
+  })
 }
 
 export const initiateAccountErasure = async (

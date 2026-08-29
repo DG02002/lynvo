@@ -893,7 +893,7 @@ export const deletePluginServerById = async (
       input.now
     )
     statements.push(...deletion.statements)
-    preparation = deletion.preparation
+    ;({ preparation } = deletion)
   }
   const serverLedgerMutation = applyStorageMutation(
     database,

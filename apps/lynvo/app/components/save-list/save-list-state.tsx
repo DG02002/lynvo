@@ -1,11 +1,6 @@
-import {
-  Archive04Icon,
-  CloudOffIcon,
-  Refresh01Icon,
-} from "@hugeicons/core-free-icons"
+import { Archive04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { ReactNode } from "react"
-import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/spinner"
 
 interface SaveListStateProps {
@@ -17,23 +12,8 @@ interface SaveListStateProps {
   readonly action?: ReactNode
 }
 
-interface SaveListErrorStateProps {
-  readonly onRetry?: () => void
-}
-
 interface SaveListLoadingStateProps {
   readonly label: string
-}
-
-interface SaveListStaleStateProps {
-  readonly onRetry?: () => void
-}
-
-interface SaveListRetryButtonProps {
-  readonly onRetry: () => void
-  readonly variant?: "ghost" | "outline"
-  readonly size?: "lg" | "sm"
-  readonly className?: string
 }
 
 const SaveListState = ({
@@ -80,28 +60,6 @@ export const SaveListLoadingState = ({ label }: SaveListLoadingStateProps) => (
   </div>
 )
 
-const SaveListRetryButton = ({
-  onRetry,
-  variant = "outline",
-  size = "lg",
-  className,
-}: SaveListRetryButtonProps) => (
-  <Button
-    type="button"
-    variant={variant}
-    size={size}
-    className={className}
-    onClick={onRetry}
-  >
-    <HugeiconsIcon
-      icon={Refresh01Icon}
-      data-icon="inline-start"
-      aria-hidden="true"
-    />
-    Try again
-  </Button>
-)
-
 export const SaveListEmptyState = () => (
   <SaveListState
     title="No saved links yet"
@@ -109,45 +67,4 @@ export const SaveListEmptyState = () => (
     description="Save a movie, show, or folder to see it here."
     icon={Archive04Icon}
   />
-)
-
-export const SaveListErrorState = ({ onRetry }: SaveListErrorStateProps) => (
-  <SaveListState
-    title="Saved links temporarily unavailable"
-    titleId="save-list-error-title"
-    description="Your saved links are safe. Check your connection or try again in a moment."
-    icon={CloudOffIcon}
-    role="alert"
-    action={
-      onRetry && <SaveListRetryButton onRetry={onRetry} className="mt-6" />
-    }
-  />
-)
-
-export const SaveListStaleState = ({ onRetry }: SaveListStaleStateProps) => (
-  <div className="flex w-full flex-wrap items-center justify-between gap-3 px-1 text-sm">
-    <p
-      className="flex min-w-0 items-center gap-2 text-muted-foreground"
-      role="status"
-    >
-      <HugeiconsIcon
-        icon={CloudOffIcon}
-        strokeWidth={1.8}
-        className="size-4 shrink-0"
-        aria-hidden="true"
-      />
-      <span>
-        Showing your last saved links. We’ll refresh when the connection is
-        restored.
-      </span>
-    </p>
-    {onRetry && (
-      <SaveListRetryButton
-        onRetry={onRetry}
-        variant="ghost"
-        size="sm"
-        className="shrink-0"
-      />
-    )}
-  </div>
 )

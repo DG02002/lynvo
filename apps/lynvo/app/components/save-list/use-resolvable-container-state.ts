@@ -11,6 +11,29 @@ interface UseResolvableContainerStateOptions {
   actions: LinkItemActions
 }
 
+const getResolvableContainerState = (
+  didResolutionFail: boolean,
+  hasMirrors: boolean,
+  isExpanded: boolean
+) => {
+  if (didResolutionFail) {
+    return "failed"
+  }
+
+  if (hasMirrors) {
+    if (isExpanded) {
+      return "expanded"
+    }
+
+    return "collapsed"
+  }
+
+  return "unresolved"
+}
+
+const isMirrorAvailable = (mirror: ExtractedLink): boolean =>
+  mirror.status !== "down" && isPlayableLinkFresh(mirror)
+
 export const useResolvableContainerState = ({
   item,
   link,
@@ -19,8 +42,6 @@ export const useResolvableContainerState = ({
   const linkTarget = getMediaNodeTarget(link)
   const savedMirrors =
     getLinkViewItemMetadata(item).playback.resolvedMirrors?.[linkTarget] ?? []
-  const isMirrorAvailable = (mirror: ExtractedLink): boolean =>
-    mirror.status !== "down" && isPlayableLinkFresh(mirror)
   const [mirrors, setMirrors] = useState(() =>
     savedMirrors.filter(isMirrorAvailable)
   )
@@ -69,13 +90,11 @@ export const useResolvableContainerState = ({
     didResolutionFail,
     isResolving,
     displaySize,
-    resolutionState: didResolutionFail
-      ? "failed"
-      : mirrors.length > 0
-        ? isExpanded
-          ? "expanded"
-          : "collapsed"
-        : "unresolved",
+    resolutionState: getResolvableContainerState(
+      didResolutionFail,
+      mirrors.length > 0,
+      isExpanded
+    ),
     openLink,
     refreshLink,
   }

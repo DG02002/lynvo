@@ -43,12 +43,11 @@ export const links: Route.LinksFunction = () => [
   { rel: "manifest", href: "/site.webmanifest" },
 ]
 
-export const loader = async (args: Route.LoaderArgs) => {
+export const loader = async ({ request, context }: Route.LoaderArgs) => {
   const startedAt = performance.now()
   const requestLogger = getRequestLogger()
   requestLogger.set({ route: "root" })
-  const request = args.request
-  const env = getServerEnv(args.context)
+  const env = getServerEnv(context)
   const cookieHeader = request.headers.get("Cookie")
   const csrfToken =
     (await csrfCookie.parse(cookieHeader)) || crypto.randomUUID()

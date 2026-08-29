@@ -208,7 +208,7 @@ export const parseVerifiedGoogleProfile = (
   credentials: GoogleOAuthCredentials,
   now: number
 ): GoogleProfile | null => {
-  const payloadPart = idToken.split(".")[1]
+  const [, payloadPart] = idToken.split(".")
   if (!payloadPart) {
     return null
   }

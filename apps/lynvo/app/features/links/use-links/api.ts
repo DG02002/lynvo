@@ -107,7 +107,7 @@ const toCommandError = async (
       },
     })
   }
-  const failure = parsed.success.failure
+  const { failure } = parsed.success
   switch (failure.kind) {
     case "storage-limit":
       if (failure.usedBytes !== undefined && failure.limitBytes !== undefined) {

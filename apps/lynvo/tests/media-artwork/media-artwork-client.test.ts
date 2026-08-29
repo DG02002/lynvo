@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { MEDIA_ARTWORK_CACHE_STORAGE_PREFIX } from "~/lib/constants"
-import { MEDIA_ARTWORK_FLUSH_DELAY_MS } from "~/lib/constants"
+import {
+  MEDIA_ARTWORK_CACHE_STORAGE_PREFIX,
+  MEDIA_ARTWORK_FLUSH_DELAY_MS,
+} from "~/lib/constants"
 import { createMemoryStorage } from "../memory-storage"
 
 const importMediaArtworkClient = async () => {

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { InformationCircleIcon } from "@hugeicons/core-free-icons"
 import {
@@ -34,6 +35,13 @@ export function PluginInfoTooltip({
     return null
   }
 
+  let usageHint: ReactNode = null
+  if (proxyCreditUsage) {
+    usageHint = <p>Proxy usage: {proxyCreditUsage}</p>
+  } else if (hasUsageHint) {
+    usageHint = <p>Might use up to {usageMultiplier}x usage per extraction</p>
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger
@@ -54,11 +62,7 @@ export function PluginInfoTooltip({
       <TooltipContent className="flex-col items-start gap-1 py-2 text-left">
         {description && <p>{description}</p>}
         {version && <p>Version {version}</p>}
-        {proxyCreditUsage ? (
-          <p>Proxy usage: {proxyCreditUsage}</p>
-        ) : hasUsageHint ? (
-          <p>Might use up to {usageMultiplier}x usage per extraction</p>
-        ) : null}
+        {usageHint}
         {projectUrl && (
           <a
             href={projectUrl}

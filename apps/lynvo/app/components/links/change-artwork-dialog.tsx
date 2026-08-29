@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useReducer,
+  useRef,
+} from "react"
 import { Result, Schema } from "effect"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { Spinner } from "~/components/spinner"
@@ -37,6 +43,113 @@ interface ChangeArtworkDialogProps {
   readonly onSelect: (identity: MediaArtworkIdentity) => void
 }
 
+interface ChangeArtworkDialogState {
+  readonly query: string
+  readonly candidates: readonly MediaArtworkCandidate[]
+  readonly isSearching: boolean
+  readonly didSearch: boolean
+  readonly searchFailed: boolean
+  readonly selectedCandidate: MediaArtworkCandidate | undefined
+}
+
+interface QueryChangedAction {
+  readonly type: "query-changed"
+  readonly query: string
+}
+
+interface SearchStartedAction {
+  readonly type: "search-started"
+}
+
+interface SearchSucceededAction {
+  readonly type: "search-succeeded"
+  readonly candidates: readonly MediaArtworkCandidate[]
+}
+
+interface SearchFailedAction {
+  readonly type: "search-failed"
+}
+
+interface DialogResetAction {
+  readonly type: "dialog-reset"
+}
+
+interface CandidateSelectedAction {
+  readonly type: "candidate-selected"
+  readonly candidate: MediaArtworkCandidate
+}
+
+interface CandidateClearedAction {
+  readonly type: "candidate-cleared"
+}
+
+interface ArtworkSearchControllerRef {
+  current: AbortController | undefined
+}
+
+type SearchCompletionAction = SearchSucceededAction | SearchFailedAction
+
+interface SearchCompletionOptions {
+  readonly searchAbortController: ArtworkSearchControllerRef
+  readonly abortController: AbortController
+  readonly dispatch: (action: SearchCompletionAction) => void
+  readonly action: SearchCompletionAction
+}
+
+type ChangeArtworkDialogAction =
+  | QueryChangedAction
+  | SearchStartedAction
+  | SearchSucceededAction
+  | SearchFailedAction
+  | DialogResetAction
+  | CandidateSelectedAction
+  | CandidateClearedAction
+
+const initialChangeArtworkDialogState: ChangeArtworkDialogState = {
+  query: "",
+  candidates: [],
+  isSearching: false,
+  didSearch: false,
+  searchFailed: false,
+  selectedCandidate: undefined,
+}
+
+const changeArtworkDialogReducer = (
+  state: ChangeArtworkDialogState,
+  action: ChangeArtworkDialogAction
+): ChangeArtworkDialogState => {
+  switch (action.type) {
+    case "query-changed":
+      return { ...state, query: action.query }
+    case "search-started":
+      return {
+        ...state,
+        isSearching: true,
+        didSearch: true,
+        searchFailed: false,
+      }
+    case "search-succeeded":
+      return {
+        ...state,
+        candidates: action.candidates,
+        isSearching: false,
+        searchFailed: false,
+      }
+    case "search-failed":
+      return {
+        ...state,
+        isSearching: false,
+        searchFailed: true,
+      }
+    case "dialog-reset":
+      return initialChangeArtworkDialogState
+    case "candidate-selected":
+      return { ...state, selectedCandidate: action.candidate }
+    case "candidate-cleared":
+      return { ...state, selectedCandidate: undefined }
+  }
+}
+
 const candidatesSchema = Schema.Struct({
   results: Schema.Array(
     Schema.Struct({
@@ -66,6 +179,87 @@ const getCandidatesByKind = (
   mediaKind: "movie" | "tv"
 ): readonly MediaArtworkCandidate[] =>
   candidates.filter((candidate) => candidate.mediaKind === mediaKind)
+
+const getSearchQuery = (searchQuery: string): string | undefined => {
+  const trimmedQuery = searchQuery.trim()
+  return trimmedQuery || undefined
+}
+
+const startArtworkSearch = (
+  searchAbortController: ArtworkSearchControllerRef
+): AbortController => {
+  searchAbortController.current?.abort()
+  const abortController = new AbortController()
+  searchAbortController.current = abortController
+  return abortController
+}
+
+const dispatchSearchCompletion = ({
+  searchAbortController,
+  abortController,
+  dispatch,
+  action,
+}: SearchCompletionOptions): void => {
+  if (
+    abortController.signal.aborted ||
+    searchAbortController.current !== abortController
+  ) {
+    return
+  }
+  dispatch(action)
+}
+
+const getUniqueCandidates = (
+  results: ReadonlyArray<{
+    readonly candidates?: ReadonlyArray<MediaArtworkCandidate>
+  }>
+): readonly MediaArtworkCandidate[] => {
+  const seenKeys = new Set<string>()
+  return results
+    .flatMap((result) => result.candidates ?? [])
+    .filter((candidate) => {
+      const key = getCandidateKey(candidate)
+      if (seenKeys.has(key)) {
+        return false
+      }
+      seenKeys.add(key)
+      return true
+    })
+}
+
+const fetchArtworkCandidates = async (
+  query: string,
+  signal: AbortSignal
+): Promise<readonly MediaArtworkCandidate[]> => {
+  const response = await fetch("/api/data/media-artwork", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requests: [
+        { title: query, mediaKind: "movie" },
+        { title: query, mediaKind: "tv" },
+      ],
+    }),
+    signal: AbortSignal.any([
+      signal,
+      AbortSignal.timeout(MEDIA_ARTWORK_API_TIMEOUT_MS),
+    ]),
+  })
+  if (!response.ok) {
+    throw new Error("Media artwork search failed.")
+  }
+  const parsed = Schema.decodeUnknownResult(candidatesSchema)(
+    await response.json()
+  )
+  if (Result.isFailure(parsed)) {
+    throw new Error("Media artwork response was invalid.")
+  }
+  return getUniqueCandidates(parsed.success.results)
+}
 
 interface CandidateGridProps {
   readonly candidates: readonly MediaArtworkCandidate[]
@@ -115,104 +309,139 @@ const CandidateGrid = ({
   </div>
 )
 
+interface ArtworkSearchResultsProps {
+  readonly candidates: readonly MediaArtworkCandidate[]
+  readonly tvCandidates: readonly MediaArtworkCandidate[]
+  readonly movieCandidates: readonly MediaArtworkCandidate[]
+  readonly isSearching: boolean
+  readonly didSearch: boolean
+  readonly searchFailed: boolean
+  readonly onSelectCandidate: (candidate: MediaArtworkCandidate) => void
+}
+
+const ArtworkSearchResults = ({
+  candidates,
+  tvCandidates,
+  movieCandidates,
+  isSearching,
+  didSearch,
+  searchFailed,
+  onSelectCandidate,
+}: ArtworkSearchResultsProps) => {
+  if (candidates.length > 0) {
+    return (
+      <Tabs defaultValue="tv" className="min-h-0 flex-1 gap-5 overflow-hidden">
+        <TabsList className="w-full shrink-0">
+          <TabsTrigger value="tv">
+            TV shows
+            <Badge variant="secondary">{tvCandidates.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="movies">
+            Movies
+            <Badge variant="secondary">{movieCandidates.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <TabsContent value="tv">
+            <CandidateGrid
+              candidates={tvCandidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
+          <TabsContent value="movies">
+            <CandidateGrid
+              candidates={movieCandidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
+          <TabsContent value="all">
+            <CandidateGrid
+              candidates={candidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
+    )
+  }
+
+  if (!isSearching && didSearch) {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
+          <p className="font-medium">
+            {searchFailed ? "Search failed" : "No matches found"}
+          </p>
+          <p className="max-w-md text-sm text-muted-foreground text-pretty">
+            {searchFailed
+              ? "Check your connection and try again."
+              : "Try the original title, remove the year, or check the spelling."}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 const ChangeArtworkDialog = ({
   item,
   open,
   onOpenChange,
   onSelect,
 }: ChangeArtworkDialogProps) => {
-  const [query, setQuery] = useState("")
-  const [candidates, setCandidates] = useState<MediaArtworkCandidate[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [didSearch, setDidSearch] = useState(false)
-  const [searchFailed, setSearchFailed] = useState(false)
-  const [selectedCandidate, setSelectedCandidate] =
-    useState<MediaArtworkCandidate>()
+  const [state, dispatch] = useReducer(
+    changeArtworkDialogReducer,
+    initialChangeArtworkDialogState
+  )
   const searchAbortController = useRef<AbortController | undefined>(undefined)
+  const abortActiveSearch = useEffectEvent(() => {
+    searchAbortController.current?.abort()
+  })
 
   const search = useCallback(async (searchQuery: string) => {
-    const trimmedQuery = searchQuery.trim()
-    if (!trimmedQuery) {
+    const query = getSearchQuery(searchQuery)
+    if (!query) {
       return
     }
-    searchAbortController.current?.abort()
-    const abortController = new AbortController()
-    searchAbortController.current = abortController
-    setIsSearching(true)
-    setDidSearch(true)
-    setSearchFailed(false)
+    const abortController = startArtworkSearch(searchAbortController)
+    dispatch({ type: "search-started" })
     try {
-      const response = await fetch("/api/data/media-artwork", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requests: [
-            { title: trimmedQuery, mediaKind: "movie" },
-            { title: trimmedQuery, mediaKind: "tv" },
-          ],
-        }),
-        signal: AbortSignal.any([
-          abortController.signal,
-          AbortSignal.timeout(MEDIA_ARTWORK_API_TIMEOUT_MS),
-        ]),
-      })
-      if (!response.ok) {
-        setSearchFailed(true)
-        return
-      }
-      const parsed = Schema.decodeUnknownResult(candidatesSchema)(
-        await response.json()
+      const candidates = await fetchArtworkCandidates(
+        query,
+        abortController.signal
       )
-      if (Result.isSuccess(parsed)) {
-        // Movie and tv ids are separate namespaces, so the kind joins the
-        // dedupe key; kindless legacy entries fall back to the id alone.
-        const seenKeys = new Set<string>()
-        const merged = parsed.success.results.flatMap(
-          (result) => result.candidates ?? []
-        )
-        setCandidates(
-          merged.filter((candidate) => {
-            const key = getCandidateKey(candidate)
-            if (seenKeys.has(key)) {
-              return false
-            }
-            seenKeys.add(key)
-            return true
-          })
-        )
-      } else {
-        setSearchFailed(true)
-      }
+      dispatchSearchCompletion({
+        searchAbortController,
+        abortController,
+        dispatch,
+        action: { type: "search-succeeded", candidates },
+      })
     } catch {
-      if (!abortController.signal.aborted) {
-        setSearchFailed(true)
-      }
-    } finally {
-      if (searchAbortController.current === abortController) {
-        setIsSearching(false)
-      }
+      dispatchSearchCompletion({
+        searchAbortController,
+        abortController,
+        dispatch,
+        action: {
+          type: "search-failed",
+        },
+      })
     }
   }, [])
 
   useEffect(() => {
     if (!open || !item) {
-      searchAbortController.current?.abort()
+      abortActiveSearch()
       return
     }
-    setQuery("")
-    setCandidates([])
-    setDidSearch(false)
-    setSearchFailed(false)
-    setSelectedCandidate(undefined)
-    return () => searchAbortController.current?.abort()
+    dispatch({ type: "dialog-reset" })
+    return () => abortActiveSearch()
   }, [open, item])
 
-  const tvCandidates = getCandidatesByKind(candidates, "tv")
-  const movieCandidates = getCandidatesByKind(candidates, "movie")
+  const tvCandidates = getCandidatesByKind(state.candidates, "tv")
+  const movieCandidates = getCandidatesByKind(state.candidates, "movie")
 
   return (
     <>
@@ -231,13 +460,18 @@ const ChangeArtworkDialog = ({
             className="shrink-0"
             onSubmit={(event) => {
               event.preventDefault()
-              void search(query)
+              void search(state.query)
             }}
           >
             <InputGroup className="h-12">
               <InputGroupInput
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                value={state.query}
+                onChange={(event) =>
+                  dispatch({
+                    type: "query-changed",
+                    query: event.target.value,
+                  })
+                }
                 aria-label="Search title"
                 placeholder="Search by title"
                 autoFocus
@@ -247,72 +481,34 @@ const ChangeArtworkDialog = ({
                   type="submit"
                   variant="secondary"
                   size="sm"
-                  disabled={isSearching || query.trim().length === 0}
+                  disabled={
+                    state.isSearching || state.query.trim().length === 0
+                  }
                 >
-                  {isSearching ? <Spinner aria-hidden="true" /> : null}
+                  {state.isSearching ? <Spinner aria-hidden="true" /> : null}
                   Search
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
           </form>
-          {candidates.length > 0 ? (
-            <Tabs
-              defaultValue="tv"
-              className="min-h-0 flex-1 gap-5 overflow-hidden"
-            >
-              <TabsList className="w-full shrink-0">
-                <TabsTrigger value="tv">
-                  TV shows
-                  <Badge variant="secondary">{tvCandidates.length}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="movies">
-                  Movies
-                  <Badge variant="secondary">{movieCandidates.length}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="all">All</TabsTrigger>
-              </TabsList>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                <TabsContent value="tv">
-                  <CandidateGrid
-                    candidates={tvCandidates}
-                    onSelectCandidate={setSelectedCandidate}
-                  />
-                </TabsContent>
-                <TabsContent value="movies">
-                  <CandidateGrid
-                    candidates={movieCandidates}
-                    onSelectCandidate={setSelectedCandidate}
-                  />
-                </TabsContent>
-                <TabsContent value="all">
-                  <CandidateGrid
-                    candidates={candidates}
-                    onSelectCandidate={setSelectedCandidate}
-                  />
-                </TabsContent>
-              </div>
-            </Tabs>
-          ) : !isSearching && didSearch ? (
-            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-              <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-                <p className="font-medium">
-                  {searchFailed ? "Search failed" : "No matches found"}
-                </p>
-                <p className="max-w-md text-sm text-muted-foreground text-pretty">
-                  {searchFailed
-                    ? "Check your connection and try again."
-                    : "Try the original title, remove the year, or check the spelling."}
-                </p>
-              </div>
-            </div>
-          ) : null}
+          <ArtworkSearchResults
+            candidates={state.candidates}
+            tvCandidates={tvCandidates}
+            movieCandidates={movieCandidates}
+            isSearching={state.isSearching}
+            didSearch={state.didSearch}
+            searchFailed={state.searchFailed}
+            onSelectCandidate={(candidate) =>
+              dispatch({ type: "candidate-selected", candidate })
+            }
+          />
         </DialogContent>
       </Dialog>
       <AlertDialog
-        open={selectedCandidate !== undefined}
+        open={state.selectedCandidate !== undefined}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setSelectedCandidate(undefined)
+            dispatch({ type: "candidate-cleared" })
           }
         }}
       >
@@ -323,11 +519,11 @@ const ChangeArtworkDialog = ({
               This will replace the artwork for this saved link.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {selectedCandidate ? (
+          {state.selectedCandidate ? (
             <div className="flex items-center gap-4">
               <div className="w-24 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-foreground/10">
                 <TmdbImage
-                  path={selectedCandidate.posterPath}
+                  path={state.selectedCandidate.posterPath}
                   variant="card"
                   imageType="poster"
                   alt=""
@@ -337,10 +533,10 @@ const ChangeArtworkDialog = ({
               </div>
               <div className="min-w-0">
                 <p className="font-medium text-pretty">
-                  {selectedCandidate.title}
+                  {state.selectedCandidate.title}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground tabular-nums">
-                  {getCandidateCaption(selectedCandidate)}
+                  {getCandidateCaption(state.selectedCandidate)}
                 </p>
               </div>
             </div>
@@ -349,11 +545,11 @@ const ChangeArtworkDialog = ({
             <AlertDialogCancel>Go back</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (!selectedCandidate) {
+                if (!state.selectedCandidate) {
                   return
                 }
-                onSelect(selectedCandidate)
-                setSelectedCandidate(undefined)
+                onSelect(state.selectedCandidate)
+                dispatch({ type: "candidate-cleared" })
                 onOpenChange(false)
               }}
             >

@@ -18,6 +18,46 @@ import { RemoteSessionList } from "./remote-play/remote-session-list"
 import type { RemoteSession } from "./remote-play/types"
 import { useRemoteSessions } from "./remote-play/use-remote-sessions"
 
+interface RemotePlayConnectionStatusProps {
+  readonly activeSessionId: string | null
+  readonly connectedDeviceName: string | null
+  readonly controlledBy: string | null
+  readonly controllingDeviceName: string | null
+  readonly onDisconnect: () => void
+  readonly onReceiverDisconnect: () => void
+}
+
+const RemotePlayConnectionStatus = ({
+  activeSessionId,
+  connectedDeviceName,
+  controlledBy,
+  controllingDeviceName,
+  onDisconnect,
+  onReceiverDisconnect,
+}: RemotePlayConnectionStatusProps) => {
+  if (controlledBy) {
+    return (
+      <RemotePlayStatusCard
+        label="Controlled by"
+        deviceName={controllingDeviceName}
+        onDisconnect={onReceiverDisconnect}
+      />
+    )
+  }
+
+  if (activeSessionId) {
+    return (
+      <RemotePlayStatusCard
+        label="Connected to"
+        deviceName={connectedDeviceName}
+        onDisconnect={onDisconnect}
+      />
+    )
+  }
+
+  return null
+}
+
 export const RemotePlayButton = ({
   trigger,
   open: externalOpen,
@@ -85,19 +125,14 @@ export const RemotePlayButton = ({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col">
-          {controlledBy ? (
-            <RemotePlayStatusCard
-              label="Controlled by"
-              deviceName={controllingDeviceName}
-              onDisconnect={handleReceiverDisconnect}
-            />
-          ) : activeSessionId ? (
-            <RemotePlayStatusCard
-              label="Connected to"
-              deviceName={connectedDeviceName}
-              onDisconnect={disconnect}
-            />
-          ) : null}
+          <RemotePlayConnectionStatus
+            activeSessionId={activeSessionId}
+            connectedDeviceName={connectedDeviceName}
+            controlledBy={controlledBy}
+            controllingDeviceName={controllingDeviceName}
+            onDisconnect={disconnect}
+            onReceiverDisconnect={handleReceiverDisconnect}
+          />
 
           {!controlledBy && !activeSessionId && (
             <RemoteSessionList

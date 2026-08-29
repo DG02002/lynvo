@@ -119,7 +119,12 @@ export const getCustomPluginServerMetadata = Effect.fn(
   if (!manifest) {
     return undefined
   }
-  return getPluginServerMetadata(manifest, pluginServer.id, targetUrl, pluginId)
+  return getPluginServerMetadata({
+    manifest,
+    pluginServerId: pluginServer.id,
+    targetUrl,
+    pluginId,
+  })
 })
 
 export const getCustomPlugin = Effect.fn(
@@ -130,13 +135,17 @@ export const getCustomPlugin = Effect.fn(
   pluginId?: string
 ): Effect.fn.Return<PluginMetadata | undefined> {
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
-  return manifest
-    ? pluginId
-      ? getLynvoManifestExtension(manifest).plugins?.find(
-          (source) => source.id === pluginId
-        )
-      : getMatchedPlugin(manifest, targetUrl)
-    : undefined
+  if (!manifest) {
+    return undefined
+  }
+
+  if (pluginId) {
+    return getLynvoManifestExtension(manifest).plugins?.find(
+      (source) => source.id === pluginId
+    )
+  }
+
+  return getMatchedPlugin(manifest, targetUrl)
 })
 
 export const discoverCustomPlugin = Effect.fn(

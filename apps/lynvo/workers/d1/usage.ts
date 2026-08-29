@@ -256,31 +256,62 @@ export type ManagedExtractionReservationResult =
       dataVersion: number
     }
 
-export const reserveManagedExtraction = async (
+interface ManagedExtractionReservationInput {
+  operationId: string
+  pluginId: ManagedPluginId
+  usageLimitsDisabled?: boolean | undefined
+  now: number
+}
+
+interface ManagedExtractionUsageSnapshot {
+  daily: UsagePeriod
+  monthly: UsagePeriod
+  epoch: number
+  ownerKey: string
+  userDailyUsed: number | null
+  globalDailyUsed: number | null
+  monthlyUsedBefore: number | null
+}
+
+interface BuildManagedExtractionReservationInput {
+  database: D1Database
+  userId: string
+  input: ManagedExtractionReservationInput
+  usageLimitsDisabled: boolean
+  snapshot: ManagedExtractionUsageSnapshot
+}
+
+interface ReservationCounterRow {
+  used: number
+}
+
+interface RequireReservationCounterInput {
+  row: ReservationCounterRow | undefined
+  compensate: () => Promise<void>
+  message: string
+  resetsAt: number
+  now: number
+}
+
+interface FinalizeManagedExtractionReservationInput {
+  dataVersion: number
+  statementResultsAt: (index: number) => ReservationCounterRow | undefined
+  compensate: () => Promise<void>
+  usageLimitsDisabled: boolean
+  daily: UsagePeriod
+  monthly: UsagePeriod
+  userDailyUsed: number | null
+  monthlyUsedBefore: number | null
+  now: number
+}
+
+const readManagedExtractionUsage = async (
   database: D1Database,
   userId: string,
-  input: {
-    operationId: string
-    pluginId: ManagedPluginId
-    usageLimitsDisabled?: boolean | undefined
-    now: number
-  }
-): Promise<ManagedExtractionReservationResult> => {
-  const existing = await findManagedOperation(
-    database,
-    userId,
-    input.operationId
-  )
-  if (existing && existing.state !== "released") {
-    return {
-      status: "already-reserved",
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-
-  const usageLimitsDisabled = input.usageLimitsDisabled === true
-  const daily = getDailyPeriod(input.now)
-  const monthly = getMonthlyPeriod(input.now)
+  now: number
+): Promise<ManagedExtractionUsageSnapshot> => {
+  const daily = getDailyPeriod(now)
+  const monthly = getMonthlyPeriod(now)
   const epoch = await getEpoch(database)
   const ownerKey = `user:${userId}`
   const [userDailyUsed, globalDailyUsed, monthlyUsedBefore] = await Promise.all(
@@ -308,35 +339,64 @@ export const reserveManagedExtraction = async (
       ),
     ]
   )
+  return {
+    daily,
+    monthly,
+    epoch,
+    ownerKey,
+    userDailyUsed,
+    globalDailyUsed,
+    monthlyUsedBefore,
+  }
+}
+
+const assertManagedExtractionWithinLimits = (
+  usageLimitsDisabled: boolean,
+  snapshot: ManagedExtractionUsageSnapshot,
+  now: number
+): void => {
   if (
     !usageLimitsDisabled &&
-    (userDailyUsed ?? 0) >= USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
+    (snapshot.userDailyUsed ?? 0) >= USER_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
   ) {
     throw new UsageLimitExhaustedError(
       "Daily Lynvo Plugin extraction limit reached.",
-      daily.resetsAt,
-      input.now
+      snapshot.daily.resetsAt,
+      now
     )
   }
-  if ((globalDailyUsed ?? 0) >= GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT) {
+  if (
+    (snapshot.globalDailyUsed ?? 0) >=
+    GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT
+  ) {
     throw new UsageLimitExhaustedError(
       "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
-      daily.resetsAt,
-      input.now
+      snapshot.daily.resetsAt,
+      now
     )
   }
   if (
     !usageLimitsDisabled &&
-    (monthlyUsedBefore ?? 0) >= USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
+    (snapshot.monthlyUsedBefore ?? 0) >=
+      USER_MONTHLY_LYNVO_PLUGIN_EXTRACTION_LIMIT
   ) {
     throw new UsageLimitExhaustedError(
       "Monthly Lynvo Plugin extraction limit reached.",
-      monthly.resetsAt,
-      input.now
+      snapshot.monthly.resetsAt,
+      now
     )
   }
+}
 
-  const statements = [
+const buildManagedExtractionReservationStatements = ({
+  database,
+  userId,
+  input,
+  usageLimitsDisabled,
+  snapshot,
+}: BuildManagedExtractionReservationInput): D1PreparedStatement[] => {
+  const { daily, monthly, epoch, ownerKey } = snapshot
+  return [
     ...(usageLimitsDisabled
       ? []
       : [
@@ -379,6 +439,100 @@ export const reserveManagedExtraction = async (
         input.now + MANAGED_EXTRACTION_RESERVATION_LEASE_MS
       ),
   ]
+}
+
+const requireReservationCounter = async ({
+  row,
+  compensate,
+  message,
+  resetsAt,
+  now,
+}: RequireReservationCounterInput): Promise<number> => {
+  if (!row) {
+    await compensate()
+    throw new UsageLimitExhaustedError(message, resetsAt, now)
+  }
+  return row.used
+}
+
+const finalizeManagedExtractionReservation = async ({
+  dataVersion,
+  statementResultsAt,
+  compensate,
+  usageLimitsDisabled,
+  daily,
+  monthly,
+  userDailyUsed,
+  monthlyUsedBefore,
+  now,
+}: FinalizeManagedExtractionReservationInput): Promise<ManagedExtractionReservationResult> => {
+  if (!usageLimitsDisabled) {
+    const dailyUsed = await requireReservationCounter({
+      row: statementResultsAt(0),
+      compensate,
+      message: "Daily Lynvo Plugin extraction limit reached.",
+      resetsAt: daily.resetsAt,
+      now,
+    })
+    const monthlyUsed = await requireReservationCounter({
+      row: statementResultsAt(1),
+      compensate,
+      message: "Monthly Lynvo Plugin extraction limit reached.",
+      resetsAt: monthly.resetsAt,
+      now,
+    })
+    await requireReservationCounter({
+      row: statementResultsAt(2),
+      compensate,
+      message:
+        "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
+      resetsAt: daily.resetsAt,
+      now,
+    })
+    return { status: "reserved", dailyUsed, monthlyUsed, dataVersion }
+  }
+  await requireReservationCounter({
+    row: statementResultsAt(0),
+    compensate,
+    message: "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
+    resetsAt: daily.resetsAt,
+    now,
+  })
+  return {
+    status: "reserved",
+    dailyUsed: userDailyUsed ?? 0,
+    monthlyUsed: monthlyUsedBefore ?? 0,
+    dataVersion,
+  }
+}
+
+export const reserveManagedExtraction = async (
+  database: D1Database,
+  userId: string,
+  input: ManagedExtractionReservationInput
+): Promise<ManagedExtractionReservationResult> => {
+  const existing = await findManagedOperation(
+    database,
+    userId,
+    input.operationId
+  )
+  if (existing && existing.state !== "released") {
+    return {
+      status: "already-reserved",
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+
+  const usageLimitsDisabled = input.usageLimitsDisabled === true
+  const snapshot = await readManagedExtractionUsage(database, userId, input.now)
+  assertManagedExtractionWithinLimits(usageLimitsDisabled, snapshot, input.now)
+  const statements = buildManagedExtractionReservationStatements({
+    database,
+    userId,
+    input,
+    usageLimitsDisabled,
+    snapshot,
+  })
   const { dataVersion, statementResults } = await executeOwnedWrite(
     database,
     userId,
@@ -392,61 +546,22 @@ export const reserveManagedExtraction = async (
     compensateReservedManagedExtraction(database, {
       userId,
       operationId: input.operationId,
-      epoch,
-      dailyPeriodKey: daily.key,
-      monthlyPeriodKey: monthly.key,
+      epoch: snapshot.epoch,
+      dailyPeriodKey: snapshot.daily.key,
+      monthlyPeriodKey: snapshot.monthly.key,
       userLimitsApplied: !usageLimitsDisabled,
     })
-  if (!usageLimitsDisabled) {
-    const userDailyRow = rowAt(0)
-    const monthlyRow = rowAt(1)
-    const globalRow = rowAt(2)
-    if (!userDailyRow) {
-      await compensate()
-      throw new UsageLimitExhaustedError(
-        "Daily Lynvo Plugin extraction limit reached.",
-        daily.resetsAt,
-        input.now
-      )
-    }
-    if (!monthlyRow) {
-      await compensate()
-      throw new UsageLimitExhaustedError(
-        "Monthly Lynvo Plugin extraction limit reached.",
-        monthly.resetsAt,
-        input.now
-      )
-    }
-    if (!globalRow) {
-      await compensate()
-      throw new UsageLimitExhaustedError(
-        "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
-        daily.resetsAt,
-        input.now
-      )
-    }
-    return {
-      status: "reserved",
-      dailyUsed: userDailyRow.used,
-      monthlyUsed: monthlyRow.used,
-      dataVersion,
-    }
-  }
-  const globalOnlyRow = rowAt(0)
-  if (!globalOnlyRow) {
-    await compensate()
-    throw new UsageLimitExhaustedError(
-      "Lynvo Plugin extraction capacity is unavailable until tomorrow.",
-      daily.resetsAt,
-      input.now
-    )
-  }
-  return {
-    status: "reserved",
-    dailyUsed: userDailyUsed ?? 0,
-    monthlyUsed: monthlyUsedBefore ?? 0,
+  return finalizeManagedExtractionReservation({
     dataVersion,
-  }
+    statementResultsAt: rowAt,
+    compensate,
+    usageLimitsDisabled,
+    daily: snapshot.daily,
+    monthly: snapshot.monthly,
+    userDailyUsed: snapshot.userDailyUsed,
+    monthlyUsedBefore: snapshot.monthlyUsedBefore,
+    now: input.now,
+  })
 }
 
 const compensateReservedManagedExtraction = async (

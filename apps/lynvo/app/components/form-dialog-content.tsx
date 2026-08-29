@@ -1,5 +1,5 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from "react"
-import { Button } from "~/components/ui/button"
+import type { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/spinner"
 import { DialogActionButton } from "~/components/dialog-action-button"
 import {

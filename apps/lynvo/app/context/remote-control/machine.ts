@@ -176,7 +176,7 @@ export const createRemoteControlMachine = ({
     outcomeListeners.forEach((listener) => listener(outcome))
 
   const syncDeliveryState = () => {
-    const lastCommand = delivery.getSnapshot().lastCommand
+    const { lastCommand } = delivery.getSnapshot()
     if (state.lastCommand === lastCommand) {
       return
     }

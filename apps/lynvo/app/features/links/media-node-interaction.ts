@@ -11,15 +11,25 @@ export interface MediaNodeInteractionState {
 
 const getMediaNodeKind = (
   link: ExtractedLink
-): MediaNodeInteractionState["kind"] =>
-  link.mediaNodeKind ??
-  (link.type === "folder" &&
-  !link.children?.length &&
-  link.childrenResolved !== true
-    ? "resolvable"
-    : link.type === "folder" || link.children
-      ? "group"
-      : "playable")
+): MediaNodeInteractionState["kind"] => {
+  if (link.mediaNodeKind !== undefined && link.mediaNodeKind !== null) {
+    return link.mediaNodeKind
+  }
+
+  if (
+    link.type === "folder" &&
+    !link.children?.length &&
+    link.childrenResolved !== true
+  ) {
+    return "resolvable"
+  }
+
+  if (link.type === "folder" || link.children) {
+    return "group"
+  }
+
+  return "playable"
+}
 
 export const getMediaNodeInteractionState = (
   link: ExtractedLink

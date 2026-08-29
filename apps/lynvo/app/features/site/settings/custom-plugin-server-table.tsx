@@ -235,11 +235,14 @@ const CustomPluginServerRow = ({
             submitLabel="Save key"
             onSubmit={async () => {
               setIsSavingProxyKey(true)
-              const didSave = await onSetProxyKey(pluginServer.id, proxyToken)
-              setIsSavingProxyKey(false)
-              if (didSave) {
-                setProxyToken("")
-                setIsProxyDialogOpen(false)
+              try {
+                const didSave = await onSetProxyKey(pluginServer.id, proxyToken)
+                if (didSave) {
+                  setProxyToken("")
+                  setIsProxyDialogOpen(false)
+                }
+              } finally {
+                setIsSavingProxyKey(false)
               }
             }}
           >
@@ -260,11 +263,14 @@ const CustomPluginServerRow = ({
                 disabled={isSavingProxyKey}
                 onClick={async () => {
                   setIsSavingProxyKey(true)
-                  const didRemove = await onSetProxyKey(pluginServer.id, "")
-                  setIsSavingProxyKey(false)
-                  if (didRemove) {
-                    setProxyToken("")
-                    setIsProxyDialogOpen(false)
+                  try {
+                    const didRemove = await onSetProxyKey(pluginServer.id, "")
+                    if (didRemove) {
+                      setProxyToken("")
+                      setIsProxyDialogOpen(false)
+                    }
+                  } finally {
+                    setIsSavingProxyKey(false)
                   }
                 }}
               >

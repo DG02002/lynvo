@@ -234,7 +234,7 @@ const toImmutableGroup = (group: MutableHybridCardGroup): HybridCardGroup => ({
 })
 
 const sortGroups = (groups: readonly HybridCardGroup[]): HybridCardGroup[] =>
-  [...groups].sort((firstGroup, secondGroup) => {
+  groups.toSorted((firstGroup, secondGroup) => {
     if (secondGroup.lastAddedAt !== firstGroup.lastAddedAt) {
       return secondGroup.lastAddedAt - firstGroup.lastAddedAt
     }

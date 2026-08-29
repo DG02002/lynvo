@@ -15,7 +15,7 @@ export const collectSelectableLinkIds = (
   links: readonly ExtractedLink[]
 ): string[] =>
   links.flatMap((link) => {
-    const isSelectable = getMediaNodeInteractionState(link).isSelectable
+    const { isSelectable } = getMediaNodeInteractionState(link)
     return [
       ...(isSelectable ? [getSelectableLinkId(link)] : []),
       ...collectSelectableLinkIds(link.children ?? []),

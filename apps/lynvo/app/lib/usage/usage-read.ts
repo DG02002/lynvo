@@ -28,6 +28,33 @@ const earliestValidReset = (
     )
     .toSorted()[0]
 
+const getLynvoUsageIconKind = (
+  isDailyLimit: boolean,
+  isDirect: boolean
+): UsageReadEntry["iconKind"] => {
+  if (isDailyLimit) {
+    return "hidden"
+  }
+
+  if (isDirect) {
+    return "direct"
+  }
+
+  return "source"
+}
+
+const getLynvoUsageSortOrder = (isDailyLimit: boolean, isDirect: boolean) => {
+  if (isDailyLimit) {
+    return 0
+  }
+
+  if (isDirect) {
+    return 1
+  }
+
+  return 2
+}
+
 const normalizeLynvoSection = (
   metrics: readonly UsageMetric[],
   plugins: UsageReadInput["lynvoPlugins"]
@@ -40,11 +67,7 @@ const normalizeLynvoSection = (
       )
       const isDailyLimit = metric.id === LYNVO_DAILY_LIMIT_METRIC_ID
       const isDirect = metric.pluginId === "direct-media"
-      const iconKind: UsageReadEntry["iconKind"] = isDailyLimit
-        ? "hidden"
-        : isDirect
-          ? "direct"
-          : "source"
+      const iconKind = getLynvoUsageIconKind(isDailyLimit, isDirect)
       return {
         key: metric.id,
         name: isDailyLimit
@@ -54,7 +77,7 @@ const normalizeLynvoSection = (
         limit: metric.limit,
         icon: plugin?.icon,
         iconKind,
-        sortOrder: isDailyLimit ? 0 : isDirect ? 1 : 2,
+        sortOrder: getLynvoUsageSortOrder(isDailyLimit, isDirect),
       }
     })
     .toSorted((left, right) => left.sortOrder - right.sortOrder)

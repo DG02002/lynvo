@@ -2,8 +2,8 @@ import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protoc
 import { Effect } from "effect"
 import { ExtractionError } from "../errors"
 import {
-  PluginServerClient,
   PluginServerClientError,
+  type PluginServerClient,
   type PluginServerRequestOptions,
 } from "../../extraction/plugin-server-client"
 

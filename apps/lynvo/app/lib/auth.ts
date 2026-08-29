@@ -1,11 +1,10 @@
 import { data, redirect } from "react-router"
-import { normalizeReturnTo } from "./auth-cookie"
+import { getCookieValue, normalizeReturnTo } from "./auth-cookie"
 import { getD1Database } from "../../workers/d1/db"
 import {
   createD1SessionCookie,
   resolveSessionContext,
 } from "../../workers/d1/sessions"
-import { getCookieValue } from "./auth-cookie"
 import { MILLISECONDS_PER_SECOND } from "./constants"
 import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 

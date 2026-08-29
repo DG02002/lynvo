@@ -155,12 +155,14 @@ export const claimNextRemoteCommand = async (
       input.now
     ),
   ])
-  const command =
-    queuedCommand && reclaimableCommand
-      ? queuedCommand.created_at <= reclaimableCommand.created_at
-        ? queuedCommand
-        : reclaimableCommand
-      : (queuedCommand ?? reclaimableCommand)
+  let command = queuedCommand ?? reclaimableCommand
+  if (
+    queuedCommand &&
+    reclaimableCommand &&
+    reclaimableCommand.created_at < queuedCommand.created_at
+  ) {
+    command = reclaimableCommand
+  }
   if (!command) {
     return null
   }
@@ -188,7 +190,7 @@ export const claimNextRemoteCommand = async (
       conditionBindings: [command.id, claimToken],
     }
   )
-  const claimResult = statementResults[0]
+  const [claimResult] = statementResults
   if ((claimResult?.meta.changes ?? 0) === 0) {
     return null
   }

@@ -178,7 +178,8 @@ describe("d1 storage ledger", () => {
         error instanceof StorageLimitError ||
         error instanceof LinkTooLargeError
       ) {
-        rejection = error.rejection
+        const { rejection: errorRejection } = error
+        rejection = errorRejection
       }
     }
     expect(rejection).toMatchObject({
@@ -211,7 +212,8 @@ describe("d1 storage ledger", () => {
         error instanceof StorageLimitError ||
         error instanceof LinkTooLargeError
       ) {
-        rejection = error.rejection
+        const { rejection: errorRejection } = error
+        rejection = errorRejection
       }
     }
     expect(rejection).toMatchObject({

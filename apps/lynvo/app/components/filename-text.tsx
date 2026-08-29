@@ -37,6 +37,23 @@ const appendFilenameSegments = (element: HTMLElement, value: string) => {
   })
 }
 
+const doesFilenameCandidateFit = (
+  measurementElement: HTMLElement,
+  textElement: HTMLSpanElement,
+  candidate: string
+): boolean => {
+  measurementElement.replaceChildren()
+  appendFilenameSegments(measurementElement, candidate.trimEnd())
+  measurementElement.appendChild(document.createTextNode(" "))
+
+  const controlElement = document.createElement("span")
+  controlElement.style.fontWeight = "500"
+  controlElement.textContent = "See more"
+  measurementElement.appendChild(controlElement)
+
+  return measurementElement.scrollHeight <= textElement.clientHeight
+}
+
 const createMeasurementElement = (
   sourceElement: HTMLSpanElement,
   value: string,
@@ -54,25 +71,18 @@ const createMeasurementElement = (
 const getCollapsedValue = (textElement: HTMLSpanElement, value: string) => {
   const measurementElement = createMeasurementElement(textElement, "")
 
-  const doesCandidateFit = (candidate: string) => {
-    measurementElement.replaceChildren()
-    appendFilenameSegments(measurementElement, candidate.trimEnd())
-    measurementElement.appendChild(document.createTextNode(" "))
-
-    const controlElement = document.createElement("span")
-    controlElement.style.fontWeight = "500"
-    controlElement.textContent = "See more"
-    measurementElement.appendChild(controlElement)
-
-    return measurementElement.scrollHeight <= textElement.clientHeight
-  }
-
   let minimumLength = 0
   let maximumLength = value.length
 
   while (minimumLength < maximumLength) {
     const candidateLength = Math.ceil((minimumLength + maximumLength) / 2)
-    if (doesCandidateFit(value.slice(0, candidateLength))) {
+    if (
+      doesFilenameCandidateFit(
+        measurementElement,
+        textElement,
+        value.slice(0, candidateLength)
+      )
+    ) {
       minimumLength = candidateLength
     } else {
       maximumLength = candidateLength - 1
@@ -103,13 +113,32 @@ const measureCollapsedFilename = (
   return { collapsedValue, doesOverflow }
 }
 
-export const FilenameText = ({
-  value,
-  className,
-  textClassName,
-  clampClassName = DEFAULT_CLAMP_CLASS_NAME,
-}: FilenameTextProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
+const observeFilenameResize = (
+  textElement: HTMLSpanElement,
+  updateOverflowState: () => void
+) => {
+  if (globalThis.ResizeObserver === undefined) {
+    window.addEventListener("resize", updateOverflowState)
+    return () => window.removeEventListener("resize", updateOverflowState)
+  }
+
+  const resizeObserver = new ResizeObserver(updateOverflowState)
+  resizeObserver.observe(textElement)
+
+  return () => resizeObserver.disconnect()
+}
+
+interface FilenameMeasurementState {
+  readonly isOverflowing: boolean
+  readonly collapsedValue: string
+  readonly containerRef: React.RefObject<HTMLSpanElement | null>
+}
+
+const useFilenameMeasurement = (
+  value: string,
+  clampClassName: string,
+  isExpanded: boolean
+): FilenameMeasurementState => {
   const [isOverflowing, setIsOverflowing] = React.useState(false)
   const [collapsedValue, setCollapsedValue] = React.useState(value)
   const containerRef = React.useRef<HTMLSpanElement>(null)
@@ -136,16 +165,21 @@ export const FilenameText = ({
     }
 
     updateOverflowState()
-    if (globalThis.ResizeObserver === undefined) {
-      window.addEventListener("resize", updateOverflowState)
-      return () => window.removeEventListener("resize", updateOverflowState)
-    }
-
-    const resizeObserver = new ResizeObserver(updateOverflowState)
-    resizeObserver.observe(textElement)
-
-    return () => resizeObserver.disconnect()
+    return observeFilenameResize(textElement, updateOverflowState)
   }, [clampClassName, isExpanded, value])
+
+  return { collapsedValue, containerRef, isOverflowing }
+}
+
+export const FilenameText = ({
+  value,
+  className,
+  textClassName,
+  clampClassName = DEFAULT_CLAMP_CLASS_NAME,
+}: FilenameTextProps) => {
+  const [isExpanded, setIsExpanded] = React.useState(false)
+  const { collapsedValue, containerRef, isOverflowing } =
+    useFilenameMeasurement(value, clampClassName, isExpanded)
 
   const toggleExpanded = (event: React.SyntheticEvent) => {
     event.preventDefault()

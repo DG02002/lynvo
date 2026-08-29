@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useSearchParams } from "react-router"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
@@ -19,13 +19,91 @@ import {
   useIsTvBroAndroidTv,
   useShouldHideTvBroSaveInput,
 } from "~/features/site/settings/tvbro-save-input-preference"
-import type { LinkViewItem } from "~/features/links/types"
+import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
 declare global {
   interface SaveListProps {
     readonly initialItems?: LinkViewItem[]
     readonly initialDataVersion?: number
   }
+}
+
+interface SaveListContentOptions {
+  readonly isGroupRoute: boolean
+  readonly openHybridGroup: HybridCardGroup | undefined
+  readonly isHybridMediaView: boolean
+  readonly isFolderRoute: boolean
+  readonly hybridCardGroups: readonly HybridCardGroup[] | undefined
+  readonly linkItemActions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly isHydrating: boolean
+  readonly highlightedId: string | null
+  readonly links: SavedLinkListItem[]
+  readonly selectedItemUrl: string | null
+  readonly openSavedFolder: (itemUrl: string) => void
+  readonly closeSavedFolder: () => void
+  readonly onExitGroup: () => void
+  readonly onOpenGroup: (groupKey: string) => void
+}
+
+const renderSaveListContent = ({
+  isGroupRoute,
+  openHybridGroup,
+  isHybridMediaView,
+  isFolderRoute,
+  hybridCardGroups,
+  linkItemActions,
+  extractingItems,
+  isHydrating,
+  highlightedId,
+  links,
+  selectedItemUrl,
+  openSavedFolder,
+  closeSavedFolder,
+  onExitGroup,
+  onOpenGroup,
+}: SaveListContentOptions): ReactNode => {
+  if (isGroupRoute && openHybridGroup) {
+    return (
+      <HybridGroupBrowser
+        group={openHybridGroup}
+        actions={linkItemActions}
+        extractingItems={extractingItems}
+        onExit={onExitGroup}
+        onOpenItem={openSavedFolder}
+      />
+    )
+  }
+
+  if (isHybridMediaView && !isFolderRoute && hybridCardGroups) {
+    return (
+      <HybridSaveGrid
+        groups={hybridCardGroups}
+        actions={linkItemActions}
+        extractingItems={extractingItems}
+        isHydrating={isHydrating}
+        highlightedId={highlightedId}
+        onOpenItem={openSavedFolder}
+        onOpenGroup={onOpenGroup}
+      />
+    )
+  }
+
+  return (
+    <SaveListBrowser
+      items={links}
+      selectedItemUrl={selectedItemUrl}
+      onSelectedItemUrlChange={(itemUrl) =>
+        itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
+      }
+      actions={linkItemActions}
+      extractingItems={extractingItems}
+      highlightedId={highlightedId}
+      isHydrating={isHydrating}
+      shouldShowRowPosters={isHybridMediaView}
+    />
+  )
 }
 
 const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
@@ -122,38 +200,23 @@ const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
       )}
 
       <div className="w-full">
-        {isGroupRoute && openHybridGroup ? (
-          <HybridGroupBrowser
-            group={openHybridGroup}
-            actions={linkItemActions}
-            extractingItems={extractingItems}
-            onExit={() => setSearchParams({}, { replace: true })}
-            onOpenItem={openSavedFolder}
-          />
-        ) : isHybridMediaView && !isFolderRoute && hybridCardGroups ? (
-          <HybridSaveGrid
-            groups={hybridCardGroups}
-            actions={linkItemActions}
-            extractingItems={extractingItems}
-            isHydrating={isHydrating}
-            highlightedId={highlightedId}
-            onOpenItem={openSavedFolder}
-            onOpenGroup={(groupKey) => setSearchParams({ group: groupKey })}
-          />
-        ) : (
-          <SaveListBrowser
-            items={links}
-            selectedItemUrl={selectedItemUrl}
-            onSelectedItemUrlChange={(itemUrl) =>
-              itemUrl ? openSavedFolder(itemUrl) : closeSavedFolder()
-            }
-            actions={linkItemActions}
-            extractingItems={extractingItems}
-            highlightedId={highlightedId}
-            isHydrating={isHydrating}
-            shouldShowRowPosters={mediaView === "hybrid"}
-          />
-        )}
+        {renderSaveListContent({
+          isGroupRoute,
+          openHybridGroup,
+          isHybridMediaView,
+          isFolderRoute,
+          hybridCardGroups,
+          linkItemActions,
+          extractingItems,
+          isHydrating,
+          highlightedId,
+          links,
+          selectedItemUrl,
+          openSavedFolder,
+          closeSavedFolder,
+          onExitGroup: () => setSearchParams({}, { replace: true }),
+          onOpenGroup: (groupKey) => setSearchParams({ group: groupKey }),
+        })}
       </div>
 
       <LinkSelectionDialog

@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useRef,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -36,7 +37,10 @@ export const useLongPress = ({
   const startPosition = useRef<{ x: number; y: number } | undefined>(undefined)
   const didLongPress = useRef(false)
   const onLongPressRef = useRef(onLongPress)
-  onLongPressRef.current = onLongPress
+
+  useEffect(() => {
+    onLongPressRef.current = onLongPress
+  }, [onLongPress])
 
   const cancel = useCallback((event?: ReactPointerEvent<HTMLElement>) => {
     if (timer.current !== undefined) {

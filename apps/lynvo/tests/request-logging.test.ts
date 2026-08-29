@@ -203,7 +203,8 @@ describe("request logging", () => {
       "*",
       requestLogging({
         keep: (context) => {
-          shouldKeep = context.shouldKeep
+          const { shouldKeep: contextShouldKeep } = context
+          shouldKeep = contextShouldKeep
         },
       })
     )

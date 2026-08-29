@@ -1,5 +1,7 @@
-import { parsePluginDomainCandidate } from "~/lib/plugin-domain"
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
 import type {
   ExtractedLink,
   LinkViewItem,
@@ -95,7 +97,6 @@ export const resolveSaveIntent = async ({
   overrideUrl,
   currentUrl,
   links,
-  addLink,
   enqueueLink,
 }: SaveIntentOptions): Promise<SaveIntentResult> => {
   const rawUrl = overrideUrl ?? currentUrl

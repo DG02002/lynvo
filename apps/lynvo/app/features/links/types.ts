@@ -1,5 +1,6 @@
 import type {
   ExpirySource,
+  JsonValue,
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 
@@ -119,4 +120,3 @@ export interface LinkListItemMap {
 }
 
 export type LinkListItem = LinkListItemMap[keyof LinkListItemMap]
-import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"

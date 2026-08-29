@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -88,9 +88,6 @@ export const useFinderBrowserState = ({
   const horizontalGestureTriggeredRef = useRef(false)
   const lastHorizontalGestureEventAtRef = useRef(0)
   const lastGestureWasBackRef = useRef<boolean | null>(null)
-  const latestContentWheelHandlerRef = useRef<(event: WheelEvent) => void>(
-    () => undefined
-  )
   const currentLinks = useMemo(
     () => getLinksAtFolderPath(rootLinks, folderPath),
     [folderPath, rootLinks]
@@ -146,7 +143,7 @@ export const useFinderBrowserState = ({
   }
 
   const navigateToNextFolder = () => {
-    const nextFolderPath = forwardFolderPaths[0]
+    const [nextFolderPath] = forwardFolderPaths
     if (!nextFolderPath) {
       return
     }
@@ -157,7 +154,7 @@ export const useFinderBrowserState = ({
     setFolderPath(nextFolderPath)
   }
 
-  const handleContentWheel = (event: WheelEvent) => {
+  const handleContentWheel = useEffectEvent((event: WheelEvent) => {
     const currentTimeMs = Date.now()
     if (
       currentTimeMs - lastHorizontalGestureEventAtRef.current >
@@ -207,11 +204,9 @@ export const useFinderBrowserState = ({
     } else {
       navigateToNextFolder()
     }
-  }
+  })
 
-  useEffect(() => {
-    latestContentWheelHandlerRef.current = handleContentWheel
-  }, [handleContentWheel])
+  const hasNoRootLinks = rootLinks.length === 0
 
   useEffect(() => {
     const contentElement = contentRef.current
@@ -219,13 +214,13 @@ export const useFinderBrowserState = ({
       return
     }
     const handleNativeWheel = (event: WheelEvent) => {
-      latestContentWheelHandlerRef.current(event)
+      handleContentWheel(event)
     }
     contentElement.addEventListener("wheel", handleNativeWheel, {
       passive: false,
     })
     return () => contentElement.removeEventListener("wheel", handleNativeWheel)
-  }, [rootLinks.length === 0])
+  }, [hasNoRootLinks])
 
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
     resetHorizontalGesture()

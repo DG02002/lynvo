@@ -15,7 +15,7 @@ const ROOT_OWNED_STATE_ACTIONS = [
 ] as const
 
 const changesRootOwnedState = (formAction: string): boolean => {
-  const pathname = new URL(formAction, "https://lynvo.invalid").pathname
+  const { pathname } = new URL(formAction, "https://lynvo.invalid")
   return ROOT_OWNED_STATE_ACTIONS.some(
     (actionPath) =>
       pathname === actionPath || pathname.startsWith(`${actionPath}/`)

@@ -14,7 +14,7 @@ export const getLinkSelectionState = (
   const interaction = getMediaNodeInteractionState(link)
   const { isFolder, isSelectable } = interaction
   const hasChildren = Boolean(link.children?.length)
-  const canExpand = interaction.canExpand
+  const { canExpand } = interaction
   const isSelectionControlAvailable =
     isSelectable || collectSelectableLinkIds(link.children ?? []).length > 0
 

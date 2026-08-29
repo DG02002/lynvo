@@ -8,7 +8,10 @@ import type {
 } from "~/features/links/types"
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
-import { parsePluginDomainCandidate } from "~/lib/plugin-domain"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
@@ -20,10 +23,11 @@ import {
 } from "./save-feedback"
 import { getSaveErrorMessage } from "./save-error-message"
 import { client } from "~/lib/effect/api/client"
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
-import { shouldOfferPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
+import {
+  shouldOfferPluginDomainSuggestion,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
 import type {
   ConfirmSaveIntentResult,
   SaveIntentResult,
@@ -42,7 +46,6 @@ export const useSaveActions = ({
   setError,
   setCurrentUrl,
   setHighlightedId,
-  shouldAutoSaveAllLinks,
 }: {
   url: string
   links: LinkViewItem[]
@@ -60,7 +63,6 @@ export const useSaveActions = ({
   setError: (error: string | null) => void
   setCurrentUrl: (url: string) => void
   setHighlightedId: (id: string | null) => void
-  shouldAutoSaveAllLinks: boolean
 }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)

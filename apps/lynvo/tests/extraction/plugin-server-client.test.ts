@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   PluginServerClient,
-  PluginServerClientError,
   HttpPluginServerTransport,
   ServiceBindingPluginServerTransport,
+  type PluginServerClientError,
   type PluginServerTransport,
 } from "~/lib/extraction/plugin-server-client"
 import { PLUGIN_SERVER_REQUEST_TIMEOUT_MS } from "~/lib/constants"

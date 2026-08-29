@@ -19,17 +19,17 @@ import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwor
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { SaveExtractionStatus } from "./extraction-status"
+import { getExtractionStatusInput } from "./extraction-status-utils"
 import {
-  SaveExtractionStatus,
-  getExtractionStatusInput,
-} from "./extraction-status"
-import {
-  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-  MEDIA_LIST_ROW_TITLE_CLASS,
   MediaListRow,
   MediaListRowMeta,
   SaveListRowIcon,
 } from "./media-list-row"
+import {
+  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
+  MEDIA_LIST_ROW_TITLE_CLASS,
+} from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 
@@ -166,6 +166,51 @@ interface HybridGroupBrowserProps {
   readonly onOpenItem: (itemUrl: string) => void
 }
 
+interface HybridGroupArtworkProps {
+  readonly displayTitle: string
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isArtworkPending: boolean
+}
+
+const HybridGroupArtwork = ({
+  displayTitle,
+  imagePath,
+  imageType,
+  isArtworkPending,
+}: HybridGroupArtworkProps) => {
+  if (imagePath) {
+    return (
+      <TmdbImage
+        path={imagePath}
+        variant="card"
+        imageType={imageType}
+        sizes="(min-width: 768px) 22rem, 20rem"
+        alt={`Artwork for ${displayTitle}`}
+        width={342}
+        height={513}
+      />
+    )
+  }
+
+  if (isArtworkPending) {
+    return (
+      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
+        <Spinner
+          aria-label={`Loading artwork for ${displayTitle}…`}
+          className="size-8"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
+      No poster found
+    </div>
+  )
+}
+
 export const HybridGroupBrowser = ({
   group,
   actions,
@@ -176,6 +221,7 @@ export const HybridGroupBrowser = ({
 }: HybridGroupBrowserProps) => {
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
+  const imageType = artwork?.stillPath ? "still" : "poster"
   const isArtworkPending =
     group.artworkRequest !== undefined && artwork === undefined
 
@@ -204,28 +250,12 @@ export const HybridGroupBrowser = ({
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
           <div className="mx-auto w-80 md:mx-0 md:w-full">
             <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
-              {imagePath ? (
-                <TmdbImage
-                  path={imagePath}
-                  variant="card"
-                  imageType={artwork?.stillPath ? "still" : "poster"}
-                  sizes="(min-width: 768px) 22rem, 20rem"
-                  alt={`Artwork for ${group.displayTitle}`}
-                  width={342}
-                  height={513}
-                />
-              ) : isArtworkPending ? (
-                <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-                  <Spinner
-                    aria-label={`Loading artwork for ${group.displayTitle}…`}
-                    className="size-8"
-                  />
-                </div>
-              ) : (
-                <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
-                  No poster found
-                </div>
-              )}
+              <HybridGroupArtwork
+                displayTitle={group.displayTitle}
+                imagePath={imagePath}
+                imageType={imageType}
+                isArtworkPending={isArtworkPending}
+              />
             </div>
             <h2 className="hidden pt-3 text-center font-heading text-base font-normal break-words md:block">
               {group.displayTitle}

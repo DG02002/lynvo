@@ -213,7 +213,7 @@ for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
   const markdownLinks = content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)
 
   for (const link of markdownLinks) {
-    const destination = link[1]
+    const [, destination] = link
     if (!destination.startsWith("/docs") && !destination.startsWith("#")) {
       continue
     }

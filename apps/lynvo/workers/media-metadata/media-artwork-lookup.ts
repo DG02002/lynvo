@@ -1,6 +1,9 @@
-import { createTmdbAdapter, type TmdbAdapter } from "./tmdb-adapter"
+import {
+  createTmdbAdapter,
+  type TmdbAdapter,
+  type TmdbSearchResult,
+} from "./tmdb-adapter"
 import { selectBestSearchResult } from "./search-result-selection"
-import type { TmdbSearchResult } from "./tmdb-adapter"
 
 export interface MediaArtworkIdentity {
   readonly providerId: number
@@ -254,14 +257,18 @@ const lookupOutcome = (
  */
 export const mediaArtworkOutcomeToResult = (
   outcome: MediaArtworkLookupOutcome
-): MediaArtworkLookupResult =>
-  outcome.status === "resolved"
-    ? outcome.result
-    : outcome.status === "empty"
-      ? outcome.candidates
-        ? { candidates: outcome.candidates }
-        : {}
-      : { failed: true }
+): MediaArtworkLookupResult => {
+  if (outcome.status === "resolved") {
+    return outcome.result
+  }
+  if (outcome.status === "failed") {
+    return { failed: true }
+  }
+  if (outcome.candidates) {
+    return { candidates: outcome.candidates }
+  }
+  return {}
+}
 
 export const lookupMediaArtworkOutcomes = async (
   environment: MediaArtworkLookupEnvironment,

@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from "vitest"
 import {
   presentSavedLinkCommandFailure,
   SavedLinkCommandFailureSchema,
+  SavedLinkCommandError,
 } from "~/features/links/saved-link-command-failure"
-import { toSavedLinkCommandError } from "~/features/links/saved-link-command-adapter"
-import { runSavedLinkCommand } from "~/features/links/saved-link-command-adapter"
-import { SavedLinkCommandError } from "~/features/links/saved-link-command-failure"
+import {
+  runSavedLinkCommand,
+  toSavedLinkCommandError,
+} from "~/features/links/saved-link-command-adapter"
 
 describe("saved-link command failure presentation", () => {
   it("round-trips every failure variant through the command schema", () => {

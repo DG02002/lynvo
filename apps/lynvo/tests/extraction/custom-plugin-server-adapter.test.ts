@@ -107,7 +107,7 @@ describe("extractFromCustomPluginServer", () => {
       )
     )
 
-    const request = fetchMock.mock.calls[0][0]
+    const [[request]] = fetchMock.mock.calls
     expect(await request.json()).toEqual({
       input: {
         kind: "source",

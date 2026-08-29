@@ -1,8 +1,8 @@
 import {
   acknowledgeRemoteCommandNotification,
   listPendingRemoteCommandNotifications,
+  type PendingRemoteCommandNotification,
 } from "./d1/remote-commands"
-import type { PendingRemoteCommandNotification } from "./d1/remote-commands"
 import { Result, Schema } from "effect"
 
 const remoteInboxDeliverySchema = Schema.Struct({

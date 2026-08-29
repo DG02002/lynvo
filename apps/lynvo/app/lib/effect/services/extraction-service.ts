@@ -1,9 +1,9 @@
 import { Context, Effect, Layer } from "effect"
 import {
   BackendError,
-  ExtractionError,
-  UsageLimitError,
   ValidationError,
+  type ExtractionError,
+  type UsageLimitError,
 } from "../errors"
 import type {
   ExtractionResult,
@@ -47,7 +47,7 @@ export class ExtractionService extends Context.Service<
         ExtractionError | UsageLimitError | ValidationError
       > {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
-        const targetUrl = routeInput.targetUrl
+        const { targetUrl } = routeInput
         if (options.userId) {
           const context = yield* loadRegisteredPluginServers(
             environment,
@@ -110,7 +110,7 @@ export class ExtractionService extends Context.Service<
         options: MetadataOptions
       ): Effect.fn.Return<MetadataResult, ValidationError | BackendError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
-        const targetUrl = routeInput.targetUrl
+        const { targetUrl } = routeInput
 
         if (options.userId) {
           const context = yield* loadRegisteredPluginServers(

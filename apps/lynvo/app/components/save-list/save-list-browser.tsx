@@ -1,5 +1,4 @@
-import { useState } from "react"
-import type { RefObject } from "react"
+import { useState, type ReactNode, type RefObject } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
@@ -49,25 +48,26 @@ import { ResolvableContainerRow } from "./resolvable-container-row"
 import { FinderEpisodeStill } from "./finder-episode-still"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import {
+  MediaListRowMeta,
+  MediaListRow,
+  SaveListRowIcon,
+} from "./media-list-row"
+import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
-  MediaListRowMeta,
-  MediaListRow,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
-  SaveListRowIcon,
-} from "./media-list-row"
+} from "./media-list-row-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
+import { ExtractionWaitStatus, SaveExtractionStatus } from "./extraction-status"
 import {
-  ExtractionWaitStatus,
-  SaveExtractionStatus,
   getExtractionStatusInput,
   getExtractionStatusLabel,
-} from "./extraction-status"
+} from "./extraction-status-utils"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
 interface SaveListBrowserProps {
@@ -116,6 +116,119 @@ interface FinderBackButtonProps {
   readonly onExit: () => void
 }
 
+interface SaveListBrowserItemIconProps {
+  readonly label: string
+  readonly parentFolderName?: string
+  readonly presentation:
+    | "episode-still"
+    | "link-poster"
+    | "container-poster"
+    | "icon"
+  readonly rowFallbackIcon: ReactNode
+  readonly isResolving: boolean
+  readonly isExpired: boolean
+  readonly isWatched: boolean
+}
+
+const getSaveListBrowserItemIconPresentation = (
+  shouldShowEpisodeStills: boolean,
+  shouldShowRowPosters: boolean,
+  isFolder: boolean
+) => {
+  if (shouldShowEpisodeStills) {
+    return "episode-still"
+  }
+
+  if (!shouldShowRowPosters) {
+    return "icon"
+  }
+
+  if (isFolder) {
+    return "container-poster"
+  }
+
+  return "link-poster"
+}
+
+const SaveListBrowserItemIcon = ({
+  label,
+  parentFolderName,
+  presentation,
+  rowFallbackIcon,
+  isResolving,
+  isExpired,
+  isWatched,
+}: SaveListBrowserItemIconProps) => {
+  if (presentation === "episode-still") {
+    return (
+      <FinderEpisodeStill
+        label={label}
+        parentFolderName={parentFolderName}
+        fallbackIcon={rowFallbackIcon}
+        isResolving={isResolving}
+        isDimmed={isExpired}
+        isWatched={isWatched}
+      />
+    )
+  }
+
+  if (presentation === "link-poster") {
+    return (
+      <SaveListRowPoster
+        label={label}
+        parentFolderName={parentFolderName}
+        fallbackIcon={rowFallbackIcon}
+        isDimmed={isExpired}
+      />
+    )
+  }
+
+  if (presentation === "container-poster") {
+    return (
+      <SaveListRowPoster
+        label={label}
+        parentFolderName={parentFolderName}
+        isContainer
+        isIconWhenArtworkMissing
+        fallbackIcon={rowFallbackIcon}
+        isDimmed={isExpired}
+      />
+    )
+  }
+
+  return (
+    <SaveListRowIcon
+      className={isExpired ? "text-muted-foreground" : undefined}
+    >
+      {rowFallbackIcon}
+    </SaveListRowIcon>
+  )
+}
+
+interface SaveListItemAriaLabelOptions {
+  readonly itemTitle: string
+  readonly directLink: ExtractedLink | undefined
+  readonly isExtractionIncomplete: boolean
+  readonly extractionStatusLabel: string
+}
+
+const getSaveListItemAriaLabel = ({
+  itemTitle,
+  directLink,
+  isExtractionIncomplete,
+  extractionStatusLabel,
+}: SaveListItemAriaLabelOptions) => {
+  if (isExtractionIncomplete) {
+    return `${extractionStatusLabel} for ${itemTitle}`
+  }
+
+  if (directLink) {
+    return `Open ${directLink.label || itemTitle}`
+  }
+
+  return `View ${itemTitle}`
+}
+
 const isVisibleTreeFolder = (link: ExtractedLink) =>
   getMediaNodeInteractionState(link).isFolder && !isMirrorResolvable(link)
 
@@ -144,7 +257,7 @@ const MobileFolderTreeToggle = ({
   </Button>
 )
 
-export const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
+const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
   <div className="contents md:block md:h-full md:border-r">
     <ImmersiveBackButton onExit={onExit} />
   </div>
@@ -424,7 +537,7 @@ const FinderBrowser = ({
                 />
               )
             }
-            const isFolder = getMediaNodeInteractionState(link).isFolder
+            const { isFolder } = getMediaNodeInteractionState(link)
             const isExpired =
               !isFolder &&
               link.expiry !== undefined &&
@@ -465,40 +578,19 @@ const FinderBrowser = ({
                 key={linkKey}
                 shouldStackIconOnMobile={shouldShowEpisodeStills}
                 icon={
-                  shouldShowEpisodeStills ? (
-                    <FinderEpisodeStill
-                      label={link.label}
-                      parentFolderName={parentFolderName}
-                      fallbackIcon={rowFallbackIcon}
-                      isResolving={isResolving}
-                      isDimmed={isExpired}
-                      isWatched={link.opened === true}
-                    />
-                  ) : shouldShowRowPosters && !isFolder ? (
-                    <SaveListRowPoster
-                      label={link.label}
-                      parentFolderName={parentFolderName}
-                      fallbackIcon={rowFallbackIcon}
-                      isDimmed={isExpired}
-                    />
-                  ) : shouldShowRowPosters ? (
-                    <SaveListRowPoster
-                      label={link.label}
-                      parentFolderName={parentFolderName}
-                      isContainer
-                      isIconWhenArtworkMissing
-                      fallbackIcon={rowFallbackIcon}
-                      isDimmed={isExpired}
-                    />
-                  ) : (
-                    <SaveListRowIcon
-                      className={
-                        isExpired ? "text-muted-foreground" : undefined
-                      }
-                    >
-                      {rowFallbackIcon}
-                    </SaveListRowIcon>
-                  )
+                  <SaveListBrowserItemIcon
+                    label={link.label}
+                    parentFolderName={parentFolderName}
+                    presentation={getSaveListBrowserItemIconPresentation(
+                      shouldShowEpisodeStills,
+                      shouldShowRowPosters,
+                      isFolder
+                    )}
+                    rowFallbackIcon={rowFallbackIcon}
+                    isResolving={isResolving}
+                    isExpired={isExpired}
+                    isWatched={link.opened === true}
+                  />
                 }
                 title={
                   <ExtractionWaitStatus
@@ -600,6 +692,32 @@ interface SaveListRootRowIconProps {
   readonly isDirectLinkExpired: boolean
 }
 
+interface SaveListRootRowFallbackIconProps {
+  readonly isExtractionVisual: boolean
+  readonly didExtractionFail: boolean
+  readonly directLinkLabel: string | undefined
+}
+
+const SaveListRootRowFallbackIcon = ({
+  isExtractionVisual,
+  didExtractionFail,
+  directLinkLabel,
+}: SaveListRootRowFallbackIconProps) => {
+  if (isExtractionVisual && didExtractionFail) {
+    return <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
+  }
+
+  if (isExtractionVisual) {
+    return <Spinner aria-hidden="true" className="size-6" />
+  }
+
+  if (directLinkLabel) {
+    return <HugeiconsIcon icon={PlayIcon} className="size-6" />
+  }
+
+  return <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+}
+
 const SaveListRootRowIcon = ({
   item,
   isExtracting,
@@ -611,16 +729,12 @@ const SaveListRootRowIcon = ({
   const extractionInput = getExtractionStatusInput(item, isExtracting)
   const didExtractionFail = extractionInput === "failed"
   const isExtractionVisual = extractionInput !== "idle"
-  const fallbackIcon = isExtractionVisual ? (
-    didExtractionFail ? (
-      <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
-    ) : (
-      <Spinner aria-hidden="true" className="size-6" />
-    )
-  ) : directLinkLabel ? (
-    <HugeiconsIcon icon={PlayIcon} className="size-6" />
-  ) : (
-    <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+  const fallbackIcon = (
+    <SaveListRootRowFallbackIcon
+      isExtractionVisual={isExtractionVisual}
+      didExtractionFail={didExtractionFail}
+      directLinkLabel={directLinkLabel}
+    />
   )
 
   if (shouldShowRowPosters) {
@@ -749,13 +863,15 @@ export const SaveListBrowser = ({
                     <button
                       type="button"
                       disabled={isDirectLinkExpired || isExtractionIncomplete}
-                      aria-label={
-                        isExtractionIncomplete
-                          ? `${getExtractionStatusLabel(item, isExtracting)} for ${getItemTitle(item)}`
-                          : directLink
-                            ? `Open ${directLink.label || getItemTitle(item)}`
-                            : `View ${getItemTitle(item)}`
-                      }
+                      aria-label={getSaveListItemAriaLabel({
+                        itemTitle: getItemTitle(item),
+                        directLink,
+                        isExtractionIncomplete,
+                        extractionStatusLabel: getExtractionStatusLabel(
+                          item,
+                          isExtracting
+                        ),
+                      })}
                       className={cn(
                         "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                         (isDirectLinkExpired || isExtractionIncomplete) &&

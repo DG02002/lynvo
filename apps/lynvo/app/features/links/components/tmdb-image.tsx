@@ -67,7 +67,23 @@ const getTmdbImageSrcSet = (
     .join(", ")
 }
 
-export const TmdbImage = ({
+const getTmdbFullUrl = (
+  path: string | undefined,
+  isRemotePath: boolean,
+  fullBaseUrl: string
+) => {
+  if (!path) {
+    return undefined
+  }
+
+  if (isRemotePath) {
+    return path
+  }
+
+  return `${fullBaseUrl}${path}`
+}
+
+const TmdbImageContent = ({
   path,
   variant,
   alt,
@@ -85,11 +101,7 @@ export const TmdbImage = ({
 
   const isRemotePath = path?.startsWith("http") ?? false
   const baseUrlPair = getTmdbImageBaseUrlPair(variant)
-  const fullUrl = !path
-    ? undefined
-    : isRemotePath
-      ? path
-      : `${baseUrlPair.full}${path}`
+  const fullUrl = getTmdbFullUrl(path, isRemotePath, baseUrlPair.full)
   const previewUrl =
     !path || isRemotePath ? undefined : `${baseUrlPair.preview}${path}`
   const fullSrcSet =
@@ -99,13 +111,13 @@ export const TmdbImage = ({
     if (hasImageLoaded(previewImageRef.current)) {
       setIsPreviewLoaded(true)
     }
-  }, [previewUrl])
+  }, [])
 
   useEffect(() => {
     if (hasImageLoaded(fullImageRef.current)) {
       setIsFullLoaded(true)
     }
-  }, [fullUrl])
+  }, [])
 
   if (!path) {
     return null
@@ -153,4 +165,9 @@ export const TmdbImage = ({
       />
     </>
   )
+}
+
+export const TmdbImage = (props: TmdbImageProps) => {
+  const imageIdentity = `${props.variant}:${props.imageType ?? "poster"}:${props.path ?? ""}`
+  return <TmdbImageContent key={imageIdentity} {...props} />
 }

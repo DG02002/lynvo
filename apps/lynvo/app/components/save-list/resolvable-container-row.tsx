@@ -1,4 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
 import {
   PackageIcon,
   PackageOpenIcon,
@@ -11,13 +12,15 @@ import { FilenameText } from "~/components/filename-text"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import {
-  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-  MEDIA_LIST_ROW_TITLE_CLASS,
   MediaListRow,
   MediaListRowMeta,
-  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
   SaveListRowIcon,
 } from "~/components/save-list/media-list-row"
+import {
+  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
+  MEDIA_LIST_ROW_TITLE_CLASS,
+  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+} from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
 import { SaveListRowPoster } from "~/components/save-list/save-list-row-poster"
@@ -52,6 +55,48 @@ interface ResolvableContainerRowProps {
   readonly onRemove: () => void
   readonly shouldShowRowPosters?: boolean
   readonly episodeStill?: ResolvableContainerEpisodeStill
+}
+
+interface ResolvableContainerRowIconProps {
+  readonly episodeStill?: ResolvableContainerEpisodeStill
+  readonly shouldShowRowPosters: boolean
+  readonly containerIcon: ReactNode
+  readonly shouldShowResolving: boolean
+  readonly linkLabel: string
+  readonly isWatched: boolean
+}
+
+const ResolvableContainerRowIcon = ({
+  episodeStill,
+  shouldShowRowPosters,
+  containerIcon,
+  shouldShowResolving,
+  linkLabel,
+  isWatched,
+}: ResolvableContainerRowIconProps) => {
+  if (episodeStill) {
+    return (
+      <FinderEpisodeStill
+        label={episodeStill.label}
+        parentFolderName={episodeStill.parentFolderName}
+        fallbackIcon={containerIcon}
+        isResolving={shouldShowResolving}
+        isWatched={isWatched}
+      />
+    )
+  }
+
+  if (shouldShowRowPosters) {
+    return (
+      <SaveListRowPoster
+        label={linkLabel}
+        isContainer
+        fallbackIcon={containerIcon}
+      />
+    )
+  }
+
+  return <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
 }
 
 const ResolvedMirrorRows = ({
@@ -148,6 +193,21 @@ const ResolvedMirrorRows = ({
   </div>
 )
 
+const getResolvableContainerIconState = (
+  hasMirrors: boolean,
+  isExpanded: boolean
+) => {
+  if (!hasMirrors) {
+    return { stateKey: "search", icon: PackageSearchIcon }
+  }
+
+  if (isExpanded) {
+    return { stateKey: "open", icon: PackageOpenIcon }
+  }
+
+  return { stateKey: "closed", icon: PackageIcon }
+}
+
 export const ResolvableContainerRow = ({
   item,
   link,
@@ -170,8 +230,8 @@ export const ResolvableContainerRow = ({
   } = useResolvableContainerState({ item, link, actions })
   const shouldShowResolving = isResolving || isStateResolving
   const resolutionState = shouldShowResolving ? "resolving" : resolvedState
-  const containerIconStateKey =
-    mirrors.length > 0 ? (isExpanded ? "open" : "closed") : "search"
+  const { stateKey: containerIconStateKey, icon: containerIconDefinition } =
+    getResolvableContainerIconState(mirrors.length > 0, isExpanded)
   const containerIcon = shouldShowResolving ? (
     <Spinner
       aria-label={`Loading playable links for ${link.label}…`}
@@ -179,16 +239,7 @@ export const ResolvableContainerRow = ({
     />
   ) : (
     <AnimatedStateIcon stateKey={containerIconStateKey}>
-      <HugeiconsIcon
-        icon={
-          mirrors.length > 0
-            ? isExpanded
-              ? PackageOpenIcon
-              : PackageIcon
-            : PackageSearchIcon
-        }
-        className="size-6"
-      />
+      <HugeiconsIcon icon={containerIconDefinition} className="size-6" />
     </AnimatedStateIcon>
   )
 
@@ -215,23 +266,14 @@ export const ResolvableContainerRow = ({
           "data-resolution-state": resolutionState,
         }}
         icon={
-          episodeStill ? (
-            <FinderEpisodeStill
-              label={episodeStill.label}
-              parentFolderName={episodeStill.parentFolderName}
-              fallbackIcon={containerIcon}
-              isResolving={shouldShowResolving}
-              isWatched={link.opened === true}
-            />
-          ) : shouldShowRowPosters ? (
-            <SaveListRowPoster
-              label={link.label}
-              isContainer
-              fallbackIcon={containerIcon}
-            />
-          ) : (
-            <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
-          )
+          <ResolvableContainerRowIcon
+            episodeStill={episodeStill}
+            shouldShowRowPosters={shouldShowRowPosters}
+            containerIcon={containerIcon}
+            shouldShowResolving={shouldShowResolving}
+            linkLabel={link.label}
+            isWatched={link.opened === true}
+          />
         }
         title={
           <ExtractionWaitStatus

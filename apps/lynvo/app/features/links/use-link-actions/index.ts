@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import { showErrorToast } from "~/lib/toast-notifications"
-import type { LinkListItem } from "~/features/links/types"
+import type { LinkListItem, LinkViewItem } from "~/features/links/types"
 import type { ExtractionPreview } from "./action-types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinksActions } from "~/features/links/use-links/actions"
@@ -14,12 +14,10 @@ import { useRefreshActions } from "./refresh-actions"
 import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
-import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 import {
   getLinkViewItemExtractedLinks,
   getLinkViewItemFlatMeta,
 } from "~/features/links/link-metadata-accessors"
-import type { LinkViewItem } from "~/features/links/types"
 
 interface UseLinkActionsProps {
   links: LinkListItem[]
@@ -37,7 +35,6 @@ export function useLinkActions({
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
   const savedLinks = links.filter((item) => item.kind === "saved")
-  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
 
   const {
     selectionDialogState,
@@ -110,12 +107,11 @@ export function useLinkActions({
       setError,
       setCurrentUrl: setUrl,
       setHighlightedId,
-      shouldAutoSaveAllLinks,
     })
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
-      const originalUrl = selectionDialogState.originalUrl
+      const { originalUrl } = selectionDialogState
       try {
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,

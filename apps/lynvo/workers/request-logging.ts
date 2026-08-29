@@ -119,7 +119,7 @@ export const requestLogging = (
         content_length: request.headers.get("content-length"),
       })
       await next()
-      const status = context.res.status
+      const { status } = context.res
       const failure = status >= 400 ? await readErrorResponse(context.res) : {}
       const logger = context.get("log")
       logger?.set({

@@ -1,8 +1,8 @@
-import type { SealedRecord } from "../app/lib/security/sealed-record"
 import {
   isSealedRecord,
   sealRecord,
   unsealRecord,
+  type SealedRecord,
 } from "../app/lib/security/sealed-record"
 import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
 import { Result, Schema } from "effect"
@@ -37,6 +37,47 @@ const additionalData = ({ userId, pluginServerId }: CredentialContext) =>
 const isContext = <Value>(value: Value): value is Value & CredentialContext =>
   Result.isSuccess(Schema.decodeUnknownResult(credentialContextSchema)(value))
 
+const encryptCredential = async (
+  encodedKey: string,
+  payload: CredentialContext
+): Promise<Response> => {
+  const encryptPayload = Schema.decodeUnknownResult(
+    encryptCredentialPayloadSchema
+  )(payload)
+  if (Result.isFailure(encryptPayload)) {
+    return new Response(null, { status: 400 })
+  }
+  try {
+    const credential = await sealRecord({
+      encodedKey,
+      additionalData: additionalData(encryptPayload.success),
+      plaintext: new TextEncoder().encode(encryptPayload.success.apiKey),
+    })
+    return Response.json(credential satisfies EncryptedPluginServerCredential)
+  } catch {
+    return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
+  }
+}
+
+const decryptCredential = async (
+  encodedKey: string,
+  payload: CredentialContext
+): Promise<Response> => {
+  if (!("credential" in payload) || !isSealedRecord(payload.credential)) {
+    return new Response(null, { status: 400 })
+  }
+  try {
+    const plaintext = await unsealRecord({
+      encodedKey,
+      additionalData: additionalData(payload),
+      record: payload.credential,
+    })
+    return Response.json({ apiKey: new TextDecoder().decode(plaintext) })
+  } catch {
+    return new Response(null, { status: 422 })
+  }
+}
+
 export class PluginServerCredentialVault implements DurableObject {
   constructor(
     _state: DurableObjectState,
@@ -60,41 +101,12 @@ export class PluginServerCredentialVault implements DurableObject {
     if (!isContext(payload)) {
       return new Response(null, { status: 400 })
     }
-    const pathname = new URL(request.url).pathname
+    const { pathname } = new URL(request.url)
     if (pathname === "/encrypt") {
-      const encryptPayload = Schema.decodeUnknownResult(
-        encryptCredentialPayloadSchema
-      )(payload)
-      if (Result.isFailure(encryptPayload)) {
-        return new Response(null, { status: 400 })
-      }
-      try {
-        const credential = await sealRecord({
-          encodedKey,
-          additionalData: additionalData(encryptPayload.success),
-          plaintext: new TextEncoder().encode(encryptPayload.success.apiKey),
-        })
-        return Response.json(
-          credential satisfies EncryptedPluginServerCredential
-        )
-      } catch {
-        return Response.json(UNAVAILABLE_RESPONSE, { status: 503 })
-      }
+      return encryptCredential(encodedKey, payload)
     }
     if (pathname === "/decrypt") {
-      if (!("credential" in payload) || !isSealedRecord(payload.credential)) {
-        return new Response(null, { status: 400 })
-      }
-      try {
-        const plaintext = await unsealRecord({
-          encodedKey,
-          additionalData: additionalData(payload),
-          record: payload.credential,
-        })
-        return Response.json({ apiKey: new TextDecoder().decode(plaintext) })
-      } catch {
-        return new Response(null, { status: 422 })
-      }
+      return decryptCredential(encodedKey, payload)
     }
     return new Response(null, { status: 404 })
   }

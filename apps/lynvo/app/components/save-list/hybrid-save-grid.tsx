@@ -17,10 +17,8 @@ import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwor
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import { cn } from "~/lib/utils"
 import { useLongPress } from "~/hooks/use-long-press"
-import {
-  SaveExtractionStatus,
-  getExtractionStatusInput,
-} from "./extraction-status"
+import { SaveExtractionStatus } from "./extraction-status"
+import { getExtractionStatusInput } from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { getItemTitle } from "./save-list-browser-model"
 import {
@@ -45,6 +43,89 @@ interface HybridSaveCardProps {
   readonly onOpenGroup: (groupKey: string) => void
 }
 
+interface HybridSaveCardArtworkProps {
+  readonly displayTitle: string
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isArtworkPending: boolean
+  readonly isExtractionVisual: boolean
+  readonly isExtractionFailed: boolean
+  readonly onDelete: () => void
+  readonly onOpenLog: () => void
+}
+
+const HybridSaveCardArtwork = ({
+  displayTitle,
+  imagePath,
+  imageType,
+  isArtworkPending,
+  isExtractionVisual,
+  isExtractionFailed,
+  onDelete,
+  onOpenLog,
+}: HybridSaveCardArtworkProps) => {
+  if (isExtractionVisual) {
+    if (!isExtractionFailed) {
+      return (
+        <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
+          <Spinner aria-hidden="true" className="size-8" />
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
+        <HugeiconsIcon
+          icon={AlertCircleIcon}
+          aria-label="Extraction failed"
+          className="size-8 text-muted-foreground"
+        />
+        <div className="z-10 flex flex-col items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onDelete}>
+            <HugeiconsIcon icon={Delete02Icon} />
+            Delete
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onOpenLog}>
+            <HugeiconsIcon icon={SourceCodeSquareIcon} />
+            Log
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (imagePath) {
+    return (
+      <TmdbImage
+        path={imagePath}
+        variant="card"
+        imageType={imageType}
+        sizes="(min-width: 768px) 14vw, (min-width: 640px) 28vw, 45vw"
+        alt={`Artwork for ${displayTitle}`}
+        width={342}
+        height={513}
+      />
+    )
+  }
+
+  if (isArtworkPending) {
+    return (
+      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
+        <Spinner
+          aria-label={`Loading artwork for ${displayTitle}…`}
+          className="size-8"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
+      No poster found
+    </div>
+  )
+}
+
 const HybridSaveCard = ({
   group,
   actions,
@@ -54,7 +135,7 @@ const HybridSaveCard = ({
   onOpenItem,
   onOpenGroup,
 }: HybridSaveCardProps) => {
-  const item = group.items[0]
+  const [item] = group.items
   const isSingleItem = group.items.length === 1 && item !== undefined
   const interactionState = isSingleItem
     ? getSavedLinkInteractionState(item, currentTimeMs)
@@ -70,6 +151,7 @@ const HybridSaveCard = ({
     getExtractionStatusInput(item, isExtracting) !== "idle"
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
+  const imageType = artwork?.stillPath ? "still" : "poster"
   const isArtworkPending =
     group.artworkRequest !== undefined && artwork === undefined
   const isExtractionFailed = extractionState === "failed"
@@ -129,66 +211,20 @@ const HybridSaveCard = ({
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
       >
-        {isExtractionVisual ? (
-          <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4">
-            {isExtractionFailed ? (
-              <>
-                <HugeiconsIcon
-                  icon={AlertCircleIcon}
-                  aria-label="Extraction failed"
-                  className="size-8 text-muted-foreground"
-                />
-                <div className="z-10 flex flex-col items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (item) {
-                        actions.remove(item.url, item.id)
-                      }
-                    }}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} />
-                    Delete
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsLogDialogOpen(true)}
-                  >
-                    <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                    Log
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <Spinner aria-hidden="true" className="size-8" />
-            )}
-          </div>
-        ) : imagePath ? (
-          <TmdbImage
-            path={imagePath}
-            variant="card"
-            imageType={artwork?.stillPath ? "still" : "poster"}
-            sizes="(min-width: 768px) 14vw, (min-width: 640px) 28vw, 45vw"
-            alt={`Artwork for ${group.displayTitle}`}
-            width={342}
-            height={513}
-          />
-        ) : isArtworkPending ? (
-          <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-            <Spinner
-              aria-label={`Loading artwork for ${group.displayTitle}…`}
-              className="size-8"
-            />
-          </div>
-        ) : (
-          <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
-            No poster found
-          </div>
-        )}
+        <HybridSaveCardArtwork
+          displayTitle={group.displayTitle}
+          imagePath={imagePath}
+          imageType={imageType}
+          isArtworkPending={isArtworkPending}
+          isExtractionVisual={isExtractionVisual}
+          isExtractionFailed={isExtractionFailed}
+          onDelete={() => {
+            if (item) {
+              actions.remove(item.url, item.id)
+            }
+          }}
+          onOpenLog={() => setIsLogDialogOpen(true)}
+        />
         <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button
