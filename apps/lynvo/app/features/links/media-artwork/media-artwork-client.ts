@@ -11,6 +11,23 @@ import {
 const mediaArtworkResultSchema = Schema.Struct({
   posterPath: Schema.optional(Schema.String),
   stillPath: Schema.optional(Schema.String),
+  identity: Schema.optional(
+    Schema.Struct({
+      providerId: Schema.Number,
+      title: Schema.String,
+      year: Schema.optional(Schema.Number),
+    })
+  ),
+  candidates: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        providerId: Schema.Number,
+        title: Schema.String,
+        year: Schema.optional(Schema.Number),
+        posterPath: Schema.optional(Schema.String),
+      })
+    )
+  ),
 })
 
 const mediaArtworkResponseSchema = Schema.Struct({
@@ -19,6 +36,7 @@ const mediaArtworkResponseSchema = Schema.Struct({
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
   [
+    request.providerId ?? "",
     request.mediaKind,
     request.title.normalize("NFKC").toLocaleLowerCase(),
     request.year ?? "",

@@ -230,6 +230,14 @@ export const HybridGroupBrowser = ({
             <h2 className="hidden pt-3 text-center font-heading text-base font-normal break-words md:block">
               {group.displayTitle}
             </h2>
+            {artwork?.identity ? (
+              <p className="hidden pt-1 text-center text-xs text-muted-foreground md:block">
+                Artwork: {artwork.identity.title}
+                {artwork.identity.year !== undefined
+                  ? ` (${artwork.identity.year})`
+                  : ""}
+              </p>
+            ) : null}
           </div>
           <h1
             aria-label={group.displayTitle}

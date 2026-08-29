@@ -73,6 +73,8 @@ export interface LinkMetadata {
   }
   /** Bounded, newest-last record of Plugin Server communication. */
   debugLog?: LinkDebugLogEntry[]
+  /** Authoritative artwork identity; by-id lookups never re-guess. */
+  artwork?: MediaArtworkIdentity
 }
 
 export interface MetaData {

@@ -49,17 +49,55 @@ const normalizeSeparators = (value: string): string =>
 const getMatchingText = (filename: string): string =>
   normalizeSeparators(stripMediaExtension(filename))
 
-const getYearMatch = (value: string): YearMatch | undefined => {
+const getAllYearMatches = (value: string): YearMatch[] => {
+  const matches: YearMatch[] = []
   YEAR_PATTERN.lastIndex = 0
-  const match = YEAR_PATTERN.exec(value)
-  if (!match) {
+  for (
+    let match = YEAR_PATTERN.exec(value);
+    match;
+    match = YEAR_PATTERN.exec(value)
+  ) {
+    const year = Number(match[1])
+    if (year >= MEDIA_YEAR_MIN && year <= MEDIA_YEAR_MAX) {
+      matches.push({
+        year,
+        index: match.index + match[0].indexOf(match[1] ?? ""),
+      })
+    }
+  }
+  return matches
+}
+
+const isEnclosedYear = (value: string, index: number): boolean => {
+  const before = value[index - 1] ?? ""
+  const after = value[index + 4] ?? ""
+  return (before === "(" && after === ")") || (before === "[" && after === "]")
+}
+
+/**
+ * Some titles are themselves years ("2012 (2009)", "1917 (2019)"): a year
+ * leading the title is part of the title when any later year exists, and a
+ * lone leading year is never treated as the release year.
+ */
+const getYearMatch = (value: string): YearMatch | undefined => {
+  const matches = getAllYearMatches(value)
+  if (matches.length === 0) {
     return undefined
   }
-  const year = Number(match[1])
-  if (year < MEDIA_YEAR_MIN || year > MEDIA_YEAR_MAX) {
+  const [leadingMatch, ...laterMatches] = matches
+  const titleIsYearLeading =
+    leadingMatch !== undefined &&
+    value.slice(0, leadingMatch.index).trim() === ""
+  if (!titleIsYearLeading) {
+    return leadingMatch
+  }
+  if (laterMatches.length === 0) {
     return undefined
   }
-  return { year, index: match.index + match[0].indexOf(match[1] ?? "") }
+  return (
+    laterMatches.find((match) => isEnclosedYear(value, match.index)) ??
+    laterMatches[0]
+  )
 }
 
 const normalizeTitle = (value: string): string | undefined => {

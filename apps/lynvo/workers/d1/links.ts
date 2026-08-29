@@ -74,6 +74,12 @@ export type SavedLinkMetadataOperation =
       expectedExtractionJson: string
       extractedLinksJson: string
     }
+  | {
+      kind: "setArtwork"
+      providerId: number
+      title: string
+      year?: number
+    }
 
 export interface SavedLinkCommandResult {
   id: string | null
@@ -572,6 +578,14 @@ export const applySavedLinkMetadataOperation = async (
             metadata.playback.openedUrls,
             [input.operation.linkUrl]
           )
+          break
+        }
+        case "setArtwork": {
+          metadata.artwork = {
+            providerId: input.operation.providerId,
+            title: input.operation.title,
+            year: input.operation.year,
+          }
           break
         }
         case "cacheMirrors": {

@@ -203,6 +203,7 @@ export const useLinksWithRuntime = (
     markOpened: mutations.markLinkAsOpened,
     cacheResolvedMirrors: mutations.cacheResolvedMirrors,
     removeLink: mutations.removeLink,
+    setArtwork: mutations.setArtwork,
   }
 
   return {

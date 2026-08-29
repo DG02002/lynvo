@@ -94,6 +94,7 @@ export function useLinkActions({
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
     chooseLinks: handleChooseLinks,
+    setArtwork: linkActions.setArtwork,
   }
   const { isSaving, handleSave, confirmSelection, pluginDomainDialog } =
     useSaveActions({

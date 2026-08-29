@@ -232,6 +232,12 @@ export interface ApplyMetadataOperationInput {
         readonly expectedExtractionJson: string
         readonly extractedLinksJson: string
       }
+    | {
+        readonly kind: "setArtwork"
+        readonly providerId: number
+        readonly title: string
+        readonly year?: number
+      }
 }
 
 export type SavedLinkApiMetadataOperation =

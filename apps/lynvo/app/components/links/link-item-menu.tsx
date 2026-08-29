@@ -7,6 +7,7 @@ import {
   Delete02Icon,
   EllipsisIcon,
   RefreshDotIcon,
+  Image01Icon,
   SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
 import {
@@ -26,6 +27,7 @@ import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import { LinkDebugLogDialog } from "./link-debug-log-dialog"
+import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
@@ -57,6 +59,7 @@ const LinkItemMenuContent = ({
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
@@ -133,6 +136,12 @@ const LinkItemMenuContent = ({
                 <HugeiconsIcon icon={SourceCodeSquareIcon} />
                 Log
               </DropdownMenuItem>
+              {actions.setArtwork && (
+                <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
+                  <HugeiconsIcon icon={Image01Icon} />
+                  Change artwork
+                </DropdownMenuItem>
+              )}
               {!playableLink && (
                 <DropdownMenuItem onClick={() => refreshLink(item.url)}>
                   <HugeiconsIcon icon={RefreshDotIcon} />
@@ -203,6 +212,12 @@ const LinkItemMenuContent = ({
         item={item}
         open={isLogDialogOpen}
         onOpenChange={setIsLogDialogOpen}
+      />
+      <ChangeArtworkDialog
+        item={item}
+        open={isArtworkDialogOpen}
+        onOpenChange={setIsArtworkDialogOpen}
+        onSelect={(identity) => actions.setArtwork?.(item.url, identity)}
       />
     </>
   )

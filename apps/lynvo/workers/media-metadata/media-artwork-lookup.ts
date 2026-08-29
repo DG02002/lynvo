@@ -1,4 +1,19 @@
 import { createTmdbAdapter, type TmdbAdapter } from "./tmdb-adapter"
+import { selectBestSearchResult } from "./search-result-selection"
+import type { TmdbSearchResult } from "./tmdb-adapter"
+
+interface MediaArtworkIdentity {
+  readonly providerId: number
+  readonly title: string
+  readonly year?: number
+}
+
+export interface MediaArtworkCandidate {
+  readonly providerId: number
+  readonly title: string
+  readonly year?: number
+  readonly posterPath?: string
+}
 
 interface MediaArtworkLookupRequest {
   readonly title: string
@@ -6,11 +21,17 @@ interface MediaArtworkLookupRequest {
   readonly year?: number
   readonly seasonNumber?: number
   readonly episodeNumber?: number
+  /** When present, artwork resolves by immutable id; no title matching. */
+  readonly providerId?: number
 }
 
 interface MediaArtworkLookupResult {
   readonly posterPath?: string
   readonly stillPath?: string
+  /** The work this artwork belongs to; displayed so mismatches are visible. */
+  readonly identity?: MediaArtworkIdentity
+  /** Raw search candidates for the picker, title-based requests only. */
+  readonly candidates?: readonly MediaArtworkCandidate[]
 }
 
 export type MediaArtworkLookupOutcome =
@@ -29,6 +50,53 @@ interface MediaArtworkLookupDependencies {
 const failedOutcome: MediaArtworkLookupOutcome = { status: "failed" }
 const emptyOutcome: MediaArtworkLookupOutcome = { status: "empty" }
 
+const toIdentity = (result: TmdbSearchResult): MediaArtworkIdentity =>
+  result.year === undefined
+    ? { providerId: result.providerId, title: result.title }
+    : {
+        providerId: result.providerId,
+        title: result.title,
+        year: result.year,
+      }
+
+const toCandidates = (
+  results: readonly TmdbSearchResult[] | undefined
+): readonly MediaArtworkCandidate[] | undefined =>
+  results
+    ? results.slice(0, 5).map((result) => ({ ...toIdentity(result) }))
+    : undefined
+
+/**
+ * Identity-resolved lookups fetch by immutable provider id, so the result
+ * cannot belong to a different work; the matching step does not run.
+ */
+const lookupArtworkById = async (
+  adapter: TmdbAdapter,
+  request: MediaArtworkLookupRequest
+): Promise<MediaArtworkLookupOutcome> => {
+  if (request.providerId === undefined) {
+    return emptyOutcome
+  }
+  const details =
+    request.mediaKind === "movie"
+      ? await adapter.getMovieDetails(request.providerId)
+      : await adapter.getTvDetails(request.providerId)
+  if (details.kind !== "success" || !details.value) {
+    return failedOutcome
+  }
+  return {
+    status: "resolved",
+    result: {
+      posterPath: details.value.posterPath,
+      identity: toIdentity({
+        providerId: request.providerId,
+        title: details.value.title,
+        year: details.value.year,
+      }),
+    },
+  }
+}
+
 const lookupEpisodeArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
@@ -43,10 +111,10 @@ const lookupEpisodeArtwork = async (
   if (search.kind !== "success") {
     return failedOutcome
   }
-  if (!search.value || search.value.length === 0) {
+  const show = selectBestSearchResult(request.title, search.value ?? [])
+  if (!show) {
     return emptyOutcome
   }
-  const show = search.value[0]
   const episode = await adapter.getTvEpisodeDetails(
     show.providerId,
     request.seasonNumber,
@@ -59,6 +127,8 @@ const lookupEpisodeArtwork = async (
     result: {
       posterPath: show.posterPath,
       stillPath: stillPath ?? undefined,
+      identity: toIdentity(show),
+      candidates: toCandidates(search.value),
     },
   }
 }
@@ -74,10 +144,10 @@ const lookupSeasonArtwork = async (
   if (search.kind !== "success") {
     return failedOutcome
   }
-  if (!search.value || search.value.length === 0) {
+  const show = selectBestSearchResult(request.title, search.value ?? [])
+  if (!show) {
     return emptyOutcome
   }
-  const show = search.value[0]
   const season = await adapter.getTvSeasonDetails(
     show.providerId,
     request.seasonNumber
@@ -86,7 +156,11 @@ const lookupSeasonArtwork = async (
     season.kind === "success" ? season.value?.posterPath : undefined
   return {
     status: "resolved",
-    result: { posterPath: seasonPosterPath ?? show.posterPath },
+    result: {
+      posterPath: seasonPosterPath ?? show.posterPath,
+      identity: toIdentity(show),
+      candidates: toCandidates(search.value),
+    },
   }
 }
 
@@ -98,13 +172,17 @@ const lookupTvArtwork = async (
   if (search.kind !== "success") {
     return failedOutcome
   }
-  if (!search.value || search.value.length === 0) {
-    return emptyOutcome
-  }
-  return {
-    status: "resolved",
-    result: { posterPath: search.value[0].posterPath },
-  }
+  const show = selectBestSearchResult(request.title, search.value ?? [])
+  return show
+    ? {
+        status: "resolved",
+        result: {
+          posterPath: show.posterPath,
+          identity: toIdentity(show),
+          candidates: toCandidates(search.value),
+        },
+      }
+    : emptyOutcome
 }
 
 const lookupMovieArtwork = async (
@@ -115,19 +193,26 @@ const lookupMovieArtwork = async (
   if (search.kind !== "success") {
     return failedOutcome
   }
-  if (!search.value || search.value.length === 0) {
-    return emptyOutcome
-  }
-  return {
-    status: "resolved",
-    result: { posterPath: search.value[0].posterPath },
-  }
+  const movie = selectBestSearchResult(request.title, search.value ?? [])
+  return movie
+    ? {
+        status: "resolved",
+        result: {
+          posterPath: movie.posterPath,
+          identity: toIdentity(movie),
+          candidates: toCandidates(search.value),
+        },
+      }
+    : emptyOutcome
 }
 
 const lookupOutcome = (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
 ): Promise<MediaArtworkLookupOutcome> => {
+  if (request.providerId !== undefined) {
+    return lookupArtworkById(adapter, request)
+  }
   if (
     request.seasonNumber !== undefined &&
     request.episodeNumber !== undefined

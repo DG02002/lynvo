@@ -1,4 +1,7 @@
-import { getLinkViewItemExtractedLinks } from "../link-metadata-accessors"
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemMetadata,
+} from "../link-metadata-accessors"
 import { toLinkViewModel } from "../link-view-models"
 import { getSavedLinkInteractionState } from "../saved-link-interaction"
 import { parseMediaFilename } from "./media-filename-parser"
@@ -181,6 +184,19 @@ const getGroupArtworkRequest = (
 ): MediaArtworkRequest | undefined => {
   if (group.mediaKind === "unmatched" || !group.requestTitle) {
     return undefined
+  }
+  // A stored identity is authoritative: resolve by immutable id and skip
+  // title matching entirely.
+  const storedArtwork = group.items.find(
+    (item) => getLinkViewItemMetadata(item).artwork !== undefined
+  )?.metadata.artwork
+  if (storedArtwork) {
+    return {
+      mediaKind: group.mediaKind,
+      title: storedArtwork.title,
+      providerId: storedArtwork.providerId,
+      year: storedArtwork.year,
+    }
   }
   if (group.mediaKind === "tv") {
     return { mediaKind: "tv", title: group.requestTitle }

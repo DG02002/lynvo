@@ -188,13 +188,14 @@ const HybridSaveCard = ({
                 type="button"
                 variant="ghost"
                 aria-label={`Choose links for ${group.displayTitle}`}
-                className={HYBRID_CARD_MENU_TRIGGER_CLASS}
+                className="h-10 gap-1.5 rounded-full bg-background/80 px-3 text-xs shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
                 onClick={(event) => {
                   event.stopPropagation()
                   actions.chooseLinks?.(item)
                 }}
               >
                 <HugeiconsIcon icon={CheckListIcon} className="size-5" />
+                Choose links
               </Button>
             </div>
             <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center sm:hidden">

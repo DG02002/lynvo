@@ -68,7 +68,13 @@ describe("Media artwork lookup", () => {
       { fetch }
     )
 
-    expect(results).toEqual([{ posterPath: "/m.jpg" }])
+    expect(results).toEqual([
+      {
+        posterPath: "/m.jpg",
+        identity: { providerId: 42, title: "Example Movie" },
+        candidates: [{ providerId: 42, title: "Example Movie" }],
+      },
+    ])
   })
 
   it("resolves episode stills through the tv search and episode details", async () => {
@@ -97,7 +103,14 @@ describe("Media artwork lookup", () => {
       { fetch }
     )
 
-    expect(results).toEqual([{ posterPath: "/s.jpg", stillPath: "/e.jpg" }])
+    expect(results).toEqual([
+      {
+        posterPath: "/s.jpg",
+        stillPath: "/e.jpg",
+        identity: { providerId: 7, title: "Example Show" },
+        candidates: [{ providerId: 7, title: "Example Show" }],
+      },
+    ])
   })
 
   it("resolves show posters through the tv search for tv title requests", async () => {
@@ -116,7 +129,13 @@ describe("Media artwork lookup", () => {
       { fetch }
     )
 
-    expect(results).toEqual([{ posterPath: "/tv.jpg" }])
+    expect(results).toEqual([
+      {
+        posterPath: "/tv.jpg",
+        identity: { providerId: 9, title: "Example Show" },
+        candidates: [{ providerId: 9, title: "Example Show" }],
+      },
+    ])
   })
 
   it("returns empty artwork when no search result matches", async () => {

@@ -331,6 +331,7 @@ const mediaArtworkRequestItemSchema = Schema.Struct({
   year: Schema.optional(Schema.Number),
   seasonNumber: Schema.optional(Schema.Number),
   episodeNumber: Schema.optional(Schema.Number),
+  providerId: Schema.optional(Schema.Number),
 })
 
 const mediaArtworkRequestSchema = Schema.Struct({

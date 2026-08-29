@@ -145,6 +145,12 @@ export const createLinksMutations = ({
         const { linkUrl } = operation
         return linkUrl ? { kind: "markOpened", linkUrl } : undefined
       }
+      case "setArtwork": {
+        const { providerId, title, year } = operation
+        return providerId !== undefined && title !== undefined
+          ? { kind: "setArtwork", providerId, title, year }
+          : undefined
+      }
       case "cacheMirrors": {
         const { lazyItemUrl, mirrors } = operation
         return lazyItemUrl && mirrors
@@ -243,6 +249,19 @@ export const createLinksMutations = ({
     )
   }
 
+  const setArtwork = (
+    itemUrl: string,
+    identity: MediaArtworkIdentity
+  ): void => {
+    const operation: LinkMetadataOperation = {
+      kind: "setArtwork",
+      providerId: identity.providerId,
+      title: identity.title,
+      year: identity.year,
+    }
+    void runMetadataUpdate(itemUrl, operation, (item) => item)
+  }
+
   const removeLink = (
     itemUrl: string,
     linkKey: string,
@@ -280,6 +299,7 @@ export const createLinksMutations = ({
     updateLinks,
     markLinkAsOpened,
     cacheResolvedMirrors,
+    setArtwork,
     removeLink,
   }
 }

@@ -7,12 +7,16 @@ declare global {
       | "cacheMirrors"
       | "removeExtractedLink"
       | "replaceExtraction"
+      | "setArtwork"
     linkUrl?: string
     linkKey?: string
     lazyItemUrl?: string
     mirrors?: ExtractedLink[]
     expectedExtraction?: ExtractedLink[]
     extractedLinks?: ExtractedLink[]
+    providerId?: number
+    title?: string
+    year?: number
   }
 
   interface LinksSnapshotStore {

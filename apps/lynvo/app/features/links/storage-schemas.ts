@@ -145,6 +145,13 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   debugLog: Schema.optional(
     Schema.mutable(Schema.Array(linkDebugLogEntrySchema))
   ),
+  artwork: Schema.optional(
+    Schema.Struct({
+      providerId: Schema.Number,
+      title: Schema.String,
+      year: Schema.optional(Schema.Number),
+    })
+  ),
 })
 
 export const parseCanonicalLinkMetadataJson = (metadataJson: string) =>

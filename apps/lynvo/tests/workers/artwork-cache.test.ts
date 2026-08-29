@@ -35,7 +35,13 @@ describe("media artwork cache", () => {
       requests,
       dependencies
     )
-    expect(first).toEqual([{ posterPath: "/poster.jpg" }])
+    expect(first).toEqual([
+      {
+        posterPath: "/poster.jpg",
+        identity: { providerId: 42, title: "Cache Test" },
+        candidates: [{ providerId: 42, title: "Cache Test" }],
+      },
+    ])
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await vi.waitFor(async () => {
@@ -62,7 +68,13 @@ describe("media artwork cache", () => {
       requests,
       dependencies
     )
-    expect(second).toEqual([{ posterPath: "/poster.jpg" }])
+    expect(second).toEqual([
+      {
+        posterPath: "/poster.jpg",
+        identity: { providerId: 42, title: "Cache Test" },
+        candidates: [{ providerId: 42, title: "Cache Test" }],
+      },
+    ])
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

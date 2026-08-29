@@ -20,4 +20,6 @@ export interface LinkItemActions {
   ) => Promise<ExtractedLink[] | null>
   /** Opens the link selection dialog to re-choose which links to keep. */
   chooseLinks?: (item: LinkViewItem) => void
+  /** Stores the authoritative artwork identity for a saved link. */
+  setArtwork?: (itemUrl: string, identity: MediaArtworkIdentity) => void
 }
