@@ -11,6 +11,10 @@ bump is a breaking change that requires a new major of this package.
 
 ## [Unreleased]
 
+## [0.1.5] (2026-08-29)
+
+Highest supported wire version: `1.0`.
+
 ### Added
 
 - `ProtocolError` with a documented error-code-to-HTTP-status table
@@ -45,6 +49,12 @@ bump is a breaking change that requires a new major of this package.
   Clients re-issue the same request after the interval; the spec section
   "Deferred Extraction" defines the contract.
 
+- Per-plugin proxy usage display (`proxyCreditUsage`) and BYO proxy key
+  support (`proxy: { provider: "scrape-do", token }` on extract requests,
+  gated by the manifest `extensions.lynvo.proxyProvider` declaration).
+- `usageMultiplier` plugin metadata so servers can warn about multi-unit
+  extractions before they run.
+
 ### Changed
 
 - Usage metric `resetsAt` must now be an ISO 8601 timestamp; the spec
@@ -53,19 +63,7 @@ bump is a breaking change that requires a new major of this package.
   (matching the additive-minor rule and actual decoding behavior), and the
   error-code-to-HTTP-status table is now part of the contract.
 
-## [0.1.5] — 2026-08-27
-
-Highest supported wire version: `1.0`.
-
-### Added
-
-- Per-plugin proxy usage display (`proxyCreditUsage`) and BYO proxy key
-  support (`proxy: { provider: "scrape-do", token }` on extract requests,
-  gated by the manifest `extensions.lynvo.proxyProvider` declaration).
-- `usageMultiplier` plugin metadata so servers can warn about multi-unit
-  extractions before they run.
-
-## [0.1.4] — 2026-08-25
+## [0.1.4] (2026-08-25)
 
 Highest supported wire version: `1.0`.
 
@@ -76,7 +74,7 @@ Highest supported wire version: `1.0`.
 - Credential capability metadata on plugins (`domain-password`,
   `http-basic`).
 
-## [0.1.3] — 2026-08-20
+## [0.1.3] (2026-08-20)
 
 Highest supported wire version: `1.0`.
 
@@ -84,7 +82,7 @@ Highest supported wire version: `1.0`.
 
 - Discovery endpoint contract (`/discover`) for URL-to-plugin matching.
 
-## [0.1.2] — 2026-08-14
+## [0.1.2] (2026-08-14)
 
 Highest supported wire version: `1.0`.
 

@@ -20,7 +20,7 @@ Use this before registering an Custom Plugin Server in Lynvo.
 
 ## Manifest Rules
 
-- `protocolVersion` is `1.0`.
+- `protocolVersion` must use a compatible `1.x` version. Lynvo currently uses `1.0`.
 - `pluginServerId` is stable and namespaced, for example `com.example.plugin-server`.
 - `displayName` is human readable.
 - `auth.type` is `bearer`.
