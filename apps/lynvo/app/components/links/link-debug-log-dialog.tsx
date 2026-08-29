@@ -1,8 +1,7 @@
-import { useState, type ReactNode } from "react"
+import { useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CopyIcon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { showLinkCopiedToast } from "~/lib/toast-notifications"
-import { Button } from "~/components/ui/button"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +12,7 @@ import {
 } from "~/components/ui/alert-dialog"
 import type { LinkViewItem } from "~/features/links/types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { highlightLogJson } from "./log-json-highlight"
 
 interface LinkDebugLogDialogProps {
   readonly item: LinkViewItem | undefined
@@ -20,44 +20,15 @@ interface LinkDebugLogDialogProps {
   readonly onOpenChange: (open: boolean) => void
 }
 
-const JSON_TOKEN_PATTERN =
-  /("(?:\\.|[^"\\])*"\s*:|"(?:\\.|[^"\\])*"|\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|\btrue\b|\bfalse\b|\bnull\b|[{}\[\],:])/g
-
-// The design system is monochrome, so highlighting differentiates by
-// weight and shade rather than hue; every class reads in both themes.
-const jsonTokenClassName = (token: string): string => {
-  if (token.endsWith(":")) {
-    return "font-medium text-foreground"
-  }
-  if (token.startsWith('"')) {
-    return "text-foreground"
-  }
-  if (token === "true" || token === "false" || token === "null") {
-    return "text-muted-foreground italic"
-  }
-  if (/^-?\d/.test(token)) {
-    return "text-muted-foreground"
-  }
-  return "text-muted-foreground/60"
-}
-
-const renderHighlightedJson = (value: string): ReactNode[] =>
-  value
-    .split(JSON_TOKEN_PATTERN)
-    .filter((segment) => segment !== "")
-    .map((segment, index) => (
-      <span key={index} className={jsonTokenClassName(segment)}>
-        {segment}
-      </span>
-    ))
-
 const LinkDebugLogDialog = ({
   item,
   open,
   onOpenChange,
 }: LinkDebugLogDialogProps) => {
   const [didCopy, setDidCopy] = useState(false)
+  const [highlightedLog, setHighlightedLog] = useState<string | undefined>()
   const debugLog = item ? getLinkViewItemMetadata(item).debugLog : undefined
+  const hasLog = Boolean(debugLog && debugLog.length > 0)
   const serializedLog = JSON.stringify(
     {
       source: item?.url,
@@ -69,6 +40,22 @@ const LinkDebugLogDialog = ({
     null,
     2
   )
+
+  useEffect(() => {
+    if (!open || !hasLog) {
+      setHighlightedLog(undefined)
+      return
+    }
+    let cancelled = false
+    void highlightLogJson(serializedLog).then((html) => {
+      if (!cancelled) {
+        setHighlightedLog(html)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, hasLog, serializedLog])
 
   const handleCopy = async () => {
     try {
@@ -89,13 +76,22 @@ const LinkDebugLogDialog = ({
             Log
           </AlertDialogTitle>
         </AlertDialogHeader>
-        {debugLog && debugLog.length > 0 ? (
-          <pre
+        {hasLog ? (
+          <div
             aria-label="Communication log in JSON format"
-            className="min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed"
+            className="log-json min-h-0 flex-1 overflow-auto rounded-lg border bg-muted/40 p-3 font-mono text-xs leading-relaxed"
           >
-            {renderHighlightedJson(serializedLog)}
-          </pre>
+            {highlightedLog ? (
+              // SAFETY: shiki output for our own JSON.stringify payload;
+              // shiki escapes the code content, so nothing user-controlled
+              // reaches the DOM as markup.
+              <div dangerouslySetInnerHTML={{ __html: highlightedLog }} />
+            ) : (
+              <pre className="m-0 whitespace-pre-wrap break-all">
+                {serializedLog}
+              </pre>
+            )}
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">
             No communication recorded yet.
@@ -104,7 +100,7 @@ const LinkDebugLogDialog = ({
         <div className="flex w-full flex-col gap-3">
           <AlertDialogAction
             className="h-13.5 w-full"
-            disabled={!(debugLog && debugLog.length > 0)}
+            disabled={!hasLog}
             onClick={() => void handleCopy()}
           >
             <HugeiconsIcon icon={didCopy ? Tick02Icon : CopyIcon} />

@@ -285,6 +285,13 @@ const metadataOperationSchema = Schema.Union([
     expectedExtractionJson: Schema.String,
     extractedLinksJson: Schema.String,
   }),
+  Schema.Struct({
+    kind: Schema.Literal("setArtwork"),
+    providerId: Schema.Number,
+    title: Schema.NonEmptyString,
+    year: Schema.optional(Schema.Number),
+    mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
+  }),
 ])
 
 const applyMetadataOperationSchema = Schema.Struct({

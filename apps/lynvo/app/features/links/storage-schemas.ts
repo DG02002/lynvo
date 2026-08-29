@@ -150,6 +150,9 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
       providerId: Schema.Number,
       title: Schema.String,
       year: Schema.optional(Schema.Number),
+      /** TMDB movie and tv ids are separate namespaces; by-id lookups
+          need the kind to pick the right details endpoint. */
+      mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
     })
   ),
 })

@@ -1,8 +1,14 @@
-import { lookupMediaArtworkOutcomes } from "./media-artwork-lookup"
+import {
+  lookupMediaArtworkOutcomes,
+  mediaArtworkOutcomeToResult,
+  type MediaArtworkCandidate,
+  type MediaArtworkIdentity,
+} from "./media-artwork-lookup"
 
 interface MediaArtworkRequest {
   readonly title: string
   readonly mediaKind?: "movie" | "tv"
+  readonly providerId?: number
   readonly year?: number
   readonly seasonNumber?: number
   readonly episodeNumber?: number
@@ -11,6 +17,9 @@ interface MediaArtworkRequest {
 interface MediaArtworkResult {
   readonly posterPath?: string
   readonly stillPath?: string
+  readonly identity?: MediaArtworkIdentity
+  readonly candidates?: readonly MediaArtworkCandidate[]
+  readonly failed?: boolean
 }
 
 interface MediaArtworkLookupEnvironment {
@@ -29,10 +38,14 @@ const ARTWORK_CACHE_ORIGIN = "https://lynvo-tmdb-artwork-cache.internal"
 const ARTWORK_CACHE_HIT_TTL_SECONDS = 30 * 24 * 60 * 60
 const ARTWORK_CACHE_MISS_TTL_SECONDS = 24 * 60 * 60
 
+// Provider-id lookups must not collide with title lookups of the same
+// title: a user's artwork correction would keep hitting the earlier
+// title-based cache entry, so the id is part of the key's identity.
 const canonicalRequestJson = (request: MediaArtworkRequest): string =>
   JSON.stringify([
     request.title.normalize("NFKC").trim().toLowerCase(),
     request.mediaKind ?? null,
+    request.providerId ?? null,
     request.year ?? null,
     request.seasonNumber ?? null,
     request.episodeNumber ?? null,
@@ -104,9 +117,7 @@ export const lookupMediaArtworkCached = async (
     const outcomes = await lookupMediaArtworkOutcomes(environment, requests, {
       fetch: dependencies.fetch ?? globalThis.fetch.bind(globalThis),
     })
-    return outcomes.map((outcome) =>
-      outcome.status === "resolved" ? outcome.result : {}
-    )
+    return outcomes.map(mediaArtworkOutcomeToResult)
   }
   const nowSeconds = Math.floor(Date.now() / 1000)
   const cacheUrls = await Promise.all(requests.map(buildCacheUrl))
@@ -127,10 +138,10 @@ export const lookupMediaArtworkCached = async (
     const outcome = freshOutcomes[missIndex]
     if (outcome?.status === "failed") {
       // Transient upstream failures stay uncached so the next request retries.
-      cachedResults[requestIndex] = {}
+      cachedResults[requestIndex] = { failed: true }
       return
     }
-    const result = outcome?.status === "resolved" ? outcome.result : {}
+    const result = mediaArtworkOutcomeToResult(outcome ?? { status: "empty" })
     cachedResults[requestIndex] = result
     if (url) {
       dependencies.waitUntil(

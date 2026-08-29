@@ -237,6 +237,7 @@ export interface ApplyMetadataOperationInput {
         readonly providerId: number
         readonly title: string
         readonly year?: number
+        readonly mediaKind?: "movie" | "tv"
       }
 }
 

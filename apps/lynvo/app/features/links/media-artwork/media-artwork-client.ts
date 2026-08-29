@@ -16,6 +16,7 @@ const mediaArtworkResultSchema = Schema.Struct({
       providerId: Schema.Number,
       title: Schema.String,
       year: Schema.optional(Schema.Number),
+      mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
     })
   ),
   candidates: Schema.optional(
@@ -24,10 +25,12 @@ const mediaArtworkResultSchema = Schema.Struct({
         providerId: Schema.Number,
         title: Schema.String,
         year: Schema.optional(Schema.Number),
+        mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
         posterPath: Schema.optional(Schema.String),
       })
     )
   ),
+  failed: Schema.optional(Schema.Boolean),
 })
 
 const mediaArtworkResponseSchema = Schema.Struct({
@@ -240,6 +243,14 @@ const flushPendingMediaArtwork = async (): Promise<void> => {
     }
     batchEntries.forEach(([key], index) => {
       const lookupResult = parsed.success.results[index] ?? null
+      if (lookupResult?.failed) {
+        // Provider-transient failures arrive as data with a marker; treat
+        // them like transport failures so the next mount retries instead
+        // of negative-caching a day of missing posters.
+        mediaArtworkResults.delete(key)
+        notifyMediaArtworkListeners(key)
+        return
+      }
       mediaArtworkResults.set(key, lookupResult)
       writeCachedMediaArtwork(key, lookupResult)
       notifyMediaArtworkListeners(key)

@@ -231,6 +231,56 @@ describe("d1 data routes", () => {
     expect(applied.dataVersion).toBe(created.dataVersion + 1)
   })
 
+  it("stores the picked artwork identity through the setArtwork operation", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const createResponse = await app.fetch(
+      dataApiRequest("/api/data/links/create-or-update", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: "https://example.com/artwork",
+          meta: emptyMetadataJson(),
+        }),
+      }),
+      env
+    )
+    const created = await readJsonBody<{ id: string; dataVersion: number }>(
+      createResponse
+    )
+
+    const setArtworkResponse = await app.fetch(
+      dataApiRequest("/api/data/links/apply-metadata-operation", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: created.id,
+          operation: {
+            kind: "setArtwork",
+            providerId: 438631,
+            title: "Dune",
+            year: 2021,
+            mediaKind: "movie",
+          },
+        }),
+      }),
+      env
+    )
+    expect(setArtworkResponse.status).toBe(200)
+    const applied = await readJsonBody<{ success: boolean }>(setArtworkResponse)
+    expect(applied.success).toBe(true)
+
+    const row = await env.DB.prepare("SELECT meta_json FROM links WHERE id = ?")
+      .bind(created.id)
+      .first<{ meta_json: string }>()
+    // SAFETY: meta_json was just written by createOrUpdate with this shape.
+    const metadata = JSON.parse(row?.meta_json ?? "{}") as {
+      artwork?: { providerId: number; mediaKind?: string }
+    }
+    expect(metadata.artwork?.providerId).toBe(438631)
+    expect(metadata.artwork?.mediaKind).toBe("movie")
+  })
+
   it("maps oversized links to a link-too-large failure", async () => {
     const user = await createUser()
     const session = await createSessionFor(user.id)

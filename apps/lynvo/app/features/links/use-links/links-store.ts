@@ -17,6 +17,7 @@ declare global {
     providerId?: number
     title?: string
     year?: number
+    mediaKind?: "movie" | "tv"
   }
 
   interface LinksSnapshotStore {

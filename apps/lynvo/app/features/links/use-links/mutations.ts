@@ -146,9 +146,9 @@ export const createLinksMutations = ({
         return linkUrl ? { kind: "markOpened", linkUrl } : undefined
       }
       case "setArtwork": {
-        const { providerId, title, year } = operation
+        const { providerId, title, year, mediaKind } = operation
         return providerId !== undefined && title !== undefined
-          ? { kind: "setArtwork", providerId, title, year }
+          ? { kind: "setArtwork", providerId, title, year, mediaKind }
           : undefined
       }
       case "cacheMirrors": {
@@ -258,6 +258,7 @@ export const createLinksMutations = ({
       providerId: identity.providerId,
       title: identity.title,
       year: identity.year,
+      mediaKind: identity.mediaKind,
     }
     void runMetadataUpdate(itemUrl, operation, (item) => item)
   }

@@ -72,7 +72,14 @@ describe("Media artwork lookup", () => {
       {
         posterPath: "/m.jpg",
         identity: { providerId: 42, title: "Example Movie" },
-        candidates: [{ providerId: 42, title: "Example Movie" }],
+        candidates: [
+          {
+            providerId: 42,
+            title: "Example Movie",
+            mediaKind: "movie",
+            posterPath: "/m.jpg",
+          },
+        ],
       },
     ])
   })
@@ -108,7 +115,14 @@ describe("Media artwork lookup", () => {
         posterPath: "/s.jpg",
         stillPath: "/e.jpg",
         identity: { providerId: 7, title: "Example Show" },
-        candidates: [{ providerId: 7, title: "Example Show" }],
+        candidates: [
+          {
+            providerId: 7,
+            title: "Example Show",
+            mediaKind: "tv",
+            posterPath: "/s.jpg",
+          },
+        ],
       },
     ])
   })
@@ -133,7 +147,14 @@ describe("Media artwork lookup", () => {
       {
         posterPath: "/tv.jpg",
         identity: { providerId: 9, title: "Example Show" },
-        candidates: [{ providerId: 9, title: "Example Show" }],
+        candidates: [
+          {
+            providerId: 9,
+            title: "Example Show",
+            mediaKind: "tv",
+            posterPath: "/tv.jpg",
+          },
+        ],
       },
     ])
   })
@@ -150,5 +171,58 @@ describe("Media artwork lookup", () => {
     )
 
     expect(results).toEqual([{}])
+  })
+
+  it("still offers picker candidates when nothing confidently matches", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/movie?",
+        payload: {
+          results: [{ id: 5, title: "Unrelated Hit", poster_path: "/u.jpg" }],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ title: "Unknown Movie" }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        candidates: [
+          {
+            providerId: 5,
+            title: "Unrelated Hit",
+            mediaKind: "movie",
+            posterPath: "/u.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("resolves stored identities by provider id without title matching", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/movie/42",
+        payload: { id: 42, title: "Picked Movie", poster_path: "/p.jpg" },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ title: "Wrong Guess", mediaKind: "movie", providerId: 42 }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/p.jpg",
+        identity: { providerId: 42, title: "Picked Movie" },
+      },
+    ])
+    expect(String(fetch.mock.calls[0]?.[0])).toContain("/movie/42")
   })
 })

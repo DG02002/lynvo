@@ -3,24 +3,52 @@ import { lookupMediaArtworkCached } from "../../workers/media-metadata/artwork-c
 
 const TMDB_TOKEN = "test-token"
 
+interface TmdbFixturePayloadItem {
+  readonly id?: number
+  readonly title?: string
+  readonly poster_path?: string | null
+}
+
+interface TmdbFixturePayload {
+  readonly id?: number
+  readonly title?: string
+  readonly poster_path?: string | null
+  readonly results?: readonly TmdbFixturePayloadItem[]
+}
+
+const jsonResponse = (payload: TmdbFixturePayload): Response =>
+  new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  })
+
 const createTmdbFetch = () =>
-  vi.fn(
-    async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
-      new Response(
-        JSON.stringify({
-          results: [
-            { id: 42, title: "Cache Test", poster_path: "/poster.jpg" },
-          ],
-        }),
-        { status: 200, headers: { "content-type": "application/json" } }
-      )
-  )
+  vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+    const requestUrl = String(input)
+    if (requestUrl.includes("/movie/42")) {
+      return jsonResponse({
+        id: 42,
+        title: "Cache Test",
+        poster_path: "/poster.jpg",
+      })
+    }
+    return jsonResponse({
+      results: [{ id: 42, title: "Cache Test", poster_path: "/poster.jpg" }],
+    })
+  })
 
 const createFailingTmdbFetch = () =>
   vi.fn(
     async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
       new Response("upstream unavailable", { status: 502 })
   )
+
+const expectedCandidate = {
+  providerId: 42,
+  title: "Cache Test",
+  mediaKind: "movie" as const,
+  posterPath: "/poster.jpg",
+}
 
 describe("media artwork cache", () => {
   it("serves repeat lookups from the cache instead of TMDB", async () => {
@@ -39,7 +67,7 @@ describe("media artwork cache", () => {
       {
         posterPath: "/poster.jpg",
         identity: { providerId: 42, title: "Cache Test" },
-        candidates: [{ providerId: 42, title: "Cache Test" }],
+        candidates: [expectedCandidate],
       },
     ])
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -50,7 +78,7 @@ describe("media artwork cache", () => {
           const digest = await crypto.subtle.digest(
             "SHA-256",
             new TextEncoder().encode(
-              JSON.stringify(["cache test", "movie", null, null, null])
+              JSON.stringify(["cache test", "movie", null, null, null, null])
             )
           )
           return `https://lynvo-tmdb-artwork-cache.internal/${[
@@ -72,10 +100,42 @@ describe("media artwork cache", () => {
       {
         posterPath: "/poster.jpg",
         identity: { providerId: 42, title: "Cache Test" },
-        candidates: [{ providerId: 42, title: "Cache Test" }],
+        candidates: [expectedCandidate],
       },
     ])
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not serve a stored provider-id lookup from the title lookup's cache entry", async () => {
+    const fetchMock = createTmdbFetch()
+    const dependencies = {
+      waitUntil: () => {},
+      fetch: fetchMock,
+    }
+    const titleRequest = { title: "Cache Test", mediaKind: "movie" as const }
+    await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [titleRequest],
+      dependencies
+    )
+
+    const byId = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      [{ ...titleRequest, providerId: 42 }],
+      dependencies
+    )
+    // Without the id in the cache key, the id-based request would reuse the
+    // title-based entry (with its search candidates) and never hit the
+    // details endpoint.
+    expect(
+      fetchMock.mock.calls.some((call) => String(call[0]).includes("/movie/42"))
+    ).toBe(true)
+    expect(byId).toEqual([
+      {
+        posterPath: "/poster.jpg",
+        identity: { providerId: 42, title: "Cache Test" },
+      },
+    ])
   })
 
   it("does not cache transient upstream failures", async () => {
@@ -95,8 +155,8 @@ describe("media artwork cache", () => {
       requests,
       dependencies
     )
-    expect(first).toEqual([{}])
-    expect(second).toEqual([{}])
+    expect(first).toEqual([{ failed: true }])
+    expect(second).toEqual([{ failed: true }])
     expect(fetchMock.mock.calls.length).toBeGreaterThan(1)
   })
 })

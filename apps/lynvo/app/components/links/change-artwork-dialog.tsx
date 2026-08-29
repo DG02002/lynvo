@@ -28,6 +28,7 @@ const candidatesSchema = Schema.Struct({
             providerId: Schema.Number,
             title: Schema.String,
             year: Schema.optional(Schema.Number),
+            mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
             posterPath: Schema.optional(Schema.String),
           })
         )
@@ -35,6 +36,21 @@ const candidatesSchema = Schema.Struct({
     })
   ),
 })
+
+const getCandidateKey = (candidate: MediaArtworkCandidate): string =>
+  `${candidate.mediaKind ?? "movie"}:${candidate.providerId}`
+
+const getCandidateKindLabel = (candidate: MediaArtworkCandidate): string => {
+  if (candidate.mediaKind === "tv") {
+    return "TV"
+  }
+  return candidate.mediaKind === "movie" ? "Movie" : ""
+}
+
+const getCandidateCaption = (candidate: MediaArtworkCandidate): string =>
+  [candidate.year, getCandidateKindLabel(candidate)]
+    .filter((part) => part !== "")
+    .join(" · ")
 
 const ChangeArtworkDialog = ({
   item,
@@ -82,16 +98,19 @@ const ChangeArtworkDialog = ({
         await response.json()
       )
       if (Result.isSuccess(parsed)) {
-        const seenIds = new Set<number>()
+        // Movie and tv ids are separate namespaces, so the kind joins the
+        // dedupe key; kindless legacy entries fall back to the id alone.
+        const seenKeys = new Set<string>()
         const merged = parsed.success.results.flatMap(
           (result) => result.candidates ?? []
         )
         setCandidates(
           merged.filter((candidate) => {
-            if (seenIds.has(candidate.providerId)) {
+            const key = getCandidateKey(candidate)
+            if (seenKeys.has(key)) {
               return false
             }
-            seenIds.add(candidate.providerId)
+            seenKeys.add(key)
             return true
           })
         )
@@ -105,7 +124,7 @@ const ChangeArtworkDialog = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="flex max-h-[85vh] w-full flex-col gap-4 p-6 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md">
+      <AlertDialogContent className="flex max-h-[85vh] w-full flex-col gap-4 p-6 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-lg">
         <AlertDialogHeader className="w-full min-w-0 shrink-0">
           <AlertDialogTitle className="text-center text-xl font-normal sm:text-2xl">
             Change artwork
@@ -128,44 +147,43 @@ const ChangeArtworkDialog = ({
             {isSearching ? <Spinner aria-hidden="true" /> : "Search"}
           </Button>
         </form>
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
+        <div className="grid min-h-0 flex-1 grid-cols-3 content-start gap-3 overflow-auto sm:grid-cols-4">
           {candidates.map((candidate) => (
             <button
-              key={candidate.providerId}
+              key={getCandidateKey(candidate)}
               type="button"
-              className="flex items-center gap-3 rounded-lg border p-2 text-left hover:bg-muted/50"
+              aria-label={`${candidate.title}${candidate.year ? ` (${candidate.year})` : ""}`}
+              className="flex min-w-0 flex-col gap-1.5 rounded-lg focus-visible:outline-none"
               onClick={() => {
                 onSelect(candidate)
                 onOpenChange(false)
               }}
             >
-              <span className="flex h-16 w-11 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
+              <span className="relative flex aspect-[2/3] w-full items-center justify-center overflow-hidden rounded-md border bg-muted">
                 {candidate.posterPath ? (
                   <TmdbImage
                     path={candidate.posterPath}
                     variant="card"
                     imageType="poster"
-                    sizes="44px"
+                    sizes="(min-width: 640px) 108px, 30vw"
                     alt=""
-                    width={92}
-                    height={138}
+                    width={185}
+                    height={278}
                   />
                 ) : null}
               </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">
+              <span className="min-w-0 text-center">
+                <span className="line-clamp-2 text-xs font-medium leading-snug">
                   {candidate.title}
                 </span>
-                {candidate.year !== undefined && (
-                  <span className="block text-xs text-muted-foreground">
-                    {candidate.year}
-                  </span>
-                )}
+                <span className="block truncate text-[11px] text-muted-foreground">
+                  {getCandidateCaption(candidate)}
+                </span>
               </span>
             </button>
           ))}
           {!isSearching && candidates.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
+            <p className="col-span-full py-6 text-center text-sm text-muted-foreground">
               Search a title to list matches.
             </p>
           ) : null}

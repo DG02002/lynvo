@@ -2,16 +2,18 @@ import { createTmdbAdapter, type TmdbAdapter } from "./tmdb-adapter"
 import { selectBestSearchResult } from "./search-result-selection"
 import type { TmdbSearchResult } from "./tmdb-adapter"
 
-interface MediaArtworkIdentity {
+export interface MediaArtworkIdentity {
   readonly providerId: number
   readonly title: string
   readonly year?: number
+  readonly mediaKind?: "movie" | "tv"
 }
 
 export interface MediaArtworkCandidate {
   readonly providerId: number
   readonly title: string
   readonly year?: number
+  readonly mediaKind?: "movie" | "tv"
   readonly posterPath?: string
 }
 
@@ -25,18 +27,20 @@ interface MediaArtworkLookupRequest {
   readonly providerId?: number
 }
 
-interface MediaArtworkLookupResult {
+export interface MediaArtworkLookupResult {
   readonly posterPath?: string
   readonly stillPath?: string
   /** The work this artwork belongs to; displayed so mismatches are visible. */
   readonly identity?: MediaArtworkIdentity
   /** Raw search candidates for the picker, title-based requests only. */
   readonly candidates?: readonly MediaArtworkCandidate[]
+  /** Present when the provider attempt failed; callers must not cache it. */
+  readonly failed?: boolean
 }
 
 export type MediaArtworkLookupOutcome =
   | { status: "resolved"; result: MediaArtworkLookupResult }
-  | { status: "empty" }
+  | { status: "empty"; candidates?: readonly MediaArtworkCandidate[] }
   | { status: "failed" }
 
 interface MediaArtworkLookupEnvironment {
@@ -60,10 +64,15 @@ const toIdentity = (result: TmdbSearchResult): MediaArtworkIdentity =>
       }
 
 const toCandidates = (
+  mediaKind: "movie" | "tv",
   results: readonly TmdbSearchResult[] | undefined
 ): readonly MediaArtworkCandidate[] | undefined =>
-  results
-    ? results.slice(0, 5).map((result) => ({ ...toIdentity(result) }))
+  results?.length
+    ? results.slice(0, 5).map((result) => ({
+        ...toIdentity(result),
+        mediaKind,
+        posterPath: result.posterPath,
+      }))
     : undefined
 
 /**
@@ -97,6 +106,18 @@ const lookupArtworkById = async (
   }
 }
 
+/**
+ * No confident match still leaves the picker something to choose from:
+ * candidates ride along on the empty outcome instead of being discarded.
+ */
+const toEmptyOutcome = (
+  mediaKind: "movie" | "tv",
+  results: readonly TmdbSearchResult[] | undefined
+): MediaArtworkLookupOutcome => ({
+  status: "empty",
+  candidates: toCandidates(mediaKind, results),
+})
+
 const lookupEpisodeArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
@@ -113,7 +134,7 @@ const lookupEpisodeArtwork = async (
   }
   const show = selectBestSearchResult(request.title, search.value ?? [])
   if (!show) {
-    return emptyOutcome
+    return toEmptyOutcome("tv", search.value)
   }
   const episode = await adapter.getTvEpisodeDetails(
     show.providerId,
@@ -128,7 +149,7 @@ const lookupEpisodeArtwork = async (
       posterPath: show.posterPath,
       stillPath: stillPath ?? undefined,
       identity: toIdentity(show),
-      candidates: toCandidates(search.value),
+      candidates: toCandidates("tv", search.value),
     },
   }
 }
@@ -146,7 +167,7 @@ const lookupSeasonArtwork = async (
   }
   const show = selectBestSearchResult(request.title, search.value ?? [])
   if (!show) {
-    return emptyOutcome
+    return toEmptyOutcome("tv", search.value)
   }
   const season = await adapter.getTvSeasonDetails(
     show.providerId,
@@ -159,7 +180,7 @@ const lookupSeasonArtwork = async (
     result: {
       posterPath: seasonPosterPath ?? show.posterPath,
       identity: toIdentity(show),
-      candidates: toCandidates(search.value),
+      candidates: toCandidates("tv", search.value),
     },
   }
 }
@@ -179,10 +200,10 @@ const lookupTvArtwork = async (
         result: {
           posterPath: show.posterPath,
           identity: toIdentity(show),
-          candidates: toCandidates(search.value),
+          candidates: toCandidates("tv", search.value),
         },
       }
-    : emptyOutcome
+    : toEmptyOutcome("tv", search.value)
 }
 
 const lookupMovieArtwork = async (
@@ -200,10 +221,10 @@ const lookupMovieArtwork = async (
         result: {
           posterPath: movie.posterPath,
           identity: toIdentity(movie),
-          candidates: toCandidates(search.value),
+          candidates: toCandidates("movie", search.value),
         },
       }
-    : emptyOutcome
+    : toEmptyOutcome("movie", search.value)
 }
 
 const lookupOutcome = (
@@ -227,10 +248,20 @@ const lookupOutcome = (
     : lookupMovieArtwork(adapter, request)
 }
 
-const outcomeToResult = (
+/**
+ * Failed outcomes carry a marker so the browser can skip negative-caching a
+ * transient provider outage, mirroring the colo cache's own policy.
+ */
+export const mediaArtworkOutcomeToResult = (
   outcome: MediaArtworkLookupOutcome
 ): MediaArtworkLookupResult =>
-  outcome.status === "resolved" ? outcome.result : {}
+  outcome.status === "resolved"
+    ? outcome.result
+    : outcome.status === "empty"
+      ? outcome.candidates
+        ? { candidates: outcome.candidates }
+        : {}
+      : { failed: true }
 
 export const lookupMediaArtworkOutcomes = async (
   environment: MediaArtworkLookupEnvironment,
@@ -259,5 +290,5 @@ export const lookupMediaArtwork = async (
     requests,
     dependencies
   )
-  return outcomes.map(outcomeToResult)
+  return outcomes.map(mediaArtworkOutcomeToResult)
 }

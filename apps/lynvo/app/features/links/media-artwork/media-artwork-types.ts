@@ -26,12 +26,15 @@ declare global {
     readonly providerId: number
     readonly title: string
     readonly year?: number
+    /** Picks the provider namespace for by-id lookups. */
+    readonly mediaKind?: "movie" | "tv"
   }
 
   interface MediaArtworkCandidate {
     readonly providerId: number
     readonly title: string
     readonly year?: number
+    readonly mediaKind?: "movie" | "tv"
     readonly posterPath?: string
   }
 
@@ -50,6 +53,8 @@ declare global {
     readonly stillPath?: string
     readonly identity?: MediaArtworkIdentity
     readonly candidates?: readonly MediaArtworkCandidate[]
+    /** Transient provider failure; callers must not negative-cache it. */
+    readonly failed?: boolean
   }
 
   interface HybridCardGroup {

@@ -192,7 +192,10 @@ const getGroupArtworkRequest = (
   )?.metadata.artwork
   if (storedArtwork) {
     return {
-      mediaKind: group.mediaKind,
+      // The stored pick's kind is authoritative: a movie id and a tv id can
+      // collide numerically, so by-id lookups must not guess from the
+      // filename classification.
+      mediaKind: storedArtwork.mediaKind ?? group.mediaKind,
       title: storedArtwork.title,
       providerId: storedArtwork.providerId,
       year: storedArtwork.year,

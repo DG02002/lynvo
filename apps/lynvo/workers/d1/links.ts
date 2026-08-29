@@ -79,6 +79,7 @@ export type SavedLinkMetadataOperation =
       providerId: number
       title: string
       year?: number
+      mediaKind?: "movie" | "tv"
     }
 
 export interface SavedLinkCommandResult {
@@ -585,6 +586,7 @@ export const applySavedLinkMetadataOperation = async (
             providerId: input.operation.providerId,
             title: input.operation.title,
             year: input.operation.year,
+            mediaKind: input.operation.mediaKind,
           }
           break
         }
