@@ -45,6 +45,8 @@ interface LinkItemMenuProps {
   isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
   triggerClassName?: string
+  menuOpen?: boolean
+  onMenuOpenChange?: (open: boolean) => void
 }
 
 const LinkItemMenuContent = ({
@@ -56,6 +58,8 @@ const LinkItemMenuContent = ({
   isPlayableLinkExpired = false,
   isRefreshing = false,
   triggerClassName,
+  menuOpen,
+  onMenuOpenChange,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
@@ -99,7 +103,7 @@ const LinkItemMenuContent = ({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <DropdownMenuTrigger
           render={
             <Button

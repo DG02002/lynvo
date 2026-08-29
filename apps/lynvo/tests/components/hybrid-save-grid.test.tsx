@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
+import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
 
 const createActions = (): LinkItemActions => ({
   play: vi.fn().mockResolvedValue({ accepted: true }),
@@ -196,14 +197,43 @@ describe("HybridSaveGrid", () => {
       "sm:rounded-3xl"
     )
     expect(movieCard.querySelector('[class*="bottom-4"]')).toHaveClass(
-      "hidden",
-      "sm:block"
+      "invisible",
+      "pointer-events-none",
+      "sm:visible",
+      "sm:pointer-events-auto"
     )
     expect(movieCard.closest(".grid")).toHaveClass(
       "grid-cols-2",
       "sm:grid-cols-3",
       "md:grid-cols-6"
     )
+  })
+
+  it("opens the item menu after a touch long press", () => {
+    vi.useFakeTimers()
+    const movieItem: LinkListItem = {
+      ...createQueuedItem(undefined),
+      title: "Touch menu item",
+    }
+    renderQueuedGrid(movieItem)
+
+    const cardButton = screen.getByRole("button", {
+      name: "View Touch menu item",
+    })
+    Object.defineProperties(cardButton, {
+      setPointerCapture: { value: vi.fn() },
+      hasPointerCapture: { value: vi.fn(() => false) },
+    })
+
+    fireEvent.pointerDown(cardButton, {
+      pointerId: 1,
+      pointerType: "touch",
+      clientX: 20,
+      clientY: 20,
+    })
+    act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
+
+    expect(screen.getByText("Copy Source link")).toBeInTheDocument()
   })
 
   it("shows a poster loading spinner while artwork is being looked up", () => {

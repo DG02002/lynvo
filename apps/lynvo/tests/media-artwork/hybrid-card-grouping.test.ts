@@ -155,6 +155,55 @@ describe("getHybridCardGroups", () => {
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
       title: "Reacher",
+      year: 2022,
+    })
+  })
+
+  it("keeps the saved title year when extracted episodes identify a show", () => {
+    const groups = getHybridCardGroups([
+      {
+        ...createItem(
+          "https://4khdhub.one/overlord-series-164/",
+          "Overlord (2015)",
+          2_000
+        ),
+        metadata: {
+          schemaVersion: 3,
+          source: { pageTitle: "Overlord (2015)" },
+          extraction: {
+            extractedLinks: [
+              {
+                label: "Season 1",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    label: "AVC 1080p WEB-DL H264",
+                    type: "folder",
+                    mediaNodeKind: "group",
+                    children: [
+                      {
+                        label:
+                          "Overlord.S01E01.1080p.AMZN.WEB-DL.DDP2.0.H.264-4kHdHub.Com.mkv",
+                        type: "folder",
+                        mediaNodeKind: "resolvable",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          playback: { openedUrls: [] },
+        },
+      },
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "tv",
+      title: "Overlord",
+      year: 2015,
     })
   })
 

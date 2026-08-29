@@ -5,7 +5,6 @@ import {
   AlertCircleIcon,
   Delete02Icon,
   SourceCodeSquareIcon,
-  CheckListIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
@@ -17,6 +16,7 @@ import { getHybridCardGroupSections } from "~/features/links/media-artwork/hybri
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import { cn } from "~/lib/utils"
+import { useLongPress } from "~/hooks/use-long-press"
 import {
   SaveExtractionStatus,
   getExtractionStatusInput,
@@ -74,6 +74,7 @@ const HybridSaveCard = ({
     group.artworkRequest !== undefined && artwork === undefined
   const isExtractionFailed = extractionState === "failed"
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const shouldOfferLinkChoice =
     !shouldAutoSaveAllLinks &&
@@ -81,8 +82,15 @@ const HybridSaveCard = ({
     item !== undefined &&
     !isExtractionVisual &&
     (item.metadata?.extraction?.extractedLinks?.length ?? 0) > 1
+  const { longPressHandlers, consumeLongPress } = useLongPress({
+    enabled: Boolean(isSingleItem && item && !isExtractionVisual),
+    onLongPress: () => setIsMenuOpen(true),
+  })
 
   const handleActivate = () => {
+    if (consumeLongPress()) {
+      return
+    }
     if (!isSingleItem || directLink) {
       onOpenGroup(group.key)
       return
@@ -105,6 +113,7 @@ const HybridSaveCard = ({
         <button
           type="button"
           onClick={handleActivate}
+          {...longPressHandlers}
           className="absolute inset-0 z-1 cursor-pointer rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:rounded-3xl"
           aria-label={
             isSingleItem && item && !directLink
@@ -182,41 +191,21 @@ const HybridSaveCard = ({
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
-          <>
-            <div className="absolute bottom-4 left-4 z-10 hidden sm:block">
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={`Choose links for ${group.displayTitle}`}
-                className="h-10 gap-1.5 rounded-full bg-background/80 px-3 text-xs shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  actions.chooseLinks?.(item)
-                }}
-              >
-                <HugeiconsIcon icon={CheckListIcon} className="size-5" />
-                Choose links
-              </Button>
-            </div>
-            <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center sm:hidden">
-              <Button
-                type="button"
-                variant="ghost"
-                aria-label={`Choose links for ${group.displayTitle}`}
-                className={HYBRID_CARD_MENU_TRIGGER_CLASS}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  actions.chooseLinks?.(item)
-                }}
-              >
-                <HugeiconsIcon icon={CheckListIcon} className="size-5" />
-                Choose links
-              </Button>
-            </div>
-          </>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={`Choose links for ${group.displayTitle}`}
+            className="absolute bottom-4 left-1/2 z-10 h-10 -translate-x-1/2 rounded-full bg-background/80 px-3 text-xs shadow-none hover:bg-background/80 aria-expanded:bg-background/80 sm:left-4 sm:translate-x-0 dark:hover:bg-background/80"
+            onClick={(event) => {
+              event.stopPropagation()
+              actions.chooseLinks?.(item)
+            }}
+          >
+            Choose links
+          </Button>
         )}
         {isSingleItem && item && (
-          <div className="absolute bottom-4 right-4 z-10 hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none sm:block [&_svg]:size-7!">
+          <div className="invisible pointer-events-none absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 sm:visible sm:pointer-events-auto sm:group-hover:opacity-100 sm:has-[:focus-visible]:opacity-100 sm:has-aria-expanded:opacity-100 [@media(hover:none)]:sm:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
             <LinkItemMenu
               item={item}
               actions={actions}
@@ -225,6 +214,8 @@ const HybridSaveCard = ({
               showRemove
               isRefreshing={isExtracting}
               triggerClassName={HYBRID_CARD_MENU_TRIGGER_CLASS}
+              menuOpen={isMenuOpen}
+              onMenuOpenChange={setIsMenuOpen}
             />
           </div>
         )}

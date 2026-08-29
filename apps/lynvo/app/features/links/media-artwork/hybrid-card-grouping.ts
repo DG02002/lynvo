@@ -89,13 +89,13 @@ const findConfidentDescendantIdentity = (
 ): HybridCardIdentity | undefined => {
   for (const node of nodes) {
     const nodeLabel = node.label?.trim()
+    const children = node.children ?? []
     if (nodeLabel) {
       const identity = getHybridCardIdentity(nodeLabel, parentFolderName)
-      if (identity) {
+      if (identity && (identity.mediaKind === "tv" || children.length === 0)) {
         return identity
       }
     }
-    const children = node.children ?? []
     if (children.length === 0) {
       continue
     }
@@ -121,6 +121,14 @@ const getHybridItemIdentity = (
   if (extractedLinks.length > 0) {
     const descendantIdentity = findConfidentDescendantIdentity(extractedLinks)
     if (descendantIdentity) {
+      const itemIdentity = getHybridCardIdentity(itemLabel)
+      if (
+        descendantIdentity.year === undefined &&
+        itemIdentity?.year !== undefined &&
+        itemIdentity.normalizedTitle === descendantIdentity.normalizedTitle
+      ) {
+        return { ...descendantIdentity, year: itemIdentity.year }
+      }
       return descendantIdentity
     }
   }
@@ -202,7 +210,13 @@ const getGroupArtworkRequest = (
     }
   }
   if (group.mediaKind === "tv") {
-    return { mediaKind: "tv", title: group.requestTitle }
+    return group.anchorYear === undefined
+      ? { mediaKind: "tv", title: group.requestTitle }
+      : {
+          mediaKind: "tv",
+          title: group.requestTitle,
+          year: group.anchorYear,
+        }
   }
   return {
     mediaKind: "movie",
