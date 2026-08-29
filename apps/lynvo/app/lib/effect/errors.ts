@@ -14,6 +14,10 @@ export class ExtractionError extends Schema.TaggedError<ExtractionError>()(
   {
     message: Schema.String,
     url: Schema.String,
+    /** The Plugin Server's unmodified error text, kept for diagnostics. */
+    detail: Schema.optional(Schema.String),
+    /** HTTP status the Plugin Server responded with, when any. */
+    status: Schema.optional(Schema.Number),
   }
 ) {}
 

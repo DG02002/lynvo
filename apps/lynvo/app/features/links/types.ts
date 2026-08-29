@@ -52,10 +52,12 @@ export interface LinkDebugLogEntry {
   pluginId?: string
   outcome: "complete" | "failed" | "pending" | "requeued"
   errorCode?: string
+  /** The Plugin Server's unmodified error text; never credentials. */
+  detail?: string
+  httpStatus?: number
   nodeCount?: number
   durationMs?: number
   attempt?: number
-  detail?: string
 }
 
 export interface LinkMetadata {

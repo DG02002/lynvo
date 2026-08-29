@@ -5,6 +5,7 @@ import {
   AlertCircleIcon,
   Delete02Icon,
   SourceCodeSquareIcon,
+  CheckListIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
@@ -128,7 +129,7 @@ const HybridSaveCard = ({
                   aria-label="Extraction failed"
                   className="size-8 text-muted-foreground"
                 />
-                <div className="z-10 flex items-center gap-2">
+                <div className="z-10 flex flex-col items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -181,20 +182,37 @@ const HybridSaveCard = ({
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
-          <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center bg-gradient-to-t from-black/50 to-transparent p-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-7 gap-1 rounded-full px-3 text-xs"
-              onClick={(event) => {
-                event.stopPropagation()
-                actions.chooseLinks?.(item)
-              }}
-            >
-              Choose links
-            </Button>
-          </div>
+          <>
+            <div className="absolute bottom-4 left-4 z-10 hidden sm:block">
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={`Choose links for ${group.displayTitle}`}
+                className={HYBRID_CARD_MENU_TRIGGER_CLASS}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  actions.chooseLinks?.(item)
+                }}
+              >
+                <HugeiconsIcon icon={CheckListIcon} className="size-5" />
+              </Button>
+            </div>
+            <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center sm:hidden">
+              <Button
+                type="button"
+                variant="ghost"
+                aria-label={`Choose links for ${group.displayTitle}`}
+                className={HYBRID_CARD_MENU_TRIGGER_CLASS}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  actions.chooseLinks?.(item)
+                }}
+              >
+                <HugeiconsIcon icon={CheckListIcon} className="size-5" />
+                Choose links
+              </Button>
+            </div>
+          </>
         )}
         {isSingleItem && item && (
           <div className="absolute bottom-4 right-4 z-10 hidden opacity-0 transition-opacity duration-150 group-hover:opacity-100 has-[:focus-visible]:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none sm:block [&_svg]:size-7!">

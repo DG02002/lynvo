@@ -119,10 +119,11 @@ export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
     pluginId: Schema.optional(Schema.String),
     outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
     errorCode: Schema.optional(Schema.String),
+    detail: Schema.optional(Schema.String),
+    httpStatus: Schema.optional(Schema.Number),
     nodeCount: Schema.optional(Schema.Number),
     durationMs: Schema.optional(Schema.Number),
     attempt: Schema.optional(Schema.Number),
-    detail: Schema.optional(Schema.String),
   })
 
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({

@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
 import { decideSavePresentation } from "../app/lib/extraction/presentation"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
+import { ExtractionError } from "../app/lib/effect/errors"
 import { getRuntime } from "../app/lib/effect/runtime"
 import {
   LINK_EXTRACTION_BATCH_SIZE,
@@ -146,7 +147,13 @@ export const processSavedLinkExtraction = async (
     await notifySafely(env, claim.userId, settled.dataVersion)
   } catch (error) {
     const extractionError =
-      error instanceof Error ? error : new Error("Unable to load links.")
+      error instanceof ExtractionError
+        ? error
+        : new ExtractionError({
+            message:
+              error instanceof Error ? error.message : "Unable to load links.",
+            url: claim.url,
+          })
     console.error("Saved link extraction failed", {
       error: extractionError,
       linkId: claim.id,
@@ -166,7 +173,10 @@ export const processSavedLinkExtraction = async (
         errorCode: extractionError.message.split(".")[0],
         attempt: claim.extractionAttempts,
         durationMs: Date.now() - startedAt,
-        detail: extractionError.message,
+        detail:
+          extractionError.detail ??
+          `Plugin Server rejected the request with ${extractionError.message}`,
+        httpStatus: extractionError.status,
       },
       now: Date.now(),
     })

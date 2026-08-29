@@ -10,14 +10,20 @@ import {
 export const createPluginServerExtractionError = (
   cause: unknown,
   url: string
-): ExtractionError =>
-  new ExtractionError({
-    message:
-      cause instanceof PluginServerClientError
-        ? cause.code
-        : "TEMPORARY_FAILURE",
+): ExtractionError => {
+  if (cause instanceof PluginServerClientError) {
+    return new ExtractionError({
+      message: cause.code,
+      url,
+      detail: cause.message,
+      status: cause.status,
+    })
+  }
+  return new ExtractionError({
+    message: "TEMPORARY_FAILURE",
     url,
   })
+}
 
 export const requestPluginServer = <Value>(
   operation: () => Promise<Value>,
