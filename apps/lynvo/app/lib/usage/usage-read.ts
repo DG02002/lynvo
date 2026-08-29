@@ -91,13 +91,21 @@ const normalizeLynvoSection = (
 }
 
 const remainingPercentOf = (metrics: readonly UsageMetric[]): number => {
-  const ratios = metrics
-    .filter((metric) => metric.limit > 0)
-    .map((metric) => 1 - metric.used / metric.limit)
-  if (ratios.length === 0) {
+  let minimumRemainingRatio: number | undefined
+  for (const metric of metrics) {
+    if (metric.limit <= 0) {
+      continue
+    }
+    const remainingRatio = 1 - metric.used / metric.limit
+    minimumRemainingRatio =
+      minimumRemainingRatio === undefined
+        ? remainingRatio
+        : Math.min(minimumRemainingRatio, remainingRatio)
+  }
+  if (minimumRemainingRatio === undefined) {
     return 100
   }
-  return Math.max(0, Math.round(Math.min(...ratios) * 100))
+  return Math.max(0, Math.round(minimumRemainingRatio * 100))
 }
 
 // Monthly budgets are what people manage; daily rate limits sort below them.

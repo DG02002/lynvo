@@ -122,37 +122,41 @@ export const createDeviceCode = async (
   input: { readonly deviceName: string; readonly now: number }
 ): Promise<CreatedDeviceCode> => {
   const deviceName = input.deviceName.trim().slice(0, 80) || "Unknown device"
-  let code: string | undefined
-  for (
-    let attempt = 0;
-    attempt < DEVICE_CODE_COLLISION_ATTEMPTS;
-    attempt += 1
-  ) {
-    const candidate = generateDeviceCode()
-    const existing = await findDeviceCodeRecord(database, candidate)
-    if (!existing) {
-      code = candidate
-      break
-    }
-  }
-  if (!code) {
-    throw new Error("Unable to allocate a device code")
-  }
+  const candidates = Array.from(
+    { length: DEVICE_CODE_COLLISION_ATTEMPTS },
+    (_, priority) => ({ code: generateDeviceCode(), priority })
+  )
+  const candidateValuesSql = candidates
+    .map((_, priority) => `(?${priority + 1}, ${priority})`)
+    .join(", ")
   const pollSecret = generatePollSecret()
+  const pollSecretDigest = await digestPollSecret(pollSecret)
   const expiresAt = input.now + DEVICE_CODE_TTL_MS
-  await database
+  const valueParameterOffset = candidates.length
+  const inserted = await database
     .prepare(
-      "INSERT INTO device_codes (code, poll_secret_digest, status, device_name, expires_at, created_at) VALUES (?1, ?2, 'pending', ?3, ?4, ?5)"
+      `WITH candidates(code, priority) AS (VALUES ${candidateValuesSql})
+       INSERT INTO device_codes (code, poll_secret_digest, status, device_name, expires_at, created_at)
+       SELECT candidates.code, ?${valueParameterOffset + 1}, 'pending', ?${valueParameterOffset + 2}, ?${valueParameterOffset + 3}, ?${valueParameterOffset + 4}
+       FROM candidates
+       WHERE NOT EXISTS (SELECT 1 FROM device_codes WHERE device_codes.code = candidates.code)
+       ORDER BY candidates.priority
+       LIMIT 1
+       ON CONFLICT(code) DO NOTHING
+       RETURNING code`
     )
     .bind(
-      code,
-      await digestPollSecret(pollSecret),
+      ...candidates.map((candidate) => candidate.code),
+      pollSecretDigest,
       deviceName,
       expiresAt,
       input.now
     )
-    .run()
-  return { code, pollSecret, expiresAt, deviceName }
+    .first<{ code: string }>()
+  if (!inserted) {
+    throw new Error("Unable to allocate a device code")
+  }
+  return { code: inserted.code, pollSecret, expiresAt, deviceName }
 }
 
 export type DeviceCodeStatusOutcome =

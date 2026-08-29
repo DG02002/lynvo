@@ -23,10 +23,9 @@ import {
   closeRealtimeSession,
 } from "../../../../../workers/realtime-session-revocation"
 import {
+  drainAccountErasures,
   initiateAccountErasure,
-  processAccountErasureStep,
 } from "../../../../../workers/d1/account-erasure"
-import { ACCOUNT_ERASURE_MAX_STEPS_PER_RUN } from "../../../../../workers/constants"
 
 const requireDatabase = (environment: Cloudflare.Env) => {
   const database = getD1Database(environment)
@@ -218,19 +217,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
                 trigger: "manual",
                 now,
               })
-              for (
-                let step = 0;
-                step < ACCOUNT_ERASURE_MAX_STEPS_PER_RUN;
-                step += 1
-              ) {
-                const outcome = await processAccountErasureStep(
-                  database,
-                  user.id
-                )
-                if (outcome.kind !== "stage") {
-                  break
-                }
-              }
+              await drainAccountErasures(database, user.id)
               await closeRealtimeAccount(environment, user.id)
             },
             catch: (cause) =>

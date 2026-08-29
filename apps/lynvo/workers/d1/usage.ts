@@ -64,6 +64,13 @@ interface ManagedOperationRecord {
   settledAt: number | null
 }
 
+interface ManagedOperationCounterIdentity {
+  readonly ownerKey: string
+  readonly metricId: string
+  readonly periodKey: string
+  readonly epoch: number
+}
+
 const mapManagedOperationRow = (
   row: ManagedOperationRow
 ): ManagedOperationRecord => ({
@@ -202,50 +209,118 @@ const findManagedOperation = async (
   return row ? mapManagedOperationRow(row) : null
 }
 
-const buildReleaseStatements = async (
+const readExpiredManagedOperations = async (
+  database: D1Database,
+  now: number
+): Promise<readonly ManagedOperationRecord[]> => {
+  const { results } = await database
+    .prepare(
+      `SELECT ${MANAGED_OPERATION_COLUMNS}
+       FROM managed_extraction_operations
+       WHERE state = 'reserved' AND lease_expires_at <= ?1
+       ORDER BY lease_expires_at, user_id, operation_id
+       LIMIT ?2`
+    )
+    .bind(now, MANAGED_EXTRACTION_RECOVERY_BATCH_SIZE)
+    .all<ManagedOperationRow>()
+  return results.map(mapManagedOperationRow)
+}
+
+const getManagedOperationCounterIdentities = (
+  operation: ManagedOperationRecord
+): readonly ManagedOperationCounterIdentity[] => {
+  const counters: ManagedOperationCounterIdentity[] = [
+    {
+      ownerKey: GLOBAL_USAGE_OWNER_KEY,
+      metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+      periodKey: operation.dailyPeriodKey,
+      epoch: operation.epoch,
+    },
+  ]
+  if (operation.userLimitsApplied) {
+    const ownerKey = `user:${operation.userId}`
+    counters.push(
+      {
+        ownerKey,
+        metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        periodKey: operation.dailyPeriodKey,
+        epoch: operation.epoch,
+      },
+      {
+        ownerKey,
+        metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+        periodKey: operation.monthlyPeriodKey,
+        epoch: operation.epoch,
+      }
+    )
+  }
+  return counters
+}
+
+const createAtomicCounterRefundStatement = (
   database: D1Database,
   operation: ManagedOperationRecord
-): Promise<D1PreparedStatement[]> => {
-  const ownerKey = `user:${operation.userId}`
-  const counterKeys = [
-    [GLOBAL_USAGE_OWNER_KEY, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID],
-    ...(operation.userLimitsApplied
-      ? [
-          [ownerKey, LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID],
-          [ownerKey, LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID],
-        ]
-      : []),
-  ] as const
-  const counterStates = await Promise.all(
-    counterKeys.map(async ([ownerKeyPart, metricId]) => {
-      const periodKey =
-        metricId === LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID
-          ? operation.dailyPeriodKey
-          : operation.monthlyPeriodKey
-      const used = await readCounterValue(
-        database,
-        ownerKeyPart,
-        metricId,
-        periodKey,
-        operation.epoch
-      )
-      if (used === null || used < 1) {
-        throw new Error("Managed extraction counter is inconsistent.")
-      }
-      return { ownerKeyPart, metricId, periodKey }
+): D1PreparedStatement => {
+  const counters = getManagedOperationCounterIdentities(operation)
+  const counterValuesSql = counters
+    .map((_, counterIndex) => {
+      const firstBindingIndex = counterIndex * 4 + 1
+      return `(?${firstBindingIndex}, ?${firstBindingIndex + 1}, ?${firstBindingIndex + 2}, ?${firstBindingIndex + 3})`
     })
-  )
-  return counterStates.map(({ ownerKeyPart, metricId, periodKey }) =>
-    decrementCounterStatement(database, {
-      ownerKey: ownerKeyPart,
-      metricId,
-      periodKey,
-      epoch: operation.epoch,
-      userId: operation.userId,
-      operationId: operation.operationId,
-    })
-  )
+    .join(", ")
+  const operationUserIdBindingIndex = counters.length * 4 + 1
+  const operationIdBindingIndex = operationUserIdBindingIndex + 1
+  const counterBindings = counters.flatMap((counter) => [
+    counter.ownerKey,
+    counter.metricId,
+    counter.periodKey,
+    counter.epoch,
+  ])
+  return database
+    .prepare(
+      `WITH required_counters(owner_key, metric_id, period_key, epoch) AS (
+         VALUES ${counterValuesSql}
+       )
+       UPDATE usage_counters
+       SET used = used - 1
+       WHERE EXISTS (
+         SELECT 1 FROM required_counters
+         WHERE required_counters.owner_key = usage_counters.owner_key
+           AND required_counters.metric_id = usage_counters.metric_id
+           AND required_counters.period_key = usage_counters.period_key
+           AND required_counters.epoch = usage_counters.epoch
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM required_counters
+         LEFT JOIN usage_counters AS current_counters
+           ON current_counters.owner_key = required_counters.owner_key
+           AND current_counters.metric_id = required_counters.metric_id
+           AND current_counters.period_key = required_counters.period_key
+           AND current_counters.epoch = required_counters.epoch
+         WHERE current_counters.used IS NULL OR current_counters.used <= 0
+       )
+       AND EXISTS (
+         SELECT 1 FROM managed_extraction_operations
+         WHERE user_id = ?${operationUserIdBindingIndex}
+           AND operation_id = ?${operationIdBindingIndex}
+           AND state = 'reserved'
+       )`
+    )
+    .bind(...counterBindings, operation.userId, operation.operationId)
 }
+
+const createExpiredManagedExtractionStatements = (
+  database: D1Database,
+  operation: ManagedOperationRecord,
+  now: number
+): readonly D1PreparedStatement[] => [
+  createAtomicCounterRefundStatement(database, operation),
+  database
+    .prepare(
+      "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved'"
+    )
+    .bind(operation.userId, operation.operationId, now),
+]
 
 export type ManagedExtractionReservationResult =
   | { status: "already-reserved"; dataVersion: number }
@@ -642,7 +717,7 @@ export const settleManagedExtraction = async (
   }
   const releaseStatements =
     input.outcome === "released"
-      ? await buildReleaseStatements(database, operation)
+      ? [createAtomicCounterRefundStatement(database, operation)]
       : []
   const { dataVersion, statementResults } = await executeOwnedWrite(
     database,
@@ -670,36 +745,15 @@ export const releaseExpiredManagedExtractions = async (
   database: D1Database,
   now: number
 ): Promise<{ released: number }> => {
-  const { results } = await database
-    .prepare(
-      `SELECT ${MANAGED_OPERATION_COLUMNS} FROM managed_extraction_operations WHERE state = 'reserved' AND lease_expires_at <= ?1 LIMIT ?2`
-    )
-    .bind(now, MANAGED_EXTRACTION_RECOVERY_BATCH_SIZE)
-    .all<ManagedOperationRow>()
-  if (results.length === 0) {
+  const operations = await readExpiredManagedOperations(database, now)
+  if (operations.length === 0) {
     return { released: 0 }
   }
-  const operations = results.map(mapManagedOperationRow)
-  const statements: D1PreparedStatement[] = []
+  const statements = operations.flatMap((operation) =>
+    createExpiredManagedExtractionStatements(database, operation, now)
+  )
   const affectedUserIds = new Set<string>()
   for (const operation of operations) {
-    let releaseStatements: D1PreparedStatement[]
-    try {
-      releaseStatements = await buildReleaseStatements(database, operation)
-    } catch {
-      // SAFETY: one inconsistent counter row must not block the whole sweep;
-      // force the release without decrementing so abandoned reservations stop
-      // consuming quota while the drift stays visible for reconciliation.
-      releaseStatements = []
-    }
-    statements.push(
-      ...releaseStatements,
-      database
-        .prepare(
-          "UPDATE managed_extraction_operations SET state = 'released', settled_at = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved'"
-        )
-        .bind(operation.userId, operation.operationId, now)
-    )
     affectedUserIds.add(operation.userId)
   }
   for (const affectedUserId of affectedUserIds) {

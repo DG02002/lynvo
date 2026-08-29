@@ -87,11 +87,6 @@ describe("HybridSaveGrid", () => {
 
     const queuedTitle = screen.getByText("Waiting to load…")
     expect(queuedTitle).toHaveClass("shimmer")
-    expect(queuedTitle.parentElement).toHaveClass(
-      "animate-in",
-      "fade-in",
-      "duration-500"
-    )
     expect(queuedTitle.parentElement?.parentElement).toHaveClass(
       "font-heading",
       "text-base",
@@ -100,7 +95,7 @@ describe("HybridSaveGrid", () => {
     expect(queuedCard.className).not.toContain("shimmer")
   })
 
-  it("closes the loading state and animates the real title in when extraction ends", () => {
+  it("closes the loading state and restores the real title when extraction ends", () => {
     const view = renderQueuedGrid(createQueuedItem({ state: "running" }))
 
     view.rerender(
@@ -131,11 +126,6 @@ describe("HybridSaveGrid", () => {
 
     const settledHeading = screen.getByRole("heading", { name: "Queued item" })
     expect(settledHeading).toBeVisible()
-    expect(settledHeading.parentElement).toHaveClass(
-      "animate-in",
-      "fade-in",
-      "slide-in-from-bottom-1"
-    )
   })
 
   it("opens the group page for a single movie and uses mobile card polish", () => {

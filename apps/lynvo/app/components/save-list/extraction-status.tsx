@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { AlertCircleIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Spinner } from "~/components/spinner"
@@ -80,10 +80,21 @@ const useExtractionStatusLifecycle = ({
   shouldRotateMessages,
 }: UseExtractionStatusLifecycleOptions): ExtractionStatusLifecycle => {
   const isWaiting = status === "waiting"
-  const [messageIndex, setMessageIndex] = useState(0)
-  const [shouldAnimateEntrance, setShouldAnimateEntrance] = useState(false)
+  const [lifecycleState, setLifecycleState] = useState({
+    observedStatus: status,
+    messageIndex: 0,
+    shouldAnimateEntrance: false,
+  })
   const prefersReducedMotion = usePrefersReducedMotion()
-  const wasWaitingRef = useRef(false)
+
+  if (lifecycleState.observedStatus !== status) {
+    setLifecycleState({
+      observedStatus: status,
+      messageIndex: 0,
+      shouldAnimateEntrance:
+        lifecycleState.observedStatus === "waiting" && status === "idle",
+    })
+  }
 
   useEffect(() => {
     if (!isWaiting || prefersReducedMotion) {
@@ -91,46 +102,43 @@ const useExtractionStatusLifecycle = ({
     }
 
     const intervalId = window.setInterval(() => {
-      setMessageIndex(
-        (currentIndex) =>
-          (currentIndex + 1) % (EXTRACTION_STATUS_MESSAGES.length + 1)
-      )
+      setLifecycleState((currentState) => ({
+        ...currentState,
+        messageIndex:
+          (currentState.messageIndex + 1) %
+          (EXTRACTION_STATUS_MESSAGES.length + 1),
+      }))
     }, EXTRACTION_STATUS_ROTATION_INTERVAL_MS)
 
     return () => window.clearInterval(intervalId)
   }, [isWaiting, prefersReducedMotion])
 
-  useEffect(() => {
-    if (isWaiting) {
-      wasWaitingRef.current = true
-      setShouldAnimateEntrance(false)
-      return
-    }
-    const didWaitEnd = wasWaitingRef.current && status !== "failed"
-    wasWaitingRef.current = false
-    if (didWaitEnd) {
-      setShouldAnimateEntrance(true)
-    }
-  }, [isWaiting, status])
-
-  useEffect(() => {
-    if (!isWaiting) {
-      setMessageIndex(0)
-    }
-  }, [isWaiting])
-
   if (isWaiting) {
-    if (!shouldRotateMessages || prefersReducedMotion || messageIndex === 0) {
-      return { phase: "waiting", message: fallbackLabel, shouldAnimateEntrance }
+    if (
+      !shouldRotateMessages ||
+      prefersReducedMotion ||
+      lifecycleState.messageIndex === 0
+    ) {
+      return {
+        phase: "waiting",
+        message: fallbackLabel,
+        shouldAnimateEntrance: lifecycleState.shouldAnimateEntrance,
+      }
     }
     return {
       phase: "waiting",
-      message: EXTRACTION_STATUS_MESSAGES[messageIndex - 1] || fallbackLabel,
-      shouldAnimateEntrance,
+      message:
+        EXTRACTION_STATUS_MESSAGES[lifecycleState.messageIndex - 1] ||
+        fallbackLabel,
+      shouldAnimateEntrance: lifecycleState.shouldAnimateEntrance,
     }
   }
 
-  return { phase: "idle", message: "", shouldAnimateEntrance }
+  return {
+    phase: "idle",
+    message: "",
+    shouldAnimateEntrance: lifecycleState.shouldAnimateEntrance,
+  }
 }
 
 const ExtractionStatusText = ({
@@ -148,7 +156,7 @@ const ExtractionStatusText = ({
     {!isTitle && <Spinner aria-hidden="true" className="size-3" />}
     <span
       key={message}
-      className="animate-in fade-in duration-500 motion-reduce:animate-none min-w-0"
+      className="animate-[enter_500ms_ease] fade-in motion-reduce:animate-none min-w-0"
     >
       <span className="shimmer">{message}</span>
     </span>
@@ -161,7 +169,7 @@ const renderExtractionStatusChildren = (
 ) => {
   if (shouldAnimateEntrance) {
     return (
-      <div className="min-w-0 animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
+      <div className="min-w-0 animate-[enter_300ms_ease_both] fade-in slide-in-from-bottom-1 motion-reduce:animate-none">
         {children}
       </div>
     )

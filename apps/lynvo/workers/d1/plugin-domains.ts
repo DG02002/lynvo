@@ -691,19 +691,20 @@ export interface PluginDomainDeletion {
   preparation: StorageLedgerPreparation
 }
 
-export const deletePluginDomainDocument = async (
-  database: D1Database,
-  userId: string,
-  domainRow: PluginDomainRow,
-  preparation: StorageLedgerPreparation,
+export interface PluginDomainDeletionInput {
+  domainRow: PluginDomainRow
+  existingCredential: PluginCredentialRow | undefined
+  preparation: StorageLedgerPreparation
   now: number
-): Promise<PluginDomainDeletion> => {
-  const existingCredential = await findCredentialByDomainId(
-    database,
-    domainRow.id
-  )
+}
+
+export const buildPluginDomainDeletion = (
+  database: D1Database,
+  input: PluginDomainDeletionInput
+): PluginDomainDeletion => {
+  const { domainRow, existingCredential, now } = input
   const statements: D1PreparedStatement[] = []
-  let chainedPreparation = preparation
+  let chainedPreparation = input.preparation
   if (existingCredential) {
     const credentialLedgerMutation = applyStorageMutation(
       database,
@@ -750,6 +751,22 @@ export const deletePluginDomainDocument = async (
   }
 }
 
+const deletePluginDomainDocument = async (
+  database: D1Database,
+  domainRow: PluginDomainRow,
+  preparation: StorageLedgerPreparation,
+  now: number
+): Promise<PluginDomainDeletion> => {
+  const existingCredential =
+    (await findCredentialByDomainId(database, domainRow.id)) ?? undefined
+  return buildPluginDomainDeletion(database, {
+    domainRow,
+    existingCredential,
+    preparation,
+    now,
+  })
+}
+
 export const deletePluginDomainById = async (
   database: D1Database,
   userId: string,
@@ -763,7 +780,6 @@ export const deletePluginDomainById = async (
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const deletion = await deletePluginDomainDocument(
     database,
-    userId,
     domainRow,
     preparation,
     input.now

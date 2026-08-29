@@ -124,9 +124,12 @@ export const lookupMediaArtworkCached = async (
   const cachedResults = await Promise.all(
     cacheUrls.map(async (url) => await readCachedResult(cache, url))
   )
-  const missedIndexes = cachedResults
-    .map((cached, index) => (cached === undefined ? index : -1))
-    .filter((index) => index >= 0)
+  const missedIndexes: number[] = []
+  cachedResults.forEach((cachedResult, resultIndex) => {
+    if (cachedResult === undefined) {
+      missedIndexes.push(resultIndex)
+    }
+  })
   const missedRequests = missedIndexes.map((index) => requests[index])
   const freshOutcomes = missedIndexes.length
     ? await lookupMediaArtworkOutcomes(environment, missedRequests, {

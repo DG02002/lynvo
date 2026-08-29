@@ -32,6 +32,19 @@ interface AccountErasureRow {
   cleanup_started_at: number | null
 }
 
+interface AccountErasureDataPresence {
+  links: number
+  pluginCredentials: number
+  pluginDomains: number
+  pluginServers: number
+  deviceCodes: number
+  remoteCommands: number
+  managedExtractions: number
+  usageCounters: number
+  storageLedgers: number
+  sessions: number
+}
+
 export interface AccountErasureProgress {
   id: string
   userId: string
@@ -144,54 +157,50 @@ const eraseUserRow = async (
   await database.prepare("DELETE FROM users WHERE id = ?1").bind(userId).run()
 }
 
-const ERASURE_STAGE_PROBES = [
-  { table: "links", stage: "links" },
-  { table: "user_plugin_credentials", stage: "pluginCredentials" },
-  { table: "user_plugin_domains", stage: "pluginDomains" },
-  { table: "user_plugin_servers", stage: "pluginServers" },
-  { table: "device_codes", stage: "deviceCodes" },
-  { table: "remote_commands", stage: "remoteCommands" },
-  { table: "managed_extraction_operations", stage: "usageCounters" },
-] as const satisfies readonly {
-  table: ErasureTableKey
-  stage: AccountErasureStage
-}[]
-
 const getIncompleteDataStage = async (
   database: D1Database,
   userId: string
 ): Promise<AccountErasureStage | null> => {
-  for (const probe of ERASURE_STAGE_PROBES) {
-    const keyColumn = ERASURE_TABLE_KEYS[probe.table]
-    const row = await database
-      .prepare(
-        `SELECT ${keyColumn} AS present FROM ${probe.table} WHERE user_id = ?1 LIMIT 1`
-      )
-      .bind(userId)
-      .first<{ present: string | number }>()
-    if (row) {
-      return probe.stage
-    }
+  const presence = await database
+    .prepare(
+      `SELECT
+         EXISTS (SELECT 1 FROM links WHERE user_id = ?1) AS links,
+         EXISTS (SELECT 1 FROM user_plugin_credentials WHERE user_id = ?1) AS pluginCredentials,
+         EXISTS (SELECT 1 FROM user_plugin_domains WHERE user_id = ?1) AS pluginDomains,
+         EXISTS (SELECT 1 FROM user_plugin_servers WHERE user_id = ?1) AS pluginServers,
+         EXISTS (SELECT 1 FROM device_codes WHERE user_id = ?1) AS deviceCodes,
+         EXISTS (SELECT 1 FROM remote_commands WHERE user_id = ?1) AS remoteCommands,
+         EXISTS (SELECT 1 FROM managed_extraction_operations WHERE user_id = ?1) AS managedExtractions,
+         EXISTS (SELECT 1 FROM usage_counters WHERE owner_key = ?2) AS usageCounters,
+         EXISTS (SELECT 1 FROM storage_ledgers WHERE user_id = ?1) AS storageLedgers,
+         EXISTS (SELECT 1 FROM sessions WHERE user_id = ?1) AS sessions`
+    )
+    .bind(userId, `user:${userId}`)
+    .first<AccountErasureDataPresence>()
+  if (!presence) {
+    return null
   }
-  const counterRow = await database
-    .prepare("SELECT rowid FROM usage_counters WHERE owner_key = ?1 LIMIT 1")
-    .bind(`user:${userId}`)
-    .first<{ rowid: number }>()
-  if (counterRow) {
-    return "usageCounters"
-  }
-  const ledgerRow = await database
-    .prepare("SELECT user_id FROM storage_ledgers WHERE user_id = ?1 LIMIT 1")
-    .bind(userId)
-    .first<{ user_id: string }>()
-  if (ledgerRow) {
-    return "storageLedgers"
-  }
-  const sessionRow = await database
-    .prepare("SELECT id FROM sessions WHERE user_id = ?1 LIMIT 1")
-    .bind(userId)
-    .first<{ id: string }>()
-  return sessionRow ? "sessions" : null
+  const presenceByStage = {
+    links: Boolean(presence.links),
+    pluginCredentials: Boolean(presence.pluginCredentials),
+    pluginDomains: Boolean(presence.pluginDomains),
+    pluginServers: Boolean(presence.pluginServers),
+    deviceCodes: Boolean(presence.deviceCodes),
+    remoteCommands: Boolean(presence.remoteCommands),
+    usageCounters: Boolean(
+      presence.managedExtractions || presence.usageCounters
+    ),
+    storageLedgers: Boolean(presence.storageLedgers),
+    sessions: Boolean(presence.sessions),
+  } satisfies Partial<Record<AccountErasureStage, boolean>>
+  const incompleteStages = new Set(
+    Object.entries(presenceByStage).flatMap(([stage, isPresent]) =>
+      isPresent ? [stage] : []
+    )
+  )
+  return (
+    ERASURE_STAGE_ORDER.find((stage) => incompleteStages.has(stage)) ?? null
+  )
 }
 
 export type AccountErasureStepOutcome =
@@ -417,15 +426,19 @@ export interface DrainAccountErasuresOutcome {
 }
 
 export const drainAccountErasures = async (
-  database: D1Database
+  database: D1Database,
+  targetUserId?: string
 ): Promise<DrainAccountErasuresOutcome> => {
   let stepsRemaining = ACCOUNT_ERASURE_MAX_STEPS_PER_RUN
   let processedUsers = 0
   while (stepsRemaining > 0) {
-    const { results } = await database
-      .prepare("SELECT user_id FROM account_erasures LIMIT 1")
-      .all<{ user_id: string }>()
-    const nextUserId = results[0]?.user_id
+    const nextUserId =
+      targetUserId ??
+      (
+        await database
+          .prepare("SELECT user_id FROM account_erasures LIMIT 1")
+          .first<{ user_id: string }>()
+      )?.user_id
     if (!nextUserId) {
       break
     }
@@ -433,6 +446,9 @@ export const drainAccountErasures = async (
     stepsRemaining -= 1
     if (outcome.kind === "done") {
       processedUsers += 1
+    }
+    if (outcome.kind !== "stage" && targetUserId) {
+      break
     }
   }
   return {

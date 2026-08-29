@@ -123,6 +123,36 @@ describe("d1 managed extraction operations", () => {
     expect(poisonedOperation?.state).toBe("released")
   })
 
+  it("does not partially refund a reservation with an exhausted shared counter", async () => {
+    const user = await createUser()
+    await reserve(user.id, "sweep:first", "direct-media", BASE_NOW)
+    await reserve(user.id, "sweep:second", "direct-media", BASE_NOW)
+    await env.DB.prepare(
+      "UPDATE usage_counters SET used = 1 WHERE owner_key = 'global'"
+    ).run()
+
+    const sweepNow = BASE_NOW + 5 * 60 * 1000 + 1_000
+    await expect(
+      releaseExpiredManagedExtractions(env.DB, sweepNow)
+    ).resolves.toEqual({ released: 2 })
+
+    const counters = await readUserCounters(user.id)
+    expect(counters.every((counter) => counter.used === 1)).toBe(true)
+    const globalCounter = await env.DB.prepare(
+      "SELECT used FROM usage_counters WHERE owner_key = 'global'"
+    ).first<{ used: number }>()
+    expect(globalCounter?.used).toBe(0)
+    const operationStates = await env.DB.prepare(
+      "SELECT state FROM managed_extraction_operations WHERE user_id = ?1 ORDER BY operation_id"
+    )
+      .bind(user.id)
+      .all<{ state: string }>()
+    expect(operationStates.results).toHaveLength(2)
+    expect(
+      operationStates.results.every(({ state }) => state === "released")
+    ).toBe(true)
+  })
+
   it("shares one 30-operation daily allowance across managed plugins", async () => {
     const user = await createUser()
     const pluginIds = [

@@ -215,16 +215,17 @@ const getUniqueCandidates = (
   }>
 ): readonly MediaArtworkCandidate[] => {
   const seenKeys = new Set<string>()
-  return results
-    .flatMap((result) => result.candidates ?? [])
-    .filter((candidate) => {
+  const uniqueCandidates: MediaArtworkCandidate[] = []
+  for (const result of results) {
+    for (const candidate of result.candidates ?? []) {
       const key = getCandidateKey(candidate)
-      if (seenKeys.has(key)) {
-        return false
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key)
+        uniqueCandidates.push(candidate)
       }
-      seenKeys.add(key)
-      return true
-    })
+    }
+  }
+  return uniqueCandidates
 }
 
 const fetchArtworkCandidates = async (

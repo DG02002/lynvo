@@ -11,8 +11,11 @@ import {
 } from "./data-version"
 import { createOpaqueId } from "./ids"
 import {
+  PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
   PLUGIN_SERVER_COLUMNS,
+  type PluginCredentialRow,
+  type PluginDomainRow,
   type PluginServerRow,
 } from "./rows"
 import {
@@ -22,7 +25,7 @@ import {
   withAppliedMutation,
   type StorageLedgerPreparation,
 } from "./storage-ledger"
-import { deletePluginDomainDocument } from "./plugin-domains"
+import { buildPluginDomainDeletion } from "./plugin-domains"
 
 export interface PluginServerRecord {
   id: string
@@ -864,34 +867,41 @@ export const deletePluginServerById = async (
   input: { id: string; now: number }
 ): Promise<{ success: boolean; dataVersion: number }> => {
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  const { results: domainRows } = await database
-    .prepare(
-      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 LIMIT ?3`
-    )
-    .bind(userId, existing.id, PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT + 1)
-    .all<{
-      id: string
-      user_id: string
-      plugin_server_id: string
-      domain: string
-      plugin_id: string
-      credential_generation: number | null
-      credential_attempt_id: string | null
-      credential_finalized_attempt_id: string | null
-    }>()
+  const [domainResult, credentialResult, initialPreparation] =
+    await Promise.all([
+      database
+        .prepare(
+          `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 LIMIT ?3`
+        )
+        .bind(userId, existing.id, PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT + 1)
+        .all<PluginDomainRow>(),
+      database
+        .prepare(
+          `SELECT ${PLUGIN_CREDENTIAL_COLUMNS} FROM user_plugin_credentials WHERE user_id = ?1 AND plugin_server_id = ?2`
+        )
+        .bind(userId, existing.id)
+        .all<PluginCredentialRow>(),
+      ensureStorageLedger(database, userId, input.now),
+    ])
+  const domainRows = domainResult.results
   if (domainRows.length > PLUGIN_SERVER_DEPENDENT_DELETE_LIMIT) {
     throw new Error("Plugin server cleanup exceeds the synchronous limit")
   }
-  let preparation = await ensureStorageLedger(database, userId, input.now)
+  const credentialsByDomainId = new Map(
+    credentialResult.results.map((credentialRow) => [
+      credentialRow.plugin_domain_id,
+      credentialRow,
+    ])
+  )
+  let preparation = initialPreparation
   const statements: D1PreparedStatement[] = [...preparation.statements]
   for (const domainRow of domainRows) {
-    const deletion = await deletePluginDomainDocument(
-      database,
-      userId,
+    const deletion = buildPluginDomainDeletion(database, {
       domainRow,
+      existingCredential: credentialsByDomainId.get(domainRow.id),
       preparation,
-      input.now
-    )
+      now: input.now,
+    })
     statements.push(...deletion.statements)
     ;({ preparation } = deletion)
   }

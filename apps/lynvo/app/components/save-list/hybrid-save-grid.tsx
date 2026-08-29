@@ -189,7 +189,7 @@ const HybridSaveCard = ({
       data-testid="hybrid-save-card"
       data-highlighted={isHighlighted ? true : undefined}
       data-extraction-state={extractionState}
-      className="group relative w-full animate-in fade-in fill-mode-both slide-in-from-bottom-4 zoom-in-95 duration-500 motion-reduce:animate-none"
+      className="group relative w-full animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
     >
       {isExtractionVisual ? null : (
         <button

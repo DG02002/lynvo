@@ -7,7 +7,7 @@ import {
 } from "../../workers/d1/account-erasure"
 import { createOrUpdateSavedLink } from "../../workers/d1/links"
 import { createSession } from "../../workers/d1/sessions"
-import { insertGoogleUser } from "../../workers/d1/users"
+import { getUserById, insertGoogleUser } from "../../workers/d1/users"
 import { reserveManagedExtraction } from "../../workers/d1/usage"
 
 const NOW = 1_750_000_000_000
@@ -53,7 +53,17 @@ const seedErasableAccount = async () => {
     `INSERT INTO device_codes (code, poll_secret_digest, status, device_name, user_id, expires_at, created_at)
      VALUES (?1, 'digest', 'pending', 'Erasure TV', ?2, ?3, ?4)`
   )
-    .bind(`ERASUR${suffix.replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 6) || "ABCDEF"}`, user.id, NOW + 600_000, NOW)
+    .bind(
+      `ERASUR${
+        suffix
+          .replace(/[^A-Z]/gi, "")
+          .toUpperCase()
+          .slice(0, 6) || "ABCDEF"
+      }`,
+      user.id,
+      NOW + 600_000,
+      NOW
+    )
     .run()
   await env.DB.prepare(
     `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status, available_at, notification_pending)
@@ -80,10 +90,16 @@ describe("d1 account erasure", () => {
     const { user } = await seedErasableAccount()
 
     expect(
-      await initiateAccountErasure(env.DB, user.id, { trigger: "manual", now: NOW })
+      await initiateAccountErasure(env.DB, user.id, {
+        trigger: "manual",
+        now: NOW,
+      })
     ).toBe(true)
     expect(
-      await initiateAccountErasure(env.DB, user.id, { trigger: "manual", now: NOW })
+      await initiateAccountErasure(env.DB, user.id, {
+        trigger: "manual",
+        now: NOW,
+      })
     ).toBe(false)
 
     const pendingAt = await env.DB.prepare(
@@ -132,9 +148,7 @@ describe("d1 account erasure", () => {
       .first<{ count: number }>()
     expect(usageCounters?.count).toBe(0)
 
-    const userRow = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ?1"
-    )
+    const userRow = await env.DB.prepare("SELECT id FROM users WHERE id = ?1")
       .bind(user.id)
       .first<{ id: string }>()
     expect(userRow).toBeNull()
@@ -151,11 +165,55 @@ describe("d1 account erasure", () => {
     })
     const outcome = await drainAccountErasures(env.DB)
     expect(outcome.processedUsers).toBeGreaterThanOrEqual(1)
-    const userRow = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ?1"
-    )
+    const userRow = await env.DB.prepare("SELECT id FROM users WHERE id = ?1")
       .bind(user.id)
       .first<{ id: string }>()
     expect(userRow).toBeNull()
+  })
+
+  it("drains only the requested account during manual erasure", async () => {
+    const first = await seedErasableAccount()
+    const second = await seedErasableAccount()
+    await initiateAccountErasure(env.DB, first.user.id, {
+      trigger: "manual",
+      now: NOW,
+    })
+    await initiateAccountErasure(env.DB, second.user.id, {
+      trigger: "inactive",
+      now: NOW,
+    })
+
+    await drainAccountErasures(env.DB, first.user.id)
+
+    expect(await getUserById(env.DB, first.user.id)).toBeNull()
+    expect(await getUserById(env.DB, second.user.id)).not.toBeNull()
+  })
+
+  it("recovers an erasure whose persisted stage skipped owned data", async () => {
+    const { user } = await seedErasableAccount()
+    await initiateAccountErasure(env.DB, user.id, {
+      trigger: "manual",
+      now: NOW,
+    })
+    await env.DB.prepare(
+      "UPDATE account_erasures SET stage = 'finalize' WHERE user_id = ?1"
+    )
+      .bind(user.id)
+      .run()
+
+    await drainAccountErasures(env.DB)
+
+    const remainingUserData = await env.DB.batch([
+      env.DB.prepare("SELECT id FROM users WHERE id = ?1").bind(user.id),
+      env.DB.prepare(
+        "SELECT rowid FROM usage_counters WHERE owner_key = ?1 LIMIT 1"
+      ).bind(`user:${user.id}`),
+      env.DB.prepare("SELECT id FROM links WHERE user_id = ?1 LIMIT 1").bind(
+        user.id
+      ),
+    ])
+    expect(remainingUserData.every(({ results }) => results.length === 0)).toBe(
+      true
+    )
   })
 })
