@@ -44,6 +44,13 @@ interface TmdbEpisodeGroupListPayload {
   }[]
 }
 
+interface TvSeasonListPayload {
+  readonly seasons?: readonly {
+    readonly season_number?: number
+    readonly name?: string
+  }[]
+}
+
 interface TmdbEpisodeGroupPayload {
   readonly groups?: readonly {
     readonly name?: string
@@ -60,6 +67,11 @@ export interface TmdbSearchResult {
   readonly year?: number
   readonly posterPath?: string
   readonly overview?: string
+}
+
+export interface TmdbSeasonSummary {
+  readonly seasonNumber: number
+  readonly name: string
 }
 
 export interface TmdbMediaMetadata {
@@ -123,6 +135,9 @@ export interface TmdbAdapter {
     providerId: number,
     seasonNumber: number
   ) => Promise<TmdbAdapterResult<TmdbMediaMetadata>>
+  readonly getTvSeasonList: (
+    providerId: number
+  ) => Promise<TmdbAdapterResult<readonly TmdbSeasonSummary[]>>
   readonly getTvEpisodeDetails: (
     providerId: number,
     seasonNumber: number,
@@ -166,6 +181,18 @@ const detailsPayloadSchema = Schema.Struct({
   still_path: Schema.optional(Schema.NullOr(Schema.String)),
   season_number: Schema.optional(Schema.Number),
   episode_number: Schema.optional(Schema.Number),
+})
+
+const tvSeasonListPayloadSchema = Schema.Struct({
+  id: Schema.optional(Schema.Number),
+  seasons: Schema.optional(
+    Schema.Array(
+      Schema.Struct({
+        season_number: Schema.optional(Schema.Number),
+        name: Schema.optional(Schema.String),
+      })
+    )
+  ),
 })
 
 const episodeGroupListPayloadSchema = Schema.Struct({
@@ -543,6 +570,38 @@ export const createTmdbAdapter = (
       details(`/tv/${providerId}`, "tv", providerId),
     getTvSeasonDetails: (providerId, seasonNumber) =>
       details(`/tv/${providerId}/season/${seasonNumber}`, "season", providerId),
+    getTvSeasonList: async (providerId) => {
+      const response = await requestJson<TvSeasonListPayload>(
+        `/tv/${providerId}`,
+        tvSeasonListPayloadSchema
+      )
+      if (response.kind === "disabled") {
+        return { kind: "disabled", message: response.message }
+      }
+      if (response.kind === "failure") {
+        return {
+          kind: "failure",
+          failureKind: response.failureKind,
+          message: response.message,
+          retryAt: response.retryAt,
+        }
+      }
+      if (!response.value) {
+        return {
+          kind: "failure",
+          failureKind: "permanent",
+          message: "TMDB returned an empty season list response",
+        }
+      }
+      const seasons = (response.value.seasons ?? []).flatMap((season) => {
+        const seasonNumber = season.season_number
+        const name = season.name?.trim()
+        return seasonNumber !== undefined && seasonNumber >= 0 && name
+          ? [{ seasonNumber, name }]
+          : []
+      })
+      return { kind: "success", value: seasons }
+    },
     getTvEpisodeDetails: episodeDetails,
   }
 }

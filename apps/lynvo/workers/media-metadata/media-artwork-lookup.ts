@@ -3,7 +3,11 @@ import {
   type TmdbAdapter,
   type TmdbSearchResult,
 } from "./tmdb-adapter"
-import { selectBestSearchResult } from "./search-result-selection"
+import {
+  doesSeasonNameCoverRemainder,
+  selectBestSearchResult,
+  selectLeadingTitleMatch,
+} from "./search-result-selection"
 
 export interface MediaArtworkIdentity {
   readonly providerId: number
@@ -121,6 +125,93 @@ const toEmptyOutcome = (
   candidates: toCandidates(mediaKind, results),
 })
 
+/**
+ * Filenames regularly carry a mistaken year; a year-filtered search then
+ * hides the real work entirely, so an unfiltered retry runs whenever the
+ * filtered pass selects nothing. Title scoring still gates the result.
+ */
+const searchTvSelectingByTitle = async (
+  adapter: TmdbAdapter,
+  title: string,
+  year: number | undefined
+) => {
+  const filteredSearch =
+    year === undefined ? undefined : await adapter.searchTv(title, year)
+  if (filteredSearch && filteredSearch.kind !== "success") {
+    return filteredSearch
+  }
+  if (
+    filteredSearch &&
+    selectBestSearchResult(title, filteredSearch.value ?? [])
+  ) {
+    return filteredSearch
+  }
+  return adapter.searchTv(title)
+}
+
+const searchMovieSelectingByTitle = async (
+  adapter: TmdbAdapter,
+  title: string,
+  year: number | undefined
+) => {
+  const filteredSearch =
+    year === undefined ? undefined : await adapter.searchMovie(title, year)
+  if (filteredSearch && filteredSearch.kind !== "success") {
+    return filteredSearch
+  }
+  if (
+    filteredSearch &&
+    selectBestSearchResult(title, filteredSearch.value ?? [])
+  ) {
+    return filteredSearch
+  }
+  return adapter.searchMovie(title)
+}
+
+interface SubtitleSeasonArtwork {
+  readonly posterPath: string | undefined
+  readonly identity: MediaArtworkIdentity
+}
+
+/**
+ * "Parent Title Subtitle" works live as named seasons of the parent show
+ * on TMDB. When the parent surfaced in the results, its season list is
+ * searched for one whose name covers the leftover query tokens; the file's
+ * own season numbering cannot be trusted there (scene packs renumber
+ * cours), so the matched season's artwork wins.
+ */
+const lookupSubtitleSeasonArtwork = async (
+  adapter: TmdbAdapter,
+  title: string,
+  results: readonly TmdbSearchResult[]
+): Promise<SubtitleSeasonArtwork | undefined> => {
+  const parentShow = selectLeadingTitleMatch(title, results)
+  if (!parentShow) {
+    return undefined
+  }
+  const seasonList = await adapter.getTvSeasonList(parentShow.providerId)
+  if (seasonList.kind !== "success") {
+    return undefined
+  }
+  const matchedSeason = (seasonList.value ?? []).find((season) =>
+    doesSeasonNameCoverRemainder(title, parentShow.title, season.name)
+  )
+  if (!matchedSeason) {
+    return undefined
+  }
+  const seasonDetails = await adapter.getTvSeasonDetails(
+    parentShow.providerId,
+    matchedSeason.seasonNumber
+  )
+  return {
+    posterPath:
+      (seasonDetails.kind === "success"
+        ? seasonDetails.value?.posterPath
+        : undefined) ?? parentShow.posterPath,
+    identity: toIdentity(parentShow),
+  }
+}
+
 const lookupEpisodeArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
@@ -131,13 +222,33 @@ const lookupEpisodeArtwork = async (
   ) {
     return emptyOutcome
   }
-  const search = await adapter.searchTv(request.title, request.year)
+  const search = await searchTvSelectingByTitle(
+    adapter,
+    request.title,
+    request.year
+  )
   if (search.kind !== "success") {
     return failedOutcome
   }
-  const show = selectBestSearchResult(request.title, search.value ?? [])
+  const searchResults = search.value ?? []
+  const show = selectBestSearchResult(request.title, searchResults)
   if (!show) {
-    return toEmptyOutcome("tv", search.value)
+    // Episode numbers of scene-packed cours do not line up with the parent
+    // show's seasons, so the fallback returns the season poster only.
+    const subtitleSeason = await lookupSubtitleSeasonArtwork(
+      adapter,
+      request.title,
+      searchResults
+    )
+    return subtitleSeason
+      ? {
+          status: "resolved",
+          result: {
+            ...subtitleSeason,
+            candidates: toCandidates("tv", searchResults),
+          },
+        }
+      : toEmptyOutcome("tv", searchResults)
   }
   const episode = await adapter.getTvEpisodeDetails(
     show.providerId,
@@ -152,7 +263,7 @@ const lookupEpisodeArtwork = async (
       posterPath: show.posterPath,
       stillPath: stillPath ?? undefined,
       identity: toIdentity(show),
-      candidates: toCandidates("tv", search.value),
+      candidates: toCandidates("tv", searchResults),
     },
   }
 }
@@ -164,13 +275,31 @@ const lookupSeasonArtwork = async (
   if (request.seasonNumber === undefined) {
     return emptyOutcome
   }
-  const search = await adapter.searchTv(request.title, request.year)
+  const search = await searchTvSelectingByTitle(
+    adapter,
+    request.title,
+    request.year
+  )
   if (search.kind !== "success") {
     return failedOutcome
   }
-  const show = selectBestSearchResult(request.title, search.value ?? [])
+  const searchResults = search.value ?? []
+  const show = selectBestSearchResult(request.title, searchResults)
   if (!show) {
-    return toEmptyOutcome("tv", search.value)
+    const subtitleSeason = await lookupSubtitleSeasonArtwork(
+      adapter,
+      request.title,
+      searchResults
+    )
+    return subtitleSeason
+      ? {
+          status: "resolved",
+          result: {
+            ...subtitleSeason,
+            candidates: toCandidates("tv", searchResults),
+          },
+        }
+      : toEmptyOutcome("tv", searchResults)
   }
   const season = await adapter.getTvSeasonDetails(
     show.providerId,
@@ -183,7 +312,7 @@ const lookupSeasonArtwork = async (
     result: {
       posterPath: seasonPosterPath ?? show.posterPath,
       identity: toIdentity(show),
-      candidates: toCandidates("tv", search.value),
+      candidates: toCandidates("tv", searchResults),
     },
   }
 }
@@ -192,28 +321,51 @@ const lookupTvArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
 ): Promise<MediaArtworkLookupOutcome> => {
-  const search = await adapter.searchTv(request.title, request.year)
+  const search = await searchTvSelectingByTitle(
+    adapter,
+    request.title,
+    request.year
+  )
   if (search.kind !== "success") {
     return failedOutcome
   }
-  const show = selectBestSearchResult(request.title, search.value ?? [])
-  return show
+  const searchResults = search.value ?? []
+  const show = selectBestSearchResult(request.title, searchResults)
+  if (show) {
+    return {
+      status: "resolved",
+      result: {
+        posterPath: show.posterPath,
+        identity: toIdentity(show),
+        candidates: toCandidates("tv", searchResults),
+      },
+    }
+  }
+  const subtitleSeason = await lookupSubtitleSeasonArtwork(
+    adapter,
+    request.title,
+    searchResults
+  )
+  return subtitleSeason
     ? {
         status: "resolved",
         result: {
-          posterPath: show.posterPath,
-          identity: toIdentity(show),
-          candidates: toCandidates("tv", search.value),
+          ...subtitleSeason,
+          candidates: toCandidates("tv", searchResults),
         },
       }
-    : toEmptyOutcome("tv", search.value)
+    : toEmptyOutcome("tv", searchResults)
 }
 
 const lookupMovieArtwork = async (
   adapter: TmdbAdapter,
   request: MediaArtworkLookupRequest
 ): Promise<MediaArtworkLookupOutcome> => {
-  const search = await adapter.searchMovie(request.title, request.year)
+  const search = await searchMovieSelectingByTitle(
+    adapter,
+    request.title,
+    request.year
+  )
   if (search.kind !== "success") {
     return failedOutcome
   }

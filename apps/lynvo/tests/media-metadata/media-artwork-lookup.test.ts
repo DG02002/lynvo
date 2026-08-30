@@ -225,4 +225,136 @@ describe("Media artwork lookup", () => {
     ])
     expect(String(fetch.mock.calls[0]?.[0])).toContain("/movie/42")
   })
+
+  it("resolves anime subtitle titles through the parent show's named season", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/tv/30984/season/2",
+        payload: {
+          id: 30984,
+          name: "Thousand-Year Blood War",
+          poster_path: "/tybw-season.jpg",
+          season_number: 2,
+        },
+      },
+      {
+        urlIncludes: "/tv/30984",
+        payload: {
+          id: 30984,
+          seasons: [
+            { season_number: 0, name: "Specials" },
+            { season_number: 1, name: "Bleach" },
+            { season_number: 2, name: "Thousand-Year Blood War" },
+          ],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Bleach Thousand Year Blood War",
+          seasonNumber: 4,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/tybw-season.jpg",
+        identity: { providerId: 30984, title: "Bleach" },
+        candidates: [
+          {
+            providerId: 30984,
+            title: "Bleach",
+            mediaKind: "tv",
+            posterPath: "/bleach.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("keeps artwork empty when no parent season name covers the query remainder", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/tv/30984",
+        payload: {
+          id: 30984,
+          seasons: [{ season_number: 1, name: "Bleach" }],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ mediaKind: "tv", title: "Bleach Unrelated Words" }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        candidates: [
+          {
+            providerId: 30984,
+            title: "Bleach",
+            mediaKind: "tv",
+            posterPath: "/bleach.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("retries without the year when the filename year hides the work", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "year=2099",
+        payload: { results: [] },
+      },
+      {
+        urlIncludes: "/search/movie?",
+        payload: {
+          results: [{ id: 42, title: "Toxic", poster_path: "/t.jpg" }],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [{ mediaKind: "movie", title: "Toxic", year: 2099 }],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/t.jpg",
+        identity: { providerId: 42, title: "Toxic" },
+        candidates: [
+          {
+            providerId: 42,
+            title: "Toxic",
+            mediaKind: "movie",
+            posterPath: "/t.jpg",
+          },
+        ],
+      },
+    ])
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
 })

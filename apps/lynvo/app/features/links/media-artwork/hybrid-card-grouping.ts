@@ -17,6 +17,14 @@ interface HybridCardIdentity {
   readonly requestTitle: string
   readonly displayTitle: string
   readonly year?: number
+  readonly seasonNumber?: number
+}
+
+interface HybridCardIdentityOptions {
+  // Descendant labels are quality tags ("HQ-Rip 1080p") and mirror names
+  // ("Direct"), so they may only identify a card when the parse is confident:
+  // a movie needs a year and a tv label an explicit episode/season marker.
+  readonly requireConfidentParse?: boolean
 }
 
 interface MutableHybridCardGroup {
@@ -24,6 +32,7 @@ interface MutableHybridCardGroup {
   mediaKind: "movie" | "tv" | "unmatched"
   normalizedTitle?: string
   anchorYear?: number
+  anchorSeason?: number
   requestTitle?: string
   displayTitle: string
   lastAddedAt: number
@@ -45,12 +54,32 @@ export const getHybridItemLabel = (item: LinkListItem): string => {
   return toLinkViewModel(item).title || new URL(item.url).hostname
 }
 
+const getTwoDigitSeasonLabel = (seasonNumber: number): string =>
+  String(seasonNumber).padStart(2, "0")
+
+const getTvDisplayTitle = (
+  title: string,
+  year: number | undefined,
+  seasonNumber: number | undefined
+) => {
+  const yearLabel = year === undefined ? "" : ` (${year})`
+  const seasonLabel =
+    seasonNumber === undefined
+      ? ""
+      : ` S${getTwoDigitSeasonLabel(seasonNumber)}`
+  return `${title}${yearLabel}${seasonLabel}`
+}
+
 const getHybridCardIdentity = (
   label: string,
-  parentFolderName?: string
+  parentFolderName?: string,
+  { requireConfidentParse = false }: HybridCardIdentityOptions = {}
 ): HybridCardIdentity | undefined => {
   const candidate = parseMediaFilename(label, parentFolderName)
   if (!candidate.title || !candidate.normalizedTitle) {
+    return undefined
+  }
+  if (requireConfidentParse && candidate.confidence !== "high") {
     return undefined
   }
 
@@ -75,8 +104,13 @@ const getHybridCardIdentity = (
       mediaKind: "tv",
       normalizedTitle: candidate.normalizedTitle,
       requestTitle: candidate.title,
-      displayTitle: candidate.title,
+      displayTitle: getTvDisplayTitle(
+        candidate.title,
+        candidate.year,
+        candidate.seasonNumber
+      ),
       year: candidate.year,
+      seasonNumber: candidate.seasonNumber,
     }
   }
 
@@ -91,7 +125,9 @@ const findConfidentDescendantIdentity = (
     const nodeLabel = node.label?.trim()
     const children = node.children ?? []
     if (nodeLabel) {
-      const identity = getHybridCardIdentity(nodeLabel, parentFolderName)
+      const identity = getHybridCardIdentity(nodeLabel, parentFolderName, {
+        requireConfidentParse: true,
+      })
       if (identity && (identity.mediaKind === "tv" || children.length === 0)) {
         return identity
       }
@@ -127,13 +163,25 @@ const getHybridItemIdentity = (
         itemIdentity?.year !== undefined &&
         itemIdentity.normalizedTitle === descendantIdentity.normalizedTitle
       ) {
-        return { ...descendantIdentity, year: itemIdentity.year }
+        return withAdoptedYear(descendantIdentity, itemIdentity.year)
       }
       return descendantIdentity
     }
   }
   return getHybridCardIdentity(itemLabel)
 }
+
+const withAdoptedYear = (
+  identity: HybridCardIdentity,
+  year: number
+): HybridCardIdentity => ({
+  ...identity,
+  year,
+  displayTitle:
+    identity.mediaKind === "movie"
+      ? `${identity.requestTitle} (${year})`
+      : getTvDisplayTitle(identity.requestTitle, year, identity.seasonNumber),
+})
 
 const toUnmatchedGroup = (
   item: LinkListItem,
@@ -145,6 +193,14 @@ const toUnmatchedGroup = (
   lastAddedAt: item.timestamp,
   items: [item],
 })
+
+const getHybridGroupKey = (identity: HybridCardIdentity): string => {
+  const seasonSegment =
+    identity.seasonNumber === undefined
+      ? ""
+      : `:S${getTwoDigitSeasonLabel(identity.seasonNumber)}`
+  return `${identity.mediaKind}:${identity.normalizedTitle}:${identity.year ?? ""}${seasonSegment}`
+}
 
 const findOrAdoptYearGroup = (
   bucket: MutableHybridCardGroup[],
@@ -174,10 +230,11 @@ const findOrAdoptYearGroup = (
   }
 
   const createdGroup: MutableHybridCardGroup = {
-    key: `${identity.mediaKind}:${identity.normalizedTitle}:${identity.year ?? ""}`,
+    key: getHybridGroupKey(identity),
     mediaKind: identity.mediaKind,
     normalizedTitle: identity.normalizedTitle,
     anchorYear: identity.year,
+    anchorSeason: identity.seasonNumber,
     requestTitle: identity.requestTitle,
     displayTitle: identity.displayTitle,
     lastAddedAt: 0,
@@ -210,13 +267,12 @@ const getGroupArtworkRequest = (
     }
   }
   if (group.mediaKind === "tv") {
-    return group.anchorYear === undefined
-      ? { mediaKind: "tv", title: group.requestTitle }
-      : {
-          mediaKind: "tv",
-          title: group.requestTitle,
-          year: group.anchorYear,
-        }
+    return {
+      mediaKind: "tv",
+      title: group.requestTitle,
+      year: group.anchorYear,
+      seasonNumber: group.anchorSeason,
+    }
   }
   return {
     mediaKind: "movie",
@@ -259,7 +315,7 @@ export const getHybridCardGroups = (
       continue
     }
 
-    const bucketKey = `${identity.mediaKind}:${identity.normalizedTitle}`
+    const bucketKey = `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
     const bucket = titleBuckets.get(bucketKey) ?? []
     const targetGroup = findOrAdoptYearGroup(bucket, identity)
     targetGroup.items.push(item)

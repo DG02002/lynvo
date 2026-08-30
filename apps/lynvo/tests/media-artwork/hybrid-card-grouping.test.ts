@@ -63,11 +63,42 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Stranger Things")
+    expect(groups[0]?.displayTitle).toBe("Stranger Things S01")
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
       title: "Stranger Things",
+      seasonNumber: 1,
     })
+  })
+
+  it("keeps episodes of different seasons in separate cards", () => {
+    const groups = getHybridCardGroups([
+      createItem(
+        "https://example.com/st-s01e01",
+        "Show.S01E01.720p.mkv",
+        3_000
+      ),
+      createItem(
+        "https://example.com/st-s02e01",
+        "Show.S02E01.1080p.mkv",
+        2_000
+      ),
+      createItem(
+        "https://example.com/st-s01e02",
+        "Show.S01E02.1080p.mkv",
+        1_000
+      ),
+    ])
+
+    expect(groups).toHaveLength(2)
+    expect(groups.map((group) => group.displayTitle)).toEqual([
+      "Show S01",
+      "Show S02",
+    ])
+    expect(groups[0]?.items.map((item) => item.url)).toEqual([
+      "https://example.com/st-s01e01",
+      "https://example.com/st-s01e02",
+    ])
   })
 
   it("keeps same-title releases with conflicting years apart", () => {
@@ -108,6 +139,112 @@ describe("getHybridCardGroups", () => {
     expect(groups).toHaveLength(1)
     expect(groups[0]?.displayTitle).toBe("file")
     expect(groups[0]?.artworkRequest).toBeUndefined()
+  })
+
+  it("ignores quality-tag descendants without a year when identifying a card", () => {
+    const groups = getHybridCardGroups([
+      {
+        ...createItem(
+          "https://new5.hdhub4u.cl/toxic-2026-hindi-line-v2-hdtc-full-movie/",
+          "Toxic (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
+          2_000
+        ),
+        metadata: {
+          schemaVersion: 3,
+          source: {},
+          extraction: {
+            extractedLinks: [
+              {
+                nodeKey: "0:resolvable:hubcdn-1",
+                url: "https://example.com/480p",
+                label: "480p⚡",
+                type: "folder",
+                size: "820MB",
+                mediaNodeKind: "resolvable",
+              },
+              {
+                nodeKey: "5:resolvable:hubdrive-6",
+                url: "https://example.com/hq-rip",
+                label: "HQ-Rip 1080p",
+                type: "folder",
+                size: "10.5GB",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+          playback: { openedUrls: [] },
+        },
+      },
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.displayTitle).toBe("Toxic (2026)")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "movie",
+      title: "Toxic",
+      year: 2026,
+    })
+  })
+
+  it("ignores resolved mirror descendants when identifying a card", () => {
+    const groups = getHybridCardGroups([
+      {
+        ...createItem(
+          "https://new5.hdhub4u.cl/toxic-2026-hindi-line-v2-hdtc-full-movie/",
+          "Toxic (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
+          2_000
+        ),
+        metadata: {
+          schemaVersion: 3,
+          source: {},
+          extraction: {
+            extractedLinks: [
+              {
+                nodeKey: "0:resolvable:hubcdn-1",
+                url: "https://example.com/480p",
+                label: "480p⚡",
+                type: "folder",
+                size: "820MB",
+                mediaNodeKind: "resolvable",
+                resolutionKind: "mirrors",
+              },
+              {
+                nodeKey: "2:resolvable:greenmount-3",
+                url: "https://example.com/720p-x264",
+                label: "720p x264",
+                type: "folder",
+                childrenResolved: true,
+                children: [
+                  {
+                    nodeKey: "0:resolvable:hubcloud-1",
+                    url: "https://example.com/direct",
+                    label: "Direct",
+                    type: "folder",
+                    mediaNodeKind: "resolvable",
+                    resolutionKind: "mirrors",
+                  },
+                  {
+                    nodeKey: "1:resolvable:hubdrive-2",
+                    url: "https://example.com/drive",
+                    label: "Drive",
+                    type: "folder",
+                    mediaNodeKind: "resolvable",
+                    resolutionKind: "mirrors",
+                  },
+                ],
+                mediaNodeKind: "resolvable",
+                resolutionKind: "folder",
+              },
+            ],
+          },
+          playback: { openedUrls: [] },
+        },
+      },
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.displayTitle).toBe("Toxic (2026)")
+    expect(groups[0]?.items).toHaveLength(1)
   })
 
   it("derives a tv identity from extracted children for show containers", () => {
@@ -151,11 +288,12 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Reacher")
+    expect(groups[0]?.displayTitle).toBe("Reacher (2022) S01")
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
       title: "Reacher",
       year: 2022,
+      seasonNumber: 1,
     })
   })
 
@@ -204,6 +342,7 @@ describe("getHybridCardGroups", () => {
       mediaKind: "tv",
       title: "Overlord",
       year: 2015,
+      seasonNumber: 1,
     })
   })
 

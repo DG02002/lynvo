@@ -107,3 +107,77 @@ export const selectBestSearchResult = (
   }
   return bestScore >= 0.75 ? bestResult : undefined
 }
+
+const toTokenList = (value: string): readonly string[] =>
+  normalizeTitle(value).split(" ").filter(Boolean)
+
+const doAllTokensMatch = (
+  leftTokens: readonly string[],
+  rightTokens: readonly string[]
+): boolean =>
+  leftTokens.length > 0 &&
+  leftTokens.every((leftToken) =>
+    rightTokens.some((rightToken) => tokenMatches(leftToken, rightToken))
+  )
+
+/**
+ * Anime-style titles hide the work as a named season of the parent show:
+ * TMDB has no standalone "Bleach: Thousand-Year Blood War" entry — it is
+ * season 2 of "Bleach". When the full title search only surfaces the
+ * parent, the parent is a candidate whose title leads the query.
+ */
+export const selectLeadingTitleMatch = (
+  query: string,
+  results: readonly TmdbSearchResult[]
+): TmdbSearchResult | undefined => {
+  const queryTokens = toTokenList(query)
+  let bestResult: TmdbSearchResult | undefined
+  let bestPrefixLength = 0
+  for (const result of results) {
+    const resultTokens = toTokenList(result.title)
+    const maxPrefixLength = Math.min(resultTokens.length, queryTokens.length)
+    let prefixLength = 0
+    while (
+      prefixLength < maxPrefixLength &&
+      tokenMatches(
+        queryTokens[prefixLength] ?? "",
+        resultTokens[prefixLength] ?? ""
+      )
+    ) {
+      prefixLength += 1
+    }
+    const coversWholeTitle = prefixLength === resultTokens.length
+    const leavesSubtitleRemainder = prefixLength < queryTokens.length
+    if (
+      coversWholeTitle &&
+      leavesSubtitleRemainder &&
+      prefixLength > bestPrefixLength
+    ) {
+      bestResult = result
+      bestPrefixLength = prefixLength
+    }
+  }
+  return bestResult
+}
+
+/** The season name must account for every query token the parent title did not. */
+export const doesSeasonNameCoverRemainder = (
+  query: string,
+  showTitle: string,
+  seasonName: string
+): boolean => {
+  const queryTokens = toTokenList(query)
+  const showTitleTokens = toTokenList(showTitle)
+  const seasonNameTokens = toTokenList(seasonName)
+  if (
+    showTitleTokens.length === 0 ||
+    showTitleTokens.length >= queryTokens.length
+  ) {
+    return false
+  }
+  const remainderTokens = queryTokens.slice(showTitleTokens.length)
+  return (
+    doAllTokensMatch(remainderTokens, seasonNameTokens) &&
+    doAllTokensMatch(seasonNameTokens, remainderTokens)
+  )
+}
