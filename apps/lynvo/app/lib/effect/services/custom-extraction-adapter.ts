@@ -49,12 +49,12 @@ const selectCustomPlugin = Effect.fn(
     options.pluginId
   )
   if (!plugin && !options.pluginId && options.kind === "source") {
-    const discovery = yield* discoverCustomPlugin(
+    const discovery = yield* discoverCustomPlugin({
       pluginServer,
-      options.targetUrl,
-      options.inlineBasicAuth,
-      options.requestId
-    )
+      targetUrl: options.targetUrl,
+      basicAuth: options.inlineBasicAuth,
+      requestId: options.requestId,
+    })
     if (discovery?.matched) {
       plugin = yield* getCustomPlugin(
         pluginServer,
@@ -96,14 +96,14 @@ export const extractWithCustomPluginServer = Effect.fn(
       })
     : {}
   const outcome = yield* Effect.result(
-    extractFromCustomPluginServer(
-      route.pluginServer,
-      options.targetUrl,
-      options.kind,
-      { pluginId: route.plugin?.id, ...credentials },
-      options.requestId,
-      route.plugin
-    )
+    extractFromCustomPluginServer({
+      pluginServer: route.pluginServer,
+      targetUrl: options.targetUrl,
+      kind: options.kind,
+      credentials: { pluginId: route.plugin?.id, ...credentials },
+      requestId: options.requestId,
+      source: route.plugin,
+    })
   )
   if (Result.isFailure(outcome)) {
     tripCircuitBreakerOnTransportFailure(

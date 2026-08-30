@@ -71,10 +71,15 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
       loader_duration_ms: Math.max(0, performance.now() - startedAt),
     },
   })
-  return responseWithSession(data, sessionResult, request, {
-    headers: {
-      "Set-Cookie": await csrfCookie.serialize(csrfToken),
-      "Server-Timing": `root-session;dur=${sessionDurationMs.toFixed(1)}`,
+  return responseWithSession({
+    responseData: data,
+    sessionResult,
+    request,
+    init: {
+      headers: {
+        "Set-Cookie": await csrfCookie.serialize(csrfToken),
+        "Server-Timing": `root-session;dur=${sessionDurationMs.toFixed(1)}`,
+      },
     },
   })
 }

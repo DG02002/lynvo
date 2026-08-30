@@ -24,6 +24,7 @@ import { buildReleaseIdentity } from "./release-identity"
 import {
   checkAuthenticationRateLimit,
   checkRateLimit,
+  type AuthenticationRateLimitResult,
 } from "./authentication-rate-limit"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { closeRealtimeSession } from "./realtime-session-revocation"
@@ -105,6 +106,67 @@ const clientIp = (request: Request): string =>
 
 const rateLimit = checkRateLimit
 
+const readDeviceCodeRequestName = async (
+  context: HonoContext<RequestLoggingEnvironment>
+): Promise<string | Response> => {
+  try {
+    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
+      await context.req.json()
+    )
+    if (Result.isFailure(result)) {
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_request",
+          error: "Send a valid request.",
+          retryable: false,
+        }),
+        400
+      )
+    }
+    return result.success.deviceName
+  } catch {
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Send a valid request.",
+        retryable: false,
+      }),
+      400
+    )
+  }
+}
+
+const createDeviceCodeRateLimitResponse = (
+  context: HonoContext<RequestLoggingEnvironment>,
+  rateLimitResult: AuthenticationRateLimitResult
+): Response | undefined => {
+  if (rateLimitResult === "allowed") {
+    return undefined
+  }
+  if (rateLimitResult === "limited") {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many attempts. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
+  }
+  addRequestContext(context, {
+    configuration_error: "auth_rate_limiter_unavailable",
+  })
+  return context.json(
+    requestApiError(context, {
+      code: "service_unavailable",
+      error: "Device login is unavailable. Try again later.",
+      retryable: true,
+    }),
+    503
+  )
+}
+
 const resolveRequestSession = async (
   request: Request,
   env: AuthEnv
@@ -164,62 +226,22 @@ app.post("/api/auth/device/code", async (context) => {
       403
     )
   }
-  let deviceName: string
-  try {
-    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
-      await context.req.json()
-    )
-    if (Result.isFailure(result)) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error: "Send a valid request.",
-          retryable: false,
-        }),
-        400
-      )
-    }
-    const { deviceName: decodedDeviceName } = result.success
-    deviceName = decodedDeviceName
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Send a valid request.",
-        retryable: false,
-      }),
-      400
-    )
+  const deviceName = await readDeviceCodeRequestName(context)
+  if (deviceName instanceof Response) {
+    return deviceName
   }
-  const rateLimitResult = await checkAuthenticationRateLimit(
-    context.env,
-    `auth:device-code:${clientIp(context.req.raw)}`,
-    DEVICE_CODE_CREATION_RATE_LIMIT,
-    DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
+  const rateLimitResult = await checkAuthenticationRateLimit({
+    environment: context.env,
+    key: `auth:device-code:${clientIp(context.req.raw)}`,
+    limit: DEVICE_CODE_CREATION_RATE_LIMIT,
+    windowSeconds: DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  })
+  const rateLimitResponse = createDeviceCodeRateLimitResponse(
+    context,
+    rateLimitResult
   )
-  if (rateLimitResult !== "allowed") {
-    if (rateLimitResult === "limited") {
-      addRequestContext(context, { rate_limit: { allowed: false } })
-      return context.json(
-        requestApiError(context, {
-          code: "rate_limited",
-          error: "Too many attempts. Try again later.",
-          retryable: true,
-        }),
-        429
-      )
-    }
-    addRequestContext(context, {
-      configuration_error: "auth_rate_limiter_unavailable",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Device login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
+  if (rateLimitResponse) {
+    return rateLimitResponse
   }
   const database = getD1Database(context.env)
   if (!database) {
@@ -323,11 +345,35 @@ app.get("/api/auth/session/status", async (context) => {
   })
 })
 
-app.get("/api/realtime", async (context) => {
-  addRequestContext(context, {
-    operation: "realtime_connect",
-    transport: "websocket",
-  })
+interface RealtimeForwardHeadersInput {
+  request: Request
+  session: {
+    readonly userId: string
+    readonly sessionId: string
+  }
+  receiverId: string | undefined
+  deviceName: string | undefined
+}
+
+const buildRealtimeForwardHeaders = ({
+  request,
+  session,
+  receiverId,
+  deviceName,
+}: RealtimeForwardHeadersInput): Headers => {
+  const headers = new Headers(request.headers)
+  headers.set("X-Lynvo-Session-Id", session.sessionId)
+  headers.set("X-Lynvo-User-Id", session.userId)
+  if (receiverId) {
+    headers.set("X-Lynvo-Receiver-Id", receiverId)
+    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
+  }
+  return headers
+}
+
+const createRealtimeHandshakeRejection = async (
+  context: HonoContext<RequestLoggingEnvironment>
+): Promise<Response | undefined> => {
   const request = context.req.raw
   if (request.headers.get("Upgrade") !== "websocket") {
     return context.text("Expected WebSocket", 426)
@@ -335,16 +381,29 @@ app.get("/api/realtime", async (context) => {
   if (!isSameOriginRequest(request)) {
     return context.text("Forbidden", 403)
   }
-  const handshakeRateLimit = await rateLimit(
-    context.env,
-    `realtime:${clientIp(request)}`,
-    EXTRACTION_ROUTE_RATE_LIMIT,
-    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
-  )
+  const handshakeRateLimit = await rateLimit({
+    environment: context.env,
+    key: `realtime:${clientIp(request)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
   if (handshakeRateLimit === "limited") {
     addRequestContext(context, { rate_limit: { allowed: false } })
     return context.text("Too many connection attempts", 429)
   }
+  return undefined
+}
+
+app.get("/api/realtime", async (context) => {
+  addRequestContext(context, {
+    operation: "realtime_connect",
+    transport: "websocket",
+  })
+  const handshakeRejection = await createRealtimeHandshakeRejection(context)
+  if (handshakeRejection) {
+    return handshakeRejection
+  }
+  const request = context.req.raw
   const session = await resolveRequestSession(request, context.env)
   if (session.kind === "unavailable") {
     return context.text("Service unavailable", 503)
@@ -363,15 +422,12 @@ app.get("/api/realtime", async (context) => {
     authenticated: true,
     user_id: session.userId,
   })
-  const headers = new Headers(request.headers)
-  headers.set("X-Lynvo-Session-Id", session.sessionId)
-  headers.set("X-Lynvo-User-Id", session.userId)
-  const receiverId = context.req.query("receiverId")
-  const deviceName = context.req.query("deviceName")
-  if (receiverId) {
-    headers.set("X-Lynvo-Receiver-Id", receiverId)
-    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
-  }
+  const headers = buildRealtimeForwardHeaders({
+    request,
+    session,
+    receiverId: context.req.query("receiverId"),
+    deviceName: context.req.query("deviceName"),
+  })
   return context.env.USER_REALTIME_ROOM.getByName(session.userId).fetch(
     new Request(request, { headers })
   )
@@ -405,12 +461,12 @@ app.use("/api/auth/device/authorize", async (context, next) => {
   if (session.kind === "anonymous") {
     return next()
   }
-  const rateLimitResult = await rateLimit(
-    context.env,
-    `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
-    10,
-    600
-  )
+  const rateLimitResult = await rateLimit({
+    environment: context.env,
+    key: `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
+    limit: 10,
+    windowSeconds: 600,
+  })
   if (rateLimitResult === "unavailable") {
     addRequestContext(context, {
       configuration_error: "auth_rate_limiter_unavailable",
@@ -440,12 +496,12 @@ app.use("/api/auth/device/authorize", async (context, next) => {
 })
 
 app.use("/api/extract", async (context, next) => {
-  const result = await rateLimit(
-    context.env,
-    `extraction:${clientIp(context.req.raw)}`,
-    EXTRACTION_ROUTE_RATE_LIMIT,
-    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
-  )
+  const result = await rateLimit({
+    environment: context.env,
+    key: `extraction:${clientIp(context.req.raw)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
   addRequestContext(context, {
     extraction_rate_limit: { outcome: result },
   })
@@ -473,12 +529,12 @@ app.use("/api/extract", async (context, next) => {
 })
 
 app.use("/api/meta", async (context, next) => {
-  const result = await rateLimit(
-    context.env,
-    `metadata:${clientIp(context.req.raw)}`,
-    EXTRACTION_ROUTE_RATE_LIMIT,
-    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
-  )
+  const result = await rateLimit({
+    environment: context.env,
+    key: `metadata:${clientIp(context.req.raw)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
   addRequestContext(context, {
     extraction_rate_limit: { outcome: result },
   })
@@ -1021,53 +1077,77 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 }
 
+interface ScheduledMaintenanceCronInput {
+  env: Env
+  database: ReturnType<typeof getD1Database>
+  startedAt: number
+}
+
+const runHourlyMaintenanceCron = async ({
+  env,
+  database,
+  startedAt,
+}: ScheduledMaintenanceCronInput): Promise<void> => {
+  const manifestRefresh = database
+    ? await refreshCustomPluginServerManifests(env, database).catch((error) => {
+        console.warn("plugin_server_manifest_refresh_unavailable", {
+          operation: "plugin_server_manifest_refresh_unavailable",
+          error: error instanceof Error ? error.message : String(error),
+        })
+        return { refreshed: 0, failed: 0 }
+      })
+    : { refreshed: 0, failed: 0 }
+  console.info("plugin_server_manifest_refresh", {
+    operation: "plugin_server_manifest_refresh",
+    refreshed_count: manifestRefresh.refreshed,
+    failed_count: manifestRefresh.failed,
+  })
+  const outcomes = database ? await runHourlyD1Maintenance(database) : []
+  const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
+  console.info("scheduled_hourly_maintenance", {
+    operation: "scheduled_hourly_maintenance",
+    outcome: failed ? "failure" : "success",
+    duration_ms: Math.max(0, performance.now() - startedAt),
+  })
+  if (failed) {
+    throw new Error("D1 hourly maintenance is unavailable")
+  }
+}
+
+interface ScheduledRetentionCronInput {
+  database: ReturnType<typeof getD1Database>
+  startedAt: number
+}
+
+const runDailyRetentionCron = async ({
+  database,
+  startedAt,
+}: ScheduledRetentionCronInput): Promise<void> => {
+  const outcome = database
+    ? await runDailyD1Maintenance(database)
+    : { kind: "skipped" as const }
+  const failed = outcome.kind === "unavailable"
+  console.info("scheduled_daily_retention", {
+    operation: "scheduled_daily_retention",
+    outcome: failed ? "failure" : "success",
+    duration_ms: Math.max(0, performance.now() - startedAt),
+  })
+  if (failed) {
+    throw new Error("D1 daily retention maintenance is unavailable")
+  }
+}
+
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
   scheduled: async (controller, env) => {
     const startedAt = performance.now()
     const database = getD1Database(env)
     if (controller.cron === CRON_SCHEDULE_HOURLY_MAINTENANCE) {
-      const manifestRefresh = database
-        ? await refreshCustomPluginServerManifests(env, database).catch(
-            (error) => {
-              console.warn("plugin_server_manifest_refresh_unavailable", {
-                operation: "plugin_server_manifest_refresh_unavailable",
-                error: error instanceof Error ? error.message : String(error),
-              })
-              return { refreshed: 0, failed: 0 }
-            }
-          )
-        : { refreshed: 0, failed: 0 }
-      console.info("plugin_server_manifest_refresh", {
-        operation: "plugin_server_manifest_refresh",
-        refreshed_count: manifestRefresh.refreshed,
-        failed_count: manifestRefresh.failed,
-      })
-      const outcomes = database ? await runHourlyD1Maintenance(database) : []
-      const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
-      console.info("scheduled_hourly_maintenance", {
-        operation: "scheduled_hourly_maintenance",
-        outcome: failed ? "failure" : "success",
-        duration_ms: Math.max(0, performance.now() - startedAt),
-      })
-      if (failed) {
-        throw new Error("D1 hourly maintenance is unavailable")
-      }
+      await runHourlyMaintenanceCron({ env, database, startedAt })
       return
     }
     if (controller.cron === CRON_SCHEDULE_DAILY_RETENTION) {
-      const outcome = database
-        ? await runDailyD1Maintenance(database)
-        : { kind: "skipped" as const }
-      const failed = outcome.kind === "unavailable"
-      console.info("scheduled_daily_retention", {
-        operation: "scheduled_daily_retention",
-        outcome: failed ? "failure" : "success",
-        duration_ms: Math.max(0, performance.now() - startedAt),
-      })
-      if (failed) {
-        throw new Error("D1 daily retention maintenance is unavailable")
-      }
+      await runDailyRetentionCron({ database, startedAt })
       return
     }
     // A rejection in any branch must not skip the outcome logging of the

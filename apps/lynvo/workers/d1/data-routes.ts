@@ -81,12 +81,19 @@ const REMOTE_CLAIM_INACTIVE_MESSAGE = "Remote command claim is no longer active"
 const PLUGIN_SERVER_DELETE_LIMIT_MESSAGE =
   "Plugin server cleanup exceeds the synchronous limit"
 
-const respondDataFailure = async (
-  context: DataRouteContext,
-  status: DataFailureStatus,
-  kind: string,
-  message: string
-): Promise<Response> =>
+interface RespondDataFailureInput {
+  readonly context: DataRouteContext
+  readonly status: DataFailureStatus
+  readonly kind: string
+  readonly message: string
+}
+
+const respondDataFailure = async ({
+  context,
+  status,
+  kind,
+  message,
+}: RespondDataFailureInput): Promise<Response> =>
   await context.json({ failure: { kind, message } }, status)
 
 const dataApp = new Hono<RequestLoggingEnvironment>()
@@ -118,20 +125,35 @@ dataApp.onError(async (error, context) => {
   }
   const message = error instanceof Error ? error.message : String(error)
   if (message === LINK_NOT_FOUND_MESSAGE) {
-    return await respondDataFailure(context, 404, "validation", message)
+    return await respondDataFailure({
+      context,
+      status: 404,
+      kind: "validation",
+      message,
+    })
   }
   if (
     message === EXTRACTION_CONFLICT_MESSAGE ||
     message === REMOTE_CLAIM_INACTIVE_MESSAGE ||
     message === REMOTE_TARGET_MISSING_MESSAGE
   ) {
-    return await respondDataFailure(context, 409, "validation", message)
+    return await respondDataFailure({
+      context,
+      status: 409,
+      kind: "validation",
+      message,
+    })
   }
   if (
     message === RETENTION_INVALID_MESSAGE ||
     message === PLUGIN_SERVER_DELETE_LIMIT_MESSAGE
   ) {
-    return await respondDataFailure(context, 400, "validation", message)
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message,
+    })
   }
   addRequestContext(context, {
     error: {
@@ -139,12 +161,12 @@ dataApp.onError(async (error, context) => {
       message,
     },
   })
-  return await respondDataFailure(
+  return await respondDataFailure({
     context,
-    500,
-    "temporarily-unavailable",
-    context.get("requestId")
-  )
+    status: 500,
+    kind: "temporarily-unavailable",
+    message: context.get("requestId"),
+  })
 })
 
 interface DataRequestReady {
@@ -172,35 +194,35 @@ const beginDataRequest = async (
   if (!database) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        503,
-        "service-unavailable",
-        "Data storage is temporarily unavailable"
-      ),
+        status: 503,
+        kind: "service-unavailable",
+        message: "Data storage is temporarily unavailable",
+      }),
     }
   }
   if (options.mutating && !isSameOriginRequest(context.req.raw)) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        403,
-        "csrf-expired",
-        "Mutation forbidden"
-      ),
+        status: 403,
+        kind: "csrf-expired",
+        message: "Mutation forbidden",
+      }),
     }
   }
   const session = await resolveD1Session(context.req.raw, database)
   if (!session) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        401,
-        "session-expired",
-        "Session expired"
-      ),
+        status: 401,
+        kind: "session-expired",
+        message: "Session expired",
+      }),
     }
   }
   addRequestContext(context, { user_id: session.userId })
@@ -210,7 +232,12 @@ const beginDataRequest = async (
 const respondInvalidBody = async (
   context: DataRouteContext
 ): Promise<Response> =>
-  respondDataFailure(context, 400, "validation", "Send a valid request.")
+  respondDataFailure({
+    context,
+    status: 400,
+    kind: "validation",
+    message: "Send a valid request.",
+  })
 
 interface DataRequestBody<Body> {
   readonly kind: "body"
@@ -373,12 +400,12 @@ dataApp.post("/media-artwork", async (context) => {
     return body.response
   }
   if (body.body.requests.length > MEDIA_ARTWORK_REQUEST_BATCH_LIMIT) {
-    return await respondDataFailure(
+    return await respondDataFailure({
       context,
-      400,
-      "validation",
-      "Too many artwork requests"
-    )
+      status: 400,
+      kind: "validation",
+      message: "Too many artwork requests",
+    })
   }
   const results = await lookupMediaArtworkCached(
     context.env,
@@ -571,12 +598,12 @@ dataApp.get("/storage-settings/retention-preview", async (context) => {
     return preparation.response
   }
   const days = normalizeRetentionDays(Number(context.req.query("days")))
-  const expiredLinkCount = await countExpiredLinksForUser(
-    preparation.database,
-    preparation.session.userId,
-    days,
-    Date.now()
-  )
+  const expiredLinkCount = await countExpiredLinksForUser({
+    database: preparation.database,
+    userId: preparation.session.userId,
+    retentionDays: days,
+    now: Date.now(),
+  })
   return context.json({ expiredLinkCount })
 })
 
@@ -598,12 +625,12 @@ dataApp.patch("/storage-settings", async (context) => {
   )
   let deletedLinks = 0
   if (body.deleteExpiredLinks) {
-    deletedLinks = await deleteExpiredLinksForUser(
-      preparation.database,
-      preparation.session.userId,
-      body.days,
-      Date.now()
-    )
+    deletedLinks = await deleteExpiredLinksForUser({
+      database: preparation.database,
+      userId: preparation.session.userId,
+      retentionDays: body.days,
+      now: Date.now(),
+    })
   }
   await notifyAccountDataChanged(
     context.env,
@@ -787,12 +814,13 @@ dataApp.post("/remote-commands/claim", async (context) => {
     return requestBody.response
   }
   const { body } = requestBody
-  const claim = await claimNextRemoteCommand(
-    preparation.database,
-    preparation.session.userId,
-    preparation.session.id,
-    { receiverId: body.receiverId, now: Date.now() }
-  )
+  const claim = await claimNextRemoteCommand({
+    database: preparation.database,
+    userId: preparation.session.userId,
+    sessionId: preparation.session.id,
+    receiverId: body.receiverId,
+    now: Date.now(),
+  })
   if (!claim) {
     return context.json({ commands: [] })
   }
@@ -820,12 +848,13 @@ dataApp.post("/remote-commands/result", async (context) => {
     return requestBody.response
   }
   const { body } = requestBody
-  const result = await reportRemoteCommandResult(
-    preparation.database,
-    preparation.session.userId,
-    preparation.session.id,
-    { ...body, now: Date.now() }
-  )
+  const result = await reportRemoteCommandResult({
+    database: preparation.database,
+    userId: preparation.session.userId,
+    sessionId: preparation.session.id,
+    ...body,
+    now: Date.now(),
+  })
   await notifyAccountDataChanged(
     context.env,
     preparation.session.userId,

@@ -4,6 +4,18 @@
     "files": ["app/components/ui/**"],
     "overrides": [
       {
+        "files": ["tests/**"],
+        "rules": [
+          "eslint/max-statements",
+          "eslint/max-params",
+          "eslint/no-await-in-loop"
+        ]
+      },
+      {
+        "files": ["app/entry.server.tsx"],
+        "rules": ["eslint/max-params"]
+      },
+      {
         "files": ["app/**/routes/*.tsx"],
         "rules": ["react-doctor/only-export-components"]
       },

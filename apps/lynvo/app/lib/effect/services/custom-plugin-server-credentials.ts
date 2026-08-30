@@ -30,14 +30,22 @@ const EncryptedResponse = Schema.Struct({
 
 const DecryptedResponse = Schema.Struct({ apiKey: Schema.String })
 
+interface VaultRequestInput {
+  readonly environment: Env
+  readonly userId: string
+  readonly pluginServerId: string
+  readonly path: "/encrypt" | "/decrypt"
+  readonly body: Record<string, JsonValue>
+}
+
 const vaultRequest = Effect.fn("CustomPluginServerCredentials.vaultRequest")(
-  function* (
-    environment: Env,
-    userId: string,
-    pluginServerId: string,
-    path: "/encrypt" | "/decrypt",
-    body: Record<string, JsonValue>
-  ): Effect.fn.Return<JsonValue, CredentialVaultError> {
+  function* ({
+    environment,
+    userId,
+    pluginServerId,
+    path,
+    body,
+  }: VaultRequestInput): Effect.fn.Return<JsonValue, CredentialVaultError> {
     const response = yield* Effect.tryPromise({
       try: () =>
         environment.PLUGIN_SERVER_CREDENTIAL_VAULT.getByName(
@@ -74,24 +82,31 @@ const vaultRequest = Effect.fn("CustomPluginServerCredentials.vaultRequest")(
   }
 )
 
+interface EncryptCustomPluginServerApiKeyInput {
+  readonly environment: Env
+  readonly userId: string
+  readonly pluginServerId: string
+  readonly apiKey: string
+}
+
 export const encryptCustomPluginServerApiKey = Effect.fn(
   "CustomPluginServerCredentials.encryptCustomPluginServerApiKey"
-)(function* (
-  environment: Env,
-  userId: string,
-  pluginServerId: string,
-  apiKey: string
-): Effect.fn.Return<
+)(function* ({
+  environment,
+  userId,
+  pluginServerId,
+  apiKey,
+}: EncryptCustomPluginServerApiKeyInput): Effect.fn.Return<
   EncryptedCustomPluginServerCredential,
   CredentialVaultError
 > {
-  const encrypted = yield* vaultRequest(
+  const encrypted = yield* vaultRequest({
     environment,
     userId,
     pluginServerId,
-    "/encrypt",
-    { apiKey }
-  )
+    path: "/encrypt",
+    body: { apiKey },
+  })
   const decoded = yield* Schema.decodeUnknownEffect(EncryptedResponse)(
     encrypted
   ).pipe(
@@ -131,20 +146,20 @@ export const decryptCustomPluginServer = Effect.fn(
       message: "Custom Plugin Server credential record is incomplete",
     })
   }
-  const decrypted = yield* vaultRequest(
+  const decrypted = yield* vaultRequest({
     environment,
     userId,
-    pluginServer.id,
-    "/decrypt",
-    {
+    pluginServerId: pluginServer.id,
+    path: "/decrypt",
+    body: {
       credential: {
         ciphertext: pluginServer.apiKeyCiphertext,
         nonce: pluginServer.apiKeyNonce,
         algorithm: pluginServer.apiKeyAlgorithm,
         keyVersion: pluginServer.apiKeyVersion,
       },
-    }
-  )
+    },
+  })
   const decoded = yield* Schema.decodeUnknownEffect(DecryptedResponse)(
     decrypted
   ).pipe(
@@ -175,20 +190,20 @@ export const decryptCustomPluginServerProxyToken = Effect.fn(
   ) {
     return undefined
   }
-  const decrypted = yield* vaultRequest(
+  const decrypted = yield* vaultRequest({
     environment,
     userId,
-    pluginServer.id,
-    "/decrypt",
-    {
+    pluginServerId: pluginServer.id,
+    path: "/decrypt",
+    body: {
       credential: {
         ciphertext: pluginServer.proxyTokenCiphertext,
         nonce: pluginServer.proxyTokenNonce,
         algorithm: pluginServer.proxyTokenAlgorithm,
         keyVersion: pluginServer.proxyTokenVersion,
       },
-    }
-  )
+    },
+  })
   const decoded = yield* Schema.decodeUnknownEffect(DecryptedResponse)(
     decrypted
   ).pipe(

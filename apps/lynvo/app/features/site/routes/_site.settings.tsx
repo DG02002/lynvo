@@ -31,8 +31,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
   const sessionResult = await getUserSession(request, getServerEnv(context))
   requireUserOrRedirect(sessionResult, new URL(request.url).pathname)
   const user = sessionResult.user!
-  return responseWithSession(
-    {
+  return responseWithSession({
+    responseData: {
       user: {
         id: user.sub,
         email: user.email,
@@ -41,8 +41,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
       },
     },
     sessionResult,
-    request
-  )
+    request,
+  })
 }
 
 export interface SettingsOutletContext {

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -12,10 +12,8 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import {
-  FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS,
-  FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX,
-} from "~/lib/constants"
+import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
+import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 import { Result, Schema } from "effect"
 
 interface UseFinderBrowserStateOptions {
@@ -83,11 +81,6 @@ export const useFinderBrowserState = ({
     []
   )
   const contentRef = useRef<HTMLDivElement>(null)
-  const scrollPositionsRef = useRef(new Map<string, number>())
-  const horizontalGestureDistanceRef = useRef(0)
-  const horizontalGestureTriggeredRef = useRef(false)
-  const lastHorizontalGestureEventAtRef = useRef(0)
-  const lastGestureWasBackRef = useRef<boolean | null>(null)
   const currentLinks = useMemo(
     () => getLinksAtFolderPath(rootLinks, folderPath),
     [folderPath, rootLinks]
@@ -108,25 +101,10 @@ export const useFinderBrowserState = ({
     )
   }, [folderPath, item.id])
 
-  useEffect(() => {
-    contentRef.current?.scrollTo({
-      top: scrollPositionsRef.current.get(currentFolderKey) ?? 0,
-    })
-  }, [currentFolderKey])
-
-  const rememberScrollPosition = () => {
-    scrollPositionsRef.current.set(
-      currentFolderKey,
-      contentRef.current?.scrollTop ?? 0
-    )
-  }
-
-  const resetHorizontalGesture = () => {
-    horizontalGestureDistanceRef.current = 0
-    horizontalGestureTriggeredRef.current = false
-    lastHorizontalGestureEventAtRef.current = 0
-    lastGestureWasBackRef.current = null
-  }
+  const { rememberScrollPosition } = useFinderScrollRestoration({
+    contentRef,
+    currentFolderKey,
+  })
 
   const navigateToParentFolder = () => {
     if (folderPath.length === 0) {
@@ -154,73 +132,14 @@ export const useFinderBrowserState = ({
     setFolderPath(nextFolderPath)
   }
 
-  const handleContentWheel = useEffectEvent((event: WheelEvent) => {
-    const currentTimeMs = Date.now()
-    if (
-      currentTimeMs - lastHorizontalGestureEventAtRef.current >
-      FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS
-    ) {
-      resetHorizontalGesture()
-    }
-
-    const isHorizontalGesture = Math.abs(event.deltaX) > Math.abs(event.deltaY)
-    if (!isHorizontalGesture || event.deltaX === 0) {
-      resetHorizontalGesture()
-      return
-    }
-
-    const isBackGesture = event.deltaX < 0
-    if (
-      lastGestureWasBackRef.current !== null &&
-      lastGestureWasBackRef.current !== isBackGesture
-    ) {
-      resetHorizontalGesture()
-    }
-    lastGestureWasBackRef.current = isBackGesture
-    lastHorizontalGestureEventAtRef.current = currentTimeMs
-
-    if (!isBackGesture && forwardFolderPaths.length === 0) {
-      resetHorizontalGesture()
-      return
-    }
-
-    event.preventDefault()
-    if (horizontalGestureTriggeredRef.current) {
-      return
-    }
-
-    horizontalGestureDistanceRef.current += Math.abs(event.deltaX)
-    if (
-      horizontalGestureDistanceRef.current <
-      FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX
-    ) {
-      return
-    }
-
-    horizontalGestureTriggeredRef.current = true
-    horizontalGestureDistanceRef.current = 0
-    if (isBackGesture) {
-      navigateToParentFolder()
-    } else {
-      navigateToNextFolder()
-    }
-  })
-
   const hasNoRootLinks = rootLinks.length === 0
-
-  useEffect(() => {
-    const contentElement = contentRef.current
-    if (!contentElement) {
-      return
-    }
-    const handleNativeWheel = (event: WheelEvent) => {
-      handleContentWheel(event)
-    }
-    contentElement.addEventListener("wheel", handleNativeWheel, {
-      passive: false,
-    })
-    return () => contentElement.removeEventListener("wheel", handleNativeWheel)
-  }, [hasNoRootLinks])
+  const { resetHorizontalGesture } = useFinderWheelNavigation({
+    contentRef,
+    hasForwardFolderPaths: forwardFolderPaths.length > 0,
+    hasNoRootLinks,
+    navigateToParentFolder,
+    navigateToNextFolder,
+  })
 
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
     resetHorizontalGesture()

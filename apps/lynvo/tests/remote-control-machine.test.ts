@@ -229,11 +229,11 @@ describe("remote-control machine", () => {
 
     expect(harness.machine.getSnapshot().lastCommand).toBeNull()
     expect(harness.transport.reportResult).toHaveBeenCalledOnce()
-    expect(harness.transport.reportResult).toHaveBeenCalledWith(
-      "command-1",
-      "claim-1",
-      "applied"
-    )
+    expect(harness.transport.reportResult).toHaveBeenCalledWith({
+      commandId: "command-1",
+      claimToken: "claim-1",
+      result: "applied",
+    })
   })
 
   it("ignores a late realtime copy after durable polling delivered a command", async () => {

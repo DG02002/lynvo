@@ -41,6 +41,13 @@ declare global {
     targetSessionId?: string
   }
 
+  interface RemoteCommandResultReport {
+    commandId: string
+    claimToken: string
+    result: "applied" | "failed"
+    message?: string
+  }
+
   interface RemoteControlTransport {
     connect: (targetSessionId: string) => Promise<void>
     disconnect: (targetSessionId: string) => Promise<void>
@@ -49,12 +56,7 @@ declare global {
       intent: RemotePlaybackIntent
     ) => Promise<void>
     poll: () => Promise<RemotePollResponse>
-    reportResult: (
-      commandId: string,
-      claimToken: string,
-      result: "applied" | "failed",
-      message?: string
-    ) => Promise<void>
+    reportResult: (report: RemoteCommandResultReport) => Promise<void>
   }
 
   interface RemoteControlPersistence {
@@ -162,7 +164,11 @@ export const createRemoteControlMachine = ({
   const outcomeListeners = new Set<(outcome: RemoteControlOutcome) => void>()
   const delivery = createRemoteCommandDelivery({
     reportApplied: async (commandId, claimToken) => {
-      await transport.reportResult(commandId, claimToken, "applied")
+      await transport.reportResult({
+        commandId,
+        claimToken,
+        result: "applied",
+      })
     },
     now: clock.now,
     persistence,
@@ -362,12 +368,12 @@ export const createRemoteControlMachine = ({
       if (!command || command.id !== commandId) {
         return
       }
-      await transport.reportResult(
+      await transport.reportResult({
         commandId,
-        command.claimToken,
-        "failed",
-        message
-      )
+        claimToken: command.claimToken,
+        result: "failed",
+        message,
+      })
       delivery.markFailed(commandId)
       syncDeliveryState()
     },

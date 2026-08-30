@@ -535,12 +535,12 @@ describe("d1 links", () => {
       })
     ).rejects.toThrow("Choose an available auto-delete period")
 
-    const deletedForUser = await deleteExpiredLinksForUser(
-      env.DB,
-      user.id,
-      7,
-      NOW + 8 * DAY_MS
-    )
+    const deletedForUser = await deleteExpiredLinksForUser({
+      database: env.DB,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
     expect(deletedForUser).toBe(1)
     let snapshot = await listSavedLinks(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
@@ -712,19 +712,19 @@ describe("d1 links", () => {
   it("does not bump data_version when a guarded write loses its race", async () => {
     const user = await createUser()
     const before = await getDataVersion(env.DB, user.id)
-    const { changed, dataVersion } = await executeOwnedWrite(
-      env.DB,
-      user.id,
-      [
+    const { changed, dataVersion } = await executeOwnedWrite({
+      database: env.DB,
+      userId: user.id,
+      statements: [
         env.DB.prepare(
           "UPDATE links SET title = 'lost' WHERE id = 'missing-link'"
         ),
       ],
-      {
+      guard: {
         conditionSql: "SELECT 1 FROM links WHERE id = 'missing-link'",
         conditionBindings: [],
-      }
-    )
+      },
+    })
     expect(changed).toBe(false)
     expect(dataVersion).toBe(before)
   })

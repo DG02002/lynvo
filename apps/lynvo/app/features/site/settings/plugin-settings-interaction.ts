@@ -1,10 +1,10 @@
 import * as React from "react"
 import { Effect } from "effect"
-import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { client } from "~/lib/effect/api/client"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { usePluginDomainDrafts } from "./use-plugin-domain-drafts"
+import { usePluginSettingsOperations } from "./use-plugin-settings-operations"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
 
 export interface PluginDomainDraft {
@@ -95,12 +95,6 @@ export interface UsePluginSettingsInteractionOptions {
   readonly now?: () => number
 }
 
-const EMPTY_DOMAIN_DRAFT: PluginDomainDraft = {
-  domain: "",
-  username: "",
-  password: "",
-  isCredentialEnabled: false,
-}
 const EMPTY_PLUGIN_SERVERS: readonly CustomPluginServer[] = []
 const EMPTY_DOMAINS: readonly PluginDomain[] = []
 const MANIFEST_FRESHNESS_MS = 15 * 60 * 1000
@@ -153,9 +147,6 @@ const defaultCommands: PluginSettingsCommands = {
     ),
 }
 
-const failureMessage = (cause: unknown, fallback: string) =>
-  getUserFacingErrorMessage(cause, fallback)
-
 export const usePluginSettingsInteraction = ({
   commands: overrides,
   loadData = true,
@@ -190,85 +181,21 @@ export const usePluginSettingsInteraction = ({
       ),
     [allDomains]
   )
-  const [domainDrafts, setDomainDrafts] = React.useState<
-    Record<string, PluginDomainDraft>
-  >({})
-  const [domainOperations, setDomainOperations] = React.useState<
-    Record<string, PluginSettingsOperation>
-  >({})
-  const [serverOperations, setServerOperations] = React.useState<
-    Record<string, PluginSettingsOperation>
-  >({})
-  const pending = React.useRef(new Set<string>())
-
-  const run = React.useCallback(
-    async (
-      key: string,
-      operation: () => Promise<PluginSettingsMutationResult>,
-      messages: { success?: string; failure: string },
-      target: "domain" | "server" = "domain",
-      feedback = true
-    ) => {
-      if (pending.current.has(key)) {
-        return false
-      }
-      pending.current.add(key)
-      const setter =
-        target === "domain" ? setDomainOperations : setServerOperations
-      setter((current) => ({ ...current, [key]: { status: "pending" } }))
-      try {
-        const result = await operation()
-        if (!result.success) {
-          throw new Error(messages.failure)
-        }
-        await reloadPluginSettings()
-        setter((current) => ({ ...current, [key]: { status: "success" } }))
-        if (feedback && messages.success) {
-          showSuccessToast({ title: messages.success })
-        }
-        return true
-      } catch (error) {
-        const message = failureMessage(error, messages.failure)
-        setter((current) => ({
-          ...current,
-          [key]: { status: "error", error: message },
-        }))
-        if (feedback) {
-          showErrorToast({ title: message })
-        }
-        return false
-      } finally {
-        pending.current.delete(key)
-      }
-    },
-    [reloadPluginSettings]
-  )
-
-  const updateDomainDraft = React.useCallback(
-    (pluginId: string, update: Partial<PluginDomainDraft>) => {
-      setDomainDrafts((current) => {
-        const next = { ...(current[pluginId] ?? EMPTY_DOMAIN_DRAFT), ...update }
-        return {
-          ...current,
-          [pluginId]: next.isCredentialEnabled
-            ? next
-            : { ...next, username: "", password: "" },
-        }
-      })
-    },
-    []
-  )
+  const { domainDrafts, updateDomainDraft, clearDomainDraft, getDomainDraft } =
+    usePluginDomainDrafts()
+  const { domainOperations, serverOperations, run } =
+    usePluginSettingsOperations({ reloadPluginSettings })
 
   const addDomain = React.useCallback(
     async (pluginId: string) => {
-      const draft = domainDrafts[pluginId] ?? EMPTY_DOMAIN_DRAFT
+      const draft = getDomainDraft(pluginId)
       const domain = draft.domain.trim()
       if (!domain) {
         return false
       }
-      const didAdd = await run(
-        pluginId,
-        () => {
+      const didAdd = await run({
+        key: pluginId,
+        operation: () => {
           let input: CreatePluginDomainInput = { domain, pluginId }
           if (draft.username) {
             input = { ...input, username: draft.username }
@@ -278,48 +205,53 @@ export const usePluginSettingsInteraction = ({
           }
           return commands.createDomain(input)
         },
-        {
+        messages: {
           success: "Plugin domain added",
           failure: "The domain couldn’t be added. Check it and try again.",
-        }
-      )
+        },
+      })
       if (didAdd) {
-        setDomainDrafts((current) => ({
-          ...current,
-          [pluginId]: EMPTY_DOMAIN_DRAFT,
-        }))
+        clearDomainDraft(pluginId)
       }
       return didAdd
     },
-    [commands, domainDrafts, run]
+    [clearDomainDraft, commands, getDomainDraft, run]
   )
 
   const handleDeleteDomain = React.useCallback(
     async (domainId: string) => {
-      await run(domainId, () => commands.deleteDomain(domainId), {
-        success: "Plugin domain removed",
-        failure: "The domain couldn’t be removed. Try again.",
+      await run({
+        key: domainId,
+        operation: () => commands.deleteDomain(domainId),
+        messages: {
+          success: "Plugin domain removed",
+          failure: "The domain couldn’t be removed. Try again.",
+        },
       })
     },
     [commands, run]
   )
   const handleSetDomainCredential = React.useCallback(
     async (domainId: string, password: string, username?: string) =>
-      await run(
-        domainId,
-        () => commands.setCredential(domainId, password, username),
-        {
+      await run({
+        key: domainId,
+        operation: () => commands.setCredential(domainId, password, username),
+        messages: {
           success: "Plugin password saved",
           failure: "The Plugin password couldn’t be saved. Try again.",
-        }
-      ),
+        },
+      }),
     [commands, run]
   )
   const handleDeleteDomainCredential = React.useCallback(
     async (domainId: string) => {
-      await run(domainId, () => commands.deleteCredential(domainId), {
-        success: "Plugin password removed",
-        failure: "The Plugin password couldn’t be removed. Try again.",
+      await run({
+        key: domainId,
+        operation: () => commands.deleteCredential(domainId),
+        messages: {
+          success: "Plugin password removed",
+          failure: "The Plugin password couldn’t be removed. Try again.",
+        },
       })
     },
     [commands, run]
@@ -327,16 +259,16 @@ export const usePluginSettingsInteraction = ({
   const handleAddPluginServer = React.useCallback(
     async (value: CustomPluginServerFormValues) => {
       const key = `create:${value.baseUrl}`
-      const didAdd = await run(
+      const didAdd = await run({
         key,
-        () => commands.createPluginServer(value),
-        {
+        operation: () => commands.createPluginServer(value),
+        messages: {
           success: "Plugin server added",
           failure:
             "The Plugin Server couldn’t be added. Check its details and try again.",
         },
-        "server"
-      )
+        target: "server",
+      })
       return didAdd
         ? null
         : "The Plugin Server couldn’t be added. Check its details and try again."
@@ -345,60 +277,60 @@ export const usePluginSettingsInteraction = ({
   )
   const handleDeletePluginServer = React.useCallback(
     async (id: string) => {
-      await run(
-        id,
-        () => commands.deletePluginServer(id),
-        {
+      await run({
+        key: id,
+        operation: () => commands.deletePluginServer(id),
+        messages: {
           success: "Plugin server deleted",
           failure: "The Plugin Server couldn’t be deleted. Try again.",
         },
-        "server"
-      )
+        target: "server",
+      })
     },
     [commands, run]
   )
   const handleTogglePluginServer = React.useCallback(
     async (id: string, enabled: boolean) => {
-      await run(
-        id,
-        () => commands.togglePluginServer(id, !enabled),
-        {
+      await run({
+        key: id,
+        operation: () => commands.togglePluginServer(id, !enabled),
+        messages: {
           success: enabled ? undefined : "Plugin server enabled",
           failure: "The Plugin Server couldn’t be updated. Try again.",
         },
-        "server"
-      )
+        target: "server",
+      })
     },
     [commands, run]
   )
   const handleRefreshPluginServer = React.useCallback(
     async (id: string, feedback = true) => {
-      await run(
-        `refresh:${id}`,
-        () => commands.refreshPluginServer(id),
-        {
+      await run({
+        key: `refresh:${id}`,
+        operation: () => commands.refreshPluginServer(id),
+        messages: {
           success: "Plugin server manifest refreshed",
           failure: "The Plugin Server couldn’t be refreshed. Try again.",
         },
-        "server",
-        feedback
-      )
+        target: "server",
+        feedback,
+      })
     },
     [commands, run]
   )
 
   const handleSetPluginServerProxyKey = React.useCallback(
     async (id: string, token: string) => {
-      const balance = await run(
-        `proxy-key:${id}`,
-        () => commands.setPluginServerProxyKey(id, token),
-        {
+      const balance = await run({
+        key: `proxy-key:${id}`,
+        operation: () => commands.setPluginServerProxyKey(id, token),
+        messages: {
           success:
             token.trim() === "" ? "Proxy key removed" : "Proxy key saved",
           failure: "The proxy key couldn’t be saved. Try again.",
         },
-        "server"
-      )
+        target: "server",
+      })
       return balance
     },
     [commands, run]

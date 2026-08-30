@@ -80,30 +80,30 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
               }),
           })
         : null
-    let plugin = findLynvoPlugin(
+    let plugin = findLynvoPlugin({
       manifest,
-      options.targetUrl,
-      options.pluginId ?? configuredDomain?.pluginId,
-      false
-    )
+      targetUrl: options.targetUrl,
+      pluginId: options.pluginId ?? configuredDomain?.pluginId,
+      allowProbe: false,
+    })
     if (!plugin && manifest.features.discovery && options.kind === "source") {
-      const discovery = yield* discoverLynvoPlugin(
-        options.environment,
-        options.targetUrl,
-        options.inlineBasicAuth,
-        options.requestId,
-        operationId
-      )
+      const discovery = yield* discoverLynvoPlugin({
+        environment: options.environment,
+        targetUrl: options.targetUrl,
+        basicAuth: options.inlineBasicAuth,
+        requestId: options.requestId,
+        operationId,
+      })
       if (discovery.matched) {
-        plugin = findLynvoPlugin(
+        plugin = findLynvoPlugin({
           manifest,
-          options.targetUrl,
-          discovery.pluginId
-        )
+          targetUrl: options.targetUrl,
+          pluginId: discovery.pluginId,
+        })
       }
     }
     if (!plugin) {
-      plugin = findLynvoPlugin(manifest, options.targetUrl, undefined, true)
+      plugin = findLynvoPlugin({ manifest, targetUrl: options.targetUrl })
     }
     return plugin ? { manifest, plugin } : undefined
   }
@@ -192,15 +192,15 @@ export const extractWithLynvoPluginServer = Effect.fn(
             }),
     })
   }
-  const extraction = extractFromLynvoPluginServer(
-    options.environment,
-    options.targetUrl,
-    options.kind,
-    { pluginId: route.plugin.id, ...credentials },
-    options.requestId,
+  const extraction = extractFromLynvoPluginServer({
+    environment: options.environment,
+    targetUrl: options.targetUrl,
+    kind: options.kind,
+    credentials: { pluginId: route.plugin.id, ...credentials },
+    requestId: options.requestId,
     operationId,
-    route.plugin
-  )
+    source: route.plugin,
+  })
   if (!meteredPluginId) {
     return yield* extraction
   }

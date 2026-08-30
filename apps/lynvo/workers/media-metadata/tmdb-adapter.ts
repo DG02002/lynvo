@@ -295,31 +295,30 @@ export const createTmdbAdapter = (
     ((delayMs: number) =>
       new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
 
-  const fetchWithRetries = async (path: string): Promise<Response> => {
-    let lastError: unknown
-    for (
-      let attempt = 1;
-      attempt <= MEDIA_METADATA_REQUEST_ATTEMPTS;
-      attempt += 1
-    ) {
-      try {
-        return await dependencies.fetch(`${TMDB_API_BASE_URL}${path}`, {
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
-            "User-Agent": "Lynvo/1.0",
-          },
-          signal: AbortSignal.timeout?.(timeoutMs),
-        })
-      } catch (error) {
-        lastError = error
-        if (attempt < MEDIA_METADATA_REQUEST_ATTEMPTS) {
-          await sleep(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
-        }
+  const requestTmdbEndpointWithRetries = async (
+    path: string,
+    attemptNumber: number
+  ): Promise<Response> => {
+    try {
+      return await dependencies.fetch(`${TMDB_API_BASE_URL}${path}`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+          "User-Agent": "Lynvo/1.0",
+        },
+        signal: AbortSignal.timeout?.(timeoutMs),
+      })
+    } catch (error) {
+      if (attemptNumber >= MEDIA_METADATA_REQUEST_ATTEMPTS) {
+        throw error
       }
+      await sleep(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
+      return requestTmdbEndpointWithRetries(path, attemptNumber + 1)
     }
-    throw lastError
   }
+
+  const fetchWithRetries = (path: string): Promise<Response> =>
+    requestTmdbEndpointWithRetries(path, 1)
 
   const requestJson = async <Value>(
     path: string,

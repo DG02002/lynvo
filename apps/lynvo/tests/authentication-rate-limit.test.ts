@@ -16,15 +16,15 @@ describe("authentication rate limit environment policy", () => {
   it("bypasses authentication attempt limits in local development", async () => {
     const limiter = createLimiter(429)
 
-    const result = await checkAuthenticationRateLimit(
-      {
+    const result = await checkAuthenticationRateLimit({
+      environment: {
         ENVIRONMENT: "development",
         AUTH_RATE_LIMITER: limiter.namespace,
       },
-      "auth:device-code:127.0.0.1",
-      10,
-      600
-    )
+      key: "auth:device-code:127.0.0.1",
+      limit: 10,
+      windowSeconds: 600,
+    })
 
     expect(result).toBe("allowed")
     expect(limiter.namespace.getByName).not.toHaveBeenCalled()
@@ -34,15 +34,15 @@ describe("authentication rate limit environment policy", () => {
   it("continues enforcing authentication attempt limits in production", async () => {
     const limiter = createLimiter(429)
 
-    const result = await checkAuthenticationRateLimit(
-      {
+    const result = await checkAuthenticationRateLimit({
+      environment: {
         ENVIRONMENT: "production",
         AUTH_RATE_LIMITER: limiter.namespace,
       },
-      "auth:device-code:203.0.113.1",
-      10,
-      600
-    )
+      key: "auth:device-code:203.0.113.1",
+      limit: 10,
+      windowSeconds: 600,
+    })
 
     expect(result).toBe("limited")
     expect(limiter.namespace.getByName).toHaveBeenCalledWith(

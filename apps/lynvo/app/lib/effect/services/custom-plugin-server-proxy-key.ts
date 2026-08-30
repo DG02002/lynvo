@@ -157,12 +157,12 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
         })
     )
   )
-  const encrypted = yield* encryptCustomPluginServerApiKey(
+  const encrypted = yield* encryptCustomPluginServerApiKey({
     environment,
-    input.user.id,
-    stored.id,
-    token
-  ).pipe(
+    userId: input.user.id,
+    pluginServerId: stored.id,
+    apiKey: token,
+  }).pipe(
     Effect.mapError(
       (error) => new PluginServerRegistrationError({ message: error.message })
     )

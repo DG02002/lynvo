@@ -95,12 +95,12 @@ export const registerCustomPluginServer = Effect.fn(
       apiKey: input.apiKey,
       requestId: input.requestId,
     })
-    const encryptedCredential = yield* encryptCustomPluginServerApiKey(
+    const encryptedCredential = yield* encryptCustomPluginServerApiKey({
       environment,
-      input.user.id,
-      reservation.id,
-      prepared.apiKey
-    ).pipe(
+      userId: input.user.id,
+      pluginServerId: reservation.id,
+      apiKey: prepared.apiKey,
+    }).pipe(
       Effect.mapError(
         (error) => new PluginServerRegistrationError({ message: error.message })
       )

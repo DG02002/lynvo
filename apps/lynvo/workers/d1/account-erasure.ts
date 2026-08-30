@@ -425,34 +425,61 @@ export interface DrainAccountErasuresOutcome {
   stepsExhausted: boolean
 }
 
+interface DrainAccountErasuresState {
+  database: D1Database
+  targetUserId: string | undefined
+  stepsRemaining: number
+  processedUsers: number
+}
+
+const selectNextAccountErasureUserId = async (
+  database: D1Database
+): Promise<string | null> => {
+  const row = await database
+    .prepare("SELECT user_id FROM account_erasures LIMIT 1")
+    .first<{ user_id: string }>()
+  return row?.user_id ?? null
+}
+
+const drainNextAccountErasure = async ({
+  database,
+  targetUserId,
+  stepsRemaining,
+  processedUsers,
+}: DrainAccountErasuresState): Promise<DrainAccountErasuresOutcome> => {
+  if (stepsRemaining === 0) {
+    return { processedUsers, stepsExhausted: true }
+  }
+  const nextUserId =
+    targetUserId ?? (await selectNextAccountErasureUserId(database))
+  if (!nextUserId) {
+    return { processedUsers, stepsExhausted: false }
+  }
+  const outcome = await processAccountErasureStep(database, nextUserId)
+  const nextProcessedUsers =
+    outcome.kind === "done" ? processedUsers + 1 : processedUsers
+  const nextStepsRemaining = stepsRemaining - 1
+  if (outcome.kind !== "stage" && targetUserId) {
+    return {
+      processedUsers: nextProcessedUsers,
+      stepsExhausted: nextStepsRemaining === 0,
+    }
+  }
+  return drainNextAccountErasure({
+    database,
+    targetUserId,
+    stepsRemaining: nextStepsRemaining,
+    processedUsers: nextProcessedUsers,
+  })
+}
+
 export const drainAccountErasures = async (
   database: D1Database,
   targetUserId?: string
-): Promise<DrainAccountErasuresOutcome> => {
-  let stepsRemaining = ACCOUNT_ERASURE_MAX_STEPS_PER_RUN
-  let processedUsers = 0
-  while (stepsRemaining > 0) {
-    const nextUserId =
-      targetUserId ??
-      (
-        await database
-          .prepare("SELECT user_id FROM account_erasures LIMIT 1")
-          .first<{ user_id: string }>()
-      )?.user_id
-    if (!nextUserId) {
-      break
-    }
-    const outcome = await processAccountErasureStep(database, nextUserId)
-    stepsRemaining -= 1
-    if (outcome.kind === "done") {
-      processedUsers += 1
-    }
-    if (outcome.kind !== "stage" && targetUserId) {
-      break
-    }
-  }
-  return {
-    processedUsers,
-    stepsExhausted: stepsRemaining === 0,
-  }
-}
+): Promise<DrainAccountErasuresOutcome> =>
+  drainNextAccountErasure({
+    database,
+    targetUserId,
+    stepsRemaining: ACCOUNT_ERASURE_MAX_STEPS_PER_RUN,
+    processedUsers: 0,
+  })

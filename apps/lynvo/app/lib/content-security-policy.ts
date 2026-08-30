@@ -1,9 +1,16 @@
-export const createContentSecurityPolicy = (
-  requestUrl: string,
-  isDevelopment: boolean,
-  nonce?: string,
-  inlineScriptHashes: readonly string[] = []
-): string => {
+interface CreateContentSecurityPolicyInput {
+  requestUrl: string
+  isDevelopment: boolean
+  nonce?: string
+  inlineScriptHashes?: readonly string[]
+}
+
+export const createContentSecurityPolicy = ({
+  requestUrl,
+  isDevelopment,
+  nonce,
+  inlineScriptHashes = [],
+}: CreateContentSecurityPolicyInput): string => {
   const developmentSources = isDevelopment
     ? " http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*"
     : ""

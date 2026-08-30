@@ -79,12 +79,19 @@ const readCachedResult = async (
   }
 }
 
-const writeCachedResult = async (
-  cache: Cache,
-  url: string,
-  result: MediaArtworkResult,
-  nowSeconds: number
-): Promise<void> => {
+interface WriteCachedResultInput {
+  readonly cache: Cache
+  readonly url: string
+  readonly result: MediaArtworkResult
+  readonly nowSeconds: number
+}
+
+const writeCachedResult = async ({
+  cache,
+  url,
+  result,
+  nowSeconds,
+}: WriteCachedResultInput): Promise<void> => {
   const isPositiveResult =
     result.posterPath !== undefined || result.stillPath !== undefined
   const maxAge = isPositiveResult
@@ -148,7 +155,12 @@ export const lookupMediaArtworkCached = async (
     cachedResults[requestIndex] = result
     if (url) {
       dependencies.waitUntil(
-        writeCachedResult(cache, url, result, nowSeconds).catch(() => undefined)
+        writeCachedResult({
+          cache,
+          url,
+          result,
+          nowSeconds,
+        }).catch(() => undefined)
       )
     }
   })

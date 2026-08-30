@@ -34,12 +34,19 @@ export const requestPluginServer = <Value>(
     catch: (cause) => createPluginServerExtractionError(cause, url),
   })
 
-export const extractPluginServerResponse = (
-  client: PluginServerClient,
-  targetUrl: string,
-  kind: "source" | "node",
-  options: PluginServerRequestOptions
-): Promise<ExtractSuccessResponse> =>
+interface ExtractPluginServerResponseInput {
+  readonly client: PluginServerClient
+  readonly targetUrl: string
+  readonly kind: "source" | "node"
+  readonly requestOptions: PluginServerRequestOptions
+}
+
+export const extractPluginServerResponse = ({
+  client,
+  targetUrl,
+  kind,
+  requestOptions,
+}: ExtractPluginServerResponseInput): Promise<ExtractSuccessResponse> =>
   kind === "node"
-    ? client.extractNode(targetUrl, options)
-    : client.extractSource(targetUrl, options)
+    ? client.extractNode(targetUrl, requestOptions)
+    : client.extractSource(targetUrl, requestOptions)

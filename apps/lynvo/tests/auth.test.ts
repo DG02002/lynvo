@@ -44,11 +44,11 @@ describe("auth cookie helpers", () => {
 
 describe("session-bearing responses", () => {
   it("prevents the browser from restoring stale session markup", () => {
-    const response = responseWithSession(
-      { user: null },
-      { user: null },
-      new Request("https://lynvo.test")
-    )
+    const response = responseWithSession({
+      responseData: { user: null },
+      sessionResult: { user: null },
+      request: new Request("https://lynvo.test"),
+    })
 
     expect(new Headers(response.init?.headers).get("Cache-Control")).toBe(
       "no-store"
@@ -57,15 +57,15 @@ describe("session-bearing responses", () => {
 
   it("refreshes an authenticated session cookie on document responses", () => {
     const sessionExpiresAt = Date.now() + 60_000
-    const response = responseWithSession(
-      {
+    const response = responseWithSession({
+      responseData: {
         user: {
           sub: "user-456",
           email: "darshan@example.com",
           sid: "session-123",
         },
       },
-      {
+      sessionResult: {
         user: {
           sub: "user-456",
           email: "darshan@example.com",
@@ -73,13 +73,13 @@ describe("session-bearing responses", () => {
         },
         sessionExpiresAt,
       },
-      new Request("https://lynvo.test/save", {
+      request: new Request("https://lynvo.test/save", {
         headers: {
           Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id`,
         },
       }),
-      { headers: { "Set-Cookie": "csrf-token=csrf-value" } }
-    )
+      init: { headers: { "Set-Cookie": "csrf-token=csrf-value" } },
+    })
 
     const cookie = new Headers(response.init?.headers).get("Set-Cookie")
     expect(cookie).toContain("csrf-token=csrf-value")
@@ -90,11 +90,11 @@ describe("session-bearing responses", () => {
   })
 
   it("does not create a session cookie for anonymous document responses", () => {
-    const response = responseWithSession(
-      { user: null },
-      { user: null },
-      new Request("https://lynvo.test/save")
-    )
+    const response = responseWithSession({
+      responseData: { user: null },
+      sessionResult: { user: null },
+      request: new Request("https://lynvo.test/save"),
+    })
 
     expect(new Headers(response.init?.headers).get("Set-Cookie")).toBeNull()
   })

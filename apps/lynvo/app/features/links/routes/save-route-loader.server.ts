@@ -28,13 +28,13 @@ export const saveRouteLoader = async ({
   const { results: savedLinks, dataVersion } =
     await listSavedLinksWithDataVersion(database, user.sub, Date.now())
 
-  return responseWithSession(
-    {
+  return responseWithSession({
+    responseData: {
       user: sessionResult.user,
       savedLinks,
       dataVersion,
     },
     sessionResult,
-    request
-  )
+    request,
+  })
 }

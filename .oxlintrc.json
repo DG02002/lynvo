@@ -29,6 +29,14 @@
     "suspicious": "warn",
     "perf": "warn"
   },
+  "overrides": [
+    {
+      "files": ["apps/lynvo/app/entry.server.tsx"],
+      "rules": {
+        "max-params": "off"
+      }
+    }
+  ],
   "rules": {
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
@@ -52,7 +60,7 @@
     "curly": "warn",
     "no-eval": "warn",
     "no-implied-eval": "warn",
-    "max-statements": "warn",
+    "max-statements": ["warn", { "max": 20 }],
     "max-params": "warn",
     "no-nested-ternary": "warn",
     "no-extra-boolean-cast": "warn",

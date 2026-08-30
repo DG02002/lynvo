@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { useSearchParams } from "react-router"
+import { useMemo, useState, type ReactNode } from "react"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
 import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
+import { useHybridGroupRoute } from "~/components/save-list/use-hybrid-group-route"
 import { useLinkActions } from "~/hooks/use-link-actions"
 import { useLinks } from "~/hooks/use-links"
 import { cn } from "~/lib/utils"
@@ -12,8 +12,6 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/spinner"
-import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
-import { useMediaView } from "~/features/site/settings/media-view-preference"
 import {
   shouldHideSaveInput,
   useIsTvBroAndroidTv,
@@ -109,8 +107,6 @@ const renderSaveListContent = ({
 const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
   const isTvBroAndroidTv = useIsTvBroAndroidTv()
   const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
-  const mediaView = useMediaView()
-  const [searchParams, setSearchParams] = useSearchParams()
   const isSaveInputHidden = shouldHideSaveInput(
     isTvBroAndroidTv,
     shouldHideTvBroSaveInput
@@ -136,27 +132,15 @@ const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
     linkActions: actions,
     setHighlightedId,
   })
-
-  const isHybridMediaView = mediaView === "hybrid"
-  const hybridGroupKey = isHybridMediaView ? searchParams.get("group") : null
-  const hybridCardGroups = useMemo(
-    () =>
-      isHybridMediaView && !isFolderRoute
-        ? getHybridCardGroups(links)
-        : undefined,
-    [isHybridMediaView, isFolderRoute, links]
-  )
-  const openHybridGroup = hybridCardGroups?.find(
-    (group) => group.key === hybridGroupKey
-  )
-  const isGroupRoute = hybridGroupKey !== null
-  const isImmersiveRoute = isFolderRoute || isGroupRoute
-
-  useEffect(() => {
-    if (hybridGroupKey && !isPending && !openHybridGroup) {
-      setSearchParams({}, { replace: true })
-    }
-  }, [hybridGroupKey, isPending, openHybridGroup, setSearchParams])
+  const {
+    isHybridMediaView,
+    hybridCardGroups,
+    openHybridGroup,
+    isGroupRoute,
+    isImmersiveRoute,
+    exitGroup,
+    openGroup,
+  } = useHybridGroupRoute({ links, isFolderRoute, isPending })
 
   useSaveListFullscreen(isImmersiveRoute)
   const savedUrls = useMemo(
@@ -214,8 +198,8 @@ const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
           selectedItemUrl,
           openSavedFolder,
           closeSavedFolder,
-          onExitGroup: () => setSearchParams({}, { replace: true }),
-          onOpenGroup: (groupKey) => setSearchParams({ group: groupKey }),
+          onExitGroup: exitGroup,
+          onOpenGroup: openGroup,
         })}
       </div>
 

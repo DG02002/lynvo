@@ -126,7 +126,12 @@ export const SettingsHandlers = HttpApiBuilder.group(
           }
           return yield* Effect.tryPromise({
             try: () =>
-              listSessionsForUser(database, user.id, user.sid, Date.now()),
+              listSessionsForUser({
+                database,
+                userId: user.id,
+                currentSessionId: user.sid,
+                now: Date.now(),
+              }),
             catch: (cause) =>
               new BackendError({
                 message: "Account data is temporarily unavailable",

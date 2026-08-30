@@ -54,6 +54,15 @@ declare global {
     transportOptions: OutboundHttpTransportOptions
     protectedOrigin: string | undefined
   }
+
+  interface OutboundRedirectFollowState {
+    requestFetch: typeof globalThis.fetch
+    requestState: OutboundRequestState
+    options: OutboundHttpRequestOptions
+    transportOptions: OutboundHttpTransportOptions
+    protectedOrigin: string | undefined
+    redirectCount: number
+  }
 }
 
 export class OutboundHttpError extends Error {
@@ -265,45 +274,58 @@ const getRedirectRequestState = ({
   }
 }
 
-const fetchWithOutboundRedirects = async ({
+const followOutboundRedirects = async ({
   requestFetch,
-  destination,
+  requestState,
   options,
   transportOptions,
   protectedOrigin,
-}: OutboundFetchContext): Promise<Response> => {
-  let requestState = createOutboundRequestState(
-    destination,
+  redirectCount,
+}: OutboundRedirectFollowState): Promise<Response> => {
+  const response = await fetchOutboundRequest({
+    requestFetch,
+    requestState,
     options,
-    transportOptions
-  )
-  for (
-    let redirectCount = 0;
-    redirectCount <= OUTBOUND_HTTP_MAX_REDIRECTS;
-    redirectCount += 1
-  ) {
-    const response = await fetchOutboundRequest({
-      requestFetch,
-      requestState,
-      options,
-    })
-    if (!isRedirect(response.status)) {
-      return readFinalOutboundResponse(response, options)
-    }
-    requestState = getRedirectRequestState({
+  })
+  if (!isRedirect(response.status)) {
+    return readFinalOutboundResponse(response, options)
+  }
+  return followOutboundRedirects({
+    requestFetch,
+    requestState: getRedirectRequestState({
       response,
       redirectCount,
       requestState,
       options,
       transportOptions,
       protectedOrigin,
-    })
-  }
-  throw new OutboundHttpError(
-    "TOO_MANY_REDIRECTS",
-    "Outbound redirect limit exceeded"
-  )
+    }),
+    options,
+    transportOptions,
+    protectedOrigin,
+    redirectCount: redirectCount + 1,
+  })
 }
+
+const fetchWithOutboundRedirects = async ({
+  requestFetch,
+  destination,
+  options,
+  transportOptions,
+  protectedOrigin,
+}: OutboundFetchContext): Promise<Response> =>
+  followOutboundRedirects({
+    requestFetch,
+    requestState: createOutboundRequestState(
+      destination,
+      options,
+      transportOptions
+    ),
+    options,
+    transportOptions,
+    protectedOrigin,
+    redirectCount: 0,
+  })
 
 export const createOutboundHttpTransport = (
   transportOptions: OutboundHttpTransportOptions = {}

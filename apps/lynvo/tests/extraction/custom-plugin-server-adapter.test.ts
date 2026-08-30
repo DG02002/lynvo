@@ -72,8 +72,8 @@ describe("extractFromCustomPluginServer", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -102,9 +102,9 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://viewer:s%40fe@source.example/title",
-        "source"
-      )
+        targetUrl: "https://viewer:s%40fe@source.example/title",
+        kind: "source",
+      })
     )
 
     const [[request]] = fetchMock.mock.calls
@@ -157,8 +157,8 @@ describe("extractFromCustomPluginServer", () => {
     )
 
     const result = await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -166,9 +166,9 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://source.example/title",
-        "source"
-      )
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
     )
 
     expect(result.meta).toMatchObject({
@@ -281,8 +281,8 @@ describe("extractFromCustomPluginServer", () => {
     )
 
     const result = await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -290,9 +290,9 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://source.example/title",
-        "source"
-      )
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
     )
 
     expect(result.meta).toEqual({

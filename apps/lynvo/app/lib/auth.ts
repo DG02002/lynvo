@@ -18,12 +18,19 @@ export interface SessionResult {
   readonly sessionExpiresAt?: number
 }
 
-export const responseWithSession = <ResponseData>(
-  responseData: ResponseData,
-  sessionResult: SessionResult,
-  request: Request,
+interface ResponseWithSessionInput<ResponseData> {
+  responseData: ResponseData
+  sessionResult: SessionResult
+  request: Request
   init?: ResponseInit
-) => {
+}
+
+export const responseWithSession = <ResponseData>({
+  responseData,
+  sessionResult,
+  request,
+  init,
+}: ResponseWithSessionInput<ResponseData>) => {
   const headers = new Headers(init?.headers)
   headers.set("Cache-Control", "no-store")
   const opaqueSessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)

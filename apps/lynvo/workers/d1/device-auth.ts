@@ -255,6 +255,61 @@ const isClaimEligibleStatus = (
       (record.exchangeLeaseExpiresAt !== null &&
         record.exchangeLeaseExpiresAt <= now)))
 
+interface ResumeClaimedExchangeSessionInput {
+  database: D1Database
+  record: DeviceCodeRecord
+  userId: string
+  input: {
+    readonly code: string
+    readonly attemptId: string
+    readonly now: number
+  }
+}
+
+const resumeClaimedExchangeSession = async ({
+  database,
+  record,
+  userId,
+  input,
+}: ResumeClaimedExchangeSessionInput): Promise<ClaimOutcome | undefined> => {
+  const isSameActiveAttempt =
+    record.status === "exchanging" &&
+    record.exchangeAttemptId === input.attemptId
+  if (!isSameActiveAttempt || !record.exchangeSessionId) {
+    return undefined
+  }
+  const existingSession = await database
+    .prepare("SELECT id, user_id, revoked_at FROM sessions WHERE id = ?1")
+    .bind(record.exchangeSessionId)
+    .first<{ id: string; user_id: string; revoked_at: number | null }>()
+  if (
+    !existingSession ||
+    existingSession.user_id !== userId ||
+    existingSession.revoked_at !== null
+  ) {
+    return { kind: "invalidExchangeSession" }
+  }
+  const refreshed = await database
+    .prepare(
+      "UPDATE device_codes SET exchange_lease_expires_at = ?3 WHERE code = ?1 AND exchange_attempt_id = ?2"
+    )
+    .bind(
+      input.code,
+      input.attemptId,
+      input.now + DEVICE_CODE_EXCHANGE_LEASE_MS
+    )
+    .run()
+  if ((refreshed.meta.changes ?? 0) === 0) {
+    return { kind: "notApproved" }
+  }
+  return {
+    kind: "claimed",
+    userId,
+    deviceName: record.deviceName,
+    sessionId: existingSession.id,
+  }
+}
+
 export const claimAuthorizedCode = async (
   database: D1Database,
   input: {
@@ -284,41 +339,14 @@ export const claimAuthorizedCode = async (
     return { kind: "notApproved" }
   }
 
-  const isSameActiveAttempt =
-    record.status === "exchanging" &&
-    record.exchangeAttemptId === input.attemptId
-
-  if (isSameActiveAttempt && record.exchangeSessionId) {
-    const existingSession = await database
-      .prepare("SELECT id, user_id, revoked_at FROM sessions WHERE id = ?1")
-      .bind(record.exchangeSessionId)
-      .first<{ id: string; user_id: string; revoked_at: number | null }>()
-    if (
-      !existingSession ||
-      existingSession.user_id !== record.userId ||
-      existingSession.revoked_at !== null
-    ) {
-      return { kind: "invalidExchangeSession" }
-    }
-    const refreshed = await database
-      .prepare(
-        "UPDATE device_codes SET exchange_lease_expires_at = ?3 WHERE code = ?1 AND exchange_attempt_id = ?2"
-      )
-      .bind(
-        input.code,
-        input.attemptId,
-        input.now + DEVICE_CODE_EXCHANGE_LEASE_MS
-      )
-      .run()
-    if ((refreshed.meta.changes ?? 0) === 0) {
-      return { kind: "notApproved" }
-    }
-    return {
-      kind: "claimed",
-      userId: record.userId,
-      deviceName: record.deviceName,
-      sessionId: existingSession.id,
-    }
+  const resumedOutcome = await resumeClaimedExchangeSession({
+    database,
+    record,
+    userId: record.userId,
+    input,
+  })
+  if (resumedOutcome) {
+    return resumedOutcome
   }
 
   if (

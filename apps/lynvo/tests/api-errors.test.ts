@@ -63,18 +63,20 @@ describe("API errors", () => {
         }),
         "Request failed."
       )
-    ).resolves.toEqual(new ApiResponseError("unknown", "Request failed."))
+    ).resolves.toEqual(
+      new ApiResponseError({ code: "unknown", message: "Request failed." })
+    )
   })
 
   it("only presents trusted API and domain messages", () => {
     expect(
       getUserFacingErrorMessage(
-        new ApiResponseError(
-          "service_unavailable",
-          "The service is temporarily unavailable.",
-          true,
-          "request-789"
-        ),
+        new ApiResponseError({
+          code: "service_unavailable",
+          message: "The service is temporarily unavailable.",
+          retryable: true,
+          requestId: "request-789",
+        }),
         "Request failed."
       )
     ).toBe("The service is temporarily unavailable. Reference: request-789")

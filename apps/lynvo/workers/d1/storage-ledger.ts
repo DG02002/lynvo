@@ -85,12 +85,19 @@ const sumDocumentBytes = <Document>(documents: readonly Document[]): number =>
     0
   )
 
-const readBoundedRows = async <Row>(
-  database: D1Database,
-  table: string,
-  columns: string,
-  userId: string
-): Promise<Row[]> => {
+interface ReadBoundedRowsInput {
+  readonly database: D1Database
+  readonly table: string
+  readonly columns: string
+  readonly userId: string
+}
+
+const readBoundedRows = async <Row>({
+  database,
+  table,
+  columns,
+  userId,
+}: ReadBoundedRowsInput): Promise<Row[]> => {
   const result = await database
     .prepare(`SELECT ${columns} FROM ${table} WHERE user_id = ?1 LIMIT ?2`)
     .bind(userId, STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT + 1)
@@ -111,25 +118,30 @@ export const calculateAppOwnedStorageUsage = async (
         .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
         .bind(userId)
         .first<ProfileUserRow>(),
-      readBoundedRows<LinkRow>(database, "links", SAVED_LINK_COLUMNS, userId),
-      readBoundedRows<PluginServerRow>(
+      readBoundedRows<LinkRow>({
         database,
-        "user_plugin_servers",
-        PLUGIN_SERVER_COLUMNS,
-        userId
-      ),
-      readBoundedRows<PluginDomainRow>(
+        table: "links",
+        columns: SAVED_LINK_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginServerRow>({
         database,
-        "user_plugin_domains",
-        PLUGIN_DOMAIN_COLUMNS,
-        userId
-      ),
-      readBoundedRows<PluginCredentialRow>(
+        table: "user_plugin_servers",
+        columns: PLUGIN_SERVER_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginDomainRow>({
         database,
-        "user_plugin_credentials",
-        PLUGIN_CREDENTIAL_COLUMNS,
-        userId
-      ),
+        table: "user_plugin_domains",
+        columns: PLUGIN_DOMAIN_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginCredentialRow>({
+        database,
+        table: "user_plugin_credentials",
+        columns: PLUGIN_CREDENTIAL_COLUMNS,
+        userId,
+      }),
     ])
   const profileBytes = userRow ? byteLength(profileStorageDocument(userRow)) : 0
   const linkBytes = sumDocumentBytes(links)
@@ -232,12 +244,19 @@ export const withAppliedMutation = (
   },
 })
 
-export const applyStorageMutation = (
-  database: D1Database,
-  preparation: StorageLedgerPreparation,
-  plan: LedgerMutationPlan,
-  now: number
-): AppliedLedgerMutation => {
+interface ApplyStorageMutationInput {
+  readonly database: D1Database
+  readonly preparation: StorageLedgerPreparation
+  readonly plan: LedgerMutationPlan
+  readonly now: number
+}
+
+export const applyStorageMutation = ({
+  database,
+  preparation,
+  plan,
+  now,
+}: ApplyStorageMutationInput): AppliedLedgerMutation => {
   const deltaBytes = plan.nextBytes - plan.currentBytes
   const totalEnforcedBytes = preparation.ledger.totalEnforcedBytes + deltaBytes
   assertStorageGrowth(totalEnforcedBytes, deltaBytes)

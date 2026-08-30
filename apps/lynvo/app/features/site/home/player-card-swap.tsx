@@ -74,6 +74,78 @@ const DEPTH_OPACITY = [1, 0.9, 0.78, 0.66]
 const opacityForSlot = (slot: Slot) =>
   DEPTH_OPACITY[slot.depth] ?? DEPTH_OPACITY.at(-1)!
 
+interface FrontCardDropAnimation {
+  animation: Animation
+  backSlot: Slot
+}
+
+const createFrontCardDropAnimation = (
+  frontCard: HTMLElement,
+  layout: CardLayout
+): FrontCardDropAnimation => {
+  const frontSlot = makeSlot(0, layout)
+  const backSlot = makeSlot(PLAYER_DEFINITIONS.length - 1, layout)
+  const animation = frontCard.animate(
+    [
+      {
+        transform: transformForSlot(frontSlot, layout),
+        opacity: opacityForSlot(frontSlot),
+        offset: 0,
+      },
+      {
+        transform: transformForDrop(frontSlot, layout),
+        opacity: opacityForSlot(frontSlot),
+        offset: 0.3,
+        easing: "cubic-bezier(0.4, 0, 0.6, 1)",
+      },
+      {
+        transform: transformForSlot(backSlot, layout),
+        opacity: opacityForSlot(backSlot),
+        offset: 1,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+      },
+    ],
+    { duration: 1900, fill: "forwards" }
+  )
+  return { animation, backSlot }
+}
+
+const createCardPromotionAnimations = (
+  cards: Array<HTMLElement | null>,
+  cardOrder: readonly number[],
+  layout: CardLayout
+): Animation[] =>
+  cardOrder
+    .map((cardIndex, index) => {
+      const card = cards[cardIndex]
+      if (!card) {
+        return undefined
+      }
+
+      const fromSlot = makeSlot(index + 1, layout)
+      const toSlot = makeSlot(index, layout)
+      card.style.zIndex = String(toSlot.zIndex)
+      return card.animate(
+        [
+          {
+            transform: transformForSlot(fromSlot, layout),
+            opacity: opacityForSlot(fromSlot),
+          },
+          {
+            transform: transformForSlot(toSlot, layout),
+            opacity: opacityForSlot(toSlot),
+          },
+        ],
+        {
+          delay: 160 + index * 100,
+          duration: 1420,
+          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+          fill: "forwards",
+        }
+      )
+    })
+    .filter((animation): animation is Animation => Boolean(animation))
+
 export const PlayerCardSwap = () => {
   const { animationContainerRef, isAnimationActive } =
     useAnimationActivity<HTMLUListElement>()
@@ -124,6 +196,15 @@ export const PlayerCardSwap = () => {
     }
     scheduleRef.current = scheduleSwap
 
+    const completeSwap = (nextOrder: number[], frontIndex: number) => {
+      orderRef.current = [...nextOrder, frontIndex]
+      animationsRef.current.forEach((animation) => animation.cancel())
+      animationsRef.current = []
+      placeCards()
+      runningRef.current = false
+      scheduleSwap()
+    }
+
     const swap = async () => {
       if (runningRef.current || pausedRef.current || reducedMotionRef.current) {
         scheduleSwap()
@@ -140,63 +221,14 @@ export const PlayerCardSwap = () => {
         return
       }
 
-      const frontSlot = makeSlot(0, layout)
-      const backSlot = makeSlot(PLAYER_DEFINITIONS.length - 1, layout)
-      const frontAnimation = frontCard.animate(
-        [
-          {
-            transform: transformForSlot(frontSlot, layout),
-            opacity: opacityForSlot(frontSlot),
-            offset: 0,
-          },
-          {
-            transform: transformForDrop(frontSlot, layout),
-            opacity: opacityForSlot(frontSlot),
-            offset: 0.3,
-            easing: "cubic-bezier(0.4, 0, 0.6, 1)",
-          },
-          {
-            transform: transformForSlot(backSlot, layout),
-            opacity: opacityForSlot(backSlot),
-            offset: 1,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-          },
-        ],
-        { duration: 1900, fill: "forwards" }
+      const { animation: frontAnimation, backSlot } =
+        createFrontCardDropAnimation(frontCard, layout)
+      const promotionAnimations = createCardPromotionAnimations(
+        cardRefs.current,
+        remaining,
+        layout
       )
-
-      const promotions = remaining.map((cardIndex, index) => {
-        const card = cardRefs.current[cardIndex]
-        if (!card) {
-          return undefined
-        }
-
-        const fromSlot = makeSlot(index + 1, layout)
-        const toSlot = makeSlot(index, layout)
-        card.style.zIndex = String(toSlot.zIndex)
-        return card.animate(
-          [
-            {
-              transform: transformForSlot(fromSlot, layout),
-              opacity: opacityForSlot(fromSlot),
-            },
-            {
-              transform: transformForSlot(toSlot, layout),
-              opacity: opacityForSlot(toSlot),
-            },
-          ],
-          {
-            delay: 160 + index * 100,
-            duration: 1420,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            fill: "forwards",
-          }
-        )
-      })
-
-      animationsRef.current = [frontAnimation, ...promotions].filter(
-        (animation): animation is Animation => Boolean(animation)
-      )
+      animationsRef.current = [frontAnimation, ...promotionAnimations]
 
       zIndexTimerRef.current = window.setTimeout(() => {
         frontCard.style.zIndex = String(backSlot.zIndex)
@@ -210,12 +242,7 @@ export const PlayerCardSwap = () => {
         return
       }
 
-      orderRef.current = [...remaining, frontIndex]
-      animationsRef.current.forEach((animation) => animation.cancel())
-      animationsRef.current = []
-      placeCards()
-      runningRef.current = false
-      scheduleSwap()
+      completeSwap(remaining, frontIndex)
     }
 
     const updateMotionPreference = () => {

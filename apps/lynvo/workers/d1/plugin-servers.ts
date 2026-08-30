@@ -130,26 +130,36 @@ type PluginServerUpdateColumn = Exclude<
   "id" | "updated_at"
 >
 
-const buildServerMutationStatements = (
-  database: D1Database,
-  preparation: StorageLedgerPreparation,
-  pluginServerId: string,
-  columns: readonly PluginServerUpdateColumn[],
-  currentRow: PluginServerRow,
-  nextRow: PluginServerRow,
-  now: number
-): D1PreparedStatement[] => {
-  const ledgerMutation = applyStorageMutation(
+interface BuildServerMutationStatementsInput {
+  readonly database: D1Database
+  readonly preparation: StorageLedgerPreparation
+  readonly pluginServerId: string
+  readonly columns: readonly PluginServerUpdateColumn[]
+  readonly currentRow: PluginServerRow
+  readonly nextRow: PluginServerRow
+  readonly now: number
+}
+
+const buildServerMutationStatements = ({
+  database,
+  preparation,
+  pluginServerId,
+  columns,
+  currentRow,
+  nextRow,
+  now,
+}: BuildServerMutationStatementsInput): D1PreparedStatement[] => {
+  const ledgerMutation = applyStorageMutation({
     database,
     preparation,
-    {
+    plan: {
       domain: "pluginServerBytes",
       currentBytes: byteLength(currentRow),
       nextBytes: byteLength(nextRow),
       savedLinkCountDelta: 0,
     },
-    now
-  )
+    now,
+  })
   const setClauses = columns
     .map((column, index) => `${column} = ?${index + 2}`)
     .join(", ")
@@ -270,6 +280,58 @@ export interface BeginRegistrationResult {
   dataVersion: number
 }
 
+interface ExpiredPluginServerCleanupInput {
+  database: D1Database
+  preparation: StorageLedgerPreparation
+  rows: readonly PluginServerRow[]
+  now: number
+}
+
+interface ExpiredPluginServerCleanup {
+  preparation: StorageLedgerPreparation
+  cleanupStatements: D1PreparedStatement[]
+  activeRows: PluginServerRow[]
+}
+
+const collectExpiredPluginServerCleanup = ({
+  database,
+  preparation,
+  rows,
+  now,
+}: ExpiredPluginServerCleanupInput): ExpiredPluginServerCleanup => {
+  const cleanupStatements: D1PreparedStatement[] = []
+  const activeRows: PluginServerRow[] = []
+  for (const row of rows) {
+    if (
+      row.credential_status !== "ready" &&
+      row.pending_expires_at !== null &&
+      row.pending_expires_at <= now
+    ) {
+      const ledgerMutation = applyStorageMutation({
+        database,
+        preparation,
+        plan: {
+          domain: "pluginServerBytes",
+          currentBytes: byteLength(row),
+          nextBytes: 0,
+          savedLinkCountDelta: 0,
+        },
+        now,
+      })
+      cleanupStatements.push(...ledgerMutation.statements)
+      cleanupStatements.push(
+        database
+          .prepare("DELETE FROM user_plugin_servers WHERE id = ?1")
+          .bind(row.id)
+      )
+      preparation = withAppliedMutation(preparation, ledgerMutation)
+    } else {
+      activeRows.push(row)
+    }
+  }
+  return { preparation, cleanupStatements, activeRows }
+}
+
 export const beginPluginServerRegistration = async (
   database: D1Database,
   userId: string,
@@ -288,37 +350,13 @@ export const beginPluginServerRegistration = async (
     ensureStorageLedger(database, userId, input.now),
   ])
 
-  let preparation = initialPreparation
-  const cleanupStatements: D1PreparedStatement[] = []
-  const activeRows: PluginServerRow[] = []
-  for (const row of results) {
-    if (
-      row.credential_status !== "ready" &&
-      row.pending_expires_at !== null &&
-      row.pending_expires_at <= input.now
-    ) {
-      const ledgerMutation = applyStorageMutation(
-        database,
-        preparation,
-        {
-          domain: "pluginServerBytes",
-          currentBytes: byteLength(row),
-          nextBytes: 0,
-          savedLinkCountDelta: 0,
-        },
-        input.now
-      )
-      cleanupStatements.push(...ledgerMutation.statements)
-      cleanupStatements.push(
-        database
-          .prepare("DELETE FROM user_plugin_servers WHERE id = ?1")
-          .bind(row.id)
-      )
-      preparation = withAppliedMutation(preparation, ledgerMutation)
-    } else {
-      activeRows.push(row)
-    }
-  }
+  const { preparation, cleanupStatements, activeRows } =
+    collectExpiredPluginServerCleanup({
+      database,
+      preparation: initialPreparation,
+      rows: results,
+      now: input.now,
+    })
 
   const existing = activeRows.find(
     (row) => row.normalized_base_url === normalizedBaseUrl
@@ -338,11 +376,11 @@ export const beginPluginServerRegistration = async (
       credential_attempt_id: attemptId,
       updated_at: input.now,
     }
-    const mutation = buildServerMutationStatements(
+    const mutation = buildServerMutationStatements({
       database,
       preparation,
-      existing.id,
-      [
+      pluginServerId: existing.id,
+      columns: [
         "base_url",
         "credential_status",
         "pending_expires_at",
@@ -350,15 +388,19 @@ export const beginPluginServerRegistration = async (
         "credential_generation",
         "credential_attempt_id",
       ],
-      existing,
+      currentRow: existing,
       nextRow,
-      input.now
-    )
-    const { dataVersion } = await executeOwnedWrite(database, userId, [
-      ...preparation.statements,
-      ...cleanupStatements,
-      ...mutation,
-    ])
+      now: input.now,
+    })
+    const { dataVersion } = await executeOwnedWrite({
+      database,
+      userId,
+      statements: [
+        ...preparation.statements,
+        ...cleanupStatements,
+        ...mutation,
+      ],
+    })
     return {
       id: existing.id,
       resumed: true,
@@ -400,49 +442,53 @@ export const beginPluginServerRegistration = async (
     created_at: input.now,
     updated_at: input.now,
   }
-  const ledgerMutation = applyStorageMutation(
+  const ledgerMutation = applyStorageMutation({
     database,
     preparation,
-    {
+    plan: {
       domain: "pluginServerBytes",
       currentBytes: 0,
       nextBytes: byteLength(newRow),
       savedLinkCountDelta: 0,
     },
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...cleanupStatements,
-    database
-      .prepare(
-        "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)"
-      )
-      .bind(
-        newRow.id,
-        newRow.user_id,
-        newRow.base_url,
-        newRow.normalized_base_url,
-        newRow.api_key_ciphertext,
-        newRow.api_key_nonce,
-        newRow.api_key_algorithm,
-        newRow.api_key_version,
-        newRow.credential_status,
-        newRow.credential_generation,
-        newRow.credential_attempt_id,
-        newRow.pending_expires_at,
-        newRow.failure_reason,
-        newRow.manifest,
-        newRow.enabled,
-        newRow.priority,
-        newRow.verification_status,
-        newRow.last_verified_at,
-        newRow.last_manifest_refresh_at,
-        newRow.created_at,
-        newRow.updated_at
-      ),
-    ...ledgerMutation.statements,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [
+      ...preparation.statements,
+      ...cleanupStatements,
+      database
+        .prepare(
+          "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)"
+        )
+        .bind(
+          newRow.id,
+          newRow.user_id,
+          newRow.base_url,
+          newRow.normalized_base_url,
+          newRow.api_key_ciphertext,
+          newRow.api_key_nonce,
+          newRow.api_key_algorithm,
+          newRow.api_key_version,
+          newRow.credential_status,
+          newRow.credential_generation,
+          newRow.credential_attempt_id,
+          newRow.pending_expires_at,
+          newRow.failure_reason,
+          newRow.manifest,
+          newRow.enabled,
+          newRow.priority,
+          newRow.verification_status,
+          newRow.last_verified_at,
+          newRow.last_manifest_refresh_at,
+          newRow.created_at,
+          newRow.updated_at
+        ),
+      ...ledgerMutation.statements,
+    ],
+  })
   return {
     id: newRow.id,
     resumed: false,
@@ -501,11 +547,11 @@ export const finalizePluginServerCredential = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    [
+    pluginServerId: existing.id,
+    columns: [
       "api_key_ciphertext",
       "api_key_nonce",
       "api_key_algorithm",
@@ -516,14 +562,15 @@ export const finalizePluginServerCredential = async (
       "pending_expires_at",
       "failure_reason",
     ],
-    existing,
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -556,19 +603,20 @@ export const markPluginServerRegistrationFailed = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    ["credential_status", "failure_reason"],
-    existing,
+    pluginServerId: existing.id,
+    columns: ["credential_status", "failure_reason"],
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -601,17 +649,17 @@ export const expireStalePluginServerRegistrations = async (
       throw new Error("Storage ledger preparation is missing")
     }
     statements.push(...preparation.statements)
-    const ledgerMutation = applyStorageMutation(
+    const ledgerMutation = applyStorageMutation({
       database,
       preparation,
-      {
+      plan: {
         domain: "pluginServerBytes",
         currentBytes: byteLength(row),
         nextBytes: 0,
         savedLinkCountDelta: 0,
       },
-      now
-    )
+      now,
+    })
     statements.push(
       ...ledgerMutation.statements,
       database
@@ -661,19 +709,20 @@ export const recordPluginServerVerificationFailure = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    ["verification_status"],
-    existing,
+    pluginServerId: existing.id,
+    columns: ["verification_status"],
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -690,19 +739,20 @@ export const recordPluginServerVerificationSuccess = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    ["verification_status", "last_verified_at"],
-    existing,
+    pluginServerId: existing.id,
+    columns: ["verification_status", "last_verified_at"],
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -721,24 +771,25 @@ export const recordPluginServerRefreshSuccess = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    [
+    pluginServerId: existing.id,
+    columns: [
       "manifest",
       "verification_status",
       "last_verified_at",
       "last_manifest_refresh_at",
     ],
-    existing,
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -760,19 +811,20 @@ export const setPluginServerEnabled = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    ["enabled"],
-    existing,
+    pluginServerId: existing.id,
+    columns: ["enabled"],
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -837,11 +889,11 @@ export const updatePluginServerProxyKey = async (
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements(
+  const mutation = buildServerMutationStatements({
     database,
     preparation,
-    existing.id,
-    [
+    pluginServerId: existing.id,
+    columns: [
       "proxy_token_ciphertext",
       "proxy_token_nonce",
       "proxy_token_algorithm",
@@ -850,14 +902,15 @@ export const updatePluginServerProxyKey = async (
       "proxy_balance_limit",
       "proxy_balance_checked_at",
     ],
-    existing,
+    currentRow: existing,
     nextRow,
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    ...mutation,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
   return { success: true, dataVersion }
 }
 
@@ -905,23 +958,27 @@ export const deletePluginServerById = async (
     statements.push(...deletion.statements)
     ;({ preparation } = deletion)
   }
-  const serverLedgerMutation = applyStorageMutation(
+  const serverLedgerMutation = applyStorageMutation({
     database,
     preparation,
-    {
+    plan: {
       domain: "pluginServerBytes",
       currentBytes: byteLength(existing),
       nextBytes: 0,
       savedLinkCountDelta: 0,
     },
-    input.now
-  )
+    now: input.now,
+  })
   statements.push(
     ...serverLedgerMutation.statements,
     database
       .prepare("DELETE FROM user_plugin_servers WHERE id = ?1")
       .bind(existing.id)
   )
-  const { dataVersion } = await executeOwnedWrite(database, userId, statements)
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements,
+  })
   return { success: true, dataVersion }
 }

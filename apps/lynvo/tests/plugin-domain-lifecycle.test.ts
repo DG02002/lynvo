@@ -84,9 +84,9 @@ describe("Plugin Domain lifecycle", () => {
       algorithm: "AES-256-GCM" as const,
       keyVersion: 1,
     }
-    const credentialDocument = buildCredentialDocument(
-      "user-1",
-      {
+    const credentialDocument = buildCredentialDocument({
+      userId: "user-1",
+      domainRow: {
         id: "domain-1",
         user_id: "user-1",
         plugin_server_id: "plugin-server-1",
@@ -97,7 +97,7 @@ describe("Plugin Domain lifecycle", () => {
         credential_finalized_attempt_id: null,
       },
       credential,
-      {
+      existingCredential: {
         id: "credential-1",
         user_id: "user-1",
         plugin_domain_id: "domain-1",
@@ -111,8 +111,8 @@ describe("Plugin Domain lifecycle", () => {
         created_at: 10,
         updated_at: 10,
       },
-      20
-    )
+      now: 20,
+    })
 
     expect(credentialDocument).toMatchObject({
       id: "credential-1",

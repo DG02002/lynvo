@@ -126,11 +126,175 @@ const CREATED_HOME_DEMO_ITEM: HomeDemoItem = {
   isNew: true,
 }
 
+interface HomeDemoViewState {
+  isClipboardOpen: boolean
+  isLinkPasted: boolean
+  isSaving: boolean
+  isItemCreated: boolean
+  isMenuOpen: boolean
+  isRemoveDialogOpen: boolean
+  isCopySourceVisible: boolean
+  isCopySourcePressed: boolean
+  isClipboardPressed: boolean
+  isMenuTriggerPressed: boolean
+  isRemoveMenuItemFocused: boolean
+  isRemoveMenuItemPressed: boolean
+  isConfirmButtonPressed: boolean
+  isCursorPressed: boolean
+  visibleHomeDemoItems: HomeDemoItem[]
+}
+
+const getHomeDemoViewState = (step: number): HomeDemoViewState => {
+  const isClipboardOpen =
+    step === HOME_DEMO_STEP.CLIPBOARD_VISIBLE ||
+    step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
+  const isLinkPasted = step === HOME_DEMO_STEP.SAVING_LINK
+  const isSaving = step === HOME_DEMO_STEP.SAVING_LINK
+  const isItemCreated =
+    step >= HOME_DEMO_STEP.ITEM_CREATED && step < HOME_DEMO_STEP.REMOVED
+  const isMenuOpen =
+    step >= HOME_DEMO_STEP.OPEN_ITEM_MENU &&
+    step < HOME_DEMO_STEP.OPEN_REMOVE_DIALOG
+  const isRemoveDialogOpen =
+    step >= HOME_DEMO_STEP.OPEN_REMOVE_DIALOG && step < HOME_DEMO_STEP.REMOVED
+  const isCopySourceVisible = step <= HOME_DEMO_STEP.COPY_SOURCE_LINK
+  const isCopySourcePressed = step === HOME_DEMO_STEP.COPY_SOURCE_LINK
+  const isClipboardPressed = step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
+  const isMenuTriggerPressed = step === HOME_DEMO_STEP.OPEN_ITEM_MENU
+  const isRemoveMenuItemFocused =
+    step === HOME_DEMO_STEP.MOVE_TO_REMOVE_LINK ||
+    step === HOME_DEMO_STEP.REMOVE_LINK
+  const isRemoveMenuItemPressed = step === HOME_DEMO_STEP.REMOVE_LINK
+  const isConfirmButtonPressed = step === HOME_DEMO_STEP.CONFIRM_REMOVE
+  const isCursorPressed =
+    isCopySourcePressed ||
+    isClipboardPressed ||
+    isMenuTriggerPressed ||
+    isRemoveMenuItemPressed ||
+    isConfirmButtonPressed
+  const visibleHomeDemoItems = isItemCreated
+    ? [CREATED_HOME_DEMO_ITEM, ...HOME_DEMO_ITEMS.slice(0, -1)]
+    : HOME_DEMO_ITEMS
+
+  return {
+    isClipboardOpen,
+    isLinkPasted,
+    isSaving,
+    isItemCreated,
+    isMenuOpen,
+    isRemoveDialogOpen,
+    isCopySourceVisible,
+    isCopySourcePressed,
+    isClipboardPressed,
+    isMenuTriggerPressed,
+    isRemoveMenuItemFocused,
+    isRemoveMenuItemPressed,
+    isConfirmButtonPressed,
+    isCursorPressed,
+    visibleHomeDemoItems,
+  }
+}
+
+interface HomeDemoCursorTargetRefs {
+  stage: RefObject<HTMLDivElement | null>
+  copySource: RefObject<HTMLButtonElement | null>
+  clipboard: RefObject<HTMLButtonElement | null>
+  menuTrigger: RefObject<HTMLButtonElement | null>
+  removeMenuItem: RefObject<HTMLDivElement | null>
+  confirmButton: RefObject<HTMLButtonElement | null>
+}
+
+const useHomeDemoCursor = (
+  step: number,
+  {
+    stage,
+    copySource,
+    clipboard,
+    menuTrigger,
+    removeMenuItem,
+    confirmButton,
+  }: HomeDemoCursorTargetRefs
+) => {
+  const [cursorPosition, setCursorPosition] =
+    useState<HomeDemoCursorPosition | null>(null)
+
+  useEffect(() => {
+    let cursorTarget: HTMLElement | null = null
+
+    if (
+      step === HOME_DEMO_STEP.MOVE_TO_COPY_SOURCE ||
+      step === HOME_DEMO_STEP.COPY_SOURCE_LINK
+    ) {
+      cursorTarget = copySource.current
+    } else if (
+      step === HOME_DEMO_STEP.CLIPBOARD_VISIBLE ||
+      step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
+    ) {
+      cursorTarget = clipboard.current
+    } else if (
+      step === HOME_DEMO_STEP.ITEM_CREATED ||
+      step === HOME_DEMO_STEP.OPEN_ITEM_MENU
+    ) {
+      cursorTarget = menuTrigger.current
+    } else if (
+      step === HOME_DEMO_STEP.MOVE_TO_REMOVE_LINK ||
+      step === HOME_DEMO_STEP.REMOVE_LINK
+    ) {
+      cursorTarget = removeMenuItem.current
+    } else if (
+      step === HOME_DEMO_STEP.OPEN_REMOVE_DIALOG ||
+      step === HOME_DEMO_STEP.CONFIRM_REMOVE
+    ) {
+      cursorTarget = confirmButton.current
+    }
+
+    const demoStage = stage.current
+    if (!cursorTarget || !demoStage) {
+      return
+    }
+
+    const updateCursorPosition = () => {
+      const stageRect = demoStage.getBoundingClientRect()
+      const targetRect = cursorTarget.getBoundingClientRect()
+      setCursorPosition({
+        left:
+          targetRect.left -
+          stageRect.left +
+          targetRect.width / 2 -
+          HOME_DEMO_CURSOR_TIP_OFFSET_X_PX,
+        top:
+          targetRect.top -
+          stageRect.top +
+          targetRect.height / 2 -
+          HOME_DEMO_CURSOR_TIP_OFFSET_Y_PX,
+      })
+    }
+
+    updateCursorPosition()
+    window.addEventListener("resize", updateCursorPosition)
+
+    return () => window.removeEventListener("resize", updateCursorPosition)
+  }, [
+    step,
+    stage,
+    copySource,
+    clipboard,
+    menuTrigger,
+    removeMenuItem,
+    confirmButton,
+  ])
+
+  const isCursorVisible =
+    cursorPosition !== null &&
+    step > HOME_DEMO_STEP.READY &&
+    step < HOME_DEMO_STEP.REMOVED
+
+  return { cursorPosition, isCursorVisible }
+}
+
 export const HomeSaveDemo = () => {
   const [step, setStep] = useState<number>(HOME_DEMO_STEP.READY)
   const [isReducedMotion, setIsReducedMotion] = useState(false)
-  const [cursorPosition, setCursorPosition] =
-    useState<HomeDemoCursorPosition | null>(null)
   const { animationContainerRef: demoStageRef, isAnimationActive } =
     useAnimationActivity<HTMLDivElement>()
   const copySourceRef = useRef<HTMLButtonElement>(null)
@@ -168,36 +332,29 @@ export const HomeSaveDemo = () => {
     return () => window.clearTimeout(timeout)
   }, [isAnimationActive, isReducedMotion, step])
 
-  const isClipboardOpen =
-    step === HOME_DEMO_STEP.CLIPBOARD_VISIBLE ||
-    step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
-  const isLinkPasted = step === HOME_DEMO_STEP.SAVING_LINK
-  const isSaving = step === HOME_DEMO_STEP.SAVING_LINK
-  const isItemCreated =
-    step >= HOME_DEMO_STEP.ITEM_CREATED && step < HOME_DEMO_STEP.REMOVED
-  const isMenuOpen =
-    step >= HOME_DEMO_STEP.OPEN_ITEM_MENU &&
-    step < HOME_DEMO_STEP.OPEN_REMOVE_DIALOG
-  const isRemoveDialogOpen =
-    step >= HOME_DEMO_STEP.OPEN_REMOVE_DIALOG && step < HOME_DEMO_STEP.REMOVED
-  const isCopySourceVisible = step <= HOME_DEMO_STEP.COPY_SOURCE_LINK
-  const isCopySourcePressed = step === HOME_DEMO_STEP.COPY_SOURCE_LINK
-  const isClipboardPressed = step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
-  const isMenuTriggerPressed = step === HOME_DEMO_STEP.OPEN_ITEM_MENU
-  const isRemoveMenuItemFocused =
-    step === HOME_DEMO_STEP.MOVE_TO_REMOVE_LINK ||
-    step === HOME_DEMO_STEP.REMOVE_LINK
-  const isRemoveMenuItemPressed = step === HOME_DEMO_STEP.REMOVE_LINK
-  const isConfirmButtonPressed = step === HOME_DEMO_STEP.CONFIRM_REMOVE
-  const isCursorPressed =
-    isCopySourcePressed ||
-    isClipboardPressed ||
-    isMenuTriggerPressed ||
-    isRemoveMenuItemPressed ||
-    isConfirmButtonPressed
-  const visibleHomeDemoItems = isItemCreated
-    ? [CREATED_HOME_DEMO_ITEM, ...HOME_DEMO_ITEMS.slice(0, -1)]
-    : HOME_DEMO_ITEMS
+  const { cursorPosition, isCursorVisible } = useHomeDemoCursor(step, {
+    stage: demoStageRef,
+    copySource: copySourceRef,
+    clipboard: clipboardRef,
+    menuTrigger: menuTriggerRef,
+    removeMenuItem: removeMenuItemRef,
+    confirmButton: confirmButtonRef,
+  })
+
+  const {
+    isClipboardOpen,
+    isLinkPasted,
+    isSaving,
+    isMenuOpen,
+    isRemoveDialogOpen,
+    isCopySourceVisible,
+    isCopySourcePressed,
+    isMenuTriggerPressed,
+    isRemoveMenuItemFocused,
+    isConfirmButtonPressed,
+    isCursorPressed,
+    visibleHomeDemoItems,
+  } = getHomeDemoViewState(step)
 
   const handleCopySourceClick = () => {
     if (step <= HOME_DEMO_STEP.COPY_SOURCE_LINK) {
@@ -210,69 +367,6 @@ export const HomeSaveDemo = () => {
       setStep(HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK)
     }
   }
-
-  useEffect(() => {
-    let cursorTarget: HTMLElement | null = null
-
-    if (
-      step === HOME_DEMO_STEP.MOVE_TO_COPY_SOURCE ||
-      step === HOME_DEMO_STEP.COPY_SOURCE_LINK
-    ) {
-      cursorTarget = copySourceRef.current
-    } else if (
-      step === HOME_DEMO_STEP.CLIPBOARD_VISIBLE ||
-      step === HOME_DEMO_STEP.PASTE_CLIPBOARD_LINK
-    ) {
-      cursorTarget = clipboardRef.current
-    } else if (
-      step === HOME_DEMO_STEP.ITEM_CREATED ||
-      step === HOME_DEMO_STEP.OPEN_ITEM_MENU
-    ) {
-      cursorTarget = menuTriggerRef.current
-    } else if (
-      step === HOME_DEMO_STEP.MOVE_TO_REMOVE_LINK ||
-      step === HOME_DEMO_STEP.REMOVE_LINK
-    ) {
-      cursorTarget = removeMenuItemRef.current
-    } else if (
-      step === HOME_DEMO_STEP.OPEN_REMOVE_DIALOG ||
-      step === HOME_DEMO_STEP.CONFIRM_REMOVE
-    ) {
-      cursorTarget = confirmButtonRef.current
-    }
-
-    const demoStage = demoStageRef.current
-    if (!cursorTarget || !demoStage) {
-      return
-    }
-
-    const updateCursorPosition = () => {
-      const stageRect = demoStage.getBoundingClientRect()
-      const targetRect = cursorTarget.getBoundingClientRect()
-      setCursorPosition({
-        left:
-          targetRect.left -
-          stageRect.left +
-          targetRect.width / 2 -
-          HOME_DEMO_CURSOR_TIP_OFFSET_X_PX,
-        top:
-          targetRect.top -
-          stageRect.top +
-          targetRect.height / 2 -
-          HOME_DEMO_CURSOR_TIP_OFFSET_Y_PX,
-      })
-    }
-
-    updateCursorPosition()
-    window.addEventListener("resize", updateCursorPosition)
-
-    return () => window.removeEventListener("resize", updateCursorPosition)
-  }, [demoStageRef, step])
-
-  const isCursorVisible =
-    cursorPosition !== null &&
-    step > HOME_DEMO_STEP.READY &&
-    step < HOME_DEMO_STEP.REMOVED
 
   return (
     <div

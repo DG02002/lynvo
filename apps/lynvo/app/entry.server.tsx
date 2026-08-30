@@ -72,11 +72,16 @@ export default async function handleRequest(
   )
   responseHeaders.set(
     "Content-Security-Policy",
-    createContentSecurityPolicy(request.url, import.meta.env.DEV, cspNonce, [
-      clientProfileBootstrapHash,
-      themeBootstrapHash,
-      NEXT_THEMES_BOOTSTRAP_HASH,
-    ])
+    createContentSecurityPolicy({
+      requestUrl: request.url,
+      isDevelopment: import.meta.env.DEV,
+      nonce: cspNonce,
+      inlineScriptHashes: [
+        clientProfileBootstrapHash,
+        themeBootstrapHash,
+        NEXT_THEMES_BOOTSTRAP_HASH,
+      ],
+    })
   )
   responseHeaders.set(
     "Strict-Transport-Security",

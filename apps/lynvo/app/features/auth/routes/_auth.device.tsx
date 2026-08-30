@@ -24,11 +24,11 @@ export async function loader({
     requireUserOrRedirect(sessionResult, `/auth/device?user_code=${code}`)
   }
 
-  return responseWithSession(
-    { user: sessionResult.user },
+  return responseWithSession({
+    responseData: { user: sessionResult.user },
     sessionResult,
-    request
-  )
+    request,
+  })
 }
 
 export default function Device() {

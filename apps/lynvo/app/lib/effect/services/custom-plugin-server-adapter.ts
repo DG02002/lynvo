@@ -148,14 +148,21 @@ export const getCustomPlugin = Effect.fn(
   return getMatchedPlugin(manifest, targetUrl)
 })
 
+interface DiscoverCustomPluginInput {
+  readonly pluginServer: RegisteredPluginServer
+  readonly targetUrl: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly requestId?: string
+}
+
 export const discoverCustomPlugin = Effect.fn(
   "CustomPluginServerAdapter.discoverCustomPlugin"
-)(function* (
-  pluginServer: RegisteredPluginServer,
-  targetUrl: string,
-  basicAuth?: HttpBasicAuth,
-  requestId?: string
-) {
+)(function* ({
+  pluginServer,
+  targetUrl,
+  basicAuth,
+  requestId,
+}: DiscoverCustomPluginInput) {
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   if (!manifest?.features.discovery) {
     return undefined
@@ -171,20 +178,34 @@ export const discoverCustomPlugin = Effect.fn(
   )
 })
 
+interface CustomPluginServerCredentials {
+  readonly password?: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly pluginId?: string
+}
+
+interface ExtractFromCustomPluginServerInput {
+  readonly pluginServer: RegisteredPluginServer
+  readonly targetUrl: string
+  readonly kind: "source" | "node"
+  readonly credentials?: CustomPluginServerCredentials
+  readonly requestId?: string
+  readonly source?: PluginMetadata
+}
+
 export const extractFromCustomPluginServer = Effect.fn(
   "CustomPluginServerAdapter.extractFromCustomPluginServer"
-)(function* (
-  pluginServer: RegisteredPluginServer,
-  targetUrl: string,
-  kind: "source" | "node",
-  credentials?: {
-    password?: string
-    basicAuth?: HttpBasicAuth
-    pluginId?: string
-  },
-  requestId?: string,
-  source?: PluginMetadata
-): Effect.fn.Return<ExtractionResult, ExtractionError> {
+)(function* ({
+  pluginServer,
+  targetUrl,
+  kind,
+  credentials,
+  requestId,
+  source,
+}: ExtractFromCustomPluginServerInput): Effect.fn.Return<
+  ExtractionResult,
+  ExtractionError
+> {
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   const extractedAuth = extractHttpBasicCredential(targetUrl)
   const basicAuth = manifest?.features.basicAuth
@@ -199,13 +220,18 @@ export const extractFromCustomPluginServer = Effect.fn(
   const client = createCustomPluginServerClient(pluginServer)
   const resultValue = yield* requestPluginServer(
     () =>
-      extractPluginServerResponse(client, extractedAuth.url, kind, {
-        apiKey: pluginServer.apiKey,
-        password: credentials?.password,
-        basicAuth,
-        pluginId: credentials?.pluginId,
-        proxy,
-        requestId,
+      extractPluginServerResponse({
+        client,
+        targetUrl: extractedAuth.url,
+        kind,
+        requestOptions: {
+          apiKey: pluginServer.apiKey,
+          password: credentials?.password,
+          basicAuth,
+          pluginId: credentials?.pluginId,
+          proxy,
+          requestId,
+        },
       }),
     targetUrl
   )

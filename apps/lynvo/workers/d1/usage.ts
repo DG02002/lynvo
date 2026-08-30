@@ -127,13 +127,21 @@ const getEpoch = async (database: D1Database): Promise<number> => {
   return row?.epoch ?? 0
 }
 
-const readCounterValue = async (
-  database: D1Database,
-  ownerKey: string,
-  metricId: string,
-  periodKey: string,
-  epoch: number
-): Promise<number | null> => {
+interface ReadCounterValueInput {
+  readonly database: D1Database
+  readonly ownerKey: string
+  readonly metricId: string
+  readonly periodKey: string
+  readonly epoch: number
+}
+
+const readCounterValue = async ({
+  database,
+  ownerKey,
+  metricId,
+  periodKey,
+  epoch,
+}: ReadCounterValueInput): Promise<number | null> => {
   const row = await database
     .prepare(
       "SELECT used FROM usage_counters WHERE owner_key = ?1 AND metric_id = ?2 AND period_key = ?3 AND epoch = ?4"
@@ -391,27 +399,27 @@ const readManagedExtractionUsage = async (
   const ownerKey = `user:${userId}`
   const [userDailyUsed, globalDailyUsed, monthlyUsedBefore] = await Promise.all(
     [
-      readCounterValue(
+      readCounterValue({
         database,
         ownerKey,
-        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-        daily.key,
-        epoch
-      ),
-      readCounterValue(
+        metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        periodKey: daily.key,
+        epoch,
+      }),
+      readCounterValue({
         database,
-        GLOBAL_USAGE_OWNER_KEY,
-        LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-        daily.key,
-        epoch
-      ),
-      readCounterValue(
+        ownerKey: GLOBAL_USAGE_OWNER_KEY,
+        metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+        periodKey: daily.key,
+        epoch,
+      }),
+      readCounterValue({
         database,
         ownerKey,
-        LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-        monthly.key,
-        epoch
-      ),
+        metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+        periodKey: monthly.key,
+        epoch,
+      }),
     ]
   )
   return {
@@ -608,11 +616,11 @@ export const reserveManagedExtraction = async (
     usageLimitsDisabled,
     snapshot,
   })
-  const { dataVersion, statementResults } = await executeOwnedWrite(
+  const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
-    statements
-  )
+    statements,
+  })
   // SAFETY: a conditional increment that hit its limit returns no row; the
   // batch still commits, so the sibling statements are compensated below.
   const rowAt = (index: number): { used: number } | undefined =>
@@ -719,18 +727,18 @@ export const settleManagedExtraction = async (
     input.outcome === "released"
       ? [createAtomicCounterRefundStatement(database, operation)]
       : []
-  const { dataVersion, statementResults } = await executeOwnedWrite(
+  const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
-    [
+    statements: [
       ...releaseStatements,
       database
         .prepare(
           "UPDATE managed_extraction_operations SET state = ?3, settled_at = ?2 WHERE user_id = ?1 AND operation_id = ?4 AND state = 'reserved'"
         )
         .bind(userId, input.now, input.outcome, input.operationId),
-    ]
-  )
+    ],
+  })
   const settleResult = statementResults[releaseStatements.length]
   if ((settleResult?.meta.changes ?? 0) === 0) {
     return {
@@ -783,20 +791,20 @@ export const getUsage = async (
   const epoch = await getEpoch(database)
   const ownerKey = `user:${userId}`
   const [dailyUsed, monthlyUsed] = await Promise.all([
-    readCounterValue(
+    readCounterValue({
       database,
       ownerKey,
-      LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
-      daily.key,
-      epoch
-    ),
-    readCounterValue(
+      metricId: LYNVO_PLUGIN_SERVER_DAILY_METRIC_ID,
+      periodKey: daily.key,
+      epoch,
+    }),
+    readCounterValue({
       database,
       ownerKey,
-      LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
-      monthly.key,
-      epoch
-    ),
+      metricId: LYNVO_PLUGIN_SERVER_MONTHLY_METRIC_ID,
+      periodKey: monthly.key,
+      epoch,
+    }),
   ])
   return {
     metrics: [

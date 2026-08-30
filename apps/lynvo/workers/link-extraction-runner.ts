@@ -286,18 +286,37 @@ export const processSavedLinkExtraction = async (
   return true
 }
 
+interface QueuedLinkExtractionDrainState {
+  env: Env
+  database: D1Database
+  extractionsRemaining: number
+}
+
+const processNextQueuedLinkExtraction = async ({
+  env,
+  database,
+  extractionsRemaining,
+}: QueuedLinkExtractionDrainState): Promise<void> => {
+  if (extractionsRemaining === 0) {
+    return
+  }
+  const didProcessExtraction = await processSavedLinkExtraction(env, database)
+  if (!didProcessExtraction) {
+    return
+  }
+  await processNextQueuedLinkExtraction({
+    env,
+    database,
+    extractionsRemaining: extractionsRemaining - 1,
+  })
+}
+
 export const processQueuedLinkExtractions = async (
   env: Env,
   database: D1Database
-): Promise<void> => {
-  for (
-    let extractionIndex = 0;
-    extractionIndex < LINK_EXTRACTION_BATCH_SIZE;
-    extractionIndex += 1
-  ) {
-    const didProcessExtraction = await processSavedLinkExtraction(env, database)
-    if (!didProcessExtraction) {
-      break
-    }
-  }
-}
+): Promise<void> =>
+  processNextQueuedLinkExtraction({
+    env,
+    database,
+    extractionsRemaining: LINK_EXTRACTION_BATCH_SIZE,
+  })

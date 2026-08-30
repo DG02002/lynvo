@@ -105,7 +105,10 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
         }
         const claim = yield* Effect.tryPromise({
           try: () =>
-            claimNextRemoteCommand(database, user.id, user.sid, {
+            claimNextRemoteCommand({
+              database,
+              userId: user.id,
+              sessionId: user.sid,
               receiverId: query.receiverId,
               now: Date.now(),
             }),
@@ -142,7 +145,10 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
         }
         yield* Effect.tryPromise({
           try: () =>
-            reportRemoteCommandResult(database, user.id, user.sid, {
+            reportRemoteCommandResult({
+              database,
+              userId: user.id,
+              sessionId: user.sid,
               id: payload.id,
               receiverId: payload.receiverId,
               claimToken: payload.claimToken,

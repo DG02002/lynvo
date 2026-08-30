@@ -138,12 +138,19 @@ export interface AccountSessionEntry {
   isCurrent: boolean
 }
 
-export const listSessionsForUser = async (
-  database: D1Database,
-  userId: string,
-  currentSessionId: string | null,
-  now: number
-): Promise<AccountSessionEntry[]> => {
+interface ListSessionsForUserInput {
+  readonly database: D1Database
+  readonly userId: string
+  readonly currentSessionId: string | null
+  readonly now: number
+}
+
+export const listSessionsForUser = async ({
+  database,
+  userId,
+  currentSessionId,
+  now,
+}: ListSessionsForUserInput): Promise<AccountSessionEntry[]> => {
   const { results } = await database
     .prepare(
       `SELECT ${SESSION_COLUMNS} FROM sessions WHERE user_id = ?1 AND revoked_at IS NULL AND expires_at > ?2 ORDER BY last_seen_at DESC LIMIT 50`

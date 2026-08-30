@@ -235,7 +235,12 @@ describe("d1 storage ledger", () => {
       days: 7,
       now: NOW,
     })
-    await deleteExpiredLinksForUser(env.DB, user.id, 7, NOW + 8 * DAY_MS)
+    await deleteExpiredLinksForUser({
+      database: env.DB,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
     await expectLedgerMatchesInventory(user.id)
     const ledger = await getStorageLedger(env.DB, user.id)
     expect(ledger?.savedLinkCount).toBe(0)

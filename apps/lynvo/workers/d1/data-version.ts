@@ -34,12 +34,19 @@ export interface OwnedWriteResult {
   changed: boolean
 }
 
-export const executeOwnedWrite = async (
-  database: D1Database,
-  userId: string,
-  statements: readonly D1PreparedStatement[],
-  guard?: OwnedWriteGuard
-): Promise<OwnedWriteResult> => {
+interface ExecuteOwnedWriteInput {
+  readonly database: D1Database
+  readonly userId: string
+  readonly statements: readonly D1PreparedStatement[]
+  readonly guard?: OwnedWriteGuard
+}
+
+export const executeOwnedWrite = async ({
+  database,
+  userId,
+  statements,
+  guard,
+}: ExecuteOwnedWriteInput): Promise<OwnedWriteResult> => {
   if (statements.length === 0) {
     return {
       dataVersion: await getDataVersion(database, userId),
