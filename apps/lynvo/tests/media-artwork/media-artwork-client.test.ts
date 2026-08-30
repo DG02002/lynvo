@@ -93,6 +93,51 @@ describe("media artwork client cache", () => {
     ).not.toContain("/stale.jpg")
   })
 
+  it("does not reuse results stored under the legacy artwork key", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [{ stillPath: "/correct.jpg", episodeTitle: "A" }],
+        }),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const client = await importMediaArtworkClient()
+    const legacyArtworkKey = [
+      artworkRequest.providerId ?? "",
+      artworkRequest.mediaKind,
+      artworkRequest.title.normalize("NFKC").toLocaleLowerCase(),
+      artworkRequest.year ?? "",
+      artworkRequest.seasonNumber ?? "",
+      artworkRequest.episodeNumber ?? "",
+    ].join("|")
+    localStorage.setItem(
+      MEDIA_ARTWORK_CACHE_STORAGE_PREFIX + legacyArtworkKey,
+      JSON.stringify({
+        value: {
+          stillPath: "/wrong.jpg",
+          episodeTitle: "The Blood Warfare",
+        },
+        expiresAt: Date.now() + 60_000,
+      })
+    )
+
+    const artworkKey = client.getMediaArtworkKey(artworkRequest)
+    expect(artworkKey).not.toBe(legacyArtworkKey)
+    client.requestMediaArtwork(artworkKey, artworkRequest)
+    await flushArtworkRequests()
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(client.getMediaArtworkForKey(artworkKey)).toEqual({
+      stillPath: "/correct.jpg",
+      episodeTitle: "A",
+    })
+  })
+
   it("does not persist transient lookup failures", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("offline"))
     vi.stubGlobal("fetch", fetchMock)

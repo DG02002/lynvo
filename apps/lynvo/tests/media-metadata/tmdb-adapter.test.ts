@@ -224,7 +224,11 @@ describe("TMDB adapter", () => {
     })
     const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
 
-    const result = await adapter.getTvEpisodeDetails(79242, 4, 1)
+    const result = await adapter.getTvEpisodeDetails({
+      providerId: 79242,
+      seasonNumber: 4,
+      episodeNumber: 1,
+    })
 
     expect(result).toEqual({
       kind: "success",
@@ -237,6 +241,40 @@ describe("TMDB adapter", () => {
         episodeNumber: 1,
         attribution: "TMDB",
       },
+    })
+  })
+
+  it("does not use the canonical episode when a requested episode group is unavailable", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 29,
+            name: "Wrong Canonical Episode",
+            still_path: "/wrong-episode.jpg",
+            season_number: 2,
+            episode_number: 1,
+          }),
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ results: [] }), { status: 200 })
+      )
+    const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
+
+    const result = await adapter.getTvEpisodeDetails({
+      providerId: 79242,
+      seasonNumber: 2,
+      episodeNumber: 1,
+      episodeGroupName: "Named Season",
+      episodeGroupNumber: 3,
+    })
+
+    expect(result).toMatchObject({
+      kind: "failure",
+      failureKind: "permanent",
     })
   })
 })

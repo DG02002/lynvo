@@ -3,15 +3,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
   AlertCircleIcon,
-  File02Icon,
   Folder01Icon,
   Folder02Icon,
   PlayIcon,
-  Tv02Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import { DropdownMenuItem } from "~/components/ui/dropdown-menu"
-import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { Spinner } from "~/components/spinner"
@@ -30,6 +26,7 @@ import { FilenameText } from "~/components/filename-text"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
   getMediaDisplayTitle,
+  getMediaEpisodeDisplayTitle,
   hasEpisodeMarker,
 } from "~/features/links/media-artwork/media-artwork-identity"
 import {
@@ -51,7 +48,10 @@ import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
-import { FinderEpisodeStill } from "./finder-episode-still"
+import {
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "./finder-episode-still"
 import { SaveListRowPoster } from "./save-list-row-poster"
 import {
   MediaListRowMeta,
@@ -75,6 +75,11 @@ import {
   getExtractionStatusLabel,
 } from "./extraction-status-utils"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import {
+  FolderTitleDisplayToggleButton,
+  FolderTitleDisplayToggleMenuItem,
+  SaveListBackButton,
+} from "./save-list-header-controls"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -118,33 +123,18 @@ interface MobileFolderTreeToggleProps {
   onToggle: () => void
 }
 
-interface FinderBackButtonProps {
-  readonly onExit: () => void
-}
-
 interface SaveListBrowserItemIconProps {
   readonly label: string
   readonly parentFolderName?: string
-  readonly presentation:
-    | "episode-still"
-    | "link-poster"
-    | "container-poster"
-    | "icon"
+  readonly presentation: "link-poster" | "container-poster" | "icon"
   readonly rowFallbackIcon: ReactNode
-  readonly isResolving: boolean
   readonly isExpired: boolean
-  readonly isWatched: boolean
 }
 
 const getSaveListBrowserItemIconPresentation = (
-  shouldShowEpisodeStills: boolean,
   shouldShowRowPosters: boolean,
   isFolder: boolean
 ) => {
-  if (shouldShowEpisodeStills) {
-    return "episode-still"
-  }
-
   if (!shouldShowRowPosters) {
     return "icon"
   }
@@ -161,23 +151,8 @@ const SaveListBrowserItemIcon = ({
   parentFolderName,
   presentation,
   rowFallbackIcon,
-  isResolving,
   isExpired,
-  isWatched,
 }: SaveListBrowserItemIconProps) => {
-  if (presentation === "episode-still") {
-    return (
-      <FinderEpisodeStill
-        label={label}
-        parentFolderName={parentFolderName}
-        fallbackIcon={rowFallbackIcon}
-        isResolving={isResolving}
-        isDimmed={isExpired}
-        isWatched={isWatched}
-      />
-    )
-  }
-
   if (presentation === "link-poster") {
     return (
       <SaveListRowPoster
@@ -262,61 +237,6 @@ const MobileFolderTreeToggle = ({
     </span>
   </Button>
 )
-
-const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
-  <div className="contents md:block md:h-full md:border-r">
-    <ImmersiveBackButton onExit={onExit} />
-  </div>
-)
-
-interface FolderTitleDisplayToggleProps {
-  readonly titleDisplay: FolderTitleDisplay
-  readonly onToggle: () => void
-}
-
-const getFolderTitleDisplayMeta = (titleDisplay: FolderTitleDisplay) =>
-  titleDisplay === "episode"
-    ? { label: "Episode names", nextLabel: "Show filenames" }
-    : { label: "Filenames", nextLabel: "Show episode names" }
-
-const FolderTitleDisplayToggleButton = ({
-  titleDisplay,
-  onToggle,
-}: FolderTitleDisplayToggleProps) => {
-  const { label } = getFolderTitleDisplayMeta(titleDisplay)
-
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      aria-pressed={titleDisplay === "episode"}
-      onClick={onToggle}
-      className="h-9 gap-1.5 px-2.5 text-xs text-muted-foreground"
-    >
-      <HugeiconsIcon
-        icon={titleDisplay === "episode" ? Tv02Icon : File02Icon}
-        className="size-4"
-      />
-      {label}
-    </Button>
-  )
-}
-
-const FolderTitleDisplayToggleMenuItem = ({
-  titleDisplay,
-  onToggle,
-}: FolderTitleDisplayToggleProps) => {
-  const { nextLabel } = getFolderTitleDisplayMeta(titleDisplay)
-
-  return (
-    <DropdownMenuItem className="md:hidden" onClick={onToggle}>
-      <HugeiconsIcon
-        icon={titleDisplay === "episode" ? File02Icon : Tv02Icon}
-      />
-      {nextLabel}
-    </DropdownMenuItem>
-  )
-}
 
 const FolderTree = ({
   rootLabel,
@@ -421,7 +341,7 @@ const FinderEmptyState = ({
 }: FinderEmptyStateProps) => (
   <section className="flex h-svh flex-col overflow-hidden bg-background">
     <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:gap-0">
-      <FinderBackButton onExit={onExit} />
+      <SaveListBackButton onExit={onExit} />
       <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
           aria-label={getItemTitle(item)}
@@ -461,6 +381,186 @@ const FinderEmptyState = ({
     </div>
   </section>
 )
+
+interface FinderBrowserLinkRowProps {
+  readonly item: LinkViewItem
+  readonly link: ExtractedLink
+  readonly linkKey: string
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly parentFolderName?: string
+  readonly shouldShowEpisodeStills: boolean
+  readonly shouldShowRowPosters: boolean
+  readonly titleDisplay: FolderTitleDisplay
+  readonly displayTitle: string
+  readonly onActivate: () => void
+}
+
+const FinderBrowserLinkRow = ({
+  item,
+  link,
+  linkKey,
+  actions,
+  extractingItems,
+  parentFolderName,
+  shouldShowEpisodeStills,
+  shouldShowRowPosters,
+  titleDisplay,
+  displayTitle,
+  onActivate,
+}: FinderBrowserLinkRowProps) => {
+  const linkTarget = getMediaNodeTargetOrUndefined(link)
+  const { isFolder } = getMediaNodeInteractionState(link)
+  const isExpired =
+    !isFolder && link.expiry !== undefined && link.expiry <= Date.now()
+  const isResolving =
+    linkTarget !== undefined && extractingItems.has(linkTarget)
+  const episodeStill = useFinderEpisodeStill(
+    link.label,
+    parentFolderName,
+    shouldShowEpisodeStills
+  )
+  const { artwork } = episodeStill
+  const rowDisplayTitle =
+    shouldShowEpisodeStills && titleDisplay === "episode"
+      ? getMediaEpisodeDisplayTitle(
+          link.label,
+          artwork?.episodeTitle,
+          parentFolderName
+        )
+      : displayTitle
+  const rowFallbackIcon = isResolving ? (
+    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+  ) : (
+    <HugeiconsIcon
+      icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
+      className="size-6"
+    />
+  )
+  const rowIcon = shouldShowEpisodeStills ? (
+    <>
+      <span className="hidden shrink-0 md:block md:w-96">
+        <FinderEpisodeStillDisplay
+          label={link.label}
+          fallbackIcon={rowFallbackIcon}
+          isResolving={isResolving}
+          isDimmed={isExpired}
+          isWatched={link.opened === true}
+          imagePath={episodeStill.imagePath}
+          imageType={episodeStill.imageType}
+          isLookupPending={episodeStill.isLookupPending}
+        />
+      </span>
+      <span className="md:hidden">
+        <SaveListRowIcon
+          className={isExpired ? "text-muted-foreground" : undefined}
+        >
+          {rowFallbackIcon}
+        </SaveListRowIcon>
+      </span>
+    </>
+  ) : (
+    <SaveListBrowserItemIcon
+      label={link.label}
+      parentFolderName={parentFolderName}
+      presentation={getSaveListBrowserItemIconPresentation(
+        shouldShowRowPosters,
+        isFolder
+      )}
+      rowFallbackIcon={rowFallbackIcon}
+      isExpired={isExpired}
+    />
+  )
+  const copyLink = () => {
+    if (linkTarget === undefined) {
+      return
+    }
+    void navigator.clipboard.writeText(linkTarget)
+  }
+  const openLinkInPlayer = async (player: PlayerDefinition) => {
+    if (linkTarget === undefined) {
+      return
+    }
+    const result = await openInSpecificPlayer(linkTarget, player)
+    markAfterAcceptedHandoff({
+      accepted: result.expectsNavigation,
+      itemLabel: link.label,
+      markOpened: () => actions.markOpened(item.url, linkTarget),
+    })
+  }
+
+  return (
+    <MediaListRow
+      key={linkKey}
+      label={rowDisplayTitle}
+      icon={rowIcon}
+      title={
+        <ExtractionWaitStatus
+          isWaiting={isResolving}
+          titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
+        >
+          <FilenameText
+            value={rowDisplayTitle}
+            className={MEDIA_LIST_ROW_TITLE_CLASS}
+            textClassName={isExpired ? "line-through" : undefined}
+          />
+        </ExtractionWaitStatus>
+      }
+      meta={
+        <>
+          <MediaListRowMeta
+            sourceName={getResolvableSourceName(link, item)}
+            size={link.size}
+          />
+          {!isFolder && link.expiry !== undefined && (
+            <span className="flex justify-end text-xs text-muted-foreground">
+              <PlayableExpiryBadge
+                expiresAt={link.expiry}
+                expirySource={link.expirySource}
+              />
+            </span>
+          )}
+          {!link.opened && !isExpired && <NewBadge className="md:hidden" />}
+        </>
+      }
+      trailing={
+        !link.opened && !isExpired ? (
+          <NewBadge className="hidden md:inline-flex" />
+        ) : undefined
+      }
+      overlay={
+        !isResolving && linkTarget !== undefined ? (
+          <LinkActionsDotMenu
+            itemLabel={link.label}
+            onCopyLink={copyLink}
+            onOpenInPlayer={openLinkInPlayer}
+            isPlayable={!isFolder && !isExpired}
+            className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+            removeRequest={
+              isFolder
+                ? {
+                    url: linkTarget,
+                    onRemove: () =>
+                      actions.removeLink?.(item.url, linkKey, linkTarget),
+                  }
+                : undefined
+            }
+            removeLabel={isFolder ? "Remove folder" : undefined}
+          />
+        ) : undefined
+      }
+      onActivate={onActivate}
+      disabled={isExpired}
+      isOpened={link.opened === true}
+      buttonClassName={isExpired ? "text-muted-foreground" : undefined}
+      buttonDataAttributes={{
+        "data-folder-state": isFolder
+          ? getFolderVisualState(link, false)
+          : undefined,
+      }}
+    />
+  )
+}
 
 const FinderBrowser = ({
   item,
@@ -509,7 +609,7 @@ const FinderBrowser = ({
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
       <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_auto_4rem] md:gap-0">
-        <FinderBackButton onExit={onExit} />
+        <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={getItemTitle(item)}
@@ -611,142 +711,21 @@ const FinderBrowser = ({
                 />
               )
             }
-            const { isFolder } = getMediaNodeInteractionState(link)
-            const isExpired =
-              !isFolder &&
-              link.expiry !== undefined &&
-              link.expiry <= Date.now()
-            const isResolving =
-              linkTarget !== undefined && extractingItems.has(linkTarget)
-            const rowFallbackIcon = isResolving ? (
-              <Spinner
-                aria-label={`Loading ${link.label}…`}
-                className="size-6"
-              />
-            ) : (
-              <HugeiconsIcon
-                icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
-                className="size-6"
-              />
-            )
-            const copyLink = () => {
-              if (linkTarget === undefined) {
-                return
-              }
-              void navigator.clipboard.writeText(linkTarget)
-            }
-            const openLinkInPlayer = async (player: PlayerDefinition) => {
-              if (linkTarget === undefined) {
-                return
-              }
-              const result = await openInSpecificPlayer(linkTarget, player)
-              markAfterAcceptedHandoff({
-                accepted: result.expectsNavigation,
-                itemLabel: link.label,
-                markOpened: () => actions.markOpened(item.url, linkTarget),
-              })
-            }
 
             return (
-              <MediaListRow
+              <FinderBrowserLinkRow
                 key={linkKey}
-                shouldStackIconOnMobile={shouldShowEpisodeStills}
-                icon={
-                  <SaveListBrowserItemIcon
-                    label={link.label}
-                    parentFolderName={parentFolderName}
-                    presentation={getSaveListBrowserItemIconPresentation(
-                      shouldShowEpisodeStills,
-                      shouldShowRowPosters,
-                      isFolder
-                    )}
-                    rowFallbackIcon={rowFallbackIcon}
-                    isResolving={isResolving}
-                    isExpired={isExpired}
-                    isWatched={link.opened === true}
-                  />
-                }
-                title={
-                  <ExtractionWaitStatus
-                    isWaiting={isResolving}
-                    titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
-                  >
-                    <FilenameText
-                      value={getRowDisplayTitle(link)}
-                      className={MEDIA_LIST_ROW_TITLE_CLASS}
-                      textClassName={isExpired ? "line-through" : undefined}
-                    />
-                  </ExtractionWaitStatus>
-                }
-                meta={
-                  <>
-                    {isFolder && (
-                      <MediaListRowMeta
-                        sourceName={getResolvableSourceName(link, item)}
-                        size={link.size}
-                      />
-                    )}
-                    {!isFolder && link.expiry !== undefined && (
-                      <span className="flex justify-end text-xs text-muted-foreground">
-                        <PlayableExpiryBadge
-                          expiresAt={link.expiry}
-                          expirySource={link.expirySource}
-                        />
-                      </span>
-                    )}
-                    {!link.opened && !isExpired && (
-                      <NewBadge className="md:hidden" />
-                    )}
-                  </>
-                }
-                trailing={
-                  <>
-                    {!isFolder && link.size && (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {link.size}
-                      </span>
-                    )}
-                    {!link.opened && !isExpired && (
-                      <NewBadge className="hidden md:inline-flex" />
-                    )}
-                  </>
-                }
-                overlay={
-                  !isResolving && linkTarget !== undefined ? (
-                    <LinkActionsDotMenu
-                      itemLabel={link.label}
-                      onCopyLink={copyLink}
-                      onOpenInPlayer={openLinkInPlayer}
-                      isPlayable={!isFolder && !isExpired}
-                      className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
-                      removeRequest={
-                        isFolder
-                          ? {
-                              url: linkTarget,
-                              onRemove: () =>
-                                actions.removeLink?.(
-                                  item.url,
-                                  linkKey,
-                                  linkTarget
-                                ),
-                            }
-                          : undefined
-                      }
-                      removeLabel={isFolder ? "Remove folder" : undefined}
-                    />
-                  ) : undefined
-                }
+                item={item}
+                link={link}
+                linkKey={linkKey}
+                actions={actions}
+                extractingItems={extractingItems}
+                parentFolderName={parentFolderName}
+                shouldShowEpisodeStills={shouldShowEpisodeStills}
+                shouldShowRowPosters={shouldShowRowPosters}
+                titleDisplay={titleDisplay}
+                displayTitle={getRowDisplayTitle(link)}
                 onActivate={() => void openLink(link)}
-                disabled={isExpired}
-                isOpened={link.opened === true}
-                buttonClassName={
-                  isExpired ? "text-muted-foreground" : undefined
-                }
-                buttonDataAttributes={{
-                  "data-folder-state": isFolder
-                    ? getFolderVisualState(link, false)
-                    : undefined,
-                }}
               />
             )
           })}

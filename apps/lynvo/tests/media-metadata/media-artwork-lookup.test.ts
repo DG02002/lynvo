@@ -16,6 +16,22 @@ interface TmdbStubPayload {
   readonly episode_number?: number
   readonly status_message?: string
   readonly results?: readonly TmdbStubResultItem[]
+  readonly groups?: readonly TmdbStubEpisodeGroup[]
+}
+
+interface TmdbStubEpisodeGroup {
+  readonly name?: string
+  readonly order?: number
+  readonly episodes?: readonly TmdbStubEpisode[]
+}
+
+interface TmdbStubEpisode {
+  readonly id?: number
+  readonly name?: string
+  readonly order?: number
+  readonly still_path?: string | null
+  readonly season_number?: number
+  readonly episode_number?: number
 }
 
 interface TmdbStubRoute {
@@ -114,6 +130,7 @@ describe("Media artwork lookup", () => {
       {
         posterPath: "/s.jpg",
         stillPath: "/e.jpg",
+        episodeTitle: "Example Show",
         identity: { providerId: 7, title: "Example Show" },
         candidates: [
           {
@@ -239,7 +256,7 @@ describe("Media artwork lookup", () => {
         payload: {
           id: 30984,
           name: "Thousand-Year Blood War",
-          poster_path: "/tybw-season.jpg",
+          poster_path: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
           season_number: 2,
         },
       },
@@ -270,7 +287,144 @@ describe("Media artwork lookup", () => {
 
     expect(results).toEqual([
       {
-        posterPath: "/tybw-season.jpg",
+        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+        identity: { providerId: 30984, title: "Bleach" },
+        candidates: [
+          {
+            providerId: 30984,
+            title: "Bleach",
+            mediaKind: "tv",
+            posterPath: "/bleach.jpg",
+          },
+        ],
+      },
+    ])
+  })
+
+  it("resolves named-season episode titles and stills through episode groups", async () => {
+    const fetch = createUrlRoutingFetch([
+      {
+        urlIncludes: "/search/tv?",
+        payload: {
+          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+        },
+      },
+      {
+        urlIncludes: "/tv/30984/season/2/episode/1",
+        payload: {
+          id: 3754381,
+          name: "The Blood Warfare",
+          still_path: "/jMo1WpRVfSdttH492fPxY2rQCyc.jpg",
+          season_number: 2,
+          episode_number: 1,
+        },
+      },
+      {
+        urlIncludes: "/tv/30984/episode_groups",
+        payload: {
+          results: [
+            {
+              id: "tybw-season-split",
+              name: "Hulu Season Split (Thousand-Year Blood War)",
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/tv/episode_group/tybw-season-split",
+        payload: {
+          groups: [
+            {
+              name: "The Conflict",
+              order: 3,
+              episodes: [
+                {
+                  id: 3754407,
+                  name: "A",
+                  order: 0,
+                  still_path: "/1CAJci6VXz9DBX3hbq1X82R436e.jpg",
+                  season_number: 2,
+                  episode_number: 27,
+                },
+              ],
+            },
+            {
+              name: "The Calamity",
+              order: 4,
+              episodes: [
+                {
+                  id: 3754421,
+                  name: "GOD OF THUNDER",
+                  order: 0,
+                  still_path: "/pShnxXXD1CrHyLbbTu8nAaLczHP.jpg",
+                  season_number: 2,
+                  episode_number: 41,
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        urlIncludes: "/tv/30984/season/2",
+        payload: {
+          id: 30984,
+          name: "Thousand-Year Blood War",
+          poster_path: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+          season_number: 2,
+        },
+      },
+      {
+        urlIncludes: "/tv/30984",
+        payload: {
+          id: 30984,
+          seasons: [
+            { season_number: 0, name: "Specials" },
+            { season_number: 1, name: "Bleach" },
+            { season_number: 2, name: "Thousand-Year Blood War" },
+          ],
+        },
+      },
+    ])
+
+    const results = await lookupMediaArtwork(
+      { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
+      [
+        {
+          mediaKind: "tv",
+          title: "Bleach Thousand Year Blood War",
+          seasonNumber: 3,
+          episodeNumber: 1,
+        },
+        {
+          mediaKind: "tv",
+          title: "Bleach Thousand Year Blood War",
+          seasonNumber: 4,
+          episodeNumber: 1,
+        },
+      ],
+      { fetch }
+    )
+
+    expect(results).toEqual([
+      {
+        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+        stillPath: "/1CAJci6VXz9DBX3hbq1X82R436e.jpg",
+        episodeTitle: "A",
+        identity: { providerId: 30984, title: "Bleach" },
+        candidates: [
+          {
+            providerId: 30984,
+            title: "Bleach",
+            mediaKind: "tv",
+            posterPath: "/bleach.jpg",
+          },
+        ],
+      },
+      {
+        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+        stillPath: "/pShnxXXD1CrHyLbbTu8nAaLczHP.jpg",
+        episodeTitle: "GOD OF THUNDER",
         identity: { providerId: 30984, title: "Bleach" },
         candidates: [
           {

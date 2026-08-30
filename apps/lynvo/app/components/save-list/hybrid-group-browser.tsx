@@ -1,26 +1,34 @@
+import { useMemo } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AlertCircleIcon,
-  ArrowLeft01Icon,
   Folder01Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "~/components/ui/button"
 import { FilenameText } from "~/components/filename-text"
-import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
+import {
+  getMediaDisplayTitle,
+  getMediaEpisodeDisplayTitle,
+  hasEpisodeMarker,
+} from "~/features/links/media-artwork/media-artwork-identity"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { getHybridItemLabel } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { SaveExtractionStatus } from "./extraction-status"
 import { getExtractionStatusInput } from "./extraction-status-utils"
+import {
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "./finder-episode-still"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -32,6 +40,11 @@ import {
 } from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
+import {
+  FolderTitleDisplayToggleButton,
+  SaveListBackButton,
+} from "./save-list-header-controls"
+import { useFolderTitleDisplay } from "./use-folder-title-display"
 
 interface HybridGroupItemRowProps {
   readonly item: LinkListItem
@@ -39,6 +52,10 @@ interface HybridGroupItemRowProps {
   readonly isExtracting: boolean
   readonly currentTimeMs: number
   readonly onOpenItem: (itemUrl: string) => void
+  readonly itemLabel: string
+  readonly displayTitle: string
+  readonly titleDisplay: FolderTitleDisplay
+  readonly shouldShowEpisodeStill: boolean
 }
 
 const HybridGroupItemRow = ({
@@ -47,17 +64,49 @@ const HybridGroupItemRow = ({
   isExtracting,
   currentTimeMs,
   onOpenItem,
+  itemLabel,
+  displayTitle,
+  titleDisplay,
+  shouldShowEpisodeStill,
 }: HybridGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
   const extractionState = item.extractionStatus?.state ?? "complete"
   const isExtractionVisual =
     getExtractionStatusInput(item, isExtracting) !== "idle"
-  const itemLabel = getHybridItemLabel(item)
   const view = toLinkViewModel(item)
   const directLinkTarget = directLink
     ? getMediaNodeTargetOrUndefined(directLink)
     : undefined
+  const rowFallbackIcon = isExtractionVisual ? (
+    <SaveListRowIcon>
+      {extractionState === "failed" ? (
+        <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
+      ) : (
+        <Spinner aria-hidden="true" className="size-6" />
+      )}
+    </SaveListRowIcon>
+  ) : (
+    <SaveListRowIcon
+      className={isDirectLinkExpired ? "text-muted-foreground" : undefined}
+    >
+      <HugeiconsIcon
+        icon={directLink ? PlayIcon : Folder01Icon}
+        className="size-6"
+      />
+    </SaveListRowIcon>
+  )
+  const episodeStill = useFinderEpisodeStill(
+    itemLabel,
+    undefined,
+    shouldShowEpisodeStill
+  )
+  const { artwork } = episodeStill
+  const episodeTitle = artwork?.episodeTitle
+  const rowDisplayTitle =
+    titleDisplay === "episode"
+      ? getMediaEpisodeDisplayTitle(itemLabel, episodeTitle)
+      : displayTitle
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -86,32 +135,32 @@ const HybridGroupItemRow = ({
 
   return (
     <MediaListRow
+      label={rowDisplayTitle}
       icon={
-        isExtractionVisual ? (
-          <SaveListRowIcon>
-            {extractionState === "failed" ? (
-              <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
-            ) : (
-              <Spinner aria-hidden="true" className="size-6" />
-            )}
-          </SaveListRowIcon>
+        shouldShowEpisodeStill ? (
+          <>
+            <span className="hidden shrink-0 md:block md:w-96">
+              <FinderEpisodeStillDisplay
+                label={itemLabel}
+                fallbackIcon={rowFallbackIcon}
+                isResolving={isExtractionVisual}
+                isDimmed={isDirectLinkExpired}
+                isWatched={directLink?.opened === true}
+                imagePath={episodeStill.imagePath}
+                imageType={episodeStill.imageType}
+                isLookupPending={episodeStill.isLookupPending}
+              />
+            </span>
+            <span className="md:hidden">{rowFallbackIcon}</span>
+          </>
         ) : (
-          <SaveListRowIcon
-            className={
-              isDirectLinkExpired ? "text-muted-foreground" : undefined
-            }
-          >
-            <HugeiconsIcon
-              icon={directLink ? PlayIcon : Folder01Icon}
-              className="size-6"
-            />
-          </SaveListRowIcon>
+          rowFallbackIcon
         )
       }
       title={
         <SaveExtractionStatus item={item} isRefreshing={isExtracting} isTitle>
           <FilenameText
-            value={itemLabel}
+            value={rowDisplayTitle}
             className={MEDIA_LIST_ROW_TITLE_CLASS}
             textClassName={isDirectLinkExpired ? "line-through" : undefined}
           />
@@ -219,6 +268,32 @@ export const HybridGroupBrowser = ({
   onExit,
   onOpenItem,
 }: HybridGroupBrowserProps) => {
+  const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("filename")
+  const itemLabels = useMemo(
+    () => group.items.map((item) => getHybridItemLabel(item)),
+    [group.items]
+  )
+  const shouldShowEpisodeStills =
+    group.artworkRequest?.mediaKind === "tv" &&
+    itemLabels.length > 0 &&
+    itemLabels.every((itemLabel) => hasEpisodeMarker(itemLabel))
+  const sortedItemEntries = useMemo(() => {
+    const itemEntries = group.items.map((item, itemIndex) => ({
+      item,
+      itemLabel: itemLabels[itemIndex],
+      originalIndex: itemIndex,
+    }))
+    if (!shouldShowEpisodeStills) {
+      return itemEntries
+    }
+    return itemEntries.toSorted(
+      (firstEntry, secondEntry) =>
+        (parseMediaFilename(firstEntry.itemLabel).episodeNumber ??
+          firstEntry.originalIndex) -
+        (parseMediaFilename(secondEntry.itemLabel).episodeNumber ??
+          secondEntry.originalIndex)
+    )
+  }, [group.items, itemLabels, shouldShowEpisodeStills])
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"
@@ -227,26 +302,28 @@ export const HybridGroupBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex min-h-16 shrink-0 items-stretch border-b bg-background md:hidden">
-        <div className="w-16 shrink-0">
-          <ImmersiveBackButton onExit={onExit} />
+      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_auto] items-stretch border-b bg-background p-0 md:grid-cols-[22rem_minmax(0,1fr)_auto] md:gap-0">
+        <SaveListBackButton onExit={onExit} />
+        <div className="flex min-w-0 items-center px-3 py-3 md:px-4">
+          <h1
+            aria-label={group.displayTitle}
+            className="w-full min-w-0 text-base font-normal"
+          >
+            <FilenameText
+              value={group.displayTitle}
+              clampClassName="line-clamp-1"
+              className="w-full"
+            />
+          </h1>
+        </div>
+        <div className="flex items-center justify-center px-1 md:px-0">
+          <FolderTitleDisplayToggleButton
+            titleDisplay={titleDisplay}
+            onToggle={toggleTitleDisplay}
+          />
         </div>
       </header>
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[8rem_minmax(0,22rem)_minmax(0,1fr)] md:grid-rows-1">
-        <div className="hidden md:block">
-          <Button
-            variant="ghost"
-            onClick={onExit}
-            className="size-full justify-center rounded-none px-4 text-lg font-foreground hover:bg-muted/70 hover:text-foreground md:border-r"
-          >
-            <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              className="size-6 text-foreground"
-              data-icon="inline-start"
-            />
-            Back
-          </Button>
-        </div>
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-1">
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
           <div className="mx-auto w-80 md:mx-0 md:w-full">
             <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
@@ -257,9 +334,6 @@ export const HybridGroupBrowser = ({
                 isArtworkPending={isArtworkPending}
               />
             </div>
-            <h2 className="hidden pt-3 text-center font-heading text-base font-normal break-words md:block">
-              {group.displayTitle}
-            </h2>
             {artwork?.identity ? (
               <p className="hidden pt-1 text-center text-xs text-muted-foreground md:block">
                 Artwork: {artwork.identity.title}
@@ -269,16 +343,10 @@ export const HybridGroupBrowser = ({
               </p>
             ) : null}
           </div>
-          <h1
-            aria-label={group.displayTitle}
-            className="mt-3 text-center font-heading text-lg font-normal break-words md:hidden"
-          >
-            {group.displayTitle}
-          </h1>
         </div>
         <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
-            {group.items.map((item) => (
+            {sortedItemEntries.map(({ item, itemLabel }) => (
               <HybridGroupItemRow
                 key={item.id ?? item.url}
                 item={item}
@@ -286,6 +354,14 @@ export const HybridGroupBrowser = ({
                 isExtracting={extractingItems.has(item.url)}
                 currentTimeMs={currentTimeMs}
                 onOpenItem={onOpenItem}
+                itemLabel={itemLabel}
+                displayTitle={
+                  titleDisplay === "episode"
+                    ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
+                    : itemLabel
+                }
+                titleDisplay={titleDisplay}
+                shouldShowEpisodeStill={shouldShowEpisodeStills}
               />
             ))}
           </div>

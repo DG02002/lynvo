@@ -3,6 +3,7 @@ import {
   MEDIA_ARTWORK_API_TIMEOUT_MS,
   MEDIA_ARTWORK_BATCH_SIZE,
   MEDIA_ARTWORK_CACHE_STORAGE_PREFIX,
+  MEDIA_ARTWORK_CACHE_VERSION,
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
   MEDIA_ARTWORK_FOUND_TTL_MS,
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
@@ -11,6 +12,7 @@ import {
 const mediaArtworkResultSchema = Schema.Struct({
   posterPath: Schema.optional(Schema.String),
   stillPath: Schema.optional(Schema.String),
+  episodeTitle: Schema.optional(Schema.String),
   identity: Schema.optional(
     Schema.Struct({
       providerId: Schema.Number,
@@ -39,6 +41,7 @@ const mediaArtworkResponseSchema = Schema.Struct({
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
   [
+    `v${MEDIA_ARTWORK_CACHE_VERSION}`,
     request.providerId ?? "",
     request.mediaKind,
     request.title.normalize("NFKC").toLocaleLowerCase(),

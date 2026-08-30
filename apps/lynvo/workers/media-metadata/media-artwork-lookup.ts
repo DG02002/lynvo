@@ -37,6 +37,7 @@ interface MediaArtworkLookupRequest {
 export interface MediaArtworkLookupResult {
   readonly posterPath?: string
   readonly stillPath?: string
+  readonly episodeTitle?: string
   /** The work this artwork belongs to; displayed so mismatches are visible. */
   readonly identity?: MediaArtworkIdentity
   /** Raw search candidates for the picker, title-based requests only. */
@@ -170,7 +171,21 @@ const searchMovieSelectingByTitle = async (
 
 interface SubtitleSeasonArtwork {
   readonly posterPath: string | undefined
+  readonly stillPath?: string
+  readonly episodeTitle?: string
   readonly identity: MediaArtworkIdentity
+}
+
+interface SubtitleSeasonArtworkOptions {
+  readonly episodeNumber?: number
+  readonly episodeGroupNumber?: number
+}
+
+interface SubtitleSeasonArtworkLookupRequest {
+  readonly adapter: TmdbAdapter
+  readonly title: string
+  readonly results: readonly TmdbSearchResult[]
+  readonly options?: SubtitleSeasonArtworkOptions
 }
 
 /**
@@ -181,10 +196,9 @@ interface SubtitleSeasonArtwork {
  * cours), so the matched season's artwork wins.
  */
 const lookupSubtitleSeasonArtwork = async (
-  adapter: TmdbAdapter,
-  title: string,
-  results: readonly TmdbSearchResult[]
+  request: SubtitleSeasonArtworkLookupRequest
 ): Promise<SubtitleSeasonArtwork | undefined> => {
+  const { adapter, title, results, options = {} } = request
   const parentShow = selectLeadingTitleMatch(title, results)
   if (!parentShow) {
     return undefined
@@ -199,15 +213,30 @@ const lookupSubtitleSeasonArtwork = async (
   if (!matchedSeason) {
     return undefined
   }
-  const seasonDetails = await adapter.getTvSeasonDetails(
-    parentShow.providerId,
-    matchedSeason.seasonNumber
-  )
+  const [seasonDetails, episodeDetails] = await Promise.all([
+    adapter.getTvSeasonDetails(
+      parentShow.providerId,
+      matchedSeason.seasonNumber
+    ),
+    options.episodeNumber === undefined
+      ? Promise.resolve(undefined)
+      : adapter.getTvEpisodeDetails({
+          providerId: parentShow.providerId,
+          seasonNumber: matchedSeason.seasonNumber,
+          episodeNumber: options.episodeNumber,
+          episodeGroupName: matchedSeason.name,
+          episodeGroupNumber: options.episodeGroupNumber,
+        }),
+  ])
+  const episodeMetadata =
+    episodeDetails?.kind === "success" ? episodeDetails.value : undefined
   return {
     posterPath:
       (seasonDetails.kind === "success"
         ? seasonDetails.value?.posterPath
         : undefined) ?? parentShow.posterPath,
+    stillPath: episodeMetadata?.stillPath,
+    episodeTitle: episodeMetadata?.title,
     identity: toIdentity(parentShow),
   }
 }
@@ -233,13 +262,15 @@ const lookupEpisodeArtwork = async (
   const searchResults = search.value ?? []
   const show = selectBestSearchResult(request.title, searchResults)
   if (!show) {
-    // Episode numbers of scene-packed cours do not line up with the parent
-    // show's seasons, so the fallback returns the season poster only.
-    const subtitleSeason = await lookupSubtitleSeasonArtwork(
+    const subtitleSeason = await lookupSubtitleSeasonArtwork({
       adapter,
-      request.title,
-      searchResults
-    )
+      title: request.title,
+      results: searchResults,
+      options: {
+        episodeNumber: request.episodeNumber,
+        episodeGroupNumber: request.seasonNumber,
+      },
+    })
     return subtitleSeason
       ? {
           status: "resolved",
@@ -250,18 +281,18 @@ const lookupEpisodeArtwork = async (
         }
       : toEmptyOutcome("tv", searchResults)
   }
-  const episode = await adapter.getTvEpisodeDetails(
-    show.providerId,
-    request.seasonNumber,
-    request.episodeNumber
-  )
-  const stillPath =
-    episode.kind === "success" ? episode.value?.stillPath : undefined
+  const episode = await adapter.getTvEpisodeDetails({
+    providerId: show.providerId,
+    seasonNumber: request.seasonNumber,
+    episodeNumber: request.episodeNumber,
+  })
+  const episodeMetadata = episode.kind === "success" ? episode.value : undefined
   return {
     status: "resolved",
     result: {
       posterPath: show.posterPath,
-      stillPath: stillPath ?? undefined,
+      stillPath: episodeMetadata?.stillPath,
+      episodeTitle: episodeMetadata?.title,
       identity: toIdentity(show),
       candidates: toCandidates("tv", searchResults),
     },
@@ -286,11 +317,11 @@ const lookupSeasonArtwork = async (
   const searchResults = search.value ?? []
   const show = selectBestSearchResult(request.title, searchResults)
   if (!show) {
-    const subtitleSeason = await lookupSubtitleSeasonArtwork(
+    const subtitleSeason = await lookupSubtitleSeasonArtwork({
       adapter,
-      request.title,
-      searchResults
-    )
+      title: request.title,
+      results: searchResults,
+    })
     return subtitleSeason
       ? {
           status: "resolved",
@@ -341,11 +372,11 @@ const lookupTvArtwork = async (
       },
     }
   }
-  const subtitleSeason = await lookupSubtitleSeasonArtwork(
+  const subtitleSeason = await lookupSubtitleSeasonArtwork({
     adapter,
-    request.title,
-    searchResults
-  )
+    title: request.title,
+    results: searchResults,
+  })
   return subtitleSeason
     ? {
         status: "resolved",

@@ -22,6 +22,24 @@ interface FinderEpisodeStillImageProps {
   readonly fallbackIcon: ReactNode
 }
 
+interface FinderEpisodeStillLookupState {
+  readonly artwork: MediaArtworkResult | undefined
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isLookupPending: boolean
+}
+
+interface FinderEpisodeStillDisplayProps {
+  readonly label: string
+  readonly fallbackIcon: ReactNode
+  readonly isResolving: boolean
+  readonly isDimmed: boolean
+  readonly isWatched: boolean
+  readonly imagePath: string | undefined
+  readonly imageType: "poster" | "still"
+  readonly isLookupPending: boolean
+}
+
 const FinderEpisodeStillImage = ({
   imagePath,
   imageType,
@@ -47,23 +65,34 @@ const FinderEpisodeStillImage = ({
   return fallbackIcon
 }
 
-export const FinderEpisodeStill = ({
-  label,
-  parentFolderName,
-  fallbackIcon,
-  isResolving = false,
-  isDimmed = false,
-  isWatched = false,
-}: FinderEpisodeStillProps) => {
+export const useFinderEpisodeStill = (
+  label: string,
+  parentFolderName?: string,
+  isEnabled = true
+): FinderEpisodeStillLookupState => {
   const artworkRequest = useMemo(
-    () => getMediaArtworkRequest(label, parentFolderName),
-    [label, parentFolderName]
+    () =>
+      isEnabled ? getMediaArtworkRequest(label, parentFolderName) : undefined,
+    [isEnabled, label, parentFolderName]
   )
   const artwork = useMediaArtwork(artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"
   const isLookupPending = artworkRequest !== undefined && artwork === undefined
 
+  return { artwork, imagePath, imageType, isLookupPending }
+}
+
+export const FinderEpisodeStillDisplay = ({
+  label,
+  fallbackIcon,
+  isResolving,
+  isDimmed,
+  isWatched,
+  imagePath,
+  imageType,
+  isLookupPending,
+}: FinderEpisodeStillDisplayProps) => {
   return (
     <span
       className={cn("block w-full shrink-0 md:w-96", isDimmed && "opacity-60")}
@@ -87,5 +116,32 @@ export const FinderEpisodeStill = ({
         )}
       </span>
     </span>
+  )
+}
+
+export const FinderEpisodeStill = ({
+  label,
+  parentFolderName,
+  fallbackIcon,
+  isResolving = false,
+  isDimmed = false,
+  isWatched = false,
+}: FinderEpisodeStillProps) => {
+  const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(
+    label,
+    parentFolderName
+  )
+
+  return (
+    <FinderEpisodeStillDisplay
+      label={label}
+      fallbackIcon={fallbackIcon}
+      isResolving={isResolving}
+      isDimmed={isDimmed}
+      isWatched={isWatched}
+      imagePath={imagePath}
+      imageType={imageType}
+      isLookupPending={isLookupPending}
+    />
   )
 }

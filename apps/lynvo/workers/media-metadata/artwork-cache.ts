@@ -4,6 +4,7 @@ import {
   type MediaArtworkCandidate,
   type MediaArtworkIdentity,
 } from "./media-artwork-lookup"
+import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 
 interface MediaArtworkRequest {
   readonly title: string
@@ -17,6 +18,7 @@ interface MediaArtworkRequest {
 interface MediaArtworkResult {
   readonly posterPath?: string
   readonly stillPath?: string
+  readonly episodeTitle?: string
   readonly identity?: MediaArtworkIdentity
   readonly candidates?: readonly MediaArtworkCandidate[]
   readonly failed?: boolean
@@ -34,7 +36,7 @@ export interface MediaArtworkCacheDependencies {
 // TMDB artwork is immutable and user-agnostic, so a shared per-colo cache
 // keyed by the normalized lookup request is safe. The synthetic origin never
 // leaves the cache; no request is made against it.
-const ARTWORK_CACHE_ORIGIN = "https://lynvo-tmdb-artwork-cache.internal"
+const ARTWORK_CACHE_ORIGIN = `https://lynvo-tmdb-artwork-cache.internal/v${MEDIA_ARTWORK_CACHE_VERSION}`
 const ARTWORK_CACHE_HIT_TTL_SECONDS = 30 * 24 * 60 * 60
 const ARTWORK_CACHE_MISS_TTL_SECONDS = 24 * 60 * 60
 

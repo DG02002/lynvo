@@ -51,6 +51,7 @@ declare global {
   interface MediaArtworkResult {
     readonly posterPath?: string
     readonly stillPath?: string
+    readonly episodeTitle?: string
     readonly identity?: MediaArtworkIdentity
     readonly candidates?: readonly MediaArtworkCandidate[]
     /** Transient provider failure; callers must not negative-cache it. */

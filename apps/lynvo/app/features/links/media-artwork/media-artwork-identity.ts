@@ -113,3 +113,16 @@ export const getMediaDisplayTitle = (
 
   return undefined
 }
+
+export const getMediaEpisodeDisplayTitle = (
+  label: string,
+  episodeTitle?: string,
+  parentFolderName?: string
+): string => {
+  const fallbackTitle = getMediaDisplayTitle(label, parentFolderName) ?? label
+  const displayTitle = episodeTitle ?? fallbackTitle
+  const { episodeNumber } = parseMediaFilename(label, parentFolderName)
+  return episodeNumber === undefined
+    ? displayTitle
+    : `${episodeNumber}. ${displayTitle}`
+}

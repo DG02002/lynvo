@@ -70,13 +70,20 @@ const ResolvableContainerRowIcon = ({
 }: ResolvableContainerRowIconProps) => {
   if (episodeStill) {
     return (
-      <FinderEpisodeStill
-        label={episodeStill.label}
-        parentFolderName={episodeStill.parentFolderName}
-        fallbackIcon={containerIcon}
-        isResolving={shouldShowResolving}
-        isWatched={isWatched}
-      />
+      <>
+        <span className="hidden md:block">
+          <FinderEpisodeStill
+            label={episodeStill.label}
+            parentFolderName={episodeStill.parentFolderName}
+            fallbackIcon={containerIcon}
+            isResolving={shouldShowResolving}
+            isWatched={isWatched}
+          />
+        </span>
+        <span className="md:hidden">
+          <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
+        </span>
+      </>
     )
   }
 
@@ -223,7 +230,6 @@ export const ResolvableContainerRow = ({
           didResolutionFail && "bg-destructive/15"
         )}
         isOpened={link.opened === true}
-        shouldStackIconOnMobile={Boolean(episodeStill)}
         buttonClassName={cn(
           isExpanded && !link.opened && "bg-transparent hover:bg-muted/80",
           didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { MEDIA_ARTWORK_CACHE_VERSION } from "../../app/lib/constants"
 import { lookupMediaArtworkCached } from "../../workers/media-metadata/artwork-cache"
 
 const TMDB_TOKEN = "test-token"
@@ -50,6 +51,21 @@ const expectedCandidate = {
   posterPath: "/poster.jpg",
 }
 
+const getArtworkCacheUrl = async (
+  canonicalRequest: readonly unknown[],
+  cacheVersion?: number
+) => {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify(canonicalRequest))
+  )
+  const cacheKey = [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+  const versionPath = cacheVersion === undefined ? "" : `v${cacheVersion}/`
+  return `https://lynvo-tmdb-artwork-cache.internal/${versionPath}${cacheKey}.json`
+}
+
 describe("media artwork cache", () => {
   it("serves repeat lookups from the cache instead of TMDB", async () => {
     const fetchMock = createTmdbFetch()
@@ -74,19 +90,10 @@ describe("media artwork cache", () => {
 
     await vi.waitFor(async () => {
       const cached = await globalThis.caches?.default.match(
-        await (async () => {
-          const digest = await crypto.subtle.digest(
-            "SHA-256",
-            new TextEncoder().encode(
-              JSON.stringify(["cache test", "movie", null, null, null, null])
-            )
-          )
-          return `https://lynvo-tmdb-artwork-cache.internal/${[
-            ...new Uint8Array(digest),
-          ]
-            .map((byte) => byte.toString(16).padStart(2, "0"))
-            .join("")}.json`
-        })()
+        await getArtworkCacheUrl(
+          ["cache test", "movie", null, null, null, null],
+          MEDIA_ARTWORK_CACHE_VERSION
+        )
       )
       expect(cached).toBeDefined()
     })
@@ -136,6 +143,43 @@ describe("media artwork cache", () => {
         identity: { providerId: 42, title: "Cache Test" },
       },
     ])
+  })
+
+  it("ignores a negative entry from the previous cache namespace", async () => {
+    const title = "Legacy Cache Test"
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({
+        results: [{ id: 84, title, poster_path: "/legacy-poster.jpg" }],
+      })
+    )
+    const dependencies = {
+      waitUntil: () => {},
+      fetch: fetchMock,
+    }
+    const requests = [{ title, mediaKind: "movie" as const }]
+    const legacyCacheUrl = await getArtworkCacheUrl(
+      [title.toLowerCase(), "movie", null, null, null, null],
+      MEDIA_ARTWORK_CACHE_VERSION - 1
+    )
+    await globalThis.caches?.default.put(
+      legacyCacheUrl,
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    )
+
+    const result = await lookupMediaArtworkCached(
+      { TMDB_API_READ_ACCESS_TOKEN: TMDB_TOKEN },
+      requests,
+      dependencies
+    )
+
+    expect(fetchMock).toHaveBeenCalled()
+    expect(result[0]).toMatchObject({
+      posterPath: "/legacy-poster.jpg",
+      identity: { providerId: 84, title },
+    })
   })
 
   it("does not cache transient upstream failures", async () => {

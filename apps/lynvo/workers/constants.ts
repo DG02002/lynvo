@@ -95,7 +95,10 @@ export const EMPTY_LINK_METADATA_JSON = JSON.stringify({
   extraction: { extractedLinks: [] },
   playback: { openedUrls: [], resolvedMirrors: {} },
 })
-export { DATA_VERSION_RESPONSE_HEADER } from "../app/lib/constants"
+export {
+  DATA_VERSION_RESPONSE_HEADER,
+  MEDIA_ARTWORK_CACHE_VERSION,
+} from "../app/lib/constants"
 
 export const CRON_SCHEDULE_HOURLY_MAINTENANCE = "9 * * * *"
 export const CRON_SCHEDULE_DAILY_RETENTION = "41 3 * * *"

@@ -139,10 +139,16 @@ export interface TmdbAdapter {
     providerId: number
   ) => Promise<TmdbAdapterResult<readonly TmdbSeasonSummary[]>>
   readonly getTvEpisodeDetails: (
-    providerId: number,
-    seasonNumber: number,
-    episodeNumber: number
+    request: TmdbEpisodeDetailsRequest
   ) => Promise<TmdbAdapterResult<TmdbMediaMetadata>>
+}
+
+export interface TmdbEpisodeDetailsRequest {
+  readonly providerId: number
+  readonly seasonNumber: number
+  readonly episodeNumber: number
+  readonly episodeGroupName?: string
+  readonly episodeGroupNumber?: number
 }
 
 export interface TmdbAdapterResult<Value> {
@@ -476,10 +482,16 @@ export const createTmdbAdapter = (
   }
 
   const alternativeEpisodeDetails = async (
-    providerId: number,
-    partNumber: number,
-    episodeNumber: number
+    request: TmdbEpisodeDetailsRequest
   ): Promise<TmdbAdapterResult<TmdbMediaMetadata>> => {
+    const {
+      providerId,
+      seasonNumber,
+      episodeGroupNumber: requestedEpisodeGroupNumber,
+      episodeNumber,
+      episodeGroupName,
+    } = request
+    const episodeGroupNumber = requestedEpisodeGroupNumber ?? seasonNumber
     const groupList = await requestJson<TmdbEpisodeGroupListPayload>(
       `/tv/${providerId}/episode_groups`,
       episodeGroupListPayloadSchema
@@ -494,10 +506,30 @@ export const createTmdbAdapter = (
             retryAt: groupList.retryAt,
           }
     }
+    const normalizedGroupName = episodeGroupName
+      ?.normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim()
+    const namedSeasonSplitGroup = normalizedGroupName
+      ? (groupList.value.results ?? []).find((group) => {
+          const normalizedProviderGroupName = group.name
+            ?.normalize("NFKC")
+            .toLocaleLowerCase()
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim()
+          return Boolean(
+            group.id &&
+            normalizedProviderGroupName?.includes("season split") &&
+            normalizedProviderGroupName.includes(normalizedGroupName)
+          )
+        })
+      : undefined
     const partsGroup = (groupList.value.results ?? []).find(
       (group) => group.id && group.name?.trim().toLocaleLowerCase() === "parts"
     )
-    if (!partsGroup?.id) {
+    const episodeGroup = namedSeasonSplitGroup ?? partsGroup
+    if (!episodeGroup?.id) {
       return {
         kind: "failure",
         failureKind: "permanent",
@@ -505,7 +537,7 @@ export const createTmdbAdapter = (
       }
     }
     const episodeGroups = await requestJson<TmdbEpisodeGroupPayload>(
-      `/tv/episode_group/${partsGroup.id}`,
+      `/tv/episode_group/${episodeGroup.id}`,
       episodeGroupPayloadSchema
     )
     if (episodeGroups.kind !== "success" || !episodeGroups.value) {
@@ -521,8 +553,8 @@ export const createTmdbAdapter = (
     }
     const part = (episodeGroups.value.groups ?? []).find(
       (group) =>
-        group.order === partNumber ||
-        group.name?.trim().toLocaleLowerCase() === `part ${partNumber}`
+        group.order === episodeGroupNumber ||
+        group.name?.trim().toLocaleLowerCase() === `part ${episodeGroupNumber}`
     )
     const episode = (part?.episodes ?? []).find(
       (candidate) => candidate.order === episodeNumber - 1
@@ -535,7 +567,7 @@ export const createTmdbAdapter = (
           kind: "success",
           value: {
             ...metadata,
-            seasonNumber: partNumber,
+            seasonNumber: episodeGroupNumber,
             episodeNumber,
           },
         }
@@ -547,17 +579,27 @@ export const createTmdbAdapter = (
   }
 
   const episodeDetails = async (
-    providerId: number,
-    seasonNumber: number,
-    episodeNumber: number
+    request: TmdbEpisodeDetailsRequest
   ): Promise<TmdbAdapterResult<TmdbMediaMetadata>> => {
+    const { providerId, seasonNumber, episodeNumber, episodeGroupNumber } =
+      request
     const canonical = await details(
       `/tv/${providerId}/season/${seasonNumber}/episode/${episodeNumber}`,
       "episode",
       providerId
     )
+    if (
+      episodeGroupNumber !== undefined &&
+      episodeGroupNumber !== seasonNumber
+    ) {
+      return alternativeEpisodeDetails(request)
+    }
     return canonical.kind === "failure" && canonical.failureKind === "permanent"
-      ? alternativeEpisodeDetails(providerId, seasonNumber, episodeNumber)
+      ? alternativeEpisodeDetails({
+          providerId,
+          seasonNumber,
+          episodeNumber,
+        })
       : canonical
   }
 
