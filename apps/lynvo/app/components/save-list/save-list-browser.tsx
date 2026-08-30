@@ -3,11 +3,14 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
   AlertCircleIcon,
+  File02Icon,
   Folder01Icon,
   Folder02Icon,
   PlayIcon,
+  Tv02Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
+import { DropdownMenuItem } from "~/components/ui/dropdown-menu"
 import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
@@ -38,12 +41,15 @@ import {
   getFolderVisualState,
   getItemTitle,
   getLinkKey,
+  getResolvableSourceName,
   isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
+import { useFolderTitleDisplay } from "./use-folder-title-display"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
+import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import { FinderEpisodeStill } from "./finder-episode-still"
 import { SaveListRowPoster } from "./save-list-row-poster"
@@ -263,6 +269,55 @@ const FinderBackButton = ({ onExit }: FinderBackButtonProps) => (
   </div>
 )
 
+interface FolderTitleDisplayToggleProps {
+  readonly titleDisplay: FolderTitleDisplay
+  readonly onToggle: () => void
+}
+
+const getFolderTitleDisplayMeta = (titleDisplay: FolderTitleDisplay) =>
+  titleDisplay === "episode"
+    ? { label: "Episode names", nextLabel: "Show filenames" }
+    : { label: "Filenames", nextLabel: "Show episode names" }
+
+const FolderTitleDisplayToggleButton = ({
+  titleDisplay,
+  onToggle,
+}: FolderTitleDisplayToggleProps) => {
+  const { label } = getFolderTitleDisplayMeta(titleDisplay)
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-pressed={titleDisplay === "episode"}
+      onClick={onToggle}
+      className="h-9 gap-1.5 px-2.5 text-xs text-muted-foreground"
+    >
+      <HugeiconsIcon
+        icon={titleDisplay === "episode" ? Tv02Icon : File02Icon}
+        className="size-4"
+      />
+      {label}
+    </Button>
+  )
+}
+
+const FolderTitleDisplayToggleMenuItem = ({
+  titleDisplay,
+  onToggle,
+}: FolderTitleDisplayToggleProps) => {
+  const { nextLabel } = getFolderTitleDisplayMeta(titleDisplay)
+
+  return (
+    <DropdownMenuItem className="md:hidden" onClick={onToggle}>
+      <HugeiconsIcon
+        icon={titleDisplay === "episode" ? File02Icon : Tv02Icon}
+      />
+      {nextLabel}
+    </DropdownMenuItem>
+  )
+}
+
 const FolderTree = ({
   rootLabel,
   folderPath,
@@ -431,6 +486,13 @@ const FinderBrowser = ({
     shouldShowRowPosters &&
     currentLinks.length > 0 &&
     currentLinks.every((link) => hasEpisodeMarker(link.label, parentFolderName))
+  const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay(
+    shouldShowRowPosters ? "episode" : "filename"
+  )
+  const getRowDisplayTitle = (link: ExtractedLink) =>
+    titleDisplay === "episode"
+      ? (getMediaDisplayTitle(link.label, parentFolderName) ?? link.label)
+      : link.label
 
   if (rootLinks.length === 0) {
     return (
@@ -446,7 +508,7 @@ const FinderBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:gap-0">
+      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_auto_4rem] md:gap-0">
         <FinderBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -460,6 +522,12 @@ const FinderBrowser = ({
             />
           </h1>
         </div>
+        <div className="hidden items-center justify-center md:flex">
+          <FolderTitleDisplayToggleButton
+            titleDisplay={titleDisplay}
+            onToggle={toggleTitleDisplay}
+          />
+        </div>
         <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
           <LinkItemMenu
             item={item}
@@ -468,6 +536,12 @@ const FinderBrowser = ({
             onRemoved={onExit}
             isRefreshing={extractingItems.has(item.url)}
             triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+            menuLeadingContent={
+              <FolderTitleDisplayToggleMenuItem
+                titleDisplay={titleDisplay}
+                onToggle={toggleTitleDisplay}
+              />
+            }
           />
         </div>
       </header>
@@ -522,7 +596,6 @@ const FinderBrowser = ({
                   link={link}
                   actions={actions}
                   isResolving={extractingItems.has(linkTarget)}
-                  shouldShowRowPosters={shouldShowRowPosters}
                   episodeStill={
                     shouldShowEpisodeStills
                       ? {
@@ -531,6 +604,7 @@ const FinderBrowser = ({
                         }
                       : undefined
                   }
+                  displayTitle={getRowDisplayTitle(link)}
                   onRemove={() =>
                     actions.removeLink?.(item.url, linkKey, linkTarget)
                   }
@@ -598,14 +672,7 @@ const FinderBrowser = ({
                     titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
                   >
                     <FilenameText
-                      value={
-                        shouldShowRowPosters
-                          ? (getMediaDisplayTitle(
-                              link.label,
-                              parentFolderName
-                            ) ?? link.label)
-                          : link.label
-                      }
+                      value={getRowDisplayTitle(link)}
                       className={MEDIA_LIST_ROW_TITLE_CLASS}
                       textClassName={isExpired ? "line-through" : undefined}
                     />
@@ -613,10 +680,13 @@ const FinderBrowser = ({
                 }
                 meta={
                   <>
-                    {!link.opened && !isExpired && (
-                      <NewBadge className="md:hidden" />
+                    {isFolder && (
+                      <MediaListRowMeta
+                        sourceName={getResolvableSourceName(link, item)}
+                        size={link.size}
+                      />
                     )}
-                    {link.expiry !== undefined && (
+                    {!isFolder && link.expiry !== undefined && (
                       <span className="flex justify-end text-xs text-muted-foreground">
                         <PlayableExpiryBadge
                           expiresAt={link.expiry}
@@ -624,11 +694,14 @@ const FinderBrowser = ({
                         />
                       </span>
                     )}
+                    {!link.opened && !isExpired && (
+                      <NewBadge className="md:hidden" />
+                    )}
                   </>
                 }
                 trailing={
                   <>
-                    {link.size && (
+                    {!isFolder && link.size && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {link.size}
                       </span>
@@ -831,7 +904,6 @@ export const SaveListBrowser = ({
                     link={directLink}
                     actions={actions}
                     isResolving={extractingItems.has(directLinkTarget)}
-                    shouldShowRowPosters={shouldShowRowPosters}
                     onRemove={() => actions.remove(item.url, item.id)}
                   />
                 )
@@ -980,6 +1052,13 @@ export const SaveListBrowser = ({
                               )}
                           </span>
                         </SaveExtractionStatus>
+                        {extractionState === "failed" && (
+                          <ExtractionFailedActions
+                            item={item}
+                            onDelete={() => actions.remove(item.url, item.id)}
+                            className="mt-1.5"
+                          />
+                        )}
                       </span>
                     </div>
                     {isRootItemNew && (

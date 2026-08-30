@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CopyIcon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { CopyIcon } from "@hugeicons/core-free-icons"
 import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import {
   AlertDialog,
@@ -25,7 +25,6 @@ const LinkDebugLogDialog = ({
   open,
   onOpenChange,
 }: LinkDebugLogDialogProps) => {
-  const [didCopy, setDidCopy] = useState(false)
   const [highlightedLog, setHighlightedLog] = useState<string | undefined>()
   const debugLog = item ? getLinkViewItemMetadata(item).debugLog : undefined
   const hasLog = Boolean(debugLog && debugLog.length > 0)
@@ -60,9 +59,8 @@ const LinkDebugLogDialog = ({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(serializedLog)
-      setDidCopy(true)
       showLinkCopiedToast()
-      setTimeout(() => setDidCopy(false), 2_000)
+      onOpenChange(false)
     } catch {
       // Clipboard can be unavailable; the dialog itself stays selectable.
     }
@@ -103,8 +101,8 @@ const LinkDebugLogDialog = ({
             disabled={!hasLog}
             onClick={() => void handleCopy()}
           >
-            <HugeiconsIcon icon={didCopy ? Tick02Icon : CopyIcon} />
-            {didCopy ? "Copied" : "Copy log"}
+            <HugeiconsIcon icon={CopyIcon} />
+            Copy log
           </AlertDialogAction>
           <AlertDialogCancel
             variant="outline"

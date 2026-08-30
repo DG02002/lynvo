@@ -23,7 +23,6 @@ import {
 } from "~/components/save-list/media-list-row-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
-import { SaveListRowPoster } from "~/components/save-list/save-list-row-poster"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
@@ -39,7 +38,6 @@ interface ResolvedMirrorRowsProps {
   readonly sourceLink: ExtractedLink
   readonly itemUrl: string
   readonly actions: LinkItemActions
-  readonly shouldShowRowPosters?: boolean
 }
 
 interface ResolvableContainerEpisodeStill {
@@ -53,25 +51,21 @@ interface ResolvableContainerRowProps {
   readonly actions: LinkItemActions
   readonly isResolving: boolean
   readonly onRemove: () => void
-  readonly shouldShowRowPosters?: boolean
   readonly episodeStill?: ResolvableContainerEpisodeStill
+  readonly displayTitle?: string
 }
 
 interface ResolvableContainerRowIconProps {
   readonly episodeStill?: ResolvableContainerEpisodeStill
-  readonly shouldShowRowPosters: boolean
   readonly containerIcon: ReactNode
   readonly shouldShowResolving: boolean
-  readonly linkLabel: string
   readonly isWatched: boolean
 }
 
 const ResolvableContainerRowIcon = ({
   episodeStill,
-  shouldShowRowPosters,
   containerIcon,
   shouldShowResolving,
-  linkLabel,
   isWatched,
 }: ResolvableContainerRowIconProps) => {
   if (episodeStill) {
@@ -86,16 +80,6 @@ const ResolvableContainerRowIcon = ({
     )
   }
 
-  if (shouldShowRowPosters) {
-    return (
-      <SaveListRowPoster
-        label={linkLabel}
-        isContainer
-        fallbackIcon={containerIcon}
-      />
-    )
-  }
-
   return <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
 }
 
@@ -104,7 +88,6 @@ const ResolvedMirrorRows = ({
   sourceLink,
   itemUrl,
   actions,
-  shouldShowRowPosters = false,
 }: ResolvedMirrorRowsProps) => (
   <div
     className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
@@ -137,29 +120,12 @@ const ResolvedMirrorRows = ({
           <MediaListRow
             wrapperClassName="border-b-0"
             buttonClassName="min-h-20 bg-transparent py-4 hover:bg-muted/80"
-            icon={
-              shouldShowRowPosters ? (
-                <SaveListRowPoster
-                  label={sourceLink.label}
-                  isContainer
-                  fallbackIcon={mirrorIcon}
-                />
-              ) : (
-                <SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>
-              )
-            }
+            icon={<SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>}
             title={
               <FilenameText
                 value={mirror.label}
                 className={MEDIA_LIST_ROW_TITLE_CLASS}
               />
-            }
-            trailing={
-              mirror.size ? (
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {mirror.size}
-                </span>
-              ) : undefined
             }
             overlay={
               <LinkActionsDotMenu
@@ -214,8 +180,8 @@ export const ResolvableContainerRow = ({
   actions,
   isResolving,
   onRemove,
-  shouldShowRowPosters = false,
   episodeStill,
+  displayTitle,
 }: ResolvableContainerRowProps) => {
   const linkTarget = getMediaNodeTarget(link)
   const {
@@ -268,10 +234,8 @@ export const ResolvableContainerRow = ({
         icon={
           <ResolvableContainerRowIcon
             episodeStill={episodeStill}
-            shouldShowRowPosters={shouldShowRowPosters}
             containerIcon={containerIcon}
             shouldShowResolving={shouldShowResolving}
-            linkLabel={link.label}
             isWatched={link.opened === true}
           />
         }
@@ -282,7 +246,7 @@ export const ResolvableContainerRow = ({
             titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
           >
             <FilenameText
-              value={link.label}
+              value={displayTitle ?? link.label}
               className={MEDIA_LIST_ROW_TITLE_CLASS}
             />
           </ExtractionWaitStatus>
@@ -311,7 +275,6 @@ export const ResolvableContainerRow = ({
           sourceLink={link}
           itemUrl={item.url}
           actions={actions}
-          shouldShowRowPosters={shouldShowRowPosters && !episodeStill}
         />
       )}
     </div>

@@ -452,7 +452,7 @@ describe("SaveListBrowser", () => {
     const sourceName = screen.getByText("Source Beta")
     expect(sourceName).toBeVisible()
     expect(sourceName.parentElement).toHaveTextContent("Source Beta·8.2 GB")
-    expect(screen.getByText("1.2 GB")).toBeVisible()
+    expect(screen.queryByText("1.2 GB")).not.toBeInTheDocument()
     expect(onSelectedItemUrlChange).not.toHaveBeenCalled()
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
 
@@ -619,9 +619,9 @@ describe("SaveListBrowser", () => {
     expect(
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
-    expect(screen.getByText("1.2 GB")).toBeVisible()
+    expect(screen.queryByText("1.2 GB")).not.toBeInTheDocument()
     expect(playableItemButton.querySelectorAll("svg")).toHaveLength(1)
-    expect(screen.getByText("1.4 GB")).toBeVisible()
+    expect(screen.queryByText("1.4 GB")).not.toBeInTheDocument()
     const mirrorGroup = screen
       .getByText("Play from Source Route Alpha")
       .closest("[data-container-children]")
