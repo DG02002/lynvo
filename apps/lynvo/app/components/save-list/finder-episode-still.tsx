@@ -5,6 +5,10 @@ import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwor
 import { cn } from "~/lib/utils"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/spinner"
+import {
+  MEDIA_LIST_EPISODE_STILL_CLASS,
+  MEDIA_LIST_EPISODE_STILL_SIZES,
+} from "./save-list-layout-constants"
 
 interface FinderEpisodeStillProps {
   readonly label: string
@@ -52,7 +56,7 @@ const FinderEpisodeStillImage = ({
         path={imagePath}
         variant="wide-card"
         imageType={imageType}
-        sizes="(min-width: 768px) 24rem, calc(100vw - 1.5rem)"
+        sizes={MEDIA_LIST_EPISODE_STILL_SIZES}
         alt=""
       />
     )
@@ -95,7 +99,7 @@ export const FinderEpisodeStillDisplay = ({
 }: FinderEpisodeStillDisplayProps) => {
   return (
     <span
-      className={cn("block w-full shrink-0 md:w-96", isDimmed && "opacity-60")}
+      className={cn(MEDIA_LIST_EPISODE_STILL_CLASS, isDimmed && "opacity-60")}
     >
       <span
         className={cn(

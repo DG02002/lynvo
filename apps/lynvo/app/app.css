@@ -446,6 +446,30 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-top: 0;
 }
 
+.save-list-group-artwork-frame {
+  width: min(100%, 20rem);
+  aspect-ratio: 2 / 3;
+  margin-inline: auto;
+}
+
+@media (min-width: 48rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, 15rem);
+  }
+}
+
+@media (min-width: 64rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, 19rem);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 36rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, calc(66.6667svh - 5.75rem));
+  }
+}
+
 .docs-content .shiki {
   background-color: transparent !important;
 }

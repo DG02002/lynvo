@@ -41,6 +41,12 @@ import {
 import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
+  HYBRID_GROUP_ARTWORK_SIZES,
+  HYBRID_GROUP_CONTENT_CLASS,
+  HYBRID_GROUP_HEADER_CLASS,
+  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
+} from "./save-list-layout-constants"
+import {
   FolderTitleDisplayToggleButton,
   SaveListBackButton,
 } from "./save-list-header-controls"
@@ -139,7 +145,7 @@ const HybridGroupItemRow = ({
       icon={
         shouldShowEpisodeStill ? (
           <>
-            <span className="hidden shrink-0 md:block md:w-96">
+            <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
               <FinderEpisodeStillDisplay
                 label={itemLabel}
                 fallbackIcon={rowFallbackIcon}
@@ -234,7 +240,7 @@ const HybridGroupArtwork = ({
         path={imagePath}
         variant="card"
         imageType={imageType}
-        sizes="(min-width: 768px) 22rem, 20rem"
+        sizes={HYBRID_GROUP_ARTWORK_SIZES}
         alt={`Artwork for ${displayTitle}`}
         width={342}
         height={513}
@@ -302,7 +308,7 @@ export const HybridGroupBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_auto] items-stretch border-b bg-background p-0 md:grid-cols-[22rem_minmax(0,1fr)_auto] md:gap-0">
+      <header className={HYBRID_GROUP_HEADER_CLASS}>
         <SaveListBackButton onExit={onExit} />
         <div className="flex min-w-0 items-center px-3 py-3 md:px-4">
           <h1
@@ -323,10 +329,10 @@ export const HybridGroupBrowser = ({
           />
         </div>
       </header>
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[22rem_minmax(0,1fr)] md:grid-rows-1">
+      <div className={HYBRID_GROUP_CONTENT_CLASS}>
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
-          <div className="mx-auto w-80 md:mx-0 md:w-full">
-            <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
+          <div className="mx-auto w-full max-w-80 md:mx-0 md:w-full">
+            <div className="save-list-group-artwork-frame relative overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
               <HybridGroupArtwork
                 displayTitle={group.displayTitle}
                 imagePath={imagePath}

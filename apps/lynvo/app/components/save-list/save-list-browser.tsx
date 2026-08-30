@@ -65,6 +65,7 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
+import { MEDIA_LIST_EPISODE_STILL_SLOT_CLASS } from "./save-list-layout-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
@@ -439,7 +440,7 @@ const FinderBrowserLinkRow = ({
   )
   const rowIcon = shouldShowEpisodeStills ? (
     <>
-      <span className="hidden shrink-0 md:block md:w-96">
+      <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
         <FinderEpisodeStillDisplay
           label={link.label}
           fallbackIcon={rowFallbackIcon}

@@ -21,6 +21,7 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "~/components/save-list/media-list-row-constants"
+import { MEDIA_LIST_EPISODE_STILL_SLOT_CLASS } from "~/components/save-list/save-list-layout-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
 import { Spinner } from "~/components/spinner"
@@ -71,7 +72,7 @@ const ResolvableContainerRowIcon = ({
   if (episodeStill) {
     return (
       <>
-        <span className="hidden md:block">
+        <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
           <FinderEpisodeStill
             label={episodeStill.label}
             parentFolderName={episodeStill.parentFolderName}

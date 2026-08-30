@@ -22,13 +22,14 @@ import { getExtractionStatusInput } from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { getItemTitle } from "./save-list-browser-model"
 import {
+  HYBRID_CARD_GRID_CLASS,
+  HYBRID_CARD_IMAGE_SIZES,
+} from "./save-list-layout-constants"
+import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
-
-const HYBRID_CARD_GRID_CLASS =
-  "stagger-children grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-6"
 
 const HYBRID_CARD_MENU_TRIGGER_CLASS =
   "size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
@@ -100,7 +101,7 @@ const HybridSaveCardArtwork = ({
         path={imagePath}
         variant="card"
         imageType={imageType}
-        sizes="(min-width: 768px) 14vw, (min-width: 640px) 28vw, 45vw"
+        sizes={HYBRID_CARD_IMAGE_SIZES}
         alt={`Artwork for ${displayTitle}`}
         width={342}
         height={513}

@@ -134,7 +134,8 @@ describe("HybridGroupBrowser", () => {
       })
     ).toBeInTheDocument()
     expect(screen.getByRole("banner")).toHaveClass(
-      "md:grid-cols-[22rem_minmax(0,1fr)_auto]"
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto]",
+      "lg:grid-cols-[22rem_minmax(0,1fr)_auto]"
     )
     expect(screen.getAllByRole("button", { name: "Back" })).not.toHaveLength(0)
     expect(screen.getByText(episodeFilename)).toBeInTheDocument()

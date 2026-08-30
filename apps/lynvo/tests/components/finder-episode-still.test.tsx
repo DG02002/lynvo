@@ -48,7 +48,7 @@ describe("FinderEpisodeStill", () => {
       )
       expect(fullImage).toHaveAttribute(
         "sizes",
-        "(min-width: 768px) 24rem, calc(100vw - 1.5rem)"
+        "(min-width: 1024px) 24rem, (min-width: 768px) 16rem, calc(100vw - 1.5rem)"
       )
     })
   })
