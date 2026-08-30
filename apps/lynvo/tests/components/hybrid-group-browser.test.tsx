@@ -124,7 +124,7 @@ afterEach(() => {
 })
 
 describe("HybridGroupBrowser", () => {
-  it("shows filenames by default and keeps episode names opt-in", async () => {
+  it("shows episode names by default and keeps filenames opt-in", async () => {
     const view = renderBrowser()
 
     expect(
@@ -138,7 +138,8 @@ describe("HybridGroupBrowser", () => {
       "lg:grid-cols-[22rem_minmax(0,1fr)_auto]"
     )
     expect(screen.getAllByRole("button", { name: "Back" })).not.toHaveLength(0)
-    expect(screen.getByText(episodeFilename)).toBeInTheDocument()
+    await screen.findByText("1. The Blood Warfare")
+    expect(screen.queryByText(episodeFilename)).not.toBeInTheDocument()
     await waitFor(() => {
       const episodeImage = view.container.querySelector(
         'img[src*="episode-still-1.jpg"]'
@@ -151,7 +152,7 @@ describe("HybridGroupBrowser", () => {
       name: "Episode names",
     })
     expect(episodeNamesSwitch).toBeInTheDocument()
-    expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "false")
+    expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "true")
     expect(screen.getByText("Episode names")).toHaveClass(
       "text-base",
       "text-foreground"
@@ -161,7 +162,7 @@ describe("HybridGroupBrowser", () => {
     )
   })
 
-  it("lets users switch hybrid rows to episode names", async () => {
+  it("lets users switch hybrid rows to filenames", async () => {
     renderBrowser()
 
     const episodeNamesSwitch = screen.getByRole("switch", {
@@ -169,9 +170,9 @@ describe("HybridGroupBrowser", () => {
     })
     fireEvent.click(episodeNamesSwitch)
 
-    expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "true")
-    await screen.findByText("1. The Blood Warfare")
-    expect(screen.queryByText(episodeFilename)).not.toBeInTheDocument()
+    expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "false")
+    await screen.findByText(episodeFilename)
+    expect(screen.queryByText("1. The Blood Warfare")).not.toBeInTheDocument()
   })
 
   it("sorts hybrid episode rows by their numeric episode number", async () => {
@@ -186,8 +187,6 @@ describe("HybridGroupBrowser", () => {
         episodeFilename.replace("S04E01", "S04E02")
       ),
     ])
-    fireEvent.click(screen.getByRole("switch", { name: "Episode names" }))
-
     await waitFor(() => {
       const episodeRowLabels = [
         ...view.container.querySelectorAll("button[aria-label]"),

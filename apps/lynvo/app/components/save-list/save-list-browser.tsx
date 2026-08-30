@@ -65,7 +65,10 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
-import { MEDIA_LIST_EPISODE_STILL_SLOT_CLASS } from "./save-list-layout-constants"
+import {
+  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
+  SAVE_LIST_BROWSER_LAYOUT_CLASS,
+} from "./save-list-layout-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
@@ -340,8 +343,13 @@ const FinderEmptyState = ({
   onExit,
   contentRef,
 }: FinderEmptyStateProps) => (
-  <section className="flex h-svh flex-col overflow-hidden bg-background">
-    <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:gap-0">
+  <section
+    className={cn(
+      SAVE_LIST_BROWSER_LAYOUT_CLASS,
+      "flex h-svh flex-col overflow-hidden bg-background"
+    )}
+  >
+    <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem] md:gap-0">
       <SaveListBackButton onExit={onExit} />
       <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
@@ -608,8 +616,13 @@ const FinderBrowser = ({
   }
 
   return (
-    <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[16rem_minmax(0,1fr)_auto_4rem] md:gap-0">
+    <section
+      className={cn(
+        SAVE_LIST_BROWSER_LAYOUT_CLASS,
+        "flex h-svh flex-col overflow-hidden bg-background"
+      )}
+    >
+      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem] md:gap-0">
         <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -647,7 +660,7 @@ const FinderBrowser = ({
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)] md:grid-rows-1">
         <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
           <MobileFolderTreeToggle
             currentFolderLabel={currentFolderLabel}

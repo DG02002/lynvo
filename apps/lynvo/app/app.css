@@ -452,6 +452,10 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   margin-inline: auto;
 }
 
+.save-list-browser-layout {
+  --save-list-browser-side-column-width: 18rem;
+}
+
 @media (min-width: 48rem) {
   .save-list-group-artwork-frame {
     width: min(100%, 15rem);
@@ -461,6 +465,10 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 @media (min-width: 64rem) {
   .save-list-group-artwork-frame {
     width: min(100%, 19rem);
+  }
+
+  .save-list-browser-layout {
+    --save-list-browser-side-column-width: 16rem;
   }
 }
 

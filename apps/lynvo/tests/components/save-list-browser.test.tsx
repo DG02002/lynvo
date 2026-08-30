@@ -100,8 +100,15 @@ describe("SaveListBrowser", () => {
     expect(headerMenu.closest("header")).toHaveClass(
       "grid",
       "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]",
       "items-stretch",
       "p-0"
+    )
+    expect(headerMenu.closest("section")).toHaveClass(
+      "save-list-browser-layout"
+    )
+    expect(headerMenu.closest("header")?.nextElementSibling).toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)]"
     )
     expect(headerMenu.closest("header")).not.toHaveClass("py-3")
     expect(

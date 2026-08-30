@@ -274,7 +274,7 @@ export const HybridGroupBrowser = ({
   onExit,
   onOpenItem,
 }: HybridGroupBrowserProps) => {
-  const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("filename")
+  const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("episode")
   const itemLabels = useMemo(
     () => group.items.map((item) => getHybridItemLabel(item)),
     [group.items]

@@ -13,6 +13,8 @@ export const HYBRID_GROUP_CONTENT_CLASS =
 export const HYBRID_GROUP_ARTWORK_SIZES =
   "(min-width: 1024px) 19rem, (min-width: 768px) 15rem, 20rem"
 
+export const SAVE_LIST_BROWSER_LAYOUT_CLASS = "save-list-browser-layout"
+
 export const MEDIA_LIST_EPISODE_STILL_SLOT_CLASS = "hidden shrink-0 md:block"
 
 export const MEDIA_LIST_EPISODE_STILL_CLASS =
