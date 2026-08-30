@@ -69,6 +69,28 @@ const item: LinkViewItem = {
   },
 }
 
+const movieItem: LinkViewItem = {
+  ...item,
+  id: "toxic-movie",
+  url: "https://media.example/toxic-movie",
+  title: "Toxic (2026)",
+  metadata: {
+    ...item.metadata,
+    extraction: {
+      ...item.metadata.extraction,
+      extractedLinks: [
+        {
+          id: "toxic-movie-file",
+          url: "https://media.example/toxic-movie-file",
+          label: "Toxic.2026.1080p.mkv",
+          type: "file",
+          size: "1.05 GB",
+        },
+      ],
+    },
+  },
+}
+
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
@@ -95,6 +117,70 @@ afterEach(() => {
 })
 
 describe("FinderBrowser episode rows", () => {
+  it("hides the episode-name control for movie folders", () => {
+    render(
+      <SaveListBrowser
+        items={[movieItem]}
+        selectedItemUrl={movieItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.queryByRole("switch", { name: "Episode names" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText("Episode names")).not.toBeInTheDocument()
+    expect(screen.queryByText("Show episode names")).not.toBeInTheDocument()
+
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for Toxic (2026)",
+    })
+    const folderHeader = headerMenu.closest("header")
+    expect(folderHeader).toHaveClass(
+      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem]"
+    )
+    expect(folderHeader).not.toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+    )
+    expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
+  })
+
+  it("keeps the header menu right-aligned for long movie folder titles", () => {
+    const longMovieTitle =
+      "Toxic (2026) — An Extremely Long Folder Title That Must Truncate In The Browser Header"
+    render(
+      <SaveListBrowser
+        items={[{ ...movieItem, title: longMovieTitle }]}
+        selectedItemUrl={movieItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    const headerMenu = screen.getByRole("button", {
+      name: `Open menu for ${longMovieTitle}`,
+    })
+    const folderHeader = headerMenu.closest("header")
+    expect(folderHeader).toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem]"
+    )
+    expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
+    expect(screen.getByRole("heading", { name: longMovieTitle })).toHaveClass(
+      "hidden",
+      "md:block"
+    )
+  })
+
   it("uses numbered episode names and inline source metadata for folder files", async () => {
     const view = render(
       <SaveListBrowser
@@ -109,6 +195,17 @@ describe("FinderBrowser episode rows", () => {
       />
     )
 
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for Can This Love Be Translated",
+    })
+    const folderHeader = headerMenu.closest("header")
+    expect(folderHeader).toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+    )
+    expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
+    expect(
+      screen.getByRole("switch", { name: "Episode names" })
+    ).toBeInTheDocument()
     await screen.findByText("1. Episode 1")
     const sourceName = screen.getByText("Netflix")
     const fileSize = screen.getByText("1.05 GB")

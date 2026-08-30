@@ -68,6 +68,9 @@ import {
 import {
   MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
+  SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
+  SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS,
+  SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS,
 } from "./save-list-layout-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
@@ -598,8 +601,11 @@ const FinderBrowser = ({
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay(
     shouldShowRowPosters ? "episode" : "filename"
   )
+  const currentTitleDisplay = shouldShowEpisodeStills
+    ? titleDisplay
+    : "filename"
   const getRowDisplayTitle = (link: ExtractedLink) =>
-    titleDisplay === "episode"
+    currentTitleDisplay === "episode"
       ? (getMediaDisplayTitle(link.label, parentFolderName) ?? link.label)
       : link.label
 
@@ -622,7 +628,14 @@ const FinderBrowser = ({
         "flex h-svh flex-col overflow-hidden bg-background"
       )}
     >
-      <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem] md:gap-0">
+      <header
+        className={cn(
+          SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
+          shouldShowEpisodeStills
+            ? SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS
+            : SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS
+        )}
+      >
         <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -636,12 +649,14 @@ const FinderBrowser = ({
             />
           </h1>
         </div>
-        <div className="hidden items-center justify-center md:flex">
-          <FolderTitleDisplayToggleButton
-            titleDisplay={titleDisplay}
-            onToggle={toggleTitleDisplay}
-          />
-        </div>
+        {shouldShowEpisodeStills ? (
+          <div className="hidden items-center justify-center md:flex">
+            <FolderTitleDisplayToggleButton
+              titleDisplay={titleDisplay}
+              onToggle={toggleTitleDisplay}
+            />
+          </div>
+        ) : null}
         <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
           <LinkItemMenu
             item={item}
@@ -651,10 +666,12 @@ const FinderBrowser = ({
             isRefreshing={extractingItems.has(item.url)}
             triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
             menuLeadingContent={
-              <FolderTitleDisplayToggleMenuItem
-                titleDisplay={titleDisplay}
-                onToggle={toggleTitleDisplay}
-              />
+              shouldShowEpisodeStills ? (
+                <FolderTitleDisplayToggleMenuItem
+                  titleDisplay={titleDisplay}
+                  onToggle={toggleTitleDisplay}
+                />
+              ) : undefined
             }
           />
         </div>
@@ -737,7 +754,7 @@ const FinderBrowser = ({
                 parentFolderName={parentFolderName}
                 shouldShowEpisodeStills={shouldShowEpisodeStills}
                 shouldShowRowPosters={shouldShowRowPosters}
-                titleDisplay={titleDisplay}
+                titleDisplay={currentTitleDisplay}
                 displayTitle={getRowDisplayTitle(link)}
                 onActivate={() => void openLink(link)}
               />

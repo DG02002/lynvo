@@ -43,8 +43,8 @@ import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   HYBRID_GROUP_ARTWORK_SIZES,
   HYBRID_GROUP_CONTENT_CLASS,
+  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
   HYBRID_GROUP_HEADER_CLASS,
-  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
 } from "./save-list-layout-constants"
 import {
   FolderTitleDisplayToggleButton,
@@ -113,6 +113,8 @@ const HybridGroupItemRow = ({
     titleDisplay === "episode"
       ? getMediaEpisodeDisplayTitle(itemLabel, episodeTitle)
       : displayTitle
+  const shouldShowNewBadge =
+    !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -144,21 +146,18 @@ const HybridGroupItemRow = ({
       label={rowDisplayTitle}
       icon={
         shouldShowEpisodeStill ? (
-          <>
-            <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
-              <FinderEpisodeStillDisplay
-                label={itemLabel}
-                fallbackIcon={rowFallbackIcon}
-                isResolving={isExtractionVisual}
-                isDimmed={isDirectLinkExpired}
-                isWatched={directLink?.opened === true}
-                imagePath={episodeStill.imagePath}
-                imageType={episodeStill.imageType}
-                isLookupPending={episodeStill.isLookupPending}
-              />
-            </span>
-            <span className="md:hidden">{rowFallbackIcon}</span>
-          </>
+          <span className={HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS}>
+            <FinderEpisodeStillDisplay
+              label={itemLabel}
+              fallbackIcon={rowFallbackIcon}
+              isResolving={isExtractionVisual}
+              isDimmed={isDirectLinkExpired}
+              isWatched={directLink?.opened === true}
+              imagePath={episodeStill.imagePath}
+              imageType={episodeStill.imageType}
+              isLookupPending={episodeStill.isLookupPending}
+            />
+          </span>
         ) : (
           rowFallbackIcon
         )
@@ -185,13 +184,12 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
+          {shouldShowNewBadge && <NewBadge className="md:hidden" />}
         </>
       }
       trailing={
-        !isDirectLinkExpired &&
-        !isExtractionVisual &&
-        interactionState.isNew ? (
-          <NewBadge />
+        shouldShowNewBadge ? (
+          <NewBadge className="hidden md:inline-flex" />
         ) : undefined
       }
       overlay={
@@ -208,6 +206,7 @@ const HybridGroupItemRow = ({
       onActivate={handleActivate}
       disabled={directLink !== undefined && isDirectLinkExpired}
       isOpened={directLink?.opened === true}
+      shouldStackIconOnMobile={shouldShowEpisodeStill}
     />
   )
 }
@@ -283,6 +282,7 @@ export const HybridGroupBrowser = ({
     group.artworkRequest?.mediaKind === "tv" &&
     itemLabels.length > 0 &&
     itemLabels.every((itemLabel) => hasEpisodeMarker(itemLabel))
+  const groupTitleDisplay = shouldShowEpisodeStills ? titleDisplay : "filename"
   const sortedItemEntries = useMemo(() => {
     const itemEntries = group.items.map((item, itemIndex) => ({
       item,
@@ -310,10 +310,10 @@ export const HybridGroupBrowser = ({
     <section className="flex h-svh flex-col overflow-hidden bg-background">
       <header className={HYBRID_GROUP_HEADER_CLASS}>
         <SaveListBackButton onExit={onExit} />
-        <div className="flex min-w-0 items-center px-3 py-3 md:px-4">
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={group.displayTitle}
-            className="w-full min-w-0 text-base font-normal"
+            className="hidden w-full min-w-0 text-base font-normal md:block"
           >
             <FilenameText
               value={group.displayTitle}
@@ -322,16 +322,18 @@ export const HybridGroupBrowser = ({
             />
           </h1>
         </div>
-        <div className="flex items-center justify-center px-1 md:px-0">
-          <FolderTitleDisplayToggleButton
-            titleDisplay={titleDisplay}
-            onToggle={toggleTitleDisplay}
-          />
-        </div>
+        {shouldShowEpisodeStills ? (
+          <div className="flex items-center justify-center px-1 md:px-0">
+            <FolderTitleDisplayToggleButton
+              titleDisplay={titleDisplay}
+              onToggle={toggleTitleDisplay}
+            />
+          </div>
+        ) : null}
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
-          <div className="mx-auto w-full max-w-80 md:mx-0 md:w-full">
+          <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
             <div className="save-list-group-artwork-frame relative overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
               <HybridGroupArtwork
                 displayTitle={group.displayTitle}
@@ -341,7 +343,7 @@ export const HybridGroupBrowser = ({
               />
             </div>
             {artwork?.identity ? (
-              <p className="hidden pt-1 text-center text-xs text-muted-foreground md:block">
+              <p className="pt-1 text-center text-xs text-muted-foreground">
                 Artwork: {artwork.identity.title}
                 {artwork.identity.year !== undefined
                   ? ` (${artwork.identity.year})`
@@ -350,7 +352,7 @@ export const HybridGroupBrowser = ({
             ) : null}
           </div>
         </div>
-        <div className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain">
+        <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
             {sortedItemEntries.map(({ item, itemLabel }) => (
               <HybridGroupItemRow
@@ -362,11 +364,11 @@ export const HybridGroupBrowser = ({
                 onOpenItem={onOpenItem}
                 itemLabel={itemLabel}
                 displayTitle={
-                  titleDisplay === "episode"
+                  groupTitleDisplay === "episode"
                     ? (getMediaDisplayTitle(itemLabel) ?? itemLabel)
                     : itemLabel
                 }
-                titleDisplay={titleDisplay}
+                titleDisplay={groupTitleDisplay}
                 shouldShowEpisodeStill={shouldShowEpisodeStills}
               />
             ))}

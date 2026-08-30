@@ -100,7 +100,7 @@ describe("SaveListBrowser", () => {
     expect(headerMenu.closest("header")).toHaveClass(
       "grid",
       "grid-cols-[4rem_minmax(0,1fr)_4rem]",
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]",
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem]",
       "items-stretch",
       "p-0"
     )

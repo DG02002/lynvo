@@ -27,7 +27,10 @@ const createMediaArtworkFetch = () =>
     ) as MediaArtworkBatchRequest
     const results = requestBody.requests.map((request) =>
       request.episodeNumber === undefined
-        ? { posterPath: "/season-poster.jpg" }
+        ? {
+            posterPath: "/season-poster.jpg",
+            identity: { providerId: 1, title: "Bleach", year: 2004 },
+          }
         : {
             stillPath: `/episode-still-${request.episodeNumber}.jpg`,
             episodeTitle:
@@ -102,6 +105,22 @@ const renderBrowser = (
     />
   )
 
+const renderNonEpisodeGroupBrowser = () =>
+  render(
+    <HybridGroupBrowser
+      group={{
+        key: "folder:ordinary-downloads",
+        displayTitle: "Ordinary Downloads",
+        lastAddedAt: Date.now(),
+        items: [createEpisodeItem("ordinary-download", "downloaded-video.mkv")],
+      }}
+      actions={createActions()}
+      extractingItems={new Set()}
+      onExit={vi.fn()}
+      onOpenItem={vi.fn()}
+    />
+  )
+
 beforeEach(() => {
   localStorageValues.clear()
   vi.stubGlobal("localStorage", localStorageStub)
@@ -124,15 +143,49 @@ afterEach(() => {
 })
 
 describe("HybridGroupBrowser", () => {
+  it("hides episode names for non-episodic groups", () => {
+    renderNonEpisodeGroupBrowser()
+
+    expect(
+      screen.queryByRole("switch", { name: "Episode names" })
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
+    expect(screen.getByRole("banner").children).toHaveLength(2)
+    expect(
+      screen.getByRole("button", { name: "downloaded-video.mkv" }).parentElement
+    ).not.toHaveClass("flex-col")
+  })
+
+  it("scrolls artwork and rows together in one mobile content column", async () => {
+    const view = renderBrowser()
+
+    const contentColumn = screen.getByRole("banner").nextElementSibling
+    expect(contentColumn).toHaveClass(
+      "flex-col",
+      "overflow-y-auto",
+      "md:grid",
+      "md:overflow-visible"
+    )
+    const listColumn = contentColumn?.lastElementChild
+    expect(listColumn).toHaveClass("md:overflow-y-auto")
+    expect(listColumn).not.toHaveClass("overflow-y-auto")
+    const artworkFrame = view.container.querySelector(
+      ".save-list-group-artwork-frame"
+    )
+    expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
+    const artworkCredit = await screen.findByText("Artwork: Bleach (2004)")
+    expect(artworkCredit).not.toHaveClass("hidden", "md:block")
+  })
+
   it("shows episode names by default and keeps filenames opt-in", async () => {
     const view = renderBrowser()
 
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: "Bleach Thousand Year Blood War S04",
-      })
-    ).toBeInTheDocument()
+    const groupHeading = screen.getByRole("heading", {
+      level: 1,
+      name: "Bleach Thousand Year Blood War S04",
+    })
+    expect(groupHeading).toBeInTheDocument()
+    expect(groupHeading).toHaveClass("hidden", "md:block")
     expect(screen.getByRole("banner")).toHaveClass(
       "md:grid-cols-[18rem_minmax(0,1fr)_auto]",
       "lg:grid-cols-[22rem_minmax(0,1fr)_auto]"
@@ -145,9 +198,19 @@ describe("HybridGroupBrowser", () => {
         'img[src*="episode-still-1.jpg"]'
       )
       expect(episodeImage).toBeInTheDocument()
-      expect(episodeImage?.closest(".hidden")).toHaveClass("md:block")
+      const stillSlot = episodeImage?.closest('span[class="block shrink-0"]')
+      expect(stillSlot).toBeInTheDocument()
+      expect(stillSlot).not.toHaveClass("hidden")
     })
-    expect(view.container.querySelector(".md\\:hidden")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "1. The Blood Warfare" }).parentElement
+    ).toHaveClass("relative", "flex-col", "md:flex-row")
+    const rowMenus = screen.getAllByRole("button", {
+      name: `Open menu for ${episodeFilename}`,
+    })
+    expect(rowMenus).toHaveLength(2)
+    expect(rowMenus[0]?.parentElement).toHaveClass("md:hidden")
+    expect(rowMenus[1]?.parentElement).toHaveClass("hidden", "md:flex")
     const episodeNamesSwitch = screen.getByRole("switch", {
       name: "Episode names",
     })
