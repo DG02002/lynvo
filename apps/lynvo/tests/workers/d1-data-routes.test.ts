@@ -8,6 +8,10 @@ import {
 import { getDataVersion } from "../../workers/d1/data-version"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
+import {
+  decryptSavedLinkExtractionCredential,
+  getSavedLinkExtractionCredential,
+} from "../../workers/d1/saved-link-extraction-credentials"
 
 const NOW = 1_750_000_000_000
 
@@ -141,6 +145,61 @@ describe("d1 data routes", () => {
     expect(listAfter.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
       String(replayed.dataVersion)
     )
+  })
+
+  it("sanitizes queued source URLs and encrypts their transient credentials", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const targetUrl = "https://index.example.com/0:/Shows/"
+    const credentialedUrl = `https://viewer:secret@${targetUrl.slice("https://".length)}`
+    const encryptionEnvironment = {
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
+        "0123456789abcdef0123456789abcdef"
+      ),
+    }
+    const response = await app.fetch(
+      dataApiRequest("/api/data/links/create-or-update", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: credentialedUrl,
+          meta: emptyMetadataJson(),
+          extractionState: "queued",
+        }),
+      }),
+      // SAFETY: This fixture includes the encryption key binding required by the route.
+      { ...env, ...encryptionEnvironment } as Env,
+      // SAFETY: This test uses a no-op callback because it runs the route synchronously.
+      { waitUntil: () => undefined } as ExecutionContext
+    )
+    expect(response.status).toBe(200)
+    const created = await readJsonBody<{ id: string }>(response)
+    const savedLink = await env.DB.prepare(
+      "SELECT url FROM links WHERE id = ?1"
+    )
+      .bind(created.id)
+      .first<{ url: string }>()
+    expect(savedLink?.url).toBe(targetUrl)
+
+    const storedCredential = await getSavedLinkExtractionCredential(
+      env.DB,
+      user.id,
+      created.id
+    )
+    await expect(
+      decryptSavedLinkExtractionCredential(
+        encryptionEnvironment,
+        storedCredential!,
+        { userId: user.id, targetUrl }
+      )
+    ).resolves.toEqual({ username: "viewer", password: "secret" })
+
+    const listed = await app.fetch(
+      dataApiRequest("/api/data/links", session),
+      env
+    )
+    const listedBody = await readJsonBody<{ links: { url: string }[] }>(listed)
+    expect(listedBody.links[0]?.url).toBe(targetUrl)
   })
 
   it("refuses wrong-user access to link mutations", async () => {

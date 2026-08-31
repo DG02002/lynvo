@@ -28,6 +28,10 @@ import {
 } from "./storage-ledger"
 import { executeOwnedWrite, getDataVersion } from "./data-version"
 import type { LinkRow } from "./rows"
+import {
+  createConditionalDeleteSavedLinkExtractionCredentialStatement,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
 
 export interface SavedLinkExtractionJob {
   id: string
@@ -51,6 +55,7 @@ export const enqueueSavedLinkExtraction = (
     url: string
     title?: string | undefined
     meta: string
+    extractionCredential?: SavedLinkExtractionCredentialWrite | null
     now: number
   }
 ) =>
@@ -362,6 +367,22 @@ export const settleSavedLinkExtraction = async (
     },
     now: input.now,
   })
+  const credentialCleanupStatement =
+    createConditionalDeleteSavedLinkExtractionCredentialStatement({
+      database,
+      userId,
+      linkId: nextRow.id,
+      operationId: input.operationId,
+      targetUrl: nextRow.url,
+      expectedLink: {
+        url: nextRow.url,
+        extractionState: nextRow.extraction_state,
+        extractionAttempts: nextRow.extraction_attempts,
+        extractionLeaseExpiresAt: nextRow.extraction_lease_expires_at,
+        updatedAt: nextRow.updated_at,
+        metaJson: nextRow.meta_json,
+      },
+    })
   const { dataVersion, statementResults } = await executeOwnedWrite({
     database,
     userId,
@@ -401,6 +422,7 @@ export const settleSavedLinkExtraction = async (
         extractionAttempts: nextRow.extraction_attempts,
         leaseExpiresAt: nextRow.extraction_lease_expires_at,
       }),
+      credentialCleanupStatement,
     ],
     guard: {
       conditionSql:

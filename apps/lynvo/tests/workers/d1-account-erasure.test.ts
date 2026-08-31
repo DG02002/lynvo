@@ -28,12 +28,18 @@ const seedErasableAccount = async () => {
   })
   const suffix = crypto.randomUUID().slice(0, 8)
   const session = await createSession(env.DB, { userId: user.id, now: NOW })
-  await createOrUpdateSavedLink(env.DB, user.id, {
+  const savedLink = await createOrUpdateSavedLink(env.DB, user.id, {
     meta: emptyMetadataJson(),
     operationId: `erasure:link:${suffix}`,
     url: "https://erasure.example",
     now: NOW,
   })
+  await env.DB.prepare(
+    `INSERT INTO saved_link_extraction_credentials (link_id, user_id, target_url, ciphertext, nonce, algorithm, key_version, created_at, updated_at)
+     VALUES (?1, ?2, 'https://erasure.example', 'ciphertext', 'nonce', 'AES-256-GCM', 1, ?3, ?3)`
+  )
+    .bind(savedLink.id, user.id, NOW)
+    .run()
   await env.DB.prepare(
     `INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, credential_status, manifest, enabled, priority, verification_status, created_at, updated_at)
      VALUES (?1, ?2, 'https://erasure.example', 'https://erasure.example', 'ready', '{}', 1, 0, 'verified', ?3, ?3)`
@@ -132,6 +138,7 @@ describe("d1 account erasure", () => {
 
     for (const [table, column] of [
       ["links", "user_id"],
+      ["saved_link_extraction_credentials", "user_id"],
       ["link_command_operations", "user_id"],
       ["user_plugin_servers", "user_id"],
       ["user_plugin_domains", "user_id"],

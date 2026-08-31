@@ -8,10 +8,14 @@ import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   EXTRACTION_ELAPSED_TIME_LIMIT_MS,
   EXTRACTION_NODE_LIMIT,
+  BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
+  BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
-import type { PluginAdapterOptions } from "../plugin-catalog"
-import { createPluginResponseMetadata } from "../plugin-catalog"
+import {
+  createPluginResponseMetadata,
+  type PluginAdapterOptions,
+} from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
@@ -19,6 +23,7 @@ import { extractDirectMedia } from "./direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
+  readBoundedUpstreamText,
 } from "../upstream-response"
 import { Schema } from "effect"
 
@@ -115,6 +120,21 @@ export const createBhadooNodes = (
     return [node]
   })
 
+export const decodeBhadooReverseEnvelope = (
+  encodedResponse: string
+): BhadooGoogleDriveListResponse => {
+  const reversedResponse = encodedResponse.split("").reverse().join("")
+  const base64Response = reversedResponse
+    .slice(BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT)
+    .slice(0, -BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT)
+  const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
+    character.charCodeAt(0)
+  )
+  return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
+    JSON.parse(new TextDecoder().decode(responseBytes))
+  )
+}
+
 const createAuthorizationHeaders = (
   basicAuth?: HttpBasicAuth
 ): Record<string, string> =>
@@ -135,7 +155,7 @@ const requestBhadooPage = async (
 ): Promise<BhadooGoogleDriveListResponse> => {
   assertSafeUpstreamUrl(requestUrl.toString())
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const response = await fetchValidatedUpstream(requestUrl, {
+  const jsonResponse = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authorizationHeaders },
     body: JSON.stringify({
@@ -144,11 +164,35 @@ const requestBhadooPage = async (
       page_index: pageIndex,
     }),
   })
-  if (!response.ok) {
-    throw new Error("Bhadoo Index upstream request failed.")
+  if (jsonResponse.ok) {
+    return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
+      await readBoundedUpstreamJson(jsonResponse)
+    )
   }
-  return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
-    await readBoundedUpstreamJson(response)
+  await jsonResponse.body?.cancel()
+
+  // HACK: Deployed Bhadoo indexes can require this reverse-envelope POST.
+  // Keep this active protocol until those deployments are retired.
+  const reverseEnvelopeBody = new URLSearchParams({
+    password: "",
+    page_token: pageToken,
+    page_index: String(pageIndex),
+  })
+  const reverseEnvelopeResponse = await fetchValidatedUpstream(requestUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      ...authorizationHeaders,
+    },
+    body: reverseEnvelopeBody.toString(),
+  })
+  if (!reverseEnvelopeResponse.ok) {
+    throw new Error(
+      `Bhadoo Index upstream request failed (JSON ${jsonResponse.status}; reverse envelope ${reverseEnvelopeResponse.status}).`
+    )
+  }
+  return decodeBhadooReverseEnvelope(
+    await readBoundedUpstreamText(reverseEnvelopeResponse)
   )
 }
 

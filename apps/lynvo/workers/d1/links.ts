@@ -41,6 +41,12 @@ import {
   reserveSavedLinkCommandOperation,
   SAVED_LINK_COLUMNS,
 } from "./saved-link-storage"
+import {
+  createConditionalDeleteSavedLinkExtractionCredentialStatement,
+  createUpsertSavedLinkExtractionCredentialStatement,
+  type SavedLinkExtractionCredentialLinkState,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
 
 export interface SavedLinkRecord {
   id: string
@@ -116,6 +122,7 @@ interface CreateOrUpdateSavedLinkInput {
   title?: string | undefined
   meta: string
   extractionState?: "queued" | undefined
+  extractionCredential?: SavedLinkExtractionCredentialWrite | null
   now: number
 }
 
@@ -229,6 +236,17 @@ interface ClearSavedLinksInput {
   operationId: string
   now: number
 }
+
+const toSavedLinkExtractionCredentialLinkState = (
+  row: LinkRow
+): SavedLinkExtractionCredentialLinkState => ({
+  url: row.url,
+  extractionState: row.extraction_state,
+  extractionAttempts: row.extraction_attempts,
+  extractionLeaseExpiresAt: row.extraction_lease_expires_at,
+  updatedAt: row.updated_at,
+  metaJson: row.meta_json,
+})
 
 interface ClearSavedLinksResult {
   success: boolean
@@ -549,6 +567,11 @@ const executeDeleteSavedLink = async (
     userId,
     statements: [
       ...preparation.statements,
+      database
+        .prepare(
+          "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
+        )
+        .bind(existingRow.id),
       database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
       ...ledgerMutation.statements,
     ],
@@ -587,6 +610,11 @@ const executeClearSavedLinks = async (
     userId,
     statements: [
       ...preparation.statements,
+      database
+        .prepare(
+          "DELETE FROM saved_link_extraction_credentials WHERE user_id = ?1"
+        )
+        .bind(userId),
       database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
       ...ledgerMutation.statements,
     ],
@@ -762,6 +790,25 @@ const updateExistingSavedLink = async ({
     },
     now: input.now,
   })
+  const extractionCredentialStatement =
+    extractionState === "queued" && input.extractionCredential
+      ? createUpsertSavedLinkExtractionCredentialStatement({
+          database,
+          userId,
+          linkId: existingRow.id,
+          operationId: input.operationId,
+          targetUrl: input.extractionCredential.targetUrl,
+          credential: input.extractionCredential,
+          expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
+        })
+      : createConditionalDeleteSavedLinkExtractionCredentialStatement({
+          database,
+          userId,
+          linkId: existingRow.id,
+          operationId: input.operationId,
+          targetUrl: nextRow.url,
+          expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
+        })
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
@@ -790,6 +837,7 @@ const updateExistingSavedLink = async ({
         operationId: input.operationId,
         linkId: existingRow.id,
       }),
+      extractionCredentialStatement,
     ],
   })
   return { id: existingRow.id, dataVersion, changed }
@@ -895,6 +943,11 @@ const insertNewSavedLink = async ({
       ...(oldestRow
         ? [
             database
+              .prepare(
+                "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
+              )
+              .bind(oldestRow.id),
+            database
               .prepare("DELETE FROM links WHERE id = ?1")
               .bind(oldestRow.id),
           ]
@@ -926,6 +979,19 @@ const insertNewSavedLink = async ({
         operationId: input.operationId,
         linkId: newRow.id,
       }),
+      ...(extractionState === "queued" && input.extractionCredential
+        ? [
+            createUpsertSavedLinkExtractionCredentialStatement({
+              database,
+              userId,
+              linkId: newRow.id,
+              operationId: input.operationId,
+              targetUrl: input.extractionCredential.targetUrl,
+              credential: input.extractionCredential,
+              expectedLink: toSavedLinkExtractionCredentialLinkState(newRow),
+            }),
+          ]
+        : []),
     ],
   })
   return { id: newRow.id, dataVersion, changed: true }
@@ -1294,6 +1360,11 @@ export const deleteExpiredLinksForUser = async ({
     statements: [
       ...preparation.statements,
       database
+        .prepare(
+          `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${placeholders})`
+        )
+        .bind(...results.map((row) => row.id)),
+      database
         .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
         .bind(...results.map((row) => row.id)),
       ...ledgerMutation.statements,
@@ -1395,6 +1466,13 @@ const processExpiredLinkBatch = async (
   const { statements, dataVersionStatements } =
     await prepareExpiredLinkBatchStatements(database, rows, now)
   const placeholders = rows.map((_, index) => `?${index + 1}`).join(", ")
+  statements.push(
+    database
+      .prepare(
+        `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${placeholders})`
+      )
+      .bind(...rows.map((row) => row.id))
+  )
   statements.push(
     database
       .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)

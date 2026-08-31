@@ -1,5 +1,6 @@
 import type { Effect } from "effect"
 import type { ExtractedLink, MetaData } from "../../../features/links/types"
+import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import type {
   ExtractionError,
   UsageLimitError,
@@ -15,6 +16,7 @@ export interface ExtractOptions {
   readonly pluginId?: string
   readonly kind?: "source" | "node"
   readonly userId?: string
+  readonly inlineBasicAuth?: HttpBasicAuth
 }
 
 export interface ExtractionPending {

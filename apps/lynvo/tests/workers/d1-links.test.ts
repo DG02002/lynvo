@@ -30,6 +30,7 @@ import {
   getDataVersion,
 } from "../../workers/d1/data-version"
 import type { ExtractedLink } from "../../app/features/links/types"
+import { getSavedLinkExtractionCredential } from "../../workers/d1/saved-link-extraction-credentials"
 
 const NOW = 1_750_000_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -197,6 +198,51 @@ describe("d1 links", () => {
     expect(completeSnapshot.results[0]?.extractionState).toBe("complete")
     expect(completeSnapshot.results[0]?.title).toBe("Shows")
     expect(completeSnapshot.results[0]?.metaJson).toContain(playableLink.url)
+  })
+
+  it("retains queued extraction credentials until extraction settles", async () => {
+    const user = await createUser()
+    const targetUrl = "https://source.example/protected/"
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "extraction:credential:queue",
+      url: targetUrl,
+      now: NOW,
+      extractionCredential: {
+        targetUrl,
+        record: {
+          ciphertext: "sealed-ciphertext",
+          nonce: "sealed-nonce",
+          algorithm: "AES-256-GCM",
+          keyVersion: 1,
+        },
+        now: NOW,
+      },
+    })
+
+    const storedCredential = await getSavedLinkExtractionCredential(
+      env.DB,
+      user.id,
+      queued.id ?? ""
+    )
+    expect(storedCredential).toMatchObject({
+      link_id: queued.id,
+      target_url: targetUrl,
+      ciphertext: "sealed-ciphertext",
+    })
+
+    const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
+    await settleSavedLinkExtraction(env.DB, user.id, {
+      operationId: "extraction:credential:settle",
+      id: queued.id ?? "",
+      leaseExpiresAt: claim?.leaseExpiresAt ?? 0,
+      state: "complete",
+      extractedLinks: [playableLink],
+      now: NOW + 1_000,
+    })
+    await expect(
+      getSavedLinkExtractionCredential(env.DB, user.id, queued.id ?? "")
+    ).resolves.toBeNull()
   })
 
   it("keeps a failed extraction visible without scheduling a retry", async () => {

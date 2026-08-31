@@ -34,6 +34,7 @@ interface AccountErasureRow {
 
 interface AccountErasureDataPresence {
   links: number
+  savedLinkExtractionCredentials: number
   pluginCredentials: number
   pluginDomains: number
   pluginServers: number
@@ -90,6 +91,7 @@ const advanceStage = async (
 
 const ERASURE_TABLE_KEYS = {
   links: "id",
+  saved_link_extraction_credentials: "link_id",
   user_plugin_credentials: "id",
   user_plugin_domains: "id",
   user_plugin_servers: "id",
@@ -165,6 +167,7 @@ const getIncompleteDataStage = async (
     .prepare(
       `SELECT
          EXISTS (SELECT 1 FROM links WHERE user_id = ?1) AS links,
+         EXISTS (SELECT 1 FROM saved_link_extraction_credentials WHERE user_id = ?1) AS savedLinkExtractionCredentials,
          EXISTS (SELECT 1 FROM user_plugin_credentials WHERE user_id = ?1) AS pluginCredentials,
          EXISTS (SELECT 1 FROM user_plugin_domains WHERE user_id = ?1) AS pluginDomains,
          EXISTS (SELECT 1 FROM user_plugin_servers WHERE user_id = ?1) AS pluginServers,
@@ -181,7 +184,7 @@ const getIncompleteDataStage = async (
     return null
   }
   const presenceByStage = {
-    links: Boolean(presence.links),
+    links: Boolean(presence.links || presence.savedLinkExtractionCredentials),
     pluginCredentials: Boolean(presence.pluginCredentials),
     pluginDomains: Boolean(presence.pluginDomains),
     pluginServers: Boolean(presence.pluginServers),
@@ -237,6 +240,15 @@ const processLinksErasureStage = async ({
   userId,
   progress,
 }: AccountErasureStageProcessorInput): Promise<AccountErasureStepOutcome> => {
+  if (
+    (await deleteOwnedBatch(
+      database,
+      "saved_link_extraction_credentials",
+      userId
+    )) > 0
+  ) {
+    return { kind: "stage", stage: "links" }
+  }
   if ((await deleteOwnedBatch(database, "links", userId)) > 0) {
     return { kind: "stage", stage: "links" }
   }

@@ -39,6 +39,11 @@ import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
 import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
+import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
+import {
+  encryptSavedLinkExtractionCredential,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
@@ -376,17 +381,45 @@ dataApp.post("/links/create-or-update", async (context) => {
   }
   const { body } = requestBody
   const now = Date.now()
+  let sourceInput: ReturnType<typeof extractHttpBasicCredential>
+  try {
+    sourceInput = extractHttpBasicCredential(body.url)
+  } catch {
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message: "Enter a valid URL.",
+    })
+  }
+  let extractionCredential: SavedLinkExtractionCredentialWrite | null = null
+  if (body.extractionState === "queued" && sourceInput.basicAuth) {
+    extractionCredential = {
+      targetUrl: sourceInput.url,
+      record: await encryptSavedLinkExtractionCredential(context.env, {
+        userId: preparation.session.userId,
+        targetUrl: sourceInput.url,
+        basicAuth: sourceInput.basicAuth,
+      }),
+      now,
+    }
+  }
+  const normalizedInput = {
+    ...body,
+    url: sourceInput.url,
+    now,
+  }
   const result =
     body.extractionState === "queued"
       ? await enqueueSavedLinkExtraction(
           preparation.database,
           preparation.session.userId,
-          { ...body, now }
+          { ...normalizedInput, extractionCredential }
         )
       : await createOrUpdateSavedLink(
           preparation.database,
           preparation.session.userId,
-          { ...body, now }
+          normalizedInput
         )
   await notifyAccountDataChanged(
     context.env,

@@ -276,6 +276,20 @@ describe("Extraction interface routing", () => {
     )
 
     expect(credentialQueries).toEqual([])
+    await Effect.runPromise(
+      ExtractionService.use((service) =>
+        service.extract({
+          url: "https://protected.example/video",
+          requestId: "sanitized-inline-basic-auth",
+          pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+          pluginId: "protected",
+          userId: "user-1",
+          inlineBasicAuth: { username: "viewer", password: "secret" },
+        })
+      ).pipe(Effect.provide(buildLayer(testEnvironment)))
+    )
+
+    expect(credentialQueries).toEqual([])
     const extractionBodies = await Promise.all(
       pluginServerRequests
         .filter((request) => request.url.endsWith("/extract"))
@@ -288,6 +302,10 @@ describe("Extraction interface routing", () => {
       }),
       expect.objectContaining({
         input: expect.objectContaining({ kind: "node" }),
+        basicAuth: { username: "viewer", password: "secret" },
+      }),
+      expect.objectContaining({
+        input: expect.objectContaining({ kind: "source" }),
         basicAuth: { username: "viewer", password: "secret" },
       }),
     ])

@@ -16,7 +16,10 @@ export interface SaveIntentOperations {
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  enqueueLink: (url: string) => Promise<string | undefined>
+  enqueueLink: (
+    savedUrl: string,
+    sourceUrl?: string
+  ) => Promise<string | undefined>
 }
 
 export interface SaveIntentOptions extends SaveIntentOperations {
@@ -124,7 +127,10 @@ export const resolveSaveIntent = async ({
   // extraction queue first, so a refresh can never discard in-flight work.
   // Manual mode opens the selection dialog from the persisted extraction
   // once the queued link completes.
-  const queuedId = await enqueueLink(savedUrl)
+  const queuedId =
+    savedUrl === targetUrl
+      ? await enqueueLink(savedUrl)
+      : await enqueueLink(savedUrl, targetUrl)
   return queuedId
     ? { kind: "queued", linkId: queuedId }
     : { kind: "error", message: "Unable to save link. Try again." }

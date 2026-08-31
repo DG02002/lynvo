@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect"
+import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
 import { decideSavePresentation } from "../app/lib/extraction/presentation"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
@@ -19,6 +20,10 @@ import {
   settleSavedLinkExtraction,
   type SavedLinkExtractionClaim,
 } from "./d1/link-extraction-queue"
+import {
+  decryptSavedLinkExtractionCredential,
+  getSavedLinkExtractionCredential,
+} from "./d1/saved-link-extraction-credentials"
 import { notifyAccountDataChanged } from "./d1/data-version-notification"
 
 const savedExtractionIdentitySchema = Schema.Struct({
@@ -39,6 +44,7 @@ interface SavedLinkExtractionExecutionContext {
   runtime: ReturnType<typeof getRuntime>
   requestId: string
   startedAt: number
+  inlineBasicAuth?: HttpBasicAuth
 }
 
 interface PendingExtractionInput extends SavedLinkExtractionExecutionContext {
@@ -80,6 +86,7 @@ const runSavedLinkExtraction = async ({
   claim,
   identity,
   requestId,
+  inlineBasicAuth,
 }: SavedLinkExtractionExecutionContext): Promise<ExtractionResult> =>
   runtime.runPromise(
     Effect.flatMap(ExtractionService, (service) =>
@@ -89,6 +96,7 @@ const runSavedLinkExtraction = async ({
         userId: claim.userId,
         pluginServerId: identity.pluginServerId,
         pluginId: identity.pluginId,
+        inlineBasicAuth,
       })
     )
   )
@@ -268,6 +276,21 @@ export const processSavedLinkExtraction = async (
   }
 
   try {
+    const credentialRow = await getSavedLinkExtractionCredential(
+      database,
+      claim.userId,
+      claim.id
+    )
+    if (credentialRow) {
+      if (credentialRow.target_url !== claim.url) {
+        throw new Error("Saved link credential target changed.")
+      }
+      context.inlineBasicAuth = await decryptSavedLinkExtractionCredential(
+        env,
+        credentialRow,
+        { userId: claim.userId, targetUrl: claim.url }
+      )
+    }
     await processClaimedSavedLinkExtraction(context)
   } catch (error) {
     const extractionError =

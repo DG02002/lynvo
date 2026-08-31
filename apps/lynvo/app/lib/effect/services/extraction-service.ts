@@ -69,7 +69,7 @@ export class ExtractionService extends Context.Service<
             pluginServerId: options.pluginServerId,
             pluginId: options.pluginId,
             kind: options.kind ?? "source",
-            inlineBasicAuth: routeInput.basicAuth,
+            inlineBasicAuth: options.inlineBasicAuth ?? routeInput.basicAuth,
           }
           const customResult = yield* extractWithCustomPluginServer(
             credentialVault,

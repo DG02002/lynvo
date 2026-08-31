@@ -54,7 +54,10 @@ export const useSaveActions = ({
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  enqueueLink: (url: string) => Promise<string | undefined>
+  enqueueLink: (
+    savedUrl: string,
+    sourceUrl?: string
+  ) => Promise<string | undefined>
   updateLinks: (url: string, links: ExtractedLink[]) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
   setExtractionPreview: (preview: { meta: MetaData } | null) => void

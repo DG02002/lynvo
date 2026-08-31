@@ -6,7 +6,7 @@ describe("Index save flow", () => {
     vi.restoreAllMocks()
   })
 
-  it("strips inline credentials before persisting the queued save intent", async () => {
+  it("strips inline credentials from the saved URL but forwards the source URL transiently", async () => {
     const credentialedUrl =
       "https://source-user:source%40secret@index.example.com/0:/Movies/"
     const sanitizedUrl = "https://index.example.com/0:/Movies/"
@@ -20,7 +20,7 @@ describe("Index save flow", () => {
       enqueueLink,
     })
 
-    expect(enqueueLink).toHaveBeenCalledWith(sanitizedUrl)
+    expect(enqueueLink).toHaveBeenCalledWith(sanitizedUrl, credentialedUrl)
     expect(addLink).not.toHaveBeenCalled()
     expect(result).toEqual({ kind: "queued", linkId: "queued-id" })
   })

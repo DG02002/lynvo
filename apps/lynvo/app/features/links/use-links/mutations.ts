@@ -83,7 +83,8 @@ export const createLinksMutations = ({
 
   const persistLink = async (
     targetUrl: string,
-    item: LinkViewItem
+    item: LinkViewItem,
+    sourceUrl = targetUrl
   ): Promise<string | undefined> => {
     try {
       return await runExclusive(async () => {
@@ -91,7 +92,7 @@ export const createLinksMutations = ({
         try {
           const result = await linksDataApi.createOrUpdate({
             operationId: crypto.randomUUID(),
-            url: targetUrl,
+            url: sourceUrl,
             title: temporaryItem.title ?? targetUrl,
             meta: JSON.stringify(toJsonMetadata(temporaryItem.metadata)),
             extractionState:
@@ -130,10 +131,11 @@ export const createLinksMutations = ({
   }
 
   const enqueueLink = async (
-    targetUrl: string
+    targetUrl: string,
+    sourceUrl = targetUrl
   ): Promise<string | undefined> => {
     const { item } = await buildQueuedLinkViewItem(targetUrl)
-    return await persistLink(targetUrl, item)
+    return await persistLink(targetUrl, item, sourceUrl)
   }
 
   const toApiOperation = (
