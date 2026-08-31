@@ -1,6 +1,7 @@
 import { Spinner } from "~/components/spinner"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
+import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
 import { HYBRID_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
 
 interface SeasonArtworkPanelProps {
@@ -83,6 +84,17 @@ export const SeasonArtworkPanel = ({
             ? ` (${artwork.identity.year})`
             : ""}
         </p>
+      ) : null}
+      {imagePath ? (
+        <div className="flex justify-center pt-2">
+          <a href={TMDB_SITE_URL} target="_blank" rel="noopener noreferrer">
+            <img
+              src={TMDB_LOGO_SHORT_SRC}
+              alt="The Movie Database (TMDB)"
+              className="h-4 w-auto"
+            />
+          </a>
+        </div>
       ) : null}
     </div>
   )
