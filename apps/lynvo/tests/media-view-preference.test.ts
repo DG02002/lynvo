@@ -14,12 +14,33 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  Reflect.deleteProperty(window, "TVBro")
   vi.unstubAllGlobals()
 })
 
 describe("Media view preference", () => {
-  it("defaults to the hybrid view", () => {
+  it("defaults to the List view in other browsers", () => {
+    expect(getMediaView()).toBe("list")
+  })
+
+  it("defaults to the Hybrid view in TV Bro", () => {
+    Object.defineProperty(window, "TVBro", {
+      configurable: true,
+      value: {},
+    })
+
     expect(getMediaView()).toBe("hybrid")
+  })
+
+  it("keeps an explicitly selected view in TV Bro", () => {
+    Object.defineProperty(window, "TVBro", {
+      configurable: true,
+      value: {},
+    })
+
+    setMediaView("list")
+
+    expect(getMediaView()).toBe("list")
   })
 
   it("persists the selected view without touching account data", () => {

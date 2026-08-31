@@ -1,6 +1,10 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
+import {
+  getCurrentClientProfile,
+  TVBRO_ANDROID_TV_PROFILE,
+} from "~/lib/client-profile"
 
 declare global {
   type MediaView = "list" | "hybrid"
@@ -10,11 +14,18 @@ export const MEDIA_VIEW_STORAGE_KEY = "lynvo:settings:media-view"
 export const MEDIA_VIEW_PREFERENCE_EVENT = "lynvo:media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
 export const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
+export const DEFAULT_MEDIA_VIEW: MediaView = "list"
+export const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "hybrid"
 
-const mediaViewValues: readonly string[] = ["list", "hybrid"]
+const mediaViewValues = new Set<string>(["list", "hybrid"])
 
 export const isMediaView = (value: string): value is MediaView =>
-  mediaViewValues.includes(value)
+  mediaViewValues.has(value)
+
+export const getDefaultMediaView = (): MediaView =>
+  getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
+    ? TVBRO_DEFAULT_MEDIA_VIEW
+    : DEFAULT_MEDIA_VIEW
 
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange)
@@ -28,14 +39,14 @@ const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
 
 export const getMediaView = (): MediaView => {
   if (globalThis.localStorage === undefined) {
-    return "hybrid"
+    return DEFAULT_MEDIA_VIEW
   }
 
   const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
   if (storedValue !== null && isMediaView(storedValue)) {
     return storedValue
   }
-  return "hybrid"
+  return getDefaultMediaView()
 }
 
 export const writeMediaViewCookie = (mediaView: MediaView): void => {
@@ -70,7 +81,7 @@ export const setMediaView = (mediaView: MediaView): void => {
 
 export const useMediaView = (): MediaView => {
   const rootData = useRouteLoaderData<typeof rootLoader>("root")
-  const serverMediaView = rootData?.mediaView ?? "hybrid"
+  const serverMediaView = rootData?.mediaView ?? DEFAULT_MEDIA_VIEW
   const mediaView = useSyncExternalStore(
     subscribeToMediaViewPreference,
     getMediaView,
