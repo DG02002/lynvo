@@ -12,8 +12,6 @@
 		"global_fetch_strictly_public"
 	],
 	"main": "./workers/app.ts",
-	// HUMAN: run `wrangler d1 create lynvo-db` and replace the placeholder database_id
-	// (same for the env.local copy) before deploying; local dev + vitest use Miniflare.
 	"d1_databases": [
 		{
 			"binding": "DB",
@@ -53,7 +51,9 @@
 		},
 		{
 			"tag": "v2",
-			"deleted_classes": ["WorkerAuthSession"],
+			"deleted_classes": [
+				"WorkerAuthSession"
+			],
 		},
 	],
 	"secrets": {
