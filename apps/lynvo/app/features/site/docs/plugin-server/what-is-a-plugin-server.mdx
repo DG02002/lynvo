@@ -7,9 +7,11 @@ contentType: Conceptual
 
 <DocSection id="what-is-a-plugin-server">
 
-A Plugin Server is a deployed HTTPS service that translates Source pages into data Lynvo understands. Lynvo sends a URL to the Plugin Server, and the Plugin Server returns normalized Media Nodes for files, folders, groups, or content that must be resolved later.
+A Plugin Server is a deployed HTTPS service that turns Source pages into
+normalized Media Nodes. Lynvo sends it a URL, and the server returns files,
+folders, groups, or content that needs later resolution.
 
-The Plugin Server is the boundary between Lynvo and Source integrations. It owns the behavior shared by every Plugin:
+The Plugin Server handles the work shared by every Source integration:
 
 - The public manifest at `GET /manifest`
 - Bearer authentication for protected endpoints
@@ -19,13 +21,14 @@ The Plugin Server is the boundary between Lynvo and Source integrations. It owns
 - Protocol error responses
 - Deployment, logs, and operational status
 
-Lynvo owns the interface around that service. It registers the Plugin Server,
-selects it for matching URLs, saves extracted nodes, tracks opened markers and
-selected links, and sends URLs to an external Android player. An
-opened marker records only that an item was opened; neither Lynvo nor the Plugin
-Server stores a playback position or resume state.
+Lynvo handles the product behavior around that service. It registers the Plugin
+Server, selects it for matching URLs, saves extracted nodes, tracks opened
+markers and selected links, and sends URLs to an external Android player. An
+opened marker records only that an item was opened. Neither Lynvo nor the
+Plugin Server stores a playback position or resume state.
 
-One Plugin Server can contain one Plugin or several Plugins. Deploy and connect the Plugin Server once, then publish each Plugin in the Plugin Server manifest.
+One Plugin Server can contain one Plugin or several Plugins. Deploy and connect
+the server once, then publish each Plugin in its manifest.
 
 <DocsNote title="Direct Media links">
 

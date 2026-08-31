@@ -1,21 +1,20 @@
-# Coding Standards
+# Coding standards
 
 ## Testing
 
 Tautological tests considered harmful.
 
-Every test must answer one question: which production bug does this catch if it
-regresses? If there is no answer — because the test re-implements the logic
-under test and asserts equality, asserts a mock returns what it was configured
-to return, mirrors a static table (route lists, CSS class strings, config
-files) into assertions, or checks type shapes the compiler already guarantees —
-delete it or rewrite it as a behavioral test that observes the module through
-its public interface.
+For every test, ask which production bug it would catch if the code regressed.
+If there is no answer because the test re-implements the logic under test,
+asserts equality, checks that a mock returns its configured value, mirrors a
+static table (route lists, CSS class strings, config files) into assertions, or
+checks type shapes the compiler already guarantees, delete it or rewrite it as
+a behavioral test that observes the module through its public interface.
 
 ## Error prevention over error detection
 
-Less "write a test to catch the next time that error happens." More "change the
-design so that class of error cannot happen."
+Prefer changing the design so an error class cannot occur over writing a test
+that detects the next occurrence.
 
 Before writing a test that pins down a race, a double-apply, or an
 out-of-bounds value, ask whether a design change removes the entire class:

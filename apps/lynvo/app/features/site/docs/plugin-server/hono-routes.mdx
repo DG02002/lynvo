@@ -7,7 +7,9 @@ contentType: Reference
 
 <DocSection id="routes">
 
-The generated `src/index.ts` wires each required endpoint through `createPluginServerRuntime`. Keep authentication, validation, usage, and response serialization in that runtime.
+The generated `src/index.ts` sends each required endpoint through
+`createPluginServerRuntime`. Keep authentication, validation, usage, and
+response serialization in that runtime.
 
 The generated route layer looks like this:
 
@@ -41,6 +43,7 @@ app.post("/extract", (context) =>
 
 Replace the manifest, authentication function, usage provider, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
 
-The starter returns a finite usage fixture so its contract tests can run without a database. Replace that provider with durable accounting before deployment.
+The starter returns a finite usage fixture so its contract tests can run without
+a database. Replace that provider with durable accounting before deployment.
 
 </DocSection>

@@ -7,7 +7,8 @@ contentType: Tutorial
 
 <DocSection id="testing">
 
-Run the generated checks before you deploy. The starter checks types, contract behavior, and the Wrangler bundle without requiring a live Cloudflare Worker.
+Run the generated checks before deployment. The starter checks types, contract
+behavior, and the Wrangler bundle without requiring a live Cloudflare Worker.
 
 Run the local checks:
 
@@ -58,11 +59,11 @@ curl https://your-tunnel.example/manifest
 
 </CodeBlock>
 
-The response must succeed and every absolute manifest URL, including Plugin
-icon URLs, must use the public HTTPS origin. A tunnel commonly terminates TLS
-before forwarding HTTP to the Worker. If the manifest generates absolute URLs
-from the request, honor `X-Forwarded-Proto: https` or configure the public
-origin explicitly. Never hardcode a temporary tunnel hostname.
+The response must succeed. Every absolute manifest URL, including Plugin icon
+URLs, must use the public HTTPS origin. A tunnel commonly terminates TLS before
+forwarding HTTP to the Worker. If the manifest generates absolute URLs from the
+request, honor `X-Forwarded-Proto: https` or configure the public origin
+explicitly. Never hardcode a temporary tunnel hostname.
 
 Verify the local bearer key:
 
@@ -93,7 +94,7 @@ curl -X POST http://localhost:8787/extract \
 
 </CodeBlock>
 
-Extend the contract suite as you add Source behavior. Cover these boundaries:
+Extend the contract suite as you add Source behavior. Test these cases:
 
 - Valid and invalid manifest metadata
 - Missing, invalid, and valid bearer credentials
@@ -106,6 +107,7 @@ Extend the contract suite as you add Source behavior. Cover these boundaries:
 - Exhausted usage before upstream work starts
 - Safe temporary and permanent failure responses
 
-The starter includes the first four contract checks in `tests/contract.test.ts`. Add Source fixtures before you deploy a real Source implementation.
+The starter includes the first four contract checks in `tests/contract.test.ts`.
+Add Source fixtures before you deploy a real Source implementation.
 
 </DocSection>

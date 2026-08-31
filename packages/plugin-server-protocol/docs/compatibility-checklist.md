@@ -1,14 +1,14 @@
-# Custom Plugin Server Compatibility Checklist
+# Custom Plugin Server compatibility checklist
 
-Use this before registering an Custom Plugin Server in Lynvo.
+Use this before registering a Custom Plugin Server in Lynvo.
 
-## Ownership Boundary
+## Ownership boundary
 
 - Lynvo defines the protocol and renders Plugin Server-provided metadata.
 - The Custom Plugin Server owns its plugin logic, deployment, icons, status, and versions.
 - Do not add source-specific code to Lynvo for Resolver Beta, File Source Delta, or similar services.
 
-## Required Endpoints
+## Required endpoints
 
 - `GET /manifest` returns the Plugin Server Manifest.
 - `POST /verify` validates the bearer token Lynvo will use.
@@ -18,7 +18,7 @@ Use this before registering an Custom Plugin Server in Lynvo.
   `POST /discover` and return a stable source id with pattern or verified
   confidence.
 
-## Manifest Rules
+## Manifest rules
 
 - `protocolVersion` must use a compatible `1.x` version. Lynvo currently uses `1.0`.
 - `pluginServerId` is stable and namespaced, for example `com.example.plugin-server`.
@@ -31,7 +31,7 @@ Use this before registering an Custom Plugin Server in Lynvo.
 - `usage.endpoint` is `/usage`.
 - Plugin Servers declaring `features.basicAuth` receive Source credentials in `request.basicAuth`, never in the target URL.
 
-## Source / Plugin Metadata
+## Source and Plugin metadata
 
 Declare each user-visible plugin under `extensions.lynvo.plugins`.
 
@@ -47,14 +47,14 @@ Each source should include:
 - Neither `hosts` nor `matchers` when `matchStrategy` is `probe`; probe Plugins
   must not claim arbitrary URLs with wildcard matchers.
 
-## Icon Rules
+## Icon rules
 
 - Use direct WebP URLs, not favicon proxy URLs.
 - Serve icons from the Plugin Server or its own CDN.
 - Keep icons small; the shared optimizer resizes WebP icons to fit within 256x256.
 - Run image optimization as part of deploy, not as a one-off manual step.
 
-## Contract Tests
+## Contract tests
 
 Custom Plugin Servers should validate:
 

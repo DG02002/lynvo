@@ -1,9 +1,9 @@
 # Lynvo
 
-The Lynvo website can be opened in any browser for sign-in and link
-management. Link handoff is designed for Android phones, Android tablets, and
-Android TV. Lynvo opens links in four Android players: Just (Video) Player, VLC
-for Android, MPV, and MX Player.
+Use the Lynvo website in any browser to sign in and manage links. Link handoff
+is designed for Android phones, Android tablets, and Android TV. Lynvo opens
+links in four Android players: Just (Video) Player, VLC for Android, MPV, and
+MX Player.
 
 Lynvo marks an item opened the first time you open it, but it does not store a
 playback position or resume state. Lynvo does not play video; it opens a URL in
@@ -27,7 +27,7 @@ markers.
 _Avoid_: card, history item, saved card, recent link
 
 **Save intent**:
-The user’s request to add a Source as a Saved link before Lynvo knows whether
+The user's request to add a Source as a Saved link before Lynvo knows whether
 Extraction can finish immediately or needs link selection.
 _Avoid_: save request, background task
 
@@ -36,8 +36,8 @@ Links the user chooses in the link-selection dialog and saves as part of a
 saved link.
 
 **Account-synchronized Saved links**:
-Saved links belonging to a signed-in account that converge across active
-sessions without manual refresh.
+Saved links that sync across active sessions for a signed-in account without a
+manual refresh.
 
 **Opened item**:
 A boolean marker Lynvo sets when you open an item. It is not a playback
@@ -94,7 +94,7 @@ _Avoid_: proxy API key, proxy token (confusable with the Plugin Server's own API
 The Plugin Server managed by Lynvo for Lynvo Plugins.
 
 **Lynvo Plugin Server Binding**:
-The private connection from Lynvo to the Lynvo Plugin Server.
+The private connection Lynvo uses to call the Lynvo Plugin Server.
 
 **Managed extraction operation**:
 An idempotent, leased allowance reservation for one Lynvo Plugin extraction. A
@@ -124,7 +124,8 @@ A normalized playable item, folder, group, or unresolved item returned by a Plug
 _Avoid_: extracted link when referring to the protocol value
 
 **Product update**:
-A public change to Lynvo’s user-facing features or reliability. Improvements to saving, deleting, and synchronizing links belong here.
+A public change to Lynvo's features or reliability. Use this term for changes
+to saving, deleting, or synchronizing links.
 _Avoid_: platform update for user-facing Lynvo changes
 
 **Plugin Server update**:

@@ -14,7 +14,7 @@ standalone author workflow; this file is not a second copy of those steps.
 
 Lynvo Plugin Servers are independently deployed HTTPS Workers. Lynvo owns
 registration, credential storage, routing, response validation, saved-link
-state, player selection, and link launching. Lynvo’s opened markers record only
+state, player selection, and link launching. Lynvo's opened markers record only
 that an item was opened; Lynvo does not store playback positions or resume
 state. A Plugin Server owns source matching, extraction, staged lazy resolution,
 its bearer secret, finite usage accounting, and deployment.
@@ -53,7 +53,7 @@ pnpm --filter create-lynvo-plugin-server check
 pnpm check:plugin-server-release
 ```
 
-The canonical starter template lives at
+The starter template lives at
 `packages/create-lynvo-plugin-server/template/`. Keep it minimal and
 independent of Lynvo application services. The generated project uses the
 published protocol package; only this monorepo uses `workspace:*`.

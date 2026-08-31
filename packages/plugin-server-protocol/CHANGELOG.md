@@ -4,8 +4,8 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package
 adheres to [Semantic Versioning](https://semver.org/).
 
-Wire compatibility is tracked separately from package semver: every entry
-below states the highest Protocol Server Protocol wire version it supports.
+Wire compatibility is tracked separately from package semver. Each entry below
+states the highest Plugin Server Protocol wire version it supports.
 Minor wire versions (`1.x`) are additive by contract; a major wire version
 bump is a breaking change that requires a new major of this package.
 
@@ -41,8 +41,8 @@ Highest supported wire version: `1.0`.
 - Per-extraction usage deltas: extract success responses may carry
   `usageDelta` entries (`id`, `used`, optional `unit`) matching `/usage`
   metric ids, so clients can update displayed allowances without polling.
-- Every Media Node accepts an optional vendor `extensions` object, giving
-  node-level data an additive home instead of new top-level fields.
+- Every Media Node accepts an optional vendor `extensions` object, so vendors
+  can add node-level data without adding top-level fields.
 - Deferred extraction: extract success responses may carry a `pending`
   object (`retryAfterSeconds`, optional `resumeNodeId`) so poll-based
   sources can answer immediately instead of holding the request open.
@@ -91,7 +91,7 @@ Highest supported wire version: `1.0`.
 - Runtime helpers `createPluginServerRuntime` and request builders for
   source and node extraction.
 
-## [0.1.1] — 2026-08-08
+## [0.1.1] (2026-08-08)
 
 Highest supported wire version: `1.0`.
 

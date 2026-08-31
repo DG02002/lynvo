@@ -1,13 +1,13 @@
-# Lynvo Plugin Server Author Guide
+# Lynvo Plugin Server author guide
 
 ## Goal
 
 This guide explains how to build a Lynvo-compatible Custom Plugin Server.
 It is the package-level technical reference for the protocol contract. The
-complete end-to-end workflow for creating, testing, deploying, and connecting a
-server is maintained in Lynvo's public in-app docs at `/docs/plugin-server`.
-That separation keeps this guide useful when the protocol package is consumed
-outside the Lynvo application without duplicating the public tutorial.
+public in-app docs at `/docs/plugin-server` cover the full workflow for
+creating, testing, deploying, and connecting a server. This guide covers the
+contract without copying that tutorial, so it also applies outside the Lynvo
+application.
 
 The recommended stack is:
 
@@ -15,7 +15,12 @@ The recommended stack is:
 - Hono
 - the published `@dg02002/lynvo-plugin-server-protocol` contract package
 
-The protocol itself is framework-agnostic. Hono is the recommended reference stack because it gives a clean routing model for `GET /manifest`, `POST /verify`, `GET /usage`, and `POST /extract`. Lynvo owns the protocol contract through the local `@dg02002/lynvo-plugin-server-protocol` package; Plugin Servers should use that package or mirror its documented contract instead of copying schemas from Lynvo or another Plugin Server.
+The protocol itself is framework-agnostic. Hono is the recommended reference
+stack because it maps directly to `GET /manifest`, `POST /verify`, `GET /usage`,
+and `POST /extract`. Lynvo defines the contract in the local
+`@dg02002/lynvo-plugin-server-protocol` package. Plugin Servers should use that
+package or follow its documented contract instead of copying schemas from
+Lynvo or another Plugin Server.
 
 Start with the generator when creating a standalone Worker:
 
@@ -33,13 +38,16 @@ Then read:
 - `tests/contract.test.ts` in the generated project for the initial contract
   checks to keep and extend.
 
-## Recommended Project Setup
+## Recommended project setup
 
-Cloudflare currently documents a Hono full-stack starter based on the `create cloudflare` CLI and a Vite React template. That is useful when you want a full-stack app, but Lynvo Plugin Servers do not need a React frontend by default.
+Cloudflare documents a Hono full-stack starter based on the `create cloudflare`
+CLI and a Vite React template. It suits a full-stack app, but a Lynvo Plugin
+Server usually needs no React frontend.
 
-For Plugin Servers, prefer a minimal Worker-first Hono project rather than scaffolding a UI you do not need.
+For Plugin Servers, prefer a minimal Worker-first Hono project instead of
+creating a UI you do not need.
 
-Use the Cloudflare docs as the authoritative source for current Hono scaffolding options:
+Use the Cloudflare docs for current Hono project setup options:
 
 - Hono on Cloudflare Plugin Servers:
   [Cloudflare Hono docs](https://developers.cloudflare.com/workers/framework-guides/web-apps/more-web-frameworks/hono/)
@@ -48,12 +56,12 @@ Use the Cloudflare docs as the authoritative source for current Hono scaffolding
 - Node.js compatibility:
   [Cloudflare Node.js compatibility docs](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)
 
-## Design Constraints
+## Design constraints
 
 Your Plugin Server should be:
 
-- stateless from Lynvo’s perspective
-- JSON-only at the Lynvo seam
+- stateless from Lynvo's perspective
+- JSON-only at the Lynvo boundary
 - server-to-server authenticated with a bearer API key
 - able to resolve staged extraction flows
 - responsible for all source-specific interpretation
@@ -71,7 +79,7 @@ Lynvo will not send:
 - opened markers, selected links, playback positions, or resume state
 - Plugin-specific mode names
 
-## Suggested File Shape
+## Suggested file shape
 
 ```text
 src/
@@ -91,7 +99,7 @@ Recommended module responsibilities:
 
 Do not define a local protocol schema unless you are writing an adapter around `@dg02002/lynvo-plugin-server-protocol`. Local copies drift and make the Plugin Server harder to trust.
 
-## Protocol Package
+## Protocol package
 
 Choose the dependency source based on where the Plugin Server lives:
 
@@ -114,11 +122,11 @@ Use it for:
 - testing routing with `matchPluginServerUrl`
 - returning nodes with the exported `MediaNode` shapes
 
-This keeps the Plugin Server’s public interface small and stable. Your Plugin
-Server can have as much Source-specific implementation as it needs behind that
-interface, but Lynvo should only see the protocol.
+The package keeps the Plugin Server's public interface small and stable. Put
+Source-specific implementation behind that interface, but expose only the
+protocol to Lynvo.
 
-## Playable Link Probes
+## Playable link probes
 
 When a Plugin Server emits a final playable node, use one bounded `GET` probe
 with `Range: bytes=0-0`. Read the response headers, then cancel the body.
@@ -134,7 +142,7 @@ Report the probe in the node metadata:
 
 For expiry, prefer signed URL parameters when they carry an explicit expiry,
 then `Cache-Control: max-age`, then a future response `Expires` header. Treat
-`max-age=0` as “no cache expiry available.” Store the result in `expiry` as
+`max-age=0` as "no cache expiry available." Store the result in `expiry` as
 Unix milliseconds and identify the source with
 `expirySource`. Cache-Control is only an estimate; it does not prove when an
 origin will invalidate a link. The same caution applies to an `Expires` header,
@@ -144,13 +152,13 @@ If the final URL requires a source-specific or credentialed proxy that the
 probe cannot reproduce, omit health metadata instead of probing an endpoint
 that is known to reject the server request.
 
-## Suggested Runtime Configuration
+## Suggested runtime configuration
 
-### Compatibility Date
+### Compatibility date
 
 Keep the Worker on a current compatibility date and update it intentionally.
 
-### Node.js Compatibility
+### Node.js compatibility
 
 Enable `nodejs_compat` only when you actually need npm packages or Node APIs that require it.
 
@@ -169,11 +177,11 @@ Do not enable it by reflex. Many Plugin Servers can stay on pure web-standard AP
 - `WebSocket`
 - Web Crypto
 
-That usually leads to smaller and simpler Plugin Servers.
+This keeps the Worker smaller and avoids adding APIs you do not need.
 
-## Secrets and Configuration
+## Secrets and configuration
 
-Follow Cloudflare best practices:
+Use Cloudflare's documented approach:
 
 - store secrets with `wrangler secret`
 - do not commit secrets into source
@@ -185,7 +193,7 @@ Suggested secrets and variables:
 - upstream helper endpoints if your Plugin Server needs them
 - optional feature flags for experimental Plugin behavior
 
-## Hono Structure
+## Hono structure
 
 Recommended route layout:
 
@@ -195,7 +203,8 @@ Recommended route layout:
 - `POST /discover` when `features.discovery` is true
 - `POST /extract`
 
-Keep the Hono layer thin. The extraction logic should sit behind small route handlers.
+Keep route handlers focused on calling the shared runtime. Put extraction logic
+in the Plugin implementation.
 
 ## Authentication
 
@@ -215,7 +224,7 @@ Do not:
 - rely on browser cookies
 - expose Plugin Server API keys to clients
 
-## Manifest Guidance
+## Manifest guidance
 
 The manifest is public. Keep it simple and stable.
 
@@ -251,13 +260,13 @@ If the icon is served by the Plugin Server itself, expose it as a static asset s
 When a reverse proxy or development tunnel terminates TLS, the request seen by
 the Plugin Server may use HTTP even though its public origin uses HTTPS. Do not
 construct public icon URLs from `new URL(request.url).origin` without accounting
-for that boundary. Either configure the public origin explicitly or upgrade the
+for the proxy. Either configure the public origin explicitly or upgrade the
 derived URL when the trusted proxy sends `X-Forwarded-Proto: https`. Add a
 contract test that sends an HTTP request with that header and verifies that the
 manifest succeeds with HTTPS icon URLs. Local HTTP icon URLs are valid only on
 loopback development hosts.
 
-### Plugin Icons
+### Plugin icons
 
 If one Plugin Server supports multiple Plugins, publish those identities under `extensions.lynvo.plugins`.
 
@@ -304,9 +313,9 @@ Lynvo displays these Plugin icons in the Custom Plugin Server settings table. Se
 
 `routesToPluginId` is optional. Set it to another source id from the same manifest when this source resolves into that downstream source. Lynvo can then show the source route before extraction starts.
 
-`usageMultiplier` is optional. Set it to a positive integer when one extraction through this source can consume multiple units of your metered extraction limit (for example `5` when the source requires a headless-browser rendering proxy). Lynvo surfaces this in the Plugin info tooltip so people know the Plugin may use more of their usage allowance. Omit it when an extraction always costs one unit.
+`usageMultiplier` is optional. Set it to a positive integer when one extraction through this source can consume multiple units of your metered extraction limit (for example `5` when the source requires a headless-browser rendering proxy). Lynvo shows this in the Plugin info tooltip so people know the Plugin may use more of their usage allowance. Omit it when an extraction always costs one unit.
 
-`proxyCreditUsage` is optional human-readable text describing how one extraction uses proxy credits. Use it when the total depends on the selected link, redirects, mirrors, cache state, or another runtime condition. Describe fixed request costs and variable requests separately, and do not present a fixed total unless the Plugin guarantees it. Lynvo surfaces this text in the Plugin info tooltip.
+`proxyCreditUsage` is optional human-readable text describing how one extraction uses proxy credits. Use it when the total depends on the selected link, redirects, mirrors, cache state, or another runtime condition. Describe fixed request costs and variable requests separately, and do not present a fixed total unless the Plugin guarantees it. Lynvo shows this text in the Plugin info tooltip.
 
 `matchers` is optional but recommended. Lynvo uses it to show which Plugin is likely to handle a URL before extraction starts.
 
@@ -320,7 +329,7 @@ wildcard matcher to claim every URL.
 
 Lynvo v1 does not define a live health endpoint. Source status is read from the manifest and refreshed when the user refreshes the Plugin Server Manifest in settings. This keeps the protocol predictable and avoids polling every Custom Plugin Server.
 
-## Extract Handler Guidance
+## Extract handler guidance
 
 `POST /extract` handles both:
 
@@ -342,7 +351,7 @@ Recommended behavior:
 - if the target requires a password, return `PASSWORD_REQUIRED`
 - if a password is provided and invalid, return `INVALID_PASSWORD`
 
-## Stage-Based Extraction
+## Stage-based extraction
 
 Lynvo expects staged extraction.
 
@@ -361,7 +370,7 @@ This means:
 - Lynvo does not chain between different Plugin Servers
 - any lazy node you emit must be resolvable by the same Plugin Server
 
-## Normalization Rules
+## Normalization rules
 
 Return only Lynvo-normalized nodes:
 
@@ -373,10 +382,10 @@ Do not return custom UI instructions.
 
 Do not return raw implementation details unless you place them under `extensions`.
 
-## Node Implementation Reference
+## Node implementation reference
 
-The protocol has three wire-level node kinds. Product terms such as “playable
-link,” “container,” “folder,” and “lazy folder” map onto those kinds as follows:
+The protocol has three wire-level node kinds. Lynvo uses the product terms
+"playable link," "container," "folder," and "lazy folder" for them:
 
 | Product item           | Protocol kind | Important fields                |
 | ---------------------- | ------------- | ------------------------------- |
@@ -399,7 +408,7 @@ import type { MediaNode } from "@dg02002/lynvo-plugin-server-protocol"
 const playableLink = {
   kind: "playable",
   id: "playable-item-primary",
-  label: "Playable Item — Variant Alpha",
+  label: "Playable Item, Variant Alpha",
   url: "https://media.example.com/playable-item.mp4",
   badge: "Variant Alpha",
   size: "1.4 GB",
@@ -478,7 +487,7 @@ contents. Set it to `mirrors` when resolving returns alternative playable
 routes. Omit it only for backward compatibility; Lynvo treats an omitted value
 as `mirrors`.
 
-## UI Metadata
+## UI metadata
 
 You may return minimal source metadata:
 
@@ -498,7 +507,7 @@ Do not assume:
 - it controls button styles
 - it overrides Lynvo UX rules
 
-## Error Handling
+## Error handling
 
 Return structured errors with standard codes.
 
@@ -512,9 +521,9 @@ Use `TEMPORARY_FAILURE` when retrying later might succeed.
 
 Use `PERMANENT_FAILURE` when the source is broken in a non-retryable way.
 
-Use `UNSUPPORTED_URL` only when the URL is outside the Plugin Server’s supported scope.
+Use `UNSUPPORTED_URL` only when the URL does not match a supported Source.
 
-## Performance Guidance
+## Performance guidance
 
 Custom Plugin Servers may run on Cloudflare free plans. Design with that in mind.
 
@@ -528,7 +537,7 @@ Prefer:
 
 Do not hard-code operational timing assumptions from Lynvo into the Plugin Server.
 
-## Security Guidance
+## Security guidance
 
 Treat Plugin Server display metadata as untrusted input on the Lynvo side, and design responsibly on the Plugin Server side too.
 
@@ -539,7 +548,7 @@ Recommended:
 - do not return HTML snippets
 - do not embed scripts or markup inside response fields
 
-## Testing Guidance
+## Testing guidance
 
 At minimum, test:
 
@@ -553,7 +562,7 @@ At minimum, test:
 
 If you use Cloudflare-native testing, prefer running tests in the Workers runtime rather than only in a generic Node environment.
 
-## Suggested Hono Skeleton
+## Suggested Hono skeleton
 
 ```ts
 import { Hono } from "hono"
@@ -648,15 +657,15 @@ app.post("/extract", (c) => runtime.handleExtract(c.req.raw, c.env))
 export default app
 ```
 
-## Final Advice
+## Final advice
 
-Keep the Plugin Server deep and the interface narrow.
+Keep the Plugin Server's implementation behind a small public interface.
 
 That means:
 
 - one public manifest
 - one auth check
-- one extract seam
+- one extract endpoint
 - staged resolution entirely inside the Plugin Server
 - normalized output only
 

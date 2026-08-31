@@ -33,7 +33,7 @@ Plugin Servers own:
 - normalization into the Lynvo response shape
 - finite per-credential usage limits, accounting, reset periods, and enforcement
 
-## Core Model
+## Core model
 
 Extraction is stage-based.
 
@@ -46,7 +46,7 @@ Example:
 5. Lynvo calls the same Plugin Server again with only that selected node target.
 6. The Plugin Server resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
 
-## Protocol Rules
+## Protocol rules
 
 ### Ownership
 
@@ -60,19 +60,19 @@ Example:
 - A Plugin Server Manifest must declare machine-readable matchers.
 - Lynvo must not broadcast user URLs to all Plugin Servers for capability checks.
 
-### Plugin Server Affinity
+### Plugin Server affinity
 
 - Once a saved link is created, Lynvo must persist the originating Plugin
   Server entry id.
 - Refresh and lazy follow-up must use that same Plugin Server first.
 - If the original Plugin Server is unavailable, Lynvo should fail closed and only offer explicit user-triggered re-routing from the original top-level source URL.
 
-### Lazy Resolution Invariant
+### Lazy resolution invariant
 
 - Any lazy node emitted by a Plugin Server must be resolvable by that same Plugin Server.
 - Lynvo must not hand Plugin Server-emitted lazy node targets to another Plugin Server automatically.
 
-### Data Ownership
+### Data ownership
 
 Plugin Servers may return:
 
@@ -89,7 +89,7 @@ Plugin Servers must not return or control:
 - UI layout instructions
 - button styling or placement
 
-### Playable Health Metadata
+### Playable health metadata
 
 Playable nodes may report the result of a bounded media probe:
 
@@ -176,7 +176,7 @@ Auth:
 
 Purpose:
 
-- let an Plugin Server identify a source implementation without teaching Lynvo
+- let a Plugin Server identify a source implementation without teaching Lynvo
   source-specific URL or HTML signatures
 - return a stable `pluginId` and either `pattern` or `verified` confidence
 - decline unsupported URLs with `{ "matched": false }`
@@ -195,13 +195,13 @@ Purpose:
 
 - report every finite usage metric attached to the bearer credential
 - expose daily Plugin Server operation and monthly provider/source capacity independently
-- allow Lynvo to render authoritative usage without owning third-party accounting
+- allow Lynvo to render reported usage without owning third-party accounting
 
 Auth:
 
 - `Authorization: Bearer <apiKey>`
 
-## Manifest Schema
+## Manifest schema
 
 ```json
 {
@@ -236,7 +236,7 @@ Auth:
 }
 ```
 
-### Manifest Field Rules
+### Manifest field rules
 
 - `protocolVersion`: required string in `MAJOR.MINOR` form. A manifest is
   wire-compatible when its major version matches the protocol major Lynvo
@@ -277,10 +277,10 @@ state, or another runtime condition. Lynvo displays this text in the Plugin
 info tooltip.
 The Lynvo extension may also declare `proxyProvider: "scrape-do"` when the
 Plugin Server accepts a user-supplied Scrape.do token per extract request and
-uses it for that request's proxy calls; Lynvo only offers the proxy-key field
+uses it for that request's proxy calls; Lynvo only shows the proxy-key field
 for servers that declare it.
 
-## Usage Response
+## Usage response
 
 ```json
 {
@@ -304,7 +304,7 @@ timestamp. Source-specific metrics include `pluginId`. Plugin Servers must enfor
 reported limits and return `RATE_LIMITED` from `/extract` when capacity is
 exhausted.
 
-### Matcher Rules
+### Matcher rules
 
 Lynvo should rank matches using:
 
@@ -322,7 +322,7 @@ Each matcher may contain:
 - `pathPatterns`: optional path constraints
 - `schemes`: optional, default `["https"]`
 
-## Verify Request
+## Verify request
 
 ```json
 {}
@@ -330,7 +330,7 @@ Each matcher may contain:
 
 v1 does not require any JSON fields in the verify body. The API key in the `Authorization` header is the primary input.
 
-## Verify Success Response
+## Verify success response
 
 ```json
 {
@@ -338,7 +338,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-## Verify Error Response
+## Verify error response
 
 ```json
 {
@@ -350,9 +350,9 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-## Extract Request Schema
+## Extract request schema
 
-### Source Extraction
+### Source extraction
 
 ```json
 {
@@ -363,7 +363,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-### Lazy Node Follow-up
+### Lazy node follow-up
 
 ```json
 {
@@ -374,7 +374,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-### Password Retry
+### Password retry
 
 ```json
 {
@@ -386,7 +386,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-### Extract Request Rules
+### Extract request rules
 
 - `input.kind` is required.
 - `input.kind = "source"` requires `sourceUrl`.
@@ -399,7 +399,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - The Plugin Server bearer token authenticates Lynvo to the Plugin Server; `basicAuth` authenticates the Plugin Server to the source. They are separate credentials.
 - Lynvo should not send the original top-level source URL on lazy follow-up requests.
 
-## Deferred Extraction
+## Deferred extraction
 
 Some sources complete work asynchronously (deferred downloads, poll-based
 mirrors) and cannot finish inside one request. Instead of holding the
@@ -422,17 +422,17 @@ request open, a Plugin Server returns a success response with empty
 - A pending response is not an error and not an empty success; clients that
   cannot defer must map it to `TEMPORARY_FAILURE` with the given retry hint.
 - Servers must eventually resolve a retry into nodes or an error; clients
-  may cap the number of pending cycles and surface a failure past the cap.
+  may cap the number of pending cycles and show a failure past the cap.
 
-### Usage Deltas
+### Usage deltas
 
 Extract success responses may carry `usageDelta`: an array of
 `{ id, used, unit? }` entries reporting the units this specific extraction
 consumed, with `id` matching the server's `/usage` metric ids. Clients can
 use it to update displayed allowances without polling `/usage`; it is
-advisory and never replaces the authoritative `/usage` response.
+advisory and never replaces the `/usage` response used for the actual allowance.
 
-### Per-Node Extensions
+### Per-node extensions
 
 Every Media Node accepts an optional `extensions` object with the same
 rules as the response-level `extensions`: vendor-scoped, additive data that
@@ -440,7 +440,7 @@ clients must ignore when they do not understand it. New node-level facts
 (sponsors, languages, subtitles) belong there rather than in new top-level
 node fields.
 
-## Extract Success Response Schema
+## Extract success response schema
 
 ```json
 {
@@ -483,7 +483,7 @@ node fields.
 }
 ```
 
-### Playable Result Example
+### Playable result example
 
 ```json
 {
@@ -511,16 +511,16 @@ node fields.
 }
 ```
 
-## Node Schema
+## Node schema
 
-### Shared Fields
+### Shared fields
 
 - `id`: optional but recommended stable identifier
 - `label`: required
 - `badge`: optional
 - `size`: optional human-readable size
 
-### Group Node
+### Group node
 
 ```json
 {
@@ -539,7 +539,7 @@ Rules:
 - `url` and `nodeUrl` are not used.
 - `selectable` is allowed for folder selection flows.
 
-### Resolvable Node
+### Resolvable node
 
 ```json
 {
@@ -562,7 +562,7 @@ Rules:
   for alternative playable routes; omission remains backward-compatible and is
   interpreted as `mirrors` by Lynvo
 
-### Playable Node
+### Playable node
 
 ```json
 {
@@ -583,7 +583,7 @@ Rules:
 - Lynvo renders these as final playable actions
 - Plugin Server returns data only; Lynvo owns presentation
 
-## Error Response Schema
+## Error response schema
 
 ```json
 {
@@ -597,7 +597,7 @@ Rules:
 }
 ```
 
-## Standard Error Codes
+## Standard error codes
 
 - `UNSUPPORTED_URL`
 - `AUTH_INVALID`
@@ -611,13 +611,13 @@ Rules:
 - `PROTOCOL_MISMATCH`
 - `BAD_REQUEST`
 
-### Error Handling Rules
+### Error handling rules
 
 - Lynvo should map the error code to a user-friendly message.
 - Lynvo may also show the Plugin Server error code and raw Plugin Server message as secondary debug detail.
 - Plugin Server error strings must not be the primary UX contract.
 
-## Validation Rules
+## Validation rules
 
 Lynvo should validate:
 
@@ -633,7 +633,7 @@ Validation policy:
 - optional custom data must live under `extensions`
 - Plugin Servers must not attach meaning to unknown fields they receive
 
-### HTTP Status Mapping
+### HTTP status mapping
 
 Protocol error codes map to HTTP statuses on every endpoint. Lynvo prefers
 the response body's `code` over the HTTP status when classifying failures.
@@ -653,11 +653,11 @@ the response body's `code` over the HTTP status when classifying failures.
 | `PROTOCOL_MISMATCH`  | 500  |
 
 A `RATE_LIMITED` response should include `error.retryAfterSeconds` and a
-`Retry-After` header so clients can back off to the reset boundary. Extract
+`Retry-After` header so clients can wait until the limit resets. Extract
 implementations signal these failures by throwing the packaged
 `ProtocolError`, which the runtime maps to this table.
 
-## Registration Flow
+## Registration flow
 
 1. User enters Plugin Server base URL and API key.
 2. Lynvo fetches `GET /manifest`.
@@ -665,14 +665,14 @@ implementations signal these failures by throwing the packaged
 4. Lynvo calls `POST /verify` with `Authorization: Bearer <apiKey>`.
 5. Lynvo saves the Plugin Server only if both steps succeed.
 
-## Refresh Flow
+## Refresh flow
 
 - Lynvo should support manual refresh from settings.
 - Lynvo should also refresh manifests automatically in the background.
 - If a refreshed manifest remains protocol-compatible, Lynvo should apply it automatically and record the change.
 - If the refreshed manifest is protocol-incompatible, Lynvo should disable or mark the Plugin Server unsupported.
 
-## Storage Model Inside Lynvo
+## Storage model inside Lynvo
 
 For each Custom Plugin Server entry, Lynvo should persist:
 
@@ -694,7 +694,7 @@ For each saved extracted item, Lynvo should persist:
   records that an item was opened; Lynvo does not persist playback positions
   or resume state.
 
-## Operational Guidance
+## Operational guidance
 
 The protocol intentionally does not define fixed timeout numbers.
 
@@ -706,7 +706,7 @@ Cloudflare Workers constraints and pricing plans change over time. Plugin Server
 
 Lynvo deployments may still enforce their own operational request budgets.
 
-## Non-Goals
+## Non-goals
 
 - browser-to-Plugin Server direct calls
 - UI instructions from Plugin Servers

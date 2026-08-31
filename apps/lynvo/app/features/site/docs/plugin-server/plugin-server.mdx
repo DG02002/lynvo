@@ -1,6 +1,6 @@
 ---
-title: Build a Custom Plugin Server
-description: Follow the guides for building and connecting a Lynvo-compatible Custom Plugin Server.
+title: Build a custom Plugin Server
+description: Build and connect a Lynvo-compatible Custom Plugin Server.
 navLabel: Plugin Server
 contentType: Landing
 ---
@@ -26,7 +26,9 @@ import Connect from "./connect.mdx"
 
 <DocSection id="quickstart">
 
-Create a Cloudflare Worker from the published starter, replace its example Plugin, and connect the deployed server to Lynvo. This guide covers the complete process from the core concepts through deployment.
+Start with the published Cloudflare Worker template. Replace its example
+Plugin, deploy the Worker, and connect it to Lynvo. This guide starts with the
+core concepts and ends with deployment.
 
 </DocSection>
 
@@ -34,7 +36,9 @@ Create a Cloudflare Worker from the published starter, replace its example Plugi
 
 ## What is a Custom Plugin Server?
 
-A Custom Plugin Server is your deployed service between Lynvo and the Sources you support. It authenticates Lynvo, runs your Plugins, enforces usage limits, and returns Media Nodes that Lynvo can display or play.
+A Custom Plugin Server is the deployed service between Lynvo and the Sources
+you support. It authenticates Lynvo, runs your Plugins, enforces usage limits,
+and returns Media Nodes that Lynvo can display or play.
 
 <WhatIsAPluginServer components={props.components} />
 
@@ -58,7 +62,7 @@ Use the published starter for the protocol shell, then ask a coding agent to rep
 
 ## Create a Plugin Server manually
 
-Follow the manual path when you want to understand or control each part of the implementation.
+Use the manual path when you want to control each part of the implementation.
 
 ### Prepare your development environment
 
@@ -86,7 +90,8 @@ Follow the manual path when you want to understand or control each part of the i
 
 ## Build a Plugin and return Media Nodes
 
-A Plugin recognizes one Source and converts its data into 4 product-level node types: direct media, container, folder, and lazy folder.
+A Plugin recognizes one Source and converts its data into four product-level
+node types: direct media, container, folder, and lazy folder.
 
 ### Add a Source Plugin
 
@@ -96,7 +101,7 @@ A Plugin recognizes one Source and converts its data into 4 product-level node t
 
 <DocSection id="media-node-types">
 
-## Choose among the 4 node types
+## Choose among the four node types
 
 <MediaNodes components={props.components} />
 

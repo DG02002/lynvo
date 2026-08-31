@@ -1,8 +1,9 @@
-# How Lynvo Consumes Plugin Server Metadata
+# How Lynvo consumes Plugin Server metadata
 
-Lynvo treats every out-of-process integration as a Plugin Server that publishes metadata
-through the protocol. It may be the Lynvo Plugin Server reached through a private Service Binding or a
-Custom Plugin Server reached through HTTPS.
+Lynvo treats every out-of-process integration as a Plugin Server that publishes
+metadata through the protocol. The integration may be the Lynvo Plugin Server
+reached through a private Service Binding or a Custom Plugin Server reached
+through HTTPS.
 
 ```mermaid
 flowchart LR
@@ -15,11 +16,11 @@ flowchart LR
   G --> H["Saved link displays source identity"]
 ```
 
-## Manifest Metadata
+## Manifest metadata
 
-The validated manifest is Lynvo's source of Plugin Server identity. Custom Plugin Server
-manifests are stored at registration; the managed Lynvo Plugin Server manifest is resolved
-through the binding and reused within the request.
+Lynvo uses the validated manifest to identify a Plugin Server. Lynvo stores
+Custom Plugin Server manifests at registration. It resolves the managed Lynvo
+Plugin Server manifest through the binding and reuses it for the request.
 
 Lynvo reads:
 
@@ -27,16 +28,16 @@ Lynvo reads:
 - Plugin `id`, `displayName`, `iconUrl`, `status`, `version`
 - Plugin `hosts` and `matchers`
 
-This powers:
+Lynvo uses this data for:
 
 - the Custom Plugin Server settings table
 - source-aware URL preview
 - saved-link source labels and icons
 
-## Extraction Metadata
+## Extraction metadata
 
-`POST /extract` may return source metadata too, but it is enrichment data. It
-should not be required to repeat everything from the manifest.
+`POST /extract` may return source metadata too, but that data supplements the
+manifest. The response does not need to repeat every manifest field.
 
 Lynvo merges metadata defensively:
 
@@ -44,9 +45,8 @@ Lynvo merges metadata defensively:
 - extraction metadata can add page-level details like `pageTitle` or `audio`
 - undefined extraction fields do not erase known manifest fields
 
-## Boundary Rule
+## Boundary rule
 
-If a new Custom Plugin Server supports a new Source, Lynvo should not add a
-Source-specific branch for it. The Plugin Server should publish its Plugin under
-`extensions.lynvo.plugins`, and Lynvo should continue rendering the generic
-metadata contract.
+When a Custom Plugin Server adds a Source, Lynvo does not add a Source-specific
+branch. The Plugin Server publishes its Plugin under
+`extensions.lynvo.plugins`, and Lynvo renders the same metadata contract.
