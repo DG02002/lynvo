@@ -95,13 +95,9 @@ export const useFinderBrowserState = ({
     [item]
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)
-  const [folderPath, setFolderPath] = useState<FolderLevel[]>(() => {
-    const restoredFolderPath = restoreFolderPath(item.id, itemRootLinks)
-    if (restoredFolderPath.length > 0) {
-      return restoredFolderPath
-    }
-    return getSingleFolderDescendPath(itemRootLinks)
-  })
+  const [folderPath, setFolderPath] = useState<FolderLevel[]>(() =>
+    getSingleFolderDescendPath(itemRootLinks)
+  )
   const [forwardFolderPaths, setForwardFolderPaths] = useState<FolderLevel[][]>(
     []
   )
@@ -112,6 +108,20 @@ export const useFinderBrowserState = ({
   )
   const currentFolderKey = folderPath.at(-1)?.id ?? item.url
   const previousRootLinksLengthRef = useRef(itemRootLinks.length)
+  const didRestoreFolderPathRef = useRef(false)
+
+  // sessionStorage is client-only, so restoring during the initial render
+  // desynchronizes SSR HTML from the hydrated tree.
+  useEffect(() => {
+    if (didRestoreFolderPathRef.current) {
+      return
+    }
+    didRestoreFolderPathRef.current = true
+    const restoredFolderPath = restoreFolderPath(item.id, itemRootLinks)
+    if (restoredFolderPath.length > 0) {
+      setFolderPath(restoredFolderPath)
+    }
+  }, [item.id, itemRootLinks])
 
   useEffect(() => {
     const didRootLinksPopulate =

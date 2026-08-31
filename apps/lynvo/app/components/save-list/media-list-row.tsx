@@ -3,6 +3,7 @@ import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 import {
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
+  MEDIA_LIST_ROW_META_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
 
@@ -116,16 +117,23 @@ export const MediaListRow = ({
           )}
         >
           {icon}
-          <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
-            <span className="flex min-w-0 items-center gap-3">
-              <span className="min-w-0 flex-1">{title}</span>
-              {overlay && (
-                <span className="pointer-events-auto -me-1 shrink-0 md:hidden">
-                  {overlay}
-                </span>
+          <span className="flex min-w-0 flex-1 items-start md:items-center">
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              {title}
+              {meta && (
+                <span className={MEDIA_LIST_ROW_META_CLASS}>{meta}</span>
               )}
             </span>
-            {meta}
+            {overlay && (
+              <span
+                className={cn(
+                  "pointer-events-auto -me-3 flex shrink-0 self-stretch items-center justify-center md:hidden",
+                  MEDIA_LIST_ROW_MENU_CELL_CLASS
+                )}
+              >
+                {overlay}
+              </span>
+            )}
           </span>
           {trailing}
         </div>
@@ -170,7 +178,7 @@ export const MediaListRow = ({
         {icon}
         <span className="flex min-w-0 flex-1 flex-col justify-center gap-1">
           {title}
-          {meta}
+          {meta && <span className={MEDIA_LIST_ROW_META_CLASS}>{meta}</span>}
         </span>
         {trailing}
       </button>

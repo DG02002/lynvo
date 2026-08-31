@@ -547,20 +547,13 @@ const FinderBrowserLinkRow = ({
             size={link.size}
           />
           {!isFolder && link.expiry !== undefined && (
-            <span className="flex justify-end text-xs text-muted-foreground">
-              <PlayableExpiryBadge
-                expiresAt={link.expiry}
-                expirySource={link.expirySource}
-              />
-            </span>
+            <PlayableExpiryBadge
+              expiresAt={link.expiry}
+              expirySource={link.expirySource}
+            />
           )}
-          {!link.opened && !isExpired && <NewBadge className="md:hidden" />}
+          {!link.opened && !isExpired && <NewBadge className="ml-auto" />}
         </>
-      }
-      trailing={
-        !link.opened && !isExpired ? (
-          <NewBadge className="hidden md:inline-flex" />
-        ) : undefined
       }
       overlay={
         !isResolving && linkTarget !== undefined ? (

@@ -184,13 +184,8 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
-          {shouldShowNewBadge && <NewBadge className="md:hidden" />}
+          {shouldShowNewBadge && <NewBadge className="ml-auto" />}
         </>
-      }
-      trailing={
-        shouldShowNewBadge ? (
-          <NewBadge className="hidden md:inline-flex" />
-        ) : undefined
       }
       overlay={
         <LinkItemMenu
