@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AlertCircleIcon,
   Delete02Icon,
+  Folder01Icon,
   SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
@@ -12,9 +13,15 @@ import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-li
 import { Spinner } from "~/components/spinner"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type {
+  ExtractedLink,
+  LinkExtractionStatus,
+  LinkListItem,
+} from "~/features/links/types"
 import { getHybridCardGroupSections } from "~/features/links/media-artwork/hybrid-card-grouping"
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
+import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import { cn } from "~/lib/utils"
 import { useLongPress } from "~/hooks/use-long-press"
 import { SaveExtractionStatus } from "./extraction-status"
@@ -51,6 +58,7 @@ interface HybridSaveCardArtworkProps {
   readonly isArtworkPending: boolean
   readonly isExtractionVisual: boolean
   readonly isExtractionFailed: boolean
+  readonly isFolderContainer: boolean
   readonly onDelete: () => void
   readonly onOpenLog: () => void
 }
@@ -62,6 +70,7 @@ const HybridSaveCardArtwork = ({
   isArtworkPending,
   isExtractionVisual,
   isExtractionFailed,
+  isFolderContainer,
   onDelete,
   onOpenLog,
 }: HybridSaveCardArtworkProps) => {
@@ -120,11 +129,69 @@ const HybridSaveCardArtwork = ({
     )
   }
 
+  if (isFolderContainer) {
+    return (
+      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
+        <HugeiconsIcon
+          icon={Folder01Icon}
+          aria-hidden="true"
+          className="size-16 text-muted-foreground"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
       No poster found
     </div>
   )
+}
+
+interface HybridCardSingleItemState {
+  readonly item: LinkListItem | undefined
+  readonly isSingleItem: boolean
+  readonly directLink: ExtractedLink | undefined
+  readonly isDirectLinkExpired: boolean
+  readonly extractionState: LinkExtractionStatus["state"]
+  readonly isExtracting: boolean
+  readonly isExtractionVisual: boolean
+  readonly isFolderContainer: boolean
+}
+
+const getHybridCardSingleItemState = (
+  group: HybridCardGroup,
+  extractingItems: Set<string>,
+  currentTimeMs: number
+): HybridCardSingleItemState => {
+  const [item] = group.items
+  const isSingleItem = group.items.length === 1 && item !== undefined
+  const interactionState = isSingleItem
+    ? getSavedLinkInteractionState(item, currentTimeMs)
+    : undefined
+  const directLink = interactionState?.directLink
+  const isExtracting =
+    isSingleItem && item ? extractingItems.has(item.url) : false
+  return {
+    item,
+    isSingleItem,
+    directLink,
+    isDirectLinkExpired: interactionState?.isDirectLinkExpired ?? false,
+    extractionState: isSingleItem
+      ? (item?.extractionStatus?.state ?? "complete")
+      : "complete",
+    isExtracting,
+    isExtractionVisual:
+      getExtractionStatusInput(
+        isSingleItem ? item : undefined,
+        isExtracting
+      ) !== "idle",
+    isFolderContainer:
+      isSingleItem &&
+      item !== undefined &&
+      directLink === undefined &&
+      getLinkViewItemExtractedLinks(item).length > 0,
+  }
 }
 
 const HybridSaveCard = ({
@@ -136,21 +203,16 @@ const HybridSaveCard = ({
   onOpenItem,
   onOpenGroup,
 }: HybridSaveCardProps) => {
-  const [item] = group.items
-  const isSingleItem = group.items.length === 1 && item !== undefined
-  const interactionState = isSingleItem
-    ? getSavedLinkInteractionState(item, currentTimeMs)
-    : undefined
-  const directLink = interactionState?.directLink
-  const isDirectLinkExpired = interactionState?.isDirectLinkExpired ?? false
-  const extractionState = isSingleItem
-    ? (item?.extractionStatus?.state ?? "complete")
-    : "complete"
-  const isExtracting =
-    isSingleItem && item ? extractingItems.has(item.url) : false
-  const isExtractionVisual =
-    getExtractionStatusInput(isSingleItem ? item : undefined, isExtracting) !==
-    "idle"
+  const {
+    item,
+    isSingleItem,
+    directLink,
+    isDirectLinkExpired,
+    extractionState,
+    isExtracting,
+    isExtractionVisual,
+    isFolderContainer,
+  } = getHybridCardSingleItemState(group, extractingItems, currentTimeMs)
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"
@@ -220,6 +282,7 @@ const HybridSaveCard = ({
           isArtworkPending={isArtworkPending}
           isExtractionVisual={isExtractionVisual}
           isExtractionFailed={isExtractionFailed}
+          isFolderContainer={isFolderContainer}
           onDelete={() => {
             if (item) {
               actions.remove(item.url, item.id)

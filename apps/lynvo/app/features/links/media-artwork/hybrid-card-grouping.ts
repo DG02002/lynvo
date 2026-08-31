@@ -117,36 +117,54 @@ const getHybridCardIdentity = (
   return undefined
 }
 
-const findConfidentDescendantIdentity = (
+const getHybridCardIdentityKey = (identity: HybridCardIdentity): string =>
+  `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
+
+// A wrapper may only borrow a descendant identity when every confidently
+// parsed descendant agrees; a listing spanning several titles or seasons is
+// a mixed folder and must keep its own name instead of posing as the first
+// descendant it contains.
+const collectConfidentDescendantIdentities = (
   nodes: readonly ExtractedLink[],
   parentFolderName?: string
-): HybridCardIdentity | undefined => {
-  for (const node of nodes) {
-    const nodeLabel = node.label?.trim()
-    const children = node.children ?? []
-    if (nodeLabel) {
-      const identity = getHybridCardIdentity(nodeLabel, parentFolderName, {
-        requireConfidentParse: true,
-      })
-      if (identity && (identity.mediaKind === "tv" || children.length === 0)) {
-        return identity
+): Map<string, HybridCardIdentity> => {
+  const identitiesByKey = new Map<string, HybridCardIdentity>()
+  const visitNodes = (
+    childNodes: readonly ExtractedLink[],
+    childParentFolderName?: string
+  ) => {
+    for (const node of childNodes) {
+      if (identitiesByKey.size > 1) {
+        return
       }
-    }
-    if (children.length === 0) {
-      continue
-    }
-    const childFolderName = [parentFolderName, nodeLabel]
-      .filter((value): value is string => Boolean(value))
-      .join(" ")
-    const descendantIdentity = findConfidentDescendantIdentity(
-      children,
-      childFolderName
-    )
-    if (descendantIdentity) {
-      return descendantIdentity
+      const nodeLabel = node.label?.trim()
+      const children = node.children ?? []
+      if (nodeLabel) {
+        const identity = getHybridCardIdentity(
+          nodeLabel,
+          childParentFolderName,
+          {
+            requireConfidentParse: true,
+          }
+        )
+        if (
+          identity &&
+          (identity.mediaKind === "tv" || children.length === 0)
+        ) {
+          identitiesByKey.set(getHybridCardIdentityKey(identity), identity)
+        }
+      }
+      if (children.length === 0) {
+        continue
+      }
+      const childFolderName = [childParentFolderName, nodeLabel]
+        .filter((value): value is string => Boolean(value))
+        .join(" ")
+      visitNodes(children, childFolderName)
     }
   }
-  return undefined
+  visitNodes(nodes, parentFolderName)
+  return identitiesByKey
 }
 
 const getHybridItemIdentity = (
@@ -155,7 +173,12 @@ const getHybridItemIdentity = (
 ): HybridCardIdentity | undefined => {
   const extractedLinks = getLinkViewItemExtractedLinks(item)
   if (extractedLinks.length > 0) {
-    const descendantIdentity = findConfidentDescendantIdentity(extractedLinks)
+    const descendantIdentities =
+      collectConfidentDescendantIdentities(extractedLinks)
+    if (descendantIdentities.size > 1) {
+      return undefined
+    }
+    const [descendantIdentity] = descendantIdentities.values()
     if (descendantIdentity) {
       const itemIdentity = getHybridCardIdentity(itemLabel)
       if (

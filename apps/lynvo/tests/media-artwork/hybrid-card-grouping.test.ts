@@ -308,6 +308,127 @@ describe("getHybridCardGroups", () => {
     })
   })
 
+  it("keeps a mixed folder as its own card titled by the folder name", () => {
+    const groups = getHybridCardGroups([
+      {
+        ...createItem(
+          "https://example.com/oya-team-2026/",
+          "OYA-TEAM 2026",
+          2_000
+        ),
+        metadata: {
+          schemaVersion: 3,
+          source: {},
+          extraction: {
+            extractedLinks: [
+              {
+                nodeKey: "0:resolvable:dangers",
+                url: "https://example.com/dangers",
+                label:
+                  "[ToonsHub].The.Dangers.in.My.Heart.S02.1080p.AMZN.WEB-DL.DDP2.0.H.264.Dual.Audio.English-Sub.[BATCH].zip",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+              {
+                nodeKey: "1:resolvable:antman",
+                url: "https://example.com/antman",
+                label:
+                  "Ant-Man.and.the.Wasp.2018.1080p.BluRay.x265.HEVC.10bit.AAC.7.1.Tigole.mkv",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+              {
+                nodeKey: "2:group:mentalist-s03",
+                label:
+                  "The Mentalist (2008) Season 3 S03 (1080p AMZN WEB-DL x265 HEVC 10bit EAC3 6.0 RZeroX) [QxR]",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    nodeKey: "2.0:resolvable:s03e01",
+                    url: "https://example.com/s03e01",
+                    label:
+                      "The Mentalist (2008) - S03E01 - Red Sky at Night (1080p AMZN WEB-DL x265 RZeroX).mkv",
+                    type: "file",
+                    mediaNodeKind: "resolvable",
+                  },
+                ],
+              },
+              {
+                nodeKey: "3:group:tigers",
+                label: "tigers",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [],
+              },
+            ],
+          },
+          playback: { openedUrls: [] },
+        },
+      },
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.displayTitle).toBe("OYA-TEAM 2026")
+    expect(groups[0]?.artworkRequest).toBeUndefined()
+    expect(groups[0]?.items).toHaveLength(1)
+  })
+
+  it("keeps multi-season containers as folder cards", () => {
+    const groups = getHybridCardGroups([
+      {
+        ...createItem(
+          "https://example.com/mentalist-complete/",
+          "The Mentalist Complete",
+          2_000
+        ),
+        metadata: {
+          schemaVersion: 3,
+          source: {},
+          extraction: {
+            extractedLinks: [
+              {
+                nodeKey: "0:group:s02",
+                label: "The Mentalist Season 2 S02",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    nodeKey: "0.0:resolvable:e1",
+                    url: "https://example.com/s02e01",
+                    label: "The.Mentalist.S02E01.1080p.mkv",
+                    type: "file",
+                    mediaNodeKind: "resolvable",
+                  },
+                ],
+              },
+              {
+                nodeKey: "1:group:s03",
+                label: "The Mentalist Season 3 S03",
+                type: "folder",
+                mediaNodeKind: "group",
+                children: [
+                  {
+                    nodeKey: "1.0:resolvable:e1",
+                    url: "https://example.com/s03e01",
+                    label: "The.Mentalist.S03E01.1080p.mkv",
+                    type: "file",
+                    mediaNodeKind: "resolvable",
+                  },
+                ],
+              },
+            ],
+          },
+          playback: { openedUrls: [] },
+        },
+      },
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.displayTitle).toBe("The Mentalist Complete")
+    expect(groups[0]?.artworkRequest).toBeUndefined()
+  })
+
   it("keeps the saved title year when extracted episodes identify a show", () => {
     const groups = getHybridCardGroups([
       {
