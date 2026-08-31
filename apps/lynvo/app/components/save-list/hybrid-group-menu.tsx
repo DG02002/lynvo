@@ -7,28 +7,22 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { formatItemCount } from "~/lib/format-item-count"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { FolderTitleDisplayToggleMenuItem } from "./save-list-header-controls"
 import { MEDIA_LIST_ROW_MENU_TRIGGER_CLASS } from "./media-list-row-constants"
 
 interface HybridGroupMenuProps {
   readonly group: HybridCardGroup
   readonly actions: LinkItemActions
-  readonly titleDisplay: FolderTitleDisplay
-  readonly onToggleTitleDisplay: () => void
   readonly onExit: () => void
 }
 
 export const HybridGroupMenu = ({
   group,
   actions,
-  titleDisplay,
-  onToggleTitleDisplay,
   onExit,
 }: HybridGroupMenuProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -60,13 +54,6 @@ export const HybridGroupMenu = ({
           }
         />
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuGroup>
-            <FolderTitleDisplayToggleMenuItem
-              titleDisplay={titleDisplay}
-              onToggle={onToggleTitleDisplay}
-            />
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem
               variant="destructive"

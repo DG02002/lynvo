@@ -113,6 +113,7 @@ const wrappedSeasonItem: LinkViewItem = {
           id: "wQbRWuzsoAF+I/pDt+v482JXM4hxqzdeWIC3p0CMHYgcKgF/fpGoSCPX4Z/tGj1M",
           type: "folder",
           mediaNodeKind: "resolvable",
+          childrenResolved: true,
           children: [
             {
               nodeKey:
@@ -194,10 +195,10 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]"
     )
-    expect(headerMenu.parentElement).toHaveClass("md:col-start-4")
+    expect(headerMenu.parentElement).toHaveClass("col-start-4")
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
   })
 
@@ -250,7 +251,7 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
       "lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
     )
@@ -289,7 +290,7 @@ describe("FinderBrowser episode rows", () => {
     expect(
       screen.getByRole("heading", { name: "Sample Series Name S01" })
     ).toBeInTheDocument()
-    expect(screen.getByText("No poster found")).toBeInTheDocument()
+    expect(await screen.findByText("No poster found")).toBeInTheDocument()
     expect(
       view.container.querySelector(".save-list-group-artwork-frame")
     ).toBeInTheDocument()
@@ -366,6 +367,68 @@ describe("FinderBrowser episode rows", () => {
 
     expect(
       screen.getByRole("heading", { name: "Sample Series Name S01" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("switch", { name: "Episode names" })
+    ).toBeInTheDocument()
+  })
+
+  it("descends once a lazy wrapper resolves after the page opens", async () => {
+    const lazyWrapperItem: LinkViewItem = {
+      ...wrappedSeasonItem,
+      metadata: {
+        ...wrappedSeasonItem.metadata,
+        extraction: {
+          ...wrappedSeasonItem.metadata.extraction,
+          extractedLinks: [
+            {
+              nodeKey:
+                "0:resolvable:wQbRWuzsoAF+I/pDt+v482JXM4hxqzdeWIC3p0CMHYgcKgF/fpGoSCPX4Z/tGj1M",
+              nodeUrl:
+                "https://media.example/wrapped-season/Stranger.Things.S05.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW/",
+              label:
+                "Stranger.Things.S05.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW",
+              id: "wQbRWuzsoAF+I/pDt+v482JXM4hxqzdeWIC3p0CMHYgcKgF/fpGoSCPX4Z/tGj1M",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+      },
+    }
+    const resolvedWrapperItem = wrappedSeasonItem
+
+    const view = render(
+      <SaveListBrowser
+        items={[lazyWrapperItem]}
+        selectedItemUrl={lazyWrapperItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+    expect(
+      screen.queryByRole("heading", { name: "Stranger Things S05" })
+    ).not.toBeInTheDocument()
+
+    view.rerender(
+      <SaveListBrowser
+        items={[resolvedWrapperItem]}
+        selectedItemUrl={resolvedWrapperItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Stranger Things S05" })
     ).toBeInTheDocument()
     expect(
       screen.getByRole("switch", { name: "Episode names" })

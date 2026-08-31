@@ -11,7 +11,7 @@ export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 // the menu cell must pin itself to the trailing column to stay right-aligned
 // when no toggle is rendered.
 export const MEDIA_LIST_HEADER_MENU_CELL_CLASS = cn(
-  "flex self-stretch items-center justify-center md:col-start-4",
+  "flex self-stretch items-center justify-center col-start-4",
   MEDIA_LIST_ROW_MENU_CELL_CLASS
 )
 

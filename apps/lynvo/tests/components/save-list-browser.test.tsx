@@ -99,7 +99,7 @@ describe("SaveListBrowser", () => {
     expect(headerMenu.parentElement).not.toHaveClass("border-s")
     expect(headerMenu.closest("header")).toHaveClass(
       "grid",
-      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
       "items-stretch",
       "p-0"

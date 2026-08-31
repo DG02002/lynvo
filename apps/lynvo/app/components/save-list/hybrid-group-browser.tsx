@@ -273,7 +273,7 @@ export const HybridGroupBrowser = ({
           </h1>
         </div>
         {shouldShowEpisodeStills ? (
-          <div className="hidden items-center justify-center md:flex">
+          <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton
               titleDisplay={titleDisplay}
               onToggle={toggleTitleDisplay}
@@ -281,13 +281,7 @@ export const HybridGroupBrowser = ({
           </div>
         ) : null}
         <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
-          <HybridGroupMenu
-            group={group}
-            actions={actions}
-            titleDisplay={titleDisplay}
-            onToggleTitleDisplay={toggleTitleDisplay}
-            onExit={onExit}
-          />
+          <HybridGroupMenu group={group} actions={actions} onExit={onExit} />
         </div>
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>

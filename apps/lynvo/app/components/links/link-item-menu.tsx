@@ -47,7 +47,6 @@ interface LinkItemMenuProps {
   triggerClassName?: string
   menuOpen?: boolean
   onMenuOpenChange?: (open: boolean) => void
-  menuLeadingContent?: React.ReactNode
 }
 
 const LinkItemMenuContent = ({
@@ -61,7 +60,6 @@ const LinkItemMenuContent = ({
   triggerClassName,
   menuOpen,
   onMenuOpenChange,
-  menuLeadingContent,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
@@ -132,9 +130,6 @@ const LinkItemMenuContent = ({
           }
         />
         <DropdownMenuContent align="end" className="w-48">
-          {menuLeadingContent && (
-            <DropdownMenuGroup>{menuLeadingContent}</DropdownMenuGroup>
-          )}
           <>
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={handleCopyLink}>

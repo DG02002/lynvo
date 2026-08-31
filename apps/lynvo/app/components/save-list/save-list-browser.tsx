@@ -89,7 +89,6 @@ import {
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 import {
   FolderTitleDisplayToggleButton,
-  FolderTitleDisplayToggleMenuItem,
   SaveListBackButton,
 } from "./save-list-header-controls"
 
@@ -721,7 +720,7 @@ const FinderBrowser = ({
           </h1>
         </div>
         {shouldShowEpisodeStills ? (
-          <div className="hidden items-center justify-center md:flex">
+          <div className="flex items-center justify-center px-1 md:px-0">
             <FolderTitleDisplayToggleButton
               titleDisplay={titleDisplay}
               onToggle={toggleTitleDisplay}
@@ -736,14 +735,6 @@ const FinderBrowser = ({
             onRemoved={onExit}
             isRefreshing={extractingItems.has(item.url)}
             triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
-            menuLeadingContent={
-              shouldShowEpisodeStills ? (
-                <FolderTitleDisplayToggleMenuItem
-                  titleDisplay={titleDisplay}
-                  onToggle={toggleTitleDisplay}
-                />
-              ) : undefined
-            }
           />
         </div>
       </header>
