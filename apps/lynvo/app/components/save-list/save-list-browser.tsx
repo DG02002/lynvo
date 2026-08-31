@@ -298,6 +298,7 @@ const FolderTree = ({
           >
             <button
               type="button"
+              aria-label={link.label}
               aria-current={isCurrent ? "page" : undefined}
               data-folder-state={getFolderVisualState(link, isInPath)}
               className={cn(
@@ -338,6 +339,7 @@ const FolderTree = ({
       <div className="group relative">
         <button
           type="button"
+          aria-label={rootLabel}
           aria-current={folderPath.length === 0 ? "page" : undefined}
           className={cn(
             "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",

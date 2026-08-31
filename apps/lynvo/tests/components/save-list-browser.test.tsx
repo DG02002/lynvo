@@ -122,10 +122,11 @@ describe("SaveListBrowser", () => {
       "size-6",
       "text-foreground"
     )
-    const seasonFolderButton = screen
-      .getAllByRole("button", { name: /^Season One/ })
-      .at(-1)
-    expect(seasonFolderButton?.querySelectorAll("svg")).toHaveLength(1)
+    const seasonFolderButton = screen.getByRole("button", {
+      name: "Season One",
+    })
+    expect(seasonFolderButton).toHaveAttribute("aria-current", "page")
+    expect(seasonFolderButton).toHaveAttribute("data-folder-state", "open")
     fireEvent.click(seasonFolderButton!)
     expect(await screen.findByText("Episode One")).toBeVisible()
 
@@ -389,7 +390,10 @@ describe("SaveListBrowser", () => {
     expect(folderButtons).toHaveLength(2)
     expect(
       folderButtons.every(
-        (button) => button.dataset.folderState === "lazy-closed"
+        (button) =>
+          button
+            .closest("[data-folder-state]")
+            ?.getAttribute("data-folder-state") === "lazy-closed"
       )
     ).toBe(true)
     fireEvent.click(folderButtons.at(-1)!)
@@ -455,7 +459,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getByText("Playable Item Alpha.mkv").closest("button")!
+      screen.getByRole("button", { name: "Playable Item Alpha.mkv" })
     )
 
     expect(markOpened).not.toHaveBeenCalled()
@@ -470,7 +474,7 @@ describe("SaveListBrowser", () => {
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
 
     fireEvent.click(
-      screen.getByText("Play from Source Route Alpha").closest("button")!
+      screen.getByRole("button", { name: "Play from Source Route Alpha" })
     )
     await waitFor(() =>
       expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
@@ -574,9 +578,9 @@ describe("SaveListBrowser", () => {
     }
 
     render(<Harness />)
-    const playableItemButton = screen
-      .getByText("Playable Item One")
-      .closest("button")!
+    const playableItemButton = screen.getByRole("button", {
+      name: "Playable Item One",
+    })
     fireEvent.click(playableItemButton)
 
     expect(
@@ -584,12 +588,14 @@ describe("SaveListBrowser", () => {
         name: "Loading playable links for Playable Item One…",
       })
     ).toBeVisible()
-    const resolvingSpinner = playableItemButton.querySelector(
+    const playableItemRow = playableItemButton.parentElement
+    const resolvingSpinner = playableItemRow?.querySelector(
       '[data-slot="spinner"]'
     )
+    expect(resolvingSpinner).toBeInTheDocument()
     expect(resolvingSpinner).toHaveClass("size-6")
     expect(resolvingSpinner?.parentElement).toHaveClass("size-10", "md:size-14")
-    expect(playableItemButton).toHaveAttribute(
+    expect(playableItemRow).toHaveAttribute(
       "data-resolution-state",
       "resolving"
     )
@@ -612,12 +618,8 @@ describe("SaveListBrowser", () => {
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
     expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
-    expect(playableItemButton).toHaveClass("bg-transparent")
-    expect(playableItemButton.parentElement).toHaveClass("bg-muted/60")
-    expect(playableItemButton).toHaveAttribute(
-      "data-resolution-state",
-      "expanded"
-    )
+    expect(playableItemButton).toHaveClass("bg-muted/60")
+    expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")
     expect(
       screen.getAllByRole("button", {
         name: /Open menu for Play from Source Route/,
@@ -636,7 +638,9 @@ describe("SaveListBrowser", () => {
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
     expect(screen.queryByText("1.2 GB")).not.toBeInTheDocument()
-    expect(playableItemButton.querySelectorAll("svg")).toHaveLength(1)
+    expect(
+      playableItemButton.nextElementSibling?.querySelectorAll("svg")
+    ).toHaveLength(1)
     expect(screen.queryByText("1.4 GB")).not.toBeInTheDocument()
     const mirrorGroup = screen
       .getByText("Play from Source Route Alpha")
@@ -666,7 +670,7 @@ describe("SaveListBrowser", () => {
     ).toBe(true)
 
     fireEvent.click(
-      screen.getByText("Play from Source Route Alpha").closest("button")!
+      screen.getByRole("button", { name: "Play from Source Route Alpha" })
     )
     await waitFor(() =>
       expect(markOpened).toHaveBeenCalledWith(
@@ -674,11 +678,6 @@ describe("SaveListBrowser", () => {
         "https://resolver-beta.example/playable-item-one"
       )
     )
-    expect(
-      screen.getByRole("button", {
-        name: "Open menu for Playable Item One",
-      }).parentElement
-    ).toHaveClass("bg-sky-500/15")
     expect(playableItemButton).toHaveClass("bg-sky-500/15")
 
     fireEvent.click(playableItemButton)
@@ -687,7 +686,7 @@ describe("SaveListBrowser", () => {
         screen.queryByText("Play from Source Route Alpha")
       ).not.toBeInTheDocument()
     })
-    expect(playableItemButton).toHaveAttribute(
+    expect(playableItemRow).toHaveAttribute(
       "data-resolution-state",
       "collapsed"
     )
@@ -736,13 +735,14 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const failedPlayableItemButton = screen
-      .getByText("Playable Item Resolution Failure")
-      .closest("button")!
+    const failedPlayableItemButton = screen.getByRole("button", {
+      name: "Playable Item Resolution Failure",
+    })
     fireEvent.click(failedPlayableItemButton)
 
+    const failedPlayableItemRow = failedPlayableItemButton.parentElement
     await waitFor(() => {
-      expect(failedPlayableItemButton).toHaveAttribute(
+      expect(failedPlayableItemRow).toHaveAttribute(
         "data-resolution-state",
         "failed"
       )
@@ -823,9 +823,9 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(
-      screen.getByRole("button", { name: /video.mp4/ }).parentElement
-    ).toHaveClass("bg-sky-500/15")
+    expect(screen.getByRole("button", { name: /video.mp4/ })).toHaveClass(
+      "bg-sky-500/15"
+    )
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")

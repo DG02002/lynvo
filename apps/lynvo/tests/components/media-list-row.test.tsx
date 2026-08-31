@@ -1,22 +1,38 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MediaListRow } from "~/components/save-list/media-list-row"
 
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+})
+
 describe("MediaListRow", () => {
-  it("renders icon, title, meta, and trailing slots inside the row button", () => {
+  it("renders icon, title, meta, and trailing slots beside the activation button", () => {
     render(
       <MediaListRow
+        label="Title text"
         icon={<span data-testid="row-icon" />}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         meta={<span>Meta text</span>}
         trailing={<span data-testid="row-trailing" />}
         onActivate={() => {}}
       />
     )
 
-    const rowButton = screen.getByRole("button")
-    expect(rowButton).toHaveTextContent("Title text")
-    expect(rowButton).toHaveTextContent("Meta text")
+    expect(
+      screen.getByRole("button", { name: "Title text" })
+    ).toBeInTheDocument()
+    expect(screen.getByText("Title text")).toBeVisible()
+    expect(screen.getByText("Meta text")).toBeVisible()
     expect(screen.getByTestId("row-icon")).toBeInTheDocument()
     expect(screen.getByTestId("row-trailing")).toBeInTheDocument()
   })
@@ -26,7 +42,7 @@ describe("MediaListRow", () => {
       <MediaListRow
         label="Open example"
         icon={null}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         onActivate={() => {}}
       />
     )
@@ -40,13 +56,14 @@ describe("MediaListRow", () => {
     const onActivate = vi.fn()
     render(
       <MediaListRow
+        label="Title text"
         icon={null}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         onActivate={onActivate}
       />
     )
 
-    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: "Title text" }))
     expect(onActivate).toHaveBeenCalledOnce()
   })
 
@@ -54,16 +71,18 @@ describe("MediaListRow", () => {
     const onActivate = vi.fn()
     render(
       <MediaListRow
+        label="Title text"
         icon={null}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         onActivate={onActivate}
         disabled
       />
     )
 
-    const rowButton = screen.getByRole("button")
+    const rowButton = screen.getByRole("button", { name: "Title text" })
     expect(rowButton).toBeDisabled()
-    expect(rowButton).toHaveClass("opacity-60", "cursor-not-allowed")
+    expect(rowButton).toHaveClass("cursor-not-allowed")
+    expect(rowButton.nextElementSibling).toHaveClass("opacity-60")
     fireEvent.click(rowButton)
     expect(onActivate).not.toHaveBeenCalled()
   })
@@ -71,21 +90,25 @@ describe("MediaListRow", () => {
   it("highlights opened rows", () => {
     render(
       <MediaListRow
+        label="Title text"
         icon={null}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         onActivate={() => {}}
         isOpened
       />
     )
 
-    expect(screen.getByRole("button")).toHaveClass("bg-sky-500/15")
+    expect(screen.getByRole("button", { name: "Title text" })).toHaveClass(
+      "bg-sky-500/15"
+    )
   })
 
   it("renders the overlay in a full-height trailing cell beside the button", () => {
     render(
       <MediaListRow
+        label="Title text"
         icon={null}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         onActivate={() => {}}
         overlay={<button type="button">Overlay action</button>}
       />
@@ -98,7 +121,7 @@ describe("MediaListRow", () => {
     expect(overlayAction.parentElement).toHaveClass("w-16", "text-foreground")
     expect(overlayAction.parentElement).not.toHaveClass("border-s")
     const rowButton = screen.getByRole("button", { name: "Title text" })
-    expect(rowButton).toHaveClass("flex-1")
+    expect(rowButton.nextElementSibling).toHaveClass("flex-1")
     expect(rowButton.parentElement.lastElementChild).toBe(
       overlayAction.parentElement
     )
@@ -107,8 +130,9 @@ describe("MediaListRow", () => {
   it("stacks the icon full width with the overlay beside the title on mobile", () => {
     render(
       <MediaListRow
+        label="Title text"
         icon={<span data-testid="row-icon" />}
-        title={<span>Title text</span>}
+        title={{ value: "Title text" }}
         meta={<span>Meta text</span>}
         onActivate={() => {}}
         overlay={<button type="button">Overlay action</button>}

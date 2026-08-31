@@ -127,6 +127,7 @@ const ResolvedMirrorRows = ({
             wrapperClassName="border-b-0"
             buttonClassName="group-hover:bg-muted/80"
             contentClassName="min-h-20 py-4"
+            label={mirror.label}
             icon={<SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>}
             title={{ value: mirror.label }}
             overlay={
@@ -221,6 +222,7 @@ export const ResolvableContainerRow = ({
       <MediaListRow
         wrapperClassName="border-b-0"
         isOpened={link.opened === true}
+        label={displayTitle ?? link.label}
         buttonClassName={cn(
           isExpanded && !link.opened && "bg-muted/60 group-hover:bg-muted/80",
           didResolutionFail && "bg-destructive/15 group-hover:bg-destructive/20"

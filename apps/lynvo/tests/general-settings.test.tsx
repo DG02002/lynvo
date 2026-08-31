@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { ThemeProvider } from "next-themes"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -51,7 +51,9 @@ describe("GeneralSettings", () => {
 
     fireEvent.click(autoSaveSwitch)
 
-    expect(autoSaveSwitch).not.toBeChecked()
-    expect(localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY)).toBe("false")
+    await waitFor(() => {
+      expect(autoSaveSwitch).not.toBeChecked()
+      expect(localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY)).toBe("false")
+    })
   })
 })
