@@ -11,7 +11,6 @@ import type {
 import {
   LINK_EXTRACTION_BATCH_SIZE,
   LINK_EXTRACTION_MAX_ATTEMPTS,
-  EMPTY_LINK_METADATA_JSON,
 } from "./constants"
 import {
   claimNextSavedLinkExtraction,
@@ -56,11 +55,9 @@ interface FailedExtractionInput extends SavedLinkExtractionExecutionContext {
 }
 
 const getSavedExtractionIdentity = (
-  metaJson: string | null
+  metaJson: string
 ): SavedExtractionIdentity => {
-  const metadata = parseCanonicalLinkMetadataJson(
-    metaJson ?? EMPTY_LINK_METADATA_JSON
-  )
+  const metadata = parseCanonicalLinkMetadataJson(metaJson)
   return Schema.decodeUnknownSync(savedExtractionIdentitySchema)(
     metadata.source
   )

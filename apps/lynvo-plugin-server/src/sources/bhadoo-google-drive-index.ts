@@ -8,8 +8,6 @@ import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   EXTRACTION_ELAPSED_TIME_LIMIT_MS,
   EXTRACTION_NODE_LIMIT,
-  LEGACY_RESPONSE_PREFIX_LENGTH,
-  LEGACY_RESPONSE_SUFFIX_LENGTH,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
 import type { PluginAdapterOptions } from "../plugin-catalog"
@@ -21,7 +19,6 @@ import { extractDirectMedia } from "./direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
-  readBoundedUpstreamText,
 } from "../upstream-response"
 import { Schema } from "effect"
 
@@ -118,21 +115,6 @@ export const createBhadooNodes = (
     return [node]
   })
 
-export const decodeLegacyBhadooResponse = (
-  encodedResponse: string
-): BhadooGoogleDriveListResponse => {
-  const reversedResponse = encodedResponse.split("").reverse().join("")
-  const base64Response = reversedResponse
-    .slice(LEGACY_RESPONSE_PREFIX_LENGTH)
-    .slice(0, -LEGACY_RESPONSE_SUFFIX_LENGTH)
-  const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
-    character.charCodeAt(0)
-  )
-  return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
-    JSON.parse(new TextDecoder().decode(responseBytes))
-  )
-}
-
 const createAuthorizationHeaders = (
   basicAuth?: HttpBasicAuth
 ): Record<string, string> =>
@@ -153,7 +135,7 @@ const requestBhadooPage = async (
 ): Promise<BhadooGoogleDriveListResponse> => {
   assertSafeUpstreamUrl(requestUrl.toString())
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const modernResponse = await fetchValidatedUpstream(requestUrl, {
+  const response = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authorizationHeaders },
     body: JSON.stringify({
@@ -162,30 +144,11 @@ const requestBhadooPage = async (
       page_index: pageIndex,
     }),
   })
-  if (modernResponse.ok) {
-    return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
-      await readBoundedUpstreamJson(modernResponse)
-    )
-  }
-
-  const legacyBody = new URLSearchParams({
-    password: "",
-    page_token: pageToken,
-    page_index: String(pageIndex),
-  })
-  const legacyResponse = await fetchValidatedUpstream(requestUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      ...authorizationHeaders,
-    },
-    body: legacyBody.toString(),
-  })
-  if (!legacyResponse.ok) {
+  if (!response.ok) {
     throw new Error("Bhadoo Index upstream request failed.")
   }
-  return decodeLegacyBhadooResponse(
-    await readBoundedUpstreamText(legacyResponse)
+  return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
+    await readBoundedUpstreamJson(response)
   )
 }
 

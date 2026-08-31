@@ -1,9 +1,13 @@
 import { PRIVATE_IPV4_PATTERNS } from "./constants"
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
 
 export const assertSafeUpstreamUrl = (value: string): URL => {
   const url = new URL(value)
   if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "Only http and https URLs are supported."
+    )
   }
 
   const hostname = url.hostname.toLowerCase()
@@ -19,7 +23,10 @@ export const assertSafeUpstreamUrl = (value: string): URL => {
     hostname.startsWith("fea") ||
     hostname.startsWith("feb")
   ) {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "Private and local network addresses are not supported."
+    )
   }
 
   return url

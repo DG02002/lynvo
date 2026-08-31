@@ -7,15 +7,10 @@ import type {
 import { getLinkSourceFields } from "./link-source-fields"
 import { stripOpenedFlags } from "./link-tree-metadata"
 import { linkMetadataSchema } from "./storage-schemas"
-import { Result, Schema } from "effect"
+import { Schema } from "effect"
 
-export const parseLinkMetadata = <Value>(metadata: Value): LinkMetadata => {
-  const stringResult = Schema.decodeUnknownResult(Schema.String)(metadata)
-  const parsed = Result.isSuccess(stringResult)
-    ? JSON.parse(stringResult.success)
-    : metadata
-  return Schema.decodeUnknownSync(linkMetadataSchema)(parsed)
-}
+export const parseLinkMetadata = (metadata: string): LinkMetadata =>
+  Schema.decodeUnknownSync(linkMetadataSchema)(JSON.parse(metadata))
 
 export const toFlatMeta = (metadata: LinkMetadata): MetaData => {
   const source = getLinkSourceFields(metadata)

@@ -13,7 +13,7 @@ declare global {
     id: string
     url: string
     title: string | null
-    metaJson: string | null
+    metaJson: string
     createdAt: number
     updatedAt: number
     extractionState?: LinkExtractionStatus["state"]
@@ -69,7 +69,7 @@ const savedLinkApiRecordSchema = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
   title: Schema.NullOr(Schema.String),
-  metaJson: Schema.NullOr(Schema.String),
+  metaJson: Schema.String,
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
   extractionState: Schema.optional(
@@ -199,7 +199,7 @@ export interface CreateOrUpdateSavedLinkInput {
   readonly operationId: string
   readonly url: string
   readonly title?: string | undefined
-  readonly meta?: string | undefined
+  readonly meta: string
   readonly extractionState?: "queued"
 }
 

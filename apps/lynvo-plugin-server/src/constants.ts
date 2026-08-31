@@ -16,8 +16,6 @@ export const BYTES_PER_KIBIBYTE = 1024
 export const FILE_SIZE_DECIMAL_PLACES = 2
 export const GOOGLE_DRIVE_FOLDER_MIME_TYPE =
   "application/vnd.google-apps.folder"
-export const LEGACY_RESPONSE_PREFIX_LENGTH = 24
-export const LEGACY_RESPONSE_SUFFIX_LENGTH = 20
 export const ONEDRIVE_FETCH_RETRIES = 3
 export const ONEDRIVE_FETCH_RETRY_DELAY_MS = 2_000
 export const UPSTREAM_TIMEOUT_MS = 10_000

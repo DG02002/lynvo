@@ -2,11 +2,9 @@ import type {
   ErrorCode,
   ExtractProtocolError,
   ExtractRequest,
-  ExtractedHttpBasicAuth,
   HttpBasicAuth,
   ProxyCredential,
 } from "./models.js"
-import { ERROR_CODES } from "./models.js"
 
 export const createProtocolError = (
   code: ErrorCode,
@@ -58,37 +56,3 @@ export const createNodeExtractRequest = (
     : withPassword
   return proxy ? { ...withBasicAuth, proxy } : withBasicAuth
 }
-
-export const extractHttpBasicAuth = (
-  sourceUrl: string
-): ExtractedHttpBasicAuth => {
-  const url = new URL(sourceUrl)
-  if (!url.username && !url.password) {
-    return { url: url.toString() }
-  }
-
-  const basicAuth = {
-    username: decodeURIComponent(url.username),
-    password: decodeURIComponent(url.password),
-  }
-  url.username = ""
-  url.password = ""
-  return { url: url.toString(), basicAuth }
-}
-
-export const applyHttpBasicAuth = (
-  sourceUrl: string,
-  basicAuth?: HttpBasicAuth
-): string => {
-  if (!basicAuth) {
-    return sourceUrl
-  }
-
-  const url = new URL(sourceUrl)
-  url.username = basicAuth.username
-  url.password = basicAuth.password
-  return url.toString()
-}
-
-export const isErrorCode = (code: string): code is ErrorCode =>
-  new Set<string>(ERROR_CODES).has(code)

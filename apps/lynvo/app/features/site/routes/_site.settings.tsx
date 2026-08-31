@@ -5,7 +5,6 @@ import {
   Key01Icon,
   PlayIcon,
   Plug02Icon,
-  RepairIcon,
   Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons"
@@ -62,7 +61,6 @@ const settingsTabs = [
   { value: "usage", label: "Usage", icon: Activity03Icon },
   { value: "storage", label: "Storage", icon: HardDriveIcon },
   { value: "player", label: "Player", icon: PlayIcon },
-  { value: "miscellaneous", label: "Miscellaneous", icon: RepairIcon },
 ] as const
 
 const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (

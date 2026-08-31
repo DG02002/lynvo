@@ -9,7 +9,6 @@ import type {
 import { parseCanonicalLinkMetadataJson } from "../../app/features/links/storage-schemas"
 import { getLinkTitle } from "../../app/features/links/use-links/link-items"
 import {
-  EMPTY_LINK_METADATA_JSON,
   LINK_EXTRACTION_LEASE_MS,
   LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS,
 } from "../constants"
@@ -34,7 +33,7 @@ export interface SavedLinkExtractionJob {
   id: string
   userId: string
   url: string
-  metaJson: string | null
+  metaJson: string
   title: string | null
   extractionAttempts: number
   leaseExpiresAt: number
@@ -51,7 +50,7 @@ export const enqueueSavedLinkExtraction = (
     operationId: string
     url: string
     title?: string | undefined
-    meta?: string | undefined
+    meta: string
     now: number
   }
 ) =>
@@ -343,9 +342,7 @@ export const settleSavedLinkExtraction = async (
     }
   }
 
-  const previousMetadata = parseCanonicalLinkMetadataJson(
-    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
-  )
+  const previousMetadata = parseCanonicalLinkMetadataJson(existingRow.meta_json)
   const nextRow = createSettledLinkRow({
     existingRow,
     previousMetadata,
@@ -453,9 +450,7 @@ export const requeuePendingSavedLinkExtraction = async (
       Math.max(input.retryAfterSeconds, 1),
       LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS
     ) * 1000
-  const previousMetadata = parseCanonicalLinkMetadataJson(
-    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
-  )
+  const previousMetadata = parseCanonicalLinkMetadataJson(existingRow.meta_json)
   const metadata: LinkMetadata = {
     ...previousMetadata,
   }

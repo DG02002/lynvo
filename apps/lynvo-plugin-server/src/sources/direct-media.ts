@@ -1,3 +1,4 @@
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   DIRECT_MEDIA_BLOCKED_EXTENSIONS,
   DIRECT_MEDIA_CONTENT_TYPES,
@@ -91,7 +92,10 @@ export const extractDirectMedia = async (options: PluginAdapterOptions) => {
       !isSupportedContent ||
       isBlockedFilename
     ) {
-      throw new Error("UNSUPPORTED_URL")
+      throw new ProtocolError(
+        "UNSUPPORTED_URL",
+        "The URL does not point at playable media."
+      )
     }
 
     const node = {

@@ -29,21 +29,6 @@ import {
   updateSavedLinkMeta,
 } from "./links"
 import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
-import {
-  deletePluginDomainById,
-  listPluginDomains,
-  upsertPluginDomain,
-} from "./plugin-domains"
-import {
-  deletePluginServerById,
-  listPluginServers,
-  setPluginServerEnabled,
-} from "./plugin-servers"
-import {
-  claimNextRemoteCommand,
-  enqueueRemoteCommand,
-  reportRemoteCommandResult,
-} from "./remote-commands"
 import { resolveD1Session, type SessionRecord } from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
@@ -76,10 +61,6 @@ const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
 const EXTRACTION_CONFLICT_MESSAGE =
   "Saved link extraction changed; refresh and retry"
 const RETENTION_INVALID_MESSAGE = "Choose an available auto-delete period"
-const REMOTE_TARGET_MISSING_MESSAGE = "Remote session not found"
-const REMOTE_CLAIM_INACTIVE_MESSAGE = "Remote command claim is no longer active"
-const PLUGIN_SERVER_DELETE_LIMIT_MESSAGE =
-  "Plugin server cleanup exceeds the synchronous limit"
 
 interface RespondDataFailureInput {
   readonly context: DataRouteContext
@@ -132,11 +113,7 @@ dataApp.onError(async (error, context) => {
       message,
     })
   }
-  if (
-    message === EXTRACTION_CONFLICT_MESSAGE ||
-    message === REMOTE_CLAIM_INACTIVE_MESSAGE ||
-    message === REMOTE_TARGET_MISSING_MESSAGE
-  ) {
+  if (message === EXTRACTION_CONFLICT_MESSAGE) {
     return await respondDataFailure({
       context,
       status: 409,
@@ -144,10 +121,7 @@ dataApp.onError(async (error, context) => {
       message,
     })
   }
-  if (
-    message === RETENTION_INVALID_MESSAGE ||
-    message === PLUGIN_SERVER_DELETE_LIMIT_MESSAGE
-  ) {
+  if (message === RETENTION_INVALID_MESSAGE) {
     return await respondDataFailure({
       context,
       status: 400,
@@ -271,7 +245,7 @@ const createOrUpdateSchema = Schema.Struct({
   operationId: Schema.NonEmptyString,
   url: Schema.NonEmptyString,
   title: Schema.optional(Schema.String),
-  meta: Schema.optional(Schema.String),
+  meta: Schema.NonEmptyString,
   extractionState: Schema.optional(Schema.Literal("queued")),
 })
 
@@ -328,33 +302,6 @@ const applyMetadataOperationSchema = Schema.Struct({
 const retentionDaysSchema = Schema.Struct({
   days: Schema.Int,
   deleteExpiredLinks: Schema.optional(Schema.Boolean),
-})
-
-const pluginServerEnabledSchema = Schema.Struct({ enabled: Schema.Boolean })
-
-const pluginDomainUpsertSchema = Schema.Struct({
-  domain: Schema.NonEmptyString,
-  pluginServerId: Schema.NonEmptyString,
-  pluginId: Schema.NonEmptyString,
-})
-
-const remoteCommandEnqueueSchema = Schema.Struct({
-  targetSessionId: Schema.NonEmptyString,
-  targetReceiverId: Schema.NonEmptyString,
-  command: Schema.Literal("play"),
-  payload: Schema.String,
-})
-
-const remoteCommandClaimSchema = Schema.Struct({
-  receiverId: Schema.NonEmptyString,
-})
-
-const remoteCommandResultSchema = Schema.Struct({
-  id: Schema.NonEmptyString,
-  receiverId: Schema.NonEmptyString,
-  claimToken: Schema.NonEmptyString,
-  result: Schema.Literals(["applied", "failed"]),
-  message: Schema.optional(Schema.String),
 })
 
 const mediaArtworkRequestItemSchema = Schema.Struct({
@@ -652,215 +599,6 @@ dataApp.get("/usage", async (context) => {
     Date.now()
   )
   return context.json(usage)
-})
-
-dataApp.get("/plugin-servers", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_servers_read" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const servers = await listPluginServers(
-    preparation.database,
-    preparation.session.userId
-  )
-  return context.json({ servers })
-})
-
-dataApp.post("/plugin-servers/:pluginServerId/enabled", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_server_set_enabled" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, pluginServerEnabledSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const { body } = requestBody
-  const result = await setPluginServerEnabled(
-    preparation.database,
-    preparation.session.userId,
-    {
-      id: context.req.param("pluginServerId"),
-      enabled: body.enabled,
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.delete("/plugin-servers/:pluginServerId", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_server_delete" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const result = await deletePluginServerById(
-    preparation.database,
-    preparation.session.userId,
-    {
-      id: context.req.param("pluginServerId"),
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.get("/plugin-domains", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domains_read" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const domains = await listPluginDomains(
-    preparation.database,
-    preparation.session.userId
-  )
-  return context.json({ domains })
-})
-
-dataApp.post("/plugin-domains", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domain_upsert" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, pluginDomainUpsertSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const { body } = requestBody
-  const result = await upsertPluginDomain(
-    preparation.database,
-    preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.delete("/plugin-domains/:domainId", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domain_delete" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const dataVersion = await deletePluginDomainById(
-    preparation.database,
-    preparation.session.userId,
-    {
-      domainId: context.req.param("domainId"),
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    dataVersion
-  )
-  return context.json({ success: true, dataVersion })
-})
-
-dataApp.post("/remote-commands/enqueue", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_enqueue" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(
-    context,
-    remoteCommandEnqueueSchema
-  )
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const { body } = requestBody
-  const result = await enqueueRemoteCommand(
-    preparation.database,
-    preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.post("/remote-commands/claim", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_claim" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, remoteCommandClaimSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const { body } = requestBody
-  const claim = await claimNextRemoteCommand({
-    database: preparation.database,
-    userId: preparation.session.userId,
-    sessionId: preparation.session.id,
-    receiverId: body.receiverId,
-    now: Date.now(),
-  })
-  if (!claim) {
-    return context.json({ commands: [] })
-  }
-  return context.json({
-    commands: [
-      {
-        id: claim.id,
-        claimToken: claim.claimToken,
-        command: claim.command,
-        payload: claim.payload,
-        createdAt: claim.createdAt,
-      },
-    ],
-  })
-})
-
-dataApp.post("/remote-commands/result", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_result" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, remoteCommandResultSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const { body } = requestBody
-  const result = await reportRemoteCommandResult({
-    database: preparation.database,
-    userId: preparation.session.userId,
-    sessionId: preparation.session.id,
-    ...body,
-    now: Date.now(),
-  })
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
 })
 
 export const registerD1DataRoutes = (

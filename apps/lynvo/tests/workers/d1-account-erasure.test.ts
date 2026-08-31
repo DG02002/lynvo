@@ -12,6 +12,14 @@ import { reserveManagedExtraction } from "../../workers/d1/usage"
 
 const NOW = 1_750_000_000_000
 
+const emptyMetadataJson = () =>
+  JSON.stringify({
+    schemaVersion: 3,
+    source: {},
+    extraction: { extractedLinks: [] },
+    playback: { openedUrls: [], resolvedMirrors: {} },
+  })
+
 const seedErasableAccount = async () => {
   const user = await insertGoogleUser(env.DB, {
     googleSubject: `subject-${crypto.randomUUID()}`,
@@ -21,6 +29,7 @@ const seedErasableAccount = async () => {
   const suffix = crypto.randomUUID().slice(0, 8)
   const session = await createSession(env.DB, { userId: user.id, now: NOW })
   await createOrUpdateSavedLink(env.DB, user.id, {
+    meta: emptyMetadataJson(),
     operationId: `erasure:link:${suffix}`,
     url: "https://erasure.example",
     now: NOW,

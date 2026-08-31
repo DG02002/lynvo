@@ -28,17 +28,8 @@ export interface ExtractedLink {
    * media node kinds after they have been mapped to the user-facing
    * folder/direct-file model. UI code must not rely on this field.
    */
-  mediaNodeKind?: "group" | "resolvable" | "playable"
+  mediaNodeKind: "group" | "resolvable" | "playable"
   resolutionKind?: "folder" | "mirrors"
-}
-
-export interface LinkResponse {
-  id: string
-  url: string
-  created_at: number
-  updated_at?: number
-  title?: string
-  meta: LinkMetadata | string
 }
 
 export interface LinkExtractionStatus {

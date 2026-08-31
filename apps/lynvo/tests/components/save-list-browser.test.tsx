@@ -48,12 +48,14 @@ describe("SaveListBrowser", () => {
               id: "season-one",
               url: "https://media.example/collection/season-one",
               label: "Season One",
+              mediaNodeKind: "group",
               type: "folder",
               children: [
                 {
                   id: "episode-one",
                   url: "https://media.example/collection/season-one/episode-one.mkv",
                   label: "Episode One",
+                  mediaNodeKind: "playable",
                   type: "file",
                 },
               ],
@@ -286,6 +288,7 @@ describe("SaveListBrowser", () => {
               id: "wheel-listener-file",
               url: "https://media.example/wheel-listener/file.mp4",
               label: "File.mp4",
+              mediaNodeKind: "playable",
               type: "file",
             },
           ],
@@ -331,6 +334,7 @@ describe("SaveListBrowser", () => {
         id: "folder-alpha",
         url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
         label: "Folder Alpha",
+        mediaNodeKind: "group",
         type: "folder",
         childrenResolved: true,
         children: [
@@ -338,6 +342,7 @@ describe("SaveListBrowser", () => {
             id: "playable-item-1",
             url: "https://index.example.com/0:/Collections/Folder%20Alpha/playable-item.mkv",
             label: "playable-item.mkv",
+            mediaNodeKind: "playable",
             type: "file",
           },
         ],
@@ -409,6 +414,7 @@ describe("SaveListBrowser", () => {
       {
         url: "https://files.example/route-alpha",
         label: "Play from Source Route Alpha",
+        mediaNodeKind: "playable",
         type: "file",
         size: "1.2 GB",
       },
@@ -532,18 +538,21 @@ describe("SaveListBrowser", () => {
             {
               url: `${lazyItemUrl}/route-alpha`,
               label: "Play from Source Route Alpha",
+              mediaNodeKind: "playable",
               type: "file",
               size: "1.2 GB",
             },
             {
               url: `${lazyItemUrl}/route-beta`,
               label: "Play from Source Route Beta Server",
+              mediaNodeKind: "playable",
               type: "file",
               size: "1.4 GB",
             },
             {
               url: `${lazyItemUrl}/route-gamma`,
               label: "Play from CDN Server (404)",
+              mediaNodeKind: "playable",
               type: "file",
               status: "down",
             },
@@ -787,6 +796,7 @@ describe("SaveListBrowser", () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/video.mp4",
       label: "video.mp4",
+      mediaNodeKind: "playable",
       type: "file",
       expiry: TEST_PLAYABLE_EXPIRY_AT_MS,
     }
@@ -830,6 +840,7 @@ describe("SaveListBrowser", () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/cell-menu.mp4",
       label: "cell-menu.mp4",
+      mediaNodeKind: "playable",
       type: "file",
     }
     const item: LinkViewItem = {
@@ -868,6 +879,7 @@ describe("SaveListBrowser", () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/expired-video.mp4",
       label: "expired-video.mp4",
+      mediaNodeKind: "playable",
       type: "file",
       expiry: Date.now() - 60_000,
     }
@@ -925,6 +937,8 @@ describe("SaveListBrowser", () => {
               id: "folder-one",
               url: "https://source.example/folder/one",
               label: "Folder one",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "folder",
               type: "folder",
               children: [],
             },

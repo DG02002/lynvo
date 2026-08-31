@@ -1,14 +1,8 @@
-import type {
-  ExtractedLink,
-  LinkMetadata,
-  LinkResponse,
-  LinkViewItem,
-} from "./types"
-import { parseLinkMetadata } from "./link-metadata-normalization"
+import type { ExtractedLink, LinkMetadata, LinkViewItem } from "./types"
 import { applyOpenedState } from "./link-playback-metadata"
 import { getLinkSourceFields } from "./link-source-fields"
 
-export interface SavedLinkDTO {
+export interface SavedLink {
   id: string
   url: string
   title?: string
@@ -16,8 +10,6 @@ export interface SavedLinkDTO {
   updatedAt: number
   metadata: LinkMetadata
 }
-
-export type SavedLink = SavedLinkDTO
 
 export interface LinkViewModel {
   id?: string
@@ -36,15 +28,6 @@ export interface LinkViewModel {
   extractedLinks: ExtractedLink[]
 }
 
-export const toSavedLinkDTO = (link: LinkResponse): SavedLinkDTO => ({
-  id: link.id,
-  url: link.url,
-  title: link.title,
-  createdAt: link.created_at,
-  updatedAt: link.updated_at ?? link.created_at,
-  metadata: parseLinkMetadata(link.meta),
-})
-
 export const toLinkViewItem = (dto: SavedLink): LinkViewItem => ({
   id: dto.id,
   url: dto.url,
@@ -54,7 +37,7 @@ export const toLinkViewItem = (dto: SavedLink): LinkViewItem => ({
   metadata: dto.metadata,
 })
 
-const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
+const toSavedLinkFromLinkViewItem = (item: LinkViewItem): SavedLink => ({
   id: item.id ?? item.url,
   url: item.url,
   title: item.title,
@@ -64,7 +47,7 @@ const toSavedLinkDTOFromLinkViewItem = (item: LinkViewItem): SavedLinkDTO => ({
 })
 
 export const toLinkViewModel = (item: LinkViewItem): LinkViewModel => {
-  const dto = toSavedLinkDTOFromLinkViewItem(item)
+  const dto = toSavedLinkFromLinkViewItem(item)
   const openedUrls = new Set(dto.metadata.playback.openedUrls)
   const source = getLinkSourceFields(dto.metadata)
 

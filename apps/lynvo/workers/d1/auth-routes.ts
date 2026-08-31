@@ -32,13 +32,11 @@ import {
 } from "./sessions"
 import { getOrCreateGoogleUser } from "./users"
 import {
-  abortDeviceExchange,
   authorizeDeviceCode,
   claimAuthorizedCode,
   finalizeDeviceExchange,
   getDeviceCodeForApproval,
   getDeviceCodeStatus,
-  recoverDeviceExchange,
 } from "./device-auth"
 
 const resolveGoogleCredentials = (env: Env): GoogleOAuthCredentials | null => {
@@ -70,13 +68,6 @@ const exchangeStartSchema = Schema.Struct({
 const finalizeSchema = Schema.Struct({
   code: Schema.NonEmptyString,
   pollSecret: Schema.NonEmptyString,
-  attemptId: Schema.NonEmptyString,
-  generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
-  sessionId: Schema.NonEmptyString,
-})
-
-const abortSchema = Schema.Struct({
-  code: Schema.NonEmptyString,
   attemptId: Schema.NonEmptyString,
   generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
   sessionId: Schema.NonEmptyString,
@@ -362,68 +353,6 @@ export const registerD1AuthRoutes = (
       "Set-Cookie",
       createD1SessionCookie(parsed.success.sessionId)
     )
-    return context.json({ success: true })
-  })
-
-  app.get("/api/auth/device/exchange/recovery", async (context) => {
-    addRequestContext(context, { operation: "device_exchange_recovery" })
-    const database = getD1Database(context.env)
-    if (!database) {
-      return context.text("Device exchange is not configured", 503)
-    }
-    const session = await resolveD1Session(context.req.raw, database)
-    if (!session) {
-      return unauthorizedResponse()
-    }
-    const code = context.req.query("code")
-    const pollSecret = context.req.query("pollSecret")
-    const attemptId = context.req.query("attemptId")
-    if (!code || !pollSecret || !attemptId) {
-      return context.json({ outcome: "invalid" }, 400)
-    }
-    const outcome = await recoverDeviceExchange(database, {
-      userId: session.userId,
-      sessionId: session.id,
-      code,
-      pollSecret,
-      attemptId,
-    })
-    return context.json({ outcome })
-  })
-
-  app.post("/api/auth/device/exchange/abort", async (context) => {
-    addRequestContext(context, { operation: "device_exchange_abort" })
-    const database = getD1Database(context.env)
-    if (!database) {
-      return context.text("Device exchange is not configured", 503)
-    }
-    if (!isSameOriginRequest(context.req.raw)) {
-      return context.text("Forbidden", 403)
-    }
-    const session = await resolveD1Session(context.req.raw, database)
-    if (!session) {
-      return unauthorizedResponse()
-    }
-    const parsed = Schema.decodeUnknownResult(abortSchema)(
-      await context.req.json().catch(() => null)
-    )
-    if (Result.isFailure(parsed)) {
-      return context.json({ error: "Invalid abort request" }, 400)
-    }
-    const outcome = await abortDeviceExchange(database, {
-      userId: session.userId,
-      sessionId: session.id,
-      code: parsed.success.code,
-      attemptId: parsed.success.attemptId,
-      generation: parsed.success.generation,
-      now: Date.now(),
-    })
-    if (outcome.kind === "invalidSession") {
-      return context.json(
-        { error: "Device code exchange session is invalid" },
-        409
-      )
-    }
     return context.json({ success: true })
   })
 }

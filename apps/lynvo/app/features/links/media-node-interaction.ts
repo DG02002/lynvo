@@ -9,38 +9,14 @@ export interface MediaNodeInteractionState {
   resolutionKind?: "folder" | "mirrors"
 }
 
-const getMediaNodeKind = (
-  link: ExtractedLink
-): MediaNodeInteractionState["kind"] => {
-  if (link.mediaNodeKind !== undefined && link.mediaNodeKind !== null) {
-    return link.mediaNodeKind
-  }
-
-  if (
-    link.type === "folder" &&
-    !link.children?.length &&
-    link.childrenResolved !== true
-  ) {
-    return "resolvable"
-  }
-
-  if (link.type === "folder" || link.children) {
-    return "group"
-  }
-
-  return "playable"
-}
-
 export const getMediaNodeInteractionState = (
   link: ExtractedLink
 ): MediaNodeInteractionState => {
-  const kind = getMediaNodeKind(link)
+  const kind = link.mediaNodeKind
   const isFolder = kind !== "playable"
   const hasChildren = Boolean(link.children?.length)
   const resolutionKind =
-    kind === "resolvable"
-      ? (link.resolutionKind ?? (link.mediaNodeKind ? "mirrors" : "folder"))
-      : undefined
+    kind === "resolvable" ? (link.resolutionKind ?? "mirrors") : undefined
 
   return {
     kind,

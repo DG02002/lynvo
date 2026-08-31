@@ -262,42 +262,6 @@ export const createPluginServerRuntime = <Env>(
           return toProtocolErrorResponse(error)
         }
         const message = error instanceof Error ? error.message : String(error)
-        if (message === "PASSWORD_REQUIRED") {
-          return jsonResponse(
-            createProtocolError(
-              "PASSWORD_REQUIRED",
-              "Password is required for this resource."
-            ),
-            401
-          )
-        }
-        if (message === "INVALID_PASSWORD") {
-          return jsonResponse(
-            createProtocolError(
-              "INVALID_PASSWORD",
-              "The supplied password was rejected."
-            ),
-            401
-          )
-        }
-        if (message === "RATE_LIMITED") {
-          return jsonResponse(
-            createProtocolError(
-              "RATE_LIMITED",
-              "Plugin Server capacity is exhausted for the current period."
-            ),
-            429
-          )
-        }
-        if (message === "UNSUPPORTED_URL") {
-          return jsonResponse(
-            createProtocolError(
-              "UNSUPPORTED_URL",
-              "The target URL is not supported."
-            ),
-            400
-          )
-        }
         return jsonResponse(
           createProtocolError(
             "TEMPORARY_FAILURE",

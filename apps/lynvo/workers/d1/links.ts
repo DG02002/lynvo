@@ -3,7 +3,6 @@ import {
   removeLinkFromTree,
 } from "../../app/features/links/link-tree-metadata"
 import {
-  EMPTY_LINK_METADATA_JSON,
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
   LINK_RETENTION_BATCH_SIZE,
@@ -47,7 +46,7 @@ export interface SavedLinkRecord {
   id: string
   url: string
   title: string | null
-  metaJson: string | null
+  metaJson: string
   openedAt: number | null
   createdAt: number
   updatedAt: number
@@ -115,7 +114,7 @@ interface CreateOrUpdateSavedLinkInput {
   operationId: string
   url: string
   title?: string | undefined
-  meta?: string | undefined
+  meta: string
   extractionState?: "queued" | undefined
   now: number
 }
@@ -505,9 +504,7 @@ const executeApplySavedLinkMetadataAttempt = async (
   input: ApplySavedLinkMetadataOperationInput
 ): Promise<SavedLinkOptimisticMutationAttemptResult> => {
   const existingRow = await requireOwnedSavedLink(database, userId, input.id)
-  const metadata = parseCanonicalLinkMetadataJson(
-    existingRow.meta_json ?? EMPTY_LINK_METADATA_JSON
-  )
+  const metadata = parseCanonicalLinkMetadataJson(existingRow.meta_json)
   applySavedLinkMetadataOperationToMetadata(
     metadata,
     input.operation,
@@ -1088,22 +1085,6 @@ export const countExpiredLinksForUser = async ({
   return row?.expired ?? 0
 }
 
-export const listSavedLinks = async (
-  database: D1Database,
-  userId: string,
-  now: number
-): Promise<{ results: SavedLinkRecord[] }> => {
-  const retentionDays = await getUserRetentionDays(database, userId)
-  const cutoff = getRetentionCutoff(now, retentionDays)
-  const { results } = await database
-    .prepare(
-      `SELECT ${SAVED_LINK_COLUMNS} FROM links WHERE user_id = ?1 AND created_at >= ?2 ORDER BY created_at DESC LIMIT ?3`
-    )
-    .bind(userId, cutoff, LINKS_MAX_COUNT)
-    .all<LinkRow>()
-  return { results: results.map(mapLinkRow) }
-}
-
 export const listSavedLinksWithDataVersion = async (
   database: D1Database,
   userId: string,
@@ -1151,9 +1132,7 @@ export const createOrUpdateSavedLink = async (
     now: input.now,
   })
 
-  const metadataJson = canonicalizeLinkMetadataJson(
-    input.meta ?? EMPTY_LINK_METADATA_JSON
-  )
+  const metadataJson = canonicalizeLinkMetadataJson(input.meta)
   const extractionState = input.extractionState ?? "complete"
   return runCreateOrUpdateSavedLinkAttempts({
     database,

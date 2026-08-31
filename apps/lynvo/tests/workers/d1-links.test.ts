@@ -7,7 +7,6 @@ import {
   createOrUpdateSavedLink,
   deleteExpiredLinksForUser,
   deleteSavedLinkById,
-  listSavedLinks,
   listSavedLinksWithDataVersion,
   sweepExpiredLinks,
   updateSavedLinkMeta,
@@ -73,11 +72,12 @@ describe("d1 links", () => {
       operationId: "create:one",
       url: "https://example.com/one",
       title: "One",
+      meta: emptyMetadataJson(),
       now: NOW,
     }
     const first = await createOrUpdateSavedLink(env.DB, user.id, command)
     const retry = await createOrUpdateSavedLink(env.DB, user.id, command)
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(retry.id).toBe(first.id)
     expect(retry.replayed).toBe(true)
     expect(first.replayed).toBe(false)
@@ -87,6 +87,7 @@ describe("d1 links", () => {
   it("updates the existing link for a repeated URL and keeps one row", async () => {
     const user = await createUser()
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "upsert:first",
       url: "https://example.com/same",
       title: "First",
@@ -99,7 +100,7 @@ describe("d1 links", () => {
       meta: emptyMetadataJson(),
       now: NOW + 1_000,
     })
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(1)
     expect(snapshot.results[0]?.title).toBe("Second")
     expect(snapshot.results[0]?.updatedAt).toBe(NOW + 1_000)
@@ -110,12 +111,14 @@ describe("d1 links", () => {
     const user = await createUser()
     const before = await getDataVersion(env.DB, user.id)
     const first = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "version:create",
       url: "https://example.com/version",
       now: NOW,
     })
     expect(first.dataVersion).toBe(before + 1)
     const replay = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "version:create",
       url: "https://example.com/version",
       now: NOW + 1_000,
@@ -133,6 +136,7 @@ describe("d1 links", () => {
   it("updates once when an updateMeta operation is replayed", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "create:update-target",
       url: "https://example.com/update-target",
       now: NOW,
@@ -153,18 +157,27 @@ describe("d1 links", () => {
   it("keeps extraction state on the Saved link while the queue settles", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "extraction:queue",
       url: "https://source.example/Shows/",
       title: "Shows",
       now: NOW,
     })
-    const queuedSnapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const queuedSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW
+    )
     expect(queued.id).toBeDefined()
     expect(queuedSnapshot.results[0]?.extractionState).toBe("queued")
 
     const claim = await claimNextSavedLinkExtraction(env.DB, { now: NOW })
     expect(claim?.id).toBe(queued.id)
-    const runningSnapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const runningSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW
+    )
     expect(runningSnapshot.results[0]?.extractionState).toBe("running")
 
     const settled = await settleSavedLinkExtraction(env.DB, user.id, {
@@ -175,7 +188,11 @@ describe("d1 links", () => {
       extractedLinks: [playableLink],
       now: NOW + 1_000,
     })
-    const completeSnapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    const completeSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 1_000
+    )
     expect(settled.success).toBe(true)
     expect(completeSnapshot.results[0]?.extractionState).toBe("complete")
     expect(completeSnapshot.results[0]?.title).toBe("Shows")
@@ -185,6 +202,7 @@ describe("d1 links", () => {
   it("keeps a failed extraction visible without scheduling a retry", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "extraction:failed:queue",
       url: "https://source.example/failed",
       title: "Failed",
@@ -200,7 +218,11 @@ describe("d1 links", () => {
       now: NOW + 1_000,
     })
 
-    const failedSnapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    const failedSnapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 1_000
+    )
     const retryClaim = await claimNextSavedLinkExtraction(env.DB, {
       now: NOW + 60_000,
     })
@@ -215,6 +237,7 @@ describe("d1 links", () => {
   it("ignores a late extraction result after a Saved link is deleted", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "extraction:deleted:queue",
       url: "https://source.example/deleted",
       now: NOW,
@@ -236,7 +259,8 @@ describe("d1 links", () => {
     })
     expect(settled.success).toBe(false)
     expect(
-      (await listSavedLinks(env.DB, user.id, NOW + 2_000)).results
+      (await listSavedLinksWithDataVersion(env.DB, user.id, NOW + 2_000))
+        .results
     ).toHaveLength(0)
   })
 
@@ -244,12 +268,17 @@ describe("d1 links", () => {
     const user = await createUser()
     for (const index of [1, 2, 3]) {
       await createOrUpdateSavedLink(env.DB, user.id, {
+        meta: emptyMetadataJson(),
         operationId: `list:${index}`,
         url: `https://example.com/${index}`,
         now: NOW + index * 1_000,
       })
     }
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 4_000)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 4_000
+    )
     expect(snapshot.results.map((link) => link.url)).toEqual([
       "https://example.com/3",
       "https://example.com/2",
@@ -282,7 +311,7 @@ describe("d1 links", () => {
       operation: { kind: "markOpened", linkUrl: playableLink.url ?? "" },
       now: NOW + 2_000,
     })
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
     expect(metadata.playback.openedUrls).toEqual([playableLink.url])
     expect(metadata.playback.resolvedMirrors["https://lazy.example"]).toEqual([
@@ -327,7 +356,7 @@ describe("d1 links", () => {
         now: NOW + 3_000,
       })
     ).rejects.toThrow("extraction changed")
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
     expect(metadata.extraction.extractedLinks).toEqual([])
   })
@@ -361,7 +390,7 @@ describe("d1 links", () => {
       },
       now: NOW + 2_000,
     })
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
     expect(metadata.playback.resolvedMirrors).toEqual({})
   })
@@ -370,6 +399,7 @@ describe("d1 links", () => {
     const owner = await createUser()
     const attacker = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, owner.id, {
+      meta: emptyMetadataJson(),
       operationId: "authz:create",
       url: "https://example.com/authz",
       now: NOW,
@@ -381,7 +411,7 @@ describe("d1 links", () => {
         now: NOW,
       })
     ).rejects.toThrow("Link not found or no longer available")
-    const snapshot = await listSavedLinks(env.DB, owner.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, owner.id, NOW)
     expect(snapshot.results).toHaveLength(1)
   })
 
@@ -389,6 +419,7 @@ describe("d1 links", () => {
     const user = await createUser()
     for (const index of [1, 2]) {
       await createOrUpdateSavedLink(env.DB, user.id, {
+        meta: emptyMetadataJson(),
         operationId: `clear:${index}`,
         url: `https://example.com/clear-${index}`,
         now: NOW,
@@ -399,13 +430,14 @@ describe("d1 links", () => {
       now: NOW,
     })
     expect(outcome.deletedLinks).toBe(2)
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
   })
 
   it("requeues a pending extraction with a delayed retry slot", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "pending:enqueue",
       url: "https://source.example/pending",
       now: NOW,
@@ -432,13 +464,18 @@ describe("d1 links", () => {
     expect(later?.id).toBe(queued.id)
     expect(later?.extractionAttempts).toBe(2)
 
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 31_000)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 31_000
+    )
     expect(snapshot.results[0]?.extractionState).toBe("running")
   })
 
   it("replays a delete instead of reporting a missing link when a retry lands", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "delete-replay:create",
       url: "https://example.com/delete-replay",
       now: NOW,
@@ -453,7 +490,7 @@ describe("d1 links", () => {
     expect(first.replayed).toBe(false)
     expect(retry.success).toBe(true)
     expect(retry.replayed).toBe(true)
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
   })
 
@@ -485,11 +522,12 @@ describe("d1 links", () => {
       )
     }
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "lru:newest",
       url: "https://example.com/lru-newest",
       now: NOW + (LINKS_MAX_COUNT + 1) * 1_000,
     })
-    const snapshot = await listSavedLinks(
+    const snapshot = await listSavedLinksWithDataVersion(
       env.DB,
       user.id,
       NOW + (LINKS_MAX_COUNT + 2) * 1_000
@@ -507,6 +545,7 @@ describe("d1 links", () => {
   it("backfills expires_at on retention change and sweeps expired links", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "retention:create",
       url: "https://example.com/retention",
       now: NOW,
@@ -542,18 +581,19 @@ describe("d1 links", () => {
       now: NOW + 8 * DAY_MS,
     })
     expect(deletedForUser).toBe(1)
-    let snapshot = await listSavedLinks(env.DB, user.id, NOW)
+    let snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
 
     const secondUser = await createUser()
     await createOrUpdateSavedLink(env.DB, secondUser.id, {
+      meta: emptyMetadataJson(),
       operationId: "retention:sweep-target",
       url: "https://example.com/sweep",
       now: NOW,
     })
     const sweep = await sweepExpiredLinks(env.DB, NOW + 31 * DAY_MS)
     expect(sweep.deletedLinks).toBeGreaterThanOrEqual(1)
-    snapshot = await listSavedLinks(env.DB, secondUser.id, NOW)
+    snapshot = await listSavedLinksWithDataVersion(env.DB, secondUser.id, NOW)
     expect(snapshot.results).toHaveLength(0)
     const ledger = await env.DB.prepare(
       "SELECT saved_link_count FROM storage_ledgers WHERE user_id = ?1"
@@ -566,6 +606,7 @@ describe("d1 links", () => {
   it("sweeps expired command operations by TTL", async () => {
     const user = await createUser()
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "ttl:one",
       url: "https://example.com/ttl",
       now: NOW,
@@ -617,7 +658,11 @@ describe("d1 links", () => {
       },
       now: NOW + 2_000,
     })
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 2_000)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
     expect(metadata.playback.resolvedMirrors["https://lazy.example"]).toEqual([
       freshMirror,
@@ -635,7 +680,7 @@ describe("d1 links", () => {
       },
       now: NOW + DAY_MS + 3_000,
     })
-    const prunedSnapshot = await listSavedLinks(
+    const prunedSnapshot = await listSavedLinksWithDataVersion(
       env.DB,
       user.id,
       NOW + DAY_MS + 3_000
@@ -652,6 +697,7 @@ describe("d1 links", () => {
   it("records the communication log across extraction outcomes", async () => {
     const user = await createUser()
     const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "log:enqueue",
       url: "https://source.example/logged",
       now: NOW,
@@ -676,7 +722,11 @@ describe("d1 links", () => {
       now: NOW + 1_000,
     })
     expect(settled.success).toBe(true)
-    const snapshot = await listSavedLinks(env.DB, user.id, NOW + 1_000)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 1_000
+    )
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
     expect(metadata.debugLog).toEqual([
       {
@@ -695,6 +745,7 @@ describe("d1 links", () => {
   it("reads items and data_version atomically", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "atomic:create",
       url: "https://example.com/atomic",
       now: NOW,

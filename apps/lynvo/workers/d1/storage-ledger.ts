@@ -188,14 +188,13 @@ export const ensureStorageLedger = async (
   now: number
 ): Promise<StorageLedgerPreparation> => {
   const existing = await getStorageLedger(database, userId)
-  if (existing && existing.schemaVersion === STORAGE_LEDGER_SCHEMA_VERSION) {
+  if (existing) {
     return { ledger: existing, statements: [] }
   }
   const usage = await calculateAppOwnedStorageUsage(database, userId)
   const statement = database
     .prepare(
-      `INSERT INTO storage_ledgers (user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-       ON CONFLICT(user_id) DO UPDATE SET schema_version = ?2, profile_bytes = ?3, link_bytes = ?4, plugin_server_bytes = ?5, plugin_domain_bytes = ?6, plugin_credential_bytes = ?7, saved_link_count = ?8, total_enforced_bytes = ?9, updated_at = ?10`
+      `INSERT INTO storage_ledgers (user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
     )
     .bind(
       userId,

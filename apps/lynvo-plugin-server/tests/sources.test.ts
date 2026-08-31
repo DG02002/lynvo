@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
 import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
 import {
   createBhadooNodes,
@@ -120,7 +121,7 @@ describe("Direct Media source adapter", () => {
         targetUrl: "https://media.example/archive.zip",
         plugin,
       })
-    ).rejects.toThrow("UNSUPPORTED_URL")
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
 })
 
@@ -499,12 +500,12 @@ describe("Google Drive public files source adapter", () => {
       extractGoogleDriveFileId(
         "https://drive.google.com/drive/folders/1AbCdEfGh123"
       )
-    ).toThrow("UNSUPPORTED_URL")
+    ).toThrow(ProtocolError)
     expect(() =>
       extractGoogleDriveFileId(
         "https://drive.google.com.example/file/d/1AbCdEfGh123/view"
       )
-    ).toThrow("UNSUPPORTED_URL")
+    ).toThrow(ProtocolError)
   })
 
   it("parses public folders into lazy folders and playable root files", () => {

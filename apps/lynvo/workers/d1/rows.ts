@@ -31,7 +31,7 @@ export interface LinkRow {
   user_id: string
   url: string
   title: string | null
-  meta_json: string | null
+  meta_json: string
   opened_at: number | null
   created_at: number
   updated_at: number

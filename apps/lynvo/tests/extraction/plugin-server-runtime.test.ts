@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  ProtocolError,
   createPluginServerRuntime,
-  isSupportedProtocolVersion,
   type ExtractSuccessResponse,
   type PluginServerManifest,
   type UsageResponse,
@@ -72,11 +72,6 @@ const createRuntime = (
   })
 
 describe("createPluginServerRuntime", () => {
-  it("declares supported protocol versions", () => {
-    expect(isSupportedProtocolVersion("1.0")).toBe(true)
-    expect(isSupportedProtocolVersion("2.0")).toBe(false)
-  })
-
   it("rejects a structurally valid manifest that fails semantic contract validation", async () => {
     const { usage: _omittedUsage, ...manifestWithoutUsage } = manifest
     // SAFETY: This test intentionally removes a required manifest field to exercise runtime validation.
@@ -381,7 +376,10 @@ describe("createPluginServerRuntime", () => {
 
   it("maps password errors to PASSWORD_REQUIRED", async () => {
     const runtime = createRuntime(() => {
-      throw new Error("PASSWORD_REQUIRED")
+      throw new ProtocolError(
+        "PASSWORD_REQUIRED",
+        "Password is required for this resource."
+      )
     })
 
     const response = await runtime.handleExtract(

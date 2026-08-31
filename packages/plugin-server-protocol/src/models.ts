@@ -127,11 +127,6 @@ export interface HttpBasicAuth {
   readonly password: string
 }
 
-export interface ExtractedHttpBasicAuth {
-  readonly basicAuth?: HttpBasicAuth
-  readonly url: string
-}
-
 export interface ExtractUsageDelta {
   /** Metric id matching the server's /usage metric ids. */
   readonly id: string
@@ -353,16 +348,6 @@ export const ERROR_CODES = [
 ] as const
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
-
-export const SUPPORTED_PROTOCOL_VERSIONS = ["1.0"] as const
-
-export type SupportedProtocolVersion =
-  (typeof SUPPORTED_PROTOCOL_VERSIONS)[number]
-
-export const isSupportedProtocolVersion = (
-  version: string
-): version is SupportedProtocolVersion =>
-  new Set<string>(SUPPORTED_PROTOCOL_VERSIONS).has(version)
 
 /**
  * A manifest version is wire-compatible when its major version matches the

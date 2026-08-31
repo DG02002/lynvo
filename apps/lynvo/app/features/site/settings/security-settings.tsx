@@ -16,7 +16,7 @@ import {
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
-import { revokeSession } from "~/lib/session-http"
+import { signOut } from "~/lib/session-http"
 import { client } from "~/lib/effect/api/client"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { useAsyncResource } from "~/hooks/use-async-resource"
@@ -49,7 +49,7 @@ export function SecuritySettings({
     setBusy("revokeAll")
     try {
       await Effect.runPromise(client.settings.revokeAllSessions())
-      await revokeSession()
+      await signOut()
       window.location.href = "/"
     } catch (error) {
       showErrorToast({

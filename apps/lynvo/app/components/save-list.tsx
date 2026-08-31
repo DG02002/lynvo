@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react"
 import { LinkInputSection } from "~/components/send-link/link-input-section"
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
@@ -13,10 +13,9 @@ import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/spinner"
 import {
-  shouldHideSaveInput,
-  useIsTvBroAndroidTv,
-  useShouldHideTvBroSaveInput,
-} from "~/features/site/settings/tvbro-save-input-preference"
+  getCurrentClientProfile,
+  TVBRO_ANDROID_TV_PROFILE,
+} from "~/lib/client-profile"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
@@ -104,13 +103,20 @@ const renderSaveListContent = ({
   )
 }
 
-const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
-  const isTvBroAndroidTv = useIsTvBroAndroidTv()
-  const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
-  const isSaveInputHidden = shouldHideSaveInput(
-    isTvBroAndroidTv,
-    shouldHideTvBroSaveInput
+const getIsTvBroAndroidTv = () =>
+  getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
+
+const subscribeToClientProfile = () => () => undefined
+
+const useIsTvBroAndroidTv = () =>
+  useSyncExternalStore(
+    subscribeToClientProfile,
+    getIsTvBroAndroidTv,
+    () => false
   )
+
+const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
+  const isSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const { links, actions, isLoading, isHydrating } = useLinks({
     initialItems,

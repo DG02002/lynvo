@@ -39,9 +39,7 @@ export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
       size: Schema.optional(Schema.String),
       sourceName: Schema.optional(Schema.String),
       selectable: Schema.optional(Schema.Boolean),
-      mediaNodeKind: Schema.optional(
-        Schema.Literals(["group", "resolvable", "playable"])
-      ),
+      mediaNodeKind: Schema.Literals(["group", "resolvable", "playable"]),
       resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
     }).pipe(
       Schema.refine(
@@ -62,15 +60,10 @@ export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
           if (link.mediaNodeKind === "group" && link.url) {
             return false
           }
-          if (
-            link.mediaNodeKind !== undefined &&
-            link.mediaNodeKind !== "playable" &&
-            link.type !== "folder"
-          ) {
+          if (link.mediaNodeKind !== "playable" && link.type !== "folder") {
             return false
           }
           if (
-            link.mediaNodeKind !== undefined &&
             link.mediaNodeKind !== "resolvable" &&
             (link.nodeUrl || link.resourceId)
           ) {

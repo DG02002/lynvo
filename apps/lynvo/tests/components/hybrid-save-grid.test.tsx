@@ -148,6 +148,7 @@ describe("HybridSaveGrid", () => {
               id: "movie-file",
               url: "https://media.example/movie/file.mkv",
               label: "Sample.in.the.Feature.2017.mkv",
+              mediaNodeKind: "playable",
               type: "file",
             },
           ],

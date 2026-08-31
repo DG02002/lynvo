@@ -13,6 +13,7 @@ describe("media node interaction", () => {
     const group = mapNodeToExtractedLink({
       kind: "group",
       label: "Season",
+      mediaNodeKind: "group",
       selectable: false,
       children: [],
     })
@@ -98,21 +99,16 @@ describe("media node interaction", () => {
     expect(getMediaNodeTargetOrUndefined(group)).toBeUndefined()
   })
 
-  it("supports app-native folder and playable shapes", () => {
+  it("keeps resolved empty folders as non-expanding groups", () => {
     expect(
       getMediaNodeInteractionState({
         label: "Folder",
         url: "https://example.com/folder",
         type: "folder",
+        mediaNodeKind: "group",
         children: [],
         childrenResolved: true,
-      }).kind
-    ).toBe("group")
-    expect(
-      getMediaNodeInteractionState({
-        label: "Video",
-        url: "https://example.com/video",
-      }).kind
-    ).toBe("playable")
+      })
+    ).toMatchObject({ kind: "group", canExpand: false, isSelectable: false })
   })
 })

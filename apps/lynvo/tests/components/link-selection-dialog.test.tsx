@@ -15,6 +15,7 @@ const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
       id: "lazy-folder",
       url: "https://drive.example/0:/lazy-folder/",
       label: "Lazy folder",
+      mediaNodeKind: "resolvable",
       type: "folder",
       selectable: true,
       children: [],
@@ -56,6 +57,7 @@ describe("LinkSelectionDialog", () => {
             id: "group",
             url: "",
             label: "Group",
+            mediaNodeKind: "group",
             type: "folder",
             selectable: false,
             children: [
@@ -63,12 +65,14 @@ describe("LinkSelectionDialog", () => {
                 id: "video-one",
                 url: "https://cdn.example/video-one.mkv",
                 label: "Video One",
+                mediaNodeKind: "playable",
                 type: "file",
               },
               {
                 id: "video-two",
                 url: "https://cdn.example/video-two.mkv",
                 label: "Video Two",
+                mediaNodeKind: "playable",
                 type: "file",
               },
             ],
@@ -122,6 +126,7 @@ describe("LinkSelectionDialog", () => {
             nodeKey: "0:group:season-one",
             id: "season-one",
             label: "Season 1",
+            mediaNodeKind: "group",
             type: "folder",
             selectable: false,
             children: [
@@ -129,6 +134,7 @@ describe("LinkSelectionDialog", () => {
                 nodeKey: "0.0:group:quality-folder",
                 id: "quality-folder",
                 label: "2160p",
+                mediaNodeKind: "group",
                 type: "folder",
                 selectable: true,
                 children: [
@@ -138,6 +144,7 @@ describe("LinkSelectionDialog", () => {
                     id: "episode-one",
                     url: "https://cdn.example/episode-one.mkv",
                     label: "Episode One",
+                    mediaNodeKind: "playable",
                     type: "file",
                   },
                 ],
@@ -147,6 +154,7 @@ describe("LinkSelectionDialog", () => {
                 id: "episode-two",
                 url: "https://cdn.example/episode-two.mkv",
                 label: "Episode Two",
+                mediaNodeKind: "playable",
                 type: "file",
               },
             ],
@@ -192,6 +200,7 @@ describe("LinkSelectionDialog", () => {
           {
             id: "season-one",
             label: "Season 1",
+            mediaNodeKind: "group",
             type: "folder",
             selectable: false,
             children: [
@@ -199,6 +208,7 @@ describe("LinkSelectionDialog", () => {
                 id: "episode-one",
                 url: "https://cdn.example/episode-one.mkv",
                 label: "Episode One",
+                mediaNodeKind: "playable",
                 type: "file",
               },
             ],
@@ -227,12 +237,14 @@ describe("LinkSelectionDialog", () => {
           {
             id: "season-one",
             label: "Season 1",
+            mediaNodeKind: "group",
             type: "folder",
             selectable: false,
             children: [
               {
                 id: "quality-folder",
                 label: "2160p",
+                mediaNodeKind: "group",
                 type: "folder",
                 selectable: true,
                 children: [
@@ -240,6 +252,7 @@ describe("LinkSelectionDialog", () => {
                     id: "episode-one",
                     url: "https://cdn.example/episode-one.mkv",
                     label: "Episode One",
+                    mediaNodeKind: "playable",
                     type: "file",
                   },
                 ],
@@ -271,6 +284,7 @@ describe("LinkSelectionDialog", () => {
             id: "video-one",
             url: "https://cdn.example/video-one.mkv",
             label: "Video One",
+            mediaNodeKind: "playable",
             type: "file",
           },
         ]}
@@ -301,12 +315,14 @@ describe("LinkSelectionDialog", () => {
             id: "video-one",
             url: "https://cdn.example/video-one.mkv",
             label: "Video One",
+            mediaNodeKind: "playable",
             type: "file",
           },
           {
             id: "video-two",
             url: "https://cdn.example/video-two.mkv",
             label: "Video Two",
+            mediaNodeKind: "playable",
             type: "file",
           },
         ]}
@@ -327,6 +343,7 @@ describe("LinkSelectionDialog", () => {
         id: "video-one",
         url: "https://cdn.example/video-one.mkv",
         label: "Video One",
+        mediaNodeKind: "playable",
         type: "file",
       },
     ])
@@ -392,6 +409,7 @@ describe("LinkSelectionDialog", () => {
         id: "video-one",
         url: "https://cdn.example/video-one.mkv",
         label: "Video One",
+        mediaNodeKind: "playable",
         type: "file",
         size: "2.4 GB",
       },
@@ -464,12 +482,14 @@ describe("LinkSelectionDialog", () => {
             id: "folder-without-metadata",
             url: "https://drive.example/folder-without-metadata",
             label: "Folder without metadata",
+            mediaNodeKind: "resolvable",
             type: "folder",
           },
           {
             id: "file-with-size",
             url: "https://drive.example/file-with-size.mkv",
             label: "File with size",
+            mediaNodeKind: "playable",
             type: "file",
             size: "1.2 GB",
           },

@@ -29,6 +29,7 @@ describe("saved link interaction", () => {
               url: "https://files.example/a",
               label: "A",
               expiry: 100,
+              mediaNodeKind: "playable",
             },
           ],
         },

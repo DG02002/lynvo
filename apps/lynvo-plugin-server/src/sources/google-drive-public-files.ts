@@ -1,3 +1,4 @@
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
 import { load } from "cheerio"
 import type {
   MediaNode,
@@ -35,12 +36,18 @@ const googleDrivePublicFolderPayloadSchema = Schema.TupleWithRest(
 export const extractGoogleDriveFileId = (value: string | URL): string => {
   const url = value instanceof URL ? value : new URL(value)
   if (url.protocol !== "https:" || url.hostname !== "drive.google.com") {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "Only drive.google.com file URLs are supported."
+    )
   }
   const match = GOOGLE_DRIVE_FILE_PATH_PATTERN.exec(url.pathname)
   const fileId = match?.[1]
   if (!fileId) {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "The Google Drive URL does not contain a file id."
+    )
   }
   return decodeURIComponent(fileId)
 }
@@ -62,11 +69,17 @@ export const createGoogleDriveDownloadUrl = (
 export const extractGoogleDriveFolderId = (value: string | URL): string => {
   const url = value instanceof URL ? value : new URL(value)
   if (url.protocol !== "https:" || url.hostname !== "drive.google.com") {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "Only drive.google.com folder URLs are supported."
+    )
   }
   const folderId = GOOGLE_DRIVE_FOLDER_PATH_PATTERN.exec(url.pathname)?.[1]
   if (!folderId) {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "The Google Drive URL does not contain a folder id."
+    )
   }
   return decodeURIComponent(folderId)
 }

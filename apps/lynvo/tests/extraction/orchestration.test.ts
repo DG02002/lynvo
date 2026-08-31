@@ -19,6 +19,7 @@ const savedWorkerItem = (): LinkViewItem => ({
           id: "folder-1",
           url: "https://pluginServer.example/folder/1",
           label: "Folder",
+          mediaNodeKind: "resolvable",
           type: "folder",
         },
       ],
@@ -42,7 +43,11 @@ const createTransport = () => ({
 
 describe("extraction presentation", () => {
   it("direct-saves one file or mirror container and selects folders", () => {
-    const file = { url: "https://cdn.example/one.mp4", label: "One" }
+    const file: ExtractedLink = {
+      url: "https://cdn.example/one.mp4",
+      label: "One",
+      mediaNodeKind: "playable",
+    }
     expect(decideSavePresentation([file])).toEqual({
       kind: "directSave",
       link: file,
@@ -50,9 +55,11 @@ describe("extraction presentation", () => {
     expect(decideSavePresentation([file, { ...file, url: "two" }]).kind).toBe(
       "selectionDialog"
     )
-    expect(decideSavePresentation([{ ...file, type: "folder" }]).kind).toBe(
-      "selectionDialog"
-    )
+    expect(
+      decideSavePresentation([
+        { ...file, type: "folder", mediaNodeKind: "group" },
+      ]).kind
+    ).toBe("selectionDialog")
     expect(
       decideSavePresentation([
         {
@@ -95,6 +102,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://cdn.example/playable-item.mp4",
           label: "Playable Item",
+          mediaNodeKind: "playable",
         },
       ],
       meta: {
@@ -132,7 +140,11 @@ describe("extraction orchestration", () => {
   it("routes refresh, mirror, and folder operations through the saved pluginServer", async () => {
     const item = savedWorkerItem()
     const resolved: ExtractedLink[] = [
-      { url: "https://cdn.example/resolved.mp4", label: "Resolved" },
+      {
+        url: "https://cdn.example/resolved.mp4",
+        label: "Resolved",
+        mediaNodeKind: "playable",
+      },
     ]
     transport.extract.mockResolvedValue({ links: resolved })
 
@@ -178,7 +190,13 @@ describe("extraction orchestration", () => {
   it("preserves partial extraction results", async () => {
     transport.getMetadata.mockResolvedValue({ filename: "source" })
     transport.extract.mockResolvedValue({
-      links: [{ url: "https://cdn.example/available.mp4", label: "Available" }],
+      links: [
+        {
+          url: "https://cdn.example/available.mp4",
+          label: "Available",
+          mediaNodeKind: "playable",
+        },
+      ],
     })
 
     const result = await orchestration.prepareSource({

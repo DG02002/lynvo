@@ -103,6 +103,7 @@ describe("d1 storage ledger", () => {
       .run()
     await seedPluginInventory(user.id, 100, "recon")
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "recon:create",
       url: "https://new.example",
       now: NOW,
@@ -114,31 +115,10 @@ describe("d1 storage ledger", () => {
     expect(ledger?.savedLinkCount).toBe(2)
   })
 
-  it("repairs an outdated ledger before applying a new delta", async () => {
-    const user = await createUser()
-    const created = await createOrUpdateSavedLink(env.DB, user.id, {
-      operationId: "repair:create",
-      url: "https://version.example",
-      now: NOW,
-    })
-    await env.DB.prepare(
-      `UPDATE storage_ledgers SET schema_version = 0, link_bytes = 0, saved_link_count = 0 WHERE user_id = ?1`
-    )
-      .bind(user.id)
-      .run()
-    await updateSavedLinkMeta(env.DB, user.id, {
-      operationId: "repair:update",
-      id: created.id ?? "",
-      meta: emptyMetadataJson(),
-      now: NOW + 1_000,
-    })
-    const { ledger } = await expectLedgerMatchesInventory(user.id)
-    expect(ledger?.schemaVersion).toBe(2)
-  })
-
   it("tracks create, grow, shrink, and delete in the document transaction", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "lifecycle:create",
       url: "https://ledger.example/item",
       title: "Initial",
@@ -192,6 +172,7 @@ describe("d1 storage ledger", () => {
   it("rolls back the ledger when a link exceeds the per-link limit", async () => {
     const user = await createUser()
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "toolarge:original",
       url: "https://ledger.example/original",
       now: NOW,
@@ -227,6 +208,7 @@ describe("d1 storage ledger", () => {
   it("expires retained links without corrupting the ledger", async () => {
     const user = await createUser()
     await createOrUpdateSavedLink(env.DB, user.id, {
+      meta: emptyMetadataJson(),
       operationId: "expiry:create",
       url: "https://expiry.example",
       now: NOW,

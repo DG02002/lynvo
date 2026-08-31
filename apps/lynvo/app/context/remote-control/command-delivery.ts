@@ -34,9 +34,9 @@ declare global {
   }
 
   interface RemoteCommandDeliveryRecord {
-    processed: Array<[string, number]>
-    applied: Array<[string, number]>
-    pendingAcknowledgements: Array<[string, string]>
+    processed: ReadonlyArray<readonly [string, number]>
+    applied: ReadonlyArray<readonly [string, number]>
+    pendingAcknowledgements: ReadonlyArray<readonly [string, string]>
   }
 
   interface RemoteCommandDelivery {

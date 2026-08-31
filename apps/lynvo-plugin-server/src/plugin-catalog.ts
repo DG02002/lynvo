@@ -1,5 +1,6 @@
 import {
   matchPluginServerUrl,
+  ProtocolError,
   type PluginServerManifest,
   type PluginServerMatcher,
   type PluginCredential,
@@ -245,7 +246,10 @@ export const extractWithLynvoPlugin = async (
 ): Promise<ExtractSuccessResponse> => {
   const plugin = findLynvoPlugin(targetUrl, request.pluginId)
   if (!plugin) {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "No catalog plugin matches the target URL."
+    )
   }
   return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
 }

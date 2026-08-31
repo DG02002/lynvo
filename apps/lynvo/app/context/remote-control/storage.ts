@@ -12,8 +12,8 @@ const EMPTY_DELIVERY_RECORD: RemoteCommandDeliveryRecord = {
 }
 
 const timedCommandEntrySchema = Schema.Tuple([Schema.String, Schema.Number])
-const pendingAcknowledgementSchema = Schema.Union([
-  Schema.Tuple([Schema.String, Schema.String]),
+const pendingAcknowledgementSchema = Schema.Tuple([
+  Schema.String,
   Schema.String,
 ])
 const deliveryRecordSchema = Schema.Struct({
@@ -21,53 +21,6 @@ const deliveryRecordSchema = Schema.Struct({
   applied: Schema.Array(timedCommandEntrySchema),
   pendingAcknowledgements: Schema.Array(pendingAcknowledgementSchema),
 })
-
-const parseCommandIdentity = (
-  identity: string
-): { commandId: string; claimToken?: string } => {
-  const separatorIndex = identity.indexOf(":")
-  return separatorIndex > 0 && separatorIndex < identity.length - 1
-    ? {
-        commandId: identity.slice(0, separatorIndex),
-        claimToken: identity.slice(separatorIndex + 1),
-      }
-    : { commandId: identity }
-}
-
-const normalizeTimedCommandEntries = (
-  entries: readonly (typeof timedCommandEntrySchema.Type)[]
-): Array<[string, number]> => {
-  const normalizedEntries = new Map<string, number>()
-  for (const entry of entries) {
-    const { commandId } = parseCommandIdentity(entry[0])
-    const existingTimestamp = normalizedEntries.get(commandId)
-    if (existingTimestamp === undefined || entry[1] > existingTimestamp) {
-      normalizedEntries.set(commandId, entry[1])
-    }
-  }
-  return [...normalizedEntries]
-}
-
-const isTupleEntry = (
-  entry: typeof pendingAcknowledgementSchema.Type
-): entry is readonly [string, string] => Array.isArray(entry)
-
-const normalizePendingAcknowledgements = (
-  entries: readonly (typeof pendingAcknowledgementSchema.Type)[]
-): Array<[string, string]> => {
-  const normalizedEntries = new Map<string, string>()
-  for (const entry of entries) {
-    if (isTupleEntry(entry)) {
-      normalizedEntries.set(entry[0], entry[1])
-    } else {
-      const { commandId, claimToken } = parseCommandIdentity(entry)
-      if (claimToken) {
-        normalizedEntries.set(commandId, claimToken)
-      }
-    }
-  }
-  return [...normalizedEntries]
-}
 
 export const createRemoteControlPersistence = (
   identity = "signed-out"
@@ -112,13 +65,7 @@ export const createRemoteControlPersistence = (
         if (Result.isFailure(parsed)) {
           return EMPTY_DELIVERY_RECORD
         }
-        return {
-          processed: normalizeTimedCommandEntries(parsed.success.processed),
-          applied: normalizeTimedCommandEntries(parsed.success.applied),
-          pendingAcknowledgements: normalizePendingAcknowledgements(
-            parsed.success.pendingAcknowledgements
-          ),
-        }
+        return parsed.success
       } catch {
         return EMPTY_DELIVERY_RECORD
       }
