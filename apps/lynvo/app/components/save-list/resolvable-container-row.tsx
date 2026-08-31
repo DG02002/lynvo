@@ -246,12 +246,19 @@ export const ResolvableContainerRow = ({
           ),
         }}
         meta={
-          <MediaListRowMeta
-            sourceName={getResolvableSourceName(link, item)}
-            size={displaySize}
-          />
+          <>
+            <MediaListRowMeta
+              sourceName={getResolvableSourceName(link, item)}
+              size={displaySize}
+            />
+            {!link.opened && <NewBadge className="ms-auto md:hidden" />}
+          </>
         }
-        trailing={!link.opened ? <NewBadge /> : undefined}
+        trailing={
+          !link.opened ? (
+            <NewBadge className="hidden md:inline-flex" />
+          ) : undefined
+        }
         overlay={
           <ResolvableLinkMenu
             itemLabel={link.label}

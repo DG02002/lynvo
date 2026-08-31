@@ -580,8 +580,15 @@ const FinderBrowserLinkRow = ({
               expirySource={link.expirySource}
             />
           )}
-          {!link.opened && !isExpired && <NewBadge className="ml-auto" />}
+          {!link.opened && !isExpired && (
+            <NewBadge className="ms-auto md:hidden" />
+          )}
         </>
+      }
+      trailing={
+        !link.opened && !isExpired ? (
+          <NewBadge className="hidden md:inline-flex" />
+        ) : undefined
       }
       overlay={
         !isResolving && linkTarget !== undefined ? (
@@ -1119,7 +1126,7 @@ export const SaveListBrowser = ({
                             }
                             isInsideActivationOverlay
                           />
-                          <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
+                          <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground md:flex-nowrap">
                             <MediaListRowMeta
                               sourceName={
                                 view.sourceName || view.pluginName || item.url
@@ -1131,34 +1138,23 @@ export const SaveListBrowser = ({
                                   : view.extractedLinks.length
                               }
                             />
-                            {!directLink && isRootItemNew && (
-                              <span className="flex items-center gap-2 md:hidden">
-                                <NewBadge className="md:hidden" />
-                              </span>
-                            )}
-                            {directLink &&
-                              (isRootItemNew ||
-                                directLink.expiry !== undefined) && (
-                                <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                                  {directLink.expiry !== undefined && (
-                                    <>
-                                      <span
-                                        aria-hidden="true"
-                                        className="hidden md:inline"
-                                      >
-                                        ·
-                                      </span>
-                                      <PlayableExpiryBadge
-                                        expiresAt={directLink.expiry}
-                                        expirySource={directLink.expirySource}
-                                      />
-                                    </>
-                                  )}
-                                  {isRootItemNew && (
-                                    <NewBadge className="md:hidden" />
-                                  )}
+                            {directLink?.expiry !== undefined && (
+                              <>
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden md:inline"
+                                >
+                                  ·
                                 </span>
-                              )}
+                                <PlayableExpiryBadge
+                                  expiresAt={directLink.expiry}
+                                  expirySource={directLink.expirySource}
+                                />
+                              </>
+                            )}
+                            {isRootItemNew && (
+                              <NewBadge className="ms-auto md:hidden" />
+                            )}
                           </span>
                         </ExtractionStatusTitle>
                         {extractionState === "failed" && (
