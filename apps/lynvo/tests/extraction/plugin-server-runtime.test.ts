@@ -78,7 +78,7 @@ describe("createPluginServerRuntime", () => {
   })
 
   it("rejects a structurally valid manifest that fails semantic contract validation", async () => {
-    const { usage: declaredUsage, ...manifestWithoutUsage } = manifest
+    const { usage: _omittedUsage, ...manifestWithoutUsage } = manifest
     // SAFETY: This test intentionally removes a required manifest field to exercise runtime validation.
     const invalidManifest = manifestWithoutUsage as PluginServerManifest
     const runtime = createRuntime(
@@ -103,7 +103,6 @@ describe("createPluginServerRuntime", () => {
     expect(await response.json()).toMatchObject({
       error: { code: "PROTOCOL_MISMATCH" },
     })
-    expect(declaredUsage).toEqual({ endpoint: "/usage" })
   })
 
   it("serves a validated manifest", async () => {

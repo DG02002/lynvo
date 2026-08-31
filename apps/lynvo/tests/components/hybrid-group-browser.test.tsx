@@ -9,7 +9,7 @@ interface MediaArtworkBatchRequest {
 }
 
 const episodeFilename =
-  "Bleach.Thousand-Year.Blood.War.S04E01.GOD.OF.THUNDER.1080p.mkv"
+  "Sample.Series.Sample-Arc.War.S04E01.TAG.OF.TAGS.1080p.mkv"
 const localStorageValues = new Map<string, string>()
 const localStorageStub = {
   getItem: (key: string) => localStorageValues.get(key) ?? null,
@@ -29,13 +29,13 @@ const createMediaArtworkFetch = () =>
       request.episodeNumber === undefined
         ? {
             posterPath: "/season-poster.jpg",
-            identity: { providerId: 1, title: "Bleach", year: 2004 },
+            identity: { providerId: 1, title: "Sample", year: 2004 },
           }
         : {
             stillPath: `/episode-still-${request.episodeNumber}.jpg`,
             episodeTitle:
               request.episodeNumber === 1
-                ? "The Blood Warfare"
+                ? "The Sample Battle"
                 : `Episode ${request.episodeNumber}`,
           }
     )
@@ -56,7 +56,7 @@ const createActions = (): LinkItemActions => ({
 })
 
 const createEpisodeItem = (
-  itemId = "bleach-episode-1",
+  itemId = "sample-episode-1",
   filename = episodeFilename
 ): LinkListItem => ({
   kind: "saved",
@@ -66,12 +66,12 @@ const createEpisodeItem = (
   title: filename,
   metadata: {
     schemaVersion: 3,
-    source: { sourceName: "Bilive" },
+    source: { sourceName: "StreamLive" },
     extraction: {
       extractedLinks: [
         {
-          id: "bleach-episode-1-link",
-          url: "https://media.example/bleach-episode-1.mkv",
+          id: "sample-episode-1-link",
+          url: "https://media.example/sample-episode-1.mkv",
           label: filename,
           type: "file",
           size: "597.62 MB",
@@ -88,11 +88,11 @@ const renderBrowser = (
   render(
     <HybridGroupBrowser
       group={{
-        key: "tv:bleach thousand year blood war::S04",
-        displayTitle: "Bleach Thousand Year Blood War S04",
+        key: "tv:sample series sample arc::S04",
+        displayTitle: "Sample Series Sample Arc S04",
         artworkRequest: {
           mediaKind: "tv",
-          title: "Bleach Thousand Year Blood War",
+          title: "Sample Series Sample Arc",
           seasonNumber: 4,
         },
         lastAddedAt: Date.now(),
@@ -173,7 +173,7 @@ describe("HybridGroupBrowser", () => {
       ".save-list-group-artwork-frame"
     )
     expect(artworkFrame?.parentElement).toHaveClass("max-w-72", "md:max-w-none")
-    const artworkCredit = await screen.findByText("Artwork: Bleach (2004)")
+    const artworkCredit = await screen.findByText("Artwork: Sample (2004)")
     expect(artworkCredit).not.toHaveClass("hidden", "md:block")
   })
 
@@ -182,7 +182,7 @@ describe("HybridGroupBrowser", () => {
 
     const groupHeading = screen.getByRole("heading", {
       level: 1,
-      name: "Bleach Thousand Year Blood War S04",
+      name: "Sample Series Sample Arc S04",
     })
     expect(groupHeading).toBeInTheDocument()
     expect(groupHeading).toHaveClass("hidden", "md:block")
@@ -191,7 +191,7 @@ describe("HybridGroupBrowser", () => {
       "lg:grid-cols-[22rem_minmax(0,1fr)_auto]"
     )
     expect(screen.getAllByRole("button", { name: "Back" })).not.toHaveLength(0)
-    await screen.findByText("1. The Blood Warfare")
+    await screen.findByText("1. The Sample Battle")
     expect(screen.queryByText(episodeFilename)).not.toBeInTheDocument()
     await waitFor(() => {
       const episodeImage = view.container.querySelector(
@@ -203,7 +203,7 @@ describe("HybridGroupBrowser", () => {
       expect(stillSlot).not.toHaveClass("hidden")
     })
     expect(
-      screen.getByRole("button", { name: "1. The Blood Warfare" }).parentElement
+      screen.getByRole("button", { name: "1. The Sample Battle" }).parentElement
     ).toHaveClass("relative", "flex-col", "md:flex-row")
     const rowMenus = screen.getAllByRole("button", {
       name: `Open menu for ${episodeFilename}`,
@@ -235,18 +235,18 @@ describe("HybridGroupBrowser", () => {
 
     expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "false")
     await screen.findByText(episodeFilename)
-    expect(screen.queryByText("1. The Blood Warfare")).not.toBeInTheDocument()
+    expect(screen.queryByText("1. The Sample Battle")).not.toBeInTheDocument()
   })
 
   it("sorts hybrid episode rows by their numeric episode number", async () => {
     const view = renderBrowser([
       createEpisodeItem(
-        "bleach-episode-9",
+        "sample-episode-9",
         episodeFilename.replace("S04E01", "S04E09")
       ),
-      createEpisodeItem("bleach-episode-1", episodeFilename),
+      createEpisodeItem("sample-episode-1", episodeFilename),
       createEpisodeItem(
-        "bleach-episode-2",
+        "sample-episode-2",
         episodeFilename.replace("S04E01", "S04E02")
       ),
     ])
@@ -258,11 +258,11 @@ describe("HybridGroupBrowser", () => {
         .filter(
           (label): label is string =>
             label?.includes("Episode") === true ||
-            label === "1. The Blood Warfare"
+            label === "1. The Sample Battle"
         )
 
       expect(episodeRowLabels).toEqual([
-        "1. The Blood Warfare",
+        "1. The Sample Battle",
         "2. Episode 2",
         "9. Episode 9",
       ])

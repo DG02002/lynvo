@@ -99,16 +99,13 @@ describe("Plugin Server usage HTTP fan-out", () => {
     // SAFETY: The Worker only calls waitUntil on this execution context.
     const executionContext = { waitUntil: () => undefined } as ExecutionContext
     const response = await worker.fetch(
-      new Request(
-        "https://lynvo.dg02002.workers.dev/api/plugin-servers/usage",
-        {
-          headers: {
-            Cookie: "lynvo_session=opaque-session-id",
-            "X-Lynvo-Expected-User-Id": "user-1",
-            "X-Lynvo-Expected-Session-Id": "session-1",
-          },
-        }
-      ),
+      new Request("https://lynvo.test/api/plugin-servers/usage", {
+        headers: {
+          Cookie: "lynvo_session=opaque-session-id",
+          "X-Lynvo-Expected-User-Id": "user-1",
+          "X-Lynvo-Expected-Session-Id": "session-1",
+        },
+      }),
       environment,
       executionContext
     )

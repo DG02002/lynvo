@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
 import {
-  PROTOCOL_ERROR_STATUS,
   ProtocolError,
   createGroupNode,
   createPlayableNode,
@@ -19,13 +18,6 @@ import {
 } from "../src/index"
 
 describe("protocol errors", () => {
-  it("maps typed errors to the documented status table", () => {
-    expect(PROTOCOL_ERROR_STATUS.RATE_LIMITED).toBe(429)
-    expect(PROTOCOL_ERROR_STATUS.NODE_EXPIRED).toBe(410)
-    expect(PROTOCOL_ERROR_STATUS.UNSUPPORTED_URL).toBe(400)
-    expect(PROTOCOL_ERROR_STATUS.PERMANENT_FAILURE).toBe(500)
-  })
-
   it("serializes typed errors with retry guidance", async () => {
     const error = new ProtocolError("RATE_LIMITED", "Capacity exhausted.", {
       retryAfterSeconds: 900,

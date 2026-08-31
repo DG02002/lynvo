@@ -6,6 +6,8 @@ import {
   reserveManagedExtraction,
   resetUsageEpoch,
   settleManagedExtraction,
+  type ManagedPluginId,
+  MANAGED_PLUGIN_IDS,
 } from "../../workers/d1/usage"
 import { insertGoogleUser } from "../../workers/d1/users"
 
@@ -31,11 +33,7 @@ const readUserCounters = async (userId: string) =>
 const reserve = (
   userId: string,
   operationId: string,
-  pluginId:
-    | "bhadoo-google-drive-index"
-    | "google-drive-public-files"
-    | "onedrive-index"
-    | "direct-media",
+  pluginId: ManagedPluginId,
   now: number
 ) => reserveManagedExtraction(env.DB, userId, { operationId, pluginId, now })
 
@@ -155,12 +153,7 @@ describe("d1 managed extraction operations", () => {
 
   it("shares one 30-operation daily allowance across managed plugins", async () => {
     const user = await createUser()
-    const pluginIds = [
-      "bhadoo-google-drive-index",
-      "google-drive-public-files",
-      "onedrive-index",
-      "direct-media",
-    ] as const
+    const pluginIds = MANAGED_PLUGIN_IDS
     for (let index = 0; index < 30; index += 1) {
       await reserve(
         user.id,

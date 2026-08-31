@@ -15,8 +15,8 @@ const authenticatedDatabase = () =>
         row: {
           session_id: "session-123",
           user_id: "user-456",
-          email: "darshan@example.com",
-          display_name: "Darshan",
+          email: "user@example.com",
+          display_name: "Demo User",
           last_seen_at: Date.now(),
           expires_at: Date.now() + 60_000,
         },
@@ -61,14 +61,14 @@ describe("session-bearing responses", () => {
       responseData: {
         user: {
           sub: "user-456",
-          email: "darshan@example.com",
+          email: "user@example.com",
           sid: "session-123",
         },
       },
       sessionResult: {
         user: {
           sub: "user-456",
-          email: "darshan@example.com",
+          email: "user@example.com",
           sid: "session-123",
         },
         sessionExpiresAt,
@@ -104,7 +104,7 @@ describe("requireGuestOrRedirect", () => {
   const authenticatedSession = {
     user: {
       sub: "user-456",
-      email: "darshan@example.com",
+      email: "user@example.com",
       sid: "session-123",
     },
   }
@@ -175,8 +175,8 @@ describe("getUserSession", () => {
     )
     expect(result.user).toEqual({
       sub: "user-456",
-      email: "darshan@example.com",
-      name: "Darshan",
+      email: "user@example.com",
+      name: "Demo User",
       sid: "session-123",
     })
     expect(result.sessionExpiresAt).toBeGreaterThan(Date.now())

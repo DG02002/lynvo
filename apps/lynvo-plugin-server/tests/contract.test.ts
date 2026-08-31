@@ -50,7 +50,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
     expect(validateUsageContract(usage)).toEqual({ ok: true, issues: [] })
   })
 
-  it("discovers Bhadoo URLs without Lynvo knowing their URL pattern", async () => {
+  it("discovers index URLs without Lynvo knowing their URL pattern", async () => {
     const response = await SELF.fetch("https://worker.example/discover", {
       method: "POST",
       headers: authenticatedHeaders,
@@ -78,7 +78,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
     expect(await response.json()).toEqual({ matched: false })
   })
 
-  it("extracts a direct Bhadoo media node", async () => {
+  it("extracts a direct drive-index media node", async () => {
     const response = await SELF.fetch("https://worker.example/extract", {
       method: "POST",
       headers: authenticatedHeaders,

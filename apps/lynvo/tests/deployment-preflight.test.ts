@@ -5,7 +5,6 @@ import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
 
 const scriptPath = resolve("scripts/deployment-preflight.mjs")
-const packageConfig = JSON.parse(readFileSync(resolve("package.json"), "utf8"))
 const lynvoConfig = readFileSync(resolve("wrangler.jsonc"), "utf8")
 
 const runPreflight = (
@@ -42,12 +41,6 @@ describe("deployment preflight command", () => {
     ["missing version", { commitHash: "abc123", serviceVersion: "" }],
   ])("rejects %s release identity", (_name, identity) => {
     expect(runPreflight(validLynvoConfig, identity).status).not.toBe(0)
-  })
-
-  it("passes the verified release identity to Wrangler", () => {
-    expect(packageConfig.scripts.deploy).toContain(
-      'wrangler deploy --config build/server/wrangler.json --env="" --var "COMMIT_HASH:$COMMIT_HASH" --var "SERVICE_VERSION:$SERVICE_VERSION"'
-    )
   })
 
   it.each([

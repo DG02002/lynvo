@@ -91,8 +91,8 @@ describe("Extraction interface routing", () => {
             return lynvoManifestResponse(
               [
                 {
-                  id: "bhadoo-google-drive-index",
-                  displayName: "Bhadoo",
+                  id: "example-drive-index",
+                  displayName: "Example",
                   status: "active",
                   version: "1.0.0",
                   hosts: ["drive.example"],
@@ -114,8 +114,8 @@ describe("Extraction interface routing", () => {
             plugin: {
               pluginServerId: "dev.lynvo.plugin-server",
               displayName: "Lynvo Plugin Server",
-              pluginId: "bhadoo-google-drive-index",
-              pluginName: "Bhadoo",
+              pluginId: "example-drive-index",
+              pluginName: "Example",
             },
             nodes: [
               {
@@ -136,7 +136,7 @@ describe("Extraction interface routing", () => {
           url: "https://drive.example/download.aspx?file=signed",
           requestId: "assigned-plugin-domain",
           pluginServerId: LYNVO_PLUGIN_SERVER_ID,
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
           userId: "user-1",
         })
       ).pipe(Effect.provide(buildLayer(testEnvironment)))
@@ -682,9 +682,9 @@ describe("Extraction interface routing", () => {
     fetchMock.mockRestore()
   })
 
-  it("selects a matched Bhadoo Plugin before Direct Media probing", async () => {
+  it("selects a matched Example Plugin before Direct Media probing", async () => {
     const pluginServerRequests: Request[] = []
-    // SAFETY: This fixture supplies the Cloudflare bindings used by the Bhadoo routing test.
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the Example routing test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -710,8 +710,8 @@ describe("Extraction interface routing", () => {
                 lynvo: {
                   plugins: [
                     {
-                      id: "bhadoo-google-drive-index",
-                      displayName: "Bhadoo’s Google Drive Index",
+                      id: "example-drive-index",
+                      displayName: "Example’s Drive Index",
                       status: "active",
                       version: "1.0.0",
                       hosts: ["drive.example.invalid"],
@@ -744,7 +744,7 @@ describe("Extraction interface routing", () => {
           if (request.url.endsWith("/discover")) {
             return Response.json({
               matched: true,
-              pluginId: "bhadoo-google-drive-index",
+              pluginId: "example-drive-index",
               confidence: "pattern",
             })
           }
@@ -752,15 +752,15 @@ describe("Extraction interface routing", () => {
             plugin: {
               pluginServerId: LYNVO_PLUGIN_SERVER_ID,
               displayName: "Lynvo Plugin Server",
-              pluginId: "bhadoo-google-drive-index",
-              pluginName: "Bhadoo’s Google Drive Index",
+              pluginId: "example-drive-index",
+              pluginName: "Example’s Drive Index",
             },
             nodes: [
               {
                 kind: "playable",
                 id: "item-1",
                 label: "Episode 1.mkv",
-                url: "https://gd.example.workers.dev/0:/Show/Episode 1.mkv",
+                url: "https://gd.example.host/0:/Show/Episode 1.mkv",
               },
             ],
             extensions: {},
@@ -773,8 +773,8 @@ describe("Extraction interface routing", () => {
     const result = await Effect.runPromise(
       ExtractionService.use((service) =>
         service.extract({
-          url: "https://gd.example.workers.dev/0:/Show/",
-          requestId: "bhadoo-auto-discover",
+          url: "https://gd.example.host/0:/Show/",
+          requestId: "example-drive-auto-discover",
           userId: "user-1",
         })
       ).pipe(Effect.provide(buildLayer(testEnvironment)))
@@ -784,7 +784,7 @@ describe("Extraction interface routing", () => {
       expect.objectContaining({ label: "Episode 1.mkv" }),
     ])
     expect(result.meta).toMatchObject({
-      pluginId: "bhadoo-google-drive-index",
+      pluginId: "example-drive-index",
       pluginServerId: LYNVO_PLUGIN_SERVER_ID,
     })
     expect(
@@ -795,9 +795,9 @@ describe("Extraction interface routing", () => {
     ).toBe(true)
   })
 
-  it("selects a matched OneDrive Plugin before Direct Media probing", async () => {
+  it("selects a matched Cloud Plugin before Direct Media probing", async () => {
     const pluginServerRequests: Request[] = []
-    // SAFETY: This fixture supplies the Cloudflare bindings used by the OneDrive routing test.
+    // SAFETY: This fixture supplies the Cloudflare bindings used by the Cloud routing test.
     const testEnvironment = {
       ...environment,
       MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
@@ -813,7 +813,7 @@ describe("Extraction interface routing", () => {
               usage: { endpoint: "/usage" },
               matchers: [
                 {
-                  hosts: ["onedrive.example.invalid"],
+                  hosts: ["cloud.example.invalid"],
                   hostPatterns: ["*"],
                   pathPatterns: ["/**"],
                 },
@@ -823,14 +823,14 @@ describe("Extraction interface routing", () => {
                 lynvo: {
                   plugins: [
                     {
-                      id: "onedrive-index",
-                      displayName: "Spencerwooo's OneDrive Vercel Index",
+                      id: "example-cloud-index",
+                      displayName: "Sample's Cloud Drive Index",
                       status: "active",
                       version: "1.0.0",
-                      hosts: ["onedrive.example.invalid"],
+                      hosts: ["cloud.example.invalid"],
                       matchers: [
                         {
-                          hosts: ["onedrive.example.invalid"],
+                          hosts: ["cloud.example.invalid"],
                           hostPatterns: ["*"],
                           pathPatterns: ["/**"],
                         },
@@ -857,7 +857,7 @@ describe("Extraction interface routing", () => {
           if (request.url.endsWith("/discover")) {
             return Response.json({
               matched: true,
-              pluginId: "onedrive-index",
+              pluginId: "example-cloud-index",
               confidence: "verified",
             })
           }
@@ -865,15 +865,15 @@ describe("Extraction interface routing", () => {
             plugin: {
               pluginServerId: LYNVO_PLUGIN_SERVER_ID,
               displayName: "Lynvo Plugin Server",
-              pluginId: "onedrive-index",
-              pluginName: "Spencerwooo's OneDrive Vercel Index",
+              pluginId: "example-cloud-index",
+              pluginName: "Sample's Cloud Drive Index",
             },
             nodes: [
               {
                 kind: "playable",
                 id: "od-1",
                 label: "Movie.mp4",
-                url: "https://onedrive.example.com/Movie.mp4",
+                url: "https://cloud.example.com/Movie.mp4",
               },
             ],
             extensions: {},
@@ -886,8 +886,8 @@ describe("Extraction interface routing", () => {
     const result = await Effect.runPromise(
       ExtractionService.use((service) =>
         service.extract({
-          url: "https://onedrive.example.com/Movies/",
-          requestId: "onedrive-auto-discover",
+          url: "https://cloud.example.com/Movies/",
+          requestId: "example-cloud-auto-discover",
           userId: "user-1",
         })
       ).pipe(Effect.provide(buildLayer(testEnvironment)))
@@ -897,7 +897,7 @@ describe("Extraction interface routing", () => {
       expect.objectContaining({ label: "Movie.mp4" }),
     ])
     expect(result.meta).toMatchObject({
-      pluginId: "onedrive-index",
+      pluginId: "example-cloud-index",
       pluginServerId: LYNVO_PLUGIN_SERVER_ID,
     })
     expect(

@@ -10,7 +10,7 @@ const savedWorkerItem = (): LinkViewItem => ({
     schemaVersion: 3,
     source: {
       pluginServerId: "pluginServer-1",
-      pluginId: "bhadoo-google-drive-index",
+      pluginId: "example-drive-index",
       sourceName: "Plugin Server Source",
     },
     extraction: {
@@ -115,7 +115,7 @@ describe("extraction orchestration", () => {
     expect(transport.extract).toHaveBeenCalledWith({
       url: "https://example.com/source",
       pluginServerId: "pluginServer-1",
-      pluginId: "bhadoo-google-drive-index",
+      pluginId: "example-drive-index",
     })
     expect(metadata).toEqual(
       expect.objectContaining({ pluginServerId: "pluginServer-1" })
@@ -152,14 +152,14 @@ describe("extraction orchestration", () => {
         {
           url: "https://example.com/source",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
         },
       ],
       [
         {
           url: "https://pluginServer.example/playable-item",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
           kind: "node",
         },
       ],
@@ -167,7 +167,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://pluginServer.example/folder/1",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
           kind: "node",
         },
       ],

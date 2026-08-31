@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { saveLink } from "~/features/links/use-link-actions/save-flow"
 
-describe("Bhadoo save flow", () => {
+describe("Index save flow", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
   })

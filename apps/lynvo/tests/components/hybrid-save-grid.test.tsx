@@ -135,7 +135,7 @@ describe("HybridSaveGrid", () => {
       id: "movie-item",
       url: "https://media.example/movie",
       timestamp: Date.now(),
-      title: "Ghost in the Shell",
+      title: "Sample Feature",
       metadata: {
         schemaVersion: 3,
         source: {
@@ -147,7 +147,7 @@ describe("HybridSaveGrid", () => {
             {
               id: "movie-file",
               url: "https://media.example/movie/file.mkv",
-              label: "Ghost.in.the.Shell.2017.mkv",
+              label: "Sample.in.the.Feature.2017.mkv",
               type: "file",
             },
           ],
@@ -160,8 +160,8 @@ describe("HybridSaveGrid", () => {
       <HybridSaveGrid
         groups={[
           {
-            key: "movie:ghost in the shell:2017",
-            displayTitle: "Ghost in the Shell (2017)",
+            key: "movie:sample feature:2017",
+            displayTitle: "Sample Feature (2017)",
             artworkRequest: undefined,
             lastAddedAt: Date.now(),
             items: [movieItem],
@@ -177,9 +177,9 @@ describe("HybridSaveGrid", () => {
     )
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Open Ghost in the Shell (2017)" })
+      screen.getByRole("button", { name: "Open Sample Feature (2017)" })
     )
-    expect(onOpenGroup).toHaveBeenCalledWith("movie:ghost in the shell:2017")
+    expect(onOpenGroup).toHaveBeenCalledWith("movie:sample feature:2017")
 
     const movieCard = screen.getByTestId("hybrid-save-card")
     expect(movieCard.querySelector(".aspect-2\\/3")).toHaveClass(
@@ -237,11 +237,11 @@ describe("HybridSaveGrid", () => {
       <HybridSaveGrid
         groups={[
           {
-            key: "movie:ghost in the shell:2017",
-            displayTitle: "Ghost in the Shell (2017)",
+            key: "movie:sample feature:2017",
+            displayTitle: "Sample Feature (2017)",
             artworkRequest: {
               mediaKind: "movie",
-              title: "Ghost in the Shell",
+              title: "Sample Feature",
               year: 2017,
             },
             lastAddedAt: Date.now(),

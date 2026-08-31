@@ -134,7 +134,7 @@ describe("Bhadoo source adapter", () => {
         headers: {
           "Content-Type": "video/x-matroska",
           "Content-Disposition":
-            'attachment; filename="Doctor.Strange.2016.1080p.mkv"',
+            'attachment; filename="Sample.Movie.2016.1080p.mkv"',
           "Content-Range": "bytes 0-0/3912361197",
         },
       })
@@ -162,7 +162,7 @@ describe("Bhadoo source adapter", () => {
     expect(result.nodes).toEqual([
       expect.objectContaining({
         kind: "playable",
-        label: "Doctor.Strange.2016.1080p.mkv",
+        label: "Sample.Movie.2016.1080p.mkv",
         rangeRequest: "supported",
         size: "3.64 GB",
       }),

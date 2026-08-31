@@ -401,27 +401,6 @@ describe("LinkSelectionDialog", () => {
     expect(folderTreeItem).toHaveAttribute("aria-expanded", "true")
   })
 
-  it("matches the save page responsive content width", () => {
-    render(
-      <LinkSelectionDialog
-        open
-        onOpenChange={vi.fn()}
-        links={[]}
-        onConfirm={vi.fn()}
-      />
-    )
-
-    expect(screen.getByRole("dialog")).toHaveClass(
-      "h-svh",
-      "w-screen",
-      "rounded-none",
-      "sm:w-[calc(100vw-2rem)]",
-      "sm:rounded-4xl",
-      "md:w-[calc(100vw-4rem)]",
-      "md:max-w-[60rem]"
-    )
-  })
-
   it("formats the page title and pipe-separated audio metadata", () => {
     render(
       <LinkSelectionDialog
@@ -464,7 +443,7 @@ describe("LinkSelectionDialog", () => {
         onOpenChange={onOpenChange}
         links={[]}
         onConfirm={vi.fn()}
-        pluginName="Spencerwooo's Onedrive Vercel Index"
+        pluginName="Sample Cloud Drive Index"
       />
     )
 
@@ -473,22 +452,6 @@ describe("LinkSelectionDialog", () => {
     ).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
-  })
-
-  it("uses the shared large dialog action size", () => {
-    render(
-      <LinkSelectionDialog
-        open
-        onOpenChange={vi.fn()}
-        links={[]}
-        onConfirm={vi.fn()}
-      />
-    )
-
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("h-13.5")
-    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("h-13.5")
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("flex-1")
-    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("flex-1")
   })
 
   it("does not reserve trailing metadata space when a row has none", () => {

@@ -24,26 +24,26 @@ describe("getHybridCardGroups", () => {
   it("merges movie variants of the same title into one card", () => {
     const groups = getHybridCardGroups([
       createItem(
-        "https://example.com/iron-man-720",
-        "Iron.Man.720p.WEB-DL.mkv",
+        "https://example.com/sample-man-720",
+        "Sample.Man.720p.WEB-DL.mkv",
         2_000
       ),
       createItem(
-        "https://example.com/iron-man-1080",
-        "Iron.Man.2008.1080p.BluRay.mkv",
+        "https://example.com/sample-man-1080",
+        "Sample.Man.2008.1080p.BluRay.mkv",
         1_000
       ),
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Iron Man (2008)")
+    expect(groups[0]?.displayTitle).toBe("Sample Man (2008)")
     expect(groups[0]?.items.map((item) => item.url)).toEqual([
-      "https://example.com/iron-man-720",
-      "https://example.com/iron-man-1080",
+      "https://example.com/sample-man-720",
+      "https://example.com/sample-man-1080",
     ])
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "movie",
-      title: "Iron Man",
+      title: "Sample Man",
       year: 2008,
     })
   })
@@ -52,21 +52,21 @@ describe("getHybridCardGroups", () => {
     const groups = getHybridCardGroups([
       createItem(
         "https://example.com/st-e01",
-        "Stranger.Things.S01E01.720p.mkv",
+        "Sample.Things.S01E01.720p.mkv",
         2_000
       ),
       createItem(
         "https://example.com/st-e02",
-        "Stranger.Things.S01E02.1080p.mkv",
+        "Sample.Things.S01E02.1080p.mkv",
         1_000
       ),
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Stranger Things S01")
+    expect(groups[0]?.displayTitle).toBe("Sample Things S01")
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
-      title: "Stranger Things",
+      title: "Sample Things",
       seasonNumber: 1,
     })
   })
@@ -103,27 +103,35 @@ describe("getHybridCardGroups", () => {
 
   it("keeps same-title releases with conflicting years apart", () => {
     const groups = getHybridCardGroups([
-      createItem("https://example.com/dune-2021", "Dune.2021.1080p.mkv", 2_000),
-      createItem("https://example.com/dune-1984", "Dune.1984.720p.mkv", 1_000),
+      createItem(
+        "https://example.com/feature-2021",
+        "Feature.2021.1080p.mkv",
+        2_000
+      ),
+      createItem(
+        "https://example.com/feature-1984",
+        "Feature.1984.720p.mkv",
+        1_000
+      ),
     ])
 
     expect(groups).toHaveLength(2)
     expect(groups.map((group) => group.displayTitle)).toEqual([
-      "Dune (2021)",
-      "Dune (1984)",
+      "Feature (2021)",
+      "Feature (1984)",
     ])
   })
 
   it("keeps same-title shows with conflicting years apart", () => {
     const groups = getHybridCardGroups([
       createItem(
-        "https://example.com/one-piece-1999",
-        "One.Piece.S01E01.1999.mkv",
+        "https://example.com/sample-piece-1999",
+        "Sample.Piece.S01E01.1999.mkv",
         2_000
       ),
       createItem(
-        "https://example.com/one-piece-2023",
-        "One.Piece.2023.S01E01.mkv",
+        "https://example.com/sample-piece-2023",
+        "Sample.Piece.2023.S01E01.mkv",
         1_000
       ),
     ])
@@ -145,8 +153,8 @@ describe("getHybridCardGroups", () => {
     const groups = getHybridCardGroups([
       {
         ...createItem(
-          "https://new5.hdhub4u.cl/toxic-2026-hindi-line-v2-hdtc-full-movie/",
-          "Toxic (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
+          "https://mirror.sample-site.cl/feature-2026-hindi-line-v2-hdtc-full-movie/",
+          "Feature (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
           2_000
         ),
         metadata: {
@@ -155,7 +163,7 @@ describe("getHybridCardGroups", () => {
           extraction: {
             extractedLinks: [
               {
-                nodeKey: "0:resolvable:hubcdn-1",
+                nodeKey: "0:resolvable:samplecdn-1",
                 url: "https://example.com/480p",
                 label: "480p⚡",
                 type: "folder",
@@ -163,7 +171,7 @@ describe("getHybridCardGroups", () => {
                 mediaNodeKind: "resolvable",
               },
               {
-                nodeKey: "5:resolvable:hubdrive-6",
+                nodeKey: "5:resolvable:sampledrive-6",
                 url: "https://example.com/hq-rip",
                 label: "HQ-Rip 1080p",
                 type: "folder",
@@ -178,10 +186,10 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Toxic (2026)")
+    expect(groups[0]?.displayTitle).toBe("Feature (2026)")
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "movie",
-      title: "Toxic",
+      title: "Feature",
       year: 2026,
     })
   })
@@ -190,8 +198,8 @@ describe("getHybridCardGroups", () => {
     const groups = getHybridCardGroups([
       {
         ...createItem(
-          "https://new5.hdhub4u.cl/toxic-2026-hindi-line-v2-hdtc-full-movie/",
-          "Toxic (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
+          "https://mirror.sample-site.cl/feature-2026-hindi-line-v2-hdtc-full-movie/",
+          "Feature (2026) V2 HQ-HDTC [Hindi] (LiNE) 1080p 720p & 480p Multi Audio [x264/HEVC] | Full Movie",
           2_000
         ),
         metadata: {
@@ -200,7 +208,7 @@ describe("getHybridCardGroups", () => {
           extraction: {
             extractedLinks: [
               {
-                nodeKey: "0:resolvable:hubcdn-1",
+                nodeKey: "0:resolvable:samplecdn-1",
                 url: "https://example.com/480p",
                 label: "480p⚡",
                 type: "folder",
@@ -209,14 +217,14 @@ describe("getHybridCardGroups", () => {
                 resolutionKind: "mirrors",
               },
               {
-                nodeKey: "2:resolvable:greenmount-3",
+                nodeKey: "2:resolvable:samplemount-3",
                 url: "https://example.com/720p-x264",
                 label: "720p x264",
                 type: "folder",
                 childrenResolved: true,
                 children: [
                   {
-                    nodeKey: "0:resolvable:hubcloud-1",
+                    nodeKey: "0:resolvable:samplecloud-1",
                     url: "https://example.com/direct",
                     label: "Direct",
                     type: "folder",
@@ -224,7 +232,7 @@ describe("getHybridCardGroups", () => {
                     resolutionKind: "mirrors",
                   },
                   {
-                    nodeKey: "1:resolvable:hubdrive-2",
+                    nodeKey: "1:resolvable:sampledrive-2",
                     url: "https://example.com/drive",
                     label: "Drive",
                     type: "folder",
@@ -243,14 +251,14 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Toxic (2026)")
+    expect(groups[0]?.displayTitle).toBe("Feature (2026)")
     expect(groups[0]?.items).toHaveLength(1)
   })
 
   it("derives a tv identity from extracted children for show containers", () => {
     const groups = getHybridCardGroups([
       {
-        ...createItem("https://example.com/reacher", "Reacher (2022)", 2_000),
+        ...createItem("https://example.com/warden", "Warden (2022)", 2_000),
         metadata: {
           schemaVersion: 3,
           source: {},
@@ -272,7 +280,7 @@ describe("getHybridCardGroups", () => {
                         nodeKey: "0.0.0:resolvable:e1",
                         url: "https://example.com/e1",
                         label:
-                          "Reacher S01E01 UHD BluRay 2160p REMUX HDR HEVC.mkv",
+                          "Warden S01E01 UHD BluRay 2160p REMUX HDR HEVC.mkv",
                         type: "file",
                         mediaNodeKind: "resolvable",
                       },
@@ -288,10 +296,10 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.displayTitle).toBe("Reacher (2022) S01")
+    expect(groups[0]?.displayTitle).toBe("Warden (2022) S01")
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
-      title: "Reacher",
+      title: "Warden",
       year: 2022,
       seasonNumber: 1,
     })
@@ -301,13 +309,13 @@ describe("getHybridCardGroups", () => {
     const groups = getHybridCardGroups([
       {
         ...createItem(
-          "https://4khdhub.one/overlord-series-164/",
-          "Overlord (2015)",
+          "https://sample-hd.example/show-series-164/",
+          "Sample Show (2015)",
           2_000
         ),
         metadata: {
           schemaVersion: 3,
-          source: { pageTitle: "Overlord (2015)" },
+          source: { pageTitle: "Sample Show (2015)" },
           extraction: {
             extractedLinks: [
               {
@@ -322,7 +330,7 @@ describe("getHybridCardGroups", () => {
                     children: [
                       {
                         label:
-                          "Overlord.S01E01.1080p.AMZN.WEB-DL.DDP2.0.H.264-4kHdHub.Com.mkv",
+                          "Sample.Show.S01E01.1080p.PROV.WEB-DL.DDP2.0.H.264-SampleTag.Com.mkv",
                         type: "folder",
                         mediaNodeKind: "resolvable",
                       },
@@ -340,7 +348,7 @@ describe("getHybridCardGroups", () => {
     expect(groups).toHaveLength(1)
     expect(groups[0]?.artworkRequest).toEqual({
       mediaKind: "tv",
-      title: "Overlord",
+      title: "Sample Show",
       year: 2015,
       seasonNumber: 1,
     })
@@ -348,15 +356,15 @@ describe("getHybridCardGroups", () => {
 
   it("orders groups by their newest item", () => {
     const groups = getHybridCardGroups([
-      createItem("https://example.com/old", "Coco.2017.mkv", 1_000),
-      createItem("https://example.com/new", "Up.2009.mkv", 3_000),
-      createItem("https://example.com/mid", "Alien.1979.mkv", 2_000),
+      createItem("https://example.com/old", "Alpha.2017.mkv", 1_000),
+      createItem("https://example.com/new", "Beta.2009.mkv", 3_000),
+      createItem("https://example.com/mid", "Gamma.1979.mkv", 2_000),
     ])
 
     expect(groups.map((group) => group.displayTitle)).toEqual([
-      "Up (2009)",
-      "Alien (1979)",
-      "Coco (2017)",
+      "Beta (2009)",
+      "Gamma (1979)",
+      "Alpha (2017)",
     ])
   })
 })

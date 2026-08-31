@@ -8,7 +8,7 @@ interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
 }
 
-const episodeFilename = "Can.This.Love.Be.Translated.S01E01.1080p.NF.WEB-DL.mkv"
+const episodeFilename = "Sample.Series.Name.S01E01.1080p.PROV.WEB-DL.mkv"
 const localStorageValues = new Map<string, string>()
 const localStorageStub = {
   getItem: (key: string) => localStorageValues.get(key) ?? null,
@@ -47,18 +47,18 @@ const createActions = (): LinkItemActions => ({
 
 const item: LinkViewItem = {
   kind: "saved",
-  id: "can-this-love-be-translated",
-  url: "https://media.example/can-this-love-be-translated",
+  id: "sample-series-name",
+  url: "https://media.example/sample-series-name",
   timestamp: Date.now(),
-  title: "Can This Love Be Translated",
+  title: "Sample Series Name",
   metadata: {
     schemaVersion: 3,
-    source: { sourceName: "Netflix" },
+    source: { sourceName: "Streambox" },
     extraction: {
       extractedLinks: [
         {
-          id: "can-this-love-be-translated-episode-1",
-          url: "https://media.example/can-this-love-be-translated-episode-1",
+          id: "sample-series-name-episode-1",
+          url: "https://media.example/sample-series-name-episode-1",
           label: episodeFilename,
           type: "file",
           size: "1.05 GB",
@@ -71,18 +71,18 @@ const item: LinkViewItem = {
 
 const movieItem: LinkViewItem = {
   ...item,
-  id: "toxic-movie",
-  url: "https://media.example/toxic-movie",
-  title: "Toxic (2026)",
+  id: "feature-movie",
+  url: "https://media.example/feature-movie",
+  title: "Feature (2026)",
   metadata: {
     ...item.metadata,
     extraction: {
       ...item.metadata.extraction,
       extractedLinks: [
         {
-          id: "toxic-movie-file",
-          url: "https://media.example/toxic-movie-file",
-          label: "Toxic.2026.1080p.mkv",
+          id: "feature-movie-file",
+          url: "https://media.example/feature-movie-file",
+          label: "Feature.2026.1080p.mkv",
           type: "file",
           size: "1.05 GB",
         },
@@ -138,7 +138,7 @@ describe("FinderBrowser episode rows", () => {
     expect(screen.queryByText("Show episode names")).not.toBeInTheDocument()
 
     const headerMenu = screen.getByRole("button", {
-      name: "Open menu for Toxic (2026)",
+      name: "Open menu for Feature (2026)",
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
@@ -153,7 +153,7 @@ describe("FinderBrowser episode rows", () => {
 
   it("keeps the header menu right-aligned for long movie folder titles", () => {
     const longMovieTitle =
-      "Toxic (2026) — An Extremely Long Folder Title That Must Truncate In The Browser Header"
+      "Feature (2026) — An Extremely Long Folder Title That Must Truncate In The Browser Header"
     render(
       <SaveListBrowser
         items={[{ ...movieItem, title: longMovieTitle }]}
@@ -196,7 +196,7 @@ describe("FinderBrowser episode rows", () => {
     )
 
     const headerMenu = screen.getByRole("button", {
-      name: "Open menu for Can This Love Be Translated",
+      name: "Open menu for Sample Series Name",
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
@@ -207,10 +207,10 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("switch", { name: "Episode names" })
     ).toBeInTheDocument()
     await screen.findByText("1. Episode 1")
-    const sourceName = screen.getByText("Netflix")
+    const sourceName = screen.getByText("Streambox")
     const fileSize = screen.getByText("1.05 GB")
     expect(sourceName.parentElement).toContainElement(fileSize)
-    expect(sourceName.parentElement).toHaveTextContent("Netflix·1.05 GB")
+    expect(sourceName.parentElement).toHaveTextContent("Streambox·1.05 GB")
     expect(screen.getAllByText("1.05 GB")).toHaveLength(1)
     await waitFor(() => {
       const episodeImage = view.container.querySelector(

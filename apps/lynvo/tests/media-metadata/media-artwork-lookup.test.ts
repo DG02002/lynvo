@@ -248,26 +248,28 @@ describe("Media artwork lookup", () => {
       {
         urlIncludes: "/search/tv?",
         payload: {
-          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+          results: [
+            { id: 30000, name: "Sample Show", poster_path: "/sample-show.jpg" },
+          ],
         },
       },
       {
-        urlIncludes: "/tv/30984/season/2",
+        urlIncludes: "/tv/30000/season/2",
         payload: {
-          id: 30984,
-          name: "Thousand-Year Blood War",
-          poster_path: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+          id: 30000,
+          name: "Sample Arc",
+          poster_path: "/sample-season-poster.jpg",
           season_number: 2,
         },
       },
       {
-        urlIncludes: "/tv/30984",
+        urlIncludes: "/tv/30000",
         payload: {
-          id: 30984,
+          id: 30000,
           seasons: [
             { season_number: 0, name: "Specials" },
-            { season_number: 1, name: "Bleach" },
-            { season_number: 2, name: "Thousand-Year Blood War" },
+            { season_number: 1, name: "Sample Show" },
+            { season_number: 2, name: "Sample Arc" },
           ],
         },
       },
@@ -278,7 +280,7 @@ describe("Media artwork lookup", () => {
       [
         {
           mediaKind: "tv",
-          title: "Bleach Thousand Year Blood War",
+          title: "Sample Show Sample Arc",
           seasonNumber: 4,
         },
       ],
@@ -287,14 +289,14 @@ describe("Media artwork lookup", () => {
 
     expect(results).toEqual([
       {
-        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
-        identity: { providerId: 30984, title: "Bleach" },
+        posterPath: "/sample-season-poster.jpg",
+        identity: { providerId: 30000, title: "Sample Show" },
         candidates: [
           {
-            providerId: 30984,
-            title: "Bleach",
+            providerId: 30000,
+            title: "Sample Show",
             mediaKind: "tv",
-            posterPath: "/bleach.jpg",
+            posterPath: "/sample-show.jpg",
           },
         ],
       },
@@ -306,26 +308,28 @@ describe("Media artwork lookup", () => {
       {
         urlIncludes: "/search/tv?",
         payload: {
-          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+          results: [
+            { id: 30000, name: "Sample Show", poster_path: "/sample-show.jpg" },
+          ],
         },
       },
       {
-        urlIncludes: "/tv/30984/season/2/episode/1",
+        urlIncludes: "/tv/30000/season/2/episode/1",
         payload: {
-          id: 3754381,
-          name: "The Blood Warfare",
-          still_path: "/jMo1WpRVfSdttH492fPxY2rQCyc.jpg",
+          id: 3000001,
+          name: "The Sample Battle",
+          still_path: "/sample-episode-1.jpg",
           season_number: 2,
           episode_number: 1,
         },
       },
       {
-        urlIncludes: "/tv/30984/episode_groups",
+        urlIncludes: "/tv/30000/episode_groups",
         payload: {
           results: [
             {
               id: "tybw-season-split",
-              name: "Hulu Season Split (Thousand-Year Blood War)",
+              name: "Platform Season Split (Sample Arc)",
             },
           ],
         },
@@ -335,28 +339,28 @@ describe("Media artwork lookup", () => {
         payload: {
           groups: [
             {
-              name: "The Conflict",
+              name: "The First Cour",
               order: 3,
               episodes: [
                 {
-                  id: 3754407,
+                  id: 3000002,
                   name: "A",
                   order: 0,
-                  still_path: "/1CAJci6VXz9DBX3hbq1X82R436e.jpg",
+                  still_path: "/sample-episode-2.jpg",
                   season_number: 2,
                   episode_number: 27,
                 },
               ],
             },
             {
-              name: "The Calamity",
+              name: "The Second Cour",
               order: 4,
               episodes: [
                 {
-                  id: 3754421,
-                  name: "GOD OF THUNDER",
+                  id: 3000003,
+                  name: "TAG OF SAMPLES",
                   order: 0,
-                  still_path: "/pShnxXXD1CrHyLbbTu8nAaLczHP.jpg",
+                  still_path: "/sample-episode-3.jpg",
                   season_number: 2,
                   episode_number: 41,
                 },
@@ -366,22 +370,22 @@ describe("Media artwork lookup", () => {
         },
       },
       {
-        urlIncludes: "/tv/30984/season/2",
+        urlIncludes: "/tv/30000/season/2",
         payload: {
-          id: 30984,
-          name: "Thousand-Year Blood War",
-          poster_path: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
+          id: 30000,
+          name: "Sample Arc",
+          poster_path: "/sample-season-poster.jpg",
           season_number: 2,
         },
       },
       {
-        urlIncludes: "/tv/30984",
+        urlIncludes: "/tv/30000",
         payload: {
-          id: 30984,
+          id: 30000,
           seasons: [
             { season_number: 0, name: "Specials" },
-            { season_number: 1, name: "Bleach" },
-            { season_number: 2, name: "Thousand-Year Blood War" },
+            { season_number: 1, name: "Sample Show" },
+            { season_number: 2, name: "Sample Arc" },
           ],
         },
       },
@@ -392,13 +396,13 @@ describe("Media artwork lookup", () => {
       [
         {
           mediaKind: "tv",
-          title: "Bleach Thousand Year Blood War",
+          title: "Sample Show Sample Arc",
           seasonNumber: 3,
           episodeNumber: 1,
         },
         {
           mediaKind: "tv",
-          title: "Bleach Thousand Year Blood War",
+          title: "Sample Show Sample Arc",
           seasonNumber: 4,
           episodeNumber: 1,
         },
@@ -408,30 +412,30 @@ describe("Media artwork lookup", () => {
 
     expect(results).toEqual([
       {
-        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
-        stillPath: "/1CAJci6VXz9DBX3hbq1X82R436e.jpg",
+        posterPath: "/sample-season-poster.jpg",
+        stillPath: "/sample-episode-2.jpg",
         episodeTitle: "A",
-        identity: { providerId: 30984, title: "Bleach" },
+        identity: { providerId: 30000, title: "Sample Show" },
         candidates: [
           {
-            providerId: 30984,
-            title: "Bleach",
+            providerId: 30000,
+            title: "Sample Show",
             mediaKind: "tv",
-            posterPath: "/bleach.jpg",
+            posterPath: "/sample-show.jpg",
           },
         ],
       },
       {
-        posterPath: "/xAiiPhRm1zOyPwBLjcA2RsFtG8G.jpg",
-        stillPath: "/pShnxXXD1CrHyLbbTu8nAaLczHP.jpg",
-        episodeTitle: "GOD OF THUNDER",
-        identity: { providerId: 30984, title: "Bleach" },
+        posterPath: "/sample-season-poster.jpg",
+        stillPath: "/sample-episode-3.jpg",
+        episodeTitle: "TAG OF SAMPLES",
+        identity: { providerId: 30000, title: "Sample Show" },
         candidates: [
           {
-            providerId: 30984,
-            title: "Bleach",
+            providerId: 30000,
+            title: "Sample Show",
             mediaKind: "tv",
-            posterPath: "/bleach.jpg",
+            posterPath: "/sample-show.jpg",
           },
         ],
       },
@@ -443,21 +447,23 @@ describe("Media artwork lookup", () => {
       {
         urlIncludes: "/search/tv?",
         payload: {
-          results: [{ id: 30984, name: "Bleach", poster_path: "/bleach.jpg" }],
+          results: [
+            { id: 30000, name: "Sample Show", poster_path: "/sample-show.jpg" },
+          ],
         },
       },
       {
-        urlIncludes: "/tv/30984",
+        urlIncludes: "/tv/30000",
         payload: {
-          id: 30984,
-          seasons: [{ season_number: 1, name: "Bleach" }],
+          id: 30000,
+          seasons: [{ season_number: 1, name: "Sample Show" }],
         },
       },
     ])
 
     const results = await lookupMediaArtwork(
       { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
-      [{ mediaKind: "tv", title: "Bleach Unrelated Words" }],
+      [{ mediaKind: "tv", title: "Sample Show Unrelated Words" }],
       { fetch }
     )
 
@@ -465,10 +471,10 @@ describe("Media artwork lookup", () => {
       {
         candidates: [
           {
-            providerId: 30984,
-            title: "Bleach",
+            providerId: 30000,
+            title: "Sample Show",
             mediaKind: "tv",
-            posterPath: "/bleach.jpg",
+            posterPath: "/sample-show.jpg",
           },
         ],
       },
@@ -484,25 +490,25 @@ describe("Media artwork lookup", () => {
       {
         urlIncludes: "/search/movie?",
         payload: {
-          results: [{ id: 42, title: "Toxic", poster_path: "/t.jpg" }],
+          results: [{ id: 42, title: "Feature", poster_path: "/t.jpg" }],
         },
       },
     ])
 
     const results = await lookupMediaArtwork(
       { TMDB_API_READ_ACCESS_TOKEN: "secret-token" },
-      [{ mediaKind: "movie", title: "Toxic", year: 2099 }],
+      [{ mediaKind: "movie", title: "Feature", year: 2099 }],
       { fetch }
     )
 
     expect(results).toEqual([
       {
         posterPath: "/t.jpg",
-        identity: { providerId: 42, title: "Toxic" },
+        identity: { providerId: 42, title: "Feature" },
         candidates: [
           {
             providerId: 42,
-            title: "Toxic",
+            title: "Feature",
             mediaKind: "movie",
             posterPath: "/t.jpg",
           },

@@ -259,8 +259,8 @@ describe("d1 data routes", () => {
           id: created.id,
           operation: {
             kind: "setArtwork",
-            providerId: 438631,
-            title: "Dune",
+            providerId: 42,
+            title: "Test Feature",
             year: 2021,
             mediaKind: "movie",
           },
@@ -279,7 +279,7 @@ describe("d1 data routes", () => {
     const metadata = JSON.parse(row?.meta_json ?? "{}") as {
       artwork?: { providerId: number; mediaKind?: string }
     }
-    expect(metadata.artwork?.providerId).toBe(438631)
+    expect(metadata.artwork?.providerId).toBe(42)
     expect(metadata.artwork?.mediaKind).toBe("movie")
   })
 

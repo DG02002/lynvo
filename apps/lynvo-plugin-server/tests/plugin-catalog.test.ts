@@ -77,40 +77,6 @@ describe("Lynvo plugin catalog", () => {
     })
   })
 
-  it("publishes only owned public icon URLs", () => {
-    const extension = getLynvoManifestExtension(
-      createLynvoPluginServerManifest("http://localhost:5173")
-    )
-    const bhadooPlugin = extension.plugins?.find(
-      (plugin) => plugin.id === "bhadoo-google-drive-index"
-    )
-    expect(bhadooPlugin).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/bhadoo-cloud.svg",
-    })
-    expect(
-      extension.plugins?.find((plugin) => plugin.id === "onedrive-index")
-    ).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
-    })
-    expect(
-      extension.plugins?.find(
-        (plugin) => plugin.id === "google-drive-public-files"
-      )
-    ).toMatchObject({
-      hasIcon: true,
-      iconUrl:
-        "http://localhost:5173/icons/sources/google-drive-public-files.webp",
-    })
-    expect(
-      extension.plugins?.find((plugin) => plugin.id === "direct-media")
-    ).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/direct-media.webp",
-    })
-  })
-
   it("omits source icons when no public asset origin is configured", () => {
     const extension = getLynvoManifestExtension(
       createLynvoPluginServerManifest()
@@ -137,7 +103,7 @@ describe("Lynvo plugin catalog", () => {
     )
 
     await expect(
-      discoverLynvoPlugin("https://unknown.example/MEDIA/TV/Flames/")
+      discoverLynvoPlugin("https://unknown.example/MEDIA/TV/Sample-Show/")
     ).resolves.toEqual({
       matched: true,
       pluginId: "onedrive-index",

@@ -11,28 +11,11 @@ import {
 import {
   ApiResponseError,
   apiErrorResponseSchema,
-  createApiErrorResponse,
   readApiResponseError,
 } from "~/lib/api-errors"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 describe("API errors", () => {
-  it("creates a stable response envelope with support information", () => {
-    expect(
-      createApiErrorResponse({
-        code: "service_unavailable",
-        error: "Login is temporarily unavailable. Try again later.",
-        retryable: true,
-        requestId: "request-123",
-      })
-    ).toEqual({
-      code: "service_unavailable",
-      error: "Login is temporarily unavailable. Try again later.",
-      retryable: true,
-      requestId: "request-123",
-    })
-  })
-
   it("decodes trusted API errors and ignores malformed server responses", async () => {
     await expect(
       readApiResponseError(

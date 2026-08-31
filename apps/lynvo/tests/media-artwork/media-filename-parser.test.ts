@@ -6,38 +6,38 @@ describe("parseMediaFilename", () => {
     const cases = [
       {
         filename:
-          "Backrooms (2026) 2160p 10bit HDR10+ DV iTunes WEB-DL HEVC...mkv",
-        title: "Backrooms",
+          "Feature (2026) 2160p 10bit HDR10+ DV Store WEB-DL HEVC...mkv",
+        title: "Feature",
         year: 2026,
       },
       {
-        filename: "Insidious-6.2026.1080p.HEVC.HDTC...mkv",
-        title: "Insidious 6",
+        filename: "Feature-6.2026.1080p.HEVC.HDTC...mkv",
+        title: "Feature 6",
         year: 2026,
       },
       {
-        filename: "Blade Runner (1982) Final Cut V2...mkv",
-        title: "Blade Runner",
+        filename: "Alpha Runner (1982) Final Cut V2...mkv",
+        title: "Alpha Runner",
         year: 1982,
       },
       {
-        filename: "Chennai.Love.Story.2026.720p...mkv",
-        title: "Chennai Love Story",
+        filename: "Metro.Love.Story.2026.720p...mkv",
+        title: "Metro Love Story",
         year: 2026,
       },
       {
-        filename: "Deadpool & Wolverine (2024) 1080p...mkv",
-        title: "Deadpool & Wolverine",
+        filename: "Alpha & Beta (2024) 1080p...mkv",
+        title: "Alpha & Beta",
         year: 2024,
       },
       {
-        filename: "Thor - The Dark World (2013) 4K...mkv",
-        title: "Thor - The Dark World",
+        filename: "Hero - The Dark World (2013) 4K...mkv",
+        title: "Hero - The Dark World",
         year: 2013,
       },
       {
-        filename: "When Marnie Was There 2014 (BD Remux...)",
-        title: "When Marnie Was There",
+        filename: "When Sample Was There 2014 (BD Remux...)",
+        title: "When Sample Was There",
         year: 2014,
       },
     ]
@@ -55,38 +55,36 @@ describe("parseMediaFilename", () => {
 
   it("classifies representative episode and range filenames", () => {
     expect(
-      parseMediaFilename(
-        "Pokemon.The.Series.S04E01.A.Goldenrod.Opportunity...mkv"
-      )
+      parseMediaFilename("Sample.The.Series.S04E01.An.Episode.Name...mkv")
     ).toMatchObject({
       kind: "episode",
-      title: "Pokemon The Series",
+      title: "Sample The Series",
       seasonNumber: 4,
       episodeNumber: 1,
     })
 
-    expect(parseMediaFilename("High School DxD - S01E01")).toMatchObject({
+    expect(parseMediaFilename("High School Sample - S01E01")).toMatchObject({
       kind: "episode",
-      title: "High School DxD",
+      title: "High School Sample",
       seasonNumber: 1,
       episodeNumber: 1,
     })
 
     expect(
-      parseMediaFilename("Mob Psycho 100 III (2022) S03E01...mkv")
+      parseMediaFilename("Sample Psycho 100 III (2022) S03E01...mkv")
     ).toMatchObject({
       kind: "episode",
-      title: "Mob Psycho 100 III",
+      title: "Sample Psycho 100 III",
       year: 2022,
       seasonNumber: 3,
       episodeNumber: 1,
     })
 
     expect(
-      parseMediaFilename("Naruto Shippuden (2007) S06[E129-143]...")
+      parseMediaFilename("Sample Shippuden (2007) S06[E129-143]...")
     ).toMatchObject({
       kind: "episode-range",
-      title: "Naruto Shippuden",
+      title: "Sample Shippuden",
       year: 2007,
       seasonNumber: 6,
       episodeNumber: 129,
@@ -95,47 +93,49 @@ describe("parseMediaFilename", () => {
   })
 
   it("recognizes season-only names and folder context", () => {
-    expect(parseMediaFilename("Oshi no Ko Season 1 BluRay...")).toMatchObject({
-      kind: "season",
-      title: "Oshi no Ko",
-      seasonNumber: 1,
-    })
-
-    expect(parseMediaFilename("[Salieri] Gachiakuta S1 - BD...")).toMatchObject(
+    expect(parseMediaFilename("Sample no Ko Season 1 BluRay...")).toMatchObject(
       {
         kind: "season",
-        title: "Gachiakuta",
+        title: "Sample no Ko",
         seasonNumber: 1,
       }
     )
 
+    expect(
+      parseMediaFilename("[SampleGroup] Sample Show S1 - BD...")
+    ).toMatchObject({
+      kind: "season",
+      title: "Sample Show",
+      seasonNumber: 1,
+    })
+
     const folderCandidate = parseMediaFilename(
-      "Chilling_Adventures_of_Sabrina_2020_S04_720p..."
+      "Sample_Adventures_of_Show_2020_S04_720p..."
     )
     expect(folderCandidate).toMatchObject({
       kind: "season",
-      title: "Chilling Adventures of Sabrina",
+      title: "Sample Adventures of Show",
       year: 2020,
       seasonNumber: 4,
     })
 
     expect(
-      parseMediaFilename("Episode 02.mkv", "Chilling Adventures of Sabrina S04")
+      parseMediaFilename("Episode 02.mkv", "Sample Adventures of Show S04")
     ).toMatchObject({
       kind: "episode",
-      title: "Chilling Adventures of Sabrina",
+      title: "Sample Adventures of Show",
       seasonNumber: 4,
       episodeNumber: 2,
     })
 
     expect(
       parseMediaFilename(
-        "Chilling Adventures of Sabrina S04E02...mkv",
-        "Chilling Adventures of Sabrina S04"
+        "Sample Adventures of Show S04E02...mkv",
+        "Sample Adventures of Show S04"
       )
     ).toMatchObject({
       kind: "episode",
-      title: "Chilling Adventures of Sabrina",
+      title: "Sample Adventures of Show",
       seasonNumber: 4,
       episodeNumber: 2,
     })

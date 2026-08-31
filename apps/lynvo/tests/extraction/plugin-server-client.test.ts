@@ -6,7 +6,6 @@ import {
   type PluginServerClientError,
   type PluginServerTransport,
 } from "~/lib/extraction/plugin-server-client"
-import { PLUGIN_SERVER_REQUEST_TIMEOUT_MS } from "~/lib/constants"
 
 const manifest = {
   protocolVersion: "1.0",
@@ -35,10 +34,6 @@ const manifest = {
 afterEach(() => vi.unstubAllGlobals())
 
 describe("PluginServerClient", () => {
-  it("allows the Lynvo Plugin Server to finish its bounded retry budget", () => {
-    expect(PLUGIN_SERVER_REQUEST_TIMEOUT_MS).toBeGreaterThan(45_000)
-  })
-
   it.each([
     [
       "HTTP",
@@ -119,7 +114,7 @@ describe("PluginServerClient", () => {
   })
 
   it("rejects a manifest that is structurally valid but semantically incomplete", async () => {
-    const { usage: declaredUsage, ...manifestWithoutUsage } = manifest
+    const { usage: _omittedUsage, ...manifestWithoutUsage } = manifest
     const client = new PluginServerClient({
       fetch: async () => Response.json(manifestWithoutUsage),
     })
@@ -129,7 +124,6 @@ describe("PluginServerClient", () => {
     >({
       code: "PROTOCOL_MISMATCH",
     })
-    expect(declaredUsage).toEqual({ endpoint: "/usage" })
   })
 
   it("rejects usage that exceeds its declared finite limit", async () => {

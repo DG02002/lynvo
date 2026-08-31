@@ -543,7 +543,7 @@ describe("SaveListBrowser", () => {
             },
             {
               url: `${lazyItemUrl}/route-gamma`,
-              label: "Play from CF Server (404)",
+              label: "Play from CDN Server (404)",
               type: "file",
               status: "down",
             },
@@ -599,7 +599,7 @@ describe("SaveListBrowser", () => {
     expect(screen.queryByText("Source Route Alpha")).not.toBeInTheDocument()
     expect(screen.queryByText("Source Route Beta")).not.toBeInTheDocument()
     expect(
-      screen.queryByText("Play from CF Server (404)")
+      screen.queryByText("Play from CDN Server (404)")
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
     expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
@@ -742,21 +742,21 @@ describe("SaveListBrowser", () => {
     expect(markOpened).not.toHaveBeenCalled()
   })
 
-  it("shows the size of a single playable Google Drive item", () => {
+  it("shows the size of a single playable Example Drive item", () => {
     const directLink: ExtractedLink = {
-      id: "google-drive-file",
-      url: "https://drive.usercontent.google.com/download?id=google-drive-file",
-      label: "Dolby ATMOS Helicopter.m2ts",
+      id: "example-drive-file",
+      url: "https://drive.example.com/download?id=example-drive-file",
+      label: "Surround Sound Helicopter.m2ts",
       type: "file",
       mediaNodeKind: "playable",
       size: "193.65 MB",
     }
     const item: LinkViewItem = {
-      url: "https://drive.google.com/file/d/google-drive-file/view",
+      url: "https://drive.example.com/file/d/example-drive-file/view",
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 3,
-        source: { sourceName: "Google Drive" },
+        source: { sourceName: "Example Drive" },
         extraction: { extractedLinks: [directLink] },
         playback: { openedUrls: [] },
       },
@@ -774,11 +774,13 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const sourceName = screen.getByText("Google Drive")
+    const sourceName = screen.getByText("Example Drive")
     const fileSize = screen.getByText("193.65 MB")
     expect(fileSize).toBeVisible()
     expect(sourceName.parentElement).toContainElement(fileSize)
-    expect(sourceName.parentElement).toHaveTextContent("Google Drive·193.65 MB")
+    expect(sourceName.parentElement).toHaveTextContent(
+      "Example Drive·193.65 MB"
+    )
   })
 
   it("renders an opened Direct Media root item with the opened background", () => {

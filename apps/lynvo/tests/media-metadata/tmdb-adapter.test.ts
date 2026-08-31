@@ -97,8 +97,8 @@ describe("TMDB adapter", () => {
             results: [
               {
                 id: 42,
-                title: "Doctor Strange",
-                release_date: "2016-11-04",
+                title: "Sample Feature",
+                release_date: "2026-01-02",
                 poster_path: "/poster.jpg",
               },
             ],
@@ -113,7 +113,7 @@ describe("TMDB adapter", () => {
       token: "secret-token",
     })
 
-    const result = await adapter.searchMovie("Doctor Strange", 2016)
+    const result = await adapter.searchMovie("Sample Feature", 2016)
 
     expect(result.kind).toBe("success")
     expect(fetch).toHaveBeenCalledTimes(3)
@@ -200,7 +200,7 @@ describe("TMDB adapter", () => {
               episodes: [
                 {
                   id: 29,
-                  name: "Chapter Twenty-Nine: The Eldritch Dark",
+                  name: "Chapter Twenty-Nine: The Sample Title",
                   order: 0,
                   season_number: 2,
                   episode_number: 9,
@@ -225,7 +225,7 @@ describe("TMDB adapter", () => {
     const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
 
     const result = await adapter.getTvEpisodeDetails({
-      providerId: 79242,
+      providerId: 79001,
       seasonNumber: 4,
       episodeNumber: 1,
     })
@@ -235,7 +235,7 @@ describe("TMDB adapter", () => {
       value: {
         kind: "episode",
         providerId: 29,
-        title: "Chapter Twenty-Nine: The Eldritch Dark",
+        title: "Chapter Twenty-Nine: The Sample Title",
         stillPath: "/episode.jpg",
         seasonNumber: 4,
         episodeNumber: 1,
@@ -265,7 +265,7 @@ describe("TMDB adapter", () => {
     const adapter = createTmdbAdapter({ fetch, token: "secret-token" })
 
     const result = await adapter.getTvEpisodeDetails({
-      providerId: 79242,
+      providerId: 79001,
       seasonNumber: 2,
       episodeNumber: 1,
       episodeGroupName: "Named Season",

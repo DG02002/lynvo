@@ -7,33 +7,33 @@ import {
 
 describe("Episode marker detection", () => {
   it("detects episode and episode-range labels", () => {
-    expect(hasEpisodeMarker("Reacher.S01E01.2160p.REMUX.mkv")).toBe(true)
+    expect(hasEpisodeMarker("Warden.S01E01.2160p.REMUX.mkv")).toBe(true)
     expect(hasEpisodeMarker("Show.S01E02-E04.mkv")).toBe(true)
-    expect(hasEpisodeMarker("Episode 02.mkv", "Slow Horses S03")).toBe(true)
+    expect(hasEpisodeMarker("Episode 02.mkv", "Slow Sample S03")).toBe(true)
   })
 
   it("rejects movies, folders, and junk labels", () => {
-    expect(hasEpisodeMarker("The.Matrix.1999.1080p.mkv")).toBe(false)
-    expect(hasEpisodeMarker("Season 2", "Slow Horses")).toBe(false)
+    expect(hasEpisodeMarker("The.Sample.1999.1080p.mkv")).toBe(false)
+    expect(hasEpisodeMarker("Season 2", "Slow Sample")).toBe(false)
     expect(hasEpisodeMarker("2160p HDR BluRay REMUX H.265")).toBe(false)
   })
 })
 
 describe("Media artwork identity", () => {
   it("maps movie filenames to movie artwork requests", () => {
-    expect(getMediaArtworkRequest("The.Matrix.1999.1080p.BluRay.mkv")).toEqual({
+    expect(getMediaArtworkRequest("The.Sample.1999.1080p.BluRay.mkv")).toEqual({
       mediaKind: "movie",
-      title: "The Matrix",
+      title: "The Sample",
       year: 1999,
     })
   })
 
   it("maps episode filenames to episode artwork requests", () => {
     expect(
-      getMediaArtworkRequest("Slow.Horses.S03E04.720p.WEB.x264.mkv")
+      getMediaArtworkRequest("Slow.Sample.S03E04.720p.WEB.x264.mkv")
     ).toEqual({
       mediaKind: "tv",
-      title: "Slow Horses",
+      title: "Slow Sample",
       seasonNumber: 3,
       episodeNumber: 4,
     })
@@ -49,26 +49,26 @@ describe("Media artwork identity", () => {
   })
 
   it("maps season folders to season artwork requests", () => {
-    expect(getMediaArtworkRequest("Season 2", "Slow Horses")).toEqual({
+    expect(getMediaArtworkRequest("Season 2", "Slow Sample")).toEqual({
       mediaKind: "tv",
-      title: "Slow Horses",
+      title: "Slow Sample",
       seasonNumber: 2,
     })
   })
 
   it("skips artwork for container labels that only look like weak movies", () => {
     expect(
-      getMediaArtworkRequest("Dovi-HDR 2160p WEB-DL H.265", undefined, {
+      getMediaArtworkRequest("Tag-HDR 2160p WEB-DL H.265", undefined, {
         isContainer: true,
       })
     ).toBeUndefined()
     expect(
-      getMediaArtworkRequest("Dune.2021.1080p.WEB-DL.mkv", undefined, {
+      getMediaArtworkRequest("Feature.2021.1080p.WEB-DL.mkv", undefined, {
         isContainer: true,
       })
     ).toEqual({
       mediaKind: "movie",
-      title: "Dune",
+      title: "Feature",
       year: 2021,
     })
   })
@@ -88,27 +88,29 @@ describe("Media artwork identity", () => {
 
 describe("Media display title", () => {
   it("cleans movie filenames and keeps the year", () => {
-    expect(getMediaDisplayTitle("The.Matrix.1999.1080p.BluRay.mkv")).toBe(
-      "The Matrix (1999)"
+    expect(getMediaDisplayTitle("The.Sample.1999.1080p.BluRay.mkv")).toBe(
+      "The Sample (1999)"
     )
-    expect(getMediaDisplayTitle("Iron.Man.720p.WEB-DL.mkv")).toBe("Iron Man")
+    expect(getMediaDisplayTitle("Sample.Man.720p.WEB-DL.mkv")).toBe(
+      "Sample Man"
+    )
   })
 
   it("cleans episode filenames into title and marker", () => {
-    expect(getMediaDisplayTitle("Stranger.Things.S01E02.720p.mkv")).toBe(
-      "Stranger Things S01E02"
+    expect(getMediaDisplayTitle("Sample.Things.S01E02.720p.mkv")).toBe(
+      "Sample Things S01E02"
     )
     expect(getMediaDisplayTitle("Show.S01E02-E04.mkv")).toBe("Show S01E02-E04")
   })
 
   it("combines show context with season folders", () => {
-    expect(getMediaDisplayTitle("Season 4", "Reacher S04")).toBe(
-      "Reacher Season 4"
+    expect(getMediaDisplayTitle("Season 4", "Warden S04")).toBe(
+      "Warden Season 4"
     )
   })
 
   it("returns undefined when no confident title exists", () => {
-    expect(getMediaDisplayTitle("Dovi-HDR 2160p WEB-DL H.265")).toBeUndefined()
+    expect(getMediaDisplayTitle("Tag-HDR 2160p WEB-DL H.265")).toBeUndefined()
     expect(getMediaDisplayTitle("file.mkv")).toBeUndefined()
   })
 })

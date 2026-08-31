@@ -18,7 +18,7 @@ describe("FinderEpisodeStill", () => {
   it("uses the wide-card source for landscape episode stills", async () => {
     const { container } = render(
       <FinderEpisodeStill
-        label="Reacher.S03E01.Persuader.2160p.mkv"
+        label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
     )
@@ -35,7 +35,7 @@ describe("FinderEpisodeStill", () => {
   it("requests still-sized sources for retina screens", async () => {
     const { container } = render(
       <FinderEpisodeStill
-        label="Reacher.S03E01.Persuader.2160p.mkv"
+        label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
     )
@@ -56,7 +56,7 @@ describe("FinderEpisodeStill", () => {
   it("shows a skeleton while the lookup is pending instead of the fallback icon", () => {
     const { container } = render(
       <FinderEpisodeStill
-        label="Reacher.S03E01.Persuader.2160p.mkv"
+        label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
     )
@@ -70,7 +70,7 @@ describe("FinderEpisodeStill", () => {
   it("renders watched episode stills in grayscale", async () => {
     const { container } = render(
       <FinderEpisodeStill
-        label="Reacher.S03E01.Persuader.2160p.mkv"
+        label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
         isWatched
       />

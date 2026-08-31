@@ -16,7 +16,7 @@ const flushArtworkRequests = async () => {
 
 const artworkRequest: MediaArtworkRequest = {
   mediaKind: "movie",
-  title: "Ghost in the Shell",
+  title: "Sample Feature",
   year: 2017,
 }
 
@@ -120,7 +120,7 @@ describe("media artwork client cache", () => {
       JSON.stringify({
         value: {
           stillPath: "/wrong.jpg",
-          episodeTitle: "The Blood Warfare",
+          episodeTitle: "The Sample Battle",
         },
         expiresAt: Date.now() + 60_000,
       })
