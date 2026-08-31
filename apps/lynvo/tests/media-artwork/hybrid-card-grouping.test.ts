@@ -417,4 +417,15 @@ describe("getSharedSeasonIdentity", () => {
   it("returns undefined for an empty folder", () => {
     expect(getSharedSeasonIdentity([])).toBeUndefined()
   })
+
+  it("ignores sidecar files when identifying a season folder", () => {
+    const identity = getSharedSeasonIdentity([
+      "Can.This.Love.Be.Translated.S01E01.1080p.NF.WEB-DL.mkv",
+      "Can.This.Love.Be.Translated.S01E01.1080p.NF.WEB-DL.srt",
+      "poster.jpg",
+      "season.nfo",
+    ])
+
+    expect(identity?.displayTitle).toBe("Can This Love Be Translated S01")
+  })
 })

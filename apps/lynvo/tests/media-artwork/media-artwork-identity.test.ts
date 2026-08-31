@@ -3,6 +3,7 @@ import {
   getMediaArtworkRequest,
   getMediaDisplayTitle,
   hasEpisodeMarker,
+  isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
 
 describe("Episode marker detection", () => {
@@ -112,5 +113,44 @@ describe("Media display title", () => {
   it("returns undefined when no confident title exists", () => {
     expect(getMediaDisplayTitle("Tag-HDR 2160p WEB-DL H.265")).toBeUndefined()
     expect(getMediaDisplayTitle("file.mkv")).toBeUndefined()
+  })
+})
+
+describe("isEpisodeOnlyListing", () => {
+  it("accepts a listing of episodes", () => {
+    expect(
+      isEpisodeOnlyListing([
+        "Sample.Things.S01E01.720p.mkv",
+        "Sample.Things.S01E02.720p.mkv",
+      ])
+    ).toBe(true)
+  })
+
+  it("ignores sidecar files like subtitles and artwork", () => {
+    expect(
+      isEpisodeOnlyListing([
+        "Sample.Things.S01E01.720p.mkv",
+        "Sample.Things.S01E01.720p.srt",
+        "poster.jpg",
+        "show.nfo",
+      ])
+    ).toBe(true)
+  })
+
+  it("rejects listings containing other media files or folders", () => {
+    expect(
+      isEpisodeOnlyListing([
+        "Sample.Things.S01E01.720p.mkv",
+        "Trailer.720p.WEB-DL.mkv",
+      ])
+    ).toBe(false)
+    expect(
+      isEpisodeOnlyListing(["Sample.Things.S01E01.720p.mkv", "Extras"])
+    ).toBe(false)
+  })
+
+  it("rejects listings with no media at all", () => {
+    expect(isEpisodeOnlyListing(["show.nfo", "poster.jpg"])).toBe(false)
+    expect(isEpisodeOnlyListing([])).toBe(false)
   })
 })

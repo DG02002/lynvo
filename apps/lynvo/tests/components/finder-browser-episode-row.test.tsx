@@ -91,6 +91,8 @@ const movieItem: LinkViewItem = {
   },
 }
 
+// Golden fixture mirrored from a real saved link: a "New" wrapper whose only
+// child is a mirror-classified resolvable season folder with playable episodes.
 const wrappedSeasonItem: LinkViewItem = {
   ...item,
   id: "wrapped-season",
@@ -102,27 +104,37 @@ const wrappedSeasonItem: LinkViewItem = {
       ...item.metadata.extraction,
       extractedLinks: [
         {
-          id: "wrapped-season-folder",
-          url: "https://media.example/wrapped-season/stranger-things-s05",
+          nodeKey:
+            "0:resolvable:wQbRWuzsoAF+I/pDt+v482JXM4hxqzdeWIC3p0CMHYgcKgF/fpGoSCPX4Z/tGj1M",
+          nodeUrl:
+            "https://media.example/wrapped-season/Stranger.Things.S05.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW/",
           label:
             "Stranger.Things.S05.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW",
+          id: "wQbRWuzsoAF+I/pDt+v482JXM4hxqzdeWIC3p0CMHYgcKgF/fpGoSCPX4Z/tGj1M",
           type: "folder",
+          mediaNodeKind: "resolvable",
           children: [
             {
-              id: "wrapped-season-episode-1",
-              url: "https://media.example/wrapped-season/stranger-things-s05/e1",
+              nodeKey:
+                "0:playable:cjut/qH6h6EZjdLd/9dJi2Hmz3h+S7Jf+ISEpCLeUeGafvSCiDsjKpVoYM4xVoBk",
+              url: "https://media.example/wrapped-season/download-e1",
               label:
                 "Stranger.Things.S05E01.Chapter.One.The.Crawl.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+              id: "cjut/qH6h6EZjdLd/9dJi2Hmz3h+S7Jf+ISEpCLeUeGafvSCiDsjKpVoYM4xVoBk",
               type: "file",
-              size: "2.4 GB",
+              size: "2.59 GB",
+              mediaNodeKind: "playable",
             },
             {
-              id: "wrapped-season-episode-2",
-              url: "https://media.example/wrapped-season/stranger-things-s05/e2",
+              nodeKey:
+                "1:playable:FM7PpwjPoqtYTlRNNFgru4jPM+pxOY3fLNOaWNSgSZZ4+NDQCeiJRPUbYjXgoT8k",
+              url: "https://media.example/wrapped-season/download-e2",
               label:
                 "Stranger.Things.S05E02.Chapter.Two.The.Vanishing.of.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+              id: "FM7PpwjPoqtYTlRNNFgru4jPM+pxOY3fLNOaWNSgSZZ4+NDQCeiJRPUbYjXgoT8k",
               type: "file",
-              size: "2.4 GB",
+              size: "2.59 GB",
+              mediaNodeKind: "playable",
             },
           ],
         },
@@ -308,6 +320,55 @@ describe("FinderBrowser episode rows", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "2. Episode 1" })
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the season view when sidecar files ride along", () => {
+    const seasonWithSidecarsItem: LinkViewItem = {
+      ...item,
+      metadata: {
+        ...item.metadata,
+        extraction: {
+          ...item.metadata.extraction,
+          extractedLinks: [
+            ...item.metadata.extraction.extractedLinks,
+            {
+              id: "sample-series-name-subtitle",
+              url: "https://media.example/sample-series-name-subtitle",
+              label: "Sample.Series.Name.S01E01.1080p.PROV.WEB-DL.srt",
+              type: "file",
+              size: "48 KB",
+            },
+            {
+              id: "sample-series-name-poster",
+              url: "https://media.example/sample-series-name-poster",
+              label: "poster.jpg",
+              type: "file",
+              size: "220 KB",
+            },
+          ],
+        },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[seasonWithSidecarsItem]}
+        selectedItemUrl={seasonWithSidecarsItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Sample Series Name S01" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("switch", { name: "Episode names" })
     ).toBeInTheDocument()
   })
 

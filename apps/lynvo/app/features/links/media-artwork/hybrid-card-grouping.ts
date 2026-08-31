@@ -4,7 +4,7 @@ import {
 } from "../link-metadata-accessors"
 import { toLinkViewModel } from "../link-view-models"
 import { getSavedLinkInteractionState } from "../saved-link-interaction"
-import { parseMediaFilename } from "./media-filename-parser"
+import { isNonMediaFilename, parseMediaFilename } from "./media-filename-parser"
 import type { ExtractedLink, LinkListItem } from "../types"
 import {
   getSaveDateGroupKey,
@@ -301,12 +301,13 @@ export const getSharedSeasonIdentity = (
   labels: readonly string[],
   parentFolderName?: string
 ): SharedSeasonIdentity | undefined => {
-  if (labels.length === 0) {
+  const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
+  if (mediaLabels.length === 0) {
     return undefined
   }
 
   let sharedIdentity: SharedSeasonIdentity | undefined
-  for (const label of labels) {
+  for (const label of mediaLabels) {
     const candidate = parseMediaFilename(label, parentFolderName)
     const isEpisode =
       candidate.kind === "episode" || candidate.kind === "episode-range"

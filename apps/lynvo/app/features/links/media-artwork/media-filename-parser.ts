@@ -6,6 +6,8 @@ import {
 
 const MEDIA_EXTENSION_PATTERN =
   /\.(?:3g2|avi|flac|flv|iso|m2ts|m4v|mkv|mov|mp4|mpeg|mpg|ts|webm|wmv)$/i
+const NON_MEDIA_EXTENSION_PATTERN =
+  /\.(?:srt|ass|ssa|sub|vtt|idx|smi|nfo|txt|md|json|xml|yml|yaml|html?|pdf|jpg|jpeg|png|webp|gif|bmp|tiff?|avif|ico|torrent|nzb|sfv|md5|sha1|zip|rar|7z|tar|gz|exe|apk|dmg|lnk|url)$/i
 const YEAR_PATTERN = /(?:^|\D)((?:19|20)\d{2})(?=\D|$)/g
 const EPISODE_RANGE_PATTERN = new RegExp(
   `\\bS(\\d{1,3})\\s*[\\[\\(\\-]?\\s*E(\\d{1,${MEDIA_FILENAME_MAX_EPISODE_DIGITS}})\\s*[-–]\\s*(?:E)?(\\d{1,${MEDIA_FILENAME_MAX_EPISODE_DIGITS}})\\s*[\\]\\)]?`,
@@ -325,6 +327,11 @@ const parseFilename = (
 
 export const getMediaFilenameMatchingText = (filename: string): string =>
   getMatchingText(filename)
+
+// Sidecar files (subtitles, artwork, metadata, archives) ride along with
+// media and must not disqualify a listing from episode treatment.
+export const isNonMediaFilename = (filename: string): boolean =>
+  NON_MEDIA_EXTENSION_PATTERN.test(filename)
 
 export const parseMediaFilename = (
   filename: string,

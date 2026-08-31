@@ -27,7 +27,7 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import {
   getMediaDisplayTitle,
   getMediaEpisodeDisplayTitle,
-  hasEpisodeMarker,
+  isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
 import { getSharedSeasonIdentity } from "~/features/links/media-artwork/hybrid-card-grouping"
 import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
@@ -621,7 +621,10 @@ const FinderBrowser = ({
   const shouldShowEpisodeStills =
     shouldShowRowPosters &&
     currentLinks.length > 0 &&
-    currentLinks.every((link) => hasEpisodeMarker(link.label, parentFolderName))
+    isEpisodeOnlyListing(
+      currentLinks.map((link) => link.label),
+      parentFolderName
+    )
   const sharedSeasonIdentity = useMemo(
     () =>
       shouldShowRowPosters

@@ -1,5 +1,6 @@
 import {
   getMediaFilenameMatchingText,
+  isNonMediaFilename,
   parseMediaFilename,
 } from "./media-filename-parser"
 
@@ -63,6 +64,17 @@ export const hasEpisodeMarker = (
 ): boolean => {
   const candidate = parseMediaFilename(label, parentFolderName)
   return candidate.kind === "episode" || candidate.kind === "episode-range"
+}
+
+export const isEpisodeOnlyListing = (
+  labels: readonly string[],
+  parentFolderName?: string
+): boolean => {
+  const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
+  return (
+    mediaLabels.length > 0 &&
+    mediaLabels.every((label) => hasEpisodeMarker(label, parentFolderName))
+  )
 }
 
 export const getMediaDisplayTitle = (

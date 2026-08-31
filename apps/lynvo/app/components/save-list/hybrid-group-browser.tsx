@@ -13,7 +13,7 @@ import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getMediaDisplayTitle,
   getMediaEpisodeDisplayTitle,
-  hasEpisodeMarker,
+  isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { getHybridItemLabel } from "~/features/links/media-artwork/hybrid-card-grouping"
@@ -236,7 +236,7 @@ export const HybridGroupBrowser = ({
   const shouldShowEpisodeStills =
     group.artworkRequest?.mediaKind === "tv" &&
     itemLabels.length > 0 &&
-    itemLabels.every((itemLabel) => hasEpisodeMarker(itemLabel))
+    isEpisodeOnlyListing(itemLabels)
   const groupTitleDisplay = shouldShowEpisodeStills ? titleDisplay : "filename"
   const sortedItemEntries = useMemo(() => {
     const itemEntries = group.items.map((item, itemIndex) => ({

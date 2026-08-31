@@ -9,7 +9,6 @@ import {
 import {
   getLinkKey,
   getLinksAtFolderPath,
-  isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
@@ -66,25 +65,22 @@ const restoreFolderPath = (
 }
 
 // Saved links are often wrappers ("New" > "Show S01" > episodes): descend
-// through single-folder levels so the view opens on real content.
+// through single-folder levels so the view opens on real content. A node
+// qualifies through canExpand (folder with loaded children); mirror-classified
+// resolvables with children are still navigable content.
 const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
   const descendedPath: FolderLevel[] = []
   let currentLinks = links
   while (currentLinks.length === 1) {
     const [onlyLink] = currentLinks
-    if (
-      onlyLink === undefined ||
-      isMirrorResolvable(onlyLink) ||
-      !getMediaNodeInteractionState(onlyLink).isFolder
-    ) {
+    if (onlyLink === undefined) {
       break
     }
-    const children = onlyLink.children ?? []
-    if (children.length === 0) {
+    if (!getMediaNodeInteractionState(onlyLink).canExpand) {
       break
     }
     descendedPath.push({ id: getLinkKey(onlyLink), label: onlyLink.label })
-    currentLinks = children
+    currentLinks = onlyLink.children ?? []
   }
   return descendedPath
 }
