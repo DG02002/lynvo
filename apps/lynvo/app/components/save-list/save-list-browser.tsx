@@ -769,7 +769,7 @@ const FinderBrowser = ({
         }
       >
         {sharedSeasonIdentity ? (
-          <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6">
+          <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
             <SeasonArtworkPanel
               displayTitle={sharedSeasonIdentity.displayTitle}
               artworkRequest={seasonArtworkRequest}

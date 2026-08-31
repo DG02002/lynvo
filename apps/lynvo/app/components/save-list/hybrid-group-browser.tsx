@@ -277,7 +277,7 @@ export const HybridGroupBrowser = ({
         </div>
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>
-        <div className="border-b bg-muted/50 p-4 md:block md:border-b-0 md:border-r md:p-6">
+        <div className="border-b bg-muted/50 p-4 md:block md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
           <SeasonArtworkPanel
             displayTitle={group.displayTitle}
             artworkRequest={group.artworkRequest}
