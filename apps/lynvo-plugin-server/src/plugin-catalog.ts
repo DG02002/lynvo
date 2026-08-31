@@ -12,6 +12,8 @@ import {
 import { load } from "cheerio"
 import {
   BHADOO_SOURCE_ID,
+  BHADOO_SOURCE_IMPLEMENTATION_VERSION,
+  BHADOO_FALLBACK_PATH,
   DIRECT_MEDIA_SOURCE_ID,
   PLUGIN_SERVER_ID,
   PLUGIN_SERVER_NAME,
@@ -57,7 +59,7 @@ const bhadooMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.example.invalid"],
     hostPatterns: ["*"],
-    pathPatterns: ["/0:/**"],
+    pathPatterns: ["/0:/**", BHADOO_FALLBACK_PATH],
     schemes: ["https"],
   },
 ]
@@ -88,7 +90,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     homepage: "https://gitlab.com/GoogleDriveIndex/Google-Drive-Index",
     iconPath: "/icons/sources/bhadoo-cloud.svg",
     status: "active",
-    version: SOURCE_IMPLEMENTATION_VERSION,
+    version: BHADOO_SOURCE_IMPLEMENTATION_VERSION,
     matchers: bhadooMatchers,
     credential: { kind: "http-basic", scope: "domain", required: false },
     discovery: { confidence: "pattern" },

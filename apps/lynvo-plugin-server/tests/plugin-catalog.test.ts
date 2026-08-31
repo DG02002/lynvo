@@ -39,6 +39,10 @@ describe("Lynvo plugin catalog", () => {
       findLynvoPlugin("https://drive.google.com/drive/folders/1AbCdEfGh123")?.id
     ).toBe("google-drive-public-files")
     expect(
+      findLynvoPlugin("https://index.example/fallback?id=encoded-folder-token")
+        ?.id
+    ).toBe("bhadoo-google-drive-index")
+    expect(
       findLynvoPlugin(
         "https://bucket.r2.cloudflarestorage.com/media/example-video.mkv"
       )?.id

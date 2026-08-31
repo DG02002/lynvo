@@ -216,6 +216,122 @@ describe("Bhadoo source adapter", () => {
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
   })
 
+  it("extracts fallback folders through the fallback API", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json({
+          id: "encoded-folder-token",
+          name: "Business Proposal",
+          mimeType: "application/vnd.google-apps.folder",
+        })
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          nextPageToken: null,
+          curPageIndex: 0,
+          data: {
+            files: [
+              {
+                id: "child-folder",
+                name: "Season 1",
+                mimeType: "application/vnd.google-apps.folder",
+              },
+              {
+                id: "video-file",
+                name: "episode-01.mkv",
+                mimeType: "video/x-matroska",
+                size: "492077810",
+                link: "/download.aspx?file=signed",
+              },
+            ],
+          },
+        })
+      )
+
+    const targetUrl = "https://index.example/fallback?id=encoded-folder-token&"
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: { kind: "source", sourceUrl: targetUrl },
+      },
+      targetUrl,
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    const calledItemRequest = fetchSpy.mock.calls[0]
+    expect(String(calledItemRequest?.[0])).toBe(
+      "https://index.example/0:fallback"
+    )
+    expect(JSON.parse(String(calledItemRequest?.[1]?.body))).toEqual({
+      id: "encoded-folder-token",
+    })
+    const calledRequest = fetchSpy.mock.calls[1]
+    expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
+    expect(calledRequest?.[1]).toMatchObject({
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+    expect(JSON.parse(String(calledRequest?.[1]?.body))).toEqual({
+      id: "encoded-folder-token",
+      type: "folder",
+      password: "",
+      page_token: "",
+      page_index: 0,
+    })
+    expect(result.nodes).toMatchObject([
+      {
+        kind: "resolvable",
+        label: "Season 1",
+        nodeUrl: "https://index.example/fallback?id=child-folder",
+      },
+      {
+        kind: "playable",
+        label: "episode-01.mkv",
+        url: "https://index.example/download.aspx?file=signed",
+      },
+    ])
+    expect(result.plugin.pageTitle).toBe("Business Proposal")
+  })
+
+  it("extracts fallback file views through the fallback API", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        id: "video-file",
+        name: "episode-01.mkv",
+        mimeType: "video/x-matroska",
+        size: "492077810",
+        link: "/download.aspx?file=signed",
+      })
+    )
+
+    const targetUrl =
+      "https://index.example/fallback?id=encoded-file-token&a=view"
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: { kind: "source", sourceUrl: targetUrl },
+      },
+      targetUrl,
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    const calledRequest = fetchSpy.mock.calls[0]
+    expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
+    expect(JSON.parse(String(calledRequest?.[1]?.body))).toEqual({
+      id: "encoded-file-token",
+    })
+    expect(result.nodes).toMatchObject([
+      {
+        kind: "playable",
+        label: "episode-01.mkv",
+        url: "https://index.example/download.aspx?file=signed",
+      },
+    ])
+  })
+
   it("forwards structured HTTP Basic Auth without URL credentials", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       Response.json({
