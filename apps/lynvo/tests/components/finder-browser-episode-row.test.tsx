@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import type { LinkViewItem } from "~/features/links/types"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -151,6 +151,42 @@ const wrappedSeasonItem: LinkViewItem = {
             },
           ],
         },
+      ],
+    },
+  },
+}
+
+const createSampleShowEpisodeLink = (episodeNumber: number): ExtractedLink => ({
+  id: `sample-show-s01e${episodeNumber}`,
+  url: `https://media.example/sample-show-s01e${episodeNumber}`,
+  label: `Sample Show (2024) - S01E${String(episodeNumber).padStart(2, "0")} - Episode ${episodeNumber} (1080p BluRay x265 Silence).mkv`,
+  mediaNodeKind: "playable",
+  type: "file",
+})
+
+const sampleShowSeasonItem: LinkViewItem = {
+  ...item,
+  id: "sample-show-season-one",
+  url: "https://media.example/sample-show-season-one",
+  title: "Sample Show (2024) Season 1 S01 (1080p BluRay x265 Silence)",
+  metadata: {
+    ...item.metadata,
+    extraction: {
+      ...item.metadata.extraction,
+      extractedLinks: [
+        {
+          id: "sample-show-featurettes",
+          url: "https://media.example/sample-show-featurettes",
+          label: "Featurettes",
+          mediaNodeKind: "resolvable",
+          resolutionKind: "folder",
+          type: "folder",
+          childrenResolved: true,
+          children: [],
+        },
+        ...Array.from({ length: 6 }, (_unusedValue, episodeIndex) =>
+          createSampleShowEpisodeLink(episodeIndex + 1)
+        ),
       ],
     },
   },
@@ -385,6 +421,53 @@ describe("FinderBrowser episode rows", () => {
     expect(
       screen.getByRole("switch", { name: "Episode names" })
     ).toBeInTheDocument()
+  })
+
+  it("keeps episode stills when a season includes a featurette folder", async () => {
+    const artworkFetch = createMediaArtworkFetch()
+    vi.stubGlobal("fetch", artworkFetch)
+
+    const view = render(
+      <SaveListBrowser
+        items={[sampleShowSeasonItem]}
+        selectedItemUrl={sampleShowSeasonItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Sample Show (2024) S01" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("switch", { name: "Episode names" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Featurettes" })).toBeVisible()
+    expect(
+      await screen.findByRole("button", { name: "1. Episode 1" })
+    ).toBeVisible()
+
+    await waitFor(() => {
+      const artworkRequests = artworkFetch.mock.calls.flatMap(
+        ([_input, requestInit]) => {
+          // SAFETY: the test fetch receives the JSON body produced by the artwork client
+          const requestBody = JSON.parse(
+            String(requestInit?.body)
+          ) as MediaArtworkBatchRequest
+          return requestBody.requests
+        }
+      )
+      expect(artworkRequests).not.toContainEqual(
+        expect.objectContaining({ title: "Featurettes" })
+      )
+      expect(
+        view.container.querySelector('img[src*="episode-1.jpg"]')
+      ).toBeInTheDocument()
+    })
   })
 
   it("descends once a lazy wrapper resolves after the page opens", async () => {

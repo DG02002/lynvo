@@ -3,6 +3,8 @@ import {
   isNonMediaFilename,
   parseMediaFilename,
 } from "./media-filename-parser"
+import { getMediaNodeInteractionState } from "../media-node-interaction"
+import type { ExtractedLink } from "../types"
 
 interface MediaArtworkRequestOptions {
   readonly isContainer?: boolean
@@ -76,6 +78,18 @@ export const isEpisodeOnlyListing = (
     mediaLabels.every((label) => hasEpisodeMarker(label, parentFolderName))
   )
 }
+
+export const getEpisodeListingLabels = (
+  links: readonly ExtractedLink[],
+  parentFolderName?: string
+): string[] =>
+  links
+    .filter(
+      (link) =>
+        !getMediaNodeInteractionState(link).isFolder ||
+        hasEpisodeMarker(link.label, parentFolderName)
+    )
+    .map((link) => link.label)
 
 export const getMediaDisplayTitle = (
   label: string,

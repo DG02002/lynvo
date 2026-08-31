@@ -27,6 +27,8 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import {
   getMediaDisplayTitle,
   getMediaEpisodeDisplayTitle,
+  getEpisodeListingLabels,
+  hasEpisodeMarker,
   isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
 import { getSharedSeasonIdentity } from "~/features/links/media-artwork/hybrid-card-grouping"
@@ -454,6 +456,8 @@ const FinderBrowserLinkRow = ({
 }: FinderBrowserLinkRowProps) => {
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
+  const shouldShowEpisodeStillForLink =
+    shouldShowEpisodeStills && hasEpisodeMarker(link.label, parentFolderName)
   const isExpired =
     !isFolder && link.expiry !== undefined && link.expiry <= Date.now()
   const isResolving =
@@ -461,11 +465,11 @@ const FinderBrowserLinkRow = ({
   const episodeStill = useFinderEpisodeStill(
     link.label,
     parentFolderName,
-    shouldShowEpisodeStills
+    shouldShowEpisodeStillForLink
   )
   const { artwork } = episodeStill
   const rowDisplayTitle =
-    shouldShowEpisodeStills && titleDisplay === "episode"
+    shouldShowEpisodeStillForLink && titleDisplay === "episode"
       ? getMediaEpisodeDisplayTitle(
           link.label,
           artwork?.episodeTitle,
@@ -493,7 +497,16 @@ const FinderBrowserLinkRow = ({
     />
   )
   const renderRowIcon = (): ReactNode => {
-    if (!shouldShowEpisodeStills) {
+    if (!shouldShowEpisodeStillForLink) {
+      if (shouldShowEpisodeStills) {
+        return (
+          <SaveListRowIcon
+            className={isExpired ? "text-muted-foreground" : undefined}
+          >
+            {rowFallbackIcon}
+          </SaveListRowIcon>
+        )
+      }
       return (
         <SaveListBrowserItemIcon
           label={link.label}
@@ -594,7 +607,9 @@ const FinderBrowserLinkRow = ({
       onActivate={onActivate}
       disabled={isExpired}
       isOpened={link.opened === true}
-      shouldStackIconOnMobile={shouldStackEpisodeStill}
+      shouldStackIconOnMobile={
+        shouldStackEpisodeStill && shouldShowEpisodeStillForLink
+      }
       buttonClassName={isExpired ? "text-muted-foreground" : undefined}
       buttonDataAttributes={{
         "data-folder-state": isFolder
@@ -626,22 +641,20 @@ const FinderBrowser = ({
   const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
   const parentFolderName =
     folderPath.map((folderLevel) => folderLevel.label).join(" ") || undefined
+  const episodeListingLabels = getEpisodeListingLabels(
+    currentLinks,
+    parentFolderName
+  )
   const shouldShowEpisodeStills =
     shouldShowRowPosters &&
-    currentLinks.length > 0 &&
-    isEpisodeOnlyListing(
-      currentLinks.map((link) => link.label),
-      parentFolderName
-    )
+    episodeListingLabels.length > 0 &&
+    isEpisodeOnlyListing(episodeListingLabels, parentFolderName)
   const sharedSeasonIdentity = useMemo(
     () =>
       shouldShowRowPosters
-        ? getSharedSeasonIdentity(
-            currentLinks.map((link) => link.label),
-            parentFolderName
-          )
+        ? getSharedSeasonIdentity(episodeListingLabels, parentFolderName)
         : undefined,
-    [currentLinks, parentFolderName, shouldShowRowPosters]
+    [episodeListingLabels, parentFolderName, shouldShowRowPosters]
   )
   const headerTitle = sharedSeasonIdentity?.displayTitle ?? getItemTitle(item)
   const seasonArtworkRequest = useMemo<MediaArtworkRequest | undefined>(() => {
@@ -819,7 +832,8 @@ const FinderBrowser = ({
                   actions={actions}
                   isResolving={extractingItems.has(linkTarget)}
                   episodeStill={
-                    shouldShowEpisodeStills
+                    shouldShowEpisodeStills &&
+                    hasEpisodeMarker(link.label, parentFolderName)
                       ? {
                           label: link.label,
                           parentFolderName,
