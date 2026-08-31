@@ -259,7 +259,7 @@ export const HybridGroupBrowser = ({
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
       <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-        <SaveListBackButton onExit={onExit} />
+        <SaveListBackButton onNavigateBack={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={group.displayTitle}

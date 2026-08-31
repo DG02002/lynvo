@@ -3,7 +3,7 @@ import { Switch } from "~/components/ui/switch"
 import { ImmersiveBackButton } from "~/components/save-list/immersive-back-button"
 
 interface SaveListBackButtonProps {
-  readonly onExit: () => void
+  readonly onNavigateBack: () => void
 }
 
 interface FolderTitleDisplayToggleProps {
@@ -11,9 +11,11 @@ interface FolderTitleDisplayToggleProps {
   readonly onToggle: () => void
 }
 
-export const SaveListBackButton = ({ onExit }: SaveListBackButtonProps) => (
+export const SaveListBackButton = ({
+  onNavigateBack,
+}: SaveListBackButtonProps) => (
   <div className="contents md:block md:h-full md:border-r">
-    <ImmersiveBackButton onExit={onExit} />
+    <ImmersiveBackButton onNavigateBack={onNavigateBack} />
   </div>
 )
 

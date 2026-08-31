@@ -357,7 +357,7 @@ const FinderEmptyState = ({
     )}
   >
     <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-      <SaveListBackButton onExit={onExit} />
+      <SaveListBackButton onNavigateBack={onExit} />
       <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
           aria-label={getItemTitle(item)}
@@ -612,6 +612,7 @@ const FinderBrowser = ({
     contentRef,
     openFolder,
     openLink,
+    navigateToParentFolder,
     selectRoot,
   } = useFinderBrowserState({ item, actions, onExit })
   const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
@@ -706,7 +707,7 @@ const FinderBrowser = ({
       )}
     >
       <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
-        <SaveListBackButton onExit={onExit} />
+        <SaveListBackButton onNavigateBack={navigateToParentFolder} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
             aria-label={headerTitle}

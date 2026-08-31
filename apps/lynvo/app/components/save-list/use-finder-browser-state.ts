@@ -233,6 +233,7 @@ export const useFinderBrowserState = ({
     contentRef,
     openFolder,
     openLink,
+    navigateToParentFolder,
     selectRoot: () => {
       resetHorizontalGesture()
       setForwardFolderPaths([])
