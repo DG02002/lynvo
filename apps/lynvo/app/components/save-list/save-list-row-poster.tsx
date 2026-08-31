@@ -43,7 +43,7 @@ export const SaveListRowPoster = ({
     <span className="flex w-10 shrink-0 justify-center md:w-14">
       <span
         className={cn(
-          "relative flex aspect-2/3 w-full items-center justify-center overflow-hidden rounded-md border border-foreground/15 bg-muted/60",
+          "relative flex aspect-2/3 w-full items-center justify-center overflow-hidden rounded-md border border-foreground/15 bg-muted/60 shadow-depth-s",
           isDimmed && "opacity-60"
         )}
       >

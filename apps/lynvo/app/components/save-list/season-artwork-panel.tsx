@@ -64,12 +64,16 @@ export const SeasonArtworkPanel = ({
 
   return (
     <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
-      <div className="save-list-group-artwork-frame relative overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
+      <div className="save-list-group-artwork-frame relative overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m">
         <SeasonArtworkImage
           displayTitle={displayTitle}
           imagePath={imagePath}
           imageType={imageType}
           isArtworkPending={isArtworkPending}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 shadow-depth-gloss"
         />
       </div>
       {artwork?.identity ? (

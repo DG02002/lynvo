@@ -103,7 +103,7 @@ export const FinderEpisodeStillDisplay = ({
     >
       <span
         className={cn(
-          "relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60",
+          "relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60 shadow-depth-s",
           isWatched && "grayscale"
         )}
       >
@@ -118,6 +118,10 @@ export const FinderEpisodeStillDisplay = ({
             <Spinner aria-label={`Loading ${label}…`} className="size-6" />
           </span>
         )}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 shadow-depth-gloss"
+        />
       </span>
     </span>
   )

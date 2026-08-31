@@ -22,7 +22,7 @@ import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
-import { FilenameText } from "~/components/filename-text"
+import { ExpandableFilename } from "~/components/expandable-filename"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
   getMediaDisplayTitle,
@@ -63,8 +63,10 @@ import {
 } from "./media-list-row"
 import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
+  MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
+  MEDIA_LIST_ROW_OPENED_TINT_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
@@ -81,10 +83,11 @@ import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
-import { ExtractionWaitStatus, SaveExtractionStatus } from "./extraction-status"
+import { ExtractionStatusTitle } from "./extraction-status"
 import {
   getExtractionStatusInput,
   getExtractionStatusLabel,
+  getExtractionStatusTitleSpec,
 } from "./extraction-status-utils"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 import {
@@ -286,30 +289,39 @@ const FolderTree = ({
           )}
           <div
             className={cn(
-              "relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
+              "group relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
               isInPath || doesActiveBranchContinue
                 ? "before:bg-sky-500"
                 : "before:bg-border/60",
               isInPath ? "after:bg-sky-500" : "after:bg-border/60"
             )}
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-                isCurrent && "bg-accent text-accent-foreground"
-              )}
+            <button
+              type="button"
               aria-current={isCurrent ? "page" : undefined}
               data-folder-state={getFolderVisualState(link, isInPath)}
+              className={cn(
+                "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+                isCurrent && "bg-accent"
+              )}
               onClick={() => onSelectFolder(link, path)}
+            />
+            <div
+              className={cn(
+                "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+                isCurrent && "text-accent-foreground"
+              )}
             >
               <HugeiconsIcon
                 icon={getFolderIcon(link, isInPath)}
                 className="shrink-0"
               />
-              <FilenameText value={link.label} className="w-0 min-w-0 flex-1" />
-            </Button>
+              <ExpandableFilename
+                value={link.label}
+                className="w-0 min-w-0 flex-1"
+                isInsideActivationOverlay
+              />
+            </div>
           </div>
           {link.children?.some(isVisibleTreeFolder) && (
             <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
@@ -323,19 +335,30 @@ const FolderTree = ({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-          folderPath.length === 0 && "bg-accent text-accent-foreground"
-        )}
-        aria-current={folderPath.length === 0 ? "page" : undefined}
-        onClick={onSelectRoot}
-      >
-        <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
-        <FilenameText value={rootLabel} className="w-0 min-w-0 flex-1" />
-      </Button>
+      <div className="group relative">
+        <button
+          type="button"
+          aria-current={folderPath.length === 0 ? "page" : undefined}
+          className={cn(
+            "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+            folderPath.length === 0 && "bg-accent"
+          )}
+          onClick={onSelectRoot}
+        />
+        <div
+          className={cn(
+            "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+            folderPath.length === 0 && "text-accent-foreground"
+          )}
+        >
+          <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
+          <ExpandableFilename
+            value={rootLabel}
+            className="w-0 min-w-0 flex-1"
+            isInsideActivationOverlay
+          />
+        </div>
+      </div>
       <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
         {renderFolders(links, [])}
       </div>
@@ -363,7 +386,7 @@ const FinderEmptyState = ({
           aria-label={getItemTitle(item)}
           className="hidden text-base font-normal md:block"
         >
-          <FilenameText
+          <ExpandableFilename
             value={getItemTitle(item)}
             clampClassName="line-clamp-1"
             className="w-full"
@@ -528,18 +551,8 @@ const FinderBrowserLinkRow = ({
       key={linkKey}
       label={rowDisplayTitle}
       icon={rowIcon}
-      title={
-        <ExtractionWaitStatus
-          isWaiting={isResolving}
-          titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
-        >
-          <FilenameText
-            value={rowDisplayTitle}
-            className={MEDIA_LIST_ROW_TITLE_CLASS}
-            textClassName={isExpired ? "line-through" : undefined}
-          />
-        </ExtractionWaitStatus>
-      }
+      title={{ value: rowDisplayTitle, isStruckThrough: isExpired }}
+      titleExtractionStatus={isResolving ? { status: "waiting" } : undefined}
       meta={
         <>
           <MediaListRowMeta
@@ -706,7 +719,7 @@ const FinderBrowser = ({
             aria-label={headerTitle}
             className="hidden w-full min-w-0 text-base font-normal md:block"
           >
-            <FilenameText
+            <ExpandableFilename
               value={headerTitle}
               clampClassName="line-clamp-1"
               className="w-full"
@@ -741,7 +754,7 @@ const FinderBrowser = ({
         }
       >
         {sharedSeasonIdentity ? (
-          <aside className="border-b p-4 md:border-b-0 md:border-r md:p-6">
+          <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6">
             <SeasonArtworkPanel
               displayTitle={sharedSeasonIdentity.displayTitle}
               artworkRequest={seasonArtworkRequest}
@@ -1008,17 +1021,7 @@ export const SaveListBrowser = ({
                   }
                   data-extraction-state={extractionState}
                 >
-                  <div
-                    className={cn(
-                      "relative flex min-h-20 min-w-0 flex-1 items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5",
-                      !isDirectLinkExpired &&
-                        !isExtractionIncomplete &&
-                        "hover:bg-muted/70",
-                      directLink?.opened &&
-                        !isDirectLinkExpired &&
-                        "bg-sky-500/15 hover:bg-sky-500/20"
-                    )}
-                  >
+                  <div className="flex min-h-20 min-w-0 flex-1 items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5">
                     <button
                       type="button"
                       disabled={isDirectLinkExpired || isExtractionIncomplete}
@@ -1032,7 +1035,13 @@ export const SaveListBrowser = ({
                         ),
                       })}
                       className={cn(
-                        "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        !isDirectLinkExpired &&
+                          !isExtractionIncomplete &&
+                          MEDIA_LIST_ROW_HOVER_TINT_CLASS,
+                        directLink?.opened &&
+                          !isDirectLinkExpired &&
+                          MEDIA_LIST_ROW_OPENED_TINT_CLASS,
                         (isDirectLinkExpired || isExtractionIncomplete) &&
                           "cursor-not-allowed"
                       )}
@@ -1066,7 +1075,7 @@ export const SaveListBrowser = ({
                     />
                     <div
                       className={cn(
-                        "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                        "pointer-events-none relative z-2 min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
                         "flex",
                         isDirectLinkExpired &&
                           "text-muted-foreground opacity-60",
@@ -1082,20 +1091,17 @@ export const SaveListBrowser = ({
                         isDirectLinkExpired={isDirectLinkExpired}
                       />
                       <span className="min-w-0 flex-1">
-                        <SaveExtractionStatus
-                          item={item}
-                          isRefreshing={isExtracting}
-                          isTitle
+                        <ExtractionStatusTitle
+                          {...getExtractionStatusTitleSpec(item, isExtracting)}
+                          titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
                         >
-                          <FilenameText
+                          <ExpandableFilename
                             value={directLink?.label || getItemTitle(item)}
-                            className={cn(
-                              MEDIA_LIST_ROW_TITLE_CLASS,
-                              "[&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10"
-                            )}
+                            className={MEDIA_LIST_ROW_TITLE_CLASS}
                             textClassName={
                               isDirectLinkExpired ? "line-through" : undefined
                             }
+                            isInsideActivationOverlay
                           />
                           <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
                             <MediaListRowMeta
@@ -1138,7 +1144,7 @@ export const SaveListBrowser = ({
                                 </span>
                               )}
                           </span>
-                        </SaveExtractionStatus>
+                        </ExtractionStatusTitle>
                         {extractionState === "failed" && (
                           <ExtractionFailedActions
                             item={item}
@@ -1154,7 +1160,7 @@ export const SaveListBrowser = ({
                   </div>
                   <div
                     className={cn(
-                      "flex items-center justify-center",
+                      "relative z-2 flex items-center justify-center",
                       MEDIA_LIST_ROW_MENU_CELL_CLASS
                     )}
                   >

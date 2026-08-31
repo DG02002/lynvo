@@ -24,8 +24,11 @@ import { getSavedLinkInteractionState } from "~/features/links/saved-link-intera
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import { cn } from "~/lib/utils"
 import { useLongPress } from "~/hooks/use-long-press"
-import { SaveExtractionStatus } from "./extraction-status"
-import { getExtractionStatusInput } from "./extraction-status-utils"
+import { ExtractionStatusTitle } from "./extraction-status"
+import {
+  getExtractionStatusInput,
+  getExtractionStatusTitleSpec,
+} from "./extraction-status-utils"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import { getItemTitle } from "./save-list-browser-model"
 import {
@@ -270,7 +273,7 @@ const HybridSaveCard = ({
       )}
       <div
         className={cn(
-          "relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted transition-colors duration-150 motion-reduce:transition-none sm:rounded-3xl",
+          "relative aspect-2/3 overflow-hidden rounded-2xl border border-foreground/15 bg-muted shadow-depth-m transition-colors duration-150 motion-reduce:transition-none sm:rounded-3xl",
           "group-hover:border-foreground/25 group-has-[:focus-visible]:border-foreground/25 has-aria-expanded:border-foreground/25",
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
@@ -290,7 +293,7 @@ const HybridSaveCard = ({
           }}
           onOpenLog={() => setIsLogDialogOpen(true)}
         />
-        <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
+        <div className="pointer-events-none absolute inset-0 bg-black/0 shadow-depth-gloss transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
           <Button
             type="button"
@@ -323,10 +326,8 @@ const HybridSaveCard = ({
       </div>
       <div className="px-1 pt-3 text-center">
         {isSingleItem && item ? (
-          <SaveExtractionStatus
-            item={item}
-            isRefreshing={isExtracting}
-            isTitle
+          <ExtractionStatusTitle
+            {...getExtractionStatusTitleSpec(item, isExtracting)}
             titleClassName="font-heading text-base font-normal"
           >
             <h3
@@ -345,7 +346,7 @@ const HybridSaveCard = ({
                 />
               </span>
             )}
-          </SaveExtractionStatus>
+          </ExtractionStatusTitle>
         ) : (
           <h3 className="font-heading text-base font-normal break-words">
             {group.displayTitle}

@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { ReactNode } from "react"
 import { cn } from "~/lib/utils"
 import { getFilenameBreakSegments } from "~/components/filename-text-segments"
 
@@ -7,6 +8,8 @@ interface FilenameTextProps {
   className?: string
   textClassName?: string
   clampClassName?: string
+  isExpanded?: boolean
+  toggle?: ReactNode
 }
 
 interface FilenameSegmentsProps {
@@ -176,32 +179,18 @@ export const FilenameText = ({
   className,
   textClassName,
   clampClassName = DEFAULT_CLAMP_CLASS_NAME,
+  isExpanded = false,
+  toggle,
 }: FilenameTextProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
   const { collapsedValue, containerRef, isOverflowing } =
     useFilenameMeasurement(value, clampClassName, isExpanded)
-
-  const toggleExpanded = (event: React.SyntheticEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsExpanded((currentIsExpanded) => !currentIsExpanded)
-  }
 
   return (
     <span ref={containerRef} className={cn("block min-w-0", className)}>
       <span className={cn("break-words", textClassName)}>
         <FilenameSegments value={isExpanded ? value : collapsedValue} />
       </span>
-      {isOverflowing && (
-        <button
-          type="button"
-          aria-expanded={isExpanded}
-          className="ml-1 inline cursor-pointer border-0 bg-transparent p-0 font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          onClick={toggleExpanded}
-        >
-          {isExpanded ? "See less" : "See more"}
-        </button>
-      )}
+      {isOverflowing && toggle}
     </span>
   )
 }

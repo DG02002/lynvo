@@ -2,6 +2,12 @@ import type { LinkListItem } from "~/features/links/types"
 
 export type ExtractionStatusInput = "idle" | "waiting" | "failed"
 
+export interface ExtractionStatusTitleSpec {
+  readonly status: ExtractionStatusInput
+  readonly fallbackLabel?: string
+  readonly error?: string
+}
+
 export const getExtractionStatusInput = (
   item: LinkListItem | undefined,
   isRefreshing: boolean
@@ -16,6 +22,27 @@ export const getExtractionStatusInput = (
   }
   return extractionState === "failed" ? "failed" : "idle"
 }
+
+export const getExtractionWaitStatusInput = (
+  isWaiting: boolean,
+  didFail: boolean
+): ExtractionStatusInput => {
+  if (isWaiting) {
+    return "waiting"
+  }
+  return didFail ? "failed" : "idle"
+}
+
+export const getExtractionStatusTitleSpec = (
+  item: LinkListItem | undefined,
+  isRefreshing: boolean
+): ExtractionStatusTitleSpec => ({
+  status: getExtractionStatusInput(item, isRefreshing),
+  fallbackLabel: item
+    ? getExtractionStatusLabel(item, isRefreshing)
+    : undefined,
+  error: item?.extractionStatus?.error,
+})
 
 export const getExtractionStatusLabel = (
   item: LinkListItem,

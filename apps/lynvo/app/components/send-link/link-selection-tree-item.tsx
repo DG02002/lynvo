@@ -9,7 +9,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Spinner } from "~/components/spinner"
-import { FilenameText } from "~/components/filename-text"
+import { ExpandableFilename } from "~/components/expandable-filename"
 import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeKey,
@@ -189,6 +189,9 @@ export const LinkSelectionTreeItem = ({
         )}
         onClick={() => void handleRowAction()}
         onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) {
+            return
+          }
           if (event.key !== "Enter" && event.key !== " ") {
             return
           }
@@ -200,7 +203,6 @@ export const LinkSelectionTreeItem = ({
           <div
             className="flex size-5 items-center justify-center"
             onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
           >
             <Checkbox
               aria-label={`Select ${link.label}`}
@@ -224,7 +226,7 @@ export const LinkSelectionTreeItem = ({
         )}
 
         <div className="min-w-0">
-          <FilenameText
+          <ExpandableFilename
             value={link.label}
             className="block text-sm font-normal"
           />

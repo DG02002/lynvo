@@ -10,6 +10,11 @@ export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
 
 export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 
+export const MEDIA_LIST_ROW_HOVER_TINT_CLASS = "group-hover:bg-muted"
+
+export const MEDIA_LIST_ROW_OPENED_TINT_CLASS =
+  "bg-sky-500/15 group-hover:bg-sky-500/20"
+
 // The immersive header's episode toggle is an optional auto-sized column, so
 // the menu cell must pin itself to the trailing column to stay right-aligned
 // when no toggle is rendered.

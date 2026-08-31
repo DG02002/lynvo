@@ -5,7 +5,7 @@ import {
   Folder01Icon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
-import { FilenameText } from "~/components/filename-text"
+import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -21,8 +21,10 @@ import { parseMediaFilename } from "~/features/links/media-artwork/media-filenam
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import { SaveExtractionStatus } from "./extraction-status"
-import { getExtractionStatusInput } from "./extraction-status-utils"
+import {
+  getExtractionStatusInput,
+  getExtractionStatusTitleSpec,
+} from "./extraction-status-utils"
 import {
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
@@ -35,7 +37,6 @@ import {
 import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-  MEDIA_LIST_ROW_TITLE_CLASS,
 } from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
@@ -162,15 +163,11 @@ const HybridGroupItemRow = ({
           rowFallbackIcon
         )
       }
-      title={
-        <SaveExtractionStatus item={item} isRefreshing={isExtracting} isTitle>
-          <FilenameText
-            value={rowDisplayTitle}
-            className={MEDIA_LIST_ROW_TITLE_CLASS}
-            textClassName={isDirectLinkExpired ? "line-through" : undefined}
-          />
-        </SaveExtractionStatus>
-      }
+      title={{
+        value: rowDisplayTitle,
+        isStruckThrough: isDirectLinkExpired,
+      }}
+      titleExtractionStatus={getExtractionStatusTitleSpec(item, isExtracting)}
       meta={
         <>
           <MediaListRowMeta
@@ -260,7 +257,7 @@ export const HybridGroupBrowser = ({
             aria-label={group.displayTitle}
             className="hidden w-full min-w-0 text-base font-normal md:block"
           >
-            <FilenameText
+            <ExpandableFilename
               value={group.displayTitle}
               clampClassName="line-clamp-1"
               className="w-full"
@@ -280,7 +277,7 @@ export const HybridGroupBrowser = ({
         </div>
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>
-        <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
+        <div className="border-b bg-muted/50 p-4 md:block md:border-b-0 md:border-r md:p-6">
           <SeasonArtworkPanel
             displayTitle={group.displayTitle}
             artworkRequest={group.artworkRequest}

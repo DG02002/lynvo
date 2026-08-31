@@ -1,32 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { AlertCircleIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Spinner } from "~/components/spinner"
 import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
-import {
-  getExtractionStatusInput,
-  getExtractionStatusLabel,
-  type ExtractionStatusInput,
-} from "./extraction-status-utils"
-import type { LinkListItem } from "~/features/links/types"
+import type { ExtractionStatusInput } from "./extraction-status-utils"
 import {
   EXTRACTION_STATUS_MESSAGES,
   EXTRACTION_STATUS_ROTATION_INTERVAL_MS,
 } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
-interface SaveExtractionStatusProps {
-  readonly item: LinkListItem
-  readonly isRefreshing: boolean
-  readonly isTitle?: boolean
-  readonly titleClassName?: string
-  readonly children?: ReactNode
-}
-
-interface ExtractionWaitStatusProps {
-  readonly isWaiting: boolean
-  readonly didFail?: boolean
+interface ExtractionStatusTitleProps {
+  readonly status: ExtractionStatusInput
   readonly fallbackLabel?: string
+  readonly error?: string
   readonly titleClassName?: string
   readonly children: ReactNode
 }
@@ -47,10 +31,10 @@ interface ExtractionStatusLifecycle {
 
 interface ExtractionStatusTextProps {
   readonly message: string
-  readonly isTitle?: boolean
   readonly titleClassName?: string
 }
 
+const DEFAULT_FALLBACK_LABEL = "Loading links…"
 const PREFERS_REDUCED_MOTION_MEDIA_QUERY = "(prefers-reduced-motion: reduce)"
 
 const usePrefersReducedMotion = (): boolean => {
@@ -143,17 +127,14 @@ const useExtractionStatusLifecycle = ({
 
 const ExtractionStatusText = ({
   message,
-  isTitle = false,
   titleClassName,
 }: ExtractionStatusTextProps) => (
   <span
     className={cn(
       "flex min-w-0 items-center gap-1.5 text-muted-foreground",
-      isTitle ? (titleClassName ?? MEDIA_LIST_ROW_TITLE_CLASS) : "text-xs"
+      titleClassName ?? MEDIA_LIST_ROW_TITLE_CLASS
     )}
-    role={isTitle ? undefined : "status"}
   >
-    {!isTitle && <Spinner aria-hidden="true" className="size-3" />}
     <span
       key={message}
       className="animate-[enter_500ms_ease] fade-in motion-reduce:animate-none min-w-0"
@@ -177,33 +158,17 @@ const renderExtractionStatusChildren = (
   return <>{children}</>
 }
 
-const getExtractionWaitStatusInput = (
-  isWaiting: boolean,
-  didFail: boolean
-): ExtractionStatusInput => {
-  if (isWaiting) {
-    return "waiting"
-  }
-  if (didFail) {
-    return "failed"
-  }
-  return "idle"
-}
-
-export const SaveExtractionStatus = ({
-  item,
-  isRefreshing,
-  isTitle = false,
+export const ExtractionStatusTitle = ({
+  status,
+  fallbackLabel = DEFAULT_FALLBACK_LABEL,
+  error,
   titleClassName,
   children,
-}: SaveExtractionStatusProps) => {
-  const extractionError = item.extractionStatus?.error
-  const statusLabel = getExtractionStatusLabel(item, isRefreshing)
-  const status = getExtractionStatusInput(item, isRefreshing)
+}: ExtractionStatusTitleProps) => {
   const lifecycle = useExtractionStatusLifecycle({
     status,
-    fallbackLabel: statusLabel,
-    shouldRotateMessages: Boolean(isTitle),
+    fallbackLabel,
+    shouldRotateMessages: true,
   })
 
   if (status === "failed") {
@@ -211,25 +176,17 @@ export const SaveExtractionStatus = ({
       <span
         className={cn(
           "flex min-w-0 items-center gap-1.5 text-destructive",
-          isTitle ? (titleClassName ?? MEDIA_LIST_ROW_TITLE_CLASS) : "text-xs"
+          titleClassName ?? MEDIA_LIST_ROW_TITLE_CLASS
         )}
         role="alert"
-        title={extractionError || "Unable to load links"}
+        title={error || "Unable to load links"}
       >
-        {!isTitle && (
-          <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
-        )}
-        <span className="min-w-0 truncate">
-          {extractionError || getExtractionStatusLabel(item, false)}
-        </span>
+        <span className="min-w-0 truncate">{error || fallbackLabel}</span>
       </span>
     )
   }
 
   if (lifecycle.phase === "idle") {
-    if (children === undefined) {
-      return null
-    }
     return renderExtractionStatusChildren(
       children,
       lifecycle.shouldAnimateEntrance
@@ -239,36 +196,6 @@ export const SaveExtractionStatus = ({
   return (
     <ExtractionStatusText
       message={lifecycle.message}
-      isTitle={isTitle}
-      titleClassName={titleClassName}
-    />
-  )
-}
-
-export const ExtractionWaitStatus = ({
-  isWaiting,
-  didFail = false,
-  fallbackLabel = "Loading links…",
-  titleClassName,
-  children,
-}: ExtractionWaitStatusProps) => {
-  const lifecycle = useExtractionStatusLifecycle({
-    status: getExtractionWaitStatusInput(isWaiting, didFail),
-    fallbackLabel,
-    shouldRotateMessages: true,
-  })
-
-  if (lifecycle.phase === "idle") {
-    return renderExtractionStatusChildren(
-      children,
-      lifecycle.shouldAnimateEntrance
-    )
-  }
-
-  return (
-    <ExtractionStatusText
-      message={lifecycle.message}
-      isTitle
       titleClassName={titleClassName}
     />
   )

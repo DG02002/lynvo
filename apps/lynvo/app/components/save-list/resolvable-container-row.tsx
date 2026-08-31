@@ -7,8 +7,7 @@ import {
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
-import { ExtractionWaitStatus } from "~/components/save-list/extraction-status"
-import { FilenameText } from "~/components/filename-text"
+import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
 import { NewBadge } from "~/components/save-list/new-badge"
 import {
@@ -18,7 +17,6 @@ import {
 } from "~/components/save-list/media-list-row"
 import {
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
-  MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "~/components/save-list/media-list-row-constants"
 import { MEDIA_LIST_EPISODE_STILL_SLOT_CLASS } from "~/components/save-list/save-list-layout-constants"
@@ -127,14 +125,10 @@ const ResolvedMirrorRows = ({
           />
           <MediaListRow
             wrapperClassName="border-b-0"
-            buttonClassName="min-h-20 bg-transparent py-4 hover:bg-muted/80"
+            buttonClassName="group-hover:bg-muted/80"
+            contentClassName="min-h-20 py-4"
             icon={<SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>}
-            title={
-              <FilenameText
-                value={mirror.label}
-                className={MEDIA_LIST_ROW_TITLE_CLASS}
-              />
-            }
+            title={{ value: mirror.label }}
             overlay={
               <LinkActionsDotMenu
                 itemLabel={mirror.label}
@@ -225,15 +219,11 @@ export const ResolvableContainerRow = ({
       )}
     >
       <MediaListRow
-        wrapperClassName={cn(
-          "border-b-0",
-          isExpanded && !link.opened && "bg-muted/60",
-          didResolutionFail && "bg-destructive/15"
-        )}
+        wrapperClassName="border-b-0"
         isOpened={link.opened === true}
         buttonClassName={cn(
-          isExpanded && !link.opened && "bg-transparent hover:bg-muted/80",
-          didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
+          isExpanded && !link.opened && "bg-muted/60 group-hover:bg-muted/80",
+          didResolutionFail && "bg-destructive/15 group-hover:bg-destructive/20"
         )}
         buttonDataAttributes={{
           "data-resolution-state": resolutionState,
@@ -246,18 +236,13 @@ export const ResolvableContainerRow = ({
             isWatched={link.opened === true}
           />
         }
-        title={
-          <ExtractionWaitStatus
-            isWaiting={shouldShowResolving}
-            didFail={didResolutionFail}
-            titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
-          >
-            <FilenameText
-              value={displayTitle ?? link.label}
-              className={MEDIA_LIST_ROW_TITLE_CLASS}
-            />
-          </ExtractionWaitStatus>
-        }
+        title={{ value: displayTitle ?? link.label }}
+        titleExtractionStatus={{
+          status: getExtractionWaitStatusInput(
+            shouldShowResolving,
+            didResolutionFail
+          ),
+        }}
         meta={
           <MediaListRowMeta
             sourceName={getResolvableSourceName(link, item)}
