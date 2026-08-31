@@ -204,4 +204,35 @@ describe("parseMediaFilename", () => {
       kind: "unknown",
     })
   })
+
+  // Golden fixture: the eight real Stranger Things S05 filenames. E04's
+  // "Sorcerer" once matched the letter-shaped malformed-marker pattern and
+  // poisoned the whole listing.
+  it("keeps episode titles containing S-word-E-word spellings parsable", () => {
+    const realLabels = [
+      "Stranger.Things.S05E01.Chapter.One.The.Crawl.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E02.Chapter.Two.The.Vanishing.of.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E03.Chapter.Three.The.Turnbow.Trap.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E04.Chapter.Four.Sorcerer.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E05.Chapter.Five.Shock.Jock.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E06.Chapter.Six.Escape.from.Camazotz.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E07.Chapter.Seven.The.Bridge.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Stranger.Things.S05E08.Chapter.Eight.The.Rightside.Up.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+    ]
+    for (const label of realLabels) {
+      expect(parseMediaFilename(label)).toMatchObject({
+        kind: "episode",
+        seasonNumber: 5,
+      })
+    }
+  })
+
+  it("still flags uppercase letter-shaped placeholder markers as ambiguous", () => {
+    expect(parseMediaFilename("Show.S01.SORCERER.WEB-DL.mkv").kind).toBe(
+      "ambiguous"
+    )
+    expect(parseMediaFilename("Show.S01E.ABC.WEB-DL.mkv").kind).toBe(
+      "ambiguous"
+    )
+  })
 })

@@ -127,6 +127,16 @@ const wrappedSeasonItem: LinkViewItem = {
               mediaNodeKind: "playable",
             },
             {
+              nodeKey: "3:playable:sorcerer-node-key",
+              url: "https://media.example/wrapped-season/download-e4",
+              label:
+                "Stranger.Things.S05E04.Chapter.Four.Sorcerer.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+              id: "sorcerer-node-key",
+              type: "file",
+              size: "2.59 GB",
+              mediaNodeKind: "playable",
+            },
+            {
               nodeKey:
                 "1:playable:FM7PpwjPoqtYTlRNNFgru4jPM+pxOY3fLNOaWNSgSZZ4+NDQCeiJRPUbYjXgoT8k",
               url: "https://media.example/wrapped-season/download-e2",

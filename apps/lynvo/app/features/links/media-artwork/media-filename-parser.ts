@@ -22,8 +22,14 @@ const CHILD_EPISODE_PATTERN = new RegExp(
   `\\b(?:EPISODE|EP)\\s*(\\d{1,${MEDIA_FILENAME_MAX_EPISODE_DIGITS}})\\b`,
   "i"
 )
-const MALFORMED_MARKER_PATTERN =
-  /(?:^|\s)S\d{1,3}\s*[\s._-]*E(?!\d)|(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/i
+// A digit marker missing its episode number may be any case, and placeholder
+// slots are filler characters (SxxEyy) in any case — but the general
+// letter-shaped form is only meaningful in uppercase, because lowercase
+// matches ordinary words like "Sorcerer" or "Storyteller".
+const MALFORMED_MARKER_DIGIT_PATTERN = /(?:^|\s)S\d{1,3}\s*[\s._-]*E(?!\d)/i
+const MALFORMED_MARKER_PLACEHOLDER_PATTERN =
+  /(?:^|\s)S[xy#?*]{1,5}E[xy#?*]{1,5}\b/i
+const MALFORMED_MARKER_UPPERCASE_PATTERN = /(?:^|\s)S[A-Z]{2,5}E[A-Z]{2,5}\b/
 const TECHNICAL_TOKEN_PATTERN =
   /\b(?:2160p|1440p|1080p|720p|576p|480p|4k|8k|\d{3,4}x\d{3,4}|\d{1,2}bit|hdr10?\+?|hdr|dolby\s+vision|dv|web[- ]?dl|webrip|web|bluray|blu[- ]?ray|brrip|bdrip|hdtc|hdtv|hevc|x264|x265|h\.?264|h\.?265|av1|aac|dts|ddp|atmos|dual\s+audio|multi\s+audio|remux|final\s+cut|subs?|subtitles?|bd|itunes)\b/i
 const GENERIC_TITLE_PATTERN = /^(?:file|sample|video|movie|episode|untitled)$/i
@@ -291,7 +297,10 @@ const parseFilename = (
     EPISODE_PATTERN.lastIndex = 0
     return [...matchingText.matchAll(EPISODE_PATTERN)].length > 1
   })()
-  const hasMalformedMarker = MALFORMED_MARKER_PATTERN.test(matchingText)
+  const hasMalformedMarker =
+    MALFORMED_MARKER_DIGIT_PATTERN.test(matchingText) ||
+    MALFORMED_MARKER_PLACEHOLDER_PATTERN.test(matchingText) ||
+    MALFORMED_MARKER_UPPERCASE_PATTERN.test(matchingText)
   if (hasRepeatedEpisodeMarkers || hasMalformedMarker) {
     return toAmbiguousCandidate(originalFilename)
   }
