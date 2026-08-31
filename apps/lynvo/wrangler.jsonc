@@ -16,7 +16,7 @@
 		{
 			"binding": "DB",
 			"database_name": "lynvo-db",
-			"database_id": "4bb5dd49-b2f0-4478-bf2a-1e3b9fd9a0ab",
+			"database_id": "73b57c79-ae21-4da3-b531-0966a21041c1",
 			"migrations_dir": "migrations",
 		},
 	],
@@ -90,7 +90,7 @@
 				{
 					"binding": "DB",
 					"database_name": "lynvo-db",
-					"database_id": "4bb5dd49-b2f0-4478-bf2a-1e3b9fd9a0ab",
+					"database_id": "73b57c79-ae21-4da3-b531-0966a21041c1",
 					"migrations_dir": "migrations",
 				},
 			],
