@@ -33,6 +33,7 @@ import {
   SaveListRowIcon,
 } from "./media-list-row"
 import {
+  MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   MEDIA_LIST_ROW_TITLE_CLASS,
 } from "./media-list-row-constants"
@@ -41,12 +42,13 @@ import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   HYBRID_GROUP_CONTENT_CLASS,
   HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
-  HYBRID_GROUP_HEADER_CLASS,
+  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
 import {
   FolderTitleDisplayToggleButton,
   SaveListBackButton,
 } from "./save-list-header-controls"
+import { HybridGroupMenu } from "./hybrid-group-menu"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
@@ -256,7 +258,7 @@ export const HybridGroupBrowser = ({
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className={HYBRID_GROUP_HEADER_CLASS}>
+      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
         <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
@@ -271,13 +273,22 @@ export const HybridGroupBrowser = ({
           </h1>
         </div>
         {shouldShowEpisodeStills ? (
-          <div className="flex items-center justify-center px-1 md:px-0">
+          <div className="hidden items-center justify-center md:flex">
             <FolderTitleDisplayToggleButton
               titleDisplay={titleDisplay}
               onToggle={toggleTitleDisplay}
             />
           </div>
         ) : null}
+        <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
+          <HybridGroupMenu
+            group={group}
+            actions={actions}
+            titleDisplay={titleDisplay}
+            onToggleTitleDisplay={toggleTitleDisplay}
+            onExit={onExit}
+          />
+        </div>
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">

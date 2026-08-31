@@ -74,10 +74,7 @@ import {
   HYBRID_GROUP_CONTENT_CLASS,
   HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
-  SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
-  SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS,
-  SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS,
-  SEASON_FOLDER_HEADER_GRID_CLASS,
+  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import {
@@ -360,7 +357,7 @@ const FinderEmptyState = ({
       "flex h-svh flex-col overflow-hidden bg-background"
     )}
   >
-    <header className="grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem] md:gap-0">
+    <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
       <SaveListBackButton onExit={onExit} />
       <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
         <h1
@@ -706,18 +703,7 @@ const FinderBrowser = ({
         "flex h-svh flex-col overflow-hidden bg-background"
       )}
     >
-      <header
-        className={
-          sharedSeasonIdentity
-            ? SEASON_FOLDER_HEADER_GRID_CLASS
-            : cn(
-                SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
-                shouldShowEpisodeStills
-                  ? SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS
-                  : SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS
-              )
-        }
-      >
+      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
         <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1

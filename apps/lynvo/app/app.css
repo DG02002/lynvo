@@ -468,7 +468,7 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   }
 
   .save-list-browser-layout {
-    --save-list-browser-side-column-width: 16rem;
+    --save-list-browser-side-column-width: 22rem;
   }
 }
 

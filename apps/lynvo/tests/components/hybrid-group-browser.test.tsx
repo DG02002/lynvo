@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -83,9 +89,12 @@ const createEpisodeItem = (
 })
 
 const renderBrowser = (
-  items: readonly LinkListItem[] = [createEpisodeItem()]
-) =>
-  render(
+  items: readonly LinkListItem[] = [createEpisodeItem()],
+  overrides: { actions?: LinkItemActions; onExit?: () => void } = {}
+) => {
+  const actions = overrides.actions ?? createActions()
+  const onExit = overrides.onExit ?? vi.fn()
+  const view = render(
     <HybridGroupBrowser
       group={{
         key: "tv:sample series sample arc::S04",
@@ -98,12 +107,14 @@ const renderBrowser = (
         lastAddedAt: Date.now(),
         items,
       }}
-      actions={createActions()}
+      actions={actions}
       extractingItems={new Set()}
-      onExit={vi.fn()}
+      onExit={onExit}
       onOpenItem={vi.fn()}
     />
   )
+  return { ...view, actions, onExit }
+}
 
 const renderNonEpisodeGroupBrowser = () =>
   render(
@@ -150,7 +161,7 @@ describe("HybridGroupBrowser", () => {
       screen.queryByRole("switch", { name: "Episode names" })
     ).not.toBeInTheDocument()
     expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
-    expect(screen.getByRole("banner").children).toHaveLength(2)
+    expect(screen.getByRole("banner").children).toHaveLength(3)
     expect(
       screen.getByRole("button", { name: "downloaded-video.mkv" }).parentElement
     ).not.toHaveClass("flex-col")
@@ -187,8 +198,9 @@ describe("HybridGroupBrowser", () => {
     expect(groupHeading).toBeInTheDocument()
     expect(groupHeading).toHaveClass("hidden", "md:block")
     expect(screen.getByRole("banner")).toHaveClass(
-      "md:grid-cols-[18rem_minmax(0,1fr)_auto]",
-      "lg:grid-cols-[22rem_minmax(0,1fr)_auto]"
+      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
+      "lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
     )
     expect(screen.getAllByRole("button", { name: "Back" })).not.toHaveLength(0)
     await screen.findByText("1. The Sample Battle")
@@ -267,5 +279,45 @@ describe("HybridGroupBrowser", () => {
         "9. Episode 9",
       ])
     })
+  })
+
+  it("removes every group item after a delete-all confirmation", async () => {
+    const { actions, onExit } = renderBrowser(
+      [
+        createEpisodeItem("sample-episode-1", episodeFilename),
+        createEpisodeItem(
+          "sample-episode-2",
+          episodeFilename.replace("S04E01", "S04E02")
+        ),
+      ],
+      { actions: createActions(), onExit: vi.fn() }
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open menu for Sample Series Sample Arc S04",
+      })
+    )
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeVisible()
+    })
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete all" }))
+
+    const confirmDialog = await screen.findByRole("alertdialog")
+    expect(confirmDialog).toHaveTextContent("Remove 2 items from your list?")
+    fireEvent.click(
+      within(confirmDialog).getByRole("button", { name: "Delete all" })
+    )
+
+    expect(actions.remove).toHaveBeenCalledTimes(2)
+    expect(actions.remove).toHaveBeenCalledWith(
+      "https://media.example/sample-episode-1",
+      "sample-episode-1"
+    )
+    expect(actions.remove).toHaveBeenCalledWith(
+      "https://media.example/sample-episode-2",
+      "sample-episode-2"
+    )
+    expect(onExit).toHaveBeenCalledTimes(1)
   })
 })

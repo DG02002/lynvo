@@ -149,7 +149,8 @@ const HybridSaveCard = ({
   const isExtracting =
     isSingleItem && item ? extractingItems.has(item.url) : false
   const isExtractionVisual =
-    getExtractionStatusInput(item, isExtracting) !== "idle"
+    getExtractionStatusInput(isSingleItem ? item : undefined, isExtracting) !==
+    "idle"
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"

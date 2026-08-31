@@ -263,4 +263,43 @@ describe("HybridSaveGrid", () => {
 
     vi.restoreAllMocks()
   })
+
+  it("keeps a merged group card openable while one episode is still extracting", () => {
+    render(
+      <HybridSaveGrid
+        groups={[
+          {
+            key: "tv:sample series::S01",
+            displayTitle: "Sample Series S01",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [
+              createQueuedItem({ state: "queued" }),
+              {
+                ...createQueuedItem(undefined),
+                id: "ready-episode",
+                url: "https://media.example/ready-episode",
+                title: "Sample.Series.S01E01.1080p.mkv",
+              },
+            ],
+          },
+        ]}
+        actions={createActions()}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    const groupCard = screen.getByTestId("hybrid-save-card")
+    expect(groupCard).toHaveAttribute("data-extraction-state", "complete")
+    expect(
+      groupCard.querySelector('[data-slot="spinner"]')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Open Sample Series S01" })
+    ).toBeInTheDocument()
+  })
 })

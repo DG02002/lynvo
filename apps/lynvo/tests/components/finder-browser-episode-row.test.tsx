@@ -143,10 +143,7 @@ describe("FinderBrowser episode rows", () => {
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
       "grid-cols-[4rem_minmax(0,1fr)_4rem]",
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem]"
-    )
-    expect(folderHeader).not.toHaveClass(
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]"
     )
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
   })
@@ -172,7 +169,7 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_4rem]"
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]"
     )
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
     expect(screen.getByRole("heading", { name: longMovieTitle })).toHaveClass(
@@ -200,7 +197,7 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
+      "grid-cols-[4rem_minmax(0,1fr)_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
       "lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
     )
@@ -284,7 +281,7 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]"
     )
     expect(
       screen.queryByRole("heading", { name: "Sample Series Name S01" })
