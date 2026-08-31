@@ -200,7 +200,9 @@ describe("FinderBrowser episode rows", () => {
     })
     const folderHeader = headerMenu.closest("header")
     expect(folderHeader).toHaveClass(
-      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
+      "lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
     )
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
     expect(
@@ -216,7 +218,79 @@ describe("FinderBrowser episode rows", () => {
       const episodeImage = view.container.querySelector(
         'img[src*="episode-1.jpg"]'
       )
-      expect(episodeImage?.closest(".hidden")).toHaveClass("md:block")
+      expect(episodeImage?.closest(".hidden")).toBeNull()
     })
+  })
+
+  it("renders a one-season folder with the season poster panel", async () => {
+    const view = render(
+      <SaveListBrowser
+        items={[item]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Sample Series Name S01" })
+    ).toBeInTheDocument()
+    expect(screen.getByText("No poster found")).toBeInTheDocument()
+    expect(
+      view.container.querySelector(".save-list-group-artwork-frame")
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the folder tree for folders mixing seasons", () => {
+    const mixedSeasonsItem: LinkViewItem = {
+      ...item,
+      metadata: {
+        ...item.metadata,
+        extraction: {
+          ...item.metadata.extraction,
+          extractedLinks: [
+            ...item.metadata.extraction.extractedLinks,
+            {
+              id: "sample-series-name-s02e01",
+              url: "https://media.example/sample-series-name-s02e01",
+              label: "Sample.Series.Name.S02E01.1080p.PROV.WEB-DL.mkv",
+              type: "file",
+              size: "1.05 GB",
+            },
+          ],
+        },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[mixedSeasonsItem]}
+        selectedItemUrl={mixedSeasonsItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for Sample Series Name",
+    })
+    const folderHeader = headerMenu.closest("header")
+    expect(folderHeader).toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)_auto_4rem]"
+    )
+    expect(
+      screen.queryByRole("heading", { name: "Sample Series Name S01" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Sample Series Name" })
+    ).toBeInTheDocument()
   })
 })

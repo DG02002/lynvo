@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type RefObject } from "react"
+import { useMemo, useState, type ReactNode, type RefObject } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
@@ -29,6 +29,9 @@ import {
   getMediaEpisodeDisplayTitle,
   hasEpisodeMarker,
 } from "~/features/links/media-artwork/media-artwork-identity"
+import { getSharedSeasonIdentity } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
@@ -67,11 +70,16 @@ import {
 } from "./media-list-row-constants"
 import {
   MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
+  FINDER_FOLDER_CONTENT_GRID_CLASS,
+  HYBRID_GROUP_CONTENT_CLASS,
+  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
   SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
   SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS,
   SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS,
+  SEASON_FOLDER_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
+import { SeasonArtworkPanel } from "./season-artwork-panel"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
@@ -402,6 +410,7 @@ interface FinderBrowserLinkRowProps {
   readonly extractingItems: Set<string>
   readonly parentFolderName?: string
   readonly shouldShowEpisodeStills: boolean
+  readonly shouldStackEpisodeStill: boolean
   readonly shouldShowRowPosters: boolean
   readonly titleDisplay: FolderTitleDisplay
   readonly displayTitle: string
@@ -416,6 +425,7 @@ const FinderBrowserLinkRow = ({
   extractingItems,
   parentFolderName,
   shouldShowEpisodeStills,
+  shouldStackEpisodeStill,
   shouldShowRowPosters,
   titleDisplay,
   displayTitle,
@@ -449,40 +459,56 @@ const FinderBrowserLinkRow = ({
       className="size-6"
     />
   )
-  const rowIcon = shouldShowEpisodeStills ? (
-    <>
-      <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
-        <FinderEpisodeStillDisplay
-          label={link.label}
-          fallbackIcon={rowFallbackIcon}
-          isResolving={isResolving}
-          isDimmed={isExpired}
-          isWatched={link.opened === true}
-          imagePath={episodeStill.imagePath}
-          imageType={episodeStill.imageType}
-          isLookupPending={episodeStill.isLookupPending}
-        />
-      </span>
-      <span className="md:hidden">
-        <SaveListRowIcon
-          className={isExpired ? "text-muted-foreground" : undefined}
-        >
-          {rowFallbackIcon}
-        </SaveListRowIcon>
-      </span>
-    </>
-  ) : (
-    <SaveListBrowserItemIcon
+  const episodeStillElement = (
+    <FinderEpisodeStillDisplay
       label={link.label}
-      parentFolderName={parentFolderName}
-      presentation={getSaveListBrowserItemIconPresentation(
-        shouldShowRowPosters,
-        isFolder
-      )}
-      rowFallbackIcon={rowFallbackIcon}
-      isExpired={isExpired}
+      fallbackIcon={rowFallbackIcon}
+      isResolving={isResolving}
+      isDimmed={isExpired}
+      isWatched={link.opened === true}
+      imagePath={episodeStill.imagePath}
+      imageType={episodeStill.imageType}
+      isLookupPending={episodeStill.isLookupPending}
     />
   )
+  const renderRowIcon = (): ReactNode => {
+    if (!shouldShowEpisodeStills) {
+      return (
+        <SaveListBrowserItemIcon
+          label={link.label}
+          parentFolderName={parentFolderName}
+          presentation={getSaveListBrowserItemIconPresentation(
+            shouldShowRowPosters,
+            isFolder
+          )}
+          rowFallbackIcon={rowFallbackIcon}
+          isExpired={isExpired}
+        />
+      )
+    }
+    if (shouldStackEpisodeStill) {
+      return (
+        <span className={HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS}>
+          {episodeStillElement}
+        </span>
+      )
+    }
+    return (
+      <>
+        <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
+          {episodeStillElement}
+        </span>
+        <span className="md:hidden">
+          <SaveListRowIcon
+            className={isExpired ? "text-muted-foreground" : undefined}
+          >
+            {rowFallbackIcon}
+          </SaveListRowIcon>
+        </span>
+      </>
+    )
+  }
+  const rowIcon = renderRowIcon()
   const copyLink = () => {
     if (linkTarget === undefined) {
       return
@@ -564,6 +590,7 @@ const FinderBrowserLinkRow = ({
       onActivate={onActivate}
       disabled={isExpired}
       isOpened={link.opened === true}
+      shouldStackIconOnMobile={shouldStackEpisodeStill}
       buttonClassName={isExpired ? "text-muted-foreground" : undefined}
       buttonDataAttributes={{
         "data-folder-state": isFolder
@@ -598,6 +625,57 @@ const FinderBrowser = ({
     shouldShowRowPosters &&
     currentLinks.length > 0 &&
     currentLinks.every((link) => hasEpisodeMarker(link.label, parentFolderName))
+  const sharedSeasonIdentity = useMemo(
+    () =>
+      shouldShowRowPosters
+        ? getSharedSeasonIdentity(
+            currentLinks.map((link) => link.label),
+            parentFolderName
+          )
+        : undefined,
+    [currentLinks, parentFolderName, shouldShowRowPosters]
+  )
+  const headerTitle = sharedSeasonIdentity?.displayTitle ?? getItemTitle(item)
+  const seasonArtworkRequest = useMemo<MediaArtworkRequest | undefined>(() => {
+    if (!sharedSeasonIdentity) {
+      return undefined
+    }
+    // A stored pick is authoritative: resolve by immutable id instead of
+    // matching the season title again.
+    const storedArtwork = getLinkViewItemMetadata(item).artwork
+    if (storedArtwork) {
+      return {
+        mediaKind: storedArtwork.mediaKind ?? "tv",
+        title: storedArtwork.title,
+        providerId: storedArtwork.providerId,
+        year: storedArtwork.year,
+      }
+    }
+    return {
+      mediaKind: "tv",
+      title: sharedSeasonIdentity.requestTitle,
+      year: sharedSeasonIdentity.year,
+      seasonNumber: sharedSeasonIdentity.seasonNumber,
+    }
+  }, [item, sharedSeasonIdentity])
+  const sortedCurrentLinks = useMemo(() => {
+    if (!sharedSeasonIdentity) {
+      return currentLinks
+    }
+    const linkEntries = currentLinks.map((link, linkIndex) => ({
+      link,
+      linkIndex,
+    }))
+    return linkEntries
+      .toSorted(
+        (firstEntry, secondEntry) =>
+          (parseMediaFilename(firstEntry.link.label, parentFolderName)
+            .episodeNumber ?? firstEntry.linkIndex) -
+          (parseMediaFilename(secondEntry.link.label, parentFolderName)
+            .episodeNumber ?? secondEntry.linkIndex)
+      )
+      .map((entry) => entry.link)
+  }, [currentLinks, parentFolderName, sharedSeasonIdentity])
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay(
     shouldShowRowPosters ? "episode" : "filename"
   )
@@ -629,21 +707,25 @@ const FinderBrowser = ({
       )}
     >
       <header
-        className={cn(
-          SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
-          shouldShowEpisodeStills
-            ? SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS
-            : SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS
-        )}
+        className={
+          sharedSeasonIdentity
+            ? SEASON_FOLDER_HEADER_GRID_CLASS
+            : cn(
+                SAVE_LIST_FOLDER_HEADER_GRID_CLASS,
+                shouldShowEpisodeStills
+                  ? SAVE_LIST_FOLDER_HEADER_WITH_TOGGLE_CLASS
+                  : SAVE_LIST_FOLDER_HEADER_WITHOUT_TOGGLE_CLASS
+              )
+        }
       >
         <SaveListBackButton onExit={onExit} />
         <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
-            aria-label={getItemTitle(item)}
+            aria-label={headerTitle}
             className="hidden w-full min-w-0 text-base font-normal md:block"
           >
             <FilenameText
-              value={getItemTitle(item)}
+              value={headerTitle}
               clampClassName="line-clamp-1"
               className="w-full"
             />
@@ -677,46 +759,66 @@ const FinderBrowser = ({
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)] md:grid-rows-1">
-        <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
-          <MobileFolderTreeToggle
-            currentFolderLabel={currentFolderLabel}
-            isOpen={isMobileFolderTreeOpen}
-            onToggle={() =>
-              setIsMobileFolderTreeOpen(
-                (currentIsMobileFolderTreeOpen) =>
-                  !currentIsMobileFolderTreeOpen
-              )
-            }
-          />
-          <div
-            className={cn(
-              "mt-2 max-h-[40svh] overflow-y-auto pr-1",
-              !isMobileFolderTreeOpen && "hidden",
-              "md:mt-0 md:block md:max-h-none md:overflow-visible md:pr-0"
-            )}
-          >
-            <FolderTree
-              rootLabel={getItemTitle(item)}
-              folderPath={folderPath}
-              links={rootLinks}
-              onSelectRoot={() => {
-                selectRoot()
-                setIsMobileFolderTreeOpen(false)
-              }}
-              onSelectFolder={(link, path) => {
-                void openFolder(link, path)
-                setIsMobileFolderTreeOpen(false)
-              }}
+      <div
+        className={
+          sharedSeasonIdentity
+            ? HYBRID_GROUP_CONTENT_CLASS
+            : FINDER_FOLDER_CONTENT_GRID_CLASS
+        }
+      >
+        {sharedSeasonIdentity ? (
+          <aside className="border-b p-4 md:border-b-0 md:border-r md:p-6">
+            <SeasonArtworkPanel
+              displayTitle={sharedSeasonIdentity.displayTitle}
+              artworkRequest={seasonArtworkRequest}
             />
-          </div>
-        </aside>
+          </aside>
+        ) : (
+          <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+            <MobileFolderTreeToggle
+              currentFolderLabel={currentFolderLabel}
+              isOpen={isMobileFolderTreeOpen}
+              onToggle={() =>
+                setIsMobileFolderTreeOpen(
+                  (currentIsMobileFolderTreeOpen) =>
+                    !currentIsMobileFolderTreeOpen
+                )
+              }
+            />
+            <div
+              className={cn(
+                "mt-2 max-h-[40svh] overflow-y-auto pr-1",
+                !isMobileFolderTreeOpen && "hidden",
+                "md:mt-0 md:block md:max-h-none md:overflow-visible md:pr-0"
+              )}
+            >
+              <FolderTree
+                rootLabel={getItemTitle(item)}
+                folderPath={folderPath}
+                links={rootLinks}
+                onSelectRoot={() => {
+                  selectRoot()
+                  setIsMobileFolderTreeOpen(false)
+                }}
+                onSelectFolder={(link, path) => {
+                  void openFolder(link, path)
+                  setIsMobileFolderTreeOpen(false)
+                }}
+              />
+            </div>
+          </aside>
+        )}
 
         <div
           ref={contentRef}
-          className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain"
+          className={cn(
+            "min-h-0 overscroll-x-none",
+            sharedSeasonIdentity
+              ? "md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain"
+              : "overflow-x-hidden overflow-y-auto overscroll-y-contain"
+          )}
         >
-          {currentLinks.map((link) => {
+          {sortedCurrentLinks.map((link) => {
             const linkKey = getLinkKey(link)
             const linkTarget = getMediaNodeTargetOrUndefined(link)
             if (linkTarget !== undefined && isMirrorResolvable(link)) {
@@ -753,6 +855,7 @@ const FinderBrowser = ({
                 extractingItems={extractingItems}
                 parentFolderName={parentFolderName}
                 shouldShowEpisodeStills={shouldShowEpisodeStills}
+                shouldStackEpisodeStill={Boolean(sharedSeasonIdentity)}
                 shouldShowRowPosters={shouldShowRowPosters}
                 titleDisplay={currentTitleDisplay}
                 displayTitle={getRowDisplayTitle(link)}

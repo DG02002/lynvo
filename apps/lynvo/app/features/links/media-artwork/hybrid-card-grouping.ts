@@ -297,6 +297,51 @@ const sortGroups = (groups: readonly HybridCardGroup[]): HybridCardGroup[] =>
     return firstGroup.displayTitle.localeCompare(secondGroup.displayTitle)
   })
 
+export const getSharedSeasonIdentity = (
+  labels: readonly string[],
+  parentFolderName?: string
+): SharedSeasonIdentity | undefined => {
+  if (labels.length === 0) {
+    return undefined
+  }
+
+  let sharedIdentity: SharedSeasonIdentity | undefined
+  for (const label of labels) {
+    const candidate = parseMediaFilename(label, parentFolderName)
+    const isEpisode =
+      candidate.kind === "episode" || candidate.kind === "episode-range"
+    if (
+      !isEpisode ||
+      !candidate.title ||
+      !candidate.normalizedTitle ||
+      candidate.seasonNumber === undefined
+    ) {
+      return undefined
+    }
+    if (sharedIdentity === undefined) {
+      sharedIdentity = {
+        requestTitle: candidate.title,
+        normalizedTitle: candidate.normalizedTitle,
+        year: candidate.year,
+        seasonNumber: candidate.seasonNumber,
+        displayTitle: getTvDisplayTitle(
+          candidate.title,
+          candidate.year,
+          candidate.seasonNumber
+        ),
+      }
+      continue
+    }
+    if (
+      candidate.normalizedTitle !== sharedIdentity.normalizedTitle ||
+      candidate.seasonNumber !== sharedIdentity.seasonNumber
+    ) {
+      return undefined
+    }
+  }
+  return sharedIdentity
+}
+
 export const getHybridCardGroups = (
   items: readonly LinkListItem[]
 ): readonly HybridCardGroup[] => {

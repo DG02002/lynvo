@@ -8,7 +8,6 @@ import {
 import { FilenameText } from "~/components/filename-text"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
-import { TmdbImage } from "~/features/links/components/tmdb-image"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
@@ -19,7 +18,6 @@ import {
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { getHybridItemLabel } from "~/features/links/media-artwork/hybrid-card-grouping"
 import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
-import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
@@ -41,7 +39,6 @@ import {
 import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
-  HYBRID_GROUP_ARTWORK_SIZES,
   HYBRID_GROUP_CONTENT_CLASS,
   HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
   HYBRID_GROUP_HEADER_CLASS,
@@ -50,6 +47,7 @@ import {
   FolderTitleDisplayToggleButton,
   SaveListBackButton,
 } from "./save-list-header-controls"
+import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
 interface HybridGroupItemRowProps {
@@ -220,51 +218,6 @@ interface HybridGroupBrowserProps {
   readonly onOpenItem: (itemUrl: string) => void
 }
 
-interface HybridGroupArtworkProps {
-  readonly displayTitle: string
-  readonly imagePath: string | undefined
-  readonly imageType: "poster" | "still"
-  readonly isArtworkPending: boolean
-}
-
-const HybridGroupArtwork = ({
-  displayTitle,
-  imagePath,
-  imageType,
-  isArtworkPending,
-}: HybridGroupArtworkProps) => {
-  if (imagePath) {
-    return (
-      <TmdbImage
-        path={imagePath}
-        variant="card"
-        imageType={imageType}
-        sizes={HYBRID_GROUP_ARTWORK_SIZES}
-        alt={`Artwork for ${displayTitle}`}
-        width={342}
-        height={513}
-      />
-    )
-  }
-
-  if (isArtworkPending) {
-    return (
-      <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15">
-        <Spinner
-          aria-label={`Loading artwork for ${displayTitle}…`}
-          className="size-8"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
-      No poster found
-    </div>
-  )
-}
-
 export const HybridGroupBrowser = ({
   group,
   actions,
@@ -300,11 +253,6 @@ export const HybridGroupBrowser = ({
           secondEntry.originalIndex)
     )
   }, [group.items, itemLabels, shouldShowEpisodeStills])
-  const artwork = useMediaArtwork(group.artworkRequest)
-  const imagePath = artwork?.stillPath ?? artwork?.posterPath
-  const imageType = artwork?.stillPath ? "still" : "poster"
-  const isArtworkPending =
-    group.artworkRequest !== undefined && artwork === undefined
 
   return (
     <section className="flex h-svh flex-col overflow-hidden bg-background">
@@ -333,24 +281,10 @@ export const HybridGroupBrowser = ({
       </header>
       <div className={HYBRID_GROUP_CONTENT_CLASS}>
         <div className="border-b p-4 md:block md:border-b-0 md:border-r md:p-6">
-          <div className="mx-auto w-full max-w-72 md:mx-0 md:w-full md:max-w-none">
-            <div className="save-list-group-artwork-frame relative overflow-hidden rounded-2xl border border-foreground/15 bg-muted">
-              <HybridGroupArtwork
-                displayTitle={group.displayTitle}
-                imagePath={imagePath}
-                imageType={imageType}
-                isArtworkPending={isArtworkPending}
-              />
-            </div>
-            {artwork?.identity ? (
-              <p className="pt-1 text-center text-xs text-muted-foreground">
-                Artwork: {artwork.identity.title}
-                {artwork.identity.year !== undefined
-                  ? ` (${artwork.identity.year})`
-                  : ""}
-              </p>
-            ) : null}
-          </div>
+          <SeasonArtworkPanel
+            displayTitle={group.displayTitle}
+            artworkRequest={group.artworkRequest}
+          />
         </div>
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">

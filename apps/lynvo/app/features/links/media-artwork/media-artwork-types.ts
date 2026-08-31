@@ -65,4 +65,12 @@ declare global {
     readonly lastAddedAt: number
     readonly items: readonly LinkListItem[]
   }
+
+  interface SharedSeasonIdentity {
+    readonly requestTitle: string
+    readonly normalizedTitle: string
+    readonly year?: number
+    readonly seasonNumber: number
+    readonly displayTitle: string
+  }
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
+import {
+  getHybridCardGroups,
+  getSharedSeasonIdentity,
+} from "~/features/links/media-artwork/hybrid-card-grouping"
 import type { LinkListItem } from "~/features/links/types"
 
 const createItem = (
@@ -366,5 +369,52 @@ describe("getHybridCardGroups", () => {
       "Gamma (1979)",
       "Alpha (2017)",
     ])
+  })
+})
+
+describe("getSharedSeasonIdentity", () => {
+  it("identifies a folder whose links are episodes of one season", () => {
+    const identity = getSharedSeasonIdentity([
+      "Can.This.Love.Be.Translated.S01E02.Episode.2.1080p.NF.WEB-DL.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+      "Can.This.Love.Be.Translated.S01E01.Episode.1.1080p.NF.WEB-DL.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+    ])
+
+    expect(identity).toEqual({
+      requestTitle: "Can This Love Be Translated",
+      normalizedTitle: "can this love be translated",
+      seasonNumber: 1,
+      displayTitle: "Can This Love Be Translated S01",
+    })
+  })
+
+  it("returns undefined when seasons differ", () => {
+    const identity = getSharedSeasonIdentity([
+      "Sample.Things.S01E01.720p.mkv",
+      "Sample.Things.S02E01.720p.mkv",
+    ])
+
+    expect(identity).toBeUndefined()
+  })
+
+  it("returns undefined when shows differ", () => {
+    const identity = getSharedSeasonIdentity([
+      "Sample.Things.S01E01.720p.mkv",
+      "Other.Things.S01E01.720p.mkv",
+    ])
+
+    expect(identity).toBeUndefined()
+  })
+
+  it("returns undefined when any link is not an episode", () => {
+    const identity = getSharedSeasonIdentity([
+      "Sample.Things.S01E01.720p.mkv",
+      "Sample.Things.Season.2.1080p.WEB-DL",
+    ])
+
+    expect(identity).toBeUndefined()
+  })
+
+  it("returns undefined for an empty folder", () => {
+    expect(getSharedSeasonIdentity([])).toBeUndefined()
   })
 })

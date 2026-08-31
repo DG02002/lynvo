@@ -15,7 +15,13 @@ export const HYBRID_GROUP_ARTWORK_SIZES =
 
 export const HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS = "block shrink-0"
 
+export const SEASON_FOLDER_HEADER_GRID_CLASS =
+  "grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_auto_4rem] items-stretch border-b bg-background p-0 md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem] md:gap-0 lg:grid-cols-[22rem_minmax(0,1fr)_auto_4rem]"
+
 export const SAVE_LIST_BROWSER_LAYOUT_CLASS = "save-list-browser-layout"
+
+export const FINDER_FOLDER_CONTENT_GRID_CLASS =
+  "grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)] md:grid-rows-1"
 
 export const SAVE_LIST_FOLDER_HEADER_GRID_CLASS =
   "grid min-h-16 shrink-0 grid-cols-[4rem_minmax(0,1fr)_4rem] items-stretch border-b bg-background p-0 md:gap-0"
