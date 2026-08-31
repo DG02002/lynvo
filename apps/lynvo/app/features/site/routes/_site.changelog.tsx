@@ -27,7 +27,7 @@ export interface ChangelogEntry {
   dateTime: string
   title: string
   category: "Product" | "Plugin Server"
-  description: string
+  description: readonly string[]
 }
 
 type ChangelogType = "general" | "plugin-server"
@@ -43,12 +43,30 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
+    date: "Aug 31, 2026",
+    dateTime: "2026-08-31",
+    title: "The Save page now has List and Hybrid views",
+    category: "Product",
+    description: [
+      "The Save page now has two views. List gives you row-by-row browsing. Hybrid groups movies and shows into artwork cards.",
+      "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Hybrid view, a folder with one season opens straight into a full-screen season view.",
+      "Nested folders keep their own names, sidecar files do not create false media matches, and mixed folders do not borrow a show or episode name from their children. Folder paths, back buttons, and the Episode names control stay in sync.",
+      'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable mirror directly, and see whether an extraction is queued, loading, or failed. Failed items show the returned error with Delete and Log actions.',
+      "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the Save page comfortably on smaller screens.",
+      "Remote Play reconnects more reliably after stale connections. The device picker explains when it is searching, has no devices, or needs another try.",
+      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. Protocol 0.1.5 adds typed errors, deferred extraction, usage changes, and additive fields.",
+      "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and metadata providers.",
+    ],
+  },
+  {
+    type: "general",
     date: "Aug 8, 2026",
     dateTime: "2026-08-08",
     title: "More reliable link management",
     category: "Product",
-    description:
+    description: [
       "Improved reliability when saving, deleting, and synchronizing links, including accounts with larger libraries.",
+    ],
   },
   {
     type: "plugin-server",
@@ -56,8 +74,9 @@ const changelogEntries: ChangelogEntry[] = [
     dateTime: "2026-08-08",
     title: "Lynvo Plugin Server",
     category: "Plugin Server",
-    description:
+    description: [
       "Added Lynvo-managed support for Bhadoo Google Drive and OneDrive indexes, with usage shown separately for each Plugin.",
+    ],
   },
   {
     type: "general",
@@ -65,8 +84,9 @@ const changelogEntries: ChangelogEntry[] = [
     dateTime: "2026-08-08",
     title: "Product launch",
     category: "Product",
-    description:
+    description: [
       "Launched link saving and folder browsing, URL handoff to Just (Video) Player, VLC for Android, MPV, and MX Player on Android TV, Android phones, and Android tablets, plus Remote Play between signed-in devices.",
+    ],
   },
 ]
 
@@ -79,12 +99,12 @@ const ChangelogDescription = ({
   description,
   id,
 }: {
-  description: string
+  description: readonly string[]
   id: string
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
-  const descriptionRef = useRef<HTMLParagraphElement>(null)
+  const descriptionRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     if (isExpanded) {
@@ -114,16 +134,18 @@ const ChangelogDescription = ({
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <p
+      <div
         ref={descriptionRef}
         id={id}
         className={cn(
-          "text-sm leading-6 text-muted-foreground text-pretty",
+          "space-y-4 text-sm leading-6 text-muted-foreground text-pretty",
           !isExpanded && "line-clamp-3"
         )}
       >
-        {description}
-      </p>
+        {description.map((paragraph, index) => (
+          <p key={`${id}-${index}`}>{paragraph}</p>
+        ))}
+      </div>
       {isOverflowing ? (
         <Button
           type="button"

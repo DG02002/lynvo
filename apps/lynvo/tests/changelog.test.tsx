@@ -20,7 +20,7 @@ describe("Changelog", () => {
 
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("Product launch")
+      within(updates).queryByText("The Save page now has List and Hybrid views")
     ).not.toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
       "aria-selected",
@@ -45,13 +45,12 @@ describe("Changelog", () => {
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
       "?type=general"
     )
-    expect(within(updates).getByText("Product launch")).toBeVisible()
+    expect(
+      within(updates).getByText("The Save page now has List and Hybrid views")
+    ).toBeVisible()
     expect(
       within(updates).queryByText("Lynvo Plugin Server")
     ).not.toBeInTheDocument()
-    expect(
-      within(updates).getByText("More reliable link management")
-    ).toBeVisible()
 
     fireEvent.click(screen.getByRole("tab", { name: "Plugin Server" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
@@ -59,19 +58,18 @@ describe("Changelog", () => {
     )
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("Product launch")
+      within(updates).queryByText("The Save page now has List and Hybrid views")
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "All" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
-    expect(within(updates).getByText("Product launch")).toBeVisible()
-    expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).getByText("More reliable link management")
+      within(updates).getByText("The Save page now has List and Hybrid views")
     ).toBeVisible()
+    expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
   })
 
-  it("keeps same-day updates in release order", () => {
+  it("shows the current release before older history", () => {
     render(
       <MemoryRouter initialEntries={["/changelog"]}>
         <Changelog />
@@ -82,7 +80,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
-    ).toHaveTextContent("More reliable link management")
+    ).toHaveTextContent("The Save page now has List and Hybrid views")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(
@@ -91,6 +89,7 @@ describe("Changelog", () => {
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 2 })
     expect(sortedHeadings[0]).toHaveTextContent("More reliable link management")
-    expect(sortedHeadings.at(-1)).toHaveTextContent("Product launch")
+    expect(sortedHeadings[1]).toHaveTextContent("Lynvo Plugin Server")
+    expect(sortedHeadings[2]).toHaveTextContent("Product launch")
   })
 })
