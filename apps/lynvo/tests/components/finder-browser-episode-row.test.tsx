@@ -91,6 +91,46 @@ const movieItem: LinkViewItem = {
   },
 }
 
+const wrappedSeasonItem: LinkViewItem = {
+  ...item,
+  id: "wrapped-season",
+  url: "https://media.example/wrapped-season",
+  title: "New",
+  metadata: {
+    ...item.metadata,
+    extraction: {
+      ...item.metadata.extraction,
+      extractedLinks: [
+        {
+          id: "wrapped-season-folder",
+          url: "https://media.example/wrapped-season/stranger-things-s05",
+          label:
+            "Stranger.Things.S05.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW",
+          type: "folder",
+          children: [
+            {
+              id: "wrapped-season-episode-1",
+              url: "https://media.example/wrapped-season/stranger-things-s05/e1",
+              label:
+                "Stranger.Things.S05E01.Chapter.One.The.Crawl.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+              type: "file",
+              size: "2.4 GB",
+            },
+            {
+              id: "wrapped-season-episode-2",
+              url: "https://media.example/wrapped-season/stranger-things-s05/e2",
+              label:
+                "Stranger.Things.S05E02.Chapter.Two.The.Vanishing.of.1080p.NF.WEB-DL.Multi.DD+5.1.Atmos.H.265-CPTN5DW.mkv",
+              type: "file",
+              size: "2.4 GB",
+            },
+          ],
+        },
+      ],
+    },
+  },
+}
+
 beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
@@ -145,6 +185,7 @@ describe("FinderBrowser episode rows", () => {
       "grid-cols-[4rem_minmax(0,1fr)_4rem]",
       "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]"
     )
+    expect(headerMenu.parentElement).toHaveClass("md:col-start-4")
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
   })
 
@@ -239,6 +280,34 @@ describe("FinderBrowser episode rows", () => {
     expect(screen.getByText("No poster found")).toBeInTheDocument()
     expect(
       view.container.querySelector(".save-list-group-artwork-frame")
+    ).toBeInTheDocument()
+  })
+
+  it("descends through a single season-folder wrapper into the season view", async () => {
+    render(
+      <SaveListBrowser
+        items={[wrappedSeasonItem]}
+        selectedItemUrl={wrappedSeasonItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Stranger Things S05" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("switch", { name: "Episode names" })
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "1. Episode 1" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "2. Episode 1" })
     ).toBeInTheDocument()
   })
 

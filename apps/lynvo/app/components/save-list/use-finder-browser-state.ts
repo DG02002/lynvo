@@ -9,6 +9,7 @@ import {
 import {
   getLinkKey,
   getLinksAtFolderPath,
+  isMirrorResolvable,
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
@@ -64,6 +65,30 @@ const restoreFolderPath = (
   }
 }
 
+// Saved links are often wrappers ("New" > "Show S01" > episodes): descend
+// through single-folder levels so the view opens on real content.
+const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
+  const descendedPath: FolderLevel[] = []
+  let currentLinks = links
+  while (currentLinks.length === 1) {
+    const [onlyLink] = currentLinks
+    if (
+      onlyLink === undefined ||
+      isMirrorResolvable(onlyLink) ||
+      !getMediaNodeInteractionState(onlyLink).isFolder
+    ) {
+      break
+    }
+    const children = onlyLink.children ?? []
+    if (children.length === 0) {
+      break
+    }
+    descendedPath.push({ id: getLinkKey(onlyLink), label: onlyLink.label })
+    currentLinks = children
+  }
+  return descendedPath
+}
+
 export const useFinderBrowserState = ({
   item,
   actions,
@@ -74,9 +99,13 @@ export const useFinderBrowserState = ({
     [item]
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)
-  const [folderPath, setFolderPath] = useState<FolderLevel[]>(() =>
-    restoreFolderPath(item.id, itemRootLinks)
-  )
+  const [folderPath, setFolderPath] = useState<FolderLevel[]>(() => {
+    const restoredFolderPath = restoreFolderPath(item.id, itemRootLinks)
+    if (restoredFolderPath.length > 0) {
+      return restoredFolderPath
+    }
+    return getSingleFolderDescendPath(itemRootLinks)
+  })
   const [forwardFolderPaths, setForwardFolderPaths] = useState<FolderLevel[][]>(
     []
   )
@@ -86,8 +115,19 @@ export const useFinderBrowserState = ({
     [folderPath, rootLinks]
   )
   const currentFolderKey = folderPath.at(-1)?.id ?? item.url
+  const previousRootLinksLengthRef = useRef(itemRootLinks.length)
 
   useEffect(() => {
+    const didRootLinksPopulate =
+      previousRootLinksLengthRef.current === 0 && itemRootLinks.length > 0
+    previousRootLinksLengthRef.current = itemRootLinks.length
+    if (didRootLinksPopulate) {
+      setFolderPath((currentFolderPath) =>
+        currentFolderPath.length > 0
+          ? currentFolderPath
+          : getSingleFolderDescendPath(itemRootLinks)
+      )
+    }
     setRootLinks(itemRootLinks)
   }, [itemRootLinks])
 
