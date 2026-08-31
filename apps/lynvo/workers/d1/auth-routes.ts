@@ -1,4 +1,4 @@
-import type { Hono } from "hono"
+import type { Context, Hono } from "hono"
 import { Result, Schema } from "effect"
 import {
   DEVICE_POLL_RATE_LIMIT,
@@ -18,11 +18,12 @@ import { getD1Database } from "./db"
 import {
   createGoogleSignInStart,
   exchangeGoogleAuthorizationCode,
-  normalizeGoogleReturnTo,
+  getSafeGoogleReturnTo,
   parseVerifiedGoogleProfile,
   readGoogleCallbackRequest,
   readGoogleStateCookie,
   type GoogleOAuthCredentials,
+  type GoogleProfile,
 } from "./google-auth"
 import {
   createD1SessionCookie,
@@ -31,13 +32,11 @@ import {
 } from "./sessions"
 import { getOrCreateGoogleUser } from "./users"
 import {
-  abortDeviceExchange,
   authorizeDeviceCode,
   claimAuthorizedCode,
   finalizeDeviceExchange,
   getDeviceCodeForApproval,
   getDeviceCodeStatus,
-  recoverDeviceExchange,
 } from "./device-auth"
 
 const resolveGoogleCredentials = (env: Env): GoogleOAuthCredentials | null => {
@@ -74,34 +73,83 @@ const finalizeSchema = Schema.Struct({
   sessionId: Schema.NonEmptyString,
 })
 
-const abortSchema = Schema.Struct({
-  code: Schema.NonEmptyString,
-  attemptId: Schema.NonEmptyString,
-  generation: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
-  sessionId: Schema.NonEmptyString,
-})
+type GoogleCallbackVerification =
+  | { kind: "redirect"; response: Response }
+  | { kind: "verified"; profile: GoogleProfile; returnTo: string | undefined }
+
+interface VerifyGoogleCallbackInput {
+  context: Context<RequestLoggingEnvironment>
+  credentials: GoogleOAuthCredentials
+}
+
+const verifyGoogleCallback = async ({
+  context,
+  credentials,
+}: VerifyGoogleCallbackInput): Promise<GoogleCallbackVerification> => {
+  const loginRedirect = (reason: string) =>
+    context.redirect(`/auth/log-in?error=${reason}`, 302)
+  const callback = readGoogleCallbackRequest(context.req.raw)
+  if (callback.error || !callback.code || !callback.state) {
+    return {
+      kind: "redirect",
+      response: loginRedirect(callback.error ?? "missing_code"),
+    }
+  }
+  const statePayload = await readGoogleStateCookie(
+    context.req.raw,
+    credentials.clientSecret
+  )
+  context.header(
+    "Set-Cookie",
+    `${GOOGLE_OAUTH_STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
+  )
+  if (
+    !statePayload ||
+    statePayload.state !== callback.state ||
+    statePayload.expiresAt <= Date.now()
+  ) {
+    addRequestContext(context, { oauth_outcome: "state_mismatch" })
+    return { kind: "redirect", response: loginRedirect("state") }
+  }
+  const idToken = await exchangeGoogleAuthorizationCode({
+    credentials,
+    redirectUri: `${new URL(context.req.raw.url).origin}/api/auth/callback/google`,
+    code: callback.code,
+    codeVerifier: statePayload.codeVerifier,
+  })
+  if (!idToken) {
+    addRequestContext(context, { oauth_outcome: "token_exchange_failed" })
+    return { kind: "redirect", response: loginRedirect("exchange") }
+  }
+  const profile = parseVerifiedGoogleProfile(idToken, credentials, Date.now())
+  if (!profile) {
+    addRequestContext(context, { oauth_outcome: "invalid_id_token" })
+    return { kind: "redirect", response: loginRedirect("invalid_token") }
+  }
+  return { kind: "verified", profile, returnTo: statePayload.returnTo }
+}
 
 export const registerD1AuthRoutes = (
   app: Hono<RequestLoggingEnvironment>
 ): void => {
   app.get("/api/auth/sign-in/google", async (context) => {
     addRequestContext(context, { operation: "google_sign_in_start" })
-    const env = context.env
+    const { env } = context
     const database = getD1Database(env)
     const credentials = resolveGoogleCredentials(env)
     if (!database || !credentials) {
       return context.text("Google sign-in is not configured", 503)
     }
-    const rateLimitResult = await checkAuthenticationRateLimit(
-      env,
-      `auth:google-start:${clientIp(context.req.raw)}`,
-      10,
-      600
-    )
+    const rateLimitResult = await checkAuthenticationRateLimit({
+      environment: env,
+      key: `auth:google-start:${clientIp(context.req.raw)}`,
+      limit: 10,
+      windowSeconds: 600,
+    })
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
     }
-    const returnTo = normalizeGoogleReturnTo(
+    const returnTo = getSafeGoogleReturnTo(
       new URL(context.req.raw.url).searchParams.get("returnTo") ?? undefined
     )
     const { redirectUrl, stateCookie } = await createGoogleSignInStart({
@@ -116,49 +164,17 @@ export const registerD1AuthRoutes = (
 
   app.get("/api/auth/callback/google", async (context) => {
     addRequestContext(context, { operation: "google_sign_in_callback" })
-    const env = context.env
+    const { env } = context
     const database = getD1Database(env)
     const credentials = resolveGoogleCredentials(env)
     if (!database || !credentials) {
       return context.text("Google sign-in is not configured", 503)
     }
-    const loginRedirect = (reason: string) =>
-      context.redirect(`/auth/log-in?error=${reason}`, 302)
-    const callback = readGoogleCallbackRequest(context.req.raw)
-    if (callback.error || !callback.code || !callback.state) {
-      return loginRedirect(callback.error ?? "missing_code")
+    const verification = await verifyGoogleCallback({ context, credentials })
+    if (verification.kind === "redirect") {
+      return verification.response
     }
-    const statePayload = await readGoogleStateCookie(
-      context.req.raw,
-      credentials.clientSecret
-    )
-    context.header(
-      "Set-Cookie",
-      `${GOOGLE_OAUTH_STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-    )
-    if (
-      !statePayload ||
-      statePayload.state !== callback.state ||
-      statePayload.expiresAt <= Date.now()
-    ) {
-      addRequestContext(context, { oauth_outcome: "state_mismatch" })
-      return loginRedirect("state")
-    }
-    const idToken = await exchangeGoogleAuthorizationCode({
-      credentials,
-      redirectUri: `${new URL(context.req.raw.url).origin}/api/auth/callback/google`,
-      code: callback.code,
-      codeVerifier: statePayload.codeVerifier,
-    })
-    if (!idToken) {
-      addRequestContext(context, { oauth_outcome: "token_exchange_failed" })
-      return loginRedirect("exchange")
-    }
-    const profile = parseVerifiedGoogleProfile(idToken, credentials, Date.now())
-    if (!profile) {
-      addRequestContext(context, { oauth_outcome: "invalid_id_token" })
-      return loginRedirect("invalid_token")
-    }
+    const { profile, returnTo } = verification
     const { user, didCreate } = await getOrCreateGoogleUser(database, {
       googleSubject: profile.subject,
       email: profile.email,
@@ -177,7 +193,7 @@ export const registerD1AuthRoutes = (
       user_id: user.id,
     })
     context.header("Set-Cookie", createD1SessionCookie(session.id))
-    return context.redirect(statePayload.returnTo, 302)
+    return context.redirect(getSafeGoogleReturnTo(returnTo), 302)
   })
 
   app.get("/api/auth/device/status", async (context) => {
@@ -189,12 +205,12 @@ export const registerD1AuthRoutes = (
       operation: "device_status_read",
       backend: "d1",
     })
-    const rateLimitResult = await checkRateLimit(
-      context.env,
-      `auth:device-poll:${clientIp(context.req.raw)}`,
-      DEVICE_POLL_RATE_LIMIT,
-      DEVICE_POLL_RATE_WINDOW_SECONDS
-    )
+    const rateLimitResult = await checkRateLimit({
+      environment: context.env,
+      key: `auth:device-poll:${clientIp(context.req.raw)}`,
+      limit: DEVICE_POLL_RATE_LIMIT,
+      windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
+    })
     if (rateLimitResult !== "allowed") {
       return context.json({ status: "rate_limited" }, 429)
     }
@@ -279,12 +295,12 @@ export const registerD1AuthRoutes = (
     if (!database) {
       return context.text("Device exchange is not configured", 503)
     }
-    const rateLimitResult = await checkRateLimit(
-      context.env,
-      `auth:device-exchange:${clientIp(context.req.raw)}`,
-      DEVICE_POLL_RATE_LIMIT,
-      DEVICE_POLL_RATE_WINDOW_SECONDS
-    )
+    const rateLimitResult = await checkRateLimit({
+      environment: context.env,
+      key: `auth:device-exchange:${clientIp(context.req.raw)}`,
+      limit: DEVICE_POLL_RATE_LIMIT,
+      windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
+    })
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
     }
@@ -337,68 +353,6 @@ export const registerD1AuthRoutes = (
       "Set-Cookie",
       createD1SessionCookie(parsed.success.sessionId)
     )
-    return context.json({ success: true })
-  })
-
-  app.get("/api/auth/device/exchange/recovery", async (context) => {
-    addRequestContext(context, { operation: "device_exchange_recovery" })
-    const database = getD1Database(context.env)
-    if (!database) {
-      return context.text("Device exchange is not configured", 503)
-    }
-    const session = await resolveD1Session(context.req.raw, database)
-    if (!session) {
-      return unauthorizedResponse()
-    }
-    const code = context.req.query("code")
-    const pollSecret = context.req.query("pollSecret")
-    const attemptId = context.req.query("attemptId")
-    if (!code || !pollSecret || !attemptId) {
-      return context.json({ outcome: "invalid" }, 400)
-    }
-    const outcome = await recoverDeviceExchange(database, {
-      userId: session.userId,
-      sessionId: session.id,
-      code,
-      pollSecret,
-      attemptId,
-    })
-    return context.json({ outcome })
-  })
-
-  app.post("/api/auth/device/exchange/abort", async (context) => {
-    addRequestContext(context, { operation: "device_exchange_abort" })
-    const database = getD1Database(context.env)
-    if (!database) {
-      return context.text("Device exchange is not configured", 503)
-    }
-    if (!isSameOriginRequest(context.req.raw)) {
-      return context.text("Forbidden", 403)
-    }
-    const session = await resolveD1Session(context.req.raw, database)
-    if (!session) {
-      return unauthorizedResponse()
-    }
-    const parsed = Schema.decodeUnknownResult(abortSchema)(
-      await context.req.json().catch(() => null)
-    )
-    if (Result.isFailure(parsed)) {
-      return context.json({ error: "Invalid abort request" }, 400)
-    }
-    const outcome = await abortDeviceExchange(database, {
-      userId: session.userId,
-      sessionId: session.id,
-      code: parsed.success.code,
-      attemptId: parsed.success.attemptId,
-      generation: parsed.success.generation,
-      now: Date.now(),
-    })
-    if (outcome.kind === "invalidSession") {
-      return context.json(
-        { error: "Device code exchange session is invalid" },
-        409
-      )
-    }
     return context.json({ success: true })
   })
 }

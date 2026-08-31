@@ -7,7 +7,8 @@ contentType: Reference
 
 <DocSection id="manifest">
 
-The generated starter declares the manifest in `src/index.ts`. Keep the server ID stable after you connect the Worker to Lynvo.
+The generated starter declares the manifest in `src/index.ts`. Keep the server
+ID stable after you connect the Worker to Lynvo.
 
 Start with the generated object and replace the example values:
 
@@ -46,19 +47,19 @@ Replace the `com.example` namespace with an identifier you control. Keep the `pl
 
 Manifest fields follow these rules:
 
-| Field             | Required | Rule                                                 |
-| ----------------- | -------- | ---------------------------------------------------- |
-| `protocolVersion` | Yes      | Must equal `"1.0"`                                   |
-| `pluginServerId`  | Yes      | Stable namespaced identifier                         |
-| `displayName`     | Yes      | Human-readable Plugin Server name                    |
-| `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it        |
-| `iconUrl`         | No       | HTTPS image URL; loopback HTTP is allowed locally    |
-| `homepage`        | No       | HTTPS project URL                                    |
-| `auth.type`       | Yes      | Must equal `"bearer"`                                |
-| `usage.endpoint`  | No       | Defaults to `"/usage"`                               |
-| `matchers`        | Yes      | Non-empty array                                      |
-| `features`        | Yes      | Declares password, lazy node, and Basic Auth support |
-| `extensions`      | No       | Namespaced non-core metadata                         |
+| Field             | Required | Rule                                                             |
+| ----------------- | -------- | ---------------------------------------------------------------- |
+| `protocolVersion` | Yes      | Must use a compatible `1.x` version. Lynvo currently uses `1.0`. |
+| `pluginServerId`  | Yes      | Stable namespaced identifier                                     |
+| `displayName`     | Yes      | Human-readable Plugin Server name                                |
+| `hasIcon`         | No       | `true` requires `iconUrl`; `false` forbids it                    |
+| `iconUrl`         | No       | HTTPS image URL; loopback HTTP is allowed locally                |
+| `homepage`        | No       | HTTPS project URL                                                |
+| `auth.type`       | Yes      | Must equal `"bearer"`                                            |
+| `usage.endpoint`  | No       | Defaults to `"/usage"`                                           |
+| `matchers`        | Yes      | Non-empty array                                                  |
+| `features`        | Yes      | Declares password, lazy node, and Basic Auth support             |
+| `extensions`      | No       | Namespaced non-core metadata                                     |
 
 Keep `matchers` and `extensions.lynvo.plugins` aligned with the Source code. Lynvo uses the manifest to select the Worker before it sends an Extraction request.
 

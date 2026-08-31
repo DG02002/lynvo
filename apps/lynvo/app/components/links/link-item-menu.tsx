@@ -1,5 +1,5 @@
 import * as React from "react"
-import { toast } from "sonner"
+import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowUpRight01Icon,
@@ -7,6 +7,8 @@ import {
   Delete02Icon,
   EllipsisIcon,
   RefreshDotIcon,
+  Image01Icon,
+  SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -20,15 +22,19 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
+import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
+import { LinkDebugLogDialog } from "./link-debug-log-dialog"
+import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { cn } from "~/lib/utils"
+import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -38,6 +44,9 @@ interface LinkItemMenuProps {
   playableLink?: ExtractedLink
   isPlayableLinkExpired?: boolean
   isRefreshing?: boolean
+  triggerClassName?: string
+  menuOpen?: boolean
+  onMenuOpenChange?: (open: boolean) => void
 }
 
 const LinkItemMenuContent = ({
@@ -48,9 +57,24 @@ const LinkItemMenuContent = ({
   playableLink,
   isPlayableLinkExpired = false,
   isRefreshing = false,
+  triggerClassName,
+  menuOpen,
+  onMenuOpenChange,
 }: LinkItemMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = React.useState(false)
+  const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
+  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const itemLabel = item.title || item.url
+  const refreshActionLabel = shouldAutoSaveAllLinks
+    ? "Refresh"
+    : "Reload link choices"
+  const refreshingLabel = shouldAutoSaveAllLinks
+    ? `Refreshing ${itemLabel}…`
+    : `Reloading link choices for ${itemLabel}…`
+  const refreshLink = shouldAutoSaveAllLinks
+    ? actions.softRefresh
+    : actions.hardRefresh
   const handleCopyLink = async () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -66,9 +90,9 @@ const LinkItemMenuContent = ({
         document.body.removeChild(textArea)
       }
       notifyClipboardWrite()
-      toast.success("Link copied")
+      showLinkCopiedToast()
     } catch {
-      toast.error("Unable to copy the link. Try again.")
+      showErrorToast({ title: "Unable to copy the link. Try again." })
     }
   }
 
@@ -79,7 +103,7 @@ const LinkItemMenuContent = ({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={onMenuOpenChange}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -87,11 +111,12 @@ const LinkItemMenuContent = ({
               size="icon"
               disabled={isRefreshing}
               aria-label={
-                isRefreshing
-                  ? `Reloading link choices for ${itemLabel}…`
-                  : `Open menu for ${itemLabel}`
+                isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`
               }
-              className="size-8 text-foreground shrink-0 hover:bg-transparent hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-foreground"
+              className={cn(
+                "size-8 shrink-0 text-foreground! hover:bg-transparent hover:text-foreground! aria-expanded:bg-transparent aria-expanded:text-foreground!",
+                triggerClassName
+              )}
             >
               {isRefreshing ? (
                 <Spinner aria-hidden="true" />
@@ -99,9 +124,7 @@ const LinkItemMenuContent = ({
                 <HugeiconsIcon icon={EllipsisIcon} />
               )}
               <span className="sr-only">
-                {isRefreshing
-                  ? `Reloading link choices for ${itemLabel}…`
-                  : `Open menu for ${itemLabel}`}
+                {isRefreshing ? refreshingLabel : `Open menu for ${itemLabel}`}
               </span>
             </Button>
           }
@@ -113,10 +136,20 @@ const LinkItemMenuContent = ({
                 <HugeiconsIcon icon={CopyIcon} />
                 Copy Source link
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
+                <HugeiconsIcon icon={SourceCodeSquareIcon} />
+                Log
+              </DropdownMenuItem>
+              {actions.setArtwork && (
+                <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
+                  <HugeiconsIcon icon={Image01Icon} />
+                  Change artwork
+                </DropdownMenuItem>
+              )}
               {!playableLink && (
-                <DropdownMenuItem onClick={() => actions.hardRefresh(item.url)}>
+                <DropdownMenuItem onClick={() => refreshLink(item.url)}>
                   <HugeiconsIcon icon={RefreshDotIcon} />
-                  Reload link choices
+                  {refreshActionLabel}
                 </DropdownMenuItem>
               )}
               {playableLink && !isPlayableLinkExpired && (
@@ -131,7 +164,11 @@ const LinkItemMenuContent = ({
                         <DropdownMenuItem
                           key={player.id}
                           onClick={async () => {
-                            const playableUrl = getMediaNodeTarget(playableLink)
+                            const playableUrl =
+                              getMediaNodeTargetOrUndefined(playableLink)
+                            if (playableUrl === undefined) {
+                              return
+                            }
                             const result = await openInSpecificPlayer(
                               playableUrl,
                               player
@@ -174,6 +211,17 @@ const LinkItemMenuContent = ({
         open={isRemoveDialogOpen}
         onOpenChange={setIsRemoveDialogOpen}
         onRemove={removeItem}
+      />
+      <LinkDebugLogDialog
+        item={item}
+        open={isLogDialogOpen}
+        onOpenChange={setIsLogDialogOpen}
+      />
+      <ChangeArtworkDialog
+        item={item}
+        open={isArtworkDialogOpen}
+        onOpenChange={setIsArtworkDialogOpen}
+        onSelect={(identity) => actions.setArtwork?.(item.url, identity)}
       />
     </>
   )

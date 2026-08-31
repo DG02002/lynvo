@@ -1,7 +1,7 @@
 import { render, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({
+const mocks = {
   poll: vi.fn(async () => undefined),
   subscribeRealtime: vi.fn(() => () => undefined),
   state: {
@@ -12,29 +12,28 @@ const mocks = vi.hoisted(() => ({
     controllingDevices: [],
     lastCommand: null,
   },
-}))
+}
 
-vi.mock("sonner", () => ({ toast: {} }))
-vi.mock("~/context/realtime-context", () => ({
-  useRealtime: () => ({
-    status: "connected",
-    connectionGeneration: 1,
-    subscribe: mocks.subscribeRealtime,
-  }),
-}))
-vi.mock("~/context/remote-control/machine", () => ({
-  createRemoteControlMachine: () => ({
-    getSnapshot: () => mocks.state,
-    getServerSnapshot: () => mocks.state,
-    subscribe: () => () => undefined,
-    subscribeOutcomes: () => () => undefined,
-    start: () => () => undefined,
-    poll: mocks.poll,
-    setRealtimeStatus: vi.fn(),
-  }),
-}))
+const createMachine = (): RemoteControlMachine => ({
+  getSnapshot: () => mocks.state,
+  getServerSnapshot: () => mocks.state,
+  subscribe: () => () => undefined,
+  subscribeOutcomes: () => () => undefined,
+  start: () => () => undefined,
+  poll: mocks.poll,
+  setRealtimeStatus: vi.fn(),
+  connect: vi.fn(async () => undefined),
+  disconnect: vi.fn(async () => undefined),
+  disconnectReceiver: vi.fn(async () => undefined),
+  sendRemotePlayback: vi.fn(async () => undefined),
+  receiveCommand: vi.fn(() => false),
+  receiveRealtime: vi.fn(),
+  acknowledgeCommand: vi.fn(async () => undefined),
+  markCommandApplied: vi.fn(),
+  failCommand: vi.fn(async () => undefined),
+})
 
-import { RemoteControlProvider } from "~/context/remote-control-context"
+import { RemoteControlProviderContent } from "~/context/remote-control-context"
 
 describe("Remote Play reconnect convergence", () => {
   beforeEach(() => {
@@ -51,11 +50,17 @@ describe("Remote Play reconnect convergence", () => {
 
   it("polls the authoritative inbox after a hidden-tab reconnect", async () => {
     render(
-      <RemoteControlProvider
+      <RemoteControlProviderContent
         user={{ id: "user-one", sessionId: "session-one" }}
+        realtime={{
+          status: "connected",
+          connectionGeneration: 1,
+          subscribe: mocks.subscribeRealtime,
+        }}
+        createMachine={createMachine}
       >
         <div />
-      </RemoteControlProvider>
+      </RemoteControlProviderContent>
     )
 
     await waitFor(() => expect(mocks.poll).toHaveBeenCalledOnce())

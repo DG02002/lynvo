@@ -1,6 +1,7 @@
 import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
@@ -76,7 +77,7 @@ export interface SavedLinkSelection {
   links: ExtractedLink[]
   meta: MetaData
   existingItemId?: string
-  pluginDomainSuggestion?: import("~/lib/plugin-domain").PluginDomainSuggestion
+  pluginDomainSuggestion?: PluginDomainSuggestion
 }
 
 export interface SavedLinkInteractionReporter {
@@ -90,7 +91,7 @@ export interface PluginDomainIdentity {
 }
 
 export const shouldOfferPluginDomainSuggestion = async (
-  suggestion: import("~/lib/plugin-domain").PluginDomainSuggestion | undefined,
+  suggestion: PluginDomainSuggestion | undefined,
   listDomains: () => Promise<readonly PluginDomainIdentity[]>
 ) => {
   if (!suggestion) {

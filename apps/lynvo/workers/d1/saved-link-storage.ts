@@ -33,28 +33,52 @@ export const findCompletedSavedLinkOperation = async (
   return row ? { linkId: row.link_id } : null
 }
 
-export const createSavedLinkCommandOperationStatement = (
+export const reserveSavedLinkCommandOperation = async (
   database: D1Database,
   input: {
     userId: string
     operationId: string
-    linkId: string
     command: string
     now: number
   }
+): Promise<boolean> => {
+  const results = await database.batch([
+    database
+      .prepare(
+        "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, NULL, ?3, ?4, ?5) ON CONFLICT(user_id, operation_id) DO NOTHING"
+      )
+      .bind(
+        input.userId,
+        input.operationId,
+        input.command,
+        input.now,
+        input.now + SAVED_LINK_COMMAND_OPERATION_TTL_MS
+      ),
+  ])
+  return (results[0]?.meta.changes ?? 0) > 0
+}
+
+export const createReservedSavedLinkOperationLinkStatement = (
+  database: D1Database,
+  input: { userId: string; operationId: string; linkId: string }
 ): D1PreparedStatement =>
   database
     .prepare(
-      "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+      "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
     )
-    .bind(
-      input.userId,
-      input.operationId,
-      input.linkId,
-      input.command,
-      input.now,
-      input.now + SAVED_LINK_COMMAND_OPERATION_TTL_MS
+    .bind(input.userId, input.operationId, input.linkId)
+
+export const releaseReservedSavedLinkCommandOperation = async (
+  database: D1Database,
+  input: { userId: string; operationId: string }
+): Promise<void> => {
+  await database
+    .prepare(
+      "DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
     )
+    .bind(input.userId, input.operationId)
+    .run()
+}
 
 export const createConditionalSavedLinkCommandOperationStatement = (
   database: D1Database,

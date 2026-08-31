@@ -1,6 +1,8 @@
-import { readFileSync, readdirSync, statSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const packageJsonPath = join(packageRoot, "package.json")
@@ -40,6 +42,14 @@ assert(packageJson.files?.includes("docs"), "package files must include docs")
 assert(
   packageJson.files?.includes("LICENSE"),
   "package files must include LICENSE"
+)
+assert(
+  packageJson.files?.includes("CHANGELOG.md"),
+  "package files must include CHANGELOG.md"
+)
+assert(
+  existsSync(join(__dirname, "..", "CHANGELOG.md")),
+  "CHANGELOG.md must exist"
 )
 
 for (const [section, dependencies] of Object.entries(packageJson)) {
@@ -117,7 +127,8 @@ const packageEntries = [
   "package.json",
 ]
 
-const allowed = /^(?:package\.json|README\.md|LICENSE|dist\/|docs\/)/
+const allowed =
+  /^(?:package\.json|README\.md|LICENSE|CHANGELOG\.md|dist\/|docs\/)/
 for (const path of packageEntries) {
   assert(allowed.test(path), `unexpected file in package: ${path}`)
   assert(

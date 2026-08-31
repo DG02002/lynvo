@@ -1,6 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import type { PropsWithChildren } from "react"
-import { MemoryRouter, Route, Routes, useLocation } from "react-router"
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router"
 import { describe, expect, it } from "vitest"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import type { SavedLinkListItem } from "~/features/links/types"
@@ -23,7 +29,7 @@ const savedFolder: SavedLinkListItem = {
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 }
 
@@ -60,6 +66,41 @@ describe("saved folder routes", () => {
     expect(result.current.folder.selectedItemUrl).toBeNull()
   })
 
+  it("does not add a folder entry when the visible Back action closes it", async () => {
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <MemoryRouter initialEntries={["/save"]}>
+        <Routes>
+          <Route path="/save" element={children} />
+          <Route path="/save/folder/:savedLinkId" element={children} />
+        </Routes>
+      </MemoryRouter>
+    )
+    const { result } = renderHook(
+      () => {
+        const navigate = useNavigate()
+        return {
+          folder: useSaveFolderRoute([savedFolder], false),
+          pathname: useLocation().pathname,
+          goBack: () => navigate(-1),
+        }
+      },
+      { wrapper }
+    )
+
+    act(() => result.current.folder.openSavedFolder(savedFolder.url))
+    await waitFor(() =>
+      expect(result.current.pathname).toBe(
+        "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"
+      )
+    )
+
+    act(() => result.current.folder.closeSavedFolder())
+    await waitFor(() => expect(result.current.pathname).toBe("/save"))
+
+    act(() => result.current.goBack())
+    await waitFor(() => expect(result.current.pathname).toBe("/save"))
+  })
+
   it("returns an invalid saved-link ID to the save page after hydration", async () => {
     const wrapper = ({ children }: PropsWithChildren) => (
       <MemoryRouter initialEntries={["/save/folder/missing-id"]}>
@@ -93,7 +134,13 @@ describe("saved folder routes", () => {
       </MemoryRouter>
     )
     const { result, rerender } = renderHook(
-      ({ items, isPending }: { items: SavedLinkListItem[]; isPending: boolean }) => ({
+      ({
+        items,
+        isPending,
+      }: {
+        items: SavedLinkListItem[]
+        isPending: boolean
+      }) => ({
         folder: useSaveFolderRoute(items, isPending),
         pathname: useLocation().pathname,
       }),

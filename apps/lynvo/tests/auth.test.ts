@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
-import {
-  getCookieValue,
-  normalizeReturnTo,
-} from "../app/lib/auth-cookie"
+import { getCookieValue, normalizeReturnTo } from "../app/lib/auth-cookie"
 import { D1_SESSION_COOKIE_NAME } from "../workers/constants"
-import { responseWithSession, getUserSession, requireGuestOrRedirect } from "../app/lib/auth"
+import {
+  responseWithSession,
+  getUserSession,
+  requireGuestOrRedirect,
+} from "../app/lib/auth"
 import { createFakeD1Database } from "./support/fake-d1"
 
 const authenticatedDatabase = () =>
@@ -14,8 +15,8 @@ const authenticatedDatabase = () =>
         row: {
           session_id: "session-123",
           user_id: "user-456",
-          email: "darshan@example.com",
-          display_name: "Darshan",
+          email: "user@example.com",
+          display_name: "Demo User",
           last_seen_at: Date.now(),
           expires_at: Date.now() + 60_000,
         },
@@ -43,11 +44,11 @@ describe("auth cookie helpers", () => {
 
 describe("session-bearing responses", () => {
   it("prevents the browser from restoring stale session markup", () => {
-    const response = responseWithSession(
-      { user: null },
-      { user: null },
-      new Request("https://lynvo.test")
-    )
+    const response = responseWithSession({
+      responseData: { user: null },
+      sessionResult: { user: null },
+      request: new Request("https://lynvo.test"),
+    })
 
     expect(new Headers(response.init?.headers).get("Cache-Control")).toBe(
       "no-store"
@@ -56,29 +57,29 @@ describe("session-bearing responses", () => {
 
   it("refreshes an authenticated session cookie on document responses", () => {
     const sessionExpiresAt = Date.now() + 60_000
-    const response = responseWithSession(
-      {
+    const response = responseWithSession({
+      responseData: {
         user: {
           sub: "user-456",
-          email: "darshan@example.com",
+          email: "user@example.com",
           sid: "session-123",
         },
       },
-      {
+      sessionResult: {
         user: {
           sub: "user-456",
-          email: "darshan@example.com",
+          email: "user@example.com",
           sid: "session-123",
         },
         sessionExpiresAt,
       },
-      new Request("https://lynvo.test/save", {
+      request: new Request("https://lynvo.test/save", {
         headers: {
           Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id`,
         },
       }),
-      { headers: { "Set-Cookie": "csrf-token=csrf-value" } }
-    )
+      init: { headers: { "Set-Cookie": "csrf-token=csrf-value" } },
+    })
 
     const cookie = new Headers(response.init?.headers).get("Set-Cookie")
     expect(cookie).toContain("csrf-token=csrf-value")
@@ -89,11 +90,11 @@ describe("session-bearing responses", () => {
   })
 
   it("does not create a session cookie for anonymous document responses", () => {
-    const response = responseWithSession(
-      { user: null },
-      { user: null },
-      new Request("https://lynvo.test/save")
-    )
+    const response = responseWithSession({
+      responseData: { user: null },
+      sessionResult: { user: null },
+      request: new Request("https://lynvo.test/save"),
+    })
 
     expect(new Headers(response.init?.headers).get("Set-Cookie")).toBeNull()
   })
@@ -103,7 +104,7 @@ describe("requireGuestOrRedirect", () => {
   const authenticatedSession = {
     user: {
       sub: "user-456",
-      email: "darshan@example.com",
+      email: "user@example.com",
       sid: "session-123",
     },
   }
@@ -152,24 +153,30 @@ describe("requireGuestOrRedirect", () => {
 
 describe("getUserSession", () => {
   it("returns an anonymous session without a cookie", async () => {
+    // SAFETY: getUserSession only reads the DB binding from this test environment.
+    const environment = {
+      DB: createFakeD1Database(() => ({ rows: [] })),
+    } as Env
     const result = await getUserSession(
       new Request("https://lynvo.test"),
-      { DB: createFakeD1Database(() => ({ rows: [] })) } as unknown as Env
+      environment
     )
     expect(result).toEqual({ user: null, sessionExpiresAt: undefined })
   })
 
   it("resolves the D1 session identity without exposing tokens", async () => {
+    // SAFETY: getUserSession only reads the DB binding from this test environment.
+    const environment = { DB: authenticatedDatabase() } as Env
     const result = await getUserSession(
       new Request("https://lynvo.test", {
         headers: { Cookie: `${D1_SESSION_COOKIE_NAME}=opaque-session-id` },
       }),
-      { DB: authenticatedDatabase() } as unknown as Env
+      environment
     )
     expect(result.user).toEqual({
       sub: "user-456",
-      email: "darshan@example.com",
-      name: "Darshan",
+      email: "user@example.com",
+      name: "Demo User",
       sid: "session-123",
     })
     expect(result.sessionExpiresAt).toBeGreaterThan(Date.now())
@@ -177,8 +184,10 @@ describe("getUserSession", () => {
   })
 
   it("reports authentication as unavailable without a database binding", async () => {
+    // SAFETY: The missing DB binding is the malformed environment under test.
+    const environment = {} as Env
     await expect(
-      getUserSession(new Request("https://lynvo.test"), {} as Env)
+      getUserSession(new Request("https://lynvo.test"), environment)
     ).rejects.toMatchObject({ init: { status: 503 } })
   })
 })

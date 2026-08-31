@@ -61,6 +61,16 @@ export const validExtractSuccessFixture: ExtractSuccessResponse = {
   extensions: {},
 }
 
+export const validExtractPendingFixture: ExtractSuccessResponse = {
+  plugin: {
+    pluginServerId: validPluginServerManifestFixture.pluginServerId,
+    displayName: validPluginServerManifestFixture.displayName,
+  },
+  nodes: [],
+  extensions: {},
+  pending: { retryAfterSeconds: 30, resumeNodeId: "task-42" },
+}
+
 export const validExtractErrorFixture: ExtractProtocolError = {
   ok: false,
   error: { code: "UNSUPPORTED_URL", message: "URL is not supported." },

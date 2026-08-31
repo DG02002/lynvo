@@ -11,8 +11,8 @@ describe("AddPluginDomainAlertDialog", () => {
       <AddPluginDomainAlertDialog
         suggestion={{
           domain: "index.example.com",
-          pluginId: "bhadoo-google-drive-index",
-          pluginName: "Bhadoo Google Drive Index",
+          pluginId: "example-drive-index",
+          pluginName: "Example Drive Index",
           sanitizedUrl: "https://index.example.com/0:/Movies/",
           username: "source-user",
           password: "source-secret",
@@ -31,7 +31,7 @@ describe("AddPluginDomainAlertDialog", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("index.example.com")).toBeInTheDocument()
     expect(
-      screen.getByText(/Lynvo recognized.*Bhadoo Google Drive Index/)
+      screen.getByText(/Lynvo recognized.*Example Drive Index/)
     ).toBeInTheDocument()
     expect(screen.queryByText("source-secret")).not.toBeInTheDocument()
 

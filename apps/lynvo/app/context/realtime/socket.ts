@@ -5,7 +5,11 @@ import {
   parseRealtimeMessage,
   sessionHelloRealtimeMessageSchema,
 } from "./message-schema"
-import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "~/lib/constants"
+import {
+  REALTIME_HEARTBEAT_INTERVAL_MS,
+  REALTIME_HEARTBEAT_TIMEOUT_MS,
+  REALTIME_SESSION_REVOKED_CLOSE_CODE,
+} from "~/lib/constants"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
@@ -42,7 +46,7 @@ const websocketUrl = () => {
 export const deliverRealtimeMessage = (
   value: string,
   receiveMessage: (message: RealtimeMessage) => void
-) => {
+): boolean => {
   if (isRealtimeHeartbeatResponse(value)) {
     return true
   }
@@ -69,21 +73,30 @@ export const openRealtimeSocket = ({
   let reconnectTimer: number | undefined
   let heartbeatTimer: number | undefined
   let attempt = 0
+  let lastServerContactAt = Date.now()
 
   const handleOpen = () => {
     attempt = 0
+    lastServerContactAt = Date.now()
     dispatch({ type: "SET_STATUS", status: "connected" })
     onOpen()
     heartbeatTimer = window.setInterval(() => {
-      if (socket?.readyState === WebSocket.OPEN) {
-        socket.send(
-          JSON.stringify({ type: "ping", payload: { at: Date.now() } })
-        )
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        return
       }
-    }, 25_000)
+      // A half-open connection keeps the "connected" status while delivering
+      // nothing; missing pongs for two intervals proves the socket is dead
+      // and closes it so the normal reconnect path takes over.
+      if (Date.now() - lastServerContactAt > REALTIME_HEARTBEAT_TIMEOUT_MS) {
+        socket.close()
+        return
+      }
+      socket.send("ping")
+    }, REALTIME_HEARTBEAT_INTERVAL_MS)
   }
 
   const handleMessage = (event: MessageEvent) => {
+    lastServerContactAt = Date.now()
     try {
       const message = Schema.decodeUnknownResult(
         sessionHelloRealtimeMessageSchema
@@ -139,7 +152,9 @@ export const openRealtimeSocket = ({
     }
 
     dispatch({ type: "SET_STATUS", status: "disconnected" })
-    const delay = Math.min(30_000, 1_000 * 2 ** attempt)
+    const baseDelay = Math.min(30_000, 1_000 * 2 ** attempt)
+    // Jitter prevents every client from reconnecting in lockstep after a deploy.
+    const delay = Math.round(baseDelay * (0.75 + Math.random() * 0.5))
     attempt += 1
     reconnectTimer = window.setTimeout(connect, delay)
   }

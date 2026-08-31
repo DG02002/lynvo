@@ -1,5 +1,4 @@
-import { useEffect, useId, useState } from "react"
-import type { MouseEvent } from "react"
+import { useEffect, useId, useState, type MouseEvent } from "react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 

@@ -7,6 +7,7 @@ import {
   assembleDocumentationMarkdown,
   extractDocumentationSection,
 } from "./docs-markdown"
+import { createHeadingId } from "./docs-heading"
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
 const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(
@@ -26,15 +27,6 @@ const lastModifiedModules = import.meta.glob<string>("./**/*.mdx", {
   query: "?docs-last-modified",
 })
 const defaultContentModuleSchema = Schema.Struct({ default: Schema.Unknown })
-
-const createHeadingId = (heading: string) =>
-  heading
-    .toLowerCase()
-    .replace(/[`*_~]/g, "")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/<[^>]+>/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
 
 const getRawContent = (path: string) => {
   let contentModule = rawContentModules[path]
@@ -213,7 +205,7 @@ for (const [sourceSlug, sourcePath] of sourcePathBySlug) {
   const markdownLinks = content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)
 
   for (const link of markdownLinks) {
-    const destination = link[1]
+    const [, destination] = link
     if (!destination.startsWith("/docs") && !destination.startsWith("#")) {
       continue
     }

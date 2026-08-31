@@ -1,27 +1,27 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { expect, it, vi } from "vitest"
+import { DocumentLayout } from "~/root/layout"
 
-const { linksMock } = vi.hoisted(() => ({ linksMock: vi.fn() }))
-
-vi.mock("react-router", () => ({
-  Links: (props: unknown) => {
-    linksMock(props)
-    return null
-  },
-  Meta: () => null,
-  Scripts: () => null,
-  ScrollRestoration: () => null,
-  useRouteLoaderData: () => ({ initialTheme: "dark" }),
-}))
-
-vi.mock("~/root/route-seo-metadata", () => ({
-  RouteSeoMetadata: () => null,
-}))
-
-import { Layout } from "~/root/layout"
+const EmptyComponent = () => null
 
 it("does not apply the script nonce to stylesheet links", () => {
-  renderToStaticMarkup(<Layout>Content</Layout>)
+  const linksMock = vi.fn()
+  const LinksComponent = (props: { nonce: string }) => {
+    linksMock(props)
+    return null
+  }
+  renderToStaticMarkup(
+    <DocumentLayout
+      initialTheme="dark"
+      LinksComponent={LinksComponent}
+      MetaComponent={EmptyComponent}
+      ScriptsComponent={EmptyComponent}
+      ScrollRestorationComponent={EmptyComponent}
+      RouteSeoMetadataComponent={EmptyComponent}
+    >
+      Content
+    </DocumentLayout>
+  )
 
   expect(linksMock).toHaveBeenCalledWith({ nonce: "" })
 })

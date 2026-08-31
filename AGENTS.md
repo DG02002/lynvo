@@ -65,3 +65,19 @@ agents.
 - Manage vendored subtrees with `pnpm run sync:repos`; use `pnpm run sync:repos --repo <id>` to sync one configured repository.
 - When updating a dependency with a configured vendored subtree, sync that subtree in the same change so `.repos/` matches the installed dependency version.
 - When writing Effect code, read `.repos/effect/LLMS.md` first and inspect `.repos/effect/` for examples of idiomatic usage, tests, module structure, and API design.
+
+## Local Development Tools
+
+While the local dev server is running (`pnpm run dev`, http://localhost:5173), the Cloudflare
+vite plugin exposes a local resource explorer API at
+`http://localhost:5173/cdn-cgi/local/explorer/api` for inspecting local D1, R2, KV, Durable
+Objects, and Workflows state.
+
+- The API root serves its own OpenAPI spec (fetch the root URL) describing every operation.
+- List local D1 databases: `GET /cdn-cgi/local/explorer/api/d1/database`.
+- Run SQL against a local D1 database:
+  `POST /cdn-cgi/local/explorer/api/d1/database/{database_id}/raw` with JSON body `{"sql": "..."}`.
+- Prefer read-only queries (`SELECT`) when inspecting state; this API can also modify local data,
+  so never point it at production and never use it to work around application write paths.
+- Useful for debugging data shape issues (e.g. `title_groups`, `links`, `sessions` tables)
+  without stopping the dev server or reaching for `wrangler d1 execute`.

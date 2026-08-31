@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useRemoteControl } from "~/context/remote-control-context"
 import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 
 export const RemoteCommandListener = () => {
@@ -18,7 +18,6 @@ export const RemoteCommandListener = () => {
 
     const handleCommand = async () => {
       try {
-        toast.info("Opening player…")
         await playableLinkHandoff.receive(
           lastCommand.payload,
           playerPreferenceUserId
@@ -31,7 +30,7 @@ export const RemoteCommandListener = () => {
           error instanceof Error ? error.message : "Playback handoff failed"
         ).catch(console.error)
         inFlightCommandId.current = null
-        toast.error("Remote Play couldn’t open this link.")
+        showErrorToast({ title: "Remote Play couldn’t open this link." })
       }
     }
 

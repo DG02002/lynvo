@@ -10,7 +10,7 @@ const savedWorkerItem = (): LinkViewItem => ({
     schemaVersion: 3,
     source: {
       pluginServerId: "pluginServer-1",
-      pluginId: "bhadoo-google-drive-index",
+      pluginId: "example-drive-index",
       sourceName: "Plugin Server Source",
     },
     extraction: {
@@ -19,11 +19,12 @@ const savedWorkerItem = (): LinkViewItem => ({
           id: "folder-1",
           url: "https://pluginServer.example/folder/1",
           label: "Folder",
+          mediaNodeKind: "resolvable",
           type: "folder",
         },
       ],
     },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
   extractedLinks: [
     {
@@ -41,8 +42,12 @@ const createTransport = () => ({
 })
 
 describe("extraction presentation", () => {
-  it("direct-saves one file and selects multiple or folder results", () => {
-    const file = { url: "https://cdn.example/one.mp4", label: "One" }
+  it("direct-saves one file or mirror container and selects folders", () => {
+    const file: ExtractedLink = {
+      url: "https://cdn.example/one.mp4",
+      label: "One",
+      mediaNodeKind: "playable",
+    }
     expect(decideSavePresentation([file])).toEqual({
       kind: "directSave",
       link: file,
@@ -50,15 +55,27 @@ describe("extraction presentation", () => {
     expect(decideSavePresentation([file, { ...file, url: "two" }]).kind).toBe(
       "selectionDialog"
     )
-    expect(decideSavePresentation([{ ...file, type: "folder" }]).kind).toBe(
-      "selectionDialog"
-    )
+    expect(
+      decideSavePresentation([
+        { ...file, type: "folder", mediaNodeKind: "group" },
+      ]).kind
+    ).toBe("selectionDialog")
     expect(
       decideSavePresentation([
         {
           ...file,
           type: "folder",
           mediaNodeKind: "resolvable",
+        },
+      ]).kind
+    ).toBe("directSave")
+    expect(
+      decideSavePresentation([
+        {
+          ...file,
+          type: "folder",
+          mediaNodeKind: "resolvable",
+          resolutionKind: "folder",
         },
       ]).kind
     ).toBe("selectionDialog")
@@ -85,6 +102,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://cdn.example/playable-item.mp4",
           label: "Playable Item",
+          mediaNodeKind: "playable",
         },
       ],
       meta: {
@@ -105,7 +123,7 @@ describe("extraction orchestration", () => {
     expect(transport.extract).toHaveBeenCalledWith({
       url: "https://example.com/source",
       pluginServerId: "pluginServer-1",
-      pluginId: "bhadoo-google-drive-index",
+      pluginId: "example-drive-index",
     })
     expect(metadata).toEqual(
       expect.objectContaining({ pluginServerId: "pluginServer-1" })
@@ -122,7 +140,11 @@ describe("extraction orchestration", () => {
   it("routes refresh, mirror, and folder operations through the saved pluginServer", async () => {
     const item = savedWorkerItem()
     const resolved: ExtractedLink[] = [
-      { url: "https://cdn.example/resolved.mp4", label: "Resolved" },
+      {
+        url: "https://cdn.example/resolved.mp4",
+        label: "Resolved",
+        mediaNodeKind: "playable",
+      },
     ]
     transport.extract.mockResolvedValue({ links: resolved })
 
@@ -142,14 +164,14 @@ describe("extraction orchestration", () => {
         {
           url: "https://example.com/source",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
         },
       ],
       [
         {
           url: "https://pluginServer.example/playable-item",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
           kind: "node",
         },
       ],
@@ -157,7 +179,7 @@ describe("extraction orchestration", () => {
         {
           url: "https://pluginServer.example/folder/1",
           pluginServerId: "pluginServer-1",
-          pluginId: "bhadoo-google-drive-index",
+          pluginId: "example-drive-index",
           kind: "node",
         },
       ],
@@ -168,7 +190,13 @@ describe("extraction orchestration", () => {
   it("preserves partial extraction results", async () => {
     transport.getMetadata.mockResolvedValue({ filename: "source" })
     transport.extract.mockResolvedValue({
-      links: [{ url: "https://cdn.example/available.mp4", label: "Available" }],
+      links: [
+        {
+          url: "https://cdn.example/available.mp4",
+          label: "Available",
+          mediaNodeKind: "playable",
+        },
+      ],
     })
 
     const result = await orchestration.prepareSource({

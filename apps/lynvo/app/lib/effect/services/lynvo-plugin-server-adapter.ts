@@ -11,7 +11,7 @@ import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,
 } from "../../extraction/plugin-server-client"
-import { ExtractionError } from "../errors"
+import type { ExtractionError } from "../errors"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   extractPluginServerResponse,
@@ -41,15 +41,23 @@ export const getLynvoPluginServerManifest = Effect.fn(
   )
 })
 
+interface DiscoverLynvoPluginInput {
+  readonly environment: Env
+  readonly targetUrl: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly requestId?: string
+  readonly operationId?: string
+}
+
 export const discoverLynvoPlugin = Effect.fn(
   "LynvoPluginServerAdapter.discoverLynvoPlugin"
-)(function* (
-  environment: Env,
-  targetUrl: string,
-  basicAuth?: HttpBasicAuth,
-  requestId?: string,
-  operationId?: string
-) {
+)(function* ({
+  environment,
+  targetUrl,
+  basicAuth,
+  requestId,
+  operationId,
+}: DiscoverLynvoPluginInput) {
   return yield* requestPluginServer(
     () =>
       createLynvoPluginServerClient(environment).discover(targetUrl, {
@@ -67,23 +75,30 @@ export const getLynvoPluginServerMetadata = (
   targetUrl: string,
   pluginId?: string
 ): MetadataResult | undefined => {
-  const source = findLynvoPlugin(manifest, targetUrl, pluginId)
+  const source = findLynvoPlugin({ manifest, targetUrl, pluginId })
   return source
-    ? getPluginServerMetadata(
+    ? getPluginServerMetadata({
         manifest,
-        LYNVO_PLUGIN_SERVER_ID,
+        pluginServerId: LYNVO_PLUGIN_SERVER_ID,
         targetUrl,
-        source.id
-      )
+        pluginId: source.id,
+      })
     : undefined
 }
 
-export const findLynvoPlugin = (
-  manifest: PluginServerManifest,
-  targetUrl: string,
-  pluginId?: string,
-  allowProbe = true
-): PluginMetadata | undefined => {
+interface FindLynvoPluginInput {
+  readonly manifest: PluginServerManifest
+  readonly targetUrl: string
+  readonly pluginId?: string
+  readonly allowProbe?: boolean
+}
+
+export const findLynvoPlugin = ({
+  manifest,
+  targetUrl,
+  pluginId,
+  allowProbe = true,
+}: FindLynvoPluginInput): PluginMetadata | undefined => {
   const sources = getLynvoManifestExtension(manifest).plugins ?? []
   if (pluginId) {
     return sources.find((candidate) => candidate.id === pluginId)
@@ -101,30 +116,46 @@ export const findLynvoPlugin = (
     : undefined
 }
 
+interface LynvoPluginServerCredentials {
+  readonly pluginId: string
+  readonly password?: string
+  readonly basicAuth?: { username: string; password: string }
+}
+
+interface ExtractFromLynvoPluginServerInput {
+  readonly environment: Env
+  readonly targetUrl: string
+  readonly kind: "source" | "node"
+  readonly credentials: LynvoPluginServerCredentials
+  readonly requestId?: string
+  readonly operationId?: string
+  readonly source?: PluginMetadata
+}
+
 export const extractFromLynvoPluginServer = Effect.fn(
   "LynvoPluginServerAdapter.extractFromLynvoPluginServer"
-)(function* (
-  environment: Env,
-  targetUrl: string,
-  kind: "source" | "node",
-  credentials: {
-    pluginId: string
-    password?: string
-    basicAuth?: { username: string; password: string }
-  },
-  requestId?: string,
-  operationId?: string,
-  source?: PluginMetadata
-): Effect.fn.Return<ExtractionResult, ExtractionError> {
+)(function* ({
+  environment,
+  targetUrl,
+  kind,
+  credentials,
+  requestId,
+  operationId,
+  source,
+}: ExtractFromLynvoPluginServerInput): Effect.fn.Return<
+  ExtractionResult,
+  ExtractionError
+> {
   const client = createLynvoPluginServerClient(environment)
-  const options = {
+  const requestOptions = {
     apiKey: environment.MANAGED_PLUGIN_SERVER_API_KEY,
     requestId,
     operationId,
     ...credentials,
   }
   const result = yield* requestPluginServer(
-    () => extractPluginServerResponse(client, targetUrl, kind, options),
+    () =>
+      extractPluginServerResponse({ client, targetUrl, kind, requestOptions }),
     targetUrl
   )
   return mapPluginServerExtractionResult(result, LYNVO_PLUGIN_SERVER_ID, source)

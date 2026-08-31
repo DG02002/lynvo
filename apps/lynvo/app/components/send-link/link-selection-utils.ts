@@ -15,36 +15,12 @@ export const collectSelectableLinkIds = (
   links: readonly ExtractedLink[]
 ): string[] =>
   links.flatMap((link) => {
-    const isSelectable = getMediaNodeInteractionState(link).isSelectable
+    const { isSelectable } = getMediaNodeInteractionState(link)
     return [
       ...(isSelectable ? [getSelectableLinkId(link)] : []),
       ...collectSelectableLinkIds(link.children ?? []),
     ]
   })
-
-const isLinkOrDescendantSelected = (
-  link: ExtractedLink,
-  selectedIds: Set<string>
-): boolean => {
-  const linkId = getSelectableLinkId(link)
-  if (selectedIds.has(linkId)) {
-    return true
-  }
-
-  return (
-    link.children?.some((child) =>
-      isLinkOrDescendantSelected(child, selectedIds)
-    ) ?? false
-  )
-}
-
-export const hasSelectedDescendant = (
-  link: ExtractedLink,
-  selectedIds: Set<string>
-): boolean =>
-  link.children?.some((child) =>
-    isLinkOrDescendantSelected(child, selectedIds)
-  ) ?? false
 
 export const collectSelectedLinks = (
   links: ExtractedLink[],

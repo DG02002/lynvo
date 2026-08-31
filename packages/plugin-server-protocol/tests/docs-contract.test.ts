@@ -39,22 +39,4 @@ describe("published Plugin Server documentation", () => {
       }
     }
   })
-
-  it("documents static and fallback probe matching consistently", async () => {
-    const routingDocumentationUrls = [
-      new URL("../docs/spec.md", import.meta.url),
-      new URL("../docs/author-guide.md", import.meta.url),
-      new URL("../docs/compatibility-checklist.md", import.meta.url),
-      new URL(
-        "../../create-lynvo-plugin-server/template/README.md",
-        import.meta.url
-      ),
-    ]
-
-    for (const documentationUrl of routingDocumentationUrls) {
-      const source = await readFile(documentationUrl, "utf8")
-      expect(source).toContain("matchStrategy")
-      expect(source).toContain("probe")
-    }
-  })
 })

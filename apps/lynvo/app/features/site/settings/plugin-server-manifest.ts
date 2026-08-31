@@ -9,6 +9,7 @@ export interface PluginServerManifestView {
   name: string
   icon: string | null
   hosts: string
+  proxyProvider?: "scrape-do"
   plugins: PluginMetadata[]
 }
 
@@ -61,6 +62,7 @@ export const getPluginServerManifestView = (
       resolveCustomPluginServerIconUrl(manifest?.iconUrl, requestOrigin) ??
       null,
     hosts,
+    proxyProvider: extension?.proxyProvider,
     plugins: (extension?.plugins ?? []).map((source) => ({
       ...source,
       iconUrl: resolveCustomPluginServerIconUrl(

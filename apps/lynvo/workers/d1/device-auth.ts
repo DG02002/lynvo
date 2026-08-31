@@ -122,37 +122,41 @@ export const createDeviceCode = async (
   input: { readonly deviceName: string; readonly now: number }
 ): Promise<CreatedDeviceCode> => {
   const deviceName = input.deviceName.trim().slice(0, 80) || "Unknown device"
-  let code: string | undefined
-  for (
-    let attempt = 0;
-    attempt < DEVICE_CODE_COLLISION_ATTEMPTS;
-    attempt += 1
-  ) {
-    const candidate = generateDeviceCode()
-    const existing = await findDeviceCodeRecord(database, candidate)
-    if (!existing) {
-      code = candidate
-      break
-    }
-  }
-  if (!code) {
-    throw new Error("Unable to allocate a device code")
-  }
+  const candidates = Array.from(
+    { length: DEVICE_CODE_COLLISION_ATTEMPTS },
+    (_, priority) => ({ code: generateDeviceCode(), priority })
+  )
+  const candidateValuesSql = candidates
+    .map((_, priority) => `(?${priority + 1}, ${priority})`)
+    .join(", ")
   const pollSecret = generatePollSecret()
+  const pollSecretDigest = await digestPollSecret(pollSecret)
   const expiresAt = input.now + DEVICE_CODE_TTL_MS
-  await database
+  const valueParameterOffset = candidates.length
+  const inserted = await database
     .prepare(
-      "INSERT INTO device_codes (code, poll_secret_digest, status, device_name, expires_at, created_at) VALUES (?1, ?2, 'pending', ?3, ?4, ?5)"
+      `WITH candidates(code, priority) AS (VALUES ${candidateValuesSql})
+       INSERT INTO device_codes (code, poll_secret_digest, status, device_name, expires_at, created_at)
+       SELECT candidates.code, ?${valueParameterOffset + 1}, 'pending', ?${valueParameterOffset + 2}, ?${valueParameterOffset + 3}, ?${valueParameterOffset + 4}
+       FROM candidates
+       WHERE NOT EXISTS (SELECT 1 FROM device_codes WHERE device_codes.code = candidates.code)
+       ORDER BY candidates.priority
+       LIMIT 1
+       ON CONFLICT(code) DO NOTHING
+       RETURNING code`
     )
     .bind(
-      code,
-      await digestPollSecret(pollSecret),
+      ...candidates.map((candidate) => candidate.code),
+      pollSecretDigest,
       deviceName,
       expiresAt,
       input.now
     )
-    .run()
-  return { code, pollSecret, expiresAt, deviceName }
+    .first<{ code: string }>()
+  if (!inserted) {
+    throw new Error("Unable to allocate a device code")
+  }
+  return { code: inserted.code, pollSecret, expiresAt, deviceName }
 }
 
 export type DeviceCodeStatusOutcome =
@@ -251,6 +255,61 @@ const isClaimEligibleStatus = (
       (record.exchangeLeaseExpiresAt !== null &&
         record.exchangeLeaseExpiresAt <= now)))
 
+interface ResumeClaimedExchangeSessionInput {
+  database: D1Database
+  record: DeviceCodeRecord
+  userId: string
+  input: {
+    readonly code: string
+    readonly attemptId: string
+    readonly now: number
+  }
+}
+
+const resumeClaimedExchangeSession = async ({
+  database,
+  record,
+  userId,
+  input,
+}: ResumeClaimedExchangeSessionInput): Promise<ClaimOutcome | undefined> => {
+  const isSameActiveAttempt =
+    record.status === "exchanging" &&
+    record.exchangeAttemptId === input.attemptId
+  if (!isSameActiveAttempt || !record.exchangeSessionId) {
+    return undefined
+  }
+  const existingSession = await database
+    .prepare("SELECT id, user_id, revoked_at FROM sessions WHERE id = ?1")
+    .bind(record.exchangeSessionId)
+    .first<{ id: string; user_id: string; revoked_at: number | null }>()
+  if (
+    !existingSession ||
+    existingSession.user_id !== userId ||
+    existingSession.revoked_at !== null
+  ) {
+    return { kind: "invalidExchangeSession" }
+  }
+  const refreshed = await database
+    .prepare(
+      "UPDATE device_codes SET exchange_lease_expires_at = ?3 WHERE code = ?1 AND exchange_attempt_id = ?2"
+    )
+    .bind(
+      input.code,
+      input.attemptId,
+      input.now + DEVICE_CODE_EXCHANGE_LEASE_MS
+    )
+    .run()
+  if ((refreshed.meta.changes ?? 0) === 0) {
+    return { kind: "notApproved" }
+  }
+  return {
+    kind: "claimed",
+    userId,
+    deviceName: record.deviceName,
+    sessionId: existingSession.id,
+  }
+}
+
 export const claimAuthorizedCode = async (
   database: D1Database,
   input: {
@@ -261,8 +320,10 @@ export const claimAuthorizedCode = async (
     readonly now: number
   }
 ): Promise<ClaimOutcome> => {
-  const record = await findDeviceCodeRecord(database, input.code)
-  const pollSecretDigest = await digestPollSecret(input.pollSecret)
+  const [record, pollSecretDigest] = await Promise.all([
+    findDeviceCodeRecord(database, input.code),
+    digestPollSecret(input.pollSecret),
+  ])
   const isStaleGeneration =
     record?.exchangeAttemptId === input.attemptId &&
     record.exchangeGeneration !== null &&
@@ -278,41 +339,14 @@ export const claimAuthorizedCode = async (
     return { kind: "notApproved" }
   }
 
-  const isSameActiveAttempt =
-    record.status === "exchanging" &&
-    record.exchangeAttemptId === input.attemptId
-
-  if (isSameActiveAttempt && record.exchangeSessionId) {
-    const existingSession = await database
-      .prepare("SELECT id, user_id, revoked_at FROM sessions WHERE id = ?1")
-      .bind(record.exchangeSessionId)
-      .first<{ id: string; user_id: string; revoked_at: number | null }>()
-    if (
-      !existingSession ||
-      existingSession.user_id !== record.userId ||
-      existingSession.revoked_at !== null
-    ) {
-      return { kind: "invalidExchangeSession" }
-    }
-    const refreshed = await database
-      .prepare(
-        "UPDATE device_codes SET exchange_lease_expires_at = ?3 WHERE code = ?1 AND exchange_attempt_id = ?2"
-      )
-      .bind(
-        input.code,
-        input.attemptId,
-        input.now + DEVICE_CODE_EXCHANGE_LEASE_MS
-      )
-      .run()
-    if ((refreshed.meta.changes ?? 0) === 0) {
-      return { kind: "notApproved" }
-    }
-    return {
-      kind: "claimed",
-      userId: record.userId,
-      deviceName: record.deviceName,
-      sessionId: existingSession.id,
-    }
+  const resumedOutcome = await resumeClaimedExchangeSession({
+    database,
+    record,
+    userId: record.userId,
+    input,
+  })
+  if (resumedOutcome) {
+    return resumedOutcome
   }
 
   if (
@@ -338,7 +372,7 @@ export const claimAuthorizedCode = async (
   const [_insertResult, updateResult] = await database.batch([
     database
       .prepare(
-        "INSERT INTO sessions (id, user_id, generation, created_at, last_seen_at, expires_at, revoked_at, user_agent) VALUES (?1, ?2, 1, ?3, ?3, ?4, NULL, NULL)"
+        "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent) VALUES (?1, ?2, ?3, ?3, ?4, NULL, NULL)"
       )
       .bind(
         mintedSessionId,
@@ -425,91 +459,6 @@ export const finalizeDeviceExchange = async (
   return (result.meta.changes ?? 0) > 0
     ? { kind: "finalized" }
     : { kind: "superseded" }
-}
-
-export type RecoverOutcome =
-  | "resumable"
-  | "completed"
-  | "superseded"
-  | "invalid"
-
-export const recoverDeviceExchange = async (
-  database: D1Database,
-  input: {
-    readonly userId: string
-    readonly sessionId: string
-    readonly code: string
-    readonly pollSecret: string
-    readonly attemptId: string
-  }
-): Promise<RecoverOutcome> => {
-  const record = await findDeviceCodeRecord(database, input.code)
-  if (
-    !record ||
-    record.userId !== input.userId ||
-    record.exchangeSessionId !== input.sessionId ||
-    record.pollSecretDigest !== (await digestPollSecret(input.pollSecret))
-  ) {
-    return "invalid"
-  }
-  if (record.exchangeAttemptId !== input.attemptId) {
-    return "superseded"
-  }
-  if (
-    record.status === "consumed" &&
-    record.consumedSessionId === input.sessionId
-  ) {
-    return "completed"
-  }
-  if (record.status === "exchanging") {
-    return "resumable"
-  }
-  return "invalid"
-}
-
-export type AbortOutcome = { kind: "aborted" } | { kind: "invalidSession" }
-
-export const abortDeviceExchange = async (
-  database: D1Database,
-  input: {
-    readonly userId: string
-    readonly sessionId: string
-    readonly code: string
-    readonly attemptId: string
-    readonly generation: number
-    readonly now: number
-  }
-): Promise<AbortOutcome> => {
-  const session = await database
-    .prepare("SELECT user_id FROM sessions WHERE id = ?1")
-    .bind(input.sessionId)
-    .first<{ user_id: string }>()
-  if (!session || session.user_id !== input.userId) {
-    return { kind: "invalidSession" }
-  }
-  const record = await findDeviceCodeRecord(database, input.code)
-  const recordMatchesAttempt =
-    record?.userId === input.userId &&
-    record.exchangeAttemptId === input.attemptId &&
-    record.exchangeSessionId === input.sessionId
-  if (recordMatchesAttempt && record.exchangeGeneration !== input.generation) {
-    return { kind: "aborted" }
-  }
-  if (recordMatchesAttempt) {
-    await database
-      .prepare(
-        "UPDATE device_codes SET status = 'authorized', exchange_lease_expires_at = NULL, exchange_session_id = NULL, consumed_session_id = NULL WHERE code = ?1"
-      )
-      .bind(input.code)
-      .run()
-  }
-  await database
-    .prepare(
-      "UPDATE sessions SET revoked_at = ?2 WHERE id = ?1 AND revoked_at IS NULL"
-    )
-    .bind(input.sessionId, input.now)
-    .run()
-  return { kind: "aborted" }
 }
 
 export const cleanupExpiredDeviceCodes = async (

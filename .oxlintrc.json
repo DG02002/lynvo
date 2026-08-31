@@ -25,8 +25,18 @@
     }
   ],
   "categories": {
-    "correctness": "warn"
+    "correctness": "warn",
+    "suspicious": "warn",
+    "perf": "warn"
   },
+  "overrides": [
+    {
+      "files": ["apps/lynvo/app/entry.server.tsx"],
+      "rules": {
+        "max-params": "off"
+      }
+    }
+  ],
   "rules": {
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
@@ -50,6 +60,15 @@
     "curly": "warn",
     "no-eval": "warn",
     "no-implied-eval": "warn",
+    "max-statements": ["warn", { "max": 20 }],
+    "max-params": "warn",
+    "no-nested-ternary": "warn",
+    "no-extra-boolean-cast": "warn",
+    "no-await-in-loop": "warn",
+    "prefer-destructuring": "warn",
+    "no-duplicate-imports": "warn",
+    "no-useless-catch": "warn",
+    "consistent-type-imports": "warn",
     "@typescript-eslint/no-unused-vars": "warn"
   }
 }

@@ -7,7 +7,8 @@ contentType: Reference
 
 <DocSection id="usage-schema">
 
-Every connected credential must have at least one finite usage metric. The Plugin Server must enforce the same limits it reports.
+Every connected credential must have at least one finite usage metric. The
+Plugin Server must enforce the limits it reports.
 
 Define the response schema:
 
@@ -71,11 +72,15 @@ Each metric must satisfy these invariants:
 - `resetsAt` is an ISO 8601 timestamp
 - `pluginId` identifies a Plugin-specific allowance
 
-Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before the adapter performs upstream work. Return `RATE_LIMITED` when no capacity remains. Settle the reservation after the adapter finishes, and release it when your accounting policy does not charge failed work.
+Use a Cloudflare Durable Object for atomic reservations. Reserve capacity before
+the adapter performs upstream work. Return `RATE_LIMITED` when no capacity
+remains. Settle the reservation after the adapter finishes. Release it when
+your accounting policy does not charge failed work.
 
-<DocsNote title="Usage is authoritative">
+<DocsNote title="Use the reported limits">
 
-Do not report one allowance while enforcing another. Lynvo renders the metrics returned by your Plugin Server and does not own third-party accounting.
+Report the same allowances you enforce. Lynvo renders the metrics returned by
+your Plugin Server and does not own third-party accounting.
 
 </DocsNote>
 

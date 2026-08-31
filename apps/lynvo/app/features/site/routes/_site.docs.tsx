@@ -56,7 +56,7 @@ export default function Docs(_: Route.ComponentProps) {
     return <DocsLanding />
   }
 
-  const Content = context.page.Content
+  const { Content } = context.page
 
   return (
     <DocsDocumentLayout context={context}>

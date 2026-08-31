@@ -9,6 +9,14 @@ const PROTOCOL_LICENSE_URL =
   "https://github.com/DG02002/lynvo/blob/main/packages/plugin-server-protocol/LICENSE"
 const CREATOR_LICENSE_URL =
   "https://github.com/DG02002/lynvo/blob/main/packages/create-lynvo-plugin-server/LICENSE"
+const TMDB_WEBSITE_URL = "https://www.themoviedb.org"
+const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
+const TMDB_LOGOS_ATTRIBUTION_URL =
+  "https://www.themoviedb.org/about/logos-attribution"
+const TMDB_LOGO_URL =
+  "https://www.themoviedb.org/assets/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"
+const TMDB_ATTRIBUTION_NOTICE =
+  "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
 
 const ExternalLink = ({
   href,
@@ -28,11 +36,12 @@ const ExternalLink = ({
 )
 
 export const LicensesContent = () => (
-  <PolicyLayout title="Open-source licenses" updatedAt="August 8, 2026">
+  <PolicyLayout title="Open-source licenses" updatedAt="August 25, 2026">
     <p>
       Lynvo includes open-source software. This page identifies the licenses for
-      the Lynvo core project and the independently licensed packages in the
-      repository.
+      the Lynvo core project, the independently licensed packages in the
+      repository, and the attribution required for TMDB content used by the
+      media library.
     </p>
 
     <PolicySection title="Lynvo core">
@@ -101,6 +110,59 @@ export const LicensesContent = () => (
         A Custom Plugin Server may have its own license, terms, privacy policy,
         and source-site obligations. Review those terms before connecting to or
         distributing one.
+      </p>
+    </PolicySection>
+
+    <PolicySection title="TMDB attribution">
+      <p>
+        <a
+          href={TMDB_WEBSITE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="not-typeset inline-block"
+        >
+          <img
+            src={TMDB_LOGO_URL}
+            alt="TMDB"
+            className="block h-32 w-auto"
+            loading="lazy"
+            data-not-typeset
+            width="185"
+            height="133"
+          />
+        </a>
+      </p>
+      <p>
+        When the server-side TMDB credential is configured, Lynvo uses the TMDB
+        APIs for optional title metadata and artwork. The credential is not
+        required for the media library to work. Lynvo does not claim ownership
+        of TMDB data, images, or trademarks.
+      </p>
+      <p>{TMDB_ATTRIBUTION_NOTICE}</p>
+      <p>
+        Lynvo&apos;s AGPL-3.0 and MIT software licenses do not grant rights to
+        use TMDB Content, meaning metadata and images returned by the TMDB APIs,
+        or the TMDB trademarks. TMDB API use is governed by the{" "}
+        <ExternalLink href={TMDB_API_TERMS_URL}>
+          TMDB API terms of use
+        </ExternalLink>{" "}
+        and the rights of the relevant content owners. TMDB&apos;s API terms
+        require a separate written agreement for commercial use. If Lynvo&apos;s
+        use becomes commercial, obtain that agreement before continuing to use
+        TMDB through Lynvo.
+      </p>
+      <p>
+        The current Lynvo implementation resolves TMDB artwork on demand and
+        keeps returned image paths in browser memory while the page is open.
+        Lynvo does not store TMDB metadata or image files in account records.
+      </p>
+      <p>
+        Read the{" "}
+        <ExternalLink href={TMDB_LOGOS_ATTRIBUTION_URL}>
+          TMDB logos and attribution guidance
+        </ExternalLink>
+        . The TMDB logo shown here is linked to TMDB and is displayed in an
+        approved form that is less prominent than Lynvo branding.
       </p>
     </PolicySection>
 

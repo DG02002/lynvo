@@ -1,5 +1,4 @@
 import { Schema } from "effect"
-import { HttpApiSchema } from "effect/unstable/httpapi"
 
 declare global {
   type SavedLinkCommandFailure =
@@ -48,10 +47,6 @@ export class SavedLinkCommandError extends Schema.TaggedError<SavedLinkCommandEr
   "SavedLinkCommandError",
   { failure: SavedLinkCommandFailureSchema }
 ) {}
-
-export const SavedLinkCommandApiError = SavedLinkCommandError.pipe(
-  HttpApiSchema.status(409)
-)
 
 const unreachableFailure = (failure: never): never => {
   throw new Error(`Unhandled Saved link command failure: ${String(failure)}`)

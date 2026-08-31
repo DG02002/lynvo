@@ -7,6 +7,8 @@ import {
   STORAGE_RETENTION_DAY_OPTIONS,
   USER_STORAGE_LIMIT_BYTES,
   USER_STORAGE_WARNING_BYTES,
+  DATA_VERSION_RESPONSE_HEADER,
+  MEDIA_ARTWORK_REQUEST_BATCH_LIMIT,
 } from "../constants"
 import {
   addRequestContext,
@@ -23,27 +25,11 @@ import {
   deleteExpiredLinksForUser,
   deleteSavedLinkById,
   getUserRetentionDays,
-  listSavedLinks,
+  listSavedLinksWithDataVersion,
   updateSavedLinkMeta,
 } from "./links"
 import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
-import {
-  deletePluginDomainById,
-  listPluginDomains,
-  upsertPluginDomain,
-} from "./plugin-domains"
-import {
-  deletePluginServerById,
-  listPluginServers,
-  setPluginServerEnabled,
-} from "./plugin-servers"
-import {
-  claimNextRemoteCommand,
-  enqueueRemoteCommand,
-  reportRemoteCommandResult,
-} from "./remote-commands"
-import { resolveD1Session } from "./sessions"
-import type { SessionRecord } from "./sessions"
+import { resolveD1Session, type SessionRecord } from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
@@ -52,26 +38,48 @@ import { normalizeRetentionDays, updateUserStorageRetentionDays } from "./users"
 import { getUsage } from "./usage"
 import { notifyAccountDataChanged } from "./data-version-notification"
 import { processSavedLinkExtraction } from "../link-extraction-runner"
+import { lookupMediaArtworkCached } from "../media-metadata/artwork-cache"
+import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
+import {
+  encryptSavedLinkExtractionCredential,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
 
 type DataRouteContext = HonoContext<RequestLoggingEnvironment>
 
 type DataFailureStatus = 400 | 401 | 403 | 404 | 409 | 422 | 500 | 503
 
+const safeWaitUntil = (
+  context: DataRouteContext,
+  promise: Promise<unknown>
+): void => {
+  try {
+    if (context.executionCtx?.waitUntil) {
+      context.executionCtx.waitUntil(promise)
+    }
+  } catch {
+    // ExecutionContext not available in testing environment; ignore background work
+  }
+}
+
 const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
 const EXTRACTION_CONFLICT_MESSAGE =
   "Saved link extraction changed; refresh and retry"
 const RETENTION_INVALID_MESSAGE = "Choose an available auto-delete period"
-const REMOTE_TARGET_MISSING_MESSAGE = "Remote session not found"
-const REMOTE_CLAIM_INACTIVE_MESSAGE = "Remote command claim is no longer active"
-const PLUGIN_SERVER_DELETE_LIMIT_MESSAGE =
-  "Plugin server cleanup exceeds the synchronous limit"
 
-const respondDataFailure = async (
-  context: DataRouteContext,
-  status: DataFailureStatus,
-  kind: string,
-  message: string
-): Promise<Response> =>
+interface RespondDataFailureInput {
+  readonly context: DataRouteContext
+  readonly status: DataFailureStatus
+  readonly kind: string
+  readonly message: string
+}
+
+const respondDataFailure = async ({
+  context,
+  status,
+  kind,
+  message,
+}: RespondDataFailureInput): Promise<Response> =>
   await context.json({ failure: { kind, message } }, status)
 
 const dataApp = new Hono<RequestLoggingEnvironment>()
@@ -103,20 +111,28 @@ dataApp.onError(async (error, context) => {
   }
   const message = error instanceof Error ? error.message : String(error)
   if (message === LINK_NOT_FOUND_MESSAGE) {
-    return await respondDataFailure(context, 404, "validation", message)
+    return await respondDataFailure({
+      context,
+      status: 404,
+      kind: "validation",
+      message,
+    })
   }
-  if (
-    message === EXTRACTION_CONFLICT_MESSAGE ||
-    message === REMOTE_CLAIM_INACTIVE_MESSAGE ||
-    message === REMOTE_TARGET_MISSING_MESSAGE
-  ) {
-    return await respondDataFailure(context, 409, "validation", message)
+  if (message === EXTRACTION_CONFLICT_MESSAGE) {
+    return await respondDataFailure({
+      context,
+      status: 409,
+      kind: "validation",
+      message,
+    })
   }
-  if (
-    message === RETENTION_INVALID_MESSAGE ||
-    message === PLUGIN_SERVER_DELETE_LIMIT_MESSAGE
-  ) {
-    return await respondDataFailure(context, 400, "validation", message)
+  if (message === RETENTION_INVALID_MESSAGE) {
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message,
+    })
   }
   addRequestContext(context, {
     error: {
@@ -124,12 +140,12 @@ dataApp.onError(async (error, context) => {
       message,
     },
   })
-  return await respondDataFailure(
+  return await respondDataFailure({
     context,
-    500,
-    "temporarily-unavailable",
-    context.get("requestId")
-  )
+    status: 500,
+    kind: "temporarily-unavailable",
+    message: context.get("requestId"),
+  })
 })
 
 interface DataRequestReady {
@@ -157,35 +173,35 @@ const beginDataRequest = async (
   if (!database) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        503,
-        "service-unavailable",
-        "Data storage is temporarily unavailable"
-      ),
+        status: 503,
+        kind: "service-unavailable",
+        message: "Data storage is temporarily unavailable",
+      }),
     }
   }
   if (options.mutating && !isSameOriginRequest(context.req.raw)) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        403,
-        "csrf-expired",
-        "Mutation forbidden"
-      ),
+        status: 403,
+        kind: "csrf-expired",
+        message: "Mutation forbidden",
+      }),
     }
   }
   const session = await resolveD1Session(context.req.raw, database)
   if (!session) {
     return {
       kind: "terminated",
-      response: await respondDataFailure(
+      response: await respondDataFailure({
         context,
-        401,
-        "session-expired",
-        "Session expired"
-      ),
+        status: 401,
+        kind: "session-expired",
+        message: "Session expired",
+      }),
     }
   }
   addRequestContext(context, { user_id: session.userId })
@@ -195,7 +211,12 @@ const beginDataRequest = async (
 const respondInvalidBody = async (
   context: DataRouteContext
 ): Promise<Response> =>
-  respondDataFailure(context, 400, "validation", "Send a valid request.")
+  respondDataFailure({
+    context,
+    status: 400,
+    kind: "validation",
+    message: "Send a valid request.",
+  })
 
 interface DataRequestBody<Body> {
   readonly kind: "body"
@@ -229,7 +250,7 @@ const createOrUpdateSchema = Schema.Struct({
   operationId: Schema.NonEmptyString,
   url: Schema.NonEmptyString,
   title: Schema.optional(Schema.String),
-  meta: Schema.optional(Schema.String),
+  meta: Schema.NonEmptyString,
   extractionState: Schema.optional(Schema.Literal("queued")),
 })
 
@@ -239,7 +260,14 @@ const updateMetaSchema = Schema.Struct({
   meta: Schema.NonEmptyString,
 })
 
-const deleteLinkSchema = Schema.Struct({ id: Schema.NonEmptyString })
+const deleteLinkSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+  id: Schema.NonEmptyString,
+})
+
+const clearLinksSchema = Schema.Struct({
+  operationId: Schema.NonEmptyString,
+})
 
 const metadataOperationSchema = Schema.Union([
   Schema.Struct({
@@ -261,6 +289,13 @@ const metadataOperationSchema = Schema.Union([
     expectedExtractionJson: Schema.String,
     extractedLinksJson: Schema.String,
   }),
+  Schema.Struct({
+    kind: Schema.Literal("setArtwork"),
+    providerId: Schema.Number,
+    title: Schema.NonEmptyString,
+    year: Schema.optional(Schema.Number),
+    mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
+  }),
 ])
 
 const applyMetadataOperationSchema = Schema.Struct({
@@ -274,31 +309,17 @@ const retentionDaysSchema = Schema.Struct({
   deleteExpiredLinks: Schema.optional(Schema.Boolean),
 })
 
-const pluginServerEnabledSchema = Schema.Struct({ enabled: Schema.Boolean })
-
-const pluginDomainUpsertSchema = Schema.Struct({
-  domain: Schema.NonEmptyString,
-  pluginServerId: Schema.NonEmptyString,
-  pluginId: Schema.NonEmptyString,
+const mediaArtworkRequestItemSchema = Schema.Struct({
+  title: Schema.NonEmptyString,
+  mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
+  year: Schema.optional(Schema.Number),
+  seasonNumber: Schema.optional(Schema.Number),
+  episodeNumber: Schema.optional(Schema.Number),
+  providerId: Schema.optional(Schema.Number),
 })
 
-const remoteCommandEnqueueSchema = Schema.Struct({
-  targetSessionId: Schema.NonEmptyString,
-  targetReceiverId: Schema.NonEmptyString,
-  command: Schema.Literal("play"),
-  payload: Schema.String,
-})
-
-const remoteCommandClaimSchema = Schema.Struct({
-  receiverId: Schema.NonEmptyString,
-})
-
-const remoteCommandResultSchema = Schema.Struct({
-  id: Schema.NonEmptyString,
-  receiverId: Schema.NonEmptyString,
-  claimToken: Schema.NonEmptyString,
-  result: Schema.Literals(["applied", "failed"]),
-  message: Schema.optional(Schema.String),
+const mediaArtworkRequestSchema = Schema.Struct({
+  requests: Schema.Array(mediaArtworkRequestItemSchema),
 })
 
 dataApp.get("/links", async (context) => {
@@ -307,12 +328,45 @@ dataApp.get("/links", async (context) => {
   if (!isReadyDataRequest(preparation)) {
     return preparation.response
   }
-  const snapshot = await listSavedLinks(
+  const snapshot = await listSavedLinksWithDataVersion(
     preparation.database,
     preparation.session.userId,
     Date.now()
   )
-  return context.json({ links: snapshot.results })
+  const response = context.json({ links: snapshot.results })
+  response.headers.set(
+    DATA_VERSION_RESPONSE_HEADER,
+    String(snapshot.dataVersion)
+  )
+  return response
+})
+
+dataApp.post("/media-artwork", async (context) => {
+  addRequestContext(context, { operation: "data_media_artwork_lookup" })
+  const preparation = await beginDataRequest(context, { mutating: true })
+  if (!isReadyDataRequest(preparation)) {
+    return preparation.response
+  }
+  const body = await readDataJsonBody(context, mediaArtworkRequestSchema)
+  if (body.kind === "invalid") {
+    return body.response
+  }
+  if (body.body.requests.length > MEDIA_ARTWORK_REQUEST_BATCH_LIMIT) {
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message: "Too many artwork requests",
+    })
+  }
+  const results = await lookupMediaArtworkCached(
+    context.env,
+    body.body.requests,
+    {
+      waitUntil: (promise) => safeWaitUntil(context, promise),
+    }
+  )
+  return context.json({ results })
 })
 
 dataApp.post("/links/create-or-update", async (context) => {
@@ -325,19 +379,47 @@ dataApp.post("/links/create-or-update", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const now = Date.now()
+  let sourceInput: ReturnType<typeof extractHttpBasicCredential>
+  try {
+    sourceInput = extractHttpBasicCredential(body.url)
+  } catch {
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message: "Enter a valid URL.",
+    })
+  }
+  let extractionCredential: SavedLinkExtractionCredentialWrite | null = null
+  if (body.extractionState === "queued" && sourceInput.basicAuth) {
+    extractionCredential = {
+      targetUrl: sourceInput.url,
+      record: await encryptSavedLinkExtractionCredential(context.env, {
+        userId: preparation.session.userId,
+        targetUrl: sourceInput.url,
+        basicAuth: sourceInput.basicAuth,
+      }),
+      now,
+    }
+  }
+  const normalizedInput = {
+    ...body,
+    url: sourceInput.url,
+    now,
+  }
   const result =
     body.extractionState === "queued"
       ? await enqueueSavedLinkExtraction(
           preparation.database,
           preparation.session.userId,
-          { ...body, now }
+          { ...normalizedInput, extractionCredential }
         )
       : await createOrUpdateSavedLink(
           preparation.database,
           preparation.session.userId,
-          { ...body, now }
+          normalizedInput
         )
   await notifyAccountDataChanged(
     context.env,
@@ -345,7 +427,8 @@ dataApp.post("/links/create-or-update", async (context) => {
     result.dataVersion
   )
   if (result.id && body.extractionState === "queued") {
-    context.executionCtx.waitUntil(
+    safeWaitUntil(
+      context,
       processSavedLinkExtraction(context.env, preparation.database, result.id)
     )
   }
@@ -362,7 +445,7 @@ dataApp.post("/links/update-meta", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await updateSavedLinkMeta(
     preparation.database,
     preparation.session.userId,
@@ -391,7 +474,7 @@ dataApp.post("/links/apply-metadata-operation", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await applySavedLinkMetadataOperation(
     preparation.database,
     preparation.session.userId,
@@ -415,11 +498,11 @@ dataApp.post("/links/delete", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await deleteSavedLinkById(
     preparation.database,
     preparation.session.userId,
-    { id: body.id, now: Date.now() }
+    { operationId: body.operationId, id: body.id, now: Date.now() }
   )
   await notifyAccountDataChanged(
     context.env,
@@ -435,10 +518,14 @@ dataApp.post("/links/clear", async (context) => {
   if (!isReadyDataRequest(preparation)) {
     return preparation.response
   }
+  const requestBody = await readDataJsonBody(context, clearLinksSchema)
+  if (requestBody.kind === "invalid") {
+    return requestBody.response
+  }
   const result = await clearSavedLinks(
     preparation.database,
     preparation.session.userId,
-    { now: Date.now() }
+    { operationId: requestBody.body.operationId, now: Date.now() }
   )
   await notifyAccountDataChanged(
     context.env,
@@ -491,12 +578,12 @@ dataApp.get("/storage-settings/retention-preview", async (context) => {
     return preparation.response
   }
   const days = normalizeRetentionDays(Number(context.req.query("days")))
-  const expiredLinkCount = await countExpiredLinksForUser(
-    preparation.database,
-    preparation.session.userId,
-    days,
-    Date.now()
-  )
+  const expiredLinkCount = await countExpiredLinksForUser({
+    database: preparation.database,
+    userId: preparation.session.userId,
+    retentionDays: days,
+    now: Date.now(),
+  })
   return context.json({ expiredLinkCount })
 })
 
@@ -510,7 +597,7 @@ dataApp.patch("/storage-settings", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const body = requestBody.body
+  const { body } = requestBody
   const result = await updateUserStorageRetentionDays(
     preparation.database,
     preparation.session.userId,
@@ -518,12 +605,12 @@ dataApp.patch("/storage-settings", async (context) => {
   )
   let deletedLinks = 0
   if (body.deleteExpiredLinks) {
-    deletedLinks = await deleteExpiredLinksForUser(
-      preparation.database,
-      preparation.session.userId,
-      body.days,
-      Date.now()
-    )
+    deletedLinks = await deleteExpiredLinksForUser({
+      database: preparation.database,
+      userId: preparation.session.userId,
+      retentionDays: body.days,
+      now: Date.now(),
+    })
   }
   await notifyAccountDataChanged(
     context.env,
@@ -545,213 +632,6 @@ dataApp.get("/usage", async (context) => {
     Date.now()
   )
   return context.json(usage)
-})
-
-dataApp.get("/plugin-servers", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_servers_read" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const servers = await listPluginServers(
-    preparation.database,
-    preparation.session.userId
-  )
-  return context.json({ servers })
-})
-
-dataApp.post("/plugin-servers/:pluginServerId/enabled", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_server_set_enabled" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, pluginServerEnabledSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const body = requestBody.body
-  const result = await setPluginServerEnabled(
-    preparation.database,
-    preparation.session.userId,
-    {
-      id: context.req.param("pluginServerId"),
-      enabled: body.enabled,
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.delete("/plugin-servers/:pluginServerId", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_server_delete" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const result = await deletePluginServerById(
-    preparation.database,
-    preparation.session.userId,
-    {
-      id: context.req.param("pluginServerId"),
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.get("/plugin-domains", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domains_read" })
-  const preparation = await beginDataRequest(context, { mutating: false })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const domains = await listPluginDomains(
-    preparation.database,
-    preparation.session.userId
-  )
-  return context.json({ domains })
-})
-
-dataApp.post("/plugin-domains", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domain_upsert" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, pluginDomainUpsertSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const body = requestBody.body
-  const result = await upsertPluginDomain(
-    preparation.database,
-    preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.delete("/plugin-domains/:domainId", async (context) => {
-  addRequestContext(context, { operation: "data_plugin_domain_delete" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const dataVersion = await deletePluginDomainById(
-    preparation.database,
-    preparation.session.userId,
-    {
-      domainId: context.req.param("domainId"),
-      now: Date.now(),
-    }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    dataVersion
-  )
-  return context.json({ success: true, dataVersion })
-})
-
-dataApp.post("/remote-commands/enqueue", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_enqueue" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(
-    context,
-    remoteCommandEnqueueSchema
-  )
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const body = requestBody.body
-  const result = await enqueueRemoteCommand(
-    preparation.database,
-    preparation.session.userId,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
-})
-
-dataApp.post("/remote-commands/claim", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_claim" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, remoteCommandClaimSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const body = requestBody.body
-  const claim = await claimNextRemoteCommand(
-    preparation.database,
-    preparation.session.userId,
-    preparation.session.id,
-    { receiverId: body.receiverId, now: Date.now() }
-  )
-  if (!claim) {
-    return context.json({ commands: [] })
-  }
-  return context.json({
-    commands: [
-      {
-        id: claim.id,
-        claimToken: claim.claimToken,
-        command: claim.command,
-        payload: claim.payload,
-        createdAt: claim.createdAt,
-      },
-    ],
-  })
-})
-
-dataApp.post("/remote-commands/result", async (context) => {
-  addRequestContext(context, { operation: "data_remote_command_result" })
-  const preparation = await beginDataRequest(context, { mutating: true })
-  if (!isReadyDataRequest(preparation)) {
-    return preparation.response
-  }
-  const requestBody = await readDataJsonBody(context, remoteCommandResultSchema)
-  if (requestBody.kind === "invalid") {
-    return requestBody.response
-  }
-  const body = requestBody.body
-  const result = await reportRemoteCommandResult(
-    preparation.database,
-    preparation.session.userId,
-    preparation.session.id,
-    { ...body, now: Date.now() }
-  )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  return context.json(result)
 })
 
 export const registerD1DataRoutes = (

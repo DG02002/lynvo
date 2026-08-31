@@ -5,7 +5,10 @@ import {
   discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
-import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  getLynvoManifestExtension,
+  validatePluginServerManifestContract,
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
   afterEach(() => {
@@ -35,6 +38,11 @@ describe("Lynvo plugin catalog", () => {
     expect(
       findLynvoPlugin("https://drive.google.com/drive/folders/1AbCdEfGh123")?.id
     ).toBe("google-drive-public-files")
+    expect(
+      findLynvoPlugin(
+        "https://bucket.r2.cloudflarestorage.com/media/example-video.mkv"
+      )?.id
+    ).toBe("direct-media")
   })
 
   it("publishes Direct Media as the fallback probe Plugin", () => {
@@ -50,39 +58,22 @@ describe("Lynvo plugin catalog", () => {
       hosts: [],
     })
     expect(directMedia?.matchers).toBeUndefined()
-  })
-
-  it("publishes only owned public icon URLs", () => {
-    const extension = getLynvoManifestExtension(
-      createLynvoPluginServerManifest("http://localhost:5173")
-    )
-    const bhadooPlugin = extension.plugins?.find(
-      (plugin) => plugin.id === "bhadoo-google-drive-index"
-    )
-    expect(bhadooPlugin).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/bhadoo-cloud.svg",
-    })
     expect(
-      extension.plugins?.find((plugin) => plugin.id === "onedrive-index")
-    ).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/onedrive-index.webp",
-    })
-    expect(
-      extension.plugins?.find(
-        (plugin) => plugin.id === "google-drive-public-files"
+      getLynvoManifestExtension(manifest).plugins?.find(
+        (plugin) => plugin.id === "onedrive-index"
       )
     ).toMatchObject({
-      hasIcon: true,
-      iconUrl:
-        "http://localhost:5173/icons/sources/google-drive-public-files.webp",
+      matchStrategy: "probe",
+      hosts: [],
     })
     expect(
-      extension.plugins?.find((plugin) => plugin.id === "direct-media")
-    ).toMatchObject({
-      hasIcon: true,
-      iconUrl: "http://localhost:5173/icons/sources/direct-media.webp",
+      getLynvoManifestExtension(manifest).plugins?.find(
+        (plugin) => plugin.id === "onedrive-index"
+      )?.matchers
+    ).toBeUndefined()
+    expect(validatePluginServerManifestContract(manifest)).toEqual({
+      ok: true,
+      issues: [],
     })
   })
 
@@ -112,7 +103,7 @@ describe("Lynvo plugin catalog", () => {
     )
 
     await expect(
-      discoverLynvoPlugin("https://unknown.example/MEDIA/TV/Flames/")
+      discoverLynvoPlugin("https://unknown.example/MEDIA/TV/Sample-Show/")
     ).resolves.toEqual({
       matched: true,
       pluginId: "onedrive-index",

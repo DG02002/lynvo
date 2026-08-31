@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { Schema } from "effect"
+import { Result, Schema } from "effect"
 import {
+  createNodeExtractRequest,
+  createSourceExtractRequest,
   getLynvoManifestExtension,
   parsePluginServerManifestContract,
+  pluginMetadataSchema,
   pluginServerManifestSchema,
   resolvableNodeSchema,
   validatePluginServerManifestContract,
@@ -200,6 +203,88 @@ describe("Lynvo manifest source credentials", () => {
       extensions: { lynvo: { plugins: [] } },
     })
     expect(getLynvoManifestExtension(manifest)).toEqual({ plugins: [] })
+  })
+
+  it("preserves Plugin usageMultiplier metadata through the manifest contract", () => {
+    const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
+      protocolVersion: "1.0",
+      pluginServerId: "dev.lynvo.test",
+      displayName: "Test",
+      auth: { type: "bearer" },
+      usage: { endpoint: "/usage" },
+      matchers: [{ hosts: ["example.com"] }],
+      features: {},
+      extensions: {
+        lynvo: {
+          plugins: [
+            {
+              id: "render-plugin",
+              displayName: "Render Plugin",
+              version: "1.0.0",
+              usageMultiplier: 5,
+              proxyCreditUsage: "Uses 5 proxy credits for rendering.",
+              hosts: ["example.com"],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(getLynvoManifestExtension(manifest).plugins?.[0]).toMatchObject({
+      usageMultiplier: 5,
+      proxyCreditUsage: "Uses 5 proxy credits for rendering.",
+    })
+    expect(
+      Result.isFailure(
+        Schema.decodeUnknownResult(pluginMetadataSchema)({
+          id: "render-plugin",
+          displayName: "Render Plugin",
+          hosts: ["example.com"],
+          usageMultiplier: 0,
+        })
+      )
+    ).toBe(true)
+  })
+
+  it("preserves the server-level proxyProvider capability through the extension", () => {
+    const manifest = Schema.decodeUnknownSync(pluginServerManifestSchema)({
+      protocolVersion: "1.0",
+      pluginServerId: "dev.lynvo.test",
+      displayName: "Test",
+      auth: { type: "bearer" },
+      usage: { endpoint: "/usage" },
+      matchers: [{ hosts: ["example.com"] }],
+      features: {},
+      extensions: {
+        lynvo: {
+          proxyProvider: "scrape-do",
+          plugins: [
+            { id: "source", displayName: "Source", hosts: ["example.com"] },
+          ],
+        },
+      },
+    })
+
+    expect(getLynvoManifestExtension(manifest).proxyProvider).toBe("scrape-do")
+    expect(getLynvoManifestExtension(manifest).plugins).toHaveLength(1)
+  })
+
+  it("round-trips a user proxy credential through the extract request", () => {
+    const request = createSourceExtractRequest(
+      "https://example.com/file",
+      undefined,
+      undefined,
+      undefined,
+      { provider: "scrape-do", token: "user-token" }
+    )
+
+    expect(request).toMatchObject({
+      input: { kind: "source", sourceUrl: "https://example.com/file" },
+      proxy: { provider: "scrape-do", token: "user-token" },
+    })
+    expect(
+      createNodeExtractRequest("https://example.com/node").proxy
+    ).toBeUndefined()
   })
 
   it("accepts probe-matched Plugins without URL matchers and rejects ambiguous combinations", () => {

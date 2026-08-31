@@ -7,7 +7,9 @@ contentType: Reference
 
 <DocSection id="protocol-version">
 
-Lynvo Custom Plugin Servers use Plugin Server Protocol version `1.0` over HTTPS and JSON. Version `1.0` defines four required endpoints and one optional discovery endpoint:
+Lynvo Custom Plugin Servers use Plugin Server Protocol version `1.0` over HTTPS
+and JSON. Version `1.0` defines four required endpoints and one optional
+discovery endpoint:
 
 | Method | Route       | Authentication | Purpose                                            |
 | ------ | ----------- | -------------- | -------------------------------------------------- |
@@ -17,6 +19,8 @@ Lynvo Custom Plugin Servers use Plugin Server Protocol version `1.0` over HTTPS 
 | `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
 | `POST` | `/extract`  | Bearer         | Resolves a Source URL or lazy node                 |
 
-Implement `POST /discover` only when the manifest sets `features.discovery` to `true`. Use `Content-Type: application/json` for JSON responses. Return protocol error envelopes instead of unstructured error strings.
+Implement `POST /discover` only when the manifest sets `features.discovery` to
+`true`. Use `Content-Type: application/json` for JSON responses. Return protocol
+error envelopes instead of unstructured error strings.
 
 </DocSection>

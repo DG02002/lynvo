@@ -6,17 +6,37 @@ import {
   useRouteLoaderData,
 } from "react-router"
 
-import type * as React from "react"
+import type { ComponentType, ReactNode } from "react"
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 import type { loader } from "../root"
 import { RouteSeoMetadata } from "./route-seo-metadata"
 
-export const Layout = ({ children }: { children: React.ReactNode }) => {
-  const loaderData = useRouteLoaderData<typeof loader>("root")
-  const csrfToken = loaderData?.csrfToken
-  const initialTheme = loaderData?.initialTheme
-  const user = loaderData?.user
+declare global {
+  interface DocumentLayoutProps {
+    readonly children: ReactNode
+    readonly csrfToken?: string
+    readonly initialTheme?: string | null
+    readonly user?: { readonly sub: string; readonly sid?: string } | null
+    readonly LinksComponent: ComponentType<{ nonce: string }>
+    readonly MetaComponent: ComponentType
+    readonly ScriptsComponent: ComponentType
+    readonly ScrollRestorationComponent: ComponentType
+    readonly RouteSeoMetadataComponent: ComponentType
+  }
+}
+
+export const DocumentLayout = ({
+  children,
+  csrfToken,
+  initialTheme,
+  user,
+  LinksComponent,
+  MetaComponent,
+  ScriptsComponent,
+  ScrollRestorationComponent,
+  RouteSeoMetadataComponent,
+}: DocumentLayoutProps) => {
   const initialBackground = initialTheme === "dark" ? "#000" : "#fff"
 
   return (
@@ -42,15 +62,33 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         {csrfToken && <meta name="csrf-token" content={csrfToken} />}
         {user && <meta name="lynvo-user-id" content={user.sub} />}
         {user?.sid && <meta name="lynvo-session-id" content={user.sid} />}
-        <RouteSeoMetadata />
-        <Meta />
-        <Links nonce="" />
+        <RouteSeoMetadataComponent />
+        <MetaComponent />
+        <LinksComponent nonce="" />
       </head>
       <body className="h-full bg-background text-foreground antialiased flex flex-col min-h-screen">
         {children}
-        <ScrollRestoration />
-        <Scripts />
+        <ScrollRestorationComponent />
+        <ScriptsComponent />
       </body>
     </html>
+  )
+}
+
+export const Layout = ({ children }: { children: ReactNode }) => {
+  const loaderData = useRouteLoaderData<typeof loader>("root")
+  return (
+    <DocumentLayout
+      csrfToken={loaderData?.csrfToken}
+      initialTheme={loaderData?.initialTheme}
+      user={loaderData?.user}
+      LinksComponent={Links}
+      MetaComponent={Meta}
+      ScriptsComponent={Scripts}
+      ScrollRestorationComponent={ScrollRestoration}
+      RouteSeoMetadataComponent={RouteSeoMetadata}
+    >
+      {children}
+    </DocumentLayout>
   )
 }

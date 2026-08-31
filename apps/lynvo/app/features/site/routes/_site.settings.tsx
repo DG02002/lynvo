@@ -26,16 +26,12 @@ export function meta() {
   return [{ title: "Settings | Lynvo" }]
 }
 
-export async function loader(args: LoaderFunctionArgs) {
-  const request = args.request
-  const sessionResult = await getUserSession(
-    request,
-    getServerEnv(args.context)
-  )
+export async function loader({ request, context }: LoaderFunctionArgs) {
+  const sessionResult = await getUserSession(request, getServerEnv(context))
   requireUserOrRedirect(sessionResult, new URL(request.url).pathname)
   const user = sessionResult.user!
-  return responseWithSession(
-    {
+  return responseWithSession({
+    responseData: {
       user: {
         id: user.sub,
         email: user.email,
@@ -44,8 +40,8 @@ export async function loader(args: LoaderFunctionArgs) {
       },
     },
     sessionResult,
-    request
-  )
+    request,
+  })
 }
 
 export interface SettingsOutletContext {

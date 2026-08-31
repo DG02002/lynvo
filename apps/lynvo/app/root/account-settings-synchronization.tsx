@@ -8,17 +8,22 @@ import {
 } from "~/lib/player-utils"
 import { client } from "~/lib/effect/api/client"
 
+const loadCloudPlayerPreferences = () =>
+  Effect.runPromise(client.settings.getPlayerPreferences())
+
 export const AccountSettingsSynchronization = ({
   userId,
+  loadPlayerPreferences = loadCloudPlayerPreferences,
 }: {
   userId?: string
+  loadPlayerPreferences?: typeof loadCloudPlayerPreferences
 }) => {
   useEffect(() => {
     if (!userId) {
       return
     }
     let didCancel = false
-    Effect.runPromise(client.settings.getPlayerPreferences())
+    loadPlayerPreferences()
       .then((cloudPreferences) => {
         if (didCancel) {
           return
@@ -39,7 +44,7 @@ export const AccountSettingsSynchronization = ({
     return () => {
       didCancel = true
     }
-  }, [userId])
+  }, [loadPlayerPreferences, userId])
 
   return null
 }

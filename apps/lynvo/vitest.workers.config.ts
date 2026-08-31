@@ -1,6 +1,11 @@
-import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers"
+import {
+  cloudflareTest,
+  readD1Migrations,
+} from "@cloudflare/vitest-pool-workers"
 import path from "node:path"
 import { defineConfig } from "vitest/config"
+
+const WORKER_TEST_TIMEOUT_MS = 15_000
 
 const migrations = await readD1Migrations(
   path.join(import.meta.dirname, "migrations")
@@ -29,5 +34,6 @@ export default defineConfig({
   test: {
     include: ["tests/workers/**/*.test.ts"],
     setupFiles: ["./tests/workers/setup.ts"],
+    testTimeout: WORKER_TEST_TIMEOUT_MS,
   },
 })

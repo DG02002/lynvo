@@ -38,9 +38,9 @@ export function AddPluginDomainAlertDialog({
           links faster next time.
         </>
       }
-      confirmLabel={isAdding ? "Adding…" : "Add domain"}
+      confirmLabel="Add domain"
       cancelLabel="Not now"
-      disabled={isAdding}
+      pending={isAdding}
       onConfirm={onAdd}
     />
   )

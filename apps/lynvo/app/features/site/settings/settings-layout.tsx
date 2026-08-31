@@ -15,7 +15,10 @@ export function SettingsPanel({
 }: React.ComponentProps<"section">) {
   return (
     <section
-      className={cn("flex flex-col gap-4 px-0 pb-5 pt-1 sm:pb-6", className)}
+      className={cn(
+        "flex flex-col gap-4 px-0 pb-5 pt-1 sm:pb-6 animate-in fade-in fill-mode-both duration-500 motion-reduce:animate-none",
+        className
+      )}
     >
       {children}
     </section>
@@ -96,11 +99,13 @@ export function SettingsActionRow(props: SettingsActionRowProps) {
 export function SettingsRowInfo({
   label,
   description,
+  note,
   destructive = false,
   className,
 }: {
   label: string
   description?: string
+  note?: string
   destructive?: boolean
   className?: string
 }) {
@@ -124,6 +129,11 @@ export function SettingsRowInfo({
           )}
         >
           {description}
+        </span>
+      )}
+      {note && (
+        <span className="text-xs leading-normal text-yellow-600 dark:text-yellow-400">
+          {note}
         </span>
       )}
     </div>

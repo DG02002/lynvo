@@ -73,14 +73,14 @@ export const CsrfLive = Layer.succeed(
   CsrfMiddleware.of((httpEffect) =>
     Effect.gen(function* () {
       const request = yield* HttpServerRequest.HttpServerRequest
-      const method = request.method
+      const { method } = request
 
       if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
         const url = request.url.startsWith("http")
           ? request.url
           : `https://localhost${request.url}`
         const webRequest = new Request(url, {
-          method: request.method,
+          method,
           headers: request.headers,
         })
 

@@ -1,5 +1,10 @@
 import { Schema } from "effect"
-import type { ExtractedLink, LinkMetadata, MetaData } from "./types"
+import type {
+  ExtractedLink,
+  LinkDebugLogEntry,
+  LinkMetadata,
+  MetaData,
+} from "./types"
 
 export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
   (): Schema.Codec<ExtractedLink> =>
@@ -34,9 +39,7 @@ export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
       size: Schema.optional(Schema.String),
       sourceName: Schema.optional(Schema.String),
       selectable: Schema.optional(Schema.Boolean),
-      mediaNodeKind: Schema.optional(
-        Schema.Literals(["group", "resolvable", "playable"])
-      ),
+      mediaNodeKind: Schema.Literals(["group", "resolvable", "playable"]),
       resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
     }).pipe(
       Schema.refine(
@@ -57,15 +60,10 @@ export const extractedLinkSchema: Schema.Codec<ExtractedLink> = Schema.suspend(
           if (link.mediaNodeKind === "group" && link.url) {
             return false
           }
-          if (
-            link.mediaNodeKind !== undefined &&
-            link.mediaNodeKind !== "playable" &&
-            link.type !== "folder"
-          ) {
+          if (link.mediaNodeKind !== "playable" && link.type !== "folder") {
             return false
           }
           if (
-            link.mediaNodeKind !== undefined &&
             link.mediaNodeKind !== "resolvable" &&
             (link.nodeUrl || link.resourceId)
           ) {
@@ -107,6 +105,20 @@ export const metadataSchema: Schema.Codec<MetaData> = Schema.Struct({
   pluginServerId: Schema.optional(Schema.String),
 })
 
+export const linkDebugLogEntrySchema: Schema.Codec<LinkDebugLogEntry> =
+  Schema.Struct({
+    at: Schema.Number,
+    pluginServerId: Schema.optional(Schema.String),
+    pluginId: Schema.optional(Schema.String),
+    outcome: Schema.Literals(["complete", "failed", "pending", "requeued"]),
+    errorCode: Schema.optional(Schema.String),
+    detail: Schema.optional(Schema.String),
+    httpStatus: Schema.optional(Schema.Number),
+    nodeCount: Schema.optional(Schema.Number),
+    durationMs: Schema.optional(Schema.Number),
+    attempt: Schema.optional(Schema.Number),
+  })
+
 export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   schemaVersion: Schema.Literal(3),
   source: Schema.Record(Schema.String, Schema.Json),
@@ -116,7 +128,6 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
   }),
   playback: Schema.Struct({
     openedUrls: Schema.mutable(Schema.Array(Schema.String)),
-    openedIds: Schema.mutable(Schema.Array(Schema.String)),
     resolvedMirrors: Schema.optional(
       Schema.Record(
         Schema.String,
@@ -124,15 +135,19 @@ export const linkMetadataSchema: Schema.Codec<LinkMetadata> = Schema.Struct({
       )
     ),
   }),
-})
-
-export const storedSavedLinkSchema = Schema.Struct({
-  id: Schema.String,
-  url: Schema.NonEmptyString,
-  createdAt: Schema.Number,
-  updatedAt: Schema.Number,
-  metadata: linkMetadataSchema,
-  title: Schema.optional(Schema.String),
+  debugLog: Schema.optional(
+    Schema.mutable(Schema.Array(linkDebugLogEntrySchema))
+  ),
+  artwork: Schema.optional(
+    Schema.Struct({
+      providerId: Schema.Number,
+      title: Schema.String,
+      year: Schema.optional(Schema.Number),
+      /** TMDB movie and tv ids are separate namespaces; by-id lookups
+          need the kind to pick the right details endpoint. */
+      mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
+    })
+  ),
 })
 
 export const parseCanonicalLinkMetadataJson = (metadataJson: string) =>

@@ -24,7 +24,7 @@ describe("Plugin Domain lifecycle", () => {
     expect(normalizePluginDomain("example.com")).toBe("example.com")
   })
 
-  it("accepts a Bhadoo Workers hostname", () => {
+  it("accepts a drive-index Workers hostname", () => {
     expect(normalizePluginDomain("https://source-alpha.example/0:/")).toBe(
       "source-alpha.example"
     )
@@ -42,7 +42,7 @@ describe("Plugin Domain lifecycle", () => {
     })
   })
 
-  it("detects a Bhadoo index URL and removes credentials from its saved URL", () => {
+  it("detects a drive-index URL and removes credentials from its saved URL", () => {
     expect(
       parsePluginDomainCandidate(
         "https://source-user:source%40secret@index.example.com/0:/Movies/"
@@ -84,25 +84,25 @@ describe("Plugin Domain lifecycle", () => {
       algorithm: "AES-256-GCM" as const,
       keyVersion: 1,
     }
-    const credentialDocument = buildCredentialDocument(
-      "user-1",
-      {
+    const credentialDocument = buildCredentialDocument({
+      userId: "user-1",
+      domainRow: {
         id: "domain-1",
         user_id: "user-1",
         plugin_server_id: "plugin-server-1",
-        plugin_id: "onedrive-index",
+        plugin_id: "storage-index",
         domain: "example.com",
         credential_generation: 1,
         credential_attempt_id: null,
         credential_finalized_attempt_id: null,
       },
       credential,
-      {
+      existingCredential: {
         id: "credential-1",
         user_id: "user-1",
         plugin_domain_id: "domain-1",
         plugin_server_id: "plugin-server-1",
-        plugin_id: "onedrive-index",
+        plugin_id: "storage-index",
         domain: "example.com",
         ciphertext: "old",
         nonce: "old",
@@ -111,15 +111,15 @@ describe("Plugin Domain lifecycle", () => {
         created_at: 10,
         updated_at: 10,
       },
-      20
-    )
+      now: 20,
+    })
 
     expect(credentialDocument).toMatchObject({
       id: "credential-1",
       user_id: "user-1",
       plugin_domain_id: "domain-1",
       plugin_server_id: "plugin-server-1",
-      plugin_id: "onedrive-index",
+      plugin_id: "storage-index",
       domain: "example.com",
       ciphertext: "ciphertext",
       nonce: "nonce",
@@ -134,13 +134,13 @@ describe("Plugin Domain lifecycle", () => {
     const context = {
       userId: "user-1",
       pluginServerId: "plugin-server-1",
-      pluginId: "onedrive-index",
+      pluginId: "storage-index",
       domain: "example.com",
     }
     const encoder = new TextDecoder()
 
     expect(encoder.decode(createPluginCredentialAdditionalData(context))).toBe(
-      "user-1\u0000plugin-server-1\u0000onedrive-index\u0000example.com\u00001"
+      "user-1\u0000plugin-server-1\u0000storage-index\u0000example.com\u00001"
     )
     expect(
       createPluginCredentialAdditionalData({ ...context, userId: "user-2" })
@@ -154,6 +154,7 @@ describe("Plugin Domain lifecycle", () => {
   })
 
   it("decrypts only with the exact owning context", async () => {
+    // SAFETY: The credential vault only reads the encryption-key binding supplied here.
     const environmentLayer = Layer.succeed(CloudflareEnv, {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
         "0123456789abcdef0123456789abcdef"
@@ -165,7 +166,7 @@ describe("Plugin Domain lifecycle", () => {
     const context = {
       userId: "user-1",
       pluginServerId: "plugin-server-1",
-      pluginId: "onedrive-index",
+      pluginId: "storage-index",
       domain: "example.com",
     }
     const program = Effect.gen(function* () {

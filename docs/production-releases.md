@@ -1,8 +1,8 @@
 # Production releases
 
-Lynvo uses GitHub Actions as the single production deployment authority. A
-push to `main` must pass the read-only `Verify` workflow before the exact
-verified commit can enter the `production` GitHub Environment.
+GitHub Actions is the only production deployment path. A push to `main` must
+pass the read-only `Verify` workflow before the exact verified commit can enter
+the `production` GitHub Environment.
 
 The deployment first applies pending D1 migrations to the production
 database. It then deploys `lynvo-plugin-server` followed by `lynvo`,
@@ -77,8 +77,8 @@ Use an expand-and-contract migration:
 3. In a later release, remove compatibility code once no active version needs
    the old representation.
 
-D1 provides Time Travel point-in-time recovery (7 days on the free tier) as
-the rollback story for data; Worker versions roll back independently through
+D1 provides Time Travel point-in-time recovery (7 days on the free tier) for
+data rollback. Worker versions roll back independently through
 the Cloudflare dashboard or `wrangler rollback`. Before a destructive or
 unusually large migration, export the database and rehearse against a scratch
 D1 database first.
@@ -88,8 +88,8 @@ bypasses the verified commit and coordinated release sequence.
 
 ## Caching policy
 
-CI uses pnpm's content-addressed dependency cache, while the lockfile remains
-the source of truth. Production API responses are not globally cached by the
+CI uses pnpm's content-addressed dependency cache, while the lockfile controls
+the dependency versions. Production API responses are not globally cached by the
 release workflow. The Plugin Server uses authorization and user-specific usage
 state, and Cloudflare normally bypasses shared caching for authorized requests.
 Static assets can use Cloudflare's asset caching independently. Add runtime

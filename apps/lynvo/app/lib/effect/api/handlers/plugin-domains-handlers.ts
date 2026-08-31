@@ -130,7 +130,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          const password = payload.password
+          const { password } = payload
           if (!password) {
             return yield* new ValidationError({
               message: "Password is required",

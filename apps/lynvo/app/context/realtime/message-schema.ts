@@ -53,6 +53,11 @@ const heartbeatResponseSchema = Schema.Struct({
 })
 
 export const isRealtimeHeartbeatResponse = (value: string): boolean => {
+  // The Durable Object answers the bare "ping" text frame from its
+  // hibernation auto-response pair without waking the object.
+  if (value === "pong") {
+    return true
+  }
   try {
     return Result.isSuccess(
       Schema.decodeUnknownResult(heartbeatResponseSchema)(JSON.parse(value))

@@ -1,23 +1,16 @@
-import { useState, type ComponentProps } from "react"
+import { useMemo, useState, type ReactNode, type RefObject } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowDown01Icon,
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Archive04Icon,
   AlertCircleIcon,
-  Clock01Icon,
   Folder01Icon,
   Folder02Icon,
-  PackageIcon,
-  PackageOpenIcon,
-  PackageSearchIcon,
   PlayIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
-import { Spinner } from "~/components/ui/spinner"
+import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type {
   ExtractedLink,
@@ -27,14 +20,23 @@ import type {
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
-import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { NewBadge } from "~/components/save-list/new-badge"
-import { FilenameText } from "~/components/filename-text"
+import { ExpandableFilename } from "~/components/expandable-filename"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
+  getMediaDisplayTitle,
+  getMediaEpisodeDisplayTitle,
+  getEpisodeListingLabels,
+  hasEpisodeMarker,
+  isEpisodeOnlyListing,
+} from "~/features/links/media-artwork/media-artwork-identity"
+import { getSharedSeasonIdentity } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import {
   getMediaNodeInteractionState,
-  getMediaNodeTarget,
+  getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import {
   getFolderIcon,
@@ -46,9 +48,54 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
-import { useResolvableContainerState } from "./use-resolvable-container-state"
+import { useFolderTitleDisplay } from "./use-folder-title-display"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { groupSaveListItems } from "./save-list-groups"
+import { ExtractionFailedActions } from "./extraction-failed-actions"
+import { ResolvableContainerRow } from "./resolvable-container-row"
+import {
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "./finder-episode-still"
+import { SaveListRowPoster } from "./save-list-row-poster"
+import {
+  MediaListRowMeta,
+  MediaListRow,
+  SaveListRowIcon,
+} from "./media-list-row"
+import {
+  MEDIA_LIST_HEADER_MENU_CELL_CLASS,
+  MEDIA_LIST_ROW_HOVER_TINT_CLASS,
+  MEDIA_LIST_ROW_MENU_CELL_CLASS,
+  MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
+  MEDIA_LIST_ROW_OPENED_TINT_CLASS,
+  MEDIA_LIST_ROW_TITLE_CLASS,
+  SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
+} from "./media-list-row-constants"
+import {
+  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
+  FINDER_FOLDER_CONTENT_GRID_CLASS,
+  HYBRID_GROUP_CONTENT_CLASS,
+  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
+  SAVE_LIST_BROWSER_LAYOUT_CLASS,
+  SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
+} from "./save-list-layout-constants"
+import { SeasonArtworkPanel } from "./season-artwork-panel"
+import {
+  SAVE_LIST_SECTION_STACK_CLASS,
+  SaveDateGroupSection,
+} from "./save-date-group-heading"
+import { ExtractionStatusTitle } from "./extraction-status"
+import {
+  getExtractionStatusInput,
+  getExtractionStatusLabel,
+  getExtractionStatusTitleSpec,
+} from "./extraction-status-utils"
+import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
+import {
+  FolderTitleDisplayToggleButton,
+  SaveListBackButton,
+} from "./save-list-header-controls"
 
 interface SaveListBrowserProps {
   items: LinkListItem[]
@@ -59,6 +106,7 @@ interface SaveListBrowserProps {
   highlightedId: string | null
   isHydrating: boolean
   currentTimeMs?: number
+  shouldShowRowPosters?: boolean
 }
 
 interface FinderBrowserProps {
@@ -66,6 +114,15 @@ interface FinderBrowserProps {
   actions: LinkItemActions
   extractingItems: Set<string>
   onExit: () => void
+  shouldShowRowPosters?: boolean
+}
+
+interface FinderEmptyStateProps {
+  item: LinkViewItem
+  actions: LinkItemActions
+  extractingItems: Set<string>
+  onExit: () => void
+  contentRef: RefObject<HTMLDivElement | null>
 }
 
 interface FolderTreeProps {
@@ -82,76 +139,91 @@ interface MobileFolderTreeToggleProps {
   onToggle: () => void
 }
 
-interface SaveExtractionStatusProps {
-  item: LinkListItem
-  isRefreshing: boolean
+interface SaveListBrowserItemIconProps {
+  readonly label: string
+  readonly parentFolderName?: string
+  readonly presentation: "link-poster" | "container-poster" | "icon"
+  readonly rowFallbackIcon: ReactNode
+  readonly isExpired: boolean
 }
 
-const getExtractionStatusLabel = (
-  item: LinkListItem,
-  isRefreshing: boolean
-): string => {
-  if (isRefreshing) {
-    return "Loading links"
+const getSaveListBrowserItemIconPresentation = (
+  shouldShowRowPosters: boolean,
+  isFolder: boolean
+) => {
+  if (!shouldShowRowPosters) {
+    return "icon"
   }
-  switch (item.extractionStatus?.state) {
-    case "queued":
-      return "Waiting to load"
-    case "running":
-      return "Loading links"
-    case "failed":
-      return item.extractionStatus.error || "Unable to load links"
-    default:
-      return ""
+
+  if (isFolder) {
+    return "container-poster"
   }
+
+  return "link-poster"
 }
 
-const SaveExtractionStatus = ({
-  item,
-  isRefreshing,
-}: SaveExtractionStatusProps) => {
-  const extractionState = item.extractionStatus?.state
-  const extractionError = item.extractionStatus?.error
-  if (!extractionState || extractionState === "complete") {
-    return null
-  }
-
-  if (isRefreshing) {
+const SaveListBrowserItemIcon = ({
+  label,
+  parentFolderName,
+  presentation,
+  rowFallbackIcon,
+  isExpired,
+}: SaveListBrowserItemIconProps) => {
+  if (presentation === "link-poster") {
     return (
-      <span
-        className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"
-        role="status"
-      >
-        <Spinner aria-hidden="true" className="size-3" />
-        <span>{getExtractionStatusLabel(item, true)}</span>
-      </span>
+      <SaveListRowPoster
+        label={label}
+        parentFolderName={parentFolderName}
+        fallbackIcon={rowFallbackIcon}
+        isDimmed={isExpired}
+      />
     )
   }
 
-  if (extractionState === "failed") {
+  if (presentation === "container-poster") {
     return (
-      <span
-        className="flex min-w-0 items-center gap-1.5 text-xs text-destructive"
-        role="alert"
-        title={extractionError || "Unable to load links"}
-      >
-        <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5 shrink-0" />
-        <span className="truncate">
-          {extractionError || getExtractionStatusLabel(item, false)}
-        </span>
-      </span>
+      <SaveListRowPoster
+        label={label}
+        parentFolderName={parentFolderName}
+        isContainer
+        isIconWhenArtworkMissing
+        fallbackIcon={rowFallbackIcon}
+        isDimmed={isExpired}
+      />
     )
   }
 
   return (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-      <HugeiconsIcon
-        icon={extractionState === "queued" ? Clock01Icon : PackageSearchIcon}
-        className="size-3.5 shrink-0"
-      />
-      <span>{getExtractionStatusLabel(item, false)}</span>
-    </span>
+    <SaveListRowIcon
+      className={isExpired ? "text-muted-foreground" : undefined}
+    >
+      {rowFallbackIcon}
+    </SaveListRowIcon>
   )
+}
+
+interface SaveListItemAriaLabelOptions {
+  readonly itemTitle: string
+  readonly directLink: ExtractedLink | undefined
+  readonly isExtractionIncomplete: boolean
+  readonly extractionStatusLabel: string
+}
+
+const getSaveListItemAriaLabel = ({
+  itemTitle,
+  directLink,
+  isExtractionIncomplete,
+  extractionStatusLabel,
+}: SaveListItemAriaLabelOptions) => {
+  if (isExtractionIncomplete) {
+    return `${extractionStatusLabel} for ${itemTitle}`
+  }
+
+  if (directLink) {
+    return `Open ${directLink.label || itemTitle}`
+  }
+
+  return `View ${itemTitle}`
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -169,7 +241,9 @@ const MobileFolderTreeToggle = ({
     aria-label={isOpen ? "Collapse folder tree" : "Expand folder tree"}
     onClick={onToggle}
   >
-    <SaveListRowIcon icon={Folder02Icon} />
+    <SaveListRowIcon>
+      <HugeiconsIcon icon={Folder02Icon} className="size-6" />
+    </SaveListRowIcon>
     <span className="min-w-0 flex-1 truncate">{currentFolderLabel}</span>
     <span className="flex size-9 shrink-0 items-center justify-center">
       <HugeiconsIcon
@@ -178,23 +252,6 @@ const MobileFolderTreeToggle = ({
       />
     </span>
   </Button>
-)
-
-const SaveListRowIcon = ({
-  icon,
-  className,
-}: {
-  icon: ComponentProps<typeof HugeiconsIcon>["icon"]
-  className?: string
-}) => (
-  <span
-    className={cn(
-      "flex size-10 shrink-0 items-center justify-center text-foreground md:size-14",
-      className
-    )}
-  >
-    <HugeiconsIcon icon={icon} className="size-6" />
-  </span>
 )
 
 const FolderTree = ({
@@ -234,30 +291,40 @@ const FolderTree = ({
           )}
           <div
             className={cn(
-              "relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
+              "group relative before:absolute before:top-0 before:bottom-1/2 before:-left-3 before:w-px after:absolute after:top-1/2 after:-left-3 after:h-px after:w-3",
               isInPath || doesActiveBranchContinue
                 ? "before:bg-sky-500"
                 : "before:bg-border/60",
               isInPath ? "after:bg-sky-500" : "after:bg-border/60"
             )}
           >
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-                isCurrent && "bg-accent text-accent-foreground"
-              )}
+            <button
+              type="button"
+              aria-label={link.label}
               aria-current={isCurrent ? "page" : undefined}
               data-folder-state={getFolderVisualState(link, isInPath)}
+              className={cn(
+                "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+                isCurrent && "bg-accent"
+              )}
               onClick={() => onSelectFolder(link, path)}
+            />
+            <div
+              className={cn(
+                "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+                isCurrent && "text-accent-foreground"
+              )}
             >
               <HugeiconsIcon
                 icon={getFolderIcon(link, isInPath)}
                 className="shrink-0"
               />
-              <FilenameText value={link.label} className="w-0 min-w-0 flex-1" />
-            </Button>
+              <ExpandableFilename
+                value={link.label}
+                className="w-0 min-w-0 flex-1"
+                isInsideActivationOverlay
+              />
+            </div>
           </div>
           {link.children?.some(isVisibleTreeFolder) && (
             <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
@@ -271,19 +338,31 @@ const FolderTree = ({
 
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "h-auto min-h-9 w-full justify-start gap-2 rounded-lg whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none hover:bg-accent hover:text-accent-foreground",
-          folderPath.length === 0 && "bg-accent text-accent-foreground"
-        )}
-        aria-current={folderPath.length === 0 ? "page" : undefined}
-        onClick={onSelectRoot}
-      >
-        <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
-        <FilenameText value={rootLabel} className="w-0 min-w-0 flex-1" />
-      </Button>
+      <div className="group relative">
+        <button
+          type="button"
+          aria-label={rootLabel}
+          aria-current={folderPath.length === 0 ? "page" : undefined}
+          className={cn(
+            "absolute inset-0 z-1 cursor-pointer rounded-lg transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring group-hover:bg-accent",
+            folderPath.length === 0 && "bg-accent"
+          )}
+          onClick={onSelectRoot}
+        />
+        <div
+          className={cn(
+            "pointer-events-none relative z-2 flex h-auto min-h-9 w-full gap-2 whitespace-normal px-2 py-1.5 text-left text-sm font-normal transition-none group-hover:text-accent-foreground",
+            folderPath.length === 0 && "text-accent-foreground"
+          )}
+        >
+          <HugeiconsIcon icon={Folder02Icon} className="shrink-0" />
+          <ExpandableFilename
+            value={rootLabel}
+            className="w-0 min-w-0 flex-1"
+            isInsideActivationOverlay
+          />
+        </div>
+      </div>
       <div className="ml-4 flex min-w-0 flex-col gap-1 pl-3">
         {renderFolders(links, [])}
       </div>
@@ -296,40 +375,43 @@ const FinderEmptyState = ({
   actions,
   extractingItems,
   onExit,
-}: FinderBrowserProps) => (
-  <section className="flex h-svh flex-col overflow-hidden bg-background">
-    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
-      <div className="contents md:block md:h-full md:border-r">
-        <Button
-          variant="ghost"
-          className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
-          onClick={onExit}
+  contentRef,
+}: FinderEmptyStateProps) => (
+  <section
+    className={cn(
+      SAVE_LIST_BROWSER_LAYOUT_CLASS,
+      "flex h-svh flex-col overflow-hidden bg-background"
+    )}
+  >
+    <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
+      <SaveListBackButton onNavigateBack={onExit} />
+      <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
+        <h1
+          aria-label={getItemTitle(item)}
+          className="hidden text-base font-normal md:block"
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-          Back
-        </Button>
+          <ExpandableFilename
+            value={getItemTitle(item)}
+            clampClassName="line-clamp-1"
+            className="w-full"
+          />
+        </h1>
       </div>
-      <h1
-        aria-label={getItemTitle(item)}
-        className="min-w-0 flex-1 text-base font-normal md:flex md:w-full md:items-center md:px-4 md:py-3"
-      >
-        <FilenameText
-          value={getItemTitle(item)}
-          clampClassName="line-clamp-1"
-          className="w-full"
-        />
-      </h1>
-      <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+      <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
         <LinkItemMenu
           item={item}
           actions={actions}
           showRemove
           onRemoved={onExit}
           isRefreshing={extractingItems.has(item.url)}
+          triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
         />
       </div>
     </header>
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+    <div
+      ref={contentRef}
+      className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-x-hidden px-6 py-10 text-center"
+    >
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
         <p className="text-sm text-muted-foreground">
@@ -343,162 +425,205 @@ const FinderEmptyState = ({
   </section>
 )
 
-interface ResolvedMirrorRowsProps {
-  mirrors: ExtractedLink[]
-  sourceLink: ExtractedLink
-  itemUrl: string
-  actions: LinkItemActions
+interface FinderBrowserLinkRowProps {
+  readonly item: LinkViewItem
+  readonly link: ExtractedLink
+  readonly linkKey: string
+  readonly actions: LinkItemActions
+  readonly extractingItems: Set<string>
+  readonly parentFolderName?: string
+  readonly shouldShowEpisodeStills: boolean
+  readonly shouldStackEpisodeStill: boolean
+  readonly shouldShowRowPosters: boolean
+  readonly titleDisplay: FolderTitleDisplay
+  readonly displayTitle: string
+  readonly onActivate: () => void
 }
 
-interface ResolvableContainerRowProps {
-  item: LinkViewItem
-  link: ExtractedLink
-  actions: LinkItemActions
-  isResolving: boolean
-  onRemove: () => void
-}
-
-const ResolvedMirrorRows = ({
-  mirrors,
-  sourceLink,
-  itemUrl,
-  actions,
-}: ResolvedMirrorRowsProps) => (
-  <div className="flex flex-col border-t bg-sky-500/5">
-    {mirrors.map((mirror) => {
-      const mirrorTarget = getMediaNodeTarget(mirror)
-      return (
-        <div
-          key={getLinkKey(mirror)}
-          className="relative border-b last:border-b-0"
-        >
-          <Button
-            variant="ghost"
-            className="h-auto min-h-20 w-full justify-start gap-3 rounded-none px-4 py-4 pr-16 text-left font-normal hover:bg-sky-500/10"
-            onClick={() => actions.play(mirror)}
-          >
-            <SaveListRowIcon icon={PlayIcon} />
-            <FilenameText
-              value={mirror.label}
-              className="min-w-0 flex-1 text-sm md:text-lg"
-            />
-            {mirror.size && (
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {mirror.size}
-              </span>
-            )}
-          </Button>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <LinkActionsDotMenu
-              itemLabel={mirror.label}
-              onCopyLink={() =>
-                void navigator.clipboard.writeText(mirrorTarget)
-              }
-              onOpenInPlayer={async (player) => {
-                const result = await openInSpecificPlayer(mirrorTarget, player)
-                markAfterAcceptedHandoff({
-                  accepted: result.expectsNavigation,
-                  itemLabel: mirror.label,
-                  markOpened: () =>
-                    actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
-                })
-              }}
-              className="size-9 shrink-0 text-foreground"
-            />
-          </div>
-        </div>
-      )
-    })}
-  </div>
-)
-
-const ResolvableContainerRow = ({
+const FinderBrowserLinkRow = ({
   item,
   link,
+  linkKey,
   actions,
-  isResolving,
-  onRemove,
-}: ResolvableContainerRowProps) => {
-  const linkTarget = getMediaNodeTarget(link)
-  const {
-    mirrors,
-    isExpanded,
-    didResolutionFail,
-    displaySize,
-    resolutionState: resolvedState,
-    openLink,
-    refreshLink,
-  } = useResolvableContainerState({ item, link, actions })
-  const resolutionState = isResolving ? "resolving" : resolvedState
+  extractingItems,
+  parentFolderName,
+  shouldShowEpisodeStills,
+  shouldStackEpisodeStill,
+  shouldShowRowPosters,
+  titleDisplay,
+  displayTitle,
+  onActivate,
+}: FinderBrowserLinkRowProps) => {
+  const linkTarget = getMediaNodeTargetOrUndefined(link)
+  const { isFolder } = getMediaNodeInteractionState(link)
+  const shouldShowEpisodeStillForLink =
+    shouldShowEpisodeStills && hasEpisodeMarker(link.label, parentFolderName)
+  const isExpired =
+    !isFolder && link.expiry !== undefined && link.expiry <= Date.now()
+  const isResolving =
+    linkTarget !== undefined && extractingItems.has(linkTarget)
+  const episodeStill = useFinderEpisodeStill(
+    link.label,
+    parentFolderName,
+    shouldShowEpisodeStillForLink
+  )
+  const { artwork } = episodeStill
+  const rowDisplayTitle =
+    shouldShowEpisodeStillForLink && titleDisplay === "episode"
+      ? getMediaEpisodeDisplayTitle(
+          link.label,
+          artwork?.episodeTitle,
+          parentFolderName
+        )
+      : displayTitle
+  const rowFallbackIcon = isResolving ? (
+    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+  ) : (
+    <HugeiconsIcon
+      icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
+      className="size-6"
+    />
+  )
+  const episodeStillElement = (
+    <FinderEpisodeStillDisplay
+      label={link.label}
+      fallbackIcon={rowFallbackIcon}
+      isResolving={isResolving}
+      isDimmed={isExpired}
+      isWatched={link.opened === true}
+      imagePath={episodeStill.imagePath}
+      imageType={episodeStill.imageType}
+      isLookupPending={episodeStill.isLookupPending}
+    />
+  )
+  const renderRowIcon = (): ReactNode => {
+    if (!shouldShowEpisodeStillForLink) {
+      if (shouldShowEpisodeStills) {
+        return (
+          <SaveListRowIcon
+            className={isExpired ? "text-muted-foreground" : undefined}
+          >
+            {rowFallbackIcon}
+          </SaveListRowIcon>
+        )
+      }
+      return (
+        <SaveListBrowserItemIcon
+          label={link.label}
+          parentFolderName={parentFolderName}
+          presentation={getSaveListBrowserItemIconPresentation(
+            shouldShowRowPosters,
+            isFolder
+          )}
+          rowFallbackIcon={rowFallbackIcon}
+          isExpired={isExpired}
+        />
+      )
+    }
+    if (shouldStackEpisodeStill) {
+      return (
+        <span className={HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS}>
+          {episodeStillElement}
+        </span>
+      )
+    }
+    return (
+      <>
+        <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
+          {episodeStillElement}
+        </span>
+        <span className="md:hidden">
+          <SaveListRowIcon
+            className={isExpired ? "text-muted-foreground" : undefined}
+          >
+            {rowFallbackIcon}
+          </SaveListRowIcon>
+        </span>
+      </>
+    )
+  }
+  const rowIcon = renderRowIcon()
+  const copyLink = () => {
+    if (linkTarget === undefined) {
+      return
+    }
+    void navigator.clipboard.writeText(linkTarget)
+  }
+  const openLinkInPlayer = async (player: PlayerDefinition) => {
+    if (linkTarget === undefined) {
+      return
+    }
+    const result = await openInSpecificPlayer(linkTarget, player)
+    markAfterAcceptedHandoff({
+      accepted: result.expectsNavigation,
+      itemLabel: link.label,
+      markOpened: () => actions.markOpened(item.url, linkTarget),
+    })
+  }
 
   return (
-    <div className="flex flex-col border-b last:border-b-0">
-      <div className="relative">
-        <button
-          type="button"
-          className={cn(
-            "flex min-h-24 w-full items-center gap-3 px-4 py-6 pr-16 text-left",
-            "hover:bg-muted",
-            link.opened && "bg-sky-500/15 hover:bg-sky-500/20",
-            didResolutionFail && "bg-destructive/15 hover:bg-destructive/20"
-          )}
-          data-resolution-state={resolutionState}
-          onClick={openLink}
-        >
-          <SaveListRowIcon
-            icon={
-              mirrors.length > 0
-                ? isExpanded
-                  ? PackageOpenIcon
-                  : PackageIcon
-                : PackageSearchIcon
-            }
+    <MediaListRow
+      key={linkKey}
+      label={rowDisplayTitle}
+      icon={rowIcon}
+      title={{ value: rowDisplayTitle, isStruckThrough: isExpired }}
+      titleExtractionStatus={isResolving ? { status: "waiting" } : undefined}
+      meta={
+        <>
+          <MediaListRowMeta
+            sourceName={getResolvableSourceName(link, item)}
+            size={link.size}
           />
-          <span className="min-w-0 flex-1">
-            <FilenameText
-              value={link.label}
-              className="block text-sm md:text-lg"
+          {!isFolder && link.expiry !== undefined && (
+            <PlayableExpiryBadge
+              expiresAt={link.expiry}
+              expirySource={link.expirySource}
             />
-            <span className="block truncate text-xs text-muted-foreground">
-              {getResolvableSourceName(link, item)}
-            </span>
-          </span>
-          {Boolean(displaySize) && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {displaySize}
-            </span>
           )}
-          {!link.opened && <NewBadge />}
-          {isResolving ? (
-            <Spinner aria-label={`Loading playable links for ${link.label}…`} />
-          ) : mirrors.length > 0 ? (
-            <HugeiconsIcon
-              icon={ArrowRight01Icon}
-              className={cn(
-                "shrink-0 transition-transform",
-                isExpanded && "rotate-90"
-              )}
-            />
-          ) : null}
-        </button>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-          <ResolvableLinkMenu
+          {!link.opened && !isExpired && (
+            <NewBadge className="ms-auto md:hidden" />
+          )}
+        </>
+      }
+      trailing={
+        !link.opened && !isExpired ? (
+          <NewBadge className="hidden md:inline-flex" />
+        ) : undefined
+      }
+      overlay={
+        !isResolving && linkTarget !== undefined ? (
+          <LinkActionsDotMenu
             itemLabel={link.label}
-            onCopyLink={() => void navigator.clipboard.writeText(linkTarget)}
-            onRefresh={refreshLink}
-            onRemove={onRemove}
+            onCopyLink={copyLink}
+            onOpenInPlayer={openLinkInPlayer}
+            isPlayable={!isFolder && !isExpired}
+            className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+            removeRequest={
+              isFolder
+                ? {
+                    url: linkTarget,
+                    onRemove: () =>
+                      actions.removeLink?.(item.url, linkKey, linkTarget),
+                  }
+                : undefined
+            }
+            removeLabel={isFolder ? "Remove folder" : undefined}
           />
-        </div>
-      </div>
-      {mirrors.length > 0 && isExpanded && (
-        <ResolvedMirrorRows
-          mirrors={mirrors}
-          sourceLink={link}
-          itemUrl={item.url}
-          actions={actions}
-        />
-      )}
-    </div>
+        ) : undefined
+      }
+      onActivate={onActivate}
+      disabled={isExpired}
+      isOpened={link.opened === true}
+      shouldStackIconOnMobile={
+        shouldStackEpisodeStill && shouldShowEpisodeStillForLink
+      }
+      buttonClassName={isExpired ? "text-muted-foreground" : undefined}
+      buttonDataAttributes={{
+        "data-folder-state": isFolder
+          ? getFolderVisualState(link, false)
+          : undefined,
+      }}
+    />
   )
 }
 
@@ -507,6 +632,7 @@ const FinderBrowser = ({
   actions,
   extractingItems,
   onExit,
+  shouldShowRowPosters = false,
 }: FinderBrowserProps) => {
   const [isMobileFolderTreeOpen, setIsMobileFolderTreeOpen] = useState(false)
   const {
@@ -516,9 +642,78 @@ const FinderBrowser = ({
     contentRef,
     openFolder,
     openLink,
+    navigateToParentFolder,
     selectRoot,
-  } = useFinderBrowserState({ item, actions })
+  } = useFinderBrowserState({ item, actions, onExit })
   const currentFolderLabel = folderPath.at(-1)?.label ?? getItemTitle(item)
+  const parentFolderName =
+    folderPath.map((folderLevel) => folderLevel.label).join(" ") || undefined
+  const episodeListingLabels = getEpisodeListingLabels(
+    currentLinks,
+    parentFolderName
+  )
+  const shouldShowEpisodeStills =
+    shouldShowRowPosters &&
+    episodeListingLabels.length > 0 &&
+    isEpisodeOnlyListing(episodeListingLabels, parentFolderName)
+  const sharedSeasonIdentity = useMemo(
+    () =>
+      shouldShowRowPosters
+        ? getSharedSeasonIdentity(episodeListingLabels, parentFolderName)
+        : undefined,
+    [episodeListingLabels, parentFolderName, shouldShowRowPosters]
+  )
+  const headerTitle = sharedSeasonIdentity?.displayTitle ?? getItemTitle(item)
+  const seasonArtworkRequest = useMemo<MediaArtworkRequest | undefined>(() => {
+    if (!sharedSeasonIdentity) {
+      return undefined
+    }
+    // A stored pick is authoritative: resolve by immutable id instead of
+    // matching the season title again.
+    const storedArtwork = getLinkViewItemMetadata(item).artwork
+    if (storedArtwork) {
+      return {
+        mediaKind: storedArtwork.mediaKind ?? "tv",
+        title: storedArtwork.title,
+        providerId: storedArtwork.providerId,
+        year: storedArtwork.year,
+      }
+    }
+    return {
+      mediaKind: "tv",
+      title: sharedSeasonIdentity.requestTitle,
+      year: sharedSeasonIdentity.year,
+      seasonNumber: sharedSeasonIdentity.seasonNumber,
+    }
+  }, [item, sharedSeasonIdentity])
+  const sortedCurrentLinks = useMemo(() => {
+    if (!sharedSeasonIdentity) {
+      return currentLinks
+    }
+    const linkEntries = currentLinks.map((link, linkIndex) => ({
+      link,
+      linkIndex,
+    }))
+    return linkEntries
+      .toSorted(
+        (firstEntry, secondEntry) =>
+          (parseMediaFilename(firstEntry.link.label, parentFolderName)
+            .episodeNumber ?? firstEntry.linkIndex) -
+          (parseMediaFilename(secondEntry.link.label, parentFolderName)
+            .episodeNumber ?? secondEntry.linkIndex)
+      )
+      .map((entry) => entry.link)
+  }, [currentLinks, parentFolderName, sharedSeasonIdentity])
+  const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay(
+    shouldShowRowPosters ? "episode" : "filename"
+  )
+  const currentTitleDisplay = shouldShowEpisodeStills
+    ? titleDisplay
+    : "filename"
+  const getRowDisplayTitle = (link: ExtractedLink) =>
+    currentTitleDisplay === "episode"
+      ? (getMediaDisplayTitle(link.label, parentFolderName) ?? link.label)
+      : link.label
 
   if (rootLinks.length === 0) {
     return (
@@ -527,89 +722,115 @@ const FinderBrowser = ({
         actions={actions}
         extractingItems={extractingItems}
         onExit={onExit}
+        contentRef={contentRef}
       />
     )
   }
 
   return (
-    <section className="flex h-svh flex-col overflow-hidden bg-background">
-      <header className="flex min-h-16 shrink-0 items-center gap-3 border-b bg-background px-4 py-3 md:grid md:grid-cols-[16rem_minmax(0,1fr)_4rem] md:items-stretch md:gap-0 md:p-0">
-        <div className="contents md:block md:h-full md:border-r">
-          <Button
-            variant="ghost"
-            className="text-base hover:bg-transparent hover:text-foreground md:h-full md:w-full md:justify-center md:rounded-none md:px-4 md:hover:bg-muted/70"
-            onClick={onExit}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
-            Back
-          </Button>
-        </div>
-        <div className="min-w-0 flex-1 md:flex md:w-full md:items-center md:px-4 md:py-3">
+    <section
+      className={cn(
+        SAVE_LIST_BROWSER_LAYOUT_CLASS,
+        "flex h-svh flex-col overflow-hidden bg-background"
+      )}
+    >
+      <header className={SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS}>
+        <SaveListBackButton onNavigateBack={navigateToParentFolder} />
+        <div className="min-w-0 md:flex md:w-full md:items-center md:px-4 md:py-3">
           <h1
-            aria-label={getItemTitle(item)}
-            className="w-full min-w-0 text-base font-normal"
+            aria-label={headerTitle}
+            className="hidden w-full min-w-0 text-base font-normal md:block"
           >
-            <FilenameText
-              value={getItemTitle(item)}
+            <ExpandableFilename
+              value={headerTitle}
               clampClassName="line-clamp-1"
               className="w-full"
             />
           </h1>
         </div>
-        <div className="contents md:flex md:h-full md:items-center md:justify-center md:[&_button]:text-base md:[&_svg]:size-5!">
+        {shouldShowEpisodeStills ? (
+          <div className="flex items-center justify-center px-1 md:px-0">
+            <FolderTitleDisplayToggleButton
+              titleDisplay={titleDisplay}
+              onToggle={toggleTitleDisplay}
+            />
+          </div>
+        ) : null}
+        <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
           <LinkItemMenu
             item={item}
             actions={actions}
             showRemove
             onRemoved={onExit}
             isRefreshing={extractingItems.has(item.url)}
+            triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
           />
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[16rem_minmax(0,1fr)] md:grid-rows-1">
-        <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
-          <MobileFolderTreeToggle
-            currentFolderLabel={currentFolderLabel}
-            isOpen={isMobileFolderTreeOpen}
-            onToggle={() =>
-              setIsMobileFolderTreeOpen(
-                (currentIsMobileFolderTreeOpen) =>
-                  !currentIsMobileFolderTreeOpen
-              )
-            }
-          />
-          <div
-            className={cn(
-              "mt-2 max-h-[40svh] overflow-y-auto pr-1",
-              !isMobileFolderTreeOpen && "hidden",
-              "md:mt-0 md:block md:max-h-none md:overflow-visible md:pr-0"
-            )}
-          >
-            <FolderTree
-              rootLabel={getItemTitle(item)}
-              folderPath={folderPath}
-              links={rootLinks}
-              onSelectRoot={() => {
-                selectRoot()
-                setIsMobileFolderTreeOpen(false)
-              }}
-              onSelectFolder={(link, path) => {
-                void openFolder(link, path)
-                setIsMobileFolderTreeOpen(false)
-              }}
+      <div
+        className={
+          sharedSeasonIdentity
+            ? HYBRID_GROUP_CONTENT_CLASS
+            : FINDER_FOLDER_CONTENT_GRID_CLASS
+        }
+      >
+        {sharedSeasonIdentity ? (
+          <aside className="border-b bg-muted/50 p-4 md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
+            <SeasonArtworkPanel
+              displayTitle={sharedSeasonIdentity.displayTitle}
+              artworkRequest={seasonArtworkRequest}
             />
-          </div>
-        </aside>
+          </aside>
+        ) : (
+          <aside className="min-w-0 overflow-x-hidden border-b px-4 py-3 md:border-r md:border-b-0 md:p-3">
+            <MobileFolderTreeToggle
+              currentFolderLabel={currentFolderLabel}
+              isOpen={isMobileFolderTreeOpen}
+              onToggle={() =>
+                setIsMobileFolderTreeOpen(
+                  (currentIsMobileFolderTreeOpen) =>
+                    !currentIsMobileFolderTreeOpen
+                )
+              }
+            />
+            <div
+              className={cn(
+                "mt-2 max-h-[40svh] overflow-y-auto pr-1",
+                !isMobileFolderTreeOpen && "hidden",
+                "md:mt-0 md:block md:max-h-none md:overflow-visible md:pr-0"
+              )}
+            >
+              <FolderTree
+                rootLabel={getItemTitle(item)}
+                folderPath={folderPath}
+                links={rootLinks}
+                onSelectRoot={() => {
+                  selectRoot()
+                  setIsMobileFolderTreeOpen(false)
+                }}
+                onSelectFolder={(link, path) => {
+                  void openFolder(link, path)
+                  setIsMobileFolderTreeOpen(false)
+                }}
+              />
+            </div>
+          </aside>
+        )}
 
         <div
           ref={contentRef}
-          className="min-h-0 overflow-y-auto overscroll-contain"
+          className={cn(
+            "min-h-0 overscroll-x-none",
+            sharedSeasonIdentity
+              ? "md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain"
+              : "overflow-x-hidden overflow-y-auto overscroll-y-contain"
+          )}
         >
-          {currentLinks.map((link) => {
+          {sortedCurrentLinks.map((link) => {
             const linkKey = getLinkKey(link)
-            const linkTarget = getMediaNodeTarget(link)
-            if (isMirrorResolvable(link)) {
+            const linkTarget = getMediaNodeTargetOrUndefined(link)
+            if (linkTarget !== undefined && isMirrorResolvable(link)) {
               return (
                 <ResolvableContainerRow
                   key={linkKey}
@@ -617,114 +838,121 @@ const FinderBrowser = ({
                   link={link}
                   actions={actions}
                   isResolving={extractingItems.has(linkTarget)}
+                  episodeStill={
+                    shouldShowEpisodeStills &&
+                    hasEpisodeMarker(link.label, parentFolderName)
+                      ? {
+                          label: link.label,
+                          parentFolderName,
+                        }
+                      : undefined
+                  }
+                  displayTitle={getRowDisplayTitle(link)}
                   onRemove={() =>
                     actions.removeLink?.(item.url, linkKey, linkTarget)
                   }
                 />
               )
             }
-            const isFolder = getMediaNodeInteractionState(link).isFolder
-            const isExpired =
-              !isFolder &&
-              link.expiry !== undefined &&
-              link.expiry <= Date.now()
-            const isResolving = extractingItems.has(linkTarget)
-            const copyLink = () => {
-              void navigator.clipboard.writeText(linkTarget)
-            }
-            const openLinkInPlayer = async (player: PlayerDefinition) => {
-              const result = await openInSpecificPlayer(linkTarget, player)
-              markAfterAcceptedHandoff({
-                accepted: result.expectsNavigation,
-                itemLabel: link.label,
-                markOpened: () => actions.markOpened(item.url, linkTarget),
-              })
-            }
 
             return (
-              <div
+              <FinderBrowserLinkRow
                 key={linkKey}
-                className="flex flex-col border-b last:border-b-0"
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    disabled={isExpired}
-                    data-folder-state={
-                      isFolder ? getFolderVisualState(link, false) : undefined
-                    }
-                    className={cn(
-                      "flex min-h-24 w-full items-center gap-3 px-4 py-6 text-left",
-                      !isExpired && "hover:bg-muted",
-                      !isFolder && "pr-16",
-                      link.opened &&
-                        !isExpired &&
-                        "bg-sky-500/15 hover:bg-sky-500/20",
-                      isExpired &&
-                        "cursor-not-allowed text-muted-foreground opacity-60"
-                    )}
-                    onClick={() => void openLink(link)}
-                  >
-                    <SaveListRowIcon
-                      icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
-                      className={
-                        isExpired ? "text-muted-foreground" : undefined
-                      }
-                    />
-                    <span className="min-w-0 flex-1">
-                      <FilenameText
-                        value={link.label}
-                        className="block text-sm md:text-lg"
-                        textClassName={isExpired ? "line-through" : undefined}
-                      />
-                      {!link.opened && !isExpired && (
-                        <NewBadge className="mt-2 md:hidden" />
-                      )}
-                      {link.expiry !== undefined && (
-                        <span className="mt-1 flex justify-end text-xs text-muted-foreground">
-                          <PlayableExpiryBadge
-                            expiresAt={link.expiry}
-                            expirySource={link.expirySource}
-                          />
-                        </span>
-                      )}
-                    </span>
-                    {link.size && (
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {link.size}
-                      </span>
-                    )}
-                    {!link.opened && !isExpired && (
-                      <NewBadge className="hidden md:inline-flex" />
-                    )}
-                    {isResolving ? (
-                      <Spinner aria-label={`Loading ${link.label}…`} />
-                    ) : isFolder ? (
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        className="shrink-0 text-foreground"
-                      />
-                    ) : null}
-                  </button>
-                  {!isFolder && !isResolving && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <LinkActionsDotMenu
-                        itemLabel={link.label}
-                        onCopyLink={copyLink}
-                        onOpenInPlayer={openLinkInPlayer}
-                        isPlayable={!isExpired}
-                        className="size-9 shrink-0 text-foreground"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+                item={item}
+                link={link}
+                linkKey={linkKey}
+                actions={actions}
+                extractingItems={extractingItems}
+                parentFolderName={parentFolderName}
+                shouldShowEpisodeStills={shouldShowEpisodeStills}
+                shouldStackEpisodeStill={Boolean(sharedSeasonIdentity)}
+                shouldShowRowPosters={shouldShowRowPosters}
+                titleDisplay={currentTitleDisplay}
+                displayTitle={getRowDisplayTitle(link)}
+                onActivate={() => void openLink(link)}
+              />
             )
           })}
         </div>
       </div>
     </section>
   )
+}
+
+interface SaveListRootRowIconProps {
+  readonly item: LinkListItem
+  readonly isExtracting: boolean
+  readonly shouldShowRowPosters: boolean
+  readonly directLinkLabel: string | undefined
+  readonly itemTitle: string
+  readonly isDirectLinkExpired: boolean
+}
+
+interface SaveListRootRowFallbackIconProps {
+  readonly isExtractionVisual: boolean
+  readonly didExtractionFail: boolean
+  readonly directLinkLabel: string | undefined
+}
+
+const SaveListRootRowFallbackIcon = ({
+  isExtractionVisual,
+  didExtractionFail,
+  directLinkLabel,
+}: SaveListRootRowFallbackIconProps) => {
+  if (isExtractionVisual && didExtractionFail) {
+    return <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
+  }
+
+  if (isExtractionVisual) {
+    return <Spinner aria-hidden="true" className="size-6" />
+  }
+
+  if (directLinkLabel) {
+    return <HugeiconsIcon icon={PlayIcon} className="size-6" />
+  }
+
+  return <HugeiconsIcon icon={Folder01Icon} className="size-6" />
+}
+
+const SaveListRootRowIcon = ({
+  item,
+  isExtracting,
+  shouldShowRowPosters,
+  directLinkLabel,
+  itemTitle,
+  isDirectLinkExpired,
+}: SaveListRootRowIconProps) => {
+  const extractionInput = getExtractionStatusInput(item, isExtracting)
+  const didExtractionFail = extractionInput === "failed"
+  const isExtractionVisual = extractionInput !== "idle"
+  const fallbackIcon = (
+    <SaveListRootRowFallbackIcon
+      isExtractionVisual={isExtractionVisual}
+      didExtractionFail={didExtractionFail}
+      directLinkLabel={directLinkLabel}
+    />
+  )
+
+  if (shouldShowRowPosters) {
+    return (
+      <SaveListRowPoster
+        label={directLinkLabel ?? itemTitle}
+        isContainer={!directLinkLabel}
+        fallbackIcon={fallbackIcon}
+        isDimmed={isDirectLinkExpired}
+      />
+    )
+  }
+  if (directLinkLabel) {
+    return (
+      <SaveListRowIcon
+        className={isDirectLinkExpired ? "text-muted-foreground" : undefined}
+      >
+        {fallbackIcon}
+      </SaveListRowIcon>
+    )
+  }
+  return <SaveListRowIcon>{fallbackIcon}</SaveListRowIcon>
 }
 
 export const SaveListBrowser = ({
@@ -736,6 +964,7 @@ export const SaveListBrowser = ({
   highlightedId,
   isHydrating,
   currentTimeMs = Date.now(),
+  shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
@@ -747,44 +976,26 @@ export const SaveListBrowser = ({
         actions={actions}
         extractingItems={extractingItems}
         onExit={() => onSelectedItemUrlChange(null)}
+        shouldShowRowPosters={shouldShowRowPosters}
       />
     )
   }
 
   if (isHydrating) {
-    return (
-      <div
-        className="flex min-h-56 items-center justify-center"
-        role="status"
-        aria-label="Loading saved links…"
-      >
-        <Spinner aria-hidden="true" />
-      </div>
-    )
+    return <SaveListLoadingState label="Loading saved links…" />
   }
 
   if (items.length === 0) {
-    return (
-      <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
-        <HugeiconsIcon
-          icon={Archive04Icon}
-          className="size-7 text-foreground"
-        />
-        <p className="font-medium">No saved links</p>
-      </div>
-    )
+    return <SaveListEmptyState />
   }
 
   const groupedItems = groupSaveListItems(items, currentTimeMs)
 
   return (
-    <section className="flex flex-col gap-8">
+    <section className={SAVE_LIST_SECTION_STACK_CLASS}>
       {groupedItems.map((group) => (
-        <div key={group.key} className="flex flex-col gap-2">
-          <h2 className="px-2 text-sm font-medium text-muted-foreground">
-            {group.label}
-          </h2>
-          <div className="flex flex-col divide-y divide-border/70">
+        <SaveDateGroupSection key={group.key} label={group.label}>
+          <div className="stagger-children flex flex-col divide-y divide-border/70">
             {group.items.map((item) => {
               const itemKey = item.id ?? item.url
               const view = toLinkViewModel(item)
@@ -800,12 +1011,15 @@ export const SaveListBrowser = ({
               const isRootItemNew =
                 !isExtractionIncomplete && interactionState.isNew
 
+              const directLinkTarget = directLink
+                ? getMediaNodeTargetOrUndefined(directLink)
+                : undefined
               if (
                 directLink &&
                 isResolvableContainer &&
+                directLinkTarget !== undefined &&
                 !isExtractionIncomplete
               ) {
-                const directLinkTarget = getMediaNodeTarget(directLink)
                 return (
                   <ResolvableContainerRow
                     key={itemKey}
@@ -821,35 +1035,36 @@ export const SaveListBrowser = ({
               return (
                 <div
                   key={itemKey}
-                  className="group relative"
+                  className={cn(
+                    "group relative flex items-stretch",
+                    SAVE_LIST_ROW_ENTER_ANIMATION_CLASS
+                  )}
                   data-highlighted={
                     highlightedId === item.id ? true : undefined
                   }
                   data-extraction-state={extractionState}
                 >
-                  <div
-                    className={cn(
-                      "relative flex min-h-20 w-full items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5",
-                      !isDirectLinkExpired &&
-                        !isExtractionIncomplete &&
-                        "hover:bg-muted/70",
-                      directLink?.opened &&
-                        !isDirectLinkExpired &&
-                        "bg-sky-500/15 hover:bg-sky-500/20"
-                    )}
-                  >
+                  <div className="flex min-h-20 min-w-0 flex-1 items-center gap-0 px-3 py-4 md:gap-3 md:px-4 md:py-5">
                     <button
                       type="button"
                       disabled={isDirectLinkExpired || isExtractionIncomplete}
-                      aria-label={
-                        isExtractionIncomplete
-                          ? `${getExtractionStatusLabel(item, isExtracting)} for ${getItemTitle(item)}`
-                          : directLink
-                            ? `Open ${directLink.label || getItemTitle(item)}`
-                            : `View ${getItemTitle(item)}`
-                      }
+                      aria-label={getSaveListItemAriaLabel({
+                        itemTitle: getItemTitle(item),
+                        directLink,
+                        isExtractionIncomplete,
+                        extractionStatusLabel: getExtractionStatusLabel(
+                          item,
+                          isExtracting
+                        ),
+                      })}
                       className={cn(
-                        "absolute inset-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        !isDirectLinkExpired &&
+                          !isExtractionIncomplete &&
+                          MEDIA_LIST_ROW_HOVER_TINT_CLASS,
+                        directLink?.opened &&
+                          !isDirectLinkExpired &&
+                          MEDIA_LIST_ROW_OPENED_TINT_CLASS,
                         (isDirectLinkExpired || isExtractionIncomplete) &&
                           "cursor-not-allowed"
                       )}
@@ -858,19 +1073,20 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          const directLinkTarget =
-                            getMediaNodeTarget(directLink)
                           void actions
                             .play(directLink)
                             .then((result) =>
                               markAfterAcceptedHandoff({
                                 ...result,
                                 itemLabel: directLink.label,
-                                markOpened: () =>
-                                  actions.markOpened(
-                                    item.url,
-                                    directLinkTarget
-                                  ),
+                                markOpened: () => {
+                                  if (directLinkTarget !== undefined) {
+                                    actions.markOpened(
+                                      item.url,
+                                      directLinkTarget
+                                    )
+                                  }
+                                },
                               })
                             )
                             .catch(console.error)
@@ -882,124 +1098,99 @@ export const SaveListBrowser = ({
                     />
                     <div
                       className={cn(
-                        "pointer-events-none relative min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
+                        "pointer-events-none relative z-2 min-w-0 flex-1 items-center gap-2 text-left md:gap-3",
                         "flex",
                         isDirectLinkExpired &&
                           "text-muted-foreground opacity-60",
                         isExtractionIncomplete && "text-muted-foreground"
                       )}
                     >
-                      {isExtractionIncomplete ? (
-                        <SaveListRowIcon icon={PackageSearchIcon} />
-                      ) : directLink ? (
-                        <SaveListRowIcon
-                          icon={PlayIcon}
-                          className={
-                            isDirectLinkExpired
-                              ? "text-muted-foreground"
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <SaveListRowIcon icon={Folder01Icon} />
-                      )}
+                      <SaveListRootRowIcon
+                        item={item}
+                        isExtracting={isExtracting}
+                        shouldShowRowPosters={shouldShowRowPosters}
+                        directLinkLabel={directLink?.label}
+                        itemTitle={getItemTitle(item)}
+                        isDirectLinkExpired={isDirectLinkExpired}
+                      />
                       <span className="min-w-0 flex-1">
-                        <FilenameText
-                          value={directLink?.label || getItemTitle(item)}
-                          className="block text-sm font-normal [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-10 md:text-base"
-                          textClassName={
-                            isDirectLinkExpired ? "line-through" : undefined
-                          }
-                        />
-                        {isExtractionIncomplete ? (
-                          <div className="mt-1 min-w-0">
-                            <SaveExtractionStatus
-                              item={item}
-                              isRefreshing={isExtracting}
+                        <ExtractionStatusTitle
+                          {...getExtractionStatusTitleSpec(item, isExtracting)}
+                          titleClassName={MEDIA_LIST_ROW_TITLE_CLASS}
+                        >
+                          <ExpandableFilename
+                            value={directLink?.label || getItemTitle(item)}
+                            className={MEDIA_LIST_ROW_TITLE_CLASS}
+                            textClassName={
+                              isDirectLinkExpired ? "line-through" : undefined
+                            }
+                            isInsideActivationOverlay
+                          />
+                          <span className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground md:flex-nowrap">
+                            <MediaListRowMeta
+                              sourceName={
+                                view.sourceName || view.pluginName || item.url
+                              }
+                              size={directLink?.size}
+                              itemCount={
+                                directLink
+                                  ? undefined
+                                  : view.extractedLinks.length
+                              }
                             />
-                          </div>
-                        ) : (
-                          <span className="mt-1 flex min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:gap-1.5">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <span className="min-w-0 truncate">
-                                {view.sourceName || view.pluginName || item.url}
-                              </span>
-                              {directLink?.size && (
-                                <span className="flex shrink-0 items-center gap-1.5">
-                                  <span aria-hidden="true">·</span>
-                                  <span>{directLink.size}</span>
+                            {directLink?.expiry !== undefined && (
+                              <>
+                                <span
+                                  aria-hidden="true"
+                                  className="hidden md:inline"
+                                >
+                                  ·
                                 </span>
-                              )}
-                            </span>
-                            {!directLink && (
-                              <span className="flex items-center gap-2 md:hidden">
-                                <span className="md:hidden">
-                                  {view.extractedLinks.length} items
-                                </span>
-                                {isRootItemNew && (
-                                  <NewBadge className="md:hidden" />
-                                )}
-                              </span>
+                                <PlayableExpiryBadge
+                                  expiresAt={directLink.expiry}
+                                  expirySource={directLink.expirySource}
+                                />
+                              </>
                             )}
-                            {directLink &&
-                              (isRootItemNew ||
-                                directLink.expiry !== undefined) && (
-                                <span className="flex flex-col items-start gap-1 md:flex-row md:items-center md:gap-1.5">
-                                  {directLink.expiry !== undefined && (
-                                    <>
-                                      <span
-                                        aria-hidden="true"
-                                        className="hidden md:inline"
-                                      >
-                                        ·
-                                      </span>
-                                      <PlayableExpiryBadge
-                                        expiresAt={directLink.expiry}
-                                        expirySource={directLink.expirySource}
-                                      />
-                                    </>
-                                  )}
-                                  {isRootItemNew && (
-                                    <NewBadge className="md:hidden" />
-                                  )}
-                                </span>
-                              )}
+                            {isRootItemNew && (
+                              <NewBadge className="ms-auto md:hidden" />
+                            )}
                           </span>
+                        </ExtractionStatusTitle>
+                        {extractionState === "failed" && (
+                          <ExtractionFailedActions
+                            item={item}
+                            onDelete={() => actions.remove(item.url, item.id)}
+                            className="mt-1.5"
+                          />
                         )}
                       </span>
                     </div>
                     {isRootItemNew && (
                       <NewBadge className="relative z-10 hidden md:inline-flex" />
                     )}
-                    {!directLink && !isExtractionIncomplete && (
-                      <span className="pointer-events-none relative z-10 hidden shrink-0 text-xs text-muted-foreground md:inline">
-                        {view.extractedLinks.length} items
-                      </span>
+                  </div>
+                  <div
+                    className={cn(
+                      "relative z-2 flex items-center justify-center",
+                      MEDIA_LIST_ROW_MENU_CELL_CLASS
                     )}
-                    <span className="relative z-10">
-                      <LinkItemMenu
-                        item={item}
-                        actions={actions}
-                        playableLink={directLink}
-                        isPlayableLinkExpired={isDirectLinkExpired}
-                        showRemove
-                        isRefreshing={isExtracting}
-                      />
-                    </span>
-                    {!directLink &&
-                      !isExtractionIncomplete &&
-                      !isExtracting && (
-                        <HugeiconsIcon
-                          icon={ArrowRight01Icon}
-                          className="pointer-events-none relative z-10 shrink-0 text-foreground"
-                        />
-                      )}
+                  >
+                    <LinkItemMenu
+                      item={item}
+                      actions={actions}
+                      playableLink={directLink}
+                      isPlayableLinkExpired={isDirectLinkExpired}
+                      showRemove
+                      isRefreshing={isExtracting}
+                      triggerClassName={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+                    />
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
+        </SaveDateGroupSection>
       ))}
     </section>
   )

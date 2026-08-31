@@ -1,4 +1,5 @@
 import * as React from "react"
+import type { ReactNode } from "react"
 import { cn } from "~/lib/utils"
 import { getFilenameBreakSegments } from "~/components/filename-text-segments"
 
@@ -7,6 +8,8 @@ interface FilenameTextProps {
   className?: string
   textClassName?: string
   clampClassName?: string
+  isExpanded?: boolean
+  toggle?: ReactNode
 }
 
 interface FilenameSegmentsProps {
@@ -37,6 +40,23 @@ const appendFilenameSegments = (element: HTMLElement, value: string) => {
   })
 }
 
+const doesFilenameCandidateFit = (
+  measurementElement: HTMLElement,
+  textElement: HTMLSpanElement,
+  candidate: string
+): boolean => {
+  measurementElement.replaceChildren()
+  appendFilenameSegments(measurementElement, candidate.trimEnd())
+  measurementElement.appendChild(document.createTextNode(" "))
+
+  const controlElement = document.createElement("span")
+  controlElement.style.fontWeight = "500"
+  controlElement.textContent = "See more"
+  measurementElement.appendChild(controlElement)
+
+  return measurementElement.scrollHeight <= textElement.clientHeight
+}
+
 const createMeasurementElement = (
   sourceElement: HTMLSpanElement,
   value: string,
@@ -54,25 +74,18 @@ const createMeasurementElement = (
 const getCollapsedValue = (textElement: HTMLSpanElement, value: string) => {
   const measurementElement = createMeasurementElement(textElement, "")
 
-  const doesCandidateFit = (candidate: string) => {
-    measurementElement.replaceChildren()
-    appendFilenameSegments(measurementElement, candidate.trimEnd())
-    measurementElement.appendChild(document.createTextNode(" "))
-
-    const controlElement = document.createElement("span")
-    controlElement.style.fontWeight = "500"
-    controlElement.textContent = "See more"
-    measurementElement.appendChild(controlElement)
-
-    return measurementElement.scrollHeight <= textElement.clientHeight
-  }
-
   let minimumLength = 0
   let maximumLength = value.length
 
   while (minimumLength < maximumLength) {
     const candidateLength = Math.ceil((minimumLength + maximumLength) / 2)
-    if (doesCandidateFit(value.slice(0, candidateLength))) {
+    if (
+      doesFilenameCandidateFit(
+        measurementElement,
+        textElement,
+        value.slice(0, candidateLength)
+      )
+    ) {
       minimumLength = candidateLength
     } else {
       maximumLength = candidateLength - 1
@@ -103,13 +116,32 @@ const measureCollapsedFilename = (
   return { collapsedValue, doesOverflow }
 }
 
-export const FilenameText = ({
-  value,
-  className,
-  textClassName,
-  clampClassName = DEFAULT_CLAMP_CLASS_NAME,
-}: FilenameTextProps) => {
-  const [isExpanded, setIsExpanded] = React.useState(false)
+const observeFilenameResize = (
+  textElement: HTMLSpanElement,
+  updateOverflowState: () => void
+) => {
+  if (globalThis.ResizeObserver === undefined) {
+    window.addEventListener("resize", updateOverflowState)
+    return () => window.removeEventListener("resize", updateOverflowState)
+  }
+
+  const resizeObserver = new ResizeObserver(updateOverflowState)
+  resizeObserver.observe(textElement)
+
+  return () => resizeObserver.disconnect()
+}
+
+interface FilenameMeasurementState {
+  readonly isOverflowing: boolean
+  readonly collapsedValue: string
+  readonly containerRef: React.RefObject<HTMLSpanElement | null>
+}
+
+const useFilenameMeasurement = (
+  value: string,
+  clampClassName: string,
+  isExpanded: boolean
+): FilenameMeasurementState => {
   const [isOverflowing, setIsOverflowing] = React.useState(false)
   const [collapsedValue, setCollapsedValue] = React.useState(value)
   const containerRef = React.useRef<HTMLSpanElement>(null)
@@ -136,48 +168,29 @@ export const FilenameText = ({
     }
 
     updateOverflowState()
-    if (globalThis.ResizeObserver === undefined) {
-      window.addEventListener("resize", updateOverflowState)
-      return () => window.removeEventListener("resize", updateOverflowState)
-    }
-
-    const resizeObserver = new ResizeObserver(updateOverflowState)
-    resizeObserver.observe(textElement)
-
-    return () => resizeObserver.disconnect()
+    return observeFilenameResize(textElement, updateOverflowState)
   }, [clampClassName, isExpanded, value])
 
-  const toggleExpanded = (event: React.SyntheticEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setIsExpanded((currentIsExpanded) => !currentIsExpanded)
-  }
+  return { collapsedValue, containerRef, isOverflowing }
+}
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault()
-      event.stopPropagation()
-      setIsExpanded((currentIsExpanded) => !currentIsExpanded)
-    }
-  }
+export const FilenameText = ({
+  value,
+  className,
+  textClassName,
+  clampClassName = DEFAULT_CLAMP_CLASS_NAME,
+  isExpanded = false,
+  toggle,
+}: FilenameTextProps) => {
+  const { collapsedValue, containerRef, isOverflowing } =
+    useFilenameMeasurement(value, clampClassName, isExpanded)
 
   return (
     <span ref={containerRef} className={cn("block min-w-0", className)}>
       <span className={cn("break-words", textClassName)}>
         <FilenameSegments value={isExpanded ? value : collapsedValue} />
       </span>
-      {isOverflowing && (
-        <span
-          role="button"
-          tabIndex={0}
-          aria-expanded={isExpanded}
-          className="ml-1 inline cursor-pointer font-medium text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          onClick={toggleExpanded}
-          onKeyDown={handleKeyDown}
-        >
-          {isExpanded ? "See less" : "See more"}
-        </span>
-      )}
+      {isOverflowing && toggle}
     </span>
   )
 }

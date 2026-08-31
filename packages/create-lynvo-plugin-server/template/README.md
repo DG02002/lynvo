@@ -83,6 +83,5 @@ upgrading the Worker.
 
 ## License
 
-The initial template files are provided under the MIT License. See
-[LICENSE](LICENSE). You may choose different terms for your own Plugin Server
-after generation.
+The initial template files use the MIT License. See [LICENSE](LICENSE). You may
+choose different terms for your own Plugin Server after generation.

@@ -21,8 +21,7 @@ const environment: LynvoPluginServerBindings = {
     tag: "",
     timestamp: "2026-08-18T00:00:00.000Z",
   },
-  PUBLIC_ASSET_ORIGIN:
-    "https://lynvo.dg02002.workers.dev/lynvo-plugin-server-assets",
+  PUBLIC_ASSET_ORIGIN: "http://localhost:5173/lynvo-plugin-server-assets",
   PLUGIN_SERVER_AUTH_KEY: "test-api-key",
   LYNVO_PLUGIN_SERVER_USAGE_LIMITER: unusedUsageLimiter,
 }

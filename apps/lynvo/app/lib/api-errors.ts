@@ -20,17 +20,24 @@ export const apiErrorResponseSchema = Schema.Struct({
 export type ApiErrorCode = typeof apiErrorCodeSchema.Type
 export type ApiErrorResponse = typeof apiErrorResponseSchema.Type
 
+interface ApiResponseErrorDetails {
+  code: ApiErrorCode | "unknown"
+  message: string
+  retryable?: boolean
+  requestId?: string
+}
+
 export class ApiResponseError extends Error {
   readonly code: ApiErrorCode | "unknown"
   readonly retryable: boolean
   readonly requestId?: string
 
-  constructor(
-    code: ApiErrorCode | "unknown",
-    message: string,
+  constructor({
+    code,
+    message,
     retryable = false,
-    requestId?: string
-  ) {
+    requestId,
+  }: ApiResponseErrorDetails) {
     super(message)
     this.name = "ApiResponseError"
     this.code = code
@@ -51,30 +58,29 @@ export const readApiResponseError = async (
   try {
     value = await response.json()
   } catch {
-    return new ApiResponseError(
-      "unknown",
-      fallback,
-      false,
-      response.headers.get("x-request-id") ?? undefined
-    )
+    return new ApiResponseError({
+      code: "unknown",
+      message: fallback,
+      requestId: response.headers.get("x-request-id") ?? undefined,
+    })
   }
 
   const result = Schema.decodeUnknownResult(apiErrorResponseSchema)(value)
   if (Result.isFailure(result)) {
-    return new ApiResponseError(
-      "unknown",
-      fallback,
-      false,
-      response.headers.get("x-request-id") ?? undefined
-    )
+    return new ApiResponseError({
+      code: "unknown",
+      message: fallback,
+      requestId: response.headers.get("x-request-id") ?? undefined,
+    })
   }
 
-  return new ApiResponseError(
-    result.success.code,
-    result.success.error,
-    result.success.retryable,
-    result.success.requestId ??
+  return new ApiResponseError({
+    code: result.success.code,
+    message: result.success.error,
+    retryable: result.success.retryable,
+    requestId:
+      result.success.requestId ??
       response.headers.get("x-request-id") ??
-      undefined
-  )
+      undefined,
+  })
 }

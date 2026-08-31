@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { createRemoteCommandNotificationDelivery } from "../workers/remote-command-notification-delivery"
 import { createFakeD1Database } from "./support/fake-d1"
 
@@ -16,12 +16,11 @@ describe("remote command notification delivery", () => {
       {
         USER_REALTIME_ROOM: {
           getByName: () => ({
-            fetch: async () =>
-              Response.json({ deliveredSocketCount: 0 }),
+            fetch: async () => Response.json({ deliveredSocketCount: 0 }),
           }),
-        } as Env["USER_REALTIME_ROOM"],
+        },
       },
-      database as D1Database
+      database
     )
 
     await expect(
@@ -44,24 +43,22 @@ describe("remote command notification delivery", () => {
       }
       return undefined
     })
-    const environment = {
-      USER_REALTIME_ROOM: {
-        getByName: (userId: string) => ({
-          fetch: async (url: string, init?: RequestInit) => {
-            expect(url).toBe("https://realtime.internal/notify-inbox")
-            expect(userId).toBe("user-one")
-            const body = JSON.parse(String(init?.body)) as {
-              receiverId: string
-            }
-            notifiedReceivers.push(body.receiverId)
-            return Response.json({ deliveredSocketCount: 2 })
-          },
-        }),
-      } as Env["USER_REALTIME_ROOM"],
-    }
     const delivery = createRemoteCommandNotificationDelivery(
-      environment,
-      database as D1Database
+      {
+        USER_REALTIME_ROOM: {
+          getByName: (userId) => ({
+            fetch: async (url, init) => {
+              expect(url).toBe("https://realtime.internal/notify-inbox")
+              expect(userId).toBe("user-one")
+              const body = JSON.parse(String(init?.body))
+              expect(body).toEqual({ receiverId: "receiver-one" })
+              notifiedReceivers.push("receiver-one")
+              return Response.json({ deliveredSocketCount: 2 })
+            },
+          }),
+        },
+      },
+      database
     )
 
     await expect(
@@ -101,27 +98,29 @@ describe("remote command notification delivery", () => {
       }
       return undefined
     })
-    const deliveredTo: string[] = []
-    const environment = {
-      USER_REALTIME_ROOM: {
-        getByName: (userId: string) => ({
-          fetch: async (_url: string, init?: RequestInit) => {
-            const body = JSON.parse(String(init?.body)) as {
-              receiverId: string
-            }
-            deliveredTo.push(`${userId}:${body.receiverId}`)
-            return Response.json({ deliveredSocketCount: 1 })
-          },
-        }),
-      } as Env["USER_REALTIME_ROOM"],
-    }
+    const deliveredRequests: unknown[] = []
     const delivery = createRemoteCommandNotificationDelivery(
-      environment,
-      database as D1Database
+      {
+        USER_REALTIME_ROOM: {
+          getByName: (userId) => ({
+            fetch: async (_url, init) => {
+              deliveredRequests.push({
+                userId,
+                body: JSON.parse(String(init?.body)),
+              })
+              return Response.json({ deliveredSocketCount: 1 })
+            },
+          }),
+        },
+      },
+      database
     )
 
     await expect(delivery.drain()).resolves.toEqual({ kind: "completed" })
-    expect(deliveredTo).toEqual(["user-1:receiver-1", "user-2:receiver-2"])
+    expect(deliveredRequests).toEqual([
+      { userId: "user-1", body: { receiverId: "receiver-1" } },
+      { userId: "user-2", body: { receiverId: "receiver-2" } },
+    ])
     expect(pendingRows).toEqual([])
   })
 
@@ -146,19 +145,16 @@ describe("remote command notification delivery", () => {
             fetch: async () =>
               Response.json({ error: "room unavailable" }, { status: 500 }),
           }),
-        } as Env["USER_REALTIME_ROOM"],
+        },
       },
-      database as D1Database
+      database
     )
 
     await expect(delivery.drain()).resolves.toEqual({ kind: "unavailable" })
   })
 
   it("completes an empty drain without a database binding", async () => {
-    const delivery = createRemoteCommandNotificationDelivery(
-      {} as { readonly USER_REALTIME_ROOM?: Env["USER_REALTIME_ROOM"] },
-      undefined
-    )
+    const delivery = createRemoteCommandNotificationDelivery({}, undefined)
     await expect(delivery.drain()).resolves.toEqual({ kind: "completed" })
   })
 })

@@ -7,9 +7,14 @@ contentType: Conceptual
 
 <DocSection id="what-is-a-plugin">
 
-A Plugin is the Source-specific code inside a Plugin Server. It recognizes URLs from one website or service, fetches the Source data, and converts that data into Lynvo Media Nodes.
+A Plugin is the Source-specific code inside a Plugin Server. It recognizes URLs
+from one website or service, fetches the Source data, and converts it into
+Lynvo Media Nodes.
 
-For example, a Plugin may support a self-hosted file index. The Plugin matches that index’s domain, handles its authentication rules, reads its folders and files, and returns playable or lazy Media Nodes. The Plugin Server handles the shared protocol around that work.
+For example, a Plugin may support a self-hosted file index. It matches that
+index's domain, handles its authentication rules, reads its folders and files,
+and returns playable or lazy Media Nodes. The Plugin Server handles the shared
+protocol around that work.
 
 A Plugin should own:
 
@@ -20,13 +25,16 @@ A Plugin should own:
 - Playable, group, folder, and lazy-node creation
 - Source-specific errors and test fixtures
 
-A Plugin should not implement bearer authentication, protocol routes, global usage enforcement, or Lynvo interface behavior. Keep those concerns in the Plugin Server shell so every Plugin follows the same contract.
+A Plugin should not implement bearer authentication, protocol routes, global
+usage enforcement, or Lynvo interface behavior. Keep those concerns in the
+Plugin Server runtime so every Plugin follows the same contract.
 
 Register every user-visible Plugin under `extensions.lynvo.plugins`. Lynvo reads this catalog to show the Plugin in [Settings](/settings/plugins) and route supported URLs to the Plugin Server.
 
 ### How Plugin Servers and Plugins fit together
 
-The Plugin Server is the deployed service. Plugins are the Source integrations that run inside it:
+The Plugin Server is the deployed service. Plugins are the Source integrations
+that run inside it:
 
 1. Lynvo matches a URL against the Plugin Server Manifest
 2. Lynvo sends the Extraction request to the Plugin Server

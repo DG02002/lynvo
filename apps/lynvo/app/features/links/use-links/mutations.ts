@@ -1,4 +1,4 @@
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import type {
   ExtractedLink,
   LinkMetadata,
@@ -71,37 +71,20 @@ export const createLinksMutations = ({
         }
       })
       settleAndRefetch()
-      if (!silent) {
-        toast.success("Link removed")
-      }
     } catch {
       if (!silent) {
-        toast.error("The saved link couldn’t be removed. Try again.")
+        showErrorToast({
+          title: "Couldn’t remove the link",
+          description: "The saved link couldn’t be removed. Try again.",
+        })
       }
-    }
-  }
-
-  const clearLinks = async (): Promise<void> => {
-    try {
-      await runExclusive(async () => {
-        store.beginClear()
-        try {
-          await linksDataApi.clearSavedLinks()
-        } catch (error) {
-          settleAndRefetch()
-          throw error
-        }
-      })
-      settleAndRefetch()
-      toast.success("Saved links cleared")
-    } catch {
-      toast.error("Saved links couldn’t be cleared. Try again.")
     }
   }
 
   const persistLink = async (
     targetUrl: string,
-    item: LinkViewItem
+    item: LinkViewItem,
+    sourceUrl = targetUrl
   ): Promise<string | undefined> => {
     try {
       return await runExclusive(async () => {
@@ -109,7 +92,7 @@ export const createLinksMutations = ({
         try {
           const result = await linksDataApi.createOrUpdate({
             operationId: crypto.randomUUID(),
-            url: targetUrl,
+            url: sourceUrl,
             title: temporaryItem.title ?? targetUrl,
             meta: JSON.stringify(toJsonMetadata(temporaryItem.metadata)),
             extractionState:
@@ -148,10 +131,11 @@ export const createLinksMutations = ({
   }
 
   const enqueueLink = async (
-    targetUrl: string
+    targetUrl: string,
+    sourceUrl = targetUrl
   ): Promise<string | undefined> => {
     const { item } = await buildQueuedLinkViewItem(targetUrl)
-    return await persistLink(targetUrl, item)
+    return await persistLink(targetUrl, item, sourceUrl)
   }
 
   const toApiOperation = (
@@ -162,6 +146,12 @@ export const createLinksMutations = ({
       case "markOpened": {
         const { linkUrl } = operation
         return linkUrl ? { kind: "markOpened", linkUrl } : undefined
+      }
+      case "setArtwork": {
+        const { providerId, title, year, mediaKind } = operation
+        return providerId !== undefined && title !== undefined
+          ? { kind: "setArtwork", providerId, title, year, mediaKind }
+          : undefined
       }
       case "cacheMirrors": {
         const { lazyItemUrl, mirrors } = operation
@@ -261,6 +251,20 @@ export const createLinksMutations = ({
     )
   }
 
+  const setArtwork = (
+    itemUrl: string,
+    identity: MediaArtworkIdentity
+  ): void => {
+    const operation: LinkMetadataOperation = {
+      kind: "setArtwork",
+      providerId: identity.providerId,
+      title: identity.title,
+      year: identity.year,
+      mediaKind: identity.mediaKind,
+    }
+    void runMetadataUpdate(itemUrl, operation, (item) => item)
+  }
+
   const removeLink = (
     itemUrl: string,
     linkKey: string,
@@ -285,9 +289,6 @@ export const createLinksMutations = ({
             openedUrls: metadata.playback.openedUrls.filter(
               (openedUrl) => openedUrl !== linkUrl
             ),
-            openedIds: metadata.playback.openedIds.filter(
-              (openedId) => openedId !== linkKey
-            ),
           },
         })
       }
@@ -296,12 +297,12 @@ export const createLinksMutations = ({
 
   return {
     remove,
-    clearLinks,
     addLink,
     enqueueLink,
     updateLinks,
     markLinkAsOpened,
     cacheResolvedMirrors,
+    setArtwork,
     removeLink,
   }
 }

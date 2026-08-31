@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import {
   getUserPlayerPreferences,
   insertGoogleUser,
-  normalizePlayerId,
   updateUserPlayerPreferences,
 } from "../../workers/d1/users"
 import { getStorageLedger } from "../../workers/d1/storage-ledger"
@@ -21,9 +20,7 @@ describe("d1 player preferences", () => {
   it("returns empty preferences for a fresh account", async () => {
     const user = await createUser()
 
-    await expect(
-      getUserPlayerPreferences(env.DB, user.id)
-    ).resolves.toEqual({})
+    await expect(getUserPlayerPreferences(env.DB, user.id)).resolves.toEqual({})
   })
 
   it("stores and returns both player selections", async () => {
@@ -71,9 +68,7 @@ describe("d1 player preferences", () => {
     ).rejects.toThrow(
       "Choose Just (Video) Player, VLC for Android, MPV, or MX Player"
     )
-    await expect(
-      getUserPlayerPreferences(env.DB, user.id)
-    ).resolves.toEqual({})
+    await expect(getUserPlayerPreferences(env.DB, user.id)).resolves.toEqual({})
   })
 
   it("keeps the data version stable when nothing changes", async () => {
@@ -105,12 +100,5 @@ describe("d1 player preferences", () => {
     expect(afterWrite?.profileBytes).toBeGreaterThan(
       beforeWrite?.profileBytes ?? 0
     )
-  })
-
-  it("normalizes only the supported player ids", () => {
-    expect(normalizePlayerId("just")).toBe("just")
-    expect(normalizePlayerId("vlc")).toBe("vlc")
-    expect(normalizePlayerId("mpv")).toBe("mpv")
-    expect(normalizePlayerId("mx")).toBe("mx")
   })
 })

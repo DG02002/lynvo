@@ -6,18 +6,21 @@ CREATE TABLE users (
   avatar_url TEXT,
   data_version INTEGER NOT NULL DEFAULT 1,
   erasure_pending_at INTEGER,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  storage_retention_days INTEGER NOT NULL DEFAULT 30,
+  range_supported_player_id TEXT,
+  range_unsupported_player_id TEXT
 );
 
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  generation INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   last_seen_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
   revoked_at INTEGER,
-  user_agent TEXT
+  user_agent TEXT,
+  device_name TEXT
 );
 CREATE INDEX sessions_by_user_id ON sessions(user_id);
 CREATE INDEX sessions_by_expires_at ON sessions(expires_at);
@@ -27,15 +30,40 @@ CREATE TABLE links (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   url TEXT NOT NULL,
   title TEXT,
-  meta_json TEXT,
+  meta_json TEXT NOT NULL,
   opened_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   expires_at INTEGER,
+  extraction_state TEXT NOT NULL DEFAULT 'complete' CHECK (extraction_state IN ('queued', 'running', 'complete', 'failed')),
+  extraction_error TEXT,
+  extraction_attempts INTEGER NOT NULL DEFAULT 0,
+  extraction_available_at INTEGER,
+  extraction_lease_expires_at INTEGER,
   UNIQUE(user_id, url)
 );
 CREATE INDEX links_by_user_created ON links(user_id, created_at);
 CREATE INDEX links_by_expires_at ON links(expires_at);
+CREATE INDEX links_by_extraction_queue ON links(
+  extraction_state,
+  extraction_available_at,
+  extraction_lease_expires_at,
+  created_at
+);
+
+CREATE TABLE saved_link_extraction_credentials (
+  link_id TEXT PRIMARY KEY REFERENCES links(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_url TEXT NOT NULL,
+  ciphertext TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  algorithm TEXT NOT NULL CHECK (algorithm = 'AES-256-GCM'),
+  key_version INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX saved_link_extraction_credentials_by_user_id
+  ON saved_link_extraction_credentials(user_id);
 
 CREATE TABLE link_command_operations (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -162,8 +190,18 @@ CREATE TABLE user_plugin_servers (
   last_manifest_refresh_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
+  proxy_token_ciphertext TEXT,
+  proxy_token_nonce TEXT,
+  proxy_token_algorithm TEXT CHECK (proxy_token_algorithm IS NULL OR proxy_token_algorithm = 'AES-256-GCM'),
+  proxy_token_version INTEGER,
+  proxy_balance_remaining INTEGER,
+  proxy_balance_limit INTEGER,
+  proxy_balance_checked_at INTEGER,
   UNIQUE(user_id, normalized_base_url)
 );
+CREATE INDEX user_plugin_servers_pending_sweep
+  ON user_plugin_servers(pending_expires_at)
+  WHERE credential_status != 'ready';
 
 CREATE TABLE user_plugin_domains (
   id TEXT PRIMARY KEY,
@@ -178,6 +216,8 @@ CREATE TABLE user_plugin_domains (
 CREATE INDEX user_plugin_domains_by_user_domain ON user_plugin_domains(user_id, domain);
 CREATE INDEX user_plugin_domains_by_user_server ON user_plugin_domains(user_id, plugin_server_id);
 CREATE INDEX user_plugin_domains_by_user_server_domain ON user_plugin_domains(user_id, plugin_server_id, domain);
+CREATE UNIQUE INDEX user_plugin_domains_unique
+  ON user_plugin_domains(user_id, plugin_server_id, domain);
 
 CREATE TABLE user_plugin_credentials (
   id TEXT PRIMARY KEY,
@@ -196,6 +236,8 @@ CREATE TABLE user_plugin_credentials (
 CREATE INDEX user_plugin_credentials_by_domain ON user_plugin_credentials(plugin_domain_id);
 CREATE INDEX user_plugin_credentials_by_user_domain ON user_plugin_credentials(user_id, domain);
 CREATE INDEX user_plugin_credentials_by_user_server_domain ON user_plugin_credentials(user_id, plugin_server_id, domain);
+CREATE UNIQUE INDEX user_plugin_credentials_unique
+  ON user_plugin_credentials(plugin_domain_id);
 
 CREATE TABLE remote_commands (
   id TEXT PRIMARY KEY,

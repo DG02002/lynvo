@@ -48,9 +48,10 @@ export const DeleteAccountDialog = ({
         </>
       }
       onSubmit={onDeleteAccount}
-      submitLabel={busy === "delete" ? "Deleting account…" : "Delete account"}
+      submitLabel="Delete account"
       submitVariant="destructive"
-      submitDisabled={confirmEmail.trim() !== email || busy === "delete"}
+      submitPending={busy === "delete"}
+      submitDisabled={confirmEmail.trim() !== email}
       cancelDisabled={busy === "delete"}
     >
       <FieldGroup className="gap-4">

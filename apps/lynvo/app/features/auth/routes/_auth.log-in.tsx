@@ -16,6 +16,26 @@ export const meta = () => [
   { name: "description", content: authCopy.signin.metaDescription },
 ]
 
+const getSignInErrorMessage = (errorReason: string | null) => {
+  if (errorReason === "state") {
+    return authCopy.signin.expiredError
+  }
+
+  if (errorReason === "exchange") {
+    return authCopy.signin.exchangeError
+  }
+
+  if (errorReason === "invalid_token") {
+    return authCopy.signin.invalidTokenError
+  }
+
+  if (errorReason) {
+    return authCopy.signin.fallbackError
+  }
+
+  return null
+}
+
 const SignIn = () => {
   const location = useLocation()
   const url = new URL(location.pathname + location.search, "https://lynvo.test")
@@ -23,16 +43,7 @@ const SignIn = () => {
     url.searchParams.get("redirect") ?? undefined
   )
   const errorReason = url.searchParams.get("error")
-  const errorMessage =
-    errorReason === "state"
-      ? authCopy.signin.expiredError
-      : errorReason === "exchange"
-        ? authCopy.signin.exchangeError
-        : errorReason === "invalid_token"
-          ? authCopy.signin.invalidTokenError
-          : errorReason
-            ? authCopy.signin.fallbackError
-            : null
+  const errorMessage = getSignInErrorMessage(errorReason)
 
   return (
     <div

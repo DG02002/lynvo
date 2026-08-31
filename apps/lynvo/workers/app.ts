@@ -9,6 +9,7 @@ import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credent
 import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/server"
+import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
 import { createApiErrorResponse } from "../app/lib/api-errors"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
 import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
@@ -23,10 +24,19 @@ import { buildReleaseIdentity } from "./release-identity"
 import {
   checkAuthenticationRateLimit,
   checkRateLimit,
+  type AuthenticationRateLimitResult,
 } from "./authentication-rate-limit"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { closeRealtimeSession } from "./realtime-session-revocation"
-import { REALTIME_SESSION_REVALIDATION_INTERVAL_MS } from "./constants"
+import {
+  CRON_SCHEDULE_DAILY_RETENTION,
+  CRON_SCHEDULE_HOURLY_MAINTENANCE,
+  DEVICE_CODE_CREATION_RATE_LIMIT,
+  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  EXTRACTION_ROUTE_RATE_LIMIT,
+  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
+} from "./constants"
 import { createRemoteTargetId } from "../app/lib/remote-target"
 import { isSameOriginRequest } from "./same-origin"
 import { registerD1AuthRoutes } from "./d1/auth-routes"
@@ -51,14 +61,6 @@ import { drainAccountErasures } from "./d1/account-erasure"
 import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
 import { echoDataVersion } from "./d1/version-echo"
 import { processQueuedLinkExtractions } from "./link-extraction-runner"
-import {
-  CRON_SCHEDULE_DAILY_RETENTION,
-  CRON_SCHEDULE_HOURLY_MAINTENANCE,
-  DEVICE_CODE_CREATION_RATE_LIMIT,
-  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
-  EXTRACTION_ROUTE_RATE_LIMIT,
-  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-} from "./constants"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 
@@ -94,12 +96,76 @@ type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
+const toFailureMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause)
+
 const clientIp = (request: Request): string =>
   request.headers.get("CF-Connecting-IP") ??
   request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
   "unknown"
 
 const rateLimit = checkRateLimit
+
+const readDeviceCodeRequestName = async (
+  context: HonoContext<RequestLoggingEnvironment>
+): Promise<string | Response> => {
+  try {
+    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
+      await context.req.json()
+    )
+    if (Result.isFailure(result)) {
+      return context.json(
+        requestApiError(context, {
+          code: "invalid_request",
+          error: "Send a valid request.",
+          retryable: false,
+        }),
+        400
+      )
+    }
+    return result.success.deviceName
+  } catch {
+    return context.json(
+      requestApiError(context, {
+        code: "invalid_request",
+        error: "Send a valid request.",
+        retryable: false,
+      }),
+      400
+    )
+  }
+}
+
+const createDeviceCodeRateLimitResponse = (
+  context: HonoContext<RequestLoggingEnvironment>,
+  rateLimitResult: AuthenticationRateLimitResult
+): Response | undefined => {
+  if (rateLimitResult === "allowed") {
+    return undefined
+  }
+  if (rateLimitResult === "limited") {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.json(
+      requestApiError(context, {
+        code: "rate_limited",
+        error: "Too many attempts. Try again later.",
+        retryable: true,
+      }),
+      429
+    )
+  }
+  addRequestContext(context, {
+    configuration_error: "auth_rate_limiter_unavailable",
+  })
+  return context.json(
+    requestApiError(context, {
+      code: "service_unavailable",
+      error: "Device login is unavailable. Try again later.",
+      retryable: true,
+    }),
+    503
+  )
+}
 
 const resolveRequestSession = async (
   request: Request,
@@ -160,61 +226,22 @@ app.post("/api/auth/device/code", async (context) => {
       403
     )
   }
-  let deviceName: string
-  try {
-    const result = Schema.decodeUnknownResult(deviceCodeRequestSchema)(
-      await context.req.json()
-    )
-    if (Result.isFailure(result)) {
-      return context.json(
-        requestApiError(context, {
-          code: "invalid_request",
-          error: "Send a valid request.",
-          retryable: false,
-        }),
-        400
-      )
-    }
-    deviceName = result.success.deviceName
-  } catch {
-    return context.json(
-      requestApiError(context, {
-        code: "invalid_request",
-        error: "Send a valid request.",
-        retryable: false,
-      }),
-      400
-    )
+  const deviceName = await readDeviceCodeRequestName(context)
+  if (deviceName instanceof Response) {
+    return deviceName
   }
-  const rateLimitResult = await checkAuthenticationRateLimit(
-    context.env,
-    `auth:device-code:${clientIp(context.req.raw)}`,
-    DEVICE_CODE_CREATION_RATE_LIMIT,
-    DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS
+  const rateLimitResult = await checkAuthenticationRateLimit({
+    environment: context.env,
+    key: `auth:device-code:${clientIp(context.req.raw)}`,
+    limit: DEVICE_CODE_CREATION_RATE_LIMIT,
+    windowSeconds: DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  })
+  const rateLimitResponse = createDeviceCodeRateLimitResponse(
+    context,
+    rateLimitResult
   )
-  if (rateLimitResult !== "allowed") {
-    if (rateLimitResult === "limited") {
-      addRequestContext(context, { rate_limit: { allowed: false } })
-      return context.json(
-        requestApiError(context, {
-          code: "rate_limited",
-          error: "Too many attempts. Try again later.",
-          retryable: true,
-        }),
-        429
-      )
-    }
-    addRequestContext(context, {
-      configuration_error: "auth_rate_limiter_unavailable",
-    })
-    return context.json(
-      requestApiError(context, {
-        code: "service_unavailable",
-        error: "Device login is unavailable. Try again later.",
-        retryable: true,
-      }),
-      503
-    )
+  if (rateLimitResponse) {
+    return rateLimitResponse
   }
   const database = getD1Database(context.env)
   if (!database) {
@@ -318,11 +345,35 @@ app.get("/api/auth/session/status", async (context) => {
   })
 })
 
-app.get("/api/realtime", async (context) => {
-  addRequestContext(context, {
-    operation: "realtime_connect",
-    transport: "websocket",
-  })
+interface RealtimeForwardHeadersInput {
+  request: Request
+  session: {
+    readonly userId: string
+    readonly sessionId: string
+  }
+  receiverId: string | undefined
+  deviceName: string | undefined
+}
+
+const buildRealtimeForwardHeaders = ({
+  request,
+  session,
+  receiverId,
+  deviceName,
+}: RealtimeForwardHeadersInput): Headers => {
+  const headers = new Headers(request.headers)
+  headers.set("X-Lynvo-Session-Id", session.sessionId)
+  headers.set("X-Lynvo-User-Id", session.userId)
+  if (receiverId) {
+    headers.set("X-Lynvo-Receiver-Id", receiverId)
+    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
+  }
+  return headers
+}
+
+const createRealtimeHandshakeRejection = async (
+  context: HonoContext<RequestLoggingEnvironment>
+): Promise<Response | undefined> => {
   const request = context.req.raw
   if (request.headers.get("Upgrade") !== "websocket") {
     return context.text("Expected WebSocket", 426)
@@ -330,6 +381,29 @@ app.get("/api/realtime", async (context) => {
   if (!isSameOriginRequest(request)) {
     return context.text("Forbidden", 403)
   }
+  const handshakeRateLimit = await rateLimit({
+    environment: context.env,
+    key: `realtime:${clientIp(request)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
+  if (handshakeRateLimit === "limited") {
+    addRequestContext(context, { rate_limit: { allowed: false } })
+    return context.text("Too many connection attempts", 429)
+  }
+  return undefined
+}
+
+app.get("/api/realtime", async (context) => {
+  addRequestContext(context, {
+    operation: "realtime_connect",
+    transport: "websocket",
+  })
+  const handshakeRejection = await createRealtimeHandshakeRejection(context)
+  if (handshakeRejection) {
+    return handshakeRejection
+  }
+  const request = context.req.raw
   const session = await resolveRequestSession(request, context.env)
   if (session.kind === "unavailable") {
     return context.text("Service unavailable", 503)
@@ -348,15 +422,12 @@ app.get("/api/realtime", async (context) => {
     authenticated: true,
     user_id: session.userId,
   })
-  const headers = new Headers(request.headers)
-  headers.set("X-Lynvo-Session-Id", session.sessionId)
-  headers.set("X-Lynvo-User-Id", session.userId)
-  const receiverId = context.req.query("receiverId")
-  const deviceName = context.req.query("deviceName")
-  if (receiverId) {
-    headers.set("X-Lynvo-Receiver-Id", receiverId)
-    headers.set("X-Lynvo-Receiver-Name", deviceName || "Unnamed device")
-  }
+  const headers = buildRealtimeForwardHeaders({
+    request,
+    session,
+    receiverId: context.req.query("receiverId"),
+    deviceName: context.req.query("deviceName"),
+  })
   return context.env.USER_REALTIME_ROOM.getByName(session.userId).fetch(
     new Request(request, { headers })
   )
@@ -390,12 +461,12 @@ app.use("/api/auth/device/authorize", async (context, next) => {
   if (session.kind === "anonymous") {
     return next()
   }
-  const rateLimitResult = await rateLimit(
-    context.env,
-    `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
-    10,
-    600
-  )
+  const rateLimitResult = await rateLimit({
+    environment: context.env,
+    key: `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
+    limit: 10,
+    windowSeconds: 600,
+  })
   if (rateLimitResult === "unavailable") {
     addRequestContext(context, {
       configuration_error: "auth_rate_limiter_unavailable",
@@ -425,12 +496,12 @@ app.use("/api/auth/device/authorize", async (context, next) => {
 })
 
 app.use("/api/extract", async (context, next) => {
-  const result = await rateLimit(
-    context.env,
-    `extraction:${clientIp(context.req.raw)}`,
-    EXTRACTION_ROUTE_RATE_LIMIT,
-    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
-  )
+  const result = await rateLimit({
+    environment: context.env,
+    key: `extraction:${clientIp(context.req.raw)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
   addRequestContext(context, {
     extraction_rate_limit: { outcome: result },
   })
@@ -458,12 +529,12 @@ app.use("/api/extract", async (context, next) => {
 })
 
 app.use("/api/meta", async (context, next) => {
-  const result = await rateLimit(
-    context.env,
-    `metadata:${clientIp(context.req.raw)}`,
-    EXTRACTION_ROUTE_RATE_LIMIT,
-    EXTRACTION_ROUTE_RATE_WINDOW_SECONDS
-  )
+  const result = await rateLimit({
+    environment: context.env,
+    key: `metadata:${clientIp(context.req.raw)}`,
+    limit: EXTRACTION_ROUTE_RATE_LIMIT,
+    windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  })
   addRequestContext(context, {
     extraction_rate_limit: { outcome: result },
   })
@@ -665,9 +736,6 @@ const runHourlyD1Maintenance = async (
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
     runD1Maintenance(database, (now) =>
-      sweepLinkCommandOperationsJob(database, now)
-    ),
-    runD1Maintenance(database, (now) =>
       expirePluginServerRegistrationsJob(database, now)
     ),
     drainPendingAccountErasuresJob(database),
@@ -688,6 +756,9 @@ const runHighFrequencyD1Maintenance = async (
     runD1Maintenance(database, (now) =>
       cleanupRemoteCommandsJob(database, now)
     ),
+    runD1Maintenance(database, (now) =>
+      sweepLinkCommandOperationsJob(database, now)
+    ),
   ])
 const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
 const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
@@ -704,6 +775,203 @@ const receiverAttachmentSchema = Schema.Struct({
 const isPingMessage = <Value>(value: Value): boolean =>
   Result.isSuccess(Schema.decodeUnknownResult(pingMessageSchema)(value))
 
+interface RealtimeWebSocketSession {
+  sessionId: string
+  userId: string
+  receiverId: string
+  deviceName: string
+}
+
+interface RealtimeSessionHelloPayload {
+  type: "session_hello"
+  userId: string
+  sessionId: string
+  dataVersion?: number
+}
+
+const handleRealtimeDataChanged = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(dataChangedSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid data version", { status: 400 })
+  }
+  const serialized = JSON.stringify({
+    type: "data-changed",
+    payload: { version: input.success.version },
+  })
+  const sockets = context.getWebSockets()
+  for (const socket of sockets) {
+    socket.send(serialized)
+  }
+  return Response.json({ deliveredSocketCount: sockets.length })
+}
+
+const handleRealtimeInboxNotification = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid receiver", { status: 400 })
+  }
+  const serialized = JSON.stringify({
+    type: "remote-inbox.changed",
+    payload: {},
+  })
+  const sockets = context.getWebSockets(input.success.receiverId)
+  for (const socket of sockets) {
+    socket.send(serialized)
+  }
+  return Response.json({ deliveredSocketCount: sockets.length })
+}
+
+const handleRealtimeSessionRevocation = async (
+  context: DurableObjectState,
+  request: Request
+): Promise<Response> => {
+  const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
+    await request.json()
+  )
+  if (Result.isFailure(input)) {
+    return new Response("Invalid session", { status: 400 })
+  }
+  for (const socket of context.getWebSockets(input.success.sessionId)) {
+    socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
+  }
+  return Response.json({ success: true })
+}
+
+const handleRealtimeAccountRevocation = (
+  context: DurableObjectState
+): Response => {
+  for (const socket of context.getWebSockets()) {
+    socket.close(
+      REALTIME_SESSION_REVOKED_CLOSE_CODE,
+      "Account sessions revoked"
+    )
+  }
+  return Response.json({ success: true })
+}
+
+const handleRealtimeReceivers = (context: DurableObjectState): Response => {
+  const receivers = context.getWebSockets().flatMap((socket) => {
+    const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
+      socket.deserializeAttachment()
+    )
+    if (Result.isFailure(attachment)) {
+      return []
+    }
+    return [
+      {
+        id: createRemoteTargetId(
+          attachment.success.sessionId,
+          attachment.success.receiverId
+        ),
+        receiverId: attachment.success.receiverId,
+        deviceName: attachment.success.deviceName,
+        lastActiveAt: attachment.success.connectedAt,
+      },
+    ]
+  })
+  return Response.json({ receivers })
+}
+
+const readRealtimeWebSocketSession = (
+  request: Request
+): RealtimeWebSocketSession | undefined => {
+  const sessionId = request.headers.get("X-Lynvo-Session-Id")
+  const userId = request.headers.get("X-Lynvo-User-Id")
+  const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
+  const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
+  if (!sessionId || !userId || !receiverId || !deviceName) {
+    return undefined
+  }
+  return { sessionId, userId, receiverId, deviceName }
+}
+
+const configureRealtimeWebSocket = (
+  context: DurableObjectState,
+  server: WebSocket,
+  session: RealtimeWebSocketSession
+): void => {
+  for (const existingSocket of context.getWebSockets(session.receiverId)) {
+    existingSocket.close(1000, "Receiver replaced")
+  }
+  server.serializeAttachment({
+    sessionId: session.sessionId,
+    receiverId: session.receiverId,
+    deviceName: session.deviceName,
+    connectedAt: Date.now(),
+  })
+  context.acceptWebSocket(server, [session.sessionId, session.receiverId])
+}
+
+const readRealtimeDataVersion = async (
+  env: Env,
+  userId: string
+): Promise<number | undefined> => {
+  const database = getD1Database(env)
+  if (!database) {
+    return undefined
+  }
+  try {
+    const dataVersion = await getDataVersion(database, userId)
+    return dataVersion > 0 ? dataVersion : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const sendRealtimeSessionHello = (
+  server: WebSocket,
+  session: RealtimeWebSocketSession,
+  dataVersion: number | undefined
+): void => {
+  const helloPayload: RealtimeSessionHelloPayload = {
+    type: "session_hello",
+    userId: session.userId,
+    sessionId: session.sessionId,
+  }
+  if (dataVersion !== undefined) {
+    helloPayload.dataVersion = dataVersion
+  }
+  server.send(JSON.stringify(helloPayload))
+}
+
+const scheduleRealtimeSessionAlarm = async (
+  storage: DurableObjectStorage
+): Promise<void> => {
+  const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
+  const existingAlarmAt = await storage.getAlarm()
+  if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
+    await storage.setAlarm(nextAlarmAt)
+  }
+}
+
+const acceptRealtimeWebSocket = async (
+  context: DurableObjectState,
+  env: Env,
+  request: Request
+): Promise<Response> => {
+  const pair = new WebSocketPair()
+  const [client, server] = Object.values(pair)
+  const session = readRealtimeWebSocketSession(request)
+  if (!session) {
+    return new Response("Missing session", { status: 401 })
+  }
+  configureRealtimeWebSocket(context, server, session)
+  const dataVersion = await readRealtimeDataVersion(env, session.userId)
+  sendRealtimeSessionHello(server, session, dataVersion)
+  await scheduleRealtimeSessionAlarm(context.storage)
+  return new Response(null, { status: 101, webSocket: client })
+}
+
 export class UserRealtimeRoom extends DurableObject<Env> {
   constructor(context: DurableObjectState, env: Env) {
     super(context, env)
@@ -713,135 +981,26 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const pathname = new URL(request.url).pathname
+    const { pathname } = new URL(request.url)
     if (pathname.endsWith("/notify-data-changed")) {
-      const input = Schema.decodeUnknownResult(dataChangedSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid data version", { status: 400 })
-      }
-      const serialized = JSON.stringify({
-        type: "data-changed",
-        payload: { version: input.success.version },
-      })
-      const sockets = this.ctx.getWebSockets()
-      for (const socket of sockets) {
-        socket.send(serialized)
-      }
-      return Response.json({ deliveredSocketCount: sockets.length })
+      return handleRealtimeDataChanged(this.ctx, request)
     }
     if (pathname.endsWith("/notify-inbox")) {
-      const input = Schema.decodeUnknownResult(receiverNotificationSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid receiver", { status: 400 })
-      }
-      const serialized = JSON.stringify({
-        type: "remote-inbox.changed",
-        payload: {},
-      })
-      const sockets = this.ctx.getWebSockets(input.success.receiverId)
-      for (const socket of sockets) {
-        socket.send(serialized)
-      }
-      return Response.json({ deliveredSocketCount: sockets.length })
+      return handleRealtimeInboxNotification(this.ctx, request)
     }
     if (pathname.endsWith("/revoke-session")) {
-      const input = Schema.decodeUnknownResult(sessionRevocationSchema)(
-        await request.json()
-      )
-      if (Result.isFailure(input)) {
-        return new Response("Invalid session", { status: 400 })
-      }
-      for (const socket of this.ctx.getWebSockets(input.success.sessionId)) {
-        socket.close(REALTIME_SESSION_REVOKED_CLOSE_CODE, "Session revoked")
-      }
-      return Response.json({ success: true })
+      return handleRealtimeSessionRevocation(this.ctx, request)
     }
     if (pathname.endsWith("/revoke-account")) {
-      for (const socket of this.ctx.getWebSockets()) {
-        socket.close(
-          REALTIME_SESSION_REVOKED_CLOSE_CODE,
-          "Account sessions revoked"
-        )
-      }
-      return Response.json({ success: true })
+      return handleRealtimeAccountRevocation(this.ctx)
     }
     if (pathname.endsWith("/receivers")) {
-      const receivers = this.ctx.getWebSockets().flatMap((socket) => {
-        const attachment = Schema.decodeUnknownResult(receiverAttachmentSchema)(
-          socket.deserializeAttachment()
-        )
-        if (Result.isFailure(attachment)) {
-          return []
-        }
-        return [
-          {
-            id: createRemoteTargetId(
-              attachment.success.sessionId,
-              attachment.success.receiverId
-            ),
-            receiverId: attachment.success.receiverId,
-            deviceName: attachment.success.deviceName,
-            lastActiveAt: attachment.success.connectedAt,
-          },
-        ]
-      })
-      return Response.json({ receivers })
+      return handleRealtimeReceivers(this.ctx)
     }
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 426 })
     }
-    const pair = new WebSocketPair()
-    const client = pair[0]
-    const server = pair[1]
-    const sessionId = request.headers.get("X-Lynvo-Session-Id")
-    const userId = request.headers.get("X-Lynvo-User-Id")
-    const receiverId = request.headers.get("X-Lynvo-Receiver-Id")
-    const deviceName = request.headers.get("X-Lynvo-Receiver-Name")
-    if (!sessionId || !userId || !receiverId || !deviceName) {
-      return new Response("Missing session", { status: 401 })
-    }
-    for (const existingSocket of this.ctx.getWebSockets(receiverId)) {
-      existingSocket.close(1000, "Receiver replaced")
-    }
-    server.serializeAttachment({
-      sessionId,
-      receiverId,
-      deviceName,
-      connectedAt: Date.now(),
-    })
-    this.ctx.acceptWebSocket(server, [sessionId, receiverId])
-    let currentDataVersion: number | undefined
-    const database = getD1Database(this.env)
-    if (database) {
-      try {
-        const dataVersion = await getDataVersion(database, userId)
-        if (dataVersion > 0) {
-          currentDataVersion = dataVersion
-        }
-      } catch {
-        currentDataVersion = undefined
-      }
-    }
-    const helloPayload =
-      currentDataVersion === undefined
-        ? { type: "session_hello" as const, userId, sessionId }
-        : {
-            type: "session_hello" as const,
-            userId,
-            sessionId,
-            dataVersion: currentDataVersion,
-          }
-    server.send(JSON.stringify(helloPayload))
-    const nextAlarmAt = Date.now() + REALTIME_SESSION_REVALIDATION_INTERVAL_MS
-    const existingAlarmAt = await this.ctx.storage.getAlarm()
-    if (existingAlarmAt === null || existingAlarmAt > nextAlarmAt) {
-      await this.ctx.storage.setAlarm(nextAlarmAt)
-    }
-    return new Response(null, { status: 101, webSocket: client })
+    return acceptRealtimeWebSocket(this.ctx, this.env, request)
   }
 
   async alarm(): Promise<void> {
@@ -918,42 +1077,92 @@ export class UserRealtimeRoom extends DurableObject<Env> {
   }
 }
 
+interface ScheduledMaintenanceCronInput {
+  env: Env
+  database: ReturnType<typeof getD1Database>
+  startedAt: number
+}
+
+const runHourlyMaintenanceCron = async ({
+  env,
+  database,
+  startedAt,
+}: ScheduledMaintenanceCronInput): Promise<void> => {
+  const manifestRefresh = database
+    ? await refreshCustomPluginServerManifests(env, database).catch((error) => {
+        console.warn("plugin_server_manifest_refresh_unavailable", {
+          operation: "plugin_server_manifest_refresh_unavailable",
+          error: error instanceof Error ? error.message : String(error),
+        })
+        return { refreshed: 0, failed: 0 }
+      })
+    : { refreshed: 0, failed: 0 }
+  console.info("plugin_server_manifest_refresh", {
+    operation: "plugin_server_manifest_refresh",
+    refreshed_count: manifestRefresh.refreshed,
+    failed_count: manifestRefresh.failed,
+  })
+  const outcomes = database ? await runHourlyD1Maintenance(database) : []
+  const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
+  console.info("scheduled_hourly_maintenance", {
+    operation: "scheduled_hourly_maintenance",
+    outcome: failed ? "failure" : "success",
+    duration_ms: Math.max(0, performance.now() - startedAt),
+  })
+  if (failed) {
+    throw new Error("D1 hourly maintenance is unavailable")
+  }
+}
+
+interface ScheduledRetentionCronInput {
+  database: ReturnType<typeof getD1Database>
+  startedAt: number
+}
+
+const runDailyRetentionCron = async ({
+  database,
+  startedAt,
+}: ScheduledRetentionCronInput): Promise<void> => {
+  const outcome = database
+    ? await runDailyD1Maintenance(database)
+    : { kind: "skipped" as const }
+  const failed = outcome.kind === "unavailable"
+  console.info("scheduled_daily_retention", {
+    operation: "scheduled_daily_retention",
+    outcome: failed ? "failure" : "success",
+    duration_ms: Math.max(0, performance.now() - startedAt),
+  })
+  if (failed) {
+    throw new Error("D1 daily retention maintenance is unavailable")
+  }
+}
+
 export default {
   fetch: (request, env, context) => app.fetch(request, env, context),
   scheduled: async (controller, env) => {
     const startedAt = performance.now()
     const database = getD1Database(env)
     if (controller.cron === CRON_SCHEDULE_HOURLY_MAINTENANCE) {
-      const outcomes = database ? await runHourlyD1Maintenance(database) : []
-      const failed = outcomes.some((outcome) => outcome.kind === "unavailable")
-      console.info("scheduled_hourly_maintenance", {
-        operation: "scheduled_hourly_maintenance",
-        outcome: failed ? "failure" : "success",
-        duration_ms: Math.max(0, performance.now() - startedAt),
-      })
-      if (failed) {
-        throw new Error("D1 hourly maintenance is unavailable")
-      }
+      await runHourlyMaintenanceCron({ env, database, startedAt })
       return
     }
     if (controller.cron === CRON_SCHEDULE_DAILY_RETENTION) {
-      const outcome = database
-        ? await runDailyD1Maintenance(database)
-        : { kind: "skipped" as const }
-      const failed = outcome.kind === "unavailable"
-      console.info("scheduled_daily_retention", {
-        operation: "scheduled_daily_retention",
-        outcome: failed ? "failure" : "success",
-        duration_ms: Math.max(0, performance.now() - startedAt),
-      })
-      if (failed) {
-        throw new Error("D1 daily retention maintenance is unavailable")
-      }
+      await runDailyRetentionCron({ database, startedAt })
       return
     }
+    // A rejection in any branch must not skip the outcome logging of the
+    // others, so each branch carries its own catch.
     const [notificationResult, d1SweepOutcome, d1MaintenanceOutcomes] =
       await Promise.all([
-        createRemoteCommandNotificationDelivery(env, database).drain(),
+        createRemoteCommandNotificationDelivery(env, database)
+          .drain()
+          .catch((cause: unknown) => {
+            console.error("remote_command_drain_failed", {
+              operation: "remote_command_drain_failed",
+              error: toFailureMessage(cause),
+            })
+            return { kind: "unavailable" as const }
+          }),
         database
           ? sweepD1AuthData(database)
           : Promise.resolve({ kind: "skipped" as const }),
@@ -961,7 +1170,14 @@ export default {
           ? runHighFrequencyD1Maintenance(database)
           : Promise.resolve<MaintenanceOutcome[]>([]),
         database
-          ? processQueuedLinkExtractions(env, database)
+          ? processQueuedLinkExtractions(env, database).catch(
+              (cause: unknown) => {
+                console.error("queued_extraction_drain_failed", {
+                  operation: "queued_extraction_drain_failed",
+                  error: toFailureMessage(cause),
+                })
+              }
+            )
           : Promise.resolve(),
       ])
     const unavailable = d1MaintenanceOutcomes.filter(

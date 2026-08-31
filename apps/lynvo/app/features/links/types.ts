@@ -1,5 +1,6 @@
 import type {
   ExpirySource,
+  JsonValue,
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 
@@ -27,22 +28,28 @@ export interface ExtractedLink {
    * media node kinds after they have been mapped to the user-facing
    * folder/direct-file model. UI code must not rely on this field.
    */
-  mediaNodeKind?: "group" | "resolvable" | "playable"
+  mediaNodeKind: "group" | "resolvable" | "playable"
   resolutionKind?: "folder" | "mirrors"
-}
-
-export interface LinkResponse {
-  id: string
-  url: string
-  created_at: number
-  updated_at?: number
-  title?: string
-  meta: LinkMetadata | string
 }
 
 export interface LinkExtractionStatus {
   state: "queued" | "running" | "complete" | "failed"
   error?: string
+}
+
+/** One credential-free communication record with a Plugin Server. */
+export interface LinkDebugLogEntry {
+  at: number
+  pluginServerId?: string
+  pluginId?: string
+  outcome: "complete" | "failed" | "pending" | "requeued"
+  errorCode?: string
+  /** The Plugin Server's unmodified error text; never credentials. */
+  detail?: string
+  httpStatus?: number
+  nodeCount?: number
+  durationMs?: number
+  attempt?: number
 }
 
 export interface LinkMetadata {
@@ -54,9 +61,12 @@ export interface LinkMetadata {
   }
   playback: {
     openedUrls: string[]
-    openedIds: string[]
     resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
   }
+  /** Bounded, newest-last record of Plugin Server communication. */
+  debugLog?: LinkDebugLogEntry[]
+  /** Authoritative artwork identity; by-id lookups never re-guess. */
+  artwork?: MediaArtworkIdentity
 }
 
 export interface MetaData {
@@ -101,4 +111,3 @@ export interface LinkListItemMap {
 }
 
 export type LinkListItem = LinkListItemMap[keyof LinkListItemMap]
-import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"

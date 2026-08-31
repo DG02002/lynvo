@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 export interface AsyncResource<Result> {
   readonly data: Result | undefined
@@ -10,21 +10,6 @@ export interface AsyncResourceOptions {
   readonly pollIntervalMs?: number
 }
 
-const areDependenciesEqual = (
-  previousDependencies: readonly unknown[],
-  nextDependencies: readonly unknown[]
-): boolean => {
-  if (previousDependencies.length !== nextDependencies.length) {
-    return false
-  }
-  for (let index = 0; index < previousDependencies.length; index += 1) {
-    if (!Object.is(previousDependencies[index], nextDependencies[index])) {
-      return false
-    }
-  }
-  return true
-}
-
 export const useAsyncResource = <Result>(
   load: () => Promise<Result>,
   dependencies: readonly unknown[] = [],
@@ -33,17 +18,11 @@ export const useAsyncResource = <Result>(
   const [data, setData] = useState<Result | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   const loadReference = useRef(load)
-  loadReference.current = load
+  const dependencySignal = useMemo(() => ({}), dependencies)
 
-  const previousDependenciesReference = useRef(dependencies)
-  const [dependencyVersion, setDependencyVersion] = useState(0)
-
-  if (
-    !areDependenciesEqual(previousDependenciesReference.current, dependencies)
-  ) {
-    previousDependenciesReference.current = dependencies
-    setDependencyVersion((currentVersion) => currentVersion + 1)
-  }
+  useEffect(() => {
+    loadReference.current = load
+  }, [load])
 
   const runLoad = useCallback(async (): Promise<void> => {
     try {
@@ -63,7 +42,7 @@ export const useAsyncResource = <Result>(
     return () => {
       didCancel = true
     }
-  }, [dependencyVersion, runLoad])
+  }, [dependencySignal, runLoad])
 
   useEffect(() => {
     if (!options.pollIntervalMs) {

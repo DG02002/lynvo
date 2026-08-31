@@ -11,6 +11,11 @@ export const echoDataVersion =
     if (context.req.method !== "GET") {
       return
     }
+    // Handlers that read items and version in one atomic batch set the header
+    // themselves; re-reading here would race concurrent writes.
+    if (context.res.headers.has(DATA_VERSION_RESPONSE_HEADER)) {
+      return
+    }
     const database = getD1Database(context.env)
     if (!database) {
       return

@@ -2,22 +2,28 @@ import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protoc
 import { Effect } from "effect"
 import { ExtractionError } from "../errors"
 import {
-  PluginServerClient,
   PluginServerClientError,
+  type PluginServerClient,
   type PluginServerRequestOptions,
 } from "../../extraction/plugin-server-client"
 
 export const createPluginServerExtractionError = (
   cause: unknown,
   url: string
-): ExtractionError =>
-  new ExtractionError({
-    message:
-      cause instanceof PluginServerClientError
-        ? cause.code
-        : "TEMPORARY_FAILURE",
+): ExtractionError => {
+  if (cause instanceof PluginServerClientError) {
+    return new ExtractionError({
+      message: cause.code,
+      url,
+      detail: cause.message,
+      status: cause.status,
+    })
+  }
+  return new ExtractionError({
+    message: "TEMPORARY_FAILURE",
     url,
   })
+}
 
 export const requestPluginServer = <Value>(
   operation: () => Promise<Value>,
@@ -28,12 +34,19 @@ export const requestPluginServer = <Value>(
     catch: (cause) => createPluginServerExtractionError(cause, url),
   })
 
-export const extractPluginServerResponse = (
-  client: PluginServerClient,
-  targetUrl: string,
-  kind: "source" | "node",
-  options: PluginServerRequestOptions
-): Promise<ExtractSuccessResponse> =>
+interface ExtractPluginServerResponseInput {
+  readonly client: PluginServerClient
+  readonly targetUrl: string
+  readonly kind: "source" | "node"
+  readonly requestOptions: PluginServerRequestOptions
+}
+
+export const extractPluginServerResponse = ({
+  client,
+  targetUrl,
+  kind,
+  requestOptions,
+}: ExtractPluginServerResponseInput): Promise<ExtractSuccessResponse> =>
   kind === "node"
-    ? client.extractNode(targetUrl, options)
-    : client.extractSource(targetUrl, options)
+    ? client.extractNode(targetUrl, requestOptions)
+    : client.extractSource(targetUrl, requestOptions)

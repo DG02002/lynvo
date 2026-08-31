@@ -1,8 +1,9 @@
-import { Effect } from "effect"
-import type { ExtractedLink } from "../../../features/links/types"
-import type { MetaData } from "../../../features/links/types"
+import type { Effect } from "effect"
+import type { ExtractedLink, MetaData } from "../../../features/links/types"
+import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import type {
   ExtractionError,
+  UsageLimitError,
   ValidationError,
   UnauthorizedError,
   BackendError,
@@ -15,11 +16,23 @@ export interface ExtractOptions {
   readonly pluginId?: string
   readonly kind?: "source" | "node"
   readonly userId?: string
+  readonly inlineBasicAuth?: HttpBasicAuth
+}
+
+export interface ExtractionPending {
+  readonly retryAfterSeconds: number
+  readonly resumeNodeId?: string
 }
 
 export interface ExtractionResult {
   readonly links: ReadonlyArray<ExtractedLink>
   readonly meta?: ExtractionMetadata
+  /**
+   * Present when the Plugin Server accepted the extraction but deferred it;
+   * consumers must retry after the interval instead of treating the empty
+   * link list as a completed extraction.
+   */
+  readonly pending?: ExtractionPending
 }
 
 export interface ExtractionMetadata extends MetaData {
@@ -54,6 +67,8 @@ export interface RegisteredPluginServer {
   readonly id: string
   readonly baseUrl: string
   readonly apiKey: string
+  /** Decrypted user proxy key; sent per extraction when the server declares the capability. */
+  readonly proxyToken?: string
   readonly manifest: string
   readonly enabled: boolean
   readonly priority: number
@@ -67,7 +82,7 @@ export interface ExtractionServiceContract {
     options: ExtractOptions
   ) => Effect.Effect<
     ExtractionResult,
-    ExtractionError | ValidationError | UnauthorizedError
+    ExtractionError | UsageLimitError | ValidationError | UnauthorizedError
   >
   readonly getMetadata: (
     options: MetadataOptions

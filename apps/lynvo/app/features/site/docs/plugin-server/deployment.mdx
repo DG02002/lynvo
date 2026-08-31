@@ -7,7 +7,9 @@ contentType: Tutorial
 
 <DocSection id="deployment">
 
-Complete the local contract checks before you send the Worker to Cloudflare. The `pnpm build` command performs a dry run; `pnpm deploy` creates or updates the Worker.
+Run the local contract checks before you send the Worker to Cloudflare. The
+`pnpm build` command runs a dry run. `pnpm deploy` creates or updates the
+Worker.
 
 Log in to Wrangler and configure the production bearer key:
 
@@ -35,6 +37,7 @@ pnpm deploy
 
 Call the four required endpoints at the deployed HTTPS origin. If the manifest enables discovery, call `POST /discover` too. Confirm the production secret works and the manifest contains only production URLs.
 
-Use bounded upstream requests, reject unsupported hosts, and record structured logs without credentials. Keep the deployment origin stable after users connect it.
+Bound upstream requests, reject unsupported hosts, and record structured logs
+without credentials. Keep the deployment origin stable after users connect it.
 
 </DocSection>

@@ -87,7 +87,7 @@ export const PlayerEdgeCarousel = () => {
             return
           }
 
-          const animation = event.currentTarget.getAnimations()[0]
+          const [animation] = event.currentTarget.getAnimations()
           const items = event.currentTarget.querySelectorAll<HTMLElement>(
             ".player-edge-carousel__item"
           )

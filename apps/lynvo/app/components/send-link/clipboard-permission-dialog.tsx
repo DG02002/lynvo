@@ -13,12 +13,25 @@ interface ClipboardPermissionDialogProps {
   onAllow: () => Promise<void>
 }
 
+const getClipboardCursorClassName = (step: number) => {
+  if (step === 0) {
+    return "left-[78%] top-[75%] opacity-0"
+  }
+
+  if (step === 1) {
+    return "left-[48%] top-[58%] opacity-100"
+  }
+
+  return "left-[48%] top-[32%] opacity-0"
+}
+
 export function ClipboardPermissionDialog({
   open,
   onOpenChange,
   onAllow,
 }: ClipboardPermissionDialogProps) {
   const [step, setStep] = React.useState(0)
+  const [isAllowing, setIsAllowing] = React.useState(false)
 
   React.useEffect(() => {
     if (!open) {
@@ -33,8 +46,13 @@ export function ClipboardPermissionDialog({
   }, [open])
 
   const handleAllow = async () => {
-    await onAllow()
-    onOpenChange(false)
+    setIsAllowing(true)
+    try {
+      await onAllow()
+      onOpenChange(false)
+    } finally {
+      setIsAllowing(false)
+    }
   }
 
   const preview = (
@@ -80,7 +98,7 @@ export function ClipboardPermissionDialog({
 
         <svg
           viewBox="0 0 28 28"
-          className={`absolute z-10 size-6 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] transition-[left,top,opacity] duration-700 ease-out motion-reduce:hidden ${step === 0 ? "left-[78%] top-[75%] opacity-0" : step === 1 ? "left-[48%] top-[58%] opacity-100" : "left-[48%] top-[32%] opacity-0"}`}
+          className={`absolute z-10 size-6 drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)] transition-[left,top,opacity] duration-700 ease-out motion-reduce:hidden ${getClipboardCursorClassName(step)}`}
         >
           <path
             d="M5 3.5 22.1 17l-8.4 1.2-4.6 7.1L5 3.5Z"
@@ -105,6 +123,7 @@ export function ClipboardPermissionDialog({
       media={preview}
       confirmLabel="Allow clipboard access"
       cancelLabel="Not now"
+      pending={isAllowing}
       onConfirm={handleAllow}
     />
   )

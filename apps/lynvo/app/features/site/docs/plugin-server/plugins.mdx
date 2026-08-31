@@ -7,7 +7,8 @@ contentType: Tutorial
 
 <DocSection id="plugins">
 
-The generated project includes one deterministic example Plugin. Replace it with your Source implementation before you deploy.
+The generated project includes one deterministic example Plugin. Replace it with
+your Source implementation before deployment.
 
 Start with these files:
 
@@ -54,8 +55,12 @@ Plugin metadata supports these fields:
 | `hosts` and `matchers`  | Source URLs handled by the Plugin              |
 | `credential`            | Domain password or HTTP Basic Auth capability  |
 
-A Plugin should own Source credentials, upstream requests, response parsing, Media Node creation, and Source-specific errors. The shared runtime should own bearer authentication, protocol validation, usage enforcement, and response serialization.
+A Plugin owns Source credentials, upstream requests, response parsing, Media
+Node creation, and Source-specific errors. The shared runtime owns bearer
+authentication, protocol validation, usage enforcement, and response
+serialization.
 
-For multiple Plugins, keep one catalog as the source of truth for manifest metadata and request dispatch. Do not add Source-specific conditions to the Hono route layer.
+For multiple Plugins, keep one catalog for manifest metadata and request
+dispatch. Do not add Source-specific conditions to the Hono route layer.
 
 </DocSection>

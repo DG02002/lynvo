@@ -21,7 +21,7 @@ describe("Security settings browser data", () => {
           return Response.json([
             {
               id: "session-1",
-              deviceName: "Darshan’s MacBook",
+              deviceName: "Test MacBook",
               lastActiveAt: 1_700_000_000_000,
               createdAt: 1_699_000_000_000,
               isCurrent: true,
@@ -34,13 +34,13 @@ describe("Security settings browser data", () => {
 
     render(
       <SecuritySettings
-        user={{ id: "user-1", email: "darshan@example.com", sid: "session-1" }}
+        user={{ id: "user-1", email: "user@example.com", sid: "session-1" }}
         showActiveSessions
         onShowActiveSessionsChange={vi.fn()}
       />
     )
 
-    expect(await screen.findByText("Darshan’s MacBook")).toBeVisible()
+    expect(await screen.findByText("Test MacBook")).toBeVisible()
     expect(requestedPaths).toContain("/api/settings/security/sessions")
   })
 })

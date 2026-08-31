@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react"
-import type { MouseEvent } from "react"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
 
 import {
   DOCS_SCROLL_END_TOLERANCE_PX,
@@ -12,6 +11,32 @@ interface PageTableOfContentsHeading {
   id: string
   label: string
   level?: 3
+}
+
+const getTableOfContentsLinkClassName = (
+  variant: "docs" | "policy",
+  heading: PageTableOfContentsHeading,
+  isActive: boolean
+): string => {
+  const variantClassName =
+    variant === "docs"
+      ? "block rounded-lg px-4 py-3 text-[0.9375rem] font-normal leading-6 transition-[color,background-color]"
+      : "block text-xs font-normal leading-5 transition-colors"
+  const levelClassName =
+    heading.level === 3 && (variant === "docs" ? "ml-3 text-sm" : "pl-4")
+
+  let activeClassName: string
+  if (variant === "docs") {
+    activeClassName = isActive
+      ? "bg-muted text-blue-500 dark:text-blue-400"
+      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+  } else {
+    activeClassName = isActive
+      ? "text-foreground"
+      : "text-muted-foreground hover:text-foreground"
+  }
+
+  return cn(variantClassName, levelClassName, activeClassName)
 }
 
 export function PageTableOfContents({
@@ -194,19 +219,10 @@ export function PageTableOfContents({
                 href={`#${heading.id}`}
                 aria-current={isActive ? "location" : undefined}
                 onClick={(event) => handleHeadingClick(event, heading.id)}
-                className={cn(
-                  variant === "docs"
-                    ? "block rounded-lg px-4 py-3 text-[0.9375rem] font-normal leading-6 transition-[color,background-color]"
-                    : "block text-xs font-normal leading-5 transition-colors",
-                  heading.level === 3 &&
-                    (variant === "docs" ? "ml-3 text-sm" : "pl-4"),
-                  variant === "docs"
-                    ? isActive
-                      ? "bg-muted text-blue-500 dark:text-blue-400"
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    : isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                className={getTableOfContentsLinkClassName(
+                  variant,
+                  heading,
+                  isActive
                 )}
               >
                 {heading.label}

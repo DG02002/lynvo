@@ -1,11 +1,10 @@
 import { data, redirect } from "react-router"
-import { normalizeReturnTo } from "./auth-cookie"
+import { getCookieValue, normalizeReturnTo } from "./auth-cookie"
 import { getD1Database } from "../../workers/d1/db"
 import {
   createD1SessionCookie,
   resolveSessionContext,
 } from "../../workers/d1/sessions"
-import { getCookieValue } from "./auth-cookie"
 import { MILLISECONDS_PER_SECOND } from "./constants"
 import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 
@@ -19,12 +18,19 @@ export interface SessionResult {
   readonly sessionExpiresAt?: number
 }
 
-export const responseWithSession = <ResponseData>(
-  responseData: ResponseData,
-  sessionResult: SessionResult,
-  request: Request,
+interface ResponseWithSessionInput<ResponseData> {
+  responseData: ResponseData
+  sessionResult: SessionResult
+  request: Request
   init?: ResponseInit
-) => {
+}
+
+export const responseWithSession = <ResponseData>({
+  responseData,
+  sessionResult,
+  request,
+  init,
+}: ResponseWithSessionInput<ResponseData>) => {
   const headers = new Headers(init?.headers)
   headers.set("Cache-Control", "no-store")
   const opaqueSessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)

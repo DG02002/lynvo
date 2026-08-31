@@ -152,5 +152,8 @@ export default defineConfig({
   ],
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    "process.env.DISABLE_USAGE_LIMITS": JSON.stringify(
+      process.env.DISABLE_USAGE_LIMITS ?? ""
+    ),
   },
 })

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
-import { toast } from "sonner"
-import type { LinkListItem } from "~/features/links/types"
+import { showErrorToast } from "~/lib/toast-notifications"
+import type { LinkListItem, LinkViewItem } from "~/features/links/types"
 import type { ExtractionPreview } from "./action-types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinksActions } from "~/features/links/use-links/actions"
@@ -14,7 +14,10 @@ import { useRefreshActions } from "./refresh-actions"
 import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
-import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
+import {
+  getLinkViewItemExtractedLinks,
+  getLinkViewItemFlatMeta,
+} from "~/features/links/link-metadata-accessors"
 
 interface UseLinkActionsProps {
   links: LinkListItem[]
@@ -32,7 +35,6 @@ export function useLinkActions({
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
   const savedLinks = links.filter((item) => item.kind === "saved")
-  const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
 
   const {
     selectionDialogState,
@@ -62,6 +64,22 @@ export function useLinkActions({
     extractingItems,
     runWithExtractingItem,
   })
+  const handleChooseLinks = useCallback(
+    (item: LinkViewItem) => {
+      const extractedLinks = getLinkViewItemExtractedLinks(item)
+      if (extractedLinks.length < 2) {
+        return
+      }
+      openSelectionDialog({
+        originalUrl: item.url,
+        links: extractedLinks,
+        meta: getLinkViewItemFlatMeta(item),
+        existingItemId: item.id,
+      })
+    },
+    [openSelectionDialog]
+  )
+
   const linkItemActions: LinkItemActions = {
     play: handleLinkClick,
     showLinks: handleShowLinks,
@@ -72,6 +90,8 @@ export function useLinkActions({
     softRefresh: handleSoftRefresh,
     hardRefresh: handleHardRefresh,
     expandMirror: handleMirrorExpand,
+    chooseLinks: handleChooseLinks,
+    setArtwork: linkActions.setArtwork,
   }
   const { isSaving, handleSave, confirmSelection, pluginDomainDialog } =
     useSaveActions({
@@ -87,12 +107,11 @@ export function useLinkActions({
       setError,
       setCurrentUrl: setUrl,
       setHighlightedId,
-      shouldAutoSaveAllLinks,
     })
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
-      const originalUrl = selectionDialogState.originalUrl
+      const { originalUrl } = selectionDialogState
       try {
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,
@@ -115,7 +134,7 @@ export function useLinkActions({
         return resolvedChildren
       } catch (error) {
         console.error(error)
-        toast.error("The folder couldn’t be opened. Try again.")
+        showErrorToast({ title: "The folder couldn’t be opened. Try again." })
         return null
       }
     },

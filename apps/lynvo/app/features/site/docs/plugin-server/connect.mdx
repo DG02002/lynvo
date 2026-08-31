@@ -16,7 +16,9 @@ Add the Plugin Server after its production contract checks pass:
 5. Enter the production bearer key in **API key**
 6. Select **Add Custom Plugin Server**
 
-Lynvo fetches `GET /manifest`, checks protocol version `1.0`, calls `POST /verify`, and stores the Plugin Server only when both responses pass validation.
+Lynvo fetches `GET /manifest` and checks protocol version `1.0`. It calls
+`POST /verify` and stores the Plugin Server only when both responses pass
+validation.
 
 Production and remote Plugin Server origins must use HTTPS. For local
 development on the same machine, use an origin whose hostname is exactly

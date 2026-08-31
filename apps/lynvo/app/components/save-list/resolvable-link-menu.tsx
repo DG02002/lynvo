@@ -6,9 +6,10 @@ import {
   EllipsisIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { Button } from "~/components/ui/button"
+import { cn } from "~/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ interface ResolvableLinkMenuProps {
   onCopyLink: () => void
   onRefresh: () => void
   onRemove: () => void
+  triggerClassName: string
 }
 
 export const ResolvableLinkMenu = ({
@@ -30,6 +32,7 @@ export const ResolvableLinkMenu = ({
   onCopyLink,
   onRefresh,
   onRemove,
+  triggerClassName,
 }: ResolvableLinkMenuProps) => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
 
@@ -38,7 +41,14 @@ export const ResolvableLinkMenu = ({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" className="size-9">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
+                triggerClassName
+              )}
+            >
               <HugeiconsIcon icon={EllipsisIcon} />
               <span className="sr-only">Open menu for {itemLabel}</span>
             </Button>
@@ -49,7 +59,7 @@ export const ResolvableLinkMenu = ({
             <DropdownMenuItem
               onClick={() => {
                 onCopyLink()
-                toast.success("Link copied")
+                showLinkCopiedToast()
               }}
             >
               <HugeiconsIcon icon={CopyIcon} />
@@ -57,7 +67,7 @@ export const ResolvableLinkMenu = ({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onRefresh}>
               <HugeiconsIcon icon={Refresh01Icon} />
-              Refresh playable links
+              Refresh
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

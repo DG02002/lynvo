@@ -1,13 +1,15 @@
 ---
 title: Extend a generated Plugin Server with an agent
-description: Use a coding agent to replace the starter Plugin without rebuilding the Worker shell.
+description: Use a coding agent to replace the starter Plugin without rebuilding the Worker runtime.
 navLabel: Extend with an agent
 contentType: Tutorial
 ---
 
 <DocSection id="agent-prompt">
 
-Generate the project first with `pnpm create lynvo-plugin-server@latest`. Then run the prompt below from the generated project directory. It tells the agent to extend the existing Worker instead of rebuilding the protocol shell.
+Generate the project with `pnpm create lynvo-plugin-server@latest`. Run the
+prompt below from the generated project directory. It asks the agent to extend
+the existing Worker instead of rebuilding its route and validation code.
 
 <CodeBlock label="Agent prompt">
 
@@ -44,6 +46,8 @@ secrets or deployment configuration.
 
 </CodeBlock>
 
-The agent should edit the Plugin implementation, manifest metadata, and tests. Keep the shared runtime and route wiring unchanged unless the protocol requires an explicit extension.
+The agent should edit the Plugin implementation, manifest metadata, and tests.
+Keep the shared runtime and route wiring unchanged unless the protocol requires
+an explicit extension.
 
 </DocSection>

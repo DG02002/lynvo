@@ -3,11 +3,10 @@ import {
   parseLinkMetadata,
   toLinkViewModel,
   toLinkViewItem,
-  toSavedLinkDTO,
   createLinkMetadata,
   mergeDefinedMeta,
+  type SavedLink,
 } from "../app/features/links/links.mapper"
-import type { LinkResponse } from "../app/features/links/types"
 
 const playableLink = (id: string, url: string, label: string) => ({
   nodeKey: `test:${id}`,
@@ -31,7 +30,7 @@ describe("links mapper metadata boundary", () => {
         extraction: {
           extractedLinks: [playableLink("a", "https://a.test", "A")],
         },
-        playback: { openedUrls: ["https://a.test"], openedIds: ["a"] },
+        playback: { openedUrls: ["https://a.test"] },
       })
     )
 
@@ -42,31 +41,33 @@ describe("links mapper metadata boundary", () => {
 
   it("rejects non-canonical persistence fields", () => {
     expect(() =>
-      parseLinkMetadata({
-        pluginName: "Plugin",
-        extractedLinks: [],
-      })
+      parseLinkMetadata(
+        JSON.stringify({
+          pluginName: "Plugin",
+          extractedLinks: [],
+        })
+      )
     ).toThrow()
   })
 
   it("preserves current metadata and derives opened view state", () => {
-    const row: LinkResponse = {
+    const link: SavedLink = {
       id: "1",
       url: "https://page.test",
       title: "Page",
-      created_at: 1,
-      updated_at: 2,
-      meta: {
+      createdAt: 1,
+      updatedAt: 2,
+      metadata: {
         schemaVersion: 3,
         source: { pluginName: "Plugin", badge: "4K" },
         extraction: {
           extractedLinks: [playableLink("x", "https://x.test", "X")],
         },
-        playback: { openedUrls: ["https://x.test"], openedIds: [] },
+        playback: { openedUrls: ["https://x.test"] },
       },
     }
 
-    const item = toLinkViewItem(toSavedLinkDTO(row))
+    const item = toLinkViewItem(link)
     const view = toLinkViewModel(item)
     expect(view.badge).toBe("4K")
     expect(view.extractedLinks[0].opened).toBe(true)
@@ -83,18 +84,14 @@ describe("save-flow metadata preservation", () => {
       extractedLinks: [playableLink("old", "https://old.test", "Old")],
     })
     previous.playback.openedUrls = ["https://old.test"]
-    previous.playback.openedIds = ["old"]
 
     const updated = createLinkMetadata({
       extractedLinks: [playableLink("new", "https://new.test", "New")],
       previous,
     })
 
-    expect(
-      (updated.source as Record<string, string | undefined>).pluginServerId
-    ).toBe("plugin-server-1")
+    expect(updated.source).toMatchObject({ pluginServerId: "plugin-server-1" })
     expect(updated.playback.openedUrls).toContain("https://old.test")
-    expect(updated.playback.openedIds).toContain("old")
   })
 
   it("preserves Plugin Server source identity metadata", () => {
@@ -112,14 +109,13 @@ describe("save-flow metadata preservation", () => {
       extractedLinks: [playableLink("link", "https://cdn.test", "CDN")],
     })
 
-    const item = toLinkViewItem(
-      toSavedLinkDTO({
-        id: "1",
-        url: "https://source.test",
-        created_at: 1,
-        meta: metadata,
-      })
-    )
+    const item = toLinkViewItem({
+      id: "1",
+      url: "https://source.test",
+      createdAt: 1,
+      updatedAt: 1,
+      metadata,
+    })
     const view = toLinkViewModel(item)
 
     expect(metadata.source.pluginId).toBe("resolver-beta")
@@ -149,9 +145,7 @@ describe("save-flow metadata preservation", () => {
       previous,
     })
 
-    expect(
-      (updated.source as Record<string, string | undefined>).pluginServerId
-    ).toBe("plugin-server-1")
+    expect(updated.source).toMatchObject({ pluginServerId: "plugin-server-1" })
   })
 
   it("does not erase manifest source metadata with undefined extraction metadata", () => {

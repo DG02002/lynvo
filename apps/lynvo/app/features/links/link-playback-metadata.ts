@@ -4,25 +4,20 @@ import { getMediaNodeTargetOrUndefined } from "./media-node-interaction"
 
 export const applyOpenedState = (
   links: ExtractedLink[],
-  openedUrls: Set<string>,
-  openedIds: Set<string>
+  openedUrls: Set<string>
 ): ExtractedLink[] =>
   links.map((link) => {
     const target = getMediaNodeTargetOrUndefined(link)
-    const isOpened =
-      (target ? openedUrls.has(target) : false) ||
-      (link.id ? openedIds.has(link.id) : false)
-
     const updated = {
       ...link,
-      opened: isOpened,
+      opened: target !== undefined && openedUrls.has(target),
     }
     if (!link.children) {
       return updated
     }
     return {
       ...updated,
-      children: applyOpenedState(link.children, openedUrls, openedIds),
+      children: applyOpenedState(link.children, openedUrls),
     }
   })
 
@@ -55,3 +50,8 @@ export const withResolvedMirrors = (
     },
   }
 }
+
+export const isPlayableLinkFresh = (
+  link: ExtractedLink,
+  currentTimeMs: number = Date.now()
+): boolean => link.expiry === undefined || link.expiry > currentTimeMs

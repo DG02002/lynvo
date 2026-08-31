@@ -1,14 +1,13 @@
 # Contributing to Lynvo
 
-This is the single setup, development, testing, and deployment guide for the
-workspace.
+This file covers setup, development, testing, and deployment for the workspace.
 
 ## Repository map
 
 - `apps/lynvo`: product application and Plugin Server extraction orchestration.
 - `apps/lynvo-plugin-server`: private managed OneDrive and Bhadoo Worker.
 - `packages/plugin-server-protocol`: shared schemas, runtime, specification, and author guide.
-- `packages/create-lynvo-plugin-server`: public standalone Worker generator and canonical template.
+- `packages/create-lynvo-plugin-server`: public standalone Worker generator and template.
 - `apps/lynvo/app/features/site/docs/plugin-server/`: public Plugin Server author docs rendered at `/docs/plugin-server`.
 - `docs/plugin-server-maintainer-guide.md`: internal monorepo, compatibility, and package release guide.
 - `docs/apple-HIG/`: read-only design and writing references used by contributors.
@@ -24,8 +23,8 @@ Create the following accounts before setting up Lynvo:
 - [Google](https://console.cloud.google.com/) for OAuth sign-in credentials.
 
 You need a local D1 database (Miniflare provisions one automatically for
-development) and Google OAuth client credentials. The free tiers are enough
-for local development.
+development) and Google OAuth client credentials. The free tiers cover local
+development.
 
 ## Install the workspace
 
@@ -185,7 +184,7 @@ deployment bundle with:
 pnpm --filter @lynvo/app exec wrangler deploy --dry-run
 ```
 
-The Lynvo dry-run intentionally uses React Router's generated Wrangler deploy
+The Lynvo dry run uses React Router's generated Wrangler deploy
 configuration. Do not pass the source `wrangler.jsonc` directly to that final
 command.
 
@@ -205,8 +204,8 @@ Before deployment:
 - Confirm `LYNVO_PLUGIN_SERVER` targets the intended Worker in the same Cloudflare account.
 
 D1 is the application database. Sessions are opaque HttpOnly cookies resolved
-to D1 rows; sign-in is Google-only. Lynvo’s Durable Object coordinates realtime
-connections; the Lynvo Plugin Server’s Durable Object enforces global extraction
+to D1 rows; sign-in is Google-only. Lynvo's Durable Object coordinates realtime
+connections; the Lynvo Plugin Server's Durable Object enforces global extraction
 capacity. Keep both Wrangler migrations intact. Schema changes ship as SQL
 files under `apps/lynvo/migrations/`; CI applies them with
 `wrangler d1 migrations apply DB --remote` before promoting a new version.

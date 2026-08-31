@@ -1,16 +1,24 @@
 import {
   acknowledgeRemoteCommandNotification,
   listPendingRemoteCommandNotifications,
+  type PendingRemoteCommandNotification,
 } from "./d1/remote-commands"
-import type { PendingRemoteCommandNotification } from "./d1/remote-commands"
 import { Result, Schema } from "effect"
 
 const remoteInboxDeliverySchema = Schema.Struct({
   deliveredSocketCount: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
 })
 
+interface RemoteCommandRealtimeRoom {
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+}
+
+interface RemoteCommandRealtimeRoomNamespace {
+  getByName: (name: string) => RemoteCommandRealtimeRoom
+}
+
 interface RemoteCommandNotificationEnvironment {
-  readonly USER_REALTIME_ROOM?: Env["USER_REALTIME_ROOM"]
+  readonly USER_REALTIME_ROOM?: RemoteCommandRealtimeRoomNamespace
 }
 
 export interface RemoteCommandNotificationDelivery {

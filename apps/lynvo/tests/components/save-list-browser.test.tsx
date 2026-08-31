@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
@@ -22,6 +22,13 @@ const createActions = (
 })
 
 describe("SaveListBrowser", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({ matches: false }),
+    })
+  })
+
   it("restores the nested folder in the same tab after refresh", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
       configurable: true,
@@ -41,22 +48,261 @@ describe("SaveListBrowser", () => {
               id: "season-one",
               url: "https://media.example/collection/season-one",
               label: "Season One",
+              mediaNodeKind: "group",
               type: "folder",
               children: [
                 {
                   id: "episode-one",
                   url: "https://media.example/collection/season-one/episode-one.mkv",
                   label: "Episode One",
+                  mediaNodeKind: "playable",
                   type: "file",
                 },
               ],
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
+    const onSelectedItemUrlChange = vi.fn()
     const renderSavedFolder = () =>
+      render(
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={onSelectedItemUrlChange}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+      )
+
+    const firstRender = renderSavedFolder()
+    const headerMenu = screen.getByRole("button", {
+      name: "Open menu for Saved Collection",
+    })
+    expect(headerMenu).toHaveClass(
+      "size-full!",
+      "rounded-none!",
+      "[&_svg]:size-7!",
+      "text-foreground!"
+    )
+    expect(headerMenu.parentElement).toHaveClass(
+      "flex",
+      "self-stretch",
+      "items-center",
+      "justify-center",
+      "w-16",
+      "text-foreground"
+    )
+    expect(headerMenu.parentElement).not.toHaveClass("contents")
+    expect(headerMenu.parentElement).not.toHaveClass("border-s")
+    expect(headerMenu.closest("header")).toHaveClass(
+      "grid",
+      "grid-cols-[4rem_minmax(0,1fr)_auto_4rem]",
+      "md:grid-cols-[18rem_minmax(0,1fr)_auto_4rem]",
+      "items-stretch",
+      "p-0"
+    )
+    expect(headerMenu.closest("section")).toHaveClass(
+      "save-list-browser-layout"
+    )
+    expect(headerMenu.closest("header")?.nextElementSibling).toHaveClass(
+      "md:grid-cols-[var(--save-list-browser-side-column-width)_minmax(0,1fr)]"
+    )
+    expect(headerMenu.closest("header")).not.toHaveClass("py-3")
+    expect(
+      screen.getByRole("heading", { name: "Saved Collection" })
+    ).toHaveClass("hidden", "md:block")
+    const backButton = screen.getByRole("button", { name: "Back" })
+    expect(backButton).toHaveClass("text-lg", "text-foreground")
+    expect(backButton.querySelector("svg")).toHaveClass(
+      "size-6",
+      "text-foreground"
+    )
+    const seasonFolderButton = screen.getByRole("button", {
+      name: "Season One",
+    })
+    expect(seasonFolderButton).toHaveAttribute("aria-current", "page")
+    expect(seasonFolderButton).toHaveAttribute("data-folder-state", "open")
+    fireEvent.click(seasonFolderButton!)
+    expect(await screen.findByText("Episode One")).toBeVisible()
+
+    firstRender.unmount()
+    renderSavedFolder()
+
+    expect(screen.getByText("Episode One")).toBeVisible()
+    expect(screen.getByRole("button", { name: /^Season One/ })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
+
+    const contentList = document.querySelector<HTMLElement>(
+      ".overscroll-y-contain"
+    )
+    expect(contentList).toBeInTheDocument()
+    expect(contentList).toHaveClass("overflow-x-hidden")
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+    fireEvent.wheel(contentList!, { deltaX: 48, deltaY: 0 })
+    expect(screen.getByText("Episode One")).toBeVisible()
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+    fireEvent.wheel(contentList!, { deltaX: 0, deltaY: 1 })
+    fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
+    expect(onSelectedItemUrlChange).toHaveBeenCalledWith(null)
+  })
+
+  it("renders protocol group folders without url targets and marks them opened by id", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const markOpened = vi.fn()
+    const item: LinkViewItem = {
+      id: "plugin-series-item",
+      url: "https://source.example/plugin-series",
+      timestamp: 1,
+      title: "Plugin Series",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              nodeKey: "0:group:folder-S01",
+              id: "folder-S01",
+              label: "Season 1",
+              type: "folder",
+              mediaNodeKind: "group",
+              selectable: false,
+              children: [
+                {
+                  nodeKey: "0.0:resolvable:episode-one",
+                  id: "episode-one",
+                  nodeUrl: "https://files.example/drive/episode-one",
+                  label: "Episode One",
+                  type: "folder",
+                  mediaNodeKind: "resolvable",
+                  resolutionKind: "mirrors",
+                },
+              ],
+            },
+            {
+              nodeKey: "1:group:identifier-less",
+              label: "Identifier-less Group",
+              type: "folder",
+              mediaNodeKind: "group",
+              selectable: false,
+              children: [],
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions({ markOpened })}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(
+      screen.getAllByRole("button", { name: /^Season 1/ }).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole("button", { name: /Identifier-less Group/ }).length
+    ).toBeGreaterThan(0)
+
+    const contentSeasonButton = screen
+      .getAllByRole("button", { name: /^Season 1/ })
+      .at(-1)!
+    fireEvent.click(contentSeasonButton)
+
+    expect(await screen.findByText("Episode One")).toBeVisible()
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(item.url, "folder-S01")
+    )
+  })
+
+  it("renders a target-less mirror resolvable root without crashing the list", () => {
+    const item: LinkViewItem = {
+      id: "target-less-resolvable-item",
+      url: "https://source.example/target-less-resolvable",
+      timestamp: 1,
+      title: "Target-less Resolvable",
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Gamma" },
+        extraction: {
+          extractedLinks: [
+            {
+              nodeKey: "0:resolvable:target-less",
+              label: "Target-less Container",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "mirrors",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    expect(screen.getByText("Target-less Container")).toBeVisible()
+    expect(screen.getByText("Source Gamma")).toBeVisible()
+  })
+
+  it("registers navigation wheel events as non-passive", () => {
+    const item: LinkViewItem = {
+      id: "wheel-listener-item",
+      url: "https://media.example/wheel-listener",
+      timestamp: 1,
+      title: "Wheel Listener Item",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "wheel-listener-file",
+              url: "https://media.example/wheel-listener/file.mp4",
+              label: "File.mp4",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+    const addEventListenerSpy = vi.spyOn(
+      HTMLElement.prototype,
+      "addEventListener"
+    )
+
+    try {
       render(
         <SaveListBrowser
           items={[{ ...item, kind: "saved" }]}
@@ -69,20 +315,14 @@ describe("SaveListBrowser", () => {
         />
       )
 
-    const firstRender = renderSavedFolder()
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /Season One/ }).at(-1)!
-    )
-    expect(await screen.findByText("Episode One")).toBeVisible()
-
-    firstRender.unmount()
-    renderSavedFolder()
-
-    expect(screen.getByText("Episode One")).toBeVisible()
-    expect(screen.getByRole("button", { name: /Season One/ })).toHaveAttribute(
-      "aria-current",
-      "page"
-    )
+      expect(addEventListenerSpy.mock.calls).toContainEqual([
+        "wheel",
+        expect.any(Function),
+        { passive: false },
+      ])
+    } finally {
+      addEventListenerSpy.mockRestore()
+    }
   })
 
   it("lazily extracts an unresolved folder when it is opened", async () => {
@@ -95,6 +335,7 @@ describe("SaveListBrowser", () => {
         id: "folder-alpha",
         url: "https://index.example.com/0:/Collections/Folder%20Alpha/",
         label: "Folder Alpha",
+        mediaNodeKind: "group",
         type: "folder",
         childrenResolved: true,
         children: [
@@ -102,6 +343,7 @@ describe("SaveListBrowser", () => {
             id: "playable-item-1",
             url: "https://index.example.com/0:/Collections/Folder%20Alpha/playable-item.mkv",
             label: "playable-item.mkv",
+            mediaNodeKind: "playable",
             type: "file",
           },
         ],
@@ -126,7 +368,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -143,12 +385,15 @@ describe("SaveListBrowser", () => {
     )
 
     const folderButtons = screen.getAllByRole("button", {
-      name: /Folder Alpha/,
+      name: /^Folder Alpha/,
     })
     expect(folderButtons).toHaveLength(2)
     expect(
       folderButtons.every(
-        (button) => button.dataset.folderState === "lazy-closed"
+        (button) =>
+          button
+            .closest("[data-folder-state]")
+            ?.getAttribute("data-folder-state") === "lazy-closed"
       )
     ).toBe(true)
     fireEvent.click(folderButtons.at(-1)!)
@@ -168,10 +413,12 @@ describe("SaveListBrowser", () => {
 
   it("shows a single resolvable container directly on the save page", async () => {
     const onSelectedItemUrlChange = vi.fn()
+    const markOpened = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([
       {
         url: "https://files.example/route-alpha",
         label: "Play from Source Route Alpha",
+        mediaNodeKind: "playable",
         type: "file",
         size: "1.2 GB",
       },
@@ -191,10 +438,11 @@ describe("SaveListBrowser", () => {
               label: "Playable Item Alpha.mkv",
               type: "folder",
               mediaNodeKind: "resolvable",
+              size: "8.2 GB",
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -203,7 +451,7 @@ describe("SaveListBrowser", () => {
         items={[{ ...item, kind: "saved" }]}
         selectedItemUrl={null}
         onSelectedItemUrlChange={onSelectedItemUrlChange}
-        actions={createActions({ expandMirror })}
+        actions={createActions({ expandMirror, markOpened })}
         extractingItems={new Set()}
         highlightedId={null}
         isHydrating={false}
@@ -211,16 +459,26 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getByText("Playable Item Alpha.mkv").closest("button")!
+      screen.getByRole("button", { name: "Playable Item Alpha.mkv" })
     )
 
+    expect(markOpened).not.toHaveBeenCalled()
     expect(
       await screen.findByText("Play from Source Route Alpha")
     ).toBeVisible()
-    expect(screen.getByText("Source Beta")).toBeVisible()
-    expect(screen.getByText("1.2 GB")).toBeVisible()
+    const sourceName = screen.getByText("Source Beta")
+    expect(sourceName).toBeVisible()
+    expect(sourceName.parentElement).toHaveTextContent("Source Beta·8.2 GB")
+    expect(screen.queryByText("1.2 GB")).not.toBeInTheDocument()
     expect(onSelectedItemUrlChange).not.toHaveBeenCalled()
     expect(expandMirror).toHaveBeenCalledWith(item.url, item.url, false)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Play from Source Route Alpha" })
+    )
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
+    )
   })
 
   it("resolves a Resolver Beta playable-item inline with loading and opened feedback", async () => {
@@ -250,7 +508,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -284,18 +542,21 @@ describe("SaveListBrowser", () => {
             {
               url: `${lazyItemUrl}/route-alpha`,
               label: "Play from Source Route Alpha",
+              mediaNodeKind: "playable",
               type: "file",
               size: "1.2 GB",
             },
             {
               url: `${lazyItemUrl}/route-beta`,
               label: "Play from Source Route Beta Server",
+              mediaNodeKind: "playable",
               type: "file",
               size: "1.4 GB",
             },
             {
               url: `${lazyItemUrl}/route-gamma`,
-              label: "Play from CF Server (404)",
+              label: "Play from CDN Server (404)",
+              mediaNodeKind: "playable",
               type: "file",
               status: "down",
             },
@@ -317,9 +578,9 @@ describe("SaveListBrowser", () => {
     }
 
     render(<Harness />)
-    const playableItemButton = screen
-      .getByText("Playable Item One")
-      .closest("button")!
+    const playableItemButton = screen.getByRole("button", {
+      name: "Playable Item One",
+    })
     fireEvent.click(playableItemButton)
 
     expect(
@@ -327,14 +588,18 @@ describe("SaveListBrowser", () => {
         name: "Loading playable links for Playable Item One…",
       })
     ).toBeVisible()
-    expect(playableItemButton).toHaveAttribute(
+    const playableItemRow = playableItemButton.parentElement
+    const resolvingSpinner = playableItemRow?.querySelector(
+      '[data-slot="spinner"]'
+    )
+    expect(resolvingSpinner).toBeInTheDocument()
+    expect(resolvingSpinner).toHaveClass("size-6")
+    expect(resolvingSpinner?.parentElement).toHaveClass("size-10", "md:size-14")
+    expect(playableItemRow).toHaveAttribute(
       "data-resolution-state",
       "resolving"
     )
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/playable-item-one"
-    )
+    expect(markOpened).not.toHaveBeenCalled()
 
     finishResolution?.()
 
@@ -349,27 +614,71 @@ describe("SaveListBrowser", () => {
     expect(screen.queryByText("Source Route Alpha")).not.toBeInTheDocument()
     expect(screen.queryByText("Source Route Beta")).not.toBeInTheDocument()
     expect(
-      screen.queryByText("Play from CF Server (404)")
+      screen.queryByText("Play from CDN Server (404)")
     ).not.toBeInTheDocument()
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/playable-item-one"
-    )
-    expect(playableItemButton).toHaveClass("bg-sky-500/15")
-    expect(playableItemButton).toHaveAttribute(
-      "data-resolution-state",
-      "expanded"
-    )
+    expect(markOpened).not.toHaveBeenCalled()
+    expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
+    expect(playableItemButton).toHaveClass("bg-muted/60")
+    expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")
     expect(
       screen.getAllByRole("button", {
         name: /Open menu for Play from Source Route/,
       })
     ).toHaveLength(2)
     expect(
+      screen
+        .getAllByRole("button", {
+          name: /Open menu for Play from Source Route/,
+        })
+        .every((menuButton) =>
+          menuButton.classList.contains("text-foreground!")
+        )
+    ).toBe(true)
+    expect(
       screen.getByRole("button", { name: "Open menu for Playable Item One" })
     ).toBeInTheDocument()
-    expect(screen.getByText("1.2 GB")).toBeVisible()
-    expect(screen.getByText("1.4 GB")).toBeVisible()
+    expect(screen.queryByText("1.2 GB")).not.toBeInTheDocument()
+    expect(
+      playableItemButton.nextElementSibling?.querySelectorAll("svg")
+    ).toHaveLength(1)
+    expect(screen.queryByText("1.4 GB")).not.toBeInTheDocument()
+    const mirrorGroup = screen
+      .getByText("Play from Source Route Alpha")
+      .closest("[data-container-children]")
+    expect(mirrorGroup).toHaveClass("bg-muted/60", "ps-12", "md:ps-14")
+    const connectors = mirrorGroup?.querySelectorAll(
+      "[data-container-connector]"
+    )
+    expect(connectors).toHaveLength(3)
+    expect(connectors?.[0]).toHaveClass("w-0.5", "bg-sky-500")
+    expect(connectors?.[1]).toHaveClass(
+      "-start-3",
+      "h-0.5",
+      "w-3",
+      "bg-sky-500"
+    )
+    expect(
+      screen
+        .getAllByRole("button", {
+          name: /Open menu for Play from Source Route/,
+        })
+        .every((menuButton) =>
+          menuButton
+            .closest("[data-container-children]")
+            ?.classList.contains("bg-muted/60")
+        )
+    ).toBe(true)
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Play from Source Route Alpha" })
+    )
+    await waitFor(() =>
+      expect(markOpened).toHaveBeenCalledWith(
+        item.url,
+        "https://resolver-beta.example/playable-item-one"
+      )
+    )
+    expect(playableItemButton).toHaveClass("bg-sky-500/15")
 
     fireEvent.click(playableItemButton)
     await waitFor(() => {
@@ -377,7 +686,7 @@ describe("SaveListBrowser", () => {
         screen.queryByText("Play from Source Route Alpha")
       ).not.toBeInTheDocument()
     })
-    expect(playableItemButton).toHaveAttribute(
+    expect(playableItemRow).toHaveAttribute(
       "data-resolution-state",
       "collapsed"
     )
@@ -407,7 +716,7 @@ describe("SaveListBrowser", () => {
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -426,41 +735,39 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const failedPlayableItemButton = screen
-      .getByText("Playable Item Resolution Failure")
-      .closest("button")!
+    const failedPlayableItemButton = screen.getByRole("button", {
+      name: "Playable Item Resolution Failure",
+    })
     fireEvent.click(failedPlayableItemButton)
 
+    const failedPlayableItemRow = failedPlayableItemButton.parentElement
     await waitFor(() => {
-      expect(failedPlayableItemButton).toHaveAttribute(
+      expect(failedPlayableItemRow).toHaveAttribute(
         "data-resolution-state",
         "failed"
       )
     })
     expect(failedPlayableItemButton).toHaveClass("bg-destructive/15")
-    expect(markOpened).toHaveBeenCalledWith(
-      item.url,
-      "https://resolver-beta.example/resolution-failure"
-    )
+    expect(markOpened).not.toHaveBeenCalled()
   })
 
-  it("shows the size of a single playable Google Drive item", () => {
+  it("shows the size of a single playable Example Drive item", () => {
     const directLink: ExtractedLink = {
-      id: "google-drive-file",
-      url: "https://drive.usercontent.google.com/download?id=google-drive-file",
-      label: "Dolby ATMOS Helicopter.m2ts",
+      id: "example-drive-file",
+      url: "https://drive.example.com/download?id=example-drive-file",
+      label: "Surround Sound Helicopter.m2ts",
       type: "file",
       mediaNodeKind: "playable",
       size: "193.65 MB",
     }
     const item: LinkViewItem = {
-      url: "https://drive.google.com/file/d/google-drive-file/view",
+      url: "https://drive.example.com/file/d/example-drive-file/view",
       timestamp: Date.now(),
       metadata: {
         schemaVersion: 3,
-        source: { sourceName: "Google Drive" },
+        source: { sourceName: "Example Drive" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -476,17 +783,20 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    const sourceName = screen.getByText("Google Drive")
+    const sourceName = screen.getByText("Example Drive")
     const fileSize = screen.getByText("193.65 MB")
     expect(fileSize).toBeVisible()
     expect(sourceName.parentElement).toContainElement(fileSize)
-    expect(sourceName.parentElement).toHaveTextContent("Google Drive·193.65 MB")
+    expect(sourceName.parentElement).toHaveTextContent(
+      "Example Drive·193.65 MB"
+    )
   })
 
   it("renders an opened Direct Media root item with the opened background", () => {
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/video.mp4",
       label: "video.mp4",
+      mediaNodeKind: "playable",
       type: "file",
       expiry: TEST_PLAYABLE_EXPIRY_AT_MS,
     }
@@ -497,7 +807,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [directLink.url], openedIds: [] },
+        playback: { openedUrls: [directLink.url] },
       },
     }
 
@@ -513,9 +823,9 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(
-      screen.getByRole("button", { name: /video.mp4/ }).parentElement
-    ).toHaveClass("bg-sky-500/15")
+    expect(screen.getByRole("button", { name: /video.mp4/ })).toHaveClass(
+      "bg-sky-500/15"
+    )
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")
@@ -526,11 +836,50 @@ describe("SaveListBrowser", () => {
     )
   })
 
+  it("renders the root item menu as a full-height trailing cell", () => {
+    const directLink: ExtractedLink = {
+      url: "https://cdn.example.com/cell-menu.mp4",
+      label: "cell-menu.mp4",
+      mediaNodeKind: "playable",
+      type: "file",
+    }
+    const item: LinkViewItem = {
+      url: "https://source.example/cell-menu",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Direct Media" },
+        extraction: { extractedLinks: [directLink] },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    const menuTrigger = screen.getByRole("button", {
+      name: "Open menu for https://source.example/cell-menu",
+    })
+    expect(menuTrigger).toHaveClass("size-full!", "rounded-none!")
+    expect(menuTrigger.parentElement).toHaveClass("w-16", "text-foreground")
+    expect(menuTrigger.parentElement).not.toHaveClass("border-s")
+  })
+
   it("disables and mutes an expired playable link", () => {
     const play = vi.fn()
     const directLink: ExtractedLink = {
       url: "https://cdn.example.com/expired-video.mp4",
       label: "expired-video.mp4",
+      mediaNodeKind: "playable",
       type: "file",
       expiry: Date.now() - 60_000,
     }
@@ -541,7 +890,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: { sourceName: "Direct Media" },
         extraction: { extractedLinks: [directLink] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -588,12 +937,14 @@ describe("SaveListBrowser", () => {
               id: "folder-one",
               url: "https://source.example/folder/one",
               label: "Folder one",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "folder",
               type: "folder",
               children: [],
             },
           ],
         },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
     }
 
@@ -613,21 +964,23 @@ describe("SaveListBrowser", () => {
     expect(newBadges).toHaveLength(2)
     expect(newBadges[0]).toHaveClass("md:hidden")
     expect(newBadges[1]).toHaveClass("hidden", "md:inline-flex")
-    const itemCounts = screen.getAllByText("1 items")
-    expect(itemCounts).toHaveLength(2)
-    expect(itemCounts[0]).toHaveClass("md:hidden")
-    expect(itemCounts[1]).toHaveClass("hidden", "md:inline")
+    const itemCounts = screen.getAllByText("1 item")
+    expect(itemCounts).toHaveLength(1)
     expect(
       Boolean(
         itemCounts[0].compareDocumentPosition(newBadges[0]) &
         Node.DOCUMENT_POSITION_FOLLOWING
       )
     ).toBe(true)
-    fireEvent.click(screen.getByRole("button", { name: "View source.example" }))
+    const folderButton = screen.getByRole("button", {
+      name: "View source.example",
+    })
+    expect(folderButton.parentElement?.querySelectorAll("svg")).toHaveLength(1)
+    fireEvent.click(folderButton)
     expect(markOpened).toHaveBeenCalledWith(item.url, item.url)
   })
 
-  it("uses a spinner for hydration and a plain empty state", () => {
+  it("uses a spinner for hydration and the shared empty state", () => {
     const commonProps = {
       selectedItemUrl: null,
       onSelectedItemUrlChange: vi.fn(),
@@ -646,7 +999,9 @@ describe("SaveListBrowser", () => {
     rerender(
       <SaveListBrowser items={[]} isHydrating={false} {...commonProps} />
     )
-    const emptyHeading = screen.getByText("No saved links")
+    const emptyHeading = screen.getByRole("heading", {
+      name: "No saved links yet",
+    })
     expect(
       screen.queryByText("Add a link to save it for later.")
     ).not.toBeInTheDocument()
@@ -666,7 +1021,7 @@ describe("SaveListBrowser", () => {
         schemaVersion: 3,
         source: {},
         extraction: { extractedLinks: [] },
-        playback: { openedUrls: [], openedIds: [] },
+        playback: { openedUrls: [] },
       },
       extractionStatus: { state: "running" },
     }
@@ -683,13 +1038,17 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByText("Loading links")).toBeVisible()
+    const loadingLabel = screen.getByText("Loading links…")
+    expect(loadingLabel).toBeVisible()
+    expect(loadingLabel).toHaveClass("shimmer")
+    expect(screen.queryByText("Queued Source")).not.toBeInTheDocument()
     const row = screen
-      .getByText("Queued Source")
+      .getByRole("button", { name: "Loading links… for Queued Source" })
       .closest("[data-extraction-state]")
     expect(row).toHaveAttribute("data-extraction-state", "running")
     expect(
-      screen.getByRole("button", { name: "Loading links for Queued Source" })
+      screen.getByRole("button", { name: "Loading links… for Queued Source" })
     ).toBeDisabled()
+    expect(row?.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
   })
 })

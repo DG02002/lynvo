@@ -1,4 +1,5 @@
 import { useTheme } from "next-themes"
+import { Switch } from "~/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -17,11 +18,8 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { Switch } from "~/components/ui/switch"
-import {
-  setShouldHideTvBroSaveInput,
-  useShouldHideTvBroSaveInput,
-} from "./tvbro-save-input-preference"
+import { setMediaView, useMediaView } from "./media-view-preference"
+import { MediaViewSelector } from "./media-view-selector"
 import {
   setShouldAutoSaveAllLinks,
   useShouldAutoSaveAllLinks,
@@ -35,8 +33,8 @@ const appearanceOptions = [
 
 export const GeneralSettings = () => {
   const { theme = "system", setTheme } = useTheme()
-  const shouldHideTvBroSaveInput = useShouldHideTvBroSaveInput()
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  const mediaView = useMediaView()
 
   const handleAppearanceChange = (value: string | null) => {
     if (!value) {
@@ -72,7 +70,7 @@ export const GeneralSettings = () => {
         <SettingsRow>
           <SettingsRowInfo
             label="Save all links automatically"
-            description="Save every extracted link without asking you to choose from the selection dialog."
+            description="Save every extracted link without a selection step."
           />
           <Switch
             checked={shouldAutoSaveAllLinks}
@@ -80,16 +78,13 @@ export const GeneralSettings = () => {
             aria-label="Save all links automatically"
           />
         </SettingsRow>
-        <SettingsRow>
+        <SettingsRow className="items-start flex-col gap-4">
           <SettingsRowInfo
-            label="Hide Add Link box in TV Bro"
-            description="Keep your saved links in focus on TV. Turn this off if you also want to add links using your TV remote."
+            className="w-full pr-0"
+            label="Saved links view"
+            description="Choose how saved links appear on the Save page."
           />
-          <Switch
-            checked={shouldHideTvBroSaveInput}
-            onCheckedChange={setShouldHideTvBroSaveInput}
-            aria-label="Hide Add Link box in TV Bro"
-          />
+          <MediaViewSelector value={mediaView} onValueChange={setMediaView} />
         </SettingsRow>
       </SettingsList>
     </SettingsPanel>

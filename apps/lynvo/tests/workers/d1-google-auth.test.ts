@@ -3,7 +3,7 @@ import {
   createGoogleSignInStart,
   decryptStatePayload,
   encryptStatePayload,
-  normalizeGoogleReturnTo,
+  getSafeGoogleReturnTo,
   parseVerifiedGoogleProfile,
 } from "../../workers/d1/google-auth"
 
@@ -11,8 +11,8 @@ const CLIENT_SECRET = "test-client-secret"
 const CLIENT_ID = "test-client-id"
 const NOW = 1_750_000_000_000
 
-const encodeIdToken = (claims: Record<string, unknown>): string => {
-  const encodePart = (value: object) =>
+const encodeIdToken = <Claims>(claims: Claims): string => {
+  const encodePart = <Value>(value: Value) =>
     btoa(JSON.stringify(value))
       .replaceAll("+", "-")
       .replaceAll("/", "_")
@@ -66,7 +66,8 @@ describe("google oauth state cookie", () => {
     expect(stateCookie).toContain("HttpOnly")
     expect(stateCookie).toContain("SameSite=Lax")
 
-    const stateCookieValue = stateCookie.split(";")[0].split("=")[1]
+    const [stateCookiePair] = stateCookie.split(";")
+    const [, stateCookieValue] = stateCookiePair.split("=")
     const decrypted = await decryptStatePayload(
       decodeURIComponent(stateCookieValue),
       CLIENT_SECRET
@@ -76,10 +77,10 @@ describe("google oauth state cookie", () => {
   })
 
   it("normalizes return-to paths to same-origin relative routes", () => {
-    expect(normalizeGoogleReturnTo("/save")).toBe("/save")
-    expect(normalizeGoogleReturnTo(undefined)).toBe("/")
-    expect(normalizeGoogleReturnTo("//evil.example")).toBe("/")
-    expect(normalizeGoogleReturnTo("https://evil.example")).toBe("/")
+    expect(getSafeGoogleReturnTo("/save")).toBe("/save")
+    expect(getSafeGoogleReturnTo(undefined)).toBe("/")
+    expect(getSafeGoogleReturnTo("//evil.example")).toBe("/")
+    expect(getSafeGoogleReturnTo("https://evil.example")).toBe("/")
   })
 })
 

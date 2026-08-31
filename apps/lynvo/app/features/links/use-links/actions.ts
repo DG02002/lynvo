@@ -16,4 +16,5 @@ export interface LinksActions {
     mirrors: ExtractedLink[]
   ) => void
   removeLink: (itemUrl: string, linkKey: string, linkUrl: string) => void
+  setArtwork: (itemUrl: string, identity: MediaArtworkIdentity) => void
 }

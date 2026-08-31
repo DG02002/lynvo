@@ -14,6 +14,10 @@ export class ExtractionError extends Schema.TaggedError<ExtractionError>()(
   {
     message: Schema.String,
     url: Schema.String,
+    /** The Plugin Server's unmodified error text, kept for diagnostics. */
+    detail: Schema.optional(Schema.String),
+    /** HTTP status the Plugin Server responded with, when any. */
+    status: Schema.optional(Schema.Number),
   }
 ) {}
 
@@ -22,6 +26,14 @@ export class ValidationError extends Schema.TaggedError<ValidationError>()(
   {
     message: Schema.String,
     details: Schema.optional(Schema.Unknown),
+  }
+) {}
+
+export class UsageLimitError extends Schema.TaggedError<UsageLimitError>()(
+  "UsageLimitError",
+  {
+    message: Schema.String,
+    retryAfterSeconds: Schema.Number,
   }
 ) {}
 
@@ -72,6 +84,11 @@ export const ExtractionApiError = publicError("ExtractionError").pipe(
 export const ValidationApiError = publicError("ValidationError").pipe(
   HttpApiSchema.status(400)
 )
+export const UsageLimitApiError = Schema.Struct({
+  _tag: Schema.Literal("UsageLimitError"),
+  message: Schema.String,
+  retryAfterSeconds: Schema.Number,
+}).pipe(HttpApiSchema.status(429))
 export const UnauthorizedApiError = publicError("UnauthorizedError").pipe(
   HttpApiSchema.status(401)
 )

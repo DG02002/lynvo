@@ -3,8 +3,10 @@ import { PolicyLayout, PolicySection } from "~/components/policy-layout"
 import { SupportChannelLinks } from "~/components/support-channel-links"
 import { policyPaths } from "~/lib/paths"
 
+const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
+
 export const UsagePolicyContent = () => (
-  <PolicyLayout title="Usage policy" updatedAt="August 8, 2026">
+  <PolicyLayout title="Usage policy" updatedAt="August 25, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       Lynvo helps you save and resolve links, then open them in external Android
       players through the Lynvo Plugin Server and Custom Plugin Servers. This
@@ -42,6 +44,20 @@ export const UsagePolicyContent = () => (
       <p>
         Follow applicable law and the terms, licenses, and access rules of each
         content provider you use with Lynvo.
+      </p>
+      <p>
+        TMDB metadata and artwork remain subject to the{" "}
+        <a
+          href={TMDB_API_TERMS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4"
+        >
+          TMDB API terms of use
+        </a>{" "}
+        and the rights of the relevant content owners. Do not use Lynvo to
+        scrape, bulk-copy, sell, sublicense, or build a separate database from
+        that metadata or artwork.
       </p>
     </PolicySection>
 

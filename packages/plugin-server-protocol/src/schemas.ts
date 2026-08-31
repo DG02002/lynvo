@@ -1,10 +1,12 @@
 import { Effect, Schema } from "effect"
-import { ERROR_CODES } from "./models.js"
-import type {
-  GroupNode,
-  MediaNode,
-  PlayableNode,
-  ResolvableNode,
+import {
+  ERROR_CODES,
+  isCompatibleProtocolVersion,
+  PROTOCOL_VERSION,
+  type GroupNode,
+  type MediaNode,
+  type PlayableNode,
+  type ResolvableNode,
 } from "./models.js"
 
 export const pluginServerMatcherSchema = Schema.Struct({
@@ -31,8 +33,7 @@ const iconUrlSchema = Schema.String.pipe(
       }
     },
     {
-      message:
-        "Icon URLs must use HTTPS, except on loopback development hosts",
+      message: "Icon URLs must use HTTPS, except on loopback development hosts",
     }
   )
 )
@@ -65,8 +66,20 @@ const urlStringSchema = Schema.String.pipe(
   )
 )
 
+// Minor wire versions are additive by contract, so any 1.x manifest whose
+// major matches the current protocol major is accepted; a major mismatch is
+// the only wire-level break.
+const protocolVersionSchema = Schema.String.pipe(
+  Schema.refine(
+    (value): value is string => isCompatibleProtocolVersion(value),
+    {
+      message: `protocolVersion must be a ${PROTOCOL_VERSION.split(".")[0]}.x version`,
+    }
+  )
+)
+
 export const pluginServerManifestSchema = Schema.Struct({
-  protocolVersion: Schema.Literal("1.0"),
+  protocolVersion: protocolVersionSchema,
   pluginServerId: Schema.NonEmptyString,
   displayName: Schema.NonEmptyString,
   hasIcon: Schema.optional(Schema.Boolean),
@@ -100,6 +113,12 @@ export const pluginServerManifestSchema = Schema.Struct({
   ),
 })
 
+const isoTimestampSchema = Schema.String.pipe(
+  Schema.refine((value): value is string => !Number.isNaN(Date.parse(value)), {
+    message: "Must be an ISO 8601 timestamp",
+  })
+)
+
 export const usageMetricSchema = Schema.Struct({
   id: Schema.NonEmptyString,
   label: Schema.NonEmptyString,
@@ -107,7 +126,7 @@ export const usageMetricSchema = Schema.Struct({
   limit: Schema.Number.pipe(Schema.check(Schema.isGreaterThan(0))),
   unit: Schema.NonEmptyString,
   period: Schema.Literals(["daily", "monthly"]),
-  resetsAt: Schema.String,
+  resetsAt: isoTimestampSchema,
   pluginId: Schema.optional(Schema.NonEmptyString),
 })
 
@@ -159,6 +178,10 @@ export const pluginMetadataSchema = Schema.Struct({
   version: Schema.optional(Schema.String),
   routesToPluginId: Schema.optional(Schema.NonEmptyString),
   matchStrategy: Schema.optional(Schema.Literals(["static", "probe"])),
+  usageMultiplier: Schema.optional(
+    Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(1)))
+  ),
+  proxyCreditUsage: Schema.optional(Schema.NonEmptyString),
   hosts: Schema.Array(Schema.String).pipe(
     Schema.withDecodingDefault(Effect.succeed([]))
   ),
@@ -176,6 +199,7 @@ export const lynvoPluginCatalogSchema = Schema.Struct({
   plugins: Schema.Array(pluginMetadataSchema).pipe(
     Schema.withDecodingDefault(Effect.succeed([]))
   ),
+  proxyProvider: Schema.optional(Schema.Literal("scrape-do")),
 })
 
 const baseNodeFields = {
@@ -184,6 +208,7 @@ const baseNodeFields = {
   badge: Schema.optional(Schema.String),
   size: Schema.optional(Schema.String),
   sourceName: Schema.optional(Schema.String),
+  extensions: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }
 
 export const groupNodeSchema: Schema.Codec<GroupNode> = Schema.Struct({
@@ -227,6 +252,19 @@ export const mediaNodeSchema: Schema.Codec<MediaNode> = Schema.Union([
   playableNodeSchema,
 ])
 
+export const extractPendingSchema = Schema.Struct({
+  retryAfterSeconds: Schema.Number.pipe(Schema.check(Schema.isGreaterThan(0))),
+  resumeNodeId: Schema.optional(Schema.NonEmptyString),
+})
+
+export const extractUsageDeltaSchema = Schema.Array(
+  Schema.Struct({
+    id: Schema.NonEmptyString,
+    used: Schema.Number.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
+    unit: Schema.optional(Schema.String),
+  })
+)
+
 export const extractSuccessSchema = Schema.Struct({
   plugin: Schema.Struct({
     pluginServerId: Schema.String,
@@ -242,6 +280,8 @@ export const extractSuccessSchema = Schema.Struct({
   extensions: Schema.Record(Schema.String, Schema.Unknown).pipe(
     Schema.withDecodingDefault(Effect.succeed({}))
   ),
+  pending: Schema.optional(extractPendingSchema),
+  usageDelta: Schema.optional(extractUsageDeltaSchema),
 })
 
 export const extractErrorSchema = Schema.Struct({
@@ -275,6 +315,12 @@ export const extractRequestSchema = Schema.Struct({
     Schema.Struct({
       username: Schema.String,
       password: Schema.String,
+    })
+  ),
+  proxy: Schema.optional(
+    Schema.Struct({
+      provider: Schema.NonEmptyString,
+      token: Schema.NonEmptyString,
     })
   ),
 })

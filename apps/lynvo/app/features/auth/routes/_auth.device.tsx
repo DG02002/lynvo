@@ -11,9 +11,11 @@ export function meta(_: Route.MetaArgs) {
   return [{ title: "Approve login | Lynvo" }]
 }
 
-export async function loader(args: Route.LoaderArgs): Promise<any> {
-  const request = args.request
-  const env = getServerEnv(args.context)
+export async function loader({
+  request,
+  context,
+}: Route.LoaderArgs): Promise<any> {
+  const env = getServerEnv(context)
   const sessionResult = await getUserSession(request, env)
 
   const url = new URL(request.url)
@@ -22,11 +24,11 @@ export async function loader(args: Route.LoaderArgs): Promise<any> {
     requireUserOrRedirect(sessionResult, `/auth/device?user_code=${code}`)
   }
 
-  return responseWithSession(
-    { user: sessionResult.user },
+  return responseWithSession({
+    responseData: { user: sessionResult.user },
     sessionResult,
-    request
-  )
+    request,
+  })
 }
 
 export default function Device() {

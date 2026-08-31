@@ -200,9 +200,10 @@ describe("getPluginServerManifestView", () => {
           lynvo: {
             plugins: [
               {
-                id: "hubcloud",
-                displayName: "HubCloud",
-                iconUrl: "http://localhost:8788/icons/sources/hubcloud.webp",
+                id: "example-drive",
+                displayName: "Example Drive",
+                iconUrl:
+                  "http://localhost:8788/icons/sources/example-drive.webp",
                 status: "active",
                 version: "1.0.0",
                 hosts: ["example.com"],
@@ -215,7 +216,7 @@ describe("getPluginServerManifestView", () => {
     )
 
     expect(view.plugins[0]?.iconUrl).toBe(
-      "http://192.168.1.3:8788/icons/sources/hubcloud.webp"
+      "http://192.168.1.3:8788/icons/sources/example-drive.webp"
     )
   })
 })

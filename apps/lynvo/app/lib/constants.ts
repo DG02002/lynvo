@@ -1,5 +1,6 @@
-export const WORKER_SESSION_COOKIE_NAME = "__Host-lynvo-session"
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
+export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000
+export const REALTIME_HEARTBEAT_TIMEOUT_MS = REALTIME_HEARTBEAT_INTERVAL_MS * 2
 export const PLUGIN_SERVER_INTERNAL_ORIGIN = "https://plugin-server.internal"
 export const PLUGIN_SERVER_REQUEST_TIMEOUT_MS = 50_000
 export const OUTBOUND_HTTP_MAX_REDIRECTS = 3
@@ -14,8 +15,52 @@ export const LINKS_REFETCH_DEBOUNCE_MS = 50
 export const LINKS_OFFLINE_POLL_INTERVAL_MS = 25_000
 export const SAVE_LIST_OLDER_AFTER_DAY_COUNT = 7
 export const DATA_VERSION_RESPONSE_HEADER = "X-Lynvo-Data-Version"
+export const MEDIA_ARTWORK_API_TIMEOUT_MS = 15_000
+export const MEDIA_ARTWORK_BATCH_SIZE = 12
+export const MEDIA_ARTWORK_FLUSH_DELAY_MS = 150
+export const TMDB_SITE_URL = "https://www.themoviedb.org"
+export const TMDB_LOGO_SHORT_SRC = "/images/tmdb-logo-blue-short.svg"
+export const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 export const MILLISECONDS_PER_SECOND = 1_000
 export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * MILLISECONDS_PER_SECOND
-export const BYTES_PER_KIBIBYTE = 1_024
-export const FILE_SIZE_DECIMAL_PLACES = 2
+export const TMDB_IMAGE_CARD_BASE_URL = "https://image.tmdb.org/t/p/w342"
+export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
+export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
+export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
+  "https://image.tmdb.org/t/p/w342"
+export const TMDB_IMAGE_WIDE_CARD_BASE_URL = TMDB_IMAGE_DETAIL_BASE_URL
+export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
+  TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
+export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
+export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
+export const MEDIA_ARTWORK_CACHE_VERSION = 4
+export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
+export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * MILLISECONDS_PER_DAY
+export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = MILLISECONDS_PER_DAY
+export const CARD_MENU_LONG_PRESS_DURATION_MS = 500
+export const CARD_MENU_LONG_PRESS_MOVEMENT_TOLERANCE_PX = 10
+export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
+export const EXTRACTION_STATUS_MESSAGES = [
+  "Getting link info…",
+  "Extracting links…",
+  "Finding playable links…",
+  "Getting things ready…",
+  "Following the link trail…",
+  "Asking the internet nicely…",
+  "Checking promising routes…",
+  "Looking for playable links…",
+  "Checking whether this link has friends…",
+  "Sorting the useful bits…",
+  "Doing a little link detective work…",
+  "Giving the metadata a gentle nudge…",
+  "Putting the pieces together…",
+  "Finishing link details…",
+  "Polishing the final details…",
+  "Wrapping up link extraction…",
+] as const
+export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
+export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160
 export const MOBILE_PRICING_CONTROLS_HEIGHT_PX = 112
+export const MEDIA_FILENAME_MAX_EPISODE_DIGITS = 4
+export const MEDIA_YEAR_MIN = 1900
+export const MEDIA_YEAR_MAX = 2099

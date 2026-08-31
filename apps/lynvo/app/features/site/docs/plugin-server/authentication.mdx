@@ -7,7 +7,8 @@ contentType: Tutorial
 
 <DocSection id="authentication">
 
-The generated starter validates the `Authorization: Bearer` header through the shared protocol runtime. Create a random 32-byte key:
+The generated starter validates the `Authorization: Bearer` header through the
+shared protocol runtime. Generate a random 32-byte key:
 
 <CodeBlock label="Terminal">
 
@@ -41,8 +42,11 @@ pnpm wrangler secret put LYNVO_PLUGIN_SERVER_API_KEY
 
 </CodeBlock>
 
-Lynvo sends this key in the `Authorization` header for `/verify`, `/usage`, and `/extract`. Never place it in a manifest, URL, response, browser bundle, or log.
+Lynvo sends this key in the `Authorization` header for `/verify`, `/usage`, and
+`/extract`. Never place it in a manifest, URL, response, browser bundle, or
+log.
 
-If you replace the generated route layer, authenticate protected requests before reserving usage or sending upstream requests.
+If you replace the generated route layer, authenticate protected requests before
+reserving usage or sending upstream requests.
 
 </DocSection>

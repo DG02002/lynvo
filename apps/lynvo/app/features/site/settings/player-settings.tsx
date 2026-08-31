@@ -1,6 +1,5 @@
 import * as React from "react"
 import { Effect, Result, Schema } from "effect"
-import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -10,11 +9,7 @@ import {
 import { SelectTrigger } from "~/components/select-trigger"
 import {
   PLAYER_DEFINITIONS,
-  getPlayerPreferences,
-  normalizePlayerPreferences,
   playerIdSchema,
-  setRangeSupportedPlayer,
-  setRangeUnsupportedPlayer,
   type PlayerId,
 } from "~/lib/player-utils"
 import {
@@ -28,18 +23,35 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
-import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queue"
+import { useRangePlayerPreferences } from "./use-range-player-preferences"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { client } from "~/lib/effect/api/client"
 
-export const PlayerSettings = () => {
+const loadCloudPlayerPreferences = () =>
+  Effect.runPromise(client.settings.getPlayerPreferences())
+
+const saveCloudPlayerPreferences = (preferences: {
+  rangeSupportedPlayerId?: PlayerId
+  rangeUnsupportedPlayerId?: PlayerId
+}) =>
+  Effect.runPromise(
+    client.settings.updatePlayerPreferences({ payload: preferences })
+  ).then(() => undefined)
+
+export const PlayerSettings = ({
+  loadPlayerPreferences = loadCloudPlayerPreferences,
+  savePlayerPreferences = saveCloudPlayerPreferences,
+}: {
+  loadPlayerPreferences?: typeof loadCloudPlayerPreferences
+  savePlayerPreferences?: typeof saveCloudPlayerPreferences
+} = {}) => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
   const { data: cloudPreferencesData } = useAsyncResource(
     () =>
       playerPreferenceIdentity
-        ? Effect.runPromise(client.settings.getPlayerPreferences())
+        ? loadPlayerPreferences()
         : Promise.resolve(undefined),
-    [playerPreferenceIdentity]
+    [loadPlayerPreferences, playerPreferenceIdentity]
   )
   const cloudPreferences = cloudPreferencesData
   const updateCloudPreferences = React.useCallback(
@@ -47,136 +59,20 @@ export const PlayerSettings = () => {
       rangeSupportedPlayerId?: PlayerId
       rangeUnsupportedPlayerId?: PlayerId
     }) => {
-      await Effect.runPromise(
-        client.settings.updatePlayerPreferences({ payload: preferences })
-      )
+      await savePlayerPreferences(preferences)
     },
-    []
+    [savePlayerPreferences]
   )
-  const [rangeSupportedPlayerId, setRangeSupportedPlayerId] =
-    React.useState<PlayerId>(
-      () =>
-        getPlayerPreferences(playerPreferenceIdentity).rangeSupportedPlayerId
-    )
-  const [rangeUnsupportedPlayerId, setRangeUnsupportedPlayerId] =
-    React.useState<PlayerId>(
-      () =>
-        getPlayerPreferences(playerPreferenceIdentity).rangeUnsupportedPlayerId
-    )
-  const initializedEmptyCloudPreferences = React.useRef(false)
-  const rangeSupportedMutationGeneration = React.useRef(0)
-  const rangeUnsupportedMutationGeneration = React.useRef(0)
-  const rangeSupportedWriteQueue = React.useRef<ReturnType<
-    typeof createPlayerPreferenceWriteQueue
-  > | null>(null)
-  const rangeUnsupportedWriteQueue = React.useRef<ReturnType<
-    typeof createPlayerPreferenceWriteQueue
-  > | null>(null)
-  rangeSupportedWriteQueue.current ??= createPlayerPreferenceWriteQueue()
-  rangeUnsupportedWriteQueue.current ??= createPlayerPreferenceWriteQueue()
-  const supportedWriteQueue = rangeSupportedWriteQueue.current
-  const unsupportedWriteQueue = rangeUnsupportedWriteQueue.current
-
-  React.useEffect(() => {
-    if (!cloudPreferences) {
-      return
-    }
-    if (!playerPreferenceIdentity) {
-      return
-    }
-    const localPreferences = getPlayerPreferences(playerPreferenceIdentity)
-
-    if (
-      cloudPreferences.rangeSupportedPlayerId ||
-      cloudPreferences.rangeUnsupportedPlayerId
-    ) {
-      const preferences = normalizePlayerPreferences({
-        rangeSupportedPlayerId:
-          cloudPreferences.rangeSupportedPlayerId ??
-          localPreferences.rangeSupportedPlayerId,
-        rangeUnsupportedPlayerId:
-          cloudPreferences.rangeUnsupportedPlayerId ??
-          localPreferences.rangeUnsupportedPlayerId,
-      })
-      setRangeSupportedPlayerId(preferences.rangeSupportedPlayerId)
-      setRangeUnsupportedPlayerId(preferences.rangeUnsupportedPlayerId)
-      setRangeSupportedPlayer(
-        playerPreferenceIdentity,
-        preferences.rangeSupportedPlayerId
-      )
-      setRangeUnsupportedPlayer(
-        playerPreferenceIdentity,
-        preferences.rangeUnsupportedPlayerId
-      )
-      return
-    }
-
-    if (initializedEmptyCloudPreferences.current) {
-      return
-    }
-    initializedEmptyCloudPreferences.current = true
-    void updateCloudPreferences(localPreferences).catch(() => {
-      toast.error("Player settings couldn’t be saved. Try again.")
-    })
-  }, [cloudPreferences, playerPreferenceIdentity, updateCloudPreferences])
-
-  const handleRangeSupportedChange = (playerId: PlayerId) => {
-    const mutationGeneration = rangeSupportedMutationGeneration.current + 1
-    rangeSupportedMutationGeneration.current = mutationGeneration
-    const previousPlayerId = rangeSupportedPlayerId
-    setRangeSupportedPlayerId(playerId)
-    if (!playerPreferenceIdentity) {
-      return
-    }
-    setRangeSupportedPlayer(playerPreferenceIdentity, playerId)
-    const write = supportedWriteQueue.enqueue(() =>
-      updateCloudPreferences({ rangeSupportedPlayerId: playerId })
-    )
-    void write
-      .then(() => {
-        if (rangeSupportedMutationGeneration.current === mutationGeneration) {
-          toast.success("Player for links with HTTP byte-range support updated")
-        }
-      })
-      .catch(() => {
-        if (rangeSupportedMutationGeneration.current !== mutationGeneration) {
-          return
-        }
-        setRangeSupportedPlayerId(previousPlayerId)
-        setRangeSupportedPlayer(playerPreferenceIdentity, previousPlayerId)
-        toast.error("The player setting couldn’t be saved. Try again.")
-      })
-  }
-
-  const handleRangeUnsupportedChange = (playerId: PlayerId) => {
-    const mutationGeneration = rangeUnsupportedMutationGeneration.current + 1
-    rangeUnsupportedMutationGeneration.current = mutationGeneration
-    const previousPlayerId = rangeUnsupportedPlayerId
-    setRangeUnsupportedPlayerId(playerId)
-    if (!playerPreferenceIdentity) {
-      return
-    }
-    setRangeUnsupportedPlayer(playerPreferenceIdentity, playerId)
-    const write = unsupportedWriteQueue.enqueue(() =>
-      updateCloudPreferences({ rangeUnsupportedPlayerId: playerId })
-    )
-    void write
-      .then(() => {
-        if (rangeUnsupportedMutationGeneration.current === mutationGeneration) {
-          toast.success(
-            "Player for links without HTTP byte-range support updated"
-          )
-        }
-      })
-      .catch(() => {
-        if (rangeUnsupportedMutationGeneration.current !== mutationGeneration) {
-          return
-        }
-        setRangeUnsupportedPlayerId(previousPlayerId)
-        setRangeUnsupportedPlayer(playerPreferenceIdentity, previousPlayerId)
-        toast.error("The player setting couldn’t be saved. Try again.")
-      })
-  }
+  const {
+    rangeSupportedPlayerId,
+    rangeUnsupportedPlayerId,
+    handleRangeSupportedChange,
+    handleRangeUnsupportedChange,
+  } = useRangePlayerPreferences({
+    cloudPreferences,
+    playerPreferenceIdentity,
+    updateCloudPreferences,
+  })
 
   const selectedRangeSupported = PLAYER_DEFINITIONS.find(
     (p) => p.id === rangeSupportedPlayerId

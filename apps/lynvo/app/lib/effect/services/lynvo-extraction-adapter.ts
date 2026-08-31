@@ -5,7 +5,14 @@ import type {
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import { ExtractionError, ValidationError } from "../errors"
+import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
+import {
+  MANAGED_PLUGIN_IDS,
+  reserveManagedExtraction,
+  settleManagedExtraction,
+  UsageLimitExhaustedError,
+  type ManagedPluginId,
+} from "../../../../workers/d1/usage"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -18,12 +25,6 @@ import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 import { getD1Database } from "../../../../workers/d1/db"
 import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
-import {
-  MANAGED_PLUGIN_IDS,
-  reserveManagedExtraction,
-  settleManagedExtraction,
-} from "../../../../workers/d1/usage"
-import type { ManagedPluginId } from "../../../../workers/d1/usage"
 
 export interface LynvoExtractionAdapterOptions {
   readonly environment: Env
@@ -79,30 +80,30 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
               }),
           })
         : null
-    let plugin = findLynvoPlugin(
+    let plugin = findLynvoPlugin({
       manifest,
-      options.targetUrl,
-      options.pluginId ?? configuredDomain?.pluginId,
-      false
-    )
+      targetUrl: options.targetUrl,
+      pluginId: options.pluginId ?? configuredDomain?.pluginId,
+      allowProbe: false,
+    })
     if (!plugin && manifest.features.discovery && options.kind === "source") {
-      const discovery = yield* discoverLynvoPlugin(
-        options.environment,
-        options.targetUrl,
-        options.inlineBasicAuth,
-        options.requestId,
-        operationId
-      )
+      const discovery = yield* discoverLynvoPlugin({
+        environment: options.environment,
+        targetUrl: options.targetUrl,
+        basicAuth: options.inlineBasicAuth,
+        requestId: options.requestId,
+        operationId,
+      })
       if (discovery.matched) {
-        plugin = findLynvoPlugin(
+        plugin = findLynvoPlugin({
           manifest,
-          options.targetUrl,
-          discovery.pluginId
-        )
+          targetUrl: options.targetUrl,
+          pluginId: discovery.pluginId,
+        })
       }
     }
     if (!plugin) {
-      plugin = findLynvoPlugin(manifest, options.targetUrl, undefined, true)
+      plugin = findLynvoPlugin({ manifest, targetUrl: options.targetUrl })
     }
     return plugin ? { manifest, plugin } : undefined
   }
@@ -124,6 +125,19 @@ const toMeteredPluginId = (
   return pluginIdentifier
 }
 
+interface EnvironmentWithUsageFlags {
+  readonly DISABLE_USAGE_LIMITS?: string | boolean
+}
+
+const isUsageLimitsDisabled = (environment: Env): boolean => {
+  const envWithFlags: Env & EnvironmentWithUsageFlags = environment
+  return (
+    envWithFlags.DISABLE_USAGE_LIMITS === "true" ||
+    envWithFlags.DISABLE_USAGE_LIMITS === true ||
+    process.env.DISABLE_USAGE_LIMITS === "true"
+  )
+}
+
 export const extractWithLynvoPluginServer = Effect.fn(
   "LynvoExtractionAdapter.extract"
 )(function* (
@@ -131,7 +145,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
   options: LynvoExtractionAdapterOptions
 ): Effect.fn.Return<
   ExtractionResult | undefined,
-  ExtractionError | ValidationError
+  ExtractionError | UsageLimitError | ValidationError
 > {
   const route = yield* selectLynvoPlugin(options)
   if (!route) {
@@ -160,39 +174,53 @@ export const extractWithLynvoPluginServer = Effect.fn(
         reserveManagedExtraction(database, options.userId, {
           operationId,
           pluginId: meteredPluginId,
-          usageLimitsDisabled: process.env.DISABLE_USAGE_LIMITS === "true",
+          usageLimitsDisabled: isUsageLimitsDisabled(options.environment),
           now: Date.now(),
         }),
       catch: (cause) =>
-        new ExtractionError({
-          message:
-            cause instanceof Error
-              ? cause.message
-              : "Managed extraction reservation failed.",
-          url: options.targetUrl,
-        }),
+        cause instanceof UsageLimitExhaustedError
+          ? new UsageLimitError({
+              message: cause.message,
+              retryAfterSeconds: cause.retryAfterSeconds,
+            })
+          : new ExtractionError({
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "Managed extraction reservation failed.",
+              url: options.targetUrl,
+            }),
     })
   }
-  const extraction = extractFromLynvoPluginServer(
-    options.environment,
-    options.targetUrl,
-    options.kind,
-    { pluginId: route.plugin.id, ...credentials },
-    options.requestId,
+  const extraction = extractFromLynvoPluginServer({
+    environment: options.environment,
+    targetUrl: options.targetUrl,
+    kind: options.kind,
+    credentials: { pluginId: route.plugin.id, ...credentials },
+    requestId: options.requestId,
     operationId,
-    route.plugin
-  )
+    source: route.plugin,
+  })
   if (!meteredPluginId) {
     return yield* extraction
   }
   const database = getD1Database(options.environment)
+  // The managed plugin server refunds its own counter when an extraction
+  // fails, so Lynvo mirrors that on the user's side: only completed
+  // extractions are consumed.
+  let didExtractionSucceed = false
   return yield* extraction.pipe(
+    Effect.tap(() =>
+      Effect.sync(() => {
+        didExtractionSucceed = true
+      })
+    ),
     Effect.ensuring(
       database
         ? Effect.promise(() =>
             settleManagedExtraction(database, options.userId, {
               operationId,
-              outcome: "consumed",
+              outcome: didExtractionSucceed ? "consumed" : "released",
               now: Date.now(),
             }).catch(() => undefined)
           )

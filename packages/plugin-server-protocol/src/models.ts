@@ -14,7 +14,7 @@ export interface JsonObject {
 }
 
 export interface PluginServerManifest {
-  readonly protocolVersion: "1.0"
+  readonly protocolVersion: string
   readonly pluginServerId: string
   readonly displayName: string
   readonly hasIcon?: boolean
@@ -57,6 +57,7 @@ export type ExpirySource = "signed-url" | "expires-header" | "cache-control"
 
 export interface GroupNode {
   readonly kind: "group"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly badge?: string
@@ -68,6 +69,7 @@ export interface GroupNode {
 
 export interface ResolvableNode {
   readonly kind: "resolvable"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly nodeUrl?: string
@@ -80,6 +82,7 @@ export interface ResolvableNode {
 
 export interface PlayableNode {
   readonly kind: "playable"
+  readonly extensions?: object
   readonly id?: string
   readonly label: string
   readonly url: string
@@ -110,6 +113,13 @@ export interface ExtractRequest {
   readonly pluginId?: string
   readonly password?: string
   readonly basicAuth?: HttpBasicAuth
+  readonly proxy?: ProxyCredential
+}
+
+export interface ProxyCredential {
+  /** Opaque provider identifier the manifest declared support for. */
+  readonly provider: string
+  readonly token: string
 }
 
 export interface HttpBasicAuth {
@@ -117,9 +127,23 @@ export interface HttpBasicAuth {
   readonly password: string
 }
 
-export interface ExtractedHttpBasicAuth {
-  readonly basicAuth?: HttpBasicAuth
-  readonly url: string
+export interface ExtractUsageDelta {
+  /** Metric id matching the server's /usage metric ids. */
+  readonly id: string
+  /** Units consumed by this specific extraction. */
+  readonly used: number
+  readonly unit?: string
+}
+
+export interface ExtractPending {
+  /** Seconds until the client should re-issue the same extract request. */
+  readonly retryAfterSeconds: number
+  /**
+   * Optional opaque handle the server can use to correlate the retry with
+   * the deferred work; clients send it back untouched on the retry's node
+   * input `resourceId`.
+   */
+  readonly resumeNodeId?: string
 }
 
 export interface ExtractSuccessResponse {
@@ -135,6 +159,17 @@ export interface ExtractSuccessResponse {
   }
   readonly nodes: readonly MediaNode[]
   readonly extensions: object
+  /**
+   * Present when extraction was accepted but cannot finish within this
+   * request. `nodes` are empty and the client must retry after the given
+   * interval instead of treating the response as an empty success.
+   */
+  readonly pending?: ExtractPending
+  /**
+   * Optional per-extraction usage accounting, so clients can show current
+   * allowance without polling /usage. Ids match the /usage metric ids.
+   */
+  readonly usageDelta?: readonly ExtractUsageDelta[]
 }
 
 export interface ExtractProtocolError {
@@ -183,6 +218,8 @@ export interface PluginMetadata {
   readonly version?: string
   readonly routesToPluginId?: string
   readonly matchStrategy?: "static" | "probe"
+  readonly usageMultiplier?: number
+  readonly proxyCreditUsage?: string
   readonly hosts: readonly string[]
   readonly matchers?: readonly PluginServerMatcher[]
   readonly credential?: PluginCredential
@@ -196,6 +233,7 @@ export interface PluginCredential {
 
 export interface LynvoManifestExtension {
   readonly plugins?: readonly PluginMetadata[]
+  readonly proxyProvider?: "scrape-do"
 }
 
 export interface ContractIssue {
@@ -241,6 +279,20 @@ export type PluginServerRuntimeManifest<Env> =
       context: PluginServerRuntimeContext<Env>
     ) => Promise<PluginServerManifest> | PluginServerManifest)
 
+export interface PluginServerRuntimeAcceptedContext<Env> {
+  readonly request: ExtractRequest
+  readonly targetUrl: string
+  readonly manifest: PluginServerManifest
+  readonly matchedPluginId?: string
+  readonly runtimeContext: PluginServerRuntimeContext<Env>
+}
+
+export interface PluginServerRuntimeResultContext<Env> {
+  readonly request: ExtractRequest
+  readonly result: ExtractSuccessResponse | ExtractProtocolError
+  readonly runtimeContext: PluginServerRuntimeContext<Env>
+}
+
 export interface PluginServerRuntimeOptions<Env> {
   readonly manifest: PluginServerRuntimeManifest<Env>
   readonly auth: PluginServerRuntimeAuth<Env>
@@ -257,6 +309,18 @@ export interface PluginServerRuntimeOptions<Env> {
     cause: unknown,
     context: PluginServerRuntimeContext<Env>
   ) => void
+  /**
+   * Observability hooks. They observe values the runtime already decoded
+   * (request, matched plugin, result) so servers can log and meter without
+   * re-parsing bodies or re-running matchers. Hook failures never fail the
+   * request; they are routed to onError.
+   */
+  readonly onExtractAccepted?: (
+    context: PluginServerRuntimeAcceptedContext<Env>
+  ) => void | Promise<void>
+  readonly onExtractResult?: (
+    context: PluginServerRuntimeResultContext<Env>
+  ) => void | Promise<void>
 }
 
 export interface PluginServerRuntime<Env> {
@@ -266,6 +330,8 @@ export interface PluginServerRuntime<Env> {
   handleDiscover: (request: Request, env: Env) => Promise<Response>
   handleExtract: (request: Request, env: Env) => Promise<Response>
 }
+
+export const PROTOCOL_VERSION = "1.0" as const
 
 export const ERROR_CODES = [
   "UNSUPPORTED_URL",
@@ -283,12 +349,14 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
-export const SUPPORTED_PROTOCOL_VERSIONS = ["1.0"] as const
-
-export type SupportedProtocolVersion =
-  (typeof SUPPORTED_PROTOCOL_VERSIONS)[number]
-
-export const isSupportedProtocolVersion = (
-  version: string
-): version is SupportedProtocolVersion =>
-  new Set<string>(SUPPORTED_PROTOCOL_VERSIONS).has(version)
+/**
+ * A manifest version is wire-compatible when its major version matches the
+ * protocol major version: minor versions are additive by contract, so a
+ * server on a newer minor within the same major must still satisfy an older
+ * client. Unknown fields are ignored; custom data rides `extensions`.
+ */
+export const isCompatibleProtocolVersion = (version: string): boolean => {
+  const parsed = /^(\d+)\.(\d+)$/.exec(version)
+  const current = /^(\d+)\.(\d+)$/.exec(PROTOCOL_VERSION)
+  return parsed !== null && current !== null && parsed[1] === current[1]
+}

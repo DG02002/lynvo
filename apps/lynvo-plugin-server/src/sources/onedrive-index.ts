@@ -1,7 +1,8 @@
 import { load } from "cheerio"
-import type {
-  MediaNode,
-  ExtractSuccessResponse,
+import {
+  ProtocolError,
+  type MediaNode,
+  type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   ONEDRIVE_FETCH_RETRIES,
@@ -214,9 +215,15 @@ const fetchOneDrivePage = async (
           Schema.decodeUnknownResult(passwordRequiredResponseSchema)(errorBody)
         )
       ) {
-        throw new Error("PASSWORD_REQUIRED")
+        throw new ProtocolError(
+          "PASSWORD_REQUIRED",
+          "Password is required for this resource."
+        )
       }
-      throw new Error("INVALID_PASSWORD")
+      throw new ProtocolError(
+        "INVALID_PASSWORD",
+        "The supplied password was rejected."
+      )
     }
     if (!response.ok) {
       throw new Error("OneDrive Index upstream request failed.")

@@ -16,7 +16,7 @@ export const isProbablyValidUrl = (value: string) => {
     if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
       return false
     }
-    const hostname = parsedUrl.hostname
+    const { hostname } = parsedUrl
     if (hostname === "localhost") {
       return true
     }

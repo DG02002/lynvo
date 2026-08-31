@@ -1,15 +1,18 @@
+import { useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowUpRight01Icon,
   CopyIcon,
+  Delete02Icon,
   EllipsisIcon,
 } from "@hugeicons/core-free-icons"
-import { toast } from "sonner"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -17,6 +20,14 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
+import { RemoveLinkAlertDialog } from "~/components/links/remove-link-alert-dialog"
+import { cn } from "~/lib/utils"
+
+interface LinkActionsRemoveRequest {
+  readonly url: string
+  readonly id?: string
+  readonly onRemove: () => void
+}
 
 interface LinkActionsDotMenuProps {
   itemLabel: string
@@ -24,6 +35,8 @@ interface LinkActionsDotMenuProps {
   onOpenInPlayer: (player: PlayerDefinition) => void
   isPlayable?: boolean
   className?: string
+  removeRequest?: LinkActionsRemoveRequest
+  removeLabel?: string
 }
 
 export function LinkActionsDotMenu({
@@ -32,10 +45,13 @@ export function LinkActionsDotMenu({
   onOpenInPlayer,
   isPlayable = true,
   className,
+  removeRequest,
+  removeLabel = "Remove saved link",
 }: LinkActionsDotMenuProps) {
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const handleCopy = () => {
     onCopyLink()
-    toast.success("Link copied")
+    showLinkCopiedToast()
   }
 
   return (
@@ -46,7 +62,10 @@ export function LinkActionsDotMenu({
             type="button"
             variant="ghost"
             size="icon"
-            className={className}
+            className={cn(
+              "text-foreground! hover:text-foreground! aria-expanded:text-foreground!",
+              className
+            )}
             onClick={(event) => event.stopPropagation()}
           >
             <HugeiconsIcon icon={EllipsisIcon} />
@@ -77,7 +96,27 @@ export function LinkActionsDotMenu({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         )}
+        {removeRequest && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setIsRemoveDialogOpen(true)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              {removeLabel}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
+      {removeRequest && (
+        <RemoveLinkAlertDialog
+          item={removeRequest}
+          open={isRemoveDialogOpen}
+          onOpenChange={setIsRemoveDialogOpen}
+          onRemove={removeRequest.onRemove}
+        />
+      )}
     </DropdownMenu>
   )
 }

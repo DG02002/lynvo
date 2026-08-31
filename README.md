@@ -1,8 +1,8 @@
 # Lynvo
 
-The Lynvo website can be opened in any browser so you can sign in and manage
-links. Link handoff is designed for Android phones, Android tablets, and
-Android TV. Lynvo opens links in one of four Android players:
+Open the Lynvo website in any browser to sign in and manage links. Link handoff
+is designed for Android phones, Android tablets, and Android TV. Lynvo opens
+links in one of four Android players:
 
 - Just (Video) Player
 - VLC for Android
@@ -25,9 +25,9 @@ Lynvo app and the packages that support it.
 ## Project information
 
 - [Lynvo website](https://lynvo.dg02002.workers.dev).
-- [Contributing guide](CONTRIBUTING.md) — set up and work on Lynvo.
-- [Plugin Server documentation](apps/lynvo/app/features/site/docs/plugin-server/) — create a custom integration.
-- [Project terminology](CONTEXT.md) — shared names and concepts used by the project.
+- The [contributing guide](CONTRIBUTING.md) explains how to set up and work on Lynvo.
+- The [Plugin Server documentation](apps/lynvo/app/features/site/docs/plugin-server/) explains how to create a custom integration.
+- [Project terminology](CONTEXT.md) lists the shared names and concepts used by the project.
 - [Report an issue on GitHub](https://github.com/DG02002/lynvo/issues).
 - [Contact Lynvo on Telegram](https://t.me/lynvo_support?direct).
 

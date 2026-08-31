@@ -10,7 +10,12 @@ import {
   parseUsageResponseContract,
 } from "./contracts.js"
 import { createProtocolError } from "./requests.js"
-import { canPluginServerAttemptUrl, getExtractTargetUrl } from "./matching.js"
+import { isProtocolError, toProtocolErrorResponse } from "./errors.js"
+import {
+  canPluginServerAttemptUrl,
+  getExtractTargetUrl,
+  getMatchedPlugin,
+} from "./matching.js"
 import type {
   PluginServerManifest,
   PluginServerRuntime,
@@ -34,6 +39,18 @@ export const createPluginServerRuntime = <Env>(
         : options.manifest
     const parsed = parsePluginServerManifestContract(value)
     return parsed.ok && parsed.value ? parsed.value : undefined
+  }
+
+  const runHook = async (
+    hook: () => Promise<void>,
+    request: Request,
+    env: Env
+  ): Promise<void> => {
+    try {
+      await hook()
+    } catch (error) {
+      options.onError?.(error, { request, env })
+    }
   }
 
   const protocolMismatchResponse = (message: string): Response =>
@@ -132,8 +149,9 @@ export const createPluginServerRuntime = <Env>(
           targetUrl: parsed.success.url,
           env,
         })
-        const parsedResult =
-          Schema.decodeUnknownResult(discoverResponseSchema)(result)
+        const parsedResult = Schema.decodeUnknownResult(discoverResponseSchema)(
+          result
+        )
         return Result.isSuccess(parsedResult)
           ? jsonResponse(parsedResult.success)
           : jsonResponse(
@@ -194,6 +212,21 @@ export const createPluginServerRuntime = <Env>(
         )
       }
 
+      const matchedPluginId = getMatchedPlugin(manifest, targetUrl)?.id
+      await runHook(
+        async () => {
+          await options.onExtractAccepted?.({
+            request: parsed.success,
+            targetUrl,
+            manifest,
+            matchedPluginId,
+            runtimeContext: { request, env },
+          })
+        },
+        request,
+        env
+      )
+
       try {
         const result = await options.extract({
           request: parsed.success,
@@ -201,7 +234,8 @@ export const createPluginServerRuntime = <Env>(
           env,
         })
         const parsedResult = parseExtractSuccessContract(result)
-        if (!parsedResult.ok || !parsedResult.value) {
+        const successResult = parsedResult.ok ? parsedResult.value : undefined
+        if (!successResult) {
           return jsonResponse(
             createProtocolError(
               "PROTOCOL_MISMATCH",
@@ -210,46 +244,24 @@ export const createPluginServerRuntime = <Env>(
             500
           )
         }
-        return jsonResponse(parsedResult.value)
+        await runHook(
+          async () => {
+            await options.onExtractResult?.({
+              request: parsed.success,
+              result: successResult,
+              runtimeContext: { request, env },
+            })
+          },
+          request,
+          env
+        )
+        return jsonResponse(successResult)
       } catch (error) {
         options.onError?.(error, { request, env })
+        if (isProtocolError(error)) {
+          return toProtocolErrorResponse(error)
+        }
         const message = error instanceof Error ? error.message : String(error)
-        if (message === "PASSWORD_REQUIRED") {
-          return jsonResponse(
-            createProtocolError(
-              "PASSWORD_REQUIRED",
-              "Password is required for this resource."
-            ),
-            401
-          )
-        }
-        if (message === "INVALID_PASSWORD") {
-          return jsonResponse(
-            createProtocolError(
-              "INVALID_PASSWORD",
-              "The supplied password was rejected."
-            ),
-            401
-          )
-        }
-        if (message === "RATE_LIMITED") {
-          return jsonResponse(
-            createProtocolError(
-              "RATE_LIMITED",
-              "Plugin Server capacity is exhausted for the current period."
-            ),
-            429
-          )
-        }
-        if (message === "UNSUPPORTED_URL") {
-          return jsonResponse(
-            createProtocolError(
-              "UNSUPPORTED_URL",
-              "The target URL is not supported."
-            ),
-            400
-          )
-        }
         return jsonResponse(
           createProtocolError(
             "TEMPORARY_FAILURE",

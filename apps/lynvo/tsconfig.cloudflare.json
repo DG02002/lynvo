@@ -11,17 +11,28 @@
   "compilerOptions": {
     "composite": true,
     "strict": true,
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["vite/client", "@cloudflare/workers-types", "mdx"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    "types": [
+      "vite/client",
+      "@cloudflare/workers-types",
+      "mdx"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    // "ignoreDeprecations": "6.0",
-    // "baseUrl": ".",
-    "rootDirs": [".", "./.react-router/types"],
+    "rootDirs": [
+      ".",
+      "./.react-router/types"
+    ],
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": [
+        "./app/*"
+      ]
     },
     "esModuleInterop": true,
     "resolveJsonModule": true

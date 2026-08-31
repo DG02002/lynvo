@@ -118,15 +118,6 @@ export const getLynvoManifestExtension = (
   return Result.isSuccess(result) ? result.success : { plugins: [] }
 }
 
-export const parseLynvoManifestExtension = (
-  manifest: PluginServerManifest
-): LynvoManifestExtension => {
-  const extension = readLynvoExtension(manifest)
-  return extension === undefined
-    ? { plugins: [] }
-    : Schema.decodeUnknownSync(lynvoPluginCatalogSchema)(extension)
-}
-
 export const getMatchedPlugin = (
   manifest: PluginServerManifest,
   targetUrl: string

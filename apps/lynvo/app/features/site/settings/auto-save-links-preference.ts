@@ -1,10 +1,8 @@
 import { useSyncExternalStore } from "react"
 
-export const AUTO_SAVE_LINKS_STORAGE_KEY =
-  "lynvo:settings:auto-save-all-extracted-links"
-
-const AUTO_SAVE_LINKS_PREFERENCE_EVENT =
-  "lynvo:auto-save-links-preference-changed"
+export const AUTO_SAVE_LINKS_STORAGE_KEY = "lynvo:settings:auto-save-all-links"
+export const AUTO_SAVE_LINKS_PREFERENCE_EVENT =
+  "lynvo:auto-save-all-links-preference-changed"
 
 const subscribeToAutoSaveLinksPreference = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange)
@@ -16,7 +14,7 @@ const subscribeToAutoSaveLinksPreference = (onStoreChange: () => void) => {
   }
 }
 
-export const getShouldAutoSaveAllLinks = () => {
+export const getShouldAutoSaveAllLinks = (): boolean => {
   if (globalThis.localStorage === undefined) {
     return true
   }
@@ -24,9 +22,18 @@ export const getShouldAutoSaveAllLinks = () => {
   return localStorage.getItem(AUTO_SAVE_LINKS_STORAGE_KEY) !== "false"
 }
 
-export const setShouldAutoSaveAllLinks = (shouldAutoSave: boolean) => {
-  localStorage.setItem(AUTO_SAVE_LINKS_STORAGE_KEY, String(shouldAutoSave))
-  window.dispatchEvent(new Event(AUTO_SAVE_LINKS_PREFERENCE_EVENT))
+export const setShouldAutoSaveAllLinks = (
+  shouldAutoSaveAllLinks: boolean
+): void => {
+  if (globalThis.localStorage !== undefined) {
+    localStorage.setItem(
+      AUTO_SAVE_LINKS_STORAGE_KEY,
+      String(shouldAutoSaveAllLinks)
+    )
+  }
+  if (globalThis.window !== undefined) {
+    window.dispatchEvent(new Event(AUTO_SAVE_LINKS_PREFERENCE_EVENT))
+  }
 }
 
 export const useShouldAutoSaveAllLinks = () =>

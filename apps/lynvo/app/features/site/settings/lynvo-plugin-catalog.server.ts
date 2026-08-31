@@ -44,12 +44,9 @@ export const loadLynvoPlugins = async (
           : {},
         description: plugin.description ?? "Lynvo Plugin Server plugin.",
         supportsDomains: Boolean(plugin.credential),
-        domainRequired:
-          plugin.credential?.kind === "http-basic"
-            ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
-            : plugin.credential
-              ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
-              : "",
+        domainRequired: plugin.credential
+          ? "Add the Plugin Domain. Optional Plugin Credentials are encrypted when saved."
+          : "",
       }
       if (plugin.credential) {
         result.credentialKind = plugin.credential.kind
@@ -59,6 +56,12 @@ export const loadLynvoPlugins = async (
       }
       if (plugin.version) {
         result.version = plugin.version
+      }
+      if (plugin.usageMultiplier) {
+        result.usageMultiplier = plugin.usageMultiplier
+      }
+      if (plugin.proxyCreditUsage) {
+        result.proxyCreditUsage = plugin.proxyCreditUsage
       }
       return result
     })

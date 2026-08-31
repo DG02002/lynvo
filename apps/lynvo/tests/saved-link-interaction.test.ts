@@ -12,7 +12,7 @@ const createItem = (overrides: Partial<LinkViewItem> = {}): LinkViewItem => ({
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedIds: [], openedUrls: [] },
+    playback: { openedUrls: [] },
   },
   ...overrides,
 })
@@ -29,10 +29,11 @@ describe("saved link interaction", () => {
               url: "https://files.example/a",
               label: "A",
               expiry: 100,
+              mediaNodeKind: "playable",
             },
           ],
         },
-        playback: { openedIds: [], openedUrls: [] },
+        playback: { openedUrls: [] },
       },
     })
 
@@ -61,7 +62,7 @@ describe("saved link interaction", () => {
             },
           ],
         },
-        playback: { openedIds: [], openedUrls: [] },
+        playback: { openedUrls: [] },
       },
     })
 

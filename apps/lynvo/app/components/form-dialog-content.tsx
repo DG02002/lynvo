@@ -1,5 +1,6 @@
 import type { ComponentProps, FormEventHandler, ReactNode } from "react"
-import { Button } from "~/components/ui/button"
+import type { Button } from "~/components/ui/button"
+import { Spinner } from "~/components/spinner"
 import { DialogActionButton } from "~/components/dialog-action-button"
 import {
   DialogClose,
@@ -18,6 +19,7 @@ interface FormDialogContentProps {
   onSubmit: FormEventHandler<HTMLFormElement>
   submitVariant?: ComponentProps<typeof Button>["variant"]
   submitDisabled?: boolean
+  submitPending?: boolean
   cancelDisabled?: boolean
   cancelLabel?: ReactNode
 }
@@ -31,6 +33,7 @@ export const FormDialogContent = ({
   onSubmit,
   submitVariant = "default",
   submitDisabled = false,
+  submitPending = false,
   cancelDisabled = false,
   cancelLabel = "Cancel",
 }: FormDialogContentProps) => (
@@ -50,8 +53,11 @@ export const FormDialogContent = ({
         <DialogActionButton
           type="submit"
           variant={submitVariant}
-          disabled={submitDisabled}
+          disabled={submitDisabled || submitPending}
         >
+          {submitPending && (
+            <Spinner data-icon="inline-start" aria-hidden="true" />
+          )}
           {submitLabel}
         </DialogActionButton>
         <DialogClose

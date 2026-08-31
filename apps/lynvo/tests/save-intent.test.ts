@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import {
   confirmSaveIntent,
@@ -14,7 +13,7 @@ const createLink = (url: string, id?: string): LinkViewItem => ({
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 
@@ -33,7 +32,6 @@ describe("save intent", () => {
         links: [],
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks: true,
       })
     ).resolves.toEqual({ kind: "error", message: "Enter a URL." })
 
@@ -43,7 +41,6 @@ describe("save intent", () => {
         links: [],
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks: true,
       })
     ).resolves.toEqual({ kind: "error", message: "Enter a valid URL." })
     expect(addLink).not.toHaveBeenCalled()
@@ -60,7 +57,6 @@ describe("save intent", () => {
         links: [createLink("https://index.example.com/0:/Shows/", "saved-id")],
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks: true,
       })
     ).resolves.toEqual({
       kind: "duplicate",
@@ -70,22 +66,9 @@ describe("save intent", () => {
     expect(enqueueLink).not.toHaveBeenCalled()
   })
 
-  it("returns selection data without opening a dialog or saving", async () => {
-    const metadata = { filename: "Shows" }
-    const extractedLinks: ExtractedLink[] = [
-      { id: "episode-one", label: "Episode One", url: "https://example.com/1" },
-      { id: "episode-two", label: "Episode Two", url: "https://example.com/2" },
-    ]
-    vi.spyOn(extractionOrchestration, "getSourceMetadata").mockResolvedValue(
-      metadata
-    )
-    vi.spyOn(extractionOrchestration, "prepareSource").mockResolvedValue({
-      metadata,
-      mergedMeta: metadata,
-      presentation: { kind: "selectionDialog", links: extractedLinks },
-    })
+  it("persists every save mode through the extraction queue so a refresh cannot discard work", async () => {
     const addLink = vi.fn()
-    const enqueueLink = vi.fn()
+    const enqueueLink = vi.fn().mockResolvedValue("queued-id")
 
     await expect(
       resolveSaveIntent({
@@ -93,19 +76,27 @@ describe("save intent", () => {
         links: [],
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks: false,
+      })
+    ).resolves.toEqual({ kind: "queued", linkId: "queued-id" })
+    expect(enqueueLink).toHaveBeenCalledWith("https://example.com/shows")
+    expect(addLink).not.toHaveBeenCalled()
+  })
+
+  it("reports a user-facing failure when the queue cannot persist the intent", async () => {
+    const addLink = vi.fn()
+    const enqueueLink = vi.fn().mockResolvedValue(undefined)
+
+    await expect(
+      resolveSaveIntent({
+        currentUrl: "https://example.com/shows",
+        links: [],
+        addLink,
+        enqueueLink,
       })
     ).resolves.toEqual({
-      kind: "selection-required",
-      selection: {
-        originalUrl: "https://example.com/shows",
-        links: extractedLinks,
-        meta: metadata,
-      },
-      previewMeta: metadata,
+      kind: "error",
+      message: "Unable to save link. Try again.",
     })
-    expect(addLink).not.toHaveBeenCalled()
-    expect(enqueueLink).not.toHaveBeenCalled()
   })
 
   it("returns an update outcome for an existing saved link", async () => {

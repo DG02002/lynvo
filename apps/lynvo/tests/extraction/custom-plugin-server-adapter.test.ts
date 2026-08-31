@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Effect, Option, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   extractFromCustomPluginServer,
@@ -6,16 +6,19 @@ import {
   selectCustomPluginServer,
 } from "~/lib/effect/services/custom-plugin-server-adapter"
 
-const findUndefinedPaths = (value: unknown, path = "result"): string[] => {
+const unknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown)
+
+const findUndefinedPaths = <Value>(value: Value, path = "result"): string[] => {
   if (Array.isArray(value)) {
     return value.flatMap((entry, index) =>
       findUndefinedPaths(entry, `${path}.${index}`)
     )
   }
-  if (typeof value !== "object" || value === null) {
+  const record = Schema.decodeUnknownOption(unknownRecordSchema)(value)
+  if (Option.isNone(record)) {
     return []
   }
-  return Object.entries(value).flatMap(([key, entry]) =>
+  return Object.entries(record.value).flatMap(([key, entry]) =>
     entry === undefined
       ? [`${path}.${key}`]
       : findUndefinedPaths(entry, `${path}.${key}`)
@@ -36,7 +39,7 @@ const createIncompleteStoredManifest = (
     pluginServerId: "dev.example.plugin-server",
     displayName: "Example Plugin Server",
     auth: { type: "bearer" },
-    ...(missingField === "usage" ? {} : { usage: { endpoint: "/usage" } }),
+    usage: missingField === "usage" ? undefined : { endpoint: "/usage" },
     matchers: [{ hosts: ["source.example"] }],
     features: {},
     extensions: {
@@ -45,8 +48,8 @@ const createIncompleteStoredManifest = (
           {
             id: "example-source",
             displayName: "Example Source",
-            ...(missingField === "status" ? {} : { status: "active" }),
-            ...(missingField === "version" ? {} : { version: "1.0.0" }),
+            status: missingField === "status" ? undefined : "active",
+            version: missingField === "version" ? undefined : "1.0.0",
             hosts: ["source.example"],
           },
         ],
@@ -69,8 +72,8 @@ describe("extractFromCustomPluginServer", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -99,12 +102,12 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://viewer:s%40fe@source.example/title",
-        "source"
-      )
+        targetUrl: "https://viewer:s%40fe@source.example/title",
+        kind: "source",
+      })
     )
 
-    const request = fetchMock.mock.calls[0][0]
+    const [[request]] = fetchMock.mock.calls
     expect(await request.json()).toEqual({
       input: {
         kind: "source",
@@ -154,8 +157,8 @@ describe("extractFromCustomPluginServer", () => {
     )
 
     const result = await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -163,9 +166,9 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://source.example/title",
-        "source"
-      )
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
     )
 
     expect(result.meta).toMatchObject({
@@ -278,8 +281,8 @@ describe("extractFromCustomPluginServer", () => {
     )
 
     const result = await Effect.runPromise(
-      extractFromCustomPluginServer(
-        {
+      extractFromCustomPluginServer({
+        pluginServer: {
           id: "pluginServer-one",
           baseUrl: "https://plugin-server.example",
           apiKey: "secret",
@@ -287,9 +290,9 @@ describe("extractFromCustomPluginServer", () => {
           enabled: true,
           priority: 0,
         },
-        "https://source.example/title",
-        "source"
-      )
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
     )
 
     expect(result.meta).toEqual({

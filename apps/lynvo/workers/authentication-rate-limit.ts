@@ -8,15 +8,22 @@ interface AuthenticationRateLimitEnvironment {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
-export const checkRateLimit = async (
-  env: AuthenticationRateLimitEnvironment,
-  key: string,
-  limit: number,
-  windowSeconds: number
-): Promise<AuthenticationRateLimitResult> => {
-  const limiter = env.AUTH_RATE_LIMITER
+interface CheckRateLimitInput {
+  readonly environment: AuthenticationRateLimitEnvironment
+  readonly key: string
+  readonly limit: number
+  readonly windowSeconds: number
+}
+
+export const checkRateLimit = async ({
+  environment,
+  key,
+  limit,
+  windowSeconds,
+}: CheckRateLimitInput): Promise<AuthenticationRateLimitResult> => {
+  const limiter = environment.AUTH_RATE_LIMITER
   if (!limiter) {
-    return env.ENVIRONMENT === "production" ? "unavailable" : "allowed"
+    return environment.ENVIRONMENT === "production" ? "unavailable" : "allowed"
   }
   try {
     const response = await limiter
@@ -38,12 +45,24 @@ export const checkRateLimit = async (
   }
 }
 
-export const checkAuthenticationRateLimit = (
-  env: AuthenticationRateLimitEnvironment,
-  key: string,
-  limit: number,
-  windowSeconds: number
-): Promise<AuthenticationRateLimitResult> =>
-  env.ENVIRONMENT === "development"
+interface CheckAuthenticationRateLimitInput {
+  readonly environment: AuthenticationRateLimitEnvironment
+  readonly key: string
+  readonly limit: number
+  readonly windowSeconds: number
+}
+
+export const checkAuthenticationRateLimit = ({
+  environment,
+  key,
+  limit,
+  windowSeconds,
+}: CheckAuthenticationRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+  environment.ENVIRONMENT === "development"
     ? Promise.resolve("allowed")
-    : checkRateLimit(env, key, limit, windowSeconds)
+    : checkRateLimit({
+        environment,
+        key,
+        limit,
+        windowSeconds,
+      })

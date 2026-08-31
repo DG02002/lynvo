@@ -3,15 +3,18 @@ import {
   Alert01Icon,
   ArrowDown01Icon,
   Delete02Icon,
-  LinkSquare02Icon,
+  Key01Icon,
   MoreHorizontalIcon,
   Refresh01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Badge } from "~/components/ui/badge"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { FormDialogContent } from "~/components/form-dialog-content"
+import { FormDialogInput } from "~/components/form-dialog-input"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Button } from "~/components/ui/button"
+import { Dialog } from "~/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +30,7 @@ import {
   PLUGIN_SERVER_VERIFICATION_STATUS,
 } from "~/lib/effect/services/plugin-server-verification-status"
 import { getPluginServerManifestView } from "./plugin-server-manifest"
+import { PluginInfoTooltip } from "./plugin-info-tooltip"
 import type { CustomPluginServer } from "./plugin-settings-interaction"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
@@ -35,6 +39,7 @@ interface CustomPluginServerRowProps {
   requestOrigin: string
   onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => void
+  onSetProxyKey: (pluginServerId: string, token: string) => Promise<boolean>
   onTogglePluginServer: (
     pluginServerId: string,
     currentEnabled: boolean
@@ -46,11 +51,15 @@ const CustomPluginServerRow = ({
   requestOrigin,
   onDeletePluginServer,
   onRefreshPluginServer,
+  onSetProxyKey,
   onTogglePluginServer,
 }: CustomPluginServerRowProps) => {
   const [isExpanded, setIsExpanded] = React.useState(true)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const [isProxyDialogOpen, setIsProxyDialogOpen] = React.useState(false)
+  const [proxyToken, setProxyToken] = React.useState("")
+  const [isSavingProxyKey, setIsSavingProxyKey] = React.useState(false)
   const manifest = getPluginServerManifestView(
     pluginServer.manifest,
     requestOrigin
@@ -82,6 +91,14 @@ const CustomPluginServerRow = ({
             >
               {pluginServer.baseUrl}
             </span>
+            {pluginServer.hasProxyKey &&
+              pluginServer.proxyBalanceRemaining !== null &&
+              pluginServer.proxyBalanceRemaining !== undefined && (
+                <span className="truncate text-xs text-muted-foreground">
+                  Own proxy key · {pluginServer.proxyBalanceRemaining} credits
+                  left
+                </span>
+              )}
           </div>
         </div>
 
@@ -114,6 +131,12 @@ const CustomPluginServerRow = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuGroup>
+                {manifest.proxyProvider === "scrape-do" && (
+                  <DropdownMenuItem onClick={() => setIsProxyDialogOpen(true)}>
+                    <HugeiconsIcon icon={Key01Icon} />
+                    Proxy key
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => onRefreshPluginServer(pluginServer.id)}
                 >
@@ -172,23 +195,17 @@ const CustomPluginServerRow = ({
                     <span className="truncate text-sm text-foreground">
                       {source.displayName}
                     </span>
-                    {projectUrl && (
-                      <a
-                        href={
-                          source.homepage ? projectUrl : `https://${projectUrl}`
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={`View project for ${source.displayName}`}
-                        title="View project"
-                        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                      >
-                        <HugeiconsIcon
-                          icon={LinkSquare02Icon}
-                          className="size-4"
-                        />
-                      </a>
-                    )}
+                    <PluginInfoTooltip
+                      pluginName={source.displayName}
+                      description={source.description}
+                      version={source.version}
+                      usageMultiplier={source.usageMultiplier}
+                      proxyCreditUsage={source.proxyCreditUsage}
+                      projectUrl={
+                        projectUrl &&
+                        (source.homepage ? projectUrl : `https://${projectUrl}`)
+                      }
+                    />
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2 pr-1">
@@ -198,16 +215,70 @@ const CustomPluginServerRow = ({
                       {source.status === "down" ? "Unavailable" : "Maintenance"}
                     </Badge>
                   )}
-                  {source.version && (
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      v{source.version}
-                    </span>
-                  )}
                 </div>
               </SettingsRow>
             )
           })}
         </div>
+      )}
+      {manifest.proxyProvider === "scrape-do" && (
+        <Dialog open={isProxyDialogOpen} onOpenChange={setIsProxyDialogOpen}>
+          <FormDialogContent
+            title={`Proxy key for ${manifest.name}`}
+            description="Your Scrape.do API token is sent only to this Plugin Server on extraction, so proxy usage bills your own Scrape.do account instead of the shared pool."
+            media={
+              <HugeiconsIcon
+                icon={Key01Icon}
+                className="mx-auto size-16 text-muted-foreground"
+              />
+            }
+            submitLabel="Save key"
+            onSubmit={async () => {
+              setIsSavingProxyKey(true)
+              try {
+                const didSave = await onSetProxyKey(pluginServer.id, proxyToken)
+                if (didSave) {
+                  setProxyToken("")
+                  setIsProxyDialogOpen(false)
+                }
+              } finally {
+                setIsSavingProxyKey(false)
+              }
+            }}
+          >
+            <FormDialogInput
+              id={`proxy-key-${pluginServer.id}`}
+              label="Scrape.do API token"
+              type="password"
+              value={proxyToken}
+              onChange={(event) => setProxyToken(event.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+            />
+            {pluginServer.hasProxyKey && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="self-start text-muted-foreground"
+                disabled={isSavingProxyKey}
+                onClick={async () => {
+                  setIsSavingProxyKey(true)
+                  try {
+                    const didRemove = await onSetProxyKey(pluginServer.id, "")
+                    if (didRemove) {
+                      setProxyToken("")
+                      setIsProxyDialogOpen(false)
+                    }
+                  } finally {
+                    setIsSavingProxyKey(false)
+                  }
+                }}
+              >
+                Remove saved key
+              </Button>
+            )}
+          </FormDialogContent>
+        </Dialog>
       )}
       <ConfirmationAlertDialog
         open={isDeleteDialogOpen}
@@ -220,9 +291,9 @@ const CustomPluginServerRow = ({
           />
         }
         description={`${manifest.name} and its server connection will be removed. You can add it again later.`}
-        confirmLabel={isDeleting ? "Deleting…" : "Delete server"}
+        confirmLabel="Delete server"
         confirmVariant="destructive"
-        disabled={isDeleting}
+        pending={isDeleting}
         onConfirm={() => {
           setIsDeleting(true)
           void onDeletePluginServer(pluginServer.id).finally(() => {
@@ -240,12 +311,14 @@ export const CustomPluginServerTable = ({
   requestOrigin,
   onDeletePluginServer,
   onRefreshPluginServer,
+  onSetProxyKey,
   onTogglePluginServer,
 }: {
   pluginServers: readonly CustomPluginServer[]
   requestOrigin: string
   onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => void
+  onSetProxyKey: (pluginServerId: string, token: string) => Promise<boolean>
   onTogglePluginServer: (
     pluginServerId: string,
     currentEnabled: boolean
@@ -259,6 +332,7 @@ export const CustomPluginServerTable = ({
         requestOrigin={requestOrigin}
         onDeletePluginServer={onDeletePluginServer}
         onRefreshPluginServer={onRefreshPluginServer}
+        onSetProxyKey={onSetProxyKey}
         onTogglePluginServer={onTogglePluginServer}
       />
     ))}

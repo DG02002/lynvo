@@ -33,20 +33,26 @@ const manifest: PluginServerManifest = {
 describe("Lynvo Plugin Server routing", () => {
   it("selects static matches before the fallback probe", () => {
     expect(
-      findLynvoPlugin(manifest, "https://drive.google.com/file/d/example")?.id
+      findLynvoPlugin({
+        manifest,
+        targetUrl: "https://drive.google.com/file/d/example",
+      })?.id
     ).toBe("google-drive")
     expect(
-      findLynvoPlugin(manifest, "https://media.example/video.mp4")?.id
+      findLynvoPlugin({
+        manifest,
+        targetUrl: "https://media.example/video.mp4",
+      })?.id
     ).toBe("direct-media")
   })
 
   it("preserves explicit Plugin selection ahead of automatic matching", () => {
     expect(
-      findLynvoPlugin(
+      findLynvoPlugin({
         manifest,
-        "https://drive.google.com/file/d/example",
-        "direct-media"
-      )?.id
+        targetUrl: "https://drive.google.com/file/d/example",
+        pluginId: "direct-media",
+      })?.id
     ).toBe("direct-media")
   })
 })

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react"
-import { toast } from "sonner"
+import { showErrorToast } from "~/lib/toast-notifications"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import {
   expandFolderLink,
@@ -9,6 +9,7 @@ import {
 } from "./refresh-flow"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
 export const useRefreshActions = ({
@@ -40,10 +41,11 @@ export const useRefreshActions = ({
           openSelectionDialog(outcome.selection)
         } else if (outcome.kind === "links-updated") {
           updateLinks(outcome.itemUrl, outcome.links)
-        } else if (outcome.kind === "refresh-succeeded") {
-          toast.success("Links refreshed")
         } else if (outcome.kind === "error") {
-          toast.error(outcome.message)
+          showErrorToast({
+            title: "Couldn’t refresh the link",
+            description: outcome.message,
+          })
         }
       },
     }),
@@ -97,7 +99,12 @@ export const useRefreshActions = ({
             ]
           : undefined
       if (cachedMirrors && !bypassCache) {
-        return cachedMirrors
+        const freshCachedMirrors = cachedMirrors.filter((mirror) =>
+          isPlayableLinkFresh(mirror)
+        )
+        if (freshCachedMirrors.length > 0) {
+          return freshCachedMirrors
+        }
       }
 
       return runWithExtractingItem(lazyItemUrl, async () => {

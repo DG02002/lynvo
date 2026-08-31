@@ -5,14 +5,19 @@ import {
   USER_STORAGE_LIMIT_BYTES,
 } from "../constants"
 import { LinkTooLargeError, StorageLimitError } from "./errors"
-import { profileStorageDocument } from "./rows"
-import type {
-  LinkRow,
-  PluginCredentialRow,
-  PluginDomainRow,
-  PluginServerRow,
-  ProfileUserRow,
+import {
+  PLUGIN_CREDENTIAL_COLUMNS,
+  PLUGIN_DOMAIN_COLUMNS,
+  PLUGIN_SERVER_COLUMNS,
+  USER_COLUMNS,
+  profileStorageDocument,
+  type LinkRow,
+  type PluginCredentialRow,
+  type PluginDomainRow,
+  type PluginServerRow,
+  type ProfileUserRow,
 } from "./rows"
+import { SAVED_LINK_COLUMNS } from "./saved-link-storage"
 
 export const LEDGER_DOMAIN_COLUMNS = {
   profileBytes: "profile_bytes",
@@ -39,6 +44,9 @@ export interface StorageLedgerRecord extends AppOwnedStorageUsage {
   readonly schemaVersion: number
   readonly updatedAt: number
 }
+
+const STORAGE_LEDGER_COLUMNS =
+  "user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at"
 
 interface StorageLedgerRow {
   user_id: string
@@ -77,13 +85,21 @@ const sumDocumentBytes = <Document>(documents: readonly Document[]): number =>
     0
   )
 
-const readBoundedRows = async <Row>(
-  database: D1Database,
-  table: string,
-  userId: string
-): Promise<Row[]> => {
+interface ReadBoundedRowsInput {
+  readonly database: D1Database
+  readonly table: string
+  readonly columns: string
+  readonly userId: string
+}
+
+const readBoundedRows = async <Row>({
+  database,
+  table,
+  columns,
+  userId,
+}: ReadBoundedRowsInput): Promise<Row[]> => {
   const result = await database
-    .prepare(`SELECT * FROM ${table} WHERE user_id = ?1 LIMIT ?2`)
+    .prepare(`SELECT ${columns} FROM ${table} WHERE user_id = ?1 LIMIT ?2`)
     .bind(userId, STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT + 1)
     .all<Row>()
   if (result.results.length > STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT) {
@@ -96,20 +112,36 @@ export const calculateAppOwnedStorageUsage = async (
   database: D1Database,
   userId: string
 ): Promise<AppOwnedStorageUsage> => {
-  const userRow = await database
-    .prepare("SELECT * FROM users WHERE id = ?1")
-    .bind(userId)
-    .first<ProfileUserRow>()
-  const [links, pluginServers, pluginDomains, pluginCredentials] =
+  const [userRow, links, pluginServers, pluginDomains, pluginCredentials] =
     await Promise.all([
-      readBoundedRows<LinkRow>(database, "links", userId),
-      readBoundedRows<PluginServerRow>(database, "user_plugin_servers", userId),
-      readBoundedRows<PluginDomainRow>(database, "user_plugin_domains", userId),
-      readBoundedRows<PluginCredentialRow>(
+      database
+        .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
+        .bind(userId)
+        .first<ProfileUserRow>(),
+      readBoundedRows<LinkRow>({
         database,
-        "user_plugin_credentials",
-        userId
-      ),
+        table: "links",
+        columns: SAVED_LINK_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginServerRow>({
+        database,
+        table: "user_plugin_servers",
+        columns: PLUGIN_SERVER_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginDomainRow>({
+        database,
+        table: "user_plugin_domains",
+        columns: PLUGIN_DOMAIN_COLUMNS,
+        userId,
+      }),
+      readBoundedRows<PluginCredentialRow>({
+        database,
+        table: "user_plugin_credentials",
+        columns: PLUGIN_CREDENTIAL_COLUMNS,
+        userId,
+      }),
     ])
   const profileBytes = userRow ? byteLength(profileStorageDocument(userRow)) : 0
   const linkBytes = sumDocumentBytes(links)
@@ -137,7 +169,9 @@ export const getStorageLedger = async (
   userId: string
 ): Promise<StorageLedgerRecord | null> => {
   const row = await database
-    .prepare("SELECT * FROM storage_ledgers WHERE user_id = ?1")
+    .prepare(
+      `SELECT ${STORAGE_LEDGER_COLUMNS} FROM storage_ledgers WHERE user_id = ?1`
+    )
     .bind(userId)
     .first<StorageLedgerRow>()
   return row ? mapLedgerRow(row) : null
@@ -154,14 +188,13 @@ export const ensureStorageLedger = async (
   now: number
 ): Promise<StorageLedgerPreparation> => {
   const existing = await getStorageLedger(database, userId)
-  if (existing && existing.schemaVersion === STORAGE_LEDGER_SCHEMA_VERSION) {
+  if (existing) {
     return { ledger: existing, statements: [] }
   }
   const usage = await calculateAppOwnedStorageUsage(database, userId)
   const statement = database
     .prepare(
-      `INSERT INTO storage_ledgers (user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-       ON CONFLICT(user_id) DO UPDATE SET schema_version = ?2, profile_bytes = ?3, link_bytes = ?4, plugin_server_bytes = ?5, plugin_domain_bytes = ?6, plugin_credential_bytes = ?7, saved_link_count = ?8, total_enforced_bytes = ?9, updated_at = ?10`
+      `INSERT INTO storage_ledgers (user_id, schema_version, profile_bytes, link_bytes, plugin_server_bytes, plugin_domain_bytes, plugin_credential_bytes, saved_link_count, total_enforced_bytes, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
     )
     .bind(
       userId,
@@ -210,12 +243,19 @@ export const withAppliedMutation = (
   },
 })
 
-export const applyStorageMutation = (
-  database: D1Database,
-  preparation: StorageLedgerPreparation,
-  plan: LedgerMutationPlan,
-  now: number
-): AppliedLedgerMutation => {
+interface ApplyStorageMutationInput {
+  readonly database: D1Database
+  readonly preparation: StorageLedgerPreparation
+  readonly plan: LedgerMutationPlan
+  readonly now: number
+}
+
+export const applyStorageMutation = ({
+  database,
+  preparation,
+  plan,
+  now,
+}: ApplyStorageMutationInput): AppliedLedgerMutation => {
   const deltaBytes = plan.nextBytes - plan.currentBytes
   const totalEnforcedBytes = preparation.ledger.totalEnforcedBytes + deltaBytes
   assertStorageGrowth(totalEnforcedBytes, deltaBytes)

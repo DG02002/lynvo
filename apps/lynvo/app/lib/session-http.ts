@@ -1,6 +1,6 @@
 import { sessionIdentityHeaders } from "./session-identity"
 
-export const revokeSession = async (): Promise<void> => {
+export const signOut = async (): Promise<void> => {
   const headers = sessionIdentityHeaders()
   const options: RequestInit = {
     method: "DELETE",
@@ -14,5 +14,3 @@ export const revokeSession = async (): Promise<void> => {
     throw new Error("Unable to revoke the server session")
   }
 }
-
-export const signOut = revokeSession

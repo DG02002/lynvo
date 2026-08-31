@@ -1,14 +1,19 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["vite.config.ts"],
+  "include": [
+    "vite.config.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "strict": true,
-    "types": ["node"],
-    "lib": ["ESNext"],
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ESNext"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler"
-    // "ignoreDeprecations": "6.0"
   }
 }

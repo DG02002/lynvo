@@ -34,9 +34,9 @@ declare global {
   }
 
   interface RemoteCommandDeliveryRecord {
-    processed: Array<[string, number]>
-    applied: Array<[string, number]>
-    pendingAcknowledgements: Array<[string, string]>
+    processed: ReadonlyArray<readonly [string, number]>
+    applied: ReadonlyArray<readonly [string, number]>
+    pendingAcknowledgements: ReadonlyArray<readonly [string, string]>
   }
 
   interface RemoteCommandDelivery {
@@ -82,6 +82,10 @@ export const createRemoteCommandDelivery = ({
   const processedCommands = new Map(storedRecord.processed)
   const appliedCommands = new Map(storedRecord.applied)
   const pendingAcknowledgements = new Map(storedRecord.pendingAcknowledgements)
+  const pendingRecordedAt = new Map<string, number>()
+  for (const commandId of pendingAcknowledgements.keys()) {
+    pendingRecordedAt.set(commandId, now())
+  }
   const acknowledgementRequests = new Map<string, Promise<void>>()
 
   const persist = () =>
@@ -97,6 +101,14 @@ export const createRemoteCommandDelivery = ({
         if (currentTime - recordedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
           commandIds.delete(commandId)
         }
+      }
+    }
+    // Acknowledgements whose command has aged out of the server's TTL would
+    // 404 forever; retire them with the same window.
+    for (const [commandId, recordedAt] of pendingRecordedAt) {
+      if (currentTime - recordedAt > REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS) {
+        pendingAcknowledgements.delete(commandId)
+        pendingRecordedAt.delete(commandId)
       }
     }
     persist()
@@ -144,6 +156,7 @@ export const createRemoteCommandDelivery = ({
       }
       if (appliedCommands.has(command.id)) {
         pendingAcknowledgements.set(command.id, command.claimToken)
+        pendingRecordedAt.set(command.id, now())
         persist()
         return false
       }
@@ -164,6 +177,7 @@ export const createRemoteCommandDelivery = ({
       }
       appliedCommands.set(commandId, now())
       pendingAcknowledgements.set(commandId, state.lastCommand.claimToken)
+      pendingRecordedAt.set(commandId, now())
       state = { lastCommand: null }
       persist()
     },

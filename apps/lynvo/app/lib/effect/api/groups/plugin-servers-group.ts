@@ -18,6 +18,9 @@ const CustomPluginServerSchema = Schema.Struct({
   enabled: Schema.Boolean,
   priority: Schema.Number,
   verificationStatus: Schema.String,
+  hasProxyKey: Schema.Boolean,
+  proxyBalanceRemaining: Schema.optional(Schema.NullOr(Schema.Number)),
+  proxyBalanceLimit: Schema.optional(Schema.NullOr(Schema.Number)),
   lastVerifiedAt: Schema.optional(Schema.NullOr(Schema.Number)),
   lastManifestRefreshAt: Schema.optional(Schema.NullOr(Schema.Number)),
   createdAt: Schema.Number,
@@ -65,6 +68,26 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       success: Schema.Struct({ success: Schema.Boolean }),
       error: [
         PluginServerRegistrationApiError,
+        UnauthorizedApiError,
+        BackendApiError,
+        CsrfApiError,
+      ],
+    }),
+    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy-key", {
+      params: {
+        pluginServerId: Schema.String,
+      },
+      payload: Schema.Struct({
+        token: Schema.String,
+      }),
+      success: Schema.Struct({
+        success: Schema.Boolean,
+        remaining: Schema.NullOr(Schema.Number),
+        limit: Schema.NullOr(Schema.Number),
+      }),
+      error: [
+        PluginServerRegistrationApiError,
+        ValidationApiError,
         UnauthorizedApiError,
         BackendApiError,
         CsrfApiError,

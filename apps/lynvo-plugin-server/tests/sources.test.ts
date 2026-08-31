@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
 import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
+import {
+  BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
+  BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
+} from "../src/constants"
 import {
   createBhadooNodes,
   extractBhadooGoogleDriveIndex,
   formatBhadooFileSize,
+  type BhadooGoogleDriveListResponse,
 } from "../src/sources/bhadoo-google-drive-index"
 import {
   createOneDriveNodes,
@@ -22,6 +28,17 @@ import {
 import { extractDirectMedia } from "../src/sources/direct-media"
 
 afterEach(() => vi.restoreAllMocks())
+
+const createBhadooReverseEnvelope = (
+  response: BhadooGoogleDriveListResponse
+): string => {
+  const wrappedResponse = `${"p".repeat(
+    BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT
+  )}${btoa(JSON.stringify(response))}${"s".repeat(
+    BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT
+  )}`
+  return wrappedResponse.split("").reverse().join("")
+}
 
 describe("Direct Media source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG.find(
@@ -120,12 +137,54 @@ describe("Direct Media source adapter", () => {
         targetUrl: "https://media.example/archive.zip",
         plugin,
       })
-    ).rejects.toThrow("UNSUPPORTED_URL")
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
 })
 
 describe("Bhadoo source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG[0]
+
+  it("extracts a Bhadoo download endpoint as direct media", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/x-matroska",
+          "Content-Disposition":
+            'attachment; filename="Sample.Movie.2016.1080p.mkv"',
+          "Content-Range": "bytes 0-0/3912361197",
+        },
+      })
+    )
+
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: {
+          kind: "source",
+          sourceUrl: "https://drive.example/download.aspx?file=signed",
+        },
+      },
+      targetUrl: "https://drive.example/download.aspx?file=signed",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+      headers: {
+        "Accept-Encoding": "identity",
+        Range: "bytes=0-0",
+      },
+    })
+    expect(result.nodes).toEqual([
+      expect.objectContaining({
+        kind: "playable",
+        label: "Sample.Movie.2016.1080p.mkv",
+        rangeRequest: "supported",
+        size: "3.64 GB",
+      }),
+    ])
+  })
 
   it("maps folders and playable files to protocol-native nodes", () => {
     const nodes = createBhadooNodes(
@@ -179,6 +238,57 @@ describe("Bhadoo source adapter", () => {
     expect(calledRequest[1]?.headers).toMatchObject({
       Authorization: `Basic ${btoa("viewer:secret")}`,
     })
+  })
+
+  it("supports the Bhadoo reverse-envelope response protocol", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response("JSON endpoint unavailable", { status: 404 })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          createBhadooReverseEnvelope({
+            nextPageToken: null,
+            curPageIndex: 0,
+            data: {
+              files: [
+                {
+                  id: "wrapped-file",
+                  name: "wrapped-video.mkv",
+                  mimeType: "video/x-matroska",
+                  link: "/download.aspx?file=wrapped",
+                },
+              ],
+            },
+          })
+        )
+      )
+
+    const result = await extractBhadooGoogleDriveIndex({
+      request: {
+        input: { kind: "source", sourceUrl: "https://drive.example/0:/" },
+        basicAuth: { username: "viewer", password: "secret" },
+      },
+      targetUrl: "https://drive.example/0:/",
+      plugin,
+      publicAssetOrigin: "https://lynvo.example",
+    })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({
+      headers: { Authorization: `Basic ${btoa("viewer:secret")}` },
+    })
+    expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Authorization: `Basic ${btoa("viewer:secret")}`,
+      },
+      body: "password=&page_token=&page_index=0",
+    })
+    expect(result.nodes).toMatchObject([
+      { kind: "playable", label: "wrapped-video.mkv" },
+    ])
   })
 
   it("treats a trailing-slash video filename as an index folder", async () => {
@@ -457,12 +567,12 @@ describe("Google Drive public files source adapter", () => {
       extractGoogleDriveFileId(
         "https://drive.google.com/drive/folders/1AbCdEfGh123"
       )
-    ).toThrow("UNSUPPORTED_URL")
+    ).toThrow(ProtocolError)
     expect(() =>
       extractGoogleDriveFileId(
         "https://drive.google.com.example/file/d/1AbCdEfGh123/view"
       )
-    ).toThrow("UNSUPPORTED_URL")
+    ).toThrow(ProtocolError)
   })
 
   it("parses public folders into lazy folders and playable root files", () => {
@@ -562,7 +672,8 @@ describe("Google Drive public files source adapter", () => {
       new Response(new Uint8Array([0]), {
         status: 206,
         headers: {
-          "Content-Disposition": 'attachment; filename="legacy-video.m2ts"',
+          "Content-Disposition":
+            'attachment; filename="resource-key-video.m2ts"',
           "Content-Range": "bytes 0-0/203059200",
         },
       })
@@ -573,17 +684,17 @@ describe("Google Drive public files source adapter", () => {
         input: {
           kind: "source",
           sourceUrl:
-            "https://drive.google.com/file/d/legacy-file-id/view?resourcekey=0-example-key",
+            "https://drive.google.com/file/d/resource-key-file-id/view?resourcekey=0-example-key",
         },
       },
       targetUrl:
-        "https://drive.google.com/file/d/legacy-file-id/view?resourcekey=0-example-key",
+        "https://drive.google.com/file/d/resource-key-file-id/view?resourcekey=0-example-key",
       plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
 
     const expectedUrl =
-      "https://drive.usercontent.google.com/download?id=legacy-file-id&export=download&confirm=t&resourcekey=0-example-key"
+      "https://drive.usercontent.google.com/download?id=resource-key-file-id&export=download&confirm=t&resourcekey=0-example-key"
     expect(String(fetchSpy.mock.calls[0]?.[0])).toBe(expectedUrl)
     expect(result.nodes[0]).toMatchObject({
       url: expectedUrl,

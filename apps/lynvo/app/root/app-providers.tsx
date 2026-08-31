@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react"
+import { useCallback, type ReactNode } from "react"
 import { Outlet } from "react-router"
 import { ThemeProvider } from "next-themes"
 import { RemoteControlProvider } from "~/context/remote-control-context"
@@ -6,7 +6,7 @@ import { RealtimeProvider } from "~/context/realtime-context"
 import { VersionWatcher } from "~/components/version-watcher"
 import { PlayerLaunchErrorDialog } from "~/components/player-launch-error-dialog"
 import { OpenedConfirmationDialog } from "~/components/opened-confirmation-dialog"
-import { Toaster } from "~/components/ui/sonner"
+import { AppToaster } from "~/components/app-toaster"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
@@ -14,6 +14,7 @@ import { AccountSettingsSynchronization } from "./account-settings-synchronizati
 import { clearRevokedSessionState } from "./session-revocation"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { IdentitySynchronizer } from "./identity-synchronizer"
+import { toProviderUser } from "./provider-user"
 
 interface AppProvidersProps {
   buildTime: string
@@ -26,10 +27,7 @@ export const AppProviders = ({
   user,
   children,
 }: AppProvidersProps) => {
-  const providerUser = useMemo(
-    () => (user ? { id: user.sub, sessionId: user.sid } : null),
-    [user?.sid, user?.sub]
-  )
+  const providerUser = toProviderUser(user)
   const handleSessionRevoked = useCallback((userId: string) => {
     clearRevokedSessionState(localStorage, window.location, userId)
   }, [])
@@ -67,8 +65,8 @@ export const AppProviders = ({
         </IdentitySynchronizer>
         <PlayerLaunchErrorDialog />
         <OpenedConfirmationDialog />
-        <Toaster />
-      </TooltipProvider>
+        <AppToaster />
+      </TooltipProvider>{" "}
     </ThemeProvider>
   )
 }

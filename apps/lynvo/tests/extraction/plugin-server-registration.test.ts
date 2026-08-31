@@ -159,7 +159,7 @@ describe("Plugin Server registration", () => {
     )
     let finalizedCount = 0
     let recoveryCount = 0
-    let storedPendingRow: Record<string, unknown> | null = null
+    let storedPendingRow: object | null = null
     const credentialVault = {
       getByName: () => ({
         fetch: () =>
@@ -176,8 +176,8 @@ describe("Plugin Server registration", () => {
     const database = createFakeD1Database((sql, args) => {
       if (sql.includes("INSERT INTO user_plugin_servers")) {
         storedPendingRow = {
-          id: args[0] as string,
-          user_id: args[1] as string,
+          id: String(args[0]),
+          user_id: String(args[1]),
           credential_status: "pending",
           credential_generation: args[9],
           credential_attempt_id: args[10],
@@ -185,9 +185,7 @@ describe("Plugin Server registration", () => {
         return undefined
       }
       if (sql.includes("FROM user_plugin_servers")) {
-        return storedPendingRow
-          ? { row: storedPendingRow }
-          : { rows: [] }
+        return storedPendingRow ? { row: storedPendingRow } : { rows: [] }
       }
       if (
         sql.includes("UPDATE user_plugin_servers") &&
@@ -205,14 +203,13 @@ describe("Plugin Server registration", () => {
       }
       return undefined
     })
+    // SAFETY: Registration only uses the DB and credential-vault bindings supplied here.
+    const environment = {
+      PLUGIN_SERVER_CREDENTIAL_VAULT: credentialVault,
+      DB: database,
+    } as Env
     const layer = Layer.mergeAll(
-      Layer.succeed(
-        CloudflareEnv,
-        CloudflareEnv.of({
-          PLUGIN_SERVER_CREDENTIAL_VAULT: credentialVault,
-          DB: database,
-        } as unknown as Env)
-      )
+      Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
     )
 
     await expect(

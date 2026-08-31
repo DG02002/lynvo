@@ -65,17 +65,21 @@ describe("d1 remote commands", () => {
       now: NOW + 1,
     })
     await expect(
-      claimNextRemoteCommand(env.DB, owner.user.id, secondSession.id, {
+      claimNextRemoteCommand({
+        database: env.DB,
+        userId: owner.user.id,
+        sessionId: secondSession.id,
         receiverId: "first-receiver",
         now: NOW + 2,
       })
     ).resolves.toBeNull()
-    const claim = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      secondSession.id,
-      { receiverId: "second-receiver", now: NOW + 2 }
-    )
+    const claim = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: secondSession.id,
+      receiverId: "second-receiver",
+      now: NOW + 2,
+    })
     expect(claim?.command).toBe("play")
     expect(claim?.claimToken).toBeTruthy()
   })
@@ -89,43 +93,43 @@ describe("d1 remote commands", () => {
       targetReceiverId: "receiver",
       now: NOW,
     })
-    const claim = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      { receiverId: "receiver", now: NOW + 1 }
-    )
+    const claim = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      receiverId: "receiver",
+      now: NOW + 1,
+    })
     expect(claim?.id).toBe(enqueued.id)
-    const firstReport = await reportRemoteCommandResult(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      {
-        id: enqueued.id,
-        receiverId: "receiver",
-        claimToken: claim?.claimToken ?? "",
-        result: "applied",
-        message: "ok",
-        now: NOW + 2,
-      }
-    )
+    const firstReport = await reportRemoteCommandResult({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      id: enqueued.id,
+      receiverId: "receiver",
+      claimToken: claim?.claimToken ?? "",
+      result: "applied",
+      message: "ok",
+      now: NOW + 2,
+    })
     expect(firstReport.success).toBe(true)
-    const replayedReport = await reportRemoteCommandResult(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      {
-        id: enqueued.id,
-        receiverId: "receiver",
-        claimToken: claim?.claimToken ?? "",
-        result: "applied",
-        message: "ok",
-        now: NOW + 3,
-      }
-    )
+    const replayedReport = await reportRemoteCommandResult({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      id: enqueued.id,
+      receiverId: "receiver",
+      claimToken: claim?.claimToken ?? "",
+      result: "applied",
+      message: "ok",
+      now: NOW + 3,
+    })
     expect(replayedReport.success).toBe(true)
     await expect(
-      reportRemoteCommandResult(env.DB, owner.user.id, owner.session.id, {
+      reportRemoteCommandResult({
+        database: env.DB,
+        userId: owner.user.id,
+        sessionId: owner.session.id,
         id: enqueued.id,
         receiverId: "receiver",
         claimToken: "wrong-token",
@@ -134,7 +138,10 @@ describe("d1 remote commands", () => {
       })
     ).rejects.toThrow("Remote command claim is no longer active")
     await expect(
-      claimNextRemoteCommand(env.DB, owner.user.id, owner.session.id, {
+      claimNextRemoteCommand({
+        database: env.DB,
+        userId: owner.user.id,
+        sessionId: owner.session.id,
         receiverId: "receiver",
         now: NOW + 5,
       })
@@ -150,25 +157,30 @@ describe("d1 remote commands", () => {
       targetReceiverId: "receiver",
       now: NOW,
     })
-    const firstClaim = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      { receiverId: "receiver", now: NOW + 1 }
-    )
+    const firstClaim = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      receiverId: "receiver",
+      now: NOW + 1,
+    })
     expect(firstClaim).not.toBeNull()
     await expect(
-      claimNextRemoteCommand(env.DB, owner.user.id, owner.session.id, {
+      claimNextRemoteCommand({
+        database: env.DB,
+        userId: owner.user.id,
+        sessionId: owner.session.id,
         receiverId: "receiver",
         now: NOW + 2,
       })
     ).resolves.toBeNull()
-    const reclaimed = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      { receiverId: "receiver", now: NOW + 2 + REMOTE_COMMAND_CLAIM_LEASE_MS }
-    )
+    const reclaimed = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      receiverId: "receiver",
+      now: NOW + 2 + REMOTE_COMMAND_CLAIM_LEASE_MS,
+    })
     expect(reclaimed?.id).toBe(firstClaim?.id)
     expect(reclaimed?.claimToken).not.toBe(firstClaim?.claimToken)
   })
@@ -190,12 +202,13 @@ describe("d1 remote commands", () => {
         )
         .run()
     }
-    const claim = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      { receiverId: "receiver", now: NOW + 1 }
-    )
+    const claim = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      receiverId: "receiver",
+      now: NOW + 1,
+    })
     expect(claim?.createdAt).toBe(0)
     expect(claim?.payload).toBe("0")
   })
@@ -207,7 +220,13 @@ describe("d1 remote commands", () => {
         `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status)
          VALUES (?1, ?2, ?3, 'receiver', 'play', '{}', ?4, ?5, 'applied')`
       )
-        .bind(`terminal-${index}`, owner.user.id, owner.session.id, index, NOW + REMOTE_COMMAND_TTL_MS)
+        .bind(
+          `terminal-${index}`,
+          owner.user.id,
+          owner.session.id,
+          index,
+          NOW + REMOTE_COMMAND_TTL_MS
+        )
         .run()
     }
     const enqueued = await enqueueRemoteCommand(env.DB, owner.user.id, {
@@ -217,12 +236,13 @@ describe("d1 remote commands", () => {
       targetReceiverId: "receiver",
       now: NOW + 1_000,
     })
-    const claim = await claimNextRemoteCommand(
-      env.DB,
-      owner.user.id,
-      owner.session.id,
-      { receiverId: "receiver", now: NOW + 1_001 }
-    )
+    const claim = await claimNextRemoteCommand({
+      database: env.DB,
+      userId: owner.user.id,
+      sessionId: owner.session.id,
+      receiverId: "receiver",
+      now: NOW + 1_001,
+    })
     expect(claim?.id).toBe(enqueued.id)
     expect(claim?.payload).toBe("deliverable")
   })
@@ -241,6 +261,7 @@ describe("d1 remote commands", () => {
     await expect(
       enqueueRemoteCommand(env.DB, owner.user.id, {
         targetSessionId: owner.session.id,
+        // SAFETY: The invalid command is intentional input for runtime validation.
         command: "stop" as "play",
         payload: "{}",
         targetReceiverId: "receiver",
@@ -251,12 +272,22 @@ describe("d1 remote commands", () => {
 
   it("cleans expired commands in bounded batches", async () => {
     const owner = await createSessionForUser()
-    for (let index = 0; index < REMOTE_COMMAND_CLEANUP_BATCH_SIZE + 1; index += 1) {
+    for (
+      let index = 0;
+      index < REMOTE_COMMAND_CLEANUP_BATCH_SIZE + 1;
+      index += 1
+    ) {
       await env.DB.prepare(
         `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status)
          VALUES (?1, ?2, ?3, 'receiver', 'play', ?4, ?5, 999999, 'queued')`
       )
-        .bind(`expired-${index}`, owner.user.id, owner.session.id, String(index), index)
+        .bind(
+          `expired-${index}`,
+          owner.user.id,
+          owner.session.id,
+          String(index),
+          index
+        )
         .run()
     }
     const outcome = await cleanupExpiredRemoteCommands(env.DB, 1_000_000)
@@ -286,7 +317,9 @@ describe("d1 remote commands", () => {
     await acknowledgeRemoteCommandNotification(env.DB, enqueued.id)
     const afterAcknowledge = await listPendingRemoteCommandNotifications(env.DB)
     expect(
-      afterAcknowledge.some((notification) => notification.commandId === enqueued.id)
+      afterAcknowledge.some(
+        (notification) => notification.commandId === enqueued.id
+      )
     ).toBe(false)
   })
 })

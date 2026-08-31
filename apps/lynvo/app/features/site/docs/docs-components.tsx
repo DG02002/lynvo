@@ -1,5 +1,12 @@
-import { isValidElement, useEffect, useId, useRef, useState } from "react"
-import type { ComponentProps, ReactNode } from "react"
+import {
+  isValidElement,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import {
   ApiIcon,
   ArrowUpRight01Icon,
@@ -138,6 +145,21 @@ const CodeLabelIcon = ({ label }: { label: string }) => {
   return <HugeiconsIcon icon={FileEmpty01Icon} className="size-4" />
 }
 
+const getCodeCopyStatusMessage = (
+  copyState: "idle" | "copied" | "error",
+  label: string
+) => {
+  if (copyState === "copied") {
+    return `${label} copied`
+  }
+
+  if (copyState === "error") {
+    return `${label} couldn’t be copied. Try again.`
+  }
+
+  return ""
+}
+
 export function DocSection({
   id,
   children,
@@ -241,11 +263,7 @@ export function CodeBlock({
             />
           </span>
           <span aria-live="polite" className="sr-only">
-            {copyState === "copied"
-              ? `${label} copied`
-              : copyState === "error"
-                ? `${label} couldn’t be copied. Try again.`
-                : ""}
+            {getCodeCopyStatusMessage(copyState, label)}
           </span>
         </button>
       </figcaption>

@@ -10,8 +10,11 @@ import {
   byteLength,
   ensureStorageLedger,
 } from "./storage-ledger"
-import { profileStorageDocument } from "./rows"
-import type { ProfileUserRow } from "./rows"
+import {
+  profileStorageDocument,
+  USER_COLUMNS,
+  type ProfileUserRow,
+} from "./rows"
 
 export interface UserRecord {
   id: string
@@ -54,9 +57,6 @@ const mapUserRow = (row: UserRow): UserRecord => ({
   rangeUnsupportedPlayerId: row.range_unsupported_player_id,
   createdAt: row.created_at,
 })
-
-const USER_COLUMNS =
-  "id, google_subject, email, display_name, avatar_url, data_version, erasure_pending_at, storage_retention_days, range_supported_player_id, range_unsupported_player_id, created_at"
 
 export const findUserByGoogleSubject = async (
   database: D1Database,
@@ -158,7 +158,7 @@ const readRawUserRow = async (
   userId: string
 ): Promise<ProfileUserRow | null> =>
   database
-    .prepare("SELECT * FROM users WHERE id = ?1")
+    .prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`)
     .bind(userId)
     .first<ProfileUserRow>()
 
@@ -183,29 +183,33 @@ export const updateUserStorageRetentionDays = async (
     storage_retention_days: retentionDays,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const ledgerMutation = applyStorageMutation(
+  const ledgerMutation = applyStorageMutation({
     database,
     preparation,
-    {
+    plan: {
       domain: "profileBytes",
       currentBytes: byteLength(currentProfileDocument),
       nextBytes: byteLength(nextProfileDocument),
       savedLinkCountDelta: 0,
     },
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    database
-      .prepare("UPDATE users SET storage_retention_days = ?2 WHERE id = ?1")
-      .bind(userId, retentionDays),
-    database
-      .prepare(
-        "UPDATE links SET expires_at = created_at + ?2 WHERE user_id = ?1"
-      )
-      .bind(userId, retentionDays * DAY_MS),
-    ...ledgerMutation.statements,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [
+      ...preparation.statements,
+      database
+        .prepare("UPDATE users SET storage_retention_days = ?2 WHERE id = ?1")
+        .bind(userId, retentionDays),
+      database
+        .prepare(
+          "UPDATE links SET expires_at = created_at + ?2 WHERE user_id = ?1"
+        )
+        .bind(userId, retentionDays * DAY_MS),
+      ...ledgerMutation.statements,
+    ],
+  })
   return { success: true, dataVersion }
 }
 
@@ -277,29 +281,33 @@ export const updateUserPlayerPreferences = async (
     }
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const ledgerMutation = applyStorageMutation(
+  const ledgerMutation = applyStorageMutation({
     database,
     preparation,
-    {
+    plan: {
       domain: "profileBytes",
       currentBytes: byteLength(currentProfileDocument),
       nextBytes: byteLength(nextProfileDocument),
       savedLinkCountDelta: 0,
     },
-    input.now
-  )
-  const { dataVersion } = await executeOwnedWrite(database, userId, [
-    ...preparation.statements,
-    database
-      .prepare(
-        "UPDATE users SET range_supported_player_id = ?2, range_unsupported_player_id = ?3 WHERE id = ?1"
-      )
-      .bind(
-        userId,
-        nextProfileDocument.range_supported_player_id,
-        nextProfileDocument.range_unsupported_player_id
-      ),
-    ...ledgerMutation.statements,
-  ])
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [
+      ...preparation.statements,
+      database
+        .prepare(
+          "UPDATE users SET range_supported_player_id = ?2, range_unsupported_player_id = ?3 WHERE id = ?1"
+        )
+        .bind(
+          userId,
+          nextProfileDocument.range_supported_player_id,
+          nextProfileDocument.range_unsupported_player_id
+        ),
+      ...ledgerMutation.statements,
+    ],
+  })
   return { success: true, dataVersion }
 }

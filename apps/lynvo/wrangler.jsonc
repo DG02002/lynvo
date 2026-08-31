@@ -12,13 +12,11 @@
 		"global_fetch_strictly_public"
 	],
 	"main": "./workers/app.ts",
-	// HUMAN: run `wrangler d1 create lynvo-db` and replace the placeholder database_id
-	// (same for the env.local copy) before deploying; local dev + vitest use Miniflare.
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "lynvo-db",
-			"database_id": "3999f259-be6d-4a75-8eb6-8ae774574279",
+			"database_id": "73b57c79-ae21-4da3-b531-0966a21041c1",
 			"migrations_dir": "migrations",
 		},
 	],
@@ -53,7 +51,9 @@
 		},
 		{
 			"tag": "v2",
-			"deleted_classes": ["WorkerAuthSession"],
+			"deleted_classes": [
+				"WorkerAuthSession"
+			],
 		},
 	],
 	"secrets": {
@@ -62,6 +62,7 @@
 			"GOOGLE_CLIENT_SECRET",
 			"PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
 			"MANAGED_PLUGIN_SERVER_API_KEY",
+			"TMDB_API_READ_ACCESS_TOKEN",
 		],
 	},
 	"services": [
@@ -89,7 +90,7 @@
 				{
 					"binding": "DB",
 					"database_name": "lynvo-db",
-					"database_id": "3999f259-be6d-4a75-8eb6-8ae774574279",
+					"database_id": "73b57c79-ae21-4da3-b531-0966a21041c1",
 					"migrations_dir": "migrations",
 				},
 			],
@@ -115,6 +116,7 @@
 					"GOOGLE_CLIENT_SECRET",
 					"PLUGIN_CREDENTIAL_ENCRYPTION_KEY",
 					"MANAGED_PLUGIN_SERVER_API_KEY",
+					"TMDB_API_READ_ACCESS_TOKEN",
 				],
 			},
 			"services": [

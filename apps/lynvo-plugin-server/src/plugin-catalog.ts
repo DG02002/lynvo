@@ -1,5 +1,6 @@
 import {
   matchPluginServerUrl,
+  ProtocolError,
   type PluginServerManifest,
   type PluginServerMatcher,
   type PluginCredential,
@@ -106,19 +107,6 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     extract: extractGoogleDrivePublicLink,
   },
   {
-    id: ONEDRIVE_SOURCE_ID,
-    displayName: "Spencerwooo's OneDrive Vercel Index",
-    description:
-      "Extracts playable files and lazy folders from OneDrive Vercel Index deployments.",
-    homepage: "https://github.com/spencerwooo/onedrive-vercel-index",
-    iconPath: "/icons/sources/onedrive-index.webp",
-    status: "active",
-    version: SOURCE_IMPLEMENTATION_VERSION,
-    matchers: oneDriveMatchers,
-    credential: { kind: "domain-password", scope: "domain", required: false },
-    extract: extractOneDriveIndex,
-  },
-  {
     id: DIRECT_MEDIA_SOURCE_ID,
     displayName: "Direct Media",
     description: "Validates and opens direct audio and video URLs.",
@@ -128,6 +116,20 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     version: SOURCE_IMPLEMENTATION_VERSION,
     matchStrategy: "probe",
     extract: extractDirectMedia,
+  },
+  {
+    id: ONEDRIVE_SOURCE_ID,
+    displayName: "Spencerwooo's OneDrive Vercel Index",
+    description:
+      "Extracts playable files and lazy folders from OneDrive Vercel Index deployments.",
+    homepage: "https://github.com/spencerwooo/onedrive-vercel-index",
+    iconPath: "/icons/sources/onedrive-index.webp",
+    status: "active",
+    version: SOURCE_IMPLEMENTATION_VERSION,
+    matchers: oneDriveMatchers,
+    matchStrategy: "probe",
+    credential: { kind: "domain-password", scope: "domain", required: false },
+    extract: extractOneDriveIndex,
   },
 ]
 
@@ -165,6 +167,8 @@ export const createLynvoPluginServerManifest = (
   extensions: {
     lynvo: {
       plugins: LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
+        const publishedMatchers =
+          plugin.matchStrategy === "probe" ? undefined : plugin.matchers
         const base = {
           id: plugin.id,
           displayName: plugin.displayName,
@@ -174,10 +178,10 @@ export const createLynvoPluginServerManifest = (
           status: plugin.status,
           version: plugin.version,
           matchStrategy: plugin.matchStrategy ?? "static",
-          hosts: plugin.matchers?.flatMap((matcher) => matcher.hosts) ?? [],
+          hosts: publishedMatchers?.flatMap((matcher) => matcher.hosts) ?? [],
         }
-        const withMatchers = plugin.matchers
-          ? { ...base, matchers: plugin.matchers }
+        const withMatchers = publishedMatchers
+          ? { ...base, matchers: publishedMatchers }
           : base
         const withIconUrl =
           publicAssetOrigin && plugin.iconPath
@@ -242,7 +246,10 @@ export const extractWithLynvoPlugin = async (
 ): Promise<ExtractSuccessResponse> => {
   const plugin = findLynvoPlugin(targetUrl, request.pluginId)
   if (!plugin) {
-    throw new Error("UNSUPPORTED_URL")
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "No catalog plugin matches the target URL."
+    )
   }
   return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
 }

@@ -12,7 +12,7 @@ const createItem = (url: string, timestamp: number): LinkListItem => ({
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
 })
 

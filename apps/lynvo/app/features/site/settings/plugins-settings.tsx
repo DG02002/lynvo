@@ -7,17 +7,10 @@ import {
   ArrowDown01Icon,
   Delete02Icon,
   Edit02Icon,
-  InformationCircleIcon,
   Link01Icon,
-  LinkSquare02Icon,
   PlugSocketIcon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "~/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
@@ -27,7 +20,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
 import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
-import { DIRECT_MEDIA_PLUGIN_ID } from "./constants"
+import { PluginInfoTooltip } from "./plugin-info-tooltip"
 import type { LynvoPlugin } from "./plugin-settings-data"
 import {
   SettingsPanel,
@@ -77,6 +70,7 @@ export function PluginsSettings({
     handleDeleteDomainCredential,
     handleAddPluginServer,
     handleDeletePluginServer,
+    handleSetPluginServerProxyKey,
     handleRefreshPluginServer,
     handleTogglePluginServer,
     domainDrafts,
@@ -129,41 +123,14 @@ export function PluginsSettings({
                       <span className="text-sm font-normal text-foreground">
                         {plugin.name}
                       </span>
-                      {plugin.id === DIRECT_MEDIA_PLUGIN_ID ? (
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <button
-                                type="button"
-                                aria-label={`${plugin.name} info`}
-                                className="inline-flex shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none"
-                              />
-                            }
-                          >
-                            <HugeiconsIcon
-                              icon={InformationCircleIcon}
-                              className="size-4"
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{plugin.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <a
-                          href={plugin.sourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label={`View project for ${plugin.name}`}
-                          title="View project"
-                          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          <HugeiconsIcon
-                            icon={LinkSquare02Icon}
-                            className="size-4"
-                          />
-                        </a>
-                      )}
+                      <PluginInfoTooltip
+                        pluginName={plugin.name}
+                        description={plugin.description}
+                        version={plugin.version}
+                        usageMultiplier={plugin.usageMultiplier}
+                        proxyCreditUsage={plugin.proxyCreditUsage}
+                        projectUrl={plugin.sourceUrl}
+                      />
                     </div>
                   </div>
                   {plugin.supportsDomains && (
@@ -253,6 +220,7 @@ export function PluginsSettings({
         onAddPluginServer={handleAddPluginServer}
         onDeletePluginServer={handleDeletePluginServer}
         onRefreshPluginServer={handleRefreshPluginServer}
+        onSetProxyKey={handleSetPluginServerProxyKey}
         onTogglePluginServer={handleTogglePluginServer}
       />
     </SettingsPanel>
@@ -309,7 +277,8 @@ const AddPluginDomainDialog = ({
             setOpen(false)
           }
         }}
-        submitLabel={isAdding ? "Adding…" : "Add domain"}
+        submitLabel="Add domain"
+        submitPending={isAdding}
         submitDisabled={isAdding}
         cancelDisabled={isAdding}
       >
@@ -457,6 +426,7 @@ interface CustomPluginServersSectionProps {
   ) => Promise<string | null>
   onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => Promise<void>
+  onSetProxyKey: (pluginServerId: string, token: string) => Promise<boolean>
   onTogglePluginServer: (
     pluginServerId: string,
     enabled: boolean
@@ -471,6 +441,7 @@ export const CustomPluginServersSection = ({
   onAddPluginServer,
   onDeletePluginServer,
   onRefreshPluginServer,
+  onSetProxyKey,
   onTogglePluginServer,
 }: CustomPluginServersSectionProps) => {
   const [registrationError, setRegistrationError] = React.useState<
@@ -537,9 +508,8 @@ export const CustomPluginServersSection = ({
                   event.preventDefault()
                   void form.handleSubmit()
                 }}
-                submitLabel={
-                  isSubmitting ? "Adding…" : "Add Custom Plugin Server"
-                }
+                submitLabel="Add Custom Plugin Server"
+                submitPending={isSubmitting}
                 submitDisabled={isSubmitting}
                 cancelDisabled={isSubmitting}
               >
@@ -610,6 +580,7 @@ export const CustomPluginServersSection = ({
           requestOrigin={requestOrigin}
           onDeletePluginServer={onDeletePluginServer}
           onRefreshPluginServer={onRefreshPluginServer}
+          onSetProxyKey={onSetProxyKey}
           onTogglePluginServer={onTogglePluginServer}
         />
       )}
@@ -707,7 +678,8 @@ const PluginCredentialEditor = ({
                 />
               }
               onSubmit={handleSubmit}
-              submitLabel={isSaving ? "Saving…" : "Save credentials"}
+              submitLabel="Save credentials"
+              submitPending={isSaving}
               submitDisabled={isSaving}
               cancelDisabled={isSaving}
             >
@@ -773,9 +745,9 @@ const PluginCredentialEditor = ({
           />
         }
         description={`Lynvo will no longer use the saved credentials for ${domain.domain}.`}
-        confirmLabel={isRemovingCredential ? "Removing…" : "Remove credentials"}
+        confirmLabel="Remove credentials"
         confirmVariant="destructive"
-        disabled={isRemovingCredential}
+        pending={isRemovingCredential}
         onConfirm={() => {
           setIsRemovingCredential(true)
           void onDeleteCredential(domain.id).finally(() => {
@@ -796,9 +768,9 @@ const PluginCredentialEditor = ({
           />
         }
         description={`${domain.domain} and its Plugin Credentials will be removed from this plugin.`}
-        confirmLabel={isRemovingDomain ? "Removing…" : "Remove domain"}
+        confirmLabel="Remove domain"
         confirmVariant="destructive"
-        disabled={isRemovingDomain}
+        pending={isRemovingDomain}
         onConfirm={() => {
           setIsRemovingDomain(true)
           void onDeleteDomain(domain.id).finally(() => {

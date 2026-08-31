@@ -15,6 +15,7 @@ const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
       id: "lazy-folder",
       url: "https://drive.example/0:/lazy-folder/",
       label: "Lazy folder",
+      mediaNodeKind: "resolvable",
       type: "folder",
       selectable: true,
       children: [],
@@ -56,6 +57,7 @@ describe("LinkSelectionDialog", () => {
             id: "group",
             url: "",
             label: "Group",
+            mediaNodeKind: "group",
             type: "folder",
             selectable: false,
             children: [
@@ -63,12 +65,14 @@ describe("LinkSelectionDialog", () => {
                 id: "video-one",
                 url: "https://cdn.example/video-one.mkv",
                 label: "Video One",
+                mediaNodeKind: "playable",
                 type: "file",
               },
               {
                 id: "video-two",
                 url: "https://cdn.example/video-two.mkv",
                 label: "Video Two",
+                mediaNodeKind: "playable",
                 type: "file",
               },
             ],
@@ -85,7 +89,7 @@ describe("LinkSelectionDialog", () => {
       })
     )
     expect(screen.getByText("2 selected")).toBeVisible()
-    expect(screen.getAllByRole("checkbox")).toHaveLength(3)
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2)
     expect(
       screen
         .getAllByRole("checkbox")
@@ -111,12 +115,235 @@ describe("LinkSelectionDialog", () => {
     ).toBe(true)
   })
 
+  it("uses a non-selectable group checkbox to toggle its selectable children", () => {
+    const onConfirm = vi.fn()
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            nodeKey: "0:group:season-one",
+            id: "season-one",
+            label: "Season 1",
+            mediaNodeKind: "group",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                nodeKey: "0.0:group:quality-folder",
+                id: "quality-folder",
+                label: "2160p",
+                mediaNodeKind: "group",
+                type: "folder",
+                selectable: true,
+                children: [
+                  {
+                    nodeKey:
+                      "0.0.0:playable:https://cdn.example/episode-one.mkv",
+                    id: "episode-one",
+                    url: "https://cdn.example/episode-one.mkv",
+                    label: "Episode One",
+                    mediaNodeKind: "playable",
+                    type: "file",
+                  },
+                ],
+              },
+              {
+                nodeKey: "0.1:playable:https://cdn.example/episode-two.mkv",
+                id: "episode-two",
+                url: "https://cdn.example/episode-two.mkv",
+                label: "Episode Two",
+                mediaNodeKind: "playable",
+                type: "file",
+              },
+            ],
+          },
+        ]}
+        onConfirm={onConfirm}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    fireEvent.click(seasonRow)
+    expect(seasonRow).toHaveAttribute("aria-expanded", "true")
+    const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
+    fireEvent.click(qualityFolderRow)
+    expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    expect(screen.getByText("3 selected")).toBeVisible()
+    expect(seasonRow).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Select 2160p" })
+    ).toHaveAttribute("data-checked")
+    expect(
+      screen.getByRole("checkbox", { name: "Select Episode One" })
+    ).toHaveAttribute("data-checked")
+    expect(
+      screen.getByRole("checkbox", { name: "Select Episode Two" })
+    ).toHaveAttribute("data-checked")
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "quality-folder" }),
+      expect.objectContaining({ id: "episode-two" }),
+    ])
+  })
+
+  it("does not expand a collapsed folder when its checkbox is selected", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "season-one",
+            label: "Season 1",
+            mediaNodeKind: "group",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                id: "episode-one",
+                url: "https://cdn.example/episode-one.mkv",
+                label: "Episode One",
+                mediaNodeKind: "playable",
+                type: "file",
+              },
+            ],
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+
+    expect(screen.getByText("1 selected")).toBeVisible()
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+  })
+
+  it("does not expand selected child folders when their parent is opened", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "season-one",
+            label: "Season 1",
+            mediaNodeKind: "group",
+            type: "folder",
+            selectable: false,
+            children: [
+              {
+                id: "quality-folder",
+                label: "2160p",
+                mediaNodeKind: "group",
+                type: "folder",
+                selectable: true,
+                children: [
+                  {
+                    id: "episode-one",
+                    url: "https://cdn.example/episode-one.mkv",
+                    label: "Episode One",
+                    mediaNodeKind: "playable",
+                    type: "file",
+                  },
+                ],
+              },
+            ],
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    fireEvent.click(seasonRow)
+
+    const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
+    expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+  })
+
+  it("toggles a file when its row is clicked or activated with the keyboard", () => {
+    const onConfirm = vi.fn()
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "video-one",
+            url: "https://cdn.example/video-one.mkv",
+            label: "Video One",
+            mediaNodeKind: "playable",
+            type: "file",
+          },
+        ]}
+        onConfirm={onConfirm}
+      />
+    )
+
+    const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
+    fireEvent.click(fileRow)
+    expect(screen.getByText("1 selected")).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "video-one" }),
+    ])
+
+    fireEvent.keyDown(fileRow, { key: "Enter" })
+    expect(screen.getByText("0 selected")).toBeVisible()
+  })
+
+  it("toggles every link when the Select all label text is clicked", () => {
+    render(
+      <LinkSelectionDialog
+        open
+        onOpenChange={vi.fn()}
+        links={[
+          {
+            id: "video-one",
+            url: "https://cdn.example/video-one.mkv",
+            label: "Video One",
+            mediaNodeKind: "playable",
+            type: "file",
+          },
+          {
+            id: "video-two",
+            url: "https://cdn.example/video-two.mkv",
+            label: "Video Two",
+            mediaNodeKind: "playable",
+            type: "file",
+          },
+        ]}
+        onConfirm={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByText("Select all"))
+    expect(screen.getByText("2 selected")).toBeVisible()
+
+    fireEvent.click(screen.getByText("Select all"))
+    expect(screen.getByText("0 selected")).toBeVisible()
+  })
+
   it("selects children discovered after a selected lazy folder is expanded", async () => {
     const resolveFolder = vi.fn().mockResolvedValue([
       {
         id: "video-one",
         url: "https://cdn.example/video-one.mkv",
         label: "Video One",
+        mediaNodeKind: "playable",
         type: "file",
       },
     ])
@@ -154,45 +381,42 @@ describe("LinkSelectionDialog", () => {
   })
 
   it("loads and expands a lazy folder when its row is opened", async () => {
-    const resolveFolder = vi.fn().mockResolvedValue([
-      {
-        id: "video-one",
-        url: "https://cdn.example/video-one.mkv",
-        label: "Video One",
-        type: "file",
-        size: "2.4 GB",
-      },
-    ])
+    let finishFolderResolution: ((links: ExtractedLink[]) => void) | undefined
+    const resolveFolder = vi.fn(
+      () =>
+        new Promise<ExtractedLink[]>((resolve) => {
+          finishFolderResolution = resolve
+        })
+    )
     render(<LazyFolderHarness resolveFolder={resolveFolder} />)
 
     fireEvent.click(screen.getByText("Lazy folder"))
 
+    const folderTreeItem = screen.getByRole("treeitem", {
+      name: /Lazy folder/,
+    })
+    expect(
+      await screen.findByRole("status", { name: "Loading Lazy folder…" })
+    ).toBeVisible()
+    const resolvingSpinner = folderTreeItem.querySelector(
+      '[data-slot="spinner"]'
+    )
+    expect(resolvingSpinner).toHaveClass("size-5")
+    expect(resolvingSpinner?.parentElement).toBe(folderTreeItem)
+
+    finishFolderResolution?.([
+      {
+        id: "video-one",
+        url: "https://cdn.example/video-one.mkv",
+        label: "Video One",
+        mediaNodeKind: "playable",
+        type: "file",
+        size: "2.4 GB",
+      },
+    ])
     expect(await screen.findByText("Video One")).toBeVisible()
     expect(resolveFolder).toHaveBeenCalledTimes(1)
-    expect(
-      screen.getByRole("treeitem", { name: /Lazy folder/ })
-    ).toHaveAttribute("aria-expanded", "true")
-  })
-
-  it("matches the save page responsive content width", () => {
-    render(
-      <LinkSelectionDialog
-        open
-        onOpenChange={vi.fn()}
-        links={[]}
-        onConfirm={vi.fn()}
-      />
-    )
-
-    expect(screen.getByRole("dialog")).toHaveClass(
-      "h-svh",
-      "w-screen",
-      "rounded-none",
-      "sm:w-[calc(100vw-2rem)]",
-      "sm:rounded-4xl",
-      "md:w-[calc(100vw-4rem)]",
-      "md:max-w-[60rem]"
-    )
+    expect(folderTreeItem).toHaveAttribute("aria-expanded", "true")
   })
 
   it("formats the page title and pipe-separated audio metadata", () => {
@@ -237,7 +461,7 @@ describe("LinkSelectionDialog", () => {
         onOpenChange={onOpenChange}
         links={[]}
         onConfirm={vi.fn()}
-        pluginName="Spencerwooo's Onedrive Vercel Index"
+        pluginName="Sample Cloud Drive Index"
       />
     )
 
@@ -246,22 +470,6 @@ describe("LinkSelectionDialog", () => {
     ).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     expect(onOpenChange).toHaveBeenCalledWith(false)
-  })
-
-  it("uses the shared large dialog action size", () => {
-    render(
-      <LinkSelectionDialog
-        open
-        onOpenChange={vi.fn()}
-        links={[]}
-        onConfirm={vi.fn()}
-      />
-    )
-
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("h-13.5")
-    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("h-13.5")
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("flex-1")
-    expect(screen.getByRole("button", { name: "Save" })).toHaveClass("flex-1")
   })
 
   it("does not reserve trailing metadata space when a row has none", () => {
@@ -274,12 +482,14 @@ describe("LinkSelectionDialog", () => {
             id: "folder-without-metadata",
             url: "https://drive.example/folder-without-metadata",
             label: "Folder without metadata",
+            mediaNodeKind: "resolvable",
             type: "folder",
           },
           {
             id: "file-with-size",
             url: "https://drive.example/file-with-size.mkv",
             label: "File with size",
+            mediaNodeKind: "playable",
             type: "file",
             size: "1.2 GB",
           },

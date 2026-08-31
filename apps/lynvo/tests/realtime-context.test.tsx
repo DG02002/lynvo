@@ -1,20 +1,15 @@
 import { render } from "@testing-library/react"
 import { beforeEach, expect, it, vi } from "vitest"
 
-const { closeSocket, openRealtimeSocket } = vi.hoisted(() => {
-  const closeSocket = vi.fn()
-  return {
-    closeSocket,
-    openRealtimeSocket: vi.fn((_options: { onSessionRevoked: () => void }) => ({
-      close: closeSocket,
-      sendSavedLinkRevision: vi.fn(),
-    })),
-  }
-})
-
-vi.mock("~/context/realtime/socket", () => ({ openRealtimeSocket }))
-
 import { RealtimeProvider } from "~/context/realtime-context"
+
+const closeSocket = vi.fn()
+const openRealtimeSocket = vi.fn(
+  (_options: { onSessionRevoked: () => void }) => ({
+    close: closeSocket,
+    sendSavedLinkRevision: vi.fn(),
+  })
+)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -22,13 +17,19 @@ beforeEach(() => {
 
 it("keeps the socket open when the same session object is recreated", () => {
   const { rerender } = render(
-    <RealtimeProvider user={{ id: "user-1", sessionId: "session-1" }}>
+    <RealtimeProvider
+      user={{ id: "user-1", sessionId: "session-1" }}
+      openSocket={openRealtimeSocket}
+    >
       Content
     </RealtimeProvider>
   )
 
   rerender(
-    <RealtimeProvider user={{ id: "user-1", sessionId: "session-1" }}>
+    <RealtimeProvider
+      user={{ id: "user-1", sessionId: "session-1" }}
+      openSocket={openRealtimeSocket}
+    >
       Content
     </RealtimeProvider>
   )
@@ -39,12 +40,19 @@ it("keeps the socket open when the same session object is recreated", () => {
 
 it("closes the socket when the user logs out", () => {
   const { rerender } = render(
-    <RealtimeProvider user={{ id: "user-1", sessionId: "session-1" }}>
+    <RealtimeProvider
+      user={{ id: "user-1", sessionId: "session-1" }}
+      openSocket={openRealtimeSocket}
+    >
       Content
     </RealtimeProvider>
   )
 
-  rerender(<RealtimeProvider user={null}>Content</RealtimeProvider>)
+  rerender(
+    <RealtimeProvider user={null} openSocket={openRealtimeSocket}>
+      Content
+    </RealtimeProvider>
+  )
 
   expect(closeSocket).toHaveBeenCalledTimes(1)
 })
@@ -55,6 +63,7 @@ it("forwards authoritative session revocation with the account identity", () => 
     <RealtimeProvider
       user={{ id: "user-1", sessionId: "session-1" }}
       onSessionRevoked={onSessionRevoked}
+      openSocket={openRealtimeSocket}
     >
       Content
     </RealtimeProvider>

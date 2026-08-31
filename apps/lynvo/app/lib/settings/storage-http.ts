@@ -59,6 +59,7 @@ export const updateStorageRetention = async (input: {
 
 export interface ClearLinksResult {
   success: boolean
+  replayed: boolean
   deletedLinks: number
   dataVersion: number
 }
@@ -66,7 +67,7 @@ export interface ClearLinksResult {
 export const clearSavedLinksOverHttp = async (): Promise<ClearLinksResult> =>
   await sameOriginJson("/api/data/links/clear", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify({ operationId: crypto.randomUUID() }),
   }).then((response) => response.json())
 
 export interface LynvoUsageSnapshot {

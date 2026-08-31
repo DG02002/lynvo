@@ -7,10 +7,18 @@ import {
 } from "../../workers/d1/account-erasure"
 import { createOrUpdateSavedLink } from "../../workers/d1/links"
 import { createSession } from "../../workers/d1/sessions"
-import { insertGoogleUser } from "../../workers/d1/users"
+import { getUserById, insertGoogleUser } from "../../workers/d1/users"
 import { reserveManagedExtraction } from "../../workers/d1/usage"
 
 const NOW = 1_750_000_000_000
+
+const emptyMetadataJson = () =>
+  JSON.stringify({
+    schemaVersion: 3,
+    source: {},
+    extraction: { extractedLinks: [] },
+    playback: { openedUrls: [], resolvedMirrors: {} },
+  })
 
 const seedErasableAccount = async () => {
   const user = await insertGoogleUser(env.DB, {
@@ -20,11 +28,18 @@ const seedErasableAccount = async () => {
   })
   const suffix = crypto.randomUUID().slice(0, 8)
   const session = await createSession(env.DB, { userId: user.id, now: NOW })
-  await createOrUpdateSavedLink(env.DB, user.id, {
+  const savedLink = await createOrUpdateSavedLink(env.DB, user.id, {
+    meta: emptyMetadataJson(),
     operationId: `erasure:link:${suffix}`,
     url: "https://erasure.example",
     now: NOW,
   })
+  await env.DB.prepare(
+    `INSERT INTO saved_link_extraction_credentials (link_id, user_id, target_url, ciphertext, nonce, algorithm, key_version, created_at, updated_at)
+     VALUES (?1, ?2, 'https://erasure.example', 'ciphertext', 'nonce', 'AES-256-GCM', 1, ?3, ?3)`
+  )
+    .bind(savedLink.id, user.id, NOW)
+    .run()
   await env.DB.prepare(
     `INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, credential_status, manifest, enabled, priority, verification_status, created_at, updated_at)
      VALUES (?1, ?2, 'https://erasure.example', 'https://erasure.example', 'ready', '{}', 1, 0, 'verified', ?3, ?3)`
@@ -53,7 +68,17 @@ const seedErasableAccount = async () => {
     `INSERT INTO device_codes (code, poll_secret_digest, status, device_name, user_id, expires_at, created_at)
      VALUES (?1, 'digest', 'pending', 'Erasure TV', ?2, ?3, ?4)`
   )
-    .bind(`ERASUR${suffix.replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 6) || "ABCDEF"}`, user.id, NOW + 600_000, NOW)
+    .bind(
+      `ERASUR${
+        suffix
+          .replace(/[^A-Z]/gi, "")
+          .toUpperCase()
+          .slice(0, 6) || "ABCDEF"
+      }`,
+      user.id,
+      NOW + 600_000,
+      NOW
+    )
     .run()
   await env.DB.prepare(
     `INSERT INTO remote_commands (id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status, available_at, notification_pending)
@@ -80,10 +105,16 @@ describe("d1 account erasure", () => {
     const { user } = await seedErasableAccount()
 
     expect(
-      await initiateAccountErasure(env.DB, user.id, { trigger: "manual", now: NOW })
+      await initiateAccountErasure(env.DB, user.id, {
+        trigger: "manual",
+        now: NOW,
+      })
     ).toBe(true)
     expect(
-      await initiateAccountErasure(env.DB, user.id, { trigger: "manual", now: NOW })
+      await initiateAccountErasure(env.DB, user.id, {
+        trigger: "manual",
+        now: NOW,
+      })
     ).toBe(false)
 
     const pendingAt = await env.DB.prepare(
@@ -107,6 +138,7 @@ describe("d1 account erasure", () => {
 
     for (const [table, column] of [
       ["links", "user_id"],
+      ["saved_link_extraction_credentials", "user_id"],
       ["link_command_operations", "user_id"],
       ["user_plugin_servers", "user_id"],
       ["user_plugin_domains", "user_id"],
@@ -132,9 +164,7 @@ describe("d1 account erasure", () => {
       .first<{ count: number }>()
     expect(usageCounters?.count).toBe(0)
 
-    const userRow = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ?1"
-    )
+    const userRow = await env.DB.prepare("SELECT id FROM users WHERE id = ?1")
       .bind(user.id)
       .first<{ id: string }>()
     expect(userRow).toBeNull()
@@ -151,11 +181,55 @@ describe("d1 account erasure", () => {
     })
     const outcome = await drainAccountErasures(env.DB)
     expect(outcome.processedUsers).toBeGreaterThanOrEqual(1)
-    const userRow = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ?1"
-    )
+    const userRow = await env.DB.prepare("SELECT id FROM users WHERE id = ?1")
       .bind(user.id)
       .first<{ id: string }>()
     expect(userRow).toBeNull()
+  })
+
+  it("drains only the requested account during manual erasure", async () => {
+    const first = await seedErasableAccount()
+    const second = await seedErasableAccount()
+    await initiateAccountErasure(env.DB, first.user.id, {
+      trigger: "manual",
+      now: NOW,
+    })
+    await initiateAccountErasure(env.DB, second.user.id, {
+      trigger: "inactive",
+      now: NOW,
+    })
+
+    await drainAccountErasures(env.DB, first.user.id)
+
+    expect(await getUserById(env.DB, first.user.id)).toBeNull()
+    expect(await getUserById(env.DB, second.user.id)).not.toBeNull()
+  })
+
+  it("recovers an erasure whose persisted stage skipped owned data", async () => {
+    const { user } = await seedErasableAccount()
+    await initiateAccountErasure(env.DB, user.id, {
+      trigger: "manual",
+      now: NOW,
+    })
+    await env.DB.prepare(
+      "UPDATE account_erasures SET stage = 'finalize' WHERE user_id = ?1"
+    )
+      .bind(user.id)
+      .run()
+
+    await drainAccountErasures(env.DB)
+
+    const remainingUserData = await env.DB.batch([
+      env.DB.prepare("SELECT id FROM users WHERE id = ?1").bind(user.id),
+      env.DB.prepare(
+        "SELECT rowid FROM usage_counters WHERE owner_key = ?1 LIMIT 1"
+      ).bind(`user:${user.id}`),
+      env.DB.prepare("SELECT id FROM links WHERE user_id = ?1 LIMIT 1").bind(
+        user.id
+      ),
+    ])
+    expect(remainingUserData.every(({ results }) => results.length === 0)).toBe(
+      true
+    )
   })
 })

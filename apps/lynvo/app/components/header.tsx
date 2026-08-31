@@ -1,4 +1,4 @@
-import { useRouteLoaderData, useNavigate } from "react-router"
+import { useNavigate, useRouteLoaderData } from "react-router"
 import { LogoLink } from "~/components/logo"
 import { useState } from "react"
 import { GuestNavActions } from "./header/guest-nav-actions"
@@ -26,9 +26,10 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
 
   return (
     <header data-site-header className="fixed top-0 z-50 w-full bg-background">
-      <div className="relative flex h-14 w-full items-center justify-between px-6 md:h-16 md:px-8 lg:px-10 xl:px-14">
+      <div className="relative flex h-14 w-full items-center gap-3 px-6 md:h-16 md:px-8 lg:px-10 xl:px-14">
         <LogoLink variant="text-only" size="sm" />
-        <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1" />
+        <div className="flex shrink-0 items-center gap-2">
           {user ? (
             <>
               <UserNavActions

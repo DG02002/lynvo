@@ -8,6 +8,7 @@ import {
 } from "../workers/request-logging"
 import { responseSecurityHeaders } from "../workers/response-security-headers"
 
+// SAFETY: Request logging only reads the release and environment fields supplied here.
 const environment = {
   ENVIRONMENT: "test",
   SERVICE_VERSION: "1.2.3",
@@ -202,7 +203,8 @@ describe("request logging", () => {
       "*",
       requestLogging({
         keep: (context) => {
-          shouldKeep = context.shouldKeep
+          const { shouldKeep: contextShouldKeep } = context
+          shouldKeep = contextShouldKeep
         },
       })
     )

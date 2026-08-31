@@ -1,7 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import {
-  abortDeviceExchange,
   authorizeDeviceCode,
   claimAuthorizedCode,
   cleanupExpiredDeviceCodes,
@@ -9,7 +8,6 @@ import {
   finalizeDeviceExchange,
   getDeviceCodeForApproval,
   getDeviceCodeStatus,
-  recoverDeviceExchange,
 } from "../../workers/d1/device-auth"
 import { findActiveSessionById } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
@@ -245,83 +243,6 @@ describe("d1 device auth state machine", () => {
       generation: 1,
     })
     expect(supersededFinalize).toEqual({ kind: "superseded" })
-  })
-
-  it("recovers a resumable and completed exchange", async () => {
-    const user = await createTestUser()
-    const created = await createApprovedCode(user.id)
-    const claim = await claimAuthorizedCode(env.DB, {
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-1",
-      generation: 1,
-      now: NOW + 3_000,
-    })
-    if (claim.kind !== "claimed") {
-      expect.unreachable("claim should succeed")
-      return
-    }
-    const resumable = await recoverDeviceExchange(env.DB, {
-      userId: user.id,
-      sessionId: claim.sessionId,
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-1",
-    })
-    expect(resumable).toBe("resumable")
-    await finalizeDeviceExchange(env.DB, {
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-1",
-      sessionId: claim.sessionId,
-      generation: 1,
-    })
-    const completed = await recoverDeviceExchange(env.DB, {
-      userId: user.id,
-      sessionId: claim.sessionId,
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-1",
-    })
-    expect(completed).toBe("completed")
-    const wrongAttempt = await recoverDeviceExchange(env.DB, {
-      userId: user.id,
-      sessionId: claim.sessionId,
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-2",
-    })
-    expect(wrongAttempt).toBe("superseded")
-  })
-
-  it("aborts an exchange, restores the code, and revokes the session", async () => {
-    const user = await createTestUser()
-    const created = await createApprovedCode(user.id)
-    const claim = await claimAuthorizedCode(env.DB, {
-      code: created.code,
-      pollSecret: created.pollSecret,
-      attemptId: "attempt-1",
-      generation: 1,
-      now: NOW + 3_000,
-    })
-    if (claim.kind !== "claimed") {
-      expect.unreachable("claim should succeed")
-      return
-    }
-    const abort = await abortDeviceExchange(env.DB, {
-      userId: user.id,
-      sessionId: claim.sessionId,
-      code: created.code,
-      attemptId: "attempt-1",
-      generation: 1,
-      now: NOW + 4_000,
-    })
-    expect(abort).toEqual({ kind: "aborted" })
-    expect(
-      await findActiveSessionById(env.DB, claim.sessionId, NOW + 5_000)
-    ).toBeNull()
-    const approval = await getDeviceCodeForApproval(env.DB, created.code)
-    expect(approval).toMatchObject({ status: "authorized" })
   })
 
   it("cleans up expired codes and revokes their exchange sessions", async () => {

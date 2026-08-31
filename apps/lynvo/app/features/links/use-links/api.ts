@@ -13,7 +13,7 @@ declare global {
     id: string
     url: string
     title: string | null
-    metaJson: string | null
+    metaJson: string
     createdAt: number
     updatedAt: number
     extractionState?: LinkExtractionStatus["state"]
@@ -34,12 +34,6 @@ declare global {
   interface SavedLinkMutationResponse {
     success: boolean
     replayed: boolean
-    dataVersion: number
-  }
-
-  interface ClearSavedLinksResponse {
-    success: boolean
-    deletedLinks: number
     dataVersion: number
   }
 }
@@ -75,7 +69,7 @@ const savedLinkApiRecordSchema = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
   title: Schema.NullOr(Schema.String),
-  metaJson: Schema.NullOr(Schema.String),
+  metaJson: Schema.String,
   createdAt: Schema.Number,
   updatedAt: Schema.Number,
   extractionState: Schema.optional(
@@ -113,7 +107,7 @@ const toCommandError = async (
       },
     })
   }
-  const failure = parsed.success.failure
+  const { failure } = parsed.success
   switch (failure.kind) {
     case "storage-limit":
       if (failure.usedBytes !== undefined && failure.limitBytes !== undefined) {
@@ -205,7 +199,7 @@ export interface CreateOrUpdateSavedLinkInput {
   readonly operationId: string
   readonly url: string
   readonly title?: string | undefined
-  readonly meta?: string | undefined
+  readonly meta: string
   readonly extractionState?: "queued"
 }
 
@@ -237,6 +231,13 @@ export interface ApplyMetadataOperationInput {
         readonly kind: "replaceExtraction"
         readonly expectedExtractionJson: string
         readonly extractedLinksJson: string
+      }
+    | {
+        readonly kind: "setArtwork"
+        readonly providerId: number
+        readonly title: string
+        readonly year?: number
+        readonly mediaKind?: "movie" | "tv"
       }
 }
 
@@ -285,11 +286,12 @@ export const linksDataApi = {
   }): Promise<SavedLinkMutationResponse> =>
     requestDataJson(
       "/api/data/links/delete",
-      mutationRequest("/api/data/links/delete", JSON.stringify(input))
-    ),
-  clearSavedLinks: (): Promise<ClearSavedLinksResponse> =>
-    requestDataJson(
-      "/api/data/links/clear",
-      mutationRequest("/api/data/links/clear", "{}")
+      mutationRequest(
+        "/api/data/links/delete",
+        JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: input.id,
+        })
+      )
     ),
 }

@@ -6,9 +6,6 @@ export const MINUTE_MS = 60 * 1000
 export const getTimeBucket = (timestamp: number, intervalMs: number) =>
   Math.floor(timestamp / intervalMs) * intervalMs
 
-export const getDailyTimeBucket = (timestamp: number) =>
-  getTimeBucket(timestamp, DAY_MS)
-
 const useCoarseTimeBucket = (intervalMs: number) => {
   const [timeBucket, setTimeBucket] = React.useState(() =>
     getTimeBucket(Date.now(), intervalMs)

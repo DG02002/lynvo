@@ -49,26 +49,20 @@ describe("remote-control browser persistence", () => {
     expect(remoteControlPersistence.loadDelivery()).toEqual(record)
   })
 
-  it("migrates composite acknowledgement identities", () => {
-    const persistence = createRemoteControlPersistence("migration")
+  it("discards legacy composite acknowledgement identities", () => {
+    const persistence = createRemoteControlPersistence("legacy")
     localStorage.setItem(
-      `${REMOTE_COMMAND_DELIVERY_KEY}:migration`,
+      `${REMOTE_COMMAND_DELIVERY_KEY}:legacy`,
       JSON.stringify({
-        processed: [
-          ["command-2:claim-1", 50],
-          ["command-2:claim-2", 75],
-        ],
-        applied: [
-          ["command-1:claim-1", 100],
-          ["command-1:claim-2", 90],
-        ],
+        processed: [["command-2:claim-1", 50]],
+        applied: [["command-1:claim-1", 100]],
         pendingAcknowledgements: ["command-1:claim-1"],
       })
     )
     expect(persistence.loadDelivery()).toEqual({
-      processed: [["command-2", 75]],
-      applied: [["command-1", 100]],
-      pendingAcknowledgements: [["command-1", "claim-1"]],
+      processed: [],
+      applied: [],
+      pendingAcknowledgements: [],
     })
   })
 

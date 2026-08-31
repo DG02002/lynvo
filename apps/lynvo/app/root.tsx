@@ -4,11 +4,16 @@ import { initLogger } from "evlog"
 import { evlog, useLogger as getRequestLogger } from "evlog/react-router"
 import interLatinFontUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url"
 import "./app.css"
+import "~/features/links/media-artwork/media-artwork-types"
 import { csrfCookie } from "~/lib/csrf"
 import { getUserSession, responseWithSession } from "~/lib/auth"
 import "~/global"
 import { getServerEnv } from "~/lib/env.server"
 import { getThemeFromCookieHeader } from "~/lib/theme"
+import {
+  DEFAULT_MEDIA_VIEW,
+  getMediaViewFromCookieHeader,
+} from "~/features/site/settings/media-view-preference"
 import { AppProviders } from "./root/app-providers"
 import { shouldRevalidateRoot } from "./root/root-revalidation"
 export { ErrorBoundary } from "./root/error-boundary"
@@ -42,12 +47,11 @@ export const links: Route.LinksFunction = () => [
   { rel: "manifest", href: "/site.webmanifest" },
 ]
 
-export const loader = async (args: Route.LoaderArgs) => {
+export const loader = async ({ request, context }: Route.LoaderArgs) => {
   const startedAt = performance.now()
   const requestLogger = getRequestLogger()
   requestLogger.set({ route: "root" })
-  const request = args.request
-  const env = getServerEnv(args.context)
+  const env = getServerEnv(context)
   const cookieHeader = request.headers.get("Cookie")
   const csrfToken =
     (await csrfCookie.parse(cookieHeader)) || crypto.randomUUID()
@@ -60,6 +64,7 @@ export const loader = async (args: Route.LoaderArgs) => {
     csrfToken,
     buildTime: __BUILD_TIME__,
     initialTheme: getThemeFromCookieHeader(cookieHeader),
+    mediaView: getMediaViewFromCookieHeader(cookieHeader) ?? DEFAULT_MEDIA_VIEW,
   }
 
   requestLogger.set({
@@ -69,10 +74,15 @@ export const loader = async (args: Route.LoaderArgs) => {
       loader_duration_ms: Math.max(0, performance.now() - startedAt),
     },
   })
-  return responseWithSession(data, sessionResult, request, {
-    headers: {
-      "Set-Cookie": await csrfCookie.serialize(csrfToken),
-      "Server-Timing": `root-session;dur=${sessionDurationMs.toFixed(1)}`,
+  return responseWithSession({
+    responseData: data,
+    sessionResult,
+    request,
+    init: {
+      headers: {
+        "Set-Cookie": await csrfCookie.serialize(csrfToken),
+        "Server-Timing": `root-session;dur=${sessionDurationMs.toFixed(1)}`,
+      },
     },
   })
 }

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Effect } from "effect"
-import { toast } from "sonner"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import type {
   ExtractedLink,
   MetaData,
@@ -8,7 +8,10 @@ import type {
 } from "~/features/links/types"
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
-import { parsePluginDomainCandidate } from "~/lib/plugin-domain"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
 import { confirmSelectedLinks, saveLink } from "./save-flow"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
@@ -20,10 +23,11 @@ import {
 } from "./save-feedback"
 import { getSaveErrorMessage } from "./save-error-message"
 import { client } from "~/lib/effect/api/client"
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
-import { shouldOfferPluginDomainSuggestion } from "~/features/links/saved-link-interaction"
+import {
+  shouldOfferPluginDomainSuggestion,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
 import type {
   ConfirmSaveIntentResult,
   SaveIntentResult,
@@ -42,7 +46,6 @@ export const useSaveActions = ({
   setError,
   setCurrentUrl,
   setHighlightedId,
-  shouldAutoSaveAllLinks,
 }: {
   url: string
   links: LinkViewItem[]
@@ -51,7 +54,10 @@ export const useSaveActions = ({
     meta?: MetaData,
     extractedLinks?: ExtractedLink[]
   ) => Promise<string | undefined>
-  enqueueLink: (url: string) => Promise<string | undefined>
+  enqueueLink: (
+    savedUrl: string,
+    sourceUrl?: string
+  ) => Promise<string | undefined>
   updateLinks: (url: string, links: ExtractedLink[]) => void
   openSelectionDialog: (options: OpenSelectionDialogOptions) => void
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
@@ -60,15 +66,13 @@ export const useSaveActions = ({
   setError: (error: string | null) => void
   setCurrentUrl: (url: string) => void
   setHighlightedId: (id: string | null) => void
-  shouldAutoSaveAllLinks: boolean
 }) => {
   const [isSaving, setIsSaving] = useState(false)
   const [isAddingPluginDomain, setIsAddingPluginDomain] = useState(false)
   const [pluginDomainSuggestion, setPluginDomainSuggestion] =
     useState<PluginDomainSuggestion | null>(null)
-  const [pendingQueuedLinkIds, setPendingQueuedLinkIds] = useState<
-    ReadonlySet<string>
-  >(() => new Set())
+  const initialPendingQueuedLinkIds = useMemo(() => new Set<string>(), [])
+  const pendingQueuedLinkIdsRef = useRef(initialPendingQueuedLinkIds)
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
       publish: (outcome) => {
@@ -100,7 +104,6 @@ export const useSaveActions = ({
             break
           case "links-updated":
             updateLinks(outcome.itemUrl, outcome.links)
-            toast.success("Links updated")
             break
           default:
             break
@@ -136,45 +139,39 @@ export const useSaveActions = ({
   )
 
   useEffect(() => {
-    if (pluginDomainSuggestion) {
-      return
-    }
+    for (const completedQueuedItem of links) {
+      const extractionState = completedQueuedItem.extractionStatus?.state
+      const completedQueuedLinkId = completedQueuedItem.id
+      if (
+        !completedQueuedLinkId ||
+        !pendingQueuedLinkIdsRef.current.has(completedQueuedLinkId) ||
+        (extractionState !== "complete" && extractionState !== "failed")
+      ) {
+        continue
+      }
 
-    const completedQueuedItem = links.find((item) => {
-      const extractionState = item.extractionStatus?.state
-      return (
-        item.id !== undefined &&
-        pendingQueuedLinkIds.has(item.id) &&
-        (extractionState === "complete" || extractionState === "failed")
+      pendingQueuedLinkIdsRef.current.delete(completedQueuedLinkId)
+
+      if (extractionState !== "complete") {
+        continue
+      }
+
+      // Manual mode saves through the queue too; the card surfaces a
+      // persistent Choose links action instead of interrupting with a
+      // dialog the moment extraction completes.
+
+      if (pluginDomainSuggestion) {
+        continue
+      }
+
+      void offerPluginDomainSuggestion(
+        createPluginDomainSuggestion(
+          parsePluginDomainCandidate(completedQueuedItem.url),
+          getLinkViewItemFlatMeta(completedQueuedItem)
+        )
       )
-    })
-    if (!completedQueuedItem?.id) {
-      return
     }
-    const completedQueuedLinkId = completedQueuedItem.id
-
-    setPendingQueuedLinkIds((currentIds) => {
-      const nextIds = new Set(currentIds)
-      nextIds.delete(completedQueuedLinkId)
-      return nextIds
-    })
-
-    if (completedQueuedItem.extractionStatus?.state !== "complete") {
-      return
-    }
-
-    void offerPluginDomainSuggestion(
-      createPluginDomainSuggestion(
-        parsePluginDomainCandidate(completedQueuedItem.url),
-        getLinkViewItemFlatMeta(completedQueuedItem)
-      )
-    )
-  }, [
-    links,
-    offerPluginDomainSuggestion,
-    pendingQueuedLinkIds,
-    pluginDomainSuggestion,
-  ])
+  }, [links, offerPluginDomainSuggestion, pluginDomainSuggestion])
 
   const applySaveIntentResult = (
     result: SaveIntentResult
@@ -199,11 +196,7 @@ export const useSaveActions = ({
         })
         return result.selection.pluginDomainSuggestion
       case "queued":
-        setPendingQueuedLinkIds((currentIds) => {
-          const nextIds = new Set(currentIds)
-          nextIds.add(result.linkId)
-          return nextIds
-        })
+        pendingQueuedLinkIdsRef.current.add(result.linkId)
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         reporter.publish({ kind: "view-reset" })
         reporter.publish({ kind: "clear-preview" })
@@ -261,7 +254,6 @@ export const useSaveActions = ({
         links,
         addLink,
         enqueueLink,
-        shouldAutoSaveAllLinks,
       })
       await offerPluginDomainSuggestion(applySaveIntentResult(result))
     } catch (error) {
@@ -325,15 +317,18 @@ export const useSaveActions = ({
           },
         })
       )
-      toast.success(`${pluginDomainSuggestion.pluginName} domain added`)
+      showSuccessToast({
+        title: `${pluginDomainSuggestion.pluginName} domain added`,
+      })
       setPluginDomainSuggestion(null)
     } catch (error) {
-      toast.error(
-        getUserFacingErrorMessage(
+      showErrorToast({
+        title: "Couldn’t add the plugin domain",
+        description: getUserFacingErrorMessage(
           error,
           "Unable to add the plugin domain. Try again."
-        )
-      )
+        ),
+      })
     } finally {
       setIsAddingPluginDomain(false)
     }

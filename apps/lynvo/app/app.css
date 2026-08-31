@@ -52,6 +52,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-depth-s: var(--depth-shadow-s);
+  --shadow-depth-m: var(--depth-shadow-m);
+  --shadow-depth-l: var(--depth-shadow-l);
+  --shadow-depth-gloss: var(--depth-shadow-gloss);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-vercel: cubic-bezier(0.175, 0.885, 0.32, 1.1);
@@ -60,6 +64,16 @@
 :root {
   color-scheme: light;
   --duration-enter: 160ms;
+  --depth-shadow-s:
+    inset 0 1px 2px rgb(255 255 255 / 0.19), 0 1px 2px rgb(0 0 0 / 0.19),
+    0 2px 4px rgb(0 0 0 / 0.08);
+  --depth-shadow-m:
+    inset 0 1px 2px rgb(255 255 255 / 0.31), 0 2px 4px rgb(0 0 0 / 0.19),
+    0 4px 8px rgb(0 0 0 / 0.08);
+  --depth-shadow-l:
+    inset 0 1px 2px rgb(255 255 255 / 0.44), 0 4px 6px rgb(0 0 0 / 0.19),
+    0 6px 10px rgb(0 0 0 / 0.08);
+  --depth-shadow-gloss: inset 0 1px 2px rgb(255 255 255 / 0.25);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -99,6 +113,16 @@
 
 .dark {
   color-scheme: dark;
+  --depth-shadow-s:
+    inset 0 1px 2px rgb(255 255 255 / 0.07), 0 1px 2px rgb(0 0 0 / 0.5),
+    0 2px 4px rgb(0 0 0 / 0.3);
+  --depth-shadow-m:
+    inset 0 1px 2px rgb(255 255 255 / 0.09), 0 2px 4px rgb(0 0 0 / 0.5),
+    0 4px 8px rgb(0 0 0 / 0.3);
+  --depth-shadow-l:
+    inset 0 1px 2px rgb(255 255 255 / 0.11), 0 4px 6px rgb(0 0 0 / 0.55),
+    0 6px 10px rgb(0 0 0 / 0.3);
+  --depth-shadow-gloss: inset 0 1px 2px rgb(255 255 255 / 0.12);
   --background: oklch(0% 0 0);
   --foreground: oklch(100% 0 0);
   --card: oklch(0.205 0 0);
@@ -391,6 +415,14 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   * {
     @apply border-border outline-ring/50;
   }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
   ::selection {
     background: var(--foreground);
     color: var(--background);
@@ -401,6 +433,8 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -408,10 +442,6 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
   html {
     @apply font-sans;
-  }
-  button:not(:disabled),
-  [role="button"]:not(:disabled) {
-    cursor: pointer;
   }
 }
 
@@ -440,6 +470,38 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   padding-top: 0;
 }
 
+.save-list-group-artwork-frame {
+  width: min(100%, 20rem);
+  aspect-ratio: 2 / 3;
+  margin-inline: auto;
+}
+
+.save-list-browser-layout {
+  --save-list-browser-side-column-width: 18rem;
+}
+
+@media (min-width: 48rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, 15rem);
+  }
+}
+
+@media (min-width: 64rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, 19rem);
+  }
+
+  .save-list-browser-layout {
+    --save-list-browser-side-column-width: 22rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 36rem) {
+  .save-list-group-artwork-frame {
+    width: min(100%, calc(66.6667svh - 5.75rem));
+  }
+}
+
 .docs-content .shiki {
   background-color: transparent !important;
 }
@@ -463,6 +525,45 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
   counter-increment: docs-code-line;
   display: block;
   min-height: 1.5rem;
+}
+
+/* Communication log dialog: same shiki treatment as the docs, plus line
+   numbers, scoped to .log-json. */
+.log-json .shiki {
+  background-color: transparent !important;
+  margin: 0;
+  padding: 0;
+}
+
+.dark .log-json .shiki,
+.dark .log-json .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+.log-json .shiki code {
+  counter-reset: log-code-line;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-json .shiki .line {
+  counter-increment: log-code-line;
+  display: block;
+  min-height: 1.5rem;
+}
+
+.log-json .shiki .line::before {
+  display: inline-block;
+  width: 2rem;
+  padding-right: 1rem;
+  color: var(--muted-foreground);
+  content: counter(log-code-line);
+  text-align: right;
+  user-select: none;
 }
 
 .docs-content .shiki .line::before {
@@ -792,6 +893,51 @@ body[data-save-list-fullscreen="true"] [data-site-content] {
 }
 
 @layer utilities {
+  .icon-swap-enter {
+    animation: icon-swap-enter 150ms var(--ease-out-strong);
+  }
+
+  @keyframes icon-swap-enter {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+      filter: blur(2px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+  }
+
+  .stagger-children > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+
+  .stagger-children > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+
+  .stagger-children > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+
+  .stagger-children > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+
+  .stagger-children > *:nth-child(6) {
+    animation-delay: 200ms;
+  }
+
+  .stagger-children > *:nth-child(7) {
+    animation-delay: 240ms;
+  }
+
+  .stagger-children > *:nth-child(8) {
+    animation-delay: 280ms;
+  }
+
   .t-stagger-line {
     opacity: 0;
     transform: translateY(16px);

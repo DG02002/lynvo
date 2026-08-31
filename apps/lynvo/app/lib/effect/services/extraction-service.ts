@@ -1,5 +1,10 @@
 import { Context, Effect, Layer } from "effect"
-import { BackendError, ExtractionError, ValidationError } from "../errors"
+import {
+  BackendError,
+  ValidationError,
+  type ExtractionError,
+  type UsageLimitError,
+} from "../errors"
 import type {
   ExtractionResult,
   ExtractOptions,
@@ -37,9 +42,12 @@ export class ExtractionService extends Context.Service<
 
       const extract = Effect.fn("ExtractionService.extract")(function* (
         options: ExtractOptions
-      ): Effect.fn.Return<ExtractionResult, ExtractionError | ValidationError> {
+      ): Effect.fn.Return<
+        ExtractionResult,
+        ExtractionError | UsageLimitError | ValidationError
+      > {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
-        const targetUrl = routeInput.targetUrl
+        const { targetUrl } = routeInput
         if (options.userId) {
           const context = yield* loadRegisteredPluginServers(
             environment,
@@ -61,7 +69,7 @@ export class ExtractionService extends Context.Service<
             pluginServerId: options.pluginServerId,
             pluginId: options.pluginId,
             kind: options.kind ?? "source",
-            inlineBasicAuth: routeInput.basicAuth,
+            inlineBasicAuth: options.inlineBasicAuth ?? routeInput.basicAuth,
           }
           const customResult = yield* extractWithCustomPluginServer(
             credentialVault,
@@ -102,7 +110,7 @@ export class ExtractionService extends Context.Service<
         options: MetadataOptions
       ): Effect.fn.Return<MetadataResult, ValidationError | BackendError> {
         const routeInput = yield* prepareExtractionRouteInput(options.url)
-        const targetUrl = routeInput.targetUrl
+        const { targetUrl } = routeInput
 
         if (options.userId) {
           const context = yield* loadRegisteredPluginServers(

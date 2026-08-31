@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest"
-import {
-  createLinksSnapshotStore,
-} from "~/features/links/use-links/links-store"
+import { createLinksSnapshotStore } from "~/features/links/use-links/links-store"
 import type { LinkViewItem } from "~/features/links/types"
 
 const viewItem = (
@@ -15,12 +13,19 @@ const viewItem = (
     schemaVersion: 3,
     source: {},
     extraction: { extractedLinks: [] },
-    playback: { openedUrls: [], openedIds: [] },
+    playback: { openedUrls: [] },
   },
   ...overrides,
 })
 
 describe("links snapshot store", () => {
+  it("starts from a server-rendered snapshot", () => {
+    const store = createLinksSnapshotStore([viewItem("initial")], 6)
+
+    expect(store.getSnapshot().map((item) => item.id)).toEqual(["initial"])
+    expect(store.getVersion()).toBe(6)
+  })
+
   it("applies server snapshots keyed by server-assigned IDs", () => {
     const store = createLinksSnapshotStore()
 
@@ -43,7 +48,9 @@ describe("links snapshot store", () => {
     const store = createLinksSnapshotStore()
     store.applyServerSnapshot([viewItem("existing")], 2)
 
-    const temporaryItem = store.beginAdd(viewItem("", { url: "https://example.com/fresh" }))
+    const temporaryItem = store.beginAdd(
+      viewItem("", { url: "https://example.com/fresh" })
+    )
     expect(temporaryItem.id).toMatch(/^temp:/)
     expect(store.getSnapshot()[0]?.url).toBe("https://example.com/fresh")
 
@@ -89,10 +96,7 @@ describe("links snapshot store", () => {
     expect(updated?.title).toBe("Optimistic title")
     expect(store.getSnapshot()[0]?.title).toBe("Optimistic title")
 
-    store.applyServerSnapshot(
-      [viewItem("one", { title: undefined })],
-      5
-    )
+    store.applyServerSnapshot([viewItem("one", { title: undefined })], 5)
     expect(store.getSnapshot()[0]?.title).toBe("Optimistic title")
 
     store.applyServerSnapshot([viewItem("one")], 6)

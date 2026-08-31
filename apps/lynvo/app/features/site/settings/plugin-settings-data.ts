@@ -11,4 +11,6 @@ export interface LynvoPlugin {
   credentialKind?: "domain-password" | "http-basic"
   status?: "active" | "maintenance" | "degraded" | "down"
   version?: string
+  usageMultiplier?: number
+  proxyCreditUsage?: string
 }

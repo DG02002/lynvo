@@ -5,6 +5,10 @@ import { policyPaths } from "~/lib/paths"
 
 const CLOUDFLARE_PRIVACY_URL = "https://www.cloudflare.com/policies/privacy/"
 const GOOGLE_PRIVACY_URL = "https://policies.google.com/privacy"
+const GOOGLE_USER_DATA_POLICY_URL =
+  "https://developers.google.com/terms/api-services-user-data-policy"
+const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
+const TMDB_PRIVACY_URL = "https://www.themoviedb.org/privacy-policy"
 
 const ProviderPolicyLink = ({
   href,
@@ -24,11 +28,12 @@ const ProviderPolicyLink = ({
 )
 
 export const PrivacyPolicyContent = () => (
-  <PolicyLayout title="Privacy policy" updatedAt="August 8, 2026">
+  <PolicyLayout title="Privacy policy" updatedAt="August 25, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       This Privacy Policy describes how Lynvo collects, uses, shares, and
-      retains data when you create an account, save a link, connect a device, or
-      configure a Plugin. It also explains the controls available to you.
+      retains data when you create an account, save a link, use the media
+      library, connect a device, or configure a Plugin. It also explains the
+      controls available to you.
     </p>
     <p>
       In this policy, <strong>Lynvo</strong> means the website and related
@@ -105,6 +110,12 @@ export const PrivacyPolicyContent = () => (
           markers, and record timestamps
         </li>
         <li>
+          <strong className="text-foreground">Optional artwork lookups:</strong>{" "}
+          when enabled, parsed media titles, years, and episode details are sent
+          to TMDB; returned image paths are kept in memory for the current page
+          and are not added to account records
+        </li>
+        <li>
           <strong className="text-foreground">Session data:</strong> session
           identifiers, device names, login and activity times, device pairing
           codes, and short-lived Remote Play commands
@@ -122,10 +133,13 @@ export const PrivacyPolicyContent = () => (
         </li>
       </ul>
       <p>
-        Lynvo signs you in with Google and receives only the identifier and
-        basic profile fields described above; it never sees your Google
-        password. Lynvo doesn&apos;t ordinarily store the video files referenced
-        by your links.
+        Lynvo uses Google OAuth and OpenID Connect only for account creation and
+        login. It requests the <code>openid</code>, <code>email</code>, and{" "}
+        <code>profile</code> authentication scopes. Google returns a verified
+        subject identifier, email address, and optional profile name and picture
+        fields. Lynvo never sees your Google password and does not request
+        access to Gmail, Drive, YouTube, or other Google services. Lynvo
+        doesn&apos;t ordinarily store the video files referenced by your links.
       </p>
     </PolicySection>
 
@@ -154,6 +168,7 @@ export const PrivacyPolicyContent = () => (
       <ul className="list-disc pl-6">
         <li>Authenticate your account and keep sessions active</li>
         <li>Save, organize, extract, and synchronize your links</li>
+        <li>Fetch optional title metadata and artwork from TMDB</li>
         <li>Open a playable link in the player you select</li>
         <li>Pair devices and deliver Remote Play commands</li>
         <li>Run Plugins and Custom Plugin Servers you configure</li>
@@ -185,12 +200,38 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">Google:</strong> account sign-in.
-          Google receives the sign-in request and may process your Google
-          account identity to authenticate you. See Google&apos;s{" "}
+          Lynvo requests only the <code>openid</code>, <code>email</code>, and{" "}
+          <code>profile</code> authentication scopes. Google processes the
+          sign-in request and returns the Google account identity fields
+          described in this policy. See Google&apos;s{" "}
           <ProviderPolicyLink href={GOOGLE_PRIVACY_URL}>
             Privacy Policy
           </ProviderPolicyLink>
+          , the{" "}
+          <ProviderPolicyLink href={GOOGLE_USER_DATA_POLICY_URL}>
+            Google API Services User Data Policy
+          </ProviderPolicyLink>
+          , and the{" "}
+          <ProviderPolicyLink href="https://developers.google.com/terms">
+            Google APIs Terms of Service
+          </ProviderPolicyLink>
           .
+        </li>
+        <li>
+          <strong className="text-foreground">TMDB:</strong> when metadata is
+          enabled, Lynvo&apos;s Worker sends a title and optional year to the
+          TMDB API for search, then requests details by TMDB title ID. The
+          browser loads TMDB artwork from <code>image.tmdb.org</code>. Lynvo
+          does not send your Google identity or Lynvo session cookie to TMDB.
+          TMDB&apos;s{" "}
+          <ProviderPolicyLink href={TMDB_API_TERMS_URL}>
+            API terms of use
+          </ProviderPolicyLink>{" "}
+          and{" "}
+          <ProviderPolicyLink href={TMDB_PRIVACY_URL}>
+            Privacy Policy
+          </ProviderPolicyLink>{" "}
+          govern TMDB&apos;s services.
         </li>
         <li>
           <strong className="text-foreground">
@@ -257,6 +298,11 @@ export const PrivacyPolicyContent = () => (
         contain up to 1,000 saved links within 3 MB of account-record storage;
         each saved link can use up to 256 KB.
       </p>
+      <p>
+        When TMDB artwork is enabled, Lynvo resolves artwork on demand for the
+        current page. Returned image paths are held in browser memory for that
+        page and are not stored in account records.
+      </p>
       <ul className="list-disc pl-6">
         <li>
           Processed Remote Play commands expire after five minutes; a cleanup
@@ -281,11 +327,12 @@ export const PrivacyPolicyContent = () => (
       </p>
     </PolicySection>
 
-    <PolicySection title="8. Account recovery and deletion controls">
+    <PolicySection title="8. Google sign-in and deletion controls">
       <p>
-        Sign-in is handled by Google. Access to your Lynvo account depends on
-        access to the Google account you used to sign in, so protect that
-        account and review its security settings with Google.
+        Sign-in uses Google OAuth only. Access to your Lynvo account depends on
+        access to the Google account used to create it, so protect that account
+        and manage its security settings with Google. Lynvo cannot restore
+        access when you cannot sign in to that Google account.
       </p>
       <p>
         You can delete saved links, clear your saved links, revoke other
@@ -293,7 +340,7 @@ export const PrivacyPolicyContent = () => (
         deletion removes the account, links, Plugin configuration, stored Plugin
         credentials, Plugin Server configuration, pairing records, and sessions.
         Deleted data and automatically deleted inactive accounts can&apos;t be
-        recovered through Lynvo.
+        restored through Lynvo.
       </p>
     </PolicySection>
 
@@ -320,7 +367,8 @@ export const PrivacyPolicyContent = () => (
         information in the United States and European Economic Area and may
         transfer or access information globally with appropriate safeguards.
         Google also processes account identity data when you sign in, under the
-        safeguards described in its privacy policy.
+        safeguards described in its privacy policy. TMDB may process API and
+        image requests under its own terms and privacy policy.
       </p>
     </PolicySection>
 
@@ -358,7 +406,14 @@ export const PrivacyPolicyContent = () => (
         >
           Usage policy
         </Link>{" "}
-        explains prohibited and restricted uses.
+        explains prohibited and restricted uses. The{" "}
+        <Link
+          to={policyPaths.licenses}
+          className="underline underline-offset-4"
+        >
+          Open-source licenses
+        </Link>{" "}
+        page lists Lynvo&apos;s software licenses and TMDB attribution.
       </p>
     </PolicySection>
   </PolicyLayout>

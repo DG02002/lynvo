@@ -8,15 +8,18 @@ import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   EXTRACTION_ELAPSED_TIME_LIMIT_MS,
   EXTRACTION_NODE_LIMIT,
-  LEGACY_RESPONSE_PREFIX_LENGTH,
-  LEGACY_RESPONSE_SUFFIX_LENGTH,
+  BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
+  BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
-import type { PluginAdapterOptions } from "../plugin-catalog"
-import { createPluginResponseMetadata } from "../plugin-catalog"
+import {
+  createPluginResponseMetadata,
+  type PluginAdapterOptions,
+} from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
+import { extractDirectMedia } from "./direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
@@ -117,13 +120,13 @@ export const createBhadooNodes = (
     return [node]
   })
 
-export const decodeLegacyBhadooResponse = (
+export const decodeBhadooReverseEnvelope = (
   encodedResponse: string
 ): BhadooGoogleDriveListResponse => {
   const reversedResponse = encodedResponse.split("").reverse().join("")
   const base64Response = reversedResponse
-    .slice(LEGACY_RESPONSE_PREFIX_LENGTH)
-    .slice(0, -LEGACY_RESPONSE_SUFFIX_LENGTH)
+    .slice(BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT)
+    .slice(0, -BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT)
   const responseBytes = Uint8Array.from(atob(base64Response), (character) =>
     character.charCodeAt(0)
   )
@@ -152,7 +155,7 @@ const requestBhadooPage = async (
 ): Promise<BhadooGoogleDriveListResponse> => {
   assertSafeUpstreamUrl(requestUrl.toString())
   const authorizationHeaders = createAuthorizationHeaders(basicAuth)
-  const modernResponse = await fetchValidatedUpstream(requestUrl, {
+  const jsonResponse = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authorizationHeaders },
     body: JSON.stringify({
@@ -161,30 +164,35 @@ const requestBhadooPage = async (
       page_index: pageIndex,
     }),
   })
-  if (modernResponse.ok) {
+  if (jsonResponse.ok) {
     return Schema.decodeUnknownSync(bhadooGoogleDriveListResponseSchema)(
-      await readBoundedUpstreamJson(modernResponse)
+      await readBoundedUpstreamJson(jsonResponse)
     )
   }
+  await jsonResponse.body?.cancel()
 
-  const legacyBody = new URLSearchParams({
+  // HACK: Deployed Bhadoo indexes can require this reverse-envelope POST.
+  // Keep this active protocol until those deployments are retired.
+  const reverseEnvelopeBody = new URLSearchParams({
     password: "",
     page_token: pageToken,
     page_index: String(pageIndex),
   })
-  const legacyResponse = await fetchValidatedUpstream(requestUrl, {
+  const reverseEnvelopeResponse = await fetchValidatedUpstream(requestUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
       ...authorizationHeaders,
     },
-    body: legacyBody.toString(),
+    body: reverseEnvelopeBody.toString(),
   })
-  if (!legacyResponse.ok) {
-    throw new Error("Bhadoo Index upstream request failed.")
+  if (!reverseEnvelopeResponse.ok) {
+    throw new Error(
+      `Bhadoo Index upstream request failed (JSON ${jsonResponse.status}; reverse envelope ${reverseEnvelopeResponse.status}).`
+    )
   }
-  return decodeLegacyBhadooResponse(
-    await readBoundedUpstreamText(legacyResponse)
+  return decodeBhadooReverseEnvelope(
+    await readBoundedUpstreamText(reverseEnvelopeResponse)
   )
 }
 
@@ -197,6 +205,14 @@ export const extractBhadooGoogleDriveIndex = async ({
   const folderUrl = assertSafeUpstreamUrl(targetUrl)
   folderUrl.username = ""
   folderUrl.password = ""
+  if (folderUrl.pathname.toLowerCase().endsWith("/download.aspx")) {
+    return extractDirectMedia({
+      request,
+      targetUrl: folderUrl.toString(),
+      plugin,
+      publicAssetOrigin,
+    })
+  }
   const filename = getBhadooPathFilename(folderUrl)
   if (!folderUrl.pathname.endsWith("/") && isVideoFile(filename)) {
     const playableUrl = new URL(folderUrl)

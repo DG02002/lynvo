@@ -1,5 +1,8 @@
-import type { EntryContext, RouterContextProvider } from "react-router"
-import { ServerRouter } from "react-router"
+import {
+  ServerRouter,
+  type EntryContext,
+  type RouterContextProvider,
+} from "react-router"
 import { isbot } from "isbot"
 import { renderToReadableStream } from "react-dom/server"
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
@@ -69,11 +72,16 @@ export default async function handleRequest(
   )
   responseHeaders.set(
     "Content-Security-Policy",
-    createContentSecurityPolicy(request.url, import.meta.env.DEV, cspNonce, [
-      clientProfileBootstrapHash,
-      themeBootstrapHash,
-      NEXT_THEMES_BOOTSTRAP_HASH,
-    ])
+    createContentSecurityPolicy({
+      requestUrl: request.url,
+      isDevelopment: import.meta.env.DEV,
+      nonce: cspNonce,
+      inlineScriptHashes: [
+        clientProfileBootstrapHash,
+        themeBootstrapHash,
+        NEXT_THEMES_BOOTSTRAP_HASH,
+      ],
+    })
   )
   responseHeaders.set(
     "Strict-Transport-Security",

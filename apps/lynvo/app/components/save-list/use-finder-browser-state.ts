@@ -4,7 +4,7 @@ import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import {
   getMediaNodeInteractionState,
-  getMediaNodeTarget,
+  getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
 import {
   getLinkKey,
@@ -12,11 +12,14 @@ import {
   type FolderLevel,
 } from "./save-list-browser-model"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
+import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 import { Result, Schema } from "effect"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem
   actions: LinkItemActions
+  onExit: () => void
 }
 
 const getFolderPathStorageKey = (savedLinkId: string) =>
@@ -61,9 +64,31 @@ const restoreFolderPath = (
   }
 }
 
+// Saved links are often wrappers ("New" > "Show S01" > episodes): descend
+// through single-folder levels so the view opens on real content. A node
+// qualifies through canExpand (folder with loaded children); mirror-classified
+// resolvables with children are still navigable content.
+const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
+  const descendedPath: FolderLevel[] = []
+  let currentLinks = links
+  while (currentLinks.length === 1) {
+    const [onlyLink] = currentLinks
+    if (onlyLink === undefined) {
+      break
+    }
+    if (!getMediaNodeInteractionState(onlyLink).canExpand) {
+      break
+    }
+    descendedPath.push({ id: getLinkKey(onlyLink), label: onlyLink.label })
+    currentLinks = onlyLink.children ?? []
+  }
+  return descendedPath
+}
+
 export const useFinderBrowserState = ({
   item,
   actions,
+  onExit,
 }: UseFinderBrowserStateOptions) => {
   const itemRootLinks = useMemo(
     () => toLinkViewModel(item).extractedLinks,
@@ -71,17 +96,44 @@ export const useFinderBrowserState = ({
   )
   const [rootLinks, setRootLinks] = useState(() => itemRootLinks)
   const [folderPath, setFolderPath] = useState<FolderLevel[]>(() =>
-    restoreFolderPath(item.id, itemRootLinks)
+    getSingleFolderDescendPath(itemRootLinks)
+  )
+  const [forwardFolderPaths, setForwardFolderPaths] = useState<FolderLevel[][]>(
+    []
   )
   const contentRef = useRef<HTMLDivElement>(null)
-  const scrollPositionsRef = useRef(new Map<string, number>())
   const currentLinks = useMemo(
     () => getLinksAtFolderPath(rootLinks, folderPath),
     [folderPath, rootLinks]
   )
   const currentFolderKey = folderPath.at(-1)?.id ?? item.url
+  const previousRootLinksLengthRef = useRef(itemRootLinks.length)
+  const didRestoreFolderPathRef = useRef(false)
+
+  // sessionStorage is client-only, so restoring during the initial render
+  // desynchronizes SSR HTML from the hydrated tree.
+  useEffect(() => {
+    if (didRestoreFolderPathRef.current) {
+      return
+    }
+    didRestoreFolderPathRef.current = true
+    const restoredFolderPath = restoreFolderPath(item.id, itemRootLinks)
+    if (restoredFolderPath.length > 0) {
+      setFolderPath(restoredFolderPath)
+    }
+  }, [item.id, itemRootLinks])
 
   useEffect(() => {
+    const didRootLinksPopulate =
+      previousRootLinksLengthRef.current === 0 && itemRootLinks.length > 0
+    previousRootLinksLengthRef.current = itemRootLinks.length
+    if (didRootLinksPopulate) {
+      setFolderPath((currentFolderPath) =>
+        currentFolderPath.length > 0
+          ? currentFolderPath
+          : getSingleFolderDescendPath(itemRootLinks)
+      )
+    }
     setRootLinks(itemRootLinks)
   }, [itemRootLinks])
 
@@ -95,24 +147,57 @@ export const useFinderBrowserState = ({
     )
   }, [folderPath, item.id])
 
-  useEffect(() => {
-    contentRef.current?.scrollTo({
-      top: scrollPositionsRef.current.get(currentFolderKey) ?? 0,
-    })
-  }, [currentFolderKey])
+  const { rememberScrollPosition } = useFinderScrollRestoration({
+    contentRef,
+    currentFolderKey,
+  })
 
-  const rememberScrollPosition = () => {
-    scrollPositionsRef.current.set(
-      currentFolderKey,
-      contentRef.current?.scrollTop ?? 0
-    )
+  const navigateToParentFolder = () => {
+    if (folderPath.length === 0) {
+      onExit()
+      return
+    }
+    const previousFolderPath = folderPath
+    rememberScrollPosition()
+    setForwardFolderPaths((currentForwardFolderPaths) => [
+      previousFolderPath,
+      ...currentForwardFolderPaths,
+    ])
+    setFolderPath((currentFolderPath) => currentFolderPath.slice(0, -1))
   }
 
+  const navigateToNextFolder = () => {
+    const [nextFolderPath] = forwardFolderPaths
+    if (!nextFolderPath) {
+      return
+    }
+    rememberScrollPosition()
+    setForwardFolderPaths((currentForwardFolderPaths) =>
+      currentForwardFolderPaths.slice(1)
+    )
+    setFolderPath(nextFolderPath)
+  }
+
+  const hasNoRootLinks = rootLinks.length === 0
+  const { resetHorizontalGesture } = useFinderWheelNavigation({
+    contentRef,
+    hasForwardFolderPaths: forwardFolderPaths.length > 0,
+    hasNoRootLinks,
+    navigateToParentFolder,
+    navigateToNextFolder,
+  })
+
   const openFolder = async (link: ExtractedLink, targetPath: FolderLevel[]) => {
+    resetHorizontalGesture()
     const linkKey = getLinkKey(link)
-    const linkTarget = getMediaNodeTarget(link)
-    actions.markOpened(item.url, linkTarget)
-    if (getMediaNodeInteractionState(link).needsResolution) {
+    const linkTarget = getMediaNodeTargetOrUndefined(link)
+    if (linkTarget !== undefined) {
+      actions.markOpened(item.url, linkTarget)
+    }
+    if (
+      getMediaNodeInteractionState(link).needsResolution &&
+      linkTarget !== undefined
+    ) {
       const resolvedLinks = await actions.expandFolder(
         item.url,
         linkKey,
@@ -123,6 +208,7 @@ export const useFinderBrowserState = ({
       }
       setRootLinks(resolvedLinks)
     }
+    setForwardFolderPaths([])
     rememberScrollPosition()
     setFolderPath(targetPath)
   }
@@ -137,12 +223,16 @@ export const useFinderBrowserState = ({
       return
     }
 
-    const linkTarget = getMediaNodeTarget(link)
+    const linkTarget = getMediaNodeTargetOrUndefined(link)
     const result = await actions.play(link)
     markAfterAcceptedHandoff({
       ...result,
       itemLabel: link.label,
-      markOpened: () => actions.markOpened(item.url, linkTarget),
+      markOpened: () => {
+        if (linkTarget !== undefined) {
+          actions.markOpened(item.url, linkTarget)
+        }
+      },
     })
   }
 
@@ -153,7 +243,10 @@ export const useFinderBrowserState = ({
     contentRef,
     openFolder,
     openLink,
+    navigateToParentFolder,
     selectRoot: () => {
+      resetHorizontalGesture()
+      setForwardFolderPaths([])
       rememberScrollPosition()
       setFolderPath([])
     },

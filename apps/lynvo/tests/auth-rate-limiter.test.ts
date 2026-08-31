@@ -7,9 +7,10 @@ class MemoryDurableObjectStorage {
   private transactionQueue = Promise.resolve()
 
   get = async <Value>(key: string): Promise<Value | undefined> =>
+    // SAFETY: Values are read through the same generic Durable Object storage contract used to write them.
     this.values.get(key) as Value | undefined
 
-  put = async (key: string, value: unknown): Promise<void> => {
+  put = async <Value>(key: string, value: Value): Promise<void> => {
     this.values.set(key, value)
   }
 
@@ -32,6 +33,7 @@ class MemoryDurableObjectStorage {
 
 const createLimiter = () => {
   const storage = new MemoryDurableObjectStorage()
+  // SAFETY: AuthRateLimiter only uses the storage methods implemented by this in-memory state.
   return new AuthRateLimiter({ storage } as DurableObjectState)
 }
 

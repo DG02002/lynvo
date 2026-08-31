@@ -10,12 +10,12 @@ It provides:
 - optional standardized source discovery
 - Lynvo source metadata helpers
 - protocol error/request builders
-- canonical contract parsers and diagnostic validation helpers
+- contract parsers and diagnostic validation helpers
 - mandatory finite usage schemas and authenticated runtime handling
 
-The package is the canonical versioned contract for standalone Plugin Servers.
-It is framework-agnostic and can run in Cloudflare Workers or another runtime
-that provides the web platform APIs used by the runtime helper.
+The package is the versioned contract for standalone Plugin Servers. It is
+framework-agnostic and can run in Cloudflare Workers or another runtime that
+provides the web platform APIs used by the runtime helper.
 
 For the fastest standalone setup, use the published starter:
 
@@ -48,7 +48,7 @@ Documentation:
 - [Compatibility checklist](docs/compatibility-checklist.md)
 - [Metadata flow](docs/metadata-flow.md)
 
-Inspect the canonical starter template in
+Inspect the starter template in
 [`create-lynvo-plugin-server`](https://github.com/DG02002/lynvo/tree/main/packages/create-lynvo-plugin-server/template)
 for the generated Worker and its contract tests.
 
