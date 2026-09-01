@@ -23,6 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
         with:
@@ -43,6 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
@@ -65,8 +73,20 @@ jobs:
         run: pnpm check
       - name: Run the test suites
         run: pnpm test
+      - name: Run the Cloudflare Worker test suite
+        run: pnpm test:workers
       - name: Build the verified release
-        run: pnpm build
+        run: |
+          set -o pipefail
+          pnpm build 2>&1 | tee build.log
+      - name: Upload the build log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lynvo-build-log-${{ github.sha }}
+          path: build.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Verify publishable package contents
         run: pnpm check:plugin-server-release
       - name: Upload verified release artifacts
@@ -102,6 +122,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Verify production credentials are available

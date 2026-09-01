@@ -9,6 +9,7 @@
     "dev": "pnpm --filter @lynvo/app dev",
     "dev:local": "pnpm --filter @lynvo/app dev:local",
     "test": "pnpm --workspace-concurrency=1 -r --if-present run test --run",
+    "test:workers": "pnpm --filter @lynvo/app test:workers",
     "deploy:lynvo": "pnpm --filter @lynvo/app run deploy",
     "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
     "lint": "oxlint scripts && pnpm -r --if-present run lint",
