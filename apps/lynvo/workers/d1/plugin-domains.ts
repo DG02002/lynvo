@@ -258,10 +258,11 @@ export const listPluginDomains = async (
   const credentialDomainIds = new Set(
     credentialRows.results.map((row) => row.plugin_domain_id)
   )
-  return domainRows.results.map((row) => ({
-    ...mapDomainRow(row),
-    hasCredential: credentialDomainIds.has(row.id),
-  }))
+  return domainRows.results.map((row) =>
+    Object.assign({}, mapDomainRow(row), {
+      hasCredential: credentialDomainIds.has(row.id),
+    })
+  )
 }
 
 export const getPluginDomainByDomain = async (

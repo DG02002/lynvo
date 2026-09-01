@@ -56,8 +56,8 @@ const urlStringSchema = Schema.String.pipe(
   Schema.refine(
     (value): value is string => {
       try {
-        new URL(value)
-        return true
+        const parsedUrl = new URL(value)
+        return parsedUrl.protocol.length > 0
       } catch {
         return false
       }

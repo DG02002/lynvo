@@ -132,8 +132,8 @@ export function useLinkActions({
             : currentState
         )
         return resolvedChildren
-      } catch (error) {
-        console.error(error)
+      } catch (caughtError) {
+        console.error(caughtError)
         showErrorToast({ title: "The folder couldn’t be opened. Try again." })
         return null
       }

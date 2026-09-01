@@ -1338,7 +1338,7 @@ export const deleteExpiredLinksForUser = async ({
     return 0
   }
   const totalBytes = results.reduce<number>(
-    (totalBytes, row) => totalBytes + byteLength(row),
+    (totalRowBytes, row) => totalRowBytes + byteLength(row),
     0
   )
   const placeholders = results.map((_, index) => `?${index + 1}`).join(", ")

@@ -63,12 +63,13 @@ export const getPluginServerManifestView = (
       null,
     hosts,
     proxyProvider: extension?.proxyProvider,
-    plugins: (extension?.plugins ?? []).map((source) => ({
-      ...source,
-      iconUrl: resolveCustomPluginServerIconUrl(
-        source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
-        requestOrigin
-      ),
-    })),
+    plugins: (extension?.plugins ?? []).map((source) =>
+      Object.assign({}, source, {
+        iconUrl: resolveCustomPluginServerIconUrl(
+          source.iconUrl?.replace(/\.png(?=$|[?#])/, ".webp"),
+          requestOrigin
+        ),
+      })
+    ),
   }
 }

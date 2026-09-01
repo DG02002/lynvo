@@ -68,18 +68,18 @@ export class LynvoPluginServerUsageLimiter {
   }
 
   private getUsed(periodKey: string): number {
-    const row = this.state.storage.sql
+    const [row] = this.state.storage.sql
       .exec<UsageCounterRow>(
         "SELECT used FROM usage_counters WHERE period_key = ?",
         periodKey
       )
-      .toArray()[0]
-    const pendingRow = this.state.storage.sql
+      .toArray()
+    const [pendingRow] = this.state.storage.sql
       .exec<UsagePendingCountRow>(
         "SELECT COUNT(*) AS pending FROM usage_reservations WHERE period_key = ? AND status IN ('pending', 'expired')",
         periodKey
       )
-      .toArray()[0]
+      .toArray()
     return (row?.used ?? 0) + (pendingRow?.pending ?? 0)
   }
 
@@ -103,12 +103,12 @@ export class LynvoPluginServerUsageLimiter {
 
   private settle(reservationId: string, succeeded: boolean): void {
     this.state.storage.transactionSync(() => {
-      const reservation = this.state.storage.sql
+      const [reservation] = this.state.storage.sql
         .exec<UsageReservationRow>(
           "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE reservation_id = ?",
           reservationId
         )
-        .toArray()[0]
+        .toArray()
       if (
         !reservation ||
         (reservation.status !== "pending" && reservation.status !== "expired")
@@ -130,11 +130,11 @@ export class LynvoPluginServerUsageLimiter {
   }
 
   private scheduleNextAlarm = async (): Promise<void> => {
-    const next = this.state.storage.sql
+    const [next] = this.state.storage.sql
       .exec<UsageReservationRow>(
         "SELECT reservation_id, period_key, status, expires_at FROM usage_reservations WHERE status IN ('pending', 'expired') ORDER BY expires_at ASC LIMIT 1"
       )
-      .toArray()[0]
+      .toArray()
     if (next) {
       const currentAlarm = await this.state.storage.getAlarm()
       if (currentAlarm === null || next.expires_at < currentAlarm) {
@@ -160,7 +160,7 @@ export class LynvoPluginServerUsageLimiter {
     const nowHeader = request.headers.get("x-lynvo-now-ms")
     const timestampMs = nowHeader ? Number(nowHeader) : Date.now()
     const periodKey = currentPeriodKey(timestampMs)
-    const pathname = new URL(request.url).pathname
+    const { pathname } = new URL(request.url)
 
     if (pathname === "/reserve" && request.method === "POST") {
       const reservation = this.reserve(periodKey, timestampMs)

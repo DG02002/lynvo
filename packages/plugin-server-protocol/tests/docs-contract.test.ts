@@ -23,20 +23,22 @@ const documentationUrls = [
 
 describe("published Plugin Server documentation", () => {
   it("keeps success responses aligned with the runtime schema", async () => {
-    for (const documentationUrl of documentationUrls) {
-      const source = await readFile(documentationUrl, "utf8")
-      expect(source).not.toMatch(/"source"\s*:/)
-      expect(source).not.toMatch(/\bsource(?:Name|IconUrl)\b/)
-      const jsonBlocks = [...source.matchAll(/```json[^\n]*\n([\s\S]*?)```/g)]
-      for (const jsonBlock of jsonBlocks) {
-        const parsedJson = JSON.parse(jsonBlock[1])
-        const result = Schema.decodeUnknownResult(
-          documentedSuccessResponseSchema
-        )(parsedJson)
-        if (Result.isSuccess(result)) {
-          expect(parseExtractSuccessContract(parsedJson).ok).toBe(true)
+    await Promise.all(
+      documentationUrls.map(async (documentationUrl) => {
+        const source = await readFile(documentationUrl, "utf8")
+        expect(source).not.toMatch(/"source"\s*:/)
+        expect(source).not.toMatch(/\bsource(?:Name|IconUrl)\b/)
+        const jsonBlocks = [...source.matchAll(/```json[^\n]*\n([\s\S]*?)```/g)]
+        for (const jsonBlock of jsonBlocks) {
+          const parsedJson = JSON.parse(jsonBlock[1])
+          const result = Schema.decodeUnknownResult(
+            documentedSuccessResponseSchema
+          )(parsedJson)
+          if (Result.isSuccess(result)) {
+            expect(parseExtractSuccessContract(parsedJson).ok).toBe(true)
+          }
         }
-      }
-    }
+      })
+    )
   })
 })

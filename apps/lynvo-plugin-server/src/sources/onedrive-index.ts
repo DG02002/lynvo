@@ -11,8 +11,10 @@ import {
   EXTRACTION_NODE_LIMIT,
   PAGINATION_PAGE_LIMIT,
 } from "../constants"
-import type { PluginAdapterOptions } from "../plugin-catalog"
-import { createPluginResponseMetadata } from "../plugin-catalog"
+import {
+  createPluginResponseMetadata,
+  type PluginAdapterOptions,
+} from "../plugin-catalog"
 import { assertSafeUpstreamUrl } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
@@ -37,6 +39,45 @@ export interface OneDriveApiResponse {
   readonly file?: OneDriveItem
   readonly next?: string
   readonly error?: string
+}
+
+export interface OneDriveNodeOptions {
+  readonly items: readonly OneDriveItem[]
+  readonly currentPath: string
+  readonly origin: string
+  readonly hashedPassword: string
+}
+
+interface OneDrivePageOptions {
+  readonly origin: string
+  readonly path: string
+  readonly headers: HeadersInit
+  readonly hashedPassword: string
+  readonly initialToken?: string
+  readonly startedAtMs?: number
+}
+
+interface OneDrivePageRequestOptions {
+  readonly origin: string
+  readonly path: string
+  readonly nextToken: string
+  readonly headers: HeadersInit
+}
+
+interface OneDriveResponseNodeOptions {
+  readonly result: OneDriveApiResponse
+  readonly path: string
+  readonly origin: string
+  readonly hashedPassword: string
+}
+
+interface OneDriveInitialResponseOptions {
+  readonly response: Response
+  readonly path: string
+  readonly origin: string
+  readonly headers: HeadersInit
+  readonly hashedPassword: string
+  readonly startedAtMs: number
 }
 
 const oneDriveItemSchema: Schema.Codec<OneDriveItem> = Schema.Struct({
@@ -114,12 +155,12 @@ export const encodeOneDrivePath = (path: string): string =>
     .map((segment) => encodeURIComponent(segment))
     .join("/")
 
-export const createOneDriveNodes = (
-  items: readonly OneDriveItem[],
-  currentPath: string,
-  origin: string,
-  hashedPassword: string
-): MediaNode[] =>
+export const createOneDriveNodes = ({
+  items,
+  currentPath,
+  origin,
+  hashedPassword,
+}: OneDriveNodeOptions): MediaNode[] =>
   items.flatMap<MediaNode>((item) => {
     if (item.folder) {
       const nextPath = currentPath.endsWith("/")
@@ -174,19 +215,88 @@ export const extractOneDriveNextData = (
   return Result.isSuccess(parsed) ? parsed.success.props.pageProps : undefined
 }
 
-const fetchOneDrivePage = async (
-  origin: string,
-  path: string,
-  headers: HeadersInit,
-  hashedPassword: string,
+const readOneDrivePage = async ({
+  origin,
+  path,
+  nextToken,
+  headers,
+}: OneDrivePageRequestOptions): Promise<OneDriveApiResponse> => {
+  const apiUrl = new URL("/api", origin)
+  apiUrl.searchParams.set("path", path)
+  if (nextToken) {
+    apiUrl.searchParams.set("next", nextToken)
+  }
+  const response = await fetchOneDrive(apiUrl.toString(), { headers })
+  if (response.status === 401) {
+    const errorBody = await readBoundedUpstreamJson(response).catch(
+      () => undefined
+    )
+    const parsedPasswordError = Schema.decodeUnknownResult(
+      passwordRequiredResponseSchema
+    )(errorBody)
+    if (Result.isSuccess(parsedPasswordError)) {
+      throw new ProtocolError(
+        "PASSWORD_REQUIRED",
+        "Password is required for this resource."
+      )
+    }
+    throw new ProtocolError(
+      "INVALID_PASSWORD",
+      "The supplied password was rejected."
+    )
+  }
+  if (!response.ok) {
+    throw new Error("OneDrive Index upstream request failed.")
+  }
+  const data = Schema.decodeUnknownResult(oneDriveApiResponseSchema)(
+    await readBoundedUpstreamJson(response)
+  )
+  if (Result.isFailure(data)) {
+    throw new Error("OneDrive Index returned malformed JSON.")
+  }
+  return data.success
+}
+
+const createOneDriveResponseNodes = ({
+  result,
+  path,
+  origin,
+  hashedPassword,
+}: OneDriveResponseNodeOptions): MediaNode[] => {
+  if (result.folder && Array.isArray(result.folder.value)) {
+    return createOneDriveNodes({
+      items: result.folder.value,
+      currentPath: path,
+      origin,
+      hashedPassword,
+    })
+  }
+  if (result.file) {
+    const parentPath = path.slice(0, Math.max(0, path.lastIndexOf("/")))
+    return createOneDriveNodes({
+      items: [result.file],
+      currentPath: parentPath,
+      origin,
+      hashedPassword,
+    })
+  }
+  throw new Error("OneDrive Index returned an unsupported payload.")
+}
+
+const fetchOneDrivePage = async ({
+  origin,
+  path,
+  headers,
+  hashedPassword,
   initialToken = "",
-  startedAtMs = Date.now()
-): Promise<MediaNode[]> => {
+  startedAtMs = Date.now(),
+}: OneDrivePageOptions): Promise<MediaNode[]> => {
   const nodes: MediaNode[] = []
   const seenTokens = new Set<string>()
-  let nextToken = initialToken
-  let pageCount = 0
-  do {
+  const fetchPage = async (
+    nextToken: string,
+    pageCount: number
+  ): Promise<void> => {
     if (
       pageCount >= PAGINATION_PAGE_LIMIT ||
       Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
@@ -199,70 +309,74 @@ const fetchOneDrivePage = async (
     if (nextToken) {
       seenTokens.add(nextToken)
     }
-    pageCount += 1
-    const apiUrl = new URL("/api", origin)
-    apiUrl.searchParams.set("path", path)
-    if (nextToken) {
-      apiUrl.searchParams.set("next", nextToken)
-    }
-    const response = await fetchOneDrive(apiUrl.toString(), { headers })
-    if (response.status === 401) {
-      const errorBody = await readBoundedUpstreamJson(response).catch(
-        () => undefined
-      )
-      if (
-        Result.isSuccess(
-          Schema.decodeUnknownResult(passwordRequiredResponseSchema)(errorBody)
-        )
-      ) {
-        throw new ProtocolError(
-          "PASSWORD_REQUIRED",
-          "Password is required for this resource."
-        )
-      }
-      throw new ProtocolError(
-        "INVALID_PASSWORD",
-        "The supplied password was rejected."
-      )
-    }
-    if (!response.ok) {
-      throw new Error("OneDrive Index upstream request failed.")
-    }
-    const data = Schema.decodeUnknownResult(oneDriveApiResponseSchema)(
-      await readBoundedUpstreamJson(response)
+    const result = await readOneDrivePage({
+      origin,
+      path,
+      nextToken,
+      headers,
+    })
+    nodes.push(
+      ...createOneDriveResponseNodes({
+        result,
+        path,
+        origin,
+        hashedPassword,
+      })
     )
-    if (Result.isFailure(data)) {
-      throw new Error("OneDrive Index returned malformed JSON.")
-    }
-    const result = data.success
-    if (result.folder && Array.isArray(result.folder.value)) {
-      nodes.push(
-        ...createOneDriveNodes(
-          result.folder.value,
-          path,
-          origin,
-          hashedPassword
-        )
-      )
-    } else if (result.file) {
-      const parentPath = path.slice(0, Math.max(0, path.lastIndexOf("/")))
-      nodes.push(
-        ...createOneDriveNodes(
-          [result.file],
-          parentPath,
-          origin,
-          hashedPassword
-        )
-      )
-    } else {
-      throw new Error("OneDrive Index returned an unsupported payload.")
-    }
-    nextToken = result.next ?? ""
     if (nodes.length > EXTRACTION_NODE_LIMIT) {
       throw new Error("OneDrive Index returned too many nodes.")
     }
-  } while (nextToken)
+    const continuationToken = result.next ?? ""
+    if (continuationToken) {
+      await fetchPage(continuationToken, pageCount + 1)
+    }
+  }
+  await fetchPage(initialToken, 0)
   return nodes
+}
+
+const extractOneDriveInitialNodes = async ({
+  response,
+  path,
+  origin,
+  headers,
+  hashedPassword,
+  startedAtMs,
+}: OneDriveInitialResponseOptions): Promise<MediaNode[] | undefined> => {
+  const nextData = extractOneDriveNextData(
+    await readBoundedUpstreamText(response)
+  )
+  if (nextData?.folder && Array.isArray(nextData.folder.value)) {
+    const nodes = createOneDriveNodes({
+      items: nextData.folder.value,
+      currentPath: path,
+      origin,
+      hashedPassword,
+    })
+    if (nextData.next) {
+      nodes.push(
+        ...(await fetchOneDrivePage({
+          origin,
+          path,
+          headers,
+          hashedPassword,
+          initialToken: nextData.next,
+          startedAtMs,
+        }))
+      )
+    }
+    return nodes
+  }
+  if (nextData?.file) {
+    const parentPath = path.slice(0, Math.max(0, path.lastIndexOf("/")))
+    return createOneDriveNodes({
+      items: [nextData.file],
+      currentPath: parentPath,
+      origin,
+      hashedPassword,
+    })
+  }
+  return undefined
 }
 
 export const extractOneDriveIndex = async ({
@@ -278,57 +392,36 @@ export const extractOneDriveIndex = async ({
   const headers = hashedPassword
     ? { "od-protected-token": hashedPassword }
     : undefined
-  let nodes: MediaNode[] | undefined
+  const requestHeaders = headers ?? {}
   const startedAtMs = Date.now()
 
-  const initialResponse = await fetchOneDrive(parsedUrl.toString(), { headers })
+  const initialResponse = await fetchOneDrive(parsedUrl.toString(), {
+    headers,
+  })
   if (initialResponse.status === 401) {
     throw new Error(password ? "INVALID_PASSWORD" : "PASSWORD_REQUIRED")
   }
-  if (initialResponse.ok) {
-    const nextData = extractOneDriveNextData(
-      await readBoundedUpstreamText(initialResponse)
-    )
-    if (nextData?.folder && Array.isArray(nextData.folder.value)) {
-      nodes = createOneDriveNodes(
-        nextData.folder.value,
+  let nodes = initialResponse.ok
+    ? await extractOneDriveInitialNodes({
+        response: initialResponse,
         path,
-        parsedUrl.origin,
-        hashedPassword
-      )
-      if (nextData.next) {
-        nodes.push(
-          ...(await fetchOneDrivePage(
-            parsedUrl.origin,
-            path,
-            headers ?? {},
-            hashedPassword,
-            nextData.next,
-            startedAtMs
-          ))
-        )
-      }
-    } else if (nextData?.file) {
-      const parentPath = path.slice(0, Math.max(0, path.lastIndexOf("/")))
-      nodes = createOneDriveNodes(
-        [nextData.file],
-        parentPath,
-        parsedUrl.origin,
-        hashedPassword
-      )
-    }
-  }
-
-  nodes ??= await fetchOneDrivePage(
-    parsedUrl.origin,
+        origin: parsedUrl.origin,
+        headers: requestHeaders,
+        hashedPassword,
+        startedAtMs,
+      })
+    : undefined
+  nodes ??= await fetchOneDrivePage({
+    origin: parsedUrl.origin,
     path,
-    headers ?? {},
+    headers: requestHeaders,
     hashedPassword,
-    "",
-    startedAtMs
-  )
+    startedAtMs,
+  })
   const pageTitle = decodeURIComponent(
-    parsedUrl.pathname.split("/").filter(Boolean).at(-1) ?? "OneDrive Index"
+    parsedUrl.pathname
+      .split("/")
+      .findLast((pathSegment) => pathSegment.length > 0) ?? "OneDrive Index"
   )
   return {
     plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, pageTitle),

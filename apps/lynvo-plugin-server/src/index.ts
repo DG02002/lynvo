@@ -142,11 +142,13 @@ app.post("/extract", async (context) => {
   const parsedRequest =
     Schema.decodeUnknownResult(extractRequestSchema)(requestBody)
   const isRequestValid = Result.isSuccess(parsedRequest)
-  const targetUrl = isRequestValid
-    ? parsedRequest.success.input.kind === "source"
-      ? parsedRequest.success.input.sourceUrl
-      : parsedRequest.success.input.nodeUrl
-    : undefined
+  let targetUrl: string | undefined
+  if (isRequestValid) {
+    targetUrl =
+      parsedRequest.success.input.kind === "source"
+        ? parsedRequest.success.input.sourceUrl
+        : parsedRequest.success.input.nodeUrl
+  }
   context.get("log").set({
     operation: "extract",
     extraction: {

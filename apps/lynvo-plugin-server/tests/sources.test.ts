@@ -37,7 +37,7 @@ const createBhadooReverseEnvelope = (
   )}${btoa(JSON.stringify(response))}${"s".repeat(
     BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT
   )}`
-  return wrappedResponse.split("").reverse().join("")
+  return wrappedResponse.split("").toReversed().join("")
 }
 
 describe("Direct Media source adapter", () => {
@@ -142,7 +142,7 @@ describe("Direct Media source adapter", () => {
 })
 
 describe("Bhadoo source adapter", () => {
-  const plugin = LYNVO_PLUGIN_CATALOG[0]
+  const [plugin] = LYNVO_PLUGIN_CATALOG
 
   it("extracts a Bhadoo download endpoint as direct media", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -260,14 +260,14 @@ describe("Bhadoo source adapter", () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledTimes(2)
-    const calledItemRequest = fetchSpy.mock.calls[0]
+    const [calledItemRequest] = fetchSpy.mock.calls
     expect(String(calledItemRequest?.[0])).toBe(
       "https://index.example/0:fallback"
     )
     expect(JSON.parse(String(calledItemRequest?.[1]?.body))).toEqual({
       id: "encoded-folder-token",
     })
-    const calledRequest = fetchSpy.mock.calls[1]
+    const [, calledRequest] = fetchSpy.mock.calls
     expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
     expect(calledRequest?.[1]).toMatchObject({
       method: "POST",
@@ -318,7 +318,7 @@ describe("Bhadoo source adapter", () => {
     })
 
     expect(fetchSpy).toHaveBeenCalledTimes(1)
-    const calledRequest = fetchSpy.mock.calls[0]
+    const [calledRequest] = fetchSpy.mock.calls
     expect(String(calledRequest?.[0])).toBe("https://index.example/0:fallback")
     expect(JSON.parse(String(calledRequest?.[1]?.body))).toEqual({
       id: "encoded-file-token",
@@ -349,7 +349,7 @@ describe("Bhadoo source adapter", () => {
       plugin,
       publicAssetOrigin: "https://lynvo.example",
     })
-    const calledRequest = fetchSpy.mock.calls[0]
+    const [calledRequest] = fetchSpy.mock.calls
     expect(String(calledRequest[0])).toBe("https://drive.example/0:/")
     expect(calledRequest[1]?.headers).toMatchObject({
       Authorization: `Basic ${btoa("viewer:secret")}`,
@@ -468,11 +468,11 @@ describe("Bhadoo source adapter", () => {
 })
 
 describe("OneDrive source adapter", () => {
-  const plugin = LYNVO_PLUGIN_CATALOG[2]
+  const [, , plugin] = LYNVO_PLUGIN_CATALOG
 
   it("maps folders and video files while skipping unrelated files", () => {
-    const nodes = createOneDriveNodes(
-      [
+    const nodes = createOneDriveNodes({
+      items: [
         { id: "folder-1", name: "Folder 1", folder: {} },
         {
           id: "file-1",
@@ -482,10 +482,10 @@ describe("OneDrive source adapter", () => {
         },
         { id: "image-1", name: "cover.jpg", file: {} },
       ],
-      "/Collections",
-      "https://index.example",
-      "token"
-    )
+      currentPath: "/Collections",
+      origin: "https://index.example",
+      hashedPassword: "token",
+    })
     expect(nodes).toMatchObject([
       {
         kind: "resolvable",
@@ -626,7 +626,7 @@ describe("OneDrive source adapter", () => {
 })
 
 describe("Google Drive public files source adapter", () => {
-  const plugin = LYNVO_PLUGIN_CATALOG[1]
+  const [, plugin] = LYNVO_PLUGIN_CATALOG
   const folderItem = [
     "folder-id",
     ["parent-id"],

@@ -84,7 +84,9 @@ export const getFilenameFromUrl = (url: string): string => {
     if (queryFilename) {
       return decodeURIComponent(queryFilename.trim())
     }
-    const lastPathPart = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
+    const lastPathPart = parsedUrl.pathname
+      .split("/")
+      .findLast((pathPart) => pathPart.length > 0)
     return lastPathPart && lastPathPart.length > 1
       ? decodeURIComponent(lastPathPart)
       : parsedUrl.hostname

@@ -77,8 +77,8 @@ describe("Plugin Server request logging", () => {
         drain: (context) => {
           drained.push(context)
         },
-        keep: (context) => {
-          shouldKeep = context.shouldKeep
+        keep: ({ shouldKeep: nextShouldKeep }) => {
+          shouldKeep = nextShouldKeep
         },
       })
     )

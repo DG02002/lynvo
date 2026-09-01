@@ -94,9 +94,9 @@ export const selectCustomPluginServer = Effect.fn(
     )
   }
 
-  const enabledPluginServers = [...pluginServers]
+  const enabledPluginServers = pluginServers
     .filter(isPluginServerUsable)
-    .sort((left, right) => right.priority - left.priority)
+    .toSorted((left, right) => right.priority - left.priority)
 
   for (const pluginServer of enabledPluginServers) {
     const manifest = yield* decodePluginServerManifest(pluginServer.manifest)

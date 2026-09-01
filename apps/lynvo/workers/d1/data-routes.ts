@@ -254,6 +254,72 @@ const createOrUpdateSchema = Schema.Struct({
   extractionState: Schema.optional(Schema.Literal("queued")),
 })
 
+interface CreateOrUpdateLinkOptions {
+  readonly context: DataRouteContext
+  readonly preparation: DataRequestReady
+  readonly body: Schema.Schema.Type<typeof createOrUpdateSchema>
+}
+
+const createOrUpdateLink = async ({
+  context,
+  preparation,
+  body,
+}: CreateOrUpdateLinkOptions): Promise<Response> => {
+  const now = Date.now()
+  let sourceInput: ReturnType<typeof extractHttpBasicCredential>
+  try {
+    sourceInput = extractHttpBasicCredential(body.url)
+  } catch {
+    return await respondDataFailure({
+      context,
+      status: 400,
+      kind: "validation",
+      message: "Enter a valid URL.",
+    })
+  }
+  let extractionCredential: SavedLinkExtractionCredentialWrite | null = null
+  if (body.extractionState === "queued" && sourceInput.basicAuth) {
+    extractionCredential = {
+      targetUrl: sourceInput.url,
+      record: await encryptSavedLinkExtractionCredential(context.env, {
+        userId: preparation.session.userId,
+        targetUrl: sourceInput.url,
+        basicAuth: sourceInput.basicAuth,
+      }),
+      now,
+    }
+  }
+  const normalizedInput = {
+    ...body,
+    url: sourceInput.url,
+    now,
+  }
+  const result =
+    body.extractionState === "queued"
+      ? await enqueueSavedLinkExtraction(
+          preparation.database,
+          preparation.session.userId,
+          { ...normalizedInput, extractionCredential }
+        )
+      : await createOrUpdateSavedLink(
+          preparation.database,
+          preparation.session.userId,
+          normalizedInput
+        )
+  await notifyAccountDataChanged(
+    context.env,
+    preparation.session.userId,
+    result.dataVersion
+  )
+  if (result.id && body.extractionState === "queued") {
+    safeWaitUntil(
+      context,
+      processSavedLinkExtraction(context.env, preparation.database, result.id)
+    )
+  }
+  return context.json(result)
+}
+
 const updateMetaSchema = Schema.Struct({
   operationId: Schema.NonEmptyString,
   id: Schema.NonEmptyString,
@@ -379,60 +445,11 @@ dataApp.post("/links/create-or-update", async (context) => {
   if (requestBody.kind === "invalid") {
     return requestBody.response
   }
-  const { body } = requestBody
-  const now = Date.now()
-  let sourceInput: ReturnType<typeof extractHttpBasicCredential>
-  try {
-    sourceInput = extractHttpBasicCredential(body.url)
-  } catch {
-    return await respondDataFailure({
-      context,
-      status: 400,
-      kind: "validation",
-      message: "Enter a valid URL.",
-    })
-  }
-  let extractionCredential: SavedLinkExtractionCredentialWrite | null = null
-  if (body.extractionState === "queued" && sourceInput.basicAuth) {
-    extractionCredential = {
-      targetUrl: sourceInput.url,
-      record: await encryptSavedLinkExtractionCredential(context.env, {
-        userId: preparation.session.userId,
-        targetUrl: sourceInput.url,
-        basicAuth: sourceInput.basicAuth,
-      }),
-      now,
-    }
-  }
-  const normalizedInput = {
-    ...body,
-    url: sourceInput.url,
-    now,
-  }
-  const result =
-    body.extractionState === "queued"
-      ? await enqueueSavedLinkExtraction(
-          preparation.database,
-          preparation.session.userId,
-          { ...normalizedInput, extractionCredential }
-        )
-      : await createOrUpdateSavedLink(
-          preparation.database,
-          preparation.session.userId,
-          normalizedInput
-        )
-  await notifyAccountDataChanged(
-    context.env,
-    preparation.session.userId,
-    result.dataVersion
-  )
-  if (result.id && body.extractionState === "queued") {
-    safeWaitUntil(
-      context,
-      processSavedLinkExtraction(context.env, preparation.database, result.id)
-    )
-  }
-  return context.json(result)
+  return createOrUpdateLink({
+    context,
+    preparation,
+    body: requestBody.body,
+  })
 })
 
 dataApp.post("/links/update-meta", async (context) => {

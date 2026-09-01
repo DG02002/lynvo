@@ -3,8 +3,6 @@ import type { MDXComponents } from "mdx/types.js"
 import type { LynvoPlugin } from "./features/site/settings/plugin-settings-data"
 import type { PluginIconSource } from "./lib/plugin-icons"
 
-export {}
-
 declare global {
   const __BUILD_TIME__: string
 

@@ -13,7 +13,6 @@ import type {
   ExtractSuccessResponse,
   PluginServerManifest,
   UsageResponse,
-  VerifyErrorResponse,
 } from "./models.js"
 
 const issue = (path: string, message: string): ContractIssue => ({

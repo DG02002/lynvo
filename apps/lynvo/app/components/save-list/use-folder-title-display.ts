@@ -9,10 +9,10 @@ export const FOLDER_TITLE_DISPLAY_STORAGE_KEY =
 
 const FOLDER_TITLE_DISPLAY_EVENT = "lynvo:folder-title-display-changed"
 
-const folderTitleDisplayValues: readonly string[] = ["episode", "filename"]
+const folderTitleDisplayValues = new Set<string>(["episode", "filename"])
 
 const isFolderTitleDisplay = (value: string): value is FolderTitleDisplay =>
-  folderTitleDisplayValues.includes(value)
+  folderTitleDisplayValues.has(value)
 
 const subscribeToFolderTitleDisplay = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange)

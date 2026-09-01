@@ -20,15 +20,20 @@ minimumReleaseAgeStrict: true
 strictDepBuilds: true
 
 catalog:
-  '@oxlint/plugins': ^1.78.0
-  '@cloudflare/workers-types': 5.20260811.1
+  "@oxlint/plugins": ^1.78.0
+  "@cloudflare/vitest-pool-workers": 0.22.0
+  "@cloudflare/workers-types": 5.20260811.1
+  "@types/node": ^26.2.0
   cheerio: ^1.2.0
+  effect: rc
+  evlog: 2.25.0
   hono: 4.13.1
   husky: 9.1.7
   lint-staged: 17.3.0
   oxfmt: ^0.63.0
   oxlint: ^1.78.0
   sharp: ^0.35.3
+  tsx: ^4.23.12
   typescript: ^7.0.2
   vite: ^8.2.1
   vitest: ^4.1.10

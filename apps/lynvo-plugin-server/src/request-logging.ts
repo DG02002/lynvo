@@ -70,7 +70,7 @@ export const pluginServerRequestLogging = (
         instance_id: context.env.CF_VERSION_METADATA?.id ?? "development",
       })
       await next()
-      const status = context.res.status
+      const { status } = context.res
       const errorCode =
         status >= 400 ? await readProtocolErrorCode(context.res) : undefined
       const logger = context.get("log")

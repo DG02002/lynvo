@@ -275,9 +275,13 @@ export interface PluginServerRuntimeDiscoverOptions<Env> {
 
 export type PluginServerRuntimeManifest<Env> =
   | PluginServerManifest
-  | ((
-      context: PluginServerRuntimeContext<Env>
-    ) => Promise<PluginServerManifest> | PluginServerManifest)
+  | PluginServerManifestFactory<Env>
+
+export interface PluginServerManifestFactory<Env> {
+  (
+    context: PluginServerRuntimeContext<Env>
+  ): Promise<PluginServerManifest> | PluginServerManifest
+}
 
 export interface PluginServerRuntimeAcceptedContext<Env> {
   readonly request: ExtractRequest

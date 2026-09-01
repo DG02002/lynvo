@@ -35,6 +35,27 @@
       "rules": {
         "max-params": "off"
       }
+    },
+    {
+      "files": ["apps/lynvo/app/lib/player-utils.ts"],
+      "rules": {
+        "consistent-function-scoping": "off"
+      }
+    },
+    {
+      "files": ["packages/plugin-server-protocol/src/runtime.ts"],
+      "rules": {
+        "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }]
+      }
+    },
+    {
+      "files": ["apps/lynvo/tests/**"],
+      "rules": {
+        "consistent-function-scoping": "off",
+        "max-params": "off",
+        "max-statements": "off",
+        "no-await-in-loop": "off"
+      }
     }
   ],
   "rules": {
@@ -69,6 +90,7 @@
     "no-duplicate-imports": "warn",
     "no-useless-catch": "warn",
     "consistent-type-imports": "warn",
+    "no-underscore-dangle": ["warn", { "allow": ["_tag", "__BUILD_TIME__"] }],
     "@typescript-eslint/no-unused-vars": "warn"
   }
 }

@@ -32,6 +32,25 @@ interface LinkSelectionDialogProps {
   preSelectedIds?: string[]
 }
 
+const findLink = (
+  items: ExtractedLink[],
+  targetId: string
+): ExtractedLink | undefined => {
+  for (const item of items) {
+    const itemId = getMediaNodeKey(item)
+    if (itemId === targetId) {
+      return item
+    }
+    if (item.children) {
+      const found = findLink(item.children, targetId)
+      if (found) {
+        return found
+      }
+    }
+  }
+  return undefined
+}
+
 export function LinkSelectionDialog({
   open,
   onOpenChange,
@@ -68,25 +87,6 @@ export function LinkSelectionDialog({
     (id: string) => {
       setSelectedIds((prev) => {
         const next = new Set(prev)
-
-        const findLink = (
-          items: ExtractedLink[],
-          targetId: string
-        ): ExtractedLink | undefined => {
-          for (const item of items) {
-            const itemId = getMediaNodeKey(item)
-            if (itemId === targetId) {
-              return item
-            }
-            if (item.children) {
-              const found = findLink(item.children, targetId)
-              if (found) {
-                return found
-              }
-            }
-          }
-          return undefined
-        }
 
         const targetLink = findLink(links, id)
         if (!targetLink) {

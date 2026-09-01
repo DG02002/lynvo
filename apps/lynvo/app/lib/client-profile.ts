@@ -15,4 +15,5 @@ const hasTvBroBridge = () =>
 export const getCurrentClientProfile = () =>
   getClientProfile({ hasTvBroBridge: hasTvBroBridge() })
 
-export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro"in window))return;document.documentElement.setAttribute(${JSON.stringify(CLIENT_PROFILE_ATTRIBUTE)},${JSON.stringify(TVBRO_ANDROID_TV_PROFILE)})}catch{}})()`
+export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT =
+  '(()=>{try{if(!("TVBro"in window))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()'

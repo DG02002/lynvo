@@ -18,21 +18,36 @@ concurrency:
 
 jobs:
   build:
+    name: Build package
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --no-experimental-webstorage
+      GOOGLE_CLIENT_ID: ci-test-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-test-google-client-secret
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: ci-test-plugin-credential-encryption-key
+      MANAGED_PLUGIN_SERVER_API_KEY: ci-test-managed-plugin-server-api-key
+      TMDB_API_READ_ACCESS_TOKEN: ci-test-tmdb-api-read-access-token
+      PLUGIN_SERVER_AUTH_KEY: ci-test-plugin-server-auth-key
     outputs:
       package-version: ${{ steps.release.outputs.package-version }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f3391d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          runtime: node@26.7.0
-          cache: false
-          install: false
+          version: 12.0.0-rc.11
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 26.7.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install the tagged dependency graph
         run: pnpm install --frozen-lockfile
@@ -95,6 +110,7 @@ jobs:
           retention-days: 1
 
   publish:
+    name: Publish package
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

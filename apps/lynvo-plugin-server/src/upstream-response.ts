@@ -18,35 +18,39 @@ const validateUpstreamUrl = (targetUrl: string): URL => {
   }
 }
 
-export const fetchValidatedUpstream = async (
+const fetchValidatedUpstreamUrl = async (
+  currentUrl: URL,
+  options: RequestInit,
+  redirectCount: number
+): Promise<Response> => {
+  const response = await fetch(currentUrl, {
+    ...options,
+    redirect: "manual",
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  })
+  if (!REDIRECT_STATUSES.has(response.status)) {
+    return response
+  }
+  if (redirectCount >= UPSTREAM_REDIRECT_LIMIT) {
+    throw new Error("Upstream redirect limit exceeded.")
+  }
+  const location = response.headers.get("Location")
+  if (!location) {
+    throw new Error("Upstream redirect omitted its destination.")
+  }
+  const nextUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
+  return fetchValidatedUpstreamUrl(nextUrl, options, redirectCount + 1)
+}
+
+export const fetchValidatedUpstream = (
   targetUrl: string | URL,
   options: RequestInit
-): Promise<Response> => {
-  let currentUrl = validateUpstreamUrl(targetUrl.toString())
-  for (
-    let redirectCount = 0;
-    redirectCount <= UPSTREAM_REDIRECT_LIMIT;
-    redirectCount += 1
-  ) {
-    const response = await fetch(currentUrl, {
-      ...options,
-      redirect: "manual",
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-    })
-    if (!REDIRECT_STATUSES.has(response.status)) {
-      return response
-    }
-    if (redirectCount === UPSTREAM_REDIRECT_LIMIT) {
-      throw new Error("Upstream redirect limit exceeded.")
-    }
-    const location = response.headers.get("Location")
-    if (!location) {
-      throw new Error("Upstream redirect omitted its destination.")
-    }
-    currentUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
-  }
-  throw new Error("Upstream redirect limit exceeded.")
-}
+): Promise<Response> =>
+  fetchValidatedUpstreamUrl(
+    validateUpstreamUrl(targetUrl.toString()),
+    options,
+    0
+  )
 
 export const readBoundedUpstreamText = async (
   response: Response
@@ -63,20 +67,23 @@ export const readBoundedUpstreamText = async (
     return ""
   }
   const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let byteCount = 0
-  while (true) {
+  const readChunks = async (
+    chunks: Uint8Array[],
+    byteCount: number
+  ): Promise<{ chunks: Uint8Array[]; byteCount: number }> => {
     const result = await reader.read()
     if (result.done) {
-      break
+      return { chunks, byteCount }
     }
-    byteCount += result.value.byteLength
-    if (byteCount > UPSTREAM_RESPONSE_BYTE_LIMIT) {
+    const nextByteCount = byteCount + result.value.byteLength
+    if (nextByteCount > UPSTREAM_RESPONSE_BYTE_LIMIT) {
       await reader.cancel()
       throw new Error("Upstream response exceeded its byte limit.")
     }
     chunks.push(result.value)
+    return readChunks(chunks, nextByteCount)
   }
+  const { chunks, byteCount } = await readChunks([], 0)
   const bytes = new Uint8Array(byteCount)
   let offset = 0
   for (const chunk of chunks) {

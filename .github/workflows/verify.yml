@@ -9,11 +9,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   HUSKY: 0
 
 jobs:
   workflow-security:
+    name: Workflow security
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,27 +29,59 @@ jobs:
           advanced-security: false
 
   verify:
+    name: Repository verification
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      NODE_OPTIONS: --no-experimental-webstorage
+      GOOGLE_CLIENT_ID: ci-test-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-test-google-client-secret
+      PLUGIN_CREDENTIAL_ENCRYPTION_KEY: ci-test-plugin-credential-encryption-key
+      MANAGED_PLUGIN_SERVER_API_KEY: ci-test-managed-plugin-server-api-key
+      TMDB_API_READ_ACCESS_TOKEN: ci-test-tmdb-api-read-access-token
+      PLUGIN_SERVER_AUTH_KEY: ci-test-plugin-server-auth-key
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          runtime: node@26.7.0
-          cache: true
-          install: false
-      - run: pnpm install --frozen-lockfile
+          version: 12.0.0-rc.11
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 26.7.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install the verified dependency graph
+        run: pnpm install --frozen-lockfile
       - name: Verify generated assets are committed
         run: |
           pnpm images:optimize
           pnpm --filter @lynvo/lynvo-plugin-server images:optimize
           git diff --exit-code
-      - run: pnpm check
-      - run: pnpm test
-      - run: pnpm build
-      - run: pnpm check:plugin-server-release
+      - name: Run repository checks
+        run: pnpm check
+      - name: Run the test suites
+        run: pnpm test
+      - name: Build the verified release
+        run: pnpm build
+      - name: Verify publishable package contents
+        run: pnpm check:plugin-server-release
+      - name: Upload verified release artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lynvo-release-${{ github.sha }}
+          path: |
+            apps/lynvo/build/client
+            apps/lynvo/build/server
+            apps/lynvo/dist/lynvo_plugin_server
+            !apps/lynvo/build/server/.dev.vars
+            !apps/lynvo/dist/lynvo_plugin_server/.dev.vars
+          if-no-files-found: error
+          retention-days: 1
 
   deploy-production:
     name: Deploy production
@@ -82,11 +118,16 @@ jobs:
             fi
           done
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+      - name: Set up pnpm
+        uses: pnpm/action-setup@fc06bc1257f3391d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          runtime: node@26.7.0
-          cache: true
-          install: false
+          version: 12.0.0-rc.11
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 26.7.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install the verified dependency graph
         run: pnpm install --frozen-lockfile
@@ -105,8 +146,11 @@ jobs:
           LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
         run: SERVICE_VERSION="$LYNVO_VERSION" pnpm --filter @lynvo/app preflight
 
-      - name: Build release artifacts
-        run: pnpm build
+      - name: Download the verified release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: lynvo-release-${{ github.sha }}
+          path: apps/lynvo
 
       - name: Apply pending D1 migrations to production
         working-directory: apps/lynvo
@@ -126,8 +170,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PLUGIN_SERVER_VERSION: ${{ steps.release.outputs.plugin_server_version }}
         run: >-
-          pnpm --filter @lynvo/lynvo-plugin-server exec wrangler deploy
-          --config wrangler.jsonc
+          pnpm --filter @lynvo/app exec wrangler deploy
+          --config dist/lynvo_plugin_server/wrangler.json
           --env=""
           --message "GitHub ${COMMIT_HASH}"
           --var "SERVICE_VERSION:$PLUGIN_SERVER_VERSION"
@@ -192,8 +236,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: >-
-          pnpm --filter @lynvo/lynvo-plugin-server exec wrangler rollback
-          --config wrangler.jsonc
+          pnpm --filter @lynvo/app exec wrangler rollback
+          --config dist/lynvo_plugin_server/wrangler.json
           --env=""
           --message "Automatic rollback after downstream release failure for ${COMMIT_HASH}"
           --yes

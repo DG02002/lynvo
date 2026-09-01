@@ -8,8 +8,8 @@ export const remotePlaybackIntentSchema = Schema.Struct({
     Schema.refine(
       (val): val is string => {
         try {
-          new URL(val)
-          return true
+          const parsedUrl = new URL(val)
+          return parsedUrl.protocol.length > 0
         } catch {
           return false
         }

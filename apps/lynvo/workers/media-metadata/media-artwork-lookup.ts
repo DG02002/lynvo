@@ -76,11 +76,12 @@ const toCandidates = (
   results: readonly TmdbSearchResult[] | undefined
 ): readonly MediaArtworkCandidate[] | undefined =>
   results?.length
-    ? results.slice(0, 5).map((result) => ({
-        ...toIdentity(result),
-        mediaKind,
-        posterPath: result.posterPath,
-      }))
+    ? results.slice(0, 5).map((result) =>
+        Object.assign({}, toIdentity(result), {
+          mediaKind,
+          posterPath: result.posterPath,
+        })
+      )
     : undefined
 
 /**

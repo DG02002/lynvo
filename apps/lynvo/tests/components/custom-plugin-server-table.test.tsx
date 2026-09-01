@@ -5,7 +5,7 @@ import { TooltipProvider } from "~/components/ui/tooltip"
 import { CustomPluginServerTable } from "~/features/site/settings/custom-plugin-server-table"
 
 const pluginServer = {
-  _id: "plugin-server-one",
+  id: "plugin-server-one",
   baseUrl: "http://localhost:8788",
   manifest: JSON.stringify({
     protocolVersion: "1.0",

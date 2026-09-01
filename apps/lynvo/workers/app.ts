@@ -1068,9 +1068,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     }
   }
 
-  webSocketClose(socket: WebSocket, code: number, reason: string): void {
-    socket.close(code, reason)
-  }
+  webSocketClose(): void {}
 
   webSocketError(socket: WebSocket): void {
     socket.close(1011, "WebSocket error")

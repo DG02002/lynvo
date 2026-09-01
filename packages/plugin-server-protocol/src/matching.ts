@@ -48,48 +48,48 @@ const patternToExpression = (
   return new RegExp(`^${expression}$`, "i")
 }
 
+const matchesPluginServerMatcher = (
+  parsedUrl: URL,
+  matcher: PluginServerMatcher
+): boolean => {
+  const { hostname, pathname, protocol } = parsedUrl
+  const scheme = protocol.replace(":", "")
+  const schemes = new Set(matcher.schemes ?? ["https"])
+  if (!schemes.has(scheme)) {
+    return false
+  }
+
+  const normalizedHostname = hostname.toLowerCase()
+  const hosts = new Set(matcher.hosts.map((host) => host.toLowerCase()))
+  const matchesHost =
+    hosts.has(normalizedHostname) ||
+    Boolean(
+      matcher.hostPatterns?.some((pattern) =>
+        patternToExpression(pattern, ".*").test(normalizedHostname)
+      )
+    )
+  if (!matchesHost) {
+    return false
+  }
+
+  const pathPatterns = matcher.pathPatterns ?? ["/**"]
+  return pathPatterns.some((pattern) =>
+    patternToExpression(pattern, "[^/]*").test(pathname)
+  )
+}
+
 export const matchPluginServerUrl = (
   targetUrl: string,
   matchers: readonly PluginServerMatcher[]
 ): boolean => {
   try {
-    const parsed = new URL(targetUrl)
-    const hostname = parsed.hostname.toLowerCase()
-    const pathname = parsed.pathname
-    const scheme = parsed.protocol.replace(":", "")
-
-    for (const matcher of matchers) {
-      const schemes = new Set(matcher.schemes ?? ["https"])
-      if (!schemes.has(scheme)) {
-        continue
-      }
-
-      const hosts = new Set(matcher.hosts.map((host) => host.toLowerCase()))
-      let didHostMatch = hosts.has(hostname)
-
-      if (!didHostMatch && matcher.hostPatterns) {
-        didHostMatch = matcher.hostPatterns.some((pattern) =>
-          patternToExpression(pattern, ".*").test(hostname)
-        )
-      }
-
-      if (!didHostMatch) {
-        continue
-      }
-
-      const pathPatterns = matcher.pathPatterns ?? ["/**"]
-      const didPathMatch = pathPatterns.some((pattern) =>
-        patternToExpression(pattern, "[^/]*").test(pathname)
-      )
-
-      if (didPathMatch) {
-        return true
-      }
-    }
+    const parsedUrl = new URL(targetUrl)
+    return matchers.some((matcher) =>
+      matchesPluginServerMatcher(parsedUrl, matcher)
+    )
   } catch {
     return false
   }
-  return false
 }
 
 export const getExtractTargetUrl = (request: ExtractRequest): string =>

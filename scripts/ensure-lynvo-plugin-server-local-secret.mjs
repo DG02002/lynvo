@@ -30,6 +30,13 @@ const readSecretValue = (contents, secretName) =>
     .find((line) => line.startsWith(`${secretName}=`))
     ?.slice(secretName.length + 1)
 
+const getSecretFilePrefix = (contents) => {
+  if (!contents) {
+    return ""
+  }
+  return contents.endsWith("\n") ? contents : `${contents}\n`
+}
+
 const contents = await Promise.all(
   secretConfigs.map((config) => readSecretFile(config.path))
 )
@@ -49,11 +56,7 @@ const secret = existingValues[0] ?? randomBytes(32).toString("base64url")
 await Promise.all(
   secretConfigs.map(async (config, index) => {
     if (!readSecretValue(contents[index], config.secretName)) {
-      const prefix = contents[index].length
-        ? contents[index].endsWith("\n")
-          ? contents[index]
-          : `${contents[index]}\n`
-        : ""
+      const prefix = getSecretFilePrefix(contents[index])
       await writeFile(
         config.path,
         `${prefix}${config.secretName}=${secret}\n`,

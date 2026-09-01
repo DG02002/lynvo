@@ -17,11 +17,26 @@ import {
   getMatchedPlugin,
 } from "./matching.js"
 import type {
+  ExtractRequest,
   PluginServerManifest,
+  PluginServerManifestFactory,
   PluginServerRuntime,
+  PluginServerRuntimeManifest,
   PluginServerRuntimeOptions,
   VerifySuccessResponse,
 } from "./models.js"
+
+interface ExtractExecutionOptions<Env> {
+  readonly request: Request
+  readonly env: Env
+  readonly parsedRequest: ExtractRequest
+  readonly targetUrl: string
+}
+
+const isManifestFactory = <Env>(
+  manifest: PluginServerRuntimeManifest<Env>
+): manifest is PluginServerManifestFactory<Env> =>
+  typeof manifest === "function"
 
 const jsonResponse = <Value>(value: Value, status = 200): Response =>
   Response.json(value, { status })
@@ -33,10 +48,9 @@ export const createPluginServerRuntime = <Env>(
     request: Request,
     env: Env
   ): Promise<PluginServerManifest | undefined> => {
-    const value =
-      options.manifest instanceof Function
-        ? await options.manifest({ request, env })
-        : options.manifest
+    const value = isManifestFactory(options.manifest)
+      ? await options.manifest({ request, env })
+      : options.manifest
     const parsed = parsePluginServerManifestContract(value)
     return parsed.ok && parsed.value ? parsed.value : undefined
   }
@@ -67,6 +81,57 @@ export const createPluginServerRuntime = <Env>(
           createProtocolError("AUTH_INVALID", "API key was rejected."),
           401
         )
+  }
+
+  const executeExtract = async ({
+    request,
+    env,
+    parsedRequest,
+    targetUrl,
+  }: ExtractExecutionOptions<Env>): Promise<Response> => {
+    try {
+      const result = await options.extract({
+        request: parsedRequest,
+        targetUrl,
+        env,
+      })
+      const parsedResult = parseExtractSuccessContract(result)
+      const successResult = parsedResult.ok ? parsedResult.value : undefined
+      if (!successResult) {
+        return jsonResponse(
+          createProtocolError(
+            "PROTOCOL_MISMATCH",
+            "Plugin Server returned an invalid response."
+          ),
+          500
+        )
+      }
+      await runHook(
+        async () => {
+          await options.onExtractResult?.({
+            request: parsedRequest,
+            result: successResult,
+            runtimeContext: { request, env },
+          })
+        },
+        request,
+        env
+      )
+      return jsonResponse(successResult)
+    } catch (error) {
+      options.onError?.(error, { request, env })
+      if (isProtocolError(error)) {
+        return toProtocolErrorResponse(error)
+      }
+      const message = error instanceof Error ? error.message : String(error)
+      return jsonResponse(
+        createProtocolError(
+          "TEMPORARY_FAILURE",
+          message || "Failed to extract links."
+        ),
+        500
+      )
+    }
   }
 
   return {
@@ -174,7 +239,6 @@ export const createPluginServerRuntime = <Env>(
       if (authFailure) {
         return authFailure
       }
-
       let body: unknown
       try {
         body = await request.json()
@@ -184,7 +248,6 @@ export const createPluginServerRuntime = <Env>(
           400
         )
       }
-
       const parsed = Schema.decodeUnknownResult(extractRequestSchema)(body)
       if (Result.isFailure(parsed)) {
         return jsonResponse(
@@ -192,8 +255,8 @@ export const createPluginServerRuntime = <Env>(
           400
         )
       }
-
-      const targetUrl = getExtractTargetUrl(parsed.success)
+      const parsedRequest = parsed.success
+      const targetUrl = getExtractTargetUrl(parsedRequest)
       const manifest = await resolveManifest(request, env)
       if (!manifest) {
         return protocolMismatchResponse(
@@ -216,7 +279,7 @@ export const createPluginServerRuntime = <Env>(
       await runHook(
         async () => {
           await options.onExtractAccepted?.({
-            request: parsed.success,
+            request: parsedRequest,
             targetUrl,
             manifest,
             matchedPluginId,
@@ -226,50 +289,7 @@ export const createPluginServerRuntime = <Env>(
         request,
         env
       )
-
-      try {
-        const result = await options.extract({
-          request: parsed.success,
-          targetUrl,
-          env,
-        })
-        const parsedResult = parseExtractSuccessContract(result)
-        const successResult = parsedResult.ok ? parsedResult.value : undefined
-        if (!successResult) {
-          return jsonResponse(
-            createProtocolError(
-              "PROTOCOL_MISMATCH",
-              "Plugin Server returned an invalid response."
-            ),
-            500
-          )
-        }
-        await runHook(
-          async () => {
-            await options.onExtractResult?.({
-              request: parsed.success,
-              result: successResult,
-              runtimeContext: { request, env },
-            })
-          },
-          request,
-          env
-        )
-        return jsonResponse(successResult)
-      } catch (error) {
-        options.onError?.(error, { request, env })
-        if (isProtocolError(error)) {
-          return toProtocolErrorResponse(error)
-        }
-        const message = error instanceof Error ? error.message : String(error)
-        return jsonResponse(
-          createProtocolError(
-            "TEMPORARY_FAILURE",
-            message || "Failed to extract links."
-          ),
-          500
-        )
-      }
+      return executeExtract({ request, env, parsedRequest, targetUrl })
     },
   }
 }

@@ -1,7 +1,5 @@
 import type { LinkListItem } from "../types"
 
-export {}
-
 declare global {
   interface MediaClassificationCandidate {
     readonly kind:

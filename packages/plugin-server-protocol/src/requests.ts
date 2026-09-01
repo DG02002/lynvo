@@ -6,6 +6,21 @@ import type {
   ProxyCredential,
 } from "./models.js"
 
+export interface ExtractRequestOptions {
+  readonly password?: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly pluginId?: string
+  readonly proxy?: ProxyCredential
+}
+
+export interface CreateSourceExtractRequestOptions extends ExtractRequestOptions {
+  readonly sourceUrl: string
+}
+
+export interface CreateNodeExtractRequestOptions extends ExtractRequestOptions {
+  readonly nodeUrl: string
+}
+
 export const createProtocolError = (
   code: ErrorCode,
   message: string,
@@ -23,36 +38,34 @@ export const createProtocolError = (
         extensions: {},
       }
 
-export const createSourceExtractRequest = (
-  sourceUrl: string,
-  password?: string,
-  basicAuth?: HttpBasicAuth,
-  pluginId?: string,
-  proxy?: ProxyCredential
+const createExtractRequest = (
+  input: ExtractRequest["input"],
+  options: ExtractRequestOptions
 ): ExtractRequest => {
-  const input = { kind: "source" as const, sourceUrl }
-  const request = { input }
-  const withPluginId = pluginId ? { ...request, pluginId } : request
-  const withPassword = password ? { ...withPluginId, password } : withPluginId
-  const withBasicAuth = basicAuth
-    ? { ...withPassword, basicAuth }
-    : withPassword
-  return proxy ? { ...withBasicAuth, proxy } : withBasicAuth
+  let request: ExtractRequest = { input }
+  if (options.pluginId) {
+    request = { ...request, pluginId: options.pluginId }
+  }
+  if (options.password) {
+    request = { ...request, password: options.password }
+  }
+  if (options.basicAuth) {
+    request = { ...request, basicAuth: options.basicAuth }
+  }
+  if (options.proxy) {
+    request = { ...request, proxy: options.proxy }
+  }
+  return request
 }
 
-export const createNodeExtractRequest = (
-  nodeUrl: string,
-  password?: string,
-  basicAuth?: HttpBasicAuth,
-  pluginId?: string,
-  proxy?: ProxyCredential
-): ExtractRequest => {
-  const input = { kind: "node" as const, nodeUrl }
-  const request = { input }
-  const withPluginId = pluginId ? { ...request, pluginId } : request
-  const withPassword = password ? { ...withPluginId, password } : withPluginId
-  const withBasicAuth = basicAuth
-    ? { ...withPassword, basicAuth }
-    : withPassword
-  return proxy ? { ...withBasicAuth, proxy } : withBasicAuth
-}
+export const createSourceExtractRequest = ({
+  sourceUrl,
+  ...options
+}: CreateSourceExtractRequestOptions): ExtractRequest =>
+  createExtractRequest({ kind: "source", sourceUrl }, options)
+
+export const createNodeExtractRequest = ({
+  nodeUrl,
+  ...options
+}: CreateNodeExtractRequestOptions): ExtractRequest =>
+  createExtractRequest({ kind: "node", nodeUrl }, options)

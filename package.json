@@ -1,10 +1,6 @@
 {
   "name": "lynvo-workspace",
   "private": true,
-  "packageManager": "pnpm@12.0.0-rc.11+sha512-bvsp9IFNxLmnHWBzjpjPuWNPYuepSrKyMUcYDRuA+1+u1gBKQHvzymWkuBAbn/lmIHj6OnD0vbBc/15D1npf5g==",
-  "engines": {
-    "node": "26.7.0"
-  },
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
@@ -27,7 +23,11 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "sharp": "catalog:",
-    "tsx": "^4.23.12",
+    "tsx": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "engines": {
+    "node": "26.7.0"
+  },
+  "packageManager": "pnpm@12.0.0-rc.11+sha512-bvsp9IFNxLmnHWBzjpjPuWNPYuepSrKyMUcYDRuA+1+u1gBKQHvzymWkuBAbn/lmIHj6OnD0vbBc/15D1npf5g=="
 }

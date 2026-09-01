@@ -49,23 +49,58 @@ Options:
 const parseArguments = (argumentsList) => {
   const positionals = []
   const options = { force: false, skipInstall: false }
+  const optionHandlers = new Map([
+    [
+      "--help",
+      () => {
+        options.help = true
+      },
+    ],
+    [
+      "-h",
+      () => {
+        options.help = true
+      },
+    ],
+    [
+      "--version",
+      () => {
+        options.version = true
+      },
+    ],
+    [
+      "-v",
+      () => {
+        options.version = true
+      },
+    ],
+    [
+      "--force",
+      () => {
+        options.force = true
+      },
+    ],
+    [
+      "--skip-install",
+      () => {
+        options.skipInstall = true
+      },
+    ],
+    [
+      "--no-install",
+      () => {
+        options.skipInstall = true
+      },
+    ],
+  ])
 
   for (const argument of argumentsList) {
-    if (argument === "--") continue
-    if (argument === "--help" || argument === "-h") {
-      options.help = true
+    if (argument === "--") {
       continue
     }
-    if (argument === "--version" || argument === "-v") {
-      options.version = true
-      continue
-    }
-    if (argument === "--force") {
-      options.force = true
-      continue
-    }
-    if (argument === "--skip-install" || argument === "--no-install") {
-      options.skipInstall = true
+    const optionHandler = optionHandlers.get(argument)
+    if (optionHandler) {
+      optionHandler()
       continue
     }
     if (argument.startsWith("-")) {
@@ -96,7 +131,9 @@ const validateProjectName = (projectName) => {
 }
 
 const getDestination = (destinationArgument) => {
-  if (!destinationArgument) throw new Error("project directory is required")
+  if (!destinationArgument) {
+    throw new Error("project directory is required")
+  }
   if (destinationArgument.startsWith("-")) {
     throw new Error("project directory must not start with a dash")
   }
@@ -116,7 +153,9 @@ const isDirectoryEmpty = async (directory) => {
   try {
     return (await readdir(directory)).length === 0
   } catch (error) {
-    if (error.code === "ENOENT") return true
+    if (error.code === "ENOENT") {
+      return true
+    }
     throw error
   }
 }
@@ -159,34 +198,34 @@ const replaceTemplateTokens = (content, values) => {
   return result
 }
 
+const copyTemplateEntry = async (destination, values, entry) => {
+  const source = join(entry.parentPath, entry.name)
+  const templatePath = relative(templateRoot, source)
+  const relativePath =
+    templatePath === "gitignore" ? ".gitignore" : templatePath
+  const target = join(destination, relativePath)
+  await mkdir(dirname(target), { recursive: true })
+
+  if (TEXT_EXTENSIONS.has(extname(entry.name)) || entry.name === ".gitignore") {
+    const content = replaceTemplateTokens(
+      await readFile(source, "utf8"),
+      values
+    )
+    await writeFile(target, content)
+    return
+  }
+  await cp(source, target)
+}
+
 const copyTemplate = async (destination, values) => {
   const entries = await readdir(templateRoot, {
     withFileTypes: true,
     recursive: true,
   })
-
-  for (const entry of entries) {
-    if (!entry.isFile()) continue
-    const source = join(entry.parentPath, entry.name)
-    const templatePath = relative(templateRoot, source)
-    const relativePath =
-      templatePath === "gitignore" ? ".gitignore" : templatePath
-    const target = join(destination, relativePath)
-    await mkdir(dirname(target), { recursive: true })
-
-    if (
-      TEXT_EXTENSIONS.has(extname(entry.name)) ||
-      entry.name === ".gitignore"
-    ) {
-      const content = replaceTemplateTokens(
-        await readFile(source, "utf8"),
-        values
-      )
-      await writeFile(target, content)
-    } else {
-      await cp(source, target)
-    }
-  }
+  const files = entries.filter((entry) => entry.isFile())
+  await Promise.all(
+    files.map((entry) => copyTemplateEntry(destination, values, entry))
+  )
 }
 
 const runInstall = (destination) =>

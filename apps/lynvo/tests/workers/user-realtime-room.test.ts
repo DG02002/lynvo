@@ -100,6 +100,25 @@ describe("UserRealtimeRoom session revalidation", () => {
   })
 })
 
+describe("UserRealtimeRoom close handling", () => {
+  it.each([1005, 1006])(
+    "does not echo reserved close code %s",
+    async (code) => {
+      const { UserRealtimeRoom } = await import("../../workers/app")
+      const close = vi.fn(() => {
+        throw new Error(`Invalid WebSocket close code: ${code}`)
+      })
+      // SAFETY: The callback only uses WebSocket.close; this test double supplies that method.
+      const socket = { close } as WebSocket
+      // SAFETY: Object.create preserves the class prototype; the handler does not use instance state.
+      const room = Object.create(UserRealtimeRoom.prototype) as UserRealtimeRoom
+
+      expect(() => room.webSocketClose(socket, code, "")).not.toThrow()
+      expect(close).not.toHaveBeenCalled()
+    }
+  )
+})
+
 describe("UserRealtimeRoom inbox notification", () => {
   it.each([0, 2])("reports delivery to %s matching sockets", async (count) => {
     const { UserRealtimeRoom } = await import("../../workers/app")

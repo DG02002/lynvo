@@ -15,9 +15,7 @@ const flattenRouteEntries = (
   ])
 
 const flattenRoutePaths = (entries: readonly RouteEntry[]): string[] =>
-  entries.flatMap((entry) => [
-    ...(entry.path === undefined ? [] : [entry.path]),
-  ])
+  entries.flatMap((entry) => (entry.path === undefined ? [] : [entry.path]))
 
 const findRouteByFile = (suffix: string): RouteEntry | undefined =>
   flattenRouteEntries(routes).find((entry) => entry.file?.endsWith(suffix))

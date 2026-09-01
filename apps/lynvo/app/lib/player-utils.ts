@@ -181,38 +181,43 @@ export const openInPlayer = async (
   return openInSpecificPlayer(targetUrl, player)
 }
 
+const createPlayerVisibilityChangeHandler = (): (() => void) => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }
+  return handleVisibilityChange
+}
+
+const launchIntentViaAnchor = (intentUrl: string): boolean => {
+  try {
+    const anchor = document.createElement("a")
+    anchor.href = intentUrl
+    anchor.style.display = "none"
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  } catch {
+    return false
+  }
+  return true
+}
+
 export const openInSpecificPlayer = async (
   targetUrl: string,
   player: PlayerDefinition
 ) => {
   const intent = buildIntentUrl(targetUrl, player)
+  const visibilityChangeHandler = createPlayerVisibilityChangeHandler()
 
-  const visHandler = () => {
-    if (document.visibilityState === "hidden") {
-      document.removeEventListener("visibilitychange", visHandler)
-    }
-  }
-  document.addEventListener("visibilitychange", visHandler)
-
-  const launchIntentViaAnchor = (intentUrl: string) => {
-    try {
-      const a = document.createElement("a")
-      a.href = intentUrl
-      a.style.display = "none"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    } catch {
-      return false
-    }
-    return true
-  }
+  document.addEventListener("visibilitychange", visibilityChangeHandler)
 
   const isAndroid =
     globalThis.navigator !== undefined && /android/i.test(navigator.userAgent)
 
   if (!isAndroid || !launchIntentViaAnchor(intent)) {
-    document.removeEventListener("visibilitychange", visHandler)
+    document.removeEventListener("visibilitychange", visibilityChangeHandler)
     showPlayerLaunchError(player.name, player.iconUrl)
     return { expectsNavigation: false, player }
   }

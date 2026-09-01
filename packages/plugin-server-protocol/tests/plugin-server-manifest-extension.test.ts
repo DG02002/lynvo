@@ -270,20 +270,17 @@ describe("Lynvo manifest source credentials", () => {
   })
 
   it("round-trips a user proxy credential through the extract request", () => {
-    const request = createSourceExtractRequest(
-      "https://example.com/file",
-      undefined,
-      undefined,
-      undefined,
-      { provider: "scrape-do", token: "user-token" }
-    )
+    const request = createSourceExtractRequest({
+      sourceUrl: "https://example.com/file",
+      proxy: { provider: "scrape-do", token: "user-token" },
+    })
 
     expect(request).toMatchObject({
       input: { kind: "source", sourceUrl: "https://example.com/file" },
       proxy: { provider: "scrape-do", token: "user-token" },
     })
     expect(
-      createNodeExtractRequest("https://example.com/node").proxy
+      createNodeExtractRequest({ nodeUrl: "https://example.com/node" }).proxy
     ).toBeUndefined()
   })
 

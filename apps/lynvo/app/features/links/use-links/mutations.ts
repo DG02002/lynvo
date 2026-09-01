@@ -28,6 +28,50 @@ const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
     JSON.parse(JSON.stringify(metadata))
   )
 
+const toApiOperation = (
+  operation: LinkMetadataOperation,
+  expectedExtraction: readonly ExtractedLink[] | undefined
+): SavedLinkApiMetadataOperation | undefined => {
+  switch (operation.kind) {
+    case "markOpened": {
+      const { linkUrl } = operation
+      return linkUrl ? { kind: "markOpened", linkUrl } : undefined
+    }
+    case "setArtwork": {
+      const { providerId, title, year, mediaKind } = operation
+      return providerId !== undefined && title !== undefined
+        ? { kind: "setArtwork", providerId, title, year, mediaKind }
+        : undefined
+    }
+    case "cacheMirrors": {
+      const { lazyItemUrl, mirrors } = operation
+      return lazyItemUrl && mirrors
+        ? {
+            kind: "cacheMirrors",
+            lazyItemUrl,
+            mirrorsJson: JSON.stringify(mirrors),
+          }
+        : undefined
+    }
+    case "removeExtractedLink": {
+      const { linkKey, linkUrl } = operation
+      return linkKey && linkUrl
+        ? { kind: "removeExtractedLink", linkKey, linkUrl }
+        : undefined
+    }
+    case "replaceExtraction": {
+      const { extractedLinks } = operation
+      return extractedLinks && expectedExtraction
+        ? {
+            kind: "replaceExtraction",
+            expectedExtractionJson: JSON.stringify(expectedExtraction),
+            extractedLinksJson: JSON.stringify(extractedLinks),
+          }
+        : undefined
+    }
+  }
+}
+
 export interface LinksMutationTargets {
   readonly store: LinksSnapshotStore
   readonly runExclusive: <Result>(
@@ -136,50 +180,6 @@ export const createLinksMutations = ({
   ): Promise<string | undefined> => {
     const { item } = await buildQueuedLinkViewItem(targetUrl)
     return await persistLink(targetUrl, item, sourceUrl)
-  }
-
-  const toApiOperation = (
-    operation: LinkMetadataOperation,
-    expectedExtraction: readonly ExtractedLink[] | undefined
-  ): SavedLinkApiMetadataOperation | undefined => {
-    switch (operation.kind) {
-      case "markOpened": {
-        const { linkUrl } = operation
-        return linkUrl ? { kind: "markOpened", linkUrl } : undefined
-      }
-      case "setArtwork": {
-        const { providerId, title, year, mediaKind } = operation
-        return providerId !== undefined && title !== undefined
-          ? { kind: "setArtwork", providerId, title, year, mediaKind }
-          : undefined
-      }
-      case "cacheMirrors": {
-        const { lazyItemUrl, mirrors } = operation
-        return lazyItemUrl && mirrors
-          ? {
-              kind: "cacheMirrors",
-              lazyItemUrl,
-              mirrorsJson: JSON.stringify(mirrors),
-            }
-          : undefined
-      }
-      case "removeExtractedLink": {
-        const { linkKey, linkUrl } = operation
-        return linkKey && linkUrl
-          ? { kind: "removeExtractedLink", linkKey, linkUrl }
-          : undefined
-      }
-      case "replaceExtraction": {
-        const { extractedLinks } = operation
-        return extractedLinks && expectedExtraction
-          ? {
-              kind: "replaceExtraction",
-              expectedExtractionJson: JSON.stringify(expectedExtraction),
-              extractedLinksJson: JSON.stringify(extractedLinks),
-            }
-          : undefined
-      }
-    }
   }
 
   const runMetadataUpdate = async (

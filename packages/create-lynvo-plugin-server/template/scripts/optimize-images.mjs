@@ -68,45 +68,17 @@ const listSourceFiles = async (directory) => {
   }
 }
 
-const optimizeWebp = async (filePath, cache) => {
-  const input = await readFile(filePath)
-  const inputHash = hashBuffer(input)
-  const outputPath = filePath.replace(/\.(png|webp)$/i, ".webp")
-  const key = cacheKeyFor(outputPath)
-  const cached = cache[key]
+const createImageCacheEntry = ({ outputHash, bytes, metadata }) => ({
+  configHash,
+  outputHash,
+  bytes,
+  width: metadata.width,
+  height: metadata.height,
+  optimizedAt: new Date().toISOString(),
+})
 
-  if (cached?.outputHash === inputHash && cached?.configHash === configHash) {
-    return { status: "cached", key, bytes: input.length }
-  }
-
-  const image = sharp(input, { failOn: "none" })
-  const metadata = await image.metadata()
-  const shouldResize =
-    (metadata.width ?? 0) > CONFIG.maxWidth ||
-    (metadata.height ?? 0) > CONFIG.maxHeight
-  const isWebp = path.extname(filePath).toLowerCase() === ".webp"
-
-  // Lossy WebP encoding is not idempotent and can vary between native codec
-  // builds. Once a WebP satisfies the size contract, treat it as a final
-  // artifact instead of recompressing it on every clean machine or CI run.
-  if (isWebp && !shouldResize) {
-    cache[key] = {
-      configHash,
-      outputHash: inputHash,
-      bytes: input.length,
-      width: metadata.width,
-      height: metadata.height,
-      optimizedAt: new Date().toISOString(),
-    }
-    return {
-      status: "already-optimal",
-      key,
-      before: input.length,
-      after: input.length,
-    }
-  }
-
-  const optimized = await image
+const writeOptimizedImage = async (image, outputPath, filePath) => {
+  const output = await image
     .resize({
       width: CONFIG.maxWidth,
       height: CONFIG.maxHeight,
@@ -115,33 +87,77 @@ const optimizeWebp = async (filePath, cache) => {
     })
     .webp(CONFIG.webp)
     .toBuffer()
-
-  const output = optimized
   const outputHash = hashBuffer(output)
-
   const temporaryPath = `${outputPath}.tmp`
   await writeFile(temporaryPath, output)
   await rename(temporaryPath, outputPath)
   if (filePath !== outputPath) {
     await rm(filePath)
   }
+  const outputStat = await stat(outputPath)
+  return { outputHash, bytes: outputStat.size }
+}
 
-  const currentStat = await stat(outputPath)
-  cache[key] = {
-    configHash,
-    outputHash,
-    bytes: currentStat.size,
-    width: metadata.width,
-    height: metadata.height,
-    optimizedAt: new Date().toISOString(),
+const optimizeWebp = async (filePath, cache) => {
+  const input = await readFile(filePath)
+  const inputHash = hashBuffer(input)
+  const outputPath = filePath.replace(/\.(png|webp)$/i, ".webp")
+  const key = cacheKeyFor(outputPath)
+  const cached = cache[key]
+  if (cached?.outputHash === inputHash && cached?.configHash === configHash) {
+    return { status: "cached", key, bytes: input.length }
   }
-
+  const image = sharp(input, { failOn: "none" })
+  const metadata = await image.metadata()
+  const shouldResize =
+    (metadata.width ?? 0) > CONFIG.maxWidth ||
+    (metadata.height ?? 0) > CONFIG.maxHeight
+  const isAlreadyOptimal =
+    path.extname(filePath).toLowerCase() === ".webp" && !shouldResize
+  if (isAlreadyOptimal) {
+    cache[key] = createImageCacheEntry({
+      outputHash: inputHash,
+      bytes: input.length,
+      metadata,
+    })
+    return {
+      status: "already-optimal",
+      key,
+      before: input.length,
+      after: input.length,
+    }
+  }
+  const { outputHash, bytes } = await writeOptimizedImage(
+    image,
+    outputPath,
+    filePath
+  )
+  cache[key] = createImageCacheEntry({ outputHash, bytes, metadata })
   return {
     status: "optimized",
     key,
     before: input.length,
-    after: currentStat.size,
+    after: bytes,
   }
+}
+
+const optimizeFilesSequentially = async (files, cache) => {
+  const results = []
+  const processNextFile = async (fileIndex) => {
+    const filePath = files[fileIndex]
+    if (!filePath) {
+      return
+    }
+    try {
+      results.push(await optimizeWebp(filePath, cache))
+    } catch (error) {
+      await rm(`${filePath}.tmp`, { force: true })
+      throw error
+    }
+    await processNextFile(fileIndex + 1)
+  }
+  await processNextFile(0)
+  return results
 }
 
 const main = async () => {
@@ -152,16 +168,7 @@ const main = async () => {
   }
 
   const cache = await readCache()
-  const results = []
-
-  for (const file of files) {
-    try {
-      results.push(await optimizeWebp(file, cache))
-    } catch (error) {
-      await rm(`${file}.tmp`, { force: true })
-      throw error
-    }
-  }
+  const results = await optimizeFilesSequentially(files, cache)
 
   await writeCache(cache)
 

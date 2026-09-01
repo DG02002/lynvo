@@ -119,7 +119,7 @@ describe("plugin server manifest refresh", () => {
     expect(maximumActiveRefreshesByUser.size).toBe(USER_COUNT)
     expect(
       Array.from(maximumActiveRefreshesByUser.values()).every(
-        (maximumActiveRefreshes) => maximumActiveRefreshes === 1
+        (refreshCount) => refreshCount === 1
       )
     ).toBe(true)
     expect(

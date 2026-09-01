@@ -274,20 +274,20 @@ export class PluginServerClient {
   ): Promise<ExtractSuccessResponse> => {
     const body =
       kind === "source"
-        ? createSourceExtractRequest(
-            targetUrl,
-            options.password,
-            options.basicAuth,
-            options.pluginId,
-            options.proxy
-          )
-        : createNodeExtractRequest(
-            targetUrl,
-            options.password,
-            options.basicAuth,
-            options.pluginId,
-            options.proxy
-          )
+        ? createSourceExtractRequest({
+            sourceUrl: targetUrl,
+            password: options.password,
+            basicAuth: options.basicAuth,
+            pluginId: options.pluginId,
+            proxy: options.proxy,
+          })
+        : createNodeExtractRequest({
+            nodeUrl: targetUrl,
+            password: options.password,
+            basicAuth: options.basicAuth,
+            pluginId: options.pluginId,
+            proxy: options.proxy,
+          })
     const response = await this.request(
       "/extract",
       {

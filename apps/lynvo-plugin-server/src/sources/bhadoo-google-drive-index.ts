@@ -72,6 +72,20 @@ interface BhadooFolderTarget {
   readonly fallbackId?: string
 }
 
+interface BhadooPaginationOptions {
+  readonly endpointUrl: URL
+  readonly fallbackId?: string
+  readonly basicAuth?: HttpBasicAuth
+  readonly folderUrl: URL
+}
+
+interface BhadooFileResponseOptions {
+  readonly filename: string
+  readonly folderUrl: URL
+  readonly plugin: PluginAdapterOptions["plugin"]
+  readonly publicAssetOrigin?: string
+}
+
 const bhadooGoogleDriveItemSchema = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -98,7 +112,9 @@ const bhadooGoogleDriveListResponseSchema = Schema.Struct({
 
 export const getBhadooPathFilename = (url: string | URL): string => {
   const parsedUrl = url instanceof URL ? url : new URL(url)
-  const finalSegment = parsedUrl.pathname.split("/").filter(Boolean).at(-1)
+  const finalSegment = parsedUrl.pathname
+    .split("/")
+    .findLast((pathPart) => pathPart.length > 0)
   return finalSegment ? decodeURIComponent(finalSegment) : "Google Drive Index"
 }
 
@@ -170,7 +186,7 @@ export const createBhadooNodes = (
 export const decodeBhadooReverseEnvelope = (
   encodedResponse: string
 ): BhadooGoogleDriveListResponse => {
-  const reversedResponse = encodedResponse.split("").reverse().join("")
+  const reversedResponse = encodedResponse.split("").toReversed().join("")
   const base64Response = reversedResponse
     .slice(BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT)
     .slice(0, -BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT)
@@ -315,6 +331,78 @@ const requestBhadooFallbackItem = async ({
   )
 }
 
+const createBhadooFileResponse = ({
+  filename,
+  folderUrl,
+  plugin,
+  publicAssetOrigin,
+}: BhadooFileResponseOptions): ExtractSuccessResponse => {
+  const playableUrl = new URL(folderUrl)
+  const actionValues = playableUrl.searchParams.getAll("a")
+  playableUrl.searchParams.delete("a")
+  actionValues
+    .filter((value) => value !== "view")
+    .forEach((value) => playableUrl.searchParams.append("a", value))
+  return {
+    plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, filename),
+    nodes: [{ kind: "playable", label: filename, url: playableUrl.toString() }],
+    extensions: {},
+  }
+}
+
+const fetchBhadooNodes = async ({
+  endpointUrl,
+  fallbackId,
+  basicAuth,
+  folderUrl,
+}: BhadooPaginationOptions): Promise<MediaNode[]> => {
+  const nodes: MediaNode[] = []
+  const seenTokens = new Set<string>()
+  const startedAtMs = Date.now()
+  const fetchPage = async (
+    pageToken: string,
+    pageIndex: number
+  ): Promise<void> => {
+    if (
+      pageIndex >= PAGINATION_PAGE_LIMIT ||
+      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
+    ) {
+      throw new Error("Bhadoo Index pagination exceeded its limit.")
+    }
+    if (pageToken && seenTokens.has(pageToken)) {
+      throw new Error("Bhadoo Index repeated a continuation token.")
+    }
+    if (pageToken) {
+      seenTokens.add(pageToken)
+    }
+    const result = await requestBhadooPage({
+      endpointUrl,
+      fallbackId,
+      basicAuth,
+      pageToken,
+      pageIndex,
+    })
+    if (result.error) {
+      throw new Error(
+        result.error.message || "Bhadoo Index rejected the request."
+      )
+    }
+    if (!Number.isInteger(result.curPageIndex)) {
+      throw new Error("Bhadoo Index returned a malformed page.")
+    }
+    nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
+    if (nodes.length > EXTRACTION_NODE_LIMIT) {
+      throw new Error("Bhadoo Index returned too many nodes.")
+    }
+    const nextPageToken = result.nextPageToken ?? ""
+    if (nextPageToken) {
+      await fetchPage(nextPageToken, result.curPageIndex + 1)
+    }
+  }
+  await fetchPage("", 0)
+  return nodes
+}
+
 export const extractBhadooGoogleDriveIndex = async ({
   request,
   targetUrl,
@@ -354,61 +442,20 @@ export const extractBhadooGoogleDriveIndex = async ({
   const filename = getBhadooPathFilename(folderUrl)
   const pageTitle = fallbackItem?.name ?? filename
   if (!folderUrl.pathname.endsWith("/") && isVideoFile(filename)) {
-    const playableUrl = new URL(folderUrl)
-    const actionValues = playableUrl.searchParams.getAll("a")
-    playableUrl.searchParams.delete("a")
-    actionValues
-      .filter((value) => value !== "view")
-      .forEach((value) => playableUrl.searchParams.append("a", value))
-    return {
-      plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, filename),
-      nodes: [
-        { kind: "playable", label: filename, url: playableUrl.toString() },
-      ],
-      extensions: {},
-    }
+    return createBhadooFileResponse({
+      filename,
+      folderUrl,
+      plugin,
+      publicAssetOrigin,
+    })
   }
 
-  const nodes: MediaNode[] = []
-  const seenTokens = new Set<string>()
-  const startedAtMs = Date.now()
-  let pageToken = ""
-  let pageIndex = 0
-  do {
-    if (
-      pageIndex >= PAGINATION_PAGE_LIMIT ||
-      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
-    ) {
-      throw new Error("Bhadoo Index pagination exceeded its limit.")
-    }
-    if (pageToken && seenTokens.has(pageToken)) {
-      throw new Error("Bhadoo Index repeated a continuation token.")
-    }
-    if (pageToken) {
-      seenTokens.add(pageToken)
-    }
-    const result = await requestBhadooPage({
-      endpointUrl: folderTarget.endpointUrl,
-      fallbackId: folderTarget.fallbackId,
-      basicAuth: request.basicAuth,
-      pageToken,
-      pageIndex,
-    })
-    if (result.error) {
-      throw new Error(
-        result.error.message || "Bhadoo Index rejected the request."
-      )
-    }
-    if (!Number.isInteger(result.curPageIndex)) {
-      throw new Error("Bhadoo Index returned a malformed page.")
-    }
-    nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
-    if (nodes.length > EXTRACTION_NODE_LIMIT) {
-      throw new Error("Bhadoo Index returned too many nodes.")
-    }
-    pageToken = result.nextPageToken ?? ""
-    pageIndex = result.curPageIndex + 1
-  } while (pageToken)
+  const nodes = await fetchBhadooNodes({
+    endpointUrl: folderTarget.endpointUrl,
+    fallbackId: folderTarget.fallbackId,
+    basicAuth: request.basicAuth,
+    folderUrl,
+  })
 
   return {
     plugin: createPluginResponseMetadata(plugin, publicAssetOrigin, pageTitle),
