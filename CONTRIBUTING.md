@@ -10,7 +10,7 @@ This file covers setup, development, testing, and deployment for the workspace.
 - `packages/create-lynvo-plugin-server`: public standalone Worker generator and template.
 - `apps/lynvo/app/features/site/docs/plugin-server/`: public Plugin Server author docs rendered at `/docs/plugin-server`.
 - `docs/plugin-server-maintainer-guide.md`: internal monorepo, compatibility, and package release guide.
-- `docs/apple-HIG/`: read-only design and writing references used by contributors.
+- `.agents/skills/product-interface-guidelines/references/`: read-only interface writing, accessibility, inclusion, and terminology references used by contributors.
 
 ## Prerequisites
 
@@ -262,5 +262,7 @@ extra configuration.
 
 - [Protocol package and documentation](packages/plugin-server-protocol/README.md)
 - [Project terminology](CONTEXT.md)
-- [Writing reference](<docs/apple-HIG/Writing - Apple HIG.md>)
-- [Inclusive-writing reference](<docs/apple-HIG/Writing Inclusively - Apple HIG.md>)
+- [Interface writing reference](.agents/skills/product-interface-guidelines/references/hig-writing.md)
+- [Accessibility reference](.agents/skills/product-interface-guidelines/references/hig-accessibility.md)
+- [Inclusive-design reference](.agents/skills/product-interface-guidelines/references/hig-inclusion.md)
+- [Terminology reference](.agents/skills/product-interface-guidelines/references/apple-style-guide.md)
