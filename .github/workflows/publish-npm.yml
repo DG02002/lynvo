@@ -142,3 +142,39 @@ jobs:
           sha256sum --check SHA256SUMS
           test "$(find . -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')" = "1"
           npm publish ./*.tgz --access public --provenance
+
+  release:
+    name: Create package GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Resolve package release title
+        id: release
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          case "$TAG_NAME" in
+            protocol-v*)
+              package_name="@dg02002/lynvo-plugin-server-protocol"
+              package_version="${TAG_NAME#protocol-}"
+              ;;
+            creator-v*)
+              package_name="create-lynvo-plugin-server"
+              package_version="${TAG_NAME#creator-}"
+              ;;
+            *)
+              echo "::error::Unsupported package release tag: ${TAG_NAME}"
+              exit 1
+              ;;
+          esac
+          printf 'title=%s %s\n' "$package_name" "$package_version" >> "$GITHUB_OUTPUT"
+
+      - name: Create package GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TITLE: ${{ steps.release.outputs.title }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: gh release create "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$RELEASE_TITLE"

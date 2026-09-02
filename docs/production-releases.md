@@ -80,8 +80,9 @@ The generated notes are a GitHub Release description, not a committed
 CHANGELOG.md and not the in-app /changelog data. The protocol package keeps
 its own hand-maintained CHANGELOG.md because that file ships inside the npm
 package. The existing protocol-vX.Y.Z and creator-vX.Y.Z tags continue to
-publish npm packages through publish-npm.yml; they are independent of product
-GitHub Releases.
+publish npm packages through publish-npm.yml; successful package publishes
+also create package-specific GitHub Releases, independent of product GitHub
+Releases.
 
 ## Cloudflare deployment strategy
 
@@ -156,6 +157,12 @@ receives the packed artifact and obtains OIDC only after the `npm` Environment
 gate. Configure both packages on npmjs.com with `publish-npm.yml` as their
 trusted GitHub publisher, the `npm` environment, and the `npm publish` action.
 No `NPM_TOKEN` is stored in GitHub.
+
+After the npm publish job succeeds, the workflow creates a GitHub Release from
+the same package tag and generates notes from merged pull requests using
+`.github/release.yml`. Protocol releases use titles such as
+`@dg02002/lynvo-plugin-server-protocol v0.1.6`; creator releases use titles
+such as `create-lynvo-plugin-server v0.1.3`.
 
 Install the Socket Security GitHub App for this repository and require `Socket
 Security: Pull Request Alerts` on `main`. The root `socket.yml` keeps pull
