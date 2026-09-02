@@ -1,5 +1,4 @@
 import * as React from "react"
-import { QRCodeCanvas } from "qrcode.react"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -16,6 +15,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { getBrowserDeviceName } from "~/lib/device-name"
 import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { QrCode } from "./qr-code"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 
@@ -348,10 +348,9 @@ export const DeviceLoginQr = () => {
       className="flex flex-col items-center gap-6 text-center"
     >
       <div data-device-login-qr-image>
-        <QRCodeCanvas
+        <QrCode
           value={authUrl}
           size={180}
-          level="M"
           marginSize={2}
           bgColor="#ffffff"
           fgColor="#000000"
