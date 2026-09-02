@@ -15,7 +15,7 @@ const matchesRequestHost = (headerValue: string, host: string | null) =>
   URL.canParse(headerValue) && new URL(headerValue).host === host
 
 const isTrustedRequestOrigin = (request: Request): boolean => {
-  // Skip strict origin checks in DEV to allow local testing (e.g. --host, tunnels)
+  // Skip strict origin checks in DEV for local testing and tunnels.
   if (import.meta.env.DEV) {
     return true
   }

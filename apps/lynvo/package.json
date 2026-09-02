@@ -6,8 +6,7 @@
   "scripts": {
     "build": "pnpm run prepare:protocol && react-router build",
     "clean": "rm -rf build .react-router",
-    "dev:local": "pnpm run prepare:protocol && node scripts/start-local-dev.mjs",
-    "dev": "pnpm run prepare:protocol && react-router dev",
+    "dev": "pnpm run prepare:protocol && node scripts/start-local-dev.mjs",
     "preview": "pnpm run build && vite preview",
     "test": "pnpm run prepare:protocol && vitest",
     "test:workers": "vitest -c vitest.workers.config.ts --run",

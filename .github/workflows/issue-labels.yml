@@ -1,0 +1,81 @@
+name: Issue labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/ISSUE_TEMPLATE/**
+      - .github/labels.json
+      - .github/workflows/issue-labels.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    name: Sync managed labels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Sync label definitions
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const labelFile = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: ".github/labels.json",
+              ref: context.ref || context.payload.repository.default_branch,
+            });
+
+            if (Array.isArray(labelFile.data) || labelFile.data.type !== "file") {
+              throw new Error(".github/labels.json must be a file");
+            }
+
+            const managedLabels = JSON.parse(
+              Buffer.from(labelFile.data.content, "base64").toString("utf8"),
+            );
+
+            for (const label of managedLabels) {
+              try {
+                const { data: existingLabel } = await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                });
+
+                if (
+                  existingLabel.color !== label.color ||
+                  (existingLabel.description ?? "") !== label.description
+                ) {
+                  await github.rest.issues.updateLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                }
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+
+                try {
+                  await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description,
+                  });
+                } catch (createError) {
+                  if (createError.status !== 422) {
+                    throw createError;
+                  }
+                }
+              }
+            }

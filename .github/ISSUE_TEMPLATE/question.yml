@@ -1,0 +1,41 @@
+name: Question
+description: Ask a focused question about using or contributing to Lynvo.
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [Lynvo help center](https://lynvo.dg02002.workers.dev/help-center),
+        [product documentation](https://lynvo.dg02002.workers.dev/docs), and the
+        [contributing guide](https://github.com/DG02002/lynvo/blob/main/CONTRIBUTING.md)
+        first. Never include credentials, session cookies, private URLs, or
+        personal data.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and where are you stuck?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: context
+    attributes:
+      label: Context
+      options:
+        - Using Lynvo
+        - Building a Custom Plugin Server
+        - Contributing to the repository
+        - Public protocol or generated package
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Include the relevant route, command, version, or error text. Redact sensitive information.
