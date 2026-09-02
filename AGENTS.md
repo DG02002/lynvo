@@ -118,6 +118,8 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
   alone.
 - The local resource explorer is for read-only inspection; prefer `SELECT`
   queries and never use it to bypass application write paths.
+- Local Explorer's agent API is under `/cdn-cgi/local/explorer/api`. The local
+  development guide documents the verified two-Worker workflow.
 
 ## Verifying
 

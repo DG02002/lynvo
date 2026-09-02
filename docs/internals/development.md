@@ -63,19 +63,68 @@ Regenerate Cloudflare bindings after changing Wrangler configuration:
 pnpm --filter @lynvo/app cf-typegen
 ```
 
-## Inspect local D1
+## Inspect local state
 
-While the local dev server is running, the Cloudflare Vite plugin exposes a
-resource explorer at
-`http://localhost:5173/cdn-cgi/local/explorer/api`.
+[Cloudflare Local Explorer](https://developers.cloudflare.com/workers/local-development/local-explorer/)
+is available from local Wrangler and Vite development servers. For this repo,
+the local human UI is:
 
-- `GET /cdn-cgi/local/explorer/api` returns the explorer's API description.
-- `GET /cdn-cgi/local/explorer/api/d1/database` lists local D1 databases.
-- `POST /cdn-cgi/local/explorer/api/d1/database/{database_id}/raw` runs SQL.
+```text
+http://localhost:5173/cdn-cgi/local/explorer/
+```
 
-Use read-only `SELECT` statements for inspection. The raw endpoint can mutate
-state, so do not use it to bypass application write paths and never point it at
+The agent API root is:
+
+```text
+http://localhost:5173/cdn-cgi/local/explorer/api
+```
+
+Keep the human and agent paths distinct. Agent integrations in this repo should
+use the explicit `/cdn-cgi/local/explorer/api` endpoint.
+
+Fetch the OpenAPI description before choosing an operation:
+
+```sh
+curl -sS http://localhost:5173/cdn-cgi/local/explorer/api
+curl -sS http://localhost:5173/cdn-cgi/local/explorer/api/d1/database
+```
+
+For a read-only D1 inspection, replace the local database ID returned by the
+second command:
+
+```sh
+local_database_id="replace-with-id"
+curl -sS -X POST "http://localhost:5173/cdn-cgi/local/explorer/api/d1/database/$local_database_id/raw" -H 'Content-Type: application/json' --data '{"sql":"SELECT name FROM sqlite_master ORDER BY name"}'
+```
+
+The raw SQL endpoint can mutate local state, so agents should prefer read-only
+`SELECT` statements, never bypass application write paths, and never point it at
 production.
+
+## Start local development with both Workers
+
+Use `pnpm dev` from the repository root. It runs
+`apps/lynvo/scripts/start-local-dev.mjs`, which applies local D1 migrations
+with Wrangler and then starts the React Router/Vite dev server.
+
+The app's `apps/lynvo/vite.config.ts` configures
+`apps/lynvo-plugin-server/wrangler.jsonc` as an auxiliary Worker. The local
+environment in `apps/lynvo/wrangler.jsonc` maps `LYNVO_PLUGIN_SERVER` to
+`lynvo-plugin-server-local`.
+
+This is the one-command workflow for both Workers. To verify it, start
+`pnpm dev` and press `b` in the terminal. The bindings output should list both
+`lynvo-local` and `lynvo-plugin-server-local`, with
+`env.LYNVO_PLUGIN_SERVER` pointing to the auxiliary Worker.
+
+Do not start the Plugin Server in a second terminal for the normal app
+workflow. The standalone command above is only for focused Worker debugging.
+
+Cloudflare documents both the Wrangler multiple-config mode and the Vite
+`auxiliaryWorkers` pattern in [Developing with multiple Workers](https://developers.cloudflare.com/workers/local-development/multi-workers/).
+This React Router app depends on Vite's generated
+`virtual:react-router/server-build`, so replacing the current command with raw
+`wrangler dev` would be a migration, not a script rename.
 
 ## Test TV Bro-specific UI
 
