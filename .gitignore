@@ -24,8 +24,8 @@ dist/
 .repos/
 temp/
 .plans/
+.zcode/
 .github/pr-assets/
-
 !app/lib/
 !app/lib/**
 !scripts/
