@@ -63,6 +63,48 @@ needs their plaintext value.
 4. GitHub uploads and promotes both Worker versions. No local deployment is
    required.
 
+## GitHub releases
+
+Production deployment happens for every merged change on main. A GitHub
+Release is a separate, named product milestone created from a tag on a
+verified main commit.
+
+Use a vX.Y.Z tag for a stable product release. Push the tag after the intended
+commit is already on main; the release workflow verifies that ancestry before
+creating the GitHub Release. There are no scheduled or nightly releases: this
+is a web application whose production deployment is already handled by the
+verified main workflow. GitHub generates the release notes from merged pull
+requests using .github/release.yml.
+
+The generated notes are a GitHub Release description, not a committed
+CHANGELOG.md and not the in-app /changelog data. The protocol package keeps
+its own hand-maintained CHANGELOG.md because that file ships inside the npm
+package. The existing protocol-vX.Y.Z and creator-vX.Y.Z tags continue to
+publish npm packages through publish-npm.yml; they are independent of product
+GitHub Releases.
+
+## Cloudflare deployment strategy
+
+Cloudflare's [versioned and aliased Preview URLs](https://developers.cloudflare.com/workers/versions-and-deployments/preview-urls/)
+are useful for Workers that can expose a preview version. They are not
+generated for Workers that implement a Durable Object, and both production
+Workers in this repository define Durable Objects. Cloudflare Access would
+also be required before exposing a preview environment containing non-public
+application behavior.
+
+[Gradual deployments](https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/)
+are therefore not enabled by this workflow. They keep multiple Worker
+versions active at once, which requires forwards- and backwards-compatible
+Worker and Durable Object protocols, an explicit [version affinity](https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/version-affinity/)
+strategy for the web client's HTML and hashed assets, and a migration plan
+that can be rolled back safely. Cloudflare's [Durable Object deployment
+guidance](https://developers.cloudflare.com/workers/versions-and-deployments/gradual-deployments/with-durable-objects/)
+also makes class-lifecycle changes an atomic deployment concern. D1 migrations
+and Durable Object class-lifecycle changes are especially important because
+they are not rolled back with Worker code. The current verified deployment
+promotes both Workers from the same commit and retains the existing health
+check and rollback steps.
+
 ## D1 schema and data migrations
 
 Schema changes are versioned SQL files under `apps/lynvo/migrations/`, applied
