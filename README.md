@@ -1,35 +1,34 @@
 # Lynvo
 
-Open the Lynvo website in any browser to sign in and manage links. Link handoff
-is designed for Android phones, Android tablets, and Android TV. Lynvo opens
-links in one of four Android players:
+Lynvo is a link library, not a media catalogue. Save supported source URLs,
+extract playable links, and open them in Just (Video) Player, VLC for Android,
+MPV, or MX Player on Android phones, tablets, and TV. Remote Play sends a
+selected playable link from one signed-in browser session to another.
 
-- Just (Video) Player
-- VLC for Android
-- MPV
-- MX Player
+Lynvo does not stream or play media itself. It sends the selected URL to an
+external player.
 
-Lynvo marks an item opened the first time you open it, but it does not store a
-playback position or resume state. Lynvo does not play video; it opens a URL in
-an external Android player. When you open the same link again, Lynvo sends the
-same URL to the selected player. Just (Video) Player is recommended for links
-whose servers support HTTP byte-range requests, which can enable seeking. It
-can open other links too, but it cannot seek when the server does not support
-HTTP byte-range requests. VLC for Android is recommended for those links and
-may still allow seeking in some cases. The selected player may remember its
-own playback position. MPV and MX Player are also available choices.
+Lynvo now has 100 users.
 
-Lynvo is an early-stage open-source project. This repository contains the
-Lynvo app and the packages that support it.
+## Use Lynvo
 
-## Project information
+Open the [Lynvo website](https://lynvo.dg02002.workers.dev) and sign in with
+Google. Read [why Lynvo exists](https://lynvo.dg02002.workers.dev/about) to
+understand the problem Lynvo solves.
 
-- [Lynvo website](https://lynvo.dg02002.workers.dev).
-- The [contributing guide](CONTRIBUTING.md) explains how to set up and work on Lynvo.
-- The [Plugin Server documentation](apps/lynvo/app/features/site/docs/plugin-server/) explains how to create a custom integration.
-- [Project terminology](CONTEXT.md) lists the shared names and concepts used by the project.
-- [Report an issue on GitHub](https://github.com/DG02002/lynvo/issues).
-- [Contact Lynvo on Telegram](https://t.me/lynvo_support?direct).
+## Documentation
+
+- [Product documentation](https://lynvo.dg02002.workers.dev/docs)
+- [Lynvo help center](https://lynvo.dg02002.workers.dev/help-center)
+- [Repository documentation](docs/README.md)
+- [Plugin Server protocol](packages/plugin-server-protocol/README.md)
+- [Security policy](SECURITY.md)
+- [Report a bug or ask a question](https://github.com/DG02002/lynvo/issues/new/choose)
+
+## Contributing
+
+Building from source or thinking about a contribution? Read
+[CONTRIBUTING.md](CONTRIBUTING.md) before reporting a bug or opening a PR.
 
 ## License
 
@@ -38,7 +37,6 @@ v3.0](LICENSE).
 
 The [Plugin Server Protocol](packages/plugin-server-protocol/LICENSE) and
 [`create-lynvo-plugin-server`](packages/create-lynvo-plugin-server/LICENSE)
-packages are licensed separately under the MIT License. Each package includes
-its own license file.
+packages are licensed separately under the MIT License.
 
 Copyright © 2026 Lynvo.

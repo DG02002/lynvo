@@ -1,0 +1,220 @@
+name: PR vouch
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  issue_comment:
+    types: [created]
+  push:
+    branches:
+      - main
+    paths:
+      - .github/VOUCHED.td
+      - .github/labels.json
+      - .github/workflows/pr-vouch.yml
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  label:
+    name: Label PR trust
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    concurrency:
+      group: pr-vouch-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+      cancel-in-progress: true
+    steps:
+      - name: Calculate and sync PR trust
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const defaultBranch = context.payload.repository.default_branch;
+            const readRepositoryFile = async (path) => {
+              try {
+                const response = await github.rest.repos.getContent({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  path,
+                  ref: defaultBranch,
+                });
+
+                if (Array.isArray(response.data) || response.data.type !== "file") {
+                  throw new Error(`${path} must be a file`);
+                }
+
+                return Buffer.from(response.data.content, "base64").toString("utf8");
+              } catch (error) {
+                if (error.status === 404 && path === ".github/VOUCHED.td") {
+                  return "";
+                }
+
+                throw error;
+              }
+            };
+
+            const targets = [];
+            if (context.eventName === "pull_request_target") {
+              const pullRequest = context.payload.pull_request;
+              targets.push({
+                number: pullRequest.number,
+                login: pullRequest.user.login,
+                association: pullRequest.author_association,
+              });
+            } else if (context.eventName === "issue_comment") {
+              const commentBody = context.payload.comment?.body ?? "";
+              const issue = context.payload.issue;
+              if (issue?.pull_request && commentBody.includes("/recheck-vouch")) {
+                const pullRequest = await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: issue.number,
+                });
+                targets.push({
+                  number: pullRequest.data.number,
+                  login: pullRequest.data.user.login,
+                  association: pullRequest.data.author_association,
+                });
+              }
+            } else {
+              const openPullRequests = await github.paginate(github.rest.pulls.list, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                per_page: 100,
+              });
+
+              for (const pullRequest of openPullRequests) {
+                targets.push({
+                  number: pullRequest.number,
+                  login: pullRequest.user.login,
+                  association: pullRequest.author_association,
+                });
+              }
+            }
+
+            if (targets.length === 0) {
+              core.info("No pull requests need a trust label.");
+              return;
+            }
+
+            const labelsText = await readRepositoryFile(".github/labels.json");
+            const vouchLabels = JSON.parse(labelsText).filter((label) =>
+              label.name.startsWith("vouch:"),
+            );
+            const vouchLabelNames = new Set(vouchLabels.map((label) => label.name));
+            const trustText = await readRepositoryFile(".github/VOUCHED.td");
+            const trustedUsers = new Set();
+            const denouncedUsers = new Set();
+
+            for (const rawLine of trustText.split(/\r?\n/)) {
+              const line = rawLine.trim();
+              if (!line || line.startsWith("#")) {
+                continue;
+              }
+
+              if (line.startsWith("-github:")) {
+                denouncedUsers.add(line.slice(8).split(/\s+/, 1)[0].toLowerCase());
+              } else if (line.startsWith("github:")) {
+                trustedUsers.add(line.slice(7).split(/\s+/, 1)[0].toLowerCase());
+              }
+            }
+
+            const trustedAssociations = new Set(["OWNER", "MEMBER", "COLLABORATOR", "BOT"]);
+            const ensureLabels = async () => {
+              for (const label of vouchLabels) {
+                try {
+                  const { data: existingLabel } = await github.rest.issues.getLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                  });
+
+                  if (
+                    existingLabel.color !== label.color ||
+                    (existingLabel.description ?? "") !== label.description
+                  ) {
+                    await github.rest.issues.updateLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label.name,
+                      color: label.color,
+                      description: label.description,
+                    });
+                  }
+                } catch (error) {
+                  if (error.status !== 404) {
+                    throw error;
+                  }
+
+                  try {
+                    await github.rest.issues.createLabel({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      name: label.name,
+                      color: label.color,
+                      description: label.description,
+                    });
+                  } catch (createError) {
+                    if (createError.status !== 422) {
+                      throw createError;
+                    }
+                  }
+                }
+              }
+            };
+
+            await ensureLabels();
+
+            for (const target of targets) {
+              const normalizedLogin = target.login.toLowerCase();
+              const authorAssociation = target.association?.toUpperCase();
+              let status = "unvouched";
+              if (denouncedUsers.has(normalizedLogin)) {
+                status = "denounced";
+              } else if (
+                trustedUsers.has(normalizedLogin) ||
+                trustedAssociations.has(authorAssociation)
+              ) {
+                status = "trusted";
+              }
+              const nextLabelName = `vouch:${status}`;
+              const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: target.number,
+                per_page: 100,
+              });
+
+              for (const label of currentLabels) {
+                if (!vouchLabelNames.has(label.name) || label.name === nextLabelName) {
+                  continue;
+                }
+
+                try {
+                  await github.rest.issues.removeLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: target.number,
+                    name: label.name,
+                  });
+                } catch (error) {
+                  if (error.status !== 404) {
+                    throw error;
+                  }
+                }
+              }
+
+              if (!currentLabels.some((label) => label.name === nextLabelName)) {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: target.number,
+                  labels: [nextLabelName],
+                });
+              }
+
+              core.info(`PR #${target.number}: ${target.login} -> ${nextLabelName}`);
+            }
