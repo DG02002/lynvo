@@ -53,11 +53,11 @@ GitHub's [artifact attestation guidance](https://docs.github.com/en/actions/how-
 
 This should be a separate change because it adds permissions and a release-verification contract. Pin the attestation action to a reviewed commit SHA when implementing it.
 
-### 6. Reduce unnecessary floating tooling in sensitive jobs
+### 6. Keep runtime and package-manager behavior explicit
 
-The user-requested `pnpm/setup` `next-12` channel and `npm@latest` install provide the newest releases, but they reduce reproducibility. The latest npm installation is currently present in verification and deployment jobs whose visible commands use pnpm and Wrangler rather than npm. Revisit removing it from those jobs, while retaining it in the npm publish job if the latest npm behavior is intentional there.
+The workflows use `pnpm/setup` to install Node through `pnpm runtime`. Since pnpm v11, that runtime intentionally omits npm, npx, and Corepack; the [pnpm runtime documentation](https://pnpm.io/cli/runtime) says to install npm separately only when a job actually needs it. The verification and deployment jobs do not need npm, so their floating npm installs were removed. The npm publish job uses `actions/setup-node`, whose official Node distribution includes npm, and retains the runtime-version check needed for trusted publishing.
 
-This is a policy tradeoff, not an immediate defect. The lockfile and pnpm trust settings still protect the dependency graph, but the runner tooling itself remains floating.
+The user-requested `pnpm/setup` `next-12` channel remains floating by design. That gives the latest pnpm 12 release but reduces reproducibility, so it should remain an explicit policy choice.
 
 ## Useful but lower priority
 
@@ -67,4 +67,4 @@ This is a policy tradeoff, not an immediate defect. The lockfile and pnpm trust 
 - Dependency submission is not needed now if the pnpm lockfile fully describes the installed graph. GitHub says lockfiles are the most reliable source for the dependency graph; consider submission only if build-time dependencies are missing from the static graph. See [dependency graph data](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-graph-data).
 - Review maintainer account security separately: GitHub recommends 2FA, passkeys or security keys, more than one recovery method, and downloaded recovery codes. See [securing accounts](https://docs.github.com/en/code-security/tutorials/implement-supply-chain-best-practices/securing-accounts).
 
-No repository workflows or GitHub settings were changed during this review.
+GitHub settings were not changed during this review. The follow-up workflow changes correct the full `pnpm/setup` SHA and remove unnecessary floating npm installs.
