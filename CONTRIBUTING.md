@@ -14,7 +14,9 @@ This file covers setup, development, testing, and deployment for the workspace.
 
 ## Prerequisites
 
-Use the latest Node.js and pnpm releases.
+Use Node.js 26.8.1 and the latest pnpm 12 release for this workspace. The
+repository pins Node.js in `.node-version`; update pnpm with
+`pnpm self-update next-12`.
 
 Create the following accounts before setting up Lynvo:
 
@@ -29,8 +31,7 @@ development.
 ## Install the workspace
 
 ```sh
-corepack enable
-corepack prepare pnpm@latest --activate
+pnpm self-update next-12
 pnpm install --frozen-lockfile
 pnpm secrets:local
 ```
