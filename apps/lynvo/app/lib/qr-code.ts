@@ -637,6 +637,14 @@ const getVersionForBytes = (bytes: Uint8Array) => {
 }
 
 export const encodeQrCode = (value: string): QrCodeModules => {
+  if (
+    Array.from(value).some(
+      (character) => (character.codePointAt(0) ?? 0) > 0x7f
+    )
+  ) {
+    throw new RangeError("QR code only supports ASCII values")
+  }
+
   const bytes = new TextEncoder().encode(value)
   const version = getVersionForBytes(bytes)
   const size = version * 4 + 17

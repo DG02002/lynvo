@@ -61,19 +61,19 @@ describe("QR code", () => {
   })
 
   it("renders a crisp SVG with a quiet zone", () => {
-    const { container } = render(
-      <QrCode value={activationUrl} size={180} marginSize={2} />
-    )
+    const { container } = render(<QrCode value={activationUrl} size={180} />)
     const svg = container.querySelector("svg")
 
     expect(svg).not.toBeNull()
-    expect(svg).toHaveAttribute("viewBox", "0 0 37 37")
+    expect(svg).toHaveAttribute("viewBox", "0 0 41 41")
     expect(svg).toHaveAttribute("aria-label", "QR code")
     expect(svg?.querySelectorAll("path")).toHaveLength(2)
   })
 
-  it("supports Unicode values", () => {
-    expect(() => encodeQrCode("Lynvo 🚀")).not.toThrow()
+  it("rejects non-ASCII values without an ECI declaration", () => {
+    expect(() => encodeQrCode("Lynvo 🚀")).toThrow(
+      "QR code only supports ASCII values"
+    )
   })
 
   it("rejects data larger than the QR capacity", () => {

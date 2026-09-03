@@ -39,7 +39,7 @@ const buildQrCodePath = (modules: QrCodeModules, margin: number) => {
 export const QrCode = ({
   value,
   size = 128,
-  marginSize = 0,
+  marginSize = 4,
   bgColor = "#ffffff",
   fgColor = "#000000",
   title,

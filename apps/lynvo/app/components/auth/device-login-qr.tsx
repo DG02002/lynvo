@@ -351,7 +351,6 @@ export const DeviceLoginQr = () => {
         <QrCode
           value={authUrl}
           size={180}
-          marginSize={2}
           bgColor="#ffffff"
           fgColor="#000000"
         />
