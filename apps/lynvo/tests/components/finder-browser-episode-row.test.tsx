@@ -344,6 +344,32 @@ describe("FinderBrowser episode rows", () => {
     ).toBeInTheDocument()
   })
 
+  it("uses the compatible saved title in the FinderBrowser season header", () => {
+    const savedTitleItem: LinkViewItem = {
+      ...item,
+      title: "The Sample Series Name (2024)",
+    }
+
+    render(
+      <SaveListBrowser
+        items={[savedTitleItem]}
+        selectedItemUrl={savedTitleItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", {
+        name: "The Sample Series Name (2024) S01",
+      })
+    ).toBeInTheDocument()
+  })
+
   it("descends through a single season-folder wrapper into the season view", async () => {
     render(
       <SaveListBrowser

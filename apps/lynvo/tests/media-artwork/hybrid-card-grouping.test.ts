@@ -233,6 +233,74 @@ describe("getHybridCardGroups", () => {
     })
   })
 
+  it("keeps a movie identity when only the saved article differs", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/movie-container",
+        "The Sample Movie",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "1080p WEB-DL",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "movie",
+                url: "https://example.com/movie-container/media",
+                label: "Sample.Movie.2021.1080p.mkv",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("Sample Movie (2021)")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "movie",
+      title: "Sample Movie",
+      year: 2021,
+    })
+  })
+
+  it("keeps a movie year when the saved title conflicts", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/movie-year-container",
+        "Sample Movie (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "1080p WEB-DL",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "movie",
+                url: "https://example.com/movie-year-container/media",
+                label: "Sample.Movie.2021.1080p.mkv",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("Sample Movie (2021)")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "movie",
+      title: "Sample Movie",
+      year: 2021,
+    })
+  })
+
   it("keeps unrecognizable labels as single-item cards without artwork", () => {
     const groups = getHybridCardGroups([
       createItem("https://example.com/random", "file", 2_000),
@@ -615,6 +683,37 @@ describe("getSharedSeasonIdentity", () => {
     ])
 
     expect(identity).toBeUndefined()
+  })
+
+  it("does not reconcile a saved title when years conflict", () => {
+    const identity = getSharedSeasonIdentity(
+      ["Sample.Show.2021.S01E01.1080p.mkv"],
+      undefined,
+      "The Sample Show (2022)"
+    )
+
+    expect(identity).toEqual({
+      requestTitle: "Sample Show",
+      normalizedTitle: "sample show",
+      year: 2021,
+      seasonNumber: 1,
+      displayTitle: "Sample Show (2021) S01",
+    })
+  })
+
+  it("does not reconcile an incompatible saved title", () => {
+    const identity = getSharedSeasonIdentity(
+      ["Sample.Show.S01E01.1080p.mkv"],
+      undefined,
+      "Other Show (2022)"
+    )
+
+    expect(identity).toEqual({
+      requestTitle: "Sample Show",
+      normalizedTitle: "sample show",
+      seasonNumber: 1,
+      displayTitle: "Sample Show S01",
+    })
   })
 
   it("returns undefined when any link is not an episode", () => {

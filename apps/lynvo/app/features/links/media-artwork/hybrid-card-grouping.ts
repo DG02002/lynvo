@@ -180,10 +180,11 @@ const getHybridItemIdentity = (
     }
     const [descendantIdentity] = descendantIdentities.values()
     if (descendantIdentity) {
-      return reconcileSavedTitle(
-        descendantIdentity,
-        item.title?.trim() || itemLabel
-      )
+      const savedTitle =
+        descendantIdentity.mediaKind === "tv"
+          ? item.title?.trim() || itemLabel
+          : itemLabel
+      return reconcileSavedTitle(descendantIdentity, savedTitle)
     }
   }
   return getHybridCardIdentity(itemLabel)
@@ -198,8 +199,26 @@ const reconcileSavedTitle = (
   savedTitle?: string
 ): HybridCardIdentity => {
   const saved = savedTitle ? getHybridCardIdentity(savedTitle) : undefined
+  if (!saved) {
+    return identity
+  }
+
+  if (identity.mediaKind === "movie") {
+    if (
+      identity.year !== undefined ||
+      saved.year === undefined ||
+      saved.normalizedTitle !== identity.normalizedTitle
+    ) {
+      return identity
+    }
+    return {
+      ...identity,
+      year: saved.year,
+      displayTitle: `${identity.requestTitle} (${saved.year})`,
+    }
+  }
+
   if (
-    !saved ||
     withoutArticle(saved.normalizedTitle) !==
       withoutArticle(identity.normalizedTitle) ||
     (saved.year !== undefined &&
@@ -208,6 +227,7 @@ const reconcileSavedTitle = (
   ) {
     return identity
   }
+
   const year = identity.year ?? saved.year
   return {
     ...identity,
@@ -388,7 +408,6 @@ export const getSharedSeasonIdentity = (
   return {
     ...sharedIdentity,
     requestTitle: reconciled.requestTitle,
-    normalizedTitle: reconciled.normalizedTitle,
     year: reconciled.year,
     displayTitle: reconciled.displayTitle,
   }
