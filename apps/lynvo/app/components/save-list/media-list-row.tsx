@@ -71,6 +71,7 @@ interface MediaListRowProps {
   readonly title: MediaListRowTitleText
   readonly titleExtractionStatus?: ExtractionStatusTitleSpec
   readonly meta?: ReactNode
+  readonly mobileTrailing?: ReactNode
   readonly trailing?: ReactNode
   readonly overlay?: ReactNode
   readonly onActivate: () => void
@@ -90,6 +91,7 @@ export const MediaListRow = ({
   title,
   titleExtractionStatus,
   meta,
+  mobileTrailing,
   trailing,
   overlay,
   onActivate,
@@ -159,6 +161,11 @@ export const MediaListRow = ({
           </ExtractionStatusTitle>
           {meta && <span className={MEDIA_LIST_ROW_META_CLASS}>{meta}</span>}
         </span>
+        {shouldStackIconOnMobile && mobileTrailing && (
+          <span className="flex shrink-0 items-center justify-center self-center md:hidden">
+            {mobileTrailing}
+          </span>
+        )}
         {shouldStackIconOnMobile && overlay && (
           <span
             className={cn(

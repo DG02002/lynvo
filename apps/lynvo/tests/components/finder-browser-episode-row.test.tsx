@@ -313,6 +313,13 @@ describe("FinderBrowser episode rows", () => {
     expect(sourceName.parentElement).toContainElement(fileSize)
     expect(sourceName.parentElement).toHaveTextContent("Streambox·1.05 GB")
     expect(screen.getAllByText("1.05 GB")).toHaveLength(1)
+    const newBadges = screen.getAllByText("New")
+    expect(newBadges).toHaveLength(2)
+    expect(newBadges[0]?.parentElement).toHaveClass(
+      "shrink-0",
+      "self-center",
+      "md:hidden"
+    )
     await waitFor(() => {
       const episodeImage = view.container.querySelector(
         'img[src*="episode-1.jpg"]'

@@ -165,4 +165,24 @@ describe("MediaListRow", () => {
     )
     expect(desktopOverlay?.parentElement).toHaveClass("hidden", "md:flex")
   })
+
+  it("centers mobile trailing content against stacked row text", () => {
+    render(
+      <MediaListRow
+        label="Title text"
+        icon={<span data-testid="row-icon" />}
+        title={{ value: "Title text" }}
+        meta={<span>Meta text</span>}
+        mobileTrailing={<span data-testid="mobile-trailing" />}
+        onActivate={() => {}}
+        shouldStackIconOnMobile
+      />
+    )
+
+    expect(screen.getByTestId("mobile-trailing").parentElement).toHaveClass(
+      "shrink-0",
+      "self-center",
+      "md:hidden"
+    )
+  })
 })

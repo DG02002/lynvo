@@ -176,8 +176,13 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
-          {shouldShowNewBadge && <NewBadge className="ms-auto md:hidden" />}
+          {shouldShowNewBadge && !shouldShowEpisodeStill && (
+            <NewBadge className="ms-auto md:hidden" />
+          )}
         </>
+      }
+      mobileTrailing={
+        shouldShowNewBadge && shouldShowEpisodeStill ? <NewBadge /> : undefined
       }
       trailing={
         shouldShowNewBadge ? (
