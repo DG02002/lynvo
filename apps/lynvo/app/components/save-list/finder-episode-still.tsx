@@ -15,15 +15,6 @@ import {
   MEDIA_LIST_EPISODE_STILL_SIZES,
 } from "./save-list-layout-constants"
 
-interface FinderEpisodeStillProps {
-  readonly label: string
-  readonly parentFolderName?: string
-  readonly fallbackIcon: ReactNode
-  readonly isResolving?: boolean
-  readonly isDimmed?: boolean
-  readonly isWatched?: boolean
-}
-
 interface FinderEpisodeStillImageProps {
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
@@ -140,33 +131,6 @@ export const FinderEpisodeStillDisplay = ({
         />
       </span>
     </span>
-  )
-}
-
-export const FinderEpisodeStill = ({
-  label,
-  parentFolderName,
-  fallbackIcon,
-  isResolving = false,
-  isDimmed = false,
-  isWatched = false,
-}: FinderEpisodeStillProps) => {
-  const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(
-    label,
-    parentFolderName
-  )
-
-  return (
-    <FinderEpisodeStillDisplay
-      label={label}
-      fallbackIcon={fallbackIcon}
-      isResolving={isResolving}
-      isDimmed={isDimmed}
-      isWatched={isWatched}
-      imagePath={imagePath}
-      imageType={imageType}
-      isLookupPending={isLookupPending}
-    />
   )
 }
 

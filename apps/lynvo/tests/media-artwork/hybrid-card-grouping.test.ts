@@ -23,6 +23,21 @@ const createItem = (
   },
 })
 
+const createEpisodeItem = (
+  url: string,
+  title: string,
+  timestamp: number,
+  extractedLinks: LinkListItem["metadata"]["extraction"]["extractedLinks"]
+): LinkListItem => ({
+  ...createItem(url, title, timestamp),
+  metadata: {
+    schemaVersion: 3,
+    source: {},
+    extraction: { extractedLinks },
+    playback: { openedUrls: [] },
+  },
+})
+
 describe("getHybridCardGroups", () => {
   it("merges movie variants of the same title into one card", () => {
     const groups = getHybridCardGroups([
@@ -140,6 +155,82 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(2)
+  })
+
+  it("merges a saved show container with a direct episode save", () => {
+    const episodeLabel = "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.mkv"
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/vox-container",
+        "The Legend of Vox Machina (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "AVC 1080p WEB-DL H264",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "episode",
+                url: "https://example.com/vox-container/episode",
+                label: episodeLabel,
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+      createEpisodeItem(
+        "https://example.com/vox-episode",
+        "The Legend of Vox Machina (2022)",
+        1_000,
+        [
+          {
+            nodeKey: "episode",
+            url: "https://example.com/vox-episode/media",
+            label: episodeLabel,
+            type: "file",
+            mediaNodeKind: "playable",
+          },
+        ]
+      ),
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.items.map((item) => item.url)).toEqual([
+      "https://example.com/vox-container",
+      "https://example.com/vox-episode",
+    ])
+  })
+
+  it("uses a compatible saved title for a mirror-resolvable container", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/vox-mirror",
+        "The Legend of Vox Machina (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "episode",
+            url: "https://example.com/vox-mirror/media",
+            label: "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.mkv",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("The Legend of Vox Machina (2022) S04")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "tv",
+      title: "The Legend of Vox Machina",
+      year: 2022,
+      seasonNumber: 4,
+    })
   })
 
   it("keeps unrecognizable labels as single-item cards without artwork", () => {

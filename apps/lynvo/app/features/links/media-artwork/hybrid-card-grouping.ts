@@ -180,7 +180,10 @@ const getHybridItemIdentity = (
     }
     const [descendantIdentity] = descendantIdentities.values()
     if (descendantIdentity) {
-      return reconcileSavedTitle(descendantIdentity, itemLabel)
+      return reconcileSavedTitle(
+        descendantIdentity,
+        item.title?.trim() || itemLabel
+      )
     }
   }
   return getHybridCardIdentity(itemLabel)
@@ -209,7 +212,6 @@ const reconcileSavedTitle = (
   return {
     ...identity,
     requestTitle: saved.requestTitle,
-    normalizedTitle: saved.normalizedTitle,
     year,
     displayTitle:
       identity.mediaKind === "tv"
