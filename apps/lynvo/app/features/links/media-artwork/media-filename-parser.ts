@@ -135,6 +135,11 @@ const getNormalizedTitleIdentity = (title: string): string =>
     .trim()
     .replace(/\s+/g, " ")
 
+const getFilenameEpisodeTitle = (suffix: string): string | undefined => {
+  const technicalStart = TECHNICAL_TOKEN_PATTERN.exec(suffix)?.index
+  return normalizeTitle(suffix.slice(0, technicalStart))
+}
+
 const toAmbiguousCandidate = (
   originalFilename: string
 ): MediaClassificationCandidate => ({
@@ -251,6 +256,9 @@ const createCandidate = ({
       year: resolvedYear,
       seasonNumber: resolvedSeason,
       episodeNumber: marker.episodeNumber,
+      episodeTitle: getFilenameEpisodeTitle(
+        matchingText.slice(marker.endIndex)
+      ),
       confidence: "high",
     }
   }

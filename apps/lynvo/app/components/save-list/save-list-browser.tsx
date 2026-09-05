@@ -26,7 +26,6 @@ import { ExpandableFilename } from "~/components/expandable-filename"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
   getMediaDisplayTitle,
-  getMediaEpisodeDisplayTitle,
   getEpisodeListingLabels,
   hasEpisodeMarker,
   isEpisodeOnlyListing,
@@ -54,6 +53,7 @@ import { groupSaveListItems } from "./save-list-groups"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
+  EpisodeStillSlot,
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
 } from "./finder-episode-still"
@@ -73,10 +73,8 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
 import {
-  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
   FINDER_FOLDER_CONTENT_GRID_CLASS,
   HYBRID_GROUP_CONTENT_CLASS,
-  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
   SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
@@ -467,14 +465,9 @@ const FinderBrowserLinkRow = ({
     parentFolderName,
     shouldShowEpisodeStillForLink
   )
-  const { artwork } = episodeStill
   const rowDisplayTitle =
     shouldShowEpisodeStillForLink && titleDisplay === "episode"
-      ? getMediaEpisodeDisplayTitle(
-          link.label,
-          artwork?.episodeTitle,
-          parentFolderName
-        )
+      ? episodeStill.episodeDisplayTitle
       : displayTitle
   const rowFallbackIcon = isResolving ? (
     <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
@@ -520,26 +513,19 @@ const FinderBrowserLinkRow = ({
         />
       )
     }
-    if (shouldStackEpisodeStill) {
-      return (
-        <span className={HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS}>
-          {episodeStillElement}
-        </span>
-      )
-    }
     return (
-      <>
-        <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
-          {episodeStillElement}
-        </span>
-        <span className="md:hidden">
+      <EpisodeStillSlot
+        stackOnMobile={shouldStackEpisodeStill}
+        mobileFallback={
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
             {rowFallbackIcon}
           </SaveListRowIcon>
-        </span>
-      </>
+        }
+      >
+        {episodeStillElement}
+      </EpisodeStillSlot>
     )
   }
   const rowIcon = renderRowIcon()
@@ -659,9 +645,13 @@ const FinderBrowser = ({
   const sharedSeasonIdentity = useMemo(
     () =>
       shouldShowRowPosters
-        ? getSharedSeasonIdentity(episodeListingLabels, parentFolderName)
+        ? getSharedSeasonIdentity(
+            episodeListingLabels,
+            parentFolderName,
+            getItemTitle(item)
+          )
         : undefined,
-    [episodeListingLabels, parentFolderName, shouldShowRowPosters]
+    [episodeListingLabels, parentFolderName, shouldShowRowPosters, item]
   )
   const headerTitle = sharedSeasonIdentity?.displayTitle ?? getItemTitle(item)
   const seasonArtworkRequest = useMemo<MediaArtworkRequest | undefined>(() => {
@@ -842,8 +832,9 @@ const FinderBrowser = ({
                     shouldShowEpisodeStills &&
                     hasEpisodeMarker(link.label, parentFolderName)
                       ? {
-                          label: link.label,
                           parentFolderName,
+                          titleDisplay: currentTitleDisplay,
+                          stackOnMobile: Boolean(sharedSeasonIdentity),
                         }
                       : undefined
                   }

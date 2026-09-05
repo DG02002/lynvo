@@ -1,11 +1,16 @@
 import { useMemo, type ReactNode } from "react"
 import { TmdbImage } from "~/features/links/components/tmdb-image"
-import { getMediaArtworkRequest } from "~/features/links/media-artwork/media-artwork-identity"
+import {
+  getMediaEpisodeDisplayTitle,
+  getMediaArtworkRequest,
+} from "~/features/links/media-artwork/media-artwork-identity"
 import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
 import { cn } from "~/lib/utils"
 import { Skeleton } from "~/components/ui/skeleton"
 import { Spinner } from "~/components/spinner"
 import {
+  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
+  MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
   MEDIA_LIST_EPISODE_STILL_CLASS,
   MEDIA_LIST_EPISODE_STILL_SIZES,
 } from "./save-list-layout-constants"
@@ -27,6 +32,7 @@ interface FinderEpisodeStillImageProps {
 }
 
 interface FinderEpisodeStillLookupState {
+  readonly episodeDisplayTitle: string
   readonly artwork: MediaArtworkResult | undefined
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
@@ -84,7 +90,17 @@ export const useFinderEpisodeStill = (
   const imageType = artwork?.stillPath ? "still" : "poster"
   const isLookupPending = artworkRequest !== undefined && artwork === undefined
 
-  return { artwork, imagePath, imageType, isLookupPending }
+  return {
+    artwork,
+    imagePath,
+    imageType,
+    isLookupPending,
+    episodeDisplayTitle: getMediaEpisodeDisplayTitle(
+      label,
+      artwork?.episodeTitle,
+      parentFolderName
+    ),
+  }
 }
 
 export const FinderEpisodeStillDisplay = ({
@@ -153,3 +169,27 @@ export const FinderEpisodeStill = ({
     />
   )
 }
+
+// Resolution changes the action, not the episode's responsive presentation.
+export const EpisodeStillSlot = ({
+  stackOnMobile,
+  children,
+  mobileFallback,
+}: {
+  readonly stackOnMobile: boolean
+  readonly children: ReactNode
+  readonly mobileFallback: ReactNode
+}) => (
+  <>
+    <span
+      className={
+        stackOnMobile
+          ? HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS
+          : MEDIA_LIST_EPISODE_STILL_SLOT_CLASS
+      }
+    >
+      {children}
+    </span>
+    {!stackOnMobile && <span className="md:hidden">{mobileFallback}</span>}
+  </>
+)

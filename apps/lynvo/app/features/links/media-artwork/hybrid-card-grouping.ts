@@ -180,31 +180,43 @@ const getHybridItemIdentity = (
     }
     const [descendantIdentity] = descendantIdentities.values()
     if (descendantIdentity) {
-      const itemIdentity = getHybridCardIdentity(itemLabel)
-      if (
-        descendantIdentity.year === undefined &&
-        itemIdentity?.year !== undefined &&
-        itemIdentity.normalizedTitle === descendantIdentity.normalizedTitle
-      ) {
-        return withAdoptedYear(descendantIdentity, itemIdentity.year)
-      }
-      return descendantIdentity
+      return reconcileSavedTitle(descendantIdentity, itemLabel)
     }
   }
   return getHybridCardIdentity(itemLabel)
 }
 
-const withAdoptedYear = (
+// The selection's title may retain an article omitted by release filenames.
+// Only borrow it when the remaining title and any explicit years agree.
+const withoutArticle = (title: string) => title.replace(/^(?:the|an|a) /, "")
+
+const reconcileSavedTitle = (
   identity: HybridCardIdentity,
-  year: number
-): HybridCardIdentity => ({
-  ...identity,
-  year,
-  displayTitle:
-    identity.mediaKind === "movie"
-      ? `${identity.requestTitle} (${year})`
-      : getTvDisplayTitle(identity.requestTitle, year, identity.seasonNumber),
-})
+  savedTitle?: string
+): HybridCardIdentity => {
+  const saved = savedTitle ? getHybridCardIdentity(savedTitle) : undefined
+  if (
+    !saved ||
+    withoutArticle(saved.normalizedTitle) !==
+      withoutArticle(identity.normalizedTitle) ||
+    (saved.year !== undefined &&
+      identity.year !== undefined &&
+      saved.year !== identity.year)
+  ) {
+    return identity
+  }
+  const year = identity.year ?? saved.year
+  return {
+    ...identity,
+    requestTitle: saved.requestTitle,
+    normalizedTitle: saved.normalizedTitle,
+    year,
+    displayTitle:
+      identity.mediaKind === "tv"
+        ? getTvDisplayTitle(saved.requestTitle, year, identity.seasonNumber)
+        : `${saved.requestTitle}${year === undefined ? "" : ` (${year})`}`,
+  }
+}
 
 const toUnmatchedGroup = (
   item: LinkListItem,
@@ -322,7 +334,8 @@ const sortGroups = (groups: readonly HybridCardGroup[]): HybridCardGroup[] =>
 
 export const getSharedSeasonIdentity = (
   labels: readonly string[],
-  parentFolderName?: string
+  parentFolderName?: string,
+  savedTitle?: string
 ): SharedSeasonIdentity | undefined => {
   const mediaLabels = labels.filter((label) => !isNonMediaFilename(label))
   if (mediaLabels.length === 0) {
@@ -363,7 +376,20 @@ export const getSharedSeasonIdentity = (
       return undefined
     }
   }
-  return sharedIdentity
+  if (!sharedIdentity) {
+    return undefined
+  }
+  const reconciled = reconcileSavedTitle(
+    { ...sharedIdentity, mediaKind: "tv" },
+    savedTitle
+  )
+  return {
+    ...sharedIdentity,
+    requestTitle: reconciled.requestTitle,
+    normalizedTitle: reconciled.normalizedTitle,
+    year: reconciled.year,
+    displayTitle: reconciled.displayTitle,
+  }
 }
 
 export const getHybridCardGroups = (
