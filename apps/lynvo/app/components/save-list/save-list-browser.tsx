@@ -471,6 +471,8 @@ const FinderBrowserLinkRow = ({
       : displayTitle
   const shouldStackIconOnMobile =
     shouldStackEpisodeStill && shouldShowEpisodeStillForLink
+  const shouldCenterMobileNewBadge =
+    shouldStackIconOnMobile && titleDisplay === "episode"
   const rowFallbackIcon = isResolving ? (
     <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
   ) : (
@@ -568,13 +570,13 @@ const FinderBrowserLinkRow = ({
               expirySource={link.expirySource}
             />
           )}
-          {!link.opened && !isExpired && !shouldStackIconOnMobile && (
+          {!link.opened && !isExpired && !shouldCenterMobileNewBadge && (
             <NewBadge className="ms-auto md:hidden" />
           )}
         </>
       }
       mobileTrailing={
-        !link.opened && !isExpired && shouldStackIconOnMobile ? (
+        !link.opened && !isExpired && shouldCenterMobileNewBadge ? (
           <NewBadge />
         ) : undefined
       }

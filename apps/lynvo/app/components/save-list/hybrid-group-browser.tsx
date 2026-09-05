@@ -111,6 +111,8 @@ const HybridGroupItemRow = ({
     titleDisplay === "episode" ? episodeStill.episodeDisplayTitle : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
+  const shouldCenterMobileNewBadge =
+    shouldShowEpisodeStill && titleDisplay === "episode"
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -176,13 +178,15 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
-          {shouldShowNewBadge && !shouldShowEpisodeStill && (
+          {shouldShowNewBadge && !shouldCenterMobileNewBadge && (
             <NewBadge className="ms-auto md:hidden" />
           )}
         </>
       }
       mobileTrailing={
-        shouldShowNewBadge && shouldShowEpisodeStill ? <NewBadge /> : undefined
+        shouldShowNewBadge && shouldCenterMobileNewBadge ? (
+          <NewBadge />
+        ) : undefined
       }
       trailing={
         shouldShowNewBadge ? (

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -375,6 +375,28 @@ describe("FinderBrowser episode rows", () => {
         name: "The Sample Series Name (2024) S01",
       })
     ).toBeInTheDocument()
+  })
+
+  it("keeps the mobile New badge below filenames when episode names are off", async () => {
+    render(
+      <SaveListBrowser
+        items={[item]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch", { name: "Episode names" }))
+    await screen.findByText(episodeFilename)
+
+    const [mobileNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge).toHaveClass("ms-auto", "md:hidden")
+    expect(mobileNewBadge?.parentElement).not.toHaveClass("self-center")
   })
 
   it("descends through a single season-folder wrapper into the season view", async () => {

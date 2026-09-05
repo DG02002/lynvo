@@ -164,6 +164,8 @@ export const ResolvableContainerRow = ({
       ? episodePresentation.episodeDisplayTitle
       : (displayTitle ?? link.label)
   const shouldStackIconOnMobile = episodeStill?.stackOnMobile === true
+  const shouldCenterMobileNewBadge =
+    shouldStackIconOnMobile && episodeStill?.titleDisplay === "episode"
   const linkTarget = getMediaNodeTarget(link)
   const {
     mirrors,
@@ -245,13 +247,13 @@ export const ResolvableContainerRow = ({
               sourceName={getResolvableSourceName(link, item)}
               size={displaySize}
             />
-            {!link.opened && !shouldStackIconOnMobile && (
+            {!link.opened && !shouldCenterMobileNewBadge && (
               <NewBadge className="ms-auto md:hidden" />
             )}
           </>
         }
         mobileTrailing={
-          !link.opened && shouldStackIconOnMobile ? <NewBadge /> : undefined
+          !link.opened && shouldCenterMobileNewBadge ? <NewBadge /> : undefined
         }
         trailing={
           !link.opened ? (
