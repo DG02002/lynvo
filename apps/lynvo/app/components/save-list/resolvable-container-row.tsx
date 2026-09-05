@@ -8,7 +8,6 @@ import {
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
-import { NewBadge } from "~/components/save-list/new-badge"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -247,18 +246,16 @@ export const ResolvableContainerRow = ({
               sourceName={getResolvableSourceName(link, item)}
               size={displaySize}
             />
-            {!link.opened && !shouldCenterMobileNewBadge && (
-              <NewBadge className="ms-auto md:hidden" />
-            )}
           </>
         }
-        mobileTrailing={
-          !link.opened && shouldCenterMobileNewBadge ? <NewBadge /> : undefined
-        }
-        trailing={
-          !link.opened ? (
-            <NewBadge className="hidden md:inline-flex" />
-          ) : undefined
+        newBadge={
+          !link.opened
+            ? {
+                mobilePlacement: shouldCenterMobileNewBadge
+                  ? "centered"
+                  : "metadata",
+              }
+            : undefined
         }
         overlay={
           <ResolvableLinkMenu

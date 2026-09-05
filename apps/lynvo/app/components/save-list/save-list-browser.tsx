@@ -10,6 +10,7 @@ import {
 import { Button } from "~/components/ui/button"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
+import { NewBadge } from "~/components/save-list/new-badge"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type {
@@ -21,7 +22,6 @@ import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
-import { NewBadge } from "~/components/save-list/new-badge"
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import {
@@ -570,20 +570,16 @@ const FinderBrowserLinkRow = ({
               expirySource={link.expirySource}
             />
           )}
-          {!link.opened && !isExpired && !shouldCenterMobileNewBadge && (
-            <NewBadge className="ms-auto md:hidden" />
-          )}
         </>
       }
-      mobileTrailing={
-        !link.opened && !isExpired && shouldCenterMobileNewBadge ? (
-          <NewBadge />
-        ) : undefined
-      }
-      trailing={
-        !link.opened && !isExpired ? (
-          <NewBadge className="hidden md:inline-flex" />
-        ) : undefined
+      newBadge={
+        !link.opened && !isExpired
+          ? {
+              mobilePlacement: shouldCenterMobileNewBadge
+                ? "centered"
+                : "metadata",
+            }
+          : undefined
       }
       overlay={
         !isResolving && linkTarget !== undefined ? (

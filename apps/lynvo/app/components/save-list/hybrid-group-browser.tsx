@@ -37,7 +37,6 @@ import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
 } from "./media-list-row-constants"
-import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   HYBRID_GROUP_CONTENT_CLASS,
@@ -178,20 +177,16 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
-          {shouldShowNewBadge && !shouldCenterMobileNewBadge && (
-            <NewBadge className="ms-auto md:hidden" />
-          )}
         </>
       }
-      mobileTrailing={
-        shouldShowNewBadge && shouldCenterMobileNewBadge ? (
-          <NewBadge />
-        ) : undefined
-      }
-      trailing={
-        shouldShowNewBadge ? (
-          <NewBadge className="hidden md:inline-flex" />
-        ) : undefined
+      newBadge={
+        shouldShowNewBadge
+          ? {
+              mobilePlacement: shouldCenterMobileNewBadge
+                ? "centered"
+                : "metadata",
+            }
+          : undefined
       }
       overlay={
         <LinkItemMenu

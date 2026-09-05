@@ -166,23 +166,25 @@ describe("MediaListRow", () => {
     expect(desktopOverlay?.parentElement).toHaveClass("hidden", "md:flex")
   })
 
-  it("centers mobile trailing content against stacked row text", () => {
+  it("places a new badge according to its responsive placement", () => {
     render(
       <MediaListRow
         label="Title text"
         icon={<span data-testid="row-icon" />}
         title={{ value: "Title text" }}
         meta={<span>Meta text</span>}
-        mobileTrailing={<span data-testid="mobile-trailing" />}
+        newBadge={{ mobilePlacement: "centered" }}
         onActivate={() => {}}
         shouldStackIconOnMobile
       />
     )
 
-    expect(screen.getByTestId("mobile-trailing").parentElement).toHaveClass(
+    const [mobileNewBadge, desktopNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge?.parentElement).toHaveClass(
       "shrink-0",
       "self-center",
       "md:hidden"
     )
+    expect(desktopNewBadge).toHaveClass("hidden", "md:inline-flex")
   })
 })
