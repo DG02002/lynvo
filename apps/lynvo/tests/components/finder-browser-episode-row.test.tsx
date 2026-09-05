@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -313,6 +313,13 @@ describe("FinderBrowser episode rows", () => {
     expect(sourceName.parentElement).toContainElement(fileSize)
     expect(sourceName.parentElement).toHaveTextContent("Streambox·1.05 GB")
     expect(screen.getAllByText("1.05 GB")).toHaveLength(1)
+    const newBadges = screen.getAllByText("New")
+    expect(newBadges).toHaveLength(2)
+    expect(newBadges[0]?.parentElement).toHaveClass(
+      "shrink-0",
+      "self-center",
+      "md:hidden"
+    )
     await waitFor(() => {
       const episodeImage = view.container.querySelector(
         'img[src*="episode-1.jpg"]'
@@ -342,6 +349,54 @@ describe("FinderBrowser episode rows", () => {
     expect(
       view.container.querySelector(".save-list-group-artwork-frame")
     ).toBeInTheDocument()
+  })
+
+  it("uses the compatible saved title in the FinderBrowser season header", () => {
+    const savedTitleItem: LinkViewItem = {
+      ...item,
+      title: "The Sample Series Name (2024)",
+    }
+
+    render(
+      <SaveListBrowser
+        items={[savedTitleItem]}
+        selectedItemUrl={savedTitleItem.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    expect(
+      screen.getByRole("heading", {
+        name: "The Sample Series Name (2024) S01",
+      })
+    ).toBeInTheDocument()
+  })
+
+  it("keeps the mobile New badge below filenames when episode names are off", async () => {
+    render(
+      <SaveListBrowser
+        items={[item]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+        shouldShowRowPosters
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch", { name: "Episode names" }))
+    await screen.findByText(episodeFilename)
+
+    const [mobileNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge).toHaveClass("ms-auto", "md:hidden")
+    expect(mobileNewBadge?.parentElement).not.toHaveClass("self-center")
   })
 
   it("descends through a single season-folder wrapper into the season view", async () => {

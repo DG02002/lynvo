@@ -248,6 +248,9 @@ describe("HybridGroupBrowser", () => {
     expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "false")
     await screen.findByText(episodeFilename)
     expect(screen.queryByText("1. The Sample Battle")).not.toBeInTheDocument()
+    const [mobileNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge).toHaveClass("ms-auto", "md:hidden")
+    expect(mobileNewBadge?.parentElement).not.toHaveClass("self-center")
   })
 
   it("sorts hybrid episode rows by their numeric episode number", async () => {

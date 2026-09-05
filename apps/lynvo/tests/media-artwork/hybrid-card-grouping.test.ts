@@ -23,6 +23,21 @@ const createItem = (
   },
 })
 
+const createEpisodeItem = (
+  url: string,
+  title: string,
+  timestamp: number,
+  extractedLinks: LinkListItem["metadata"]["extraction"]["extractedLinks"]
+): LinkListItem => ({
+  ...createItem(url, title, timestamp),
+  metadata: {
+    schemaVersion: 3,
+    source: {},
+    extraction: { extractedLinks },
+    playback: { openedUrls: [] },
+  },
+})
+
 describe("getHybridCardGroups", () => {
   it("merges movie variants of the same title into one card", () => {
     const groups = getHybridCardGroups([
@@ -140,6 +155,150 @@ describe("getHybridCardGroups", () => {
     ])
 
     expect(groups).toHaveLength(2)
+  })
+
+  it("merges a saved show container with a direct episode save", () => {
+    const episodeLabel = "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.mkv"
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/vox-container",
+        "The Legend of Vox Machina (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "AVC 1080p WEB-DL H264",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "episode",
+                url: "https://example.com/vox-container/episode",
+                label: episodeLabel,
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+      createEpisodeItem(
+        "https://example.com/vox-episode",
+        "The Legend of Vox Machina (2022)",
+        1_000,
+        [
+          {
+            nodeKey: "episode",
+            url: "https://example.com/vox-episode/media",
+            label: episodeLabel,
+            type: "file",
+            mediaNodeKind: "playable",
+          },
+        ]
+      ),
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.items.map((item) => item.url)).toEqual([
+      "https://example.com/vox-container",
+      "https://example.com/vox-episode",
+    ])
+  })
+
+  it("uses a compatible saved title for a mirror-resolvable container", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/vox-mirror",
+        "The Legend of Vox Machina (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "episode",
+            url: "https://example.com/vox-mirror/media",
+            label: "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.mkv",
+            type: "folder",
+            mediaNodeKind: "resolvable",
+            resolutionKind: "mirrors",
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("The Legend of Vox Machina (2022) S04")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "tv",
+      title: "The Legend of Vox Machina",
+      year: 2022,
+      seasonNumber: 4,
+    })
+  })
+
+  it("keeps a movie identity when only the saved article differs", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/movie-container",
+        "The Sample Movie",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "1080p WEB-DL",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "movie",
+                url: "https://example.com/movie-container/media",
+                label: "Sample.Movie.2021.1080p.mkv",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("Sample Movie (2021)")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "movie",
+      title: "Sample Movie",
+      year: 2021,
+    })
+  })
+
+  it("keeps a movie year when the saved title conflicts", () => {
+    const groups = getHybridCardGroups([
+      createEpisodeItem(
+        "https://example.com/movie-year-container",
+        "Sample Movie (2022)",
+        2_000,
+        [
+          {
+            nodeKey: "quality",
+            label: "1080p WEB-DL",
+            type: "folder",
+            mediaNodeKind: "group",
+            children: [
+              {
+                nodeKey: "movie",
+                url: "https://example.com/movie-year-container/media",
+                label: "Sample.Movie.2021.1080p.mkv",
+                type: "file",
+                mediaNodeKind: "resolvable",
+              },
+            ],
+          },
+        ]
+      ),
+    ])
+
+    expect(groups[0]?.displayTitle).toBe("Sample Movie (2021)")
+    expect(groups[0]?.artworkRequest).toEqual({
+      mediaKind: "movie",
+      title: "Sample Movie",
+      year: 2021,
+    })
   })
 
   it("keeps unrecognizable labels as single-item cards without artwork", () => {
@@ -524,6 +683,37 @@ describe("getSharedSeasonIdentity", () => {
     ])
 
     expect(identity).toBeUndefined()
+  })
+
+  it("does not reconcile a saved title when years conflict", () => {
+    const identity = getSharedSeasonIdentity(
+      ["Sample.Show.2021.S01E01.1080p.mkv"],
+      undefined,
+      "The Sample Show (2022)"
+    )
+
+    expect(identity).toEqual({
+      requestTitle: "Sample Show",
+      normalizedTitle: "sample show",
+      year: 2021,
+      seasonNumber: 1,
+      displayTitle: "Sample Show (2021) S01",
+    })
+  })
+
+  it("does not reconcile an incompatible saved title", () => {
+    const identity = getSharedSeasonIdentity(
+      ["Sample.Show.S01E01.1080p.mkv"],
+      undefined,
+      "Other Show (2022)"
+    )
+
+    expect(identity).toEqual({
+      requestTitle: "Sample Show",
+      normalizedTitle: "sample show",
+      seasonNumber: 1,
+      displayTitle: "Sample Show S01",
+    })
   })
 
   it("returns undefined when any link is not an episode", () => {

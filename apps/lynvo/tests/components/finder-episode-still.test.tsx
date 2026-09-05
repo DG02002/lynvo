@@ -1,8 +1,37 @@
 import { render, screen, waitFor } from "@testing-library/react"
+import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
+import {
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "~/components/save-list/finder-episode-still"
 
-describe("FinderEpisodeStill", () => {
+const EpisodeStillHarness = ({
+  label,
+  fallbackIcon,
+  isWatched = false,
+}: {
+  readonly label: string
+  readonly fallbackIcon: ReactNode
+  readonly isWatched?: boolean
+}) => {
+  const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(label)
+
+  return (
+    <FinderEpisodeStillDisplay
+      label={label}
+      fallbackIcon={fallbackIcon}
+      isResolving={false}
+      isDimmed={false}
+      isWatched={isWatched}
+      imagePath={imagePath}
+      imageType={imageType}
+      isLookupPending={isLookupPending}
+    />
+  )
+}
+
+describe("episode still presentation", () => {
   beforeEach(() => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ results: [{ stillPath: "/still.jpg" }] }), {
@@ -17,7 +46,7 @@ describe("FinderEpisodeStill", () => {
 
   it("uses the wide-card source for landscape episode stills", async () => {
     const { container } = render(
-      <FinderEpisodeStill
+      <EpisodeStillHarness
         label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
@@ -34,7 +63,7 @@ describe("FinderEpisodeStill", () => {
 
   it("requests still-sized sources for retina screens", async () => {
     const { container } = render(
-      <FinderEpisodeStill
+      <EpisodeStillHarness
         label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
@@ -55,7 +84,7 @@ describe("FinderEpisodeStill", () => {
 
   it("shows a skeleton while the lookup is pending instead of the fallback icon", () => {
     const { container } = render(
-      <FinderEpisodeStill
+      <EpisodeStillHarness
         label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
       />
@@ -69,7 +98,7 @@ describe("FinderEpisodeStill", () => {
 
   it("renders watched episode stills in grayscale", async () => {
     const { container } = render(
-      <FinderEpisodeStill
+      <EpisodeStillHarness
         label="Warden.S03E01.Episode.2160p.mkv"
         fallbackIcon={<span>Fallback</span>}
         isWatched

@@ -12,7 +12,6 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getMediaDisplayTitle,
-  getMediaEpisodeDisplayTitle,
   isEpisodeOnlyListing,
 } from "~/features/links/media-artwork/media-artwork-identity"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
@@ -38,7 +37,6 @@ import {
   MEDIA_LIST_HEADER_MENU_CELL_CLASS,
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
 } from "./media-list-row-constants"
-import { NewBadge } from "./new-badge"
 import { PlayableExpiryBadge } from "./playable-expiry-badge"
 import {
   HYBRID_GROUP_CONTENT_CLASS,
@@ -108,14 +106,12 @@ const HybridGroupItemRow = ({
     undefined,
     shouldShowEpisodeStill
   )
-  const { artwork } = episodeStill
-  const episodeTitle = artwork?.episodeTitle
   const rowDisplayTitle =
-    titleDisplay === "episode"
-      ? getMediaEpisodeDisplayTitle(itemLabel, episodeTitle)
-      : displayTitle
+    titleDisplay === "episode" ? episodeStill.episodeDisplayTitle : displayTitle
   const shouldShowNewBadge =
     !isDirectLinkExpired && !isExtractionVisual && interactionState.isNew
+  const shouldCenterMobileNewBadge =
+    shouldShowEpisodeStill && titleDisplay === "episode"
 
   const handleActivate = () => {
     if (isExtractionVisual) {
@@ -181,13 +177,16 @@ const HybridGroupItemRow = ({
               expirySource={directLink.expirySource}
             />
           )}
-          {shouldShowNewBadge && <NewBadge className="ms-auto md:hidden" />}
         </>
       }
-      trailing={
-        shouldShowNewBadge ? (
-          <NewBadge className="hidden md:inline-flex" />
-        ) : undefined
+      newBadge={
+        shouldShowNewBadge
+          ? {
+              mobilePlacement: shouldCenterMobileNewBadge
+                ? "centered"
+                : "metadata",
+            }
+          : undefined
       }
       overlay={
         <LinkItemMenu

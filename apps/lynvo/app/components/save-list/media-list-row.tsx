@@ -4,6 +4,7 @@ import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
 import { ExtractionStatusTitle } from "./extraction-status"
 import type { ExtractionStatusTitleSpec } from "./extraction-status-utils"
+import { NewBadge } from "./new-badge"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
@@ -65,12 +66,17 @@ interface MediaListRowTitleText {
   readonly isStruckThrough?: boolean
 }
 
+interface MediaListRowNewBadge {
+  readonly mobilePlacement: "centered" | "metadata"
+}
+
 interface MediaListRowProps {
   readonly label?: string
   readonly icon: ReactNode
   readonly title: MediaListRowTitleText
   readonly titleExtractionStatus?: ExtractionStatusTitleSpec
   readonly meta?: ReactNode
+  readonly newBadge?: MediaListRowNewBadge
   readonly trailing?: ReactNode
   readonly overlay?: ReactNode
   readonly onActivate: () => void
@@ -90,6 +96,7 @@ export const MediaListRow = ({
   title,
   titleExtractionStatus,
   meta,
+  newBadge,
   trailing,
   overlay,
   onActivate,
@@ -157,8 +164,21 @@ export const MediaListRow = ({
               isInsideActivationOverlay
             />
           </ExtractionStatusTitle>
-          {meta && <span className={MEDIA_LIST_ROW_META_CLASS}>{meta}</span>}
+          {(meta || newBadge?.mobilePlacement === "metadata") && (
+            <span className={MEDIA_LIST_ROW_META_CLASS}>
+              {meta}
+              {newBadge?.mobilePlacement === "metadata" && (
+                <NewBadge className="ms-auto md:hidden" />
+              )}
+            </span>
+          )}
         </span>
+        {shouldStackIconOnMobile &&
+          newBadge?.mobilePlacement === "centered" && (
+            <span className="flex shrink-0 items-center justify-center self-center md:hidden">
+              <NewBadge />
+            </span>
+          )}
         {shouldStackIconOnMobile && overlay && (
           <span
             className={cn(
@@ -171,6 +191,7 @@ export const MediaListRow = ({
         )}
       </span>
       {trailing}
+      {newBadge && <NewBadge className="hidden md:inline-flex" />}
     </div>
     {overlay && (
       <div

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   getMediaArtworkRequest,
+  getMediaEpisodeDisplayTitle,
   getMediaDisplayTitle,
   hasEpisodeMarker,
   isEpisodeOnlyListing,
@@ -152,5 +153,15 @@ describe("isEpisodeOnlyListing", () => {
   it("rejects listings with no media at all", () => {
     expect(isEpisodeOnlyListing(["show.nfo", "poster.jpg"])).toBe(false)
     expect(isEpisodeOnlyListing([])).toBe(false)
+  })
+})
+
+describe("episode title availability", () => {
+  it("uses the filename episode name while provider metadata is unavailable", () => {
+    expect(
+      getMediaEpisodeDisplayTitle(
+        "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.AMZN.WEB-DL.mkv"
+      )
+    ).toBe("1. One Year Later")
   })
 })

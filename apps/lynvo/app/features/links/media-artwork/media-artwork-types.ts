@@ -17,6 +17,7 @@ declare global {
     readonly seasonNumber?: number
     readonly episodeNumber?: number
     readonly episodeEnd?: number
+    readonly episodeTitle?: string
     readonly confidence: "high" | "medium" | "low"
   }
 

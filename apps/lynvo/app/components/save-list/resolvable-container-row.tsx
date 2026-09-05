@@ -1,5 +1,4 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import type { ReactNode } from "react"
 import {
   PackageIcon,
   PackageOpenIcon,
@@ -9,7 +8,6 @@ import {
 import { AnimatedStateIcon } from "~/components/animated-state-icon"
 import { getExtractionWaitStatusInput } from "~/components/save-list/extraction-status-utils"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
-import { NewBadge } from "~/components/save-list/new-badge"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -19,9 +17,12 @@ import {
   MEDIA_LIST_ROW_MENU_TRIGGER_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "~/components/save-list/media-list-row-constants"
-import { MEDIA_LIST_EPISODE_STILL_SLOT_CLASS } from "~/components/save-list/save-list-layout-constants"
 import { ResolvableLinkMenu } from "~/components/save-list/resolvable-link-menu"
-import { FinderEpisodeStill } from "~/components/save-list/finder-episode-still"
+import {
+  EpisodeStillSlot,
+  FinderEpisodeStillDisplay,
+  useFinderEpisodeStill,
+} from "~/components/save-list/finder-episode-still"
 import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
@@ -40,8 +41,9 @@ interface ResolvedMirrorRowsProps {
 }
 
 interface ResolvableContainerEpisodeStill {
-  readonly label: string
   readonly parentFolderName?: string
+  readonly titleDisplay: "episode" | "filename"
+  readonly stackOnMobile: boolean
 }
 
 interface ResolvableContainerRowProps {
@@ -52,41 +54,6 @@ interface ResolvableContainerRowProps {
   readonly onRemove: () => void
   readonly episodeStill?: ResolvableContainerEpisodeStill
   readonly displayTitle?: string
-}
-
-interface ResolvableContainerRowIconProps {
-  readonly episodeStill?: ResolvableContainerEpisodeStill
-  readonly containerIcon: ReactNode
-  readonly shouldShowResolving: boolean
-  readonly isWatched: boolean
-}
-
-const ResolvableContainerRowIcon = ({
-  episodeStill,
-  containerIcon,
-  shouldShowResolving,
-  isWatched,
-}: ResolvableContainerRowIconProps) => {
-  if (episodeStill) {
-    return (
-      <>
-        <span className={MEDIA_LIST_EPISODE_STILL_SLOT_CLASS}>
-          <FinderEpisodeStill
-            label={episodeStill.label}
-            parentFolderName={episodeStill.parentFolderName}
-            fallbackIcon={containerIcon}
-            isResolving={shouldShowResolving}
-            isWatched={isWatched}
-          />
-        </span>
-        <span className="md:hidden">
-          <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
-        </span>
-      </>
-    )
-  }
-
-  return <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
 }
 
 const ResolvedMirrorRows = ({
@@ -186,6 +153,18 @@ export const ResolvableContainerRow = ({
   episodeStill,
   displayTitle,
 }: ResolvableContainerRowProps) => {
+  const episodePresentation = useFinderEpisodeStill(
+    link.label,
+    episodeStill?.parentFolderName,
+    episodeStill !== undefined
+  )
+  const rowDisplayTitle =
+    episodeStill?.titleDisplay === "episode"
+      ? episodePresentation.episodeDisplayTitle
+      : (displayTitle ?? link.label)
+  const shouldStackIconOnMobile = episodeStill?.stackOnMobile === true
+  const shouldCenterMobileNewBadge =
+    shouldStackIconOnMobile && episodeStill?.titleDisplay === "episode"
   const linkTarget = getMediaNodeTarget(link)
   const {
     mirrors,
@@ -221,8 +200,9 @@ export const ResolvableContainerRow = ({
     >
       <MediaListRow
         wrapperClassName="border-b-0"
+        shouldStackIconOnMobile={shouldStackIconOnMobile}
         isOpened={link.opened === true}
-        label={displayTitle ?? link.label}
+        label={rowDisplayTitle}
         buttonClassName={cn(
           isExpanded && !link.opened && "bg-muted/60 group-hover:bg-muted/80",
           didResolutionFail && "bg-destructive/15 group-hover:bg-destructive/20"
@@ -231,14 +211,29 @@ export const ResolvableContainerRow = ({
           "data-resolution-state": resolutionState,
         }}
         icon={
-          <ResolvableContainerRowIcon
-            episodeStill={episodeStill}
-            containerIcon={containerIcon}
-            shouldShowResolving={shouldShowResolving}
-            isWatched={link.opened === true}
-          />
+          episodeStill ? (
+            <EpisodeStillSlot
+              stackOnMobile={episodeStill.stackOnMobile}
+              mobileFallback={
+                <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
+              }
+            >
+              <FinderEpisodeStillDisplay
+                label={link.label}
+                fallbackIcon={containerIcon}
+                isResolving={shouldShowResolving}
+                isDimmed={false}
+                isWatched={link.opened === true}
+                imagePath={episodePresentation.imagePath}
+                imageType={episodePresentation.imageType}
+                isLookupPending={episodePresentation.isLookupPending}
+              />
+            </EpisodeStillSlot>
+          ) : (
+            <SaveListRowIcon>{containerIcon}</SaveListRowIcon>
+          )
         }
-        title={{ value: displayTitle ?? link.label }}
+        title={{ value: rowDisplayTitle }}
         titleExtractionStatus={{
           status: getExtractionWaitStatusInput(
             shouldShowResolving,
@@ -251,13 +246,16 @@ export const ResolvableContainerRow = ({
               sourceName={getResolvableSourceName(link, item)}
               size={displaySize}
             />
-            {!link.opened && <NewBadge className="ms-auto md:hidden" />}
           </>
         }
-        trailing={
-          !link.opened ? (
-            <NewBadge className="hidden md:inline-flex" />
-          ) : undefined
+        newBadge={
+          !link.opened
+            ? {
+                mobilePlacement: shouldCenterMobileNewBadge
+                  ? "centered"
+                  : "metadata",
+              }
+            : undefined
         }
         overlay={
           <ResolvableLinkMenu
