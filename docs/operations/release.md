@@ -84,13 +84,15 @@ note categories are configured in [`.github/release.yml`](../../.github/release.
 
 The production job uses this order:
 
-1. verify the production configuration and release identity
-2. download the artifacts built from the verified commit
-3. apply pending D1 migrations remotely
-4. deploy `lynvo-plugin-server`
-5. deploy `lynvo`
-6. verify the expected commit, service version, deployment ID, and homepage
-7. roll back Worker versions if post-promotion verification fails
+1. verify that the stable release tag points to a commit on `main`
+2. verify the production configuration and release identity
+3. download the artifacts built from the verified commit
+4. apply pending D1 migrations remotely
+5. deploy `lynvo-plugin-server`
+6. deploy `lynvo`
+7. verify the expected commit, service version, deployment ID, and homepage
+8. roll back Worker versions if post-promotion verification fails
+9. create the GitHub Release after the deployment health checks pass
 
 Preserve this order when changing the workflow. Lynvo must not serve code that
 expects a migration or Plugin Server change that has not landed yet.
@@ -108,6 +110,11 @@ and creates a GitHub Release only after the deployment health checks pass. The
 release starts with the independent Lynvo and managed Plugin Server service
 versions, then uses the category rules in
 [`.github/release.yml`](../../.github/release.yml) for generated change notes.
+
+The release step retries three times and treats an existing release as
+successful. If the Workers deploy successfully but GitHub Release creation
+still fails, the Workers remain deployed. Rerun the tag workflow or create the
+release manually; do not roll back the Workers for a release-metadata failure.
 
 There are no scheduled or nightly product releases. Verified `main` commits
 remain candidates for release until a maintainer creates a stable product tag.
