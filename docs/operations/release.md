@@ -36,8 +36,6 @@ secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
 
 Register the production Google OAuth callback:
 
@@ -46,6 +44,7 @@ https://lynvo.dg02002.workers.dev/api/auth/callback/google
 ```
 
 Keep Worker-only secrets in Cloudflare. The application Worker requires
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `PLUGIN_CREDENTIAL_ENCRYPTION_KEY`, `MANAGED_PLUGIN_SERVER_API_KEY`, and
 `TMDB_API_READ_ACCESS_TOKEN`. The managed Plugin Server requires
 `PLUGIN_SERVER_AUTH_KEY`; its value must match the application's managed
@@ -154,20 +153,24 @@ Runtime caching is not a general coordination mechanism. Add caching endpoint
 by endpoint with an explicit key, ownership, and invalidation rule. Do not use
 the Cache API as durable application state.
 
-## Cloudflare build projects
+## Cloudflare production deployment
 
-Connect the repository to two separate Cloudflare Worker projects. Configure
-each project with the directory that owns its Wrangler configuration:
-
-| Worker project | Root directory | Deploy command |
-| --- | --- | --- |
-| Lynvo | `/apps/lynvo` | `pnpm deploy` |
-| Lynvo Plugin Server | `/apps/lynvo-plugin-server` | `pnpm deploy` |
+GitHub Actions is the only production deployment path for the managed Lynvo
+and managed Plugin Server Workers. Do not connect these directories to
+Cloudflare Workers Builds with an automatic production deploy command. That
+would bypass stable-tag gating, verified release artifacts, D1 migration
+ordering, and rollback handling.
 
 Keep the Workers as separate build targets even though they share one
-repository. Include `packages/plugin-server-protocol/**`, the root lockfile,
-and workspace configuration in both projects' build watch paths. Protocol or
-dependency changes can affect either Worker.
+repository. If a Cloudflare build project is used for a non-production
+preview, include `packages/plugin-server-protocol/**`, the root lockfile, and
+workspace configuration in its watch paths. Protocol or dependency changes
+can affect either Worker.
+
+For local validation, use the repository checks and the dry-run `pnpm build`
+command. The managed Plugin Server's `pnpm deploy` script requires explicit
+`SERVICE_VERSION` and `COMMIT_HASH` values; ordinary production releases must
+still go through the tag workflow above.
 
 The workspace intentionally uses pnpm recursive scripts instead of Turborepo.
 Add a task orchestrator only after measured build times justify its caching and

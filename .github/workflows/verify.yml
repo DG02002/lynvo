@@ -132,7 +132,7 @@ jobs:
             !apps/lynvo/build/server/.dev.vars
             !apps/lynvo/dist/lynvo_plugin_server/.dev.vars
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   deploy-production:
     name: Deploy production
@@ -166,10 +166,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
-          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing production environment secret: ${name}"
               exit 1
@@ -192,7 +190,6 @@ jobs:
         run: |
           lynvo_package_version="$(node -p "require('./apps/lynvo/package.json').version")"
           plugin_server_package_version="$(node -p "require('./apps/lynvo-plugin-server/package.json').version")"
-          printf 'tag=%s\n' "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'lynvo_version=%s+%s\n' "$lynvo_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'plugin_server_version=%s+%s\n' "$plugin_server_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
 
@@ -206,6 +203,14 @@ jobs:
         with:
           name: lynvo-release-${{ github.sha }}
           path: apps/lynvo
+
+      - name: Verify generated deployment configuration
+        working-directory: apps/lynvo
+        env:
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
+        run: >-
+          SERVICE_VERSION="$LYNVO_VERSION"
+          pnpm run preflight -- build/server/wrangler.json --generated
 
       - name: Apply pending D1 migrations to production
         working-directory: apps/lynvo
@@ -270,7 +275,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::The expected Lynvo release did not become active within 60 seconds."
+          echo "::error::The expected Lynvo release did not become active within the configured verification window."
           exit 1
 
       - name: Roll back Lynvo after a post-promotion failure

@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { join, relative, resolve } from "node:path"
 import { spawnSync } from "node:child_process"
 import { describe, expect, it } from "vitest"
 
@@ -9,13 +9,22 @@ const lynvoConfig = readFileSync(resolve("wrangler.jsonc"), "utf8")
 
 const runPreflight = (
   lynvo: string,
-  identity = { commitHash: "abc123", serviceVersion: "2026.08.18" }
+  identity = { commitHash: "abc123", serviceVersion: "2026.08.18" },
+  options: { generated?: boolean; relativePath?: boolean } = {}
 ) => {
-  const directory = mkdtempSync(join(tmpdir(), "lynvo-preflight-"))
+  const directory = mkdtempSync(join(tmpdir(), "lynvo preflight-"))
   const lynvoPath = join(directory, "lynvo.jsonc")
   writeFileSync(lynvoPath, lynvo)
-  return spawnSync(process.execPath, [scriptPath, lynvoPath], {
+  const configArgument = options.relativePath
+    ? relative(process.cwd(), lynvoPath)
+    : lynvoPath
+  const args = [scriptPath, configArgument]
+  if (options.generated) {
+    args.push("--generated")
+  }
+  return spawnSync(process.execPath, args, {
     encoding: "utf8",
+    cwd: process.cwd(),
     env: {
       ...process.env,
       COMMIT_HASH: identity.commitHash,
@@ -28,10 +37,26 @@ const validLynvoConfig = lynvoConfig.replace(
   /"database_id":\s*"[^"]+"/,
   '"database_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"'
 )
+const generatedLynvoConfig = validLynvoConfig.replace(
+  /\n\t"env": \{[\s\S]*?\n\t\},\n\t"observability"/,
+  '\n\t"observability"'
+)
 
 describe("deployment preflight command", () => {
   it("accepts the intended private production topology", () => {
     expect(runPreflight(validLynvoConfig).status).toBe(0)
+  })
+
+  it("accepts the generated production topology", () => {
+    expect(
+      runPreflight(generatedLynvoConfig, undefined, { generated: true }).status
+    ).toBe(0)
+  })
+
+  it("accepts relative config paths containing spaces", () => {
+    expect(
+      runPreflight(validLynvoConfig, undefined, { relativePath: true }).status
+    ).toBe(0)
   })
 
   it.each([
@@ -92,5 +117,15 @@ describe("deployment preflight command", () => {
     ],
   ])("rejects %s configuration", (_name, lynvo) => {
     expect(runPreflight(lynvo).status).not.toBe(0)
+  })
+
+  it("reports the failed checks", () => {
+    const result = runPreflight(
+      validLynvoConfig.replace('"binding": "DB"', '"binding": "MISSING_DB"')
+    )
+
+    expect(result.stderr).toContain(
+      "D1 database binding appears 1 time; expected 2"
+    )
   })
 })

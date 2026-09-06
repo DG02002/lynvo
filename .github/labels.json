@@ -10,6 +10,16 @@
     "description": "Something is broken or behaving incorrectly."
   },
   {
+    "name": "breaking-change",
+    "color": "b60205",
+    "description": "A change that requires a new major release or compatibility migration."
+  },
+  {
+    "name": "dependencies",
+    "color": "0366d6",
+    "description": "An automated dependency update."
+  },
+  {
     "name": "documentation",
     "color": "0075ca",
     "description": "Documentation needs an improvement or correction."
@@ -28,6 +38,11 @@
     "name": "good first issue",
     "color": "7057ff",
     "description": "A focused issue suitable for a new contributor."
+  },
+  {
+    "name": "github_actions",
+    "color": "000000",
+    "description": "An automated GitHub Actions update."
   },
   {
     "name": "help wanted",
