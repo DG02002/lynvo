@@ -1,8 +1,8 @@
 # Release and deployment
 
 GitHub Actions is the production deployment path. A push to `main` runs the
-read-only verification job first. The production job enters the `production`
-GitHub Environment only after verification succeeds.
+read-only verification job only. The production job enters the `production`
+GitHub Environment only for a stable product tag after verification succeeds.
 
 The deployment applies pending D1 migrations, deploys the managed Plugin
 Server, deploys Lynvo, verifies the expected release identity and homepage, and
@@ -53,27 +53,32 @@ Plugin Server key. Never copy a secret into the repository or GitHub unless a
 workflow genuinely needs its plaintext value.
 
 Protect `main`, require pull requests, and require the successful
-`Verify / Repository verification` check before merging. Configure an
-approver for the `production` Environment when a manual release gate is
-needed. These GitHub settings are external to this repository and must be
-checked in the GitHub UI.
+`Verify / Repository verification` check before merging. Protect the stable
+release tag pattern (`v*.*.*`) so only maintainers can create production
+release tags. Configure an approver for the `production` Environment when a
+manual release gate is needed. These GitHub settings are external to this
+repository and must be checked in the GitHub UI.
 
 ## Normal production workflow
 
 1. Create a focused branch and pull request.
 2. Wait for `Verify` to pass on the pull request.
 3. Merge the pull request into `main`.
-4. Let the `Verify` workflow build and upload the verified artifacts.
-5. Let `Deploy production` apply migrations and deploy both Workers.
-6. Check the release identity endpoint and the homepage health check in the
-   workflow output.
+4. Let the `Verify` workflow run on `main` and confirm the repository remains
+   healthy. This does not deploy production.
+5. Create and push a stable `vX.Y.Z` tag on the approved `main` commit.
+6. Let the tag run the complete verification, apply migrations, and deploy
+   both Workers.
+7. Check the release identity endpoint, homepage health check, and generated
+   GitHub Release.
 
 Do not deploy from a laptop during ordinary development. A local deployment
 can bypass the verified commit and the coordinated Worker order.
 
-The workflow files are [`verify.yml`](../../.github/workflows/verify.yml) and
-[`release.yml`](../../.github/workflows/release.yml). The product deployment
-is in `verify.yml`; `release.yml` creates a named GitHub Release only.
+The product release workflow is [`verify.yml`](../../.github/workflows/verify.yml).
+It verifies `main` pushes and stable product tags. A stable tag deploys both
+Workers and creates the GitHub Release after deployment succeeds. The release
+note categories are configured in [`.github/release.yml`](../../.github/release.yml).
 
 ## Worker deployment order
 
@@ -92,16 +97,20 @@ expects a migration or Plugin Server change that has not landed yet.
 
 ## GitHub product releases
 
-Production deploys happen for every verified merge to `main`. A GitHub Release
-is a separate named milestone created from a stable tag on a verified commit.
+Production deploys happen for stable product tags, not for every verified
+merge to `main`.
 
-Use a `vX.Y.Z` tag for a Lynvo product release. The release workflow accepts
-stable `v*.*.*` tags, verifies that the tagged commit is already on `main`, and
-generates release notes from merged pull requests using
-[`.github/release.yml`](../../.github/release.yml).
+Use a `vX.Y.Z` tag for a Lynvo product release. This tag is the coordinated
+deployment milestone and does not need to match either service manifest
+version. The tag workflow verifies that the tagged commit is already on
+`main`, deploys the managed Plugin Server and Lynvo from that exact commit,
+and creates a GitHub Release only after the deployment health checks pass. The
+release starts with the independent Lynvo and managed Plugin Server service
+versions, then uses the category rules in
+[`.github/release.yml`](../../.github/release.yml) for generated change notes.
 
-There are no scheduled or nightly product releases. The hosted web app is
-already deployed from verified `main` commits.
+There are no scheduled or nightly product releases. Verified `main` commits
+remain candidates for release until a maintainer creates a stable product tag.
 
 The generated release notes are not a committed `CHANGELOG.md` and are not the
 in-app changelog. The protocol package keeps its own hand-maintained changelog

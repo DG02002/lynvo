@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
+      - "!v*-*"
 
 permissions:
   contents: read
@@ -87,7 +90,7 @@ jobs:
       - name: Verify publishable package contents
         run: pnpm check:plugin-server-release
       - name: Upload verified release artifacts
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref_type == 'tag'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lynvo-release-${{ github.sha }}
@@ -105,7 +108,10 @@ jobs:
     needs:
       - workflow-security
       - verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    outputs:
+      lynvo_version: ${{ steps.release.outputs.lynvo_version }}
+      plugin_server_version: ${{ steps.release.outputs.plugin_server_version }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -119,11 +125,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           sparse-checkout: |
             /*
             !/.repos/
           sparse-checkout-cone-mode: false
           persist-credentials: false
+
+      - name: Verify release tag is on main
+        env:
+          TAG_COMMIT: ${{ github.sha }}
+        run: git merge-base --is-ancestor "$TAG_COMMIT" origin/main
 
       - name: Verify production credentials are available
         env:
@@ -155,7 +167,6 @@ jobs:
         run: |
           lynvo_package_version="$(node -p "require('./apps/lynvo/package.json').version")"
           plugin_server_package_version="$(node -p "require('./apps/lynvo-plugin-server/package.json').version")"
-          printf 'tag=%s\n' "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'lynvo_version=%s+%s\n' "$lynvo_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'plugin_server_version=%s+%s\n' "$plugin_server_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
 
@@ -191,7 +202,7 @@ jobs:
           pnpm --filter @lynvo/app exec wrangler deploy
           --config dist/lynvo_plugin_server/wrangler.json
           --env=""
-          --message "GitHub ${COMMIT_HASH}"
+          --message "GitHub ${GITHUB_REF_NAME} (${COMMIT_HASH})"
           --var "SERVICE_VERSION:$PLUGIN_SERVER_VERSION"
           --var "COMMIT_HASH:$COMMIT_HASH"
 
@@ -205,7 +216,7 @@ jobs:
           pnpm --filter @lynvo/app exec wrangler deploy
           --config build/server/wrangler.json
           --env=""
-          --message "GitHub ${COMMIT_HASH}"
+          --message "GitHub ${GITHUB_REF_NAME} (${COMMIT_HASH})"
           --var "SERVICE_VERSION:$LYNVO_VERSION"
           --var "COMMIT_HASH:$COMMIT_HASH"
 
@@ -259,3 +270,37 @@ jobs:
           --env=""
           --message "Automatic rollback after downstream release failure for ${COMMIT_HASH}"
           --yes
+
+  create-release:
+    name: Create GitHub release
+    needs: deploy-production
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG_NAME: ${{ github.ref_name }}
+      LYNVO_VERSION: ${{ needs.deploy-production.outputs.lynvo_version }}
+      PLUGIN_SERVER_VERSION: ${{ needs.deploy-production.outputs.plugin_server_version }}
+    steps:
+      - name: Create product release
+        run: |
+          release_notes="$(cat <<EOF
+          ## Component versions
+
+          - Lynvo: \`$LYNVO_VERSION\`
+          - Managed Plugin Server: \`$PLUGIN_SERVER_VERSION\`
+          - Commit: \`$GITHUB_SHA\`
+
+          Both production Workers were deployed from this tag after the full repository verification passed.
+          EOF
+          )"
+
+          gh release create "$TAG_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --generate-notes \
+            --notes "$release_notes" \
+            --title "Lynvo $TAG_NAME"
