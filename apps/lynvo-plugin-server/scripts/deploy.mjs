@@ -29,7 +29,7 @@ const child = spawn(
     "--var",
     `COMMIT_HASH:${commitHash}`,
   ],
-  { stdio: "inherit" }
+  { shell: process.platform === "win32", stdio: "inherit" }
 )
 
 const exitCode = await new Promise((resolve) => {

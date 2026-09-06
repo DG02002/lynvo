@@ -12,8 +12,18 @@ permissions:
   pull-requests: write
 
 jobs:
+  sync-labels:
+    name: Sync PR size labels
+    uses: ./.github/workflows/sync-managed-labels.yml
+    with:
+      prefix: "size:"
+    permissions:
+      contents: read
+      issues: write
+
   label:
     name: Label PR size
+    needs: sync-labels
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -65,47 +75,6 @@ jobs:
 
             if (!nextLabelName || !managedLabelNames.has(nextLabelName)) {
               throw new Error(`Missing managed label definition: ${nextLabelName}`);
-            }
-
-            for (const label of managedLabels) {
-              try {
-                const { data: existingLabel } = await github.rest.issues.getLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: label.name,
-                });
-
-                if (
-                  existingLabel.color !== label.color ||
-                  (existingLabel.description ?? "") !== label.description
-                ) {
-                  await github.rest.issues.updateLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: label.name,
-                    color: label.color,
-                    description: label.description,
-                  });
-                }
-              } catch (error) {
-                if (error.status !== 404) {
-                  throw error;
-                }
-
-                try {
-                  await github.rest.issues.createLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: label.name,
-                    color: label.color,
-                    description: label.description,
-                  });
-                } catch (createError) {
-                  if (createError.status !== 422) {
-                    throw createError;
-                  }
-                }
-              }
             }
 
             const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({

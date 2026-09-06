@@ -13,6 +13,7 @@ on:
     paths:
       - .github/VOUCHED.td
       - .github/labels.json
+      - .github/workflows/sync-managed-labels.yml
       - .github/workflows/pr-vouch.yml
 
 permissions:
@@ -21,8 +22,18 @@ permissions:
   pull-requests: write
 
 jobs:
+  sync-labels:
+    name: Sync PR trust labels
+    uses: ./.github/workflows/sync-managed-labels.yml
+    with:
+      prefix: "vouch:"
+    permissions:
+      contents: read
+      issues: write
+
   label:
     name: Label PR trust
+    needs: sync-labels
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -125,51 +136,6 @@ jobs:
             }
 
             const trustedAssociations = new Set(["OWNER", "MEMBER", "COLLABORATOR", "BOT"]);
-            const ensureLabels = async () => {
-              for (const label of vouchLabels) {
-                try {
-                  const { data: existingLabel } = await github.rest.issues.getLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: label.name,
-                  });
-
-                  if (
-                    existingLabel.color !== label.color ||
-                    (existingLabel.description ?? "") !== label.description
-                  ) {
-                    await github.rest.issues.updateLabel({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      name: label.name,
-                      color: label.color,
-                      description: label.description,
-                    });
-                  }
-                } catch (error) {
-                  if (error.status !== 404) {
-                    throw error;
-                  }
-
-                  try {
-                    await github.rest.issues.createLabel({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      name: label.name,
-                      color: label.color,
-                      description: label.description,
-                    });
-                  } catch (createError) {
-                    if (createError.status !== 422) {
-                      throw createError;
-                    }
-                  }
-                }
-              }
-            };
-
-            await ensureLabels();
-
             for (const target of targets) {
               const normalizedLogin = target.login.toLowerCase();
               const authorAssociation = target.association?.toUpperCase();

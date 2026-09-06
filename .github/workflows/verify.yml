@@ -110,6 +110,12 @@ jobs:
         run: |
           set -o pipefail
           pnpm build 2>&1 | tee build.log
+      - name: Verify generated deployment configuration
+        working-directory: apps/lynvo
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          SERVICE_VERSION: ci-verify
+        run: pnpm run preflight -- build/server/wrangler.json --generated
       - name: Upload the build log
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
