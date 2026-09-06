@@ -36,7 +36,7 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
       group: pr-vouch-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}

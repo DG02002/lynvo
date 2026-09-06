@@ -15,7 +15,7 @@ permissions:
 jobs:
   sync:
     name: Sync managed labels
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Sync label definitions
