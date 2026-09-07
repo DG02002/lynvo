@@ -5,6 +5,8 @@ on:
     tags:
       - protocol-v*.*.*
       - creator-v*.*.*
+      - "!protocol-v*-*"
+      - "!creator-v*-*"
 
 permissions:
   contents: read
@@ -56,7 +58,10 @@ jobs:
       - name: Resolve and verify release identity
         id: release
         run: |
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Package release tag ${GITHUB_REF_NAME} does not point to a commit on main"
+            exit 1
+          fi
           case "$GITHUB_REF_NAME" in
             protocol-v*)
               package_directory="packages/plugin-server-protocol"
@@ -81,8 +86,12 @@ jobs:
 
       - name: Run complete release checks
         run: |
+          pnpm images:optimize
+          pnpm --filter @lynvo/lynvo-plugin-server images:optimize
+          git diff --exit-code
           pnpm check
           pnpm test
+          pnpm test:workers
           pnpm build
           pnpm check:plugin-server-release
 
@@ -108,7 +117,7 @@ jobs:
           name: npm-${{ github.ref_name }}
           path: release-artifacts
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   publish:
     name: Publish package

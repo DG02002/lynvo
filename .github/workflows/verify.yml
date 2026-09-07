@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
+      - "!v*-*"
 
 permissions:
   contents: read
@@ -31,6 +34,37 @@ jobs:
       - uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
         with:
           advanced-security: false
+
+  verify-release-tag:
+    name: Verify stable release tag
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Check tag ancestry
+        env:
+          TAG_COMMIT: ${{ github.sha }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unsupported product release tag: ${TAG_NAME}"
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/main; then
+            echo "::error::Product release tag ${TAG_NAME} does not point to a commit on main"
+            exit 1
+          fi
 
   verify:
     name: Repository verification
@@ -76,6 +110,12 @@ jobs:
         run: |
           set -o pipefail
           pnpm build 2>&1 | tee build.log
+      - name: Verify generated deployment configuration
+        working-directory: apps/lynvo
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          SERVICE_VERSION: ci-verify
+        run: pnpm run preflight -- build/server/wrangler.json --generated
       - name: Upload the build log
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -87,7 +127,7 @@ jobs:
       - name: Verify publishable package contents
         run: pnpm check:plugin-server-release
       - name: Upload verified release artifacts
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref_type == 'tag'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lynvo-release-${{ github.sha }}
@@ -98,20 +138,23 @@ jobs:
             !apps/lynvo/build/server/.dev.vars
             !apps/lynvo/dist/lynvo_plugin_server/.dev.vars
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
   deploy-production:
     name: Deploy production
     needs:
       - workflow-security
+      - verify-release-tag
       - verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
       group: production
       queue: max
     environment: production
+    permissions:
+      contents: write
     env:
       COMMIT_HASH: ${{ github.sha }}
     steps:
@@ -129,10 +172,8 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
-          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing production environment secret: ${name}"
               exit 1
@@ -155,7 +196,6 @@ jobs:
         run: |
           lynvo_package_version="$(node -p "require('./apps/lynvo/package.json').version")"
           plugin_server_package_version="$(node -p "require('./apps/lynvo-plugin-server/package.json').version")"
-          printf 'tag=%s\n' "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'lynvo_version=%s+%s\n' "$lynvo_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
           printf 'plugin_server_version=%s+%s\n' "$plugin_server_package_version" "${COMMIT_HASH::12}" >> "$GITHUB_OUTPUT"
 
@@ -169,6 +209,14 @@ jobs:
         with:
           name: lynvo-release-${{ github.sha }}
           path: apps/lynvo
+
+      - name: Verify generated deployment configuration
+        working-directory: apps/lynvo
+        env:
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
+        run: >-
+          SERVICE_VERSION="$LYNVO_VERSION"
+          pnpm run preflight -- build/server/wrangler.json --generated
 
       - name: Apply pending D1 migrations to production
         working-directory: apps/lynvo
@@ -233,7 +281,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::The expected Lynvo release did not become active within 60 seconds."
+          echo "::error::The expected Lynvo release did not become active within the configured verification window."
           exit 1
 
       - name: Roll back Lynvo after a post-promotion failure
@@ -259,3 +307,43 @@ jobs:
           --env=""
           --message "Automatic rollback after downstream release failure for ${COMMIT_HASH}"
           --yes
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+          LYNVO_VERSION: ${{ steps.release.outputs.lynvo_version }}
+          PLUGIN_SERVER_VERSION: ${{ steps.release.outputs.plugin_server_version }}
+        run: |
+          release_notes="$(cat <<EOF
+          ## Component versions
+
+          - Lynvo: \`$LYNVO_VERSION\`
+          - Managed Plugin Server: \`$PLUGIN_SERVER_VERSION\`
+          - Commit: \`$GITHUB_SHA\`
+          EOF
+          )"
+
+          for attempt in 1 2 3; do
+            if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "GitHub Release ${TAG_NAME} already exists."
+              exit 0
+            fi
+
+            if gh release create "$TAG_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --generate-notes \
+              --notes "$release_notes" \
+              --title "Lynvo $TAG_NAME"; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              echo "GitHub Release creation failed on attempt ${attempt}/3; retrying."
+              sleep 10
+            fi
+          done
+
+          echo "::error::GitHub Release ${TAG_NAME} could not be created after 3 attempts."
+          exit 1

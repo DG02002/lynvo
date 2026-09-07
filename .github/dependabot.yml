@@ -10,7 +10,15 @@ updates:
     cooldown:
       default-days: 8
     open-pull-requests-limit: 5
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      github-actions:
+        patterns:
+          - "*"

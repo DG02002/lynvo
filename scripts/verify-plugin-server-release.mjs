@@ -73,7 +73,11 @@ try {
   )
   run(
     "pnpm",
-    ["add", `create-lynvo-plugin-server@file:${creatorTarball}`, "--ignore-scripts"],
+    [
+      "add",
+      `create-lynvo-plugin-server@file:${creatorTarball}`,
+      "--ignore-scripts",
+    ],
     temporaryRoot
   )
   run(
@@ -104,6 +108,7 @@ try {
     [
       "add",
       `@dg02002/lynvo-plugin-server-protocol@file:${protocolTarball}`,
+      "--ignore-scripts",
       "--save-exact",
     ],
     join(temporaryRoot, "generated-plugin")

@@ -1,8 +1,8 @@
 # Release and deployment
 
 GitHub Actions is the production deployment path. A push to `main` runs the
-read-only verification job first. The production job enters the `production`
-GitHub Environment only after verification succeeds.
+read-only verification job only. The production job enters the `production`
+GitHub Environment only for a stable product tag after verification succeeds.
 
 The deployment applies pending D1 migrations, deploys the managed Plugin
 Server, deploys Lynvo, verifies the expected release identity and homepage, and
@@ -36,8 +36,6 @@ secrets:
 
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
 
 Register the production Google OAuth callback:
 
@@ -46,6 +44,7 @@ https://lynvo.dg02002.workers.dev/api/auth/callback/google
 ```
 
 Keep Worker-only secrets in Cloudflare. The application Worker requires
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
 `PLUGIN_CREDENTIAL_ENCRYPTION_KEY`, `MANAGED_PLUGIN_SERVER_API_KEY`, and
 `TMDB_API_READ_ACCESS_TOKEN`. The managed Plugin Server requires
 `PLUGIN_SERVER_AUTH_KEY`; its value must match the application's managed
@@ -53,55 +52,71 @@ Plugin Server key. Never copy a secret into the repository or GitHub unless a
 workflow genuinely needs its plaintext value.
 
 Protect `main`, require pull requests, and require the successful
-`Verify / Repository verification` check before merging. Configure an
-approver for the `production` Environment when a manual release gate is
-needed. These GitHub settings are external to this repository and must be
-checked in the GitHub UI.
+`Verify / Repository verification` check before merging. Protect the stable
+release tag pattern (`v*.*.*`) so only maintainers can create production
+release tags. Configure an approver for the `production` Environment when a
+manual release gate is needed. These GitHub settings are external to this
+repository and must be checked in the GitHub UI.
 
 ## Normal production workflow
 
 1. Create a focused branch and pull request.
 2. Wait for `Verify` to pass on the pull request.
 3. Merge the pull request into `main`.
-4. Let the `Verify` workflow build and upload the verified artifacts.
-5. Let `Deploy production` apply migrations and deploy both Workers.
-6. Check the release identity endpoint and the homepage health check in the
-   workflow output.
+4. Let the `Verify` workflow run on `main` and confirm the repository remains
+   healthy. This does not deploy production.
+5. Create and push a stable `vX.Y.Z` tag on the approved `main` commit.
+6. Let the tag run the complete verification, apply migrations, and deploy
+   both Workers.
+7. Check the release identity endpoint, homepage health check, and generated
+   GitHub Release.
 
 Do not deploy from a laptop during ordinary development. A local deployment
 can bypass the verified commit and the coordinated Worker order.
 
-The workflow files are [`verify.yml`](../../.github/workflows/verify.yml) and
-[`release.yml`](../../.github/workflows/release.yml). The product deployment
-is in `verify.yml`; `release.yml` creates a named GitHub Release only.
+The product release workflow is [`verify.yml`](../../.github/workflows/verify.yml).
+It verifies `main` pushes and stable product tags. A stable tag deploys both
+Workers and creates the GitHub Release after deployment succeeds. The release
+note categories are configured in [`.github/release.yml`](../../.github/release.yml).
 
 ## Worker deployment order
 
 The production job uses this order:
 
-1. verify the production configuration and release identity
-2. download the artifacts built from the verified commit
-3. apply pending D1 migrations remotely
-4. deploy `lynvo-plugin-server`
-5. deploy `lynvo`
-6. verify the expected commit, service version, deployment ID, and homepage
-7. roll back Worker versions if post-promotion verification fails
+1. verify that the stable release tag points to a commit on `main`
+2. verify the production configuration and release identity
+3. download the artifacts built from the verified commit
+4. apply pending D1 migrations remotely
+5. deploy `lynvo-plugin-server`
+6. deploy `lynvo`
+7. verify the expected commit, service version, deployment ID, and homepage
+8. roll back Worker versions if post-promotion verification fails
+9. create the GitHub Release after the deployment health checks pass
 
 Preserve this order when changing the workflow. Lynvo must not serve code that
 expects a migration or Plugin Server change that has not landed yet.
 
 ## GitHub product releases
 
-Production deploys happen for every verified merge to `main`. A GitHub Release
-is a separate named milestone created from a stable tag on a verified commit.
+Production deploys happen for stable product tags, not for every verified
+merge to `main`.
 
-Use a `vX.Y.Z` tag for a Lynvo product release. The release workflow accepts
-stable `v*.*.*` tags, verifies that the tagged commit is already on `main`, and
-generates release notes from merged pull requests using
-[`.github/release.yml`](../../.github/release.yml).
+Use a `vX.Y.Z` tag for a Lynvo product release. This tag is the coordinated
+deployment milestone and does not need to match either service manifest
+version. The tag workflow verifies that the tagged commit is already on
+`main`, deploys the managed Plugin Server and Lynvo from that exact commit,
+and creates a GitHub Release only after the deployment health checks pass. The
+release starts with the independent Lynvo and managed Plugin Server service
+versions, then uses the category rules in
+[`.github/release.yml`](../../.github/release.yml) for generated change notes.
 
-There are no scheduled or nightly product releases. The hosted web app is
-already deployed from verified `main` commits.
+The release step retries three times and treats an existing release as
+successful. If the Workers deploy successfully but GitHub Release creation
+still fails, the Workers remain deployed. Rerun the tag workflow or create the
+release manually; do not roll back the Workers for a release-metadata failure.
+
+There are no scheduled or nightly product releases. Verified `main` commits
+remain candidates for release until a maintainer creates a stable product tag.
 
 The generated release notes are not a committed `CHANGELOG.md` and are not the
 in-app changelog. The protocol package keeps its own hand-maintained changelog
@@ -138,20 +153,24 @@ Runtime caching is not a general coordination mechanism. Add caching endpoint
 by endpoint with an explicit key, ownership, and invalidation rule. Do not use
 the Cache API as durable application state.
 
-## Cloudflare build projects
+## Cloudflare production deployment
 
-Connect the repository to two separate Cloudflare Worker projects. Configure
-each project with the directory that owns its Wrangler configuration:
-
-| Worker project | Root directory | Deploy command |
-| --- | --- | --- |
-| Lynvo | `/apps/lynvo` | `pnpm deploy` |
-| Lynvo Plugin Server | `/apps/lynvo-plugin-server` | `pnpm deploy` |
+GitHub Actions is the only production deployment path for the managed Lynvo
+and managed Plugin Server Workers. Do not connect these directories to
+Cloudflare Workers Builds with an automatic production deploy command. That
+would bypass stable-tag gating, verified release artifacts, D1 migration
+ordering, and rollback handling.
 
 Keep the Workers as separate build targets even though they share one
-repository. Include `packages/plugin-server-protocol/**`, the root lockfile,
-and workspace configuration in both projects' build watch paths. Protocol or
-dependency changes can affect either Worker.
+repository. If a Cloudflare build project is used for a non-production
+preview, include `packages/plugin-server-protocol/**`, the root lockfile, and
+workspace configuration in its watch paths. Protocol or dependency changes
+can affect either Worker.
+
+For local validation, use the repository checks and the dry-run `pnpm build`
+command. The managed Plugin Server's `pnpm deploy` script requires explicit
+`SERVICE_VERSION` and `COMMIT_HASH` values; ordinary production releases must
+still go through the tag workflow above.
 
 The workspace intentionally uses pnpm recursive scripts instead of Turborepo.
 Add a task orchestrator only after measured build times justify its caching and
