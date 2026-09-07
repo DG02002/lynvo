@@ -12,7 +12,7 @@ permissions:
 jobs:
   sync-labels:
     name: Sync PR size labels
-    uses: ./.github/workflows/sync-managed-labels.yml
+    uses: $/.github/workflows/sync-managed-labels.yml
     with:
       prefix: "size:"
     permissions:
@@ -33,7 +33,7 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Calculate and sync PR size
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const labelFile = await github.rest.repos.getContent({
