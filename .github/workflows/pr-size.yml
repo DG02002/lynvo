@@ -12,7 +12,7 @@ permissions:
 jobs:
   sync-labels:
     name: Sync PR size labels
-    uses: ./.github/workflows/sync-managed-labels.yml
+    uses: $/.github/workflows/sync-managed-labels.yml
     with:
       prefix: "size:"
     permissions:
