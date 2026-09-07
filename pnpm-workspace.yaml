@@ -13,6 +13,7 @@ blockExoticSubdeps: true
 
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
+  - cn@0.2.6
   - effect@4.0.0-rc.112
 minimumReleaseAgeIgnoreMissingTime: false
 minimumReleaseAgeStrict: true
