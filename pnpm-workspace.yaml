@@ -20,24 +20,24 @@ minimumReleaseAgeStrict: true
 strictDepBuilds: true
 
 catalog:
-  "@oxlint/plugins": ^1.78.0
+  "@oxlint/plugins": ^1.80.0
   "@cloudflare/vitest-pool-workers": 0.22.0
-  "@cloudflare/workers-types": 5.20260811.1
-  "@types/node": ^26.2.0
+  "@cloudflare/workers-types": 5.20260830.1
+  "@types/node": ^26.4.0
   cheerio: ^1.2.0
   effect: rc
-  evlog: 2.25.0
-  hono: 4.13.1
+  evlog: 2.27.1
+  hono: 4.13.5
   husky: 9.1.7
-  lint-staged: 17.3.0
-  oxfmt: ^0.63.0
-  oxlint: ^1.78.0
-  sharp: ^0.35.3
-  tsx: ^4.23.12
+  lint-staged: 17.4.1
+  oxfmt: ^0.65.0
+  oxlint: ^1.80.0
+  sharp: ^0.35.4
+  tsx: ^4.23.13
   typescript: ^7.0.2
-  vite: ^8.2.1
-  vitest: ^4.1.10
-  wrangler: 4.120.1
+  vite: ^8.2.2
+  vitest: ^4.1.11
+  wrangler: 4.127.1
 
 saveWorkspaceProtocol: rolling
 
