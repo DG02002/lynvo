@@ -56,6 +56,12 @@ export interface SettingsOutletContext {
 
 const settingsTabs = [
   { value: "general", label: "General", icon: Settings01Icon },
+  { value: "account", label: "Account", icon: UserCircleIcon },
+  { value: "security", label: "Security and login", icon: Key01Icon },
+  { value: "plugins", label: "Plugins", icon: Plug02Icon },
+  { value: "usage", label: "Usage", icon: Activity03Icon },
+  { value: "storage", label: "Storage", icon: HardDriveIcon },
+  { value: "player", label: "Player", icon: PlayIcon },
   ...(import.meta.env.DEV
     ? [
         {
@@ -65,12 +71,6 @@ const settingsTabs = [
         },
       ]
     : []),
-  { value: "account", label: "Account", icon: UserCircleIcon },
-  { value: "security", label: "Security and login", icon: Key01Icon },
-  { value: "plugins", label: "Plugins", icon: Plug02Icon },
-  { value: "usage", label: "Usage", icon: Activity03Icon },
-  { value: "storage", label: "Storage", icon: HardDriveIcon },
-  { value: "player", label: "Player", icon: PlayIcon },
 ] as const
 
 const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (
