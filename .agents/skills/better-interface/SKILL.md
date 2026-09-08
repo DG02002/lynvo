@@ -1,10 +1,6 @@
 ---
 name: better-interface
-description: >-
-  Cross-discipline interface review. Routes a screen, flow, or feature to every `better-*`
-  domain skill and consolidates one ranked verdict. Use when asked for a holistic review
-  rather than a single domain and when `interface-review` hands up a change to route.
-  Triggers on better-interface, holistic interface review, review the whole screen.
+description: Combines all of the `better-*` skills into a single review across accessibility, layout, writing, typography, color and UI polish.
 ---
 
 # Interface review

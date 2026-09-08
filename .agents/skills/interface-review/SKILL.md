@@ -1,8 +1,7 @@
 ---
 name: interface-review
 disable-model-invocation: true
-description: >-
-  Interface review of a change rather than a screen: uncommitted work, the current branch, or a pull request. Covers interface quality, not correctness, tests, or security.
+description: Reviews your work across multiple categories like UI, typography, layout, color, writing and accessibility and gives you a detailed analysis of the findings.
 ---
 
 # Change review
