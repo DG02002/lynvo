@@ -133,9 +133,10 @@ Bro-specific UI**, then open the Save page. The setting applies only to the
 current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
-The same section contains **Freeze usage** for local extraction testing. It
-skips Lynvo's per-account daily and monthly usage counters for that browser;
-global capacity and Plugin Server limits still apply.
+The same section contains **Freeze usage** for local extraction testing. It is
+enabled by default in development builds and skips Lynvo's per-account daily
+and monthly usage counters for that browser; global capacity and Plugin Server
+limits still apply. Turn it off when you need to test usage accounting.
 
 Public builds do not include the Development settings UI. A direct request to
 `/settings/development` redirects to `/settings/general` instead.

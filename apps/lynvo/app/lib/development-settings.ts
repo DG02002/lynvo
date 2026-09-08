@@ -10,15 +10,18 @@ export const DEVELOPMENT_SETTINGS_EVENT = "lynvo:development-settings-changed"
 const DEVELOPMENT_PREFERENCE_MAX_AGE_SECONDS = 31_536_000
 const isDevelopmentBuild = import.meta.env.DEV
 
-const readStorageBoolean = (key: string): boolean => {
+const readStorageBoolean = (key: string, defaultValue = false): boolean => {
   if (!isDevelopmentBuild) {
     return false
   }
 
   try {
-    return globalThis.localStorage?.getItem(key) === "true"
+    const storedValue = globalThis.localStorage?.getItem(key)
+    return storedValue === null || storedValue === undefined
+      ? defaultValue
+      : storedValue === "true"
   } catch {
-    return false
+    return defaultValue
   }
 }
 
@@ -45,7 +48,7 @@ export const getDevelopmentTvBroUiEnabled = (): boolean =>
   readStorageBoolean(DEVELOPMENT_TVBRO_UI_STORAGE_KEY)
 
 export const getDevelopmentFreezeUsageEnabled = (): boolean =>
-  readStorageBoolean(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY)
+  readStorageBoolean(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY, true)
 
 export const setDevelopmentTvBroUiEnabled = (enabled: boolean): void => {
   updateDevelopmentSetting(() =>
@@ -58,7 +61,7 @@ const writeFreezeUsageCookie = (enabled: boolean): void => {
     return
   }
 
-  document.cookie = `${DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME}=${enabled ? "true" : ""}; Path=/; Max-Age=${enabled ? DEVELOPMENT_PREFERENCE_MAX_AGE_SECONDS : 0}; SameSite=Lax`
+  document.cookie = `${DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME}=${enabled ? "true" : "false"}; Path=/; Max-Age=${DEVELOPMENT_PREFERENCE_MAX_AGE_SECONDS}; SameSite=Lax`
 }
 
 export const setDevelopmentFreezeUsageEnabled = (enabled: boolean): void => {
@@ -84,9 +87,15 @@ export const subscribeToDevelopmentSettings = (
   }
 }
 
-export const isDevelopmentFreezeUsageEnabled = (request: Request): boolean =>
-  isDevelopmentBuild &&
-  getCookieValueFromHeader(
-    request.headers.get("Cookie"),
-    DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME
-  ) === "true"
+export const isDevelopmentFreezeUsageEnabled = (request: Request): boolean => {
+  if (!isDevelopmentBuild) {
+    return false
+  }
+
+  return (
+    getCookieValueFromHeader(
+      request.headers.get("Cookie"),
+      DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME
+    ) !== "false"
+  )
+}

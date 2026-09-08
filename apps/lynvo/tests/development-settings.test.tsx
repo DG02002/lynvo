@@ -33,7 +33,13 @@ describe("DevelopmentSettings", () => {
     })
 
     expect(tvBroSwitch).not.toBeChecked()
-    expect(freezeUsageSwitch).not.toBeChecked()
+    expect(freezeUsageSwitch).toBeChecked()
+    expect(getDevelopmentFreezeUsageEnabled()).toBe(true)
+    expect(
+      isDevelopmentFreezeUsageEnabled(
+        new Request("http://localhost:5173/api/extract")
+      )
+    ).toBe(true)
 
     fireEvent.click(tvBroSwitch)
     await waitFor(() => {
@@ -45,6 +51,25 @@ describe("DevelopmentSettings", () => {
         document.documentElement.getAttribute(CLIENT_PROFILE_ATTRIBUTE)
       ).toBe("tvbro-android-tv")
     })
+
+    fireEvent.click(freezeUsageSwitch)
+    await waitFor(() => {
+      expect(freezeUsageSwitch).not.toBeChecked()
+      expect(localStorage.getItem(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY)).toBe(
+        "false"
+      )
+      expect(getDevelopmentFreezeUsageEnabled()).toBe(false)
+    })
+
+    expect(
+      isDevelopmentFreezeUsageEnabled(
+        new Request("http://localhost:5173/api/extract", {
+          headers: {
+            Cookie: `${DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME}=false`,
+          },
+        })
+      )
+    ).toBe(false)
 
     fireEvent.click(freezeUsageSwitch)
     await waitFor(() => {
