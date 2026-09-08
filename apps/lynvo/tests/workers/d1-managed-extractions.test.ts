@@ -167,6 +167,36 @@ describe("d1 managed extraction operations", () => {
     ).rejects.toThrow("Daily Lynvo Plugin extraction limit reached.")
   })
 
+  it("freezes account counters while retaining shared capacity accounting", async () => {
+    const user = await createUser()
+    const initialGlobalCounter = await env.DB.prepare(
+      "SELECT used FROM usage_counters WHERE owner_key = 'global'"
+    ).first<{ used: number }>()
+    for (let index = 0; index < 30; index += 1) {
+      await reserve(user.id, `frozen:normal:${index}`, "direct-media", BASE_NOW)
+    }
+
+    const frozen = await reserveManagedExtraction(env.DB, user.id, {
+      operationId: "frozen:extra",
+      pluginId: "direct-media",
+      usageLimitsDisabled: true,
+      now: BASE_NOW + 1_000,
+    })
+
+    expect(frozen).toMatchObject({
+      status: "reserved",
+      dailyUsed: 30,
+      monthlyUsed: 30,
+    })
+    const userCounters = await readUserCounters(user.id)
+    expect(userCounters).toHaveLength(2)
+    expect(userCounters.every((counter) => counter.used === 30)).toBe(true)
+    const globalCounter = await env.DB.prepare(
+      "SELECT used FROM usage_counters WHERE owner_key = 'global'"
+    ).first<{ used: number }>()
+    expect(globalCounter?.used).toBe((initialGlobalCounter?.used ?? 0) + 31)
+  })
+
   it("releases an abandoned reservation after its lease expires", async () => {
     const user = await createUser()
     await reserve(user.id, "extract:abandoned", "direct-media", BASE_NOW)

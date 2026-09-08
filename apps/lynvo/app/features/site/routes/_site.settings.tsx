@@ -5,6 +5,7 @@ import {
   Key01Icon,
   PlayIcon,
   Plug02Icon,
+  SourceCodeSquareIcon,
   Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons"
@@ -55,6 +56,15 @@ export interface SettingsOutletContext {
 
 const settingsTabs = [
   { value: "general", label: "General", icon: Settings01Icon },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          value: "development",
+          label: "Development",
+          icon: SourceCodeSquareIcon,
+        },
+      ]
+    : []),
   { value: "account", label: "Account", icon: UserCircleIcon },
   { value: "security", label: "Security and login", icon: Key01Icon },
   { value: "plugins", label: "Plugins", icon: Plug02Icon },

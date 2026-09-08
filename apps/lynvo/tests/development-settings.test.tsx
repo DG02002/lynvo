@@ -1,0 +1,68 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { DevelopmentSettings } from "~/features/site/settings/development-settings"
+import {
+  DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME,
+  DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY,
+  DEVELOPMENT_TVBRO_UI_STORAGE_KEY,
+  getDevelopmentFreezeUsageEnabled,
+  isDevelopmentFreezeUsageEnabled,
+} from "~/lib/development-settings"
+import { CLIENT_PROFILE_ATTRIBUTE } from "~/lib/client-profile"
+import { createMemoryStorage } from "./memory-storage"
+
+beforeEach(() => {
+  vi.stubGlobal("localStorage", createMemoryStorage())
+  document.documentElement.removeAttribute(CLIENT_PROFILE_ATTRIBUTE)
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  document.documentElement.removeAttribute(CLIENT_PROFILE_ATTRIBUTE)
+})
+
+describe("DevelopmentSettings", () => {
+  it("updates the TV Bro preview and usage freeze settings locally", async () => {
+    render(<DevelopmentSettings />)
+
+    const tvBroSwitch = screen.getByRole("switch", {
+      name: "Use TV Bro-specific UI",
+    })
+    const freezeUsageSwitch = screen.getByRole("switch", {
+      name: "Freeze usage",
+    })
+
+    expect(tvBroSwitch).not.toBeChecked()
+    expect(freezeUsageSwitch).not.toBeChecked()
+
+    fireEvent.click(tvBroSwitch)
+    await waitFor(() => {
+      expect(tvBroSwitch).toBeChecked()
+      expect(localStorage.getItem(DEVELOPMENT_TVBRO_UI_STORAGE_KEY)).toBe(
+        "true"
+      )
+      expect(
+        document.documentElement.getAttribute(CLIENT_PROFILE_ATTRIBUTE)
+      ).toBe("tvbro-android-tv")
+    })
+
+    fireEvent.click(freezeUsageSwitch)
+    await waitFor(() => {
+      expect(freezeUsageSwitch).toBeChecked()
+      expect(localStorage.getItem(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY)).toBe(
+        "true"
+      )
+      expect(getDevelopmentFreezeUsageEnabled()).toBe(true)
+    })
+
+    expect(
+      isDevelopmentFreezeUsageEnabled(
+        new Request("http://localhost:5173/api/extract", {
+          headers: {
+            Cookie: `${DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME}=true`,
+          },
+        })
+      )
+    ).toBe(true)
+  })
+})

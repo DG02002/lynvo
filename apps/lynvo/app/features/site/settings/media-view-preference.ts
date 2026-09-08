@@ -5,6 +5,7 @@ import {
   getCurrentClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
+import { DEVELOPMENT_SETTINGS_EVENT } from "~/lib/development-settings"
 
 declare global {
   type MediaView = "list" | "hybrid"
@@ -30,10 +31,12 @@ export const getDefaultMediaView = (): MediaView =>
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange)
   window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
+  window.addEventListener(DEVELOPMENT_SETTINGS_EVENT, onStoreChange)
 
   return () => {
     window.removeEventListener("storage", onStoreChange)
     window.removeEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
+    window.removeEventListener(DEVELOPMENT_SETTINGS_EVENT, onStoreChange)
   }
 }
 

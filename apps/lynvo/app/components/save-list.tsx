@@ -16,6 +16,7 @@ import {
   getCurrentClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
+import { subscribeToDevelopmentSettings } from "~/lib/development-settings"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
@@ -106,11 +107,9 @@ const renderSaveListContent = ({
 const getIsTvBroAndroidTv = () =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
 
-const subscribeToClientProfile = () => () => undefined
-
 const useIsTvBroAndroidTv = () =>
   useSyncExternalStore(
-    subscribeToClientProfile,
+    subscribeToDevelopmentSettings,
     getIsTvBroAndroidTv,
     () => false
   )
