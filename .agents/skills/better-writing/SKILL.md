@@ -1,9 +1,6 @@
 ---
 name: better-writing
-description: >-
-  UX writing and interface copy. Use when writing or reviewing any user-facing text.
-  Triggers on UX writing, microcopy, button labels, link text, error messages, empty
-  states, placeholder text, settings labels, capitalization, sentence case, voice and tone.
+description: Focuses on improving product copy in your project.
 ---
 
 # Interface writing

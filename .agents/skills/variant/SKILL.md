@@ -1,6 +1,6 @@
 ---
 name: variant
-description: Answers "which of these?" rather than "is this right?". Builds several genuinely different versions of one piece of UI behind a picker in the real page, so you can flip between them and promote the one that wins.
+description: Builds multiple variants of a component you're working on and helps you iterate and pick one.
 disable-model-invocation: true
 ---
 

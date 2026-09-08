@@ -1,6 +1,6 @@
 ---
 name: explain-interface
-description: Answers "how was this built?" about an interface. Give it a URL and name the thing you're curious about, and it reads the layers that produce the effect. Reads the whole frontend instead when you don't name a thing. From a screenshot it reconstructs rather than reads and says so.
+description: Helps you figure out how something was built on the web.
 disable-model-invocation: true
 ---
 

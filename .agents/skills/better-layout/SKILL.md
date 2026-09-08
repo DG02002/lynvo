@@ -1,6 +1,6 @@
 ---
 name: better-layout
-description: Layout structure for web interfaces. Use when structuring a page or component, deciding what collapses at small sizes, or reviewing frontend code for layout. Triggers on layout, spacing, alignment, grouping, whitespace, visual hierarchy, reading order, progressive disclosure, breakpoints, container queries, safe area, full-bleed, layout margins, RTL layout, logical properties.
+description: Helps with grouping, alignment, reading order, progressive disclosure and other details that make a good layout.
 ---
 
 # Layout
