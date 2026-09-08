@@ -6,6 +6,7 @@ export const DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY =
 export const DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME =
   "lynvo-development-freeze-usage"
 export const DEVELOPMENT_SETTINGS_EVENT = "lynvo:development-settings-changed"
+export const DEVELOPMENT_FREEZE_USAGE_BOOTSTRAP_SCRIPT = `(()=>{try{const stored=localStorage.getItem("lynvo:development:freeze-usage");const enabled=stored===null||stored==="true";document.cookie="lynvo-development-freeze-usage="+(enabled?"true":"false")+"; Path=/; Max-Age=31536000; SameSite=Lax"}catch{}})()`
 
 const DEVELOPMENT_PREFERENCE_MAX_AGE_SECONDS = 31_536_000
 const isDevelopmentBuild = import.meta.env.DEV

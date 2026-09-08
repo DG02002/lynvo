@@ -8,6 +8,7 @@ import {
 
 import type { ComponentType, ReactNode } from "react"
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
+import { DEVELOPMENT_FREEZE_USAGE_BOOTSTRAP_SCRIPT } from "~/lib/development-settings"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
 import type { loader } from "../root"
 import { RouteSeoMetadata } from "./route-seo-metadata"
@@ -59,6 +60,13 @@ export const DocumentLayout = ({
           }}
         />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        {import.meta.env.DEV && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: DEVELOPMENT_FREEZE_USAGE_BOOTSTRAP_SCRIPT,
+            }}
+          />
+        )}
         {csrfToken && <meta name="csrf-token" content={csrfToken} />}
         {user && <meta name="lynvo-user-id" content={user.sub} />}
         {user?.sid && <meta name="lynvo-session-id" content={user.sid} />}
