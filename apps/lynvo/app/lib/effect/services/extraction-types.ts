@@ -17,6 +17,7 @@ export interface ExtractOptions {
   readonly kind?: "source" | "node"
   readonly userId?: string
   readonly inlineBasicAuth?: HttpBasicAuth
+  readonly freezeUsage?: boolean
 }
 
 export interface ExtractionPending {

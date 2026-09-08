@@ -128,30 +128,18 @@ This React Router app depends on Vite's generated
 
 ## Test TV Bro-specific UI
 
-To test the TV Bro profile without Android TV, install the
-[User-Agent Switcher and Manager extension](https://github.com/ray-lothian/UserAgent-Switcher/)
-and configure TV Bro's legacy user agent:
+Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV
+Bro-specific UI**, then open the Save page. The setting applies only to the
+current browser and is available only in the development build. Turn it off to
+return to the standard browser UI.
 
-```text
-Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Mobile Safari/537.36
-```
+The same section contains **Freeze usage** for local extraction testing. It is
+enabled by default in development builds and skips Lynvo's per-account daily
+and monthly usage counters for that browser; global capacity and Plugin Server
+limits still apply. Turn it off when you need to test usage accounting.
 
-Open Lynvo on a route other than `/save`, then run this in the browser console:
-
-```js
-Object.defineProperty(window, "TVBro", {
-  configurable: true,
-  value: {},
-})
-document.documentElement.setAttribute(
-  "data-lynvo-client-profile",
-  "tvbro-android-tv"
-)
-```
-
-Navigate to `/save` using Lynvo's Save link without reloading. A full reload
-clears the simulated bridge. Remove the user-agent override when testing the
-standard browser UI.
+Public builds do not include the Development settings UI. A direct request to
+`/settings/development` redirects to `/settings/general` instead.
 
 ## Quality gates
 

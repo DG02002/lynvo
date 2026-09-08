@@ -35,6 +35,7 @@ export interface LynvoExtractionAdapterOptions {
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
+  readonly freezeUsage: boolean
 }
 
 export interface LynvoPluginRoute {
@@ -129,12 +130,16 @@ interface EnvironmentWithUsageFlags {
   readonly DISABLE_USAGE_LIMITS?: string | boolean
 }
 
-const isUsageLimitsDisabled = (environment: Env): boolean => {
+const isUsageLimitsDisabled = (
+  environment: Env,
+  freezeUsage: boolean
+): boolean => {
   const envWithFlags: Env & EnvironmentWithUsageFlags = environment
   return (
     envWithFlags.DISABLE_USAGE_LIMITS === "true" ||
     envWithFlags.DISABLE_USAGE_LIMITS === true ||
-    process.env.DISABLE_USAGE_LIMITS === "true"
+    process.env.DISABLE_USAGE_LIMITS === "true" ||
+    (import.meta.env.DEV && freezeUsage)
   )
 }
 
@@ -174,7 +179,10 @@ export const extractWithLynvoPluginServer = Effect.fn(
         reserveManagedExtraction(database, options.userId, {
           operationId,
           pluginId: meteredPluginId,
-          usageLimitsDisabled: isUsageLimitsDisabled(options.environment),
+          usageLimitsDisabled: isUsageLimitsDisabled(
+            options.environment,
+            options.freezeUsage
+          ),
           now: Date.now(),
         }),
       catch: (cause) =>

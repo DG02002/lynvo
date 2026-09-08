@@ -7,6 +7,7 @@ import { CloudflareEnv } from "../../services/cloudflare-env"
 import { RequestEventService } from "../../services/request-event-service"
 import { getD1Database } from "../../../../../workers/d1/db"
 import { resolveSessionContext } from "../../../../../workers/d1/sessions"
+import { isDevelopmentFreezeUsageEnabled } from "../../../development-settings"
 
 const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
@@ -60,6 +61,7 @@ export const ExtractionHandlers = HttpApiBuilder.group(
             pluginId: query.pluginId,
             kind: extractionKind(query.kind),
             userId,
+            freezeUsage: isDevelopmentFreezeUsageEnabled(webRequest),
           })
           requestEvent.add({
             extraction: {

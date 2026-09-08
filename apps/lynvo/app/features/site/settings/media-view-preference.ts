@@ -1,8 +1,10 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
+import { getCookieValueFromHeader } from "~/lib/auth-cookie"
 import {
   getCurrentClientProfile,
+  subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
 
@@ -28,11 +30,11 @@ export const getDefaultMediaView = (): MediaView =>
     : DEFAULT_MEDIA_VIEW
 
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
-  window.addEventListener("storage", onStoreChange)
+  const unsubscribeFromClientProfile = subscribeToClientProfile(onStoreChange)
   window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
 
   return () => {
-    window.removeEventListener("storage", onStoreChange)
+    unsubscribeFromClientProfile()
     window.removeEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
   }
 }
@@ -59,12 +61,9 @@ export const writeMediaViewCookie = (mediaView: MediaView): void => {
 export const getMediaViewFromCookieHeader = (
   cookieHeader: string | null
 ): MediaView | undefined => {
-  const mediaViewCookie = cookieHeader
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${MEDIA_VIEW_COOKIE_NAME}=`))
-  const mediaViewCookieValue = mediaViewCookie?.slice(
-    MEDIA_VIEW_COOKIE_NAME.length + 1
+  const mediaViewCookieValue = getCookieValueFromHeader(
+    cookieHeader,
+    MEDIA_VIEW_COOKIE_NAME
   )
 
   if (mediaViewCookieValue !== undefined && isMediaView(mediaViewCookieValue)) {

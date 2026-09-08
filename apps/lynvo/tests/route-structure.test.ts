@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import routes from "~/routes"
+import routes, { createRoutes } from "~/routes"
 
-type RouteEntry = (typeof routes)[number]
+type RouteEntry = ReturnType<typeof createRoutes>[number]
 
 const flattenRouteEntries = (
   entries: readonly RouteEntry[]
@@ -17,8 +17,11 @@ const flattenRouteEntries = (
 const flattenRoutePaths = (entries: readonly RouteEntry[]): string[] =>
   entries.flatMap((entry) => (entry.path === undefined ? [] : [entry.path]))
 
-const findRouteByFile = (suffix: string): RouteEntry | undefined =>
-  flattenRouteEntries(routes).find((entry) => entry.file?.endsWith(suffix))
+const findRouteByFile = (
+  entries: readonly RouteEntry[],
+  suffix: string
+): RouteEntry | undefined =>
+  flattenRouteEntries(entries).find((entry) => entry.file?.endsWith(suffix))
 
 describe("route structure", () => {
   it("exposes the public device-login and license routes", () => {
@@ -29,7 +32,7 @@ describe("route structure", () => {
   })
 
   it("loads every Settings section as its own route module", () => {
-    const settings = findRouteByFile("_site.settings.tsx")
+    const settings = findRouteByFile(routes, "_site.settings.tsx")
     const children = settings?.children ?? []
     expect(children.length).toBeGreaterThan(1)
 
@@ -44,8 +47,32 @@ describe("route structure", () => {
     expect(children.filter((child) => child.path === undefined)).toHaveLength(1)
   })
 
+  it("uses the Development UI only in development builds", () => {
+    const developmentRoutes = createRoutes(true)
+    const productionRoutes = createRoutes(false)
+
+    expect(
+      findRouteByFile(developmentRoutes, "_site.settings.development.tsx")
+    ).toBeDefined()
+    expect(
+      findRouteByFile(
+        developmentRoutes,
+        "_site.settings.development-redirect.ts"
+      )
+    ).toBeUndefined()
+    expect(
+      findRouteByFile(
+        productionRoutes,
+        "_site.settings.development-redirect.ts"
+      )
+    ).toBeDefined()
+    expect(
+      findRouteByFile(productionRoutes, "_site.settings.development.tsx")
+    ).toBeUndefined()
+  })
+
   it("groups guest-session validation under one shared layout", () => {
-    const guestLayout = findRouteByFile("_auth.guest.tsx")
+    const guestLayout = findRouteByFile(routes, "_auth.guest.tsx")
     const children = guestLayout?.children ?? []
     expect(children.length).toBeGreaterThan(1)
 

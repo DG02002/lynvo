@@ -14,6 +14,7 @@ import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route
 import { Spinner } from "~/components/spinner"
 import {
   getCurrentClientProfile,
+  subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
@@ -105,8 +106,6 @@ const renderSaveListContent = ({
 
 const getIsTvBroAndroidTv = () =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
-
-const subscribeToClientProfile = () => () => undefined
 
 const useIsTvBroAndroidTv = () =>
   useSyncExternalStore(

@@ -70,6 +70,7 @@ export class ExtractionService extends Context.Service<
             pluginId: options.pluginId,
             kind: options.kind ?? "source",
             inlineBasicAuth: options.inlineBasicAuth ?? routeInput.basicAuth,
+            freezeUsage: options.freezeUsage ?? false,
           }
           const customResult = yield* extractWithCustomPluginServer(
             credentialVault,
@@ -134,6 +135,7 @@ export class ExtractionService extends Context.Service<
             pluginId: options.pluginId,
             kind: "source" as const,
             inlineBasicAuth: routeInput.basicAuth,
+            freezeUsage: false,
           }
           const customMetadata = yield* getCustomRouteMetadata(
             context.pluginServers,
