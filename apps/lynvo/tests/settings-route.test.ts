@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { loader as developmentRedirectLoader } from "~/features/site/routes/_site.settings.development-redirect"
 import {
   getSettingsPath,
   parseSettingsRoute,
@@ -33,5 +34,12 @@ describe("settings routes", () => {
     expect(getSettingsPath("security", "active-sessions")).toBe(
       "/settings/security/active-sessions"
     )
+  })
+
+  it("redirects the public development URL to General", () => {
+    const response = developmentRedirectLoader()
+
+    expect(response.status).toBe(302)
+    expect(response.headers.get("Location")).toBe("/settings/general")
   })
 })

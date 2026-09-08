@@ -137,6 +137,9 @@ The same section contains **Freeze usage** for local extraction testing. It
 skips Lynvo's per-account daily and monthly usage counters for that browser;
 global capacity and Plugin Server limits still apply.
 
+Public builds do not include the Development settings UI. A direct request to
+`/settings/development` redirects to `/settings/general` instead.
+
 ## Quality gates
 
 Use targeted checks while iterating. Before handing off code changes, run all

@@ -9,7 +9,11 @@ export const getCookieValueFromHeader = (
     }
     const name = cookie.slice(0, separatorIndex).trim()
     if (name === cookieName) {
-      return decodeURIComponent(cookie.slice(separatorIndex + 1))
+      try {
+        return decodeURIComponent(cookie.slice(separatorIndex + 1))
+      } catch {
+        return undefined
+      }
     }
   }
   return undefined

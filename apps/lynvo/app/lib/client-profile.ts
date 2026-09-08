@@ -1,5 +1,4 @@
 import {
-  DEVELOPMENT_TVBRO_UI_STORAGE_KEY,
   getDevelopmentTvBroUiEnabled,
   subscribeToDevelopmentSettings,
 } from "./development-settings"
@@ -39,8 +38,11 @@ export const syncClientProfileAttribute = (): void => {
   }
 }
 
-const tvBroUiOverrideExpression = import.meta.env.DEV
-  ? `localStorage.getItem(${JSON.stringify(DEVELOPMENT_TVBRO_UI_STORAGE_KEY)}) === "true"`
-  : "false"
+// Keep this source static because it is embedded directly in an inline script
+// tag. This avoids interpolating any value into executable JavaScript.
+const DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window)&&!(localStorage.getItem("lynvo:development:tvbro-ui")==="true"))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
+const PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
 
-export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro"in window)&&!(${tvBroUiOverrideExpression}))return;document.documentElement.setAttribute("${CLIENT_PROFILE_ATTRIBUTE}","${TVBRO_ANDROID_TV_PROFILE}")}catch{}})()`
+export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT = import.meta.env.DEV
+  ? DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT
+  : PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT

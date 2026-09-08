@@ -58,4 +58,8 @@ describe("theme cookie", () => {
   it("rejects unsupported theme values", () => {
     expect(getThemeFromCookieHeader("lynvo-theme=system")).toBeNull()
   })
+
+  it("ignores malformed theme cookies", () => {
+    expect(getThemeFromCookieHeader("lynvo-theme=%")).toBeNull()
+  })
 })

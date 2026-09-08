@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
+import { getCookieValueFromHeader } from "~/lib/auth-cookie"
 import {
   getCurrentClientProfile,
   subscribeToClientProfile,
@@ -60,12 +61,9 @@ export const writeMediaViewCookie = (mediaView: MediaView): void => {
 export const getMediaViewFromCookieHeader = (
   cookieHeader: string | null
 ): MediaView | undefined => {
-  const mediaViewCookie = cookieHeader
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${MEDIA_VIEW_COOKIE_NAME}=`))
-  const mediaViewCookieValue = mediaViewCookie?.slice(
-    MEDIA_VIEW_COOKIE_NAME.length + 1
+  const mediaViewCookieValue = getCookieValueFromHeader(
+    cookieHeader,
+    MEDIA_VIEW_COOKIE_NAME
   )
 
   if (mediaViewCookieValue !== undefined && isMediaView(mediaViewCookieValue)) {
