@@ -1,12 +1,4 @@
-import { redirect } from "react-router"
 import { DevelopmentSettings } from "~/features/site/settings/development-settings"
-
-export const loader = () => {
-  if (!import.meta.env.DEV) {
-    return redirect("/settings/general")
-  }
-  return null
-}
 
 export default function DevelopmentSettingsRoute() {
   return (

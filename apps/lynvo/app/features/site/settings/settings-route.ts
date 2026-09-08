@@ -1,6 +1,5 @@
 export const SETTINGS_TAB_VALUES = [
   "general",
-  "development",
   "account",
   "security",
   "plugins",
@@ -17,8 +16,7 @@ export interface SettingsRoute {
 }
 
 export const isSettingsTab = (value: string): value is SettingsTab =>
-  SETTINGS_TAB_VALUES.some((tab) => tab === value) &&
-  (value !== "development" || import.meta.env.DEV)
+  SETTINGS_TAB_VALUES.some((tab) => tab === value)
 
 export const getSettingsPath = (
   tab: SettingsTab,

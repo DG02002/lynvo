@@ -35,7 +35,7 @@ export interface LynvoExtractionAdapterOptions {
   readonly pluginId?: string
   readonly kind: "source" | "node"
   readonly inlineBasicAuth?: HttpBasicAuth
-  readonly freezeUsage?: boolean
+  readonly freezeUsage: boolean
 }
 
 export interface LynvoPluginRoute {
@@ -132,7 +132,7 @@ interface EnvironmentWithUsageFlags {
 
 const isUsageLimitsDisabled = (
   environment: Env,
-  freezeUsage = false
+  freezeUsage: boolean
 ): boolean => {
   const envWithFlags: Env & EnvironmentWithUsageFlags = environment
   return (

@@ -14,10 +14,6 @@ describe("settings routes", () => {
       activeTab: "security",
       showActiveSessions: true,
     })
-    expect(parseSettingsRoute("development")).toEqual({
-      activeTab: "development",
-      showActiveSessions: false,
-    })
   })
 
   it("uses General for the settings index", () => {

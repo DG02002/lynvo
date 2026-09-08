@@ -1,6 +1,7 @@
 import {
   DEVELOPMENT_TVBRO_UI_STORAGE_KEY,
   getDevelopmentTvBroUiEnabled,
+  subscribeToDevelopmentSettings,
 } from "./development-settings"
 
 export const TVBRO_ANDROID_TV_PROFILE = "tvbro-android-tv"
@@ -21,6 +22,9 @@ export const getCurrentClientProfile = () =>
   getClientProfile({
     hasTvBroBridge: hasTvBroBridge() || getDevelopmentTvBroUiEnabled(),
   })
+
+export const subscribeToClientProfile = (onStoreChange: () => void) =>
+  subscribeToDevelopmentSettings(onStoreChange)
 
 export const syncClientProfileAttribute = (): void => {
   if (globalThis.document === undefined) {

@@ -44,6 +44,11 @@ describe("route structure", () => {
     expect(children.filter((child) => child.path === undefined)).toHaveLength(1)
   })
 
+  it("registers Development settings only for development builds", () => {
+    const routePaths = flattenRoutePaths(flattenRouteEntries(routes))
+    expect(routePaths.includes("development")).toBe(import.meta.env.DEV)
+  })
+
   it("groups guest-session validation under one shared layout", () => {
     const guestLayout = findRouteByFile("_auth.guest.tsx")
     const children = guestLayout?.children ?? []

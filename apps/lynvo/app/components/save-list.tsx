@@ -14,9 +14,9 @@ import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route
 import { Spinner } from "~/components/spinner"
 import {
   getCurrentClientProfile,
+  subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
-import { subscribeToDevelopmentSettings } from "~/lib/development-settings"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
@@ -109,7 +109,7 @@ const getIsTvBroAndroidTv = () =>
 
 const useIsTvBroAndroidTv = () =>
   useSyncExternalStore(
-    subscribeToDevelopmentSettings,
+    subscribeToClientProfile,
     getIsTvBroAndroidTv,
     () => false
   )

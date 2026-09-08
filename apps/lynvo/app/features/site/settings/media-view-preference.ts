@@ -3,9 +3,9 @@ import { useRouteLoaderData } from "react-router"
 import type { loader as rootLoader } from "~/root"
 import {
   getCurrentClientProfile,
+  subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
-import { DEVELOPMENT_SETTINGS_EVENT } from "~/lib/development-settings"
 
 declare global {
   type MediaView = "list" | "hybrid"
@@ -29,14 +29,12 @@ export const getDefaultMediaView = (): MediaView =>
     : DEFAULT_MEDIA_VIEW
 
 const subscribeToMediaViewPreference = (onStoreChange: () => void) => {
-  window.addEventListener("storage", onStoreChange)
+  const unsubscribeFromClientProfile = subscribeToClientProfile(onStoreChange)
   window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
-  window.addEventListener(DEVELOPMENT_SETTINGS_EVENT, onStoreChange)
 
   return () => {
-    window.removeEventListener("storage", onStoreChange)
+    unsubscribeFromClientProfile()
     window.removeEventListener(MEDIA_VIEW_PREFERENCE_EVENT, onStoreChange)
-    window.removeEventListener(DEVELOPMENT_SETTINGS_EVENT, onStoreChange)
   }
 }
 

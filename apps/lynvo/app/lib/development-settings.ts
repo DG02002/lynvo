@@ -1,3 +1,5 @@
+import { getCookieValueFromHeader } from "./auth-cookie"
+
 export const DEVELOPMENT_TVBRO_UI_STORAGE_KEY = "lynvo:development:tvbro-ui"
 export const DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY =
   "lynvo:development:freeze-usage"
@@ -6,9 +8,10 @@ export const DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME =
 export const DEVELOPMENT_SETTINGS_EVENT = "lynvo:development-settings-changed"
 
 const DEVELOPMENT_PREFERENCE_MAX_AGE_SECONDS = 31_536_000
+const isDevelopmentBuild = import.meta.env.DEV
 
 const readStorageBoolean = (key: string): boolean => {
-  if (!import.meta.env.DEV) {
+  if (!isDevelopmentBuild) {
     return false
   }
 
@@ -20,10 +23,6 @@ const readStorageBoolean = (key: string): boolean => {
 }
 
 const writeStorageBoolean = (key: string, value: boolean): void => {
-  if (!import.meta.env.DEV) {
-    return
-  }
-
   try {
     globalThis.localStorage?.setItem(key, String(value))
   } catch {
@@ -31,7 +30,12 @@ const writeStorageBoolean = (key: string, value: boolean): void => {
   }
 }
 
-const notifyDevelopmentSettingsChanged = (): void => {
+const updateDevelopmentSetting = (update: () => void): void => {
+  if (!isDevelopmentBuild) {
+    return
+  }
+
+  update()
   if (globalThis.window !== undefined) {
     window.dispatchEvent(new Event(DEVELOPMENT_SETTINGS_EVENT))
   }
@@ -44,15 +48,13 @@ export const getDevelopmentFreezeUsageEnabled = (): boolean =>
   readStorageBoolean(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY)
 
 export const setDevelopmentTvBroUiEnabled = (enabled: boolean): void => {
-  if (!import.meta.env.DEV) {
-    return
-  }
-  writeStorageBoolean(DEVELOPMENT_TVBRO_UI_STORAGE_KEY, enabled)
-  notifyDevelopmentSettingsChanged()
+  updateDevelopmentSetting(() =>
+    writeStorageBoolean(DEVELOPMENT_TVBRO_UI_STORAGE_KEY, enabled)
+  )
 }
 
 const writeFreezeUsageCookie = (enabled: boolean): void => {
-  if (!import.meta.env.DEV || globalThis.document === undefined) {
+  if (globalThis.document === undefined) {
     return
   }
 
@@ -60,12 +62,10 @@ const writeFreezeUsageCookie = (enabled: boolean): void => {
 }
 
 export const setDevelopmentFreezeUsageEnabled = (enabled: boolean): void => {
-  if (!import.meta.env.DEV) {
-    return
-  }
-  writeStorageBoolean(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY, enabled)
-  writeFreezeUsageCookie(enabled)
-  notifyDevelopmentSettingsChanged()
+  updateDevelopmentSetting(() => {
+    writeStorageBoolean(DEVELOPMENT_FREEZE_USAGE_STORAGE_KEY, enabled)
+    writeFreezeUsageCookie(enabled)
+  })
 }
 
 export const subscribeToDevelopmentSettings = (
@@ -84,21 +84,9 @@ export const subscribeToDevelopmentSettings = (
   }
 }
 
-const getCookieValue = (
-  cookieHeader: string | null,
-  cookieName: string
-): string | undefined => {
-  const cookie = cookieHeader
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${cookieName}=`))
-
-  return cookie?.slice(cookieName.length + 1)
-}
-
 export const isDevelopmentFreezeUsageEnabled = (request: Request): boolean =>
-  import.meta.env.DEV &&
-  getCookieValue(
+  isDevelopmentBuild &&
+  getCookieValueFromHeader(
     request.headers.get("Cookie"),
     DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME
   ) === "true"
