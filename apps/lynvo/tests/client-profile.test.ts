@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   CLIENT_PROFILE_ATTRIBUTE,
   CLIENT_PROFILE_BOOTSTRAP_SCRIPT,
+  createClientProfileBootstrapScript,
   getCurrentClientProfile,
   getClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
@@ -61,5 +62,14 @@ describe("client profile bootstrap", () => {
     expect(document.documentElement.dataset.lynvoClientProfile).toBe(
       TVBRO_ANDROID_TV_PROFILE
     )
+  })
+
+  it("ignores the development override in the production bootstrap", () => {
+    localStorage.setItem(DEVELOPMENT_TVBRO_UI_STORAGE_KEY, "true")
+    document.documentElement.removeAttribute(CLIENT_PROFILE_ATTRIBUTE)
+
+    window.eval(createClientProfileBootstrapScript(false))
+
+    expect(document.documentElement.dataset.lynvoClientProfile).toBeUndefined()
   })
 })

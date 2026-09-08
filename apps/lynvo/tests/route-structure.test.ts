@@ -56,6 +56,12 @@ describe("route structure", () => {
     ).toBeDefined()
     expect(
       findRouteByFile(
+        developmentRoutes,
+        "_site.settings.development-redirect.ts"
+      )
+    ).toBeUndefined()
+    expect(
+      findRouteByFile(
         productionRoutes,
         "_site.settings.development-redirect.ts"
       )

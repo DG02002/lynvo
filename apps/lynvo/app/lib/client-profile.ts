@@ -43,6 +43,10 @@ export const syncClientProfileAttribute = (): void => {
 const DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window)&&!(localStorage.getItem("lynvo:development:tvbro-ui")==="true"))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
 const PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
 
-export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT = import.meta.env.DEV
-  ? DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT
-  : PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT
+export const createClientProfileBootstrapScript = (isDevelopment: boolean) =>
+  isDevelopment
+    ? DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT
+    : PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT
+
+export const CLIENT_PROFILE_BOOTSTRAP_SCRIPT =
+  createClientProfileBootstrapScript(import.meta.env.DEV)
