@@ -20,6 +20,7 @@ import { signOut } from "~/lib/session-http"
 import { client } from "~/lib/effect/api/client"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 type SettingsUser = {
   id: string
@@ -39,7 +40,7 @@ export function SecuritySettings({
   const { data, reload } = useAsyncResource(
     () => Effect.runPromise(client.settings.listSessions()),
     [user.id],
-    { cacheKey: `settings:security:${user.id}` }
+    { cacheKey: getSettingsDataCacheKey("security", user.id) }
   )
   const sessions = data ?? []
   const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState("")

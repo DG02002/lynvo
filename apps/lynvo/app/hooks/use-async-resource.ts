@@ -42,6 +42,16 @@ export const clearAsyncResourceCache = (cacheKey?: string): void => {
   asyncResourceCache.clear()
 }
 
+export const clearAsyncResourceCacheWhere = (
+  predicate: (cacheKey: string) => boolean
+): void => {
+  for (const cacheKey of asyncResourceCache.keys()) {
+    if (predicate(cacheKey)) {
+      asyncResourceCache.delete(cacheKey)
+    }
+  }
+}
+
 export const useAsyncResource = <Result>(
   load: () => Promise<Result>,
   dependencies: readonly unknown[] = [],
@@ -52,6 +62,7 @@ export const useAsyncResource = <Result>(
   const [data, setData] = useState<Result | undefined>(initialCacheEntry?.data)
   const [isLoading, setIsLoading] = useState(!initialCacheEntry)
   const loadReference = useRef(load)
+  const previousDependencySignal = useRef<object | undefined>(undefined)
   const dependencySignal = useMemo(() => ({}), dependencies)
 
   useEffect(() => {
@@ -83,6 +94,10 @@ export const useAsyncResource = <Result>(
 
   useEffect(() => {
     let didCancel = false
+    const dependenciesChanged =
+      previousDependencySignal.current !== undefined &&
+      previousDependencySignal.current !== dependencySignal
+    previousDependencySignal.current = dependencySignal
     const cachedEntry = getCacheEntry<Result>(cacheKey)
     const hasFreshCache =
       cachedEntry !== undefined &&
@@ -96,7 +111,7 @@ export const useAsyncResource = <Result>(
       setIsLoading(true)
     }
 
-    if (hasFreshCache) {
+    if (hasFreshCache && !dependenciesChanged) {
       return () => {
         didCancel = true
       }

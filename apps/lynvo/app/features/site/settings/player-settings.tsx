@@ -29,6 +29,7 @@ import {
   useAsyncResource,
 } from "~/hooks/use-async-resource"
 import { client } from "~/lib/effect/api/client"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const loadCloudPlayerPreferences = () =>
   Effect.runPromise(client.settings.getPlayerPreferences())
@@ -50,7 +51,7 @@ export const PlayerSettings = ({
 } = {}) => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
   const playerCacheKey = playerPreferenceIdentity
-    ? `settings:player:${playerPreferenceIdentity}`
+    ? getSettingsDataCacheKey("player", playerPreferenceIdentity)
     : undefined
   const { data: cloudPreferencesData } = useAsyncResource(
     () =>

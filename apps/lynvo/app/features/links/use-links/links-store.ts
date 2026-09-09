@@ -51,6 +51,25 @@ interface PendingEntry {
 
 const TEMPORARY_ID_PREFIX = "temp:"
 
+const haveSameServerItems = (
+  currentItems: LinkViewItem[],
+  nextItems: LinkViewItem[]
+): boolean =>
+  currentItems.length === nextItems.length &&
+  currentItems.every((currentItem, index) => {
+    const nextItem = nextItems[index]
+    if (!nextItem) {
+      return false
+    }
+    return (
+      currentItem.id === nextItem.id &&
+      currentItem.url === nextItem.url &&
+      currentItem.timestamp === nextItem.timestamp &&
+      currentItem.updatedAt === nextItem.updatedAt &&
+      currentItem.title === nextItem.title
+    )
+  })
+
 export const createTemporaryLinkId = (): string =>
   `${TEMPORARY_ID_PREFIX}${crypto.randomUUID()}`
 
@@ -149,8 +168,15 @@ export const createLinksSnapshotStore = (
         return false
       }
       hasServerSnapshot = true
+      const nextSettledItems = items.filter((item) => Boolean(item.id))
+      if (
+        snapshotVersion === version &&
+        haveSameServerItems(settledItems, nextSettledItems)
+      ) {
+        return true
+      }
       version = snapshotVersion
-      settledItems = items.filter((item) => Boolean(item.id))
+      settledItems = nextSettledItems
       dropSettledEntries()
       republish()
       return true

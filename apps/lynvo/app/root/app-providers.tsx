@@ -1,4 +1,4 @@
-import { useCallback, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, type ReactNode } from "react"
 import { Outlet } from "react-router"
 import { ThemeProvider } from "next-themes"
 import { RemoteControlProvider } from "~/context/remote-control-context"
@@ -16,6 +16,9 @@ import { clearRevokedSessionState } from "./session-revocation"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { IdentitySynchronizer } from "./identity-synchronizer"
 import { toProviderUser } from "./provider-user"
+import { clearAsyncResourceCacheWhere } from "~/hooks/use-async-resource"
+import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
+import { isSettingsDataCacheKeyForUser } from "~/features/site/settings/settings-data-cache"
 
 interface AppProvidersProps {
   buildTime: string
@@ -29,9 +32,22 @@ export const AppProviders = ({
   children,
 }: AppProvidersProps) => {
   const providerUser = toProviderUser(user)
-  const handleSessionRevoked = useCallback((userId: string) => {
-    clearRevokedSessionState(localStorage, window.location, userId)
+  const userId = providerUser?.id
+  const previousUserId = useRef<string | undefined>(userId)
+  const handleSessionRevoked = useCallback((revokedUserId: string) => {
+    clearRevokedSessionState(localStorage, window.location, revokedUserId)
   }, [])
+
+  useEffect(() => {
+    const previousId = previousUserId.current
+    if (previousId && previousId !== userId) {
+      clearLinksSnapshotStores(previousId)
+      clearAsyncResourceCacheWhere((cacheKey) =>
+        isSettingsDataCacheKeyForUser(cacheKey, previousId)
+      )
+    }
+    previousUserId.current = userId
+  }, [userId])
 
   return (
     <ThemeProvider
@@ -53,10 +69,10 @@ export const AppProviders = ({
               onSessionRevoked={handleSessionRevoked}
             >
               <PlayerPreferenceProvider
-                key={providerUser?.id ?? "signed-out"}
-                userId={providerUser?.id}
+                key={userId ?? "signed-out"}
+                userId={userId}
               >
-                <AccountSettingsSynchronization userId={providerUser?.id} />
+                <AccountSettingsSynchronization userId={userId} />
                 <RemoteControlProvider user={providerUser}>
                   <VersionWatcher buildTime={buildTime} />
                   {children ?? <Outlet />}

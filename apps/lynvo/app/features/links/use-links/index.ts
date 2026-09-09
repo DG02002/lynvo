@@ -41,6 +41,8 @@ declare global {
 }
 
 interface UseLinksRefreshOptions {
+  hasInitialSnapshot: boolean | undefined
+  initialDataVersion: number | undefined
   userId: string | undefined
   realtime: RealtimeContextValue | undefined
   store: ReturnType<typeof createLinksSnapshotStore>
@@ -52,6 +54,8 @@ interface UseLinksRefreshResult {
 }
 
 interface UseInitialLinksLoadOptions {
+  hasInitialSnapshot: boolean | undefined
+  initialDataVersion: number | undefined
   userId: string | undefined
   realtime: RealtimeContextValue | undefined
   store: ReturnType<typeof createLinksSnapshotStore>
@@ -110,6 +114,8 @@ const refreshLinksSafely = (
 }
 
 const useInitialLinksLoad = ({
+  hasInitialSnapshot,
+  initialDataVersion,
   userId,
   realtime,
   store,
@@ -125,9 +131,16 @@ const useInitialLinksLoad = ({
     }
 
     const hasSnapshot = store.hasServerSnapshot()
+    const hasMatchingServerVersion =
+      initialDataVersion !== undefined &&
+      store.getVersion() === initialDataVersion
     if (hasSnapshot) {
       setIsInitialLoadComplete(true)
-      if (realtime?.status === "connected") {
+      if (
+        realtime?.status === "connected" ||
+        hasInitialSnapshot ||
+        hasMatchingServerVersion
+      ) {
         return
       }
       void applyFetchedSnapshot().catch((error) =>
@@ -148,7 +161,14 @@ const useInitialLinksLoad = ({
     return () => {
       didCancel = true
     }
-  }, [applyFetchedSnapshot, realtime?.status, store, userId])
+  }, [
+    applyFetchedSnapshot,
+    hasInitialSnapshot,
+    initialDataVersion,
+    realtime?.status,
+    store,
+    userId,
+  ])
   return isInitialLoadComplete
 }
 
@@ -158,15 +178,12 @@ const useInitialServerSnapshot = ({
   store,
   userId,
 }: UseInitialServerSnapshotOptions): void => {
-  const initialItemsRef = useRef(initialItems)
-  initialItemsRef.current = initialItems
-
   useEffect(() => {
-    if (!userId || initialItemsRef.current === undefined) {
+    if (!userId || initialItems === undefined) {
       return
     }
-    store.applyServerSnapshot(initialItemsRef.current, initialDataVersion ?? 0)
-  }, [initialDataVersion, store, userId])
+    store.applyServerSnapshot(initialItems, initialDataVersion ?? 0)
+  }, [initialDataVersion, initialItems, store, userId])
 }
 
 const useRealtimeLinksRefresh = ({
@@ -241,6 +258,8 @@ const useLinksRefetchTimer = ({
 }
 
 const useLinksRefresh = ({
+  hasInitialSnapshot,
+  initialDataVersion,
   userId,
   realtime,
   store,
@@ -264,6 +283,8 @@ const useLinksRefresh = ({
   }, [store, userId])
   const scheduleRefetch = useLinksRefetchTimer({ applyFetchedSnapshot })
   const isInitialLoadComplete = useInitialLinksLoad({
+    hasInitialSnapshot,
+    initialDataVersion,
     userId,
     realtime,
     store,
@@ -365,6 +386,8 @@ export const useLinksWithRuntime = (
     userId,
   })
   const { isInitialLoadComplete, scheduleRefetch } = useLinksRefresh({
+    hasInitialSnapshot: options.hasInitialSnapshot,
+    initialDataVersion: options.initialDataVersion,
     userId,
     realtime,
     store,

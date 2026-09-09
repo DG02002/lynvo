@@ -55,6 +55,26 @@ describe("useAsyncResource cache", () => {
     expect(secondLoad).toHaveBeenCalledOnce()
   })
 
+  it("reloads when dependencies change despite a fresh cache entry", async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce("first")
+      .mockResolvedValueOnce("second")
+    const { result, rerender } = renderHook(
+      ({ bucket }: { bucket: number }) =>
+        useAsyncResource(load, [bucket], {
+          cacheKey: "settings:usage:user-1",
+        }),
+      { initialProps: { bucket: 1 } }
+    )
+
+    await waitFor(() => expect(result.current.data).toBe("first"))
+    rerender({ bucket: 2 })
+
+    await waitFor(() => expect(result.current.data).toBe("second"))
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
   it("supports explicit reloads for refresh and retry actions", async () => {
     const load = vi
       .fn()

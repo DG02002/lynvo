@@ -36,6 +36,7 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -61,7 +62,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
     () => readStorageSettings(),
     [timeBucket],
     {
-      cacheKey: userId ? `settings:storage:${userId}` : undefined,
+      cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
     }
   )
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)

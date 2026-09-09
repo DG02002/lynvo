@@ -12,6 +12,7 @@ import {
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
@@ -126,7 +127,7 @@ export const UsageSettings = ({
     [timeBucket, pluginCacheKey],
     {
       cacheKey: userId
-        ? `settings:usage:${userId}:${pluginCacheKey}`
+        ? getSettingsDataCacheKey("usage", userId, pluginCacheKey)
         : undefined,
     }
   )
