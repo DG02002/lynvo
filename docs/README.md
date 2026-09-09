@@ -17,6 +17,7 @@ policy live in [CONTRIBUTING.md](../CONTRIBUTING.md); agent rules live in
 ## Operations
 
 - [Release and deployment runbook](operations/release.md)
+- [Extraction failure runbook](operations/extraction-resilience.md)
 
 ## GitHub contribution tooling
 

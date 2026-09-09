@@ -1,6 +1,7 @@
 import type { ExtractedLink } from "~/features/links/types"
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
+import { getExtractionErrorMessage } from "./extraction-error-message"
 import type {
   FolderExpandOptions,
   MirrorExpandOptions,
@@ -29,7 +30,10 @@ export const softRefreshLink = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: "The saved link couldn’t be refreshed. Try again.",
+      message: getExtractionErrorMessage(
+        error,
+        "The saved link couldn’t be refreshed. Try again."
+      ),
     })
   }
 }
@@ -82,7 +86,10 @@ export const hardRefreshLink = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: "Link choices couldn’t be loaded. Try again.",
+      message: getExtractionErrorMessage(
+        error,
+        "Link choices couldn’t be loaded. Try again."
+      ),
     })
   }
 }
@@ -100,7 +107,10 @@ export const expandMirrorLinks = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: "Playable links couldn’t be loaded. Try again.",
+      message: getExtractionErrorMessage(
+        error,
+        "Playable links couldn’t be loaded. Try again."
+      ),
     })
     return null
   }
@@ -130,7 +140,10 @@ export const expandFolderLink = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: "Playback options couldn’t be loaded. Try again.",
+      message: getExtractionErrorMessage(
+        error,
+        "Playback options couldn’t be loaded. Try again."
+      ),
     })
     return null
   }

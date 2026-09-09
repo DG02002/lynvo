@@ -17,6 +17,13 @@ declare global {
     | { readonly kind: "csrf-expired" }
     | { readonly kind: "validation"; readonly message: string }
     | { readonly kind: "temporarily-unavailable"; readonly reference: string }
+    | { readonly kind: "transient"; readonly reference?: string }
+    | {
+        readonly kind: "rate-limited"
+        readonly retryAfterSeconds?: number
+        readonly reference?: string
+      }
+    | { readonly kind: "plugin-server-down"; readonly reference?: string }
 }
 
 export const SavedLinkCommandFailureSchema = Schema.Union([
@@ -41,6 +48,19 @@ export const SavedLinkCommandFailureSchema = Schema.Union([
     kind: Schema.Literal("temporarily-unavailable"),
     reference: Schema.String,
   }),
+  Schema.Struct({
+    kind: Schema.Literal("transient"),
+    reference: Schema.optional(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("rate-limited"),
+    retryAfterSeconds: Schema.optional(Schema.Number),
+    reference: Schema.optional(Schema.String),
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("plugin-server-down"),
+    reference: Schema.optional(Schema.String),
+  }),
 ])
 
 export class SavedLinkCommandError extends Schema.TaggedError<SavedLinkCommandError>()(
@@ -51,6 +71,9 @@ export class SavedLinkCommandError extends Schema.TaggedError<SavedLinkCommandEr
 const unreachableFailure = (failure: never): never => {
   throw new Error(`Unhandled Saved link command failure: ${String(failure)}`)
 }
+
+const withReference = (message: string, reference?: string): string =>
+  reference ? `${message} Reference: ${reference}` : message
 
 export const presentSavedLinkCommandFailure = (
   failure: SavedLinkCommandFailure
@@ -70,6 +93,21 @@ export const presentSavedLinkCommandFailure = (
       return failure.message
     case "temporarily-unavailable":
       return `The link couldn’t be saved right now. Try again. Reference: ${failure.reference}`
+    case "transient":
+      return withReference(
+        "Extraction is temporarily unavailable. Try again in a moment.",
+        failure.reference
+      )
+    case "rate-limited":
+      return withReference(
+        "Extraction is rate-limited. Wait a moment, then try again.",
+        failure.reference
+      )
+    case "plugin-server-down":
+      return withReference(
+        "The Plugin Server is unavailable. Try again later or choose another Plugin Server.",
+        failure.reference
+      )
     default:
       return unreachableFailure(failure)
   }

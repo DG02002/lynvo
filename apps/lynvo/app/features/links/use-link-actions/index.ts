@@ -14,6 +14,7 @@ import { useRefreshActions } from "./refresh-actions"
 import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
+import { getExtractionErrorMessage } from "./extraction-error-message"
 import {
   getLinkViewItemExtractedLinks,
   getLinkViewItemFlatMeta,
@@ -134,7 +135,13 @@ export function useLinkActions({
         return resolvedChildren
       } catch (caughtError) {
         console.error(caughtError)
-        showErrorToast({ title: "The folder couldn’t be opened. Try again." })
+        showErrorToast({
+          title: "The folder couldn’t be opened. Try again.",
+          description: getExtractionErrorMessage(
+            caughtError,
+            "The folder couldn’t be opened. Try again."
+          ),
+        })
         return null
       }
     },
