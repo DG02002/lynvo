@@ -16,7 +16,7 @@ const identityStatusSchema = Schema.Union([
 
 interface IdentitySynchronizerProps {
   user: { id: string; sessionId?: string } | null
-  children: (validateIdentity: () => Promise<boolean>) => ReactNode
+  children: (ensureIdentityIsSafe: () => Promise<boolean>) => ReactNode
 }
 
 const SessionIdentityContext = createContext<() => Promise<boolean>>(
@@ -35,7 +35,7 @@ export const IdentitySynchronizer = ({
   const validationRequired = useRef(false)
   const userId = user?.id
   const sessionId = user?.sessionId
-  const validateIdentity = useCallback((): Promise<boolean> => {
+  const ensureIdentityIsSafe = useCallback((): Promise<boolean> => {
     if (isReloading.current) {
       return Promise.resolve(false)
     }
@@ -100,10 +100,10 @@ export const IdentitySynchronizer = ({
     if (!validationRequired.current) {
       return true
     }
-    const isValid = await validateIdentity()
+    const isValid = await ensureIdentityIsSafe()
     validationRequired.current = false
     return isValid
-  }, [validateIdentity])
+  }, [ensureIdentityIsSafe])
 
   useEffect(() => {
     validationGeneration.current += 1
@@ -113,25 +113,25 @@ export const IdentitySynchronizer = ({
         return
       }
       if (validationRequired.current) {
-        void validateIdentity()
+        void ensureIdentityIsSafe()
       }
     }
-    const handleOnline = () => void validateIdentity()
-    const handleFocus = () => void validateIdentity()
+    const handleOnline = () => void ensureIdentityIsSafe()
+    const handleFocus = () => void ensureIdentityIsSafe()
     window.addEventListener("online", handleOnline)
     window.addEventListener("focus", handleFocus)
     document.addEventListener("visibilitychange", handleVisibility)
-    void validateIdentity()
+    void ensureIdentityIsSafe()
     return () => {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
-  }, [validateIdentity])
+  }, [ensureIdentityIsSafe])
 
   return (
     <SessionIdentityContext.Provider value={ensureFreshIdentity}>
-      {children(validateIdentity)}
+      {children(ensureIdentityIsSafe)}
     </SessionIdentityContext.Provider>
   )
 }

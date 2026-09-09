@@ -120,26 +120,21 @@ const retryableDelayMs = (
   if (retryAfterMs === undefined) {
     return retryDelayMs(retryNumber)
   }
-  if (retryAfterMs > EXTRACTION_MAX_RETRY_AFTER_MS) {
+  if (
+    retryAfterMs + EXTRACTION_RETRY_JITTER_MS >
+    EXTRACTION_MAX_RETRY_AFTER_MS
+  ) {
     return undefined
   }
   return retryAfterMs + retryJitterMs()
 }
-
-const retryAfterSeconds = (delayMs: number | undefined): number | undefined =>
-  delayMs === undefined ? undefined : Math.ceil(delayMs / 1000)
 
 const toExtractionCommandError = (
   cause: unknown,
   retryableFailure?: RetryableExtractionFailure
 ): ExtractionCommandError | undefined => {
   if (retryableFailure?.kind === "rate-limited") {
-    return new ExtractionCommandError({
-      failure: {
-        kind: "rate-limited",
-        retryAfterSeconds: retryAfterSeconds(retryableFailure.retryAfterMs),
-      },
-    })
+    return new ExtractionCommandError({ failure: { kind: "rate-limited" } })
   }
   if (retryableFailure?.kind === "transient") {
     return new ExtractionCommandError({ failure: { kind: "transient" } })

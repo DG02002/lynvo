@@ -15,6 +15,7 @@ import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { getExtractionErrorMessage } from "./extraction-error-message"
+import { runAfterSessionIdentity } from "./session-gated-action"
 import { useEnsureSessionIdentity } from "~/root/identity-synchronizer"
 import {
   getLinkViewItemExtractedLinks,
@@ -117,14 +118,18 @@ export function useLinkActions({
     async (linkId: string, linkUrl: string) => {
       const { originalUrl } = selectionDialogState
       try {
-        if (!(await ensureSessionIdentity())) {
+        const resolvedChildren = await runAfterSessionIdentity(
+          ensureSessionIdentity,
+          () =>
+            extractionOrchestration.resolveFolder({
+              folderUrl: linkUrl,
+              pluginServerId: selectionDialogState.meta.pluginServerId,
+              pluginId: selectionDialogState.meta.pluginId,
+            })
+        )
+        if (resolvedChildren === null) {
           return null
         }
-        const resolvedChildren = await extractionOrchestration.resolveFolder({
-          folderUrl: linkUrl,
-          pluginServerId: selectionDialogState.meta.pluginServerId,
-          pluginId: selectionDialogState.meta.pluginId,
-        })
         setSelectionDialogState((currentState) =>
           currentState.originalUrl === originalUrl
             ? {

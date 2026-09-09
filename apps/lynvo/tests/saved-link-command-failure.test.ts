@@ -21,7 +21,7 @@ describe("saved-link command failure presentation", () => {
       { kind: "validation", message: "The saved link is invalid." },
       { kind: "temporarily-unavailable", reference: "request-one" },
       { kind: "transient" },
-      { kind: "rate-limited", retryAfterSeconds: 5 },
+      { kind: "rate-limited" },
       { kind: "plugin-server-down" },
     ]
 
@@ -87,7 +87,6 @@ describe("saved-link command failure presentation", () => {
     expect(
       presentSavedLinkCommandFailure({
         kind: "rate-limited",
-        retryAfterSeconds: 5,
       })
     ).toBe("Extraction is rate-limited. Wait a moment, then try again.")
     expect(presentSavedLinkCommandFailure({ kind: "plugin-server-down" })).toBe(

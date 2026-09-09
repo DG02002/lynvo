@@ -31,8 +31,8 @@ describe("identity synchronization", () => {
       <IdentitySynchronizer
         user={{ id: "rendered-user", sessionId: "rendered-session" }}
       >
-        {(validateIdentity) => (
-          <button onClick={validateIdentity}>Validate</button>
+        {(ensureIdentityIsSafe) => (
+          <button onClick={ensureIdentityIsSafe}>Validate</button>
         )}
       </IdentitySynchronizer>
     )

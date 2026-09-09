@@ -62,10 +62,10 @@ export const AppProviders = ({
         <ThemeCookieSync />
         <AuthActivityTouch isAuthenticated={Boolean(user)} />
         <IdentitySynchronizer user={providerUser}>
-          {(validateIdentity) => (
+          {(ensureIdentityIsSafe) => (
             <RealtimeProvider
               user={providerUser}
-              onConnectionOpen={() => void validateIdentity()}
+              onConnectionOpen={() => void ensureIdentityIsSafe()}
               onSessionRevoked={handleSessionRevoked}
             >
               <PlayerPreferenceProvider

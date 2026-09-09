@@ -72,6 +72,37 @@ describe("default extraction client", () => {
     expect(requestIds[0]).toBe(requestIds[1])
   })
 
+  it("uses bounded exponential backoff for transient retries", async () => {
+    vi.mocked(Math.random).mockReturnValue(0.5)
+    fetchMock
+      .mockResolvedValueOnce(
+        Response.json({ error: "Try again" }, { status: 503 })
+      )
+      .mockResolvedValueOnce(
+        Response.json({ error: "Try again" }, { status: 503 })
+      )
+      .mockResolvedValueOnce(successResponse())
+
+    const result = extractionClient.extract({ url: "https://source.example" })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(374)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(624)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(result).resolves.toMatchObject({
+      links: [{ label: "episode.mkv" }],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
   it("waits for Retry-After before retrying a rate-limited response", async () => {
     vi.mocked(Math.random).mockReturnValue(0.5)
     fetchMock
@@ -105,6 +136,20 @@ describe("default extraction client", () => {
       Response.json(
         { code: "rate_limited", error: "Slow down", retryable: true },
         { status: 429, headers: { "Retry-After": "3600" } }
+      )
+    )
+
+    await expect(
+      extractionClient.extract({ url: "https://source.example" })
+    ).rejects.toMatchObject({ failure: { kind: "rate-limited" } })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not exceed the retry window after adding jitter", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { code: "rate_limited", error: "Slow down", retryable: true },
+        { status: 429, headers: { "Retry-After": "20" } }
       )
     )
 

@@ -5,7 +5,6 @@ export const extractionCommandFailureSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("transient") }),
   Schema.Struct({
     kind: Schema.Literal("rate-limited"),
-    retryAfterSeconds: Schema.optional(Schema.Number),
   }),
   Schema.Struct({ kind: Schema.Literal("plugin-server-down") }),
 ])

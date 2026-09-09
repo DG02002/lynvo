@@ -1,9 +1,6 @@
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import {
-  ExtractionCommandError,
-  presentExtractionFailure,
-} from "~/lib/extraction/errors"
 import { Result, Schema } from "effect"
+import { getKnownExtractionErrorMessage } from "./extraction-error-message"
 
 const taggedSaveErrorSchema = Schema.Struct({
   _tag: Schema.optional(Schema.String),
@@ -11,8 +8,9 @@ const taggedSaveErrorSchema = Schema.Struct({
 })
 
 export const getSaveErrorMessage = <Value>(error: Value): string => {
-  if (error instanceof ExtractionCommandError) {
-    return presentExtractionFailure(error.failure)
+  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(error)
+  if (knownExtractionErrorMessage) {
+    return knownExtractionErrorMessage
   }
 
   const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
