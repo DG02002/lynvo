@@ -180,17 +180,12 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
 @keyframes tvbro-enter {
   from {
     opacity: var(--tw-enter-opacity, 1);
-    transform: translate3d(
-        var(--tw-enter-translate-x, 0),
-        var(--tw-enter-translate-y, 0),
-        0
-      )
+    transform: translate3d(0, var(--tw-enter-translate-y, 0), 0)
       scale3d(
         var(--tw-enter-scale, 1),
         var(--tw-enter-scale, 1),
         var(--tw-enter-scale, 1)
-      )
-      rotate(var(--tw-enter-rotate, 0));
+      );
   }
 }
 
@@ -210,18 +205,26 @@ html[data-lynvo-client-profile="tvbro-android-tv"] .tvbro-filter-free-enter {
   animation-name: tvbro-enter;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html[data-lynvo-client-profile="tvbro-android-tv"] .shimmer,
+  html[data-lynvo-client-profile="tvbro-android-tv"] .clipboard-icon-shimmer,
+  html[data-lynvo-client-profile="tvbro-android-tv"] .tvbro-filter-free-enter {
+    animation: none;
+  }
+}
+
 html[data-lynvo-client-profile="tvbro-android-tv"]
   .stagger-children
   > *:nth-child(n + 4) {
   animation-delay: 80ms;
 }
 
-html[data-lynvo-client-profile="tvbro-android-tv"] .tmdb-image-preview {
+html[data-lynvo-client-profile="tvbro-android-tv"] [data-tmdb-image-preview] {
   -webkit-filter: none;
   filter: none;
 }
 
-html[data-lynvo-client-profile="tvbro-android-tv"] .receiver-overlay {
+html[data-lynvo-client-profile="tvbro-android-tv"] [data-receiver-overlay] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }

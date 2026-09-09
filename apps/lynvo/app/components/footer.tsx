@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router"
-import { useIsTvBroAndroidTv } from "~/lib/client-profile"
+import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths, sitePaths } from "~/lib/paths"
 
 const supportLinks = [
@@ -34,37 +34,41 @@ const FooterLinkGroup = ({
   heading,
   headingId,
   links,
-  isTvBroAndroidTv,
 }: {
   heading: string
   headingId: string
   links: readonly { label: string; to: string }[]
-  isTvBroAndroidTv: boolean
-}) => (
-  <nav aria-labelledby={headingId} className="flex flex-col items-start gap-5">
-    <h2 id={headingId} className="text-sm font-normal text-muted-foreground">
-      {heading}
-    </h2>
-    <ul className="flex flex-col items-start gap-4">
-      {links.map((link) => (
-        <li key={link.to}>
-          <Link
-            to={link.to}
-            prefetch="intent"
-            viewTransition={!isTvBroAndroidTv}
-            className={footerLinkClassName}
-          >
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  </nav>
-)
+}) => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <nav
+      aria-labelledby={headingId}
+      className="flex flex-col items-start gap-5"
+    >
+      <h2 id={headingId} className="text-sm font-normal text-muted-foreground">
+        {heading}
+      </h2>
+      <ul className="flex flex-col items-start gap-4">
+        {links.map((link) => (
+          <li key={link.to}>
+            <Link
+              to={link.to}
+              prefetch="intent"
+              viewTransition={viewTransition}
+              className={footerLinkClassName}
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
 
 export function Footer() {
   const { pathname } = useLocation()
-  const isTvBroAndroidTv = useIsTvBroAndroidTv()
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/"
   const showLinkGroups = !(
     normalizedPathname === "/save" ||
@@ -82,25 +86,21 @@ export function Footer() {
               heading="Support"
               headingId="footer-support-heading"
               links={supportLinks}
-              isTvBroAndroidTv={isTvBroAndroidTv}
             />
             <FooterLinkGroup
               heading="Company"
               headingId="footer-company-heading"
               links={companyLinks}
-              isTvBroAndroidTv={isTvBroAndroidTv}
             />
             <FooterLinkGroup
               heading="Learn"
               headingId="footer-learn-heading"
               links={docsLinks}
-              isTvBroAndroidTv={isTvBroAndroidTv}
             />
             <FooterLinkGroup
               heading="Terms and policies"
               headingId="footer-policies-heading"
               links={policyLinks}
-              isTvBroAndroidTv={isTvBroAndroidTv}
             />
           </div>
         </div>

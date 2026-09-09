@@ -4,6 +4,7 @@ import {
   SupportChannelLinks,
   TelegramSupportLink,
 } from "~/components/support-channel-links"
+import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths } from "~/lib/paths"
 
 const TMDB_API_TERMS_URL = "https://www.themoviedb.org/api-terms-of-use"
@@ -112,56 +113,62 @@ const TermsOfUseLimitsContent = () => (
   </>
 )
 
-const TermsOfUseLinksContent = () => (
-  <>
-    <p>
-      You keep any rights you have in URLs, labels, and other information you
-      submit. You give Lynvo permission to store, process, display, and send
-      that data as needed to operate the features you request.
-    </p>
-    <p>
-      TMDB metadata and artwork are third-party materials. Lynvo does not grant
-      you ownership of or a separate license to reuse them. Follow the{" "}
-      <a
-        href={TMDB_API_TERMS_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="underline underline-offset-4"
-      >
-        TMDB API terms of use
-      </a>{" "}
-      and the rights of the relevant content owners.
-    </p>
-    <p>
-      You must use Lynvo lawfully and follow the{" "}
-      <Link
-        to={policyPaths.usagePolicy}
-        viewTransition
-        className="font-normal underline underline-offset-4"
-      >
-        Usage policy
-      </Link>
-      . In particular, you may not:
-    </p>
-    <ul className="list-disc pl-6">
-      <li>Save, access, or play content you have no legal right to use</li>
-      <li>Infringe copyright, privacy, or other rights</li>
-      <li>Distribute malware or links designed to compromise another system</li>
-      <li>Bypass authentication, Source restrictions, or access controls</li>
-      <li>
-        Probe, disrupt, overload, or interfere with Lynvo or its providers
-      </li>
-      <li>Evade storage, Extraction, request, or rate limits</li>
-      <li>Automate access without Lynvo&apos;s written permission</li>
-      <li>Resell or misrepresent Lynvo as your own service</li>
-    </ul>
-    <p>
-      You&apos;re responsible for confirming that a link, Source, or file is
-      lawful before using it. Lynvo&apos;s ability to resolve a URL doesn&apos;t
-      grant permission to access its content.
-    </p>
-  </>
-)
+const TermsOfUseLinksContent = () => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <>
+      <p>
+        You keep any rights you have in URLs, labels, and other information you
+        submit. You give Lynvo permission to store, process, display, and send
+        that data as needed to operate the features you request.
+      </p>
+      <p>
+        TMDB metadata and artwork are third-party materials. Lynvo does not
+        grant you ownership of or a separate license to reuse them. Follow the{" "}
+        <a
+          href={TMDB_API_TERMS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4"
+        >
+          TMDB API terms of use
+        </a>{" "}
+        and the rights of the relevant content owners.
+      </p>
+      <p>
+        You must use Lynvo lawfully and follow the{" "}
+        <Link
+          to={policyPaths.usagePolicy}
+          viewTransition={viewTransition}
+          className="font-normal underline underline-offset-4"
+        >
+          Usage policy
+        </Link>
+        . In particular, you may not:
+      </p>
+      <ul className="list-disc pl-6">
+        <li>Save, access, or play content you have no legal right to use</li>
+        <li>Infringe copyright, privacy, or other rights</li>
+        <li>
+          Distribute malware or links designed to compromise another system
+        </li>
+        <li>Bypass authentication, Source restrictions, or access controls</li>
+        <li>
+          Probe, disrupt, overload, or interfere with Lynvo or its providers
+        </li>
+        <li>Evade storage, Extraction, request, or rate limits</li>
+        <li>Automate access without Lynvo&apos;s written permission</li>
+        <li>Resell or misrepresent Lynvo as your own service</li>
+      </ul>
+      <p>
+        You&apos;re responsible for confirming that a link, Source, or file is
+        lawful before using it. Lynvo&apos;s ability to resolve a URL
+        doesn&apos;t grant permission to access its content.
+      </p>
+    </>
+  )
+}
 
 const TermsOfUsePluginsContent = () => (
   <>
@@ -181,53 +188,57 @@ const TermsOfUsePluginsContent = () => (
   </>
 )
 
-const TermsOfUsePrivacyContent = () => (
-  <>
-    <p>
-      The{" "}
-      <Link
-        to={policyPaths.privacyPolicy}
-        viewTransition
-        className="font-normal underline underline-offset-4"
-      >
-        Privacy policy
-      </Link>{" "}
-      explains what data Lynvo collects, where it goes, and when Lynvo deletes
-      it. The Privacy policy forms part of these terms.
-    </p>
-    <p>
-      The{" "}
-      <Link
-        to={policyPaths.cookiePolicy}
-        viewTransition
-        className="font-normal underline underline-offset-4"
-      >
-        Cookie policy
-      </Link>{" "}
-      explains Lynvo&apos;s cookies and browser storage. The{" "}
-      <Link
-        to={policyPaths.usagePolicy}
-        viewTransition
-        className="font-normal underline underline-offset-4"
-      >
-        Usage policy
-      </Link>{" "}
-      explains restricted uses of Lynvo and connected Plugin Servers.
-    </p>
-    <p>
-      The{" "}
-      <Link
-        to={policyPaths.licenses}
-        viewTransition
-        className="font-normal underline underline-offset-4"
-      >
-        Open-source licenses
-      </Link>{" "}
-      page lists the licenses for Lynvo software and the attribution for
-      third-party services such as TMDB.
-    </p>
-  </>
-)
+const TermsOfUsePrivacyContent = () => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <>
+      <p>
+        The{" "}
+        <Link
+          to={policyPaths.privacyPolicy}
+          viewTransition={viewTransition}
+          className="font-normal underline underline-offset-4"
+        >
+          Privacy policy
+        </Link>{" "}
+        explains what data Lynvo collects, where it goes, and when Lynvo deletes
+        it. The Privacy policy forms part of these terms.
+      </p>
+      <p>
+        The{" "}
+        <Link
+          to={policyPaths.cookiePolicy}
+          viewTransition={viewTransition}
+          className="font-normal underline underline-offset-4"
+        >
+          Cookie policy
+        </Link>{" "}
+        explains Lynvo&apos;s cookies and browser storage. The{" "}
+        <Link
+          to={policyPaths.usagePolicy}
+          viewTransition={viewTransition}
+          className="font-normal underline underline-offset-4"
+        >
+          Usage policy
+        </Link>{" "}
+        explains restricted uses of Lynvo and connected Plugin Servers.
+      </p>
+      <p>
+        The{" "}
+        <Link
+          to={policyPaths.licenses}
+          viewTransition={viewTransition}
+          className="font-normal underline underline-offset-4"
+        >
+          Open-source licenses
+        </Link>{" "}
+        page lists the licenses for Lynvo software and the attribution for
+        third-party services such as TMDB.
+      </p>
+    </>
+  )
+}
 
 const TermsOfUseTerminationContent = () => (
   <>

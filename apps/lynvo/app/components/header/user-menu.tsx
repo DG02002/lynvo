@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { sitePaths } from "~/lib/paths"
+import { useViewTransition } from "~/lib/client-profile"
 
 export const UserMenu = ({
   name,
@@ -24,63 +25,67 @@ export const UserMenu = ({
   email: string
   onRemotePlay: () => void
   onLogout: () => void
-}) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger
-      render={
-        <button
-          type="button"
-          className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
-        >
-          <HugeiconsIcon icon={UserIcon} className="size-4" />
-          <span className="hidden text-base font-normal sm:inline">
-            {name || email}
-          </span>
-        </button>
-      }
-    />
-    <DropdownMenuContent align="end" className="w-max min-w-max">
-      <DropdownMenuItem
-        render={
-          <Link
-            to="#"
-            onClick={(event) => {
-              event.preventDefault()
-              onRemotePlay()
-            }}
-            className="cursor-pointer"
-          >
-            <HugeiconsIcon icon={AirplayLineIcon} />
-            <span>Remote Play</span>
-          </Link>
-        }
-      />
-      <DropdownMenuItem
-        render={
-          <Link
-            to={sitePaths.settings}
-            prefetch="intent"
-            viewTransition
-            className="cursor-pointer"
-          >
-            <HugeiconsIcon icon={Settings01Icon} />
-            <span>Settings</span>
-          </Link>
-        }
-      />
-      <DropdownMenuItem
-        nativeButton
+}) => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
         render={
           <button
             type="button"
-            onClick={onLogout}
-            className="w-full cursor-pointer"
+            className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
           >
-            <HugeiconsIcon icon={Logout05Icon} />
-            <span>Log out</span>
+            <HugeiconsIcon icon={UserIcon} className="size-4" />
+            <span className="hidden text-base font-normal sm:inline">
+              {name || email}
+            </span>
           </button>
         }
       />
-    </DropdownMenuContent>
-  </DropdownMenu>
-)
+      <DropdownMenuContent align="end" className="w-max min-w-max">
+        <DropdownMenuItem
+          render={
+            <Link
+              to="#"
+              onClick={(event) => {
+                event.preventDefault()
+                onRemotePlay()
+              }}
+              className="cursor-pointer"
+            >
+              <HugeiconsIcon icon={AirplayLineIcon} />
+              <span>Remote Play</span>
+            </Link>
+          }
+        />
+        <DropdownMenuItem
+          render={
+            <Link
+              to={sitePaths.settings}
+              prefetch="intent"
+              viewTransition={viewTransition}
+              className="cursor-pointer"
+            >
+              <HugeiconsIcon icon={Settings01Icon} />
+              <span>Settings</span>
+            </Link>
+          }
+        />
+        <DropdownMenuItem
+          nativeButton
+          render={
+            <button
+              type="button"
+              onClick={onLogout}
+              className="w-full cursor-pointer"
+            >
+              <HugeiconsIcon icon={Logout05Icon} />
+              <span>Log out</span>
+            </button>
+          }
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}

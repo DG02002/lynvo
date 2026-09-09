@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { PricingFaq } from "~/features/site/pricing/pricing-faq"
+import { useViewTransition } from "~/lib/client-profile"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
@@ -135,30 +136,38 @@ interface MobilePlanControlsProps {
   className?: string
 }
 
-const MobilePlanControls = ({ className }: MobilePlanControlsProps) => (
-  <div className={cn("flex flex-col gap-3 sm:hidden", className)}>
-    <div className="mx-auto grid w-52 max-w-full grid-cols-2 rounded-full bg-muted p-0.5 text-center text-sm">
-      <span className="rounded-full bg-background px-3 py-1 shadow-sm">
-        Free
-      </span>
-      <span className="px-3 py-1 text-foreground">More soon</span>
+const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <div className={cn("flex flex-col gap-3 sm:hidden", className)}>
+      <div className="mx-auto grid w-52 max-w-full grid-cols-2 rounded-full bg-muted p-0.5 text-center text-sm">
+        <span className="rounded-full bg-background px-3 py-1 shadow-sm">
+          Free
+        </span>
+        <span className="px-3 py-1 text-foreground">More soon</span>
+      </div>
+      <Link
+        to={authPaths.signIn}
+        viewTransition={viewTransition}
+        className={cn(
+          buttonVariants({ size: "lg" }),
+          "mx-auto w-full max-w-2xl"
+        )}
+      >
+        Get Free
+        <HugeiconsIcon
+          icon={ArrowUpRight01Icon}
+          strokeWidth={2}
+          data-icon="inline-end"
+        />
+      </Link>
     </div>
-    <Link
-      to={authPaths.signIn}
-      viewTransition
-      className={cn(buttonVariants({ size: "lg" }), "mx-auto w-full max-w-2xl")}
-    >
-      Get Free
-      <HugeiconsIcon
-        icon={ArrowUpRight01Icon}
-        strokeWidth={2}
-        data-icon="inline-end"
-      />
-    </Link>
-  </div>
-)
+  )
+}
 
 export default function Pricing() {
+  const viewTransition = useViewTransition()
   const comparisonTableRef = useRef<HTMLDivElement>(null)
   const comparisonEndRef = useRef<HTMLDivElement>(null)
   const [isComparisonTableVisible, setIsComparisonTableVisible] =
@@ -235,7 +244,7 @@ export default function Pricing() {
             </div>
             <Link
               to={authPaths.signIn}
-              viewTransition
+              viewTransition={viewTransition}
               className={cn(buttonVariants({ size: "lg" }), "w-full")}
             >
               Create a free account
@@ -295,7 +304,7 @@ export default function Pricing() {
               <span className="text-lg">Free</span>
               <Link
                 to={authPaths.signIn}
-                viewTransition
+                viewTransition={viewTransition}
                 className={buttonVariants({ size: "sm" })}
               >
                 Create a free account
@@ -369,7 +378,7 @@ export default function Pricing() {
             restricted under the{" "}
             <Link
               to={policyPaths.usagePolicy}
-              viewTransition
+              viewTransition={viewTransition}
               className="text-foreground underline underline-offset-4"
             >
               Usage policy
@@ -385,7 +394,7 @@ export default function Pricing() {
             the{" "}
             <Link
               to={sitePaths.changelog}
-              viewTransition
+              viewTransition={viewTransition}
               className="text-foreground underline underline-offset-4"
             >
               changelog

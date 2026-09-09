@@ -140,7 +140,10 @@ const ExtractionStatusText = ({
   >
     <span
       key={message}
-      className={`${TVBRO_FILTER_FREE_ENTER_CLASS} min-w-0 animate-[enter_500ms_ease] fade-in motion-reduce:animate-none`}
+      className={cn(
+        TVBRO_FILTER_FREE_ENTER_CLASS,
+        "min-w-0 animate-[enter_500ms_ease] fade-in motion-reduce:animate-none"
+      )}
     >
       <span className="shimmer">{message}</span>
     </span>
@@ -154,7 +157,10 @@ const renderExtractionStatusChildren = (
   if (shouldAnimateEntrance) {
     return (
       <div
-        className={`${TVBRO_FILTER_FREE_ENTER_CLASS} min-w-0 animate-[enter_300ms_ease_both] fade-in slide-in-from-bottom-1 motion-reduce:animate-none`}
+        className={cn(
+          TVBRO_FILTER_FREE_ENTER_CLASS,
+          "min-w-0 animate-[enter_300ms_ease_both] fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
+        )}
       >
         {children}
       </div>

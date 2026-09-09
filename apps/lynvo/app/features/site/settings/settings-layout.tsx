@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Link, type LinkProps } from "react-router"
-import { useIsTvBroAndroidTv } from "~/lib/client-profile"
+import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
 import {
   settingsActionRowClass,
@@ -56,14 +56,14 @@ type SettingsActionRowProps =
   | ({ as: "div" } & React.ComponentProps<"div">)
 
 export function SettingsActionRow(props: SettingsActionRowProps) {
-  const isTvBroAndroidTv = useIsTvBroAndroidTv()
+  const clientViewTransition = useViewTransition()
 
   if (props.as === "link") {
     const { as: _as, className, viewTransition = true, ...linkProps } = props
     return (
       <Link
         {...linkProps}
-        viewTransition={isTvBroAndroidTv ? false : viewTransition}
+        viewTransition={clientViewTransition && viewTransition}
         className={cn(
           settingsActionRowClass,
           "cursor-pointer select-none",

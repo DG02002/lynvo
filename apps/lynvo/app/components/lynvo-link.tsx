@@ -1,15 +1,18 @@
 import { Link } from "react-router"
+import { useViewTransition } from "~/lib/client-profile"
 
 type LynvoLinkProps = {
   className?: string
 }
 
 export function LynvoLink({ className }: LynvoLinkProps) {
+  const viewTransition = useViewTransition()
+
   return (
     <Link
       to="/"
       prefetch="intent"
-      viewTransition
+      viewTransition={viewTransition}
       aria-label="Lynvo home"
       className={
         className ??

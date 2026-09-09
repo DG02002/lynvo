@@ -257,7 +257,11 @@ const HybridSaveCard = ({
       data-testid="hybrid-save-card"
       data-highlighted={isHighlighted ? true : undefined}
       data-extraction-state={extractionState}
-      className={`group relative w-full ${TVBRO_FILTER_FREE_ENTER_CLASS} animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none`}
+      className={cn(
+        "group relative w-full",
+        TVBRO_FILTER_FREE_ENTER_CLASS,
+        "animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
+      )}
     >
       {isExtractionVisual ? null : (
         <button
