@@ -3,6 +3,7 @@ import { FolderLibraryIcon } from "@hugeicons/core-free-icons"
 import { Link } from "react-router"
 import { buttonVariants } from "~/components/ui/button-variants"
 import { RemotePlayButton } from "~/components/remote-play-button"
+import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
 import { UserMenu } from "./user-menu"
 
@@ -20,34 +21,38 @@ export const UserNavActions = ({
   remotePlayOpen: boolean
   onRemotePlayOpenChange: (open: boolean) => void
   onLogoutDialogOpen: () => void
-}) => (
-  <>
-    {showSaveAction && (
-      <Link
-        to="/save"
-        prefetch="intent"
-        viewTransition
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "gap-2 px-2 sm:px-4 text-foreground rounded-full"
-        )}
-      >
-        <HugeiconsIcon icon={FolderLibraryIcon} className="size-4" />
-        <span className="hidden text-base font-normal sm:inline">Save</span>
-      </Link>
-    )}
+}) => {
+  const viewTransition = useViewTransition()
 
-    <RemotePlayButton
-      open={remotePlayOpen}
-      onOpenChange={onRemotePlayOpenChange}
-      trigger={null}
-    />
+  return (
+    <>
+      {showSaveAction && (
+        <Link
+          to="/save"
+          prefetch="intent"
+          viewTransition={viewTransition}
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "gap-2 px-2 sm:px-4 text-foreground rounded-full"
+          )}
+        >
+          <HugeiconsIcon icon={FolderLibraryIcon} className="size-4" />
+          <span className="hidden text-base font-normal sm:inline">Save</span>
+        </Link>
+      )}
 
-    <UserMenu
-      name={name}
-      email={email}
-      onRemotePlay={() => onRemotePlayOpenChange(true)}
-      onLogout={onLogoutDialogOpen}
-    />
-  </>
-)
+      <RemotePlayButton
+        open={remotePlayOpen}
+        onOpenChange={onRemotePlayOpenChange}
+        trigger={null}
+      />
+
+      <UserMenu
+        name={name}
+        email={email}
+        onRemotePlay={() => onRemotePlayOpenChange(true)}
+        onLogout={onLogoutDialogOpen}
+      />
+    </>
+  )
+}

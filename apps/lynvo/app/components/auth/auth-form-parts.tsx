@@ -1,5 +1,6 @@
 import { Link } from "react-router"
 import { Alert, AlertDescription } from "~/components/ui/alert"
+import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths } from "~/lib/paths"
 import { cn } from "~/lib/utils"
 
@@ -33,25 +34,29 @@ export const AuthDivider = ({ className }: AuthDividerProps) => (
   </div>
 )
 
-export const AuthPolicyLinks = () => (
-  <div
-    data-auth-form-policies
-    className="mt-3 space-x-1 text-center text-xs text-muted-foreground"
-  >
-    <Link
-      to={policyPaths.termsOfUse}
-      viewTransition
-      className="underline underline-offset-4"
+export const AuthPolicyLinks = () => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <div
+      data-auth-form-policies
+      className="mt-3 space-x-1 text-center text-xs text-muted-foreground"
     >
-      Terms of use
-    </Link>
-    <span> | </span>
-    <Link
-      to={policyPaths.privacyPolicy}
-      viewTransition
-      className="underline underline-offset-4"
-    >
-      Privacy policy
-    </Link>
-  </div>
-)
+      <Link
+        to={policyPaths.termsOfUse}
+        viewTransition={viewTransition}
+        className="underline underline-offset-4"
+      >
+        Terms of use
+      </Link>
+      <span> | </span>
+      <Link
+        to={policyPaths.privacyPolicy}
+        viewTransition={viewTransition}
+        className="underline underline-offset-4"
+      >
+        Privacy policy
+      </Link>
+    </div>
+  )
+}

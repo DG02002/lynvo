@@ -11,6 +11,7 @@ import { useExpiryClock } from "./use-expiry-clock"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { useViewTransition } from "~/lib/client-profile"
 
 interface DeviceApprovalStatusMessageProps {
   readonly code: string
@@ -107,6 +108,7 @@ const DeviceApprovalStatusMessage = ({
 }
 
 const DeviceApproval = () => {
+  const viewTransition = useViewTransition()
   const params = new URLSearchParams(
     globalThis.window !== undefined ? window.location.search : ""
   )
@@ -148,7 +150,7 @@ const DeviceApproval = () => {
                 className="h-13.5 w-full"
                 nativeButton={false}
                 render={
-                  <Link to="/" viewTransition>
+                  <Link to="/" viewTransition={viewTransition}>
                     Go home
                   </Link>
                 }
@@ -173,7 +175,7 @@ const DeviceApproval = () => {
                   className="h-13.5 w-full"
                   nativeButton={false}
                   render={
-                    <Link to={authPaths.signIn} viewTransition>
+                    <Link to={authPaths.signIn} viewTransition={viewTransition}>
                       Back to log in
                     </Link>
                   }

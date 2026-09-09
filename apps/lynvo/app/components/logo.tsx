@@ -1,6 +1,7 @@
 import { Link } from "react-router"
 import { PlayIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
 
 interface LogoProps {
@@ -63,11 +64,13 @@ export const LogoLink = ({
   size = "md",
   className,
 }: LogoProps) => {
+  const viewTransition = useViewTransition()
+
   return (
     <Link
       to="/"
       prefetch="intent"
-      viewTransition
+      viewTransition={viewTransition}
       className={cn(
         "flex items-center gap-2 hover:opacity-80 transition-opacity",
         className

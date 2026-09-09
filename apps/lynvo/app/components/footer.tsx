@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router"
+import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths, sitePaths } from "~/lib/paths"
 
 const supportLinks = [
@@ -37,27 +38,34 @@ const FooterLinkGroup = ({
   heading: string
   headingId: string
   links: readonly { label: string; to: string }[]
-}) => (
-  <nav aria-labelledby={headingId} className="flex flex-col items-start gap-5">
-    <h2 id={headingId} className="text-sm font-normal text-muted-foreground">
-      {heading}
-    </h2>
-    <ul className="flex flex-col items-start gap-4">
-      {links.map((link) => (
-        <li key={link.to}>
-          <Link
-            to={link.to}
-            prefetch="intent"
-            viewTransition
-            className={footerLinkClassName}
-          >
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  </nav>
-)
+}) => {
+  const viewTransition = useViewTransition()
+
+  return (
+    <nav
+      aria-labelledby={headingId}
+      className="flex flex-col items-start gap-5"
+    >
+      <h2 id={headingId} className="text-sm font-normal text-muted-foreground">
+        {heading}
+      </h2>
+      <ul className="flex flex-col items-start gap-4">
+        {links.map((link) => (
+          <li key={link.to}>
+            <Link
+              to={link.to}
+              prefetch="intent"
+              viewTransition={viewTransition}
+              className={footerLinkClassName}
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
 
 export function Footer() {
   const { pathname } = useLocation()

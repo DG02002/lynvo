@@ -2,6 +2,7 @@ import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
 import { DeviceLoginQr } from "~/components/auth/device-login-qr"
 import { LynvoLink } from "~/components/lynvo-link"
+import { useViewTransition } from "~/lib/client-profile"
 import { authPaths, policyPaths } from "~/lib/paths"
 
 export function meta() {
@@ -15,6 +16,8 @@ export function meta() {
 }
 
 export default function SignInWithAnotherDevice() {
+  const viewTransition = useViewTransition()
+
   return (
     <div
       data-device-sign-in-page
@@ -52,7 +55,7 @@ export default function SignInWithAnotherDevice() {
               className="h-13.5 w-full"
               nativeButton={false}
               render={
-                <Link to={authPaths.signIn} viewTransition>
+                <Link to={authPaths.signIn} viewTransition={viewTransition}>
                   Back to log in
                 </Link>
               }
@@ -65,7 +68,7 @@ export default function SignInWithAnotherDevice() {
           >
             <Link
               to={policyPaths.termsOfUse}
-              viewTransition
+              viewTransition={viewTransition}
               className="underline underline-offset-4"
             >
               Terms of use
@@ -73,7 +76,7 @@ export default function SignInWithAnotherDevice() {
             <span> | </span>
             <Link
               to={policyPaths.privacyPolicy}
-              viewTransition
+              viewTransition={viewTransition}
               className="underline underline-offset-4"
             >
               Privacy policy

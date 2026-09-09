@@ -5,6 +5,7 @@ import { GuestNavActions } from "./header/guest-nav-actions"
 import { LogoutDialog } from "./header/logout-dialog"
 import { UserNavActions } from "./header/user-nav-actions"
 import { signOut } from "~/lib/session-http"
+import { useViewTransition } from "~/lib/client-profile"
 
 export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const navigate = useNavigate()
@@ -14,11 +15,12 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const user = data?.user
   const [remotePlayOpen, setRemotePlayOpen] = useState(false)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
+  const viewTransition = useViewTransition()
 
   const handleLogout = async () => {
     try {
       await signOut()
-      navigate("/", { viewTransition: true })
+      navigate("/", { viewTransition })
     } catch (error) {
       console.error("Logout failed:", error)
     }

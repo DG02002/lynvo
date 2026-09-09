@@ -9,6 +9,7 @@ import {
 import { Button } from "~/components/ui/button"
 import { authCopy } from "~/features/auth/auth.copy"
 import { normalizeReturnTo } from "~/lib/auth-cookie"
+import { useViewTransition } from "~/lib/client-profile"
 import { authPaths } from "~/lib/paths"
 
 export const meta = () => [
@@ -37,6 +38,7 @@ const getSignInErrorMessage = (errorReason: string | null) => {
 }
 
 const SignIn = () => {
+  const viewTransition = useViewTransition()
   const location = useLocation()
   const url = new URL(location.pathname + location.search, "https://lynvo.test")
   const returnTo = normalizeReturnTo(
@@ -69,7 +71,10 @@ const SignIn = () => {
             className="h-13.5 w-full max-w-xs self-center font-normal"
             nativeButton={false}
             render={
-              <Link to={authPaths.signInWithAnotherDevice} viewTransition>
+              <Link
+                to={authPaths.signInWithAnotherDevice}
+                viewTransition={viewTransition}
+              >
                 {authCopy.signin.qrButton}
               </Link>
             }

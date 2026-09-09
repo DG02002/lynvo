@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react"
 import {
   getDevelopmentTvBroUiEnabled,
   subscribeToDevelopmentSettings,
@@ -24,6 +25,25 @@ export const getCurrentClientProfile = () =>
 
 export const subscribeToClientProfile = (onStoreChange: () => void) =>
   subscribeToDevelopmentSettings(onStoreChange)
+
+export const getIsTvBroAndroidTv = () =>
+  getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
+
+export const getViewTransitionEnabled = () => !getIsTvBroAndroidTv()
+
+export const useIsTvBroAndroidTv = () =>
+  useSyncExternalStore(
+    subscribeToClientProfile,
+    getIsTvBroAndroidTv,
+    () => false
+  )
+
+export const useViewTransition = () =>
+  useSyncExternalStore(
+    subscribeToClientProfile,
+    getViewTransitionEnabled,
+    () => true
+  )
 
 export const syncClientProfileAttribute = (): void => {
   if (globalThis.document === undefined) {

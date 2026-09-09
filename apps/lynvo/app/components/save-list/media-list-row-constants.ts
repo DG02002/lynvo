@@ -1,12 +1,15 @@
 import { cn } from "~/lib/utils"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 
 export const MEDIA_LIST_ROW_TITLE_CLASS = "block text-sm md:text-lg"
 
 export const MEDIA_LIST_ROW_META_CLASS =
   "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground"
 
-export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS =
+export const SAVE_LIST_ROW_ENTER_ANIMATION_CLASS = cn(
+  TVBRO_FILTER_FREE_ENTER_CLASS,
   "animate-in fade-in fill-mode-both slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
+)
 
 export const MEDIA_LIST_ROW_MENU_CELL_CLASS = "w-16 shrink-0 text-foreground"
 

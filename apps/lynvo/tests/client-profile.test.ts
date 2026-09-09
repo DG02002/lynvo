@@ -5,6 +5,7 @@ import {
   createClientProfileBootstrapScript,
   getCurrentClientProfile,
   getClientProfile,
+  getViewTransitionEnabled,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
 import { DEVELOPMENT_TVBRO_UI_STORAGE_KEY } from "~/lib/development-settings"
@@ -35,6 +36,17 @@ describe("client profile", () => {
     localStorage.setItem(DEVELOPMENT_TVBRO_UI_STORAGE_KEY, "true")
 
     expect(getCurrentClientProfile()).toBe(TVBRO_ANDROID_TV_PROFILE)
+  })
+
+  it("disables view transitions for TV Bro only", () => {
+    expect(getViewTransitionEnabled()).toBe(true)
+
+    Object.defineProperty(window, "TVBro", {
+      configurable: true,
+      value: {},
+    })
+
+    expect(getViewTransitionEnabled()).toBe(false)
   })
 })
 

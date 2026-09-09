@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 import type { ExtractionStatusInput } from "./extraction-status-utils"
 import {
   EXTRACTION_STATUS_MESSAGES,
@@ -137,7 +138,10 @@ const ExtractionStatusText = ({
   >
     <span
       key={message}
-      className="animate-[enter_500ms_ease] fade-in motion-reduce:animate-none min-w-0"
+      className={cn(
+        TVBRO_FILTER_FREE_ENTER_CLASS,
+        "min-w-0 animate-[enter_500ms_ease] fade-in motion-reduce:animate-none"
+      )}
     >
       <span className="shimmer">{message}</span>
     </span>
@@ -150,7 +154,12 @@ const renderExtractionStatusChildren = (
 ) => {
   if (shouldAnimateEntrance) {
     return (
-      <div className="min-w-0 animate-[enter_300ms_ease_both] fade-in slide-in-from-bottom-1 motion-reduce:animate-none">
+      <div
+        className={cn(
+          TVBRO_FILTER_FREE_ENTER_CLASS,
+          "min-w-0 animate-[enter_300ms_ease_both] fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
+        )}
+      >
         {children}
       </div>
     )
