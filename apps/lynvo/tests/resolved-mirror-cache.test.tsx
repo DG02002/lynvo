@@ -38,6 +38,7 @@ describe("resolved mirror cache", () => {
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),
         runWithExtractingItem,
+        ensureSessionIdentity: async () => true,
       })
     )
 
@@ -84,6 +85,7 @@ describe("resolved mirror cache", () => {
         openSelectionDialog: vi.fn(),
         extractingItems: new Set(),
         runWithExtractingItem,
+        ensureSessionIdentity: async () => true,
       })
     )
 

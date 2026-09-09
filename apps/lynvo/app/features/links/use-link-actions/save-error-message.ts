@@ -1,4 +1,8 @@
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+import {
+  ExtractionCommandError,
+  presentExtractionFailure,
+} from "~/lib/extraction/errors"
 import { Result, Schema } from "effect"
 
 const taggedSaveErrorSchema = Schema.Struct({
@@ -7,6 +11,10 @@ const taggedSaveErrorSchema = Schema.Struct({
 })
 
 export const getSaveErrorMessage = <Value>(error: Value): string => {
+  if (error instanceof ExtractionCommandError) {
+    return presentExtractionFailure(error.failure)
+  }
+
   const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
   if (Result.isFailure(parsedError)) {
     return "The link couldn’t be opened. Check the link, then try again."

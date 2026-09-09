@@ -15,6 +15,7 @@ import { useSaveActions } from "./save-actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import { getExtractionErrorMessage } from "./extraction-error-message"
+import { useEnsureSessionIdentity } from "~/root/identity-synchronizer"
 import {
   getLinkViewItemExtractedLinks,
   getLinkViewItemFlatMeta,
@@ -46,6 +47,7 @@ export function useLinkActions({
   const { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady } =
     useOpeningState()
   const { extractingItems, runWithExtractingItem } = useExtractingItems()
+  const ensureSessionIdentity = useEnsureSessionIdentity()
   const { handleLinkClick } = usePlaybackActions({
     isOpeningRef,
     setIsOpening,
@@ -64,6 +66,7 @@ export function useLinkActions({
     openSelectionDialog,
     extractingItems,
     runWithExtractingItem,
+    ensureSessionIdentity,
   })
   const handleChooseLinks = useCallback(
     (item: LinkViewItem) => {
@@ -114,6 +117,9 @@ export function useLinkActions({
     async (linkId: string, linkUrl: string) => {
       const { originalUrl } = selectionDialogState
       try {
+        if (!(await ensureSessionIdentity())) {
+          return null
+        }
         const resolvedChildren = await extractionOrchestration.resolveFolder({
           folderUrl: linkUrl,
           pluginServerId: selectionDialogState.meta.pluginServerId,
@@ -136,11 +142,8 @@ export function useLinkActions({
       } catch (caughtError) {
         console.error(caughtError)
         showErrorToast({
-          title: "The folder couldn’t be opened. Try again.",
-          description: getExtractionErrorMessage(
-            caughtError,
-            "The folder couldn’t be opened. Try again."
-          ),
+          title: "The folder couldn’t be opened",
+          description: getExtractionErrorMessage(caughtError, "Try again."),
         })
         return null
       }
@@ -149,6 +152,7 @@ export function useLinkActions({
       selectionDialogState.meta.pluginId,
       selectionDialogState.meta.pluginServerId,
       selectionDialogState.originalUrl,
+      ensureSessionIdentity,
       setSelectionDialogState,
     ]
   )

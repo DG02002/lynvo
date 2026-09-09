@@ -20,13 +20,9 @@ describe("saved-link command failure presentation", () => {
       { kind: "csrf-expired" },
       { kind: "validation", message: "The saved link is invalid." },
       { kind: "temporarily-unavailable", reference: "request-one" },
-      { kind: "transient", reference: "request-two" },
-      {
-        kind: "rate-limited",
-        retryAfterSeconds: 5,
-        reference: "request-three",
-      },
-      { kind: "plugin-server-down", reference: "request-four" },
+      { kind: "transient" },
+      { kind: "rate-limited", retryAfterSeconds: 5 },
+      { kind: "plugin-server-down" },
     ]
 
     for (const failure of failures) {

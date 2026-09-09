@@ -7,10 +7,11 @@ Plugin Server error.
 ## Capture the request
 
 Record the failed action, the HTTP status, and the `x-request-id` response
-header. The browser retries network failures, 503 responses, and 429 responses
-up to two times, so capture the request ID from the final failed response and
-the timestamps for all attempts if they are available. A 429 response may also
-include `Retry-After`.
+header. The browser retries network failures, 503 responses, and short 429
+hints up to two times. It adds bounded exponential backoff with jitter, and
+does not keep the extracting state open for a long `Retry-After` value. One
+logical extraction reuses the same request ID for every attempt, so capture
+that ID and the timestamps for all attempts if they are available.
 
 Do not copy URLs, credentials, cookies, or response bodies into an issue. The
 Worker log redacts URL-shaped values and sensitive fields, but the request ID
@@ -35,9 +36,9 @@ dependency.
 
 ## Trace the Plugin Server
 
-The application forwards the request ID as `x-request-id` when it calls the
-managed or Custom Plugin Server. Filter the corresponding Plugin Server logs
-on the same `request_id` and compare:
+The application forwards the stable logical request ID as `x-request-id` when
+it calls the managed or Custom Plugin Server. Filter the corresponding Plugin
+Server logs on the same `request_id` and compare:
 
 - `error_code`
 - HTTP `status`

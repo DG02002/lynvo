@@ -1,6 +1,9 @@
 import { render, waitFor } from "@testing-library/react"
+import {
+  useEnsureSessionIdentity,
+  IdentitySynchronizer,
+} from "~/root/identity-synchronizer"
 import { vi } from "vitest"
-import { IdentitySynchronizer } from "~/root/identity-synchronizer"
 
 describe("identity synchronization", () => {
   it("accepts the successful signed-out session status", async () => {
@@ -9,7 +12,9 @@ describe("identity synchronization", () => {
       .mockResolvedValue(Response.json({ status: "unauthenticated" }))
     vi.stubGlobal("fetch", fetchMock)
 
-    render(<IdentitySynchronizer user={null}>{() => null}</IdentitySynchronizer>)
+    render(
+      <IdentitySynchronizer user={null}>{() => null}</IdentitySynchronizer>
+    )
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
   })
@@ -50,5 +55,70 @@ describe("identity synchronization", () => {
       })
     )
     await statusResponse
+  })
+
+  it("gates the first action after visibility resume on session validation", async () => {
+    let resolveResume: (response: Response) => void = () => undefined
+    const resumeResponse = new Promise<Response>((resolve) => {
+      resolveResume = resolve
+    })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "authenticated",
+          userId: "rendered-user",
+          sessionId: "rendered-session",
+        })
+      )
+      .mockReturnValueOnce(resumeResponse)
+    vi.stubGlobal("fetch", fetchMock)
+
+    let ensureIdentity: (() => Promise<boolean>) | undefined
+    const IdentityGateCapture = () => {
+      ensureIdentity = useEnsureSessionIdentity()
+      return null
+    }
+
+    render(
+      <IdentitySynchronizer
+        user={{ id: "rendered-user", sessionId: "rendered-session" }}
+      >
+        {() => <IdentityGateCapture />}
+      </IdentitySynchronizer>
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    })
+    document.dispatchEvent(new Event("visibilitychange"))
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    })
+    document.dispatchEvent(new Event("visibilitychange"))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(ensureIdentity).toBeDefined()
+    if (!ensureIdentity) {
+      throw new Error("The identity gate was not provided")
+    }
+    const validation = ensureIdentity()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+
+    resolveResume(
+      Response.json({
+        status: "authenticated",
+        userId: "rendered-user",
+        sessionId: "rendered-session",
+      })
+    )
+    await expect(validation).resolves.toBe(true)
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    })
   })
 })

@@ -43,3 +43,20 @@ Protocol version `1.0` defines these error codes:
 | `BAD_REQUEST`       | The JSON body or route input is malformed   |
 
 </DocSection>
+
+<DocSection id="extraction-recovery">
+
+## When extraction is temporarily unavailable
+
+Lynvo retries a failed extraction when the connection drops or a Plugin Server
+returns a temporary failure. Retries are bounded so the page does not keep a
+loading state forever.
+
+- A rate-limited extraction waits for a short server-provided retry hint when
+  one is available. Longer hints are shown as a rate-limit message instead of
+  keeping the page busy.
+- An expired session asks you to log in again and does not retry the request.
+- A temporary Plugin Server failure asks you to try again later or choose
+  another Plugin Server.
+
+</DocSection>

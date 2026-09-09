@@ -17,6 +17,9 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
         pluginId: Schema.optional(Schema.String),
         kind: Schema.optional(Schema.String),
       }),
+      headers: Schema.Struct({
+        "x-request-id": Schema.optional(Schema.String),
+      }),
       success: Schema.Unknown,
       error: [
         ExtractionApiError,
@@ -30,6 +33,9 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
         url: Schema.String,
         pluginServerId: Schema.optional(Schema.String),
         pluginId: Schema.optional(Schema.String),
+      }),
+      headers: Schema.Struct({
+        "x-request-id": Schema.optional(Schema.String),
       }),
       success: Schema.Unknown,
       error: [ValidationApiError, BackendApiError],

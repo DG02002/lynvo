@@ -19,6 +19,7 @@ export const useRefreshActions = ({
   openSelectionDialog,
   extractingItems,
   runWithExtractingItem,
+  ensureSessionIdentity,
 }: {
   links: LinkListItem[]
   updateLinks: (url: string, links: ExtractedLink[]) => void
@@ -33,6 +34,7 @@ export const useRefreshActions = ({
     itemKey: string,
     task: () => Promise<T>
   ) => Promise<T>
+  ensureSessionIdentity: () => Promise<boolean>
 }) => {
   const reporter = useMemo<SavedLinkInteractionReporter>(
     () => ({
@@ -54,24 +56,30 @@ export const useRefreshActions = ({
 
   const handleSoftRefresh = useCallback(
     async (itemUrl: string) => {
-      await runWithExtractingItem(itemUrl, () =>
-        softRefreshLink({ itemUrl, links, reporter })
-      )
+      await runWithExtractingItem(itemUrl, async () => {
+        if (!(await ensureSessionIdentity())) {
+          return
+        }
+        await softRefreshLink({ itemUrl, links, reporter })
+      })
     },
-    [links, reporter, runWithExtractingItem]
+    [ensureSessionIdentity, links, reporter, runWithExtractingItem]
   )
 
   const handleHardRefresh = useCallback(
     async (itemUrl: string) => {
-      await runWithExtractingItem(itemUrl, () =>
-        hardRefreshLink({
+      await runWithExtractingItem(itemUrl, async () => {
+        if (!(await ensureSessionIdentity())) {
+          return
+        }
+        await hardRefreshLink({
           itemUrl,
           links,
           reporter,
         })
-      )
+      })
     },
-    [links, reporter, runWithExtractingItem]
+    [ensureSessionIdentity, links, reporter, runWithExtractingItem]
   )
 
   const handleShowLinks = useCallback(
@@ -108,6 +116,9 @@ export const useRefreshActions = ({
       }
 
       return runWithExtractingItem(lazyItemUrl, async () => {
+        if (!(await ensureSessionIdentity())) {
+          return null
+        }
         const mirrors = await expandMirrorLinks({
           itemUrl,
           lazyItemUrl,
@@ -122,6 +133,7 @@ export const useRefreshActions = ({
     },
     [
       cacheResolvedMirrors,
+      ensureSessionIdentity,
       extractingItems,
       links,
       reporter,
@@ -136,16 +148,26 @@ export const useRefreshActions = ({
       }
 
       return await runWithExtractingItem(linkUrl, () =>
-        expandFolderLink({
-          itemUrl,
-          linkId,
-          linkUrl,
-          links,
-          reporter,
-        })
+        ensureSessionIdentity().then((isValid) =>
+          isValid
+            ? expandFolderLink({
+                itemUrl,
+                linkId,
+                linkUrl,
+                links,
+                reporter,
+              })
+            : null
+        )
       )
     },
-    [extractingItems, links, reporter, runWithExtractingItem]
+    [
+      ensureSessionIdentity,
+      extractingItems,
+      links,
+      reporter,
+      runWithExtractingItem,
+    ]
   )
 
   return {

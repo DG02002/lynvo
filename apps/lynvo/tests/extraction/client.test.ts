@@ -21,6 +21,8 @@ const successResponse = () =>
     ],
   })
 
+const metadataResponse = () => Response.json({ title: "Example source" })
+
 const fetchMock = vi.fn<typeof globalThis.fetch>()
 let extractionClient: ExtractionTransport
 
@@ -63,9 +65,15 @@ describe("default extraction client", () => {
       links: [{ label: "episode.mkv" }],
     })
     expect(fetchMock).toHaveBeenCalledTimes(2)
+    const requestIds = fetchMock.mock.calls.map(([input, init]) =>
+      new Request(input, init).headers.get("x-request-id")
+    )
+    expect(requestIds[0]).toBeTruthy()
+    expect(requestIds[0]).toBe(requestIds[1])
   })
 
   it("waits for Retry-After before retrying a rate-limited response", async () => {
+    vi.mocked(Math.random).mockReturnValue(0.5)
     fetchMock
       .mockResolvedValueOnce(
         Response.json(
@@ -83,6 +91,37 @@ describe("default extraction client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await vi.advanceTimersByTimeAsync(1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(125)
+    await expect(result).resolves.toMatchObject({
+      links: [{ label: "episode.mkv" }],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not wait on an unbounded Retry-After hint", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { code: "rate_limited", error: "Slow down", retryable: true },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      )
+    )
+
+    await expect(
+      extractionClient.extract({ url: "https://source.example" })
+    ).rejects.toMatchObject({ failure: { kind: "rate-limited" } })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("recovers from a socket disconnect after an idle period", async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(successResponse())
+
+    const result = extractionClient.extract({ url: "https://source.example" })
+    await vi.runAllTimersAsync()
+
     await expect(result).resolves.toMatchObject({
       links: [{ label: "episode.mkv" }],
     })
@@ -134,6 +173,39 @@ describe("default extraction client", () => {
     await expect(
       extractionClient.extract({ url: "https://source.example" })
     ).rejects.toMatchObject({ failure: { kind: "plugin-server-down" } })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("retries metadata requests with the same resilience boundary", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        Response.json({ error: "Try again" }, { status: 503 })
+      )
+      .mockResolvedValueOnce(metadataResponse())
+
+    const result = extractionClient.getMetadata({
+      url: "https://source.example",
+    })
+    await vi.runAllTimersAsync()
+
+    await expect(result).resolves.toMatchObject({ title: "Example source" })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not label Plugin Server authentication failures as downtime", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { _tag: "ExtractionError", message: "AUTH_INVALID" },
+        { status: 422 }
+      )
+    )
+
+    await expect(
+      extractionClient.extract({ url: "https://source.example" })
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "AUTH_INVALID",
+    })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

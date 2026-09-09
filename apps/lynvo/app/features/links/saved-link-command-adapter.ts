@@ -3,6 +3,7 @@ import {
   SavedLinkCommandFailureSchema,
   SavedLinkCommandError,
 } from "./saved-link-command-failure"
+import { runWithRetries } from "~/lib/retry"
 
 const dependencyFailureSchema = Schema.Struct({
   data: SavedLinkCommandFailureSchema,
@@ -29,16 +30,12 @@ export const toSavedLinkCommandError = (
 
 export const runSavedLinkCommand = async <Result>(
   execute: () => Promise<Result>
-): Promise<Result> => {
-  try {
-    return await execute()
-  } catch (error) {
-    if (
-      error instanceof SavedLinkCommandError &&
-      error.failure.kind === "temporarily-unavailable"
-    ) {
-      return await execute()
-    }
-    throw error
-  }
-}
+): Promise<Result> =>
+  runWithRetries(execute, {
+    maxRetries: 1,
+    getDelayMs: (cause) =>
+      cause instanceof SavedLinkCommandError &&
+      cause.failure.kind === "temporarily-unavailable"
+        ? 0
+        : undefined,
+  })

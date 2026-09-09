@@ -65,7 +65,7 @@ export const AppProviders = ({
           {(validateIdentity) => (
             <RealtimeProvider
               user={providerUser}
-              onConnectionOpen={validateIdentity}
+              onConnectionOpen={() => void validateIdentity()}
               onSessionRevoked={handleSessionRevoked}
             >
               <PlayerPreferenceProvider

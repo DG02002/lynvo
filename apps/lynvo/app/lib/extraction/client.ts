@@ -1,8 +1,10 @@
 import { Cause, Effect, Result, Schema } from "effect"
 import { HttpClientError } from "effect/unstable/http"
+import { ERROR_CODES } from "@dg02002/lynvo-plugin-server-protocol"
 import { client } from "~/lib/effect/api/client"
-import { SavedLinkCommandError } from "~/features/links/saved-link-command-failure"
+import { ExtractionCommandError } from "./errors"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
+import { runWithRetries } from "~/lib/retry"
 import {
   extractedLinkSchema,
   metadataSchema,
@@ -21,7 +23,7 @@ const unauthorizedErrorSchema = Schema.Struct({
 
 const extractionErrorSchema = Schema.Struct({
   _tag: Schema.Literal("ExtractionError"),
-  message: Schema.String,
+  message: Schema.Literals(ERROR_CODES),
 })
 
 const usageLimitErrorSchema = Schema.Struct({
@@ -34,6 +36,7 @@ const EXTRACTION_REQUEST_TIMEOUT_MS = 20_000
 const EXTRACTION_MAX_RETRIES = 2
 const EXTRACTION_RETRY_BASE_DELAY_MS = 250
 const EXTRACTION_RETRY_JITTER_MS = 250
+const EXTRACTION_MAX_RETRY_AFTER_MS = EXTRACTION_REQUEST_TIMEOUT_MS
 
 type RetryableExtractionFailure =
   | {
@@ -60,20 +63,23 @@ const parseRetryAfterMs = (value: string | undefined): number | undefined => {
 const getHttpResponse = (cause: unknown) =>
   HttpClientError.isHttpClientError(cause) ? cause.response : undefined
 
-const getRequestReference = (cause: unknown): string | undefined =>
-  getHttpResponse(cause)?.headers["x-request-id"]
+type UsageLimitError = typeof usageLimitErrorSchema.Type
+
+const decodeUsageLimitError = (cause: unknown): UsageLimitError | undefined => {
+  const usageLimit = Schema.decodeUnknownResult(usageLimitErrorSchema)(cause)
+  return Result.isSuccess(usageLimit) ? usageLimit.success : undefined
+}
 
 const getRetryAfterMs = (
-  cause: unknown,
-  response = getHttpResponse(cause)
+  response: ReturnType<typeof getHttpResponse>,
+  usageLimit: UsageLimitError | undefined
 ): number | undefined => {
   const headerDelay = parseRetryAfterMs(response?.headers["retry-after"])
   if (headerDelay !== undefined) {
     return headerDelay
   }
-  const usageLimit = Schema.decodeUnknownResult(usageLimitErrorSchema)(cause)
-  return Result.isSuccess(usageLimit)
-    ? Math.max(0, usageLimit.success.retryAfterSeconds * 1000)
+  return usageLimit
+    ? Math.max(0, usageLimit.retryAfterSeconds * 1000)
     : undefined
 }
 
@@ -81,11 +87,13 @@ const getRetryableFailure = (
   cause: unknown
 ): RetryableExtractionFailure | undefined => {
   const response = getHttpResponse(cause)
+  const usageLimit = decodeUsageLimitError(cause)
+  const retryAfterMs = getRetryAfterMs(response, usageLimit)
   if (response?.status === 429) {
-    return { kind: "rate-limited", retryAfterMs: getRetryAfterMs(cause) }
+    return { kind: "rate-limited", retryAfterMs }
   }
   if (response?.status === 503) {
-    return { kind: "transient", retryAfterMs: getRetryAfterMs(cause) }
+    return { kind: "transient", retryAfterMs }
   }
   if (Cause.isTimeoutError(cause)) {
     return { kind: "transient" }
@@ -96,21 +104,27 @@ const getRetryableFailure = (
   ) {
     return { kind: "transient" }
   }
-  const usageLimit = Schema.decodeUnknownResult(usageLimitErrorSchema)(cause)
-  return Result.isSuccess(usageLimit)
-    ? {
-        kind: "rate-limited",
-        retryAfterMs: getRetryAfterMs(cause),
-      }
-    : undefined
+  return usageLimit ? { kind: "rate-limited", retryAfterMs } : undefined
 }
 
-const retryDelayMs = (retryNumber: number): number =>
-  EXTRACTION_RETRY_BASE_DELAY_MS * 2 ** (retryNumber - 1) +
+const retryJitterMs = (): number =>
   Math.floor(Math.random() * EXTRACTION_RETRY_JITTER_MS)
 
-const wait = (delayMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, delayMs))
+const retryDelayMs = (retryNumber: number): number =>
+  EXTRACTION_RETRY_BASE_DELAY_MS * 2 ** (retryNumber - 1) + retryJitterMs()
+
+const retryableDelayMs = (
+  retryAfterMs: number | undefined,
+  retryNumber: number
+): number | undefined => {
+  if (retryAfterMs === undefined) {
+    return retryDelayMs(retryNumber)
+  }
+  if (retryAfterMs > EXTRACTION_MAX_RETRY_AFTER_MS) {
+    return undefined
+  }
+  return retryAfterMs + retryJitterMs()
+}
 
 const retryAfterSeconds = (delayMs: number | undefined): number | undefined =>
   delayMs === undefined ? undefined : Math.ceil(delayMs / 1000)
@@ -118,39 +132,33 @@ const retryAfterSeconds = (delayMs: number | undefined): number | undefined =>
 const toExtractionCommandError = (
   cause: unknown,
   retryableFailure?: RetryableExtractionFailure
-): SavedLinkCommandError | undefined => {
-  const reference = getRequestReference(cause)
+): ExtractionCommandError | undefined => {
   if (retryableFailure?.kind === "rate-limited") {
-    return new SavedLinkCommandError({
+    return new ExtractionCommandError({
       failure: {
         kind: "rate-limited",
         retryAfterSeconds: retryAfterSeconds(retryableFailure.retryAfterMs),
-        reference,
       },
     })
   }
   if (retryableFailure?.kind === "transient") {
-    return new SavedLinkCommandError({
-      failure: { kind: "transient", reference },
-    })
+    return new ExtractionCommandError({ failure: { kind: "transient" } })
   }
 
   const unauthorized = Schema.decodeUnknownResult(unauthorizedErrorSchema)(
     cause
   )
   if (Result.isSuccess(unauthorized)) {
-    return new SavedLinkCommandError({ failure: { kind: "session-expired" } })
+    return new ExtractionCommandError({ failure: { kind: "session-expired" } })
   }
 
   const extraction = Schema.decodeUnknownResult(extractionErrorSchema)(cause)
   if (
     Result.isSuccess(extraction) &&
-    ["TEMPORARY_FAILURE", "PROTOCOL_MISMATCH", "AUTH_INVALID"].includes(
-      extraction.success.message
-    )
+    extraction.success.message === "TEMPORARY_FAILURE"
   ) {
-    return new SavedLinkCommandError({
-      failure: { kind: "plugin-server-down", reference },
+    return new ExtractionCommandError({
+      failure: { kind: "plugin-server-down" },
     })
   }
 
@@ -158,20 +166,27 @@ const toExtractionCommandError = (
 }
 
 const runWithExtractionResilience = async <Value>(
-  execute: () => Promise<Value>,
-  retries = 0
+  execute: () => Promise<Value>
 ): Promise<Value> => {
   try {
-    return await execute()
+    return await runWithRetries(execute, {
+      maxRetries: EXTRACTION_MAX_RETRIES,
+      getDelayMs: (cause, retryNumber) => {
+        const retryableFailure = getRetryableFailure(cause)
+        return retryableFailure
+          ? retryableDelayMs(retryableFailure.retryAfterMs, retryNumber)
+          : undefined
+      },
+    })
   } catch (cause) {
     const retryableFailure = getRetryableFailure(cause)
-    if (!retryableFailure || retries >= EXTRACTION_MAX_RETRIES) {
-      throw toExtractionCommandError(cause, retryableFailure) ?? cause
-    }
-    await wait(retryableFailure.retryAfterMs ?? retryDelayMs(retries + 1))
-    return await runWithExtractionResilience(execute, retries + 1)
+    throw toExtractionCommandError(cause, retryableFailure) ?? cause
   }
 }
+
+const createExtractionRequestHeaders = () => ({
+  "x-request-id": crypto.randomUUID(),
+})
 
 const resolveClientMetadataIconUrls = (metadata: MetaData) =>
   globalThis.window === undefined
@@ -180,11 +195,12 @@ const resolveClientMetadataIconUrls = (metadata: MetaData) =>
 
 export const defaultExtractionClient: ExtractionTransport = {
   extract: async (query) => {
+    const headers = createExtractionRequestHeaders()
     const result = Schema.decodeUnknownSync(extractionResultSchema)(
       await runWithExtractionResilience(() =>
         Effect.runPromise(
           client.extraction
-            .extract({ query })
+            .extract({ query, headers })
             .pipe(Effect.timeout(EXTRACTION_REQUEST_TIMEOUT_MS))
         )
       )
@@ -195,8 +211,15 @@ export const defaultExtractionClient: ExtractionTransport = {
       : { links }
   },
   getMetadata: async (query) => {
+    const headers = createExtractionRequestHeaders()
     const metadata = Schema.decodeUnknownSync(metadataSchema)(
-      await Effect.runPromise(client.extraction.getMetadata({ query }))
+      await runWithExtractionResilience(() =>
+        Effect.runPromise(
+          client.extraction
+            .getMetadata({ query, headers })
+            .pipe(Effect.timeout(EXTRACTION_REQUEST_TIMEOUT_MS))
+        )
+      )
     )
     return resolveClientMetadataIconUrls(metadata)
   },

@@ -1,4 +1,9 @@
 import { Schema } from "effect"
+import {
+  extractionCommandFailureSchema,
+  presentExtractionFailure,
+  type ExtractionCommandFailure,
+} from "~/lib/extraction/errors"
 
 declare global {
   type SavedLinkCommandFailure =
@@ -12,18 +17,11 @@ declare global {
         readonly sizeBytes: number
         readonly limitBytes: number
       }
-    | { readonly kind: "session-expired" }
     | { readonly kind: "session-changed" }
     | { readonly kind: "csrf-expired" }
     | { readonly kind: "validation"; readonly message: string }
     | { readonly kind: "temporarily-unavailable"; readonly reference: string }
-    | { readonly kind: "transient"; readonly reference?: string }
-    | {
-        readonly kind: "rate-limited"
-        readonly retryAfterSeconds?: number
-        readonly reference?: string
-      }
-    | { readonly kind: "plugin-server-down"; readonly reference?: string }
+    | ExtractionCommandFailure
 }
 
 export const SavedLinkCommandFailureSchema = Schema.Union([
@@ -37,7 +35,6 @@ export const SavedLinkCommandFailureSchema = Schema.Union([
     sizeBytes: Schema.Number,
     limitBytes: Schema.Number,
   }),
-  Schema.Struct({ kind: Schema.Literal("session-expired") }),
   Schema.Struct({ kind: Schema.Literal("session-changed") }),
   Schema.Struct({ kind: Schema.Literal("csrf-expired") }),
   Schema.Struct({
@@ -48,19 +45,7 @@ export const SavedLinkCommandFailureSchema = Schema.Union([
     kind: Schema.Literal("temporarily-unavailable"),
     reference: Schema.String,
   }),
-  Schema.Struct({
-    kind: Schema.Literal("transient"),
-    reference: Schema.optional(Schema.String),
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("rate-limited"),
-    retryAfterSeconds: Schema.optional(Schema.Number),
-    reference: Schema.optional(Schema.String),
-  }),
-  Schema.Struct({
-    kind: Schema.Literal("plugin-server-down"),
-    reference: Schema.optional(Schema.String),
-  }),
+  extractionCommandFailureSchema,
 ])
 
 export class SavedLinkCommandError extends Schema.TaggedError<SavedLinkCommandError>()(
@@ -84,7 +69,10 @@ export const presentSavedLinkCommandFailure = (
     case "link-too-large":
       return "This saved link is too large. Remove some extracted items, then try again."
     case "session-expired":
-      return "The session expired. Log in, then try again."
+    case "transient":
+    case "rate-limited":
+    case "plugin-server-down":
+      return presentExtractionFailure(failure)
     case "session-changed":
       return "The signed-in account changed. Try again from the current account."
     case "csrf-expired":
@@ -92,20 +80,8 @@ export const presentSavedLinkCommandFailure = (
     case "validation":
       return failure.message
     case "temporarily-unavailable":
-      return `The link couldn’t be saved right now. Try again. Reference: ${failure.reference}`
-    case "transient":
       return withReference(
-        "Extraction is temporarily unavailable. Try again in a moment.",
-        failure.reference
-      )
-    case "rate-limited":
-      return withReference(
-        "Extraction is rate-limited. Wait a moment, then try again.",
-        failure.reference
-      )
-    case "plugin-server-down":
-      return withReference(
-        "The Plugin Server is unavailable. Try again later or choose another Plugin Server.",
+        "The link couldn’t be saved right now. Try again.",
         failure.reference
       )
     default:
