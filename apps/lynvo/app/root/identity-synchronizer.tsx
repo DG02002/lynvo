@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react"
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from "react"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 import { Result, Schema } from "effect"
 
@@ -9,8 +16,14 @@ const identityStatusSchema = Schema.Union([
 
 interface IdentitySynchronizerProps {
   user: { id: string; sessionId?: string } | null
-  children: (validateIdentity: () => void) => ReactNode
+  children: (ensureIdentityIsSafe: () => Promise<boolean>) => ReactNode
 }
+
+const SessionIdentityContext = createContext<() => Promise<boolean>>(
+  async () => true
+)
+
+export const useEnsureSessionIdentity = () => use(SessionIdentityContext)
 
 export const IdentitySynchronizer = ({
   user,
@@ -18,12 +31,16 @@ export const IdentitySynchronizer = ({
 }: IdentitySynchronizerProps) => {
   const isReloading = useRef(false)
   const validationGeneration = useRef(0)
-  const validationRequest = useRef<Promise<void> | null>(null)
+  const validationRequest = useRef<Promise<boolean> | null>(null)
+  const validationRequired = useRef(false)
   const userId = user?.id
   const sessionId = user?.sessionId
-  const validateIdentity = useCallback(() => {
-    if (isReloading.current || validationRequest.current) {
-      return
+  const ensureIdentityIsSafe = useCallback((): Promise<boolean> => {
+    if (isReloading.current) {
+      return Promise.resolve(false)
+    }
+    if (validationRequest.current) {
+      return validationRequest.current
     }
     const generation = validationGeneration.current
     const identity = userId && sessionId ? { userId, sessionId } : undefined
@@ -40,7 +57,7 @@ export const IdentitySynchronizer = ({
           response.status >= 500 ||
           generation !== validationGeneration.current
         ) {
-          return
+          return true
         }
         const payload = Schema.decodeUnknownResult(identityStatusSchema)(
           await response.json().catch(() => null)
@@ -55,7 +72,7 @@ export const IdentitySynchronizer = ({
               payload.success.userId === userId &&
               payload.success.sessionId === sessionId))
         if (matches) {
-          return
+          return true
         }
         isReloading.current = true
         if (userId) {
@@ -67,33 +84,54 @@ export const IdentitySynchronizer = ({
           }
         }
         window.location.reload()
+        return false
       })
-      .catch(() => undefined)
+      .catch(() => true)
       .finally(() => {
         if (validationRequest.current === request) {
           validationRequest.current = null
         }
       })
     validationRequest.current = request
+    return request
   }, [sessionId, userId])
+
+  const ensureFreshIdentity = useCallback(async () => {
+    if (!validationRequired.current) {
+      return true
+    }
+    const isValid = await ensureIdentityIsSafe()
+    validationRequired.current = false
+    return isValid
+  }, [ensureIdentityIsSafe])
 
   useEffect(() => {
     validationGeneration.current += 1
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        validateIdentity()
+      if (document.visibilityState === "hidden") {
+        validationRequired.current = true
+        return
+      }
+      if (validationRequired.current) {
+        void ensureIdentityIsSafe()
       }
     }
-    window.addEventListener("online", validateIdentity)
-    window.addEventListener("focus", validateIdentity)
+    const handleOnline = () => void ensureIdentityIsSafe()
+    const handleFocus = () => void ensureIdentityIsSafe()
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("focus", handleFocus)
     document.addEventListener("visibilitychange", handleVisibility)
-    validateIdentity()
+    void ensureIdentityIsSafe()
     return () => {
-      window.removeEventListener("online", validateIdentity)
-      window.removeEventListener("focus", validateIdentity)
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("focus", handleFocus)
       document.removeEventListener("visibilitychange", handleVisibility)
     }
-  }, [validateIdentity])
+  }, [ensureIdentityIsSafe])
 
-  return children(validateIdentity)
+  return (
+    <SessionIdentityContext.Provider value={ensureFreshIdentity}>
+      {children(ensureIdentityIsSafe)}
+    </SessionIdentityContext.Provider>
+  )
 }

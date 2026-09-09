@@ -1,5 +1,6 @@
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { Result, Schema } from "effect"
+import { getKnownExtractionErrorMessage } from "./extraction-error-message"
 
 const taggedSaveErrorSchema = Schema.Struct({
   _tag: Schema.optional(Schema.String),
@@ -7,6 +8,11 @@ const taggedSaveErrorSchema = Schema.Struct({
 })
 
 export const getSaveErrorMessage = <Value>(error: Value): string => {
+  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(error)
+  if (knownExtractionErrorMessage) {
+    return knownExtractionErrorMessage
+  }
+
   const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
   if (Result.isFailure(parsedError)) {
     return "The link couldn’t be opened. Check the link, then try again."
