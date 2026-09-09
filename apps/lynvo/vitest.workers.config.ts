@@ -6,6 +6,7 @@ import path from "node:path"
 import { defineConfig } from "vitest/config"
 
 const WORKER_TEST_TIMEOUT_MS = 15_000
+const WORKER_TEST_MAX_WORKERS = 2
 
 const migrations = await readD1Migrations(
   path.join(import.meta.dirname, "migrations")
@@ -34,6 +35,7 @@ export default defineConfig({
   test: {
     include: ["tests/workers/**/*.test.ts"],
     setupFiles: ["./tests/workers/setup.ts"],
+    maxWorkers: WORKER_TEST_MAX_WORKERS,
     testTimeout: WORKER_TEST_TIMEOUT_MS,
   },
 })
