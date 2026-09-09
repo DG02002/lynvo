@@ -137,7 +137,7 @@ const TmdbImageContent = ({
           alt=""
           aria-hidden="true"
           className={cn(
-            "absolute inset-0 size-full scale-110 object-cover blur-md transition-opacity duration-300 motion-reduce:blur-none motion-reduce:transition-none",
+            "tmdb-image-preview absolute inset-0 size-full scale-110 object-cover blur-md transition-opacity duration-300 motion-reduce:blur-none motion-reduce:transition-none",
             isPreviewLoaded ? "opacity-100" : "opacity-0",
             className
           )}

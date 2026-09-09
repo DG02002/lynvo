@@ -11,7 +11,7 @@ export const ReceiverOverlay = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 p-6 opacity-100 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0">
+    <div className="receiver-overlay fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 p-6 opacity-100 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0">
       <div className="max-w-md w-full flex flex-col gap-6 bg-card p-8 rounded-xl border shadow-2xl">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-full bg-primary/ shrink-0">

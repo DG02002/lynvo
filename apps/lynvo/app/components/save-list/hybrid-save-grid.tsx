@@ -35,6 +35,7 @@ import {
   HYBRID_CARD_GRID_CLASS,
   HYBRID_CARD_IMAGE_SIZES,
 } from "./save-list-layout-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./media-list-row-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
@@ -256,7 +257,7 @@ const HybridSaveCard = ({
       data-testid="hybrid-save-card"
       data-highlighted={isHighlighted ? true : undefined}
       data-extraction-state={extractionState}
-      className="group relative w-full animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none"
+      className={`group relative w-full ${TVBRO_FILTER_FREE_ENTER_CLASS} animate-[enter_500ms_ease_both] fade-in slide-in-from-bottom-4 zoom-in-95 motion-reduce:animate-none`}
     >
       {isExtractionVisual ? null : (
         <button
