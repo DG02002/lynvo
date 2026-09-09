@@ -22,7 +22,7 @@ import {
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import { cn } from "~/lib/utils"
-
+import type { SettingsOutletContext } from "~/features/site/settings/settings-route"
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
 }
@@ -43,15 +43,6 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
     sessionResult,
     request,
   })
-}
-
-export interface SettingsOutletContext {
-  readonly user: {
-    readonly id: string
-    readonly email: string
-    readonly name?: string | null
-    readonly sid: string
-  }
 }
 
 const settingsTabs = [

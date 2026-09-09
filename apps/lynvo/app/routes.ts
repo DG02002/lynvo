@@ -4,6 +4,7 @@ import {
   layout,
   index,
 } from "@react-router/dev/routes"
+import { savePaths } from "./lib/paths"
 
 export const createRoutes = (isDevelopment: boolean) =>
   [
@@ -14,7 +15,7 @@ export const createRoutes = (isDevelopment: boolean) =>
       index("features/site/routes/_site._index.tsx"),
       route("save", "features/links/routes/_site.save.tsx"),
       route(
-        "save/folder/:savedLinkId",
+        savePaths.folderRoute,
         "features/links/routes/_site.save-folder.tsx"
       ),
       route("settings", "features/site/routes/_site.settings.tsx", [

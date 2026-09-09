@@ -1,6 +1,8 @@
 import { UsageSettings } from "~/features/site/settings/usage-settings"
+import { useSettingsUser } from "~/features/site/settings/settings-route"
 
 export default function UsageSettingsRoute() {
+  const user = useSettingsUser()
   return (
     <section className="flex flex-col">
       <header className="pb-4">
@@ -9,7 +11,7 @@ export default function UsageSettingsRoute() {
           Track extraction usage within service limits.
         </p>
       </header>
-      <UsageSettings lynvoPlugins={[]} />
+      <UsageSettings lynvoPlugins={[]} userId={user.id} />
     </section>
   )
 }

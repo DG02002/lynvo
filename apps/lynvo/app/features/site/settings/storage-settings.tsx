@@ -36,6 +36,7 @@ import {
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) {
@@ -55,11 +56,14 @@ const formatBytes = (bytes: number) => {
   return `${value.toFixed(digits)} ${units[unitIndex]}`
 }
 
-export function StorageSettings() {
+export function StorageSettings({ userId }: { userId?: string }) {
   const timeBucket = useMinuteTimeBucket()
   const { data: usage, reload } = useAsyncResource(
     () => readStorageSettings(),
-    [timeBucket]
+    [timeBucket],
+    {
+      cacheKey: userId ? getSettingsDataCacheKey("storage", userId) : undefined,
+    }
   )
   const [isUpdatingRetention, setIsUpdatingRetention] = React.useState(false)
   const [isClearingLinks, setIsClearingLinks] = React.useState(false)

@@ -1,8 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { RealtimeContextValue } from "~/context/realtime-context"
 import { useLinksWithRuntime } from "~/features/links/use-links"
-import type { LinkMetadata } from "~/features/links/types"
+import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
+import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
 
 const realtime = {
   status: "connected" as const,
@@ -67,6 +69,7 @@ const respondJson = <Body,>(body: Body, headers: Record<string, string> = {}) =>
 
 describe("useLinks", () => {
   beforeEach(() => {
+    clearLinksSnapshotStores()
     vi.clearAllMocks()
     fetchResponses.mockImplementation(async (input: RequestInfo | URL) => {
       const path = String(input)
@@ -90,13 +93,191 @@ describe("useLinks", () => {
     })
   })
 
+  it("uses a server-rendered snapshot without a client refetch", () => {
+    const initialItem: LinkViewItem = {
+      id: "cached-link",
+      url: "https://example.com/cached-link",
+      timestamp: 100,
+      metadata: metadata("cached-file"),
+    }
+
+    const { result } = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [initialItem],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        { user: { sub: "cached-user" }, realtime }
+      )
+    )
+
+    expect(result.current.links).toMatchObject([
+      { id: "cached-link", kind: "saved" },
+    ])
+    expect(result.current.isLoading).toBe(false)
+    expect(fetchResponses).not.toHaveBeenCalled()
+  })
+
+  it("uses the server snapshot before realtime connects", () => {
+    const initialItem: LinkViewItem = {
+      id: "cached-link",
+      url: "https://example.com/cached-link",
+      timestamp: 100,
+      metadata: metadata("cached-file"),
+    }
+    const connectingRealtime = {
+      ...realtime,
+      status: "connecting" as const,
+    }
+
+    renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [initialItem],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        { user: { sub: "connecting-user" }, realtime: connectingRealtime }
+      )
+    )
+
+    expect(fetchResponses).not.toHaveBeenCalled()
+  })
+
+  it("applies changed route items even when the data version is unchanged", async () => {
+    const firstItem: LinkViewItem = {
+      id: "first-link",
+      url: "https://example.com/first-link",
+      timestamp: 100,
+      metadata: metadata("first-file"),
+    }
+    const nextItem: LinkViewItem = {
+      id: "next-link",
+      url: "https://example.com/next-link",
+      timestamp: 100,
+      metadata: metadata("next-file"),
+    }
+    const { result, rerender } = renderHook(
+      ({ items }: { items: LinkViewItem[] }) =>
+        useLinksWithRuntime(
+          {
+            initialItems: items,
+            initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+          },
+          { user: { sub: "same-version-user" }, realtime }
+        ),
+      { initialProps: { items: [firstItem] } }
+    )
+
+    expect(result.current.links[0]?.id).toBe("first-link")
+    rerender({ items: [nextItem] })
+
+    await waitFor(() => expect(result.current.links[0]?.id).toBe("next-link"))
+    expect(fetchResponses).not.toHaveBeenCalled()
+  })
+
+  it("refreshes when realtime reports a newer data version", async () => {
+    let notify: Parameters<RealtimeContextValue["subscribe"]>[0] | undefined
+    const realtimeWithListener: RealtimeContextValue = {
+      ...realtime,
+      subscribe: vi.fn((listener) => {
+        notify = listener
+        return () => {
+          if (notify === listener) {
+            notify = undefined
+          }
+        }
+      }),
+    }
+
+    renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        {
+          user: { sub: "realtime-version-user" },
+          realtime: realtimeWithListener,
+        }
+      )
+    )
+
+    await waitFor(() => expect(notify).toBeTypeOf("function"))
+    expect(fetchResponses).not.toHaveBeenCalled()
+
+    act(() => {
+      notify?.({ type: "data-changed", payload: { version: 6 } })
+    })
+    await waitFor(() => {
+      expect(
+        fetchResponses.mock.calls.filter(
+          ([path]) => String(path) === "/api/data/links"
+        )
+      ).toHaveLength(1)
+    })
+
+    act(() => {
+      notify?.({
+        type: "session_hello",
+        userId: "realtime-version-user",
+        sessionId: "session-1",
+        dataVersion: 7,
+      })
+    })
+    await waitFor(() => {
+      expect(
+        fetchResponses.mock.calls.filter(
+          ([path]) => String(path) === "/api/data/links"
+        )
+      ).toHaveLength(2)
+    })
+  })
+
+  it("revalidates a cached snapshot when realtime is not connected", async () => {
+    const initialItem: LinkViewItem = {
+      id: "cached-link",
+      url: "https://example.com/cached-link",
+      timestamp: 100,
+      metadata: metadata("cached-file"),
+    }
+    const connected = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [initialItem],
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
+        },
+        { user: { sub: "revalidate-user" }, realtime }
+      )
+    )
+    connected.unmount()
+    fetchResponses.mockClear()
+
+    const offlineRealtime = {
+      ...realtime,
+      status: "connecting" as const,
+    }
+    renderHook(() =>
+      useLinksWithRuntime(
+        {},
+        { user: { sub: "revalidate-user" }, realtime: offlineRealtime }
+      )
+    )
+
+    await waitFor(() => {
+      expect(
+        fetchResponses.mock.calls.some(
+          ([path]) => String(path) === "/api/data/links"
+        )
+      ).toBe(true)
+    })
+  })
+
   it("does not treat an authoritative empty snapshot as hydration", () => {
     const HydrationProbe = () => {
       const { isHydrating } = useLinksWithRuntime(
         {
           initialItems: [],
-          initialDataVersion: 1,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 1 },
         },
         { user: { sub: "user-1" } }
       )

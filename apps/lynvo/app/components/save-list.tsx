@@ -12,6 +12,7 @@ import { useSaveListFullscreen } from "~/components/save-list/use-save-list-full
 import { AddPluginDomainAlertDialog } from "~/components/links/add-plugin-domain-alert-dialog"
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import { Spinner } from "~/components/spinner"
+import type { InitialSnapshotMeta } from "~/features/links/use-links"
 import {
   getCurrentClientProfile,
   subscribeToClientProfile,
@@ -23,7 +24,7 @@ import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 declare global {
   interface SaveListProps {
     readonly initialItems?: LinkViewItem[]
-    readonly initialDataVersion?: number
+    readonly initialSnapshotMeta?: InitialSnapshotMeta
   }
 }
 
@@ -114,13 +115,24 @@ const useIsTvBroAndroidTv = () =>
     () => false
   )
 
-const SaveList = ({ initialItems, initialDataVersion }: SaveListProps) => {
+const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   const isSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const resolvedInitialSnapshotMeta = useMemo<InitialSnapshotMeta>(
+    () => ({
+      hasRouteSnapshot:
+        initialSnapshotMeta?.hasRouteSnapshot ?? initialItems !== undefined,
+      dataVersion: initialSnapshotMeta?.dataVersion,
+    }),
+    [
+      initialItems !== undefined,
+      initialSnapshotMeta?.dataVersion,
+      initialSnapshotMeta?.hasRouteSnapshot,
+    ]
+  )
   const { links, actions, isLoading, isHydrating } = useLinks({
     initialItems,
-    initialDataVersion,
-    hasInitialSnapshot: initialItems !== undefined,
+    initialSnapshotMeta: resolvedInitialSnapshotMeta,
   })
   const isPending = isHydrating || isLoading
   const { selectedItemUrl, isFolderRoute, openSavedFolder, closeSavedFolder } =

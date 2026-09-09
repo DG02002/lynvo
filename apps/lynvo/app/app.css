@@ -272,6 +272,43 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
 }
 
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: 2px;
+  transform-origin: left;
+  background: var(--primary);
+  animation: navigation-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes navigation-progress {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  12% {
+    opacity: 1;
+    transform: scaleX(0.2);
+  }
+  70% {
+    opacity: 1;
+    transform: scaleX(0.72);
+  }
+  100% {
+    opacity: 0.8;
+    transform: scaleX(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress {
+    animation: none;
+    opacity: 1;
+    transform: scaleX(0.5);
+  }
+}
+
 @keyframes clipboard-icon-shimmer {
   from {
     mask-position: 150% 0;

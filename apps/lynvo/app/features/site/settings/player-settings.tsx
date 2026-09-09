@@ -24,8 +24,12 @@ import {
 } from "./settings-layout-classes"
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { useRangePlayerPreferences } from "./use-range-player-preferences"
-import { useAsyncResource } from "~/hooks/use-async-resource"
+import {
+  clearAsyncResourceCache,
+  useAsyncResource,
+} from "~/hooks/use-async-resource"
 import { client } from "~/lib/effect/api/client"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const loadCloudPlayerPreferences = () =>
   Effect.runPromise(client.settings.getPlayerPreferences())
@@ -46,12 +50,18 @@ export const PlayerSettings = ({
   savePlayerPreferences?: typeof saveCloudPlayerPreferences
 } = {}) => {
   const playerPreferenceIdentity = usePlayerPreferenceIdentity()
+  const playerCacheKey = playerPreferenceIdentity
+    ? getSettingsDataCacheKey("player", playerPreferenceIdentity)
+    : undefined
   const { data: cloudPreferencesData } = useAsyncResource(
     () =>
       playerPreferenceIdentity
         ? loadPlayerPreferences()
         : Promise.resolve(undefined),
-    [loadPlayerPreferences, playerPreferenceIdentity]
+    [loadPlayerPreferences, playerPreferenceIdentity],
+    {
+      cacheKey: playerCacheKey,
+    }
   )
   const cloudPreferences = cloudPreferencesData
   const updateCloudPreferences = React.useCallback(
@@ -60,8 +70,11 @@ export const PlayerSettings = ({
       rangeUnsupportedPlayerId?: PlayerId
     }) => {
       await savePlayerPreferences(preferences)
+      if (playerCacheKey) {
+        clearAsyncResourceCache(playerCacheKey)
+      }
     },
-    [savePlayerPreferences]
+    [playerCacheKey, savePlayerPreferences]
   )
   const {
     rangeSupportedPlayerId,

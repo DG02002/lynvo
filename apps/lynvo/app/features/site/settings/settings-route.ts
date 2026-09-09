@@ -1,3 +1,5 @@
+import { useOutletContext } from "react-router"
+
 export const SETTINGS_TAB_VALUES = [
   "general",
   "account",
@@ -9,6 +11,18 @@ export const SETTINGS_TAB_VALUES = [
 ] as const
 
 export type SettingsTab = (typeof SETTINGS_TAB_VALUES)[number]
+
+export interface SettingsOutletContext {
+  readonly user: {
+    readonly id: string
+    readonly email: string
+    readonly name?: string | null
+    readonly sid: string
+  }
+}
+
+export const useSettingsUser = () =>
+  useOutletContext<SettingsOutletContext>().user
 
 export interface SettingsRoute {
   activeTab: SettingsTab

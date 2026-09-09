@@ -5,6 +5,7 @@ import { Header } from "~/components/header"
 import { Footer } from "~/components/footer"
 import { RemoteCommandListener } from "~/components/remote-command-listener"
 import { ReceiverOverlay } from "~/components/receiver-overlay"
+import { savePaths } from "~/lib/paths"
 
 declare global {
   interface SiteLayoutContentProps {
@@ -27,8 +28,10 @@ export const SiteLayoutContent = ({
 }: SiteLayoutContentProps) => {
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/"
   const isInnerDocsRoute = normalizedPathname.startsWith("/docs/")
-  const isSaveRoute = normalizedPathname === "/save"
-  const isSaveFolderRoute = normalizedPathname.startsWith("/save/folder/")
+  const isSaveRoute = normalizedPathname === savePaths.root
+  const isSaveFolderRoute = normalizedPathname.startsWith(
+    savePaths.folderPrefix
+  )
 
   return (
     <>

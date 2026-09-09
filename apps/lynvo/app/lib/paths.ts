@@ -22,3 +22,11 @@ export const policyPaths = {
   termsOfUse: "/policies/terms-of-use",
   usagePolicy: "/policies/usage-policy",
 } as const
+
+const saveFolderRouteSegment = "save/folder"
+
+export const savePaths = {
+  root: "/save",
+  folderPrefix: `/${saveFolderRouteSegment}/`,
+  folderRoute: `${saveFolderRouteSegment}/:savedLinkId`,
+} as const

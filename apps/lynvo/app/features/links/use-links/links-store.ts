@@ -23,6 +23,7 @@ declare global {
   interface LinksSnapshotStore {
     getSnapshot: () => LinkViewItem[]
     getVersion: () => number
+    hasServerSnapshot: () => boolean
     subscribe: (listener: () => void) => () => void
     applyServerSnapshot: (items: LinkViewItem[], version: number) => boolean
     beginAdd: (item: LinkViewItem) => LinkViewItem & { readonly id: string }
@@ -50,6 +51,25 @@ interface PendingEntry {
 
 const TEMPORARY_ID_PREFIX = "temp:"
 
+const haveSameServerItems = (
+  currentItems: LinkViewItem[],
+  nextItems: LinkViewItem[]
+): boolean =>
+  currentItems.length === nextItems.length &&
+  currentItems.every((currentItem, index) => {
+    const nextItem = nextItems[index]
+    if (!nextItem) {
+      return false
+    }
+    return (
+      currentItem.id === nextItem.id &&
+      currentItem.url === nextItem.url &&
+      currentItem.timestamp === nextItem.timestamp &&
+      currentItem.updatedAt === nextItem.updatedAt &&
+      currentItem.title === nextItem.title
+    )
+  })
+
 export const createTemporaryLinkId = (): string =>
   `${TEMPORARY_ID_PREFIX}${crypto.randomUUID()}`
 
@@ -57,11 +77,12 @@ export const isTemporaryLinkId = (linkId: string | undefined): boolean =>
   Boolean(linkId?.startsWith(TEMPORARY_ID_PREFIX))
 
 export const createLinksSnapshotStore = (
-  initialItems: LinkViewItem[] = [],
+  initialItems?: LinkViewItem[],
   initialVersion = 0
 ): LinksSnapshotStore => {
   let version = initialVersion
-  let settledItems = initialItems.filter((item) => Boolean(item.id))
+  let hasServerSnapshot = initialItems !== undefined
+  let settledItems = (initialItems ?? []).filter((item) => Boolean(item.id))
   let clearedFromVersion: number | null = null
   const pendingEntries = new Map<string, PendingEntry>()
   const pendingAddOrder: string[] = []
@@ -137,6 +158,7 @@ export const createLinksSnapshotStore = (
   return {
     getSnapshot: () => visibleItems,
     getVersion: () => version,
+    hasServerSnapshot: () => hasServerSnapshot,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => listeners.delete(listener)
@@ -145,8 +167,16 @@ export const createLinksSnapshotStore = (
       if (snapshotVersion < version) {
         return false
       }
+      hasServerSnapshot = true
+      const nextSettledItems = items.filter((item) => Boolean(item.id))
+      if (
+        snapshotVersion === version &&
+        haveSameServerItems(settledItems, nextSettledItems)
+      ) {
+        return true
+      }
       version = snapshotVersion
-      settledItems = items.filter((item) => Boolean(item.id))
+      settledItems = nextSettledItems
       dropSettledEntries()
       republish()
       return true
@@ -242,4 +272,33 @@ export const createLinksSnapshotStore = (
       republish()
     },
   }
+}
+
+const clientLinksSnapshotStores = new Map<string, LinksSnapshotStore>()
+
+export const getLinksSnapshotStore = (
+  userId: string,
+  initialItems?: LinkViewItem[],
+  initialVersion = 0
+): LinksSnapshotStore => {
+  if (!globalThis.window) {
+    return createLinksSnapshotStore(initialItems, initialVersion)
+  }
+
+  const existingStore = clientLinksSnapshotStores.get(userId)
+  if (existingStore) {
+    return existingStore
+  }
+
+  const store = createLinksSnapshotStore(initialItems, initialVersion)
+  clientLinksSnapshotStores.set(userId, store)
+  return store
+}
+
+export const clearLinksSnapshotStores = (userId?: string): void => {
+  if (userId) {
+    clientLinksSnapshotStores.delete(userId)
+    return
+  }
+  clientLinksSnapshotStores.clear()
 }

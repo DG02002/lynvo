@@ -12,6 +12,7 @@ import {
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
@@ -114,13 +115,21 @@ const UsageLoading = () => (
 
 export const UsageSettings = ({
   lynvoPlugins,
+  userId,
 }: {
   lynvoPlugins: LynvoPlugin[]
+  userId?: string
 }) => {
   const timeBucket = useDailyTimeBucket()
+  const pluginCacheKey = lynvoPlugins.map((plugin) => plugin.id).join(",")
   const { data: snapshot } = useAsyncResource(
     () => readUsageSnapshot({ lynvoPlugins }),
-    [timeBucket]
+    [timeBucket, pluginCacheKey],
+    {
+      cacheKey: userId
+        ? getSettingsDataCacheKey("usage", userId, pluginCacheKey)
+        : undefined,
+    }
   )
 
   if (!snapshot) {
