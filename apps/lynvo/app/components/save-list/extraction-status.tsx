@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react"
-import {
-  MEDIA_LIST_ROW_TITLE_CLASS,
-  TVBRO_FILTER_FREE_ENTER_CLASS,
-} from "./media-list-row-constants"
+import { MEDIA_LIST_ROW_TITLE_CLASS } from "./media-list-row-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 import type { ExtractionStatusInput } from "./extraction-status-utils"
 import {
   EXTRACTION_STATUS_MESSAGES,

@@ -177,6 +177,7 @@ html[data-lynvo-client-profile="tvbro-android-tv"]
   }
 }
 
+/* Keep TVBro enters limited to opacity, vertical translation, and scale. */
 @keyframes tvbro-enter {
   from {
     opacity: var(--tw-enter-opacity, 1);

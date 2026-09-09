@@ -35,7 +35,7 @@ import {
   HYBRID_CARD_GRID_CLASS,
   HYBRID_CARD_IMAGE_SIZES,
 } from "./save-list-layout-constants"
-import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./media-list-row-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { cn } from "~/lib/utils"
-import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./media-list-row-constants"
+import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 
 export const SAVE_LIST_SECTION_STACK_CLASS = "flex flex-col gap-12"
 
