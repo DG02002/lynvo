@@ -17,7 +17,7 @@ import {
   type RealtimeContextValue,
 } from "~/context/realtime-context"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
-import { createLinksSnapshotStore } from "./links-store"
+import { createLinksSnapshotStore, getLinksSnapshotStore } from "./links-store"
 import { createLinksMutations } from "./mutations"
 import type { LinksActions } from "./actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
@@ -41,7 +41,6 @@ declare global {
 }
 
 interface UseLinksRefreshOptions {
-  initialSnapshot: UseLinksOptions
   userId: string | undefined
   realtime: RealtimeContextValue | undefined
   store: ReturnType<typeof createLinksSnapshotStore>
@@ -53,9 +52,17 @@ interface UseLinksRefreshResult {
 }
 
 interface UseInitialLinksLoadOptions {
-  hasInitialSnapshot: boolean | undefined
   userId: string | undefined
+  realtime: RealtimeContextValue | undefined
+  store: ReturnType<typeof createLinksSnapshotStore>
   applyFetchedSnapshot: () => Promise<void>
+}
+
+interface UseInitialServerSnapshotOptions {
+  initialDataVersion: number | undefined
+  initialItems: LinkViewItem[] | undefined
+  store: ReturnType<typeof createLinksSnapshotStore>
+  userId: string | undefined
 }
 
 interface UseRealtimeLinksRefreshOptions {
@@ -103,22 +110,34 @@ const refreshLinksSafely = (
 }
 
 const useInitialLinksLoad = ({
-  hasInitialSnapshot,
   userId,
+  realtime,
+  store,
   applyFetchedSnapshot,
 }: UseInitialLinksLoadOptions): boolean => {
-  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(
-    Boolean(hasInitialSnapshot)
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(() =>
+    store.hasServerSnapshot()
   )
   useEffect(() => {
     if (!userId) {
       setIsInitialLoadComplete(false)
       return
     }
-    let didCancel = false
-    if (!hasInitialSnapshot) {
-      setIsInitialLoadComplete(false)
+
+    const hasSnapshot = store.hasServerSnapshot()
+    if (hasSnapshot) {
+      setIsInitialLoadComplete(true)
+      if (realtime?.status === "connected") {
+        return
+      }
+      void applyFetchedSnapshot().catch((error) =>
+        console.error("Unable to revalidate saved links", error)
+      )
+      return
     }
+
+    let didCancel = false
+    setIsInitialLoadComplete(false)
     applyFetchedSnapshot()
       .catch((error) => console.error("Unable to load saved links", error))
       .finally(() => {
@@ -129,8 +148,25 @@ const useInitialLinksLoad = ({
     return () => {
       didCancel = true
     }
-  }, [applyFetchedSnapshot, hasInitialSnapshot, userId])
+  }, [applyFetchedSnapshot, realtime?.status, store, userId])
   return isInitialLoadComplete
+}
+
+const useInitialServerSnapshot = ({
+  initialDataVersion,
+  initialItems,
+  store,
+  userId,
+}: UseInitialServerSnapshotOptions): void => {
+  const initialItemsRef = useRef(initialItems)
+  initialItemsRef.current = initialItems
+
+  useEffect(() => {
+    if (!userId || initialItemsRef.current === undefined) {
+      return
+    }
+    store.applyServerSnapshot(initialItemsRef.current, initialDataVersion ?? 0)
+  }, [initialDataVersion, store, userId])
 }
 
 const useRealtimeLinksRefresh = ({
@@ -205,7 +241,6 @@ const useLinksRefetchTimer = ({
 }
 
 const useLinksRefresh = ({
-  initialSnapshot,
   userId,
   realtime,
   store,
@@ -229,8 +264,9 @@ const useLinksRefresh = ({
   }, [store, userId])
   const scheduleRefetch = useLinksRefetchTimer({ applyFetchedSnapshot })
   const isInitialLoadComplete = useInitialLinksLoad({
-    hasInitialSnapshot: initialSnapshot.hasInitialSnapshot,
     userId,
+    realtime,
+    store,
     applyFetchedSnapshot,
   })
   useRealtimeLinksRefresh({
@@ -308,24 +344,34 @@ export const useLinksWithRuntime = (
   const { user, realtime } = runtime
   const userId = user?.sub
   const identity = userId ?? "signed-out"
-  const initialSnapshot = useRef(options).current
   const store = useMemo(
     () =>
-      createLinksSnapshotStore(
-        initialSnapshot.initialItems,
-        initialSnapshot.initialDataVersion
-      ),
-    [identity, initialSnapshot]
+      userId
+        ? getLinksSnapshotStore(
+            userId,
+            options.initialItems,
+            options.initialDataVersion
+          )
+        : createLinksSnapshotStore(
+            options.initialItems,
+            options.initialDataVersion
+          ),
+    [identity]
   )
+  useInitialServerSnapshot({
+    initialDataVersion: options.initialDataVersion,
+    initialItems: options.initialItems,
+    store,
+    userId,
+  })
   const { isInitialLoadComplete, scheduleRefetch } = useLinksRefresh({
-    initialSnapshot,
     userId,
     realtime,
     store,
   })
   const actions = useLinksMutationActions({ scheduleRefetch, store })
   const { links, dataVersion } = useLinksSnapshot({
-    hasInitialSnapshot: initialSnapshot.hasInitialSnapshot,
+    hasInitialSnapshot: options.hasInitialSnapshot,
     store,
   })
 
@@ -338,7 +384,7 @@ export const useLinksWithRuntime = (
     isHydrating: Boolean(
       userId &&
       !hasHydrated &&
-      !initialSnapshot.hasInitialSnapshot &&
+      !options.hasInitialSnapshot &&
       links.length === 0
     ),
   }

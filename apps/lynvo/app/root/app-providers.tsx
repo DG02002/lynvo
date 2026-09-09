@@ -7,6 +7,7 @@ import { VersionWatcher } from "~/components/version-watcher"
 import { PlayerLaunchErrorDialog } from "~/components/player-launch-error-dialog"
 import { OpenedConfirmationDialog } from "~/components/opened-confirmation-dialog"
 import { AppToaster } from "~/components/app-toaster"
+import { NavigationProgress } from "~/components/navigation-progress"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { AuthActivityTouch } from "./auth-activity-touch"
 import { ThemeCookieSync } from "./theme-cookie-sync"
@@ -41,6 +42,7 @@ export const AppProviders = ({
       disableTransitionOnChange
     >
       <TooltipProvider>
+        <NavigationProgress />
         <ThemeCookieSync />
         <AuthActivityTouch isAuthenticated={Boolean(user)} />
         <IdentitySynchronizer user={providerUser}>

@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useLinksWithRuntime } from "~/features/links/use-links"
-import type { LinkMetadata } from "~/features/links/types"
+import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
+import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
 
 const realtime = {
   status: "connected" as const,
@@ -67,6 +68,7 @@ const respondJson = <Body,>(body: Body, headers: Record<string, string> = {}) =>
 
 describe("useLinks", () => {
   beforeEach(() => {
+    clearLinksSnapshotStores()
     vi.clearAllMocks()
     fetchResponses.mockImplementation(async (input: RequestInfo | URL) => {
       const path = String(input)
@@ -87,6 +89,72 @@ describe("useLinks", () => {
         return respondJson({ success: true, replayed: false, dataVersion: 6 })
       }
       throw new Error(`Unexpected request: ${path}`)
+    })
+  })
+
+  it("uses a server-rendered snapshot without a client refetch", () => {
+    const initialItem: LinkViewItem = {
+      id: "cached-link",
+      url: "https://example.com/cached-link",
+      timestamp: 100,
+      metadata: metadata("cached-file"),
+    }
+
+    const { result } = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [initialItem],
+          initialDataVersion: 5,
+          hasInitialSnapshot: true,
+        },
+        { user: { sub: "cached-user" }, realtime }
+      )
+    )
+
+    expect(result.current.links).toMatchObject([
+      { id: "cached-link", kind: "saved" },
+    ])
+    expect(result.current.isLoading).toBe(false)
+    expect(fetchResponses).not.toHaveBeenCalled()
+  })
+
+  it("revalidates a cached snapshot when realtime is not connected", async () => {
+    const initialItem: LinkViewItem = {
+      id: "cached-link",
+      url: "https://example.com/cached-link",
+      timestamp: 100,
+      metadata: metadata("cached-file"),
+    }
+    const connected = renderHook(() =>
+      useLinksWithRuntime(
+        {
+          initialItems: [initialItem],
+          initialDataVersion: 5,
+          hasInitialSnapshot: true,
+        },
+        { user: { sub: "revalidate-user" }, realtime }
+      )
+    )
+    connected.unmount()
+    fetchResponses.mockClear()
+
+    const offlineRealtime = {
+      ...realtime,
+      status: "connecting" as const,
+    }
+    renderHook(() =>
+      useLinksWithRuntime(
+        {},
+        { user: { sub: "revalidate-user" }, realtime: offlineRealtime }
+      )
+    )
+
+    await waitFor(() => {
+      expect(
+        fetchResponses.mock.calls.some(
+          ([path]) => String(path) === "/api/data/links"
+        )
+      ).toBe(true)
     })
   })
 

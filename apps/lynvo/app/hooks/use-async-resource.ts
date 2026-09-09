@@ -8,6 +8,38 @@ export interface AsyncResource<Result> {
 
 export interface AsyncResourceOptions {
   readonly pollIntervalMs?: number
+  readonly cacheKey?: string
+  readonly cacheTtlMs?: number
+}
+
+const DEFAULT_CACHE_TTL_MS = 30_000
+
+interface AsyncResourceCacheEntry {
+  readonly data: unknown
+  readonly cachedAt: number
+}
+
+const asyncResourceCache = new Map<string, AsyncResourceCacheEntry>()
+
+const getCacheEntry = <Result>(
+  cacheKey: string | undefined
+): (AsyncResourceCacheEntry & { readonly data: Result }) | undefined => {
+  if (!cacheKey) {
+    return undefined
+  }
+  const entry = asyncResourceCache.get(cacheKey)
+  // SAFETY: the caller owns the opaque cache key and stores one Result type under it.
+  return entry as
+    | (AsyncResourceCacheEntry & { readonly data: Result })
+    | undefined
+}
+
+export const clearAsyncResourceCache = (cacheKey?: string): void => {
+  if (cacheKey) {
+    asyncResourceCache.delete(cacheKey)
+    return
+  }
+  asyncResourceCache.clear()
 }
 
 export const useAsyncResource = <Result>(
@@ -15,8 +47,10 @@ export const useAsyncResource = <Result>(
   dependencies: readonly unknown[] = [],
   options: AsyncResourceOptions = {}
 ): AsyncResource<Result> => {
-  const [data, setData] = useState<Result | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
+  const { cacheKey, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = options
+  const initialCacheEntry = getCacheEntry<Result>(cacheKey)
+  const [data, setData] = useState<Result | undefined>(initialCacheEntry?.data)
+  const [isLoading, setIsLoading] = useState(!initialCacheEntry)
   const loadReference = useRef(load)
   const dependencySignal = useMemo(() => ({}), dependencies)
 
@@ -24,17 +58,51 @@ export const useAsyncResource = <Result>(
     loadReference.current = load
   }, [load])
 
-  const runLoad = useCallback(async (): Promise<void> => {
-    try {
-      setData(await loadReference.current())
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  const runLoad = useCallback(
+    async (isActive: () => boolean = () => true): Promise<void> => {
+      let nextData: Result
+      try {
+        nextData = await loadReference.current()
+      } finally {
+        if (isActive()) {
+          setIsLoading(false)
+        }
+      }
+      if (cacheKey) {
+        asyncResourceCache.set(cacheKey, {
+          data: nextData,
+          cachedAt: Date.now(),
+        })
+      }
+      if (isActive()) {
+        setData(nextData)
+      }
+    },
+    [cacheKey]
+  )
 
   useEffect(() => {
     let didCancel = false
-    runLoad().catch((error) => {
+    const cachedEntry = getCacheEntry<Result>(cacheKey)
+    const hasFreshCache =
+      cachedEntry !== undefined &&
+      Date.now() - cachedEntry.cachedAt < cacheTtlMs
+
+    if (cachedEntry) {
+      setData(cachedEntry.data)
+      setIsLoading(false)
+    } else {
+      setData(undefined)
+      setIsLoading(true)
+    }
+
+    if (hasFreshCache) {
+      return () => {
+        didCancel = true
+      }
+    }
+
+    runLoad(() => !didCancel).catch((error) => {
       if (!didCancel) {
         console.error(error)
       }
@@ -42,7 +110,7 @@ export const useAsyncResource = <Result>(
     return () => {
       didCancel = true
     }
-  }, [dependencySignal, runLoad])
+  }, [cacheKey, cacheTtlMs, dependencySignal, runLoad])
 
   useEffect(() => {
     if (!options.pollIntervalMs) {

@@ -114,13 +114,21 @@ const UsageLoading = () => (
 
 export const UsageSettings = ({
   lynvoPlugins,
+  userId,
 }: {
   lynvoPlugins: LynvoPlugin[]
+  userId?: string
 }) => {
   const timeBucket = useDailyTimeBucket()
+  const pluginCacheKey = lynvoPlugins.map((plugin) => plugin.id).join(",")
   const { data: snapshot } = useAsyncResource(
     () => readUsageSnapshot({ lynvoPlugins }),
-    [timeBucket]
+    [timeBucket, pluginCacheKey],
+    {
+      cacheKey: userId
+        ? `settings:usage:${userId}:${pluginCacheKey}`
+        : undefined,
+    }
   )
 
   if (!snapshot) {

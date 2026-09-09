@@ -36,8 +36,10 @@ export function SecuritySettings({
   showActiveSessions: boolean
   onShowActiveSessionsChange: (showActiveSessions: boolean) => void
 }) {
-  const { data, reload } = useAsyncResource(() =>
-    Effect.runPromise(client.settings.listSessions())
+  const { data, reload } = useAsyncResource(
+    () => Effect.runPromise(client.settings.listSessions()),
+    [user.id],
+    { cacheKey: `settings:security:${user.id}` }
   )
   const sessions = data ?? []
   const [deleteConfirmEmail, setDeleteConfirmEmail] = React.useState("")
