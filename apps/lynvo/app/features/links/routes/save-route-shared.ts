@@ -16,6 +16,9 @@ const searchWithoutGroup = (url: URL): string => {
   return searchParams.toString()
 }
 
+const isSaveFolderPath = (pathname: string): boolean =>
+  pathname.startsWith("/save/folder/")
+
 export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = ({
   currentUrl,
   nextUrl,
@@ -35,4 +38,23 @@ export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = ({
   }
 
   return defaultShouldRevalidate
+}
+
+export const shouldRevalidateSaveFolderRoute: ShouldRevalidateFunction = (
+  args
+) => {
+  const { currentUrl, nextUrl, defaultShouldRevalidate, formMethod } = args
+  if (formMethod && formMethod.toUpperCase() !== "GET") {
+    return defaultShouldRevalidate
+  }
+
+  if (
+    isSaveFolderPath(currentUrl.pathname) &&
+    isSaveFolderPath(nextUrl.pathname) &&
+    searchWithoutGroup(currentUrl) === searchWithoutGroup(nextUrl)
+  ) {
+    return false
+  }
+
+  return shouldRevalidateSaveRoute(args)
 }

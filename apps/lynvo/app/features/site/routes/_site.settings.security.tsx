@@ -4,13 +4,14 @@ import {
   redirect,
   useLoaderData,
   useNavigate,
-  useOutletContext,
   type LoaderFunctionArgs,
 } from "react-router"
 import { Button } from "~/components/ui/button"
 import { SecuritySettings } from "~/features/site/settings/security-settings"
-import { getSettingsPath } from "~/features/site/settings/settings-route"
-import type { SettingsOutletContext } from "./_site.settings"
+import {
+  getSettingsPath,
+  useSettingsUser,
+} from "~/features/site/settings/settings-route"
 
 export const loader = ({ params }: LoaderFunctionArgs) => {
   if (params.subview && params.subview !== "active-sessions") {
@@ -21,7 +22,7 @@ export const loader = ({ params }: LoaderFunctionArgs) => {
 
 export default function SecuritySettingsRoute() {
   const { showActiveSessions } = useLoaderData<typeof loader>()
-  const { user } = useOutletContext<SettingsOutletContext>()
+  const user = useSettingsUser()
   const navigate = useNavigate()
   return (
     <section className="flex flex-col">

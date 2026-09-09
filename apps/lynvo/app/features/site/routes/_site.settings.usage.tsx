@@ -1,9 +1,8 @@
-import { useOutletContext } from "react-router"
 import { UsageSettings } from "~/features/site/settings/usage-settings"
-import type { SettingsOutletContext } from "./_site.settings"
+import { useSettingsUser } from "~/features/site/settings/settings-route"
 
 export default function UsageSettingsRoute() {
-  const { user } = useOutletContext<SettingsOutletContext>()
+  const user = useSettingsUser()
   return (
     <section className="flex flex-col">
       <header className="pb-4">
