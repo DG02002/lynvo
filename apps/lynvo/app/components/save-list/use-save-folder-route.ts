@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
+import { savePaths } from "~/lib/paths"
 import type { LinkListItem, SavedLinkListItem } from "~/features/links/types"
 
 export const useSaveFolderRoute = (
@@ -20,7 +21,7 @@ export const useSaveFolderRoute = (
 
   useEffect(() => {
     if (savedLinkId && !isPending && !selectedItemUrl) {
-      void navigate("/save", { replace: true })
+      void navigate(savePaths.root, { replace: true })
     }
   }, [isPending, navigate, savedLinkId, selectedItemUrl])
 
@@ -33,9 +34,11 @@ export const useSaveFolderRoute = (
           item.kind === "saved" && item.url === itemUrl && item.id !== undefined
       )
       if (savedLink?.id) {
-        void navigate(`/save/folder/${encodeURIComponent(savedLink.id)}`)
+        void navigate(
+          `${savePaths.folderPrefix}${encodeURIComponent(savedLink.id)}`
+        )
       }
     },
-    closeSavedFolder: () => void navigate("/save", { replace: true }),
+    closeSavedFolder: () => void navigate(savePaths.root, { replace: true }),
   }
 }

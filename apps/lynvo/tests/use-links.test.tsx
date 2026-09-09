@@ -105,8 +105,7 @@ describe("useLinks", () => {
       useLinksWithRuntime(
         {
           initialItems: [initialItem],
-          initialDataVersion: 5,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
         },
         { user: { sub: "cached-user" }, realtime }
       )
@@ -135,8 +134,7 @@ describe("useLinks", () => {
       useLinksWithRuntime(
         {
           initialItems: [initialItem],
-          initialDataVersion: 5,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
         },
         { user: { sub: "connecting-user" }, realtime: connectingRealtime }
       )
@@ -163,8 +161,7 @@ describe("useLinks", () => {
         useLinksWithRuntime(
           {
             initialItems: items,
-            initialDataVersion: 5,
-            hasInitialSnapshot: true,
+            initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
           },
           { user: { sub: "same-version-user" }, realtime }
         ),
@@ -196,8 +193,7 @@ describe("useLinks", () => {
       useLinksWithRuntime(
         {
           initialItems: [],
-          initialDataVersion: 5,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
         },
         {
           user: { sub: "realtime-version-user" },
@@ -248,8 +244,7 @@ describe("useLinks", () => {
       useLinksWithRuntime(
         {
           initialItems: [initialItem],
-          initialDataVersion: 5,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 5 },
         },
         { user: { sub: "revalidate-user" }, realtime }
       )
@@ -282,8 +277,7 @@ describe("useLinks", () => {
       const { isHydrating } = useLinksWithRuntime(
         {
           initialItems: [],
-          initialDataVersion: 1,
-          hasInitialSnapshot: true,
+          initialSnapshotMeta: { hasRouteSnapshot: true, dataVersion: 1 },
         },
         { user: { sub: "user-1" } }
       )

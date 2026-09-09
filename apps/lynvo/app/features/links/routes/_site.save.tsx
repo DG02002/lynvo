@@ -16,7 +16,7 @@ const SaveRoute = () => {
   return (
     <SaveList
       initialItems={toInitialSaveItems(loaderData.savedLinks)}
-      initialDataVersion={loaderData.dataVersion}
+      initialSnapshotMeta={{ dataVersion: loaderData.dataVersion }}
     />
   )
 }

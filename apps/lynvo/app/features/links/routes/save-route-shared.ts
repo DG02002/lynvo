@@ -1,4 +1,5 @@
 import { savedLinkApiRecordToViewItem } from "~/features/links/use-links/api"
+import { savePaths } from "~/lib/paths"
 import type { ShouldRevalidateFunction } from "react-router"
 import type { Route } from "./+types/_site.save"
 
@@ -17,44 +18,43 @@ const searchWithoutGroup = (url: URL): string => {
 }
 
 const isSaveFolderPath = (pathname: string): boolean =>
-  pathname.startsWith("/save/folder/")
+  pathname.startsWith(savePaths.folderPrefix)
 
-export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = ({
-  currentUrl,
-  nextUrl,
-  defaultShouldRevalidate,
-  formMethod,
-}) => {
+const hasSameNonGroupSearch = (currentUrl: URL, nextUrl: URL): boolean =>
+  searchWithoutGroup(currentUrl) === searchWithoutGroup(nextUrl)
+
+type SaveRouteRevalidationArgs = Parameters<ShouldRevalidateFunction>[0]
+
+const shouldRevalidateSavedLinksRoute = (
+  args: SaveRouteRevalidationArgs,
+  canReuseSnapshot: (args: SaveRouteRevalidationArgs) => boolean
+): boolean => {
+  const { defaultShouldRevalidate, formMethod } = args
   if (formMethod && formMethod.toUpperCase() !== "GET") {
     return defaultShouldRevalidate
   }
 
-  if (
-    currentUrl.pathname === nextUrl.pathname &&
-    currentUrl.search !== nextUrl.search &&
-    searchWithoutGroup(currentUrl) === searchWithoutGroup(nextUrl)
-  ) {
-    return false
-  }
-
-  return defaultShouldRevalidate
+  return canReuseSnapshot(args) ? false : defaultShouldRevalidate
 }
+
+export const shouldRevalidateSaveRoute: ShouldRevalidateFunction = (args) =>
+  shouldRevalidateSavedLinksRoute(
+    args,
+    ({ currentUrl, nextUrl }) =>
+      currentUrl.pathname === nextUrl.pathname &&
+      currentUrl.search !== nextUrl.search &&
+      hasSameNonGroupSearch(currentUrl, nextUrl)
+  )
 
 export const shouldRevalidateSaveFolderRoute: ShouldRevalidateFunction = (
   args
-) => {
-  const { currentUrl, nextUrl, defaultShouldRevalidate, formMethod } = args
-  if (formMethod && formMethod.toUpperCase() !== "GET") {
-    return defaultShouldRevalidate
-  }
-
-  if (
-    isSaveFolderPath(currentUrl.pathname) &&
-    isSaveFolderPath(nextUrl.pathname) &&
-    searchWithoutGroup(currentUrl) === searchWithoutGroup(nextUrl)
-  ) {
-    return false
-  }
-
-  return shouldRevalidateSaveRoute(args)
-}
+) =>
+  shouldRevalidateSavedLinksRoute(
+    args,
+    ({ currentUrl, nextUrl }) =>
+      isSaveFolderPath(currentUrl.pathname) &&
+      isSaveFolderPath(nextUrl.pathname) &&
+      hasSameNonGroupSearch(currentUrl, nextUrl) &&
+      (currentUrl.pathname !== nextUrl.pathname ||
+        currentUrl.search !== nextUrl.search)
+  )

@@ -1,32 +1,26 @@
 import { describe, expect, it } from "vitest"
+import type { ShouldRevalidateFunction } from "react-router"
 import {
   shouldRevalidateSaveFolderRoute,
   shouldRevalidateSaveRoute,
 } from "~/features/links/routes/save-route-shared"
 
-const navigation = (
-  current: string,
-  next: string,
-  overrides: Partial<Parameters<typeof shouldRevalidateSaveRoute>[0]> = {}
-) =>
-  shouldRevalidateSaveRoute({
-    currentUrl: new URL(current, "https://lynvo.example"),
-    nextUrl: new URL(next, "https://lynvo.example"),
-    defaultShouldRevalidate: true,
-    ...overrides,
-  })
+const createNavigation =
+  (shouldRevalidate: ShouldRevalidateFunction) =>
+  (
+    current: string,
+    next: string,
+    overrides: Partial<Parameters<ShouldRevalidateFunction>[0]> = {}
+  ) =>
+    shouldRevalidate({
+      currentUrl: new URL(current, "https://lynvo.example"),
+      nextUrl: new URL(next, "https://lynvo.example"),
+      defaultShouldRevalidate: true,
+      ...overrides,
+    })
 
-const folderNavigation = (
-  current: string,
-  next: string,
-  overrides: Partial<Parameters<typeof shouldRevalidateSaveFolderRoute>[0]> = {}
-) =>
-  shouldRevalidateSaveFolderRoute({
-    currentUrl: new URL(current, "https://lynvo.example"),
-    nextUrl: new URL(next, "https://lynvo.example"),
-    defaultShouldRevalidate: true,
-    ...overrides,
-  })
+const navigation = createNavigation(shouldRevalidateSaveRoute)
+const folderNavigation = createNavigation(shouldRevalidateSaveFolderRoute)
 
 describe("save route revalidation", () => {
   it("reuses the snapshot when only the hybrid group changes", () => {
@@ -53,6 +47,7 @@ describe("save route revalidation", () => {
   })
 
   it("keeps folder revalidation for unrelated search changes and mutations", () => {
+    expect(folderNavigation("/save/folder/one", "/save/folder/one")).toBe(true)
     expect(
       folderNavigation("/save/folder/one", "/save/folder/one?filter=unopened")
     ).toBe(true)
