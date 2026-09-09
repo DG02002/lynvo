@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Effect } from "effect"
 import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
 import type {
   ExtractedLink,
@@ -22,7 +21,7 @@ import {
   vibrateSaveSuccess,
 } from "./save-feedback"
 import { getSaveErrorMessage } from "./save-error-message"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import {
   shouldOfferPluginDomainSuggestion,
@@ -126,7 +125,7 @@ export const useSaveActions = ({
       try {
         const offeredSuggestion = await shouldOfferPluginDomainSuggestion(
           suggestion,
-          () => Effect.runPromise(client.pluginDomains.list({}))
+          () => client.pluginDomains.list()
         )
         if (offeredSuggestion) {
           setPluginDomainSuggestion(offeredSuggestion)
@@ -306,17 +305,15 @@ export const useSaveActions = ({
 
     setIsAddingPluginDomain(true)
     try {
-      await Effect.runPromise(
-        client.pluginDomains.create({
-          payload: {
-            domain: pluginDomainSuggestion.domain,
-            pluginServerId: pluginDomainSuggestion.pluginServerId,
-            pluginId: pluginDomainSuggestion.pluginId,
-            username: pluginDomainSuggestion.username,
-            password: pluginDomainSuggestion.password,
-          },
-        })
-      )
+      await client.pluginDomains.create({
+        payload: {
+          domain: pluginDomainSuggestion.domain,
+          pluginServerId: pluginDomainSuggestion.pluginServerId,
+          pluginId: pluginDomainSuggestion.pluginId,
+          username: pluginDomainSuggestion.username,
+          password: pluginDomainSuggestion.password,
+        },
+      })
       showSuccessToast({
         title: `${pluginDomainSuggestion.pluginName} domain added`,
       })

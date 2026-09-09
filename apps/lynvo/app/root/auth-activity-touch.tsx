@@ -1,7 +1,6 @@
 import { useEffect } from "react"
-import { Effect } from "effect"
 import { getBrowserDeviceName } from "~/lib/device-name"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 
 export const AuthActivityTouch = ({
   isAuthenticated,
@@ -10,11 +9,9 @@ export const AuthActivityTouch = ({
 }) => {
   useEffect(() => {
     if (isAuthenticated) {
-      void Effect.runPromise(
-        client.settings.touchActivity({
-          payload: { deviceName: getBrowserDeviceName() },
-        })
-      )
+      void client.settings.touchActivity({
+        payload: { deviceName: getBrowserDeviceName() },
+      })
     }
   }, [isAuthenticated])
 

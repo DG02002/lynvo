@@ -1,7 +1,6 @@
 import * as React from "react"
-import { Effect } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { usePluginDomainDrafts } from "./use-plugin-domain-drafts"
 import { usePluginSettingsOperations } from "./use-plugin-settings-operations"
@@ -101,50 +100,34 @@ const MANIFEST_FRESHNESS_MS = 15 * 60 * 1000
 
 const defaultCommands: PluginSettingsCommands = {
   createDomain: async (input) =>
-    await Effect.runPromise(
-      client.pluginDomains.create({
-        payload: { ...input, pluginServerId: LYNVO_PLUGIN_SERVER_ID },
-      })
-    ),
+    await client.pluginDomains.create({
+      payload: { ...input, pluginServerId: LYNVO_PLUGIN_SERVER_ID },
+    }),
   deleteDomain: async (domainId) =>
-    await Effect.runPromise(
-      client.pluginDomains.delete({ params: { domainId } })
-    ),
+    await client.pluginDomains.delete({ params: { domainId } }),
   setCredential: async (domainId, password, username) =>
-    await Effect.runPromise(
-      client.pluginDomains.setCredential({
-        params: { domainId },
-        payload: username ? { password, username } : { password },
-      })
-    ),
+    await client.pluginDomains.setCredential({
+      params: { domainId },
+      payload: username ? { password, username } : { password },
+    }),
   deleteCredential: async (domainId) =>
-    await Effect.runPromise(
-      client.pluginDomains.deleteCredential({ params: { domainId } })
-    ),
+    await client.pluginDomains.deleteCredential({ params: { domainId } }),
   createPluginServer: async (value) =>
-    await Effect.runPromise(client.pluginServers.create({ payload: value })),
+    await client.pluginServers.create({ payload: value }),
   deletePluginServer: async (pluginServerId) =>
-    await Effect.runPromise(
-      client.pluginServers.delete({ params: { pluginServerId } })
-    ),
+    await client.pluginServers.delete({ params: { pluginServerId } }),
   togglePluginServer: async (pluginServerId, enabled) =>
-    await Effect.runPromise(
-      client.pluginServers.toggle({
-        params: { pluginServerId },
-        payload: { enabled },
-      })
-    ),
+    await client.pluginServers.toggle({
+      params: { pluginServerId },
+      payload: { enabled },
+    }),
   refreshPluginServer: async (pluginServerId) =>
-    await Effect.runPromise(
-      client.pluginServers.refresh({ params: { pluginServerId } })
-    ),
+    await client.pluginServers.refresh({ params: { pluginServerId } }),
   setPluginServerProxyKey: async (pluginServerId, token) =>
-    await Effect.runPromise(
-      client.pluginServers.setProxyKey({
-        params: { pluginServerId },
-        payload: { token },
-      })
-    ),
+    await client.pluginServers.setProxyKey({
+      params: { pluginServerId },
+      payload: { token },
+    }),
 }
 
 export const usePluginSettingsInteraction = ({
@@ -162,15 +145,13 @@ export const usePluginSettingsInteraction = ({
   } = useAsyncResource(
     () =>
       loadData
-        ? Effect.runPromise(client.pluginServers.list())
+        ? client.pluginServers.list()
         : Promise.resolve(EMPTY_PLUGIN_SERVERS),
     [loadData]
   )
   const { data: allDomains = EMPTY_DOMAINS } = useAsyncResource(
     () =>
-      loadData
-        ? Effect.runPromise(client.pluginDomains.list({}))
-        : Promise.resolve(EMPTY_DOMAINS),
+      loadData ? client.pluginDomains.list() : Promise.resolve(EMPTY_DOMAINS),
     [loadData]
   )
   const pluginServers = loadData ? fetchedPluginServers : EMPTY_PLUGIN_SERVERS

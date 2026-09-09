@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Effect, Result, Schema } from "effect"
+import { Result, Schema } from "effect"
 import {
   Select,
   SelectContent,
@@ -28,19 +28,18 @@ import {
   clearAsyncResourceCache,
   useAsyncResource,
 } from "~/hooks/use-async-resource"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 
-const loadCloudPlayerPreferences = () =>
-  Effect.runPromise(client.settings.getPlayerPreferences())
+const loadCloudPlayerPreferences = () => client.settings.getPlayerPreferences()
 
 const saveCloudPlayerPreferences = (preferences: {
   rangeSupportedPlayerId?: PlayerId
   rangeUnsupportedPlayerId?: PlayerId
 }) =>
-  Effect.runPromise(
-    client.settings.updatePlayerPreferences({ payload: preferences })
-  ).then(() => undefined)
+  client.settings
+    .updatePlayerPreferences({ payload: preferences })
+    .then(() => undefined)
 
 export const PlayerSettings = ({
   loadPlayerPreferences = loadCloudPlayerPreferences,

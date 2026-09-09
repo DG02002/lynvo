@@ -1,15 +1,13 @@
 import { useEffect } from "react"
-import { Effect } from "effect"
 import {
   getPlayerPreferences,
   normalizePlayerPreferences,
   setRangeSupportedPlayer,
   setRangeUnsupportedPlayer,
 } from "~/lib/player-utils"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 
-const loadCloudPlayerPreferences = () =>
-  Effect.runPromise(client.settings.getPlayerPreferences())
+const loadCloudPlayerPreferences = () => client.settings.getPlayerPreferences()
 
 export const AccountSettingsSynchronization = ({
   userId,
