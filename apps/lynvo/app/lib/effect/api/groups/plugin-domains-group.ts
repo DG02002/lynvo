@@ -13,7 +13,7 @@ import {
   MutationResultSchema,
   PluginDomainListSchema,
   SetCredentialPayloadSchema,
-} from "../../../api/contracts"
+} from "../../../api-contracts"
 
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
   .add(

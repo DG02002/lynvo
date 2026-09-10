@@ -7,7 +7,7 @@ import {
   BackendApiError,
   UsageLimitApiError,
 } from "../../errors"
-import { ExtractQuerySchema, MetadataQuerySchema } from "../../../api/contracts"
+import { ExtractQuerySchema, MetadataQuerySchema } from "../../../api-contracts"
 
 export class ExtractionGroup extends HttpApiGroup.make("extraction")
   .add(

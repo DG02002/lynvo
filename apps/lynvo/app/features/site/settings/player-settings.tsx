@@ -7,11 +7,8 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { SelectTrigger } from "~/components/select-trigger"
-import {
-  PLAYER_DEFINITIONS,
-  playerIdSchema,
-  type PlayerId,
-} from "~/lib/player-utils"
+import { PLAYER_DEFINITIONS, type PlayerId } from "~/lib/player-utils"
+import { PlayerIdSchema } from "~/lib/api-contracts"
 import {
   SettingsPanel,
   SettingsList,
@@ -86,13 +83,13 @@ export const PlayerSettings = ({
     (p) => p.id === rangeUnsupportedPlayerId
   )
   const updateRangeSupportedPlayer = (value: string | null) => {
-    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
       handleRangeSupportedChange(playerId.success)
     }
   }
   const updateRangeUnsupportedPlayer = (value: string | null) => {
-    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
       handleRangeUnsupportedChange(playerId.success)
     }

@@ -11,7 +11,7 @@ import {
   RemotePollResponseSchema,
   RemoteResultPayloadSchema,
   RemoteSendPayloadSchema,
-} from "../../../api/contracts"
+} from "../../../api-contracts"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
   .add(

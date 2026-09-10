@@ -30,17 +30,19 @@ import {
   type SetProxyKeyResponse,
   type TogglePluginServerPayload,
   type UserSessionList,
-} from "./contracts"
+} from "../api-contracts"
 
 interface ApiRequestOptions {
   readonly signal?: AbortSignal
 }
 
+type RequestQuery = ExtractQuery | MetadataQuery | RemotePollQuery
+
 type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly method?: "DELETE" | "GET" | "PATCH" | "POST"
   readonly headers?: Record<string, string>
   readonly payload?: Payload
-  readonly query?: ExtractQuery | MetadataQuery | RemotePollQuery
+  readonly query?: RequestQuery
 }
 
 const apiErrorBodySchema = Schema.Struct({
@@ -94,10 +96,7 @@ export class ApiClientError extends Error {
   }
 }
 
-const appendQuery = (
-  path: string,
-  query: ExtractQuery | MetadataQuery | RemotePollQuery | undefined
-): string => {
+const appendQuery = (path: string, query: RequestQuery | undefined): string => {
   if (!query) {
     return path
   }

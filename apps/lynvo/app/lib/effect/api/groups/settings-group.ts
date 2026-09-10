@@ -12,7 +12,7 @@ import {
   MutationResultSchema,
   PlayerPreferencesSchema,
   UserSessionListSchema,
-} from "../../../api/contracts"
+} from "../../../api-contracts"
 
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(

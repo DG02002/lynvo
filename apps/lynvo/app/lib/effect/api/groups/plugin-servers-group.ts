@@ -16,7 +16,7 @@ import {
   SetProxyKeyPayloadSchema,
   SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
-} from "../../../api/contracts"
+} from "../../../api-contracts"
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
