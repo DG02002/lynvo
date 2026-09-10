@@ -438,6 +438,11 @@ const executeSavedLinkMetadataWrite = async ({
       savedLinkCountDelta: 0,
     },
     now,
+    condition: savedLinkMetaAppliedLedgerCondition({
+      linkId: existingRow.id,
+      metaJson: nextRow.meta_json,
+      updatedAt: now,
+    }),
   })
   return executeOwnedWrite({
     database,
@@ -463,13 +468,45 @@ const executeSavedLinkMetadataWrite = async ({
         userId,
         operationId,
         linkId: existingRow.id,
+        appliedLink: { metaJson: nextRow.meta_json, updatedAt: now },
       }),
     ],
+    guard: savedLinkMetaAppliedGuard({
+      linkId: existingRow.id,
+      metaJson: nextRow.meta_json,
+      updatedAt: now,
+    }),
   })
 }
 
 const canonicalizeLinkMetadataJson = (metadataJson: string): string =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
+
+interface SavedLinkMetaAppliedState {
+  readonly linkId: string
+  readonly metaJson: string
+  readonly updatedAt: number
+}
+
+const savedLinkMetaAppliedGuard = ({
+  linkId,
+  metaJson,
+  updatedAt,
+}: SavedLinkMetaAppliedState) => ({
+  conditionSql:
+    "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND meta_json IS ?3 AND updated_at = ?4",
+  conditionBindings: [linkId, metaJson, updatedAt],
+})
+
+const savedLinkMetaAppliedLedgerCondition = ({
+  linkId,
+  metaJson,
+  updatedAt,
+}: SavedLinkMetaAppliedState) => ({
+  conditionSql:
+    "SELECT 1 FROM links WHERE id = ?6 AND user_id = ?1 AND meta_json IS ?7 AND updated_at = ?8",
+  conditionBindings: [linkId, metaJson, updatedAt],
+})
 
 const executeUpdateSavedLinkMetaAttempt = async ({
   database,
@@ -495,6 +532,11 @@ const executeUpdateSavedLinkMetaAttempt = async ({
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: savedLinkMetaAppliedLedgerCondition({
+      linkId: existingRow.id,
+      metaJson: metadataJson,
+      updatedAt: input.now,
+    }),
   })
   return executeOwnedWrite({
     database,
@@ -511,8 +553,14 @@ const executeUpdateSavedLinkMetaAttempt = async ({
         userId,
         operationId: input.operationId,
         linkId: existingRow.id,
+        appliedLink: { metaJson: metadataJson, updatedAt: input.now },
       }),
     ],
+    guard: savedLinkMetaAppliedGuard({
+      linkId: existingRow.id,
+      metaJson: metadataJson,
+      updatedAt: input.now,
+    }),
   })
 }
 
@@ -789,6 +837,11 @@ const updateExistingSavedLink = async ({
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: savedLinkMetaAppliedLedgerCondition({
+      linkId: existingRow.id,
+      metaJson: metadataJson,
+      updatedAt: input.now,
+    }),
   })
   const extractionCredentialStatement =
     extractionState === "queued" && input.extractionCredential
@@ -836,9 +889,15 @@ const updateExistingSavedLink = async ({
         userId,
         operationId: input.operationId,
         linkId: existingRow.id,
+        appliedLink: { metaJson: metadataJson, updatedAt: input.now },
       }),
       extractionCredentialStatement,
     ],
+    guard: savedLinkMetaAppliedGuard({
+      linkId: existingRow.id,
+      metaJson: metadataJson,
+      updatedAt: input.now,
+    }),
   })
   return { id: existingRow.id, dataVersion, changed }
 }

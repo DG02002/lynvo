@@ -243,11 +243,22 @@ export const withAppliedMutation = (
   },
 })
 
+export interface StorageMutationCondition {
+  /**
+   * EXISTS subquery tying the delta to the guarded write's post-state, so a
+   * lost optimistic UPDATE does not move the ledger. Bindings are numbered
+   * from ?6 (?1 is the user id, ?2–?5 the deltas and timestamp).
+   */
+  readonly conditionSql: string
+  readonly conditionBindings: readonly unknown[]
+}
+
 interface ApplyStorageMutationInput {
   readonly database: D1Database
   readonly preparation: StorageLedgerPreparation
   readonly plan: LedgerMutationPlan
   readonly now: number
+  readonly condition?: StorageMutationCondition
 }
 
 export const applyStorageMutation = ({
@@ -255,21 +266,24 @@ export const applyStorageMutation = ({
   preparation,
   plan,
   now,
+  condition,
 }: ApplyStorageMutationInput): AppliedLedgerMutation => {
   const deltaBytes = plan.nextBytes - plan.currentBytes
   const totalEnforcedBytes = preparation.ledger.totalEnforcedBytes + deltaBytes
   assertStorageGrowth(totalEnforcedBytes, deltaBytes)
   const column = LEDGER_DOMAIN_COLUMNS[plan.domain]
+  const baseSql = `UPDATE storage_ledgers SET ${column} = ${column} + ?2, saved_link_count = saved_link_count + ?3, total_enforced_bytes = total_enforced_bytes + ?4, updated_at = ?5 WHERE user_id = ?1`
   const statement = database
     .prepare(
-      `UPDATE storage_ledgers SET ${column} = ${column} + ?2, saved_link_count = saved_link_count + ?3, total_enforced_bytes = total_enforced_bytes + ?4, updated_at = ?5 WHERE user_id = ?1`
+      condition ? `${baseSql} AND EXISTS (${condition.conditionSql})` : baseSql
     )
     .bind(
       preparation.ledger.userId,
       deltaBytes,
       plan.savedLinkCountDelta,
       deltaBytes,
-      now
+      now,
+      ...(condition?.conditionBindings ?? [])
     )
   return { statements: [statement], deltaBytes, totalEnforcedBytes }
 }

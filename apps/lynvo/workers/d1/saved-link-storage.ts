@@ -60,13 +60,30 @@ export const reserveSavedLinkCommandOperation = async (
 
 export const createReservedSavedLinkOperationLinkStatement = (
   database: D1Database,
-  input: { userId: string; operationId: string; linkId: string }
-): D1PreparedStatement =>
-  database
+  input: {
+    userId: string
+    operationId: string
+    linkId: string
+    appliedLink?: { metaJson: string; updatedAt: number }
+  }
+): D1PreparedStatement => {
+  const baseSql =
+    "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+  return database
     .prepare(
-      "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+      input.appliedLink
+        ? `${baseSql} AND EXISTS (SELECT 1 FROM links WHERE id = ?3 AND user_id = ?1 AND meta_json IS ?4 AND updated_at = ?5)`
+        : baseSql
     )
-    .bind(input.userId, input.operationId, input.linkId)
+    .bind(
+      input.userId,
+      input.operationId,
+      input.linkId,
+      ...(input.appliedLink
+        ? [input.appliedLink.metaJson, input.appliedLink.updatedAt]
+        : [])
+    )
+}
 
 export const releaseReservedSavedLinkCommandOperation = async (
   database: D1Database,
