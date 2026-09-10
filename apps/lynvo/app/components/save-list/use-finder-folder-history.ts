@@ -84,9 +84,10 @@ export const useFinderFolderHistory = ({
     const nextBrowserForwardEntry = readBrowserForwardEntry()
     setBrowserForwardEntry(nextBrowserForwardEntry)
     const currentEntry = { key: locationKey, folderIds }
+    const previousHistoryKey = currentHistoryKeyRef.current
     setEntries((currentEntries) => {
       const previousIndex = currentEntries.findIndex(
-        (entry) => entry.key === currentHistoryKeyRef.current
+        (entry) => entry.key === previousHistoryKey
       )
 
       if (navigationType === "PUSH") {

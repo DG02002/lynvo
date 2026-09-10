@@ -28,6 +28,15 @@ const BrowserBack = () => {
   )
 }
 
+const BrowserForward = () => {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => void navigate(1)}>
+      Browser forward
+    </button>
+  )
+}
+
 const createActions = (
   overrides: Partial<LinkItemActions> = {}
 ): LinkItemActions => ({
@@ -255,6 +264,11 @@ describe("SaveListBrowser", () => {
         playback: { openedUrls: [] },
       },
     }
+    const scrollTo = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    })
 
     render(
       <>
@@ -269,6 +283,7 @@ describe("SaveListBrowser", () => {
         />
         <LocationProbe />
         <BrowserBack />
+        <BrowserForward />
       </>,
       "/save/folder/nested-navigation"
     )
@@ -299,13 +314,37 @@ describe("SaveListBrowser", () => {
       "/save/folder/nested-navigation?path=folder-one/folder-two"
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    const contentList = document.querySelector<HTMLElement>(
+      ".overscroll-y-contain"
+    )
+    expect(contentList).toBeInTheDocument()
+    Object.defineProperty(contentList!, "scrollTop", {
+      configurable: true,
+      value: 128,
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
     await screen.findAllByRole("button", { name: "Folder Two" })
     expect(
       screen
         .getAllByRole("button", { name: "Folder One" })
         .some((button) => button.getAttribute("aria-current") === "page")
     ).toBe(true)
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser forward" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/nested-navigation?path=folder-one/folder-two"
+      )
+    )
+    await screen.findByRole("button", { name: "Nested Episode" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 128 })
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await screen.findAllByRole("button", { name: "Folder Two" })
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/save/folder/nested-navigation?path=folder-one"
     )

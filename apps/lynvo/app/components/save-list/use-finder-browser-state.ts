@@ -295,6 +295,7 @@ export const useFinderBrowserState = ({
       previousFolderIds &&
       areFolderIdsEqual(previousFolderIds, parentFolderIds)
     ) {
+      beginFolderNavigation()
       setFolderPath(parentFolderPath)
       void navigate(-1)
       return
