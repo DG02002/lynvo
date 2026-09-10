@@ -5,6 +5,7 @@ import {
   USER_STORAGE_LIMIT_BYTES,
 } from "../constants"
 import { LinkTooLargeError, StorageLimitError } from "./errors"
+import type { OwnedWriteGuard } from "./data-version"
 import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
@@ -243,22 +244,17 @@ export const withAppliedMutation = (
   },
 })
 
-export interface StorageMutationCondition {
-  /**
-   * EXISTS subquery tying the delta to the guarded write's post-state, so a
-   * lost optimistic UPDATE does not move the ledger. Bindings are numbered
-   * from ?6 (?1 is the user id, ?2–?5 the deltas and timestamp).
-   */
-  readonly conditionSql: string
-  readonly conditionBindings: readonly unknown[]
-}
-
 interface ApplyStorageMutationInput {
   readonly database: D1Database
   readonly preparation: StorageLedgerPreparation
   readonly plan: LedgerMutationPlan
   readonly now: number
-  readonly condition?: StorageMutationCondition
+  /**
+   * OwnedWriteGuard tied to the guarded write's post-state, so a lost
+   * optimistic UPDATE does not move the ledger. Bindings are numbered from
+   * ?6 (?1 is the user id, ?2–?5 the deltas and timestamp).
+   */
+  readonly condition?: OwnedWriteGuard
 }
 
 export const applyStorageMutation = ({

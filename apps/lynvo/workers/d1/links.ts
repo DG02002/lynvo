@@ -428,6 +428,11 @@ const executeSavedLinkMetadataWrite = async ({
 }> => {
   const preparation = await ensureStorageLedger(database, userId, now)
   assertLinkSize(byteLength(nextRow))
+  const applied = savedLinkMetaApplied({
+    linkId: existingRow.id,
+    metaJson: nextRow.meta_json,
+    updatedAt: now,
+  })
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -438,11 +443,7 @@ const executeSavedLinkMetadataWrite = async ({
       savedLinkCountDelta: 0,
     },
     now,
-    condition: savedLinkMetaAppliedLedgerCondition({
-      linkId: existingRow.id,
-      metaJson: nextRow.meta_json,
-      updatedAt: now,
-    }),
+    condition: applied.ledgerCondition,
   })
   return executeOwnedWrite({
     database,
@@ -468,14 +469,10 @@ const executeSavedLinkMetadataWrite = async ({
         userId,
         operationId,
         linkId: existingRow.id,
-        appliedLink: { metaJson: nextRow.meta_json, updatedAt: now },
+        appliedLink: applied.appliedLink,
       }),
     ],
-    guard: savedLinkMetaAppliedGuard({
-      linkId: existingRow.id,
-      metaJson: nextRow.meta_json,
-      updatedAt: now,
-    }),
+    guard: applied.guard,
   })
 }
 
@@ -488,24 +485,28 @@ interface SavedLinkMetaAppliedState {
   readonly updatedAt: number
 }
 
-const savedLinkMetaAppliedGuard = ({
-  linkId,
-  metaJson,
-  updatedAt,
-}: SavedLinkMetaAppliedState) => ({
-  conditionSql:
-    "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND meta_json IS ?3 AND updated_at = ?4",
-  conditionBindings: [linkId, metaJson, updatedAt],
-})
+const savedLinkMetaAppliedSql = (firstBindingIndex: number): string =>
+  `SELECT 1 FROM links WHERE id = ?${firstBindingIndex} AND user_id = ?1 AND meta_json IS ?${
+    firstBindingIndex + 1
+  } AND updated_at = ?${firstBindingIndex + 2}`
 
-const savedLinkMetaAppliedLedgerCondition = ({
-  linkId,
-  metaJson,
-  updatedAt,
-}: SavedLinkMetaAppliedState) => ({
-  conditionSql:
-    "SELECT 1 FROM links WHERE id = ?6 AND user_id = ?1 AND meta_json IS ?7 AND updated_at = ?8",
-  conditionBindings: [linkId, metaJson, updatedAt],
+/**
+ * Post-state wiring for one optimistic metadata write: the ledger delta and
+ * operation-link conditions and the version-bump guard all assert the same
+ * applied row, so a lost race moves nothing. The predicate cannot distinguish
+ * this write from a concurrent write of byte-identical metadata in the same
+ * millisecond; that interleaving can double-apply one ledger delta.
+ */
+const savedLinkMetaApplied = (state: SavedLinkMetaAppliedState) => ({
+  ledgerCondition: {
+    conditionSql: savedLinkMetaAppliedSql(6),
+    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
+  },
+  appliedLink: { metaJson: state.metaJson, updatedAt: state.updatedAt },
+  guard: {
+    conditionSql: savedLinkMetaAppliedSql(2),
+    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
+  },
 })
 
 const executeUpdateSavedLinkMetaAttempt = async ({
@@ -522,6 +523,11 @@ const executeUpdateSavedLinkMetaAttempt = async ({
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(nextRow))
+  const applied = savedLinkMetaApplied({
+    linkId: existingRow.id,
+    metaJson: metadataJson,
+    updatedAt: input.now,
+  })
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -532,11 +538,7 @@ const executeUpdateSavedLinkMetaAttempt = async ({
       savedLinkCountDelta: 0,
     },
     now: input.now,
-    condition: savedLinkMetaAppliedLedgerCondition({
-      linkId: existingRow.id,
-      metaJson: metadataJson,
-      updatedAt: input.now,
-    }),
+    condition: applied.ledgerCondition,
   })
   return executeOwnedWrite({
     database,
@@ -553,14 +555,10 @@ const executeUpdateSavedLinkMetaAttempt = async ({
         userId,
         operationId: input.operationId,
         linkId: existingRow.id,
-        appliedLink: { metaJson: metadataJson, updatedAt: input.now },
+        appliedLink: applied.appliedLink,
       }),
     ],
-    guard: savedLinkMetaAppliedGuard({
-      linkId: existingRow.id,
-      metaJson: metadataJson,
-      updatedAt: input.now,
-    }),
+    guard: applied.guard,
   })
 }
 
@@ -827,6 +825,11 @@ const updateExistingSavedLink = async ({
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(nextRow))
+  const applied = savedLinkMetaApplied({
+    linkId: existingRow.id,
+    metaJson: metadataJson,
+    updatedAt: input.now,
+  })
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -837,11 +840,7 @@ const updateExistingSavedLink = async ({
       savedLinkCountDelta: 0,
     },
     now: input.now,
-    condition: savedLinkMetaAppliedLedgerCondition({
-      linkId: existingRow.id,
-      metaJson: metadataJson,
-      updatedAt: input.now,
-    }),
+    condition: applied.ledgerCondition,
   })
   const extractionCredentialStatement =
     extractionState === "queued" && input.extractionCredential
@@ -889,15 +888,11 @@ const updateExistingSavedLink = async ({
         userId,
         operationId: input.operationId,
         linkId: existingRow.id,
-        appliedLink: { metaJson: metadataJson, updatedAt: input.now },
+        appliedLink: applied.appliedLink,
       }),
       extractionCredentialStatement,
     ],
-    guard: savedLinkMetaAppliedGuard({
-      linkId: existingRow.id,
-      metaJson: metadataJson,
-      updatedAt: input.now,
-    }),
+    guard: applied.guard,
   })
   return { id: existingRow.id, dataVersion, changed }
 }
