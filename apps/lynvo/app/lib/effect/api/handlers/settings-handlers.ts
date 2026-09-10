@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
+import { withDataVersionHeaders } from "../versioned-response"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
@@ -96,7 +97,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const result = yield* Effect.tryPromise({
             try: () =>
               updateUserPlayerPreferences(database, user.id, {
                 ...payload,
@@ -111,7 +112,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersionHeaders(result)
         })
       )
       .handle("listSessions", () =>

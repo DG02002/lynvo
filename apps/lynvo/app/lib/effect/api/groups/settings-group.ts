@@ -13,6 +13,7 @@ import {
   PlayerPreferencesSchema,
   UserSessionListSchema,
 } from "../../../api-contracts"
+import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(
@@ -27,7 +28,7 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
     }),
     HttpApiEndpoint.patch("updatePlayerPreferences", "/player", {
       payload: PlayerPreferencesSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("listSessions", "/security/sessions", {

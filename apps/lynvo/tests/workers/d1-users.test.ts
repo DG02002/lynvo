@@ -1,9 +1,6 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
-import {
-  getOrCreateGoogleUser,
-  insertGoogleUser,
-} from "../../workers/d1/users"
+import { getOrCreateGoogleUser, insertGoogleUser } from "../../workers/d1/users"
 
 const NOW = 1_750_000_000_000
 

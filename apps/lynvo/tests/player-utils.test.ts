@@ -57,9 +57,9 @@ describe("player-utils", () => {
   })
 
   it("uses VLC for links without HTTP byte-range support by default", () => {
-    expect(
-      selectPlayerForRangeCapability("unsupported", "test-user").id
-    ).toBe("vlc")
+    expect(selectPlayerForRangeCapability("unsupported", "test-user").id).toBe(
+      "vlc"
+    )
   })
 
   it("treats unknown byte-range support like supported requests", () => {
@@ -75,9 +75,9 @@ describe("player-utils", () => {
     expect(selectPlayerForRangeCapability("supported", "test-user").id).toBe(
       "mpv"
     )
-    expect(
-      selectPlayerForRangeCapability("unsupported", "test-user").id
-    ).toBe("mx")
+    expect(selectPlayerForRangeCapability("unsupported", "test-user").id).toBe(
+      "mx"
+    )
   })
 
   it("ignores invalid saved player preferences", () => {
@@ -86,9 +86,8 @@ describe("player-utils", () => {
     expect(selectPlayerForRangeCapability("supported", "test-user").id).toBe(
       "just"
     )
-    expect(
-      selectPlayerForRangeCapability("unsupported", "test-user").id
-    ).toBe("vlc")
+    expect(selectPlayerForRangeCapability("unsupported", "test-user").id).toBe(
+      "vlc"
+    )
   })
-
 })

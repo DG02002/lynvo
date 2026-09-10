@@ -510,4 +510,93 @@ describe("d1 data routes", () => {
     expect(echoedVersion).toBeGreaterThan(1)
     expect(list.dataVersion === undefined || list.dataVersion > 0).toBe(true)
   })
+
+  it("echoes the write's data version on mutation responses", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const createResponse = await app.fetch(
+      dataApiRequest("/api/data/links/create-or-update", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          url: "https://example.com/mutation-echo",
+          meta: emptyMetadataJson(),
+        }),
+      }),
+      env
+    )
+    const created = await readJsonBody<{
+      id?: string
+      success: boolean
+      dataVersion: number
+    }>(createResponse)
+    expect(createResponse.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(created.dataVersion)
+    )
+
+    const deleteResponse = await app.fetch(
+      dataApiRequest("/api/data/links/delete", session, {
+        method: "POST",
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          id: created.id,
+        }),
+      }),
+      env
+    )
+    const deleted = await readJsonBody<{
+      success: boolean
+      dataVersion: number
+    }>(deleteResponse)
+    expect(deleted.success).toBe(true)
+    expect(deleted.dataVersion).toBeGreaterThan(created.dataVersion)
+    expect(deleteResponse.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(deleted.dataVersion)
+    )
+  })
+
+  it("returns the post-deletion version from storage settings updates", async () => {
+    const user = await createUser()
+    const session = await createSessionFor(user.id)
+    const created = await readJsonBody<{ id: string; dataVersion: number }>(
+      await app.fetch(
+        dataApiRequest("/api/data/links/create-or-update", session, {
+          method: "POST",
+          body: JSON.stringify({
+            operationId: crypto.randomUUID(),
+            url: "https://example.com/retention-sweep",
+            meta: emptyMetadataJson(),
+          }),
+        }),
+        env
+      )
+    )
+    // The retention write backfills expires_at from created_at before the
+    // sweep, so age the link itself rather than its expiry.
+    await env.DB.prepare("UPDATE links SET created_at = 1 WHERE id = ?1")
+      .bind(created.id)
+      .run()
+
+    const patchResponse = await app.fetch(
+      dataApiRequest("/api/data/storage-settings", session, {
+        method: "PATCH",
+        body: JSON.stringify({ days: 7, deleteExpiredLinks: true }),
+      }),
+      env
+    )
+    const patched = await readJsonBody<{
+      success: boolean
+      deletedLinks: number
+      dataVersion: number
+    }>(patchResponse)
+    expect(patched.success).toBe(true)
+    expect(patched.deletedLinks).toBe(1)
+    // The deletion is the second owned write; its version, not the retention
+    // update's, is the response's.
+    expect(patched.dataVersion).toBeGreaterThan(created.dataVersion)
+    expect(patched.dataVersion).toBe(await getDataVersion(env.DB, user.id))
+    expect(patchResponse.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(patched.dataVersion)
+    )
+  })
 })

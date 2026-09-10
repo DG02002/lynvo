@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
+import { withDataVersionHeaders } from "../versioned-response"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
@@ -101,7 +102,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               keyVersion: encrypted.keyVersion,
             }
           }
-          yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               upsertPluginDomain(database, user.id, {
                 domain,
@@ -116,7 +117,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
       .handle("setCredential", ({ params, payload }) =>
@@ -157,7 +158,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
             pluginId: attempt.pluginId,
             domain: attempt.domain,
           })
-          yield* Effect.tryPromise({
+          const dataVersion = yield* Effect.tryPromise({
             try: () =>
               finalizePluginDomainCredentialChange(database, user.id, {
                 domainId: attempt.id,
@@ -177,7 +178,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
       .handle("deleteCredential", ({ params }) =>
@@ -190,7 +191,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const dataVersion = yield* Effect.tryPromise({
             try: () =>
               deletePluginDomainCredential(database, user.id, {
                 domainId: params.domainId,
@@ -202,7 +203,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
       .handle("delete", ({ params }) =>
@@ -215,7 +216,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const dataVersion = yield* Effect.tryPromise({
             try: () =>
               deletePluginDomainById(database, user.id, {
                 domainId: params.domainId,
@@ -227,7 +228,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
 )

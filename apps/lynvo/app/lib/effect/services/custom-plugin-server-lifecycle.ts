@@ -105,7 +105,7 @@ export const registerCustomPluginServer = Effect.fn(
         (error) => new PluginServerRegistrationError({ message: error.message })
       )
     )
-    yield* Effect.tryPromise({
+    const finalized = yield* Effect.tryPromise({
       try: () =>
         finalizePluginServerCredential(database, input.user.id, {
           id: reservation.id,
@@ -124,7 +124,7 @@ export const registerCustomPluginServer = Effect.fn(
           cause,
         }),
     })
-    return { success: true }
+    return { success: true, dataVersion: finalized.dataVersion }
   }).pipe(
     Effect.catch((primaryError) =>
       Effect.tryPromise({
@@ -214,7 +214,7 @@ export const refreshCustomPluginServer = Effect.fn(
     )
   )
   const now = Date.now()
-  yield* Effect.tryPromise({
+  const recorded = yield* Effect.tryPromise({
     try: () =>
       recordPluginServerRefreshSuccess(database, input.user.id, {
         id: pluginServer.id,
@@ -228,7 +228,7 @@ export const refreshCustomPluginServer = Effect.fn(
         cause,
       }),
   })
-  return { success: true }
+  return { success: true, dataVersion: recorded.dataVersion }
 })
 
 export const readCustomPluginServerUsage = Effect.fn(
