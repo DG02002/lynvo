@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../../constants"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
@@ -27,7 +28,7 @@ const withDataVersion = <Body extends { readonly dataVersion: number }>(
 ) =>
   HttpApiSchema.withHeaders({
     body,
-    headers: { "x-lynvo-data-version": body.dataVersion },
+    headers: { [DATA_VERSION_RESPONSE_HEADER]: body.dataVersion },
   })
 
 export const PluginServersHandlers = HttpApiBuilder.group(

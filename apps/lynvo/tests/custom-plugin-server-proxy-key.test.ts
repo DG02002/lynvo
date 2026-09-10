@@ -84,7 +84,7 @@ describe("refreshCustomPluginServerProxyBalance", () => {
     vi.unstubAllGlobals()
   })
 
-  it("revalidates the stored token and writes the new balance", async () => {
+  it("revalidates a stored token even when the server is not ready", async () => {
     const serverRow = {
       id: "plugin-server-1",
       user_id: "user-1",
@@ -102,7 +102,7 @@ describe("refreshCustomPluginServerProxyBalance", () => {
       proxy_balance_limit: 1_000,
       proxy_balance_checked_at: 1,
       proxy_enabled: 1,
-      credential_status: "ready",
+      credential_status: "failed",
       credential_generation: 1,
       credential_attempt_id: null,
       pending_expires_at: null,

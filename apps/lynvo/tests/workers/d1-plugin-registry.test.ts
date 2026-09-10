@@ -324,12 +324,13 @@ describe("d1 plugin registry", () => {
       "https://proxy.example"
     )
 
-    await updatePluginServerProxyKey(env.DB, user.id, {
+    const saved = await updatePluginServerProxyKey(env.DB, user.id, {
       id: registration.id,
       encrypted: credential(),
       balance: { remaining: 973, limit: 1_000 },
       now: NOW + 1_000,
     })
+    expect(saved.dataVersion).toBeGreaterThan(0)
     await updatePluginServerProxyBalance(env.DB, user.id, {
       id: registration.id,
       balance: { remaining: 950, limit: 1_000 },
@@ -353,12 +354,13 @@ describe("d1 plugin registry", () => {
       proxy_balance_checked_at: NOW + 2_000,
     })
 
-    await updatePluginServerProxyKey(env.DB, user.id, {
+    const removed = await updatePluginServerProxyKey(env.DB, user.id, {
       id: registration.id,
       encrypted: null,
       balance: null,
       now: NOW + 3_000,
     })
+    expect(removed.dataVersion).toBeGreaterThan(saved.dataVersion)
     row = await env.DB.prepare(
       "SELECT proxy_token_ciphertext, proxy_token_nonce, proxy_token_algorithm, proxy_token_version, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at FROM user_plugin_servers WHERE id = ?1"
     )

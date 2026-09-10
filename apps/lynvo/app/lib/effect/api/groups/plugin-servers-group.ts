@@ -5,6 +5,7 @@ import {
   HttpApiSchema,
 } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../middleware"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../../constants"
 import {
   UnauthorizedApiError,
   CsrfApiError,
@@ -25,7 +26,7 @@ import {
 } from "../../../api-contracts"
 
 const dataVersionHeaders = {
-  "x-lynvo-data-version": Schema.Number,
+  [DATA_VERSION_RESPONSE_HEADER]: Schema.Number,
 }
 
 const VersionedMutationResponseSchema = HttpApiSchema.WithHeaders(

@@ -104,14 +104,22 @@ const normalizeBaseUrl = (baseUrl: string): string => {
 
 const findPluginServerRow = async (
   database: D1Database,
-  pluginServerId: string
+  pluginServerId: string,
+  userId?: string
 ): Promise<PluginServerRow | null> => {
-  const row = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1`
-    )
-    .bind(pluginServerId)
-    .first<PluginServerRow>()
+  const statement =
+    userId !== undefined
+      ? database
+          .prepare(
+            `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2`
+          )
+          .bind(pluginServerId, userId)
+      : database
+          .prepare(
+            `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1`
+          )
+          .bind(pluginServerId)
+  const row = await statement.first<PluginServerRow>()
   return row ?? null
 }
 
@@ -120,8 +128,8 @@ const requireOwnedPluginServerRow = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow> => {
-  const existing = await findPluginServerRow(database, pluginServerId)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findPluginServerRow(database, pluginServerId, userId)
+  if (!existing) {
     throw new Error("Plugin server not found or no longer available")
   }
   return existing
@@ -239,12 +247,7 @@ export const findOwnedPluginServerById = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRecord | null> => {
-  const row = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2`
-    )
-    .bind(pluginServerId, userId)
-    .first<PluginServerRow>()
+  const row = await findPluginServerRow(database, pluginServerId, userId)
   return row ? mapPluginServerRow(row) : null
 }
 

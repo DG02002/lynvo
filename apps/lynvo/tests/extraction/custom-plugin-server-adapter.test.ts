@@ -57,6 +57,33 @@ const createIncompleteStoredManifest = (
     },
   })
 
+const proxyManifest = JSON.stringify({
+  protocolVersion: "1.0",
+  pluginServerId: "dev.example.plugin-server",
+  displayName: "Example Plugin Server",
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [{ hosts: ["source.example"] }],
+  features: {},
+  extensions: {
+    lynvo: {
+      proxyProvider: "scrape-do",
+      plugins: [],
+    },
+  },
+})
+
+const createProxyPluginServer = (proxyEnabled: boolean) => ({
+  id: "pluginServer-one",
+  baseUrl: "https://plugin-server.example",
+  apiKey: "secret",
+  manifest: proxyManifest,
+  enabled: true,
+  priority: 0,
+  proxyToken: "user-proxy-token",
+  proxyEnabled,
+})
+
 describe("extractFromCustomPluginServer", () => {
   it("forwards structured Basic Auth only to plugin servers that declare support", async () => {
     const fetchMock = vi.fn(async () =>
@@ -136,30 +163,7 @@ describe("extractFromCustomPluginServer", () => {
 
     await Effect.runPromise(
       extractFromCustomPluginServer({
-        pluginServer: {
-          id: "pluginServer-one",
-          baseUrl: "https://plugin-server.example",
-          apiKey: "secret",
-          manifest: JSON.stringify({
-            protocolVersion: "1.0",
-            pluginServerId: "dev.example.plugin-server",
-            displayName: "Example Plugin Server",
-            auth: { type: "bearer" },
-            usage: { endpoint: "/usage" },
-            matchers: [{ hosts: ["source.example"] }],
-            features: {},
-            extensions: {
-              lynvo: {
-                proxyProvider: "scrape-do",
-                plugins: [],
-              },
-            },
-          }),
-          enabled: true,
-          priority: 0,
-          proxyToken: "user-proxy-token",
-          proxyEnabled: false,
-        },
+        pluginServer: createProxyPluginServer(false),
         targetUrl: "https://source.example/title",
         kind: "source",
       })
@@ -168,6 +172,40 @@ describe("extractFromCustomPluginServer", () => {
     const [[request]] = fetchMock.mock.calls
     const body = await request.json()
     expect(body).not.toHaveProperty("proxy")
+  })
+
+  it("forwards the enabled proxy key with its declared provider", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await Effect.runPromise(
+      extractFromCustomPluginServer({
+        pluginServer: createProxyPluginServer(true),
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
+    )
+
+    const [[request]] = fetchMock.mock.calls
+    expect(await request.json()).toMatchObject({
+      input: {
+        kind: "source",
+        sourceUrl: "https://source.example/title",
+      },
+      proxy: {
+        provider: "scrape-do",
+        token: "user-proxy-token",
+      },
+    })
   })
 
   it("decodes human-readable pluginServer text without changing identifiers or URLs", async () => {

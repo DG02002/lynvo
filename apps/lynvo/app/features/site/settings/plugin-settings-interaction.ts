@@ -49,6 +49,7 @@ export interface CreatePluginDomainInput {
 
 export interface PluginSettingsMutationResult {
   readonly success: boolean
+  readonly dataVersion?: number
 }
 
 export interface PluginSettingsCommands {
@@ -95,6 +96,7 @@ export interface PluginSettingsCommands {
 export interface PluginSettingsOperation {
   readonly status: "pending" | "success" | "error"
   readonly error?: string
+  readonly dataVersion?: number
 }
 
 export interface UsePluginSettingsInteractionOptions {
