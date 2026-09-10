@@ -70,7 +70,6 @@ export function PluginsSettings({
     handleDeleteDomainCredential,
     handleAddPluginServer,
     handleDeletePluginServer,
-    handleSetPluginServerProxyKey,
     handleRefreshPluginServer,
     handleTogglePluginServer,
     domainDrafts,
@@ -220,7 +219,6 @@ export function PluginsSettings({
         onAddPluginServer={handleAddPluginServer}
         onDeletePluginServer={handleDeletePluginServer}
         onRefreshPluginServer={handleRefreshPluginServer}
-        onSetProxyKey={handleSetPluginServerProxyKey}
         onTogglePluginServer={handleTogglePluginServer}
       />
     </SettingsPanel>
@@ -426,7 +424,6 @@ interface CustomPluginServersSectionProps {
   ) => Promise<string | null>
   onDeletePluginServer: (pluginServerId: string) => Promise<void>
   onRefreshPluginServer: (pluginServerId: string) => Promise<void>
-  onSetProxyKey: (pluginServerId: string, token: string) => Promise<boolean>
   onTogglePluginServer: (
     pluginServerId: string,
     enabled: boolean
@@ -441,7 +438,6 @@ export const CustomPluginServersSection = ({
   onAddPluginServer,
   onDeletePluginServer,
   onRefreshPluginServer,
-  onSetProxyKey,
   onTogglePluginServer,
 }: CustomPluginServersSectionProps) => {
   const [registrationError, setRegistrationError] = React.useState<
@@ -580,7 +576,6 @@ export const CustomPluginServersSection = ({
           requestOrigin={requestOrigin}
           onDeletePluginServer={onDeletePluginServer}
           onRefreshPluginServer={onRefreshPluginServer}
-          onSetProxyKey={onSetProxyKey}
           onTogglePluginServer={onTogglePluginServer}
         />
       )}

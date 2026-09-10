@@ -1,5 +1,6 @@
 import * as React from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { MemoryRouter } from "react-router"
 import { describe, expect, it, vi } from "vitest"
 import { TooltipProvider } from "~/components/ui/tooltip"
 import { CustomPluginServerTable } from "~/features/site/settings/custom-plugin-server-table"
@@ -34,21 +35,27 @@ const pluginServer = {
   }),
   enabled: true,
   verificationStatus: "down",
+  hasProxyKey: false,
+  proxyBalanceRemaining: null,
+  proxyBalanceLimit: null,
+  proxyBalanceCheckedAt: null,
+  proxyEnabled: true,
 }
 
 describe("CustomPluginServerTable", () => {
   const renderTable = (servers = [pluginServer]) =>
     render(
-      <TooltipProvider delay={0}>
-        <CustomPluginServerTable
-          pluginServers={servers}
-          requestOrigin="http://localhost:5173"
-          onDeletePluginServer={vi.fn()}
-          onRefreshPluginServer={vi.fn()}
-          onSetProxyKey={vi.fn(async () => true)}
-          onTogglePluginServer={vi.fn()}
-        />
-      </TooltipProvider>
+      <MemoryRouter>
+        <TooltipProvider delay={0}>
+          <CustomPluginServerTable
+            pluginServers={servers}
+            requestOrigin="http://localhost:5173"
+            onDeletePluginServer={vi.fn()}
+            onRefreshPluginServer={vi.fn()}
+            onTogglePluginServer={vi.fn()}
+          />
+        </TooltipProvider>
+      </MemoryRouter>
     )
 
   it("shows an unavailable enabled Plugin Server", () => {
@@ -98,7 +105,7 @@ describe("CustomPluginServerTable", () => {
     expect(screen.queryByText("View project")).not.toBeInTheDocument()
   })
 
-  it("offers the proxy key dialog only when the server declares the capability", () => {
+  it("links supported servers to the shared proxy settings", () => {
     const baseManifest = JSON.parse(pluginServer.manifest)
     const capableServer = {
       ...pluginServer,
@@ -106,6 +113,8 @@ describe("CustomPluginServerTable", () => {
       hasProxyKey: true,
       proxyBalanceRemaining: 973,
       proxyBalanceLimit: 1000,
+      proxyBalanceCheckedAt: 1,
+      proxyEnabled: true,
       manifest: JSON.stringify({
         ...baseManifest,
         displayName: "Proxy Capable",
@@ -119,22 +128,15 @@ describe("CustomPluginServerTable", () => {
     }
     renderTable([capableServer, pluginServer])
 
-    expect(
-      screen.getAllByText("Own proxy key · 973 credits left")
-    ).toHaveLength(1)
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Actions for Example Plugin Server" })
-    )
-    expect(screen.queryByText("Proxy key")).not.toBeInTheDocument()
+    const proxyLink = screen.getByRole("link", {
+      name: "Manage proxy settings for Proxy Capable",
+    })
+    expect(proxyLink).toHaveAttribute("href", "/settings/proxy")
+    expect(screen.getByText("Proxy key set")).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole("button", { name: "Actions for Proxy Capable" })
     )
-    fireEvent.click(screen.getByText("Proxy key"))
-
-    expect(screen.getByText("Proxy key for Proxy Capable")).toBeInTheDocument()
-    expect(screen.getByLabelText("Scrape.do API token")).toBeInTheDocument()
-    expect(screen.getByText("Remove saved key")).toBeInTheDocument()
+    expect(screen.queryByText("Proxy key")).not.toBeInTheDocument()
   })
 })

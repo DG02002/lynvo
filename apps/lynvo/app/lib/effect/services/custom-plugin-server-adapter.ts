@@ -28,6 +28,10 @@ import {
   getPluginServerMetadata,
   mapPluginServerExtractionResult,
 } from "./plugin-server-result-mapping"
+import {
+  isSupportedProxyProvider,
+  SCRAPE_DO_PROXY_PROVIDER,
+} from "../../plugin-server-proxy"
 
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
@@ -213,9 +217,15 @@ export const extractFromCustomPluginServer = Effect.fn(
     : undefined
   const proxy: ProxyCredential | undefined =
     manifest &&
-    getLynvoManifestExtension(manifest).proxyProvider === "scrape-do" &&
+    pluginServer.proxyEnabled &&
+    isSupportedProxyProvider(
+      getLynvoManifestExtension(manifest).proxyProvider
+    ) &&
     pluginServer.proxyToken
-      ? { provider: "scrape-do", token: pluginServer.proxyToken }
+      ? {
+          provider: SCRAPE_DO_PROXY_PROVIDER,
+          token: pluginServer.proxyToken,
+        }
       : undefined
   const client = createCustomPluginServerClient(pluginServer)
   const resultValue = yield* requestPluginServer(

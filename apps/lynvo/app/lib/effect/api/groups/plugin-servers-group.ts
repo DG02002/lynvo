@@ -1,6 +1,11 @@
 import { Schema } from "effect"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+import {
+  HttpApiEndpoint,
+  HttpApiGroup,
+  HttpApiSchema,
+} from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../middleware"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../../constants"
 import {
   UnauthorizedApiError,
   CsrfApiError,
@@ -13,10 +18,30 @@ import {
   MutationResultSchema,
   PluginServerListSchema,
   PluginServerUsageListSchema,
+  RefreshProxyBalanceResponseSchema,
   SetProxyKeyPayloadSchema,
   SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
+  VersionedMutationResultSchema,
 } from "../../../api-contracts"
+
+const dataVersionHeaders = {
+  [DATA_VERSION_RESPONSE_HEADER]: Schema.Number,
+}
+
+const withDataVersionResponseSchema = <S extends Schema.Top>(schema: S) =>
+  HttpApiSchema.WithHeaders(schema, dataVersionHeaders)
+
+const VersionedMutationResponseSchema = withDataVersionResponseSchema(
+  VersionedMutationResultSchema
+)
+
+const SetProxyKeyResponseWithHeadersSchema = withDataVersionResponseSchema(
+  SetProxyKeyResponseSchema
+)
+
+const RefreshProxyBalanceResponseWithHeadersSchema =
+  withDataVersionResponseSchema(RefreshProxyBalanceResponseSchema)
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
@@ -47,6 +72,14 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
+    HttpApiEndpoint.post("toggleProxy", "/:pluginServerId/proxy/toggle", {
+      params: {
+        pluginServerId: Schema.String,
+      },
+      payload: TogglePluginServerPayloadSchema,
+      success: VersionedMutationResponseSchema,
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+    }),
     HttpApiEndpoint.post("refresh", "/:pluginServerId/refresh", {
       params: {
         pluginServerId: Schema.String,
@@ -59,12 +92,12 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         CsrfApiError,
       ],
     }),
-    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy-key", {
+    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy/key", {
       params: {
         pluginServerId: Schema.String,
       },
       payload: SetProxyKeyPayloadSchema,
-      success: SetProxyKeyResponseSchema,
+      success: SetProxyKeyResponseWithHeadersSchema,
       error: [
         PluginServerRegistrationApiError,
         ValidationApiError,
@@ -73,6 +106,22 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         CsrfApiError,
       ],
     }),
+    HttpApiEndpoint.post(
+      "refreshProxyBalance",
+      "/:pluginServerId/proxy/balance/refresh",
+      {
+        params: {
+          pluginServerId: Schema.String,
+        },
+        success: RefreshProxyBalanceResponseWithHeadersSchema,
+        error: [
+          PluginServerRegistrationApiError,
+          UnauthorizedApiError,
+          BackendApiError,
+          CsrfApiError,
+        ],
+      }
+    ),
     HttpApiEndpoint.delete("delete", "/:pluginServerId", {
       params: {
         pluginServerId: Schema.String,

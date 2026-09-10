@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Activity03Icon,
+  Globe02Icon,
   HardDriveIcon,
   Key01Icon,
   PlayIcon,
@@ -39,6 +40,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
         name: user.name,
         sid: user.sid,
       },
+      requestOrigin: new URL(request.url).origin,
     },
     sessionResult,
     request,
@@ -50,6 +52,7 @@ const settingsTabs = [
   { value: "account", label: "Account", icon: UserCircleIcon },
   { value: "security", label: "Security and login", icon: Key01Icon },
   { value: "plugins", label: "Plugins", icon: Plug02Icon },
+  { value: "proxy", label: "Proxy", icon: Globe02Icon },
   { value: "usage", label: "Usage", icon: Activity03Icon },
   { value: "storage", label: "Storage", icon: HardDriveIcon },
   { value: "player", label: "Player", icon: PlayIcon },
@@ -101,7 +104,7 @@ const SettingsNavigation = ({ mobile = false }: { mobile?: boolean }) => (
 )
 
 export default function SettingsLayout() {
-  const { user } = useLoaderData<typeof loader>()
+  const { user, requestOrigin } = useLoaderData<typeof loader>()
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-6 md:px-8 md:py-10">
       <div className="mb-6 text-center md:mb-10">
@@ -119,7 +122,9 @@ export default function SettingsLayout() {
           </div>
         </div>
         <div className="min-w-0 flex-1 py-2 sm:px-4 md:px-8 md:py-0">
-          <Outlet context={{ user } satisfies SettingsOutletContext} />
+          <Outlet
+            context={{ user, requestOrigin } satisfies SettingsOutletContext}
+          />
         </div>
       </div>
     </div>

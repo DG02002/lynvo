@@ -31,6 +31,7 @@ describe("settings routes", () => {
 
   it("builds canonical path-based settings URLs", () => {
     expect(getSettingsPath("plugins")).toBe("/settings/plugins")
+    expect(getSettingsPath("proxy")).toBe("/settings/proxy")
     expect(getSettingsPath("security", "active-sessions")).toBe(
       "/settings/security/active-sessions"
     )

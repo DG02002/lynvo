@@ -43,6 +43,16 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
+    date: "Sep 10, 2026",
+    dateTime: "2026-09-10",
+    title: "Proxy keys have their own settings tab",
+    category: "Product",
+    description: [
+      "Manage a proxy key for each supported Custom Plugin Server from Settings > Proxy. See your Scrape.do balance, refresh it without re-entering the key, and turn proxy use on or off per server.",
+    ],
+  },
+  {
+    type: "general",
     date: "Aug 31, 2026",
     dateTime: "2026-08-31",
     title: "The Save page now has List and Hybrid views",

@@ -43,6 +43,7 @@ export interface PluginServerRecord {
   proxyBalanceRemaining: number | null
   proxyBalanceLimit: number | null
   proxyBalanceCheckedAt: number | null
+  proxyEnabled: boolean
   credentialStatus: "pending" | "ready" | "failed"
   credentialGeneration: number | null
   credentialAttemptId: string | null
@@ -74,6 +75,7 @@ const mapPluginServerRow = (row: PluginServerRow): PluginServerRecord => ({
   proxyBalanceRemaining: row.proxy_balance_remaining,
   proxyBalanceLimit: row.proxy_balance_limit,
   proxyBalanceCheckedAt: row.proxy_balance_checked_at,
+  proxyEnabled: row.proxy_enabled === 1,
   credentialStatus: row.credential_status,
   credentialGeneration: row.credential_generation,
   credentialAttemptId: row.credential_attempt_id,
@@ -100,15 +102,16 @@ const normalizeBaseUrl = (baseUrl: string): string => {
   return url.toString().replace(/\/$/, "")
 }
 
-const findPluginServerRow = async (
+const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
+
+const findOwnedPluginServerRow = async (
   database: D1Database,
+  userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow | null> => {
   const row = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1`
-    )
-    .bind(pluginServerId)
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE id = ?1 AND user_id = ?2`)
+    .bind(pluginServerId, userId)
     .first<PluginServerRow>()
   return row ?? null
 }
@@ -118,8 +121,12 @@ const requireOwnedPluginServerRow = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow> => {
-  const existing = await findPluginServerRow(database, pluginServerId)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findOwnedPluginServerRow(
+    database,
+    userId,
+    pluginServerId
+  )
+  if (!existing) {
     throw new Error("Plugin server not found or no longer available")
   }
   return existing
@@ -184,6 +191,8 @@ export interface PublicPluginServerRecord {
   hasProxyKey: boolean
   proxyBalanceRemaining: number | null
   proxyBalanceLimit: number | null
+  proxyBalanceCheckedAt: number | null
+  proxyEnabled: boolean
   lastVerifiedAt: number | null
   lastManifestRefreshAt: number | null
   createdAt: number
@@ -203,6 +212,8 @@ const toPublicPluginServer = (
   hasProxyKey: Boolean(record.proxyTokenCiphertext),
   proxyBalanceRemaining: record.proxyBalanceRemaining,
   proxyBalanceLimit: record.proxyBalanceLimit,
+  proxyBalanceCheckedAt: record.proxyBalanceCheckedAt,
+  proxyEnabled: record.proxyEnabled,
   lastVerifiedAt: record.lastVerifiedAt,
   lastManifestRefreshAt: record.lastManifestRefreshAt,
   createdAt: record.createdAt,
@@ -214,9 +225,7 @@ export const listPluginServers = async (
   userId: string
 ): Promise<PublicPluginServerRecord[]> => {
   const { results } = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
-    )
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1`)
     .bind(userId)
     .all<PluginServerRow>()
   const pluginServers: PublicPluginServerRecord[] = []
@@ -226,6 +235,15 @@ export const listPluginServers = async (
     }
   }
   return pluginServers
+}
+
+export const findOwnedPluginServerById = async (
+  database: D1Database,
+  userId: string,
+  pluginServerId: string
+): Promise<PluginServerRecord | null> => {
+  const row = await findOwnedPluginServerRow(database, userId, pluginServerId)
+  return row ? mapPluginServerRow(row) : null
 }
 
 export interface ServicePluginServerRecord extends PublicPluginServerRecord {
@@ -244,9 +262,7 @@ export const listReadyPluginServersForService = async (
   userId: string
 ): Promise<ServicePluginServerRecord[]> => {
   const { results } = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
-    )
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1`)
     .bind(userId)
     .all<PluginServerRow>()
   return results.flatMap((row) =>
@@ -342,9 +358,7 @@ export const beginPluginServerRegistration = async (
   const attemptId = crypto.randomUUID()
   const [{ results }, initialPreparation] = await Promise.all([
     database
-      .prepare(
-        `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2`
-      )
+      .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1 LIMIT ?2`)
       .bind(userId, CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT + 1)
       .all<PluginServerRow>(),
     ensureStorageLedger(database, userId, input.now),
@@ -428,6 +442,7 @@ export const beginPluginServerRegistration = async (
     proxy_balance_remaining: null,
     proxy_balance_limit: null,
     proxy_balance_checked_at: null,
+    proxy_enabled: 1,
     credential_status: "pending",
     credential_generation: 1,
     credential_attempt_id: attemptId,
@@ -461,7 +476,7 @@ export const beginPluginServerRegistration = async (
       ...cleanupStatements,
       database
         .prepare(
-          "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)"
+          "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, proxy_enabled, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)"
         )
         .bind(
           newRow.id,
@@ -483,6 +498,7 @@ export const beginPluginServerRegistration = async (
           newRow.verification_status,
           newRow.last_verified_at,
           newRow.last_manifest_refresh_at,
+          newRow.proxy_enabled,
           newRow.created_at,
           newRow.updated_at
         ),
@@ -514,8 +530,8 @@ export const finalizePluginServerCredential = async (
   userId: string,
   input: FinalizeCredentialInput & { now: number }
 ): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await findPluginServerRow(database, input.id)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findOwnedPluginServerRow(database, userId, input.id)
+  if (!existing) {
     throw new Error("Plugin server credential cannot be finalized")
   }
   if (
@@ -585,8 +601,8 @@ export const markPluginServerRegistrationFailed = async (
     now: number
   }
 ): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await findPluginServerRow(database, input.id)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findOwnedPluginServerRow(database, userId, input.id)
+  if (!existing) {
     throw new Error("Plugin server registration not found")
   }
   if (
@@ -626,7 +642,7 @@ export const expireStalePluginServerRegistrations = async (
 ): Promise<{ expired: number }> => {
   const { results } = await database
     .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
+      `${PLUGIN_SERVER_SELECT} WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
     )
     .bind(now, PLUGIN_SERVER_REGISTRATION_SWEEP_BATCH_SIZE)
     .all<PluginServerRow>()
@@ -793,13 +809,23 @@ export const recordPluginServerRefreshSuccess = async (
   return { success: true, dataVersion }
 }
 
-export const setPluginServerEnabled = async (
+type PluginServerBooleanColumn = "enabled" | "proxy_enabled"
+
+interface PluginServerBooleanInput {
+  readonly id: string
+  readonly enabled: boolean
+  readonly now: number
+  readonly column: PluginServerBooleanColumn
+}
+
+const setPluginServerBoolean = async (
   database: D1Database,
   userId: string,
-  input: { id: string; enabled: boolean; now: number }
+  input: PluginServerBooleanInput
 ): Promise<{ success: boolean; dataVersion: number }> => {
+  const { column } = input
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  if ((existing.enabled === 1) === input.enabled) {
+  if ((existing[column] === 1) === input.enabled) {
     return {
       success: true,
       dataVersion: await getDataVersion(database, userId),
@@ -807,7 +833,7 @@ export const setPluginServerEnabled = async (
   }
   const nextRow: PluginServerRow = {
     ...existing,
-    enabled: input.enabled ? 1 : 0,
+    [column]: input.enabled ? 1 : 0,
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
@@ -815,7 +841,7 @@ export const setPluginServerEnabled = async (
     database,
     preparation,
     pluginServerId: existing.id,
-    columns: ["enabled"],
+    columns: [column],
     currentRow: existing,
     nextRow,
     now: input.now,
@@ -827,6 +853,23 @@ export const setPluginServerEnabled = async (
   })
   return { success: true, dataVersion }
 }
+
+export const setPluginServerEnabled = async (
+  database: D1Database,
+  userId: string,
+  input: { id: string; enabled: boolean; now: number }
+): Promise<{ success: boolean; dataVersion: number }> =>
+  setPluginServerBoolean(database, userId, { ...input, column: "enabled" })
+
+export const setPluginServerProxyEnabled = async (
+  database: D1Database,
+  userId: string,
+  input: { id: string; enabled: boolean; now: number }
+): Promise<{ success: boolean; dataVersion: number }> =>
+  setPluginServerBoolean(database, userId, {
+    ...input,
+    column: "proxy_enabled",
+  })
 
 export interface PluginServerProxyBalanceUpdate {
   readonly id: string
@@ -841,19 +884,35 @@ export const updatePluginServerProxyBalance = async (
   database: D1Database,
   userId: string,
   input: PluginServerProxyBalanceUpdate
-): Promise<void> => {
-  await database
-    .prepare(
-      "UPDATE user_plugin_servers SET proxy_balance_remaining = ?2, proxy_balance_limit = ?3, proxy_balance_checked_at = ?4 WHERE id = ?1 AND user_id = ?5"
-    )
-    .bind(
-      input.id,
-      input.balance.remaining,
-      input.balance.limit,
-      input.now,
-      userId
-    )
-    .run()
+): Promise<{ success: boolean; dataVersion: number }> => {
+  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
+  const nextRow: PluginServerRow = {
+    ...existing,
+    proxy_balance_remaining: input.balance.remaining,
+    proxy_balance_limit: input.balance.limit,
+    proxy_balance_checked_at: input.now,
+    updated_at: input.now,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  const mutation = buildServerMutationStatements({
+    database,
+    preparation,
+    pluginServerId: existing.id,
+    columns: [
+      "proxy_balance_remaining",
+      "proxy_balance_limit",
+      "proxy_balance_checked_at",
+    ],
+    currentRow: existing,
+    nextRow,
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
+  return { success: true, dataVersion }
 }
 
 export interface PluginServerProxyKeyUpdate {

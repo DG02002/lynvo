@@ -2,6 +2,7 @@ import * as React from "react"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { client } from "~/lib/api/client"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
 import { usePluginDomainDrafts } from "./use-plugin-domain-drafts"
 import { usePluginSettingsOperations } from "./use-plugin-settings-operations"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
@@ -30,12 +31,9 @@ export interface CustomPluginServer {
   hasProxyKey: boolean
   proxyBalanceRemaining?: number | null
   proxyBalanceLimit?: number | null
+  proxyBalanceCheckedAt?: number | null
+  proxyEnabled: boolean
   lastManifestRefreshAt?: number | null
-}
-
-export interface ProxyKeyMutationResult {
-  readonly remaining: number | null
-  readonly limit: number | null
 }
 
 export interface CreatePluginDomainInput {
@@ -80,7 +78,14 @@ export interface PluginSettingsCommands {
   readonly setPluginServerProxyKey: (
     pluginServerId: string,
     token: string
-  ) => Promise<PluginSettingsMutationResult & ProxyKeyMutationResult>
+  ) => Promise<PluginSettingsMutationResult>
+  readonly togglePluginServerProxy: (
+    pluginServerId: string,
+    enabled: boolean
+  ) => Promise<PluginSettingsMutationResult>
+  readonly refreshPluginServerProxyBalance: (
+    pluginServerId: string
+  ) => Promise<PluginSettingsMutationResult>
 }
 
 export interface PluginSettingsOperation {
@@ -127,6 +132,15 @@ const defaultCommands: PluginSettingsCommands = {
     await client.pluginServers.setProxyKey({
       params: { pluginServerId },
       payload: { token },
+    }),
+  togglePluginServerProxy: async (pluginServerId, enabled) =>
+    await client.pluginServers.toggleProxy({
+      params: { pluginServerId },
+      payload: { enabled },
+    }),
+  refreshPluginServerProxyBalance: async (pluginServerId) =>
+    await client.pluginServers.refreshProxyBalance({
+      params: { pluginServerId },
     }),
 }
 
@@ -302,17 +316,49 @@ export const usePluginSettingsInteraction = ({
 
   const handleSetPluginServerProxyKey = React.useCallback(
     async (id: string, token: string) => {
-      const balance = await run({
+      const isRemoving = isProxyTokenRemoval(token)
+      const didComplete = await run({
         key: `proxy-key:${id}`,
         operation: () => commands.setPluginServerProxyKey(id, token),
         messages: {
-          success:
-            token.trim() === "" ? "Proxy key removed" : "Proxy key saved",
-          failure: "The proxy key couldn’t be saved. Try again.",
+          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
+          failure: isRemoving
+            ? "The proxy key couldn’t be removed. Try again."
+            : "The proxy key couldn’t be saved. Try again.",
         },
         target: "server",
       })
-      return balance
+      return didComplete
+    },
+    [commands, run]
+  )
+
+  const handleTogglePluginServerProxy = React.useCallback(
+    async (id: string, enabled: boolean) => {
+      await run({
+        key: `proxy-toggle:${id}`,
+        operation: () => commands.togglePluginServerProxy(id, !enabled),
+        messages: {
+          success: enabled ? "Proxy disabled" : "Proxy enabled",
+          failure: "The proxy setting couldn’t be updated. Try again.",
+        },
+        target: "server",
+      })
+    },
+    [commands, run]
+  )
+
+  const handleRefreshPluginServerProxyBalance = React.useCallback(
+    async (id: string) => {
+      await run({
+        key: `proxy-balance:${id}`,
+        operation: () => commands.refreshPluginServerProxyBalance(id),
+        messages: {
+          success: "Proxy balance refreshed",
+          failure: "The proxy balance couldn’t be refreshed. Try again.",
+        },
+        target: "server",
+      })
     },
     [commands, run]
   )
@@ -346,6 +392,8 @@ export const usePluginSettingsInteraction = ({
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleSetPluginServerProxyKey,
+    handleTogglePluginServerProxy,
+    handleRefreshPluginServerProxyBalance,
     handleTogglePluginServer,
   }
 }

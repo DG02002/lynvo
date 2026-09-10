@@ -30,6 +30,8 @@ describe("Plugin settings browser data", () => {
               hasProxyKey: false,
               proxyBalanceRemaining: null,
               proxyBalanceLimit: null,
+              proxyBalanceCheckedAt: null,
+              proxyEnabled: true,
               createdAt: 1,
               updatedAt: 1,
             },

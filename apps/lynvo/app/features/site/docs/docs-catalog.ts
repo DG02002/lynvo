@@ -179,7 +179,9 @@ if (orderedPages.length !== pagesBySlug.size) {
 const getGroups = (
   page: DocumentationPage
 ): readonly DocumentationChapterGroup[] =>
-  page.slug === "android-tv" ? [rootGroups[0]] : pluginServerGroups
+  rootGroups.some((group) => group.pages.includes(page))
+    ? rootGroups
+    : pluginServerGroups
 
 const getContext = (slug: string): DocumentationPageContext | undefined => {
   const page = pagesBySlug.get(slug)

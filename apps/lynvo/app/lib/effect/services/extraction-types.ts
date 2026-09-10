@@ -70,6 +70,8 @@ export interface RegisteredPluginServer {
   readonly apiKey: string
   /** Decrypted user proxy key; sent per extraction when the server declares the capability. */
   readonly proxyToken?: string
+  /** Whether Lynvo may send the user's proxy key to this server. */
+  readonly proxyEnabled: boolean
   readonly manifest: string
   readonly enabled: boolean
   readonly priority: number

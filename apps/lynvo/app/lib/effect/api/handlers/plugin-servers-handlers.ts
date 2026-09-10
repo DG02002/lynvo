@@ -1,7 +1,8 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../../constants"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
@@ -10,13 +11,25 @@ import {
   deletePluginServerById,
   listPluginServers,
   setPluginServerEnabled,
+  setPluginServerProxyEnabled,
 } from "../../../../../workers/d1/plugin-servers"
 import {
   readCustomPluginServerUsage,
   refreshCustomPluginServer,
   registerCustomPluginServer,
 } from "../../services/custom-plugin-server-lifecycle"
-import { saveCustomPluginServerProxyKey } from "../../services/custom-plugin-server-proxy-key"
+import {
+  refreshCustomPluginServerProxyBalance,
+  saveCustomPluginServerProxyKey,
+} from "../../services/custom-plugin-server-proxy-key"
+
+const withDataVersionHeaders = <Body extends { readonly dataVersion: number }>(
+  body: Body
+) =>
+  HttpApiSchema.withHeaders({
+    body,
+    headers: { [DATA_VERSION_RESPONSE_HEADER]: body.dataVersion },
+  })
 
 export const PluginServersHandlers = HttpApiBuilder.group(
   Api,
@@ -103,6 +116,39 @@ export const PluginServersHandlers = HttpApiBuilder.group(
           return { success: true }
         })
       )
+      .handle("toggleProxy", ({ params, payload }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          const environment = yield* CloudflareEnv
+          const database = getD1Database(environment)
+          const requestEvent = yield* RequestEventService
+          requestEvent.add({
+            operation: "plugin_server_proxy_toggle",
+            user_id: user.id,
+            plugin_server_id: params.pluginServerId,
+            plugin_server_proxy_enabled: payload.enabled,
+          })
+          if (!database) {
+            return yield* new BackendError({
+              message: "Account data is temporarily unavailable",
+            })
+          }
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              setPluginServerProxyEnabled(database, user.id, {
+                id: params.pluginServerId,
+                enabled: payload.enabled,
+                now: Date.now(),
+              }),
+            catch: (cause) =>
+              new BackendError({
+                message: "The proxy setting couldn’t be updated",
+                cause,
+              }),
+          })
+          return withDataVersionHeaders(result)
+        })
+      )
       .handle("refresh", ({ params }) =>
         Effect.gen(function* () {
           const user = yield* CurrentUser
@@ -133,7 +179,23 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             token: payload.token,
             user,
           })
-          return { success: true, ...balance }
+          return withDataVersionHeaders({ success: true, ...balance })
+        })
+      )
+      .handle("refreshProxyBalance", ({ params }) =>
+        Effect.gen(function* () {
+          const user = yield* CurrentUser
+          const requestEvent = yield* RequestEventService
+          requestEvent.add({
+            operation: "plugin_server_proxy_balance_refresh",
+            user_id: user.id,
+            plugin_server_id: params.pluginServerId,
+          })
+          const result = yield* refreshCustomPluginServerProxyBalance({
+            pluginServerId: params.pluginServerId,
+            user,
+          })
+          return withDataVersionHeaders(result)
         })
       )
       .handle("delete", ({ params }) =>

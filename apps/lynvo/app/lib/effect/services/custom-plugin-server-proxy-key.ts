@@ -2,10 +2,21 @@ import { Effect, Result, Schema } from "effect"
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 import { CloudflareEnv } from "./cloudflare-env"
 import { getD1Database } from "../../../../workers/d1/db"
-import { updatePluginServerProxyKey } from "../../../../workers/d1/plugin-servers"
-import { encryptCustomPluginServerApiKey } from "./custom-plugin-server-credentials"
+import {
+  findOwnedPluginServerById,
+  updatePluginServerProxyBalance,
+  updatePluginServerProxyKey,
+} from "../../../../workers/d1/plugin-servers"
+import {
+  decryptCustomPluginServerProxyToken,
+  encryptCustomPluginServerApiKey,
+} from "./custom-plugin-server-credentials"
 import { PluginServerRegistrationError } from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
+import {
+  isProxyTokenRemoval,
+  isSupportedProxyProvider,
+} from "../../plugin-server-proxy"
 
 export interface CustomPluginServerProxyKeyUser {
   readonly id: string
@@ -21,6 +32,7 @@ export interface SaveCustomPluginServerProxyKeyInput {
 export interface ProxyKeyBalance {
   readonly remaining: number | null
   readonly limit: number | null
+  readonly dataVersion: number
 }
 
 const ScrapeDoAccountInfo = Schema.Struct({
@@ -100,12 +112,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   }
   const stored = yield* Effect.tryPromise({
     try: () =>
-      database
-        .prepare(
-          "SELECT id, manifest FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2"
-        )
-        .bind(input.pluginServerId, input.user.id)
-        .first<{ id: string; manifest: string }>(),
+      findOwnedPluginServerById(database, input.user.id, input.pluginServerId),
     catch: (cause) =>
       new PluginServerRegistrationError({
         message: "Plugin server lookup failed.",
@@ -120,15 +127,15 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   const manifest = yield* decodePluginServerManifest(stored.manifest)
   if (
     !manifest ||
-    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do"
+    !isSupportedProxyProvider(getLynvoManifestExtension(manifest).proxyProvider)
   ) {
     return yield* new PluginServerRegistrationError({
       message: "This Plugin Server does not support user proxy keys.",
     })
   }
 
-  if (input.token.trim() === "") {
-    yield* Effect.tryPromise({
+  if (isProxyTokenRemoval(input.token)) {
+    const { dataVersion } = yield* Effect.tryPromise({
       try: () =>
         updatePluginServerProxyKey(database, input.user.id, {
           id: stored.id,
@@ -142,7 +149,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
           details: cause,
         }),
     })
-    return { remaining: null, limit: null }
+    return { remaining: null, limit: null, dataVersion }
   }
 
   const token = input.token.trim()
@@ -167,7 +174,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
       (error) => new PluginServerRegistrationError({ message: error.message })
     )
   )
-  yield* Effect.tryPromise({
+  const { dataVersion } = yield* Effect.tryPromise({
     try: () =>
       updatePluginServerProxyKey(database, input.user.id, {
         id: stored.id,
@@ -186,5 +193,101 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
         details: cause,
       }),
   })
-  return balance
+  return { ...balance, dataVersion }
+})
+
+export interface RefreshCustomPluginServerProxyBalanceInput {
+  readonly pluginServerId: string
+  readonly user: CustomPluginServerProxyKeyUser
+}
+
+export const refreshCustomPluginServerProxyBalance = Effect.fn(
+  "CustomPluginServerProxyKey.refreshBalance"
+)(function* (
+  input: RefreshCustomPluginServerProxyBalanceInput
+): Effect.fn.Return<
+  {
+    success: true
+    remaining: number
+    limit: number
+    checkedAt: number
+    dataVersion: number
+  },
+  PluginServerRegistrationError,
+  CloudflareEnv
+> {
+  const environment = yield* CloudflareEnv
+  const database = getD1Database(environment)
+  if (!database) {
+    return yield* new PluginServerRegistrationError({
+      message: "Account data is temporarily unavailable.",
+    })
+  }
+
+  const pluginServer = yield* Effect.tryPromise({
+    try: () =>
+      findOwnedPluginServerById(database, input.user.id, input.pluginServerId),
+    catch: (cause) =>
+      new PluginServerRegistrationError({
+        message: "Plugin server lookup failed.",
+        details: cause,
+      }),
+  })
+  if (!pluginServer) {
+    return yield* new PluginServerRegistrationError({
+      message: "Plugin server not found.",
+    })
+  }
+
+  const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
+  if (
+    !manifest ||
+    !isSupportedProxyProvider(getLynvoManifestExtension(manifest).proxyProvider)
+  ) {
+    return yield* new PluginServerRegistrationError({
+      message: "This Plugin Server does not support user proxy keys.",
+    })
+  }
+
+  const proxyToken = yield* decryptCustomPluginServerProxyToken(
+    environment,
+    input.user.id,
+    pluginServer
+  ).pipe(
+    Effect.mapError(
+      (error) => new PluginServerRegistrationError({ message: error.message })
+    )
+  )
+  if (!proxyToken) {
+    return yield* new PluginServerRegistrationError({
+      message: "Save a proxy key before refreshing its balance.",
+    })
+  }
+
+  const balance = yield* readScrapeDoAccountInfo(proxyToken).pipe(
+    Effect.mapError(
+      (cause) =>
+        new PluginServerRegistrationError({
+          message:
+            cause instanceof Error
+              ? cause.message
+              : "The proxy balance couldn’t be refreshed.",
+        })
+    )
+  )
+  const checkedAt = Date.now()
+  const { dataVersion } = yield* Effect.tryPromise({
+    try: () =>
+      updatePluginServerProxyBalance(database, input.user.id, {
+        id: pluginServer.id,
+        balance,
+        now: checkedAt,
+      }),
+    catch: (cause) =>
+      new PluginServerRegistrationError({
+        message: "The proxy balance couldn’t be saved.",
+        details: cause,
+      }),
+  })
+  return { success: true, ...balance, checkedAt, dataVersion }
 })

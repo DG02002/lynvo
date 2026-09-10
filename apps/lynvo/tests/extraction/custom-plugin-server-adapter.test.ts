@@ -57,6 +57,33 @@ const createIncompleteStoredManifest = (
     },
   })
 
+const proxyManifest = JSON.stringify({
+  protocolVersion: "1.0",
+  pluginServerId: "dev.example.plugin-server",
+  displayName: "Example Plugin Server",
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [{ hosts: ["source.example"] }],
+  features: {},
+  extensions: {
+    lynvo: {
+      proxyProvider: "scrape-do",
+      plugins: [],
+    },
+  },
+})
+
+const createProxyPluginServer = (proxyEnabled: boolean) => ({
+  id: "pluginServer-one",
+  baseUrl: "https://plugin-server.example",
+  apiKey: "secret",
+  manifest: proxyManifest,
+  enabled: true,
+  priority: 0,
+  proxyToken: "user-proxy-token",
+  proxyEnabled,
+})
+
 describe("extractFromCustomPluginServer", () => {
   it("forwards structured Basic Auth only to plugin servers that declare support", async () => {
     const fetchMock = vi.fn(async () =>
@@ -101,6 +128,7 @@ describe("extractFromCustomPluginServer", () => {
           }),
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://viewer:s%40fe@source.example/title",
         kind: "source",
@@ -116,6 +144,66 @@ describe("extractFromCustomPluginServer", () => {
       basicAuth: {
         username: "viewer",
         password: "s@fe",
+      },
+    })
+  })
+
+  it("omits the proxy request field when proxy use is disabled", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await Effect.runPromise(
+      extractFromCustomPluginServer({
+        pluginServer: createProxyPluginServer(false),
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
+    )
+
+    const [[request]] = fetchMock.mock.calls
+    const body = await request.json()
+    expect(body).not.toHaveProperty("proxy")
+  })
+
+  it("forwards the enabled proxy key with its declared provider", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await Effect.runPromise(
+      extractFromCustomPluginServer({
+        pluginServer: createProxyPluginServer(true),
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
+    )
+
+    const [[request]] = fetchMock.mock.calls
+    expect(await request.json()).toMatchObject({
+      input: {
+        kind: "source",
+        sourceUrl: "https://source.example/title",
+      },
+      proxy: {
+        provider: "scrape-do",
+        token: "user-proxy-token",
       },
     })
   })
@@ -165,6 +253,7 @@ describe("extractFromCustomPluginServer", () => {
           manifest: "{}",
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://source.example/title",
         kind: "source",
@@ -236,6 +325,7 @@ describe("extractFromCustomPluginServer", () => {
           }),
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         "https://plugin-source-alpha.example/file"
       )
@@ -289,6 +379,7 @@ describe("extractFromCustomPluginServer", () => {
           manifest: "{}",
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://source.example/title",
         kind: "source",
@@ -315,6 +406,7 @@ describe("selectCustomPluginServer", () => {
       manifest: createIncompleteStoredManifest("usage"),
       enabled: true,
       priority: 0,
+      proxyEnabled: true,
       verificationStatus: "down",
     }
 
@@ -343,6 +435,7 @@ describe("selectCustomPluginServer", () => {
         manifest: createIncompleteStoredManifest(missingField),
         enabled: true,
         priority: 0,
+        proxyEnabled: true,
         verificationStatus: "verified",
       }
 
@@ -362,6 +455,7 @@ describe("selectCustomPluginServer", () => {
       manifest: "not-json",
       enabled: true,
       priority: 0,
+      proxyEnabled: true,
       verificationStatus: "verified",
     }
 

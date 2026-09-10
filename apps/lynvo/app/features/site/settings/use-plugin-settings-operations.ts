@@ -53,7 +53,10 @@ export const usePluginSettingsOperations = ({
           throw new Error(messages.failure)
         }
         await reloadPluginSettings()
-        setter((current) => ({ ...current, [key]: { status: "success" } }))
+        setter((current) => ({
+          ...current,
+          [key]: { status: "success" },
+        }))
         if (feedback && messages.success) {
           showSuccessToast({ title: messages.success })
         }

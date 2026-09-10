@@ -2,7 +2,7 @@
   "groups": [
     {
       "title": "Using Lynvo",
-      "pages": ["android-tv"]
+      "pages": ["android-tv", "proxy-keys"]
     },
     {
       "title": "Plugin Servers",

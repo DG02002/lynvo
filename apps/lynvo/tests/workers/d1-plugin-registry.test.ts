@@ -11,6 +11,9 @@ import {
   recordPluginServerVerificationFailure,
   recordPluginServerVerificationSuccess,
   setPluginServerEnabled,
+  setPluginServerProxyEnabled,
+  updatePluginServerProxyBalance,
+  updatePluginServerProxyKey,
 } from "../../workers/d1/plugin-servers"
 import {
   beginPluginDomainCredentialChange,
@@ -276,12 +279,18 @@ describe("d1 plugin registry", () => {
       enabled: false,
       now: NOW + 2_000,
     })
+    await setPluginServerProxyEnabled(env.DB, user.id, {
+      id: registration.id,
+      enabled: false,
+      now: NOW + 2_500,
+    })
     const enabledRow = await env.DB.prepare(
-      "SELECT enabled FROM user_plugin_servers WHERE id = ?1"
+      "SELECT enabled, proxy_enabled FROM user_plugin_servers WHERE id = ?1"
     )
       .bind(registration.id)
-      .first<{ enabled: number }>()
+      .first<{ enabled: number; proxy_enabled: number }>()
     expect(enabledRow?.enabled).toBe(0)
+    expect(enabledRow?.proxy_enabled).toBe(0)
 
     await deletePluginServerById(env.DB, user.id, {
       id: registration.id,
@@ -306,6 +315,74 @@ describe("d1 plugin registry", () => {
     expect(domainRows?.count).toBe(0)
     expect(credentialRows?.count).toBe(0)
     await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("stores proxy balances and clears all proxy data when the key is removed", async () => {
+    const user = await createUser()
+    const registration = await registerReadyServer(
+      user.id,
+      "https://proxy.example"
+    )
+
+    const saved = await updatePluginServerProxyKey(env.DB, user.id, {
+      id: registration.id,
+      encrypted: credential(),
+      balance: { remaining: 973, limit: 1_000 },
+      now: NOW + 1_000,
+    })
+    expect(saved.dataVersion).toBeGreaterThan(0)
+    await updatePluginServerProxyBalance(env.DB, user.id, {
+      id: registration.id,
+      balance: { remaining: 950, limit: 1_000 },
+      now: NOW + 2_000,
+    })
+
+    let row = await env.DB.prepare(
+      "SELECT proxy_token_ciphertext, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at FROM user_plugin_servers WHERE id = ?1"
+    )
+      .bind(registration.id)
+      .first<{
+        proxy_token_ciphertext: string | null
+        proxy_balance_remaining: number | null
+        proxy_balance_limit: number | null
+        proxy_balance_checked_at: number | null
+      }>()
+    expect(row).toMatchObject({
+      proxy_token_ciphertext: "ciphertext",
+      proxy_balance_remaining: 950,
+      proxy_balance_limit: 1_000,
+      proxy_balance_checked_at: NOW + 2_000,
+    })
+
+    const removed = await updatePluginServerProxyKey(env.DB, user.id, {
+      id: registration.id,
+      encrypted: null,
+      balance: null,
+      now: NOW + 3_000,
+    })
+    expect(removed.dataVersion).toBeGreaterThan(saved.dataVersion)
+    row = await env.DB.prepare(
+      "SELECT proxy_token_ciphertext, proxy_token_nonce, proxy_token_algorithm, proxy_token_version, proxy_balance_remaining, proxy_balance_limit, proxy_balance_checked_at FROM user_plugin_servers WHERE id = ?1"
+    )
+      .bind(registration.id)
+      .first<{
+        proxy_token_ciphertext: string | null
+        proxy_token_nonce: string | null
+        proxy_token_algorithm: string | null
+        proxy_token_version: number | null
+        proxy_balance_remaining: number | null
+        proxy_balance_limit: number | null
+        proxy_balance_checked_at: number | null
+      }>()
+    expect(row).toEqual({
+      proxy_token_ciphertext: null,
+      proxy_token_nonce: null,
+      proxy_token_algorithm: null,
+      proxy_token_version: null,
+      proxy_balance_remaining: null,
+      proxy_balance_limit: null,
+      proxy_balance_checked_at: null,
+    })
   })
 
   it("upserts domains, reassigns plugins, and manages credentials", async () => {

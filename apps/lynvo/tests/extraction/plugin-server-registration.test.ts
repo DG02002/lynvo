@@ -244,6 +244,7 @@ describe("Plugin Server registration", () => {
           manifest: "{}",
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
       })
     )

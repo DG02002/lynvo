@@ -5,6 +5,7 @@ export const SETTINGS_TAB_VALUES = [
   "account",
   "security",
   "plugins",
+  "proxy",
   "usage",
   "storage",
   "player",
@@ -19,10 +20,14 @@ export interface SettingsOutletContext {
     readonly name?: string | null
     readonly sid: string
   }
+  readonly requestOrigin: string
 }
 
 export const useSettingsUser = () =>
   useOutletContext<SettingsOutletContext>().user
+
+export const useSettingsRequestOrigin = () =>
+  useOutletContext<SettingsOutletContext>().requestOrigin
 
 export interface SettingsRoute {
   activeTab: SettingsTab
