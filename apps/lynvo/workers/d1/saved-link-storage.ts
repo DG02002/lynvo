@@ -1,5 +1,9 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
 import type { LinkRow } from "./rows"
+import {
+  SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
+  type SavedLinkMetaAppliedLink,
+} from "./saved-link-meta-applied"
 
 export const SAVED_LINK_COLUMNS =
   "id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at"
@@ -60,13 +64,30 @@ export const reserveSavedLinkCommandOperation = async (
 
 export const createReservedSavedLinkOperationLinkStatement = (
   database: D1Database,
-  input: { userId: string; operationId: string; linkId: string }
-): D1PreparedStatement =>
-  database
+  input: {
+    userId: string
+    operationId: string
+    linkId: string
+    appliedLink?: SavedLinkMetaAppliedLink
+  }
+): D1PreparedStatement => {
+  const baseSql =
+    "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+  return database
     .prepare(
-      "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+      input.appliedLink
+        ? `${baseSql} AND EXISTS (${SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL})`
+        : baseSql
     )
-    .bind(input.userId, input.operationId, input.linkId)
+    .bind(
+      input.userId,
+      input.operationId,
+      input.linkId,
+      ...(input.appliedLink
+        ? [input.appliedLink.metaJson, input.appliedLink.updatedAt]
+        : [])
+    )
+}
 
 export const releaseReservedSavedLinkCommandOperation = async (
   database: D1Database,

@@ -29,6 +29,10 @@ import {
   executeOwnedWrite,
   getDataVersion,
 } from "../../workers/d1/data-version"
+import {
+  calculateAppOwnedStorageUsage,
+  getStorageLedger,
+} from "../../workers/d1/storage-ledger"
 import type { ExtractedLink } from "../../app/features/links/types"
 import { getSavedLinkExtractionCredential } from "../../workers/d1/saved-link-extraction-credentials"
 
@@ -363,6 +367,103 @@ describe("d1 links", () => {
     expect(metadata.playback.resolvedMirrors["https://lazy.example"]).toEqual([
       playableLink,
     ])
+  })
+
+  it("keeps both concurrent markOpened writes instead of dropping one", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "race:create",
+      url: "https://source.example/race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const results = await Promise.all([
+      applySavedLinkMetadataOperation(env.DB, user.id, {
+        operationId: "race:opened:one",
+        id: linkId,
+        operation: {
+          kind: "markOpened",
+          linkUrl: "https://media.example/one.mp4",
+        },
+        now: NOW + 1_000,
+      }),
+      applySavedLinkMetadataOperation(env.DB, user.id, {
+        operationId: "race:opened:two",
+        id: linkId,
+        operation: {
+          kind: "markOpened",
+          linkUrl: "https://media.example/two.mp4",
+        },
+        now: NOW + 1_000,
+      }),
+    ])
+    expect(results.map((result) => result.success)).toEqual([true, true])
+    expect(results.map((result) => result.replayed)).toEqual([false, false])
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+    const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
+    expect([...metadata.playback.openedUrls].toSorted()).toEqual([
+      "https://media.example/one.mp4",
+      "https://media.example/two.mp4",
+    ])
+    expect(snapshot.dataVersion).toBe(created.dataVersion + 2)
+    const [ledger, usage] = await Promise.all([
+      getStorageLedger(env.DB, user.id),
+      calculateAppOwnedStorageUsage(env.DB, user.id),
+    ])
+    expect(ledger?.linkBytes).toBe(usage.linkBytes)
+  })
+
+  it("recovers a concurrent updateMeta race and lands the last payload", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "meta-race:create",
+      url: "https://example.com/meta-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const metadataJsonForLabel = (label: string) =>
+      JSON.stringify({
+        schemaVersion: 3,
+        source: {},
+        extraction: { extractedLinks: [{ ...playableLink, label }] },
+        playback: { openedUrls: [], resolvedMirrors: {} },
+      })
+    const results = await Promise.all([
+      updateSavedLinkMeta(env.DB, user.id, {
+        operationId: "meta-race:first",
+        id: linkId,
+        meta: metadataJsonForLabel("One"),
+        now: NOW + 1_000,
+      }),
+      updateSavedLinkMeta(env.DB, user.id, {
+        operationId: "meta-race:second",
+        id: linkId,
+        meta: metadataJsonForLabel("Two"),
+        now: NOW + 1_000,
+      }),
+    ])
+    expect(results.map((result) => result.success)).toEqual([true, true])
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+    const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
+    expect(metadata.extraction.extractedLinks[0]?.label).toBe("Two")
+    expect(snapshot.dataVersion).toBe(created.dataVersion + 2)
+    const replay = await updateSavedLinkMeta(env.DB, user.id, {
+      operationId: "meta-race:second",
+      id: linkId,
+      meta: metadataJsonForLabel("Two"),
+      now: NOW + 3_000,
+    })
+    expect(replay.replayed).toBe(true)
   })
 
   it("does not resurrect a removed child and rejects stale replacement", async () => {

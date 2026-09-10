@@ -24,6 +24,7 @@ import {
   createDataVersionBumpStatement,
   executeOwnedWrite,
   getDataVersion,
+  type OwnedWriteResult,
 } from "./data-version"
 import {
   assertLinkSize,
@@ -41,6 +42,7 @@ import {
   reserveSavedLinkCommandOperation,
   SAVED_LINK_COLUMNS,
 } from "./saved-link-storage"
+import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
   createConditionalDeleteSavedLinkExtractionCredentialStatement,
   createUpsertSavedLinkExtractionCredentialStatement,
@@ -105,15 +107,6 @@ export interface SavedLinkMutationResult {
 
 interface ResolvedMirrorsByUrl {
   [lazyItemUrl: string]: ExtractedLink[]
-}
-
-interface SavedLinkMetadataWriteInput {
-  database: D1Database
-  userId: string
-  operationId: string
-  existingRow: LinkRow
-  nextRow: LinkRow
-  now: number
 }
 
 interface CreateOrUpdateSavedLinkInput {
@@ -415,19 +408,36 @@ const createSavedLinkMetadataNextRow = ({
   }
 }
 
-const executeSavedLinkMetadataWrite = async ({
+interface GuardedSavedLinkMetaWriteInput {
+  readonly database: D1Database
+  readonly userId: string
+  readonly operationId: string
+  readonly existingRow: LinkRow
+  readonly nextRow: LinkRow
+  readonly updateStatement: D1PreparedStatement
+  readonly trailingStatement?: D1PreparedStatement
+}
+
+const executeGuardedSavedLinkMetaWrite = async ({
   database,
   userId,
   operationId,
   existingRow,
   nextRow,
-  now,
-}: SavedLinkMetadataWriteInput): Promise<{
-  dataVersion: number
-  changed: boolean
-}> => {
+  updateStatement,
+  trailingStatement,
+}: GuardedSavedLinkMetaWriteInput): Promise<OwnedWriteResult> => {
+  // nextRow.updated_at is the write's clock: the ledger timestamps and the
+  // applied-state guard both read it, so they cannot disagree with the
+  // UPDATE statement's updated_at binding.
+  const now = nextRow.updated_at
   const preparation = await ensureStorageLedger(database, userId, now)
   assertLinkSize(byteLength(nextRow))
+  const applied = savedLinkMetaAppliedConditions({
+    linkId: existingRow.id,
+    metaJson: nextRow.meta_json,
+    updatedAt: now,
+  })
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -438,83 +448,29 @@ const executeSavedLinkMetadataWrite = async ({
       savedLinkCountDelta: 0,
     },
     now,
+    condition: applied.ledgerCondition,
   })
   return executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
-      database
-        .prepare(
-          "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
-        )
-        .bind(
-          existingRow.id,
-          nextRow.meta_json,
-          now,
-          nextRow.extraction_state,
-          nextRow.extraction_error,
-          nextRow.extraction_available_at,
-          nextRow.extraction_lease_expires_at,
-          existingRow.meta_json
-        ),
+      updateStatement,
       ...ledgerMutation.statements,
       createReservedSavedLinkOperationLinkStatement(database, {
         userId,
         operationId,
         linkId: existingRow.id,
+        appliedLink: applied.appliedLink,
       }),
+      ...(trailingStatement ? [trailingStatement] : []),
     ],
+    guard: applied.guard,
   })
 }
 
 const canonicalizeLinkMetadataJson = (metadataJson: string): string =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
-
-const executeUpdateSavedLinkMetaAttempt = async ({
-  database,
-  userId,
-  input,
-  metadataJson,
-}: UpdateSavedLinkMetaAttemptInput): Promise<SavedLinkOptimisticMutationAttemptResult> => {
-  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
-  const nextRow: LinkRow = {
-    ...existingRow,
-    meta_json: metadataJson,
-    updated_at: input.now,
-  }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  assertLinkSize(byteLength(nextRow))
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: byteLength(existingRow),
-      nextBytes: byteLength(nextRow),
-      savedLinkCountDelta: 0,
-    },
-    now: input.now,
-  })
-  return executeOwnedWrite({
-    database,
-    userId,
-    statements: [
-      ...preparation.statements,
-      database
-        .prepare(
-          "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
-        )
-        .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
-      ...ledgerMutation.statements,
-      createReservedSavedLinkOperationLinkStatement(database, {
-        userId,
-        operationId: input.operationId,
-        linkId: existingRow.id,
-      }),
-    ],
-  })
-}
 
 const executeApplySavedLinkMetadataAttempt = async (
   database: D1Database,
@@ -534,13 +490,52 @@ const executeApplySavedLinkMetadataAttempt = async (
     operation: input.operation,
     now: input.now,
   })
-  return executeSavedLinkMetadataWrite({
+  return executeGuardedSavedLinkMetaWrite({
     database,
     userId,
     operationId: input.operationId,
     existingRow,
     nextRow,
-    now: input.now,
+    updateStatement: database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.meta_json,
+        nextRow.updated_at,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at,
+        existingRow.meta_json
+      ),
+  })
+}
+
+const executeUpdateSavedLinkMetaAttempt = async ({
+  database,
+  userId,
+  input,
+  metadataJson,
+}: UpdateSavedLinkMetaAttemptInput): Promise<SavedLinkOptimisticMutationAttemptResult> => {
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+  const nextRow: LinkRow = {
+    ...existingRow,
+    meta_json: metadataJson,
+    updated_at: input.now,
+  }
+  return executeGuardedSavedLinkMetaWrite({
+    database,
+    userId,
+    operationId: input.operationId,
+    existingRow,
+    nextRow,
+    updateStatement: database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
+      )
+      .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
   })
 }
 
@@ -777,19 +772,6 @@ const updateExistingSavedLink = async ({
     extraction_available_at: extractionState === "queued" ? input.now : null,
     extraction_lease_expires_at: null,
   }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  assertLinkSize(byteLength(nextRow))
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: byteLength(existingRow),
-      nextBytes: byteLength(nextRow),
-      savedLinkCountDelta: 0,
-    },
-    now: input.now,
-  })
   const extractionCredentialStatement =
     extractionState === "queued" && input.extractionCredential
       ? createUpsertSavedLinkExtractionCredentialStatement({
@@ -809,36 +791,30 @@ const updateExistingSavedLink = async ({
           targetUrl: nextRow.url,
           expectedLink: toSavedLinkExtractionCredentialLinkState(nextRow),
         })
-  const { dataVersion, changed } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeGuardedSavedLinkMetaWrite({
     database,
     userId,
-    statements: [
-      ...preparation.statements,
-      database
-        .prepare(
-          "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
-        )
-        .bind(
-          existingRow.id,
-          nextRow.title,
-          metadataJson,
-          input.now,
-          nextRow.expires_at,
-          nextRow.extraction_state,
-          nextRow.extraction_error,
-          nextRow.extraction_attempts,
-          nextRow.extraction_available_at,
-          nextRow.extraction_lease_expires_at,
-          existingRow.meta_json
-        ),
-      ...ledgerMutation.statements,
-      createReservedSavedLinkOperationLinkStatement(database, {
-        userId,
-        operationId: input.operationId,
-        linkId: existingRow.id,
-      }),
-      extractionCredentialStatement,
-    ],
+    operationId: input.operationId,
+    existingRow,
+    nextRow,
+    updateStatement: database
+      .prepare(
+        "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.title,
+        metadataJson,
+        input.now,
+        nextRow.expires_at,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_attempts,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at,
+        existingRow.meta_json
+      ),
+    trailingStatement: extractionCredentialStatement,
   })
   return { id: existingRow.id, dataVersion, changed }
 }
