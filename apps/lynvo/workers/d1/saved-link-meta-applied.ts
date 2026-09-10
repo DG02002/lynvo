@@ -33,16 +33,22 @@ export const SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL =
  * one ledger delta. Retries reuse the caller's `now`, so `updated_at` is
  * not monotonic across attempts; nothing reads it as a clock.
  */
+export interface SavedLinkMetaAppliedConditions {
+  readonly ledgerCondition: OwnedWriteGuard
+  readonly appliedLink: SavedLinkMetaAppliedLink
+  readonly guard: OwnedWriteGuard
+}
+
 export const savedLinkMetaAppliedConditions = (
   state: SavedLinkMetaAppliedState
-) => ({
+): SavedLinkMetaAppliedConditions => ({
   ledgerCondition: {
     conditionSql: SAVED_LINK_META_APPLIED_LEDGER_SQL,
-    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
+    conditionBindings: [state.linkId, state.metaJson, state.updatedAt],
   },
   appliedLink: { metaJson: state.metaJson, updatedAt: state.updatedAt },
   guard: {
     conditionSql: SAVED_LINK_META_APPLIED_GUARD_SQL,
-    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
+    conditionBindings: [state.linkId, state.metaJson, state.updatedAt],
   },
 })

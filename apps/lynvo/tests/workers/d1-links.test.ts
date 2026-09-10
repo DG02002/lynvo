@@ -406,7 +406,7 @@ describe("d1 links", () => {
       NOW + 2_000
     )
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
-    expect([...metadata.playback.openedUrls].sort()).toEqual([
+    expect([...metadata.playback.openedUrls].toSorted()).toEqual([
       "https://media.example/one.mp4",
       "https://media.example/two.mp4",
     ])
