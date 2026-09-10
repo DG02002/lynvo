@@ -2,6 +2,7 @@ import * as React from "react"
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
 import { client } from "~/lib/api/client"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { isProxyTokenRemoval } from "~/lib/plugin-server-proxy"
 import { usePluginDomainDrafts } from "./use-plugin-domain-drafts"
 import { usePluginSettingsOperations } from "./use-plugin-settings-operations"
 import type { CustomPluginServerFormValues } from "./plugin-settings-schemas"
@@ -315,8 +316,8 @@ export const usePluginSettingsInteraction = ({
 
   const handleSetPluginServerProxyKey = React.useCallback(
     async (id: string, token: string) => {
-      const isRemoving = token.trim() === ""
-      const didSave = await run({
+      const isRemoving = isProxyTokenRemoval(token)
+      const didComplete = await run({
         key: `proxy-key:${id}`,
         operation: () => commands.setPluginServerProxyKey(id, token),
         messages: {
@@ -327,7 +328,7 @@ export const usePluginSettingsInteraction = ({
         },
         target: "server",
       })
-      return didSave
+      return didComplete
     },
     [commands, run]
   )

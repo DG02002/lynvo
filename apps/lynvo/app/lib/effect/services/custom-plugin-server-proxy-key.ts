@@ -13,7 +13,10 @@ import {
 } from "./custom-plugin-server-credentials"
 import { PluginServerRegistrationError } from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
-import { isSupportedProxyProvider } from "../../plugin-server-proxy"
+import {
+  isProxyTokenRemoval,
+  isSupportedProxyProvider,
+} from "../../plugin-server-proxy"
 
 export interface CustomPluginServerProxyKeyUser {
   readonly id: string
@@ -131,7 +134,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
     })
   }
 
-  if (input.token.trim() === "") {
+  if (isProxyTokenRemoval(input.token)) {
     const { dataVersion } = yield* Effect.tryPromise({
       try: () =>
         updatePluginServerProxyKey(database, input.user.id, {
