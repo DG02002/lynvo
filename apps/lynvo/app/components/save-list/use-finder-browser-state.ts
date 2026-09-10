@@ -253,18 +253,14 @@ export const useFinderBrowserState = ({
     }
   }, [item.id])
 
-  const beginFolderNavigation = (clearForwardFolderPaths = false) => {
-    if (clearForwardFolderPaths) {
-      setForwardFolderPaths([])
-    }
+  const beginFolderNavigation = () => {
     rememberScrollPosition()
     shouldAutoDescendRef.current = false
   }
 
-  const prepareParentNavigation = (currentFolderPath: FolderLevel[]) => {
-    const parentFolderPath = currentFolderPath.slice(0, -1)
+  const resetFolderNavigation = () => {
+    setForwardFolderPaths([])
     beginFolderNavigation()
-    return parentFolderPath
   }
 
   const queueForwardFolderPath = (folderPathToQueue: FolderLevel[]) => {
@@ -274,12 +270,25 @@ export const useFinderBrowserState = ({
     ])
   }
 
+  const consumeForwardFolderPath = () => {
+    beginFolderNavigation()
+    setForwardFolderPaths((currentForwardFolderPaths) =>
+      currentForwardFolderPaths.slice(1)
+    )
+  }
+
+  const navigateToFallbackParent = (currentFolderPath: FolderLevel[]) => {
+    beginFolderNavigation()
+    queueForwardFolderPath(currentFolderPath)
+    navigateToFolderPath(currentFolderPath.slice(0, -1), true)
+  }
+
   const navigateToParentFolder = () => {
     if (visibleFolderPath.length === 0) {
       onExit()
       return
     }
-    const parentFolderPath = prepareParentNavigation(visibleFolderPath)
+    const parentFolderPath = visibleFolderPath.slice(0, -1)
 
     const parentFolderIds = parentFolderPath.map((folder) => folder.id)
     if (
@@ -291,8 +300,7 @@ export const useFinderBrowserState = ({
       return
     }
 
-    queueForwardFolderPath(visibleFolderPath)
-    navigateToFolderPath(parentFolderPath, true)
+    navigateToFallbackParent(visibleFolderPath)
   }
 
   const shouldBlockFolderExit = useCallback<BlockerFunction>(
@@ -308,10 +316,8 @@ export const useFinderBrowserState = ({
     if (folderExitBlocker.state !== "blocked") {
       return
     }
-    const parentFolderPath = prepareParentNavigation(visibleFolderPath)
-    queueForwardFolderPath(visibleFolderPath)
     folderExitBlocker.reset()
-    navigateToFolderPath(parentFolderPath, true)
+    navigateToFallbackParent(visibleFolderPath)
   })
 
   useEffect(() => {
@@ -320,9 +326,12 @@ export const useFinderBrowserState = ({
     }
   }, [folderExitBlocker.state])
 
+  const hasBrowserFolderForward =
+    hasBrowserForwardEntry && visibleFolderPath.length > 0
+
   const navigateToNextFolder = () => {
     if (historyForwardFolderIds) {
-      beginFolderNavigation(true)
+      resetFolderNavigation()
       const nextFolderPath = resolveFolderPath(
         rootLinks,
         historyForwardFolderIds
@@ -334,8 +343,8 @@ export const useFinderBrowserState = ({
       return
     }
 
-    if (hasBrowserForwardEntry && visibleFolderPath.length > 0) {
-      beginFolderNavigation(true)
+    if (hasBrowserFolderForward) {
+      resetFolderNavigation()
       void navigate(1)
       return
     }
@@ -344,10 +353,7 @@ export const useFinderBrowserState = ({
     if (!nextFolderPath) {
       return
     }
-    rememberScrollPosition()
-    setForwardFolderPaths((currentForwardFolderPaths) =>
-      currentForwardFolderPaths.slice(1)
-    )
+    consumeForwardFolderPath()
     navigateToFolderPath(nextFolderPath, false)
   }
 
@@ -357,7 +363,7 @@ export const useFinderBrowserState = ({
     hasForwardFolderPaths:
       forwardFolderPaths.length > 0 ||
       historyForwardFolderIds !== undefined ||
-      (hasBrowserForwardEntry && visibleFolderPath.length > 0),
+      hasBrowserFolderForward,
     hasNoRootLinks,
     navigateToParentFolder,
     navigateToNextFolder,
@@ -391,7 +397,7 @@ export const useFinderBrowserState = ({
       }
       setRootLinks(resolvedLinks)
     }
-    beginFolderNavigation(true)
+    resetFolderNavigation()
     navigateToFolderPath(targetPath, false)
   }
 
@@ -441,7 +447,7 @@ export const useFinderBrowserState = ({
     navigateToParentFolder,
     selectRoot: () => {
       resetHorizontalGesture()
-      beginFolderNavigation(true)
+      resetFolderNavigation()
       navigateToFolderPath([], true)
     },
   }
