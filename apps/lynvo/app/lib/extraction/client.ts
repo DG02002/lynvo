@@ -1,6 +1,6 @@
 import { Result, Schema } from "effect"
 import { ERROR_CODES } from "@dg02002/lynvo-plugin-server-protocol"
-import { ApiClientError, client } from "~/lib/api/client"
+import { ApiClientError, requestJson } from "~/lib/api/client"
 import { ExtractionCommandError } from "./errors"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
 import { runWithRetries } from "~/lib/retry"
@@ -217,9 +217,11 @@ export const defaultExtractionClient: ExtractionTransport = {
     const headers = createExtractionRequestHeaders()
     const result = await runWithExtractionResilience(() =>
       runWithExtractionTimeout((signal) =>
-        client.extraction.extract({ query, headers }, extractionResultSchema, {
-          signal,
-        })
+        requestJson(
+          "/api/extract",
+          { query, headers, signal },
+          extractionResultSchema
+        )
       )
     )
     const links = [...result.links]
@@ -231,9 +233,7 @@ export const defaultExtractionClient: ExtractionTransport = {
     const headers = createExtractionRequestHeaders()
     const metadata = await runWithExtractionResilience(() =>
       runWithExtractionTimeout((signal) =>
-        client.extraction.getMetadata({ query, headers }, metadataSchema, {
-          signal,
-        })
+        requestJson("/api/meta", { query, headers, signal }, metadataSchema)
       )
     )
     return resolveClientMetadataIconUrls(metadata)

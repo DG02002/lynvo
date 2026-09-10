@@ -131,7 +131,7 @@ const readJson = async (
   return value as JsonResponse | undefined
 }
 
-const requestJson = async <ResponseBody, Payload = undefined>(
+export const requestJson = async <ResponseBody, Payload = undefined>(
   path: string,
   { method = "GET", headers, payload, query, signal }: RequestOptions<Payload>,
   schema: Schema.ConstraintDecoder<ResponseBody>
@@ -164,11 +164,6 @@ const requestJson = async <ResponseBody, Payload = undefined>(
   return Schema.decodeUnknownSync(schema)(body)
 }
 
-interface ExtractionRequest<Query> {
-  readonly query: Query
-  readonly headers?: Record<string, string>
-}
-
 type MutationOptions<ResponseBody, Payload> = {
   readonly payload?: Payload
   readonly schema: Schema.ConstraintDecoder<ResponseBody>
@@ -181,36 +176,6 @@ const mutation = <ResponseBody, Payload = undefined>(
 ) => requestJson<ResponseBody, Payload>(path, { method, payload }, schema)
 
 export const client = {
-  extraction: {
-    extract: <ResponseBody>(
-      input: ExtractionRequest<ExtractQuery>,
-      schema: Schema.ConstraintDecoder<ResponseBody>,
-      options?: ApiRequestOptions
-    ): Promise<ResponseBody> =>
-      requestJson<ResponseBody>(
-        "/api/extract",
-        {
-          query: input.query,
-          headers: input.headers,
-          signal: options?.signal,
-        },
-        schema
-      ),
-    getMetadata: <ResponseBody>(
-      input: ExtractionRequest<MetadataQuery>,
-      schema: Schema.ConstraintDecoder<ResponseBody>,
-      options?: ApiRequestOptions
-    ): Promise<ResponseBody> =>
-      requestJson<ResponseBody>(
-        "/api/meta",
-        {
-          query: input.query,
-          headers: input.headers,
-          signal: options?.signal,
-        },
-        schema
-      ),
-  },
   pluginServers: {
     list: (): Promise<PluginServerList> =>
       requestJson<PluginServerList>(
