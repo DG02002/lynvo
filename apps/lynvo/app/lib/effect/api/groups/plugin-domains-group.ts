@@ -8,31 +8,22 @@ import {
   CredentialVaultApiError,
   ValidationApiError,
 } from "../../errors"
+import {
+  CreatePluginDomainPayloadSchema,
+  MutationResultSchema,
+  PluginDomainListSchema,
+  SetCredentialPayloadSchema,
+} from "../../../api-contracts"
 
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(
-        Schema.Struct({
-          id: Schema.String,
-          userId: Schema.String,
-          pluginServerId: Schema.String,
-          domain: Schema.String,
-          pluginId: Schema.String,
-          hasCredential: Schema.Boolean,
-        })
-      ),
+      success: PluginDomainListSchema,
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
-      payload: Schema.Struct({
-        domain: Schema.String,
-        pluginServerId: Schema.String,
-        pluginId: Schema.String,
-        username: Schema.optional(Schema.String),
-        password: Schema.optional(Schema.String),
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: CreatePluginDomainPayloadSchema,
+      success: MutationResultSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -43,11 +34,8 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     }),
     HttpApiEndpoint.patch("setCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
-      payload: Schema.Struct({
-        username: Schema.optional(Schema.String),
-        password: Schema.String,
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: SetCredentialPayloadSchema,
+      success: MutationResultSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -58,14 +46,14 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     }),
     HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,
       },
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )

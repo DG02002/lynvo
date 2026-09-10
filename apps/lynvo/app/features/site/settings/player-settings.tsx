@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Effect, Result, Schema } from "effect"
+import { Result, Schema } from "effect"
 import {
   Select,
   SelectContent,
@@ -7,11 +7,8 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { SelectTrigger } from "~/components/select-trigger"
-import {
-  PLAYER_DEFINITIONS,
-  playerIdSchema,
-  type PlayerId,
-} from "~/lib/player-utils"
+import { PLAYER_DEFINITIONS, type PlayerId } from "~/lib/player-utils"
+import { PlayerIdSchema } from "~/lib/api-contracts"
 import {
   SettingsPanel,
   SettingsList,
@@ -28,19 +25,11 @@ import {
   clearAsyncResourceCache,
   useAsyncResource,
 } from "~/hooks/use-async-resource"
-import { client } from "~/lib/effect/api/client"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
-
-const loadCloudPlayerPreferences = () =>
-  Effect.runPromise(client.settings.getPlayerPreferences())
-
-const saveCloudPlayerPreferences = (preferences: {
-  rangeSupportedPlayerId?: PlayerId
-  rangeUnsupportedPlayerId?: PlayerId
-}) =>
-  Effect.runPromise(
-    client.settings.updatePlayerPreferences({ payload: preferences })
-  ).then(() => undefined)
+import {
+  loadCloudPlayerPreferences,
+  saveCloudPlayerPreferences,
+} from "~/lib/settings/player-preferences-api"
 
 export const PlayerSettings = ({
   loadPlayerPreferences = loadCloudPlayerPreferences,
@@ -94,13 +83,13 @@ export const PlayerSettings = ({
     (p) => p.id === rangeUnsupportedPlayerId
   )
   const updateRangeSupportedPlayer = (value: string | null) => {
-    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
       handleRangeSupportedChange(playerId.success)
     }
   }
   const updateRangeUnsupportedPlayer = (value: string | null) => {
-    const playerId = Schema.decodeUnknownResult(playerIdSchema)(value)
+    const playerId = Schema.decodeUnknownResult(PlayerIdSchema)(value)
     if (Result.isSuccess(playerId)) {
       handleRangeUnsupportedChange(playerId.success)
     }

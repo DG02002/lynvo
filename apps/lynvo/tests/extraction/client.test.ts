@@ -72,6 +72,15 @@ describe("default extraction client", () => {
     expect(requestIds[0]).toBe(requestIds[1])
   })
 
+  it("rejects a malformed successful extraction response", async () => {
+    fetchMock.mockResolvedValue(Response.json({ links: "not-an-array" }))
+
+    await expect(
+      extractionClient.extract({ url: "https://source.example" })
+    ).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("uses bounded exponential backoff for transient retries", async () => {
     vi.mocked(Math.random).mockReturnValue(0.5)
     fetchMock

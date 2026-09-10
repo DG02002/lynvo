@@ -1,5 +1,5 @@
-import { Effect, Result, Schema } from "effect"
-import { client } from "~/lib/effect/api/client"
+import { Result, Schema } from "effect"
+import { client } from "~/lib/api/client"
 import { remotePollResponseSchema } from "./schemas"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 
@@ -15,22 +15,18 @@ export const remoteApi: RemoteControlTransport = {
   connect: async () => undefined,
   disconnect: async () => undefined,
   send: async (targetSessionId, intent) => {
-    await Effect.runPromise(
-      client.remote.send({
-        payload: {
-          target_session_id: targetSessionId,
-          command: "play",
-          data: intent,
-        },
-      })
-    )
+    await client.remote.send({
+      payload: {
+        target_session_id: targetSessionId,
+        command: "play",
+        data: intent,
+      },
+    })
   },
   poll: async () => {
-    const result = await Effect.runPromise(
-      client.remote.pollInbox({
-        query: { receiverId: requireReceiverId() },
-      })
-    )
+    const result = await client.remote.pollInbox({
+      query: { receiverId: requireReceiverId() },
+    })
     const parsed = Schema.decodeUnknownResult(remotePollResponseSchema)({
       commands: [...result.commands],
     })
@@ -45,16 +41,14 @@ export const remoteApi: RemoteControlTransport = {
     result,
     message,
   }: RemoteCommandResultReport) => {
-    await Effect.runPromise(
-      client.remote.reportResult({
-        payload: {
-          id: commandId,
-          claimToken,
-          receiverId: requireReceiverId(),
-          result,
-          message,
-        },
-      })
-    )
+    await client.remote.reportResult({
+      payload: {
+        id: commandId,
+        claimToken,
+        receiverId: requireReceiverId(),
+        result,
+        message,
+      },
+    })
   },
 }

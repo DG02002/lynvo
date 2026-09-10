@@ -1,5 +1,4 @@
 import * as React from "react"
-import { Effect } from "effect"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
 import {
@@ -17,7 +16,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
 import { signOut } from "~/lib/session-http"
-import { client } from "~/lib/effect/api/client"
+import { client } from "~/lib/api/client"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
@@ -38,7 +37,7 @@ export function SecuritySettings({
   onShowActiveSessionsChange: (showActiveSessions: boolean) => void
 }) {
   const { data, reload } = useAsyncResource(
-    () => Effect.runPromise(client.settings.listSessions()),
+    () => client.settings.listSessions(),
     [user.id],
     { cacheKey: getSettingsDataCacheKey("security", user.id) }
   )
@@ -51,7 +50,7 @@ export function SecuritySettings({
   const handleRevokeAllSessions = async () => {
     setBusy("revokeAll")
     try {
-      await Effect.runPromise(client.settings.revokeAllSessions())
+      await client.settings.revokeAllSessions()
       await signOut()
       window.location.href = "/"
     } catch (error) {
@@ -78,11 +77,9 @@ export function SecuritySettings({
     }
     setBusy("delete")
     try {
-      await Effect.runPromise(
-        client.settings.deleteAccount({
-          payload: { confirmEmail: deleteConfirmEmail },
-        })
-      )
+      await client.settings.deleteAccount({
+        payload: { confirmEmail: deleteConfirmEmail },
+      })
       showSuccessToast({
         title: "Account deleted",
         description: "Your account has been permanently removed.",
@@ -109,11 +106,9 @@ export function SecuritySettings({
           busy={busy}
           onRevokeSession={async (sessionId) => {
             try {
-              await Effect.runPromise(
-                client.settings.revokeSession({
-                  params: { sessionId },
-                })
-              )
+              await client.settings.revokeSession({
+                params: { sessionId },
+              })
               await reload()
             } catch (error) {
               showErrorToast({

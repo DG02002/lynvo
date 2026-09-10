@@ -7,16 +7,12 @@ import {
   BackendApiError,
   UsageLimitApiError,
 } from "../../errors"
+import { ExtractQuerySchema, MetadataQuerySchema } from "../../../api-contracts"
 
 export class ExtractionGroup extends HttpApiGroup.make("extraction")
   .add(
     HttpApiEndpoint.get("extract", "/extract", {
-      query: Schema.Struct({
-        url: Schema.String,
-        pluginServerId: Schema.optional(Schema.String),
-        pluginId: Schema.optional(Schema.String),
-        kind: Schema.optional(Schema.String),
-      }),
+      query: ExtractQuerySchema,
       headers: Schema.Struct({
         "x-request-id": Schema.optional(Schema.String),
       }),
@@ -29,11 +25,7 @@ export class ExtractionGroup extends HttpApiGroup.make("extraction")
       ],
     }),
     HttpApiEndpoint.get("getMetadata", "/meta", {
-      query: Schema.Struct({
-        url: Schema.String,
-        pluginServerId: Schema.optional(Schema.String),
-        pluginId: Schema.optional(Schema.String),
-      }),
+      query: MetadataQuerySchema,
       headers: Schema.Struct({
         "x-request-id": Schema.optional(Schema.String),
       }),

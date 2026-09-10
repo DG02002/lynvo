@@ -8,41 +8,29 @@ import {
   PluginServerRegistrationApiError,
   BackendApiError,
 } from "../../errors"
-import { PluginServerUsageSchema } from "../usage-schemas"
-
-const CustomPluginServerSchema = Schema.Struct({
-  id: Schema.String,
-  userId: Schema.String,
-  baseUrl: Schema.String,
-  manifest: Schema.String,
-  enabled: Schema.Boolean,
-  priority: Schema.Number,
-  verificationStatus: Schema.String,
-  hasProxyKey: Schema.Boolean,
-  proxyBalanceRemaining: Schema.optional(Schema.NullOr(Schema.Number)),
-  proxyBalanceLimit: Schema.optional(Schema.NullOr(Schema.Number)),
-  lastVerifiedAt: Schema.optional(Schema.NullOr(Schema.Number)),
-  lastManifestRefreshAt: Schema.optional(Schema.NullOr(Schema.Number)),
-  createdAt: Schema.Number,
-  updatedAt: Schema.Number,
-})
+import {
+  CreatePluginServerPayloadSchema,
+  MutationResultSchema,
+  PluginServerListSchema,
+  PluginServerUsageListSchema,
+  SetProxyKeyPayloadSchema,
+  SetProxyKeyResponseSchema,
+  TogglePluginServerPayloadSchema,
+} from "../../../api-contracts"
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
     HttpApiEndpoint.get("list", "/", {
-      success: Schema.Array(CustomPluginServerSchema),
+      success: PluginServerListSchema,
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("usage", "/usage", {
-      success: Schema.Array(PluginServerUsageSchema),
+      success: PluginServerUsageListSchema,
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("create", "/", {
-      payload: Schema.Struct({
-        baseUrl: Schema.String,
-        apiKey: Schema.String,
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: CreatePluginServerPayloadSchema,
+      success: MutationResultSchema,
       error: [
         PluginServerRegistrationApiError,
         ValidationApiError,
@@ -55,17 +43,15 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       params: {
         pluginServerId: Schema.String,
       },
-      payload: Schema.Struct({
-        enabled: Schema.Boolean,
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: TogglePluginServerPayloadSchema,
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("refresh", "/:pluginServerId/refresh", {
       params: {
         pluginServerId: Schema.String,
       },
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: MutationResultSchema,
       error: [
         PluginServerRegistrationApiError,
         UnauthorizedApiError,
@@ -77,14 +63,8 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       params: {
         pluginServerId: Schema.String,
       },
-      payload: Schema.Struct({
-        token: Schema.String,
-      }),
-      success: Schema.Struct({
-        success: Schema.Boolean,
-        remaining: Schema.NullOr(Schema.Number),
-        limit: Schema.NullOr(Schema.Number),
-      }),
+      payload: SetProxyKeyPayloadSchema,
+      success: SetProxyKeyResponseSchema,
       error: [
         PluginServerRegistrationApiError,
         ValidationApiError,
@@ -97,7 +77,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       params: {
         pluginServerId: Schema.String,
       },
-      success: Schema.Struct({ success: Schema.Boolean }),
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
