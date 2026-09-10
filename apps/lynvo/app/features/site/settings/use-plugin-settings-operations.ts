@@ -21,13 +21,6 @@ interface UsePluginSettingsOperationsOptions {
 const failureMessage = (cause: unknown, fallback: string) =>
   getUserFacingErrorMessage(cause, fallback)
 
-const createSuccessOperation = (
-  result: PluginSettingsMutationResult
-): PluginSettingsOperation =>
-  result.dataVersion === undefined
-    ? { status: "success" }
-    : { status: "success", dataVersion: result.dataVersion }
-
 export const usePluginSettingsOperations = ({
   reloadPluginSettings,
 }: UsePluginSettingsOperationsOptions) => {
@@ -62,7 +55,7 @@ export const usePluginSettingsOperations = ({
         await reloadPluginSettings()
         setter((current) => ({
           ...current,
-          [key]: createSuccessOperation(result),
+          [key]: { status: "success" },
         }))
         if (feedback && messages.success) {
           showSuccessToast({ title: messages.success })

@@ -58,23 +58,29 @@ const pluginServerRow = {
   updated_at: 1,
 }
 
-const database = createFakeD1Database((sql) => {
-  if (sql.includes("INNER JOIN users u")) {
-    return {
-      row: {
-        session_id: "session-1",
-        user_id: "user-1",
-        email: "user@example.com",
-        last_seen_at: Date.now(),
-        expires_at: Date.now() + 60_000,
-      },
+const enabledPluginServerRow = { ...pluginServerRow, proxy_enabled: 1 }
+
+const createDatabase = (row: typeof pluginServerRow) =>
+  createFakeD1Database((sql) => {
+    if (sql.includes("INNER JOIN users u")) {
+      return {
+        row: {
+          session_id: "session-1",
+          user_id: "user-1",
+          email: "user@example.com",
+          last_seen_at: Date.now(),
+          expires_at: Date.now() + 60_000,
+        },
+      }
     }
-  }
-  if (sql.includes("FROM user_plugin_servers")) {
-    return { row: pluginServerRow, rows: [pluginServerRow] }
-  }
-  return undefined
-})
+    if (sql.includes("FROM user_plugin_servers")) {
+      return { row, rows: [row] }
+    }
+    return undefined
+  })
+
+const database = createDatabase(pluginServerRow)
+const enabledDatabase = createDatabase(enabledPluginServerRow)
 
 describe("public Extraction proxy behavior", () => {
   afterEach(() => {
@@ -133,6 +139,64 @@ describe("public Extraction proxy behavior", () => {
       throw new Error("Expected the custom Plugin Server request")
     }
     expect(await request.json()).not.toHaveProperty("proxy")
+  })
+
+  it("forwards the enabled proxy key through the public extract route", async () => {
+    const { default: app } = await import("../../workers/app")
+    const pluginServerFetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Proxy Capable",
+          pluginId: "source-alpha",
+          pluginName: "Source Alpha",
+        },
+        nodes: [],
+        extensions: {},
+      })
+    )
+    // SAFETY: This route test supplies only the bindings used by public extraction.
+    const environment = {
+      ENVIRONMENT: "development",
+      DB: enabledDatabase,
+      PLUGIN_SERVER_CREDENTIAL_VAULT: {
+        getByName: () => ({
+          fetch: async () => Response.json({ apiKey: "stored-credential" }),
+        }),
+      },
+    } as Env
+    // SAFETY: The Worker only calls waitUntil while recording request logs.
+    const executionContext = { waitUntil: () => undefined } as ExecutionContext
+    const requestUrl = new URL("https://lynvo.test/api/extract")
+    requestUrl.searchParams.set("url", "https://source.example/title")
+    requestUrl.searchParams.set("pluginServerId", "plugin-server-1")
+    requestUrl.searchParams.set("pluginId", "source-alpha")
+
+    const response = await app.fetch(
+      new Request(requestUrl, {
+        headers: {
+          Cookie: "lynvo_session=session-1",
+          "X-Lynvo-Expected-User-Id": "user-1",
+          "X-Lynvo-Expected-Session-Id": "session-1",
+        },
+      }),
+      environment,
+      executionContext
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ links: [] })
+    expect(pluginServerFetch).toHaveBeenCalledOnce()
+    const request = pluginServerFetch.mock.calls[0]?.[0]
+    if (!(request instanceof Request)) {
+      throw new Error("Expected the custom Plugin Server request")
+    }
+    expect(await request.json()).toMatchObject({
+      proxy: {
+        provider: "scrape-do",
+        token: "stored-credential",
+      },
+    })
   })
 
   it("returns the proxy toggle data version in the body and response header", async () => {

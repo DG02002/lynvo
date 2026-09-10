@@ -4,6 +4,7 @@ import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import {
   readScrapeDoAccountInfo,
   refreshCustomPluginServerProxyBalance,
+  saveCustomPluginServerProxyKey,
 } from "~/lib/effect/services/custom-plugin-server-proxy-key"
 import { createFakeD1Database } from "./support/fake-d1"
 
@@ -22,6 +23,53 @@ interface ScrapeDoAccountPayload {
 }
 
 const accountJson = (value: ScrapeDoAccountPayload) => JSON.stringify(value)
+
+const proxyServerManifest = JSON.stringify({
+  protocolVersion: "1.0",
+  pluginServerId: "dev.example.plugin-server",
+  displayName: "Proxy Capable",
+  auth: { type: "bearer" },
+  usage: { endpoint: "/usage" },
+  matchers: [{ hosts: ["example.com"] }],
+  features: {},
+  extensions: {
+    lynvo: { proxyProvider: "scrape-do", plugins: [] },
+  },
+})
+
+const createProxyServerRow = (
+  credentialStatus: "ready" | "failed" = "ready"
+) => ({
+  id: "plugin-server-1",
+  user_id: "user-1",
+  base_url: "https://plugins.example.com",
+  normalized_base_url: "https://plugins.example.com",
+  api_key_ciphertext: "api-ciphertext",
+  api_key_nonce: "api-nonce",
+  api_key_algorithm: "AES-256-GCM",
+  api_key_version: 1,
+  proxy_token_ciphertext: "proxy-ciphertext",
+  proxy_token_nonce: "proxy-nonce",
+  proxy_token_algorithm: "AES-256-GCM",
+  proxy_token_version: 1,
+  proxy_balance_remaining: 973,
+  proxy_balance_limit: 1_000,
+  proxy_balance_checked_at: 1,
+  proxy_enabled: 1,
+  credential_status: credentialStatus,
+  credential_generation: 1,
+  credential_attempt_id: null,
+  pending_expires_at: null,
+  failure_reason: null,
+  manifest: proxyServerManifest,
+  enabled: 1,
+  priority: 0,
+  verification_status: "verified",
+  last_verified_at: 1,
+  last_manifest_refresh_at: 1,
+  created_at: 1,
+  updated_at: 1,
+})
 
 describe("readScrapeDoAccountInfo", () => {
   afterEach(() => {
@@ -84,82 +132,101 @@ describe("refreshCustomPluginServerProxyBalance", () => {
     vi.unstubAllGlobals()
   })
 
-  it("revalidates a stored token even when the server is not ready", async () => {
-    const serverRow = {
-      id: "plugin-server-1",
-      user_id: "user-1",
-      base_url: "https://plugins.example.com",
-      normalized_base_url: "https://plugins.example.com",
-      api_key_ciphertext: "api-ciphertext",
-      api_key_nonce: "api-nonce",
-      api_key_algorithm: "AES-256-GCM",
-      api_key_version: 1,
-      proxy_token_ciphertext: "proxy-ciphertext",
-      proxy_token_nonce: "proxy-nonce",
-      proxy_token_algorithm: "AES-256-GCM",
-      proxy_token_version: 1,
-      proxy_balance_remaining: 973,
-      proxy_balance_limit: 1_000,
-      proxy_balance_checked_at: 1,
-      proxy_enabled: 1,
-      credential_status: "failed",
-      credential_generation: 1,
-      credential_attempt_id: null,
-      pending_expires_at: null,
-      failure_reason: null,
-      manifest: JSON.stringify({
-        protocolVersion: "1.0",
-        pluginServerId: "dev.example.plugin-server",
-        displayName: "Proxy Capable",
-        auth: { type: "bearer" },
-        usage: { endpoint: "/usage" },
-        matchers: [{ hosts: ["example.com"] }],
-        features: {},
-        extensions: {
-          lynvo: { proxyProvider: "scrape-do", plugins: [] },
+  it.each(["ready", "failed"] as const)(
+    "revalidates a stored token for a %s server",
+    async (credentialStatus) => {
+      const serverRow = createProxyServerRow(credentialStatus)
+      let balanceUpdateArgs: unknown[] | undefined
+      let serverLookupSql = ""
+      let serverLookupArgs: unknown[] | undefined
+      const database = createFakeD1Database((sql, args) => {
+        if (sql.includes("FROM user_plugin_servers WHERE id = ?1")) {
+          serverLookupSql = sql
+          serverLookupArgs = args
+          return { row: serverRow, rows: [serverRow] }
+        }
+        if (sql.includes("FROM user_plugin_servers")) {
+          return { rows: [serverRow] }
+        }
+        if (
+          sql.includes("UPDATE user_plugin_servers SET proxy_balance_remaining")
+        ) {
+          balanceUpdateArgs = args
+        }
+        return undefined
+      })
+      const fetchMock = vi.fn(async () =>
+        Response.json({
+          IsActive: true,
+          RemainingMonthlyRequest: 901,
+          MaxMonthlyRequest: 1_000,
+        })
+      )
+      vi.stubGlobal("fetch", fetchMock)
+      // SAFETY: The refresh test only needs the database and credential-vault bindings.
+      const environment = {
+        DB: database,
+        PLUGIN_SERVER_CREDENTIAL_VAULT: {
+          getByName: () => ({
+            fetch: async () => Response.json({ apiKey: "stored-proxy-token" }),
+          }),
         },
-      }),
-      enabled: 1,
-      priority: 0,
-      verification_status: "verified",
-      last_verified_at: 1,
-      last_manifest_refresh_at: 1,
-      created_at: 1,
-      updated_at: 1,
+      } as Env
+
+      const result = await Effect.runPromise(
+        refreshCustomPluginServerProxyBalance({
+          pluginServerId: "plugin-server-1",
+          user: { id: "user-1" },
+        }).pipe(
+          Effect.provide(
+            Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+          )
+        )
+      )
+
+      expect(result).toMatchObject({
+        success: true,
+        remaining: 901,
+        limit: 1_000,
+        dataVersion: 2,
+      })
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.scrape.do/info?token=stored-proxy-token",
+        expect.objectContaining({ headers: { Accept: "application/json" } })
+      )
+      expect(serverLookupSql).toContain("AND user_id = ?2")
+      expect(serverLookupArgs).toEqual(["plugin-server-1", "user-1"])
+      expect(balanceUpdateArgs?.slice(0, 3)).toEqual([
+        "plugin-server-1",
+        901,
+        1_000,
+      ])
     }
-    let balanceUpdateArgs: unknown[] | undefined
+  )
+})
+
+describe("saveCustomPluginServerProxyKey", () => {
+  it("clears the saved key when given an empty token", async () => {
+    const serverRow = createProxyServerRow()
+    let keyUpdateArgs: unknown[] | undefined
     const database = createFakeD1Database((sql, args) => {
       if (sql.includes("FROM user_plugin_servers")) {
         return { row: serverRow, rows: [serverRow] }
       }
       if (
-        sql.includes("UPDATE user_plugin_servers SET proxy_balance_remaining")
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
       ) {
-        balanceUpdateArgs = args
+        keyUpdateArgs = args
       }
       return undefined
     })
-    const fetchMock = vi.fn(async () =>
-      Response.json({
-        IsActive: true,
-        RemainingMonthlyRequest: 901,
-        MaxMonthlyRequest: 1_000,
-      })
-    )
-    vi.stubGlobal("fetch", fetchMock)
-    // SAFETY: The refresh test only needs the database and credential-vault bindings.
-    const environment = {
-      DB: database,
-      PLUGIN_SERVER_CREDENTIAL_VAULT: {
-        getByName: () => ({
-          fetch: async () => Response.json({ apiKey: "stored-proxy-token" }),
-        }),
-      },
-    } as Env
+    // SAFETY: This service test supplies only the database binding it exercises.
+    const environment = { DB: database } as Env
 
     const result = await Effect.runPromise(
-      refreshCustomPluginServerProxyBalance({
+      saveCustomPluginServerProxyKey({
         pluginServerId: "plugin-server-1",
+        token: "  ",
         user: { id: "user-1" },
       }).pipe(
         Effect.provide(
@@ -168,20 +235,47 @@ describe("refreshCustomPluginServerProxyBalance", () => {
       )
     )
 
-    expect(result).toMatchObject({
-      success: true,
-      remaining: 901,
-      limit: 1_000,
-      dataVersion: 2,
-    })
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.scrape.do/info?token=stored-proxy-token",
-      expect.objectContaining({ headers: { Accept: "application/json" } })
-    )
-    expect(balanceUpdateArgs?.slice(0, 3)).toEqual([
+    expect(result).toEqual({ remaining: null, limit: null, dataVersion: 2 })
+    expect(keyUpdateArgs?.slice(0, 8)).toEqual([
       "plugin-server-1",
-      901,
-      1_000,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
     ])
+  })
+
+  it("reports a failed empty-token removal", async () => {
+    const serverRow = createProxyServerRow()
+    const database = createFakeD1Database((sql) => {
+      if (sql.includes("FROM user_plugin_servers")) {
+        return { row: serverRow, rows: [serverRow] }
+      }
+      if (
+        sql.includes("UPDATE user_plugin_servers SET proxy_token_ciphertext")
+      ) {
+        return { error: new Error("database write failed") }
+      }
+      return undefined
+    })
+    // SAFETY: This service test supplies only the database binding it exercises.
+    const environment = { DB: database } as Env
+
+    await expect(
+      Effect.runPromise(
+        saveCustomPluginServerProxyKey({
+          pluginServerId: "plugin-server-1",
+          token: "",
+          user: { id: "user-1" },
+        }).pipe(
+          Effect.provide(
+            Layer.succeed(CloudflareEnv, CloudflareEnv.of(environment))
+          )
+        )
+      )
+    ).rejects.toThrow("The proxy key couldn’t be removed.")
   })
 })

@@ -105,11 +105,9 @@ describe("Plugin settings interaction", () => {
 
   it("routes credential and Custom Plugin Server workflows through one interface", async () => {
     const calls: string[] = []
-    const success = async (name: string, dataVersion?: number) => {
+    const success = async (name: string) => {
       calls.push(name)
-      return dataVersion === undefined
-        ? { success: true }
-        : { success: true, dataVersion }
+      return { success: true }
     }
     const commands: Partial<PluginSettingsCommands> = {
       setCredential: async () => await success("save-credential"),
@@ -119,7 +117,7 @@ describe("Plugin settings interaction", () => {
       refreshPluginServer: async () => await success("refresh-server"),
       deletePluginServer: async () => await success("delete-server"),
       setPluginServerProxyKey: async () => await success("save-proxy-key"),
-      togglePluginServerProxy: async () => await success("toggle-proxy", 7),
+      togglePluginServerProxy: async () => await success("toggle-proxy"),
       refreshPluginServerProxyBalance: async () =>
         await success("refresh-proxy-balance"),
     }
@@ -155,7 +153,6 @@ describe("Plugin settings interaction", () => {
     ])
     expect(result.current.serverOperations["proxy-toggle:server"]).toEqual({
       status: "success",
-      dataVersion: 7,
     })
   })
 })

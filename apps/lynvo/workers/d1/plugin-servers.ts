@@ -102,24 +102,17 @@ const normalizeBaseUrl = (baseUrl: string): string => {
   return url.toString().replace(/\/$/, "")
 }
 
-const findPluginServerRow = async (
+const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
+
+const findOwnedPluginServerRow = async (
   database: D1Database,
-  pluginServerId: string,
-  userId?: string
+  userId: string,
+  pluginServerId: string
 ): Promise<PluginServerRow | null> => {
-  const statement =
-    userId !== undefined
-      ? database
-          .prepare(
-            `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2`
-          )
-          .bind(pluginServerId, userId)
-      : database
-          .prepare(
-            `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1`
-          )
-          .bind(pluginServerId)
-  const row = await statement.first<PluginServerRow>()
+  const row = await database
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE id = ?1 AND user_id = ?2`)
+    .bind(pluginServerId, userId)
+    .first<PluginServerRow>()
   return row ?? null
 }
 
@@ -128,7 +121,11 @@ const requireOwnedPluginServerRow = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow> => {
-  const existing = await findPluginServerRow(database, pluginServerId, userId)
+  const existing = await findOwnedPluginServerRow(
+    database,
+    userId,
+    pluginServerId
+  )
   if (!existing) {
     throw new Error("Plugin server not found or no longer available")
   }
@@ -228,9 +225,7 @@ export const listPluginServers = async (
   userId: string
 ): Promise<PublicPluginServerRecord[]> => {
   const { results } = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
-    )
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1`)
     .bind(userId)
     .all<PluginServerRow>()
   const pluginServers: PublicPluginServerRecord[] = []
@@ -247,7 +242,7 @@ export const findOwnedPluginServerById = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRecord | null> => {
-  const row = await findPluginServerRow(database, pluginServerId, userId)
+  const row = await findOwnedPluginServerRow(database, userId, pluginServerId)
   return row ? mapPluginServerRow(row) : null
 }
 
@@ -267,9 +262,7 @@ export const listReadyPluginServersForService = async (
   userId: string
 ): Promise<ServicePluginServerRecord[]> => {
   const { results } = await database
-    .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1`
-    )
+    .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1`)
     .bind(userId)
     .all<PluginServerRow>()
   return results.flatMap((row) =>
@@ -365,9 +358,7 @@ export const beginPluginServerRegistration = async (
   const attemptId = crypto.randomUUID()
   const [{ results }, initialPreparation] = await Promise.all([
     database
-      .prepare(
-        `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE user_id = ?1 LIMIT ?2`
-      )
+      .prepare(`${PLUGIN_SERVER_SELECT} WHERE user_id = ?1 LIMIT ?2`)
       .bind(userId, CUSTOM_PLUGIN_SERVER_REGISTRATION_LIMIT + 1)
       .all<PluginServerRow>(),
     ensureStorageLedger(database, userId, input.now),
@@ -539,8 +530,8 @@ export const finalizePluginServerCredential = async (
   userId: string,
   input: FinalizeCredentialInput & { now: number }
 ): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await findPluginServerRow(database, input.id)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findOwnedPluginServerRow(database, userId, input.id)
+  if (!existing) {
     throw new Error("Plugin server credential cannot be finalized")
   }
   if (
@@ -610,8 +601,8 @@ export const markPluginServerRegistrationFailed = async (
     now: number
   }
 ): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await findPluginServerRow(database, input.id)
-  if (!existing || existing.user_id !== userId) {
+  const existing = await findOwnedPluginServerRow(database, userId, input.id)
+  if (!existing) {
     throw new Error("Plugin server registration not found")
   }
   if (
@@ -651,7 +642,7 @@ export const expireStalePluginServerRegistrations = async (
 ): Promise<{ expired: number }> => {
   const { results } = await database
     .prepare(
-      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
+      `${PLUGIN_SERVER_SELECT} WHERE credential_status != 'ready' AND pending_expires_at IS NOT NULL AND pending_expires_at <= ?1 LIMIT ?2`
     )
     .bind(now, PLUGIN_SERVER_REGISTRATION_SWEEP_BATCH_SIZE)
     .all<PluginServerRow>()

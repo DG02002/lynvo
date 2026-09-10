@@ -29,19 +29,19 @@ const dataVersionHeaders = {
   [DATA_VERSION_RESPONSE_HEADER]: Schema.Number,
 }
 
-const VersionedMutationResponseSchema = HttpApiSchema.WithHeaders(
-  VersionedMutationResultSchema,
-  dataVersionHeaders
+const withDataVersionHeaders = <S extends Schema.Top>(schema: S) =>
+  HttpApiSchema.WithHeaders(schema, dataVersionHeaders)
+
+const VersionedMutationResponseSchema = withDataVersionHeaders(
+  VersionedMutationResultSchema
 )
 
-const SetProxyKeyResponseWithHeadersSchema = HttpApiSchema.WithHeaders(
-  SetProxyKeyResponseSchema,
-  dataVersionHeaders
+const SetProxyKeyResponseWithHeadersSchema = withDataVersionHeaders(
+  SetProxyKeyResponseSchema
 )
 
-const RefreshProxyBalanceResponseWithHeadersSchema = HttpApiSchema.WithHeaders(
-  RefreshProxyBalanceResponseSchema,
-  dataVersionHeaders
+const RefreshProxyBalanceResponseWithHeadersSchema = withDataVersionHeaders(
+  RefreshProxyBalanceResponseSchema
 )
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
