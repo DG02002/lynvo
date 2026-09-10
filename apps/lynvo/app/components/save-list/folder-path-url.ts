@@ -1,13 +1,11 @@
-import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
-import type { ExtractedLink } from "~/features/links/types"
-import { getLinkKey, type FolderLevel } from "./save-list-browser-model"
+import { SAVE_FOLDER_PATH_SEARCH_PARAM } from "~/lib/paths"
+import { type FolderLevel } from "./save-list-browser-model"
 
-export const SAVE_FOLDER_PATH_SEARCH_PARAM = "path"
+export { SAVE_FOLDER_PATH_SEARCH_PARAM } from "~/lib/paths"
 
 export interface ParsedFolderPath {
   hasSearchParam: boolean
   ids: string[]
-  isMalformed: boolean
 }
 
 const decodeSearchComponent = (value: string): string | undefined => {
@@ -41,49 +39,32 @@ const getRawSearchParam = (
 export const parseFolderPath = (search: string): ParsedFolderPath => {
   const rawPath = getRawSearchParam(search, SAVE_FOLDER_PATH_SEARCH_PARAM)
   if (rawPath === null) {
-    return { hasSearchParam: false, ids: [], isMalformed: false }
+    return { hasSearchParam: false, ids: [] }
   }
   if (rawPath === "") {
-    return { hasSearchParam: true, ids: [], isMalformed: false }
+    return { hasSearchParam: true, ids: [] }
   }
 
   // Keep slash separators readable in the URL and decode each segment
   // independently so an opaque identifier may contain an encoded slash.
   const rawSegments = rawPath.split("/")
   if (rawSegments.some((segment) => segment === "")) {
-    return { hasSearchParam: true, ids: [], isMalformed: true }
+    return { hasSearchParam: true, ids: [] }
   }
 
   const ids: string[] = []
   for (const rawSegment of rawSegments) {
     const id = decodeSearchComponent(rawSegment)
     if (!id) {
-      return { hasSearchParam: true, ids: [], isMalformed: true }
+      return { hasSearchParam: true, ids: [] }
     }
     ids.push(id)
   }
-  return { hasSearchParam: true, ids, isMalformed: false }
+  return { hasSearchParam: true, ids }
 }
 
 export const encodeFolderPath = (folderPath: FolderLevel[]): string =>
   folderPath.map((folder) => encodeURIComponent(folder.id)).join("/")
-
-export const resolveFolderPath = (
-  rootLinks: ExtractedLink[],
-  folderIds: string[]
-): FolderLevel[] => {
-  const resolvedPath: FolderLevel[] = []
-  let links = rootLinks
-  for (const folderId of folderIds) {
-    const folder = links.find((link) => getLinkKey(link) === folderId)
-    if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
-      break
-    }
-    resolvedPath.push({ id: folderId, label: folder.label })
-    links = folder.children ?? []
-  }
-  return resolvedPath
-}
 
 export const createFolderPathSearch = (
   currentSearch: string,

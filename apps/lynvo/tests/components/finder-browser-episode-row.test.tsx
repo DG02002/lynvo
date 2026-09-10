@@ -1,22 +1,9 @@
-import {
-  fireEvent,
-  render as testingRender,
-  screen,
-  waitFor,
-} from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { PropsWithChildren, ReactElement } from "react"
-import { MemoryRouter } from "react-router"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-
-const render = (ui: ReactElement, initialEntry = "/save") =>
-  testingRender(ui, {
-    wrapper: ({ children }: PropsWithChildren) => (
-      <MemoryRouter initialEntries={[initialEntry]}>{children}</MemoryRouter>
-    ),
-  })
+import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]

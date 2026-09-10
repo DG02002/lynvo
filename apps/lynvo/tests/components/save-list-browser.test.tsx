@@ -1,30 +1,13 @@
-import {
-  fireEvent,
-  render as testingRender,
-  screen,
-  waitFor,
-} from "@testing-library/react"
-import { useState, type PropsWithChildren, type ReactElement } from "react"
-import { MemoryRouter, useLocation, useNavigate } from "react-router"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { useState } from "react"
+import { useLocation, useNavigate } from "react-router"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
-
-const render = (ui: ReactElement, initialEntry: string | string[] = "/save") =>
-  testingRender(ui, {
-    wrapper: ({ children }: PropsWithChildren) => (
-      <MemoryRouter
-        initialEntries={
-          Array.isArray(initialEntry) ? initialEntry : [initialEntry]
-        }
-      >
-        {children}
-      </MemoryRouter>
-    ),
-  })
+import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 
 const LocationProbe = () => {
   const location = useLocation()
@@ -109,21 +92,32 @@ describe("SaveListBrowser", () => {
       },
     }
     const onSelectedItemUrlChange = vi.fn()
+    window.sessionStorage.setItem(
+      "lynvo:save-folder-path:saved-collection",
+      JSON.stringify([{ id: "season-one" }])
+    )
     const renderSavedFolder = () =>
       render(
-        <SaveListBrowser
-          items={[{ ...item, kind: "saved" }]}
-          selectedItemUrl={item.url}
-          onSelectedItemUrlChange={onSelectedItemUrlChange}
-          actions={createActions()}
-          extractingItems={new Set()}
-          highlightedId={null}
-          isHydrating={false}
-        />,
-        "/save/folder/saved-collection?path=season-one"
+        <>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={onSelectedItemUrlChange}
+            actions={createActions()}
+            extractingItems={new Set()}
+            highlightedId={null}
+            isHydrating={false}
+          />
+          <LocationProbe />
+          <BrowserBack />
+        </>,
+        ["/save", "/save/folder/saved-collection?path=season-one"]
       )
 
     const firstRender = renderSavedFolder()
+    expect(
+      window.sessionStorage.getItem("lynvo:save-folder-path:saved-collection")
+    ).toBeNull()
     const headerMenu = screen.getByRole("button", {
       name: "Open menu for Saved Collection",
     })
@@ -173,6 +167,14 @@ describe("SaveListBrowser", () => {
     expect(seasonFolderButton).toHaveAttribute("data-folder-state", "open")
     fireEvent.click(seasonFolderButton!)
     expect(await screen.findByText("Episode One")).toBeVisible()
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/saved-collection"
+      )
+    )
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
 
     firstRender.unmount()
     renderSavedFolder()
@@ -662,6 +664,81 @@ describe("SaveListBrowser", () => {
     expect(
       screen.getByRole("button", { name: /Folder Alpha/ })
     ).toHaveAttribute("data-folder-state", "open")
+  })
+
+  it("does not reopen a folder when lazy expansion resolves after browser back", async () => {
+    let finishExpansion: ((links: ExtractedLink[]) => void) | undefined
+    const resolvedLinks: ExtractedLink[] = [
+      {
+        id: "resolved-file",
+        url: "https://media.example/resolved-file",
+        label: "Resolved File",
+        mediaNodeKind: "playable",
+        type: "file",
+      },
+    ]
+    const expandFolder = vi.fn(
+      () =>
+        new Promise<ExtractedLink[]>((resolve) => {
+          finishExpansion = resolve
+        })
+    )
+    const item: LinkViewItem = {
+      id: "lazy-race",
+      url: "https://media.example/lazy-race",
+      timestamp: 1,
+      title: "Lazy Race",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "lazy-folder",
+              url: "https://media.example/lazy-folder",
+              label: "Lazy Folder",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "folder",
+              type: "folder",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions({ expandFolder })}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+      </>,
+      ["/save", "/save/folder/lazy-race"]
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Lazy Folder" }).at(-1)!
+    )
+    await waitFor(() => expect(expandFolder).toHaveBeenCalled())
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/save")
+    )
+    finishExpansion?.(resolvedLinks)
+
+    await waitFor(() =>
+      expect(screen.queryByText("Resolved File")).not.toBeInTheDocument()
+    )
+    expect(screen.getByTestId("location")).toHaveTextContent("/save")
   })
 
   it("shows a single resolvable container directly on the save page", async () => {

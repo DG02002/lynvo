@@ -4,8 +4,8 @@ import {
   createFolderPathSearch,
   encodeFolderPath,
   parseFolderPath,
-  resolveFolderPath,
 } from "~/components/save-list/folder-path-url"
+import { resolveFolderPath } from "~/components/save-list/save-list-browser-model"
 
 describe("folder path URL helpers", () => {
   it("round-trips opaque ids that contain URL-reserved characters", () => {
@@ -20,7 +20,6 @@ describe("folder path URL helpers", () => {
     expect(parseFolderPath(`?path=${encodedPath}`)).toEqual({
       hasSearchParam: true,
       ids: ["parent/id+%", "child?name"],
-      isMalformed: false,
     })
   })
 
