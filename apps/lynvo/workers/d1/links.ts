@@ -41,6 +41,7 @@ import {
   reserveSavedLinkCommandOperation,
   SAVED_LINK_COLUMNS,
 } from "./saved-link-storage"
+import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
   createConditionalDeleteSavedLinkExtractionCredentialStatement,
   createUpsertSavedLinkExtractionCredentialStatement,
@@ -428,7 +429,7 @@ const executeSavedLinkMetadataWrite = async ({
 }> => {
   const preparation = await ensureStorageLedger(database, userId, now)
   assertLinkSize(byteLength(nextRow))
-  const applied = savedLinkMetaApplied({
+  const applied = savedLinkMetaAppliedConditions({
     linkId: existingRow.id,
     metaJson: nextRow.meta_json,
     updatedAt: now,
@@ -479,36 +480,6 @@ const executeSavedLinkMetadataWrite = async ({
 const canonicalizeLinkMetadataJson = (metadataJson: string): string =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
 
-interface SavedLinkMetaAppliedState {
-  readonly linkId: string
-  readonly metaJson: string
-  readonly updatedAt: number
-}
-
-const savedLinkMetaAppliedSql = (firstBindingIndex: number): string =>
-  `SELECT 1 FROM links WHERE id = ?${firstBindingIndex} AND user_id = ?1 AND meta_json IS ?${
-    firstBindingIndex + 1
-  } AND updated_at = ?${firstBindingIndex + 2}`
-
-/**
- * Post-state wiring for one optimistic metadata write: the ledger delta and
- * operation-link conditions and the version-bump guard all assert the same
- * applied row, so a lost race moves nothing. The predicate cannot distinguish
- * this write from a concurrent write of byte-identical metadata in the same
- * millisecond; that interleaving can double-apply one ledger delta.
- */
-const savedLinkMetaApplied = (state: SavedLinkMetaAppliedState) => ({
-  ledgerCondition: {
-    conditionSql: savedLinkMetaAppliedSql(6),
-    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
-  },
-  appliedLink: { metaJson: state.metaJson, updatedAt: state.updatedAt },
-  guard: {
-    conditionSql: savedLinkMetaAppliedSql(2),
-    conditionBindings: [state.linkId, state.metaJson, state.updatedAt] as const,
-  },
-})
-
 const executeUpdateSavedLinkMetaAttempt = async ({
   database,
   userId,
@@ -523,7 +494,7 @@ const executeUpdateSavedLinkMetaAttempt = async ({
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(nextRow))
-  const applied = savedLinkMetaApplied({
+  const applied = savedLinkMetaAppliedConditions({
     linkId: existingRow.id,
     metaJson: metadataJson,
     updatedAt: input.now,
@@ -825,7 +796,7 @@ const updateExistingSavedLink = async ({
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(nextRow))
-  const applied = savedLinkMetaApplied({
+  const applied = savedLinkMetaAppliedConditions({
     linkId: existingRow.id,
     metaJson: metadataJson,
     updatedAt: input.now,

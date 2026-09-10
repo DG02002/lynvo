@@ -1,7 +1,8 @@
 export interface OwnedWriteGuard {
   /**
-   * EXISTS subquery tied to the post-state of the guarded write. Placeholders
-   * are numbered from ?2 (?1 is always the user id).
+   * EXISTS subquery tied to the post-state of the guarded write. Placeholder
+   * numbering is owned by the statement that embeds the subquery; the
+   * version bump binds the user id at ?1 followed by the guard bindings.
    */
   readonly conditionSql: string
   readonly conditionBindings: readonly unknown[]

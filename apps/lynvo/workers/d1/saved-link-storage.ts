@@ -1,5 +1,9 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
 import type { LinkRow } from "./rows"
+import {
+  SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
+  type SavedLinkMetaAppliedLink,
+} from "./saved-link-meta-applied"
 
 export const SAVED_LINK_COLUMNS =
   "id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at"
@@ -64,7 +68,7 @@ export const createReservedSavedLinkOperationLinkStatement = (
     userId: string
     operationId: string
     linkId: string
-    appliedLink?: { metaJson: string; updatedAt: number }
+    appliedLink?: SavedLinkMetaAppliedLink
   }
 ): D1PreparedStatement => {
   const baseSql =
@@ -72,7 +76,7 @@ export const createReservedSavedLinkOperationLinkStatement = (
   return database
     .prepare(
       input.appliedLink
-        ? `${baseSql} AND EXISTS (SELECT 1 FROM links WHERE id = ?3 AND user_id = ?1 AND meta_json IS ?4 AND updated_at = ?5)`
+        ? `${baseSql} AND EXISTS (${SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL})`
         : baseSql
     )
     .bind(
