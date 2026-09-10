@@ -215,11 +215,11 @@ const resolveClientMetadataIconUrls = (metadata: MetaData) =>
 export const defaultExtractionClient: ExtractionTransport = {
   extract: async (query) => {
     const headers = createExtractionRequestHeaders()
-    const result = Schema.decodeUnknownSync(extractionResultSchema)(
-      await runWithExtractionResilience(() =>
-        runWithExtractionTimeout((signal) =>
-          client.extraction.extract({ query, headers }, { signal })
-        )
+    const result = await runWithExtractionResilience(() =>
+      runWithExtractionTimeout((signal) =>
+        client.extraction.extract({ query, headers }, extractionResultSchema, {
+          signal,
+        })
       )
     )
     const links = [...result.links]
@@ -229,11 +229,11 @@ export const defaultExtractionClient: ExtractionTransport = {
   },
   getMetadata: async (query) => {
     const headers = createExtractionRequestHeaders()
-    const metadata = Schema.decodeUnknownSync(metadataSchema)(
-      await runWithExtractionResilience(() =>
-        runWithExtractionTimeout((signal) =>
-          client.extraction.getMetadata({ query, headers }, { signal })
-        )
+    const metadata = await runWithExtractionResilience(() =>
+      runWithExtractionTimeout((signal) =>
+        client.extraction.getMetadata({ query, headers }, metadataSchema, {
+          signal,
+        })
       )
     )
     return resolveClientMetadataIconUrls(metadata)

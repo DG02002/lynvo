@@ -45,6 +45,14 @@ type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly query?: RequestQuery
 }
 
+type RequestParams<Name extends string> = {
+  readonly params: { readonly [Key in Name]: string }
+}
+
+type PluginServerParams = RequestParams<"pluginServerId">
+type PluginDomainParams = RequestParams<"domainId">
+type SessionParams = RequestParams<"sessionId">
+
 const apiErrorBodySchema = Schema.Struct({
   _tag: Schema.optional(Schema.String),
   message: Schema.optional(Schema.String),
@@ -174,31 +182,33 @@ const mutation = <ResponseBody, Payload = undefined>(
 
 export const client = {
   extraction: {
-    extract: (
+    extract: <ResponseBody>(
       input: ExtractionRequest<ExtractQuery>,
+      schema: Schema.ConstraintDecoder<ResponseBody>,
       options?: ApiRequestOptions
-    ): Promise<JsonResponse> =>
-      requestJson<JsonResponse>(
+    ): Promise<ResponseBody> =>
+      requestJson<ResponseBody>(
         "/api/extract",
         {
           query: input.query,
           headers: input.headers,
           signal: options?.signal,
         },
-        Schema.Json
+        schema
       ),
-    getMetadata: (
+    getMetadata: <ResponseBody>(
       input: ExtractionRequest<MetadataQuery>,
+      schema: Schema.ConstraintDecoder<ResponseBody>,
       options?: ApiRequestOptions
-    ): Promise<JsonResponse> =>
-      requestJson<JsonResponse>(
+    ): Promise<ResponseBody> =>
+      requestJson<ResponseBody>(
         "/api/meta",
         {
           query: input.query,
           headers: input.headers,
           signal: options?.signal,
         },
-        Schema.Json
+        schema
       ),
   },
   pluginServers: {
@@ -222,35 +232,33 @@ export const client = {
         "POST",
         { payload: input.payload, schema: MutationResultSchema }
       ),
-    toggle: (input: {
-      readonly params: { readonly pluginServerId: string }
-      readonly payload: TogglePluginServerPayload
-    }): Promise<MutationResult> =>
+    toggle: (
+      input: PluginServerParams & {
+        readonly payload: TogglePluginServerPayload
+      }
+    ): Promise<MutationResult> =>
       mutation<MutationResult, TogglePluginServerPayload>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/toggle`,
         "POST",
         { payload: input.payload, schema: MutationResultSchema }
       ),
-    refresh: (input: {
-      readonly params: { readonly pluginServerId: string }
-    }): Promise<MutationResult> =>
+    refresh: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,
         "POST",
         { schema: MutationResultSchema }
       ),
-    setProxyKey: (input: {
-      readonly params: { readonly pluginServerId: string }
-      readonly payload: SetProxyKeyPayload
-    }): Promise<SetProxyKeyResponse> =>
+    setProxyKey: (
+      input: PluginServerParams & {
+        readonly payload: SetProxyKeyPayload
+      }
+    ): Promise<SetProxyKeyResponse> =>
       mutation<SetProxyKeyResponse, SetProxyKeyPayload>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-key`,
         "POST",
         { payload: input.payload, schema: SetProxyKeyResponseSchema }
       ),
-    delete: (input: {
-      readonly params: { readonly pluginServerId: string }
-    }): Promise<MutationResult> =>
+    delete: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}`,
         "DELETE",
@@ -272,26 +280,23 @@ export const client = {
         "POST",
         { payload: input.payload, schema: MutationResultSchema }
       ),
-    setCredential: (input: {
-      readonly params: { readonly domainId: string }
-      readonly payload: SetCredentialPayload
-    }): Promise<MutationResult> =>
+    setCredential: (
+      input: PluginDomainParams & {
+        readonly payload: SetCredentialPayload
+      }
+    ): Promise<MutationResult> =>
       mutation<MutationResult, SetCredentialPayload>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
         "PATCH",
         { payload: input.payload, schema: MutationResultSchema }
       ),
-    deleteCredential: (input: {
-      readonly params: { readonly domainId: string }
-    }): Promise<MutationResult> =>
+    deleteCredential: (input: PluginDomainParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
         "DELETE",
         { schema: MutationResultSchema }
       ),
-    delete: (input: {
-      readonly params: { readonly domainId: string }
-    }): Promise<MutationResult> =>
+    delete: (input: PluginDomainParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}`,
         "DELETE",
@@ -352,9 +357,7 @@ export const client = {
         {},
         UserSessionListSchema
       ),
-    revokeSession: (input: {
-      readonly params: { readonly sessionId: string }
-    }): Promise<MutationResult> =>
+    revokeSession: (input: SessionParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/settings/security/sessions/${encodeURIComponent(input.params.sessionId)}`,
         "DELETE",
