@@ -1,11 +1,41 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
+import { useLocation, useNavigate } from "react-router"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { TEST_PLAYABLE_EXPIRY_AT_MS } from "~/features/links/testing/constants"
+import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+
+const LocationProbe = () => {
+  const location = useLocation()
+  return (
+    <output data-testid="location">
+      {location.pathname}
+      {location.search}
+    </output>
+  )
+}
+
+const BrowserBack = () => {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => void navigate(-1)}>
+      Browser back
+    </button>
+  )
+}
+
+const BrowserForward = () => {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => void navigate(1)}>
+      Browser forward
+    </button>
+  )
+}
 
 const createActions = (
   overrides: Partial<LinkItemActions> = {}
@@ -23,6 +53,11 @@ const createActions = (
 
 describe("SaveListBrowser", () => {
   beforeEach(() => {
+    window.sessionStorage.clear()
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: vi.fn(),
+    })
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({ matches: false }),
@@ -66,20 +101,32 @@ describe("SaveListBrowser", () => {
       },
     }
     const onSelectedItemUrlChange = vi.fn()
+    window.sessionStorage.setItem(
+      "lynvo:save-folder-path:saved-collection",
+      JSON.stringify([{ id: "season-one" }])
+    )
     const renderSavedFolder = () =>
       render(
-        <SaveListBrowser
-          items={[{ ...item, kind: "saved" }]}
-          selectedItemUrl={item.url}
-          onSelectedItemUrlChange={onSelectedItemUrlChange}
-          actions={createActions()}
-          extractingItems={new Set()}
-          highlightedId={null}
-          isHydrating={false}
-        />
+        <>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={onSelectedItemUrlChange}
+            actions={createActions()}
+            extractingItems={new Set()}
+            highlightedId={null}
+            isHydrating={false}
+          />
+          <LocationProbe />
+          <BrowserBack />
+        </>,
+        ["/save", "/save/folder/saved-collection?path=season-one"]
       )
 
     const firstRender = renderSavedFolder()
+    expect(
+      window.sessionStorage.getItem("lynvo:save-folder-path:saved-collection")
+    ).toBeNull()
     const headerMenu = screen.getByRole("button", {
       name: "Open menu for Saved Collection",
     })
@@ -130,6 +177,14 @@ describe("SaveListBrowser", () => {
     fireEvent.click(seasonFolderButton!)
     expect(await screen.findByText("Episode One")).toBeVisible()
 
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/saved-collection"
+      )
+    )
+    expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+
     firstRender.unmount()
     renderSavedFolder()
 
@@ -153,6 +208,306 @@ describe("SaveListBrowser", () => {
     fireEvent.wheel(contentList!, { deltaX: 0, deltaY: 1 })
     fireEvent.wheel(contentList!, { deltaX: -48, deltaY: 0 })
     expect(onSelectedItemUrlChange).toHaveBeenCalledWith(null)
+    expect(
+      window.sessionStorage.getItem("lynvo:save-folder-path:saved-collection")
+    ).toBeNull()
+    expect(
+      window.sessionStorage.getItem("lynvo:save-folder-scroll:saved-collection")
+    ).not.toBeNull()
+  })
+
+  it("pushes folder paths and climbs them with browser back and Escape", async () => {
+    const item: LinkViewItem = {
+      id: "nested-navigation",
+      url: "https://media.example/nested-navigation",
+      timestamp: 1,
+      title: "Nested Navigation",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "folder-one",
+              url: "https://media.example/nested-navigation/folder-one",
+              label: "Folder One",
+              mediaNodeKind: "group",
+              type: "folder",
+              children: [
+                {
+                  id: "folder-two",
+                  url: "https://media.example/nested-navigation/folder-two",
+                  label: "Folder Two",
+                  mediaNodeKind: "group",
+                  type: "folder",
+                  children: [
+                    {
+                      id: "nested-episode",
+                      url: "https://media.example/nested-navigation/episode",
+                      label: "Nested Episode",
+                      mediaNodeKind: "playable",
+                      type: "file",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: "root-episode",
+              url: "https://media.example/nested-navigation/root-episode",
+              label: "Root Episode",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+    const scrollTo = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    })
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+        <BrowserForward />
+      </>,
+      "/save/folder/nested-navigation"
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Folder One" }).at(-1)!
+    )
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    expect(
+      screen
+        .getAllByRole("button", { name: "Folder One" })
+        .some((button) => button.getAttribute("aria-current") === "page")
+    ).toBe(true)
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one"
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
+    )
+    await screen.findByRole("button", { name: "Nested Episode" })
+    expect(
+      screen
+        .getAllByRole("button", { name: "Folder Two" })
+        .some((button) => button.getAttribute("aria-current") === "page")
+    ).toBe(true)
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one/folder-two"
+    )
+
+    const contentList = document.querySelector<HTMLElement>(
+      ".overscroll-y-contain"
+    )
+    expect(contentList).toBeInTheDocument()
+    Object.defineProperty(contentList!, "scrollTop", {
+      configurable: true,
+      value: 128,
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }))
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    expect(
+      screen
+        .getAllByRole("button", { name: "Folder One" })
+        .some((button) => button.getAttribute("aria-current") === "page")
+    ).toBe(true)
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser forward" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/nested-navigation?path=folder-one/folder-two"
+      )
+    )
+    await screen.findByRole("button", { name: "Nested Episode" })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 128 })
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one"
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await screen.findByRole("button", { name: "Root Episode" })
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation"
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Folder One" }).at(-1)!
+    )
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
+    )
+    await screen.findByRole("button", { name: "Nested Episode" })
+
+    fireEvent.keyDown(window, { key: "Escape" })
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    expect(
+      screen
+        .getAllByRole("button", { name: "Folder One" })
+        .some((button) => button.getAttribute("aria-current") === "page")
+    ).toBe(true)
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/save/folder/nested-navigation?path=folder-one"
+    )
+  })
+
+  it("does not turn back between saved folder routes into a folder climb", async () => {
+    const item: LinkViewItem = {
+      id: "folder-route-transition",
+      url: "https://media.example/folder-route-transition",
+      timestamp: 1,
+      title: "Folder Route Transition",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "nested-folder",
+              url: "https://media.example/folder-route-transition/nested",
+              label: "Nested Folder",
+              mediaNodeKind: "group",
+              type: "folder",
+              children: [
+                {
+                  id: "nested-file",
+                  url: "https://media.example/folder-route-transition/nested/file",
+                  label: "Nested File",
+                  mediaNodeKind: "playable",
+                  type: "file",
+                },
+              ],
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+      </>,
+      [
+        "/save/folder/previous-folder",
+        "/save/folder/folder-route-transition?path=nested-folder",
+      ]
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/previous-folder"
+      )
+    )
+  })
+
+  it("normalizes an unknown deep-link segment to the deepest valid folder", async () => {
+    const item: LinkViewItem = {
+      id: "stale-navigation",
+      url: "https://media.example/stale-navigation",
+      timestamp: 1,
+      title: "Stale Navigation",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "folder-one",
+              url: "https://media.example/stale-navigation/folder-one",
+              label: "Folder One",
+              mediaNodeKind: "group",
+              type: "folder",
+              children: [
+                {
+                  id: "folder-two",
+                  url: "https://media.example/stale-navigation/folder-two",
+                  label: "Folder Two",
+                  mediaNodeKind: "group",
+                  type: "folder",
+                  children: [],
+                },
+              ],
+            },
+            {
+              id: "root-episode",
+              url: "https://media.example/stale-navigation/root-episode",
+              label: "Root Episode",
+              mediaNodeKind: "playable",
+              type: "file",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+      </>,
+      "/save/folder/stale-navigation?path=folder-one/unknown-folder"
+    )
+
+    await screen.findAllByRole("button", { name: "Folder Two" })
+    expect(
+      screen
+        .getAllByRole("button", { name: "Folder One" })
+        .some((button) => button.getAttribute("aria-current") === "page")
+    ).toBe(true)
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/stale-navigation?path=folder-one"
+      )
+    )
+    expect(
+      screen.getAllByRole("button", { name: "Folder Two" })
+    ).not.toHaveLength(0)
   })
 
   it("renders protocol group folders without url targets and marks them opened by id", async () => {
@@ -409,6 +764,81 @@ describe("SaveListBrowser", () => {
     expect(
       screen.getByRole("button", { name: /Folder Alpha/ })
     ).toHaveAttribute("data-folder-state", "open")
+  })
+
+  it("does not reopen a folder when lazy expansion resolves after browser back", async () => {
+    let finishExpansion: ((links: ExtractedLink[]) => void) | undefined
+    const resolvedLinks: ExtractedLink[] = [
+      {
+        id: "resolved-file",
+        url: "https://media.example/resolved-file",
+        label: "Resolved File",
+        mediaNodeKind: "playable",
+        type: "file",
+      },
+    ]
+    const expandFolder = vi.fn(
+      () =>
+        new Promise<ExtractedLink[]>((resolve) => {
+          finishExpansion = resolve
+        })
+    )
+    const item: LinkViewItem = {
+      id: "lazy-race",
+      url: "https://media.example/lazy-race",
+      timestamp: 1,
+      title: "Lazy Race",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "lazy-folder",
+              url: "https://media.example/lazy-folder",
+              label: "Lazy Folder",
+              mediaNodeKind: "resolvable",
+              resolutionKind: "folder",
+              type: "folder",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions({ expandFolder })}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+      </>,
+      ["/save", "/save/folder/lazy-race"]
+    )
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Lazy Folder" }).at(-1)!
+    )
+    await waitFor(() => expect(expandFolder).toHaveBeenCalled())
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/save")
+    )
+    finishExpansion?.(resolvedLinks)
+
+    await waitFor(() =>
+      expect(screen.queryByText("Resolved File")).not.toBeInTheDocument()
+    )
+    expect(screen.getByTestId("location")).toHaveTextContent("/save")
   })
 
   it("shows a single resolvable container directly on the save page", async () => {

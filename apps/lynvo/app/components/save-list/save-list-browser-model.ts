@@ -66,3 +66,20 @@ export const getLinksAtFolderPath = (
     )
     return currentFolder?.children ?? []
   }, rootLinks)
+
+export const resolveFolderPath = (
+  rootLinks: ExtractedLink[],
+  folderIds: string[]
+): FolderLevel[] => {
+  const resolvedPath: FolderLevel[] = []
+  let links = rootLinks
+  for (const folderId of folderIds) {
+    const folder = links.find((link) => getLinkKey(link) === folderId)
+    if (!folder || !getMediaNodeInteractionState(folder).isFolder) {
+      break
+    }
+    resolvedPath.push({ id: folderId, label: folder.label })
+    links = folder.children ?? []
+  }
+  return resolvedPath
+}

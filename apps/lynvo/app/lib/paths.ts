@@ -25,6 +25,8 @@ export const policyPaths = {
 
 const saveFolderRouteSegment = "save/folder"
 
+export const SAVE_FOLDER_PATH_SEARCH_PARAM = "path"
+
 export const savePaths = {
   root: "/save",
   folderPrefix: `/${saveFolderRouteSegment}/`,
