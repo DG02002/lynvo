@@ -28,18 +28,11 @@ import {
   clearAsyncResourceCache,
   useAsyncResource,
 } from "~/hooks/use-async-resource"
-import { client } from "~/lib/api/client"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
-
-const loadCloudPlayerPreferences = () => client.settings.getPlayerPreferences()
-
-const saveCloudPlayerPreferences = (preferences: {
-  rangeSupportedPlayerId?: PlayerId
-  rangeUnsupportedPlayerId?: PlayerId
-}) =>
-  client.settings
-    .updatePlayerPreferences({ payload: preferences })
-    .then(() => undefined)
+import {
+  loadCloudPlayerPreferences,
+  saveCloudPlayerPreferences,
+} from "~/lib/settings/player-preferences-api"
 
 export const PlayerSettings = ({
   loadPlayerPreferences = loadCloudPlayerPreferences,

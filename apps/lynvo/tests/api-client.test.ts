@@ -45,7 +45,12 @@ describe("browser API client", () => {
   it("preserves tagged API errors and response metadata", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
-        { _tag: "UnauthorizedError", message: "Unauthorized" },
+        {
+          _tag: "UnauthorizedError",
+          message: "Unauthorized",
+          status: 999,
+          headers: "spoofed",
+        },
         { status: 401, headers: { "Retry-After": "2" } }
       )
     )
@@ -54,6 +59,17 @@ describe("browser API client", () => {
       _tag: "UnauthorizedError",
       message: "Unauthorized",
       status: 401,
+      headers: expect.any(Headers),
     })
+  })
+
+  it("rejects successful responses that do not match the endpoint contract", async () => {
+    fetchMock.mockResolvedValue(Response.json({ success: "true" }))
+
+    await expect(
+      client.settings.updatePlayerPreferences({
+        payload: { rangeSupportedPlayerId: "vlc" },
+      })
+    ).rejects.toThrow()
   })
 })

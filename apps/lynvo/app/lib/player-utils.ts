@@ -1,10 +1,11 @@
 import { Result, Schema } from "effect"
+import { PlayerIdSchema, type PlayerId } from "~/lib/api/contracts"
 import { showPlayerLaunchError } from "~/lib/player-launch-events"
 
-export type PlayerId = "just" | "vlc" | "mpv" | "mx"
+export type { PlayerId } from "~/lib/api/contracts"
 export type RangeRequestCapability = "supported" | "unsupported" | "unknown"
 
-export const playerIdSchema = Schema.Literals(["just", "vlc", "mpv", "mx"])
+export const playerIdSchema = PlayerIdSchema
 
 export interface PlayerDefinition {
   id: PlayerId

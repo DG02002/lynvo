@@ -5,9 +5,7 @@ import {
   setRangeSupportedPlayer,
   setRangeUnsupportedPlayer,
 } from "~/lib/player-utils"
-import { client } from "~/lib/api/client"
-
-const loadCloudPlayerPreferences = () => client.settings.getPlayerPreferences()
+import { loadCloudPlayerPreferences } from "~/lib/settings/player-preferences-api"
 
 export const AccountSettingsSynchronization = ({
   userId,

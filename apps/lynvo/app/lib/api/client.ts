@@ -1,28 +1,46 @@
-import type {
-  JsonValue,
-  RangeRequestCapability,
-} from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 import { getCsrfToken } from "../utils"
 import { sessionIdentityHeaders } from "../session-identity"
+import {
+  MutationResultSchema,
+  PluginDomainListSchema,
+  PluginServerListSchema,
+  PluginServerUsageListSchema,
+  PlayerPreferencesSchema,
+  RemotePollResponseSchema,
+  SetProxyKeyResponseSchema,
+  UserSessionListSchema,
+  type ActivityPayload,
+  type CreatePluginDomainPayload,
+  type CreatePluginServerPayload,
+  type DeleteAccountPayload,
+  type ExtractQuery,
+  type MetadataQuery,
+  type MutationResult,
+  type PlayerPreferences,
+  type PluginDomainList,
+  type PluginServerList,
+  type PluginServerUsageList,
+  type RemotePollResponse,
+  type RemotePollQuery,
+  type RemoteResultPayload,
+  type RemoteSendPayload,
+  type SetCredentialPayload,
+  type SetProxyKeyPayload,
+  type SetProxyKeyResponse,
+  type TogglePluginServerPayload,
+  type UserSessionList,
+} from "./contracts"
 
-export interface ApiRequestOptions {
+interface ApiRequestOptions {
   readonly signal?: AbortSignal
-}
-
-interface ApiQuery {
-  readonly kind?: string
-  readonly pluginId?: string
-  readonly pluginServerId?: string
-  readonly receiverId?: string
-  readonly url?: string
 }
 
 type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly method?: "DELETE" | "GET" | "PATCH" | "POST"
   readonly headers?: Record<string, string>
   readonly payload?: Payload
-  readonly query?: ApiQuery
+  readonly query?: ExtractQuery | MetadataQuery | RemotePollQuery
 }
 
 const apiErrorBodySchema = Schema.Struct({
@@ -33,7 +51,9 @@ const apiErrorBodySchema = Schema.Struct({
 
 type ApiErrorBody = typeof apiErrorBodySchema.Type
 
-const decodeApiErrorBody = (value: JsonValue | undefined) => {
+type JsonResponse = typeof Schema.Json.Type
+
+const decodeApiErrorBody = (value: JsonResponse | undefined) => {
   if (value === undefined) {
     return undefined
   }
@@ -55,6 +75,7 @@ export class ApiClientError extends Error {
   readonly status: number
   readonly headers: Headers
   readonly body: ApiErrorBody | undefined
+  readonly retryAfterSeconds: number | undefined
 
   constructor({
     body,
@@ -68,16 +89,15 @@ export class ApiClientError extends Error {
     this.status = response.status
     this.headers = response.headers
     this.body = body
-
-    if (body) {
-      Object.assign(this, body)
-    }
-
     this._tag = body?._tag ?? "ApiClientError"
+    this.retryAfterSeconds = body?.retryAfterSeconds
   }
 }
 
-const appendQuery = (path: string, query: ApiQuery | undefined): string => {
+const appendQuery = (
+  path: string,
+  query: ExtractQuery | MetadataQuery | RemotePollQuery | undefined
+): string => {
   if (!query) {
     return path
   }
@@ -96,21 +116,18 @@ const resolveRequestUrl = (path: string): string =>
     ? path
     : new URL(path, globalThis.location.href).toString()
 
-const readJson = async (response: Response): Promise<JsonValue | undefined> => {
+const readJson = async (
+  response: Response
+): Promise<JsonResponse | undefined> => {
   const value = await response.json().catch(() => undefined)
   // SAFETY: the same-origin API contract returns JSON values in every response body.
-  return value as JsonValue | undefined
+  return value as JsonResponse | undefined
 }
 
 const requestJson = async <ResponseBody, Payload = undefined>(
   path: string,
-  {
-    method = "GET",
-    headers,
-    payload,
-    query,
-    signal,
-  }: RequestOptions<Payload> = {}
+  { method = "GET", headers, payload, query, signal }: RequestOptions<Payload>,
+  schema: Schema.ConstraintDecoder<ResponseBody>
 ): Promise<ResponseBody> => {
   const requestHeaders = new Headers({
     Accept: "application/json",
@@ -137,273 +154,174 @@ const requestJson = async <ResponseBody, Payload = undefined>(
   if (!response.ok) {
     throw new ApiClientError({ body: decodeApiErrorBody(body), response })
   }
-  // SAFETY: each client method supplies the response type for its same-origin endpoint.
-  return body as ResponseBody
+  return Schema.decodeUnknownSync(schema)(body)
 }
 
-type MutationResult = { readonly success: boolean }
-
-interface PluginServer {
-  readonly id: string
-  readonly userId: string
-  readonly baseUrl: string
-  readonly manifest: string
-  readonly enabled: boolean
-  readonly priority: number
-  readonly verificationStatus: string
-  readonly hasProxyKey: boolean
-  readonly proxyBalanceRemaining?: number | null
-  readonly proxyBalanceLimit?: number | null
-  readonly lastVerifiedAt?: number | null
-  readonly lastManifestRefreshAt?: number | null
-  readonly createdAt: number
-  readonly updatedAt: number
-}
-
-interface PluginDomain {
-  readonly id: string
-  readonly userId: string
-  readonly pluginServerId: string
-  readonly domain: string
-  readonly pluginId: string
-  readonly hasCredential: boolean
-}
-
-interface PluginServerUsage {
-  readonly pluginServerId: string
-  readonly name: string
-  readonly iconUrl?: string
-  readonly plugins?: readonly {
-    readonly id: string
-    readonly name: string
-    readonly iconUrl?: string
-  }[]
-  readonly metrics: readonly UsageMetric[]
-  readonly error?: string
-}
-
-interface PlayerPreferences {
-  readonly rangeSupportedPlayerId?: "just" | "vlc" | "mpv" | "mx"
-  readonly rangeUnsupportedPlayerId?: "just" | "vlc" | "mpv" | "mx"
-}
-
-interface UserSession {
-  readonly id: string
-  readonly deviceName: string
-  readonly lastActiveAt: number
-  readonly createdAt: number
-  readonly isCurrent: boolean
-}
-
-interface RemotePollResponse {
-  readonly commands: readonly {
-    readonly id: string
-    readonly claimToken: string
-    readonly command: "play"
-    readonly payload: string
-    readonly createdAt: number
-  }[]
-}
-
-interface ExtractionQuery {
-  readonly url: string
-  readonly pluginServerId?: string
-  readonly pluginId?: string
-  readonly kind?: string
-}
-
-interface ExtractionRequest {
-  readonly query: ExtractionQuery
+interface ExtractionRequest<Query> {
+  readonly query: Query
   readonly headers?: Record<string, string>
 }
 
-interface CreatePluginServerPayload {
-  readonly apiKey: string
-  readonly baseUrl: string
-}
-
-interface CreatePluginDomainPayload {
-  readonly domain: string
-  readonly password?: string
-  readonly pluginId: string
-  readonly pluginServerId: string
-  readonly username?: string
-}
-
-interface SetCredentialPayload {
-  readonly password: string
-  readonly username?: string
-}
-
-interface RemoteSendPayload {
-  readonly command: "play"
-  readonly data?: {
-    readonly rangeRequest: RangeRequestCapability
-    readonly url: string
-  }
-  readonly target_session_id: string
-}
-
-interface RemoteResultPayload {
-  readonly claimToken: string
-  readonly id: string
-  readonly message?: string
-  readonly receiverId: string
-  readonly result: "applied" | "failed"
-}
-
-interface ActivityPayload {
-  readonly deviceName: string
-}
-
-interface DeleteAccountPayload {
-  readonly confirmEmail: string
+type MutationOptions<ResponseBody, Payload> = {
+  readonly payload?: Payload
+  readonly schema: Schema.ConstraintDecoder<ResponseBody>
 }
 
 const mutation = <ResponseBody, Payload = undefined>(
   path: string,
   method: "DELETE" | "PATCH" | "POST",
-  payload?: Payload
-) => requestJson<ResponseBody, Payload>(path, { method, payload })
+  { payload, schema }: MutationOptions<ResponseBody, Payload>
+) => requestJson<ResponseBody, Payload>(path, { method, payload }, schema)
 
 export const client = {
   extraction: {
     extract: (
-      input: ExtractionRequest,
+      input: ExtractionRequest<ExtractQuery>,
       options?: ApiRequestOptions
-    ): Promise<JsonValue> =>
-      requestJson<JsonValue>("/api/extract", {
-        query: input.query,
-        headers: input.headers,
-        signal: options?.signal,
-      }),
+    ): Promise<JsonResponse> =>
+      requestJson<JsonResponse>(
+        "/api/extract",
+        {
+          query: input.query,
+          headers: input.headers,
+          signal: options?.signal,
+        },
+        Schema.Json
+      ),
     getMetadata: (
-      input: ExtractionRequest,
+      input: ExtractionRequest<MetadataQuery>,
       options?: ApiRequestOptions
-    ): Promise<JsonValue> =>
-      requestJson<JsonValue>("/api/meta", {
-        query: input.query,
-        headers: input.headers,
-        signal: options?.signal,
-      }),
+    ): Promise<JsonResponse> =>
+      requestJson<JsonResponse>(
+        "/api/meta",
+        {
+          query: input.query,
+          headers: input.headers,
+          signal: options?.signal,
+        },
+        Schema.Json
+      ),
   },
   pluginServers: {
-    list: (): Promise<readonly PluginServer[]> =>
-      requestJson<readonly PluginServer[]>("/api/plugin-servers"),
-    usage: (): Promise<readonly PluginServerUsage[]> =>
-      requestJson<readonly PluginServerUsage[]>("/api/plugin-servers/usage"),
+    list: (): Promise<PluginServerList> =>
+      requestJson<PluginServerList>(
+        "/api/plugin-servers",
+        {},
+        PluginServerListSchema
+      ),
+    usage: (): Promise<PluginServerUsageList> =>
+      requestJson<PluginServerUsageList>(
+        "/api/plugin-servers/usage",
+        {},
+        PluginServerUsageListSchema
+      ),
     create: (input: {
       readonly payload: CreatePluginServerPayload
     }): Promise<MutationResult> =>
       mutation<MutationResult, CreatePluginServerPayload>(
         "/api/plugin-servers",
         "POST",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
     toggle: (input: {
       readonly params: { readonly pluginServerId: string }
-      readonly payload: { readonly enabled: boolean }
+      readonly payload: TogglePluginServerPayload
     }): Promise<MutationResult> =>
-      mutation<MutationResult, { readonly enabled: boolean }>(
+      mutation<MutationResult, TogglePluginServerPayload>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/toggle`,
         "POST",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
     refresh: (input: {
       readonly params: { readonly pluginServerId: string }
     }): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,
-        "POST"
+        "POST",
+        { schema: MutationResultSchema }
       ),
     setProxyKey: (input: {
       readonly params: { readonly pluginServerId: string }
-      readonly payload: { readonly token: string }
-    }): Promise<
-      MutationResult & {
-        readonly remaining: number | null
-        readonly limit: number | null
-      }
-    > =>
-      mutation<
-        MutationResult & {
-          readonly remaining: number | null
-          readonly limit: number | null
-        },
-        { readonly token: string }
-      >(
+      readonly payload: SetProxyKeyPayload
+    }): Promise<SetProxyKeyResponse> =>
+      mutation<SetProxyKeyResponse, SetProxyKeyPayload>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-key`,
         "POST",
-        input.payload
+        { payload: input.payload, schema: SetProxyKeyResponseSchema }
       ),
     delete: (input: {
       readonly params: { readonly pluginServerId: string }
     }): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}`,
-        "DELETE"
+        "DELETE",
+        { schema: MutationResultSchema }
       ),
   },
   pluginDomains: {
-    list: (): Promise<readonly PluginDomain[]> =>
-      requestJson<readonly PluginDomain[]>("/api/plugin-domains"),
+    list: (): Promise<PluginDomainList> =>
+      requestJson<PluginDomainList>(
+        "/api/plugin-domains",
+        {},
+        PluginDomainListSchema
+      ),
     create: (input: {
       readonly payload: CreatePluginDomainPayload
     }): Promise<MutationResult> =>
       mutation<MutationResult, CreatePluginDomainPayload>(
         "/api/plugin-domains",
         "POST",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
     setCredential: (input: {
       readonly params: { readonly domainId: string }
-      readonly payload: {
-        readonly password: string
-        readonly username?: string
-      }
+      readonly payload: SetCredentialPayload
     }): Promise<MutationResult> =>
       mutation<MutationResult, SetCredentialPayload>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
         "PATCH",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
     deleteCredential: (input: {
       readonly params: { readonly domainId: string }
     }): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
-        "DELETE"
+        "DELETE",
+        { schema: MutationResultSchema }
       ),
     delete: (input: {
       readonly params: { readonly domainId: string }
     }): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}`,
-        "DELETE"
+        "DELETE",
+        { schema: MutationResultSchema }
       ),
   },
   remote: {
     send: (input: {
       readonly payload: RemoteSendPayload
     }): Promise<MutationResult> =>
-      mutation<MutationResult, RemoteSendPayload>(
-        "/api/remote/send",
-        "POST",
-        input.payload
-      ),
-    pollInbox: (input: {
-      readonly query: { readonly receiverId: string }
-    }): Promise<RemotePollResponse> =>
-      requestJson<RemotePollResponse>("/api/remote/inbox", {
-        query: input.query,
+      mutation<MutationResult, RemoteSendPayload>("/api/remote/send", "POST", {
+        payload: input.payload,
+        schema: MutationResultSchema,
       }),
+    pollInbox: (input: {
+      readonly query: RemotePollQuery
+    }): Promise<RemotePollResponse> =>
+      requestJson<RemotePollResponse>(
+        "/api/remote/inbox",
+        { query: input.query },
+        RemotePollResponseSchema
+      ),
     reportResult: (input: {
       readonly payload: RemoteResultPayload
     }): Promise<MutationResult> =>
       mutation<MutationResult, RemoteResultPayload>(
         "/api/remote/result",
         "POST",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
   },
   settings: {
@@ -413,36 +331,47 @@ export const client = {
       mutation<MutationResult, ActivityPayload>(
         "/api/settings/activity",
         "POST",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
     getPlayerPreferences: (): Promise<PlayerPreferences> =>
-      requestJson<PlayerPreferences>("/api/settings/player"),
+      requestJson<PlayerPreferences>(
+        "/api/settings/player",
+        {},
+        PlayerPreferencesSchema
+      ),
     updatePlayerPreferences: (input: {
       readonly payload: PlayerPreferences
     }): Promise<MutationResult> =>
       mutation<MutationResult, PlayerPreferences>(
         "/api/settings/player",
         "PATCH",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
-    listSessions: (): Promise<readonly UserSession[]> =>
-      requestJson<readonly UserSession[]>("/api/settings/security/sessions"),
+    listSessions: (): Promise<UserSessionList> =>
+      requestJson<UserSessionList>(
+        "/api/settings/security/sessions",
+        {},
+        UserSessionListSchema
+      ),
     revokeSession: (input: {
       readonly params: { readonly sessionId: string }
     }): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/settings/security/sessions/${encodeURIComponent(input.params.sessionId)}`,
-        "DELETE"
+        "DELETE",
+        { schema: MutationResultSchema }
       ),
     revokeAllSessions: (): Promise<MutationResult> =>
-      mutation<MutationResult>("/api/settings/security/sessions", "DELETE"),
+      mutation<MutationResult>("/api/settings/security/sessions", "DELETE", {
+        schema: MutationResultSchema,
+      }),
     deleteAccount: (input: {
       readonly payload: DeleteAccountPayload
     }): Promise<MutationResult> =>
       mutation<MutationResult, DeleteAccountPayload>(
         "/api/settings/security/account",
         "DELETE",
-        input.payload
+        { payload: input.payload, schema: MutationResultSchema }
       ),
   },
 }

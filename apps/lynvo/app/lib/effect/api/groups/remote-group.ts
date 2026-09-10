@@ -1,4 +1,3 @@
-import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../middleware"
 import {
@@ -6,45 +5,29 @@ import {
   CsrfApiError,
   BackendApiError,
 } from "../../errors"
+import {
+  MutationResultSchema,
+  RemotePollQuerySchema,
+  RemotePollResponseSchema,
+  RemoteResultPayloadSchema,
+  RemoteSendPayloadSchema,
+} from "../../../api/contracts"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
   .add(
     HttpApiEndpoint.post("send", "/send", {
-      payload: Schema.Struct({
-        target_session_id: Schema.String,
-        command: Schema.Literal("play"),
-        data: Schema.optional(Schema.Unknown),
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: RemoteSendPayloadSchema,
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
-      query: Schema.Struct({ receiverId: Schema.String }),
-      success: Schema.Struct({
-        commands: Schema.Array(
-          Schema.Struct({
-            id: Schema.String,
-            claimToken: Schema.String,
-            command: Schema.Literal("play"),
-            payload: Schema.String,
-            createdAt: Schema.Number,
-          })
-        ),
-      }),
+      query: RemotePollQuerySchema,
+      success: RemotePollResponseSchema,
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("reportResult", "/result", {
-      payload: Schema.Struct({
-        id: Schema.String,
-        claimToken: Schema.String,
-        receiverId: Schema.String,
-        result: Schema.Union([
-          Schema.Literal("applied"),
-          Schema.Literal("failed"),
-        ]),
-        message: Schema.optional(Schema.String),
-      }),
-      success: Schema.Struct({ success: Schema.Boolean }),
+      payload: RemoteResultPayloadSchema,
+      success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )
