@@ -253,15 +253,25 @@ export const useFinderBrowserState = ({
     }
   }, [item.id])
 
+  const beginFolderNavigation = (clearForwardFolderPaths = false) => {
+    if (clearForwardFolderPaths) {
+      setForwardFolderPaths([])
+    }
+    rememberScrollPosition()
+    shouldAutoDescendRef.current = false
+  }
+
   const prepareParentNavigation = (currentFolderPath: FolderLevel[]) => {
     const parentFolderPath = currentFolderPath.slice(0, -1)
-    rememberScrollPosition()
+    beginFolderNavigation()
+    return parentFolderPath
+  }
+
+  const queueForwardFolderPath = (folderPathToQueue: FolderLevel[]) => {
     setForwardFolderPaths((currentForwardFolderPaths) => [
-      currentFolderPath,
+      folderPathToQueue,
       ...currentForwardFolderPaths,
     ])
-    shouldAutoDescendRef.current = false
-    return parentFolderPath
   }
 
   const navigateToParentFolder = () => {
@@ -281,6 +291,7 @@ export const useFinderBrowserState = ({
       return
     }
 
+    queueForwardFolderPath(visibleFolderPath)
     navigateToFolderPath(parentFolderPath, true)
   }
 
@@ -289,7 +300,7 @@ export const useFinderBrowserState = ({
       historyAction === "POP" &&
       visibleFolderPath.length > 0 &&
       currentLocation.pathname.startsWith(savePaths.folderPrefix) &&
-      nextLocation.pathname !== currentLocation.pathname,
+      !nextLocation.pathname.startsWith(savePaths.folderPrefix),
     [visibleFolderPath.length]
   )
   const folderExitBlocker = useBlocker(shouldBlockFolderExit)
@@ -298,6 +309,7 @@ export const useFinderBrowserState = ({
       return
     }
     const parentFolderPath = prepareParentNavigation(visibleFolderPath)
+    queueForwardFolderPath(visibleFolderPath)
     folderExitBlocker.reset()
     navigateToFolderPath(parentFolderPath, true)
   })
@@ -310,10 +322,7 @@ export const useFinderBrowserState = ({
 
   const navigateToNextFolder = () => {
     if (historyForwardFolderIds) {
-      rememberScrollPosition()
-      setForwardFolderPaths((currentForwardFolderPaths) =>
-        currentForwardFolderPaths.slice(1)
-      )
+      beginFolderNavigation(true)
       const nextFolderPath = resolveFolderPath(
         rootLinks,
         historyForwardFolderIds
@@ -326,7 +335,7 @@ export const useFinderBrowserState = ({
     }
 
     if (hasBrowserForwardEntry && visibleFolderPath.length > 0) {
-      rememberScrollPosition()
+      beginFolderNavigation(true)
       void navigate(1)
       return
     }
@@ -382,9 +391,7 @@ export const useFinderBrowserState = ({
       }
       setRootLinks(resolvedLinks)
     }
-    setForwardFolderPaths([])
-    rememberScrollPosition()
-    shouldAutoDescendRef.current = false
+    beginFolderNavigation(true)
     navigateToFolderPath(targetPath, false)
   }
 
@@ -434,9 +441,7 @@ export const useFinderBrowserState = ({
     navigateToParentFolder,
     selectRoot: () => {
       resetHorizontalGesture()
-      setForwardFolderPaths([])
-      rememberScrollPosition()
-      shouldAutoDescendRef.current = false
+      beginFolderNavigation(true)
       navigateToFolderPath([], true)
     },
   }

@@ -37,6 +37,8 @@ const getBrowserHistoryState = () => {
 const syncBrowserHistoryOffset = () => {
   const state = getBrowserHistoryState()
   const { idx, [BROWSER_HISTORY_OFFSET_KEY]: offset } = state ?? {}
+  // `idx` is React Router's browser-history position; this is best-effort
+  // metadata that may need revisiting if that implementation changes.
   if (idx === undefined) {
     return
   }
@@ -56,7 +58,7 @@ const syncBrowserHistoryOffset = () => {
   }
 }
 
-const hasBrowserForwardEntry = (): boolean => {
+const readBrowserForwardEntry = (): boolean => {
   const state = getBrowserHistoryState()
   const { idx: historyIndex, [BROWSER_HISTORY_OFFSET_KEY]: historyOffset } =
     state ?? {}
@@ -75,9 +77,16 @@ export const useFinderFolderHistory = ({
   const [entries, setEntries] = useState<FolderHistoryEntry[]>([
     { key: locationKey, folderIds },
   ])
+  const [browserForwardEntry, setBrowserForwardEntry] = useState(false)
 
   useEffect(() => {
     syncBrowserHistoryOffset()
+    const nextBrowserForwardEntry = readBrowserForwardEntry()
+    setBrowserForwardEntry((currentBrowserForwardEntry) =>
+      currentBrowserForwardEntry === nextBrowserForwardEntry
+        ? currentBrowserForwardEntry
+        : nextBrowserForwardEntry
+    )
     const currentEntry = { key: locationKey, folderIds }
     setEntries((currentEntries) => {
       const previousIndex = currentEntries.findIndex(
@@ -111,7 +120,7 @@ export const useFinderFolderHistory = ({
         currentIndex > 0 ? entries[currentIndex - 1]?.folderIds : undefined,
       forwardFolderIds:
         currentIndex === -1 ? undefined : entries[currentIndex + 1]?.folderIds,
-      hasBrowserForwardEntry: hasBrowserForwardEntry(),
+      hasBrowserForwardEntry: browserForwardEntry,
     }
-  }, [entries, locationKey])
+  }, [browserForwardEntry, entries, locationKey])
 }

@@ -337,6 +337,67 @@ describe("SaveListBrowser", () => {
     )
   })
 
+  it("does not turn back between saved folder routes into a folder climb", async () => {
+    const item: LinkViewItem = {
+      id: "folder-route-transition",
+      url: "https://media.example/folder-route-transition",
+      timestamp: 1,
+      title: "Folder Route Transition",
+      metadata: {
+        schemaVersion: 3,
+        source: {},
+        extraction: {
+          extractedLinks: [
+            {
+              id: "nested-folder",
+              url: "https://media.example/folder-route-transition/nested",
+              label: "Nested Folder",
+              mediaNodeKind: "group",
+              type: "folder",
+              children: [
+                {
+                  id: "nested-file",
+                  url: "https://media.example/folder-route-transition/nested/file",
+                  label: "Nested File",
+                  mediaNodeKind: "playable",
+                  type: "file",
+                },
+              ],
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <>
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions()}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
+        <LocationProbe />
+        <BrowserBack />
+      </>,
+      [
+        "/save/folder/previous-folder",
+        "/save/folder/folder-route-transition?path=nested-folder",
+      ]
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/save/folder/previous-folder"
+      )
+    )
+  })
+
   it("normalizes an unknown deep-link segment to the deepest valid folder", async () => {
     const item: LinkViewItem = {
       id: "stale-navigation",
