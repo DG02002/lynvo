@@ -109,15 +109,6 @@ interface ResolvedMirrorsByUrl {
   [lazyItemUrl: string]: ExtractedLink[]
 }
 
-interface SavedLinkMetadataWriteInput {
-  database: D1Database
-  userId: string
-  operationId: string
-  existingRow: LinkRow
-  nextRow: LinkRow
-  now: number
-}
-
 interface CreateOrUpdateSavedLinkInput {
   operationId: string
   url: string
@@ -423,9 +414,8 @@ interface GuardedSavedLinkMetaWriteInput {
   readonly operationId: string
   readonly existingRow: LinkRow
   readonly nextRow: LinkRow
-  readonly now: number
   readonly updateStatement: D1PreparedStatement
-  readonly trailingStatements?: readonly D1PreparedStatement[]
+  readonly trailingStatement?: D1PreparedStatement
 }
 
 const executeGuardedSavedLinkMetaWrite = async ({
@@ -434,16 +424,19 @@ const executeGuardedSavedLinkMetaWrite = async ({
   operationId,
   existingRow,
   nextRow,
-  now,
   updateStatement,
-  trailingStatements = [],
+  trailingStatement,
 }: GuardedSavedLinkMetaWriteInput): Promise<OwnedWriteResult> => {
+  // nextRow.updated_at is the write's clock: the ledger timestamps and the
+  // applied-state guard both read it, so they cannot disagree with the
+  // UPDATE statement's updated_at binding.
+  const now = nextRow.updated_at
   const preparation = await ensureStorageLedger(database, userId, now)
   assertLinkSize(byteLength(nextRow))
   const applied = savedLinkMetaAppliedConditions({
     linkId: existingRow.id,
     metaJson: nextRow.meta_json,
-    updatedAt: nextRow.updated_at,
+    updatedAt: now,
   })
   const ledgerMutation = applyStorageMutation({
     database,
@@ -470,75 +463,14 @@ const executeGuardedSavedLinkMetaWrite = async ({
         linkId: existingRow.id,
         appliedLink: applied.appliedLink,
       }),
-      ...trailingStatements,
+      ...(trailingStatement ? [trailingStatement] : []),
     ],
     guard: applied.guard,
   })
 }
 
-const executeSavedLinkMetadataWrite = async ({
-  database,
-  userId,
-  operationId,
-  existingRow,
-  nextRow,
-  now,
-}: SavedLinkMetadataWriteInput): Promise<{
-  dataVersion: number
-  changed: boolean
-}> =>
-  executeGuardedSavedLinkMetaWrite({
-    database,
-    userId,
-    operationId,
-    existingRow,
-    nextRow,
-    now,
-    updateStatement: database
-      .prepare(
-        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
-      )
-      .bind(
-        existingRow.id,
-        nextRow.meta_json,
-        now,
-        nextRow.extraction_state,
-        nextRow.extraction_error,
-        nextRow.extraction_available_at,
-        nextRow.extraction_lease_expires_at,
-        existingRow.meta_json
-      ),
-  })
-
 const canonicalizeLinkMetadataJson = (metadataJson: string): string =>
   JSON.stringify(parseCanonicalLinkMetadataJson(metadataJson))
-
-const executeUpdateSavedLinkMetaAttempt = async ({
-  database,
-  userId,
-  input,
-  metadataJson,
-}: UpdateSavedLinkMetaAttemptInput): Promise<SavedLinkOptimisticMutationAttemptResult> => {
-  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
-  const nextRow: LinkRow = {
-    ...existingRow,
-    meta_json: metadataJson,
-    updated_at: input.now,
-  }
-  return executeGuardedSavedLinkMetaWrite({
-    database,
-    userId,
-    operationId: input.operationId,
-    existingRow,
-    nextRow,
-    now: input.now,
-    updateStatement: database
-      .prepare(
-        "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
-      )
-      .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
-  })
-}
 
 const executeApplySavedLinkMetadataAttempt = async (
   database: D1Database,
@@ -558,13 +490,52 @@ const executeApplySavedLinkMetadataAttempt = async (
     operation: input.operation,
     now: input.now,
   })
-  return executeSavedLinkMetadataWrite({
+  return executeGuardedSavedLinkMetaWrite({
     database,
     userId,
     operationId: input.operationId,
     existingRow,
     nextRow,
-    now: input.now,
+    updateStatement: database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
+      )
+      .bind(
+        existingRow.id,
+        nextRow.meta_json,
+        nextRow.updated_at,
+        nextRow.extraction_state,
+        nextRow.extraction_error,
+        nextRow.extraction_available_at,
+        nextRow.extraction_lease_expires_at,
+        existingRow.meta_json
+      ),
+  })
+}
+
+const executeUpdateSavedLinkMetaAttempt = async ({
+  database,
+  userId,
+  input,
+  metadataJson,
+}: UpdateSavedLinkMetaAttemptInput): Promise<SavedLinkOptimisticMutationAttemptResult> => {
+  const existingRow = await requireOwnedSavedLink(database, userId, input.id)
+  const nextRow: LinkRow = {
+    ...existingRow,
+    meta_json: metadataJson,
+    updated_at: input.now,
+  }
+  return executeGuardedSavedLinkMetaWrite({
+    database,
+    userId,
+    operationId: input.operationId,
+    existingRow,
+    nextRow,
+    updateStatement: database
+      .prepare(
+        "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
+      )
+      .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
   })
 }
 
@@ -826,7 +797,6 @@ const updateExistingSavedLink = async ({
     operationId: input.operationId,
     existingRow,
     nextRow,
-    now: input.now,
     updateStatement: database
       .prepare(
         "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
@@ -844,7 +814,7 @@ const updateExistingSavedLink = async ({
         nextRow.extraction_lease_expires_at,
         existingRow.meta_json
       ),
-    trailingStatements: [extractionCredentialStatement],
+    trailingStatement: extractionCredentialStatement,
   })
   return { id: existingRow.id, dataVersion, changed }
 }
