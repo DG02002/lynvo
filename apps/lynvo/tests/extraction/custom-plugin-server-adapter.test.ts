@@ -101,6 +101,7 @@ describe("extractFromCustomPluginServer", () => {
           }),
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://viewer:s%40fe@source.example/title",
         kind: "source",
@@ -214,6 +215,7 @@ describe("extractFromCustomPluginServer", () => {
           manifest: "{}",
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://source.example/title",
         kind: "source",
@@ -285,6 +287,7 @@ describe("extractFromCustomPluginServer", () => {
           }),
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         "https://plugin-source-alpha.example/file"
       )
@@ -338,6 +341,7 @@ describe("extractFromCustomPluginServer", () => {
           manifest: "{}",
           enabled: true,
           priority: 0,
+          proxyEnabled: true,
         },
         targetUrl: "https://source.example/title",
         kind: "source",
@@ -364,6 +368,7 @@ describe("selectCustomPluginServer", () => {
       manifest: createIncompleteStoredManifest("usage"),
       enabled: true,
       priority: 0,
+      proxyEnabled: true,
       verificationStatus: "down",
     }
 
@@ -392,6 +397,7 @@ describe("selectCustomPluginServer", () => {
         manifest: createIncompleteStoredManifest(missingField),
         enabled: true,
         priority: 0,
+        proxyEnabled: true,
         verificationStatus: "verified",
       }
 
@@ -411,6 +417,7 @@ describe("selectCustomPluginServer", () => {
       manifest: "not-json",
       enabled: true,
       priority: 0,
+      proxyEnabled: true,
       verificationStatus: "verified",
     }
 

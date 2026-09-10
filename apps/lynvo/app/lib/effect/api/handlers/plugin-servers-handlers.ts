@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
+import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { CloudflareEnv } from "../../services/cloudflare-env"
@@ -21,6 +21,14 @@ import {
   refreshCustomPluginServerProxyBalance,
   saveCustomPluginServerProxyKey,
 } from "../../services/custom-plugin-server-proxy-key"
+
+const withDataVersion = <Body extends { readonly dataVersion: number }>(
+  body: Body
+) =>
+  HttpApiSchema.withHeaders({
+    body,
+    headers: { "x-lynvo-data-version": body.dataVersion },
+  })
 
 export const PluginServersHandlers = HttpApiBuilder.group(
   Api,
@@ -124,7 +132,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const result = yield* Effect.tryPromise({
             try: () =>
               setPluginServerProxyEnabled(database, user.id, {
                 id: params.pluginServerId,
@@ -137,7 +145,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return withDataVersion(result)
         })
       )
       .handle("refresh", ({ params }) =>
@@ -170,7 +178,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             token: payload.token,
             user,
           })
-          return { success: true, ...balance }
+          return withDataVersion({ success: true, ...balance })
         })
       )
       .handle("refreshProxyBalance", ({ params }) =>
@@ -182,10 +190,11 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             user_id: user.id,
             plugin_server_id: params.pluginServerId,
           })
-          return yield* refreshCustomPluginServerProxyBalance({
+          const result = yield* refreshCustomPluginServerProxyBalance({
             pluginServerId: params.pluginServerId,
             user,
           })
+          return withDataVersion(result)
         })
       )
       .handle("delete", ({ params }) =>

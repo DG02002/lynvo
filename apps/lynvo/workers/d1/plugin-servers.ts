@@ -234,6 +234,20 @@ export const listPluginServers = async (
   return pluginServers
 }
 
+export const findOwnedPluginServerById = async (
+  database: D1Database,
+  userId: string,
+  pluginServerId: string
+): Promise<PluginServerRecord | null> => {
+  const row = await database
+    .prepare(
+      `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2`
+    )
+    .bind(pluginServerId, userId)
+    .first<PluginServerRow>()
+  return row ? mapPluginServerRow(row) : null
+}
+
 export interface ServicePluginServerRecord extends PublicPluginServerRecord {
   apiKeyCiphertext: string
   apiKeyNonce: string
@@ -801,13 +815,23 @@ export const recordPluginServerRefreshSuccess = async (
   return { success: true, dataVersion }
 }
 
-export const setPluginServerEnabled = async (
+type PluginServerBooleanColumn = "enabled" | "proxy_enabled"
+
+interface PluginServerBooleanInput {
+  readonly id: string
+  readonly enabled: boolean
+  readonly now: number
+  readonly column: PluginServerBooleanColumn
+}
+
+const setPluginServerBoolean = async (
   database: D1Database,
   userId: string,
-  input: { id: string; enabled: boolean; now: number }
+  input: PluginServerBooleanInput
 ): Promise<{ success: boolean; dataVersion: number }> => {
+  const { column } = input
   const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  if ((existing.enabled === 1) === input.enabled) {
+  if ((existing[column] === 1) === input.enabled) {
     return {
       success: true,
       dataVersion: await getDataVersion(database, userId),
@@ -815,7 +839,7 @@ export const setPluginServerEnabled = async (
   }
   const nextRow: PluginServerRow = {
     ...existing,
-    enabled: input.enabled ? 1 : 0,
+    [column]: input.enabled ? 1 : 0,
     updated_at: input.now,
   }
   const preparation = await ensureStorageLedger(database, userId, input.now)
@@ -823,7 +847,7 @@ export const setPluginServerEnabled = async (
     database,
     preparation,
     pluginServerId: existing.id,
-    columns: ["enabled"],
+    columns: [column],
     currentRow: existing,
     nextRow,
     now: input.now,
@@ -836,40 +860,22 @@ export const setPluginServerEnabled = async (
   return { success: true, dataVersion }
 }
 
+export const setPluginServerEnabled = async (
+  database: D1Database,
+  userId: string,
+  input: { id: string; enabled: boolean; now: number }
+): Promise<{ success: boolean; dataVersion: number }> =>
+  setPluginServerBoolean(database, userId, { ...input, column: "enabled" })
+
 export const setPluginServerProxyEnabled = async (
   database: D1Database,
   userId: string,
   input: { id: string; enabled: boolean; now: number }
-): Promise<{ success: boolean; dataVersion: number }> => {
-  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
-  if ((existing.proxy_enabled === 1) === input.enabled) {
-    return {
-      success: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
-  }
-  const nextRow: PluginServerRow = {
-    ...existing,
-    proxy_enabled: input.enabled ? 1 : 0,
-    updated_at: input.now,
-  }
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const mutation = buildServerMutationStatements({
-    database,
-    preparation,
-    pluginServerId: existing.id,
-    columns: ["proxy_enabled"],
-    currentRow: existing,
-    nextRow,
-    now: input.now,
+): Promise<{ success: boolean; dataVersion: number }> =>
+  setPluginServerBoolean(database, userId, {
+    ...input,
+    column: "proxy_enabled",
   })
-  const { dataVersion } = await executeOwnedWrite({
-    database,
-    userId,
-    statements: [...preparation.statements, ...mutation],
-  })
-  return { success: true, dataVersion }
-}
 
 export interface PluginServerProxyBalanceUpdate {
   readonly id: string

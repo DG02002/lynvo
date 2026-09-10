@@ -172,6 +172,7 @@ describe("refreshCustomPluginServerProxyBalance", () => {
       success: true,
       remaining: 901,
       limit: 1_000,
+      dataVersion: 2,
     })
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.scrape.do/info?token=stored-proxy-token",

@@ -9,6 +9,7 @@ import { Dialog, DialogTrigger } from "~/components/ui/dialog"
 import { Badge } from "~/components/ui/badge"
 import { Switch } from "~/components/ui/switch"
 import { PluginIcon } from "~/components/plugin-icon"
+import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
 import {
   SectionHeading,
   SettingsList,
@@ -45,18 +46,15 @@ const getProxyDescription = (hasProxyKey: boolean, isProxyEnabled: boolean) => {
 }
 
 const getBalanceDescription = ({
-  hasBalance,
   hasProxyKey,
   remaining,
   limit,
 }: {
-  readonly hasBalance: boolean
   readonly hasProxyKey: boolean
   readonly remaining?: number | null
   readonly limit?: number | null
 }) => {
   if (
-    hasBalance &&
     remaining !== null &&
     remaining !== undefined &&
     limit !== null &&
@@ -89,7 +87,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
           pluginServer.manifest,
           requestOrigin
         )
-        return manifest.proxyProvider === "scrape-do"
+        return isSupportedProxyProvider(manifest.proxyProvider)
           ? [{ manifest, pluginServer }]
           : []
       }),
@@ -185,13 +183,7 @@ const ProxyServerSettingsRow = ({
 }: ProxyServerSettingsRowProps) => {
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down
-  const isProxyEnabled =
-    pluginServer.hasProxyKey && pluginServer.proxyEnabled !== false
-  const hasBalance =
-    pluginServer.proxyBalanceRemaining !== null &&
-    pluginServer.proxyBalanceRemaining !== undefined &&
-    pluginServer.proxyBalanceLimit !== null &&
-    pluginServer.proxyBalanceLimit !== undefined
+  const isProxyEnabled = pluginServer.hasProxyKey && pluginServer.proxyEnabled
   const proxyUsage = manifest.plugins.flatMap((source) =>
     source.proxyCreditUsage
       ? [{ name: source.displayName, usage: source.proxyCreditUsage }]
@@ -202,7 +194,6 @@ const ProxyServerSettingsRow = ({
     isProxyEnabled
   )
   const balanceDescription = getBalanceDescription({
-    hasBalance,
     hasProxyKey: pluginServer.hasProxyKey,
     remaining: pluginServer.proxyBalanceRemaining,
     limit: pluginServer.proxyBalanceLimit,
@@ -251,10 +242,7 @@ const ProxyServerSettingsRow = ({
             checked={isProxyEnabled}
             disabled={!pluginServer.hasProxyKey || isDown || isToggling}
             onCheckedChange={() =>
-              onToggleProxy(
-                pluginServer.id,
-                pluginServer.proxyEnabled !== false
-              )
+              onToggleProxy(pluginServer.id, pluginServer.proxyEnabled)
             }
             aria-label={`${isProxyEnabled ? "Disable" : "Enable"} proxy for ${manifest.name}`}
             aria-busy={isToggling}

@@ -1,5 +1,9 @@
 import { Schema } from "effect"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+import {
+  HttpApiEndpoint,
+  HttpApiGroup,
+  HttpApiSchema,
+} from "effect/unstable/httpapi"
 import { WebAuth, CsrfMiddleware } from "../middleware"
 import {
   UnauthorizedApiError,
@@ -17,7 +21,27 @@ import {
   SetProxyKeyPayloadSchema,
   SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
+  VersionedMutationResultSchema,
 } from "../../../api-contracts"
+
+const dataVersionHeaders = {
+  "x-lynvo-data-version": Schema.Number,
+}
+
+const VersionedMutationResponseSchema = HttpApiSchema.WithHeaders(
+  VersionedMutationResultSchema,
+  dataVersionHeaders
+)
+
+const SetProxyKeyResponseWithHeadersSchema = HttpApiSchema.WithHeaders(
+  SetProxyKeyResponseSchema,
+  dataVersionHeaders
+)
+
+const RefreshProxyBalanceResponseWithHeadersSchema = HttpApiSchema.WithHeaders(
+  RefreshProxyBalanceResponseSchema,
+  dataVersionHeaders
+)
 
 export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
   .add(
@@ -53,7 +77,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         pluginServerId: Schema.String,
       },
       payload: TogglePluginServerPayloadSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("refresh", "/:pluginServerId/refresh", {
@@ -73,7 +97,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         pluginServerId: Schema.String,
       },
       payload: SetProxyKeyPayloadSchema,
-      success: SetProxyKeyResponseSchema,
+      success: SetProxyKeyResponseWithHeadersSchema,
       error: [
         PluginServerRegistrationApiError,
         ValidationApiError,
@@ -89,7 +113,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         params: {
           pluginServerId: Schema.String,
         },
-        success: RefreshProxyBalanceResponseSchema,
+        success: RefreshProxyBalanceResponseWithHeadersSchema,
         error: [
           PluginServerRegistrationApiError,
           UnauthorizedApiError,

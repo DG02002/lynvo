@@ -132,7 +132,7 @@ describe("CustomPluginServerTable", () => {
       name: "Manage proxy settings for Proxy Capable",
     })
     expect(proxyLink).toHaveAttribute("href", "/settings/proxy")
-    expect(screen.getByText("Proxy on")).toBeInTheDocument()
+    expect(screen.getByText("Proxy key set")).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole("button", { name: "Actions for Proxy Capable" })

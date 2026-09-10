@@ -31,7 +31,7 @@ export interface CustomPluginServer {
   proxyBalanceRemaining?: number | null
   proxyBalanceLimit?: number | null
   proxyBalanceCheckedAt?: number | null
-  proxyEnabled?: boolean
+  proxyEnabled: boolean
   lastManifestRefreshAt?: number | null
 }
 

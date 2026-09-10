@@ -11,6 +11,7 @@ import {
   RemotePollResponseSchema,
   SetProxyKeyResponseSchema,
   UserSessionListSchema,
+  VersionedMutationResultSchema,
   type ActivityPayload,
   type CreatePluginDomainPayload,
   type CreatePluginServerPayload,
@@ -32,6 +33,7 @@ import {
   type SetProxyKeyResponse,
   type TogglePluginServerPayload,
   type UserSessionList,
+  type VersionedMutationResult,
 } from "../api-contracts"
 
 interface ApiRequestOptions {
@@ -177,6 +179,21 @@ const mutation = <ResponseBody, Payload = undefined>(
   { payload, schema }: MutationOptions<ResponseBody, Payload>
 ) => requestJson<ResponseBody, Payload>(path, { method, payload }, schema)
 
+type PluginServerToggleInput = PluginServerParams & {
+  readonly payload: TogglePluginServerPayload
+}
+
+const togglePluginServer = <ResponseBody>(
+  suffix: string,
+  input: PluginServerToggleInput,
+  schema: Schema.ConstraintDecoder<ResponseBody>
+): Promise<ResponseBody> =>
+  mutation<ResponseBody, TogglePluginServerPayload>(
+    `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/${suffix}`,
+    "POST",
+    { payload: input.payload, schema }
+  )
+
 export const client = {
   pluginServers: {
     list: (): Promise<PluginServerList> =>
@@ -199,26 +216,12 @@ export const client = {
         "POST",
         { payload: input.payload, schema: MutationResultSchema }
       ),
-    toggle: (
-      input: PluginServerParams & {
-        readonly payload: TogglePluginServerPayload
-      }
-    ): Promise<MutationResult> =>
-      mutation<MutationResult, TogglePluginServerPayload>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/toggle`,
-        "POST",
-        { payload: input.payload, schema: MutationResultSchema }
-      ),
+    toggle: (input: PluginServerToggleInput): Promise<MutationResult> =>
+      togglePluginServer("toggle", input, MutationResultSchema),
     toggleProxy: (
-      input: PluginServerParams & {
-        readonly payload: TogglePluginServerPayload
-      }
-    ): Promise<MutationResult> =>
-      mutation<MutationResult, TogglePluginServerPayload>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-toggle`,
-        "POST",
-        { payload: input.payload, schema: MutationResultSchema }
-      ),
+      input: PluginServerToggleInput
+    ): Promise<VersionedMutationResult> =>
+      togglePluginServer("proxy-toggle", input, VersionedMutationResultSchema),
     refresh: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,

@@ -3,7 +3,7 @@ import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol
 import { CloudflareEnv } from "./cloudflare-env"
 import { getD1Database } from "../../../../workers/d1/db"
 import {
-  listReadyPluginServersForService,
+  findOwnedPluginServerById,
   updatePluginServerProxyBalance,
   updatePluginServerProxyKey,
 } from "../../../../workers/d1/plugin-servers"
@@ -13,6 +13,7 @@ import {
 } from "./custom-plugin-server-credentials"
 import { PluginServerRegistrationError } from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
+import { isSupportedProxyProvider } from "../../plugin-server-proxy"
 
 export interface CustomPluginServerProxyKeyUser {
   readonly id: string
@@ -28,6 +29,7 @@ export interface SaveCustomPluginServerProxyKeyInput {
 export interface ProxyKeyBalance {
   readonly remaining: number | null
   readonly limit: number | null
+  readonly dataVersion: number
 }
 
 const ScrapeDoAccountInfo = Schema.Struct({
@@ -127,7 +129,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   const manifest = yield* decodePluginServerManifest(stored.manifest)
   if (
     !manifest ||
-    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do"
+    !isSupportedProxyProvider(getLynvoManifestExtension(manifest).proxyProvider)
   ) {
     return yield* new PluginServerRegistrationError({
       message: "This Plugin Server does not support user proxy keys.",
@@ -135,7 +137,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   }
 
   if (input.token.trim() === "") {
-    yield* Effect.tryPromise({
+    const { dataVersion } = yield* Effect.tryPromise({
       try: () =>
         updatePluginServerProxyKey(database, input.user.id, {
           id: stored.id,
@@ -149,7 +151,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
           details: cause,
         }),
     })
-    return { remaining: null, limit: null }
+    return { remaining: null, limit: null, dataVersion }
   }
 
   const token = input.token.trim()
@@ -174,7 +176,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
       (error) => new PluginServerRegistrationError({ message: error.message })
     )
   )
-  yield* Effect.tryPromise({
+  const { dataVersion } = yield* Effect.tryPromise({
     try: () =>
       updatePluginServerProxyKey(database, input.user.id, {
         id: stored.id,
@@ -193,7 +195,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
         details: cause,
       }),
   })
-  return balance
+  return { ...balance, dataVersion }
 })
 
 export interface RefreshCustomPluginServerProxyBalanceInput {
@@ -206,7 +208,13 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
 )(function* (
   input: RefreshCustomPluginServerProxyBalanceInput
 ): Effect.fn.Return<
-  { success: true; remaining: number; limit: number; checkedAt: number },
+  {
+    success: true
+    remaining: number
+    limit: number
+    checkedAt: number
+    dataVersion: number
+  },
   PluginServerRegistrationError,
   CloudflareEnv
 > {
@@ -218,17 +226,15 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
     })
   }
 
-  const pluginServers = yield* Effect.tryPromise({
-    try: () => listReadyPluginServersForService(database, input.user.id),
+  const pluginServer = yield* Effect.tryPromise({
+    try: () =>
+      findOwnedPluginServerById(database, input.user.id, input.pluginServerId),
     catch: (cause) =>
       new PluginServerRegistrationError({
         message: "Plugin server lookup failed.",
         details: cause,
       }),
   })
-  const pluginServer = pluginServers.find(
-    (entry) => entry.id === input.pluginServerId
-  )
   if (!pluginServer) {
     return yield* new PluginServerRegistrationError({
       message: "Plugin server not found.",
@@ -238,7 +244,7 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
   const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
   if (
     !manifest ||
-    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do"
+    !isSupportedProxyProvider(getLynvoManifestExtension(manifest).proxyProvider)
   ) {
     return yield* new PluginServerRegistrationError({
       message: "This Plugin Server does not support user proxy keys.",
@@ -272,7 +278,7 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
     )
   )
   const checkedAt = Date.now()
-  yield* Effect.tryPromise({
+  const { dataVersion } = yield* Effect.tryPromise({
     try: () =>
       updatePluginServerProxyBalance(database, input.user.id, {
         id: pluginServer.id,
@@ -285,5 +291,5 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
         details: cause,
       }),
   })
-  return { success: true, ...balance, checkedAt }
+  return { success: true, ...balance, checkedAt, dataVersion }
 })

@@ -179,7 +179,14 @@ export const decryptCustomPluginServerProxyToken = Effect.fn(
 )(function* (
   environment: Env,
   userId: string,
-  pluginServer: StoredCustomPluginServerCredential
+  pluginServer: Pick<
+    StoredCustomPluginServerCredential,
+    | "id"
+    | "proxyTokenCiphertext"
+    | "proxyTokenNonce"
+    | "proxyTokenAlgorithm"
+    | "proxyTokenVersion"
+  >
 ): Effect.fn.Return<string | undefined, CredentialVaultError> {
   if (
     !pluginServer.proxyTokenCiphertext ||

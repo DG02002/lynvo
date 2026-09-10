@@ -22,6 +22,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { Switch } from "~/components/ui/switch"
 import { cn } from "~/lib/utils"
+import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
 import { sourceStatusVariant } from "~/lib/source-status-variant"
 import {
   isPluginServerUsable,
@@ -61,11 +62,8 @@ const CustomPluginServerRow = ({
   const isDown =
     pluginServer.verificationStatus === PLUGIN_SERVER_VERIFICATION_STATUS.down
   const isUsable = isPluginServerUsable(pluginServer)
-  const supportsProxy = manifest.proxyProvider === "scrape-do"
-  const isProxyEnabled =
-    supportsProxy &&
-    pluginServer.hasProxyKey &&
-    pluginServer.proxyEnabled !== false
+  const supportsProxy = isSupportedProxyProvider(manifest.proxyProvider)
+  const hasProxyKey = supportsProxy && pluginServer.hasProxyKey
 
   return (
     <div className="flex flex-col">
@@ -95,7 +93,7 @@ const CustomPluginServerRow = ({
         <div className="flex shrink-0 items-center gap-1">
           {supportsProxy && (
             <Badge
-              variant={isProxyEnabled ? "secondary" : "outline"}
+              variant={hasProxyKey ? "secondary" : "outline"}
               render={
                 <Link
                   to="/settings/proxy"
@@ -104,7 +102,7 @@ const CustomPluginServerRow = ({
               }
             >
               <HugeiconsIcon icon={Key01Icon} data-icon="inline-start" />
-              Proxy {isProxyEnabled ? "on" : "off"}
+              Proxy key {hasProxyKey ? "set" : "not set"}
             </Badge>
           )}
           <Switch

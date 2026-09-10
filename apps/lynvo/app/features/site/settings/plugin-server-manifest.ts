@@ -4,12 +4,13 @@ import {
   type PluginMetadata,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import type { SupportedProxyProvider } from "~/lib/plugin-server-proxy"
 
 export interface PluginServerManifestView {
   name: string
   icon: string | null
   hosts: string
-  proxyProvider?: "scrape-do"
+  proxyProvider?: SupportedProxyProvider
   plugins: PluginMetadata[]
 }
 

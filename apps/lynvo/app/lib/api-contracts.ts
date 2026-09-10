@@ -6,6 +6,13 @@ export const MutationResultSchema = Schema.Struct({
 
 export type MutationResult = typeof MutationResultSchema.Type
 
+export const VersionedMutationResultSchema = Schema.Struct({
+  success: Schema.Boolean,
+  dataVersion: Schema.Number,
+})
+
+export type VersionedMutationResult = typeof VersionedMutationResultSchema.Type
+
 export const CustomPluginServerSchema = Schema.Struct({
   id: Schema.String,
   userId: Schema.String,
@@ -42,6 +49,7 @@ export const SetProxyKeyResponseSchema = Schema.Struct({
   success: Schema.Boolean,
   remaining: Schema.NullOr(Schema.Number),
   limit: Schema.NullOr(Schema.Number),
+  dataVersion: Schema.Number,
 })
 
 export const RefreshProxyBalanceResponseSchema = Schema.Struct({
@@ -49,6 +57,7 @@ export const RefreshProxyBalanceResponseSchema = Schema.Struct({
   remaining: Schema.Number,
   limit: Schema.Number,
   checkedAt: Schema.Number,
+  dataVersion: Schema.Number,
 })
 
 export const CreatePluginDomainPayloadSchema = Schema.Struct({
