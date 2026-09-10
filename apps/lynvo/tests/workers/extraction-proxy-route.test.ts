@@ -61,7 +61,7 @@ const pluginServerRow = {
 const enabledPluginServerRow = { ...pluginServerRow, proxy_enabled: 1 }
 
 const createDatabase = (row: typeof pluginServerRow) =>
-  createFakeD1Database((sql) => {
+  createFakeD1Database((sql, args) => {
     if (sql.includes("INNER JOIN users u")) {
       return {
         row: {
@@ -74,6 +74,15 @@ const createDatabase = (row: typeof pluginServerRow) =>
       }
     }
     if (sql.includes("FROM user_plugin_servers")) {
+      const ownedById =
+        sql.includes("WHERE id = ?1 AND user_id = ?2") &&
+        args[0] === "plugin-server-1" &&
+        args[1] === "user-1"
+      const ownedByUser =
+        sql.includes("WHERE user_id = ?1") && args[0] === "user-1"
+      if (!ownedById && !ownedByUser) {
+        return { rows: [] }
+      }
       return { row, rows: [row] }
     }
     return undefined
@@ -216,7 +225,7 @@ describe("public Extraction proxy behavior", () => {
     const executionContext = { waitUntil: () => undefined } as ExecutionContext
     const response = await app.fetch(
       new Request(
-        "https://lynvo.test/api/plugin-servers/plugin-server-1/proxy-toggle",
+        "https://lynvo.test/api/plugin-servers/plugin-server-1/proxy/toggle",
         {
           method: "POST",
           headers: {

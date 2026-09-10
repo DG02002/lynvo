@@ -221,7 +221,7 @@ export const client = {
     toggleProxy: (
       input: PluginServerToggleInput
     ): Promise<VersionedMutationResult> =>
-      togglePluginServer("proxy-toggle", input, VersionedMutationResultSchema),
+      togglePluginServer("proxy/toggle", input, VersionedMutationResultSchema),
     refresh: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,
@@ -234,7 +234,7 @@ export const client = {
       }
     ): Promise<SetProxyKeyResponse> =>
       mutation<SetProxyKeyResponse, SetProxyKeyPayload>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-key`,
+        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy/key`,
         "POST",
         { payload: input.payload, schema: SetProxyKeyResponseSchema }
       ),
@@ -242,7 +242,7 @@ export const client = {
       input: PluginServerParams
     ): Promise<RefreshProxyBalanceResponse> =>
       mutation<RefreshProxyBalanceResponse>(
-        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-balance/refresh`,
+        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy/balance/refresh`,
         "POST",
         { schema: RefreshProxyBalanceResponseSchema }
       ),

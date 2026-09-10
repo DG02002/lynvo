@@ -109,12 +109,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   }
   const stored = yield* Effect.tryPromise({
     try: () =>
-      database
-        .prepare(
-          "SELECT id, manifest FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2"
-        )
-        .bind(input.pluginServerId, input.user.id)
-        .first<{ id: string; manifest: string }>(),
+      findOwnedPluginServerById(database, input.user.id, input.pluginServerId),
     catch: (cause) =>
       new PluginServerRegistrationError({
         message: "Plugin server lookup failed.",

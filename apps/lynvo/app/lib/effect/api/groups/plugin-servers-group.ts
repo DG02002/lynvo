@@ -73,7 +73,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
-    HttpApiEndpoint.post("toggleProxy", "/:pluginServerId/proxy-toggle", {
+    HttpApiEndpoint.post("toggleProxy", "/:pluginServerId/proxy/toggle", {
       params: {
         pluginServerId: Schema.String,
       },
@@ -93,7 +93,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         CsrfApiError,
       ],
     }),
-    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy-key", {
+    HttpApiEndpoint.post("setProxyKey", "/:pluginServerId/proxy/key", {
       params: {
         pluginServerId: Schema.String,
       },
@@ -109,7 +109,7 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
     }),
     HttpApiEndpoint.post(
       "refreshProxyBalance",
-      "/:pluginServerId/proxy-balance/refresh",
+      "/:pluginServerId/proxy/balance/refresh",
       {
         params: {
           pluginServerId: Schema.String,

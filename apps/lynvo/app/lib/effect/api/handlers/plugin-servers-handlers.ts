@@ -23,7 +23,7 @@ import {
   saveCustomPluginServerProxyKey,
 } from "../../services/custom-plugin-server-proxy-key"
 
-const withDataVersion = <Body extends { readonly dataVersion: number }>(
+const withDataVersionHeaders = <Body extends { readonly dataVersion: number }>(
   body: Body
 ) =>
   HttpApiSchema.withHeaders({
@@ -146,7 +146,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersion(result)
+          return withDataVersionHeaders(result)
         })
       )
       .handle("refresh", ({ params }) =>
@@ -179,7 +179,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             token: payload.token,
             user,
           })
-          return withDataVersion({ success: true, ...balance })
+          return withDataVersionHeaders({ success: true, ...balance })
         })
       )
       .handle("refreshProxyBalance", ({ params }) =>
@@ -195,7 +195,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             pluginServerId: params.pluginServerId,
             user,
           })
-          return withDataVersion(result)
+          return withDataVersionHeaders(result)
         })
       )
       .handle("delete", ({ params }) =>

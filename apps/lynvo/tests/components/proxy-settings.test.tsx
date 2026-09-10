@@ -153,7 +153,7 @@ describe("ProxySettings", () => {
         }
         if (
           url.pathname ===
-          "/api/plugin-servers/plugin-server-1/proxy-balance/refresh"
+          "/api/plugin-servers/plugin-server-1/proxy/balance/refresh"
         ) {
           expect(init?.method).toBe("POST")
           return Response.json({

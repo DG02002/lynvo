@@ -35,11 +35,6 @@ export interface CustomPluginServer {
   lastManifestRefreshAt?: number | null
 }
 
-export interface ProxyKeyMutationResult {
-  readonly remaining: number | null
-  readonly limit: number | null
-}
-
 export interface CreatePluginDomainInput {
   readonly domain: string
   readonly pluginId: string
@@ -82,7 +77,7 @@ export interface PluginSettingsCommands {
   readonly setPluginServerProxyKey: (
     pluginServerId: string,
     token: string
-  ) => Promise<PluginSettingsMutationResult & ProxyKeyMutationResult>
+  ) => Promise<PluginSettingsMutationResult>
   readonly togglePluginServerProxy: (
     pluginServerId: string,
     enabled: boolean
@@ -320,17 +315,19 @@ export const usePluginSettingsInteraction = ({
 
   const handleSetPluginServerProxyKey = React.useCallback(
     async (id: string, token: string) => {
-      const balance = await run({
+      const isRemoving = token.trim() === ""
+      const didSave = await run({
         key: `proxy-key:${id}`,
         operation: () => commands.setPluginServerProxyKey(id, token),
         messages: {
-          success:
-            token.trim() === "" ? "Proxy key removed" : "Proxy key saved",
-          failure: "The proxy key couldn’t be saved. Try again.",
+          success: isRemoving ? "Proxy key removed" : "Proxy key saved",
+          failure: isRemoving
+            ? "The proxy key couldn’t be removed. Try again."
+            : "The proxy key couldn’t be saved. Try again.",
         },
         target: "server",
       })
-      return balance
+      return didSave
     },
     [commands, run]
   )
