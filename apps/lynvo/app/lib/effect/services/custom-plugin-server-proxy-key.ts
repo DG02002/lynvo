@@ -2,8 +2,15 @@ import { Effect, Result, Schema } from "effect"
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 import { CloudflareEnv } from "./cloudflare-env"
 import { getD1Database } from "../../../../workers/d1/db"
-import { updatePluginServerProxyKey } from "../../../../workers/d1/plugin-servers"
-import { encryptCustomPluginServerApiKey } from "./custom-plugin-server-credentials"
+import {
+  listReadyPluginServersForService,
+  updatePluginServerProxyBalance,
+  updatePluginServerProxyKey,
+} from "../../../../workers/d1/plugin-servers"
+import {
+  decryptCustomPluginServerProxyToken,
+  encryptCustomPluginServerApiKey,
+} from "./custom-plugin-server-credentials"
 import { PluginServerRegistrationError } from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
 
@@ -187,4 +194,96 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
       }),
   })
   return balance
+})
+
+export interface RefreshCustomPluginServerProxyBalanceInput {
+  readonly pluginServerId: string
+  readonly user: CustomPluginServerProxyKeyUser
+}
+
+export const refreshCustomPluginServerProxyBalance = Effect.fn(
+  "CustomPluginServerProxyKey.refreshBalance"
+)(function* (
+  input: RefreshCustomPluginServerProxyBalanceInput
+): Effect.fn.Return<
+  { success: true; remaining: number; limit: number; checkedAt: number },
+  PluginServerRegistrationError,
+  CloudflareEnv
+> {
+  const environment = yield* CloudflareEnv
+  const database = getD1Database(environment)
+  if (!database) {
+    return yield* new PluginServerRegistrationError({
+      message: "Account data is temporarily unavailable.",
+    })
+  }
+
+  const pluginServers = yield* Effect.tryPromise({
+    try: () => listReadyPluginServersForService(database, input.user.id),
+    catch: (cause) =>
+      new PluginServerRegistrationError({
+        message: "Plugin server lookup failed.",
+        details: cause,
+      }),
+  })
+  const pluginServer = pluginServers.find(
+    (entry) => entry.id === input.pluginServerId
+  )
+  if (!pluginServer) {
+    return yield* new PluginServerRegistrationError({
+      message: "Plugin server not found.",
+    })
+  }
+
+  const manifest = yield* decodePluginServerManifest(pluginServer.manifest)
+  if (
+    !manifest ||
+    getLynvoManifestExtension(manifest).proxyProvider !== "scrape-do"
+  ) {
+    return yield* new PluginServerRegistrationError({
+      message: "This Plugin Server does not support user proxy keys.",
+    })
+  }
+
+  const proxyToken = yield* decryptCustomPluginServerProxyToken(
+    environment,
+    input.user.id,
+    pluginServer
+  ).pipe(
+    Effect.mapError(
+      (error) => new PluginServerRegistrationError({ message: error.message })
+    )
+  )
+  if (!proxyToken) {
+    return yield* new PluginServerRegistrationError({
+      message: "Save a proxy key before refreshing its balance.",
+    })
+  }
+
+  const balance = yield* readScrapeDoAccountInfo(proxyToken).pipe(
+    Effect.mapError(
+      (cause) =>
+        new PluginServerRegistrationError({
+          message:
+            cause instanceof Error
+              ? cause.message
+              : "The proxy balance couldn’t be refreshed.",
+        })
+    )
+  )
+  const checkedAt = Date.now()
+  yield* Effect.tryPromise({
+    try: () =>
+      updatePluginServerProxyBalance(database, input.user.id, {
+        id: pluginServer.id,
+        balance,
+        now: checkedAt,
+      }),
+    catch: (cause) =>
+      new PluginServerRegistrationError({
+        message: "The proxy balance couldn’t be saved.",
+        details: cause,
+      }),
+  })
+  return { success: true, ...balance, checkedAt }
 })

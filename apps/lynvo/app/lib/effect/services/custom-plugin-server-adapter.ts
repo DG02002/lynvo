@@ -213,6 +213,7 @@ export const extractFromCustomPluginServer = Effect.fn(
     : undefined
   const proxy: ProxyCredential | undefined =
     manifest &&
+    pluginServer.proxyEnabled !== false &&
     getLynvoManifestExtension(manifest).proxyProvider === "scrape-do" &&
     pluginServer.proxyToken
       ? { provider: "scrape-do", token: pluginServer.proxyToken }

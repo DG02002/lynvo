@@ -40,6 +40,7 @@ export const createRoutes = (isDevelopment: boolean) =>
           "features/site/routes/_site.settings.security.tsx"
         ),
         route("plugins", "features/site/routes/_site.settings.plugins.tsx"),
+        route("proxy", "features/site/routes/_site.settings.proxy.tsx"),
         route("usage", "features/site/routes/_site.settings.usage.tsx"),
         route("storage", "features/site/routes/_site.settings.storage.tsx"),
         route("player", "features/site/routes/_site.settings.player.tsx"),

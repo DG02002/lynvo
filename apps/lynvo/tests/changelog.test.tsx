@@ -80,7 +80,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
-    ).toHaveTextContent("The Save page now has List and Hybrid views")
+    ).toHaveTextContent("Proxy keys have their own settings tab")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(

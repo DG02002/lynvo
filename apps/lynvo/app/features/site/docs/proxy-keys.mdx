@@ -1,0 +1,48 @@
+---
+title: Use your own proxy credits
+description: Connect a proxy key to a supported Custom Plugin Server and control when it uses your account.
+navLabel: Proxy keys
+contentType: How-to
+---
+
+<DocSection id="overview">
+
+## Bring your own proxy key
+
+Bring your own key (BYOK) means that a supported Custom Plugin Server uses your
+Scrape.do account for proxy requests instead of the server's shared proxy
+credits. Lynvo stores the key encrypted and does not send it to the browser.
+
+Open [**Settings > Proxy**](/settings/proxy) to add a proxy key for each
+supported Custom Plugin Server. The provider calls this value an API token.
+
+</DocSection>
+
+<DocSection id="credits">
+
+## Check proxy credits
+
+After you save a key, Lynvo shows the remaining and monthly limit from Scrape.do.
+Select **Refresh balance** to check the account again. Each balance includes the
+time it was last checked.
+
+Sources can declare how many proxy credits an Extraction may use. The amount
+can vary when a Source follows redirects, resolves mirrors, or retries an
+upstream request, so read the usage note shown for that Source.
+
+</DocSection>
+
+<DocSection id="enable">
+
+## Choose when to use the key
+
+Turn **Use proxy key** on for a Custom Plugin Server when you want its
+Extractions to use your Scrape.do credits. Turn it off when you want the server
+to use its own proxy behavior instead. Turning the switch off keeps the saved
+key so you can turn it on again later; remove the key when you no longer want
+Lynvo to retain it.
+
+Proxy keys apply to Custom Plugin Servers that declare Scrape.do support. They
+do not change the Lynvo Plugin Server.
+
+</DocSection>

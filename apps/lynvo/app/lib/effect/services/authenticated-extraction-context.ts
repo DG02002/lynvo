@@ -37,5 +37,11 @@ export const loadRegisteredPluginServers = Effect.fn(
     userId,
     storedPluginServers
   )
-  return { pluginServers }
+  return {
+    pluginServers: pluginServers.map((pluginServer) =>
+      Object.assign({}, pluginServer, {
+        proxyEnabled: pluginServer.proxyEnabled !== false,
+      })
+    ),
+  }
 })

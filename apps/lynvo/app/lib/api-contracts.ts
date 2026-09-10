@@ -17,6 +17,8 @@ export const CustomPluginServerSchema = Schema.Struct({
   hasProxyKey: Schema.Boolean,
   proxyBalanceRemaining: Schema.optional(Schema.NullOr(Schema.Number)),
   proxyBalanceLimit: Schema.optional(Schema.NullOr(Schema.Number)),
+  proxyBalanceCheckedAt: Schema.optional(Schema.NullOr(Schema.Number)),
+  proxyEnabled: Schema.Boolean,
   lastVerifiedAt: Schema.optional(Schema.NullOr(Schema.Number)),
   lastManifestRefreshAt: Schema.optional(Schema.NullOr(Schema.Number)),
   createdAt: Schema.Number,
@@ -40,6 +42,13 @@ export const SetProxyKeyResponseSchema = Schema.Struct({
   success: Schema.Boolean,
   remaining: Schema.NullOr(Schema.Number),
   limit: Schema.NullOr(Schema.Number),
+})
+
+export const RefreshProxyBalanceResponseSchema = Schema.Struct({
+  success: Schema.Boolean,
+  remaining: Schema.Number,
+  limit: Schema.Number,
+  checkedAt: Schema.Number,
 })
 
 export const CreatePluginDomainPayloadSchema = Schema.Struct({
@@ -170,6 +179,8 @@ export type TogglePluginServerPayload =
   typeof TogglePluginServerPayloadSchema.Type
 export type SetProxyKeyPayload = typeof SetProxyKeyPayloadSchema.Type
 export type SetProxyKeyResponse = typeof SetProxyKeyResponseSchema.Type
+export type RefreshProxyBalanceResponse =
+  typeof RefreshProxyBalanceResponseSchema.Type
 export type CreatePluginDomainPayload =
   typeof CreatePluginDomainPayloadSchema.Type
 export type SetCredentialPayload = typeof SetCredentialPayloadSchema.Type

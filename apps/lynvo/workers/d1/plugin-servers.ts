@@ -43,6 +43,7 @@ export interface PluginServerRecord {
   proxyBalanceRemaining: number | null
   proxyBalanceLimit: number | null
   proxyBalanceCheckedAt: number | null
+  proxyEnabled: boolean
   credentialStatus: "pending" | "ready" | "failed"
   credentialGeneration: number | null
   credentialAttemptId: string | null
@@ -74,6 +75,7 @@ const mapPluginServerRow = (row: PluginServerRow): PluginServerRecord => ({
   proxyBalanceRemaining: row.proxy_balance_remaining,
   proxyBalanceLimit: row.proxy_balance_limit,
   proxyBalanceCheckedAt: row.proxy_balance_checked_at,
+  proxyEnabled: row.proxy_enabled === 1,
   credentialStatus: row.credential_status,
   credentialGeneration: row.credential_generation,
   credentialAttemptId: row.credential_attempt_id,
@@ -184,6 +186,8 @@ export interface PublicPluginServerRecord {
   hasProxyKey: boolean
   proxyBalanceRemaining: number | null
   proxyBalanceLimit: number | null
+  proxyBalanceCheckedAt: number | null
+  proxyEnabled: boolean
   lastVerifiedAt: number | null
   lastManifestRefreshAt: number | null
   createdAt: number
@@ -203,6 +207,8 @@ const toPublicPluginServer = (
   hasProxyKey: Boolean(record.proxyTokenCiphertext),
   proxyBalanceRemaining: record.proxyBalanceRemaining,
   proxyBalanceLimit: record.proxyBalanceLimit,
+  proxyBalanceCheckedAt: record.proxyBalanceCheckedAt,
+  proxyEnabled: record.proxyEnabled,
   lastVerifiedAt: record.lastVerifiedAt,
   lastManifestRefreshAt: record.lastManifestRefreshAt,
   createdAt: record.createdAt,
@@ -428,6 +434,7 @@ export const beginPluginServerRegistration = async (
     proxy_balance_remaining: null,
     proxy_balance_limit: null,
     proxy_balance_checked_at: null,
+    proxy_enabled: 1,
     credential_status: "pending",
     credential_generation: 1,
     credential_attempt_id: attemptId,
@@ -461,7 +468,7 @@ export const beginPluginServerRegistration = async (
       ...cleanupStatements,
       database
         .prepare(
-          "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)"
+          "INSERT INTO user_plugin_servers (id, user_id, base_url, normalized_base_url, api_key_ciphertext, api_key_nonce, api_key_algorithm, api_key_version, credential_status, credential_generation, credential_attempt_id, pending_expires_at, failure_reason, manifest, enabled, priority, verification_status, last_verified_at, last_manifest_refresh_at, proxy_enabled, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)"
         )
         .bind(
           newRow.id,
@@ -483,6 +490,7 @@ export const beginPluginServerRegistration = async (
           newRow.verification_status,
           newRow.last_verified_at,
           newRow.last_manifest_refresh_at,
+          newRow.proxy_enabled,
           newRow.created_at,
           newRow.updated_at
         ),
@@ -828,6 +836,41 @@ export const setPluginServerEnabled = async (
   return { success: true, dataVersion }
 }
 
+export const setPluginServerProxyEnabled = async (
+  database: D1Database,
+  userId: string,
+  input: { id: string; enabled: boolean; now: number }
+): Promise<{ success: boolean; dataVersion: number }> => {
+  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
+  if ((existing.proxy_enabled === 1) === input.enabled) {
+    return {
+      success: true,
+      dataVersion: await getDataVersion(database, userId),
+    }
+  }
+  const nextRow: PluginServerRow = {
+    ...existing,
+    proxy_enabled: input.enabled ? 1 : 0,
+    updated_at: input.now,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  const mutation = buildServerMutationStatements({
+    database,
+    preparation,
+    pluginServerId: existing.id,
+    columns: ["proxy_enabled"],
+    currentRow: existing,
+    nextRow,
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
+  return { success: true, dataVersion }
+}
+
 export interface PluginServerProxyBalanceUpdate {
   readonly id: string
   readonly balance: {
@@ -841,19 +884,35 @@ export const updatePluginServerProxyBalance = async (
   database: D1Database,
   userId: string,
   input: PluginServerProxyBalanceUpdate
-): Promise<void> => {
-  await database
-    .prepare(
-      "UPDATE user_plugin_servers SET proxy_balance_remaining = ?2, proxy_balance_limit = ?3, proxy_balance_checked_at = ?4 WHERE id = ?1 AND user_id = ?5"
-    )
-    .bind(
-      input.id,
-      input.balance.remaining,
-      input.balance.limit,
-      input.now,
-      userId
-    )
-    .run()
+): Promise<{ success: boolean; dataVersion: number }> => {
+  const existing = await requireOwnedPluginServerRow(database, userId, input.id)
+  const nextRow: PluginServerRow = {
+    ...existing,
+    proxy_balance_remaining: input.balance.remaining,
+    proxy_balance_limit: input.balance.limit,
+    proxy_balance_checked_at: input.now,
+    updated_at: input.now,
+  }
+  const preparation = await ensureStorageLedger(database, userId, input.now)
+  const mutation = buildServerMutationStatements({
+    database,
+    preparation,
+    pluginServerId: existing.id,
+    columns: [
+      "proxy_balance_remaining",
+      "proxy_balance_limit",
+      "proxy_balance_checked_at",
+    ],
+    currentRow: existing,
+    nextRow,
+    now: input.now,
+  })
+  const { dataVersion } = await executeOwnedWrite({
+    database,
+    userId,
+    statements: [...preparation.statements, ...mutation],
+  })
+  return { success: true, dataVersion }
 }
 
 export interface PluginServerProxyKeyUpdate {

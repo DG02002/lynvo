@@ -7,6 +7,7 @@ import {
   PluginServerListSchema,
   PluginServerUsageListSchema,
   PlayerPreferencesSchema,
+  RefreshProxyBalanceResponseSchema,
   RemotePollResponseSchema,
   SetProxyKeyResponseSchema,
   UserSessionListSchema,
@@ -21,6 +22,7 @@ import {
   type PluginDomainList,
   type PluginServerList,
   type PluginServerUsageList,
+  type RefreshProxyBalanceResponse,
   type RemotePollResponse,
   type RemotePollQuery,
   type RemoteResultPayload,
@@ -207,6 +209,16 @@ export const client = {
         "POST",
         { payload: input.payload, schema: MutationResultSchema }
       ),
+    toggleProxy: (
+      input: PluginServerParams & {
+        readonly payload: TogglePluginServerPayload
+      }
+    ): Promise<MutationResult> =>
+      mutation<MutationResult, TogglePluginServerPayload>(
+        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-toggle`,
+        "POST",
+        { payload: input.payload, schema: MutationResultSchema }
+      ),
     refresh: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,
@@ -222,6 +234,14 @@ export const client = {
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-key`,
         "POST",
         { payload: input.payload, schema: SetProxyKeyResponseSchema }
+      ),
+    refreshProxyBalance: (
+      input: PluginServerParams
+    ): Promise<RefreshProxyBalanceResponse> =>
+      mutation<RefreshProxyBalanceResponse>(
+        `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/proxy-balance/refresh`,
+        "POST",
+        { schema: RefreshProxyBalanceResponseSchema }
       ),
     delete: (input: PluginServerParams): Promise<MutationResult> =>
       mutation<MutationResult>(

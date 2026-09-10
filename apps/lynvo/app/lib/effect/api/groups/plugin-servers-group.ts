@@ -13,6 +13,7 @@ import {
   MutationResultSchema,
   PluginServerListSchema,
   PluginServerUsageListSchema,
+  RefreshProxyBalanceResponseSchema,
   SetProxyKeyPayloadSchema,
   SetProxyKeyResponseSchema,
   TogglePluginServerPayloadSchema,
@@ -47,6 +48,14 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
       success: MutationResultSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
+    HttpApiEndpoint.post("toggleProxy", "/:pluginServerId/proxy-toggle", {
+      params: {
+        pluginServerId: Schema.String,
+      },
+      payload: TogglePluginServerPayloadSchema,
+      success: MutationResultSchema,
+      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+    }),
     HttpApiEndpoint.post("refresh", "/:pluginServerId/refresh", {
       params: {
         pluginServerId: Schema.String,
@@ -73,6 +82,22 @@ export class PluginServersGroup extends HttpApiGroup.make("pluginServers")
         CsrfApiError,
       ],
     }),
+    HttpApiEndpoint.post(
+      "refreshProxyBalance",
+      "/:pluginServerId/proxy-balance/refresh",
+      {
+        params: {
+          pluginServerId: Schema.String,
+        },
+        success: RefreshProxyBalanceResponseSchema,
+        error: [
+          PluginServerRegistrationApiError,
+          UnauthorizedApiError,
+          BackendApiError,
+          CsrfApiError,
+        ],
+      }
+    ),
     HttpApiEndpoint.delete("delete", "/:pluginServerId", {
       params: {
         pluginServerId: Schema.String,

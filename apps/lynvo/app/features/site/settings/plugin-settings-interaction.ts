@@ -30,6 +30,8 @@ export interface CustomPluginServer {
   hasProxyKey: boolean
   proxyBalanceRemaining?: number | null
   proxyBalanceLimit?: number | null
+  proxyBalanceCheckedAt?: number | null
+  proxyEnabled?: boolean
   lastManifestRefreshAt?: number | null
 }
 
@@ -81,6 +83,13 @@ export interface PluginSettingsCommands {
     pluginServerId: string,
     token: string
   ) => Promise<PluginSettingsMutationResult & ProxyKeyMutationResult>
+  readonly togglePluginServerProxy: (
+    pluginServerId: string,
+    enabled: boolean
+  ) => Promise<PluginSettingsMutationResult>
+  readonly refreshPluginServerProxyBalance: (
+    pluginServerId: string
+  ) => Promise<PluginSettingsMutationResult>
 }
 
 export interface PluginSettingsOperation {
@@ -127,6 +136,15 @@ const defaultCommands: PluginSettingsCommands = {
     await client.pluginServers.setProxyKey({
       params: { pluginServerId },
       payload: { token },
+    }),
+  togglePluginServerProxy: async (pluginServerId, enabled) =>
+    await client.pluginServers.toggleProxy({
+      params: { pluginServerId },
+      payload: { enabled },
+    }),
+  refreshPluginServerProxyBalance: async (pluginServerId) =>
+    await client.pluginServers.refreshProxyBalance({
+      params: { pluginServerId },
     }),
 }
 
@@ -317,6 +335,36 @@ export const usePluginSettingsInteraction = ({
     [commands, run]
   )
 
+  const handleTogglePluginServerProxy = React.useCallback(
+    async (id: string, enabled: boolean) => {
+      await run({
+        key: `proxy-toggle:${id}`,
+        operation: () => commands.togglePluginServerProxy(id, !enabled),
+        messages: {
+          success: enabled ? "Proxy disabled" : "Proxy enabled",
+          failure: "The proxy setting couldn’t be updated. Try again.",
+        },
+        target: "server",
+      })
+    },
+    [commands, run]
+  )
+
+  const handleRefreshPluginServerProxyBalance = React.useCallback(
+    async (id: string) => {
+      await run({
+        key: `proxy-balance:${id}`,
+        operation: () => commands.refreshPluginServerProxyBalance(id),
+        messages: {
+          success: "Proxy balance refreshed",
+          failure: "The proxy balance couldn’t be refreshed. Try again.",
+        },
+        target: "server",
+      })
+    },
+    [commands, run]
+  )
+
   React.useEffect(() => {
     if (!loadData) {
       return
@@ -346,6 +394,8 @@ export const usePluginSettingsInteraction = ({
     handleDeletePluginServer,
     handleRefreshPluginServer,
     handleSetPluginServerProxyKey,
+    handleTogglePluginServerProxy,
+    handleRefreshPluginServerProxyBalance,
     handleTogglePluginServer,
   }
 }

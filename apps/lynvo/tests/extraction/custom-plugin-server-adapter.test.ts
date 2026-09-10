@@ -120,6 +120,55 @@ describe("extractFromCustomPluginServer", () => {
     })
   })
 
+  it("omits the proxy request field when proxy use is disabled", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        plugin: {
+          pluginServerId: "dev.example.plugin-server",
+          displayName: "Example Plugin Server",
+        },
+        nodes: [],
+        extensions: {},
+      })
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    await Effect.runPromise(
+      extractFromCustomPluginServer({
+        pluginServer: {
+          id: "pluginServer-one",
+          baseUrl: "https://plugin-server.example",
+          apiKey: "secret",
+          manifest: JSON.stringify({
+            protocolVersion: "1.0",
+            pluginServerId: "dev.example.plugin-server",
+            displayName: "Example Plugin Server",
+            auth: { type: "bearer" },
+            usage: { endpoint: "/usage" },
+            matchers: [{ hosts: ["source.example"] }],
+            features: {},
+            extensions: {
+              lynvo: {
+                proxyProvider: "scrape-do",
+                plugins: [],
+              },
+            },
+          }),
+          enabled: true,
+          priority: 0,
+          proxyToken: "user-proxy-token",
+          proxyEnabled: false,
+        },
+        targetUrl: "https://source.example/title",
+        kind: "source",
+      })
+    )
+
+    const [[request]] = fetchMock.mock.calls
+    const body = await request.json()
+    expect(body).not.toHaveProperty("proxy")
+  })
+
   it("decodes human-readable pluginServer text without changing identifiers or URLs", async () => {
     vi.stubGlobal(
       "fetch",
