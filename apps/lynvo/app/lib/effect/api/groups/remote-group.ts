@@ -11,7 +11,10 @@ import {
   RemoteResultPayloadSchema,
   RemoteSendPayloadSchema,
 } from "../../../api-contracts"
-import { VersionedMutationResponseSchema } from "../versioned-response"
+import {
+  VersionedMutationResponseSchema,
+  withDataVersionResponseSchema,
+} from "../versioned-response"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
   .add(
@@ -22,7 +25,7 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
       query: RemotePollQuerySchema,
-      success: RemotePollResponseSchema,
+      success: withDataVersionResponseSchema(RemotePollResponseSchema),
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("reportResult", "/result", {

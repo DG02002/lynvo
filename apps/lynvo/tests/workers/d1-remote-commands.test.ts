@@ -14,6 +14,9 @@ import {
   listPendingRemoteCommandNotifications,
   reportRemoteCommandResult,
 } from "../../workers/d1/remote-commands"
+import app from "../../workers/app"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../app/lib/constants"
+import { getDataVersion } from "../../workers/d1/data-version"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
 
@@ -82,6 +85,44 @@ describe("d1 remote commands", () => {
     })
     expect(claim?.command).toBe("play")
     expect(claim?.claimToken).toBeTruthy()
+  })
+
+  it("answers the inbox poll with the claim write's data version", async () => {
+    const owner = await createSessionForUser()
+    // Route auth resolves sessions against Date.now(); the shared NOW fixture
+    // predates the session lifetime.
+    const pollSession = await createSession(env.DB, {
+      userId: owner.user.id,
+      now: Date.now(),
+    })
+    await enqueueRemoteCommand(env.DB, owner.user.id, {
+      targetSessionId: pollSession.id,
+      command: "play",
+      payload: "{}",
+      targetReceiverId: "receiver",
+      now: Date.now(),
+    })
+    const response = await app.fetch(
+      new Request(`https://lynvo.test/api/remote/inbox?receiverId=receiver`, {
+        headers: {
+          Cookie: `lynvo_session=${pollSession.id}`,
+          "x-lynvo-expected-user-id": owner.user.id,
+          "x-lynvo-expected-session-id": pollSession.id,
+        },
+      }),
+      env
+    )
+    expect(response.status).toBe(200)
+    // SAFETY: The route contract under test defines this response shape.
+    const body = (await response.json()) as {
+      commands: Array<{ id: string }>
+      dataVersion: number
+    }
+    expect(body.commands).toHaveLength(1)
+    expect(body.dataVersion).toBe(await getDataVersion(env.DB, owner.user.id))
+    expect(response.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe(
+      String(body.dataVersion)
+    )
   })
 
   it("reports an applied command idempotently and refuses stale claims", async () => {

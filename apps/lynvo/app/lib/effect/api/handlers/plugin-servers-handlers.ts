@@ -94,7 +94,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          const result = yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               setPluginServerEnabled(database, user.id, {
                 id: params.pluginServerId,
@@ -107,7 +107,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersionHeaders(result)
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
       .handle("toggleProxy", ({ params, payload }) =>
@@ -210,7 +210,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          const result = yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               deletePluginServerById(database, user.id, {
                 id: params.pluginServerId,
@@ -225,7 +225,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersionHeaders(result)
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
 )

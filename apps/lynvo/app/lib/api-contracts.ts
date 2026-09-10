@@ -143,6 +143,7 @@ export const RemoteCommandSchema = Schema.Struct({
 
 export const RemotePollResponseSchema = Schema.Struct({
   commands: Schema.Array(RemoteCommandSchema),
+  dataVersion: Schema.Number,
 })
 
 export const RemoteResultPayloadSchema = Schema.Struct({

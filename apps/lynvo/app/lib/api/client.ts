@@ -210,23 +210,25 @@ export const client = {
       ),
     create: (input: {
       readonly payload: CreatePluginServerPayload
-    }): Promise<MutationResult> =>
-      mutation<MutationResult, CreatePluginServerPayload>(
+    }): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, CreatePluginServerPayload>(
         "/api/plugin-servers",
         "POST",
-        { payload: input.payload, schema: MutationResultSchema }
+        { payload: input.payload, schema: VersionedMutationResultSchema }
       ),
-    toggle: (input: PluginServerToggleInput): Promise<MutationResult> =>
-      togglePluginServer("toggle", input, MutationResultSchema),
+    toggle: (
+      input: PluginServerToggleInput
+    ): Promise<VersionedMutationResult> =>
+      togglePluginServer("toggle", input, VersionedMutationResultSchema),
     toggleProxy: (
       input: PluginServerToggleInput
     ): Promise<VersionedMutationResult> =>
       togglePluginServer("proxy/toggle", input, VersionedMutationResultSchema),
-    refresh: (input: PluginServerParams): Promise<MutationResult> =>
-      mutation<MutationResult>(
+    refresh: (input: PluginServerParams): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}/refresh`,
         "POST",
-        { schema: MutationResultSchema }
+        { schema: VersionedMutationResultSchema }
       ),
     setProxyKey: (
       input: PluginServerParams & {
@@ -246,11 +248,11 @@ export const client = {
         "POST",
         { schema: RefreshProxyBalanceResponseSchema }
       ),
-    delete: (input: PluginServerParams): Promise<MutationResult> =>
-      mutation<MutationResult>(
+    delete: (input: PluginServerParams): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult>(
         `/api/plugin-servers/${encodeURIComponent(input.params.pluginServerId)}`,
         "DELETE",
-        { schema: MutationResultSchema }
+        { schema: VersionedMutationResultSchema }
       ),
   },
   pluginDomains: {
@@ -262,43 +264,49 @@ export const client = {
       ),
     create: (input: {
       readonly payload: CreatePluginDomainPayload
-    }): Promise<MutationResult> =>
-      mutation<MutationResult, CreatePluginDomainPayload>(
+    }): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, CreatePluginDomainPayload>(
         "/api/plugin-domains",
         "POST",
-        { payload: input.payload, schema: MutationResultSchema }
+        { payload: input.payload, schema: VersionedMutationResultSchema }
       ),
     setCredential: (
       input: PluginDomainParams & {
         readonly payload: SetCredentialPayload
       }
-    ): Promise<MutationResult> =>
-      mutation<MutationResult, SetCredentialPayload>(
+    ): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, SetCredentialPayload>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
         "PATCH",
-        { payload: input.payload, schema: MutationResultSchema }
+        { payload: input.payload, schema: VersionedMutationResultSchema }
       ),
-    deleteCredential: (input: PluginDomainParams): Promise<MutationResult> =>
-      mutation<MutationResult>(
+    deleteCredential: (
+      input: PluginDomainParams
+    ): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}/credential`,
         "DELETE",
-        { schema: MutationResultSchema }
+        { schema: VersionedMutationResultSchema }
       ),
-    delete: (input: PluginDomainParams): Promise<MutationResult> =>
-      mutation<MutationResult>(
+    delete: (input: PluginDomainParams): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult>(
         `/api/plugin-domains/${encodeURIComponent(input.params.domainId)}`,
         "DELETE",
-        { schema: MutationResultSchema }
+        { schema: VersionedMutationResultSchema }
       ),
   },
   remote: {
     send: (input: {
       readonly payload: RemoteSendPayload
-    }): Promise<MutationResult> =>
-      mutation<MutationResult, RemoteSendPayload>("/api/remote/send", "POST", {
-        payload: input.payload,
-        schema: MutationResultSchema,
-      }),
+    }): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, RemoteSendPayload>(
+        "/api/remote/send",
+        "POST",
+        {
+          payload: input.payload,
+          schema: VersionedMutationResultSchema,
+        }
+      ),
     pollInbox: (input: {
       readonly query: RemotePollQuery
     }): Promise<RemotePollResponse> =>
@@ -309,11 +317,11 @@ export const client = {
       ),
     reportResult: (input: {
       readonly payload: RemoteResultPayload
-    }): Promise<MutationResult> =>
-      mutation<MutationResult, RemoteResultPayload>(
+    }): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, RemoteResultPayload>(
         "/api/remote/result",
         "POST",
-        { payload: input.payload, schema: MutationResultSchema }
+        { payload: input.payload, schema: VersionedMutationResultSchema }
       ),
   },
   settings: {
@@ -333,11 +341,11 @@ export const client = {
       ),
     updatePlayerPreferences: (input: {
       readonly payload: PlayerPreferences
-    }): Promise<MutationResult> =>
-      mutation<MutationResult, PlayerPreferences>(
+    }): Promise<VersionedMutationResult> =>
+      mutation<VersionedMutationResult, PlayerPreferences>(
         "/api/settings/player",
         "PATCH",
-        { payload: input.payload, schema: MutationResultSchema }
+        { payload: input.payload, schema: VersionedMutationResultSchema }
       ),
     listSessions: (): Promise<UserSessionList> =>
       requestJson<UserSessionList>(

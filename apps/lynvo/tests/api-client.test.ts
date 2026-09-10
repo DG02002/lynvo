@@ -21,7 +21,9 @@ describe("browser API client", () => {
   })
 
   it("sends same-origin API requests with session and CSRF headers", async () => {
-    fetchMock.mockResolvedValue(Response.json({ success: true }))
+    fetchMock.mockResolvedValue(
+      Response.json({ success: true, dataVersion: 2 })
+    )
 
     await client.settings.updatePlayerPreferences({
       payload: { rangeSupportedPlayerId: "vlc" },

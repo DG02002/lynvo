@@ -97,7 +97,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          const result = yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               updateUserPlayerPreferences(database, user.id, {
                 ...payload,
@@ -112,7 +112,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersionHeaders(result)
+          return withDataVersionHeaders({ success: true, dataVersion })
         })
       )
       .handle("listSessions", () =>

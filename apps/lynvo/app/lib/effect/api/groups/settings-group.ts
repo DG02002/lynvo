@@ -17,6 +17,8 @@ import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(
+    // Session and account state is not snapshot-owned data: these writes do
+    // not go through executeOwnedWrite and carry no data_version.
     HttpApiEndpoint.post("touchActivity", "/activity", {
       payload: ActivityPayloadSchema,
       success: MutationResultSchema,

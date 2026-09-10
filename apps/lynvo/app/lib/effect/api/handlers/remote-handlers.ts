@@ -12,6 +12,7 @@ import {
   enqueueRemoteCommand,
   reportRemoteCommandResult,
 } from "../../../../../workers/d1/remote-commands"
+import { getDataVersion } from "../../../../../workers/d1/data-version"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 
 const remotePresenceSchema = Schema.Struct({
@@ -122,7 +123,12 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        return {
+        // Claiming is an owned write; echo its version. With nothing to
+        // claim the current version answers the poll.
+        const dataVersion = claim
+          ? claim.dataVersion
+          : yield* Effect.promise(() => getDataVersion(database, user.id))
+        return withDataVersionHeaders({
           commands: claim
             ? [
                 {
@@ -134,7 +140,8 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
                 },
               ]
             : [],
-        }
+          dataVersion,
+        })
       })
     )
     .handle("reportResult", ({ payload }) =>
