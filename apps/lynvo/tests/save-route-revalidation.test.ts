@@ -57,4 +57,13 @@ describe("save route revalidation", () => {
       })
     ).toBe(true)
   })
+
+  it("reuses the snapshot when a folder path changes to a different subfolder", () => {
+    expect(
+      folderNavigation(
+        "/save/folder/one?path=season-one",
+        "/save/folder/one?path=season-two"
+      )
+    ).toBe(false)
+  })
 })

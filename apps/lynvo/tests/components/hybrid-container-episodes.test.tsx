@@ -1,8 +1,22 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  fireEvent,
+  render as testingRender,
+  screen,
+  waitFor,
+} from "@testing-library/react"
+import type { PropsWithChildren, ReactElement } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { MemoryRouter } from "react-router"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
 import type { LinkListItem } from "~/features/links/types"
+
+const render = (ui: ReactElement) =>
+  testingRender(ui, {
+    wrapper: ({ children }: PropsWithChildren) => (
+      <MemoryRouter initialEntries={["/save"]}>{children}</MemoryRouter>
+    ),
+  })
 
 const item: LinkListItem = {
   kind: "saved",

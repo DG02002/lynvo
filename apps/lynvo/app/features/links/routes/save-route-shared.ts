@@ -17,6 +17,13 @@ const searchWithoutGroup = (url: URL): string => {
   return searchParams.toString()
 }
 
+const searchWithoutGroupAndFolderPath = (url: URL): string => {
+  const searchParams = new URLSearchParams(url.search)
+  searchParams.delete("group")
+  searchParams.delete("path")
+  return searchParams.toString()
+}
+
 const isSaveFolderPath = (pathname: string): boolean =>
   pathname.startsWith(savePaths.folderPrefix)
 
@@ -54,7 +61,8 @@ export const shouldRevalidateSaveFolderRoute: ShouldRevalidateFunction = (
     ({ currentUrl, nextUrl }) =>
       isSaveFolderPath(currentUrl.pathname) &&
       isSaveFolderPath(nextUrl.pathname) &&
-      hasSameNonGroupSearch(currentUrl, nextUrl) &&
+      searchWithoutGroupAndFolderPath(currentUrl) ===
+        searchWithoutGroupAndFolderPath(nextUrl) &&
       (currentUrl.pathname !== nextUrl.pathname ||
         currentUrl.search !== nextUrl.search)
   )
