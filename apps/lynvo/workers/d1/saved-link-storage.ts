@@ -18,6 +18,11 @@ export interface CompletedSavedLinkOperation {
   linkId: string | null
 }
 
+export interface SavedLinkCommandOperationKey {
+  userId: string
+  operationId: string
+}
+
 export const findSavedLinkById = async (
   database: D1Database,
   linkId: string
@@ -45,9 +50,7 @@ export const findCompletedSavedLinkOperation = async (
 
 export const reserveSavedLinkCommandOperation = async (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     command: string
     now: number
   }
@@ -70,9 +73,7 @@ export const reserveSavedLinkCommandOperation = async (
 
 export const createReservedSavedLinkOperationLinkStatement = (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     linkId: string
     appliedLink?: SavedLinkMetaAppliedLink
   }
@@ -96,9 +97,7 @@ export const createReservedSavedLinkOperationLinkStatement = (
 
 export const createSavedLinkOperationCompletionStatement = (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     requireNoSavedLinks?: boolean
   }
 ): D1PreparedStatement => {
@@ -114,7 +113,7 @@ export const createSavedLinkOperationCompletionStatement = (
 
 export const completeSavedLinkOperationIfNoSavedLinks = async (
   database: D1Database,
-  input: { userId: string; operationId: string }
+  input: SavedLinkCommandOperationKey
 ): Promise<boolean> => {
   // This is ledger-only state; keeping it out of executeOwnedWrite preserves
   // the data_version for a clear that changes no Saved links.
@@ -129,7 +128,7 @@ export const completeSavedLinkOperationIfNoSavedLinks = async (
 
 export const releaseReservedSavedLinkCommandOperation = async (
   database: D1Database,
-  input: { userId: string; operationId: string }
+  input: SavedLinkCommandOperationKey
 ): Promise<void> => {
   await database
     .prepare(
@@ -141,9 +140,7 @@ export const releaseReservedSavedLinkCommandOperation = async (
 
 export const createConditionalSavedLinkCommandOperationStatement = (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     linkId: string
     command: string
     now: number

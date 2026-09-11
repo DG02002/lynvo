@@ -162,13 +162,10 @@ const runSavedLinkOperationRace = async <Original, Retry>(
   database: D1Database,
   operationId: string,
   executeOriginal: (database: D1Database) => Promise<Original>,
-  executeRetry: () => Promise<Retry>
+  executeRetry: () => Promise<Retry>,
+  pausePoint: SavedLinkOperationPausePoint = "after-reservation"
 ): Promise<{ original: Original; racingRetry: Retry }> => {
-  const pause = createSavedLinkOperationPause(
-    database,
-    operationId,
-    "after-reservation"
-  )
+  const pause = createSavedLinkOperationPause(database, operationId, pausePoint)
   const originalPromise = executeOriginal(pause.database)
   let racingRetry!: Retry
   try {
@@ -262,29 +259,25 @@ describe("d1 links", () => {
   it("does not complete an empty clear before a concurrent create", async () => {
     const user = await createUser()
     const clearOperationId = "in-flight:clear"
-    const pause = createSavedLinkOperationPause(
+    const { original: clearResult } = await runSavedLinkOperationRace(
       env.DB,
       clearOperationId,
+      (database) =>
+        clearSavedLinks(database, user.id, {
+          operationId: clearOperationId,
+          now: NOW,
+        }),
+      () =>
+        createOrUpdateSavedLink(env.DB, user.id, {
+          operationId: "in-flight:clear:create",
+          url: "https://example.com/in-flight-clear",
+          meta: emptyMetadataJson(),
+          now: NOW + 1_000,
+        }),
       "before-completion"
     )
-    const clearPromise = clearSavedLinks(pause.database, user.id, {
-      operationId: clearOperationId,
-      now: NOW,
-    })
-    await pause.waitForPause(clearPromise)
 
-    try {
-      await createOrUpdateSavedLink(env.DB, user.id, {
-        operationId: "in-flight:clear:create",
-        url: "https://example.com/in-flight-clear",
-        meta: emptyMetadataJson(),
-        now: NOW + 1_000,
-      })
-    } finally {
-      pause.resume()
-    }
-
-    await expect(clearPromise).resolves.toMatchObject({
+    expect(clearResult).toMatchObject({
       success: true,
       replayed: false,
       deletedLinks: 1,
@@ -304,29 +297,25 @@ describe("d1 links", () => {
     })
 
     const clearOperationId = "in-flight:non-empty-clear"
-    const pause = createSavedLinkOperationPause(
+    const { original: clearResult } = await runSavedLinkOperationRace(
       env.DB,
       clearOperationId,
+      (database) =>
+        clearSavedLinks(database, user.id, {
+          operationId: clearOperationId,
+          now: NOW + 1_000,
+        }),
+      () =>
+        createOrUpdateSavedLink(env.DB, user.id, {
+          operationId: "in-flight:non-empty-clear:create",
+          url: "https://example.com/in-flight-non-empty-clear-created",
+          meta: emptyMetadataJson(),
+          now: NOW + 2_000,
+        }),
       "before-completion"
     )
-    const clearPromise = clearSavedLinks(pause.database, user.id, {
-      operationId: clearOperationId,
-      now: NOW + 1_000,
-    })
-    await pause.waitForPause(clearPromise)
 
-    try {
-      await createOrUpdateSavedLink(env.DB, user.id, {
-        operationId: "in-flight:non-empty-clear:create",
-        url: "https://example.com/in-flight-non-empty-clear-created",
-        meta: emptyMetadataJson(),
-        now: NOW + 2_000,
-      })
-    } finally {
-      pause.resume()
-    }
-
-    await expect(clearPromise).resolves.toMatchObject({
+    expect(clearResult).toMatchObject({
       success: true,
       replayed: false,
       deletedLinks: 2,

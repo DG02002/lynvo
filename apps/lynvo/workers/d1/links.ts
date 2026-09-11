@@ -45,6 +45,7 @@ import {
   reserveSavedLinkCommandOperation,
   SAVED_LINK_COLUMNS,
   type CompletedSavedLinkOperation,
+  type SavedLinkCommandOperationKey,
 } from "./saved-link-storage"
 import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
@@ -667,7 +668,7 @@ interface SavedLinkOperationReplay {
 
 const findSavedLinkOperationReplay = async (
   database: D1Database,
-  input: { userId: string; operationId: string }
+  input: SavedLinkCommandOperationKey
 ): Promise<SavedLinkOperationReplay | undefined> => {
   const operation = await findCompletedSavedLinkOperation(
     database,
@@ -685,17 +686,20 @@ const findSavedLinkOperationReplay = async (
 
 const resolveSavedLinkReservationConflict = async (
   database: D1Database,
-  input: { userId: string; operationId: string }
+  input: SavedLinkCommandOperationKey
 ): Promise<SavedLinkReservationOutcome> => {
-  const operation = await findCompletedSavedLinkOperation(
-    database,
-    input.userId,
-    input.operationId
-  )
-  const dataVersion = await getDataVersion(database, input.userId)
-  return operation
-    ? { kind: "completed", operation, dataVersion }
-    : { kind: "inFlight", dataVersion }
+  const replay = await findSavedLinkOperationReplay(database, input)
+  if (replay) {
+    return {
+      kind: "completed",
+      operation: replay.operation,
+      dataVersion: replay.dataVersion,
+    }
+  }
+  return {
+    kind: "inFlight",
+    dataVersion: await getDataVersion(database, input.userId),
+  }
 }
 
 const reserveSavedLinkMutation = async (
