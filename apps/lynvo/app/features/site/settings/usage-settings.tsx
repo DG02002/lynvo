@@ -1,10 +1,7 @@
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
-import {
-  LoadErrorRetry,
-  type LoadErrorRetryProps,
-} from "~/components/load-error-retry"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
@@ -110,7 +107,7 @@ const UsageItem = ({
 )
 
 const UsageLoading = () => (
-  <SettingsList>
+  <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
       <Skeleton className="h-4 w-48" />
       <Progress value={0} />
@@ -120,14 +117,17 @@ const UsageLoading = () => (
 
 const UsageLoadError = ({
   error,
+  isRetrying,
   onRetry,
 }: {
   error: unknown
-  onRetry: LoadErrorRetryProps["onRetry"]
+  isRetrying: boolean
+  onRetry: () => void
 }) => (
   <SettingsList>
     <SettingsRow className="flex-col items-stretch gap-3 py-2">
       <LoadErrorRetry
+        isRetrying={isRetrying}
         message={getUserFacingErrorMessage(
           error,
           "Usage couldn’t be loaded just now. Check the connection, then try again."
@@ -150,6 +150,7 @@ export const UsageSettings = ({
   const {
     data: snapshot,
     error,
+    isLoading,
     retry,
   } = useAsyncResource(
     () => readUsageSnapshot({ lynvoPlugins }),
@@ -165,7 +166,11 @@ export const UsageSettings = ({
     return (
       <div className="flex flex-col gap-7">
         {error !== undefined ? (
-          <UsageLoadError error={error} onRetry={retry} />
+          <UsageLoadError
+            error={error}
+            isRetrying={isLoading}
+            onRetry={() => void retry()}
+          />
         ) : (
           <UsageLoading />
         )}
@@ -250,7 +255,11 @@ export const UsageSettings = ({
         )}
 
         {error !== undefined && (
-          <UsageLoadError error={error} onRetry={retry} />
+          <UsageLoadError
+            error={error}
+            isRetrying={isLoading}
+            onRetry={() => void retry()}
+          />
         )}
       </>
     </div>

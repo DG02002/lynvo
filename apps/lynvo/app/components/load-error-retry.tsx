@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/spinner"
 import { cn } from "~/lib/utils"
@@ -6,27 +5,16 @@ import { cn } from "~/lib/utils"
 export interface LoadErrorRetryProps {
   className?: string
   message: string
-  /** May reject; failures render through the caller's error state. */
-  onRetry: () => Promise<void>
+  isRetrying: boolean
+  onRetry: () => void
 }
 
 const LoadErrorRetry = ({
   className,
+  isRetrying,
   message,
   onRetry,
 }: LoadErrorRetryProps) => {
-  const [isRetrying, setIsRetrying] = React.useState(false)
-
-  const handleRetry = async () => {
-    setIsRetrying(true)
-    try {
-      await onRetry()
-    } catch {
-    } finally {
-      setIsRetrying(false)
-    }
-  }
-
   return (
     <div className={cn("flex flex-col items-start gap-2", className)}>
       <p className="text-sm text-destructive" role="alert">
@@ -37,7 +25,7 @@ const LoadErrorRetry = ({
         variant="secondary"
         size="sm"
         disabled={isRetrying}
-        onClick={() => void handleRetry()}
+        onClick={onRetry}
       >
         {isRetrying && <Spinner data-icon="inline-start" aria-hidden="true" />}
         Try again

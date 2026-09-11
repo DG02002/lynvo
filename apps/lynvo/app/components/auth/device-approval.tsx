@@ -154,11 +154,12 @@ const DeviceApproval = () => {
             {approvalPhase === "failed" ? (
               <LoadErrorRetry
                 className="items-center"
+                isRetrying={isCodeQueryPending}
                 message={getUserFacingErrorMessage(
                   codeQueryError,
                   "The login code couldn’t be checked. Try again."
                 )}
-                onRetry={retryCodeQuery}
+                onRetry={() => void retryCodeQuery()}
               />
             ) : (
               <DeviceApprovalStatusMessage

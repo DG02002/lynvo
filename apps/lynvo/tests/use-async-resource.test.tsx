@@ -52,7 +52,7 @@ describe("useAsyncResource cache", () => {
     )
 
     expect(second.result.current.data).toBe("first")
-    expect(second.result.current.isLoading).toBe(false)
+    expect(second.result.current.isLoading).toBe(true)
     await waitFor(() => expect(second.result.current.data).toBe("second"))
     expect(secondLoad).toHaveBeenCalledOnce()
   })
@@ -187,7 +187,7 @@ describe("useAsyncResource error handling", () => {
     )
 
     expect(second.result.current.data).toBe("cached")
-    expect(second.result.current.isLoading).toBe(false)
+    expect(second.result.current.isLoading).toBe(true)
     await waitFor(() => expect(second.result.current.error).toBe(failure))
     expect(second.result.current.data).toBe("cached")
   })
@@ -319,5 +319,95 @@ describe("useAsyncResource error handling", () => {
     expect(result.current.data).toBe("current")
     expect(result.current.error).toBeUndefined()
     expect(result.current.isLoading).toBe(false)
+  })
+
+  it("does not apply a retry result after dependencies change", async () => {
+    const initialFailure = new Error("initial load failed")
+    let resolveRetry!: (value: string) => void
+    let resolveCurrent!: (value: string) => void
+    const retryPromise = new Promise<string>((resolve) => {
+      resolveRetry = resolve
+    })
+    const currentPromise = new Promise<string>((resolve) => {
+      resolveCurrent = resolve
+    })
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(initialFailure)
+      .mockReturnValueOnce(retryPromise)
+      .mockReturnValueOnce(currentPromise)
+    const { result, rerender } = renderHook(
+      ({ bucket }: { bucket: number }) =>
+        useAsyncResource<string>(load, [bucket], {
+          cacheKey: "settings:security:user-1",
+        }),
+      { initialProps: { bucket: 1 } }
+    )
+
+    await waitFor(() => expect(result.current.error).toBe(initialFailure))
+    let retryRequest: Promise<void> | undefined
+    act(() => {
+      retryRequest = result.current.retry()
+    })
+    expect(result.current.isLoading).toBe(true)
+
+    rerender({ bucket: 2 })
+    resolveRetry("stale retry")
+    await act(async () => {
+      await retryRequest
+    })
+
+    expect(result.current.data).toBeUndefined()
+    expect(result.current.error).toBeUndefined()
+    expect(result.current.isLoading).toBe(true)
+
+    resolveCurrent("current")
+    await act(async () => {
+      await currentPromise
+    })
+
+    expect(result.current.data).toBe("current")
+    expect(result.current.error).toBeUndefined()
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it("does not cache a retry result after unmount", async () => {
+    const initialFailure = new Error("initial load failed")
+    let resolveRetry!: (value: string) => void
+    const retryPromise = new Promise<string>((resolve) => {
+      resolveRetry = resolve
+    })
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(initialFailure)
+      .mockReturnValueOnce(retryPromise)
+    const first = renderHook(() =>
+      useAsyncResource<string>(load, [], {
+        cacheKey: "settings:security:user-1",
+      })
+    )
+
+    await waitFor(() => expect(first.result.current.error).toBe(initialFailure))
+    let retryRequest: Promise<void> | undefined
+    act(() => {
+      retryRequest = first.result.current.retry()
+    })
+    expect(first.result.current.isLoading).toBe(true)
+    first.unmount()
+
+    resolveRetry("stale retry")
+    await act(async () => {
+      await retryRequest
+    })
+
+    const secondLoad = vi.fn().mockResolvedValue("current")
+    const second = renderHook(() =>
+      useAsyncResource<string>(secondLoad, [], {
+        cacheKey: "settings:security:user-1",
+      })
+    )
+
+    expect(second.result.current.data).toBeUndefined()
+    expect(secondLoad).toHaveBeenCalledOnce()
   })
 })

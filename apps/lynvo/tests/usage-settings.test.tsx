@@ -73,10 +73,8 @@ describe("UsageSettings", () => {
     render(<UsageSettings lynvoPlugins={[]} userId="user-1" />)
 
     expect(screen.getByText("Monthly usage limit")).toBeVisible()
-    // The loaded view itself renders a usage progress bar, so rule out the
-    // skeleton by its own marker instead.
     expect(
-      document.querySelector('[data-slot="skeleton"]')
+      screen.queryByRole("status", { name: "Loading usage" })
     ).not.toBeInTheDocument()
     expect(
       await screen.findByRole("button", { name: "Try again" })

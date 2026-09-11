@@ -66,6 +66,8 @@ export const useAsyncResource = <Result>(
   const [isLoading, setIsLoading] = useState(!initialCacheEntry)
   const [error, setError] = useState<unknown>(undefined)
   const loadReference = useRef(load)
+  const isMountedReference = useRef(false)
+  const loadSequenceReference = useRef(0)
   const previousDependencySignal = useRef<object | undefined>(undefined)
   const dependencySignal = useMemo(() => ({}), dependencies)
 
@@ -73,41 +75,56 @@ export const useAsyncResource = <Result>(
     loadReference.current = load
   }, [load])
 
-  const runLoad = useCallback(
-    async (isActive: () => boolean = () => true): Promise<void> => {
-      let nextData: Result
-      try {
-        nextData = await loadReference.current()
-      } catch (loadError) {
-        // Awaiting callers catch the rejection; components render the error state.
-        if (isActive()) {
-          setError(loadError ?? new Error("The load failed without an error."))
-        }
-        throw loadError
-      } finally {
-        if (isActive()) {
-          setIsLoading(false)
-        }
-      }
-      if (cacheKey) {
-        asyncResourceCache.set(cacheKey, {
-          data: nextData,
-          cachedAt: Date.now(),
-        })
-      }
-      if (isActive()) {
-        setData(nextData)
-        setError(undefined)
-      }
-    },
-    [cacheKey]
-  )
+  useEffect(() => {
+    isMountedReference.current = true
+    return () => {
+      isMountedReference.current = false
+      loadSequenceReference.current += 1
+    }
+  }, [])
 
-  const retry = useCallback(async (): Promise<void> => {
+  const runLoad = useCallback(async (): Promise<void> => {
+    const loadSequence = ++loadSequenceReference.current
+    const isActive = () =>
+      isMountedReference.current &&
+      loadSequenceReference.current === loadSequence
+
+    if (isActive()) {
+      setIsLoading(true)
+    }
+
+    let nextData: Result
     try {
-      await runLoad()
-    } catch {}
-  }, [runLoad])
+      nextData = await loadReference.current()
+    } catch (loadError) {
+      if (isActive()) {
+        setError(loadError ?? new Error("The load failed without an error."))
+      }
+      throw loadError
+    } finally {
+      if (isActive()) {
+        setIsLoading(false)
+      }
+    }
+
+    if (!isActive()) {
+      return
+    }
+
+    if (cacheKey) {
+      asyncResourceCache.set(cacheKey, {
+        data: nextData,
+        cachedAt: Date.now(),
+      })
+    }
+    setData(nextData)
+    setError(undefined)
+  }, [cacheKey])
+
+  const retry = useCallback(
+    (): Promise<void> => runLoad().catch(() => undefined),
+    [runLoad]
+  )
 
   useEffect(() => {
     let didCancel = false
@@ -132,16 +149,18 @@ export const useAsyncResource = <Result>(
     if (hasFreshCache && !dependenciesChanged) {
       return () => {
         didCancel = true
+        loadSequenceReference.current += 1
       }
     }
 
-    runLoad(() => !didCancel).catch((error) => {
+    runLoad().catch((loadError) => {
       if (!didCancel) {
-        console.error(error)
+        console.error(loadError)
       }
     })
     return () => {
       didCancel = true
+      loadSequenceReference.current += 1
     }
   }, [cacheKey, cacheTtlMs, dependencySignal, runLoad])
 
@@ -150,7 +169,7 @@ export const useAsyncResource = <Result>(
       return
     }
     const intervalId = window.setInterval(() => {
-      runLoad().catch((error) => console.error(error))
+      runLoad().catch((loadError) => console.error(loadError))
     }, options.pollIntervalMs)
     return () => {
       window.clearInterval(intervalId)
