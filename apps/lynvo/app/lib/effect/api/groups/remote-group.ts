@@ -6,28 +6,31 @@ import {
   BackendApiError,
 } from "../../errors"
 import {
-  MutationResultSchema,
   RemotePollQuerySchema,
   RemotePollResponseSchema,
   RemoteResultPayloadSchema,
   RemoteSendPayloadSchema,
 } from "../../../api-contracts"
+import {
+  VersionedMutationResponseSchema,
+  withDataVersionResponseSchema,
+} from "../versioned-response"
 
 export class RemoteGroup extends HttpApiGroup.make("remote")
   .add(
     HttpApiEndpoint.post("send", "/send", {
       payload: RemoteSendPayloadSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
       query: RemotePollQuerySchema,
-      success: RemotePollResponseSchema,
+      success: withDataVersionResponseSchema(RemotePollResponseSchema),
       error: [UnauthorizedApiError, BackendApiError],
     }),
     HttpApiEndpoint.post("reportResult", "/result", {
       payload: RemoteResultPayloadSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )

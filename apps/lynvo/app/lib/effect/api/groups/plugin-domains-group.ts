@@ -10,10 +10,10 @@ import {
 } from "../../errors"
 import {
   CreatePluginDomainPayloadSchema,
-  MutationResultSchema,
   PluginDomainListSchema,
   SetCredentialPayloadSchema,
 } from "../../../api-contracts"
+import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
   .add(
@@ -23,7 +23,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     }),
     HttpApiEndpoint.post("create", "/", {
       payload: CreatePluginDomainPayloadSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -35,7 +35,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     HttpApiEndpoint.patch("setCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
       payload: SetCredentialPayloadSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [
         UnauthorizedApiError,
         CsrfApiError,
@@ -46,14 +46,14 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     }),
     HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,
       },
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     })
   )

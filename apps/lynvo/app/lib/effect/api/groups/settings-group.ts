@@ -13,9 +13,12 @@ import {
   PlayerPreferencesSchema,
   UserSessionListSchema,
 } from "../../../api-contracts"
+import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class SettingsGroup extends HttpApiGroup.make("settings")
   .add(
+    // Session and account state is not snapshot-owned data: these writes do
+    // not go through executeOwnedWrite and carry no data_version.
     HttpApiEndpoint.post("touchActivity", "/activity", {
       payload: ActivityPayloadSchema,
       success: MutationResultSchema,
@@ -27,7 +30,7 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
     }),
     HttpApiEndpoint.patch("updatePlayerPreferences", "/player", {
       payload: PlayerPreferencesSchema,
-      success: MutationResultSchema,
+      success: VersionedMutationResponseSchema,
       error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
     }),
     HttpApiEndpoint.get("listSessions", "/security/sessions", {

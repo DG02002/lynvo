@@ -6,12 +6,12 @@ export const MutationResultSchema = Schema.Struct({
 
 export type MutationResult = typeof MutationResultSchema.Type
 
-export const VersionedMutationResultSchema = Schema.Struct({
+export const VersionedMutationBodySchema = Schema.Struct({
   success: Schema.Boolean,
   dataVersion: Schema.Number,
 })
 
-export type VersionedMutationResult = typeof VersionedMutationResultSchema.Type
+export type VersionedMutationBody = typeof VersionedMutationBodySchema.Type
 
 export const CustomPluginServerSchema = Schema.Struct({
   id: Schema.String,
@@ -143,6 +143,7 @@ export const RemoteCommandSchema = Schema.Struct({
 
 export const RemotePollResponseSchema = Schema.Struct({
   commands: Schema.Array(RemoteCommandSchema),
+  dataVersion: Schema.Number,
 })
 
 export const RemoteResultPayloadSchema = Schema.Struct({

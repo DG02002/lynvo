@@ -12,10 +12,7 @@ const collectBrowserSources = (directory: string): string[] =>
 
 describe("browser authentication boundary", () => {
   it("keeps tokens out of browser-readable storage", () => {
-    const forbiddenPatterns = [
-      /localStorage.*[Tt]oken/,
-      /indexedDB.*[Tt]oken/,
-    ]
+    const forbiddenPatterns = [/localStorage.*[Tt]oken/, /indexedDB.*[Tt]oken/]
     const violations = collectBrowserSources("app").flatMap((path) =>
       forbiddenPatterns.some((pattern) => pattern.test(source(path)))
         ? [path]

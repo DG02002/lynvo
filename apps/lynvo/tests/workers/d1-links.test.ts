@@ -727,7 +727,8 @@ describe("d1 links", () => {
       retentionDays: 7,
       now: NOW + 8 * DAY_MS,
     })
-    expect(deletedForUser).toBe(1)
+    expect(deletedForUser.deletedCount).toBe(1)
+    expect(deletedForUser.dataVersion).toBeGreaterThan(0)
     let snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
 

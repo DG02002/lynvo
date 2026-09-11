@@ -1,8 +1,8 @@
 import { Effect } from "effect"
-import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
+import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
-import { DATA_VERSION_RESPONSE_HEADER } from "../../../constants"
+import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
@@ -22,14 +22,6 @@ import {
   refreshCustomPluginServerProxyBalance,
   saveCustomPluginServerProxyKey,
 } from "../../services/custom-plugin-server-proxy-key"
-
-const withDataVersionHeaders = <Body extends { readonly dataVersion: number }>(
-  body: Body
-) =>
-  HttpApiSchema.withHeaders({
-    body,
-    headers: { [DATA_VERSION_RESPONSE_HEADER]: body.dataVersion },
-  })
 
 export const PluginServersHandlers = HttpApiBuilder.group(
   Api,
@@ -75,12 +67,14 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             operation: "plugin_server_create",
             user_id: user.id,
           })
-          return yield* registerCustomPluginServer({
-            baseUrl: payload.baseUrl,
-            apiKey: payload.apiKey,
-            requestId: requestEvent.requestId,
-            user,
-          })
+          return withDataVersionHeaders(
+            yield* registerCustomPluginServer({
+              baseUrl: payload.baseUrl,
+              apiKey: payload.apiKey,
+              requestId: requestEvent.requestId,
+              user,
+            })
+          )
         })
       )
       .handle("toggle", ({ params, payload }) =>
@@ -100,7 +94,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               setPluginServerEnabled(database, user.id, {
                 id: params.pluginServerId,
@@ -113,7 +107,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return versionedSuccess(dataVersion)
         })
       )
       .handle("toggleProxy", ({ params, payload }) =>
@@ -158,11 +152,13 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             user_id: user.id,
             plugin_server_id: params.pluginServerId,
           })
-          return yield* refreshCustomPluginServer({
-            pluginServerId: params.pluginServerId,
-            requestId: requestEvent.requestId,
-            user,
-          })
+          return withDataVersionHeaders(
+            yield* refreshCustomPluginServer({
+              pluginServerId: params.pluginServerId,
+              requestId: requestEvent.requestId,
+              user,
+            })
+          )
         })
       )
       .handle("setProxyKey", ({ params, payload }) =>
@@ -214,7 +210,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
               message: "Account data is temporarily unavailable",
             })
           }
-          yield* Effect.tryPromise({
+          const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               deletePluginServerById(database, user.id, {
                 id: params.pluginServerId,
@@ -229,7 +225,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return { success: true }
+          return versionedSuccess(dataVersion)
         })
       )
 )

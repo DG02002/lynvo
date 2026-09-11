@@ -1302,7 +1302,10 @@ export const deleteExpiredLinksForUser = async ({
   userId,
   retentionDays,
   now,
-}: DeleteExpiredLinksForUserInput): Promise<number> => {
+}: DeleteExpiredLinksForUserInput): Promise<{
+  deletedCount: number
+  dataVersion: number
+}> => {
   const cutoff = getRetentionCutoff(now, retentionDays)
   const { results } = await database
     .prepare(
@@ -1311,7 +1314,10 @@ export const deleteExpiredLinksForUser = async ({
     .bind(userId, cutoff, LINK_RETENTION_BATCH_SIZE)
     .all<LinkRow>()
   if (results.length === 0) {
-    return 0
+    return {
+      deletedCount: 0,
+      dataVersion: await getDataVersion(database, userId),
+    }
   }
   const totalBytes = results.reduce<number>(
     (totalRowBytes, row) => totalRowBytes + byteLength(row),
@@ -1330,7 +1336,7 @@ export const deleteExpiredLinksForUser = async ({
     },
     now,
   })
-  await executeOwnedWrite({
+  const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
     statements: [
@@ -1346,7 +1352,7 @@ export const deleteExpiredLinksForUser = async ({
       ...ledgerMutation.statements,
     ],
   })
-  return results.length
+  return { deletedCount: results.length, dataVersion }
 }
 
 const loadExpiredLinkBatch = async (

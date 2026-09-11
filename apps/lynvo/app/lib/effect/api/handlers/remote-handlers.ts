@@ -2,6 +2,7 @@ import { Effect, Result, Schema } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
+import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { BackendError } from "../../errors"
@@ -11,6 +12,7 @@ import {
   enqueueRemoteCommand,
   reportRemoteCommandResult,
 } from "../../../../../workers/d1/remote-commands"
+import { getDataVersion } from "../../../../../workers/d1/data-version"
 import { createRemoteCommandNotificationDelivery } from "../../../../../workers/remote-command-notification-delivery"
 
 const remotePresenceSchema = Schema.Struct({
@@ -90,7 +92,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             })
             .catch(() => ({ kind: "unavailable" as const }))
         )
-        return { success: true }
+        return versionedSuccess(enqueued.dataVersion)
       })
     )
     .handle("pollInbox", ({ query }) =>
@@ -118,7 +120,12 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        return {
+        // Claiming is an owned write; echo its version. With nothing to
+        // claim the current version answers the poll.
+        const dataVersion = claim
+          ? claim.dataVersion
+          : yield* Effect.promise(() => getDataVersion(database, user.id))
+        return withDataVersionHeaders({
           commands: claim
             ? [
                 {
@@ -130,7 +137,8 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
                 },
               ]
             : [],
-        }
+          dataVersion,
+        })
       })
     )
     .handle("reportResult", ({ payload }) =>
@@ -143,7 +151,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             message: "Remote commands are temporarily unavailable",
           })
         }
-        yield* Effect.tryPromise({
+        const { dataVersion } = yield* Effect.tryPromise({
           try: () =>
             reportRemoteCommandResult({
               database,
@@ -165,7 +173,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        return { success: true }
+        return versionedSuccess(dataVersion)
       })
     )
 )
