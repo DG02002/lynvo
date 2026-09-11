@@ -37,20 +37,30 @@ const isBlockedIpv6Hostname = (hostname: string): boolean => {
     address === "::1" ||
     address.startsWith("::ffff:") ||
     address.startsWith("64:ff9b::") ||
+    address.startsWith("64:ff9b:1:") ||
     (firstGroup & 0xfe00) === 0xfc00 ||
     (firstGroup & 0xffc0) === 0xfe80 ||
+    (firstGroup & 0xffc0) === 0xfec0 ||
     (firstGroup & 0xff00) === 0xff00 ||
     address.startsWith("2001:db8:")
   )
 }
 
 /**
- * Returns whether a URL-normalized hostname is an IP literal that should not
- * be used as a public outbound destination.
+ * Returns whether a URL's IP literal should not be used as a public outbound
+ * destination.
  *
- * URL.hostname normalizes IPv4 spellings and IPv6 hextets before this helper
- * is called. DNS names are intentionally ignored, including names that begin
- * with an IPv6 range prefix.
+ * Taking a URL rather than a raw hostname makes the URL parser responsible for
+ * normalizing IPv4 spellings and IPv6 hextets. DNS names are intentionally
+ * ignored, including names that begin with an IPv6 range prefix.
  */
-export const isBlockedIpHostname = (hostname: string): boolean =>
-  isBlockedIpv4Hostname(hostname) || isBlockedIpv6Hostname(hostname)
+export const isBlockedIpUrl = (url: URL): boolean => {
+  const hostname = url.hostname.toLowerCase()
+  return isBlockedIpv4Hostname(hostname) || isBlockedIpv6Hostname(hostname)
+}
+
+/** Returns whether a URL resolves to localhost or a localhost subdomain. */
+export const isLocalUrl = (url: URL): boolean => {
+  const hostname = url.hostname.toLowerCase()
+  return hostname === "localhost" || hostname.endsWith(".localhost")
+}

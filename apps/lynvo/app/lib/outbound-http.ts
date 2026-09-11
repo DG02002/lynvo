@@ -1,4 +1,7 @@
-import { isBlockedIpHostname } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  isBlockedIpUrl,
+  isLocalUrl,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import {
   OUTBOUND_HTTP_MAX_REDIRECTS,
   OUTBOUND_HTTP_MAX_RESPONSE_BYTES,
@@ -102,12 +105,10 @@ export const validateOutboundUrl = (
       "Credentials are not allowed in outbound URLs"
     )
   }
-  const hostname = destination.hostname.toLowerCase()
-  const isLocalHostname =
-    hostname === "localhost" || hostname.endsWith(".localhost")
+  const isLocalDestination = isLocalUrl(destination)
   if (
-    (isLocalHostname && !options.allowLocalDevelopment) ||
-    isBlockedIpHostname(hostname)
+    (isLocalDestination && !options.allowLocalDevelopment) ||
+    isBlockedIpUrl(destination)
   ) {
     throw new OutboundHttpError(
       "UNSAFE_DESTINATION",

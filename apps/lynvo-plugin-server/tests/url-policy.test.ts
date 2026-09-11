@@ -16,22 +16,26 @@ const expectUnsupportedUrl = (value: string): void => {
 
 describe("upstream URL policy", () => {
   it.each([
+    "https://localhost/video.mp4",
+    "https://media.localhost/video.mp4",
     "https://[::]/video.mp4",
     "https://[::1]/video.mp4",
     "https://[::ffff:10.0.0.1]/video.mp4",
     "https://[::ffff:127.0.0.1]/video.mp4",
     "https://[64:ff9b::7f00:1]/video.mp4",
+    "https://[64:ff9b:1::7f00:1]/video.mp4",
     "https://[fc00::1]/video.mp4",
     "https://[fd12::1]/video.mp4",
     "https://[fe80::1]/video.mp4",
+    "https://[fec0::1]/video.mp4",
     "https://[ff02::1]/video.mp4",
     "https://[2001:db8::1]/video.mp4",
-  ])("blocks non-public IPv6 literals: %s", (value) => {
+  ])("blocks local and non-public destinations: %s", (value) => {
     expectUnsupportedUrl(value)
   })
 
   it.each(["not a URL", "https://[fe80::1%25eth0]/video.mp4"])(
-    "maps malformed URLs to protocol errors: %s",
+    "maps invalid URLs to protocol errors: %s",
     (value) => {
       expectUnsupportedUrl(value)
     }

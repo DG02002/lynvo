@@ -13,10 +13,10 @@ bump is a breaking change that requires a new major of this package.
 
 ### Added
 
-- Exported `isBlockedIpHostname` for consistent outbound safety checks across
-  Lynvo and Plugin Server Workers. It rejects non-public IPv4 and IPv6
-  literals, including IPv4-mapped and NAT64 IPv6 forms, while leaving DNS
-  names untouched.
+- Exported `isBlockedIpUrl` and `isLocalUrl` for consistent outbound safety
+  checks across Lynvo and Plugin Server Workers. They reject non-public IPv4
+  and IPv6 literals, including IPv4-mapped, deprecated site-local, and NAT64
+  IPv6 forms, while leaving public DNS names untouched.
 
 ## [0.1.5] (2026-08-29)
 
