@@ -5,6 +5,9 @@ import {
   type LynvoPluginServerUsageLimiter,
 } from "../src/usage-limiter"
 
+type UsagePeriodKey = string
+type UsagePeriodKeys = readonly [UsagePeriodKey, UsagePeriodKey]
+
 export const getUsageLimiterStub = (): DurableObjectStub => {
   const namespace = env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER
   const id = namespace.idFromName(USAGE_LIMITER_NAME)
@@ -24,7 +27,7 @@ export const runInUsageLimiter = <Value>(
 
 // The public route uses live Date.now(), so seed both sides of a possible UTC
 // midnight rollover between setup and the request.
-export const currentUsagePeriodKeys = (): readonly string[] => {
+export const currentUsagePeriodKeys = (): UsagePeriodKeys => {
   const timestampMs = Date.now()
   return [
     usagePeriodForTesting.currentPeriodKey(timestampMs),
@@ -35,7 +38,7 @@ export const currentUsagePeriodKeys = (): readonly string[] => {
 }
 
 export const setUsageCounters = (
-  periodKeys: readonly string[],
+  periodKeys: readonly UsagePeriodKey[],
   used: number
 ): Promise<void> =>
   runInUsageLimiter((_instance, state) => {
@@ -49,7 +52,7 @@ export const setUsageCounters = (
   })
 
 export const clearUsageCounters = (
-  periodKeys: readonly string[]
+  periodKeys: readonly UsagePeriodKey[]
 ): Promise<void> =>
   runInUsageLimiter((_instance, state) => {
     for (const periodKey of periodKeys) {

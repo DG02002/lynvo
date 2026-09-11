@@ -121,6 +121,8 @@ describe("Lynvo Plugin Server protocol routes", () => {
       }),
     })
 
+    // Keep this focused on the protocol envelope; the source-specific error
+    // code is not part of the logging regression.
     expect(response.ok).toBe(false)
     expect(response.headers.get("content-type")).toContain("application/json")
     const result: unknown = await response.json()

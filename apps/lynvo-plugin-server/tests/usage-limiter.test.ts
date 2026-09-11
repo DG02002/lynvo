@@ -109,38 +109,37 @@ describe("usage limiter", () => {
     expect(originalPeriod.metrics[0].used).toBe(0)
   })
 
-  it("rejects reservations at the finite limit", async () => {
-    const timestampMs = Date.UTC(2100, 6, 19)
-    const periodKey = usagePeriodForTesting.currentPeriodKey(timestampMs)
-    await setUsageCounters([periodKey], GLOBAL_DAILY_OPERATION_LIMIT)
+  it.each([
+    {
+      name: "at the finite limit",
+      timestampMs: Date.UTC(2100, 6, 19),
+      expectedPeriodKey: "2100-07-19",
+      expectedRetryAfterSeconds: 86_400,
+    },
+    {
+      name: "with a partial reset interval",
+      timestampMs: Date.UTC(2100, 6, 19, 23, 59, 59, 250),
+      expectedPeriodKey: "2100-07-19",
+      expectedRetryAfterSeconds: 1,
+    },
+  ])(
+    "rejects reservations $name",
+    async ({ timestampMs, expectedPeriodKey, expectedRetryAfterSeconds }) => {
+      const seededPeriodKey =
+        usagePeriodForTesting.currentPeriodKey(timestampMs)
+      await setUsageCounters([seededPeriodKey], GLOBAL_DAILY_OPERATION_LIMIT)
 
-    const response = await requestAt("/reserve", timestampMs, {
-      method: "POST",
-    })
-    expect(await response.json()).toEqual({
-      reserved: false,
-      periodKey: "2100-07-19",
-      reservationId: null,
-      retryAfterSeconds: 86_400,
-    })
-  })
-
-  it("rounds a partial reset interval up to one second", async () => {
-    const timestampMs = Date.UTC(2100, 6, 19, 23, 59, 59, 250)
-    const periodKey = usagePeriodForTesting.currentPeriodKey(timestampMs)
-    await setUsageCounters([periodKey], GLOBAL_DAILY_OPERATION_LIMIT)
-
-    const response = await requestAt("/reserve", timestampMs, {
-      method: "POST",
-    })
-
-    expect(await response.json()).toMatchObject({
-      reserved: false,
-      periodKey: "2100-07-19",
-      reservationId: null,
-      retryAfterSeconds: 1,
-    })
-  })
+      const response = await requestAt("/reserve", timestampMs, {
+        method: "POST",
+      })
+      expect(await response.json()).toEqual({
+        reserved: false,
+        periodKey: expectedPeriodKey,
+        reservationId: null,
+        retryAfterSeconds: expectedRetryAfterSeconds,
+      })
+    }
+  )
 
   it("uses independent UTC daily periods", async () => {
     const firstDay = Date.UTC(2100, 6, 19, 23, 59)
