@@ -5,11 +5,22 @@ import {
   type SavedLinkMetaAppliedLink,
 } from "./saved-link-meta-applied"
 
+const SAVED_LINK_OPERATION_RESERVED_STATE = "reserved"
+const SAVED_LINK_OPERATION_COMPLETED_STATE = "completed"
+const RESERVED_SAVED_LINK_OPERATION_CONDITION = `state = '${SAVED_LINK_OPERATION_RESERVED_STATE}' AND link_id IS NULL`
+const NO_SAVED_LINKS_CONDITION =
+  "NOT EXISTS (SELECT 1 FROM links WHERE user_id = ?1)"
+
 export const SAVED_LINK_COLUMNS =
   "id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at"
 
 export interface CompletedSavedLinkOperation {
   linkId: string | null
+}
+
+export interface SavedLinkCommandOperationKey {
+  userId: string
+  operationId: string
 }
 
 export const findSavedLinkById = async (
@@ -30,7 +41,7 @@ export const findCompletedSavedLinkOperation = async (
 ): Promise<CompletedSavedLinkOperation | null> => {
   const row = await database
     .prepare(
-      "SELECT link_id FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2"
+      `SELECT link_id FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}'`
     )
     .bind(userId, operationId)
     .first<{ link_id: string | null }>()
@@ -39,9 +50,7 @@ export const findCompletedSavedLinkOperation = async (
 
 export const reserveSavedLinkCommandOperation = async (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     command: string
     now: number
   }
@@ -49,7 +58,7 @@ export const reserveSavedLinkCommandOperation = async (
   const results = await database.batch([
     database
       .prepare(
-        "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, NULL, ?3, ?4, ?5) ON CONFLICT(user_id, operation_id) DO NOTHING"
+        `INSERT INTO link_command_operations (user_id, operation_id, link_id, state, command, created_at, expires_at) VALUES (?1, ?2, NULL, '${SAVED_LINK_OPERATION_RESERVED_STATE}', ?3, ?4, ?5) ON CONFLICT(user_id, operation_id) DO NOTHING`
       )
       .bind(
         input.userId,
@@ -64,15 +73,12 @@ export const reserveSavedLinkCommandOperation = async (
 
 export const createReservedSavedLinkOperationLinkStatement = (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     linkId: string
     appliedLink?: SavedLinkMetaAppliedLink
   }
 ): D1PreparedStatement => {
-  const baseSql =
-    "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+  const baseSql = `UPDATE link_command_operations SET link_id = ?3, state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}`
   return database
     .prepare(
       input.appliedLink
@@ -89,13 +95,44 @@ export const createReservedSavedLinkOperationLinkStatement = (
     )
 }
 
+export const createSavedLinkOperationCompletionStatement = (
+  database: D1Database,
+  input: SavedLinkCommandOperationKey & {
+    requireNoSavedLinks?: boolean
+  }
+): D1PreparedStatement => {
+  const noSavedLinksCondition = input.requireNoSavedLinks
+    ? ` AND ${NO_SAVED_LINKS_CONDITION}`
+    : ""
+  return database
+    .prepare(
+      `UPDATE link_command_operations SET state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}${noSavedLinksCondition}`
+    )
+    .bind(input.userId, input.operationId)
+}
+
+export const completeSavedLinkOperationIfNoSavedLinks = async (
+  database: D1Database,
+  input: SavedLinkCommandOperationKey
+): Promise<boolean> => {
+  // This is ledger-only state; keeping it out of executeOwnedWrite preserves
+  // the data_version for a clear that changes no Saved links.
+  const results = await database.batch([
+    createSavedLinkOperationCompletionStatement(database, {
+      ...input,
+      requireNoSavedLinks: true,
+    }),
+  ])
+  return (results[0]?.meta.changes ?? 0) > 0
+}
+
 export const releaseReservedSavedLinkCommandOperation = async (
   database: D1Database,
-  input: { userId: string; operationId: string }
+  input: SavedLinkCommandOperationKey
 ): Promise<void> => {
   await database
     .prepare(
-      "DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+      `DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}`
     )
     .bind(input.userId, input.operationId)
     .run()
@@ -103,9 +140,7 @@ export const releaseReservedSavedLinkCommandOperation = async (
 
 export const createConditionalSavedLinkCommandOperationStatement = (
   database: D1Database,
-  input: {
-    userId: string
-    operationId: string
+  input: SavedLinkCommandOperationKey & {
     linkId: string
     command: string
     now: number
@@ -116,8 +151,8 @@ export const createConditionalSavedLinkCommandOperationStatement = (
 ): D1PreparedStatement =>
   database
     .prepare(
-      `INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at)
-       SELECT ?1, ?2, ?3, ?4, ?5, ?6
+      `INSERT INTO link_command_operations (user_id, operation_id, link_id, state, command, created_at, expires_at)
+       SELECT ?1, ?2, ?3, '${SAVED_LINK_OPERATION_COMPLETED_STATE}', ?4, ?5, ?6
        WHERE EXISTS (
          SELECT 1 FROM links
          WHERE id = ?3

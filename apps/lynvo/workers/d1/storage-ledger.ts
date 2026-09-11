@@ -284,6 +284,17 @@ export const applyStorageMutation = ({
   return { statements: [statement], deltaBytes, totalEnforcedBytes }
 }
 
+export const createClearSavedLinksLedgerStatement = (
+  database: D1Database,
+  userId: string,
+  now: number
+): D1PreparedStatement =>
+  database
+    .prepare(
+      `UPDATE storage_ledgers SET ${LEDGER_DOMAIN_COLUMNS.linkBytes} = 0, saved_link_count = 0, total_enforced_bytes = total_enforced_bytes - ${LEDGER_DOMAIN_COLUMNS.linkBytes}, updated_at = ?2 WHERE user_id = ?1`
+    )
+    .bind(userId, now)
+
 export const assertStorageGrowth = (
   projectedStorageBytes: number,
   storageDeltaBytes: number
