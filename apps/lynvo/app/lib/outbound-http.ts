@@ -1,4 +1,8 @@
 import {
+  isBlockedIpUrl,
+  isLocalUrl,
+} from "@dg02002/lynvo-plugin-server-protocol"
+import {
   OUTBOUND_HTTP_MAX_REDIRECTS,
   OUTBOUND_HTTP_MAX_RESPONSE_BYTES,
   OUTBOUND_HTTP_TIMEOUT_MS,
@@ -75,49 +79,6 @@ export class OutboundHttpError extends Error {
   }
 }
 
-const isBlockedIpv4 = (hostname: string): boolean => {
-  const octets = hostname.split(".").map(Number)
-  if (
-    octets.length !== 4 ||
-    octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)
-  ) {
-    return false
-  }
-  const [first, second, third] = octets
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 0 && third === 0) ||
-    (first === 192 && second === 0 && third === 2) ||
-    (first === 192 && second === 168) ||
-    (first === 198 && (second === 18 || second === 19)) ||
-    (first === 198 && second === 51 && third === 100) ||
-    (first === 203 && second === 0 && third === 113) ||
-    first >= 224
-  )
-}
-
-const isBlockedIpv6 = (hostname: string): boolean => {
-  if (!hostname.startsWith("[") || !hostname.endsWith("]")) {
-    return false
-  }
-  const address = hostname.slice(1, -1).toLowerCase()
-  const firstGroup = Number.parseInt(address.split(":")[0] || "0", 16)
-  return (
-    address === "::" ||
-    address === "::1" ||
-    address.startsWith("::ffff:") ||
-    (firstGroup & 0xfe00) === 0xfc00 ||
-    (firstGroup & 0xffc0) === 0xfe80 ||
-    (firstGroup & 0xff00) === 0xff00 ||
-    address.startsWith("2001:db8:")
-  )
-}
-
 export const validateOutboundUrl = (
   value: string | URL,
   options: {
@@ -144,13 +105,10 @@ export const validateOutboundUrl = (
       "Credentials are not allowed in outbound URLs"
     )
   }
-  const hostname = destination.hostname.toLowerCase()
-  const isLocalHostname =
-    hostname === "localhost" || hostname.endsWith(".localhost")
+  const isLocalDestination = isLocalUrl(destination)
   if (
-    (isLocalHostname && !options.allowLocalDevelopment) ||
-    isBlockedIpv4(hostname) ||
-    isBlockedIpv6(hostname)
+    (isLocalDestination && !options.allowLocalDevelopment) ||
+    isBlockedIpUrl(destination)
   ) {
     throw new OutboundHttpError(
       "UNSAFE_DESTINATION",

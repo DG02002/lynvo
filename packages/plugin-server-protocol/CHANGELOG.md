@@ -11,6 +11,14 @@ bump is a breaking change that requires a new major of this package.
 
 ## [Unreleased]
 
+### Added
+
+- Exported `isBlockedIpUrl` and `isLocalUrl` for consistent outbound safety
+  checks across Lynvo and Plugin Server Workers. They reject non-public IPv4
+  and IPv6 literals, including IPv4-mapped, deprecated site-local, Teredo,
+  6to4, deprecated 6to4-relay, and NAT64 forms, while leaving public DNS names
+  untouched.
+
 ## [0.1.5] (2026-08-29)
 
 Highest supported wire version: `1.0`.
