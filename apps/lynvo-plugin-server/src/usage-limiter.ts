@@ -6,6 +6,7 @@ import {
   USAGE_RESERVATION_LEASE_MS,
   USAGE_RESERVATION_SETTLEMENT_GRACE_MS,
   USAGE_LIMITER_NAME,
+  MILLISECONDS_PER_SECOND,
 } from "./constants"
 
 export interface UsageCounterRow {
@@ -17,6 +18,7 @@ export interface UsageReservationResult {
   reserved: boolean
   periodKey: string
   reservationId: string | null
+  retryAfterSeconds?: number
 }
 
 export interface UsageReservationRow {
@@ -50,6 +52,15 @@ const nextResetAt = (timestampMs: number): string => {
     )
   ).toISOString()
 }
+
+const secondsUntilReset = (timestampMs: number): number =>
+  Math.max(
+    1,
+    Math.ceil(
+      (Date.parse(nextResetAt(timestampMs)) - timestampMs) /
+        MILLISECONDS_PER_SECOND
+    )
+  )
 
 export class LynvoPluginServerUsageLimiter {
   private readonly state: DurableObjectState
@@ -89,7 +100,12 @@ export class LynvoPluginServerUsageLimiter {
   ): UsageReservationResult {
     const used = this.getUsed(periodKey)
     if (used >= GLOBAL_DAILY_OPERATION_LIMIT) {
-      return { reserved: false, periodKey, reservationId: null }
+      return {
+        reserved: false,
+        periodKey,
+        reservationId: null,
+        retryAfterSeconds: secondsUntilReset(timestampMs),
+      }
     }
     const reservationId = crypto.randomUUID()
     this.state.storage.sql.exec(

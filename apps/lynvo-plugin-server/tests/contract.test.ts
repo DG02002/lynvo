@@ -1,14 +1,52 @@
-import { SELF } from "cloudflare:test"
+import { env, runInDurableObject, SELF } from "cloudflare:test"
 import { describe, expect, it } from "vitest"
 import {
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
   validateUsageContract,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  GLOBAL_DAILY_OPERATION_LIMIT,
+  USAGE_LIMITER_NAME,
+} from "../src/constants"
+import type { LynvoPluginServerUsageLimiter } from "../src/usage-limiter"
 
 const authenticatedHeaders = {
   Authorization: "Bearer test-api-key",
   "Content-Type": "application/json",
+}
+
+const getUsageLimiterStub = (): DurableObjectStub => {
+  const id =
+    env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER.idFromName(USAGE_LIMITER_NAME)
+  return env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER.get(id)
+}
+
+const setCurrentDailyUsage = async (): Promise<void> => {
+  const periodKey = new Date().toISOString().slice(0, 10)
+  await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
+    getUsageLimiterStub(),
+    (_instance, state) => {
+      state.storage.sql.exec(
+        "INSERT INTO usage_counters (period_key, used) VALUES (?, ?) ON CONFLICT(period_key) DO UPDATE SET used = excluded.used",
+        periodKey,
+        GLOBAL_DAILY_OPERATION_LIMIT
+      )
+    }
+  )
+}
+
+const clearCurrentDailyUsage = async (): Promise<void> => {
+  const periodKey = new Date().toISOString().slice(0, 10)
+  await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
+    getUsageLimiterStub(),
+    (_instance, state) => {
+      state.storage.sql.exec(
+        "DELETE FROM usage_counters WHERE period_key = ?",
+        periodKey
+      )
+    }
+  )
 }
 
 describe("Lynvo Plugin Server protocol routes", () => {
@@ -101,6 +139,54 @@ describe("Lynvo Plugin Server protocol routes", () => {
       plugin: { pluginId: "bhadoo-google-drive-index" },
       nodes: [{ kind: "playable", label: "example.mkv" }],
     })
+  })
+
+  it("keeps schema-valid non-URL input inside the protocol envelope", async () => {
+    const response = await SELF.fetch("https://worker.example/extract", {
+      method: "POST",
+      headers: authenticatedHeaders,
+      body: JSON.stringify({
+        pluginId: "direct-media",
+        input: { kind: "source", sourceUrl: "not-a-url" },
+      }),
+    })
+
+    expect(response.status).toBe(500)
+    expect(response.headers.get("content-type")).toContain("application/json")
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "TEMPORARY_FAILURE" },
+    })
+  })
+
+  it("returns retry guidance when extraction capacity is exhausted", async () => {
+    await setCurrentDailyUsage()
+    try {
+      const response = await SELF.fetch("https://worker.example/extract", {
+        method: "POST",
+        headers: authenticatedHeaders,
+        body: JSON.stringify({
+          pluginId: "direct-media",
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/video.mp4",
+          },
+        }),
+      })
+
+      const result: unknown = await response.json()
+      expect(response.status).toBe(429)
+      expect(response.headers.get("retry-after")).toMatch(/^\d+$/)
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "RATE_LIMITED",
+          retryAfterSeconds: expect.any(Number),
+        },
+      })
+    } finally {
+      await clearCurrentDailyUsage()
+    }
   })
 
   it("returns a protocol envelope for unknown routes", async () => {
