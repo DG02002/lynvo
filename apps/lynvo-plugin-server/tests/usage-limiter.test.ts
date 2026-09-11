@@ -1,39 +1,33 @@
-import { env, runInDurableObject } from "cloudflare:test"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   GLOBAL_DAILY_OPERATION_LIMIT,
   USAGE_RESERVATION_LEASE_MS,
   USAGE_RESERVATION_SETTLEMENT_GRACE_MS,
-  USAGE_LIMITER_NAME,
 } from "../src/constants"
-import type { LynvoPluginServerUsageLimiter } from "../src/usage-limiter"
-
-const getStub = (): DurableObjectStub => {
-  const namespace = env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER
-  const id = namespace.idFromName(USAGE_LIMITER_NAME)
-  return namespace.get(id)
-}
+import { usagePeriodForTesting } from "../src/usage-limiter"
+import {
+  getUsageLimiterStub,
+  runInUsageLimiter,
+  setUsageCounters,
+} from "./usage-limiter-test-helpers"
 
 const requestAt = (
   path: string,
   timestampMs: number,
   init?: RequestInit
 ): Promise<Response> =>
-  getStub().fetch(`https://usage.internal${path}`, {
+  getUsageLimiterStub().fetch(`https://usage.internal${path}`, {
     ...init,
     headers: { "x-lynvo-now-ms": String(timestampMs), ...init?.headers },
   })
 
 describe("usage limiter", () => {
   beforeEach(async () => {
-    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-      getStub(),
-      async (_instance, state) => {
-        await state.storage.deleteAlarm()
-        state.storage.sql.exec("DELETE FROM usage_counters")
-        state.storage.sql.exec("DELETE FROM usage_reservations")
-      }
-    )
+    await runInUsageLimiter(async (_instance, state) => {
+      await state.storage.deleteAlarm()
+      state.storage.sql.exec("DELETE FROM usage_counters")
+      state.storage.sql.exec("DELETE FROM usage_reservations")
+    })
   })
 
   afterEach(() => {
@@ -117,18 +111,8 @@ describe("usage limiter", () => {
 
   it("rejects reservations at the finite limit", async () => {
     const timestampMs = Date.UTC(2100, 6, 19)
-    const periodKey = "2100-07-19"
-    const stub = getStub()
-    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-      stub,
-      (_instance, state) => {
-        state.storage.sql.exec(
-          "INSERT INTO usage_counters (period_key, used) VALUES (?, ?) ON CONFLICT(period_key) DO UPDATE SET used = excluded.used",
-          periodKey,
-          GLOBAL_DAILY_OPERATION_LIMIT
-        )
-      }
-    )
+    const periodKey = usagePeriodForTesting.currentPeriodKey(timestampMs)
+    await setUsageCounters([periodKey], GLOBAL_DAILY_OPERATION_LIMIT)
 
     const response = await requestAt("/reserve", timestampMs, {
       method: "POST",
@@ -138,6 +122,23 @@ describe("usage limiter", () => {
       periodKey: "2100-07-19",
       reservationId: null,
       retryAfterSeconds: 86_400,
+    })
+  })
+
+  it("rounds a partial reset interval up to one second", async () => {
+    const timestampMs = Date.UTC(2100, 6, 19, 23, 59, 59, 250)
+    const periodKey = usagePeriodForTesting.currentPeriodKey(timestampMs)
+    await setUsageCounters([periodKey], GLOBAL_DAILY_OPERATION_LIMIT)
+
+    const response = await requestAt("/reserve", timestampMs, {
+      method: "POST",
+    })
+
+    expect(await response.json()).toMatchObject({
+      reserved: false,
+      periodKey: "2100-07-19",
+      reservationId: null,
+      retryAfterSeconds: 1,
     })
   })
 
@@ -185,12 +186,9 @@ describe("usage limiter", () => {
     vi.setSystemTime(timestampMs)
     await requestAt("/reserve", timestampMs, { method: "POST" })
     vi.setSystemTime(timestampMs + USAGE_RESERVATION_LEASE_MS)
-    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-      getStub(),
-      async (instance) => {
-        await instance.alarm()
-      }
-    )
+    await runInUsageLimiter(async (instance) => {
+      await instance.alarm()
+    })
 
     const usageResponse = await requestAt(
       "/usage",
@@ -206,12 +204,9 @@ describe("usage limiter", () => {
         USAGE_RESERVATION_LEASE_MS +
         USAGE_RESERVATION_SETTLEMENT_GRACE_MS
     )
-    await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-      getStub(),
-      async (instance) => {
-        await instance.alarm()
-      }
-    )
+    await runInUsageLimiter(async (instance) => {
+      await instance.alarm()
+    })
     const reclaimedResponse = await requestAt(
       "/usage",
       timestampMs +
@@ -227,16 +222,14 @@ describe("usage limiter", () => {
   it("does not postpone the earliest alarm when later work arrives", async () => {
     const timestampMs = Date.UTC(2101, 6, 19)
     await requestAt("/reserve", timestampMs, { method: "POST" })
-    const firstAlarm = await runInDurableObject<
-      LynvoPluginServerUsageLimiter,
-      number | null
-    >(getStub(), (_instance, state) => state.storage.getAlarm())
+    const firstAlarm = await runInUsageLimiter((_instance, state) =>
+      state.storage.getAlarm()
+    )
 
     await requestAt("/reserve", timestampMs + 60_000, { method: "POST" })
-    const secondAlarm = await runInDurableObject<
-      LynvoPluginServerUsageLimiter,
-      number | null
-    >(getStub(), (_instance, state) => state.storage.getAlarm())
+    const secondAlarm = await runInUsageLimiter((_instance, state) =>
+      state.storage.getAlarm()
+    )
 
     expect(firstAlarm).toBe(timestampMs + USAGE_RESERVATION_LEASE_MS)
     expect(secondAlarm).toBe(firstAlarm)

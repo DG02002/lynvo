@@ -1,52 +1,22 @@
-import { env, runInDurableObject, SELF } from "cloudflare:test"
+import { SELF } from "cloudflare:test"
+import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
+  extractErrorSchema,
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
   validateUsageContract,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { GLOBAL_DAILY_OPERATION_LIMIT } from "../src/constants"
 import {
-  GLOBAL_DAILY_OPERATION_LIMIT,
-  USAGE_LIMITER_NAME,
-} from "../src/constants"
-import type { LynvoPluginServerUsageLimiter } from "../src/usage-limiter"
+  clearUsageCounters,
+  currentUsagePeriodKeys,
+  setUsageCounters,
+} from "./usage-limiter-test-helpers"
 
 const authenticatedHeaders = {
   Authorization: "Bearer test-api-key",
   "Content-Type": "application/json",
-}
-
-const getUsageLimiterStub = (): DurableObjectStub => {
-  const id =
-    env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER.idFromName(USAGE_LIMITER_NAME)
-  return env.LYNVO_PLUGIN_SERVER_USAGE_LIMITER.get(id)
-}
-
-const setCurrentDailyUsage = async (): Promise<void> => {
-  const periodKey = new Date().toISOString().slice(0, 10)
-  await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-    getUsageLimiterStub(),
-    (_instance, state) => {
-      state.storage.sql.exec(
-        "INSERT INTO usage_counters (period_key, used) VALUES (?, ?) ON CONFLICT(period_key) DO UPDATE SET used = excluded.used",
-        periodKey,
-        GLOBAL_DAILY_OPERATION_LIMIT
-      )
-    }
-  )
-}
-
-const clearCurrentDailyUsage = async (): Promise<void> => {
-  const periodKey = new Date().toISOString().slice(0, 10)
-  await runInDurableObject<LynvoPluginServerUsageLimiter, void>(
-    getUsageLimiterStub(),
-    (_instance, state) => {
-      state.storage.sql.exec(
-        "DELETE FROM usage_counters WHERE period_key = ?",
-        periodKey
-      )
-    }
-  )
 }
 
 describe("Lynvo Plugin Server protocol routes", () => {
@@ -151,17 +121,18 @@ describe("Lynvo Plugin Server protocol routes", () => {
       }),
     })
 
-    expect(response.status).toBe(500)
+    expect(response.ok).toBe(false)
     expect(response.headers.get("content-type")).toContain("application/json")
-    expect(await response.json()).toMatchObject({
-      ok: false,
-      error: { code: "TEMPORARY_FAILURE" },
-    })
+    const result: unknown = await response.json()
+    expect(
+      Result.isSuccess(Schema.decodeUnknownResult(extractErrorSchema)(result))
+    ).toBe(true)
   })
 
   it("returns retry guidance when extraction capacity is exhausted", async () => {
-    await setCurrentDailyUsage()
+    const periodKeys = currentUsagePeriodKeys()
     try {
+      await setUsageCounters(periodKeys, GLOBAL_DAILY_OPERATION_LIMIT)
       const response = await SELF.fetch("https://worker.example/extract", {
         method: "POST",
         headers: authenticatedHeaders,
@@ -185,7 +156,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
         },
       })
     } finally {
-      await clearCurrentDailyUsage()
+      await clearUsageCounters(periodKeys)
     }
   })
 

@@ -42,24 +42,21 @@ const settleRequestSchema = Schema.Struct({
 const currentPeriodKey = (timestampMs: number): string =>
   new Date(timestampMs).toISOString().slice(0, 10)
 
-const nextResetAt = (timestampMs: number): string => {
+const nextResetAtMs = (timestampMs: number): number => {
   const currentDate = new Date(timestampMs)
-  return new Date(
-    Date.UTC(
-      currentDate.getUTCFullYear(),
-      currentDate.getUTCMonth(),
-      currentDate.getUTCDate() + 1
-    )
-  ).toISOString()
+  return Date.UTC(
+    currentDate.getUTCFullYear(),
+    currentDate.getUTCMonth(),
+    currentDate.getUTCDate() + 1
+  )
 }
 
+const nextResetAt = (timestampMs: number): string =>
+  new Date(nextResetAtMs(timestampMs)).toISOString()
+
 const secondsUntilReset = (timestampMs: number): number =>
-  Math.max(
-    1,
-    Math.ceil(
-      (Date.parse(nextResetAt(timestampMs)) - timestampMs) /
-        MILLISECONDS_PER_SECOND
-    )
+  Math.ceil(
+    (nextResetAtMs(timestampMs) - timestampMs) / MILLISECONDS_PER_SECOND
   )
 
 export class LynvoPluginServerUsageLimiter {
@@ -260,6 +257,5 @@ export const readUsage = async (
 
 export const usagePeriodForTesting = {
   currentPeriodKey,
-  nextResetAt,
   millisecondsPerDay: MILLISECONDS_PER_DAY,
 }
