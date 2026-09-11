@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 export interface AsyncResource<Result> {
   readonly data: Result | undefined
   readonly isLoading: boolean
+  readonly error: unknown
   readonly reload: () => Promise<void>
+  /** Never rejects; failures surface through error. */
+  readonly retry: () => Promise<void>
 }
 
 export interface AsyncResourceOptions {
@@ -61,6 +64,7 @@ export const useAsyncResource = <Result>(
   const initialCacheEntry = getCacheEntry<Result>(cacheKey)
   const [data, setData] = useState<Result | undefined>(initialCacheEntry?.data)
   const [isLoading, setIsLoading] = useState(!initialCacheEntry)
+  const [error, setError] = useState<unknown>(undefined)
   const loadReference = useRef(load)
   const previousDependencySignal = useRef<object | undefined>(undefined)
   const dependencySignal = useMemo(() => ({}), dependencies)
@@ -74,6 +78,12 @@ export const useAsyncResource = <Result>(
       let nextData: Result
       try {
         nextData = await loadReference.current()
+      } catch (loadError) {
+        // Awaiting callers catch the rejection; components render the error state.
+        if (isActive()) {
+          setError(loadError ?? new Error("The load failed without an error."))
+        }
+        throw loadError
       } finally {
         if (isActive()) {
           setIsLoading(false)
@@ -87,10 +97,17 @@ export const useAsyncResource = <Result>(
       }
       if (isActive()) {
         setData(nextData)
+        setError(undefined)
       }
     },
     [cacheKey]
   )
+
+  const retry = useCallback(async (): Promise<void> => {
+    try {
+      await runLoad()
+    } catch {}
+  }, [runLoad])
 
   useEffect(() => {
     let didCancel = false
@@ -110,6 +127,7 @@ export const useAsyncResource = <Result>(
       setData(undefined)
       setIsLoading(true)
     }
+    setError(undefined)
 
     if (hasFreshCache && !dependenciesChanged) {
       return () => {
@@ -139,5 +157,5 @@ export const useAsyncResource = <Result>(
     }
   }, [options.pollIntervalMs, runLoad])
 
-  return { data, isLoading, reload: runLoad }
+  return { data, isLoading, error, reload: runLoad, retry }
 }

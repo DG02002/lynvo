@@ -1,7 +1,12 @@
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
+import {
+  LoadErrorRetry,
+  type LoadErrorRetryProps,
+} from "~/components/load-error-retry"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { useAsyncResource } from "~/hooks/use-async-resource"
@@ -113,6 +118,26 @@ const UsageLoading = () => (
   </SettingsList>
 )
 
+const UsageLoadError = ({
+  error,
+  onRetry,
+}: {
+  error: unknown
+  onRetry: LoadErrorRetryProps["onRetry"]
+}) => (
+  <SettingsList>
+    <SettingsRow className="flex-col items-stretch gap-3 py-2">
+      <LoadErrorRetry
+        message={getUserFacingErrorMessage(
+          error,
+          "Usage couldn’t be loaded just now. Check the connection, then try again."
+        )}
+        onRetry={onRetry}
+      />
+    </SettingsRow>
+  </SettingsList>
+)
+
 export const UsageSettings = ({
   lynvoPlugins,
   userId,
@@ -122,7 +147,11 @@ export const UsageSettings = ({
 }) => {
   const timeBucket = useDailyTimeBucket()
   const pluginCacheKey = lynvoPlugins.map((plugin) => plugin.id).join(",")
-  const { data: snapshot } = useAsyncResource(
+  const {
+    data: snapshot,
+    error,
+    retry,
+  } = useAsyncResource(
     () => readUsageSnapshot({ lynvoPlugins }),
     [timeBucket, pluginCacheKey],
     {
@@ -135,7 +164,11 @@ export const UsageSettings = ({
   if (!snapshot) {
     return (
       <div className="flex flex-col gap-7">
-        <UsageLoading />
+        {error !== undefined ? (
+          <UsageLoadError error={error} onRetry={retry} />
+        ) : (
+          <UsageLoading />
+        )}
       </div>
     )
   }
@@ -214,6 +247,10 @@ export const UsageSettings = ({
               </SettingsList>
             )}
           </SettingsPanel>
+        )}
+
+        {error !== undefined && (
+          <UsageLoadError error={error} onRetry={retry} />
         )}
       </>
     </div>
