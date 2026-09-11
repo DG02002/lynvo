@@ -70,6 +70,57 @@ const emptyMetadataJson = () =>
     playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
+const createSavedLinkReservationPause = (database: D1Database) => {
+  let reservationCommitted!: () => void
+  const reservationCommittedPromise = new Promise<void>((resolve) => {
+    reservationCommitted = resolve
+  })
+  let resumeOriginal!: () => void
+  const resumeOriginalPromise = new Promise<void>((resolve) => {
+    resumeOriginal = resolve
+  })
+  const reservationStatements = new WeakSet<object>()
+  const prepare = database.prepare.bind(database)
+  const batch = database.batch.bind(database)
+  // SAFETY: the public D1 functions exercised here use only prepare and batch;
+  // both methods delegate to the real database below.
+  const pausedDatabase = {
+    prepare(query: string): D1PreparedStatement {
+      const statement = prepare(query)
+      if (
+        !query.includes("INSERT INTO link_command_operations") ||
+        !query.includes("VALUES (?1, ?2, NULL")
+      ) {
+        return statement
+      }
+      // SAFETY: reservation statements only call bind before entering batch; the
+      // returned bound statement is the real D1 statement passed to the database.
+      return {
+        bind(...values: unknown[]) {
+          const bound = statement.bind(...values)
+          reservationStatements.add(bound)
+          return bound
+        },
+      } as D1PreparedStatement
+    },
+    async batch(statements: D1PreparedStatement[]) {
+      const results = await batch(statements)
+      if (
+        statements.some((statement) => reservationStatements.has(statement))
+      ) {
+        reservationCommitted()
+        await resumeOriginalPromise
+      }
+      return results
+    },
+  } as D1Database
+  return {
+    database: pausedDatabase,
+    reservationCommitted: reservationCommittedPromise,
+    resumeOriginal,
+  }
+}
+
 describe("d1 links", () => {
   it("creates once when an operation is replayed after a lost response", async () => {
     const user = await createUser()
@@ -87,6 +138,72 @@ describe("d1 links", () => {
     expect(retry.replayed).toBe(true)
     expect(first.replayed).toBe(false)
     expect(snapshot.results).toHaveLength(1)
+  })
+
+  it("does not report an in-flight metadata mutation as completed", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "in-flight:update:create",
+      url: "https://example.com/in-flight-update",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const input = {
+      operationId: "in-flight:update",
+      id: created.id ?? "",
+      meta: metadataJson(),
+      now: NOW + 1_000,
+    }
+    const pause = createSavedLinkReservationPause(env.DB)
+    const originalPromise = updateSavedLinkMeta(pause.database, user.id, input)
+    await pause.reservationCommitted
+
+    const racingRetry = await updateSavedLinkMeta(env.DB, user.id, input)
+    pause.resumeOriginal()
+    const original = await originalPromise
+
+    expect(racingRetry.success).toBe(false)
+    expect(racingRetry.replayed).toBe(false)
+    expect(original.success).toBe(true)
+    await expect(
+      updateSavedLinkMeta(env.DB, user.id, input)
+    ).resolves.toMatchObject({
+      success: true,
+      replayed: true,
+    })
+  })
+
+  it("does not return a missing id for an in-flight create-or-update replay", async () => {
+    const user = await createUser()
+    const input = {
+      operationId: "in-flight:create",
+      url: "https://example.com/in-flight-create",
+      title: "In flight",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    }
+    const pause = createSavedLinkReservationPause(env.DB)
+    const originalPromise = createOrUpdateSavedLink(
+      pause.database,
+      user.id,
+      input
+    )
+    await pause.reservationCommitted
+
+    const racingRetry = await createOrUpdateSavedLink(env.DB, user.id, input)
+    pause.resumeOriginal()
+    const original = await originalPromise
+
+    expect(racingRetry.id).toBeNull()
+    expect(racingRetry.replayed).toBe(false)
+    expect(original.id).toBeDefined()
+    expect(original.replayed).toBe(false)
+    await expect(
+      createOrUpdateSavedLink(env.DB, user.id, input)
+    ).resolves.toMatchObject({
+      id: original.id,
+      replayed: true,
+    })
   })
 
   it("updates the existing link for a repeated URL and keeps one row", async () => {
@@ -572,13 +689,39 @@ describe("d1 links", () => {
         now: NOW,
       })
     }
+    const operationId = "clear:all"
     const outcome = await clearSavedLinks(env.DB, user.id, {
-      operationId: "clear:all",
+      operationId,
       now: NOW,
     })
+    const replay = await clearSavedLinks(env.DB, user.id, {
+      operationId,
+      now: NOW + 1_000,
+    })
     expect(outcome.deletedLinks).toBe(2)
+    expect(replay).toMatchObject({
+      success: true,
+      replayed: true,
+      deletedLinks: 0,
+    })
     const snapshot = await listSavedLinksWithDataVersion(env.DB, user.id, NOW)
     expect(snapshot.results).toHaveLength(0)
+
+    const emptyOperationId = "clear:empty"
+    const empty = await clearSavedLinks(env.DB, user.id, {
+      operationId: emptyOperationId,
+      now: NOW + 2_000,
+    })
+    const emptyReplay = await clearSavedLinks(env.DB, user.id, {
+      operationId: emptyOperationId,
+      now: NOW + 3_000,
+    })
+    expect(empty.deletedLinks).toBe(0)
+    expect(emptyReplay).toMatchObject({
+      success: true,
+      replayed: true,
+      deletedLinks: 0,
+    })
   })
 
   it("requeues a pending extraction with a delayed retry slot", async () => {

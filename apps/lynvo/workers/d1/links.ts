@@ -36,6 +36,7 @@ import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
 import {
   createReservedSavedLinkOperationLinkStatement,
+  createSavedLinkOperationCompletionStatement,
   findCompletedSavedLinkOperation,
   releaseReservedSavedLinkCommandOperation,
   requireOwnedSavedLink,
@@ -569,6 +570,10 @@ const executeDeleteSavedLink = async (
         .bind(existingRow.id),
       database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
       ...ledgerMutation.statements,
+      createSavedLinkOperationCompletionStatement(database, {
+        userId,
+        operationId: input.operationId,
+      }),
     ],
   })
   return { success: true, replayed: false, dataVersion }
@@ -582,6 +587,12 @@ const executeClearSavedLinks = async (
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const { savedLinkCount } = preparation.ledger
   if (savedLinkCount === 0) {
+    await database.batch([
+      createSavedLinkOperationCompletionStatement(database, {
+        userId,
+        operationId: input.operationId,
+      }),
+    ])
     return {
       success: true,
       replayed: false,
@@ -612,6 +623,10 @@ const executeClearSavedLinks = async (
         .bind(userId),
       database.prepare("DELETE FROM links WHERE user_id = ?1").bind(userId),
       ...ledgerMutation.statements,
+      createSavedLinkOperationCompletionStatement(database, {
+        userId,
+        operationId: input.operationId,
+      }),
     ],
   })
   return {
@@ -646,11 +661,22 @@ const reserveSavedLinkMutation = async (
     now: input.now,
   })
   if (!reserved) {
-    return {
-      success: true,
-      replayed: true,
-      dataVersion: await getDataVersion(database, userId),
-    }
+    const concurrentOperation = await findCompletedSavedLinkOperation(
+      database,
+      userId,
+      input.operationId
+    )
+    return concurrentOperation
+      ? {
+          success: true,
+          replayed: true,
+          dataVersion: await getDataVersion(database, userId),
+        }
+      : {
+          success: false,
+          replayed: false,
+          dataVersion: await getDataVersion(database, userId),
+        }
   }
   return undefined
 }
@@ -686,7 +712,7 @@ const reserveCreateOrUpdateSavedLink = async (
     )
     return {
       id: concurrentOperation?.linkId ?? null,
-      replayed: true,
+      replayed: concurrentOperation !== null,
       dataVersion: await getDataVersion(database, userId),
     }
   }

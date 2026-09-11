@@ -30,7 +30,7 @@ export const findCompletedSavedLinkOperation = async (
 ): Promise<CompletedSavedLinkOperation | null> => {
   const row = await database
     .prepare(
-      "SELECT link_id FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2"
+      "SELECT link_id FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND state = 'completed'"
     )
     .bind(userId, operationId)
     .first<{ link_id: string | null }>()
@@ -49,7 +49,7 @@ export const reserveSavedLinkCommandOperation = async (
   const results = await database.batch([
     database
       .prepare(
-        "INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at) VALUES (?1, ?2, NULL, ?3, ?4, ?5) ON CONFLICT(user_id, operation_id) DO NOTHING"
+        "INSERT INTO link_command_operations (user_id, operation_id, link_id, state, command, created_at, expires_at) VALUES (?1, ?2, NULL, 'reserved', ?3, ?4, ?5) ON CONFLICT(user_id, operation_id) DO NOTHING"
       )
       .bind(
         input.userId,
@@ -72,7 +72,7 @@ export const createReservedSavedLinkOperationLinkStatement = (
   }
 ): D1PreparedStatement => {
   const baseSql =
-    "UPDATE link_command_operations SET link_id = ?3 WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+    "UPDATE link_command_operations SET link_id = ?3, state = 'completed' WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved' AND link_id IS NULL"
   return database
     .prepare(
       input.appliedLink
@@ -89,13 +89,23 @@ export const createReservedSavedLinkOperationLinkStatement = (
     )
 }
 
+export const createSavedLinkOperationCompletionStatement = (
+  database: D1Database,
+  input: { userId: string; operationId: string }
+): D1PreparedStatement =>
+  database
+    .prepare(
+      "UPDATE link_command_operations SET state = 'completed' WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved' AND link_id IS NULL"
+    )
+    .bind(input.userId, input.operationId)
+
 export const releaseReservedSavedLinkCommandOperation = async (
   database: D1Database,
   input: { userId: string; operationId: string }
 ): Promise<void> => {
   await database
     .prepare(
-      "DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND link_id IS NULL"
+      "DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND state = 'reserved' AND link_id IS NULL"
     )
     .bind(input.userId, input.operationId)
     .run()
@@ -116,8 +126,8 @@ export const createConditionalSavedLinkCommandOperationStatement = (
 ): D1PreparedStatement =>
   database
     .prepare(
-      `INSERT INTO link_command_operations (user_id, operation_id, link_id, command, created_at, expires_at)
-       SELECT ?1, ?2, ?3, ?4, ?5, ?6
+      `INSERT INTO link_command_operations (user_id, operation_id, link_id, state, command, created_at, expires_at)
+       SELECT ?1, ?2, ?3, 'completed', ?4, ?5, ?6
        WHERE EXISTS (
          SELECT 1 FROM links
          WHERE id = ?3
