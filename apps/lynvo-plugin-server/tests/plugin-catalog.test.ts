@@ -6,6 +6,7 @@ import {
   findLynvoPlugin,
 } from "../src/plugin-catalog"
 import {
+  canPluginServerAttemptUrl,
   getLynvoManifestExtension,
   validatePluginServerManifestContract,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -79,6 +80,35 @@ describe("Lynvo plugin catalog", () => {
       ok: true,
       issues: [],
     })
+  })
+
+  it("publishes no wildcard or probe-plugin matchers in the manifest", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
+
+    expect(manifest.matchers.length).toBeGreaterThan(0)
+    for (const matcher of manifest.matchers) {
+      const isCatchAll =
+        (matcher.hostPatterns?.includes("*") ?? false) &&
+        (matcher.pathPatterns?.includes("/**") ?? false)
+      expect(isCatchAll).toBe(false)
+    }
+
+    const staticPluginMatchers =
+      getLynvoManifestExtension(manifest)
+        .plugins?.filter((plugin) => plugin.matchStrategy !== "probe")
+        .flatMap((plugin) => plugin.matchers ?? []) ?? []
+    expect(manifest.matchers).toEqual(staticPluginMatchers)
+  })
+
+  it("keeps OneDrive index URLs eligible for a probe attempt", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
+
+    expect(
+      canPluginServerAttemptUrl(
+        manifest,
+        "https://index.example/MEDIA/TV/Sample-Show/"
+      )
+    ).toBe(true)
   })
 
   it("omits source icons when no public asset origin is configured", () => {

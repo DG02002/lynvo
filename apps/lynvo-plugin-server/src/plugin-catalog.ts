@@ -64,15 +64,6 @@ const bhadooMatchers: PluginServerMatcher[] = [
   },
 ]
 
-const oneDriveMatchers: PluginServerMatcher[] = [
-  {
-    hosts: ["onedrive.example.invalid"],
-    hostPatterns: ["*"],
-    pathPatterns: ["/**"],
-    schemes: ["https"],
-  },
-]
-
 const googleDrivePublicFileMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.google.com"],
@@ -128,7 +119,6 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/onedrive-index.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
-    matchers: oneDriveMatchers,
     matchStrategy: "probe",
     credential: { kind: "domain-password", scope: "domain", required: false },
     extract: extractOneDriveIndex,
@@ -159,7 +149,9 @@ export const createLynvoPluginServerManifest = (
   homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
-  matchers: LYNVO_PLUGIN_CATALOG.flatMap((plugin) => plugin.matchers ?? []),
+  matchers: LYNVO_PLUGIN_CATALOG.filter(
+    (plugin) => plugin.matchStrategy !== "probe"
+  ).flatMap((plugin) => plugin.matchers ?? []),
   features: {
     password: true,
     lazyNodes: true,
