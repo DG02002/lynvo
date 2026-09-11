@@ -1,7 +1,9 @@
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { useAsyncResource } from "~/hooks/use-async-resource"
@@ -105,10 +107,33 @@ const UsageItem = ({
 )
 
 const UsageLoading = () => (
-  <SettingsList>
+  <SettingsList role="status" aria-label="Loading usage">
     <SettingsRow className="flex-col items-stretch gap-3">
       <Skeleton className="h-4 w-48" />
       <Progress value={0} />
+    </SettingsRow>
+  </SettingsList>
+)
+
+const UsageLoadError = ({
+  error,
+  isRetrying,
+  onRetry,
+}: {
+  error: unknown
+  isRetrying: boolean
+  onRetry: () => void
+}) => (
+  <SettingsList>
+    <SettingsRow className="flex-col items-stretch gap-3 py-2">
+      <LoadErrorRetry
+        isRetrying={isRetrying}
+        message={getUserFacingErrorMessage(
+          error,
+          "Usage couldn’t be loaded just now. Check the connection, then try again."
+        )}
+        onRetry={onRetry}
+      />
     </SettingsRow>
   </SettingsList>
 )
@@ -122,7 +147,12 @@ export const UsageSettings = ({
 }) => {
   const timeBucket = useDailyTimeBucket()
   const pluginCacheKey = lynvoPlugins.map((plugin) => plugin.id).join(",")
-  const { data: snapshot } = useAsyncResource(
+  const {
+    data: snapshot,
+    error,
+    isLoading,
+    retry,
+  } = useAsyncResource(
     () => readUsageSnapshot({ lynvoPlugins }),
     [timeBucket, pluginCacheKey],
     {
@@ -135,7 +165,15 @@ export const UsageSettings = ({
   if (!snapshot) {
     return (
       <div className="flex flex-col gap-7">
-        <UsageLoading />
+        {error !== undefined ? (
+          <UsageLoadError
+            error={error}
+            isRetrying={isLoading}
+            onRetry={retry}
+          />
+        ) : (
+          <UsageLoading />
+        )}
       </div>
     )
   }
@@ -214,6 +252,14 @@ export const UsageSettings = ({
               </SettingsList>
             )}
           </SettingsPanel>
+        )}
+
+        {error !== undefined && (
+          <UsageLoadError
+            error={error}
+            isRetrying={isLoading}
+            onRetry={retry}
+          />
         )}
       </>
     </div>

@@ -2,6 +2,7 @@ import * as React from "react"
 import { Link } from "react-router"
 import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/spinner"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { showErrorToast } from "~/lib/toast-notifications"
 import { FieldSet } from "~/components/field"
 import { LynvoLink } from "~/components/lynvo-link"
@@ -48,19 +49,20 @@ const useDeviceApprovalAction = (code: string) => {
   return { authorize, didApprove, isAuthorizing }
 }
 
-const getDeviceApprovalHeading = (
-  didApprove: boolean,
-  isCheckingCode: boolean,
-  canApprove: boolean
-): string => {
-  if (didApprove) {
-    return "Login approved"
-  }
-  if (isCheckingCode || canApprove) {
-    return "Approve login"
-  }
-  return "Code invalid or expired"
-}
+type DeviceApprovalPhase =
+  | "approved"
+  | "checking"
+  | "ready"
+  | "failed"
+  | "invalid"
+
+const approvalPhaseHeadings = {
+  approved: "Login approved",
+  checking: "Approve login",
+  ready: "Approve login",
+  failed: "Couldn’t check the code",
+  invalid: "Code invalid or expired",
+} satisfies Record<DeviceApprovalPhase, string>
 
 const DeviceApprovalStatusMessage = ({
   code,
@@ -114,20 +116,33 @@ const DeviceApproval = () => {
   )
   const code = params.get("user_code") ?? ""
   const hasValidCode = /^[A-Z]{4}-[A-Z]{4}$/.test(code)
-  const { data: codeRecord, isLoading: isCodeQueryPending } = useAsyncResource(
+  const {
+    data: codeRecord,
+    isLoading: isCodeQueryPending,
+    error: codeQueryError,
+    retry: retryCodeQuery,
+  } = useAsyncResource(
     () =>
       hasValidCode ? readDeviceCodeApproval(code) : Promise.resolve(undefined),
     [code, hasValidCode]
   )
   const isCheckingCode = hasValidCode && isCodeQueryPending
+  const didCodeCheckFail =
+    hasValidCode && codeRecord === undefined && codeQueryError !== undefined
   const hasExpired = useExpiryClock(codeRecord?.expiresAt)
   const canApprove = codeRecord?.status === "pending" && !hasExpired
   const { authorize, didApprove, isAuthorizing } = useDeviceApprovalAction(code)
-  const heading = getDeviceApprovalHeading(
-    didApprove,
-    isCheckingCode,
-    canApprove
-  )
+  let approvalPhase: DeviceApprovalPhase = "invalid"
+  if (didApprove) {
+    approvalPhase = "approved"
+  } else if (isCheckingCode) {
+    approvalPhase = "checking"
+  } else if (canApprove) {
+    approvalPhase = "ready"
+  } else if (didCodeCheckFail) {
+    approvalPhase = "failed"
+  }
+  const heading = approvalPhaseHeadings[approvalPhase]
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col">
@@ -136,12 +151,24 @@ const DeviceApproval = () => {
           <div className="flex flex-col gap-4 text-center">
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">{heading}</h1>
-            <DeviceApprovalStatusMessage
-              code={code}
-              canApprove={canApprove}
-              didApprove={didApprove}
-              isCheckingCode={isCheckingCode}
-            />
+            {approvalPhase === "failed" ? (
+              <LoadErrorRetry
+                className="items-center"
+                isRetrying={isCodeQueryPending}
+                message={getUserFacingErrorMessage(
+                  codeQueryError,
+                  "The login code couldn’t be checked. Try again."
+                )}
+                onRetry={retryCodeQuery}
+              />
+            ) : (
+              <DeviceApprovalStatusMessage
+                code={code}
+                canApprove={canApprove}
+                didApprove={didApprove}
+                isCheckingCode={isCheckingCode}
+              />
+            )}
           </div>
 
           <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
