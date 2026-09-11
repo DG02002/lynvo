@@ -34,10 +34,15 @@ describe("outbound URL address policy", () => {
     "fd12::1",
     "fe80::1",
     "fec0::1",
+    "febf::1",
+    "feff::1",
     "ff02::1",
+    "2001::1",
     "2001:0::1",
     "2001:db8::1",
     "2002::1",
+    "2002:ffff::1",
+    "64:ff9b:1:ffff::1",
   ])("blocks non-public IPv6 literals: %s", (address) => {
     expect(isBlockedIpUrl(ipv6Url(address))).toBe(true)
   })

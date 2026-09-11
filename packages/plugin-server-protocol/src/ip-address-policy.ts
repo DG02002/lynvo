@@ -52,12 +52,7 @@ const parseIpv6GroupsPart = (value: string): number[] | undefined => {
   }
 
   const groups = value.split(":")
-  if (
-    groups.some(
-      (group) =>
-        !/^[0-9a-f]{1,4}$/.test(group) || Number.parseInt(group, 16) > 0xffff
-    )
-  ) {
+  if (groups.some((group) => !/^[0-9a-f]{1,4}$/.test(group))) {
     return undefined
   }
 
