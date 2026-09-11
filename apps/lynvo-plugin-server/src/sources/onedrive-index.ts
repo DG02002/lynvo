@@ -399,7 +399,15 @@ export const extractOneDriveIndex = async ({
     headers,
   })
   if (initialResponse.status === 401) {
-    throw new Error(password ? "INVALID_PASSWORD" : "PASSWORD_REQUIRED")
+    throw password
+      ? new ProtocolError(
+          "INVALID_PASSWORD",
+          "The supplied password was rejected."
+        )
+      : new ProtocolError(
+          "PASSWORD_REQUIRED",
+          "Password is required for this resource."
+        )
   }
   let nodes = initialResponse.ok
     ? await extractOneDriveInitialNodes({

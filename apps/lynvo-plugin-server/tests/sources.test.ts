@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  ProtocolError,
+  toProtocolErrorResponse,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { LYNVO_PLUGIN_CATALOG } from "../src/plugin-catalog"
 import {
   BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
@@ -573,6 +576,73 @@ describe("OneDrive source adapter", () => {
     expect(String(fetchSpy.mock.calls[1][0])).toContain(
       "next=initial-continuation"
     )
+  })
+
+  it("keeps the password-required envelope when the initial page returns 401", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 401 })
+    )
+
+    let error: unknown
+    try {
+      await extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections",
+          },
+        },
+        targetUrl: "https://index.example/Collections",
+        plugin,
+        publicAssetOrigin: "https://lynvo.example",
+      })
+    } catch (cause) {
+      error = cause
+    }
+
+    expect(error).toBeInstanceOf(ProtocolError)
+    expect(error).toMatchObject({ code: "PASSWORD_REQUIRED" })
+    // SAFETY: the instance and code assertions above prove error is a ProtocolError.
+    const response = toProtocolErrorResponse(error as ProtocolError)
+    expect(response.status).toBe(401)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "PASSWORD_REQUIRED" },
+    })
+  })
+
+  it("keeps the invalid-password envelope when the initial page rejects a password", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 401 })
+    )
+
+    let error: unknown
+    try {
+      await extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections",
+          },
+          password: "wrong-password",
+        },
+        targetUrl: "https://index.example/Collections",
+        plugin,
+        publicAssetOrigin: "https://lynvo.example",
+      })
+    } catch (cause) {
+      error = cause
+    }
+
+    expect(error).toBeInstanceOf(ProtocolError)
+    expect(error).toMatchObject({ code: "INVALID_PASSWORD" })
+    // SAFETY: the instance and code assertions above prove error is a ProtocolError.
+    const response = toProtocolErrorResponse(error as ProtocolError)
+    expect(response.status).toBe(401)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_PASSWORD" },
+    })
   })
 
   it("rejects oversized upstream response bodies", async () => {
