@@ -294,6 +294,58 @@ describe("d1 links", () => {
     ).resolves.toMatchObject({ results: [] })
   })
 
+  it("clears links committed before a non-empty clear transaction", async () => {
+    const user = await createUser()
+    await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "in-flight:non-empty-clear:initial",
+      url: "https://example.com/in-flight-non-empty-clear-initial",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+
+    const clearOperationId = "in-flight:non-empty-clear"
+    const pause = createSavedLinkOperationPause(
+      env.DB,
+      clearOperationId,
+      "before-completion"
+    )
+    const clearPromise = clearSavedLinks(pause.database, user.id, {
+      operationId: clearOperationId,
+      now: NOW + 1_000,
+    })
+    await pause.waitForPause(clearPromise)
+
+    try {
+      await createOrUpdateSavedLink(env.DB, user.id, {
+        operationId: "in-flight:non-empty-clear:create",
+        url: "https://example.com/in-flight-non-empty-clear-created",
+        meta: emptyMetadataJson(),
+        now: NOW + 2_000,
+      })
+    } finally {
+      pause.resume()
+    }
+
+    await expect(clearPromise).resolves.toMatchObject({
+      success: true,
+      replayed: false,
+      deletedLinks: 2,
+    })
+    await expect(
+      listSavedLinksWithDataVersion(env.DB, user.id, NOW + 2_000)
+    ).resolves.toMatchObject({ results: [] })
+    await expect(
+      clearSavedLinks(env.DB, user.id, {
+        operationId: "in-flight:non-empty-clear:follow-up",
+        now: NOW + 3_000,
+      })
+    ).resolves.toMatchObject({
+      success: true,
+      replayed: false,
+      deletedLinks: 0,
+    })
+  })
+
   it("updates the existing link for a repeated URL and keeps one row", async () => {
     const user = await createUser()
     await createOrUpdateSavedLink(env.DB, user.id, {
