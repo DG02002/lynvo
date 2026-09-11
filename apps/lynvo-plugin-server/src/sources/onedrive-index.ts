@@ -215,6 +215,15 @@ export const extractOneDriveNextData = (
   return Result.isSuccess(parsed) ? parsed.success.props.pageProps : undefined
 }
 
+const passwordRequiredError = (): ProtocolError =>
+  new ProtocolError(
+    "PASSWORD_REQUIRED",
+    "Password is required for this resource."
+  )
+
+const invalidPasswordError = (): ProtocolError =>
+  new ProtocolError("INVALID_PASSWORD", "The supplied password was rejected.")
+
 const readOneDrivePage = async ({
   origin,
   path,
@@ -235,15 +244,9 @@ const readOneDrivePage = async ({
       passwordRequiredResponseSchema
     )(errorBody)
     if (Result.isSuccess(parsedPasswordError)) {
-      throw new ProtocolError(
-        "PASSWORD_REQUIRED",
-        "Password is required for this resource."
-      )
+      throw passwordRequiredError()
     }
-    throw new ProtocolError(
-      "INVALID_PASSWORD",
-      "The supplied password was rejected."
-    )
+    throw invalidPasswordError()
   }
   if (!response.ok) {
     throw new Error("OneDrive Index upstream request failed.")
@@ -399,7 +402,7 @@ export const extractOneDriveIndex = async ({
     headers,
   })
   if (initialResponse.status === 401) {
-    throw new Error(password ? "INVALID_PASSWORD" : "PASSWORD_REQUIRED")
+    throw password ? invalidPasswordError() : passwordRequiredError()
   }
   let nodes = initialResponse.ok
     ? await extractOneDriveInitialNodes({
