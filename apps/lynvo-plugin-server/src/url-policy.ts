@@ -1,8 +1,15 @@
-import { PRIVATE_IPV4_PATTERNS } from "./constants"
-import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  isBlockedIpHostname,
+  ProtocolError,
+} from "@dg02002/lynvo-plugin-server-protocol"
 
 export const assertSafeUpstreamUrl = (value: string): URL => {
-  const url = new URL(value)
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new ProtocolError("UNSUPPORTED_URL", "The upstream URL is invalid.")
+  }
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new ProtocolError(
       "UNSUPPORTED_URL",
@@ -11,17 +18,10 @@ export const assertSafeUpstreamUrl = (value: string): URL => {
   }
 
   const hostname = url.hostname.toLowerCase()
-  const ipv6Hostname = hostname.includes(":")
-    ? hostname.replace(/^\[|\]$/g, "")
-    : undefined
-  const isPrivateIpv6 =
-    ipv6Hostname !== undefined &&
-    (ipv6Hostname === "::1" || /^(?:fc|fd|fe[89ab])/.test(ipv6Hostname))
   if (
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
-    PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(hostname)) ||
-    isPrivateIpv6
+    isBlockedIpHostname(hostname)
   ) {
     throw new ProtocolError(
       "UNSUPPORTED_URL",

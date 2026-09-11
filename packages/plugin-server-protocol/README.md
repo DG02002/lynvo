@@ -10,6 +10,7 @@ It provides:
 - optional standardized source discovery
 - Lynvo source metadata helpers
 - protocol error/request builders
+- shared outbound IP-literal safety checks
 - contract parsers and diagnostic validation helpers
 - mandatory finite usage schemas and authenticated runtime handling
 

@@ -25,3 +25,4 @@ export {
   validateVerifyErrorContract,
 } from "./contracts.js"
 export { createPluginServerRuntime } from "./runtime.js"
+export { isBlockedIpHostname } from "./ip-address-policy.js"

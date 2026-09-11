@@ -71,11 +71,3 @@ export const DIRECT_MEDIA_BLOCKED_EXTENSIONS = [
 ]
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_HTML_BYTES = 2 * 1024 * 1024
 export const GOOGLE_DRIVE_PUBLIC_FOLDER_MAX_ITEMS = 2_000
-export const PRIVATE_IPV4_PATTERNS = [
-  /^127\./,
-  /^10\./,
-  /^192\.168\./,
-  /^169\.254\./,
-  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-  /^0\.0\.0\.0$/,
-]
