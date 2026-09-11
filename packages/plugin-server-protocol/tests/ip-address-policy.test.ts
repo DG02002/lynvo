@@ -14,6 +14,7 @@ describe("outbound URL address policy", () => {
     "172.16.0.1",
     "192.0.0.2",
     "192.168.0.1",
+    "192.88.99.1",
     "198.18.0.1",
     "198.51.100.1",
     "203.0.113.1",
@@ -34,7 +35,9 @@ describe("outbound URL address policy", () => {
     "fe80::1",
     "fec0::1",
     "ff02::1",
+    "2001:0::1",
     "2001:db8::1",
+    "2002::1",
   ])("blocks non-public IPv6 literals: %s", (address) => {
     expect(isBlockedIpUrl(ipv6Url(address))).toBe(true)
   })
@@ -43,18 +46,26 @@ describe("outbound URL address policy", () => {
     "8.8.8.8",
     "100.63.255.255",
     "172.15.255.255",
+    "192.88.98.1",
+    "6400::1",
+    "64:ff9a::1",
+    "64:ff9b:2::1",
+    "fe7f::1",
+    "2001:1::1",
     "2001:4860:4860::8888",
   ])("allows public IP literals: %s", (address) => {
     const url = address.includes(":") ? ipv6Url(address) : ipv4Url(address)
     expect(isBlockedIpUrl(url)).toBe(false)
   })
 
-  it.each(["fc.example.com", "fd.example.com", "fe8.example.com"])(
-    "ignores DNS names that resemble IPv6 prefixes: %s",
-    (hostname) => {
-      expect(isBlockedIpUrl(new URL(`https://${hostname}/`))).toBe(false)
-    }
-  )
+  it.each([
+    "fc.example.com",
+    "fd.example.com",
+    "fe8.example.com",
+    "fec0.example.com",
+  ])("ignores DNS names that resemble IPv6 prefixes: %s", (hostname) => {
+    expect(isBlockedIpUrl(new URL(`https://${hostname}/`))).toBe(false)
+  })
 
   it.each(["https://localhost/", "https://media.localhost/"])(
     "recognizes local hostnames: %s",

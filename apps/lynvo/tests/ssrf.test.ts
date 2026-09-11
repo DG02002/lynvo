@@ -18,6 +18,9 @@ describe("outbound HTTP safety boundary", () => {
     "http://[64:ff9b::7f00:1]/resource",
     "http://[64:ff9b:1::7f00:1]/resource",
     "http://[fec0::1]/resource",
+    "http://[2001:0::1]/resource",
+    "http://[2002::1]/resource",
+    "http://192.88.99.1/resource",
     "http://169.254.169.254/latest/meta-data",
     "https://user:password@example.com/resource",
   ])("rejects a non-public destination: %s", async (url) => {

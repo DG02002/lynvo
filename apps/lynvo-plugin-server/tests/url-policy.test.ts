@@ -29,7 +29,9 @@ describe("upstream URL policy", () => {
     "https://[fe80::1]/video.mp4",
     "https://[fec0::1]/video.mp4",
     "https://[ff02::1]/video.mp4",
+    "https://[2001:0::1]/video.mp4",
     "https://[2001:db8::1]/video.mp4",
+    "https://[2002::1]/video.mp4",
   ])("blocks local and non-public destinations: %s", (value) => {
     expectUnsupportedUrl(value)
   })
