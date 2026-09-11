@@ -4,6 +4,7 @@ export interface AsyncResource<Result> {
   readonly data: Result | undefined
   readonly isLoading: boolean
   readonly error: unknown
+  /** Rejects when the load fails; callers can catch the failure. */
   readonly reload: () => Promise<void>
   /** Never rejects; failures surface through error. */
   readonly retry: () => Promise<void>
@@ -83,7 +84,13 @@ export const useAsyncResource = <Result>(
   }, [])
 
   const runLoad = useCallback(
-    async (showLoading = false): Promise<void> => {
+    async ({
+      showLoading = false,
+      logError = false,
+    }: {
+      readonly showLoading?: boolean
+      readonly logError?: boolean
+    } = {}): Promise<void> => {
       const loadSequence = ++loadSequenceReference.current
       const isActive = () =>
         isMountedReference.current &&
@@ -99,6 +106,9 @@ export const useAsyncResource = <Result>(
       } catch (loadError) {
         if (isActive()) {
           setError(loadError ?? new Error("The load failed without an error."))
+          if (logError) {
+            console.error(loadError)
+          }
         }
         throw loadError
       } finally {
@@ -123,9 +133,12 @@ export const useAsyncResource = <Result>(
     [cacheKey]
   )
 
-  const reload = useCallback((): Promise<void> => runLoad(true), [runLoad])
+  const reload = useCallback(
+    (): Promise<void> => runLoad({ showLoading: true }),
+    [runLoad]
+  )
   const retry = useCallback(
-    (): Promise<void> => runLoad(true).catch(() => undefined),
+    (): Promise<void> => runLoad({ showLoading: true }).catch(() => undefined),
     [runLoad]
   )
 
@@ -149,7 +162,7 @@ export const useAsyncResource = <Result>(
     setError(undefined)
 
     if (!(hasFreshCache && !dependenciesChanged)) {
-      runLoad().catch((loadError) => console.error(loadError))
+      runLoad({ logError: true }).catch(() => undefined)
     }
     return () => {
       loadSequenceReference.current += 1

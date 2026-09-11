@@ -320,6 +320,7 @@ describe("useAsyncResource error handling", () => {
     await act(async () => {
       pending[0]?.reject(new Error("stale load failed"))
     })
+    expect(vi.mocked(console.error)).not.toHaveBeenCalled()
     expect(result.current.error).toBeUndefined()
     expect(result.current.isLoading).toBe(true)
 
