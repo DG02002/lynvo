@@ -35,6 +35,7 @@ import {
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
 import {
+  completeSavedLinkOperationIfNoSavedLinks,
   createReservedSavedLinkOperationLinkStatement,
   createSavedLinkOperationCompletionStatement,
   findCompletedSavedLinkOperation,
@@ -42,6 +43,7 @@ import {
   requireOwnedSavedLink,
   reserveSavedLinkCommandOperation,
   SAVED_LINK_COLUMNS,
+  type CompletedSavedLinkOperation,
 } from "./saved-link-storage"
 import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
@@ -188,6 +190,10 @@ interface SavedLinkMutationReservationInput {
   command: string
   now: number
 }
+
+type SavedLinkReservationOutcome =
+  | { kind: "completed"; operation: CompletedSavedLinkOperation }
+  | { kind: "inFlight" }
 
 interface SavedLinkOptimisticMutationAttemptResult {
   dataVersion: number
@@ -584,20 +590,36 @@ const executeClearSavedLinks = async (
   userId: string,
   input: ClearSavedLinksInput
 ): Promise<ClearSavedLinksResult> => {
-  const preparation = await ensureStorageLedger(database, userId, input.now)
-  const { savedLinkCount } = preparation.ledger
+  let preparation = await ensureStorageLedger(database, userId, input.now)
+  let { savedLinkCount } = preparation.ledger
   if (savedLinkCount === 0) {
-    await database.batch([
-      createSavedLinkOperationCompletionStatement(database, {
+    const completed = await completeSavedLinkOperationIfNoSavedLinks(database, {
+      userId,
+      operationId: input.operationId,
+    })
+    if (completed) {
+      return {
+        success: true,
+        replayed: false,
+        deletedLinks: 0,
+        dataVersion: await getDataVersion(database, userId),
+      }
+    }
+    // The no-link precondition no longer holds, so refresh the ledger and clear
+    // it under the normal owned-write transaction.
+    preparation = await ensureStorageLedger(database, userId, input.now)
+    ;({ savedLinkCount } = preparation.ledger)
+    if (savedLinkCount === 0) {
+      await releaseReservedSavedLinkCommandOperation(database, {
         userId,
         operationId: input.operationId,
-      }),
-    ])
-    return {
-      success: true,
-      replayed: false,
-      deletedLinks: 0,
-      dataVersion: await getDataVersion(database, userId),
+      })
+      return {
+        success: false,
+        replayed: false,
+        deletedLinks: 0,
+        dataVersion: await getDataVersion(database, userId),
+      }
     }
   }
   const ledgerMutation = applyStorageMutation({
@@ -637,6 +659,19 @@ const executeClearSavedLinks = async (
   }
 }
 
+const resolveSavedLinkReservationConflict = async (
+  database: D1Database,
+  userId: string,
+  operationId: string
+): Promise<SavedLinkReservationOutcome> => {
+  const operation = await findCompletedSavedLinkOperation(
+    database,
+    userId,
+    operationId
+  )
+  return operation ? { kind: "completed", operation } : { kind: "inFlight" }
+}
+
 const reserveSavedLinkMutation = async (
   database: D1Database,
   userId: string,
@@ -661,22 +696,15 @@ const reserveSavedLinkMutation = async (
     now: input.now,
   })
   if (!reserved) {
-    const concurrentOperation = await findCompletedSavedLinkOperation(
+    const outcome = await resolveSavedLinkReservationConflict(
       database,
       userId,
       input.operationId
     )
-    return concurrentOperation
-      ? {
-          success: true,
-          replayed: true,
-          dataVersion: await getDataVersion(database, userId),
-        }
-      : {
-          success: false,
-          replayed: false,
-          dataVersion: await getDataVersion(database, userId),
-        }
+    const dataVersion = await getDataVersion(database, userId)
+    return outcome.kind === "completed"
+      ? { success: true, replayed: true, dataVersion }
+      : { success: false, replayed: false, dataVersion }
   }
   return undefined
 }
@@ -705,15 +733,16 @@ const reserveCreateOrUpdateSavedLink = async (
     now: input.now,
   })
   if (!reserved) {
-    const concurrentOperation = await findCompletedSavedLinkOperation(
+    const outcome = await resolveSavedLinkReservationConflict(
       database,
       userId,
       input.operationId
     )
+    const dataVersion = await getDataVersion(database, userId)
     return {
-      id: concurrentOperation?.linkId ?? null,
-      replayed: concurrentOperation !== null,
-      dataVersion: await getDataVersion(database, userId),
+      id: outcome.kind === "completed" ? outcome.operation.linkId : null,
+      replayed: outcome.kind === "completed",
+      dataVersion,
     }
   }
   return undefined

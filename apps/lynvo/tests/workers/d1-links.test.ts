@@ -70,55 +70,114 @@ const emptyMetadataJson = () =>
     playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
-const createSavedLinkReservationPause = (database: D1Database) => {
-  let reservationCommitted!: () => void
-  const reservationCommittedPromise = new Promise<void>((resolve) => {
-    reservationCommitted = resolve
+type SavedLinkOperationPausePoint = "after-reservation" | "before-completion"
+
+const createSavedLinkOperationPause = (
+  database: D1Database,
+  operationId: string,
+  pausePoint: SavedLinkOperationPausePoint
+) => {
+  let pauseReached!: () => void
+  const pauseReachedPromise = new Promise<void>((resolve) => {
+    pauseReached = resolve
   })
-  let resumeOriginal!: () => void
-  const resumeOriginalPromise = new Promise<void>((resolve) => {
-    resumeOriginal = resolve
+  let resume!: () => void
+  const resumePromise = new Promise<void>((resolve) => {
+    resume = resolve
   })
-  const reservationStatements = new WeakSet<object>()
+  const targetStatements = new WeakSet<object>()
   const prepare = database.prepare.bind(database)
   const batch = database.batch.bind(database)
+  const targetQuery =
+    pausePoint === "after-reservation"
+      ? "INSERT INTO link_command_operations"
+      : "UPDATE link_command_operations"
+  const isTargetStatement = (statement: D1PreparedStatement): boolean =>
+    targetStatements.has(statement)
+  const markTargetStatement = (
+    query: string,
+    statement: D1PreparedStatement,
+    values: unknown[]
+  ): void => {
+    if (
+      query.includes(targetQuery) &&
+      values.some((value) => value === operationId)
+    ) {
+      targetStatements.add(statement)
+    }
+  }
   // SAFETY: the public D1 functions exercised here use only prepare and batch;
   // both methods delegate to the real database below.
   const pausedDatabase = {
     prepare(query: string): D1PreparedStatement {
       const statement = prepare(query)
-      if (
-        !query.includes("INSERT INTO link_command_operations") ||
-        !query.includes("VALUES (?1, ?2, NULL")
-      ) {
+      if (!query.includes(targetQuery)) {
         return statement
       }
-      // SAFETY: reservation statements only call bind before entering batch; the
+      // SAFETY: targeted statements only call bind before entering batch; the
       // returned bound statement is the real D1 statement passed to the database.
       return {
         bind(...values: unknown[]) {
           const bound = statement.bind(...values)
-          reservationStatements.add(bound)
+          markTargetStatement(query, bound, values)
           return bound
         },
       } as D1PreparedStatement
     },
     async batch(statements: D1PreparedStatement[]) {
+      const isTargetBatch = statements.some(isTargetStatement)
+      if (isTargetBatch && pausePoint === "before-completion") {
+        pauseReached()
+        await resumePromise
+      }
       const results = await batch(statements)
-      if (
-        statements.some((statement) => reservationStatements.has(statement))
-      ) {
-        reservationCommitted()
-        await resumeOriginalPromise
+      if (isTargetBatch && pausePoint === "after-reservation") {
+        pauseReached()
+        await resumePromise
       }
       return results
     },
   } as D1Database
   return {
     database: pausedDatabase,
-    reservationCommitted: reservationCommittedPromise,
-    resumeOriginal,
+    waitForPause: async (originalPromise: Promise<unknown>): Promise<void> => {
+      const outcome = await Promise.race([
+        pauseReachedPromise.then(() => "paused" as const),
+        originalPromise.then(
+          () => "original-finished" as const,
+          () => "original-finished" as const
+        ),
+      ])
+      if (outcome === "original-finished") {
+        throw new Error(
+          `Saved link operation pause did not observe ${pausePoint}`
+        )
+      }
+    },
+    resume,
   }
+}
+
+const runSavedLinkOperationRace = async <Original, Retry>(
+  database: D1Database,
+  operationId: string,
+  executeOriginal: (database: D1Database) => Promise<Original>,
+  executeRetry: () => Promise<Retry>
+): Promise<{ original: Original; racingRetry: Retry }> => {
+  const pause = createSavedLinkOperationPause(
+    database,
+    operationId,
+    "after-reservation"
+  )
+  const originalPromise = executeOriginal(pause.database)
+  let racingRetry!: Retry
+  try {
+    await pause.waitForPause(originalPromise)
+    racingRetry = await executeRetry()
+  } finally {
+    pause.resume()
+  }
+  return { original: await originalPromise, racingRetry }
 }
 
 describe("d1 links", () => {
@@ -154,13 +213,12 @@ describe("d1 links", () => {
       meta: metadataJson(),
       now: NOW + 1_000,
     }
-    const pause = createSavedLinkReservationPause(env.DB)
-    const originalPromise = updateSavedLinkMeta(pause.database, user.id, input)
-    await pause.reservationCommitted
-
-    const racingRetry = await updateSavedLinkMeta(env.DB, user.id, input)
-    pause.resumeOriginal()
-    const original = await originalPromise
+    const { original, racingRetry } = await runSavedLinkOperationRace(
+      env.DB,
+      input.operationId,
+      (database) => updateSavedLinkMeta(database, user.id, input),
+      () => updateSavedLinkMeta(env.DB, user.id, input)
+    )
 
     expect(racingRetry.success).toBe(false)
     expect(racingRetry.replayed).toBe(false)
@@ -182,17 +240,12 @@ describe("d1 links", () => {
       meta: emptyMetadataJson(),
       now: NOW,
     }
-    const pause = createSavedLinkReservationPause(env.DB)
-    const originalPromise = createOrUpdateSavedLink(
-      pause.database,
-      user.id,
-      input
+    const { original, racingRetry } = await runSavedLinkOperationRace(
+      env.DB,
+      input.operationId,
+      (database) => createOrUpdateSavedLink(database, user.id, input),
+      () => createOrUpdateSavedLink(env.DB, user.id, input)
     )
-    await pause.reservationCommitted
-
-    const racingRetry = await createOrUpdateSavedLink(env.DB, user.id, input)
-    pause.resumeOriginal()
-    const original = await originalPromise
 
     expect(racingRetry.id).toBeNull()
     expect(racingRetry.replayed).toBe(false)
@@ -204,6 +257,41 @@ describe("d1 links", () => {
       id: original.id,
       replayed: true,
     })
+  })
+
+  it("does not complete an empty clear before a concurrent create", async () => {
+    const user = await createUser()
+    const clearOperationId = "in-flight:clear"
+    const pause = createSavedLinkOperationPause(
+      env.DB,
+      clearOperationId,
+      "before-completion"
+    )
+    const clearPromise = clearSavedLinks(pause.database, user.id, {
+      operationId: clearOperationId,
+      now: NOW,
+    })
+    await pause.waitForPause(clearPromise)
+
+    try {
+      await createOrUpdateSavedLink(env.DB, user.id, {
+        operationId: "in-flight:clear:create",
+        url: "https://example.com/in-flight-clear",
+        meta: emptyMetadataJson(),
+        now: NOW + 1_000,
+      })
+    } finally {
+      pause.resume()
+    }
+
+    await expect(clearPromise).resolves.toMatchObject({
+      success: true,
+      replayed: false,
+      deletedLinks: 1,
+    })
+    await expect(
+      listSavedLinksWithDataVersion(env.DB, user.id, NOW + 1_000)
+    ).resolves.toMatchObject({ results: [] })
   })
 
   it("updates the existing link for a repeated URL and keeps one row", async () => {
