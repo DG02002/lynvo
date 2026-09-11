@@ -55,20 +55,14 @@ export interface LynvoPluginDefinition {
   extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
+const isProbePlugin = (plugin: LynvoPluginDefinition): boolean =>
+  plugin.matchStrategy === "probe"
+
 const bhadooMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.example.invalid"],
     hostPatterns: ["*"],
     pathPatterns: ["/0:/**", BHADOO_FALLBACK_PATH],
-    schemes: ["https"],
-  },
-]
-
-const oneDriveMatchers: PluginServerMatcher[] = [
-  {
-    hosts: ["onedrive.example.invalid"],
-    hostPatterns: ["*"],
-    pathPatterns: ["/**"],
     schemes: ["https"],
   },
 ]
@@ -128,7 +122,6 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     iconPath: "/icons/sources/onedrive-index.webp",
     status: "active",
     version: SOURCE_IMPLEMENTATION_VERSION,
-    matchers: oneDriveMatchers,
     matchStrategy: "probe",
     credential: { kind: "domain-password", scope: "domain", required: false },
     extract: extractOneDriveIndex,
@@ -143,11 +136,10 @@ export const findLynvoPlugin = (
     ? LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.id === pluginId)
     : (LYNVO_PLUGIN_CATALOG.find(
         (plugin) =>
-          plugin.matchStrategy !== "probe" &&
+          !isProbePlugin(plugin) &&
           plugin.matchers &&
           matchPluginServerUrl(targetUrl, plugin.matchers)
-      ) ??
-      LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.matchStrategy === "probe"))
+      ) ?? LYNVO_PLUGIN_CATALOG.find((plugin) => isProbePlugin(plugin)))
 
 export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string
@@ -159,7 +151,9 @@ export const createLynvoPluginServerManifest = (
   homepage: "https://lynvo.dg02002.workers.dev",
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
-  matchers: LYNVO_PLUGIN_CATALOG.flatMap((plugin) => plugin.matchers ?? []),
+  matchers: LYNVO_PLUGIN_CATALOG.filter(
+    (plugin) => !isProbePlugin(plugin)
+  ).flatMap((plugin) => plugin.matchers ?? []),
   features: {
     password: true,
     lazyNodes: true,
@@ -169,8 +163,9 @@ export const createLynvoPluginServerManifest = (
   extensions: {
     lynvo: {
       plugins: LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
-        const publishedMatchers =
-          plugin.matchStrategy === "probe" ? undefined : plugin.matchers
+        const publishedMatchers = isProbePlugin(plugin)
+          ? undefined
+          : plugin.matchers
         const base = {
           id: plugin.id,
           displayName: plugin.displayName,

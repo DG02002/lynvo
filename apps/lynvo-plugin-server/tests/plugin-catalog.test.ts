@@ -5,7 +5,9 @@ import {
   discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
+import { BHADOO_FALLBACK_PATH } from "../src/constants"
 import {
+  canPluginServerAttemptUrl,
   getLynvoManifestExtension,
   validatePluginServerManifestContract,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -79,6 +81,42 @@ describe("Lynvo plugin catalog", () => {
       ok: true,
       issues: [],
     })
+  })
+
+  it("publishes exactly the static plugin matchers with no catch-all", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
+
+    expect(manifest.matchers).toEqual([
+      {
+        hosts: ["drive.example.invalid"],
+        hostPatterns: ["*"],
+        pathPatterns: ["/0:/**", BHADOO_FALLBACK_PATH],
+        schemes: ["https"],
+      },
+      {
+        hosts: ["drive.google.com"],
+        pathPatterns: ["/file/d/**", "/drive/folders/**"],
+        schemes: ["https"],
+      },
+    ])
+
+    for (const matcher of manifest.matchers) {
+      const isCatchAll =
+        (matcher.hostPatterns?.includes("*") ?? false) &&
+        (matcher.pathPatterns ?? ["/**"]).includes("/**")
+      expect(isCatchAll).toBe(false)
+    }
+  })
+
+  it("keeps OneDrive index URLs eligible for a probe attempt", () => {
+    const manifest = createLynvoPluginServerManifest("https://lynvo.example")
+
+    expect(
+      canPluginServerAttemptUrl(
+        manifest,
+        "https://index.example/MEDIA/TV/Sample-Show/"
+      )
+    ).toBe(true)
   })
 
   it("omits source icons when no public asset origin is configured", () => {
