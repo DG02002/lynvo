@@ -2,7 +2,7 @@ import { Effect, Result, Schema } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
-import { withDataVersionHeaders } from "../versioned-response"
+import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { BackendError } from "../../errors"
@@ -92,10 +92,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             })
             .catch(() => ({ kind: "unavailable" as const }))
         )
-        return withDataVersionHeaders({
-          success: true,
-          dataVersion: enqueued.dataVersion,
-        })
+        return versionedSuccess(enqueued.dataVersion)
       })
     )
     .handle("pollInbox", ({ query }) =>
@@ -176,7 +173,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
               cause,
             }),
         })
-        return withDataVersionHeaders({ success: true, dataVersion })
+        return versionedSuccess(dataVersion)
       })
     )
 )

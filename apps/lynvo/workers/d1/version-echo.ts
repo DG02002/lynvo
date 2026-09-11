@@ -1,14 +1,11 @@
 import { Result, Schema } from "effect"
 import type { MiddlewareHandler } from "hono"
+import { VersionedMutationBodySchema } from "../../app/lib/api-contracts"
 import { DATA_VERSION_RESPONSE_HEADER } from "../constants"
 import type { RequestLoggingEnvironment } from "../request-logging"
 import { getD1Database } from "./db"
 import { getDataVersion } from "./data-version"
 import { resolveD1Session } from "./sessions"
-
-const dataVersionBodySchema = Schema.Struct({
-  dataVersion: Schema.Number,
-})
 
 const readBodyDataVersion = async (
   response: Response
@@ -17,7 +14,7 @@ const readBodyDataVersion = async (
     .clone()
     .json()
     .catch(() => null)
-  const decoded = Schema.decodeUnknownResult(dataVersionBodySchema)(body)
+  const decoded = Schema.decodeUnknownResult(VersionedMutationBodySchema)(body)
   return Result.isSuccess(decoded) ? decoded.success.dataVersion : undefined
 }
 

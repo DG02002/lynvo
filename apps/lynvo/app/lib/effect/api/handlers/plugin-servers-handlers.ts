@@ -2,7 +2,7 @@ import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../api"
 import { CurrentUser } from "../middleware"
-import { withDataVersionHeaders } from "../versioned-response"
+import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
@@ -107,7 +107,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersionHeaders({ success: true, dataVersion })
+          return versionedSuccess(dataVersion)
         })
       )
       .handle("toggleProxy", ({ params, payload }) =>
@@ -225,7 +225,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
                 cause,
               }),
           })
-          return withDataVersionHeaders({ success: true, dataVersion })
+          return versionedSuccess(dataVersion)
         })
       )
 )
