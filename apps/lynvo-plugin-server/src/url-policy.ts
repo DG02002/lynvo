@@ -11,17 +11,17 @@ export const assertSafeUpstreamUrl = (value: string): URL => {
   }
 
   const hostname = url.hostname.toLowerCase()
+  const ipv6Hostname = hostname.includes(":")
+    ? hostname.replace(/^\[|\]$/g, "")
+    : undefined
+  const isPrivateIpv6 =
+    ipv6Hostname !== undefined &&
+    (ipv6Hostname === "::1" || /^(?:fc|fd|fe[89ab])/.test(ipv6Hostname))
   if (
     hostname === "localhost" ||
-    hostname === "::1" ||
     hostname.endsWith(".localhost") ||
     PRIVATE_IPV4_PATTERNS.some((pattern) => pattern.test(hostname)) ||
-    hostname.startsWith("fc") ||
-    hostname.startsWith("fd") ||
-    hostname.startsWith("fe8") ||
-    hostname.startsWith("fe9") ||
-    hostname.startsWith("fea") ||
-    hostname.startsWith("feb")
+    isPrivateIpv6
   ) {
     throw new ProtocolError(
       "UNSUPPORTED_URL",
