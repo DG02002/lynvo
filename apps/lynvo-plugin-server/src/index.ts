@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { createError, initLogger } from "evlog"
+import { initLogger } from "evlog"
 import { useLogger } from "evlog/hono"
 import { Result, Schema } from "effect"
 import {
@@ -7,6 +7,7 @@ import {
   extractErrorSchema,
   extractRequestSchema,
   extractSuccessSchema,
+  ProtocolError,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
 import {
@@ -55,12 +56,13 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
       },
     })
     if (!reservation.reserved) {
-      throw createError({
-        message: "RATE_LIMITED",
-        status: 429,
-        why: "The Plugin Server has no remaining capacity for this period.",
-        fix: "Retry after the usage window resets.",
-      })
+      throw new ProtocolError(
+        "RATE_LIMITED",
+        "The Plugin Server has no remaining capacity for this period.",
+        {
+          retryAfterSeconds: reservation.retryAfterSeconds,
+        }
+      )
     }
 
     try {
@@ -114,6 +116,17 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   },
 })
 
+const getTargetHost = (targetUrl: string | undefined): string | undefined => {
+  if (!targetUrl) {
+    return undefined
+  }
+  try {
+    return new URL(targetUrl).hostname
+  } catch {
+    return undefined
+  }
+}
+
 const app = new Hono<PluginServerRequestLoggingEnvironment>()
 
 app.use("*", pluginServerRequestLogging())
@@ -149,11 +162,12 @@ app.post("/extract", async (context) => {
         ? parsedRequest.success.input.sourceUrl
         : parsedRequest.success.input.nodeUrl
   }
+  const targetHost = getTargetHost(targetUrl)
   context.get("log").set({
     operation: "extract",
     extraction: {
       input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
-      target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
+      target_host: targetHost,
     },
   })
   const response = await runtime.handleExtract(context.req.raw, context.env)
@@ -168,7 +182,7 @@ app.post("/extract", async (context) => {
   context.get("log").set({
     extraction: {
       input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
-      target_host: targetUrl ? new URL(targetUrl).hostname : undefined,
+      target_host: targetHost,
       node_count: isSuccess ? success.success.nodes.length : undefined,
       plugin_server_id: isSuccess
         ? success.success.plugin.pluginServerId

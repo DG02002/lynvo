@@ -137,6 +137,7 @@ describe("usage limiter", () => {
       reserved: false,
       periodKey: "2100-07-19",
       reservationId: null,
+      retryAfterSeconds: 86_400,
     })
   })
 
