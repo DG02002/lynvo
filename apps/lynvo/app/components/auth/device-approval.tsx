@@ -159,7 +159,7 @@ const DeviceApproval = () => {
                   codeQueryError,
                   "The login code couldn’t be checked. Try again."
                 )}
-                onRetry={() => void retryCodeQuery()}
+                onRetry={retryCodeQuery}
               />
             ) : (
               <DeviceApprovalStatusMessage

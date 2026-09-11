@@ -169,7 +169,7 @@ export const UsageSettings = ({
           <UsageLoadError
             error={error}
             isRetrying={isLoading}
-            onRetry={() => void retry()}
+            onRetry={retry}
           />
         ) : (
           <UsageLoading />
@@ -258,7 +258,7 @@ export const UsageSettings = ({
           <UsageLoadError
             error={error}
             isRetrying={isLoading}
-            onRetry={() => void retry()}
+            onRetry={retry}
           />
         )}
       </>

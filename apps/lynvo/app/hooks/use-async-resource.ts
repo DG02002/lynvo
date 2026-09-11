@@ -79,55 +79,57 @@ export const useAsyncResource = <Result>(
     isMountedReference.current = true
     return () => {
       isMountedReference.current = false
-      loadSequenceReference.current += 1
     }
   }, [])
 
-  const runLoad = useCallback(async (): Promise<void> => {
-    const loadSequence = ++loadSequenceReference.current
-    const isActive = () =>
-      isMountedReference.current &&
-      loadSequenceReference.current === loadSequence
+  const runLoad = useCallback(
+    async (showLoading = false): Promise<void> => {
+      const loadSequence = ++loadSequenceReference.current
+      const isActive = () =>
+        isMountedReference.current &&
+        loadSequenceReference.current === loadSequence
 
-    if (isActive()) {
-      setIsLoading(true)
-    }
-
-    let nextData: Result
-    try {
-      nextData = await loadReference.current()
-    } catch (loadError) {
-      if (isActive()) {
-        setError(loadError ?? new Error("The load failed without an error."))
+      if (showLoading && isActive()) {
+        setIsLoading(true)
       }
-      throw loadError
-    } finally {
-      if (isActive()) {
-        setIsLoading(false)
+
+      let nextData: Result
+      try {
+        nextData = await loadReference.current()
+      } catch (loadError) {
+        if (isActive()) {
+          setError(loadError ?? new Error("The load failed without an error."))
+        }
+        throw loadError
+      } finally {
+        if (isActive()) {
+          setIsLoading(false)
+        }
       }
-    }
 
-    if (!isActive()) {
-      return
-    }
+      if (!isActive()) {
+        return
+      }
 
-    if (cacheKey) {
-      asyncResourceCache.set(cacheKey, {
-        data: nextData,
-        cachedAt: Date.now(),
-      })
-    }
-    setData(nextData)
-    setError(undefined)
-  }, [cacheKey])
+      if (cacheKey) {
+        asyncResourceCache.set(cacheKey, {
+          data: nextData,
+          cachedAt: Date.now(),
+        })
+      }
+      setData(nextData)
+      setError(undefined)
+    },
+    [cacheKey]
+  )
 
+  const reload = useCallback((): Promise<void> => runLoad(true), [runLoad])
   const retry = useCallback(
-    (): Promise<void> => runLoad().catch(() => undefined),
+    (): Promise<void> => runLoad(true).catch(() => undefined),
     [runLoad]
   )
 
   useEffect(() => {
-    let didCancel = false
     const dependenciesChanged =
       previousDependencySignal.current !== undefined &&
       previousDependencySignal.current !== dependencySignal
@@ -146,20 +148,10 @@ export const useAsyncResource = <Result>(
     }
     setError(undefined)
 
-    if (hasFreshCache && !dependenciesChanged) {
-      return () => {
-        didCancel = true
-        loadSequenceReference.current += 1
-      }
+    if (!(hasFreshCache && !dependenciesChanged)) {
+      runLoad().catch((loadError) => console.error(loadError))
     }
-
-    runLoad().catch((loadError) => {
-      if (!didCancel) {
-        console.error(loadError)
-      }
-    })
     return () => {
-      didCancel = true
       loadSequenceReference.current += 1
     }
   }, [cacheKey, cacheTtlMs, dependencySignal, runLoad])
@@ -176,5 +168,5 @@ export const useAsyncResource = <Result>(
     }
   }, [options.pollIntervalMs, runLoad])
 
-  return { data, isLoading, error, reload: runLoad, retry }
+  return { data, isLoading, error, reload, retry }
 }

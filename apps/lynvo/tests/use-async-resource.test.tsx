@@ -52,7 +52,7 @@ describe("useAsyncResource cache", () => {
     )
 
     expect(second.result.current.data).toBe("first")
-    expect(second.result.current.isLoading).toBe(true)
+    expect(second.result.current.isLoading).toBe(false)
     await waitFor(() => expect(second.result.current.data).toBe("second"))
     expect(secondLoad).toHaveBeenCalledOnce()
   })
@@ -78,10 +78,14 @@ describe("useAsyncResource cache", () => {
   })
 
   it("supports explicit reloads for refresh and retry actions", async () => {
+    let resolveReload!: (value: string) => void
+    const reloadPromise = new Promise<string>((resolve) => {
+      resolveReload = resolve
+    })
     const load = vi
       .fn()
       .mockResolvedValueOnce("first")
-      .mockResolvedValueOnce("second")
+      .mockReturnValueOnce(reloadPromise)
     const { result } = renderHook(() =>
       useAsyncResource(load, [], { cacheKey: "settings:security:user-1" })
     )
@@ -89,8 +93,14 @@ describe("useAsyncResource cache", () => {
     await waitFor(() => expect(result.current.data).toBe("first"))
     expect(result.current.error).toBeUndefined()
     expect(result.current.isLoading).toBe(false)
+    let reloadRequest: Promise<void> | undefined
+    act(() => {
+      reloadRequest = result.current.reload()
+    })
+    expect(result.current.isLoading).toBe(true)
+    resolveReload("second")
     await act(async () => {
-      await result.current.reload()
+      await reloadRequest
     })
 
     expect(result.current.data).toBe("second")
@@ -187,7 +197,7 @@ describe("useAsyncResource error handling", () => {
     )
 
     expect(second.result.current.data).toBe("cached")
-    expect(second.result.current.isLoading).toBe(true)
+    expect(second.result.current.isLoading).toBe(false)
     await waitFor(() => expect(second.result.current.error).toBe(failure))
     expect(second.result.current.data).toBe("cached")
   })
@@ -369,6 +379,109 @@ describe("useAsyncResource error handling", () => {
     expect(result.current.data).toBe("current")
     expect(result.current.error).toBeUndefined()
     expect(result.current.isLoading).toBe(false)
+  })
+
+  it("does not apply a retry error after dependencies change", async () => {
+    const initialFailure = new Error("initial load failed")
+    let rejectRetry!: (reason: Error) => void
+    let resolveCurrent!: (value: string) => void
+    const retryPromise = new Promise<string>((_resolve, reject) => {
+      rejectRetry = reject
+    })
+    const currentPromise = new Promise<string>((resolve) => {
+      resolveCurrent = resolve
+    })
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(initialFailure)
+      .mockReturnValueOnce(retryPromise)
+      .mockReturnValueOnce(currentPromise)
+    const { result, rerender } = renderHook(
+      ({ bucket }: { bucket: number }) =>
+        useAsyncResource<string>(load, [bucket], {
+          cacheKey: "settings:security:user-1",
+        }),
+      { initialProps: { bucket: 1 } }
+    )
+
+    await waitFor(() => expect(result.current.error).toBe(initialFailure))
+    let retryRequest: Promise<void> | undefined
+    act(() => {
+      retryRequest = result.current.retry()
+    })
+    rerender({ bucket: 2 })
+
+    rejectRetry(new Error("stale retry failed"))
+    await act(async () => {
+      await retryRequest
+    })
+
+    expect(result.current.data).toBeUndefined()
+    expect(result.current.error).toBeUndefined()
+    expect(result.current.isLoading).toBe(true)
+
+    resolveCurrent("current")
+    await act(async () => {
+      await currentPromise
+    })
+
+    expect(result.current.data).toBe("current")
+    expect(result.current.error).toBeUndefined()
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it("does not apply a retry result after a poll supersedes it", async () => {
+    vi.useFakeTimers()
+    const initialFailure = new Error("initial load failed")
+    let resolveRetry!: (value: string) => void
+    let resolvePoll!: (value: string) => void
+    const retryPromise = new Promise<string>((resolve) => {
+      resolveRetry = resolve
+    })
+    const pollPromise = new Promise<string>((resolve) => {
+      resolvePoll = resolve
+    })
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(initialFailure)
+      .mockReturnValueOnce(retryPromise)
+      .mockReturnValueOnce(pollPromise)
+    const { result, unmount } = renderHook(() =>
+      useAsyncResource<string>(load, [], { pollIntervalMs: 1000 })
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(result.current.error).toBe(initialFailure)
+    let retryRequest: Promise<void> | undefined
+    act(() => {
+      retryRequest = result.current.retry()
+    })
+    expect(result.current.isLoading).toBe(true)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(load).toHaveBeenCalledTimes(3)
+
+    resolveRetry("stale retry")
+    await act(async () => {
+      await retryRequest
+    })
+    expect(result.current.data).toBeUndefined()
+    expect(result.current.error).toBe(initialFailure)
+    expect(result.current.isLoading).toBe(true)
+
+    resolvePoll("current poll")
+    await act(async () => {
+      await pollPromise
+    })
+    expect(result.current.data).toBe("current poll")
+    expect(result.current.error).toBeUndefined()
+    expect(result.current.isLoading).toBe(false)
+
+    unmount()
   })
 
   it("does not cache a retry result after unmount", async () => {
