@@ -5,6 +5,7 @@ import {
   discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
+import { BHADOO_FALLBACK_PATH } from "../src/constants"
 import {
   canPluginServerAttemptUrl,
   getLynvoManifestExtension,
@@ -82,22 +83,29 @@ describe("Lynvo plugin catalog", () => {
     })
   })
 
-  it("publishes no wildcard or probe-plugin matchers in the manifest", () => {
+  it("publishes exactly the static plugin matchers with no catch-all", () => {
     const manifest = createLynvoPluginServerManifest("https://lynvo.example")
 
-    expect(manifest.matchers.length).toBeGreaterThan(0)
+    expect(manifest.matchers).toEqual([
+      {
+        hosts: ["drive.example.invalid"],
+        hostPatterns: ["*"],
+        pathPatterns: ["/0:/**", BHADOO_FALLBACK_PATH],
+        schemes: ["https"],
+      },
+      {
+        hosts: ["drive.google.com"],
+        pathPatterns: ["/file/d/**", "/drive/folders/**"],
+        schemes: ["https"],
+      },
+    ])
+
     for (const matcher of manifest.matchers) {
       const isCatchAll =
         (matcher.hostPatterns?.includes("*") ?? false) &&
-        (matcher.pathPatterns?.includes("/**") ?? false)
+        (matcher.pathPatterns ?? ["/**"]).includes("/**")
       expect(isCatchAll).toBe(false)
     }
-
-    const staticPluginMatchers =
-      getLynvoManifestExtension(manifest)
-        .plugins?.filter((plugin) => plugin.matchStrategy !== "probe")
-        .flatMap((plugin) => plugin.matchers ?? []) ?? []
-    expect(manifest.matchers).toEqual(staticPluginMatchers)
   })
 
   it("keeps OneDrive index URLs eligible for a probe attempt", () => {

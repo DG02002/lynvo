@@ -55,6 +55,9 @@ export interface LynvoPluginDefinition {
   extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
 }
 
+const isProbePlugin = (plugin: LynvoPluginDefinition): boolean =>
+  plugin.matchStrategy === "probe"
+
 const bhadooMatchers: PluginServerMatcher[] = [
   {
     hosts: ["drive.example.invalid"],
@@ -133,11 +136,10 @@ export const findLynvoPlugin = (
     ? LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.id === pluginId)
     : (LYNVO_PLUGIN_CATALOG.find(
         (plugin) =>
-          plugin.matchStrategy !== "probe" &&
+          !isProbePlugin(plugin) &&
           plugin.matchers &&
           matchPluginServerUrl(targetUrl, plugin.matchers)
-      ) ??
-      LYNVO_PLUGIN_CATALOG.find((plugin) => plugin.matchStrategy === "probe"))
+      ) ?? LYNVO_PLUGIN_CATALOG.find((plugin) => isProbePlugin(plugin)))
 
 export const createLynvoPluginServerManifest = (
   publicAssetOrigin?: string
@@ -150,7 +152,7 @@ export const createLynvoPluginServerManifest = (
   auth: { type: "bearer" },
   usage: { endpoint: "/usage" },
   matchers: LYNVO_PLUGIN_CATALOG.filter(
-    (plugin) => plugin.matchStrategy !== "probe"
+    (plugin) => !isProbePlugin(plugin)
   ).flatMap((plugin) => plugin.matchers ?? []),
   features: {
     password: true,
@@ -161,8 +163,9 @@ export const createLynvoPluginServerManifest = (
   extensions: {
     lynvo: {
       plugins: LYNVO_PLUGIN_CATALOG.map((plugin): PluginMetadata => {
-        const publishedMatchers =
-          plugin.matchStrategy === "probe" ? undefined : plugin.matchers
+        const publishedMatchers = isProbePlugin(plugin)
+          ? undefined
+          : plugin.matchers
         const base = {
           id: plugin.id,
           displayName: plugin.displayName,
