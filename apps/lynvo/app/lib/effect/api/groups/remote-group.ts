@@ -4,6 +4,7 @@ import {
   UnauthorizedApiError,
   CsrfApiError,
   BackendApiError,
+  ValidationApiError,
 } from "../../errors"
 import {
   RemotePollQuerySchema,
@@ -21,7 +22,12 @@ export class RemoteGroup extends HttpApiGroup.make("remote")
     HttpApiEndpoint.post("send", "/send", {
       payload: RemoteSendPayloadSchema,
       success: VersionedMutationResponseSchema,
-      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ValidationApiError,
+        BackendApiError,
+      ],
     }),
     HttpApiEndpoint.get("pollInbox", "/inbox", {
       query: RemotePollQuerySchema,

@@ -4,7 +4,9 @@ import { CsrfMiddleware, WebAuth } from "../middleware"
 import {
   BackendApiError,
   CsrfApiError,
+  NotFoundApiError,
   UnauthorizedApiError,
+  ValidationApiError,
 } from "../../errors"
 import {
   ActivityPayloadSchema,
@@ -40,7 +42,12 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
     HttpApiEndpoint.delete("revokeSession", "/security/sessions/:sessionId", {
       params: { sessionId: Schema.String },
       success: MutationResultSchema,
-      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        NotFoundApiError,
+        BackendApiError,
+      ],
     }),
     HttpApiEndpoint.delete("revokeAllSessions", "/security/sessions", {
       success: MutationResultSchema,
@@ -49,7 +56,12 @@ export class SettingsGroup extends HttpApiGroup.make("settings")
     HttpApiEndpoint.delete("deleteAccount", "/security/account", {
       payload: DeleteAccountPayloadSchema,
       success: MutationResultSchema,
-      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        ValidationApiError,
+        BackendApiError,
+      ],
     })
   )
   .middleware(WebAuth)

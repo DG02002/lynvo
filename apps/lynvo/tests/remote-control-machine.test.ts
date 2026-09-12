@@ -158,6 +158,29 @@ describe("remote-control machine", () => {
     )
   })
 
+  it("preserves actionable messages for failed Remote Play sends", async () => {
+    const harness = createHarness({ storedSessionId: "tv-1" })
+    const outcomes: RemoteControlOutcome[] = []
+    harness.machine.subscribeOutcomes((outcome) => outcomes.push(outcome))
+    const error = {
+      _tag: "ValidationError",
+      message: "Remote receiver target is invalid",
+    }
+    harness.transport.send.mockRejectedValueOnce(error)
+
+    await expect(
+      harness.machine.sendRemotePlayback({
+        url: "https://example.com/video",
+        rangeRequest: "unknown",
+      })
+    ).rejects.toBe(error)
+
+    expect(outcomes).toContainEqual({
+      type: "send-failed",
+      error,
+    })
+  })
+
   it("deduplicates replayed commands and rejects stale commands", async () => {
     const harness = createHarness()
     harness.machine.receiveCommand({

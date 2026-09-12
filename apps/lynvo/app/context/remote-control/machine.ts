@@ -76,22 +76,18 @@ declare global {
     clearInterval: (intervalId: number) => void
   }
 
-  interface RemoteControlOutcome {
-    type:
-      | "connected"
-      | "connect-failed"
-      | "disconnected"
-      | "disconnect-failed"
-      | "receiver-disconnected"
-      | "send-failed"
-      | "receiver-connected"
-      | "receiver-ended"
-      | "command-received"
-      | "invalid-command"
-      | "delivery-unavailable"
-    deviceName?: string
-    command?: "play"
-  }
+  type RemoteControlOutcome =
+    | { type: "connected"; deviceName: string }
+    | { type: "connect-failed"; deviceName: string }
+    | { type: "disconnected" }
+    | { type: "disconnect-failed" }
+    | { type: "receiver-disconnected" }
+    | { type: "send-failed"; error: unknown }
+    | { type: "receiver-connected"; deviceName: string }
+    | { type: "receiver-ended" }
+    | { type: "command-received"; command: "play" }
+    | { type: "invalid-command" }
+    | { type: "delivery-unavailable" }
 
   interface RemoteControlMachine {
     getSnapshot: () => RemoteControlMachineState
@@ -304,7 +300,10 @@ export const createRemoteControlMachine = ({
       try {
         await transport.send(state.activeSessionId, intent)
       } catch (error) {
-        publishOutcome({ type: "send-failed" })
+        publishOutcome({
+          type: "send-failed",
+          error,
+        })
         await machine.disconnect().catch(() => undefined)
         throw error
       }

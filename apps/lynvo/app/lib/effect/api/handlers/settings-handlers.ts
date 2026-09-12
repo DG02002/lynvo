@@ -5,7 +5,7 @@ import { CurrentUser } from "../middleware"
 import { versionedSuccess } from "../versioned-response"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/cloudflare-env"
-import { BackendError } from "../../errors"
+import { BackendError, NotFoundError, ValidationError } from "../../errors"
 import { getD1Database } from "../../../../../workers/d1/db"
 import {
   findSessionOwnerById,
@@ -155,7 +155,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
             findSessionOwnerById(database, params.sessionId)
           )
           if (ownerId !== user.id) {
-            return yield* new BackendError({ message: "Session not found" })
+            return yield* new NotFoundError({ message: "Session not found" })
           }
           yield* Effect.tryPromise({
             try: async () => {
@@ -214,7 +214,9 @@ export const SettingsHandlers = HttpApiBuilder.group(
             })
           }
           if (payload.confirmEmail.trim() !== account.email) {
-            return yield* new BackendError({ message: "Email does not match" })
+            return yield* new ValidationError({
+              message: "Email does not match",
+            })
           }
           const now = Date.now()
           yield* Effect.tryPromise({

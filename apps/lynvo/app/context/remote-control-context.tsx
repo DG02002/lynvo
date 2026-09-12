@@ -14,7 +14,9 @@ import {
   useRealtime,
   type RealtimeContextValue,
 } from "~/context/realtime-context"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 import { remoteApi } from "./remote-control/api"
+import { REMOTE_CONNECTION_FAILURE_MESSAGE } from "./remote-control/constants"
 import { createRemoteControlMachine } from "./remote-control/machine"
 import { createRemoteControlPersistence } from "./remote-control/storage"
 
@@ -54,16 +56,30 @@ const createBrowserRemoteControlMachine = (identity: string) =>
     clock: browserClock,
   })
 
+type RemoteControlNotifications = {
+  readonly showErrorToast: typeof showErrorToast
+  readonly showInfoToast: typeof showInfoToast
+  readonly showSuccessToast: typeof showSuccessToast
+}
+
+const browserRemoteControlNotifications: RemoteControlNotifications = {
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
+}
+
 export const RemoteControlProviderContent = ({
   children,
   user,
   realtime,
   createMachine = createBrowserRemoteControlMachine,
+  notifications = browserRemoteControlNotifications,
 }: {
   children: React.ReactNode
   user: { id: string; sessionId?: string } | null
   realtime: RealtimeContextValue
   createMachine?: (identity: string) => RemoteControlMachine
+  notifications?: RemoteControlNotifications
 }) => {
   const identity = `${user?.id ?? "signed-out"}:${user?.sessionId ?? "none"}`
   const machine = useMemo(
@@ -122,9 +138,11 @@ export const RemoteControlProviderContent = ({
     () =>
       machine.subscribeOutcomes((outcome) => {
         if (outcome.type === "connected") {
-          showSuccessToast({ title: `Connected to ${outcome.deviceName}` })
+          notifications.showSuccessToast({
+            title: `Connected to ${outcome.deviceName}`,
+          })
         } else if (outcome.type === "connect-failed") {
-          showErrorToast({
+          notifications.showErrorToast({
             title: "Remote Play couldn’t connect",
             description: "Keep Lynvo open on both devices, then try again.",
           })
@@ -132,31 +150,34 @@ export const RemoteControlProviderContent = ({
           outcome.type === "disconnected" ||
           outcome.type === "receiver-disconnected"
         ) {
-          showInfoToast({ title: "Remote Play disconnected" })
+          notifications.showInfoToast({ title: "Remote Play disconnected" })
         } else if (outcome.type === "disconnect-failed") {
-          showErrorToast({
+          notifications.showErrorToast({
             title: "Remote Play couldn’t disconnect",
-            description: "Check the connection, then try again.",
+            description: REMOTE_CONNECTION_FAILURE_MESSAGE,
           })
         } else if (outcome.type === "send-failed") {
-          showErrorToast({
+          notifications.showErrorToast({
             title: "Couldn’t send the Remote Play command",
-            description: "Check the connection, then try again.",
+            description: getUserFacingErrorMessage(
+              outcome.error,
+              REMOTE_CONNECTION_FAILURE_MESSAGE
+            ),
           })
         } else if (outcome.type === "delivery-unavailable") {
-          showErrorToast({
+          notifications.showErrorToast({
             title: "Remote Play is temporarily unavailable",
             description:
               "Remote Play updates are temporarily unavailable. Check the connection.",
           })
         } else if (outcome.type === "invalid-command") {
-          showErrorToast({
+          notifications.showErrorToast({
             title: "Invalid playback request",
             description: "Remote Play received an invalid playback request.",
           })
         }
       }),
-    [machine]
+    [machine, notifications]
   )
 
   useEffect(
