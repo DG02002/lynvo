@@ -46,6 +46,74 @@ const createUser = async () =>
     now: NOW,
   })
 
+const createSavedLinkOwnershipPause = (
+  database: D1Database,
+  linkId: string
+) => {
+  let readReached!: () => void
+  const readReachedPromise = new Promise<void>((resolve) => {
+    readReached = resolve
+  })
+  let resume!: () => void
+  const resumePromise = new Promise<void>((resolve) => {
+    resume = resolve
+  })
+  let paused = false
+  const prepare = database.prepare.bind(database)
+  // SAFETY: this wrapper preserves the D1 methods used by the public update
+  // path and delegates every non-targeted operation to the real database.
+  const pausedDatabase = {
+    prepare(query: string): D1PreparedStatement {
+      const statement = prepare(query)
+      if (!query.includes("FROM links WHERE id = ?1")) {
+        return statement
+      }
+      // SAFETY: the targeted statement only calls bind and first in the
+      // requireOwnedSavedLink path exercised by this test.
+      return {
+        bind(...values: unknown[]) {
+          const bound = statement.bind(...values)
+          if (values[0] !== linkId) {
+            return bound
+          }
+          // SAFETY: the targeted bound statement only calls first in the
+          // requireOwnedSavedLink path exercised by this test.
+          return {
+            async first<Result>() {
+              const result = await bound.first<Result>()
+              if (!paused) {
+                paused = true
+                readReached()
+                await resumePromise
+              }
+              return result
+            },
+          } as D1PreparedStatement
+        },
+      } as D1PreparedStatement
+    },
+    batch: database.batch.bind(database),
+    // SAFETY: the wrapper implements prepare and batch, the only D1 methods
+    // used by this public operation.
+  } as D1Database
+  return {
+    database: pausedDatabase,
+    waitForRead: async (originalPromise: Promise<unknown>): Promise<void> => {
+      const outcome = await Promise.race([
+        readReachedPromise.then(() => "paused" as const),
+        originalPromise.then(
+          () => "original-finished" as const,
+          () => "original-finished" as const
+        ),
+      ])
+      if (outcome === "original-finished") {
+        throw new Error("Saved link ownership pause did not observe the read")
+      }
+    },
+    resume,
+  }
+}
+
 const playableLink: ExtractedLink = {
   nodeKey: "file:one",
   url: "https://media.example/one.mp4",
@@ -710,6 +778,41 @@ describe("d1 links", () => {
       now: NOW + 3_000,
     })
     expect(replay.replayed).toBe(true)
+  })
+
+  it("does not update a link after its ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:update:create",
+      url: "https://example.com/authz-update",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const updatePromise = updateSavedLinkMeta(pause.database, user.id, {
+      operationId: "authz:update-attack",
+      id: linkId,
+      meta: metadataJson(),
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(updatePromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(updatePromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
   })
 
   it("does not resurrect a removed child and rejects stale replacement", async () => {

@@ -14,6 +14,7 @@ import {
   withAppliedMutation,
   type StorageLedgerPreparation,
 } from "./storage-ledger"
+import { requireOwnedPluginServerRow } from "./plugin-server-ownership"
 
 export interface EncryptedCredentialInput {
   ciphertext: string
@@ -387,6 +388,7 @@ const upsertPluginDomainOnce = async (
     now: number
   }
 ): Promise<UpsertPluginDomainResult> => {
+  await requireOwnedPluginServerRow(database, userId, input.pluginServerId)
   const domain = normalizePluginDomain(input.domain)
   const existingDomainRow = await database
     .prepare(

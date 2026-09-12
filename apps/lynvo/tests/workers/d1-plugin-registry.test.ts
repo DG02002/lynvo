@@ -387,9 +387,13 @@ describe("d1 plugin registry", () => {
 
   it("upserts domains, reassigns plugins, and manages credentials", async () => {
     const user = await createUser()
+    const server = await registerReadyServer(
+      user.id,
+      "https://server-1.example"
+    )
     const created = await upsertPluginDomain(env.DB, user.id, {
       domain: "Domain.Example",
-      pluginServerId: "server-1",
+      pluginServerId: server.id,
       pluginId: "plugin-1",
       credential: credential(),
       now: NOW,
@@ -398,7 +402,7 @@ describe("d1 plugin registry", () => {
 
     const lookup = await getPluginDomainByDomain(env.DB, user.id, {
       domain: "domain.example",
-      pluginServerId: "server-1",
+      pluginServerId: server.id,
     })
     expect(lookup?.id).toBe(created.id)
     expect(lookup?.pluginId).toBe("plugin-1")
@@ -448,7 +452,7 @@ describe("d1 plugin registry", () => {
 
     const reassigned = await upsertPluginDomain(env.DB, user.id, {
       domain: "domain.example",
-      pluginServerId: "server-1",
+      pluginServerId: server.id,
       pluginId: "plugin-2",
       now: NOW + 7_000,
     })
@@ -490,16 +494,17 @@ describe("d1 plugin registry", () => {
   it("rejects invalid domains and wrong-user access", async () => {
     const owner = await createUser()
     const attacker = await createUser()
+    const server = await registerReadyServer(owner.id, "https://authz.example")
     const created = await upsertPluginDomain(env.DB, owner.id, {
       domain: "authz.example",
-      pluginServerId: "server-1",
+      pluginServerId: server.id,
       pluginId: "plugin-1",
       now: NOW,
     })
     await expect(
       upsertPluginDomain(env.DB, owner.id, {
         domain: "",
-        pluginServerId: "server-1",
+        pluginServerId: server.id,
         pluginId: "plugin-1",
         now: NOW,
       })
@@ -519,17 +524,54 @@ describe("d1 plugin registry", () => {
     ).rejects.toThrow("Plugin domain not found")
   })
 
+  it("rejects domain writes for foreign or missing plugin servers", async () => {
+    const owner = await createUser()
+    const foreignOwner = await createUser()
+    const foreignServer = await registerReadyServer(
+      foreignOwner.id,
+      "https://foreign.example"
+    )
+
+    await expect(
+      upsertPluginDomain(env.DB, owner.id, {
+        domain: "foreign.example",
+        pluginServerId: foreignServer.id,
+        pluginId: "plugin-1",
+        now: NOW,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+    await expect(
+      upsertPluginDomain(env.DB, owner.id, {
+        domain: "missing.example",
+        pluginServerId: "missing-server",
+        pluginId: "plugin-1",
+        now: NOW + 1_000,
+      })
+    ).rejects.toThrow("Plugin server not found or no longer available")
+
+    const domains = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM user_plugin_domains WHERE user_id = ?1"
+    )
+      .bind(owner.id)
+      .first<{ count: number }>()
+    expect(domains?.count).toBe(0)
+  })
+
   it("keeps one plugin domain row per user, server, and domain", async () => {
     const user = await createUser()
+    const server = await registerReadyServer(
+      user.id,
+      "https://server-one.example"
+    )
     const first = await upsertPluginDomain(env.DB, user.id, {
       domain: "source.example",
-      pluginServerId: "server-one",
+      pluginServerId: server.id,
       pluginId: "plugin-one",
       now: NOW,
     })
     const second = await upsertPluginDomain(env.DB, user.id, {
       domain: "source.example",
-      pluginServerId: "server-one",
+      pluginServerId: server.id,
       pluginId: "plugin-one",
       now: NOW + 1_000,
     })
@@ -542,9 +584,9 @@ describe("d1 plugin registry", () => {
     expect(domains?.count).toBe(1)
     await expect(
       env.DB.prepare(
-        "INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id) VALUES ('dup', ?1, 'server-one', 'source.example', 'plugin-one')"
+        "INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id) VALUES ('dup', ?1, ?2, 'source.example', 'plugin-one')"
       )
-        .bind(user.id)
+        .bind(user.id, server.id)
         .run()
     ).rejects.toThrow("UNIQUE constraint failed")
   })
