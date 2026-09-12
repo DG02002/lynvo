@@ -5,7 +5,7 @@ import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { parseRemoteTargetId } from "../../../remote-target"
-import { BackendError } from "../../errors"
+import { BackendError, ValidationError } from "../../errors"
 import { getD1Database } from "../../../../../workers/d1/db"
 import {
   claimNextRemoteCommand,
@@ -36,7 +36,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
           : "{}"
         const target = parseRemoteTargetId(payload.target_session_id)
         if (!target) {
-          return yield* new BackendError({
+          return yield* new ValidationError({
             message: "Remote receiver target is invalid",
           })
         }
@@ -61,7 +61,7 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
             (receiver) => receiver.id === payload.target_session_id
           )
         if (!receiverIsLive) {
-          return yield* new BackendError({
+          return yield* new ValidationError({
             message: "Remote receiver is offline",
           })
         }

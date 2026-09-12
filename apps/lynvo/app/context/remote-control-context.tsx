@@ -141,7 +141,8 @@ export const RemoteControlProviderContent = ({
         } else if (outcome.type === "send-failed") {
           showErrorToast({
             title: "Couldn’t send the Remote Play command",
-            description: "Check the connection, then try again.",
+            description:
+              outcome.message ?? "Check the connection, then try again.",
           })
         } else if (outcome.type === "delivery-unavailable") {
           showErrorToast({

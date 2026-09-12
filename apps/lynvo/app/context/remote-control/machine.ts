@@ -3,6 +3,7 @@ import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
 } from "./command-delivery"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 declare global {
   interface RemoteDevice {
@@ -90,6 +91,7 @@ declare global {
       | "invalid-command"
       | "delivery-unavailable"
     deviceName?: string
+    message?: string
     command?: "play"
   }
 
@@ -304,7 +306,13 @@ export const createRemoteControlMachine = ({
       try {
         await transport.send(state.activeSessionId, intent)
       } catch (error) {
-        publishOutcome({ type: "send-failed" })
+        publishOutcome({
+          type: "send-failed",
+          message: getUserFacingErrorMessage(
+            error,
+            "Check the connection, then try again."
+          ),
+        })
         await machine.disconnect().catch(() => undefined)
         throw error
       }

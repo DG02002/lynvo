@@ -13,6 +13,7 @@ import {
   apiErrorResponseSchema,
   readApiResponseError,
 } from "~/lib/api-errors"
+import { ApiClientError } from "~/lib/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 describe("API errors", () => {
@@ -75,6 +76,31 @@ describe("API errors", () => {
         "Request failed."
       )
     ).toBe("Enter a supported URL.")
+  })
+
+  it.each([
+    ["ValidationError", "Remote receiver target is invalid"],
+    ["ValidationError", "Remote receiver is offline"],
+    ["NotFoundError", "Session not found"],
+    ["ValidationError", "Email does not match"],
+  ] as const)(
+    "surfaces the server message for %s failures",
+    (_tag, message) => {
+      expect(
+        getUserFacingErrorMessage({ _tag, message }, "Request failed.")
+      ).toBe(message)
+    }
+  )
+
+  it("surfaces messages from typed API client errors", () => {
+    const error = new ApiClientError({
+      body: { _tag: "NotFoundError", message: "Session not found" },
+      response: new Response(null, { status: 404 }),
+    })
+
+    expect(getUserFacingErrorMessage(error, "Request failed.")).toBe(
+      "Session not found"
+    )
   })
 
   it("assigns semantic HTTP statuses to Effect errors", () => {
