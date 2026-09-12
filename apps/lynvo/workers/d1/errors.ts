@@ -7,7 +7,7 @@ export interface StorageRejection {
 
 export const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
 export const PLUGIN_DOMAIN_NOT_FOUND_MESSAGE = "Plugin domain not found"
-export const PLUGIN_SERVER_NOT_FOUND_MESSAGE =
+export const PLUGIN_SERVER_UNAVAILABLE_MESSAGE =
   "Plugin server not found or no longer available"
 export const PLUGIN_CREDENTIAL_CHANGE_SUPERSEDED_MESSAGE =
   "Plugin credential change was superseded"
@@ -34,7 +34,7 @@ export class PluginServerUnavailableError extends Error {
   readonly kind = "plugin-server-unavailable" as const
 
   constructor() {
-    super(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
+    super(PLUGIN_SERVER_UNAVAILABLE_MESSAGE)
     this.name = "PluginServerUnavailableError"
   }
 }

@@ -21,6 +21,9 @@ const taggedErrorMessage = <Value>(error: Value): string | undefined => {
     case "NotFoundError":
     case "UsageLimitError":
     case "PluginServerRegistrationError":
+    case "PluginDomainNotFoundError":
+    case "PluginServerUnavailableError":
+    case "PluginCredentialChangeSupersededError":
       return parsed.success.message
     case "ExtractionError":
       return "Links couldn’t be loaded from this address. Check the link, then try again."

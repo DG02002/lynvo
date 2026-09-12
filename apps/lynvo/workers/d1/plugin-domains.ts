@@ -98,6 +98,46 @@ interface PluginDomainStatePredicatePlaceholders {
   credentialFinalizedAttemptId: string
 }
 
+const createPluginDomainStateUpdatePlaceholders = (
+  bindingStart: number
+): PluginDomainStatePredicatePlaceholders => ({
+  id: `?${bindingStart}`,
+  userId: `?${bindingStart + 1}`,
+  pluginServerId: `?${bindingStart + 2}`,
+  domain: `?${bindingStart + 3}`,
+  pluginId: `?${bindingStart + 4}`,
+  credentialGeneration: `?${bindingStart + 5}`,
+  credentialAttemptId: `?${bindingStart + 6}`,
+  credentialFinalizedAttemptId: `?${bindingStart + 7}`,
+})
+
+const createPluginDomainStateConditionPlaceholders = (
+  stateBindingStart: number,
+  userIdBinding: number
+): PluginDomainStatePredicatePlaceholders => ({
+  id: `?${stateBindingStart}`,
+  userId: `?${userIdBinding}`,
+  pluginServerId: `?${stateBindingStart + 1}`,
+  domain: `?${stateBindingStart + 2}`,
+  pluginId: `?${stateBindingStart + 3}`,
+  credentialGeneration: `?${stateBindingStart + 4}`,
+  credentialAttemptId: `?${stateBindingStart + 5}`,
+  credentialFinalizedAttemptId: `?${stateBindingStart + 6}`,
+})
+
+const createPluginDomainCredentialInsertPlaceholders = (
+  stateBindingStart: number
+): PluginDomainStatePredicatePlaceholders => ({
+  id: "?3",
+  userId: "?2",
+  pluginServerId: "?4",
+  domain: "?6",
+  pluginId: "?5",
+  credentialGeneration: `?${stateBindingStart}`,
+  credentialAttemptId: `?${stateBindingStart + 1}`,
+  credentialFinalizedAttemptId: `?${stateBindingStart + 2}`,
+})
+
 const createReadyPluginServerExistsSql = (
   pluginServerId: string,
   userId: string
@@ -169,29 +209,15 @@ const pluginDomainWriteConditions = (
   const conditionBindings = pluginDomainStateBindings(row)
   return {
     ledgerCondition: {
-      conditionSql: createPluginDomainStatePredicate({
-        id: "?6",
-        userId: "?1",
-        pluginServerId: "?7",
-        domain: "?8",
-        pluginId: "?9",
-        credentialGeneration: "?10",
-        credentialAttemptId: "?11",
-        credentialFinalizedAttemptId: "?12",
-      }),
+      conditionSql: createPluginDomainStatePredicate(
+        createPluginDomainStateConditionPlaceholders(6, 1)
+      ),
       conditionBindings,
     },
     guard: {
-      conditionSql: createPluginDomainStatePredicate({
-        id: "?2",
-        userId: "?1",
-        pluginServerId: "?3",
-        domain: "?4",
-        pluginId: "?5",
-        credentialGeneration: "?6",
-        credentialAttemptId: "?7",
-        credentialFinalizedAttemptId: "?8",
-      }),
+      conditionSql: createPluginDomainStatePredicate(
+        createPluginDomainStateConditionPlaceholders(2, 1)
+      ),
       conditionBindings,
     },
   }
@@ -258,16 +284,7 @@ const createOwnedPluginCredentialDeleteStatement = (
   }
 ): D1PreparedStatement => {
   const domainStateCondition = input.domainState
-    ? ` AND EXISTS (${createPluginDomainStatePredicate({
-        id: "?4",
-        userId: "?5",
-        pluginServerId: "?6",
-        domain: "?7",
-        pluginId: "?8",
-        credentialGeneration: "?9",
-        credentialAttemptId: "?10",
-        credentialFinalizedAttemptId: "?11",
-      })})`
+    ? ` AND EXISTS (${createPluginDomainStatePredicate(createPluginDomainStateUpdatePlaceholders(4))})`
     : ""
   return database
     .prepare(
@@ -373,18 +390,7 @@ const buildReplaceCredentialMutations = ({
   ]
   const writeStatement = database
     .prepare(
-      `INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12 WHERE EXISTS (${createPluginDomainStatePredicate(
-        {
-          id: "?3",
-          userId: "?2",
-          pluginServerId: "?4",
-          domain: "?6",
-          pluginId: "?5",
-          credentialGeneration: "?13",
-          credentialAttemptId: "?14",
-          credentialFinalizedAttemptId: "?15",
-        }
-      )}) ON CONFLICT(plugin_domain_id) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, algorithm = excluded.algorithm, key_version = excluded.key_version, updated_at = excluded.updated_at`
+      `INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12 WHERE EXISTS (${createPluginDomainStatePredicate(createPluginDomainCredentialInsertPlaceholders(13))}) ON CONFLICT(plugin_domain_id) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, algorithm = excluded.algorithm, key_version = excluded.key_version, updated_at = excluded.updated_at`
     )
     .bind(...credentialBindings, ...credentialStateBindings)
   return [...ledgerMutation.statements, writeStatement]
@@ -879,18 +885,7 @@ export const beginPluginDomainCredentialChange = async (
       ...ledgerMutation.statements,
       database
         .prepare(
-          `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = ?10, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(
-            {
-              id: "?1",
-              userId: "?2",
-              pluginServerId: "?3",
-              domain: "?4",
-              pluginId: "?5",
-              credentialGeneration: "?6",
-              credentialAttemptId: "?7",
-              credentialFinalizedAttemptId: "?8",
-            }
-          )}`
+          `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = ?10, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(createPluginDomainStateUpdatePlaceholders(1))}`
         )
         .bind(
           ...pluginDomainStateUpdateBindings(domainRow, userId),
@@ -1063,18 +1058,7 @@ export const deletePluginDomainCredential = async (
     ...revocationLedgerMutation.statements,
     database
       .prepare(
-        `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(
-          {
-            id: "?1",
-            userId: "?2",
-            pluginServerId: "?3",
-            domain: "?4",
-            pluginId: "?5",
-            credentialGeneration: "?6",
-            credentialAttemptId: "?7",
-            credentialFinalizedAttemptId: "?8",
-          }
-        )}`
+        `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(createPluginDomainStateUpdatePlaceholders(1))}`
       )
       .bind(
         ...pluginDomainStateUpdateBindings(domainRow, userId),

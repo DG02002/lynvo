@@ -987,6 +987,41 @@ describe("d1 links", () => {
     await expectLedgerMatchesInventory(user.id)
   })
 
+  it("cascades extraction credentials with retained link deletion", async () => {
+    const user = await createUser()
+    const targetUrl = "https://source.example/retention-protected/"
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "retention:credential:queue",
+      url: targetUrl,
+      now: NOW,
+      extractionCredential: {
+        targetUrl,
+        record: {
+          ciphertext: "retention-ciphertext",
+          nonce: "retention-nonce",
+          algorithm: "AES-256-GCM",
+          keyVersion: 1,
+        },
+        now: NOW,
+      },
+    })
+    const beforeVersion = await getDataVersion(env.DB, user.id)
+
+    const deleted = await deleteExpiredLinksForUser({
+      database: env.DB,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
+
+    expect(deleted.deletedCount).toBe(1)
+    expect(deleted.dataVersion).toBe(beforeVersion + 1)
+    await expect(
+      getSavedLinkExtractionCredential(env.DB, user.id, queued.id ?? "")
+    ).resolves.toBeNull()
+  })
+
   it("does not resurrect a removed child and rejects stale replacement", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {

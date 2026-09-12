@@ -7,6 +7,9 @@ import {
   BackendApiError,
   CredentialVaultApiError,
   ValidationApiError,
+  PluginCredentialChangeSupersededApiError,
+  PluginDomainNotFoundApiError,
+  PluginServerUnavailableApiError,
 } from "../../errors"
 import {
   CreatePluginDomainPayloadSchema,
@@ -28,6 +31,7 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
         UnauthorizedApiError,
         CsrfApiError,
         BackendApiError,
+        PluginServerUnavailableApiError,
         CredentialVaultApiError,
         ValidationApiError,
       ],
@@ -40,6 +44,9 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
         UnauthorizedApiError,
         CsrfApiError,
         BackendApiError,
+        PluginDomainNotFoundApiError,
+        PluginServerUnavailableApiError,
+        PluginCredentialChangeSupersededApiError,
         CredentialVaultApiError,
         ValidationApiError,
       ],
@@ -47,14 +54,26 @@ export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")
     HttpApiEndpoint.delete("deleteCredential", "/:domainId/credential", {
       params: { domainId: Schema.String },
       success: VersionedMutationResponseSchema,
-      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        BackendApiError,
+        PluginDomainNotFoundApiError,
+        PluginServerUnavailableApiError,
+        PluginCredentialChangeSupersededApiError,
+      ],
     }),
     HttpApiEndpoint.delete("delete", "/:domainId", {
       params: {
         domainId: Schema.String,
       },
       success: VersionedMutationResponseSchema,
-      error: [UnauthorizedApiError, CsrfApiError, BackendApiError],
+      error: [
+        UnauthorizedApiError,
+        CsrfApiError,
+        BackendApiError,
+        PluginDomainNotFoundApiError,
+      ],
     })
   )
   .middleware(WebAuth)

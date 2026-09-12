@@ -277,20 +277,25 @@ const createOwnedLinkPredicate = (
 
 const createOwnedLinkDeletionStatements = (
   database: D1Database,
-  rows: readonly OwnedLinkIdentity[]
+  rows: readonly OwnedLinkIdentity[],
+  options: { readonly deleteExtractionCredentials?: boolean } = {}
 ): D1PreparedStatement[] => {
   const bindings = rows.flatMap((row) => [row.id, row.user_id])
+  const linkDeletion = database
+    .prepare(`DELETE FROM links WHERE ${createOwnedLinkPredicate(rows, "id")}`)
+    .bind(...bindings)
+  if (options.deleteExtractionCredentials === false) {
+    // The foreign key cascades this child cleanup. Keeping the links DELETE
+    // last lets CHANGED_ROWS_GUARD observe the owned row write.
+    return [linkDeletion]
+  }
   return [
     database
       .prepare(
         `DELETE FROM saved_link_extraction_credentials WHERE ${createOwnedLinkPredicate(rows, "link_id")}`
       )
       .bind(...bindings),
-    database
-      .prepare(
-        `DELETE FROM links WHERE ${createOwnedLinkPredicate(rows, "id")}`
-      )
-      .bind(...bindings),
+    linkDeletion,
   ]
 }
 
@@ -1490,7 +1495,9 @@ export const deleteExpiredLinksForUser = async ({
     statements: [
       ...preparation.statements,
       ...ledgerStatements,
-      ...createOwnedLinkDeletionStatements(database, results),
+      ...createOwnedLinkDeletionStatements(database, results, {
+        deleteExtractionCredentials: false,
+      }),
     ],
     guard: CHANGED_ROWS_GUARD,
   })
@@ -1547,7 +1554,9 @@ const prepareExpiredLinkUserMutation = async (
     statements: [
       ...preparation.statements,
       ...ledgerStatements,
-      ...createOwnedLinkDeletionStatements(database, summary.rows),
+      ...createOwnedLinkDeletionStatements(database, summary.rows, {
+        deleteExtractionCredentials: false,
+      }),
     ],
     dataVersionStatement: createDataVersionBumpStatement(
       database,
