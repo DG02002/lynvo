@@ -52,9 +52,11 @@ export const useResolvableContainerState = ({
   const [isResolving, setIsResolving] = useState(false)
   const isResolutionInFlight = useRef(false)
   const displaySize = link.size
+  const isResolveInFlight = () =>
+    isExternallyResolving || isResolutionInFlight.current
 
   const resolveLink = async (bypassCache = false) => {
-    if (isExternallyResolving || isResolutionInFlight.current) {
+    if (isResolveInFlight()) {
       return
     }
 
@@ -70,10 +72,7 @@ export const useResolvableContainerState = ({
       )
       const availableMirrors = resolvedLinks?.filter(isMirrorAvailable) ?? []
       setMirrors(availableMirrors)
-      if (availableMirrors.length) {
-        setIsExpanded(true)
-        setDidResolutionFail(false)
-      } else {
+      if (!availableMirrors.length) {
         setIsExpanded(false)
         setDidResolutionFail(true)
       }
@@ -92,6 +91,10 @@ export const useResolvableContainerState = ({
   }
 
   const refreshLink = () => {
+    if (isResolveInFlight()) {
+      return
+    }
+
     setMirrors([])
     void resolveLink(true)
   }

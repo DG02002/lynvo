@@ -917,8 +917,8 @@ describe("SaveListBrowser", () => {
       value: vi.fn(),
     })
     let finishResolution: (() => void) | undefined
-    let resolutionCount = 0
     const markOpened = vi.fn()
+    const expandMirror = vi.fn<LinkItemActions["expandMirror"]>()
     const item: LinkViewItem = {
       id: "resolver-beta-item",
       url: "https://source-alpha.example/collection",
@@ -948,6 +948,42 @@ describe("SaveListBrowser", () => {
         ...item,
         kind: "saved" as const,
       })
+      expandMirror.mockImplementation(async (_, lazyItemUrl) => {
+        if (extractingItems.has(lazyItemUrl)) {
+          return null
+        }
+
+        setExtractingItems((currentItems) =>
+          new Set(currentItems).add(lazyItemUrl)
+        )
+        await new Promise<void>((resolve) => {
+          finishResolution = resolve
+        })
+        setExtractingItems(new Set())
+        return [
+          {
+            url: `${lazyItemUrl}/route-alpha`,
+            label: "Play from Source Route Alpha",
+            mediaNodeKind: "playable",
+            type: "file",
+            size: "1.2 GB",
+          },
+          {
+            url: `${lazyItemUrl}/route-beta`,
+            label: "Play from Source Route Beta Server",
+            mediaNodeKind: "playable",
+            type: "file",
+            size: "1.4 GB",
+          },
+          {
+            url: `${lazyItemUrl}/route-gamma`,
+            label: "Play from CDN Server (404)",
+            mediaNodeKind: "playable",
+            type: "file",
+            status: "down",
+          },
+        ]
+      })
       const actions = createActions({
         markOpened: (itemUrl, linkUrl) => {
           markOpened(itemUrl, linkUrl)
@@ -959,43 +995,7 @@ describe("SaveListBrowser", () => {
             ),
           }))
         },
-        expandMirror: async (_, lazyItemUrl) => {
-          if (extractingItems.has(lazyItemUrl)) {
-            return null
-          }
-
-          resolutionCount += 1
-          setExtractingItems((currentItems) =>
-            new Set(currentItems).add(lazyItemUrl)
-          )
-          await new Promise<void>((resolve) => {
-            finishResolution = resolve
-          })
-          setExtractingItems(new Set())
-          return [
-            {
-              url: `${lazyItemUrl}/route-alpha`,
-              label: "Play from Source Route Alpha",
-              mediaNodeKind: "playable",
-              type: "file",
-              size: "1.2 GB",
-            },
-            {
-              url: `${lazyItemUrl}/route-beta`,
-              label: "Play from Source Route Beta Server",
-              mediaNodeKind: "playable",
-              type: "file",
-              size: "1.4 GB",
-            },
-            {
-              url: `${lazyItemUrl}/route-gamma`,
-              label: "Play from CDN Server (404)",
-              mediaNodeKind: "playable",
-              type: "file",
-              status: "down",
-            },
-          ]
-        },
+        expandMirror,
       })
 
       return (
@@ -1048,7 +1048,7 @@ describe("SaveListBrowser", () => {
       "resolving"
     )
     expect(playableItemButton).not.toHaveClass("bg-destructive/15")
-    expect(resolutionCount).toBe(1)
+    expect(expandMirror).toHaveBeenCalledTimes(1)
 
     finishResolution?.()
 
@@ -1144,7 +1144,93 @@ describe("SaveListBrowser", () => {
     expect(
       await screen.findByText("Play from Source Route Alpha")
     ).toBeVisible()
-    expect(resolutionCount).toBe(1)
+  })
+
+  it("preserves cached mirrors when refresh is clicked during an external resolve", async () => {
+    const lazyItemUrl = "https://resolver-beta.example/cached-playable-item"
+    const item: LinkViewItem = {
+      id: "resolver-beta-cached-item",
+      url: "https://source-alpha.example/cached-collection",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "cached-playable-item",
+              url: lazyItemUrl,
+              label: "Cached Playable Item",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+        playback: {
+          openedUrls: [],
+          resolvedMirrors: {
+            [lazyItemUrl]: [
+              {
+                url: "https://cdn.example/cached-playable-item.mp4",
+                label: "Cached Playable Item Mirror",
+                mediaNodeKind: "playable",
+                type: "file",
+              },
+            ],
+          },
+        },
+      },
+    }
+    const expandMirror = vi.fn().mockResolvedValue(null)
+
+    const Harness = () => {
+      const [extractingItems, setExtractingItems] = useState(
+        () => new Set([lazyItemUrl])
+      )
+
+      return (
+        <>
+          <button type="button" onClick={() => setExtractingItems(new Set())}>
+            Finish external resolve
+          </button>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={vi.fn()}
+            actions={createActions({ expandMirror })}
+            extractingItems={extractingItems}
+            highlightedId={null}
+            isHydrating={false}
+          />
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const cachedItemButton = screen.getByRole("button", {
+      name: "Cached Playable Item",
+    })
+    const cachedItemRow = cachedItemButton.parentElement
+    expect(cachedItemRow).toHaveAttribute("data-resolution-state", "resolving")
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open menu for Cached Playable Item",
+      })
+    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Refresh" }))
+    expect(expandMirror).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Finish external resolve" })
+    )
+
+    await waitFor(() => {
+      expect(cachedItemRow).toHaveAttribute(
+        "data-resolution-state",
+        "collapsed"
+      )
+    })
   })
 
   it("shows a red failure state when a resolvable item returns no links", async () => {
