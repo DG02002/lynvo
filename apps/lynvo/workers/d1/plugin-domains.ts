@@ -6,7 +6,11 @@ import {
   type PluginCredentialRow,
   type PluginDomainRow,
 } from "./rows"
-import { executeOwnedWrite, getDataVersion } from "./data-version"
+import {
+  executeOwnedWrite,
+  getDataVersion,
+  type OwnedWriteGuard,
+} from "./data-version"
 import {
   applyStorageMutation,
   byteLength,
@@ -14,7 +18,7 @@ import {
   withAppliedMutation,
   type StorageLedgerPreparation,
 } from "./storage-ledger"
-import { requireOwnedPluginServerRow } from "./plugin-server-ownership"
+import { requireReadyPluginServerRow } from "./plugin-server-ownership"
 
 export interface EncryptedCredentialInput {
   ciphertext: string
@@ -76,6 +80,40 @@ const mapCredentialRow = (
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 })
+
+const PLUGIN_DOMAIN_UPSERT_GUARD_SQL =
+  "SELECT 1 FROM user_plugin_domains WHERE id = ?2 AND user_id = ?1 AND plugin_server_id = ?3 AND domain = ?4 AND plugin_id = ?5 AND credential_generation IS ?6 AND credential_attempt_id IS ?7 AND credential_finalized_attempt_id IS ?8 AND EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ?3 AND user_id = ?1 AND credential_status = 'ready')"
+const PLUGIN_DOMAIN_UPSERT_LEDGER_SQL =
+  "SELECT 1 FROM user_plugin_domains WHERE id = ?6 AND user_id = ?1 AND plugin_server_id = ?7 AND domain = ?8 AND plugin_id = ?9 AND credential_generation IS ?10 AND credential_attempt_id IS ?11 AND credential_finalized_attempt_id IS ?12 AND EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ?7 AND user_id = ?1 AND credential_status = 'ready')"
+
+interface PluginDomainUpsertConditions {
+  ledgerCondition: OwnedWriteGuard
+  guard: OwnedWriteGuard
+}
+
+const pluginDomainUpsertConditions = (
+  row: PluginDomainRow
+): PluginDomainUpsertConditions => {
+  const conditionBindings = [
+    row.id,
+    row.plugin_server_id,
+    row.domain,
+    row.plugin_id,
+    row.credential_generation,
+    row.credential_attempt_id,
+    row.credential_finalized_attempt_id,
+  ]
+  return {
+    ledgerCondition: {
+      conditionSql: PLUGIN_DOMAIN_UPSERT_LEDGER_SQL,
+      conditionBindings,
+    },
+    guard: {
+      conditionSql: PLUGIN_DOMAIN_UPSERT_GUARD_SQL,
+      conditionBindings,
+    },
+  }
+}
 
 const findDomainRowById = async (
   database: D1Database,
@@ -152,6 +190,8 @@ interface BuildReplaceCredentialMutationsInput {
   readonly credential: EncryptedCredentialInput
   readonly existingCredential: PluginCredentialRow | undefined
   readonly now: number
+  readonly condition?: OwnedWriteGuard
+  readonly requireReadyPluginServer?: boolean
 }
 
 const buildReplaceCredentialMutations = ({
@@ -162,6 +202,8 @@ const buildReplaceCredentialMutations = ({
   credential,
   existingCredential,
   now,
+  condition,
+  requireReadyPluginServer = false,
 }: BuildReplaceCredentialMutationsInput): D1PreparedStatement[] => {
   const credentialDocument = buildCredentialDocument({
     userId,
@@ -180,24 +222,46 @@ const buildReplaceCredentialMutations = ({
       savedLinkCountDelta: 0,
     },
     now,
+    condition,
   })
+  const credentialBindings = [
+    credentialDocument.id,
+    credentialDocument.user_id,
+    credentialDocument.plugin_domain_id,
+    credentialDocument.plugin_server_id,
+    credentialDocument.plugin_id,
+    credentialDocument.domain,
+    credentialDocument.ciphertext,
+    credentialDocument.nonce,
+    credentialDocument.algorithm,
+    credentialDocument.key_version,
+    credentialDocument.created_at,
+    credentialDocument.updated_at,
+  ]
+  const credentialInsertSource = requireReadyPluginServer
+    ? `SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12
+       WHERE EXISTS (
+         SELECT 1 FROM user_plugin_domains
+         WHERE id = ?3
+           AND user_id = ?2
+           AND plugin_server_id = ?13
+           AND domain = ?6
+           AND plugin_id = ?5
+       )
+       AND EXISTS (
+         SELECT 1 FROM user_plugin_servers
+         WHERE id = ?13
+           AND user_id = ?2
+           AND credential_status = 'ready'
+       )`
+    : "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
   const writeStatement = database
     .prepare(
-      "INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12) ON CONFLICT(plugin_domain_id) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, algorithm = excluded.algorithm, key_version = excluded.key_version, updated_at = excluded.updated_at"
+      `INSERT INTO user_plugin_credentials (id, user_id, plugin_domain_id, plugin_server_id, plugin_id, domain, ciphertext, nonce, algorithm, key_version, created_at, updated_at) ${credentialInsertSource} ON CONFLICT(plugin_domain_id) DO UPDATE SET ciphertext = excluded.ciphertext, nonce = excluded.nonce, algorithm = excluded.algorithm, key_version = excluded.key_version, updated_at = excluded.updated_at`
     )
     .bind(
-      credentialDocument.id,
-      credentialDocument.user_id,
-      credentialDocument.plugin_domain_id,
-      credentialDocument.plugin_server_id,
-      credentialDocument.plugin_id,
-      credentialDocument.domain,
-      credentialDocument.ciphertext,
-      credentialDocument.nonce,
-      credentialDocument.algorithm,
-      credentialDocument.key_version,
-      credentialDocument.created_at,
-      credentialDocument.updated_at
+      ...credentialBindings,
+      ...(requireReadyPluginServer ? [domainRow.plugin_server_id] : [])
     )
   return [...ledgerMutation.statements, writeStatement]
 }
@@ -207,6 +271,7 @@ interface BuildDeleteCredentialMutationsInput {
   readonly preparation: StorageLedgerPreparation
   readonly existingCredential: PluginCredentialRow
   readonly now: number
+  readonly condition?: OwnedWriteGuard
 }
 
 const buildDeleteCredentialMutations = ({
@@ -214,6 +279,7 @@ const buildDeleteCredentialMutations = ({
   preparation,
   existingCredential,
   now,
+  condition,
 }: BuildDeleteCredentialMutationsInput): D1PreparedStatement[] => {
   const ledgerMutation = applyStorageMutation({
     database,
@@ -225,12 +291,19 @@ const buildDeleteCredentialMutations = ({
       savedLinkCountDelta: 0,
     },
     now,
+    condition,
   })
   return [
     ...ledgerMutation.statements,
     database
-      .prepare("DELETE FROM user_plugin_credentials WHERE id = ?1")
-      .bind(existingCredential.id),
+      .prepare(
+        "DELETE FROM user_plugin_credentials WHERE id = ?1 AND user_id = ?2 AND EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ?3 AND user_id = ?2 AND credential_status = 'ready')"
+      )
+      .bind(
+        existingCredential.id,
+        existingCredential.user_id,
+        existingCredential.plugin_server_id
+      ),
   ]
 }
 
@@ -299,16 +372,19 @@ export interface UpsertPluginDomainResult {
   dataVersion: number
 }
 
+interface PluginDomainUpsertInput {
+  domain: string
+  pluginServerId: string
+  pluginId: string
+  credential?: EncryptedCredentialInput | undefined
+  now: number
+}
+
 interface InsertNewPluginDomainInput {
   database: D1Database
   userId: string
   domain: string
-  input: {
-    pluginServerId: string
-    pluginId: string
-    credential?: EncryptedCredentialInput | undefined
-    now: number
-  }
+  input: PluginDomainUpsertInput
 }
 
 const insertNewPluginDomain = async ({
@@ -327,6 +403,7 @@ const insertNewPluginDomain = async ({
     credential_attempt_id: null,
     credential_finalized_attempt_id: null,
   }
+  const applied = pluginDomainUpsertConditions(domainRow)
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const domainLedgerMutation = applyStorageMutation({
     database,
@@ -338,12 +415,13 @@ const insertNewPluginDomain = async ({
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: applied.ledgerCondition,
   })
   let statements: D1PreparedStatement[] = [
     ...preparation.statements,
     database
       .prepare(
-        "INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+        "INSERT INTO user_plugin_domains (id, user_id, plugin_server_id, domain, plugin_id, credential_generation, credential_attempt_id, credential_finalized_attempt_id) SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8 WHERE EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ?3 AND user_id = ?2 AND credential_status = 'ready')"
       )
       .bind(
         domainRow.id,
@@ -366,47 +444,44 @@ const insertNewPluginDomain = async ({
       credential: input.credential,
       existingCredential: undefined,
       now: input.now,
+      condition: applied.ledgerCondition,
+      requireReadyPluginServer: true,
     })
     statements = [...statements, ...credentialMutations]
   }
-  const { dataVersion } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements,
+    guard: applied.guard,
   })
+  if (!changed) {
+    throw new Error("Plugin server not found or no longer available")
+  }
   return { id: domainRow.id, dataVersion }
 }
 
-const upsertPluginDomainOnce = async (
-  database: D1Database,
-  userId: string,
-  input: {
-    domain: string
-    pluginServerId: string
-    pluginId: string
-    credential?: EncryptedCredentialInput | undefined
-    now: number
-  }
-): Promise<UpsertPluginDomainResult> => {
-  await requireOwnedPluginServerRow(database, userId, input.pluginServerId)
-  const domain = normalizePluginDomain(input.domain)
-  const existingDomainRow = await database
-    .prepare(
-      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3`
-    )
-    .bind(userId, input.pluginServerId, domain)
-    .first<PluginDomainRow>()
+interface UpdateExistingPluginDomainInput {
+  database: D1Database
+  userId: string
+  domain: string
+  existingDomainRow: PluginDomainRow
+  input: PluginDomainUpsertInput
+}
 
-  if (!existingDomainRow) {
-    return insertNewPluginDomain({ database, userId, domain, input })
-  }
-
+const updateExistingPluginDomain = async ({
+  database,
+  userId,
+  domain,
+  existingDomainRow,
+  input,
+}: UpdateExistingPluginDomainInput): Promise<UpsertPluginDomainResult> => {
   const existingCredential = await findCredentialByDomainId(
     database,
     existingDomainRow.id
   )
   const isReassignment = existingDomainRow.plugin_id !== input.pluginId
-  const nextDomainRow = {
+  const nextDomainRow: PluginDomainRow = {
     ...existingDomainRow,
     plugin_id: input.pluginId,
     domain,
@@ -416,6 +491,7 @@ const upsertPluginDomainOnce = async (
     credential_attempt_id: null,
     credential_finalized_attempt_id: null,
   }
+  const applied = pluginDomainUpsertConditions(nextDomainRow)
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const domainLedgerMutation = applyStorageMutation({
     database,
@@ -427,15 +503,18 @@ const upsertPluginDomainOnce = async (
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: applied.ledgerCondition,
   })
   let statements: D1PreparedStatement[] = [
     ...preparation.statements,
     database
       .prepare(
-        "UPDATE user_plugin_domains SET plugin_id = ?2, domain = ?3, credential_generation = ?4, credential_attempt_id = ?5, credential_finalized_attempt_id = ?6 WHERE id = ?1"
+        "UPDATE user_plugin_domains SET plugin_id = ?4, domain = ?5, credential_generation = ?6, credential_attempt_id = ?7, credential_finalized_attempt_id = ?8 WHERE id = ?1 AND user_id = ?2 AND plugin_server_id = ?3 AND EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ?3 AND user_id = ?2 AND credential_status = 'ready')"
       )
       .bind(
         existingDomainRow.id,
+        userId,
+        nextDomainRow.plugin_server_id,
         nextDomainRow.plugin_id,
         nextDomainRow.domain,
         nextDomainRow.credential_generation,
@@ -451,6 +530,7 @@ const upsertPluginDomainOnce = async (
         preparation,
         existingCredential,
         now: input.now,
+        condition: applied.ledgerCondition,
       })
     )
   }
@@ -465,15 +545,57 @@ const upsertPluginDomainOnce = async (
         ? undefined
         : (existingCredential ?? undefined),
       now: input.now,
+      condition: applied.ledgerCondition,
+      requireReadyPluginServer: true,
     })
     statements = [...statements, ...credentialMutations]
   }
-  const { dataVersion } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements,
+    guard: applied.guard,
   })
+  if (!changed) {
+    throw new Error("Plugin server not found or no longer available")
+  }
   return { id: existingDomainRow.id, dataVersion }
+}
+
+const upsertPluginDomainOnce = async (
+  database: D1Database,
+  userId: string,
+  input: PluginDomainUpsertInput
+): Promise<UpsertPluginDomainResult> => {
+  const pluginServer = await requireReadyPluginServerRow(
+    database,
+    userId,
+    input.pluginServerId
+  )
+  const ownedInput = { ...input, pluginServerId: pluginServer.id }
+  const domain = normalizePluginDomain(input.domain)
+  const existingDomainRow = await database
+    .prepare(
+      `SELECT ${PLUGIN_DOMAIN_COLUMNS} FROM user_plugin_domains WHERE user_id = ?1 AND plugin_server_id = ?2 AND domain = ?3`
+    )
+    .bind(userId, pluginServer.id, domain)
+    .first<PluginDomainRow>()
+
+  if (!existingDomainRow) {
+    return insertNewPluginDomain({
+      database,
+      userId,
+      domain,
+      input: ownedInput,
+    })
+  }
+  return updateExistingPluginDomain({
+    database,
+    userId,
+    domain,
+    existingDomainRow,
+    input: ownedInput,
+  })
 }
 
 export const upsertPluginDomain = async (
@@ -612,9 +734,9 @@ export const beginPluginDomainCredentialChange = async (
       ...ledgerMutation.statements,
       database
         .prepare(
-          "UPDATE user_plugin_domains SET credential_generation = ?2, credential_attempt_id = ?3, credential_finalized_attempt_id = NULL WHERE id = ?1"
+          "UPDATE user_plugin_domains SET credential_generation = ?3, credential_attempt_id = ?4, credential_finalized_attempt_id = NULL WHERE id = ?1 AND user_id = ?2"
         )
-        .bind(domainRow.id, generation, attemptId),
+        .bind(domainRow.id, userId, generation, attemptId),
     ],
   })
   return {
@@ -689,9 +811,9 @@ export const finalizePluginDomainCredentialChange = async (
       ...finalizationLedgerMutation.statements,
       database
         .prepare(
-          "UPDATE user_plugin_domains SET credential_finalized_attempt_id = ?2 WHERE id = ?1"
+          "UPDATE user_plugin_domains SET credential_finalized_attempt_id = ?3 WHERE id = ?1 AND user_id = ?2"
         )
-        .bind(domainRow.id, input.attemptId),
+        .bind(domainRow.id, userId, input.attemptId),
     ],
   })
   return dataVersion
@@ -734,9 +856,9 @@ export const deletePluginDomainCredential = async (
     ...revocationLedgerMutation.statements,
     database
       .prepare(
-        "UPDATE user_plugin_domains SET credential_generation = ?2, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE id = ?1"
+        "UPDATE user_plugin_domains SET credential_generation = ?3, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE id = ?1 AND user_id = ?2"
       )
-      .bind(domainRow.id, revokedRow.credential_generation),
+      .bind(domainRow.id, userId, revokedRow.credential_generation),
   ]
   if (existingCredential) {
     const credentialLedgerMutation = applyStorageMutation({
@@ -821,8 +943,8 @@ export const buildPluginDomainDeletion = (
   statements.push(
     ...domainLedgerMutation.statements,
     database
-      .prepare("DELETE FROM user_plugin_domains WHERE id = ?1")
-      .bind(domainRow.id)
+      .prepare("DELETE FROM user_plugin_domains WHERE id = ?1 AND user_id = ?2")
+      .bind(domainRow.id, domainRow.user_id)
   )
   return {
     statements,

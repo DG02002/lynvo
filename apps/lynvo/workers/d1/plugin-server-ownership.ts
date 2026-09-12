@@ -29,3 +29,19 @@ export const requireOwnedPluginServerRow = async (
   }
   return existing
 }
+
+export const requireReadyPluginServerRow = async (
+  database: D1Database,
+  userId: string,
+  pluginServerId: string
+): Promise<PluginServerRow> => {
+  const existing = await requireOwnedPluginServerRow(
+    database,
+    userId,
+    pluginServerId
+  )
+  if (existing.credential_status !== "ready") {
+    throw new Error("Plugin server not found or no longer available")
+  }
+  return existing
+}

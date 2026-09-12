@@ -20,6 +20,7 @@ import {
 import {
   PLUGIN_SERVER_SELECT,
   findOwnedPluginServerRow,
+  requireReadyPluginServerRow,
   requireOwnedPluginServerRow,
 } from "./plugin-server-ownership"
 import {
@@ -663,22 +664,6 @@ export const expireStalePluginServerRegistrations = async (
   }
   await database.batch(statements)
   return { expired: results.length }
-}
-
-const requireReadyPluginServerRow = async (
-  database: D1Database,
-  userId: string,
-  pluginServerId: string
-): Promise<PluginServerRow> => {
-  const existing = await requireOwnedPluginServerRow(
-    database,
-    userId,
-    pluginServerId
-  )
-  if (existing.credential_status !== "ready") {
-    throw new Error("Plugin server not found or no longer available")
-  }
-  return existing
 }
 
 export const recordPluginServerVerificationFailure = async (

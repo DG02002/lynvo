@@ -1,4 +1,5 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
+import type { OwnedWriteGuard } from "./data-version"
 import type { LinkRow } from "./rows"
 import {
   SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
@@ -99,16 +100,24 @@ export const createSavedLinkOperationCompletionStatement = (
   database: D1Database,
   input: SavedLinkCommandOperationKey & {
     requireNoSavedLinks?: boolean
+    condition?: OwnedWriteGuard
   }
 ): D1PreparedStatement => {
   const noSavedLinksCondition = input.requireNoSavedLinks
     ? ` AND ${NO_SAVED_LINKS_CONDITION}`
     : ""
+  const condition = input.condition
+    ? ` AND ${input.condition.conditionSql}`
+    : ""
   return database
     .prepare(
-      `UPDATE link_command_operations SET state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}${noSavedLinksCondition}`
+      `UPDATE link_command_operations SET state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}${noSavedLinksCondition}${condition}`
     )
-    .bind(input.userId, input.operationId)
+    .bind(
+      input.userId,
+      input.operationId,
+      ...(input.condition?.conditionBindings ?? [])
+    )
 }
 
 export const completeSavedLinkOperationIfNoSavedLinks = async (

@@ -60,25 +60,20 @@ const createSavedLinkOwnershipPause = (
   })
   let paused = false
   const prepare = database.prepare.bind(database)
-  // SAFETY: this wrapper preserves the D1 methods used by the public update
-  // path and delegates every non-targeted operation to the real database.
   const pausedDatabase = {
     prepare(query: string): D1PreparedStatement {
       const statement = prepare(query)
       if (!query.includes("FROM links WHERE id = ?1")) {
         return statement
       }
-      // SAFETY: the targeted statement only calls bind and first in the
-      // requireOwnedSavedLink path exercised by this test.
-      return {
+      // SAFETY: this decorator only implements bind for the ownership-read statement.
+      const decoratedStatement = {
         bind(...values: unknown[]) {
           const bound = statement.bind(...values)
           if (values[0] !== linkId) {
             return bound
           }
-          // SAFETY: the targeted bound statement only calls first in the
-          // requireOwnedSavedLink path exercised by this test.
-          return {
+          const pausedStatement = {
             async first<Result>() {
               const result = await bound.first<Result>()
               if (!paused) {
@@ -88,16 +83,20 @@ const createSavedLinkOwnershipPause = (
               }
               return result
             },
-          } as D1PreparedStatement
+          }
+          // SAFETY: only first is used on this bound ownership-read statement.
+          return pausedStatement as D1PreparedStatement
         },
-      } as D1PreparedStatement
+      }
+      // SAFETY: only bind is used on this decorated ownership-read statement.
+      return decoratedStatement as D1PreparedStatement
     },
     batch: database.batch.bind(database),
-    // SAFETY: the wrapper implements prepare and batch, the only D1 methods
-    // used by this public operation.
-  } as D1Database
+  }
+  // SAFETY: the public operation only calls prepare and batch.
+  const pausedD1 = pausedDatabase as D1Database
   return {
-    database: pausedDatabase,
+    database: pausedD1,
     waitForRead: async (originalPromise: Promise<unknown>): Promise<void> => {
       const outcome = await Promise.race([
         readReachedPromise.then(() => "paused" as const),
@@ -805,6 +804,79 @@ describe("d1 links", () => {
     pause.resume()
 
     await expect(updatePromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not apply a metadata operation after ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:operation:create",
+      url: "https://example.com/authz-operation",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const operationPromise = applySavedLinkMetadataOperation(
+      pause.database,
+      user.id,
+      {
+        operationId: "authz:operation:attack",
+        id: linkId,
+        operation: { kind: "markOpened", linkUrl: playableLink.url ?? "" },
+        now: NOW + 1_000,
+      }
+    )
+
+    await pause.waitForRead(operationPromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(operationPromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not delete a link after its ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:delete:create",
+      url: "https://example.com/authz-delete",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const deletePromise = deleteSavedLinkById(pause.database, user.id, {
+      operationId: "authz:delete:attack",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(deletePromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(deletePromise).rejects.toThrow(
       "Link not found or no longer available"
     )
     const row = await env.DB.prepare(

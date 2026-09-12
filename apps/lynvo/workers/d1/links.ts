@@ -24,6 +24,7 @@ import {
   createDataVersionBumpStatement,
   executeOwnedWrite,
   getDataVersion,
+  type OwnedWriteGuard,
   type OwnedWriteResult,
 } from "./data-version"
 import {
@@ -252,6 +253,68 @@ const toSavedLinkExtractionCredentialLinkState = (
   extractionLeaseExpiresAt: row.extraction_lease_expires_at,
   updatedAt: row.updated_at,
   metaJson: row.meta_json,
+})
+
+type OwnedLinkIdentity = Pick<LinkRow, "id" | "user_id">
+
+const createOwnedLinkPredicate = (
+  rows: readonly OwnedLinkIdentity[],
+  idColumn: "id" | "link_id"
+): string =>
+  rows
+    .map(
+      (_, index) =>
+        `(${idColumn} = ?${index * 2 + 1} AND user_id = ?${index * 2 + 2})`
+    )
+    .join(" OR ")
+
+const createOwnedLinkDeletionStatements = (
+  database: D1Database,
+  rows: readonly OwnedLinkIdentity[]
+): D1PreparedStatement[] => {
+  const bindings = rows.flatMap((row) => [row.id, row.user_id])
+  return [
+    database
+      .prepare(
+        `DELETE FROM saved_link_extraction_credentials WHERE ${createOwnedLinkPredicate(rows, "link_id")}`
+      )
+      .bind(...bindings),
+    database
+      .prepare(
+        `DELETE FROM links WHERE ${createOwnedLinkPredicate(rows, "id")}`
+      )
+      .bind(...bindings),
+  ]
+}
+
+const SAVED_LINK_DELETED_GUARD_SQL =
+  "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM links WHERE id = ?2)"
+const SAVED_LINK_DELETED_LEDGER_SQL =
+  "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM links WHERE id = ?6)"
+const SAVED_LINK_DELETED_OPERATION_SQL =
+  "NOT EXISTS (SELECT 1 FROM links WHERE id = ?3)"
+
+interface SavedLinkDeletedConditions {
+  ledgerCondition: OwnedWriteGuard
+  operationCondition: OwnedWriteGuard
+  guard: OwnedWriteGuard
+}
+
+const savedLinkDeletedConditions = (
+  linkId: string
+): SavedLinkDeletedConditions => ({
+  ledgerCondition: {
+    conditionSql: SAVED_LINK_DELETED_LEDGER_SQL,
+    conditionBindings: [linkId],
+  },
+  operationCondition: {
+    conditionSql: SAVED_LINK_DELETED_OPERATION_SQL,
+    conditionBindings: [linkId],
+  },
+  guard: {
+    conditionSql: SAVED_LINK_DELETED_GUARD_SQL,
+    conditionBindings: [linkId],
+  },
 })
 
 interface ClearSavedLinksResult {
@@ -566,6 +629,7 @@ const executeDeleteSavedLink = async (
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const preparation = await ensureStorageLedger(database, userId, input.now)
+  const deleted = savedLinkDeletedConditions(existingRow.id)
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -576,27 +640,26 @@ const executeDeleteSavedLink = async (
       savedLinkCountDelta: -1,
     },
     now: input.now,
+    condition: deleted.ledgerCondition,
   })
-  const { dataVersion } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
-      database
-        .prepare(
-          "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
-        )
-        .bind(existingRow.id),
-      database
-        .prepare("DELETE FROM links WHERE id = ?1 AND user_id = ?2")
-        .bind(existingRow.id, userId),
+      ...createOwnedLinkDeletionStatements(database, [existingRow]),
       ...ledgerMutation.statements,
       createSavedLinkOperationCompletionStatement(database, {
         userId,
         operationId: input.operationId,
+        condition: deleted.operationCondition,
       }),
     ],
+    guard: deleted.guard,
   })
+  if (!changed) {
+    throw new Error("Link not found or no longer available")
+  }
   return { success: true, replayed: false, dataVersion }
 }
 
@@ -1421,12 +1484,6 @@ export const deleteExpiredLinksForUser = async ({
     (totalRowBytes, row) => totalRowBytes + byteLength(row),
     0
   )
-  const linkIdPlaceholders = results
-    .map((_, index) => `?${index + 1}`)
-    .join(", ")
-  const ownedLinkIdPlaceholders = results
-    .map((_, index) => `?${index + 2}`)
-    .join(", ")
   const preparation = await ensureStorageLedger(database, userId, now)
   const ledgerMutation = applyStorageMutation({
     database,
@@ -1444,16 +1501,7 @@ export const deleteExpiredLinksForUser = async ({
     userId,
     statements: [
       ...preparation.statements,
-      database
-        .prepare(
-          `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${linkIdPlaceholders})`
-        )
-        .bind(...results.map((row) => row.id)),
-      database
-        .prepare(
-          `DELETE FROM links WHERE user_id = ?1 AND id IN (${ownedLinkIdPlaceholders})`
-        )
-        .bind(userId, ...results.map((row) => row.id)),
+      ...createOwnedLinkDeletionStatements(database, results),
       ...ledgerMutation.statements,
     ],
   })
@@ -1552,24 +1600,7 @@ const processExpiredLinkBatch = async (
   }
   const { statements, dataVersionStatements } =
     await prepareExpiredLinkBatchStatements(database, rows, now)
-  const ownershipPredicates = rows
-    .map(
-      (_, index) => `(id = ?${index * 2 + 1} AND user_id = ?${index * 2 + 2})`
-    )
-    .join(" OR ")
-  const linkIdPlaceholders = rows.map((_, index) => `?${index + 1}`).join(", ")
-  statements.push(
-    database
-      .prepare(
-        `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${linkIdPlaceholders})`
-      )
-      .bind(...rows.map((row) => row.id))
-  )
-  statements.push(
-    database
-      .prepare(`DELETE FROM links WHERE ${ownershipPredicates}`)
-      .bind(...rows.flatMap((row) => [row.id, row.user_id]))
-  )
+  statements.push(...createOwnedLinkDeletionStatements(database, rows))
   statements.push(...dataVersionStatements)
   await database.batch(statements)
   return {
