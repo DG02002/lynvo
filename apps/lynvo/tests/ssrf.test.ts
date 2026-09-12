@@ -63,4 +63,53 @@ describe("outbound HTTP safety boundary", () => {
     ).rejects.toMatchObject({ code: "CROSS_ORIGIN_REDIRECT" })
     expect(fetch).toHaveBeenCalledOnce()
   })
+
+  it("stops consuming an oversized response as soon as it exceeds the limit", async () => {
+    const maximumResponseBytes = 8
+    const chunkSize = 4
+    const totalChunks = 100
+    let chunksPulled = 0
+    let bytesPulled = 0
+    let cancelled = false
+    let requestSignal: AbortSignal | undefined
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          if (chunksPulled === totalChunks) {
+            controller.close()
+            return
+          }
+          chunksPulled += 1
+          const chunk = new Uint8Array(chunkSize)
+          bytesPulled += chunk.byteLength
+          controller.enqueue(chunk)
+        },
+        cancel() {
+          cancelled = true
+        },
+      },
+      { highWaterMark: 0 }
+    )
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementationOnce(async (request) => {
+        requestSignal = request instanceof Request ? request.signal : undefined
+        return new Response(body)
+      })
+    const transport = createOutboundHttpTransport({ fetch })
+
+    const response = transport.fetch("https://public.example/oversized", {
+      maximumResponseBytes,
+    })
+
+    await expect(response).rejects.toBeInstanceOf(OutboundHttpError)
+    await expect(response).rejects.toMatchObject({
+      code: "RESPONSE_TOO_LARGE",
+      message: "Outbound response exceeded the byte limit",
+    })
+    expect(bytesPulled).toBeLessThan(totalChunks * chunkSize)
+    expect(bytesPulled).toBeLessThanOrEqual(maximumResponseBytes + chunkSize)
+    expect(cancelled).toBe(true)
+    expect(requestSignal?.aborted).toBe(true)
+  })
 })
