@@ -1,10 +1,17 @@
 import { csrfCookie } from "../../app/lib/csrf"
 import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
+import { USER_COLUMNS } from "../../workers/d1/rows"
 import { createFakeD1Database, type FakeD1QueryHandler } from "./fake-d1"
 
 const DEFAULT_USER_ID = "user-1"
 const DEFAULT_SESSION_ID = "session-1"
 const DEFAULT_EMAIL = "user@example.com"
+const USER_BY_ID_QUERY = `SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`
+
+const isAuthenticatedSessionQuery = (sql: string): boolean =>
+  sql.includes("SELECT s.id AS session_id") &&
+  sql.includes("FROM sessions s INNER JOIN users u") &&
+  sql.includes("WHERE s.id = ?1 AND s.revoked_at IS NULL")
 
 interface AuthenticatedWorkerDatabaseOptions {
   readonly handler?: FakeD1QueryHandler
@@ -24,7 +31,7 @@ export const createAuthenticatedWorkerDatabase = ({
     if (customOutcome !== undefined) {
       return customOutcome
     }
-    if (sql.includes("INNER JOIN users u")) {
+    if (isAuthenticatedSessionQuery(sql)) {
       return {
         row: {
           session_id: sessionId,
@@ -35,7 +42,7 @@ export const createAuthenticatedWorkerDatabase = ({
         },
       }
     }
-    if (sql.includes("FROM users WHERE id = ?1")) {
+    if (sql === USER_BY_ID_QUERY) {
       return {
         row: {
           id: userId,
@@ -108,22 +115,24 @@ interface TestRealtimeRoomNamespace {
 
 interface WorkerTestEnvironment {
   readonly ENVIRONMENT: "development" | "production"
-  readonly DB: D1Database
+  DB?: D1Database
   USER_REALTIME_ROOM?: TestRealtimeRoomNamespace
 }
 
 export const createWorkerEnvironment = ({
   database,
   userRealtimeRoom,
-  environment = "production",
+  environment,
 }: {
-  readonly database: D1Database
+  readonly database?: D1Database
   readonly userRealtimeRoom?: TestRealtimeRoomNamespace
-  readonly environment?: "development" | "production"
+  readonly environment: "development" | "production"
 }): Env => {
   const testEnvironment: WorkerTestEnvironment = {
     ENVIRONMENT: environment,
-    DB: database,
+  }
+  if (database) {
+    testEnvironment.DB = database
   }
   if (userRealtimeRoom) {
     testEnvironment.USER_REALTIME_ROOM = userRealtimeRoom

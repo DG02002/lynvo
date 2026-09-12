@@ -11,14 +11,16 @@ describe("Settings Worker contract", () => {
   it("returns a not-found error for a missing session", async () => {
     const database = createAuthenticatedWorkerDatabase({
       handler: (sql) =>
-        sql.includes("SELECT user_id FROM sessions") ? { rows: [] } : undefined,
+        sql === "SELECT user_id FROM sessions WHERE id = ?1"
+          ? { rows: [] }
+          : undefined,
     })
     const response = await app.fetch(
       await buildAuthenticatedWorkerRequest(
         "/api/settings/security/sessions/missing-session",
         { method: "DELETE" }
       ),
-      createWorkerEnvironment({ database }),
+      createWorkerEnvironment({ database, environment: "development" }),
       createWorkerExecutionContext()
     )
 

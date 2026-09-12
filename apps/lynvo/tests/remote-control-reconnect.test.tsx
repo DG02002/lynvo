@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = {
   poll: vi.fn(async () => undefined),
   subscribeRealtime: vi.fn(() => () => undefined),
+  notifications: {
+    showErrorToast: vi.fn(),
+    showInfoToast: vi.fn(),
+    showSuccessToast: vi.fn(),
+  },
   state: {
     activeSessionId: null,
     connectedDeviceName: null,
@@ -14,11 +19,18 @@ const mocks = {
   },
 }
 
+let outcomeListener: ((outcome: RemoteControlOutcome) => void) | undefined
+
 const createMachine = (): RemoteControlMachine => ({
   getSnapshot: () => mocks.state,
   getServerSnapshot: () => mocks.state,
   subscribe: () => () => undefined,
-  subscribeOutcomes: () => () => undefined,
+  subscribeOutcomes: (listener) => {
+    outcomeListener = listener
+    return () => {
+      outcomeListener = undefined
+    }
+  },
   start: () => () => undefined,
   poll: mocks.poll,
   setRealtimeStatus: vi.fn(),
@@ -38,6 +50,7 @@ import { RemoteControlProviderContent } from "~/context/remote-control-context"
 describe("Remote Play reconnect convergence", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    outcomeListener = undefined
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "hidden",
@@ -58,11 +71,43 @@ describe("Remote Play reconnect convergence", () => {
           subscribe: mocks.subscribeRealtime,
         }}
         createMachine={createMachine}
+        notifications={mocks.notifications}
       >
         <div />
       </RemoteControlProviderContent>
     )
 
     await waitFor(() => expect(mocks.poll).toHaveBeenCalledOnce())
+  })
+
+  it("surfaces typed send failures in the Remote Play toast", async () => {
+    render(
+      <RemoteControlProviderContent
+        user={{ id: "user-one", sessionId: "session-one" }}
+        realtime={{
+          status: "connected",
+          connectionGeneration: 1,
+          subscribe: mocks.subscribeRealtime,
+        }}
+        createMachine={createMachine}
+        notifications={mocks.notifications}
+      >
+        <div />
+      </RemoteControlProviderContent>
+    )
+
+    await waitFor(() => expect(outcomeListener).toBeDefined())
+    outcomeListener?.({
+      type: "send-failed",
+      error: {
+        _tag: "ValidationError",
+        message: "Remote receiver target is invalid",
+      },
+    })
+
+    expect(mocks.notifications.showErrorToast).toHaveBeenCalledWith({
+      title: "Couldn’t send the Remote Play command",
+      description: "Remote receiver target is invalid",
+    })
   })
 })

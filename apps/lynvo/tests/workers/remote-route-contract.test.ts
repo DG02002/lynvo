@@ -44,17 +44,14 @@ describe("Remote Play Worker contract", () => {
     ["POST", "/api/remote/result"],
   ])("refuses unauthenticated %s %s", async (method, path) => {
     const { default: worker } = await import("../../workers/app")
-    // SAFETY: Route registration only reads ENVIRONMENT in this smoke test.
-    const environment = { ENVIRONMENT: "development" } as Env
-    // SAFETY: The Worker only calls waitUntil on this execution context.
-    const executionContext = { waitUntil: () => undefined } as ExecutionContext
+    const environment = createWorkerEnvironment({ environment: "development" })
     const response = await worker.fetch(
       new Request(`https://lynvo.test${path}`, {
         method,
         headers: { Origin: "https://lynvo.test" },
       }),
       environment,
-      executionContext
+      createWorkerExecutionContext()
     )
 
     // Without a session, CSRF, database, or auth must refuse the request —

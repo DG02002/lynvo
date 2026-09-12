@@ -177,7 +177,7 @@ describe("remote-control machine", () => {
 
     expect(outcomes).toContainEqual({
       type: "send-failed",
-      message: "Remote receiver target is invalid",
+      error,
     })
   })
 

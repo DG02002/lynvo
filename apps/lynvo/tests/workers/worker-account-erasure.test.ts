@@ -13,6 +13,7 @@ describe("Account erasure HTTP behavior", () => {
     const { default: worker } = await import("../../workers/app")
     const environment = createWorkerEnvironment({
       database,
+      environment: "development",
       userRealtimeRoom: {
         getByName: () => ({
           fetch: async (_url: string, init?: RequestInit) => {
@@ -42,7 +43,10 @@ describe("Account erasure HTTP behavior", () => {
   it("returns the email mismatch as a client error", async () => {
     const database = createAuthenticatedWorkerDatabase()
     const { default: worker } = await import("../../workers/app")
-    const environment = createWorkerEnvironment({ database })
+    const environment = createWorkerEnvironment({
+      database,
+      environment: "development",
+    })
     const response = await worker.fetch(
       await buildAuthenticatedWorkerRequest("/api/settings/security/account", {
         method: "DELETE",

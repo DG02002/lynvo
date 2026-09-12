@@ -1,12 +1,8 @@
-import {
-  REMOTE_CONNECTION_FAILURE_MESSAGE,
-  REMOTE_POLL_INTERVAL_MS,
-} from "./constants"
+import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
 } from "./command-delivery"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 declare global {
   interface RemoteDevice {
@@ -86,7 +82,7 @@ declare global {
     | { type: "disconnected" }
     | { type: "disconnect-failed" }
     | { type: "receiver-disconnected" }
-    | { type: "send-failed"; message: string }
+    | { type: "send-failed"; error: unknown }
     | { type: "receiver-connected"; deviceName: string }
     | { type: "receiver-ended" }
     | { type: "command-received"; command: "play" }
@@ -306,10 +302,7 @@ export const createRemoteControlMachine = ({
       } catch (error) {
         publishOutcome({
           type: "send-failed",
-          message: getUserFacingErrorMessage(
-            error,
-            REMOTE_CONNECTION_FAILURE_MESSAGE
-          ),
+          error,
         })
         await machine.disconnect().catch(() => undefined)
         throw error
