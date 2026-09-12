@@ -8,6 +8,12 @@ import {
   OUTBOUND_HTTP_TIMEOUT_MS,
 } from "./constants"
 
+interface OutboundFetchResult {
+  response: Response
+  controller: AbortController
+  maximumResponseBytes: number
+}
+
 declare global {
   interface OutboundHttpTransportOptions {
     fetch?: typeof globalThis.fetch
@@ -40,12 +46,6 @@ declare global {
     requestFetch: typeof globalThis.fetch
     requestState: OutboundRequestState
     options: OutboundHttpRequestOptions
-  }
-
-  interface OutboundFetchResult {
-    response: Response
-    controller: AbortController
-    maximumResponseBytes: number
   }
 
   interface OutboundRedirectInput {
