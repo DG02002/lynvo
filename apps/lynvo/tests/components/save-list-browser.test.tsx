@@ -960,6 +960,10 @@ describe("SaveListBrowser", () => {
           }))
         },
         expandMirror: async (_, lazyItemUrl) => {
+          if (extractingItems.has(lazyItemUrl)) {
+            return null
+          }
+
           resolutionCount += 1
           setExtractingItems((currentItems) =>
             new Set(currentItems).add(lazyItemUrl)
@@ -1031,6 +1035,21 @@ describe("SaveListBrowser", () => {
     )
     expect(markOpened).not.toHaveBeenCalled()
 
+    fireEvent.click(playableItemButton)
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open menu for Playable Item One",
+      })
+    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Refresh" }))
+
+    expect(playableItemRow).toHaveAttribute(
+      "data-resolution-state",
+      "resolving"
+    )
+    expect(playableItemButton).not.toHaveClass("bg-destructive/15")
+    expect(resolutionCount).toBe(1)
+
     finishResolution?.()
 
     await waitFor(() => {
@@ -1047,6 +1066,7 @@ describe("SaveListBrowser", () => {
       screen.queryByText("Play from CDN Server (404)")
     ).not.toBeInTheDocument()
     expect(markOpened).not.toHaveBeenCalled()
+    expect(playableItemButton).not.toHaveClass("bg-destructive/15")
     expect(playableItemButton).not.toHaveClass("bg-sky-500/15")
     expect(playableItemButton).toHaveClass("bg-muted/60")
     expect(playableItemRow).toHaveAttribute("data-resolution-state", "expanded")

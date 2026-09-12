@@ -175,7 +175,12 @@ export const ResolvableContainerRow = ({
     isResolving: isStateResolving,
     openLink,
     refreshLink,
-  } = useResolvableContainerState({ item, link, actions })
+  } = useResolvableContainerState({
+    item,
+    link,
+    actions,
+    isResolving,
+  })
   const shouldShowResolving = isResolving || isStateResolving
   const resolutionState = shouldShowResolving ? "resolving" : resolvedState
   const { stateKey: containerIconStateKey, icon: containerIconDefinition } =
@@ -205,7 +210,9 @@ export const ResolvableContainerRow = ({
         label={rowDisplayTitle}
         buttonClassName={cn(
           isExpanded && !link.opened && "bg-muted/60 group-hover:bg-muted/80",
-          didResolutionFail && "bg-destructive/15 group-hover:bg-destructive/20"
+          didResolutionFail &&
+            !shouldShowResolving &&
+            "bg-destructive/15 group-hover:bg-destructive/20"
         )}
         buttonDataAttributes={{
           "data-resolution-state": resolutionState,
