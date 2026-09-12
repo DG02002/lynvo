@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test"
+import { exports } from "cloudflare:workers"
 import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -19,9 +19,12 @@ const authenticatedHeaders = {
   "Content-Type": "application/json",
 }
 
+const fetchRoute = (path: string, init?: RequestInit): Promise<Response> =>
+  exports.default.fetch(`https://worker.example${path}`, init)
+
 describe("Lynvo Plugin Server protocol routes", () => {
   it("serves a public valid manifest", async () => {
-    const response = await SELF.fetch("https://worker.example/manifest")
+    const response = await fetchRoute("/manifest")
     const manifest: unknown = await response.json()
 
     expect(response.status).toBe(200)
@@ -32,10 +35,10 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("requires the configured bearer credential", async () => {
-    const denied = await SELF.fetch("https://worker.example/verify", {
+    const denied = await fetchRoute("/verify", {
       method: "POST",
     })
-    const accepted = await SELF.fetch("https://worker.example/verify", {
+    const accepted = await fetchRoute("/verify", {
       method: "POST",
       headers: authenticatedHeaders,
     })
@@ -49,7 +52,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("reports finite enforced usage", async () => {
-    const response = await SELF.fetch("https://worker.example/usage", {
+    const response = await fetchRoute("/usage", {
       headers: authenticatedHeaders,
     })
     const usage: unknown = await response.json()
@@ -59,7 +62,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("discovers index URLs without Lynvo knowing their URL pattern", async () => {
-    const response = await SELF.fetch("https://worker.example/discover", {
+    const response = await fetchRoute("/discover", {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({
@@ -76,7 +79,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("does not claim unrelated URLs during discovery", async () => {
-    const response = await SELF.fetch("https://worker.example/discover", {
+    const response = await fetchRoute("/discover", {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({ url: "https://unknown.example/movies/" }),
@@ -87,7 +90,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("extracts a direct drive-index media node", async () => {
-    const response = await SELF.fetch("https://worker.example/extract", {
+    const response = await fetchRoute("/extract", {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({
@@ -112,7 +115,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("keeps schema-valid non-URL input inside the protocol envelope", async () => {
-    const response = await SELF.fetch("https://worker.example/extract", {
+    const response = await fetchRoute("/extract", {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({
@@ -135,7 +138,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
     const periodKeys = currentUsagePeriodKeys()
     try {
       await setUsageCounters(periodKeys, GLOBAL_DAILY_OPERATION_LIMIT)
-      const response = await SELF.fetch("https://worker.example/extract", {
+      const response = await fetchRoute("/extract", {
         method: "POST",
         headers: authenticatedHeaders,
         body: JSON.stringify({
@@ -163,7 +166,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("returns a protocol envelope for unknown routes", async () => {
-    const response = await SELF.fetch("https://worker.example/unknown")
+    const response = await fetchRoute("/unknown")
     expect(response.status).toBe(404)
     expect(await response.json()).toMatchObject({
       ok: false,

@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test"
+import { env } from "cloudflare:workers"
+import { runInDurableObject } from "cloudflare:test"
 import { USAGE_LIMITER_NAME } from "../src/constants"
 import {
   usagePeriodForTesting,
