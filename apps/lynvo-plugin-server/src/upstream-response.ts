@@ -13,6 +13,10 @@ const REDIRECT_REQUEST_BODY_HEADERS = [
   "Content-Location",
   "Content-Type",
 ] as const
+const REDIRECT_CREDENTIAL_HEADERS = [
+  "Authorization",
+  "od-protected-token",
+] as const
 
 export class UpstreamPolicyError extends Error {}
 
@@ -38,7 +42,9 @@ const normalizeRedirectRequest = (
     }
   }
   if (isCrossOrigin) {
-    headers.delete("Authorization")
+    for (const headerName of REDIRECT_CREDENTIAL_HEADERS) {
+      headers.delete(headerName)
+    }
   }
 
   const nextOptions: RequestInit = { ...options, headers }

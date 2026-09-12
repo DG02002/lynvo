@@ -17,7 +17,7 @@ import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import { decodeUrlComponent } from "../url-policy"
+import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
 import { Result, Schema } from "effect"
@@ -160,7 +160,8 @@ const decodeGoogleDriveFolderPayload = (payload: string): string => {
 
   while (index < payload.length) {
     const hexadecimalByte =
-      payload[index] === "\\" && payload[index + 1] === "x"
+      payload[index] === "\\" &&
+      (payload[index + 1] === "x" || payload[index + 1] === "X")
         ? payload.slice(index + 2, index + 4)
         : ""
     if (/^[0-9a-f]{2}$/i.test(hexadecimalByte)) {
@@ -222,7 +223,7 @@ export const createGoogleDrivePublicFolderNodes = (
           kind: "resolvable",
           id: item.id,
           label: item.name,
-          nodeUrl: `https://drive.google.com/drive/folders/${item.id}`,
+          nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
           resolutionKind: "folder",
         },
       ]

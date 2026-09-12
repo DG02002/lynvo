@@ -74,6 +74,7 @@ describe("Validated upstream requests", () => {
             "Content-Language": "en",
             "Content-Location": "/upload",
             "Content-Type": "application/json",
+            "od-protected-token": "hashed-password",
             "X-Request-Id": "request-1",
           },
           body: "request body",
@@ -92,6 +93,9 @@ describe("Validated upstream requests", () => {
         fetchSpy.mock.calls[1]?.[1]?.headers
       )
       expect(intermediateHeaders.get("Authorization")).toBe("Basic secret")
+      expect(intermediateHeaders.get("od-protected-token")).toBe(
+        "hashed-password"
+      )
       expect(fetchSpy.mock.calls[2]?.[1]).toMatchObject({
         method: "GET",
         body: null,
@@ -105,11 +109,46 @@ describe("Validated upstream requests", () => {
         "Content-Language",
         "Content-Location",
         "Content-Type",
+        "od-protected-token",
       ]) {
         expect(finalHeaders.has(headerName)).toBe(false)
       }
     }
   )
+
+  it("strips credentials on cross-origin redirects without rewriting GET", async () => {
+    const redirectResponse = new Response("redirect body", {
+      status: 307,
+      headers: { Location: "https://other.example/final" },
+    })
+    const cancel = vi.spyOn(redirectResponse.body!, "cancel")
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(redirectResponse)
+      .mockResolvedValueOnce(new Response("final body"))
+
+    await expect(
+      fetchValidatedUpstream("https://media.example/start", {
+        method: "GET",
+        headers: {
+          Authorization: "Basic secret",
+          "od-protected-token": "hashed-password",
+          "X-Request-Id": "request-2",
+        },
+      })
+    ).resolves.toMatchObject({ status: 200 })
+
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({
+      method: "GET",
+      redirect: "manual",
+    })
+    const finalHeaders = new Headers(fetchSpy.mock.calls[1]?.[1]?.headers)
+    expect(finalHeaders.get("X-Request-Id")).toBe("request-2")
+    expect(finalHeaders.has("Authorization")).toBe(false)
+    expect(finalHeaders.has("od-protected-token")).toBe(false)
+  })
 })
 
 describe("Direct Media source adapter", () => {
@@ -327,7 +366,7 @@ describe("Bhadoo source adapter", () => {
   it("maps malformed percent-encoded paths to unsupported URLs", () => {
     expect(() =>
       getBhadooPathFilename("https://drive.example/0:/bad%/")
-    ).toThrow(ProtocolError)
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
   })
 
   it("extracts fallback folders through the fallback API", async () => {
@@ -864,10 +903,31 @@ describe("Google Drive public files source adapter", () => {
   it("maps malformed percent-encoded IDs to unsupported URLs", () => {
     expect(() =>
       extractGoogleDriveFileId("https://drive.google.com/file/d/%")
-    ).toThrow(ProtocolError)
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
     expect(() =>
       extractGoogleDriveFolderId("https://drive.google.com/drive/folders/%")
-    ).toThrow(ProtocolError)
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
+  })
+
+  it("encodes public folder IDs in resolvable node URLs", () => {
+    expect(
+      createGoogleDrivePublicFolderNodes([
+        {
+          id: "folder/id?name#fragment",
+          name: "Nested folder",
+          mimeType: "application/vnd.google-apps.folder",
+        },
+      ])
+    ).toEqual([
+      {
+        kind: "resolvable",
+        id: "folder/id?name#fragment",
+        label: "Nested folder",
+        nodeUrl:
+          "https://drive.google.com/drive/folders/folder%2Fid%3Fname%23fragment",
+        resolutionKind: "folder",
+      },
+    ])
   })
 
   it("parses public folders into lazy folders and playable root files", () => {
@@ -895,6 +955,14 @@ describe("Google Drive public files source adapter", () => {
         status: "unknown",
       },
     ])
+  })
+
+  it("decodes both cases of hex-escaped public folder payloads", () => {
+    const uppercasePayload = createFolderHtml().replaceAll("\\x", "\\X")
+
+    expect(parseGoogleDrivePublicFolderItems(uppercasePayload)).toEqual(
+      parseGoogleDrivePublicFolderItems(createFolderHtml())
+    )
   })
 
   it("extracts a public folder page without Google authentication", async () => {
