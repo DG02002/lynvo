@@ -45,6 +45,7 @@ declare global {
   interface OutboundFetchResult {
     response: Response
     controller: AbortController
+    maximumResponseBytes: number
   }
 
   interface OutboundRedirectInput {
@@ -161,7 +162,12 @@ const fetchOutboundRequest = async ({
         signal: controller.signal,
       })
     )
-    return { response, controller }
+    return {
+      response,
+      controller,
+      maximumResponseBytes:
+        options.maximumResponseBytes ?? OUTBOUND_HTTP_MAX_RESPONSE_BYTES,
+    }
   } finally {
     clearTimeout(timeoutId)
   }
@@ -182,25 +188,17 @@ const combineOutboundResponseChunks = (
   return responseBody
 }
 
-const readOutboundResponseChunks = async (
-  response: Response,
-  maximumResponseBytes: number,
-  controller: AbortController
-): Promise<Uint8Array[]> => {
+const readOutboundResponseChunks = async ({
+  response,
+  controller,
+  maximumResponseBytes,
+}: OutboundFetchResult): Promise<Uint8Array[]> => {
   const reader = response.body?.getReader()
   if (!reader) {
     return []
   }
   const chunks: Uint8Array[] = []
   let responseByteLength = 0
-  const rejectOversizedResponse = async (): Promise<never> => {
-    controller.abort()
-    await reader.cancel().catch(() => undefined)
-    throw new OutboundHttpError(
-      "RESPONSE_TOO_LARGE",
-      "Outbound response exceeded the byte limit"
-    )
-  }
   try {
     while (true) {
       // oxlint-disable-next-line no-await-in-loop -- Chunks must be checked in order.
@@ -208,13 +206,15 @@ const readOutboundResponseChunks = async (
       if (done) {
         break
       }
-      if (!value) {
-        continue
-      }
       responseByteLength += value.byteLength
       if (responseByteLength > maximumResponseBytes) {
+        controller.abort()
         // oxlint-disable-next-line no-await-in-loop -- Cancel before releasing the reader.
-        await rejectOversizedResponse()
+        await reader.cancel().catch(() => undefined)
+        throw new OutboundHttpError(
+          "RESPONSE_TOO_LARGE",
+          "Outbound response exceeded the byte limit"
+        )
       }
       chunks.push(value)
     }
@@ -225,21 +225,15 @@ const readOutboundResponseChunks = async (
 }
 
 const readFinalOutboundResponse = async (
-  response: Response,
-  options: OutboundHttpRequestOptions,
-  controller: AbortController
+  fetchResult: OutboundFetchResult,
+  options: OutboundHttpRequestOptions
 ): Promise<Response> => {
+  const { response } = fetchResult
   if (options.responseBodyMode === "discard") {
     await response.body?.cancel()
     return new Response(null, response)
   }
-  const maximumResponseBytes =
-    options.maximumResponseBytes ?? OUTBOUND_HTTP_MAX_RESPONSE_BYTES
-  const chunks = await readOutboundResponseChunks(
-    response,
-    maximumResponseBytes,
-    controller
-  )
+  const chunks = await readOutboundResponseChunks(fetchResult)
   const responseBody = combineOutboundResponseChunks(chunks)
   return new Response(responseBody, response)
 }
@@ -302,18 +296,18 @@ const followOutboundRedirects = async ({
   protectedOrigin,
   redirectCount,
 }: OutboundRedirectFollowState): Promise<Response> => {
-  const { response, controller } = await fetchOutboundRequest({
+  const fetchResult = await fetchOutboundRequest({
     requestFetch,
     requestState,
     options,
   })
-  if (!isRedirect(response.status)) {
-    return readFinalOutboundResponse(response, options, controller)
+  if (!isRedirect(fetchResult.response.status)) {
+    return readFinalOutboundResponse(fetchResult, options)
   }
   return followOutboundRedirects({
     requestFetch,
     requestState: getRedirectRequestState({
-      response,
+      response: fetchResult.response,
       redirectCount,
       requestState,
       options,
