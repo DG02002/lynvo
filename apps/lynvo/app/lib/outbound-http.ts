@@ -8,6 +8,12 @@ import {
   OUTBOUND_HTTP_TIMEOUT_MS,
 } from "./constants"
 
+interface OutboundFetchResult {
+  response: Response
+  controller: AbortController
+  maximumResponseBytes: number
+}
+
 declare global {
   interface OutboundHttpTransportOptions {
     fetch?: typeof globalThis.fetch
@@ -139,14 +145,14 @@ const fetchOutboundRequest = async ({
   requestFetch,
   requestState,
   options,
-}: OutboundRequestAttempt): Promise<Response> => {
+}: OutboundRequestAttempt): Promise<OutboundFetchResult> => {
   const controller = new AbortController()
   const timeoutId = setTimeout(
     () => controller.abort(),
     options.timeoutMs ?? OUTBOUND_HTTP_TIMEOUT_MS
   )
   try {
-    return await requestFetch(
+    const response = await requestFetch(
       new Request(requestState.currentUrl, {
         ...options,
         method: requestState.method,
@@ -156,29 +162,79 @@ const fetchOutboundRequest = async ({
         signal: controller.signal,
       })
     )
+    return {
+      response,
+      controller,
+      maximumResponseBytes:
+        options.maximumResponseBytes ?? OUTBOUND_HTTP_MAX_RESPONSE_BYTES,
+    }
   } finally {
     clearTimeout(timeoutId)
   }
 }
 
+const combineOutboundResponseChunks = (
+  chunks: readonly Uint8Array[]
+): ArrayBuffer => {
+  const responseBody = new ArrayBuffer(
+    chunks.reduce((byteLength, chunk) => byteLength + chunk.byteLength, 0)
+  )
+  const responseBodyView = new Uint8Array(responseBody)
+  let responseBodyOffset = 0
+  for (const chunk of chunks) {
+    responseBodyView.set(chunk, responseBodyOffset)
+    responseBodyOffset += chunk.byteLength
+  }
+  return responseBody
+}
+
+const readOutboundResponseChunks = async ({
+  response,
+  controller,
+  maximumResponseBytes,
+}: OutboundFetchResult): Promise<Uint8Array[]> => {
+  const reader = response.body?.getReader()
+  if (!reader) {
+    return []
+  }
+  const chunks: Uint8Array[] = []
+  let responseByteLength = 0
+  try {
+    while (true) {
+      // oxlint-disable-next-line no-await-in-loop -- Chunks must be checked in order.
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+      responseByteLength += value.byteLength
+      if (responseByteLength > maximumResponseBytes) {
+        controller.abort()
+        // oxlint-disable-next-line no-await-in-loop -- Cancel before releasing the reader.
+        await reader.cancel().catch(() => undefined)
+        throw new OutboundHttpError(
+          "RESPONSE_TOO_LARGE",
+          "Outbound response exceeded the byte limit"
+        )
+      }
+      chunks.push(value)
+    }
+    return chunks
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 const readFinalOutboundResponse = async (
-  response: Response,
+  fetchResult: OutboundFetchResult,
   options: OutboundHttpRequestOptions
 ): Promise<Response> => {
+  const { response } = fetchResult
   if (options.responseBodyMode === "discard") {
     await response.body?.cancel()
     return new Response(null, response)
   }
-  const responseBody = await response.arrayBuffer()
-  if (
-    responseBody.byteLength >
-    (options.maximumResponseBytes ?? OUTBOUND_HTTP_MAX_RESPONSE_BYTES)
-  ) {
-    throw new OutboundHttpError(
-      "RESPONSE_TOO_LARGE",
-      "Outbound response exceeded the byte limit"
-    )
-  }
+  const chunks = await readOutboundResponseChunks(fetchResult)
+  const responseBody = combineOutboundResponseChunks(chunks)
   return new Response(responseBody, response)
 }
 
@@ -240,18 +296,18 @@ const followOutboundRedirects = async ({
   protectedOrigin,
   redirectCount,
 }: OutboundRedirectFollowState): Promise<Response> => {
-  const response = await fetchOutboundRequest({
+  const fetchResult = await fetchOutboundRequest({
     requestFetch,
     requestState,
     options,
   })
-  if (!isRedirect(response.status)) {
-    return readFinalOutboundResponse(response, options)
+  if (!isRedirect(fetchResult.response.status)) {
+    return readFinalOutboundResponse(fetchResult, options)
   }
   return followOutboundRedirects({
     requestFetch,
     requestState: getRedirectRequestState({
-      response,
+      response: fetchResult.response,
       redirectCount,
       requestState,
       options,
