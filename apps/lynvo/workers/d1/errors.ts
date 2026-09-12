@@ -5,6 +5,11 @@ export interface StorageRejection {
   readonly limitBytes: number
 }
 
+export const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
+export const PLUGIN_DOMAIN_NOT_FOUND_MESSAGE = "Plugin domain not found"
+export const PLUGIN_SERVER_NOT_FOUND_MESSAGE =
+  "Plugin server not found or no longer available"
+
 export class StorageLimitError extends Error {
   readonly kind = "storage-limit" as const
   readonly usedBytes: number

@@ -1,4 +1,5 @@
 import { PLUGIN_SERVER_COLUMNS, type PluginServerRow } from "./rows"
+import { PLUGIN_SERVER_NOT_FOUND_MESSAGE } from "./errors"
 
 export const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
 
@@ -25,7 +26,7 @@ export const requireOwnedPluginServerRow = async (
     pluginServerId
   )
   if (!existing) {
-    throw new Error("Plugin server not found or no longer available")
+    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
   }
   return existing
 }
@@ -41,7 +42,7 @@ export const requireReadyPluginServerRow = async (
     pluginServerId
   )
   if (existing.credential_status !== "ready") {
-    throw new Error("Plugin server not found or no longer available")
+    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
   }
   return existing
 }

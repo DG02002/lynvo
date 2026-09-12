@@ -24,7 +24,6 @@ import {
   createDataVersionBumpStatement,
   executeOwnedWrite,
   getDataVersion,
-  type OwnedWriteGuard,
   type OwnedWriteResult,
 } from "./data-version"
 import {
@@ -34,10 +33,15 @@ import {
   createClearSavedLinksLedgerStatement,
   ensureStorageLedger,
 } from "./storage-ledger"
+import { LINK_NOT_FOUND_MESSAGE } from "./errors"
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
 import {
   completeSavedLinkOperationIfNoSavedLinks,
+  createSavedLinkDeleteClaimStatement,
+  createSavedLinkDeleteCompletionStatement,
+  createSavedLinkDeleteGuard,
+  createSavedLinkDeleteLedgerCondition,
   createReservedSavedLinkOperationLinkStatement,
   createSavedLinkOperationCompletionStatement,
   findCompletedSavedLinkOperation,
@@ -286,36 +290,6 @@ const createOwnedLinkDeletionStatements = (
       .bind(...bindings),
   ]
 }
-
-const SAVED_LINK_DELETED_GUARD_SQL =
-  "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM links WHERE id = ?2)"
-const SAVED_LINK_DELETED_LEDGER_SQL =
-  "SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM links WHERE id = ?6)"
-const SAVED_LINK_DELETED_OPERATION_SQL =
-  "NOT EXISTS (SELECT 1 FROM links WHERE id = ?3)"
-
-interface SavedLinkDeletedConditions {
-  ledgerCondition: OwnedWriteGuard
-  operationCondition: OwnedWriteGuard
-  guard: OwnedWriteGuard
-}
-
-const savedLinkDeletedConditions = (
-  linkId: string
-): SavedLinkDeletedConditions => ({
-  ledgerCondition: {
-    conditionSql: SAVED_LINK_DELETED_LEDGER_SQL,
-    conditionBindings: [linkId],
-  },
-  operationCondition: {
-    conditionSql: SAVED_LINK_DELETED_OPERATION_SQL,
-    conditionBindings: [linkId],
-  },
-  guard: {
-    conditionSql: SAVED_LINK_DELETED_GUARD_SQL,
-    conditionBindings: [linkId],
-  },
-})
 
 interface ClearSavedLinksResult {
   success: boolean
@@ -629,7 +603,11 @@ const executeDeleteSavedLink = async (
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const preparation = await ensureStorageLedger(database, userId, input.now)
-  const deleted = savedLinkDeletedConditions(existingRow.id)
+  const deleteOperation = {
+    userId,
+    operationId: input.operationId,
+    linkId: existingRow.id,
+  }
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -640,25 +618,22 @@ const executeDeleteSavedLink = async (
       savedLinkCountDelta: -1,
     },
     now: input.now,
-    condition: deleted.ledgerCondition,
+    condition: createSavedLinkDeleteLedgerCondition(deleteOperation),
   })
   const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
-      ...createOwnedLinkDeletionStatements(database, [existingRow]),
+      createSavedLinkDeleteClaimStatement(database, deleteOperation),
       ...ledgerMutation.statements,
-      createSavedLinkOperationCompletionStatement(database, {
-        userId,
-        operationId: input.operationId,
-        condition: deleted.operationCondition,
-      }),
+      ...createOwnedLinkDeletionStatements(database, [existingRow]),
+      createSavedLinkDeleteCompletionStatement(database, deleteOperation),
     ],
-    guard: deleted.guard,
+    guard: createSavedLinkDeleteGuard(deleteOperation),
   })
   if (!changed) {
-    throw new Error("Link not found or no longer available")
+    throw new Error(LINK_NOT_FOUND_MESSAGE)
   }
   return { success: true, replayed: false, dataVersion }
 }
@@ -1078,16 +1053,7 @@ const insertNewSavedLink = async ({
     statements: [
       ...preparation.statements,
       ...(oldestRow
-        ? [
-            database
-              .prepare(
-                "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
-              )
-              .bind(oldestRow.id),
-            database
-              .prepare("DELETE FROM links WHERE id = ?1 AND user_id = ?2")
-              .bind(oldestRow.id, userId),
-          ]
+        ? [...createOwnedLinkDeletionStatements(database, [oldestRow])]
         : []),
       ...(evictionMutation?.statements ?? []),
       database

@@ -16,7 +16,11 @@ import {
 } from "../request-logging"
 import { isSameOriginRequest } from "../same-origin"
 import { getD1Database } from "./db"
-import { LinkTooLargeError, StorageLimitError } from "./errors"
+import {
+  LINK_NOT_FOUND_MESSAGE,
+  LinkTooLargeError,
+  StorageLimitError,
+} from "./errors"
 import {
   applySavedLinkMetadataOperation,
   clearSavedLinks,
@@ -62,7 +66,6 @@ const safeWaitUntil = (
   }
 }
 
-const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
 const EXTRACTION_CONFLICT_MESSAGE =
   "Saved link extraction changed; refresh and retry"
 const RETENTION_INVALID_MESSAGE = "Choose an available auto-delete period"

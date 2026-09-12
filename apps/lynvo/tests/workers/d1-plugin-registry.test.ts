@@ -30,6 +30,7 @@ import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
 } from "../../workers/d1/storage-ledger"
+import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
 
@@ -90,78 +91,6 @@ const registerReadyServer = async (
     now: NOW + 1_000,
   })
   return registration
-}
-
-const createPluginServerOwnershipPause = (
-  database: D1Database,
-  pluginServerId: string
-) => {
-  let readReached!: () => void
-  const readReachedPromise = new Promise<void>((resolve) => {
-    readReached = resolve
-  })
-  let resume!: () => void
-  const resumePromise = new Promise<void>((resolve) => {
-    resume = resolve
-  })
-  let paused = false
-  const prepare = database.prepare.bind(database)
-  const pausedDatabase = {
-    prepare(query: string): D1PreparedStatement {
-      const statement = prepare(query)
-      if (
-        !query.includes(
-          "FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2"
-        )
-      ) {
-        return statement
-      }
-      const decoratedStatement = {
-        bind(...values: unknown[]) {
-          const bound = statement.bind(...values)
-          if (values[0] !== pluginServerId) {
-            return bound
-          }
-          const pausedStatement = {
-            async first<Result>() {
-              const result = await bound.first<Result>()
-              if (!paused) {
-                paused = true
-                readReached()
-                await resumePromise
-              }
-              return result
-            },
-          }
-          // SAFETY: only first is used on this bound ownership-read statement.
-          return pausedStatement as D1PreparedStatement
-        },
-      }
-      // SAFETY: only bind is used on this decorated ownership-read statement.
-      return decoratedStatement as D1PreparedStatement
-    },
-    batch: database.batch.bind(database),
-  }
-  // SAFETY: the public operation only calls prepare and batch.
-  const pausedD1 = pausedDatabase as D1Database
-  return {
-    database: pausedD1,
-    waitForRead: async (originalPromise: Promise<unknown>): Promise<void> => {
-      const outcome = await Promise.race([
-        readReachedPromise.then(() => "paused" as const),
-        originalPromise.then(
-          () => "original-finished" as const,
-          () => "original-finished" as const
-        ),
-      ])
-      if (outcome === "original-finished") {
-        throw new Error(
-          "Plugin server ownership pause did not observe the read"
-        )
-      }
-    },
-    resume,
-  }
 }
 
 describe("d1 plugin registry", () => {
@@ -656,7 +585,11 @@ describe("d1 plugin registry", () => {
       pluginId: "plugin-1",
       now: NOW,
     })
-    const pause = createPluginServerOwnershipPause(env.DB, server.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2",
+      rowId: server.id,
+      label: "Plugin server ownership",
+    })
     const upsertPromise = upsertPluginDomain(pause.database, owner.id, {
       domain: "domain-race.example",
       pluginServerId: server.id,
@@ -689,6 +622,116 @@ describe("d1 plugin registry", () => {
       plugin_server_id: server.id,
       plugin_id: "plugin-1",
     })
+  })
+
+  it("does not set a domain credential after its plugin server changes ownership", async () => {
+    const owner = await createUser()
+    const newOwner = await createUser()
+    const server = await registerReadyServer(
+      owner.id,
+      "https://credential-race.example"
+    )
+    const created = await upsertPluginDomain(env.DB, owner.id, {
+      domain: "credential-race.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+    const ledgerBefore = await getStorageLedger(env.DB, owner.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM user_plugin_domains WHERE id = ?1",
+      rowId: created.id,
+      label: "Plugin domain ownership",
+    })
+    const setPromise = setPluginDomainCredential(pause.database, owner.id, {
+      domainId: created.id,
+      credential: { ...credential(), ciphertext: "changed-ciphertext" },
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(setPromise)
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET user_id = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, newOwner.id)
+      .run()
+    pause.resume()
+
+    await expect(setPromise).rejects.toThrow(
+      "Plugin server not found or no longer available"
+    )
+    const stored = await env.DB.prepare(
+      "SELECT user_id, ciphertext FROM user_plugin_credentials WHERE plugin_domain_id = ?1"
+    )
+      .bind(created.id)
+      .first<{ user_id: string; ciphertext: string }>()
+    expect(stored).toEqual({ user_id: owner.id, ciphertext: "ciphertext" })
+    expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
+  })
+
+  it("does not finalize a domain credential after its plugin server changes ownership", async () => {
+    const owner = await createUser()
+    const newOwner = await createUser()
+    const server = await registerReadyServer(
+      owner.id,
+      "https://finalize-race.example"
+    )
+    const created = await upsertPluginDomain(env.DB, owner.id, {
+      domain: "finalize-race.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+    const change = await beginPluginDomainCredentialChange(env.DB, owner.id, {
+      domainId: created.id,
+      now: NOW + 1_000,
+    })
+    const ledgerBefore = await getStorageLedger(env.DB, owner.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM user_plugin_domains WHERE id = ?1",
+      rowId: created.id,
+      label: "Plugin domain ownership",
+    })
+    const finalizePromise = finalizePluginDomainCredentialChange(
+      pause.database,
+      owner.id,
+      {
+        domainId: created.id,
+        generation: change.generation,
+        attemptId: change.attemptId,
+        credential: { ...credential(), ciphertext: "finalized-ciphertext" },
+        now: NOW + 2_000,
+      }
+    )
+
+    await pause.waitForRead(finalizePromise)
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET user_id = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, newOwner.id)
+      .run()
+    pause.resume()
+
+    await expect(finalizePromise).rejects.toThrow(
+      "Plugin server not found or no longer available"
+    )
+    const domain = await env.DB.prepare(
+      "SELECT user_id, credential_attempt_id, credential_finalized_attempt_id FROM user_plugin_domains WHERE id = ?1"
+    )
+      .bind(created.id)
+      .first<{
+        user_id: string
+        credential_attempt_id: string | null
+        credential_finalized_attempt_id: string | null
+      }>()
+    expect(domain).toEqual({
+      user_id: owner.id,
+      credential_attempt_id: change.attemptId,
+      credential_finalized_attempt_id: null,
+    })
+    expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
   })
 
   it("keeps one plugin domain row per user, server, and domain", async () => {

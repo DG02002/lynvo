@@ -35,6 +35,7 @@ import {
 } from "../../workers/d1/storage-ledger"
 import type { ExtractedLink } from "../../app/features/links/types"
 import { getSavedLinkExtractionCredential } from "../../workers/d1/saved-link-extraction-credentials"
+import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -45,73 +46,6 @@ const createUser = async () =>
     email: "links-test@example.com",
     now: NOW,
   })
-
-const createSavedLinkOwnershipPause = (
-  database: D1Database,
-  linkId: string
-) => {
-  let readReached!: () => void
-  const readReachedPromise = new Promise<void>((resolve) => {
-    readReached = resolve
-  })
-  let resume!: () => void
-  const resumePromise = new Promise<void>((resolve) => {
-    resume = resolve
-  })
-  let paused = false
-  const prepare = database.prepare.bind(database)
-  const pausedDatabase = {
-    prepare(query: string): D1PreparedStatement {
-      const statement = prepare(query)
-      if (!query.includes("FROM links WHERE id = ?1")) {
-        return statement
-      }
-      // SAFETY: this decorator only implements bind for the ownership-read statement.
-      const decoratedStatement = {
-        bind(...values: unknown[]) {
-          const bound = statement.bind(...values)
-          if (values[0] !== linkId) {
-            return bound
-          }
-          const pausedStatement = {
-            async first<Result>() {
-              const result = await bound.first<Result>()
-              if (!paused) {
-                paused = true
-                readReached()
-                await resumePromise
-              }
-              return result
-            },
-          }
-          // SAFETY: only first is used on this bound ownership-read statement.
-          return pausedStatement as D1PreparedStatement
-        },
-      }
-      // SAFETY: only bind is used on this decorated ownership-read statement.
-      return decoratedStatement as D1PreparedStatement
-    },
-    batch: database.batch.bind(database),
-  }
-  // SAFETY: the public operation only calls prepare and batch.
-  const pausedD1 = pausedDatabase as D1Database
-  return {
-    database: pausedD1,
-    waitForRead: async (originalPromise: Promise<unknown>): Promise<void> => {
-      const outcome = await Promise.race([
-        readReachedPromise.then(() => "paused" as const),
-        originalPromise.then(
-          () => "original-finished" as const,
-          () => "original-finished" as const
-        ),
-      ])
-      if (outcome === "original-finished") {
-        throw new Error("Saved link ownership pause did not observe the read")
-      }
-    },
-    resume,
-  }
-}
 
 const playableLink: ExtractedLink = {
   nodeKey: "file:one",
@@ -789,7 +723,11 @@ describe("d1 links", () => {
       now: NOW,
     })
     const linkId = created.id ?? ""
-    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
     const updatePromise = updateSavedLinkMeta(pause.database, user.id, {
       operationId: "authz:update-attack",
       id: linkId,
@@ -824,7 +762,11 @@ describe("d1 links", () => {
       now: NOW,
     })
     const linkId = created.id ?? ""
-    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
     const operationPromise = applySavedLinkMetadataOperation(
       pause.database,
       user.id,
@@ -863,7 +805,11 @@ describe("d1 links", () => {
       now: NOW,
     })
     const linkId = created.id ?? ""
-    const pause = createSavedLinkOwnershipPause(env.DB, linkId)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
     const deletePromise = deleteSavedLinkById(pause.database, user.id, {
       operationId: "authz:delete:attack",
       id: linkId,
@@ -885,6 +831,52 @@ describe("d1 links", () => {
       .bind(linkId)
       .first<{ user_id: string; meta_json: string }>()
     expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not double-decrement storage for concurrent deletes", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "delete-race:create",
+      url: "https://example.com/delete-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
+    const staleDelete = deleteSavedLinkById(pause.database, user.id, {
+      operationId: "delete-race:stale",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(staleDelete)
+    const winner = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "delete-race:winner",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+    pause.resume()
+
+    await expect(staleDelete).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    expect(winner.success).toBe(true)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+    expect(snapshot.results).toHaveLength(0)
+    expect(snapshot.dataVersion).toBe(created.dataVersion + 1)
+    const [ledger, inventory] = await Promise.all([
+      getStorageLedger(env.DB, user.id),
+      calculateAppOwnedStorageUsage(env.DB, user.id),
+    ])
+    expect(ledger).toMatchObject(inventory)
   })
 
   it("does not resurrect a removed child and rejects stale replacement", async () => {
