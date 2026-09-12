@@ -1,4 +1,6 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
+import type { OwnedWriteGuard } from "./data-version"
+import { LinkNotFoundError } from "./errors"
 import type { LinkRow } from "./rows"
 import {
   SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
@@ -7,7 +9,9 @@ import {
 
 const SAVED_LINK_OPERATION_RESERVED_STATE = "reserved"
 const SAVED_LINK_OPERATION_COMPLETED_STATE = "completed"
-const RESERVED_SAVED_LINK_OPERATION_CONDITION = `state = '${SAVED_LINK_OPERATION_RESERVED_STATE}' AND link_id IS NULL`
+const SAVED_LINK_DELETE_CLAIMED_COMMAND = "delete:claimed"
+const RESERVED_SAVED_LINK_OPERATION_STATE = `state = '${SAVED_LINK_OPERATION_RESERVED_STATE}'`
+const RESERVED_SAVED_LINK_OPERATION_CONDITION = `${RESERVED_SAVED_LINK_OPERATION_STATE} AND link_id IS NULL`
 const NO_SAVED_LINKS_CONDITION =
   "NOT EXISTS (SELECT 1 FROM links WHERE user_id = ?1)"
 
@@ -95,20 +99,76 @@ export const createReservedSavedLinkOperationLinkStatement = (
     )
 }
 
+export const createSavedLinkDeleteClaimStatement = (
+  database: D1Database,
+  input: SavedLinkCommandOperationKey & { linkId: string }
+): D1PreparedStatement =>
+  database
+    .prepare(
+      `UPDATE link_command_operations
+       SET link_id = ?3, command = '${SAVED_LINK_DELETE_CLAIMED_COMMAND}'
+       WHERE user_id = ?1
+         AND operation_id = ?2
+         AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}
+         AND EXISTS (
+           SELECT 1 FROM links WHERE id = ?3 AND user_id = ?1
+         )`
+    )
+    .bind(input.userId, input.operationId, input.linkId)
+
+export const createSavedLinkDeleteCompletionStatement = (
+  database: D1Database,
+  input: SavedLinkCommandOperationKey & { linkId: string }
+): D1PreparedStatement =>
+  database
+    .prepare(
+      `UPDATE link_command_operations
+       SET link_id = NULL, state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}'
+       WHERE user_id = ?1
+         AND operation_id = ?2
+         AND ${RESERVED_SAVED_LINK_OPERATION_STATE}
+         AND command = '${SAVED_LINK_DELETE_CLAIMED_COMMAND}'
+         AND (link_id = ?3 OR link_id IS NULL)
+         AND NOT EXISTS (SELECT 1 FROM links WHERE id = ?3)`
+    )
+    .bind(input.userId, input.operationId, input.linkId)
+
+export const createSavedLinkDeleteLedgerCondition = (
+  input: SavedLinkCommandOperationKey & { linkId: string }
+): OwnedWriteGuard => ({
+  conditionSql: `SELECT 1 FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?6 AND command = '${SAVED_LINK_DELETE_CLAIMED_COMMAND}' AND link_id = ?7`,
+  conditionBindings: [input.operationId, input.linkId],
+})
+
+export const createSavedLinkDeleteGuard = (
+  input: SavedLinkCommandOperationKey & { linkId: string }
+): OwnedWriteGuard => ({
+  conditionSql: `SELECT 1 FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' AND command = '${SAVED_LINK_DELETE_CLAIMED_COMMAND}' AND link_id IS NULL AND NOT EXISTS (SELECT 1 FROM links WHERE id = ?3)`,
+  conditionBindings: [input.operationId, input.linkId],
+})
+
 export const createSavedLinkOperationCompletionStatement = (
   database: D1Database,
   input: SavedLinkCommandOperationKey & {
     requireNoSavedLinks?: boolean
+    condition?: OwnedWriteGuard
   }
 ): D1PreparedStatement => {
   const noSavedLinksCondition = input.requireNoSavedLinks
     ? ` AND ${NO_SAVED_LINKS_CONDITION}`
     : ""
+  const condition = input.condition
+    ? ` AND ${input.condition.conditionSql}`
+    : ""
   return database
     .prepare(
-      `UPDATE link_command_operations SET state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}${noSavedLinksCondition}`
+      `UPDATE link_command_operations SET state = '${SAVED_LINK_OPERATION_COMPLETED_STATE}' WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}${noSavedLinksCondition}${condition}`
     )
-    .bind(input.userId, input.operationId)
+    .bind(
+      input.userId,
+      input.operationId,
+      ...(input.condition?.conditionBindings ?? [])
+    )
 }
 
 export const completeSavedLinkOperationIfNoSavedLinks = async (
@@ -132,7 +192,7 @@ export const releaseReservedSavedLinkCommandOperation = async (
 ): Promise<void> => {
   await database
     .prepare(
-      `DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_CONDITION}`
+      `DELETE FROM link_command_operations WHERE user_id = ?1 AND operation_id = ?2 AND ${RESERVED_SAVED_LINK_OPERATION_STATE}`
     )
     .bind(input.userId, input.operationId)
     .run()
@@ -181,7 +241,7 @@ export const requireOwnedSavedLink = async (
 ): Promise<LinkRow> => {
   const existing = await findSavedLinkById(database, linkId)
   if (!existing || existing.user_id !== userId) {
-    throw new Error("Link not found or no longer available")
+    throw new LinkNotFoundError()
   }
   return existing
 }

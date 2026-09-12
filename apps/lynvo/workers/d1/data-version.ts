@@ -8,6 +8,19 @@ export interface OwnedWriteGuard {
   readonly conditionBindings: readonly unknown[]
 }
 
+// The guarded write must be the statement immediately before the version bump.
+export const CHANGED_ROWS_GUARD: OwnedWriteGuard = {
+  conditionSql: "SELECT 1 WHERE changes() > 0",
+  conditionBindings: [],
+}
+
+export const createChangedWriteGuard = (
+  guard: OwnedWriteGuard
+): OwnedWriteGuard => ({
+  conditionSql: `${CHANGED_ROWS_GUARD.conditionSql} AND EXISTS (${guard.conditionSql})`,
+  conditionBindings: guard.conditionBindings,
+})
+
 export const createDataVersionBumpStatement = (
   database: D1Database,
   userId: string,

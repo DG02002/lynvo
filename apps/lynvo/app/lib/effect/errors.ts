@@ -9,6 +9,27 @@ export class BackendError extends Schema.TaggedError<BackendError>()(
   }
 ) {}
 
+export class PluginDomainNotFoundError extends Schema.TaggedError<PluginDomainNotFoundError>()(
+  "PluginDomainNotFoundError",
+  {
+    message: Schema.String,
+  }
+) {}
+
+export class PluginServerUnavailableError extends Schema.TaggedError<PluginServerUnavailableError>()(
+  "PluginServerUnavailableError",
+  {
+    message: Schema.String,
+  }
+) {}
+
+export class PluginCredentialChangeSupersededError extends Schema.TaggedError<PluginCredentialChangeSupersededError>()(
+  "PluginCredentialChangeSupersededError",
+  {
+    message: Schema.String,
+  }
+) {}
+
 export class ExtractionError extends Schema.TaggedError<ExtractionError>()(
   "ExtractionError",
   {
@@ -78,6 +99,15 @@ const publicError = <Tag extends string>(tag: Tag) =>
 export const BackendApiError = publicError("BackendError").pipe(
   HttpApiSchema.status(503)
 )
+export const PluginDomainNotFoundApiError = publicError(
+  "PluginDomainNotFoundError"
+).pipe(HttpApiSchema.status(404))
+export const PluginServerUnavailableApiError = publicError(
+  "PluginServerUnavailableError"
+).pipe(HttpApiSchema.status(503))
+export const PluginCredentialChangeSupersededApiError = publicError(
+  "PluginCredentialChangeSupersededError"
+).pipe(HttpApiSchema.status(409))
 export const ExtractionApiError = publicError("ExtractionError").pipe(
   HttpApiSchema.status(422)
 )

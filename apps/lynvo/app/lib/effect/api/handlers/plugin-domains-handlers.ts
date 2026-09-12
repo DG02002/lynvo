@@ -7,7 +7,13 @@ import {
   normalizePluginDomain,
   parsePluginDomainInput,
 } from "../../../plugin-domain"
-import { BackendError, ValidationError } from "../../errors"
+import {
+  BackendError,
+  PluginCredentialChangeSupersededError as PluginCredentialChangeSupersededApiError,
+  PluginDomainNotFoundError as PluginDomainNotFoundApiError,
+  PluginServerUnavailableError as PluginServerUnavailableApiError,
+  ValidationError,
+} from "../../errors"
 import { PluginCredentialVault } from "../../services/plugin-credential-vault"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
@@ -20,6 +26,36 @@ import {
   listPluginDomains,
   upsertPluginDomain,
 } from "../../../../../workers/d1/plugin-domains"
+import {
+  PluginCredentialChangeSupersededError as D1PluginCredentialChangeSupersededError,
+  PluginDomainNotFoundError as D1PluginDomainNotFoundError,
+  PluginServerUnavailableError as D1PluginServerUnavailableError,
+} from "../../../../../workers/d1/errors"
+
+const mapPluginDomainMutationError = (cause: unknown, fallback: string) => {
+  if (cause instanceof D1PluginDomainNotFoundError) {
+    return new PluginDomainNotFoundApiError({ message: cause.message })
+  }
+  if (cause instanceof D1PluginServerUnavailableError) {
+    return new PluginServerUnavailableApiError({ message: cause.message })
+  }
+  if (cause instanceof D1PluginCredentialChangeSupersededError) {
+    return new PluginCredentialChangeSupersededApiError({
+      message: cause.message,
+    })
+  }
+  return new BackendError({ message: fallback, cause })
+}
+
+const mapPluginServerAvailabilityError = (cause: unknown, fallback: string) =>
+  cause instanceof D1PluginServerUnavailableError
+    ? new PluginServerUnavailableApiError({ message: cause.message })
+    : new BackendError({ message: fallback, cause })
+
+const mapPluginDomainNotFoundError = (cause: unknown, fallback: string) =>
+  cause instanceof D1PluginDomainNotFoundError
+    ? new PluginDomainNotFoundApiError({ message: cause.message })
+    : new BackendError({ message: fallback, cause })
 
 const validateDomain = (value: string) =>
   Effect.try({
@@ -112,10 +148,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 now: Date.now(),
               }),
             catch: (cause) =>
-              new BackendError({
-                message: "The plugin domain couldn’t be saved",
+              mapPluginServerAvailabilityError(
                 cause,
-              }),
+                "The plugin domain couldn’t be saved"
+              ),
           })
           return versionedSuccess(dataVersion)
         })
@@ -144,10 +180,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 now: Date.now(),
               }),
             catch: (cause) =>
-              new BackendError({
-                message: "The plugin domain couldn’t be updated",
+              mapPluginDomainMutationError(
                 cause,
-              }),
+                "The plugin domain couldn’t be updated"
+              ),
           })
           const credentialValue = payload.username
             ? serializeHttpBasicCredential(payload.username, password)
@@ -173,10 +209,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 now: Date.now(),
               }),
             catch: (cause) =>
-              new BackendError({
-                message: "The plugin credential couldn’t be saved",
+              mapPluginDomainMutationError(
                 cause,
-              }),
+                "The plugin credential couldn’t be saved"
+              ),
           })
           return versionedSuccess(dataVersion)
         })
@@ -198,10 +234,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 now: Date.now(),
               }),
             catch: (cause) =>
-              new BackendError({
-                message: "The plugin credential couldn’t be removed",
+              mapPluginDomainMutationError(
                 cause,
-              }),
+                "The plugin credential couldn’t be removed"
+              ),
           })
           return versionedSuccess(dataVersion)
         })
@@ -223,10 +259,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
                 now: Date.now(),
               }),
             catch: (cause) =>
-              new BackendError({
-                message: "The plugin domain couldn’t be deleted",
+              mapPluginDomainNotFoundError(
                 cause,
-              }),
+                "The plugin domain couldn’t be deleted"
+              ),
           })
           return versionedSuccess(dataVersion)
         })

@@ -13,11 +13,16 @@ import { createOpaqueId } from "./ids"
 import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
-  PLUGIN_SERVER_COLUMNS,
   type PluginCredentialRow,
   type PluginDomainRow,
   type PluginServerRow,
 } from "./rows"
+import {
+  PLUGIN_SERVER_SELECT,
+  findOwnedPluginServerRow,
+  requireReadyPluginServerRow,
+  requireOwnedPluginServerRow,
+} from "./plugin-server-ownership"
 import {
   applyStorageMutation,
   byteLength,
@@ -100,36 +105,6 @@ const normalizeBaseUrl = (baseUrl: string): string => {
   url.search = ""
   url.hash = ""
   return url.toString().replace(/\/$/, "")
-}
-
-const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
-
-const findOwnedPluginServerRow = async (
-  database: D1Database,
-  userId: string,
-  pluginServerId: string
-): Promise<PluginServerRow | null> => {
-  const row = await database
-    .prepare(`${PLUGIN_SERVER_SELECT} WHERE id = ?1 AND user_id = ?2`)
-    .bind(pluginServerId, userId)
-    .first<PluginServerRow>()
-  return row ?? null
-}
-
-const requireOwnedPluginServerRow = async (
-  database: D1Database,
-  userId: string,
-  pluginServerId: string
-): Promise<PluginServerRow> => {
-  const existing = await findOwnedPluginServerRow(
-    database,
-    userId,
-    pluginServerId
-  )
-  if (!existing) {
-    throw new Error("Plugin server not found or no longer available")
-  }
-  return existing
 }
 
 type PluginServerUpdateColumn = Exclude<
@@ -689,22 +664,6 @@ export const expireStalePluginServerRegistrations = async (
   }
   await database.batch(statements)
   return { expired: results.length }
-}
-
-const requireReadyPluginServerRow = async (
-  database: D1Database,
-  userId: string,
-  pluginServerId: string
-): Promise<PluginServerRow> => {
-  const existing = await requireOwnedPluginServerRow(
-    database,
-    userId,
-    pluginServerId
-  )
-  if (existing.credential_status !== "ready") {
-    throw new Error("Plugin server not found or no longer available")
-  }
-  return existing
 }
 
 export const recordPluginServerVerificationFailure = async (

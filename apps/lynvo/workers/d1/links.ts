@@ -21,9 +21,11 @@ import type {
 } from "../../app/features/links/types"
 import { Schema } from "effect"
 import {
+  CHANGED_ROWS_GUARD,
   createDataVersionBumpStatement,
   executeOwnedWrite,
   getDataVersion,
+  type OwnedWriteGuard,
   type OwnedWriteResult,
 } from "./data-version"
 import {
@@ -32,11 +34,17 @@ import {
   byteLength,
   createClearSavedLinksLedgerStatement,
   ensureStorageLedger,
+  type StorageLedgerPreparation,
 } from "./storage-ledger"
+import { LinkNotFoundError } from "./errors"
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
 import {
   completeSavedLinkOperationIfNoSavedLinks,
+  createSavedLinkDeleteClaimStatement,
+  createSavedLinkDeleteCompletionStatement,
+  createSavedLinkDeleteGuard,
+  createSavedLinkDeleteLedgerCondition,
   createReservedSavedLinkOperationLinkStatement,
   createSavedLinkOperationCompletionStatement,
   findCompletedSavedLinkOperation,
@@ -254,6 +262,74 @@ const toSavedLinkExtractionCredentialLinkState = (
   metaJson: row.meta_json,
 })
 
+type OwnedLinkIdentity = Pick<LinkRow, "id" | "user_id">
+
+const createOwnedLinkPredicate = (
+  rows: readonly OwnedLinkIdentity[],
+  idColumn: "id" | "link_id"
+): string =>
+  rows
+    .map(
+      (_, index) =>
+        `(${idColumn} = ?${index * 2 + 1} AND user_id = ?${index * 2 + 2})`
+    )
+    .join(" OR ")
+
+const createOwnedLinkDeletionStatements = (
+  database: D1Database,
+  rows: readonly OwnedLinkIdentity[],
+  options: { readonly deleteExtractionCredentials?: boolean } = {}
+): D1PreparedStatement[] => {
+  const bindings = rows.flatMap((row) => [row.id, row.user_id])
+  const linkDeletion = database
+    .prepare(`DELETE FROM links WHERE ${createOwnedLinkPredicate(rows, "id")}`)
+    .bind(...bindings)
+  if (options.deleteExtractionCredentials === false) {
+    // The foreign key cascades this child cleanup. Keeping the links DELETE
+    // last lets CHANGED_ROWS_GUARD observe the owned row write.
+    return [linkDeletion]
+  }
+  return [
+    database
+      .prepare(
+        `DELETE FROM saved_link_extraction_credentials WHERE ${createOwnedLinkPredicate(rows, "link_id")}`
+      )
+      .bind(...bindings),
+    linkDeletion,
+  ]
+}
+
+const createSavedLinkExistsCondition = (
+  row: OwnedLinkIdentity
+): OwnedWriteGuard => ({
+  conditionSql: "SELECT 1 FROM links WHERE id = ?6 AND user_id = ?1",
+  conditionBindings: [row.id],
+})
+
+const createSavedLinkDeletionLedgerMutation = ({
+  database,
+  preparation,
+  row,
+  now,
+}: {
+  database: D1Database
+  preparation: StorageLedgerPreparation
+  row: LinkRow
+  now: number
+}) =>
+  applyStorageMutation({
+    database,
+    preparation,
+    plan: {
+      domain: "linkBytes",
+      currentBytes: byteLength(row),
+      nextBytes: 0,
+      savedLinkCountDelta: -1,
+    },
+    now,
+    condition: createSavedLinkExistsCondition(row),
+  })
+
 interface ClearSavedLinksResult {
   success: boolean
   replayed: boolean
@@ -263,8 +339,7 @@ interface ClearSavedLinksResult {
 
 interface ExpiredLinkUserSummary {
   userId: string
-  totalBytes: number
-  linkCount: number
+  rows: LinkRow[]
 }
 
 interface PreparedExpiredLinkUserMutation {
@@ -511,10 +586,11 @@ const executeApplySavedLinkMetadataAttempt = async (
     nextRow,
     updateStatement: database
       .prepare(
-        "UPDATE links SET meta_json = ?2, updated_at = ?3, extraction_state = ?4, extraction_error = ?5, extraction_available_at = ?6, extraction_lease_expires_at = ?7 WHERE id = ?1 AND meta_json IS ?8"
+        "UPDATE links SET meta_json = ?3, updated_at = ?4, extraction_state = ?5, extraction_error = ?6, extraction_available_at = ?7, extraction_lease_expires_at = ?8 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?9"
       )
       .bind(
         existingRow.id,
+        userId,
         nextRow.meta_json,
         nextRow.updated_at,
         nextRow.extraction_state,
@@ -546,9 +622,15 @@ const executeUpdateSavedLinkMetaAttempt = async ({
     nextRow,
     updateStatement: database
       .prepare(
-        "UPDATE links SET meta_json = ?2, updated_at = ?3 WHERE id = ?1 AND meta_json IS ?4"
+        "UPDATE links SET meta_json = ?3, updated_at = ?4 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?5"
       )
-      .bind(existingRow.id, metadataJson, input.now, existingRow.meta_json),
+      .bind(
+        existingRow.id,
+        userId,
+        metadataJson,
+        input.now,
+        existingRow.meta_json
+      ),
   })
 }
 
@@ -559,6 +641,11 @@ const executeDeleteSavedLink = async (
 ): Promise<SavedLinkMutationResult> => {
   const existingRow = await requireOwnedSavedLink(database, userId, input.id)
   const preparation = await ensureStorageLedger(database, userId, input.now)
+  const deleteOperation = {
+    userId,
+    operationId: input.operationId,
+    linkId: existingRow.id,
+  }
   const ledgerMutation = applyStorageMutation({
     database,
     preparation,
@@ -569,25 +656,23 @@ const executeDeleteSavedLink = async (
       savedLinkCountDelta: -1,
     },
     now: input.now,
+    condition: createSavedLinkDeleteLedgerCondition(deleteOperation),
   })
-  const { dataVersion } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
-      database
-        .prepare(
-          "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
-        )
-        .bind(existingRow.id),
-      database.prepare("DELETE FROM links WHERE id = ?1").bind(existingRow.id),
+      createSavedLinkDeleteClaimStatement(database, deleteOperation),
       ...ledgerMutation.statements,
-      createSavedLinkOperationCompletionStatement(database, {
-        userId,
-        operationId: input.operationId,
-      }),
+      ...createOwnedLinkDeletionStatements(database, [existingRow]),
+      createSavedLinkDeleteCompletionStatement(database, deleteOperation),
     ],
+    guard: createSavedLinkDeleteGuard(deleteOperation),
   })
+  if (!changed) {
+    throw new LinkNotFoundError()
+  }
   return { success: true, replayed: false, dataVersion }
 }
 
@@ -887,10 +972,11 @@ const updateExistingSavedLink = async ({
     nextRow,
     updateStatement: database
       .prepare(
-        "UPDATE links SET title = ?2, meta_json = ?3, updated_at = ?4, expires_at = ?5, extraction_state = ?6, extraction_error = ?7, extraction_attempts = ?8, extraction_available_at = ?9, extraction_lease_expires_at = ?10 WHERE id = ?1 AND meta_json IS ?11"
+        "UPDATE links SET title = ?3, meta_json = ?4, updated_at = ?5, expires_at = ?6, extraction_state = ?7, extraction_error = ?8, extraction_attempts = ?9, extraction_available_at = ?10, extraction_lease_expires_at = ?11 WHERE id = ?1 AND user_id = ?2 AND meta_json IS ?12"
       )
       .bind(
         existingRow.id,
+        userId,
         nextRow.title,
         metadataJson,
         input.now,
@@ -976,15 +1062,10 @@ const insertNewSavedLink = async ({
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(newRow))
   const evictionMutation = oldestRow
-    ? applyStorageMutation({
+    ? createSavedLinkDeletionLedgerMutation({
         database,
         preparation,
-        plan: {
-          domain: "linkBytes",
-          currentBytes: byteLength(oldestRow),
-          nextBytes: 0,
-          savedLinkCountDelta: -1,
-        },
+        row: oldestRow,
         now: input.now,
       })
     : undefined
@@ -1004,19 +1085,10 @@ const insertNewSavedLink = async ({
     userId,
     statements: [
       ...preparation.statements,
-      ...(oldestRow
-        ? [
-            database
-              .prepare(
-                "DELETE FROM saved_link_extraction_credentials WHERE link_id = ?1"
-              )
-              .bind(oldestRow.id),
-            database
-              .prepare("DELETE FROM links WHERE id = ?1")
-              .bind(oldestRow.id),
-          ]
-        : []),
       ...(evictionMutation?.statements ?? []),
+      ...(oldestRow
+        ? [...createOwnedLinkDeletionStatements(database, [oldestRow])]
+        : []),
       database
         .prepare(
           "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
@@ -1407,38 +1479,27 @@ export const deleteExpiredLinksForUser = async ({
       dataVersion: await getDataVersion(database, userId),
     }
   }
-  const totalBytes = results.reduce<number>(
-    (totalRowBytes, row) => totalRowBytes + byteLength(row),
-    0
-  )
-  const placeholders = results.map((_, index) => `?${index + 1}`).join(", ")
   const preparation = await ensureStorageLedger(database, userId, now)
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: totalBytes,
-      nextBytes: 0,
-      savedLinkCountDelta: -results.length,
-    },
-    now,
-  })
+  const ledgerStatements = results.flatMap(
+    (row) =>
+      createSavedLinkDeletionLedgerMutation({
+        database,
+        preparation,
+        row,
+        now,
+      }).statements
+  )
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
-      database
-        .prepare(
-          `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${placeholders})`
-        )
-        .bind(...results.map((row) => row.id)),
-      database
-        .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
-        .bind(...results.map((row) => row.id)),
-      ...ledgerMutation.statements,
+      ...ledgerStatements,
+      ...createOwnedLinkDeletionStatements(database, results, {
+        deleteExtractionCredentials: false,
+      }),
     ],
+    guard: CHANGED_ROWS_GUARD,
   })
   return { deletedCount: results.length, dataVersion }
 }
@@ -1463,14 +1524,12 @@ const summarizeExpiredLinksByUser = (
   for (const row of rows) {
     const existingSummary = summariesByUser.get(row.user_id)
     if (existingSummary) {
-      existingSummary.totalBytes += byteLength(row)
-      existingSummary.linkCount += 1
+      existingSummary.rows.push(row)
       continue
     }
     summariesByUser.set(row.user_id, {
       userId: row.user_id,
-      totalBytes: byteLength(row),
-      linkCount: 1,
+      rows: [row],
     })
   }
   return [...summariesByUser.values()]
@@ -1482,22 +1541,27 @@ const prepareExpiredLinkUserMutation = async (
   now: number
 ): Promise<PreparedExpiredLinkUserMutation> => {
   const preparation = await ensureStorageLedger(database, summary.userId, now)
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: summary.totalBytes,
-      nextBytes: 0,
-      savedLinkCountDelta: -summary.linkCount,
-    },
-    now,
-  })
+  const ledgerStatements = summary.rows.flatMap(
+    (row) =>
+      createSavedLinkDeletionLedgerMutation({
+        database,
+        preparation,
+        row,
+        now,
+      }).statements
+  )
   return {
-    statements: [...preparation.statements, ...ledgerMutation.statements],
+    statements: [
+      ...preparation.statements,
+      ...ledgerStatements,
+      ...createOwnedLinkDeletionStatements(database, summary.rows, {
+        deleteExtractionCredentials: false,
+      }),
+    ],
     dataVersionStatement: createDataVersionBumpStatement(
       database,
-      summary.userId
+      summary.userId,
+      CHANGED_ROWS_GUARD
     ),
   }
 }
@@ -1508,7 +1572,6 @@ const prepareExpiredLinkBatchStatements = async (
   now: number
 ): Promise<{
   statements: D1PreparedStatement[]
-  dataVersionStatements: D1PreparedStatement[]
 }> => {
   const summaries = summarizeExpiredLinksByUser(rows)
   const preparedUsers = await Promise.all(
@@ -1517,12 +1580,11 @@ const prepareExpiredLinkBatchStatements = async (
     )
   )
   const statements: D1PreparedStatement[] = []
-  const dataVersionStatements: D1PreparedStatement[] = []
   for (const preparedUser of preparedUsers) {
     statements.push(...preparedUser.statements)
-    dataVersionStatements.push(preparedUser.dataVersionStatement)
+    statements.push(preparedUser.dataVersionStatement)
   }
-  return { statements, dataVersionStatements }
+  return { statements }
 }
 
 const processExpiredLinkBatch = async (
@@ -1533,22 +1595,11 @@ const processExpiredLinkBatch = async (
   if (!rows) {
     return undefined
   }
-  const { statements, dataVersionStatements } =
-    await prepareExpiredLinkBatchStatements(database, rows, now)
-  const placeholders = rows.map((_, index) => `?${index + 1}`).join(", ")
-  statements.push(
-    database
-      .prepare(
-        `DELETE FROM saved_link_extraction_credentials WHERE link_id IN (${placeholders})`
-      )
-      .bind(...rows.map((row) => row.id))
+  const { statements } = await prepareExpiredLinkBatchStatements(
+    database,
+    rows,
+    now
   )
-  statements.push(
-    database
-      .prepare(`DELETE FROM links WHERE id IN (${placeholders})`)
-      .bind(...rows.map((row) => row.id))
-  )
-  statements.push(...dataVersionStatements)
   await database.batch(statements)
   return {
     deletedLinks: rows.length,

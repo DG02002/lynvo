@@ -35,6 +35,7 @@ import {
 } from "../../workers/d1/storage-ledger"
 import type { ExtractedLink } from "../../app/features/links/types"
 import { getSavedLinkExtractionCredential } from "../../workers/d1/saved-link-extraction-credentials"
+import { createD1OwnershipReadPause } from "./d1-ownership-race"
 
 const NOW = 1_750_000_000_000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -69,6 +70,44 @@ const emptyMetadataJson = () =>
     extraction: { extractedLinks: [] },
     playback: { openedUrls: [], resolvedMirrors: {} },
   })
+
+const seedLinksAtCapacity = async (userId: string): Promise<string> => {
+  const seedPrefix = `link-seed-${crypto.randomUUID()}`
+  const seedStatements: D1PreparedStatement[] = []
+  for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
+    seedStatements.push(
+      env.DB.prepare(
+        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, NULL, ?4, NULL, ?5, ?5, ?6)"
+      ).bind(
+        `${seedPrefix}-${index}`,
+        userId,
+        `https://example.com/${seedPrefix}-${index}`,
+        EMPTY_LINK_METADATA_JSON,
+        NOW + index * 1_000,
+        NOW + index * 1_000 + 30 * DAY_MS
+      )
+    )
+  }
+  const batchChunkSize = 100
+  for (
+    let batchOffset = 0;
+    batchOffset < seedStatements.length;
+    batchOffset += batchChunkSize
+  ) {
+    await env.DB.batch(
+      seedStatements.slice(batchOffset, batchOffset + batchChunkSize)
+    )
+  }
+  return seedPrefix
+}
+
+const expectLedgerMatchesInventory = async (userId: string) => {
+  const [ledger, inventory] = await Promise.all([
+    getStorageLedger(env.DB, userId),
+    calculateAppOwnedStorageUsage(env.DB, userId),
+  ])
+  expect(ledger).toMatchObject(inventory)
+}
 
 type SavedLinkOperationPausePoint = "after-reservation" | "before-completion"
 
@@ -712,6 +751,277 @@ describe("d1 links", () => {
     expect(replay.replayed).toBe(true)
   })
 
+  it("does not update a link after its ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:update:create",
+      url: "https://example.com/authz-update",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
+    const updatePromise = updateSavedLinkMeta(pause.database, user.id, {
+      operationId: "authz:update-attack",
+      id: linkId,
+      meta: metadataJson(),
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(updatePromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(updatePromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not apply a metadata operation after ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:operation:create",
+      url: "https://example.com/authz-operation",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
+    const operationPromise = applySavedLinkMetadataOperation(
+      pause.database,
+      user.id,
+      {
+        operationId: "authz:operation:attack",
+        id: linkId,
+        operation: { kind: "markOpened", linkUrl: playableLink.url ?? "" },
+        now: NOW + 1_000,
+      }
+    )
+
+    await pause.waitForRead(operationPromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(operationPromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not delete a link after its ownership changes", async () => {
+    const owner = await createUser()
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "authz:delete:create",
+      url: "https://example.com/authz-delete",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
+    const deletePromise = deleteSavedLinkById(pause.database, user.id, {
+      operationId: "authz:delete:attack",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(deletePromise)
+    await env.DB.prepare("UPDATE links SET user_id = ?2 WHERE id = ?1")
+      .bind(linkId, owner.id)
+      .run()
+    pause.resume()
+
+    await expect(deletePromise).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    const row = await env.DB.prepare(
+      "SELECT user_id, meta_json FROM links WHERE id = ?1"
+    )
+      .bind(linkId)
+      .first<{ user_id: string; meta_json: string }>()
+    expect(row).toEqual({ user_id: owner.id, meta_json: emptyMetadataJson() })
+  })
+
+  it("does not double-decrement storage for concurrent deletes", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "delete-race:create",
+      url: "https://example.com/delete-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE id = ?1",
+      rowId: linkId,
+      label: "Saved link ownership",
+    })
+    const staleDelete = deleteSavedLinkById(pause.database, user.id, {
+      operationId: "delete-race:stale",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+
+    await pause.waitForRead(staleDelete)
+    const winner = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "delete-race:winner",
+      id: linkId,
+      now: NOW + 1_000,
+    })
+    pause.resume()
+
+    await expect(staleDelete).rejects.toThrow(
+      "Link not found or no longer available"
+    )
+    expect(winner.success).toBe(true)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 2_000
+    )
+    expect(snapshot.results).toHaveLength(0)
+    expect(snapshot.dataVersion).toBe(created.dataVersion + 1)
+    const [ledger, inventory] = await Promise.all([
+      getStorageLedger(env.DB, user.id),
+      calculateAppOwnedStorageUsage(env.DB, user.id),
+    ])
+    expect(ledger).toMatchObject(inventory)
+  })
+
+  it("does not double-decrement storage when retention races a direct delete", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "retention-race:create",
+      url: "https://example.com/retention-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE user_id = ?1 AND created_at < ?2",
+      rowId: user.id,
+      label: "Retention sweep",
+      readMethod: "all",
+    })
+    const retentionPromise = deleteExpiredLinksForUser({
+      database: pause.database,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
+
+    await pause.waitForRead(retentionPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "retention-race:direct",
+      id: linkId,
+      now: NOW + 8 * DAY_MS,
+    })
+    pause.resume()
+    await retentionPromise
+
+    expect(direct.success).toBe(true)
+    expect(
+      (await listSavedLinksWithDataVersion(env.DB, user.id, NOW)).results
+    ).toHaveLength(0)
+    await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("does not double-decrement storage when scheduled retention races a direct delete", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "scheduled-retention-race:create",
+      url: "https://example.com/scheduled-retention-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: user.id,
+      label: "Scheduled retention",
+    })
+    const sweepPromise = sweepExpiredLinks(pause.database, NOW + 31 * DAY_MS)
+
+    await pause.waitForRead(sweepPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "scheduled-retention-race:direct",
+      id: created.id ?? "",
+      now: NOW + 31 * DAY_MS,
+    })
+    pause.resume()
+    const sweep = await sweepPromise
+
+    expect(direct.success).toBe(true)
+    expect(sweep.deletedLinks).toBeGreaterThanOrEqual(1)
+    expect(
+      (await listSavedLinksWithDataVersion(env.DB, user.id, NOW)).results
+    ).toHaveLength(0)
+    await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("cascades extraction credentials with retained link deletion", async () => {
+    const user = await createUser()
+    const targetUrl = "https://source.example/retention-protected/"
+    const queued = await enqueueSavedLinkExtraction(env.DB, user.id, {
+      meta: emptyMetadataJson(),
+      operationId: "retention:credential:queue",
+      url: targetUrl,
+      now: NOW,
+      extractionCredential: {
+        targetUrl,
+        record: {
+          ciphertext: "retention-ciphertext",
+          nonce: "retention-nonce",
+          algorithm: "AES-256-GCM",
+          keyVersion: 1,
+        },
+        now: NOW,
+      },
+    })
+    const beforeVersion = await getDataVersion(env.DB, user.id)
+
+    const deleted = await deleteExpiredLinksForUser({
+      database: env.DB,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
+
+    expect(deleted.deletedCount).toBe(1)
+    expect(deleted.dataVersion).toBe(beforeVersion + 1)
+    await expect(
+      getSavedLinkExtractionCredential(env.DB, user.id, queued.id ?? "")
+    ).resolves.toBeNull()
+  })
+
   it("does not resurrect a removed child and rejects stale replacement", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
@@ -915,31 +1225,7 @@ describe("d1 links", () => {
 
   it("evicts the oldest link beyond the retention count", async () => {
     const user = await createUser()
-    const seedStatements: D1PreparedStatement[] = []
-    for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
-      seedStatements.push(
-        env.DB.prepare(
-          "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, NULL, ?4, NULL, ?5, ?5, ?6)"
-        ).bind(
-          `link-seed-${index}`,
-          user.id,
-          `https://example.com/lru-${index}`,
-          EMPTY_LINK_METADATA_JSON,
-          NOW + index * 1_000,
-          NOW + index * 1_000 + 30 * DAY_MS
-        )
-      )
-    }
-    const batchChunkSize = 100
-    for (
-      let batchOffset = 0;
-      batchOffset < seedStatements.length;
-      batchOffset += batchChunkSize
-    ) {
-      await env.DB.batch(
-        seedStatements.slice(batchOffset, batchOffset + batchChunkSize)
-      )
-    }
+    const seedPrefix = await seedLinksAtCapacity(user.id)
     await createOrUpdateSavedLink(env.DB, user.id, {
       meta: emptyMetadataJson(),
       operationId: "lru:newest",
@@ -954,11 +1240,56 @@ describe("d1 links", () => {
     expect(snapshot.results).toHaveLength(LINKS_MAX_COUNT)
     expect(snapshot.results[0]?.url).toBe("https://example.com/lru-newest")
     expect(
-      snapshot.results.find((link) => link.url === "https://example.com/lru-0")
+      snapshot.results.find(
+        (link) => link.url === `https://example.com/${seedPrefix}-0`
+      )
     ).toBeUndefined()
     expect(
-      snapshot.results.find((link) => link.url === "https://example.com/lru-1")
+      snapshot.results.find(
+        (link) => link.url === `https://example.com/${seedPrefix}-1`
+      )
     ).toBeDefined()
+  })
+
+  it("does not double-decrement storage when eviction races a direct delete", async () => {
+    const user = await createUser()
+    const seedPrefix = await seedLinksAtCapacity(user.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment:
+        "FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1",
+      rowId: user.id,
+      label: "Saved link eviction",
+    })
+    const createPromise = createOrUpdateSavedLink(pause.database, user.id, {
+      operationId: "eviction-race:create",
+      meta: emptyMetadataJson(),
+      url: "https://example.com/eviction-race",
+      now: NOW + (LINKS_MAX_COUNT + 1) * 1_000,
+    })
+
+    await pause.waitForRead(createPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "eviction-race:direct",
+      id: `${seedPrefix}-0`,
+      now: NOW + (LINKS_MAX_COUNT + 2) * 1_000,
+    })
+    pause.resume()
+    const created = await createPromise
+
+    expect(direct.success).toBe(true)
+    expect(created.id).toBeTruthy()
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + (LINKS_MAX_COUNT + 3) * 1_000
+    )
+    expect(snapshot.results).toHaveLength(LINKS_MAX_COUNT)
+    expect(
+      snapshot.results.find(
+        (link) => link.url === "https://example.com/eviction-race"
+      )
+    ).toBeDefined()
+    await expectLedgerMatchesInventory(user.id)
   })
 
   it("backfills expires_at on retention change and sweeps expired links", async () => {

@@ -5,6 +5,9 @@ import {
   BackendApiError,
   CsrfApiError,
   NotFoundApiError,
+  PluginCredentialChangeSupersededApiError,
+  PluginDomainNotFoundApiError,
+  PluginServerUnavailableApiError,
   UnauthorizedApiError,
   UsageLimitApiError,
   ValidationApiError,
@@ -85,6 +88,15 @@ describe("API errors", () => {
     ["NotFoundError", "Session not found"],
     ["ValidationError", "Email does not match"],
     ["UsageLimitError", "Monthly usage limit reached"],
+    ["PluginDomainNotFoundError", "Plugin domain not found"],
+    [
+      "PluginServerUnavailableError",
+      "Plugin server not found or no longer available",
+    ],
+    [
+      "PluginCredentialChangeSupersededError",
+      "Plugin credential change was superseded",
+    ],
   ] as const)(
     "surfaces the server message for %s failures",
     (_tag, message) => {
@@ -112,6 +124,15 @@ describe("API errors", () => {
     expect(HttpApiSchema.getStatusError(NotFoundApiError.ast)).toBe(404)
     expect(HttpApiSchema.getStatusError(UsageLimitApiError.ast)).toBe(429)
     expect(HttpApiSchema.getStatusError(BackendApiError.ast)).toBe(503)
+    expect(HttpApiSchema.getStatusError(PluginDomainNotFoundApiError.ast)).toBe(
+      404
+    )
+    expect(
+      HttpApiSchema.getStatusError(PluginServerUnavailableApiError.ast)
+    ).toBe(503)
+    expect(
+      HttpApiSchema.getStatusError(PluginCredentialChangeSupersededApiError.ast)
+    ).toBe(409)
   })
 
   it("rejects unknown error codes at the HTTP boundary", () => {
