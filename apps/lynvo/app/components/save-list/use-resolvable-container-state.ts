@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
@@ -9,6 +9,7 @@ interface UseResolvableContainerStateOptions {
   item: LinkViewItem
   link: ExtractedLink
   actions: LinkItemActions
+  isResolving: boolean
 }
 
 const getResolvableContainerState = (
@@ -38,6 +39,7 @@ export const useResolvableContainerState = ({
   item,
   link,
   actions,
+  isResolving: isExternallyResolving,
 }: UseResolvableContainerStateOptions) => {
   const linkTarget = getMediaNodeTarget(link)
   const savedMirrors =
@@ -48,9 +50,17 @@ export const useResolvableContainerState = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [didResolutionFail, setDidResolutionFail] = useState(false)
   const [isResolving, setIsResolving] = useState(false)
+  const localResolveInFlight = useRef(false)
   const displaySize = link.size
+  const isResolveInFlight = () =>
+    isExternallyResolving || localResolveInFlight.current
 
   const resolveLink = async (bypassCache = false) => {
+    if (isResolveInFlight()) {
+      return
+    }
+
+    localResolveInFlight.current = true
     setDidResolutionFail(false)
     setIsExpanded(true)
     setIsResolving(true)
@@ -67,6 +77,7 @@ export const useResolvableContainerState = ({
         setDidResolutionFail(true)
       }
     } finally {
+      localResolveInFlight.current = false
       setIsResolving(false)
     }
   }
@@ -80,6 +91,10 @@ export const useResolvableContainerState = ({
   }
 
   const refreshLink = () => {
+    if (isResolveInFlight()) {
+      return
+    }
+
     setMirrors([])
     void resolveLink(true)
   }
