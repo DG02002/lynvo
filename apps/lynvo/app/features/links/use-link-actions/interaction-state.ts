@@ -63,23 +63,49 @@ export const useSelectionDialog = () => {
 export const useOpeningState = () => {
   const [isOpening, setIsOpening] = useState(false)
   const isOpeningRef = useRef(isOpening)
+  const visibilityChangeListenerRef = useRef<(() => void) | undefined>(
+    undefined
+  )
+  const openingResetTimerRef = useRef<
+    ReturnType<typeof setTimeout> | undefined
+  >(undefined)
+
+  const clearOpeningReset = useCallback(() => {
+    if (visibilityChangeListenerRef.current) {
+      document.removeEventListener(
+        "visibilitychange",
+        visibilityChangeListenerRef.current
+      )
+      visibilityChangeListenerRef.current = undefined
+    }
+    if (openingResetTimerRef.current !== undefined) {
+      clearTimeout(openingResetTimerRef.current)
+      openingResetTimerRef.current = undefined
+    }
+  }, [])
 
   useEffect(() => {
     isOpeningRef.current = isOpening
   }, [isOpening])
 
+  useEffect(() => clearOpeningReset, [clearOpeningReset])
+
   const resetOpeningWhenReady = useCallback(() => {
-    const reset = () => setIsOpening(false)
+    clearOpeningReset()
+    const reset = () => {
+      setIsOpening(false)
+      clearOpeningReset()
+    }
     const onVisChange = () => {
       if (document.visibilityState === "visible") {
         reset()
-        document.removeEventListener("visibilitychange", onVisChange)
       }
     }
 
+    visibilityChangeListenerRef.current = onVisChange
     document.addEventListener("visibilitychange", onVisChange)
-    setTimeout(reset, OPENING_RESET_DELAY_MS)
-  }, [])
+    openingResetTimerRef.current = setTimeout(reset, OPENING_RESET_DELAY_MS)
+  }, [clearOpeningReset])
 
   return { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady }
 }
