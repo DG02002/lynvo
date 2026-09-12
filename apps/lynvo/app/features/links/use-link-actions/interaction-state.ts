@@ -4,6 +4,11 @@ import { OPENING_RESET_DELAY_MS } from "./constants"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
+type PendingOpeningReset = {
+  listener: () => void
+  timer: ReturnType<typeof setTimeout>
+}
+
 export interface SelectionDialogState {
   open: boolean
   links: ExtractedLink[]
@@ -63,25 +68,19 @@ export const useSelectionDialog = () => {
 export const useOpeningState = () => {
   const [isOpening, setIsOpening] = useState(false)
   const isOpeningRef = useRef(isOpening)
-  const visibilityChangeListenerRef = useRef<(() => void) | undefined>(
+  const pendingOpeningResetRef = useRef<PendingOpeningReset | undefined>(
     undefined
   )
-  const openingResetTimerRef = useRef<
-    ReturnType<typeof setTimeout> | undefined
-  >(undefined)
 
   const clearOpeningReset = useCallback(() => {
-    if (visibilityChangeListenerRef.current) {
-      document.removeEventListener(
-        "visibilitychange",
-        visibilityChangeListenerRef.current
-      )
-      visibilityChangeListenerRef.current = undefined
+    const pendingReset = pendingOpeningResetRef.current
+    if (!pendingReset) {
+      return
     }
-    if (openingResetTimerRef.current !== undefined) {
-      clearTimeout(openingResetTimerRef.current)
-      openingResetTimerRef.current = undefined
-    }
+
+    document.removeEventListener("visibilitychange", pendingReset.listener)
+    clearTimeout(pendingReset.timer)
+    pendingOpeningResetRef.current = undefined
   }, [])
 
   useEffect(() => {
@@ -102,9 +101,11 @@ export const useOpeningState = () => {
       }
     }
 
-    visibilityChangeListenerRef.current = onVisChange
+    pendingOpeningResetRef.current = {
+      listener: onVisChange,
+      timer: setTimeout(reset, OPENING_RESET_DELAY_MS),
+    }
     document.addEventListener("visibilitychange", onVisChange)
-    openingResetTimerRef.current = setTimeout(reset, OPENING_RESET_DELAY_MS)
   }, [clearOpeningReset])
 
   return { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady }
