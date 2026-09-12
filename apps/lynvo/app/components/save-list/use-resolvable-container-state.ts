@@ -50,17 +50,17 @@ export const useResolvableContainerState = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [didResolutionFail, setDidResolutionFail] = useState(false)
   const [isResolving, setIsResolving] = useState(false)
-  const isResolutionInFlight = useRef(false)
+  const localResolveInFlight = useRef(false)
   const displaySize = link.size
   const isResolveInFlight = () =>
-    isExternallyResolving || isResolutionInFlight.current
+    isExternallyResolving || localResolveInFlight.current
 
   const resolveLink = async (bypassCache = false) => {
     if (isResolveInFlight()) {
       return
     }
 
-    isResolutionInFlight.current = true
+    localResolveInFlight.current = true
     setDidResolutionFail(false)
     setIsExpanded(true)
     setIsResolving(true)
@@ -77,7 +77,7 @@ export const useResolvableContainerState = ({
         setDidResolutionFail(true)
       }
     } finally {
-      isResolutionInFlight.current = false
+      localResolveInFlight.current = false
       setIsResolving(false)
     }
   }
