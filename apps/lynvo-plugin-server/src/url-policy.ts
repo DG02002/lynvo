@@ -38,3 +38,6 @@ export const decodeUrlComponent = (value: string): string => {
     )
   }
 }
+
+export const encodeUrlPathSegment = (value: string): string =>
+  encodeURIComponent(value)

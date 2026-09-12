@@ -15,7 +15,11 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-catalog"
-import { assertSafeUpstreamUrl, decodeUrlComponent } from "../url-policy"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
 import {
@@ -150,10 +154,7 @@ export const fetchOneDrive = async (
 }
 
 export const encodeOneDrivePath = (path: string): string =>
-  path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/")
+  path.split("/").map(encodeUrlPathSegment).join("/")
 
 export const createOneDriveNodes = ({
   items,

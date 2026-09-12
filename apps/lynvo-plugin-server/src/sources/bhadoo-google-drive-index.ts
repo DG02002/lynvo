@@ -19,7 +19,11 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-catalog"
-import { assertSafeUpstreamUrl, decodeUrlComponent } from "../url-policy"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
 import { extractDirectMedia } from "./direct-media"
@@ -136,7 +140,7 @@ const createBhadooFolderNodeUrl = (
     ? folderUrl.pathname
     : `${folderUrl.pathname}/`
   const nodeUrl = new URL(folderUrl.origin)
-  nodeUrl.pathname = `${pathname}${encodeURIComponent(item.name)}/`
+  nodeUrl.pathname = `${pathname}${encodeUrlPathSegment(item.name)}/`
   return nodeUrl.toString()
 }
 
@@ -166,7 +170,7 @@ export const createBhadooNodes = (
     const playableUrl = item.link
       ? new URL(item.link, folderUrl)
       : new URL(
-          item.name,
+          encodeUrlPathSegment(item.name),
           folderUrl.toString().endsWith("/") ? folderUrl : `${folderUrl}/`
         )
     playableUrl.username = ""

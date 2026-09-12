@@ -17,6 +17,7 @@ import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
 } from "../upstream-response"
+import { decodeUrlComponent } from "../url-policy"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
 import { Result, Schema } from "effect"
@@ -51,7 +52,7 @@ export const extractGoogleDriveFileId = (value: string | URL): string => {
       "The Google Drive URL does not contain a file id."
     )
   }
-  return decodeURIComponent(fileId)
+  return decodeUrlComponent(fileId)
 }
 
 export const createGoogleDriveDownloadUrl = (
@@ -83,7 +84,7 @@ export const extractGoogleDriveFolderId = (value: string | URL): string => {
       "The Google Drive URL does not contain a folder id."
     )
   }
-  return decodeURIComponent(folderId)
+  return decodeUrlComponent(folderId)
 }
 
 export interface GoogleDrivePublicFileMetadata {
@@ -105,7 +106,7 @@ const getContentDispositionFilename = (
     contentDisposition
   )?.[1]
   if (encodedFilename) {
-    return decodeURIComponent(encodedFilename)
+    return decodeUrlComponent(encodedFilename)
   }
   return /filename="([^"]+)"/i.exec(contentDisposition)?.[1]
 }
@@ -159,8 +160,7 @@ const decodeGoogleDriveFolderPayload = (payload: string): string => {
 
   while (index < payload.length) {
     const hexadecimalByte =
-      payload[index] === "\\" &&
-      (payload[index + 1] === "x" || payload[index + 1] === "X")
+      payload[index] === "\\" && payload[index + 1] === "x"
         ? payload.slice(index + 2, index + 4)
         : ""
     if (/^[0-9a-f]{2}$/i.test(hexadecimalByte)) {

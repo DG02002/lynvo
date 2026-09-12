@@ -7,21 +7,46 @@ import { assertSafeUpstreamUrl } from "./url-policy"
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+const REDIRECT_REQUEST_BODY_HEADERS = [
+  "Content-Encoding",
+  "Content-Language",
+  "Content-Location",
+  "Content-Type",
+] as const
 
 export class UpstreamPolicyError extends Error {}
 
 const normalizeRedirectRequest = (
   status: number,
+  redirect: { currentUrl: URL; nextUrl: URL },
   options: RequestInit
 ): RequestInit => {
   const method = (options.method ?? "GET").toUpperCase()
   const shouldConvertToGet =
     ((status === 301 || status === 302) && method === "POST") ||
     (status === 303 && method !== "GET" && method !== "HEAD")
+  const isCrossOrigin = redirect.currentUrl.origin !== redirect.nextUrl.origin
 
-  return shouldConvertToGet
-    ? { ...options, method: "GET", body: null }
-    : options
+  if (!shouldConvertToGet && !isCrossOrigin) {
+    return options
+  }
+
+  const headers = new Headers(options.headers)
+  if (shouldConvertToGet) {
+    for (const headerName of REDIRECT_REQUEST_BODY_HEADERS) {
+      headers.delete(headerName)
+    }
+  }
+  if (isCrossOrigin) {
+    headers.delete("Authorization")
+  }
+
+  const nextOptions: RequestInit = { ...options, headers }
+  if (shouldConvertToGet) {
+    nextOptions.method = "GET"
+    nextOptions.body = null
+  }
+  return nextOptions
 }
 
 const validateUpstreamUrl = (targetUrl: string): URL => {
@@ -60,7 +85,7 @@ const fetchValidatedUpstreamUrl = async (
   }
   return fetchValidatedUpstreamUrl(
     nextUrl,
-    normalizeRedirectRequest(response.status, options),
+    normalizeRedirectRequest(response.status, { currentUrl, nextUrl }, options),
     redirectCount + 1
   )
 }
