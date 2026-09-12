@@ -12,7 +12,7 @@ allowBuilds:
 blockExoticSubdeps: true
 
 minimumReleaseAge: 10080
-# Temporary exceptions for the Phase 1 plugin graph; remove after 2026-09-18.
+# The newly added Phase 1 graph entries are temporary; remove them after 2026-09-18.
 minimumReleaseAgeExclude:
   - cn@0.2.6
   - "@cloudflare/vitest-plugin@1.1.8"
