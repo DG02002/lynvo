@@ -6,7 +6,13 @@ export interface D1OwnershipReadPause {
 
 export const createD1OwnershipReadPause = (
   database: D1Database,
-  input: { queryFragment: string; rowId: string; label: string }
+  input: {
+    queryFragment: string
+    rowId: string
+    label: string
+    readMethod?: "first" | "all"
+    bindingIndex?: number
+  }
 ): D1OwnershipReadPause => {
   let readReached!: () => void
   const readReachedPromise = new Promise<void>((resolve) => {
@@ -27,21 +33,33 @@ export const createD1OwnershipReadPause = (
       const decoratedStatement = {
         bind(...values: unknown[]) {
           const bound = statement.bind(...values)
-          if (values[0] !== input.rowId) {
+          if (values[input.bindingIndex ?? 0] !== input.rowId) {
             return bound
           }
-          const pausedStatement = {
-            async first<Result>() {
-              const result = await bound.first<Result>()
-              if (!paused) {
-                paused = true
-                readReached()
-                await resumePromise
-              }
-              return result
-            },
+          const pauseRead = async <Result>(
+            read: () => Promise<Result>
+          ): Promise<Result> => {
+            const result = await read()
+            if (!paused) {
+              paused = true
+              readReached()
+              await resumePromise
+            }
+            return result
           }
-          // SAFETY: the targeted read only calls bind().first().
+          const pausedStatement =
+            input.readMethod === "all"
+              ? {
+                  async all<Result>() {
+                    return await pauseRead(() => bound.all<Result>())
+                  },
+                }
+              : {
+                  async first<Result>() {
+                    return await pauseRead(() => bound.first<Result>())
+                  },
+                }
+          // SAFETY: The selected read method matches the targeted operation.
           return pausedStatement as D1PreparedStatement
         },
       }

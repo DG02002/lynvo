@@ -7,13 +7,15 @@ import {
   type PluginDomainRow,
 } from "./rows"
 import {
+  createChangedWriteGuard,
   executeOwnedWrite,
   getDataVersion,
   type OwnedWriteGuard,
 } from "./data-version"
 import {
-  PLUGIN_DOMAIN_NOT_FOUND_MESSAGE,
-  PLUGIN_SERVER_NOT_FOUND_MESSAGE,
+  PluginCredentialChangeSupersededError,
+  PluginDomainNotFoundError,
+  PluginServerUnavailableError,
 } from "./errors"
 import {
   applyStorageMutation,
@@ -102,6 +104,18 @@ const createReadyPluginServerExistsSql = (
 ): string =>
   `EXISTS (SELECT 1 FROM user_plugin_servers WHERE id = ${pluginServerId} AND user_id = ${userId} AND credential_status = 'ready')`
 
+const createPluginDomainStateWhereSql = ({
+  id,
+  userId,
+  pluginServerId,
+  domain,
+  pluginId,
+  credentialGeneration,
+  credentialAttemptId,
+  credentialFinalizedAttemptId,
+}: PluginDomainStatePredicatePlaceholders): string =>
+  `id = ${id} AND user_id = ${userId} AND plugin_server_id = ${pluginServerId} AND domain = ${domain} AND plugin_id = ${pluginId} AND credential_generation IS ${credentialGeneration} AND credential_attempt_id IS ${credentialAttemptId} AND credential_finalized_attempt_id IS ${credentialFinalizedAttemptId} AND ${createReadyPluginServerExistsSql(pluginServerId, userId)}`
+
 const createPluginDomainStatePredicate = ({
   id,
   userId,
@@ -112,7 +126,37 @@ const createPluginDomainStatePredicate = ({
   credentialAttemptId,
   credentialFinalizedAttemptId,
 }: PluginDomainStatePredicatePlaceholders): string =>
-  `SELECT 1 FROM user_plugin_domains WHERE id = ${id} AND user_id = ${userId} AND plugin_server_id = ${pluginServerId} AND domain = ${domain} AND plugin_id = ${pluginId} AND credential_generation IS ${credentialGeneration} AND credential_attempt_id IS ${credentialAttemptId} AND credential_finalized_attempt_id IS ${credentialFinalizedAttemptId} AND ${createReadyPluginServerExistsSql(pluginServerId, userId)}`
+  `SELECT 1 FROM user_plugin_domains WHERE ${createPluginDomainStateWhereSql({
+    id,
+    userId,
+    pluginServerId,
+    domain,
+    pluginId,
+    credentialGeneration,
+    credentialAttemptId,
+    credentialFinalizedAttemptId,
+  })}`
+
+const pluginDomainStateBindings = (
+  row: PluginDomainRow
+): readonly unknown[] => [
+  row.id,
+  row.plugin_server_id,
+  row.domain,
+  row.plugin_id,
+  row.credential_generation,
+  row.credential_attempt_id,
+  row.credential_finalized_attempt_id,
+]
+
+const pluginDomainStateUpdateBindings = (
+  row: PluginDomainRow,
+  userId: string
+): readonly unknown[] => [
+  row.id,
+  userId,
+  ...pluginDomainStateBindings(row).slice(1),
+]
 
 interface PluginDomainWriteConditions {
   ledgerCondition: OwnedWriteGuard
@@ -122,15 +166,7 @@ interface PluginDomainWriteConditions {
 const pluginDomainWriteConditions = (
   row: PluginDomainRow
 ): PluginDomainWriteConditions => {
-  const conditionBindings = [
-    row.id,
-    row.plugin_server_id,
-    row.domain,
-    row.plugin_id,
-    row.credential_generation,
-    row.credential_attempt_id,
-    row.credential_finalized_attempt_id,
-  ]
+  const conditionBindings = pluginDomainStateBindings(row)
   return {
     ledgerCondition: {
       conditionSql: createPluginDomainStatePredicate({
@@ -181,9 +217,22 @@ const requireAuthorizedDomainRow = async (
 ): Promise<PluginDomainRow> => {
   const domain = await findDomainRowById(database, domainId)
   if (!domain || domain.user_id !== userId) {
-    throw new Error(PLUGIN_DOMAIN_NOT_FOUND_MESSAGE)
+    throw new PluginDomainNotFoundError()
   }
   return domain
+}
+
+const raisePluginDomainWriteConflict = async (
+  database: D1Database,
+  userId: string,
+  domainId: string
+): Promise<never> => {
+  const domain = await findDomainRowById(database, domainId)
+  if (!domain || domain.user_id !== userId) {
+    throw new PluginDomainNotFoundError()
+  }
+  await requireReadyPluginServerRow(database, userId, domain.plugin_server_id)
+  throw new PluginCredentialChangeSupersededError()
 }
 
 const findCredentialByDomainId = async (
@@ -205,13 +254,34 @@ const createOwnedPluginCredentialDeleteStatement = (
     credential: PluginCredentialRow
     userId: string
     pluginDomainId: string
+    domainState?: PluginDomainRow
   }
-): D1PreparedStatement =>
-  database
+): D1PreparedStatement => {
+  const domainStateCondition = input.domainState
+    ? ` AND EXISTS (${createPluginDomainStatePredicate({
+        id: "?4",
+        userId: "?5",
+        pluginServerId: "?6",
+        domain: "?7",
+        pluginId: "?8",
+        credentialGeneration: "?9",
+        credentialAttemptId: "?10",
+        credentialFinalizedAttemptId: "?11",
+      })})`
+    : ""
+  return database
     .prepare(
-      "DELETE FROM user_plugin_credentials WHERE id = ?1 AND user_id = ?2 AND plugin_domain_id = ?3"
+      `DELETE FROM user_plugin_credentials WHERE id = ?1 AND user_id = ?2 AND plugin_domain_id = ?3${domainStateCondition}`
     )
-    .bind(input.credential.id, input.userId, input.pluginDomainId)
+    .bind(
+      input.credential.id,
+      input.userId,
+      input.pluginDomainId,
+      ...(input.domainState
+        ? pluginDomainStateUpdateBindings(input.domainState, input.userId)
+        : [])
+    )
+}
 
 interface BuildCredentialDocumentInput {
   readonly userId: string
@@ -509,7 +579,7 @@ const insertNewPluginDomain = async ({
     guard: applied.guard,
   })
   if (!changed) {
-    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
+    throw new PluginServerUnavailableError()
   }
   return { id: domainRow.id, dataVersion }
 }
@@ -611,7 +681,7 @@ const updateExistingPluginDomain = async ({
     guard: applied.guard,
   })
   if (!changed) {
-    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
+    throw new PluginServerUnavailableError()
   }
   return { id: existingDomainRow.id, dataVersion }
 }
@@ -744,10 +814,10 @@ export const setPluginDomainCredential = async (
     database,
     userId,
     statements: prepared.statements,
-    guard: prepared.conditions.guard,
+    guard: createChangedWriteGuard(prepared.conditions.guard),
   })
   if (!changed) {
-    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
+    await raisePluginDomainWriteConflict(database, userId, input.domainId)
   }
   return dataVersion
 }
@@ -773,6 +843,11 @@ export const beginPluginDomainCredentialChange = async (
     userId,
     input.domainId
   )
+  await requireReadyPluginServerRow(
+    database,
+    userId,
+    domainRow.plugin_server_id
+  )
   const generation = (domainRow.credential_generation ?? 0) + 1
   const attemptId = crypto.randomUUID()
   const nextRow = {
@@ -781,6 +856,8 @@ export const beginPluginDomainCredentialChange = async (
     credential_attempt_id: attemptId,
     credential_finalized_attempt_id: null,
   }
+  const currentConditions = pluginDomainWriteConditions(domainRow)
+  const nextConditions = pluginDomainWriteConditions(nextRow)
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const ledgerMutation = applyStorageMutation({
     database,
@@ -792,8 +869,9 @@ export const beginPluginDomainCredentialChange = async (
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: currentConditions.ledgerCondition,
   })
-  const { dataVersion } = await executeOwnedWrite({
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements: [
@@ -801,11 +879,30 @@ export const beginPluginDomainCredentialChange = async (
       ...ledgerMutation.statements,
       database
         .prepare(
-          "UPDATE user_plugin_domains SET credential_generation = ?3, credential_attempt_id = ?4, credential_finalized_attempt_id = NULL WHERE id = ?1 AND user_id = ?2"
+          `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = ?10, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(
+            {
+              id: "?1",
+              userId: "?2",
+              pluginServerId: "?3",
+              domain: "?4",
+              pluginId: "?5",
+              credentialGeneration: "?6",
+              credentialAttemptId: "?7",
+              credentialFinalizedAttemptId: "?8",
+            }
+          )}`
         )
-        .bind(domainRow.id, userId, generation, attemptId),
+        .bind(
+          ...pluginDomainStateUpdateBindings(domainRow, userId),
+          generation,
+          attemptId
+        ),
     ],
+    guard: createChangedWriteGuard(nextConditions.guard),
   })
+  if (!changed) {
+    await raisePluginDomainWriteConflict(database, userId, input.domainId)
+  }
   return {
     id: domainRow.id,
     userId: domainRow.user_id,
@@ -838,7 +935,7 @@ export const finalizePluginDomainCredentialChange = async (
     domainRow.credential_generation !== input.generation ||
     domainRow.credential_attempt_id !== input.attemptId
   ) {
-    throw new Error("Plugin credential change was superseded")
+    throw new PluginCredentialChangeSupersededError()
   }
   if (domainRow.credential_finalized_attempt_id === input.attemptId) {
     return await getDataVersion(database, userId)
@@ -890,10 +987,10 @@ export const finalizePluginDomainCredentialChange = async (
           domainRow.plugin_server_id
         ),
     ],
-    guard: finalizedConditions.guard,
+    guard: createChangedWriteGuard(finalizedConditions.guard),
   })
   if (!changed) {
-    throw new Error(PLUGIN_SERVER_NOT_FOUND_MESSAGE)
+    await raisePluginDomainWriteConflict(database, userId, input.domainId)
   }
   return dataVersion
 }
@@ -908,6 +1005,11 @@ export const deletePluginDomainCredential = async (
     userId,
     input.domainId
   )
+  await requireReadyPluginServerRow(
+    database,
+    userId,
+    domainRow.plugin_server_id
+  )
   const existingCredential = await findCredentialByDomainId(
     database,
     domainRow.id
@@ -918,6 +1020,8 @@ export const deletePluginDomainCredential = async (
     credential_attempt_id: null,
     credential_finalized_attempt_id: null,
   }
+  const currentConditions = pluginDomainWriteConditions(domainRow)
+  const revokedConditions = pluginDomainWriteConditions(revokedRow)
   const preparation = await ensureStorageLedger(database, userId, input.now)
   const revocationLedgerMutation = applyStorageMutation({
     database,
@@ -929,16 +1033,9 @@ export const deletePluginDomainCredential = async (
       savedLinkCountDelta: 0,
     },
     now: input.now,
+    condition: currentConditions.ledgerCondition,
   })
-  const statements: D1PreparedStatement[] = [
-    ...preparation.statements,
-    ...revocationLedgerMutation.statements,
-    database
-      .prepare(
-        "UPDATE user_plugin_domains SET credential_generation = ?3, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE id = ?1 AND user_id = ?2"
-      )
-      .bind(domainRow.id, userId, revokedRow.credential_generation),
-  ]
+  const statements: D1PreparedStatement[] = [...preparation.statements]
   if (existingCredential) {
     const credentialLedgerMutation = applyStorageMutation({
       database,
@@ -950,6 +1047,7 @@ export const deletePluginDomainCredential = async (
         savedLinkCountDelta: 0,
       },
       now: input.now,
+      condition: currentConditions.ledgerCondition,
     })
     statements.push(
       ...credentialLedgerMutation.statements,
@@ -957,14 +1055,41 @@ export const deletePluginDomainCredential = async (
         credential: existingCredential,
         userId,
         pluginDomainId: domainRow.id,
+        domainState: domainRow,
       })
     )
   }
-  const { dataVersion } = await executeOwnedWrite({
+  statements.push(
+    ...revocationLedgerMutation.statements,
+    database
+      .prepare(
+        `UPDATE user_plugin_domains SET credential_generation = ?9, credential_attempt_id = NULL, credential_finalized_attempt_id = NULL WHERE ${createPluginDomainStateWhereSql(
+          {
+            id: "?1",
+            userId: "?2",
+            pluginServerId: "?3",
+            domain: "?4",
+            pluginId: "?5",
+            credentialGeneration: "?6",
+            credentialAttemptId: "?7",
+            credentialFinalizedAttemptId: "?8",
+          }
+        )}`
+      )
+      .bind(
+        ...pluginDomainStateUpdateBindings(domainRow, userId),
+        revokedRow.credential_generation
+      )
+  )
+  const { dataVersion, changed } = await executeOwnedWrite({
     database,
     userId,
     statements,
+    guard: createChangedWriteGuard(revokedConditions.guard),
   })
+  if (!changed) {
+    await raisePluginDomainWriteConflict(database, userId, input.domainId)
+  }
   return dataVersion
 }
 

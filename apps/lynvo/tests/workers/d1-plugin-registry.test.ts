@@ -670,6 +670,122 @@ describe("d1 plugin registry", () => {
     expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
   })
 
+  it("does not begin a credential change after its plugin server changes ownership", async () => {
+    const owner = await createUser()
+    const newOwner = await createUser()
+    const server = await registerReadyServer(
+      owner.id,
+      "https://begin-credential-race.example"
+    )
+    const created = await upsertPluginDomain(env.DB, owner.id, {
+      domain: "begin-credential-race.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+    const ledgerBefore = await getStorageLedger(env.DB, owner.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: owner.id,
+      label: "Plugin credential change",
+    })
+    const beginPromise = beginPluginDomainCredentialChange(
+      pause.database,
+      owner.id,
+      { domainId: created.id, now: NOW + 1_000 }
+    )
+
+    await pause.waitForRead(beginPromise)
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET user_id = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, newOwner.id)
+      .run()
+    pause.resume()
+
+    await expect(beginPromise).rejects.toThrow(
+      "Plugin server not found or no longer available"
+    )
+    const domain = await env.DB.prepare(
+      "SELECT credential_generation, credential_attempt_id, credential_finalized_attempt_id FROM user_plugin_domains WHERE id = ?1"
+    )
+      .bind(created.id)
+      .first<{
+        credential_generation: number
+        credential_attempt_id: string | null
+        credential_finalized_attempt_id: string | null
+      }>()
+    expect(domain).toEqual({
+      credential_generation: 1,
+      credential_attempt_id: null,
+      credential_finalized_attempt_id: null,
+    })
+    expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
+  })
+
+  it("does not revoke a domain credential after its plugin server changes ownership", async () => {
+    const owner = await createUser()
+    const newOwner = await createUser()
+    const server = await registerReadyServer(
+      owner.id,
+      "https://revoke-credential-race.example"
+    )
+    const created = await upsertPluginDomain(env.DB, owner.id, {
+      domain: "revoke-credential-race.example",
+      pluginServerId: server.id,
+      pluginId: "plugin-1",
+      credential: credential(),
+      now: NOW,
+    })
+    const ledgerBefore = await getStorageLedger(env.DB, owner.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: owner.id,
+      label: "Plugin credential revoke",
+    })
+    const revokePromise = deletePluginDomainCredential(
+      pause.database,
+      owner.id,
+      { domainId: created.id, now: NOW + 1_000 }
+    )
+
+    await pause.waitForRead(revokePromise)
+    await env.DB.prepare(
+      "UPDATE user_plugin_servers SET user_id = ?2 WHERE id = ?1"
+    )
+      .bind(server.id, newOwner.id)
+      .run()
+    pause.resume()
+
+    await expect(revokePromise).rejects.toThrow(
+      "Plugin server not found or no longer available"
+    )
+    const [domain, storedCredential] = await Promise.all([
+      env.DB.prepare(
+        "SELECT credential_generation, credential_attempt_id, credential_finalized_attempt_id FROM user_plugin_domains WHERE id = ?1"
+      )
+        .bind(created.id)
+        .first<{
+          credential_generation: number
+          credential_attempt_id: string | null
+          credential_finalized_attempt_id: string | null
+        }>(),
+      env.DB.prepare(
+        "SELECT ciphertext FROM user_plugin_credentials WHERE plugin_domain_id = ?1"
+      )
+        .bind(created.id)
+        .first<{ ciphertext: string }>(),
+    ])
+    expect(domain).toEqual({
+      credential_generation: 1,
+      credential_attempt_id: null,
+      credential_finalized_attempt_id: null,
+    })
+    expect(storedCredential).toEqual({ ciphertext: "ciphertext" })
+    expect(await getStorageLedger(env.DB, owner.id)).toEqual(ledgerBefore)
+  })
+
   it("does not finalize a domain credential after its plugin server changes ownership", async () => {
     const owner = await createUser()
     const newOwner = await createUser()

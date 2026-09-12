@@ -1,6 +1,6 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
 import type { OwnedWriteGuard } from "./data-version"
-import { LINK_NOT_FOUND_MESSAGE } from "./errors"
+import { LinkNotFoundError } from "./errors"
 import type { LinkRow } from "./rows"
 import {
   SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
@@ -11,7 +11,7 @@ const SAVED_LINK_OPERATION_RESERVED_STATE = "reserved"
 const SAVED_LINK_OPERATION_COMPLETED_STATE = "completed"
 const SAVED_LINK_DELETE_CLAIMED_COMMAND = "delete:claimed"
 const RESERVED_SAVED_LINK_OPERATION_STATE = `state = '${SAVED_LINK_OPERATION_RESERVED_STATE}'`
-const RESERVED_SAVED_LINK_OPERATION_CONDITION = `state = '${SAVED_LINK_OPERATION_RESERVED_STATE}' AND link_id IS NULL`
+const RESERVED_SAVED_LINK_OPERATION_CONDITION = `${RESERVED_SAVED_LINK_OPERATION_STATE} AND link_id IS NULL`
 const NO_SAVED_LINKS_CONDITION =
   "NOT EXISTS (SELECT 1 FROM links WHERE user_id = ?1)"
 
@@ -241,7 +241,7 @@ export const requireOwnedSavedLink = async (
 ): Promise<LinkRow> => {
   const existing = await findSavedLinkById(database, linkId)
   if (!existing || existing.user_id !== userId) {
-    throw new Error(LINK_NOT_FOUND_MESSAGE)
+    throw new LinkNotFoundError()
   }
   return existing
 }

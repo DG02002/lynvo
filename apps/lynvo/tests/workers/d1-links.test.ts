@@ -71,6 +71,44 @@ const emptyMetadataJson = () =>
     playback: { openedUrls: [], resolvedMirrors: {} },
   })
 
+const seedLinksAtCapacity = async (userId: string): Promise<string> => {
+  const seedPrefix = `link-seed-${crypto.randomUUID()}`
+  const seedStatements: D1PreparedStatement[] = []
+  for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
+    seedStatements.push(
+      env.DB.prepare(
+        "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, NULL, ?4, NULL, ?5, ?5, ?6)"
+      ).bind(
+        `${seedPrefix}-${index}`,
+        userId,
+        `https://example.com/${seedPrefix}-${index}`,
+        EMPTY_LINK_METADATA_JSON,
+        NOW + index * 1_000,
+        NOW + index * 1_000 + 30 * DAY_MS
+      )
+    )
+  }
+  const batchChunkSize = 100
+  for (
+    let batchOffset = 0;
+    batchOffset < seedStatements.length;
+    batchOffset += batchChunkSize
+  ) {
+    await env.DB.batch(
+      seedStatements.slice(batchOffset, batchOffset + batchChunkSize)
+    )
+  }
+  return seedPrefix
+}
+
+const expectLedgerMatchesInventory = async (userId: string) => {
+  const [ledger, inventory] = await Promise.all([
+    getStorageLedger(env.DB, userId),
+    calculateAppOwnedStorageUsage(env.DB, userId),
+  ])
+  expect(ledger).toMatchObject(inventory)
+}
+
 type SavedLinkOperationPausePoint = "after-reservation" | "before-completion"
 
 const createSavedLinkOperationPause = (
@@ -879,6 +917,76 @@ describe("d1 links", () => {
     expect(ledger).toMatchObject(inventory)
   })
 
+  it("does not double-decrement storage when retention races a direct delete", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "retention-race:create",
+      url: "https://example.com/retention-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const linkId = created.id ?? ""
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE user_id = ?1 AND created_at < ?2",
+      rowId: user.id,
+      label: "Retention sweep",
+      readMethod: "all",
+    })
+    const retentionPromise = deleteExpiredLinksForUser({
+      database: pause.database,
+      userId: user.id,
+      retentionDays: 7,
+      now: NOW + 8 * DAY_MS,
+    })
+
+    await pause.waitForRead(retentionPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "retention-race:direct",
+      id: linkId,
+      now: NOW + 8 * DAY_MS,
+    })
+    pause.resume()
+    await retentionPromise
+
+    expect(direct.success).toBe(true)
+    expect(
+      (await listSavedLinksWithDataVersion(env.DB, user.id, NOW)).results
+    ).toHaveLength(0)
+    await expectLedgerMatchesInventory(user.id)
+  })
+
+  it("does not double-decrement storage when scheduled retention races a direct delete", async () => {
+    const user = await createUser()
+    const created = await createOrUpdateSavedLink(env.DB, user.id, {
+      operationId: "scheduled-retention-race:create",
+      url: "https://example.com/scheduled-retention-race",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    })
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM storage_ledgers WHERE user_id = ?1",
+      rowId: user.id,
+      label: "Scheduled retention",
+    })
+    const sweepPromise = sweepExpiredLinks(pause.database, NOW + 31 * DAY_MS)
+
+    await pause.waitForRead(sweepPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "scheduled-retention-race:direct",
+      id: created.id ?? "",
+      now: NOW + 31 * DAY_MS,
+    })
+    pause.resume()
+    const sweep = await sweepPromise
+
+    expect(direct.success).toBe(true)
+    expect(sweep.deletedLinks).toBeGreaterThanOrEqual(1)
+    expect(
+      (await listSavedLinksWithDataVersion(env.DB, user.id, NOW)).results
+    ).toHaveLength(0)
+    await expectLedgerMatchesInventory(user.id)
+  })
+
   it("does not resurrect a removed child and rejects stale replacement", async () => {
     const user = await createUser()
     const created = await createOrUpdateSavedLink(env.DB, user.id, {
@@ -1082,31 +1190,7 @@ describe("d1 links", () => {
 
   it("evicts the oldest link beyond the retention count", async () => {
     const user = await createUser()
-    const seedStatements: D1PreparedStatement[] = []
-    for (let index = 0; index < LINKS_MAX_COUNT; index += 1) {
-      seedStatements.push(
-        env.DB.prepare(
-          "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at) VALUES (?1, ?2, ?3, NULL, ?4, NULL, ?5, ?5, ?6)"
-        ).bind(
-          `link-seed-${index}`,
-          user.id,
-          `https://example.com/lru-${index}`,
-          EMPTY_LINK_METADATA_JSON,
-          NOW + index * 1_000,
-          NOW + index * 1_000 + 30 * DAY_MS
-        )
-      )
-    }
-    const batchChunkSize = 100
-    for (
-      let batchOffset = 0;
-      batchOffset < seedStatements.length;
-      batchOffset += batchChunkSize
-    ) {
-      await env.DB.batch(
-        seedStatements.slice(batchOffset, batchOffset + batchChunkSize)
-      )
-    }
+    const seedPrefix = await seedLinksAtCapacity(user.id)
     await createOrUpdateSavedLink(env.DB, user.id, {
       meta: emptyMetadataJson(),
       operationId: "lru:newest",
@@ -1121,11 +1205,56 @@ describe("d1 links", () => {
     expect(snapshot.results).toHaveLength(LINKS_MAX_COUNT)
     expect(snapshot.results[0]?.url).toBe("https://example.com/lru-newest")
     expect(
-      snapshot.results.find((link) => link.url === "https://example.com/lru-0")
+      snapshot.results.find(
+        (link) => link.url === `https://example.com/${seedPrefix}-0`
+      )
     ).toBeUndefined()
     expect(
-      snapshot.results.find((link) => link.url === "https://example.com/lru-1")
+      snapshot.results.find(
+        (link) => link.url === `https://example.com/${seedPrefix}-1`
+      )
     ).toBeDefined()
+  })
+
+  it("does not double-decrement storage when eviction races a direct delete", async () => {
+    const user = await createUser()
+    const seedPrefix = await seedLinksAtCapacity(user.id)
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment:
+        "FROM links WHERE user_id = ?1 ORDER BY created_at ASC LIMIT 1",
+      rowId: user.id,
+      label: "Saved link eviction",
+    })
+    const createPromise = createOrUpdateSavedLink(pause.database, user.id, {
+      operationId: "eviction-race:create",
+      meta: emptyMetadataJson(),
+      url: "https://example.com/eviction-race",
+      now: NOW + (LINKS_MAX_COUNT + 1) * 1_000,
+    })
+
+    await pause.waitForRead(createPromise)
+    const direct = await deleteSavedLinkById(env.DB, user.id, {
+      operationId: "eviction-race:direct",
+      id: `${seedPrefix}-0`,
+      now: NOW + (LINKS_MAX_COUNT + 2) * 1_000,
+    })
+    pause.resume()
+    const created = await createPromise
+
+    expect(direct.success).toBe(true)
+    expect(created.id).toBeTruthy()
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + (LINKS_MAX_COUNT + 3) * 1_000
+    )
+    expect(snapshot.results).toHaveLength(LINKS_MAX_COUNT)
+    expect(
+      snapshot.results.find(
+        (link) => link.url === "https://example.com/eviction-race"
+      )
+    ).toBeDefined()
+    await expectLedgerMatchesInventory(user.id)
   })
 
   it("backfills expires_at on retention change and sweeps expired links", async () => {

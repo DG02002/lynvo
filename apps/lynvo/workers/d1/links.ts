@@ -21,9 +21,11 @@ import type {
 } from "../../app/features/links/types"
 import { Schema } from "effect"
 import {
+  CHANGED_ROWS_GUARD,
   createDataVersionBumpStatement,
   executeOwnedWrite,
   getDataVersion,
+  type OwnedWriteGuard,
   type OwnedWriteResult,
 } from "./data-version"
 import {
@@ -32,8 +34,9 @@ import {
   byteLength,
   createClearSavedLinksLedgerStatement,
   ensureStorageLedger,
+  type StorageLedgerPreparation,
 } from "./storage-ledger"
-import { LINK_NOT_FOUND_MESSAGE } from "./errors"
+import { LinkNotFoundError } from "./errors"
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
 import {
@@ -291,6 +294,37 @@ const createOwnedLinkDeletionStatements = (
   ]
 }
 
+const createSavedLinkExistsCondition = (
+  row: OwnedLinkIdentity
+): OwnedWriteGuard => ({
+  conditionSql: "SELECT 1 FROM links WHERE id = ?6 AND user_id = ?1",
+  conditionBindings: [row.id],
+})
+
+const createSavedLinkDeletionLedgerMutation = ({
+  database,
+  preparation,
+  row,
+  now,
+}: {
+  database: D1Database
+  preparation: StorageLedgerPreparation
+  row: LinkRow
+  now: number
+}) =>
+  applyStorageMutation({
+    database,
+    preparation,
+    plan: {
+      domain: "linkBytes",
+      currentBytes: byteLength(row),
+      nextBytes: 0,
+      savedLinkCountDelta: -1,
+    },
+    now,
+    condition: createSavedLinkExistsCondition(row),
+  })
+
 interface ClearSavedLinksResult {
   success: boolean
   replayed: boolean
@@ -300,8 +334,7 @@ interface ClearSavedLinksResult {
 
 interface ExpiredLinkUserSummary {
   userId: string
-  totalBytes: number
-  linkCount: number
+  rows: LinkRow[]
 }
 
 interface PreparedExpiredLinkUserMutation {
@@ -633,7 +666,7 @@ const executeDeleteSavedLink = async (
     guard: createSavedLinkDeleteGuard(deleteOperation),
   })
   if (!changed) {
-    throw new Error(LINK_NOT_FOUND_MESSAGE)
+    throw new LinkNotFoundError()
   }
   return { success: true, replayed: false, dataVersion }
 }
@@ -1024,15 +1057,10 @@ const insertNewSavedLink = async ({
   const preparation = await ensureStorageLedger(database, userId, input.now)
   assertLinkSize(byteLength(newRow))
   const evictionMutation = oldestRow
-    ? applyStorageMutation({
+    ? createSavedLinkDeletionLedgerMutation({
         database,
         preparation,
-        plan: {
-          domain: "linkBytes",
-          currentBytes: byteLength(oldestRow),
-          nextBytes: 0,
-          savedLinkCountDelta: -1,
-        },
+        row: oldestRow,
         now: input.now,
       })
     : undefined
@@ -1052,10 +1080,10 @@ const insertNewSavedLink = async ({
     userId,
     statements: [
       ...preparation.statements,
+      ...(evictionMutation?.statements ?? []),
       ...(oldestRow
         ? [...createOwnedLinkDeletionStatements(database, [oldestRow])]
         : []),
-      ...(evictionMutation?.statements ?? []),
       database
         .prepare(
           "INSERT INTO links (id, user_id, url, title, meta_json, opened_at, created_at, updated_at, expires_at, extraction_state, extraction_error, extraction_attempts, extraction_available_at, extraction_lease_expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
@@ -1446,30 +1474,25 @@ export const deleteExpiredLinksForUser = async ({
       dataVersion: await getDataVersion(database, userId),
     }
   }
-  const totalBytes = results.reduce<number>(
-    (totalRowBytes, row) => totalRowBytes + byteLength(row),
-    0
-  )
   const preparation = await ensureStorageLedger(database, userId, now)
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: totalBytes,
-      nextBytes: 0,
-      savedLinkCountDelta: -results.length,
-    },
-    now,
-  })
+  const ledgerStatements = results.flatMap(
+    (row) =>
+      createSavedLinkDeletionLedgerMutation({
+        database,
+        preparation,
+        row,
+        now,
+      }).statements
+  )
   const { dataVersion } = await executeOwnedWrite({
     database,
     userId,
     statements: [
       ...preparation.statements,
+      ...ledgerStatements,
       ...createOwnedLinkDeletionStatements(database, results),
-      ...ledgerMutation.statements,
     ],
+    guard: CHANGED_ROWS_GUARD,
   })
   return { deletedCount: results.length, dataVersion }
 }
@@ -1494,14 +1517,12 @@ const summarizeExpiredLinksByUser = (
   for (const row of rows) {
     const existingSummary = summariesByUser.get(row.user_id)
     if (existingSummary) {
-      existingSummary.totalBytes += byteLength(row)
-      existingSummary.linkCount += 1
+      existingSummary.rows.push(row)
       continue
     }
     summariesByUser.set(row.user_id, {
       userId: row.user_id,
-      totalBytes: byteLength(row),
-      linkCount: 1,
+      rows: [row],
     })
   }
   return [...summariesByUser.values()]
@@ -1513,22 +1534,25 @@ const prepareExpiredLinkUserMutation = async (
   now: number
 ): Promise<PreparedExpiredLinkUserMutation> => {
   const preparation = await ensureStorageLedger(database, summary.userId, now)
-  const ledgerMutation = applyStorageMutation({
-    database,
-    preparation,
-    plan: {
-      domain: "linkBytes",
-      currentBytes: summary.totalBytes,
-      nextBytes: 0,
-      savedLinkCountDelta: -summary.linkCount,
-    },
-    now,
-  })
+  const ledgerStatements = summary.rows.flatMap(
+    (row) =>
+      createSavedLinkDeletionLedgerMutation({
+        database,
+        preparation,
+        row,
+        now,
+      }).statements
+  )
   return {
-    statements: [...preparation.statements, ...ledgerMutation.statements],
+    statements: [
+      ...preparation.statements,
+      ...ledgerStatements,
+      ...createOwnedLinkDeletionStatements(database, summary.rows),
+    ],
     dataVersionStatement: createDataVersionBumpStatement(
       database,
-      summary.userId
+      summary.userId,
+      CHANGED_ROWS_GUARD
     ),
   }
 }
@@ -1539,7 +1563,6 @@ const prepareExpiredLinkBatchStatements = async (
   now: number
 ): Promise<{
   statements: D1PreparedStatement[]
-  dataVersionStatements: D1PreparedStatement[]
 }> => {
   const summaries = summarizeExpiredLinksByUser(rows)
   const preparedUsers = await Promise.all(
@@ -1548,12 +1571,11 @@ const prepareExpiredLinkBatchStatements = async (
     )
   )
   const statements: D1PreparedStatement[] = []
-  const dataVersionStatements: D1PreparedStatement[] = []
   for (const preparedUser of preparedUsers) {
     statements.push(...preparedUser.statements)
-    dataVersionStatements.push(preparedUser.dataVersionStatement)
+    statements.push(preparedUser.dataVersionStatement)
   }
-  return { statements, dataVersionStatements }
+  return { statements }
 }
 
 const processExpiredLinkBatch = async (
@@ -1564,10 +1586,11 @@ const processExpiredLinkBatch = async (
   if (!rows) {
     return undefined
   }
-  const { statements, dataVersionStatements } =
-    await prepareExpiredLinkBatchStatements(database, rows, now)
-  statements.push(...createOwnedLinkDeletionStatements(database, rows))
-  statements.push(...dataVersionStatements)
+  const { statements } = await prepareExpiredLinkBatchStatements(
+    database,
+    rows,
+    now
+  )
   await database.batch(statements)
   return {
     deletedLinks: rows.length,

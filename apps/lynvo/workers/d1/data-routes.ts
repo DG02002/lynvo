@@ -17,7 +17,7 @@ import {
 import { isSameOriginRequest } from "../same-origin"
 import { getD1Database } from "./db"
 import {
-  LINK_NOT_FOUND_MESSAGE,
+  LinkNotFoundError,
   LinkTooLargeError,
   StorageLimitError,
 } from "./errors"
@@ -112,15 +112,15 @@ dataApp.onError(async (error, context) => {
       422
     )
   }
-  const message = error instanceof Error ? error.message : String(error)
-  if (message === LINK_NOT_FOUND_MESSAGE) {
+  if (error instanceof LinkNotFoundError) {
     return await respondDataFailure({
       context,
       status: 404,
       kind: "validation",
-      message,
+      message: error.message,
     })
   }
+  const message = error instanceof Error ? error.message : String(error)
   if (message === EXTRACTION_CONFLICT_MESSAGE) {
     return await respondDataFailure({
       context,
