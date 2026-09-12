@@ -13,7 +13,7 @@ describe("Account erasure HTTP behavior", () => {
     const { default: worker } = await import("../../workers/app")
     const environment = createWorkerEnvironment({
       database,
-      environment: "development",
+      environment: "production",
       userRealtimeRoom: {
         getByName: () => ({
           fetch: async (_url: string, init?: RequestInit) => {

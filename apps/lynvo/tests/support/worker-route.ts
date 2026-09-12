@@ -7,6 +7,8 @@ const DEFAULT_USER_ID = "user-1"
 const DEFAULT_SESSION_ID = "session-1"
 const DEFAULT_EMAIL = "user@example.com"
 const USER_BY_ID_QUERY = `SELECT ${USER_COLUMNS} FROM users WHERE id = ?1`
+export const SESSION_USER_ID_QUERY =
+  "SELECT user_id FROM sessions WHERE id = ?1"
 
 const isAuthenticatedSessionQuery = (sql: string): boolean =>
   sql.includes("SELECT s.id AS session_id") &&

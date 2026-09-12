@@ -5,15 +5,14 @@ import {
   createAuthenticatedWorkerDatabase,
   createWorkerEnvironment,
   createWorkerExecutionContext,
+  SESSION_USER_ID_QUERY,
 } from "../support/worker-route"
 
 describe("Settings Worker contract", () => {
   it("returns a not-found error for a missing session", async () => {
     const database = createAuthenticatedWorkerDatabase({
       handler: (sql) =>
-        sql === "SELECT user_id FROM sessions WHERE id = ?1"
-          ? { rows: [] }
-          : undefined,
+        sql === SESSION_USER_ID_QUERY ? { rows: [] } : undefined,
     })
     const response = await app.fetch(
       await buildAuthenticatedWorkerRequest(
