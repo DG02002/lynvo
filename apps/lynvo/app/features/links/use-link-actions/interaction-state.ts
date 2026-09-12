@@ -101,11 +101,9 @@ export const useOpeningState = () => {
       }
     }
 
-    pendingOpeningResetRef.current = {
-      listener: onVisChange,
-      timer: setTimeout(reset, OPENING_RESET_DELAY_MS),
-    }
+    const timer = setTimeout(reset, OPENING_RESET_DELAY_MS)
     document.addEventListener("visibilitychange", onVisChange)
+    pendingOpeningResetRef.current = { listener: onVisChange, timer }
   }, [clearOpeningReset])
 
   return { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady }
