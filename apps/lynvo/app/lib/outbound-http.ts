@@ -42,6 +42,11 @@ declare global {
     options: OutboundHttpRequestOptions
   }
 
+  interface OutboundFetchResult {
+    response: Response
+    controller: AbortController
+  }
+
   interface OutboundRedirectInput {
     response: Response
     redirectCount: number
@@ -139,10 +144,7 @@ const fetchOutboundRequest = async ({
   requestFetch,
   requestState,
   options,
-}: OutboundRequestAttempt): Promise<{
-  response: Response
-  controller: AbortController
-}> => {
+}: OutboundRequestAttempt): Promise<OutboundFetchResult> => {
   const controller = new AbortController()
   const timeoutId = setTimeout(
     () => controller.abort(),
@@ -164,12 +166,6 @@ const fetchOutboundRequest = async ({
     clearTimeout(timeoutId)
   }
 }
-
-const createResponseTooLargeError = (): OutboundHttpError =>
-  new OutboundHttpError(
-    "RESPONSE_TOO_LARGE",
-    "Outbound response exceeded the byte limit"
-  )
 
 const combineOutboundResponseChunks = (
   chunks: readonly Uint8Array[]
@@ -200,7 +196,10 @@ const readOutboundResponseChunks = async (
   const rejectOversizedResponse = async (): Promise<never> => {
     controller.abort()
     await reader.cancel().catch(() => undefined)
-    throw createResponseTooLargeError()
+    throw new OutboundHttpError(
+      "RESPONSE_TOO_LARGE",
+      "Outbound response exceeded the byte limit"
+    )
   }
   try {
     while (true) {

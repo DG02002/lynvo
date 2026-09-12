@@ -70,10 +70,16 @@ describe("outbound HTTP safety boundary", () => {
     const totalChunks = 100
     let chunksPulled = 0
     let bytesPulled = 0
-    let cancelled = false
+    let responseBodyAborted = false
+    let responseBodyController:
+      | ReadableStreamDefaultController<Uint8Array>
+      | undefined
     let requestSignal: AbortSignal | undefined
     const body = new ReadableStream<Uint8Array>(
       {
+        start(controller) {
+          responseBodyController = controller
+        },
         pull(controller) {
           if (chunksPulled === totalChunks) {
             controller.close()
@@ -84,9 +90,6 @@ describe("outbound HTTP safety boundary", () => {
           bytesPulled += chunk.byteLength
           controller.enqueue(chunk)
         },
-        cancel() {
-          cancelled = true
-        },
       },
       { highWaterMark: 0 }
     )
@@ -94,6 +97,14 @@ describe("outbound HTTP safety boundary", () => {
       .fn<typeof globalThis.fetch>()
       .mockImplementationOnce(async (request) => {
         requestSignal = request instanceof Request ? request.signal : undefined
+        requestSignal?.addEventListener(
+          "abort",
+          () => {
+            responseBodyAborted = true
+            responseBodyController?.error(new Error("Request aborted"))
+          },
+          { once: true }
+        )
         return new Response(body)
       })
     const transport = createOutboundHttpTransport({ fetch })
@@ -109,7 +120,7 @@ describe("outbound HTTP safety boundary", () => {
     })
     expect(bytesPulled).toBeLessThan(totalChunks * chunkSize)
     expect(bytesPulled).toBeLessThanOrEqual(maximumResponseBytes + chunkSize)
-    expect(cancelled).toBe(true)
+    expect(responseBodyAborted).toBe(true)
     expect(requestSignal?.aborted).toBe(true)
   })
 })
