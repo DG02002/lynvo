@@ -1,4 +1,4 @@
-import { SELF } from "cloudflare:test"
+import { exports } from "cloudflare:workers"
 import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -21,7 +21,9 @@ const authenticatedHeaders = {
 
 describe("Lynvo Plugin Server protocol routes", () => {
   it("serves a public valid manifest", async () => {
-    const response = await SELF.fetch("https://worker.example/manifest")
+    const response = await exports.default.fetch(
+      "https://worker.example/manifest"
+    )
     const manifest: unknown = await response.json()
 
     expect(response.status).toBe(200)
@@ -32,13 +34,19 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("requires the configured bearer credential", async () => {
-    const denied = await SELF.fetch("https://worker.example/verify", {
-      method: "POST",
-    })
-    const accepted = await SELF.fetch("https://worker.example/verify", {
-      method: "POST",
-      headers: authenticatedHeaders,
-    })
+    const denied = await exports.default.fetch(
+      "https://worker.example/verify",
+      {
+        method: "POST",
+      }
+    )
+    const accepted = await exports.default.fetch(
+      "https://worker.example/verify",
+      {
+        method: "POST",
+        headers: authenticatedHeaders,
+      }
+    )
 
     expect(denied.status).toBe(401)
     expect(await denied.json()).toMatchObject({
@@ -49,9 +57,12 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("reports finite enforced usage", async () => {
-    const response = await SELF.fetch("https://worker.example/usage", {
-      headers: authenticatedHeaders,
-    })
+    const response = await exports.default.fetch(
+      "https://worker.example/usage",
+      {
+        headers: authenticatedHeaders,
+      }
+    )
     const usage: unknown = await response.json()
 
     expect(response.status).toBe(200)
@@ -59,13 +70,16 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("discovers index URLs without Lynvo knowing their URL pattern", async () => {
-    const response = await SELF.fetch("https://worker.example/discover", {
-      method: "POST",
-      headers: authenticatedHeaders,
-      body: JSON.stringify({
-        url: "https://unknown.example/0:/Collections/",
-      }),
-    })
+    const response = await exports.default.fetch(
+      "https://worker.example/discover",
+      {
+        method: "POST",
+        headers: authenticatedHeaders,
+        body: JSON.stringify({
+          url: "https://unknown.example/0:/Collections/",
+        }),
+      }
+    )
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
@@ -76,28 +90,35 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("does not claim unrelated URLs during discovery", async () => {
-    const response = await SELF.fetch("https://worker.example/discover", {
-      method: "POST",
-      headers: authenticatedHeaders,
-      body: JSON.stringify({ url: "https://unknown.example/movies/" }),
-    })
+    const response = await exports.default.fetch(
+      "https://worker.example/discover",
+      {
+        method: "POST",
+        headers: authenticatedHeaders,
+        body: JSON.stringify({ url: "https://unknown.example/movies/" }),
+      }
+    )
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ matched: false })
   })
 
   it("extracts a direct drive-index media node", async () => {
-    const response = await SELF.fetch("https://worker.example/extract", {
-      method: "POST",
-      headers: authenticatedHeaders,
-      body: JSON.stringify({
-        pluginId: "bhadoo-google-drive-index",
-        input: {
-          kind: "source",
-          sourceUrl: "https://drive.example/0:/Collections/example.mkv?a=view",
-        },
-      }),
-    })
+    const response = await exports.default.fetch(
+      "https://worker.example/extract",
+      {
+        method: "POST",
+        headers: authenticatedHeaders,
+        body: JSON.stringify({
+          pluginId: "bhadoo-google-drive-index",
+          input: {
+            kind: "source",
+            sourceUrl:
+              "https://drive.example/0:/Collections/example.mkv?a=view",
+          },
+        }),
+      }
+    )
     const result: unknown = await response.json()
 
     expect(response.status).toBe(200)
@@ -112,14 +133,17 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("keeps schema-valid non-URL input inside the protocol envelope", async () => {
-    const response = await SELF.fetch("https://worker.example/extract", {
-      method: "POST",
-      headers: authenticatedHeaders,
-      body: JSON.stringify({
-        pluginId: "direct-media",
-        input: { kind: "source", sourceUrl: "not-a-url" },
-      }),
-    })
+    const response = await exports.default.fetch(
+      "https://worker.example/extract",
+      {
+        method: "POST",
+        headers: authenticatedHeaders,
+        body: JSON.stringify({
+          pluginId: "direct-media",
+          input: { kind: "source", sourceUrl: "not-a-url" },
+        }),
+      }
+    )
 
     // Keep this focused on the protocol envelope; the source-specific error
     // code is not part of the logging regression.
@@ -135,17 +159,20 @@ describe("Lynvo Plugin Server protocol routes", () => {
     const periodKeys = currentUsagePeriodKeys()
     try {
       await setUsageCounters(periodKeys, GLOBAL_DAILY_OPERATION_LIMIT)
-      const response = await SELF.fetch("https://worker.example/extract", {
-        method: "POST",
-        headers: authenticatedHeaders,
-        body: JSON.stringify({
-          pluginId: "direct-media",
-          input: {
-            kind: "source",
-            sourceUrl: "https://media.example/video.mp4",
-          },
-        }),
-      })
+      const response = await exports.default.fetch(
+        "https://worker.example/extract",
+        {
+          method: "POST",
+          headers: authenticatedHeaders,
+          body: JSON.stringify({
+            pluginId: "direct-media",
+            input: {
+              kind: "source",
+              sourceUrl: "https://media.example/video.mp4",
+            },
+          }),
+        }
+      )
 
       const result: unknown = await response.json()
       expect(response.status).toBe(429)
@@ -163,7 +190,9 @@ describe("Lynvo Plugin Server protocol routes", () => {
   })
 
   it("returns a protocol envelope for unknown routes", async () => {
-    const response = await SELF.fetch("https://worker.example/unknown")
+    const response = await exports.default.fetch(
+      "https://worker.example/unknown"
+    )
     expect(response.status).toBe(404)
     expect(await response.json()).toMatchObject({
       ok: false,

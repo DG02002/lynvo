@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.2",
-    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@cloudflare/vitest-plugin": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "@edge-runtime/vm": "^5.0.0",
     "@mdx-js/rollup": "^3.1.1",
