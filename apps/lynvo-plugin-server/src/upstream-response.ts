@@ -7,8 +7,53 @@ import { assertSafeUpstreamUrl } from "./url-policy"
 import type { JsonValue } from "@dg02002/lynvo-plugin-server-protocol"
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+const REDIRECT_REQUEST_BODY_HEADERS = [
+  "Content-Encoding",
+  "Content-Language",
+  "Content-Location",
+  "Content-Type",
+] as const
+const REDIRECT_CREDENTIAL_HEADERS = [
+  "Authorization",
+  "od-protected-token",
+] as const
 
 export class UpstreamPolicyError extends Error {}
+
+const normalizeRedirectRequest = (
+  status: number,
+  redirect: { currentUrl: URL; nextUrl: URL },
+  options: RequestInit
+): RequestInit => {
+  const method = (options.method ?? "GET").toUpperCase()
+  const shouldConvertToGet =
+    ((status === 301 || status === 302) && method === "POST") ||
+    (status === 303 && method !== "GET" && method !== "HEAD")
+  const isCrossOrigin = redirect.currentUrl.origin !== redirect.nextUrl.origin
+
+  if (!shouldConvertToGet && !isCrossOrigin) {
+    return options
+  }
+
+  const headers = new Headers(options.headers)
+  if (shouldConvertToGet) {
+    for (const headerName of REDIRECT_REQUEST_BODY_HEADERS) {
+      headers.delete(headerName)
+    }
+  }
+  if (isCrossOrigin) {
+    for (const headerName of REDIRECT_CREDENTIAL_HEADERS) {
+      headers.delete(headerName)
+    }
+  }
+
+  const nextOptions: RequestInit = { ...options, headers }
+  if (shouldConvertToGet) {
+    nextOptions.method = "GET"
+    nextOptions.body = null
+  }
+  return nextOptions
+}
 
 const validateUpstreamUrl = (targetUrl: string): URL => {
   try {
@@ -31,15 +76,24 @@ const fetchValidatedUpstreamUrl = async (
   if (!REDIRECT_STATUSES.has(response.status)) {
     return response
   }
-  if (redirectCount >= UPSTREAM_REDIRECT_LIMIT) {
-    throw new Error("Upstream redirect limit exceeded.")
+  let nextUrl: URL
+  try {
+    if (redirectCount >= UPSTREAM_REDIRECT_LIMIT) {
+      throw new Error("Upstream redirect limit exceeded.")
+    }
+    const location = response.headers.get("Location")
+    if (!location) {
+      throw new Error("Upstream redirect omitted its destination.")
+    }
+    nextUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
+  } finally {
+    await response.body?.cancel()
   }
-  const location = response.headers.get("Location")
-  if (!location) {
-    throw new Error("Upstream redirect omitted its destination.")
-  }
-  const nextUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
-  return fetchValidatedUpstreamUrl(nextUrl, options, redirectCount + 1)
+  return fetchValidatedUpstreamUrl(
+    nextUrl,
+    normalizeRedirectRequest(response.status, { currentUrl, nextUrl }, options),
+    redirectCount + 1
+  )
 }
 
 export const fetchValidatedUpstream = (

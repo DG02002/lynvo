@@ -27,3 +27,17 @@ export const assertSafeUpstreamUrl = (value: string): URL => {
 
   return url
 }
+
+export const decodeUrlComponent = (value: string): string => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    throw new ProtocolError(
+      "UNSUPPORTED_URL",
+      "The URL contains an invalid percent-encoded component."
+    )
+  }
+}
+
+export const encodeUrlPathSegment = (value: string): string =>
+  encodeURIComponent(value)

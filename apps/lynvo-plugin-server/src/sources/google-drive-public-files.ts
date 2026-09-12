@@ -17,6 +17,7 @@ import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
 } from "../upstream-response"
+import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { formatFileSize } from "./file-size"
 import { isVideoFile } from "./video-file"
 import { Result, Schema } from "effect"
@@ -51,7 +52,7 @@ export const extractGoogleDriveFileId = (value: string | URL): string => {
       "The Google Drive URL does not contain a file id."
     )
   }
-  return decodeURIComponent(fileId)
+  return decodeUrlComponent(fileId)
 }
 
 export const createGoogleDriveDownloadUrl = (
@@ -83,7 +84,7 @@ export const extractGoogleDriveFolderId = (value: string | URL): string => {
       "The Google Drive URL does not contain a folder id."
     )
   }
-  return decodeURIComponent(folderId)
+  return decodeUrlComponent(folderId)
 }
 
 export interface GoogleDrivePublicFileMetadata {
@@ -105,7 +106,7 @@ const getContentDispositionFilename = (
     contentDisposition
   )?.[1]
   if (encodedFilename) {
-    return decodeURIComponent(encodedFilename)
+    return decodeUrlComponent(encodedFilename)
   }
   return /filename="([^"]+)"/i.exec(contentDisposition)?.[1]
 }
@@ -143,12 +144,44 @@ export interface GoogleDrivePublicFolderItem {
   size?: number
 }
 
-const decodeGoogleDriveFolderPayload = (payload: string): string =>
-  payload
-    .replace(/\\x([0-9a-f]{2})/gi, (_, hexadecimalByte: string) =>
-      String.fromCharCode(Number.parseInt(hexadecimalByte, 16))
-    )
-    .replace(/\\'/g, "'")
+const decodeGoogleDriveFolderPayload = (payload: string): string => {
+  const bytes: number[] = []
+  let decoded = ""
+  let index = 0
+  const decoder = new TextDecoder()
+
+  const flushBytes = (): void => {
+    if (bytes.length === 0) {
+      return
+    }
+    decoded += decoder.decode(Uint8Array.from(bytes))
+    bytes.length = 0
+  }
+
+  while (index < payload.length) {
+    const hexadecimalByte =
+      payload[index] === "\\" &&
+      (payload[index + 1] === "x" || payload[index + 1] === "X")
+        ? payload.slice(index + 2, index + 4)
+        : ""
+    if (/^[0-9a-f]{2}$/i.test(hexadecimalByte)) {
+      bytes.push(Number.parseInt(hexadecimalByte, 16))
+      index += 4
+      continue
+    }
+
+    flushBytes()
+    if (payload.startsWith("\\'", index)) {
+      decoded += "'"
+      index += 2
+    } else {
+      decoded += payload[index]
+      index += 1
+    }
+  }
+  flushBytes()
+  return decoded
+}
 
 export const parseGoogleDrivePublicFolderItems = (
   html: string
@@ -190,7 +223,7 @@ export const createGoogleDrivePublicFolderNodes = (
           kind: "resolvable",
           id: item.id,
           label: item.name,
-          nodeUrl: `https://drive.google.com/drive/folders/${item.id}`,
+          nodeUrl: `https://drive.google.com/drive/folders/${encodeUrlPathSegment(item.id)}`,
           resolutionKind: "folder",
         },
       ]

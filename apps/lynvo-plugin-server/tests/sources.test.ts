@@ -12,6 +12,7 @@ import {
   createBhadooNodes,
   extractBhadooGoogleDriveIndex,
   formatBhadooFileSize,
+  getBhadooPathFilename,
   type BhadooGoogleDriveListResponse,
 } from "../src/sources/bhadoo-google-drive-index"
 import {
@@ -29,6 +30,7 @@ import {
   parseGoogleDrivePublicFolderItems,
 } from "../src/sources/google-drive-public-files"
 import { extractDirectMedia } from "../src/sources/direct-media"
+import { fetchValidatedUpstream } from "../src/upstream-response"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -42,6 +44,112 @@ const createBhadooReverseEnvelope = (
   )}`
   return wrappedResponse.split("").toReversed().join("")
 }
+
+describe("Validated upstream requests", () => {
+  it.each([301, 302, 303])(
+    "cancels every redirect body and converts a POST to GET after %s",
+    async (status) => {
+      const firstRedirectResponse = new Response("first redirect body", {
+        status: 307,
+        headers: { Location: "https://media.example/intermediate" },
+      })
+      const secondRedirectResponse = new Response("second redirect body", {
+        status,
+        headers: { Location: "https://other.example/final" },
+      })
+      const firstCancel = vi.spyOn(firstRedirectResponse.body!, "cancel")
+      const secondCancel = vi.spyOn(secondRedirectResponse.body!, "cancel")
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(firstRedirectResponse)
+        .mockResolvedValueOnce(secondRedirectResponse)
+        .mockResolvedValueOnce(new Response("final body"))
+
+      await expect(
+        fetchValidatedUpstream("https://media.example/start", {
+          method: "POST",
+          headers: {
+            Authorization: "Basic secret",
+            "Content-Encoding": "gzip",
+            "Content-Language": "en",
+            "Content-Location": "/upload",
+            "Content-Type": "application/json",
+            "od-protected-token": "hashed-password",
+            "X-Request-Id": "request-1",
+          },
+          body: "request body",
+        })
+      ).resolves.toMatchObject({ status: 200 })
+
+      expect(firstCancel).toHaveBeenCalledOnce()
+      expect(secondCancel).toHaveBeenCalledOnce()
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+      expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({
+        method: "POST",
+        body: "request body",
+        redirect: "manual",
+      })
+      const intermediateHeaders = new Headers(
+        fetchSpy.mock.calls[1]?.[1]?.headers
+      )
+      expect(intermediateHeaders.get("Authorization")).toBe("Basic secret")
+      expect(intermediateHeaders.get("od-protected-token")).toBe(
+        "hashed-password"
+      )
+      expect(fetchSpy.mock.calls[2]?.[1]).toMatchObject({
+        method: "GET",
+        body: null,
+        redirect: "manual",
+      })
+      const finalHeaders = new Headers(fetchSpy.mock.calls[2]?.[1]?.headers)
+      expect(finalHeaders.get("X-Request-Id")).toBe("request-1")
+      for (const headerName of [
+        "Authorization",
+        "Content-Encoding",
+        "Content-Language",
+        "Content-Location",
+        "Content-Type",
+        "od-protected-token",
+      ]) {
+        expect(finalHeaders.has(headerName)).toBe(false)
+      }
+    }
+  )
+
+  it("strips credentials on cross-origin redirects without rewriting GET", async () => {
+    const redirectResponse = new Response("redirect body", {
+      status: 307,
+      headers: { Location: "https://other.example/final" },
+    })
+    const cancel = vi.spyOn(redirectResponse.body!, "cancel")
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(redirectResponse)
+      .mockResolvedValueOnce(new Response("final body"))
+
+    await expect(
+      fetchValidatedUpstream("https://media.example/start", {
+        method: "GET",
+        headers: {
+          Authorization: "Basic secret",
+          "od-protected-token": "hashed-password",
+          "X-Request-Id": "request-2",
+        },
+      })
+    ).resolves.toMatchObject({ status: 200 })
+
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({
+      method: "GET",
+      redirect: "manual",
+    })
+    const finalHeaders = new Headers(fetchSpy.mock.calls[1]?.[1]?.headers)
+    expect(finalHeaders.get("X-Request-Id")).toBe("request-2")
+    expect(finalHeaders.has("Authorization")).toBe(false)
+    expect(finalHeaders.has("od-protected-token")).toBe(false)
+  })
+})
 
 describe("Direct Media source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG.find(
@@ -142,6 +250,31 @@ describe("Direct Media source adapter", () => {
       })
     ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
+
+  it("maps malformed percent-encoded paths to unsupported URLs", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Range": "bytes 0-0/1",
+        },
+      })
+    )
+
+    await expect(
+      extractDirectMedia({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/video%.mp4",
+          },
+        },
+        targetUrl: "https://media.example/video%.mp4",
+        plugin,
+      })
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
+  })
 })
 
 describe("Bhadoo source adapter", () => {
@@ -194,7 +327,7 @@ describe("Bhadoo source adapter", () => {
       [
         {
           id: "folder-1",
-          name: "Folder 1",
+          name: "Folder % 1",
           mimeType: "application/vnd.google-apps.folder",
         },
         {
@@ -205,18 +338,35 @@ describe("Bhadoo source adapter", () => {
           link: "/download.aspx?file=signed",
         },
         { id: "image-1", name: "poster.jpg", mimeType: "image/jpeg" },
+        {
+          id: "file-2",
+          name: "raw % video.mkv",
+          mimeType: "video/x-matroska",
+        },
       ],
       new URL("https://drive.example/0:/Collections/")
     )
     expect(nodes).toMatchObject([
       {
         kind: "resolvable",
-        label: "Folder 1",
+        label: "Folder % 1",
+        nodeUrl: "https://drive.example/0:/Collections/Folder%20%25%201/",
         resolutionKind: "folder",
       },
       { kind: "playable", label: "playable-item.mkv", size: "469.28 MB" },
+      {
+        kind: "playable",
+        label: "raw % video.mkv",
+        url: "https://drive.example/0:/Collections/raw%20%25%20video.mkv",
+      },
     ])
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
+  })
+
+  it("maps malformed percent-encoded paths to unsupported URLs", () => {
+    expect(() =>
+      getBhadooPathFilename("https://drive.example/0:/bad%/")
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
   })
 
   it("extracts fallback folders through the fallback API", async () => {
@@ -476,7 +626,7 @@ describe("OneDrive source adapter", () => {
   it("maps folders and video files while skipping unrelated files", () => {
     const nodes = createOneDriveNodes({
       items: [
-        { id: "folder-1", name: "Folder 1", folder: {} },
+        { id: "folder-1", name: "Folder % 1", folder: {} },
         {
           id: "file-1",
           name: "playable-item.mp4",
@@ -492,11 +642,27 @@ describe("OneDrive source adapter", () => {
     expect(nodes).toMatchObject([
       {
         kind: "resolvable",
-        label: "Folder 1",
+        label: "Folder % 1",
+        nodeUrl: "https://index.example/Collections/Folder%20%25%201",
         resolutionKind: "folder",
       },
       { kind: "playable", label: "playable-item.mp4", size: "193.65 MB" },
     ])
+  })
+
+  it("maps malformed percent-encoded paths to unsupported URLs", async () => {
+    await expect(
+      extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections%",
+          },
+        },
+        targetUrl: "https://index.example/Collections%",
+        plugin,
+      })
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
 
   it("extracts Next.js page data and forwards a hashed Plugin Domain password", async () => {
@@ -679,7 +845,7 @@ describe("Google Drive public files source adapter", () => {
   const videoItem = [
     "video-id",
     ["parent-id"],
-    "Root video.mkv",
+    "Café video.mkv",
     "video/x-matroska",
     null,
     null,
@@ -700,12 +866,12 @@ describe("Google Drive public files source adapter", () => {
   ]
 
   const createFolderHtml = (): string => {
-    const payload = JSON.stringify([[folderItem, videoItem, unrelatedItem]])
-      .split("")
-      .map(
-        (character) =>
-          `\\x${character.charCodeAt(0).toString(16).padStart(2, "0")}`
+    const payload = Array.from(
+      new TextEncoder().encode(
+        JSON.stringify([[folderItem, videoItem, unrelatedItem]])
       )
+    )
+      .map((byte) => `\\x${byte.toString(16).padStart(2, "0")}`)
       .join("")
     return `<title>Public tests – Google Drive</title><script>window['_DRIVE_ivd'] = '${payload}';</script>`
   }
@@ -734,6 +900,36 @@ describe("Google Drive public files source adapter", () => {
     ).toThrow(ProtocolError)
   })
 
+  it("maps malformed percent-encoded IDs to unsupported URLs", () => {
+    expect(() =>
+      extractGoogleDriveFileId("https://drive.google.com/file/d/%")
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
+    expect(() =>
+      extractGoogleDriveFolderId("https://drive.google.com/drive/folders/%")
+    ).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_URL" }))
+  })
+
+  it("encodes public folder IDs in resolvable node URLs", () => {
+    expect(
+      createGoogleDrivePublicFolderNodes([
+        {
+          id: "folder/id?name#fragment",
+          name: "Nested folder",
+          mimeType: "application/vnd.google-apps.folder",
+        },
+      ])
+    ).toEqual([
+      {
+        kind: "resolvable",
+        id: "folder/id?name#fragment",
+        label: "Nested folder",
+        nodeUrl:
+          "https://drive.google.com/drive/folders/folder%2Fid%3Fname%23fragment",
+        resolutionKind: "folder",
+      },
+    ])
+  })
+
   it("parses public folders into lazy folders and playable root files", () => {
     expect(
       extractGoogleDriveFolderId(
@@ -753,12 +949,20 @@ describe("Google Drive public files source adapter", () => {
       {
         kind: "playable",
         id: "video-id",
-        label: "Root video.mkv",
+        label: "Café video.mkv",
         url: "https://drive.usercontent.google.com/download?id=video-id&export=download&confirm=t",
         size: "1.05 MB",
         status: "unknown",
       },
     ])
+  })
+
+  it("decodes both cases of hex-escaped public folder payloads", () => {
+    const uppercasePayload = createFolderHtml().replaceAll("\\x", "\\X")
+
+    expect(parseGoogleDrivePublicFolderItems(uppercasePayload)).toEqual(
+      parseGoogleDrivePublicFolderItems(createFolderHtml())
+    )
   })
 
   it("extracts a public folder page without Google authentication", async () => {
@@ -824,6 +1028,24 @@ describe("Google Drive public files source adapter", () => {
         status: "unknown",
       },
     ])
+  })
+
+  it("maps malformed encoded content-disposition filenames to unsupported URLs", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, {
+        status: 206,
+        headers: {
+          "Content-Disposition": "attachment; filename*=UTF-8''bad%",
+          "Content-Range": "bytes 0-0/1",
+        },
+      })
+    )
+
+    await expect(
+      fetchGoogleDrivePublicFileMetadata(
+        "https://drive.usercontent.google.com/download?id=file-id"
+      )
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
 
   it("preserves a Drive resource key in the download URL", async () => {
