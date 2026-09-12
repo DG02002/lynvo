@@ -4,6 +4,11 @@ import { OPENING_RESET_DELAY_MS } from "./constants"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
+type PendingOpeningReset = {
+  listener: () => void
+  timer: ReturnType<typeof setTimeout>
+}
+
 export interface SelectionDialogState {
   open: boolean
   links: ExtractedLink[]
@@ -63,23 +68,43 @@ export const useSelectionDialog = () => {
 export const useOpeningState = () => {
   const [isOpening, setIsOpening] = useState(false)
   const isOpeningRef = useRef(isOpening)
+  const pendingOpeningResetRef = useRef<PendingOpeningReset | undefined>(
+    undefined
+  )
+
+  const clearOpeningReset = useCallback(() => {
+    const pendingReset = pendingOpeningResetRef.current
+    if (!pendingReset) {
+      return
+    }
+
+    document.removeEventListener("visibilitychange", pendingReset.listener)
+    clearTimeout(pendingReset.timer)
+    pendingOpeningResetRef.current = undefined
+  }, [])
 
   useEffect(() => {
     isOpeningRef.current = isOpening
   }, [isOpening])
 
+  useEffect(() => clearOpeningReset, [clearOpeningReset])
+
   const resetOpeningWhenReady = useCallback(() => {
-    const reset = () => setIsOpening(false)
+    clearOpeningReset()
+    const reset = () => {
+      setIsOpening(false)
+      clearOpeningReset()
+    }
     const onVisChange = () => {
       if (document.visibilityState === "visible") {
         reset()
-        document.removeEventListener("visibilitychange", onVisChange)
       }
     }
 
+    const timer = setTimeout(reset, OPENING_RESET_DELAY_MS)
     document.addEventListener("visibilitychange", onVisChange)
-    setTimeout(reset, OPENING_RESET_DELAY_MS)
-  }, [])
+    pendingOpeningResetRef.current = { listener: onVisChange, timer }
+  }, [clearOpeningReset])
 
   return { isOpening, setIsOpening, isOpeningRef, resetOpeningWhenReady }
 }
