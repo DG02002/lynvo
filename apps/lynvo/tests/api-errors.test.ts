@@ -6,6 +6,7 @@ import {
   CsrfApiError,
   NotFoundApiError,
   UnauthorizedApiError,
+  UsageLimitApiError,
   ValidationApiError,
 } from "~/lib/effect/errors"
 import {
@@ -83,6 +84,7 @@ describe("API errors", () => {
     ["ValidationError", "Remote receiver is offline"],
     ["NotFoundError", "Session not found"],
     ["ValidationError", "Email does not match"],
+    ["UsageLimitError", "Monthly usage limit reached"],
   ] as const)(
     "surfaces the server message for %s failures",
     (_tag, message) => {
@@ -108,6 +110,7 @@ describe("API errors", () => {
     expect(HttpApiSchema.getStatusError(UnauthorizedApiError.ast)).toBe(401)
     expect(HttpApiSchema.getStatusError(CsrfApiError.ast)).toBe(403)
     expect(HttpApiSchema.getStatusError(NotFoundApiError.ast)).toBe(404)
+    expect(HttpApiSchema.getStatusError(UsageLimitApiError.ast)).toBe(429)
     expect(HttpApiSchema.getStatusError(BackendApiError.ast)).toBe(503)
   })
 

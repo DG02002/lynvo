@@ -19,6 +19,7 @@ const taggedErrorMessage = <Value>(error: Value): string | undefined => {
       return "The security session expired. Refresh the page, then try again."
     case "ValidationError":
     case "NotFoundError":
+    case "UsageLimitError":
     case "PluginServerRegistrationError":
       return parsed.success.message
     case "ExtractionError":

@@ -15,6 +15,7 @@ import {
   type RealtimeContextValue,
 } from "~/context/realtime-context"
 import { remoteApi } from "./remote-control/api"
+import { REMOTE_CONNECTION_FAILURE_MESSAGE } from "./remote-control/constants"
 import { createRemoteControlMachine } from "./remote-control/machine"
 import { createRemoteControlPersistence } from "./remote-control/storage"
 
@@ -136,13 +137,12 @@ export const RemoteControlProviderContent = ({
         } else if (outcome.type === "disconnect-failed") {
           showErrorToast({
             title: "Remote Play couldn’t disconnect",
-            description: "Check the connection, then try again.",
+            description: REMOTE_CONNECTION_FAILURE_MESSAGE,
           })
         } else if (outcome.type === "send-failed") {
           showErrorToast({
             title: "Couldn’t send the Remote Play command",
-            description:
-              outcome.message ?? "Check the connection, then try again.",
+            description: outcome.message,
           })
         } else if (outcome.type === "delivery-unavailable") {
           showErrorToast({

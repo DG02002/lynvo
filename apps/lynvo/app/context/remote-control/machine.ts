@@ -1,4 +1,7 @@
-import { REMOTE_POLL_INTERVAL_MS } from "./constants"
+import {
+  REMOTE_CONNECTION_FAILURE_MESSAGE,
+  REMOTE_POLL_INTERVAL_MS,
+} from "./constants"
 import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
@@ -77,23 +80,18 @@ declare global {
     clearInterval: (intervalId: number) => void
   }
 
-  interface RemoteControlOutcome {
-    type:
-      | "connected"
-      | "connect-failed"
-      | "disconnected"
-      | "disconnect-failed"
-      | "receiver-disconnected"
-      | "send-failed"
-      | "receiver-connected"
-      | "receiver-ended"
-      | "command-received"
-      | "invalid-command"
-      | "delivery-unavailable"
-    deviceName?: string
-    message?: string
-    command?: "play"
-  }
+  type RemoteControlOutcome =
+    | { type: "connected"; deviceName: string }
+    | { type: "connect-failed"; deviceName: string }
+    | { type: "disconnected" }
+    | { type: "disconnect-failed" }
+    | { type: "receiver-disconnected" }
+    | { type: "send-failed"; message: string }
+    | { type: "receiver-connected"; deviceName: string }
+    | { type: "receiver-ended" }
+    | { type: "command-received"; command: "play" }
+    | { type: "invalid-command" }
+    | { type: "delivery-unavailable" }
 
   interface RemoteControlMachine {
     getSnapshot: () => RemoteControlMachineState
@@ -310,7 +308,7 @@ export const createRemoteControlMachine = ({
           type: "send-failed",
           message: getUserFacingErrorMessage(
             error,
-            "Check the connection, then try again."
+            REMOTE_CONNECTION_FAILURE_MESSAGE
           ),
         })
         await machine.disconnect().catch(() => undefined)
