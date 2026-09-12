@@ -10,6 +10,26 @@ const setVisibilityState = (visibilityState: "hidden" | "visible") => {
   })
 }
 
+const startOpeningReset = (
+  controls: Pick<
+    ReturnType<typeof useOpeningState>,
+    "setIsOpening" | "resetOpeningWhenReady"
+  >
+) => {
+  act(() => {
+    controls.setIsOpening(true)
+    controls.resetOpeningWhenReady()
+  })
+}
+
+const createVisibilityListenerReader = () => {
+  const addEventListener = vi.spyOn(document, "addEventListener")
+  return () =>
+    addEventListener.mock.calls.find(
+      ([eventName]) => eventName === "visibilitychange"
+    )?.[1]
+}
+
 describe("useOpeningState", () => {
   afterEach(() => {
     setVisibilityState("visible")
@@ -22,10 +42,7 @@ describe("useOpeningState", () => {
     const removeEventListener = vi.spyOn(document, "removeEventListener")
     const { result } = renderHook(() => useOpeningState())
 
-    act(() => {
-      result.current.setIsOpening(true)
-      result.current.resetOpeningWhenReady()
-    })
+    startOpeningReset(result.current)
     expect(result.current.isOpening).toBe(true)
     expect(vi.getTimerCount()).toBe(1)
 
@@ -45,10 +62,8 @@ describe("useOpeningState", () => {
     const removeEventListener = vi.spyOn(document, "removeEventListener")
     const { result } = renderHook(() => useOpeningState())
 
-    act(() => {
-      result.current.setIsOpening(true)
-      result.current.resetOpeningWhenReady()
-    })
+    startOpeningReset(result.current)
+    expect(result.current.isOpening).toBe(true)
 
     act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS))
 
@@ -62,20 +77,15 @@ describe("useOpeningState", () => {
 
   it("cancels an earlier reset when a new one is scheduled", () => {
     vi.useFakeTimers()
-    const addEventListener = vi.spyOn(document, "addEventListener")
+    const readVisibilityListener = createVisibilityListenerReader()
     const removeEventListener = vi.spyOn(document, "removeEventListener")
     const { result } = renderHook(() => useOpeningState())
 
-    act(() => {
-      result.current.setIsOpening(true)
-      result.current.resetOpeningWhenReady()
-      vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2)
-      result.current.resetOpeningWhenReady()
-    })
+    startOpeningReset(result.current)
+    act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
+    act(() => result.current.resetOpeningWhenReady())
 
-    const firstVisibilityListener = addEventListener.mock.calls.find(
-      ([eventName]) => eventName === "visibilitychange"
-    )?.[1]
+    const firstVisibilityListener = readVisibilityListener()
     expect(vi.getTimerCount()).toBe(1)
     expect(removeEventListener).toHaveBeenCalledWith(
       "visibilitychange",
@@ -92,18 +102,13 @@ describe("useOpeningState", () => {
 
   it("cleans up the visibility listener and timer on unmount", () => {
     vi.useFakeTimers()
-    const addEventListener = vi.spyOn(document, "addEventListener")
+    const readVisibilityListener = createVisibilityListenerReader()
     const removeEventListener = vi.spyOn(document, "removeEventListener")
     const { result, unmount } = renderHook(() => useOpeningState())
 
-    act(() => {
-      result.current.setIsOpening(true)
-      result.current.resetOpeningWhenReady()
-    })
+    startOpeningReset(result.current)
 
-    const visibilityListener = addEventListener.mock.calls.find(
-      ([eventName]) => eventName === "visibilitychange"
-    )?.[1]
+    const visibilityListener = readVisibilityListener()
     expect(result.current.isOpening).toBe(true)
     expect(vi.getTimerCount()).toBe(1)
 
