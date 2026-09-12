@@ -15,7 +15,7 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-catalog"
-import { assertSafeUpstreamUrl } from "../url-policy"
+import { assertSafeUpstreamUrl, decodeUrlComponent } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
 import {
@@ -389,7 +389,7 @@ export const extractOneDriveIndex = async ({
   publicAssetOrigin,
 }: PluginAdapterOptions): Promise<ExtractSuccessResponse> => {
   const parsedUrl = assertSafeUpstreamUrl(targetUrl)
-  const path = decodeURIComponent(parsedUrl.pathname)
+  const path = decodeUrlComponent(parsedUrl.pathname)
   const password = request.password ?? ""
   const hashedPassword = password ? await sha256(password) : ""
   const headers = hashedPassword
@@ -421,7 +421,7 @@ export const extractOneDriveIndex = async ({
     hashedPassword,
     startedAtMs,
   })
-  const pageTitle = decodeURIComponent(
+  const pageTitle = decodeUrlComponent(
     parsedUrl.pathname
       .split("/")
       .findLast((pathSegment) => pathSegment.length > 0) ?? "OneDrive Index"

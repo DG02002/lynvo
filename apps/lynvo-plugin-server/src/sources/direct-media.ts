@@ -10,6 +10,7 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-catalog"
+import { decodeUrlComponent } from "../url-policy"
 import { fetchValidatedUpstream } from "../upstream-response"
 import { formatFileSize } from "./file-size"
 
@@ -22,7 +23,7 @@ const getFilename = (targetUrl: string, headers: Headers): string => {
     headers.get("Content-Disposition") ?? ""
   )?.[1]
   if (headerFilename) {
-    return decodeURIComponent(headerFilename)
+    return decodeUrlComponent(headerFilename)
   }
   const parsedUrl = new URL(targetUrl)
   const queryDisposition =
@@ -31,16 +32,16 @@ const getFilename = (targetUrl: string, headers: Headers): string => {
   if (queryDisposition) {
     const match = CONTENT_DISPOSITION_FILENAME.exec(queryDisposition)?.[1]
     if (match) {
-      return decodeURIComponent(match)
+      return decodeUrlComponent(match)
     }
   }
   const queryFilename =
     parsedUrl.searchParams.get("filename") ?? parsedUrl.searchParams.get("file")
   if (queryFilename) {
-    return decodeURIComponent(queryFilename)
+    return decodeUrlComponent(queryFilename)
   }
   const pathFilename = parsedUrl.pathname.split("/").at(-1)
-  return pathFilename ? decodeURIComponent(pathFilename) : "Unknown File"
+  return pathFilename ? decodeUrlComponent(pathFilename) : "Unknown File"
 }
 
 const getFileSize = (status: number, headers: Headers): string | undefined => {

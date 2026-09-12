@@ -19,7 +19,7 @@ import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
 } from "../plugin-catalog"
-import { assertSafeUpstreamUrl } from "../url-policy"
+import { assertSafeUpstreamUrl, decodeUrlComponent } from "../url-policy"
 import { isVideoFile } from "./video-file"
 import { formatFileSize } from "./file-size"
 import { extractDirectMedia } from "./direct-media"
@@ -115,7 +115,7 @@ export const getBhadooPathFilename = (url: string | URL): string => {
   const finalSegment = parsedUrl.pathname
     .split("/")
     .findLast((pathPart) => pathPart.length > 0)
-  return finalSegment ? decodeURIComponent(finalSegment) : "Google Drive Index"
+  return finalSegment ? decodeUrlComponent(finalSegment) : "Google Drive Index"
 }
 
 const isBhadooFallbackUrl = (url: URL): boolean =>
@@ -136,7 +136,7 @@ const createBhadooFolderNodeUrl = (
     ? folderUrl.pathname
     : `${folderUrl.pathname}/`
   const nodeUrl = new URL(folderUrl.origin)
-  nodeUrl.pathname = `${pathname}${item.name}/`
+  nodeUrl.pathname = `${pathname}${encodeURIComponent(item.name)}/`
   return nodeUrl.toString()
 }
 

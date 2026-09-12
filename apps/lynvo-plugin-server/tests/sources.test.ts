@@ -12,6 +12,7 @@ import {
   createBhadooNodes,
   extractBhadooGoogleDriveIndex,
   formatBhadooFileSize,
+  getBhadooPathFilename,
   type BhadooGoogleDriveListResponse,
 } from "../src/sources/bhadoo-google-drive-index"
 import {
@@ -29,6 +30,7 @@ import {
   parseGoogleDrivePublicFolderItems,
 } from "../src/sources/google-drive-public-files"
 import { extractDirectMedia } from "../src/sources/direct-media"
+import { fetchValidatedUpstream } from "../src/upstream-response"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -42,6 +44,50 @@ const createBhadooReverseEnvelope = (
   )}`
   return wrappedResponse.split("").toReversed().join("")
 }
+
+describe("Validated upstream requests", () => {
+  it.each([301, 302, 303])(
+    "cancels every redirect body and converts a POST to GET after %s",
+    async (status) => {
+      const firstRedirectResponse = new Response("first redirect body", {
+        status: 307,
+        headers: { Location: "https://media.example/intermediate" },
+      })
+      const secondRedirectResponse = new Response("second redirect body", {
+        status,
+        headers: { Location: "https://media.example/final" },
+      })
+      const firstCancel = vi.spyOn(firstRedirectResponse.body!, "cancel")
+      const secondCancel = vi.spyOn(secondRedirectResponse.body!, "cancel")
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(firstRedirectResponse)
+        .mockResolvedValueOnce(secondRedirectResponse)
+        .mockResolvedValueOnce(new Response("final body"))
+
+      await expect(
+        fetchValidatedUpstream("https://media.example/start", {
+          method: "POST",
+          body: "request body",
+        })
+      ).resolves.toMatchObject({ status: 200 })
+
+      expect(firstCancel).toHaveBeenCalledOnce()
+      expect(secondCancel).toHaveBeenCalledOnce()
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+      expect(fetchSpy.mock.calls[1]?.[1]).toMatchObject({
+        method: "POST",
+        body: "request body",
+        redirect: "manual",
+      })
+      expect(fetchSpy.mock.calls[2]?.[1]).toMatchObject({
+        method: "GET",
+        body: null,
+        redirect: "manual",
+      })
+    }
+  )
+})
 
 describe("Direct Media source adapter", () => {
   const plugin = LYNVO_PLUGIN_CATALOG.find(
@@ -142,6 +188,31 @@ describe("Direct Media source adapter", () => {
       })
     ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
   })
+
+  it("maps malformed percent-encoded paths to unsupported URLs", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new Uint8Array([0]), {
+        status: 206,
+        headers: {
+          "Content-Type": "video/mp4",
+          "Content-Range": "bytes 0-0/1",
+        },
+      })
+    )
+
+    await expect(
+      extractDirectMedia({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://media.example/video%.mp4",
+          },
+        },
+        targetUrl: "https://media.example/video%.mp4",
+        plugin,
+      })
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
+  })
 })
 
 describe("Bhadoo source adapter", () => {
@@ -194,7 +265,7 @@ describe("Bhadoo source adapter", () => {
       [
         {
           id: "folder-1",
-          name: "Folder 1",
+          name: "Folder % 1",
           mimeType: "application/vnd.google-apps.folder",
         },
         {
@@ -211,12 +282,25 @@ describe("Bhadoo source adapter", () => {
     expect(nodes).toMatchObject([
       {
         kind: "resolvable",
-        label: "Folder 1",
+        label: "Folder % 1",
+        nodeUrl: "https://drive.example/0:/Collections/Folder%20%25%201/",
         resolutionKind: "folder",
       },
       { kind: "playable", label: "playable-item.mkv", size: "469.28 MB" },
     ])
     expect(formatBhadooFileSize("492077810")).toBe("469.28 MB")
+  })
+
+  it("maps malformed percent-encoded paths to unsupported URLs", () => {
+    let error: unknown
+    try {
+      getBhadooPathFilename("https://drive.example/0:/bad%/")
+    } catch (cause) {
+      error = cause
+    }
+
+    expect(error).toBeInstanceOf(ProtocolError)
+    expect(error).toMatchObject({ code: "UNSUPPORTED_URL" })
   })
 
   it("extracts fallback folders through the fallback API", async () => {
@@ -499,6 +583,21 @@ describe("OneDrive source adapter", () => {
     ])
   })
 
+  it("maps malformed percent-encoded paths to unsupported URLs", async () => {
+    await expect(
+      extractOneDriveIndex({
+        request: {
+          input: {
+            kind: "source",
+            sourceUrl: "https://index.example/Collections%",
+          },
+        },
+        targetUrl: "https://index.example/Collections%",
+        plugin,
+      })
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_URL" })
+  })
+
   it("extracts Next.js page data and forwards a hashed Plugin Domain password", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -679,7 +778,7 @@ describe("Google Drive public files source adapter", () => {
   const videoItem = [
     "video-id",
     ["parent-id"],
-    "Root video.mkv",
+    "Café video.mkv",
     "video/x-matroska",
     null,
     null,
@@ -700,12 +799,12 @@ describe("Google Drive public files source adapter", () => {
   ]
 
   const createFolderHtml = (): string => {
-    const payload = JSON.stringify([[folderItem, videoItem, unrelatedItem]])
-      .split("")
-      .map(
-        (character) =>
-          `\\x${character.charCodeAt(0).toString(16).padStart(2, "0")}`
+    const payload = Array.from(
+      new TextEncoder().encode(
+        JSON.stringify([[folderItem, videoItem, unrelatedItem]])
       )
+    )
+      .map((byte) => `\\x${byte.toString(16).padStart(2, "0")}`)
       .join("")
     return `<title>Public tests – Google Drive</title><script>window['_DRIVE_ivd'] = '${payload}';</script>`
   }
@@ -753,7 +852,7 @@ describe("Google Drive public files source adapter", () => {
       {
         kind: "playable",
         id: "video-id",
-        label: "Root video.mkv",
+        label: "Café video.mkv",
         url: "https://drive.usercontent.google.com/download?id=video-id&export=download&confirm=t",
         size: "1.05 MB",
         status: "unknown",

@@ -10,6 +10,20 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
 
 export class UpstreamPolicyError extends Error {}
 
+const normalizeRedirectRequest = (
+  status: number,
+  options: RequestInit
+): RequestInit => {
+  const method = (options.method ?? "GET").toUpperCase()
+  const shouldConvertToGet =
+    ((status === 301 || status === 302) && method === "POST") ||
+    (status === 303 && method !== "GET" && method !== "HEAD")
+
+  return shouldConvertToGet
+    ? { ...options, method: "GET", body: null }
+    : options
+}
+
 const validateUpstreamUrl = (targetUrl: string): URL => {
   try {
     return assertSafeUpstreamUrl(targetUrl)
@@ -31,15 +45,24 @@ const fetchValidatedUpstreamUrl = async (
   if (!REDIRECT_STATUSES.has(response.status)) {
     return response
   }
-  if (redirectCount >= UPSTREAM_REDIRECT_LIMIT) {
-    throw new Error("Upstream redirect limit exceeded.")
+  let nextUrl: URL
+  try {
+    if (redirectCount >= UPSTREAM_REDIRECT_LIMIT) {
+      throw new Error("Upstream redirect limit exceeded.")
+    }
+    const location = response.headers.get("Location")
+    if (!location) {
+      throw new Error("Upstream redirect omitted its destination.")
+    }
+    nextUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
+  } finally {
+    await response.body?.cancel()
   }
-  const location = response.headers.get("Location")
-  if (!location) {
-    throw new Error("Upstream redirect omitted its destination.")
-  }
-  const nextUrl = validateUpstreamUrl(new URL(location, currentUrl).toString())
-  return fetchValidatedUpstreamUrl(nextUrl, options, redirectCount + 1)
+  return fetchValidatedUpstreamUrl(
+    nextUrl,
+    normalizeRedirectRequest(response.status, options),
+    redirectCount + 1
+  )
 }
 
 export const fetchValidatedUpstream = (
