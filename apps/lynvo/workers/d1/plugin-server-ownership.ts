@@ -1,5 +1,6 @@
 import { PLUGIN_SERVER_COLUMNS, type PluginServerRow } from "./rows"
 import { PluginServerUnavailableError } from "./errors"
+import { requireOwnedRow } from "./owned-row"
 
 export const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
 
@@ -20,15 +21,15 @@ export const requireOwnedPluginServerRow = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow> => {
-  const existing = await findOwnedPluginServerRow(
+  return requireOwnedRow(
     database,
+    "user_plugin_servers",
+    PLUGIN_SERVER_COLUMNS,
+    pluginServerId,
     userId,
-    pluginServerId
+    "Plugin server not found or no longer available",
+    () => new PluginServerUnavailableError()
   )
-  if (!existing) {
-    throw new PluginServerUnavailableError()
-  }
-  return existing
 }
 
 export const requireReadyPluginServerRow = async (

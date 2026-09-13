@@ -18,7 +18,7 @@ const domainRow = {
   credential_finalized_attempt_id: null,
 }
 
-const readyServerRow = { credential_status: "ready" }
+const readyServerRow = { user_id: "user-1", credential_status: "ready" }
 
 describe("Plugin Domains Worker error contract", () => {
   it("exposes a missing domain as a typed not-found error", async () => {
@@ -50,7 +50,7 @@ describe("Plugin Domains Worker error contract", () => {
   it("exposes a missing plugin server as a typed unavailable error", async () => {
     const database = createAuthenticatedWorkerDatabase({
       handler: (sql) =>
-        sql.includes("FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2")
+        sql.includes("FROM user_plugin_servers WHERE id = ?1")
           ? { rows: [] }
           : undefined,
     })
@@ -86,11 +86,7 @@ describe("Plugin Domains Worker error contract", () => {
         if (sql.includes("FROM user_plugin_domains WHERE id = ?1")) {
           return { row: domainRow }
         }
-        if (
-          sql.includes(
-            "FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2"
-          )
-        ) {
+        if (sql.includes("FROM user_plugin_servers WHERE id = ?1")) {
           return { row: readyServerRow }
         }
         return undefined

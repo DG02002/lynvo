@@ -194,8 +194,9 @@ describe("refreshCustomPluginServerProxyBalance", () => {
         "https://api.scrape.do/info?token=stored-proxy-token",
         expect.objectContaining({ headers: { Accept: "application/json" } })
       )
-      expect(serverLookupSql).toContain("AND user_id = ?2")
-      expect(serverLookupArgs).toEqual(["plugin-server-1", "user-1"])
+      expect(serverLookupSql).toContain("WHERE id = ?1")
+      expect(serverLookupSql).not.toContain("AND user_id = ?2")
+      expect(serverLookupArgs).toEqual(["plugin-server-1"])
       expect(balanceUpdateArgs?.slice(0, 3)).toEqual([
         "plugin-server-1",
         901,

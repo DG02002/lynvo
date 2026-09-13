@@ -586,7 +586,7 @@ describe("d1 plugin registry", () => {
       now: NOW,
     })
     const pause = createD1OwnershipReadPause(env.DB, {
-      queryFragment: "FROM user_plugin_servers WHERE id = ?1 AND user_id = ?2",
+      queryFragment: "FROM user_plugin_servers WHERE id = ?1",
       rowId: server.id,
       label: "Plugin server ownership",
     })
