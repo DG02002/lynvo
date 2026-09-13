@@ -1,8 +1,6 @@
 import { SAVE_FOLDER_PATH_SEARCH_PARAM } from "~/lib/paths"
 import { type FolderLevel } from "./save-list-browser-model"
 
-export { SAVE_FOLDER_PATH_SEARCH_PARAM } from "~/lib/paths"
-
 export interface ParsedFolderPath {
   hasSearchParam: boolean
   ids: string[]

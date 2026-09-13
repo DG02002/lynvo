@@ -52,7 +52,7 @@ interface LinkItemMenuProps {
   onMenuOpenChange?: (open: boolean) => void
 }
 
-const LinkItemMenuContent = ({
+export const LinkItemMenu = ({
   item,
   actions,
   showRemove = false,
@@ -231,7 +231,3 @@ const LinkItemMenuContent = ({
     </>
   )
 }
-
-export const LinkItemMenu = (
-  props: Omit<LinkItemMenuProps, "item"> & { item: LinkViewItem }
-) => <LinkItemMenuContent {...props} />

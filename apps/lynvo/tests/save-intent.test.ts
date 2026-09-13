@@ -66,6 +66,25 @@ describe("save intent", () => {
     expect(enqueueLink).not.toHaveBeenCalled()
   })
 
+  it("passes a sanitized URL and transient source URL to the queue", async () => {
+    const credentialedUrl =
+      "https://source-user:source%40secret@index.example.com/0:/Movies/"
+    const sanitizedUrl = "https://index.example.com/0:/Movies/"
+    const addLink = vi.fn()
+    const enqueueLink = vi.fn().mockResolvedValue("queued-id")
+
+    const result = await resolveSaveIntent({
+      currentUrl: credentialedUrl,
+      links: [],
+      addLink,
+      enqueueLink,
+    })
+
+    expect(enqueueLink).toHaveBeenCalledWith(sanitizedUrl, credentialedUrl)
+    expect(addLink).not.toHaveBeenCalled()
+    expect(result).toEqual({ kind: "queued", linkId: "queued-id" })
+  })
+
   it("persists every save mode through the extraction queue so a refresh cannot discard work", async () => {
     const addLink = vi.fn()
     const enqueueLink = vi.fn().mockResolvedValue("queued-id")

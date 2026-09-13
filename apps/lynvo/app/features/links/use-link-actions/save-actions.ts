@@ -11,7 +11,12 @@ import {
   parsePluginDomainCandidate,
   type PluginDomainSuggestion,
 } from "~/lib/plugin-domain"
-import { confirmSelectedLinks, saveLink } from "./save-flow"
+import {
+  confirmSaveIntent,
+  resolveSaveIntent,
+  type ConfirmSaveIntentResult,
+  type SaveIntentResult,
+} from "~/features/links/save-intent"
 import type { SelectionDialogState } from "./interaction-state"
 import type { OpenSelectionDialogOptions } from "./action-types"
 import {
@@ -27,10 +32,6 @@ import {
   shouldOfferPluginDomainSuggestion,
   type SavedLinkInteractionReporter,
 } from "~/features/links/saved-link-interaction"
-import type {
-  ConfirmSaveIntentResult,
-  SaveIntentResult,
-} from "~/features/links/save-intent"
 
 export const useSaveActions = ({
   url,
@@ -247,7 +248,7 @@ export const useSaveActions = ({
       }
       reporter.publish({ kind: "clear-error" })
       reporter.publish({ kind: "clear-preview" })
-      const result = await saveLink({
+      const result = await resolveSaveIntent({
         overrideUrl,
         currentUrl: url,
         links,
@@ -274,7 +275,7 @@ export const useSaveActions = ({
         pluginDomainSuggestion: selectionSuggestion,
       } = selectionDialogState
 
-      const result = await confirmSelectedLinks({
+      const result = await confirmSaveIntent({
         selectedLinks,
         originalUrl,
         meta,

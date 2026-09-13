@@ -44,7 +44,7 @@ const ScrapeDoAccountInfo = Schema.Struct({
   MaxMonthlyRequest: Schema.Number,
 })
 
-export const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
+const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
 
 /**
  * Validates a Scrape.do token against the free account-info endpoint. The

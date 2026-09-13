@@ -12,18 +12,10 @@ const SAVE_LIST_SECTION_ENTER_ANIMATION_CLASS = cn(
 interface SaveDateGroupHeadingProps {
   readonly label: string
   readonly id?: string
-  readonly className?: string
 }
 
-export const SaveDateGroupHeading = ({
-  label,
-  id,
-  className,
-}: SaveDateGroupHeadingProps) => (
-  <h2
-    id={id}
-    className={cn("font-heading text-2xl font-bold tracking-tight", className)}
-  >
+const SaveDateGroupHeading = ({ label, id }: SaveDateGroupHeadingProps) => (
+  <h2 id={id} className="font-heading text-2xl font-bold tracking-tight">
     {label}
   </h2>
 )

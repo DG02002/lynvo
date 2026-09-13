@@ -22,7 +22,7 @@ export interface FolderLevel {
 
 export const getLinkKey = getMediaNodeKey
 
-export const isLazyFolder = (link: ExtractedLink) =>
+const isLazyFolder = (link: ExtractedLink) =>
   getMediaNodeInteractionState(link).needsResolution
 
 export const isMirrorResolvable = isMirrorResolvableMediaNode

@@ -80,10 +80,6 @@ const readErrorMessage = (
   status: number
 ): string => body?.message ?? `Request failed with status ${status}`
 
-/**
- * The generated HttpApiClient exposed tagged server errors directly. Keep
- * that shape for callers while avoiding the client-side HTTP API runtime.
- */
 export class ApiClientError extends Error {
   _tag: string
   readonly status: number

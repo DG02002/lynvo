@@ -24,7 +24,6 @@ interface FinderEpisodeStillImageProps {
 
 interface FinderEpisodeStillLookupState {
   readonly episodeDisplayTitle: string
-  readonly artwork: MediaArtworkResult | undefined
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
   readonly isLookupPending: boolean
@@ -82,7 +81,6 @@ export const useFinderEpisodeStill = (
   const isLookupPending = artworkRequest !== undefined && artwork === undefined
 
   return {
-    artwork,
     imagePath,
     imageType,
     isLookupPending,
