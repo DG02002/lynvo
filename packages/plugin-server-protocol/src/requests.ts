@@ -1,9 +1,11 @@
-import type {
-  ErrorCode,
-  ExtractProtocolError,
-  ExtractRequest,
-  HttpBasicAuth,
-  ProxyCredential,
+import {
+  requireNodeIdentity,
+  type ErrorCode,
+  type ExtractProtocolError,
+  type ExtractRequest,
+  type HttpBasicAuth,
+  type RequiredNodeIdentity,
+  type ProxyCredential,
 } from "./models.js"
 
 export interface ExtractRequestOptions {
@@ -17,9 +19,8 @@ export interface CreateSourceExtractRequestOptions extends ExtractRequestOptions
   readonly sourceUrl: string
 }
 
-export interface CreateNodeExtractRequestOptions extends ExtractRequestOptions {
-  readonly nodeUrl: string
-}
+export type CreateNodeExtractRequestOptions = ExtractRequestOptions &
+  RequiredNodeIdentity
 
 export const createProtocolError = (
   code: ErrorCode,
@@ -66,6 +67,10 @@ export const createSourceExtractRequest = ({
 
 export const createNodeExtractRequest = ({
   nodeUrl,
+  resourceId,
   ...options
 }: CreateNodeExtractRequestOptions): ExtractRequest =>
-  createExtractRequest({ kind: "node", nodeUrl }, options)
+  createExtractRequest(
+    { kind: "node", ...requireNodeIdentity({ nodeUrl, resourceId }) },
+    options
+  )

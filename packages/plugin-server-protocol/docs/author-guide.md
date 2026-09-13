@@ -358,8 +358,8 @@ Lynvo expects staged extraction.
 Example:
 
 1. `source-alpha` page returns folder and lazy item nodes.
-2. Lazy Item node carries a lazy `nodeUrl`.
-3. Lynvo calls `POST /extract` again with that `nodeUrl`.
+2. Lazy Item node carries a `nodeUrl` and/or `resourceId`.
+3. Lynvo calls `POST /extract` again with that node identity.
 4. The Plugin Server resolves the next step.
 5. If the next step is final, return playable nodes.
 6. If the next step is still intermediate, return more resolvable nodes.
@@ -449,9 +449,9 @@ const selectableFolder = {
 
 ### Lazy folder item
 
-Use `resolvable` when the folder is intentionally not expanded yet. `nodeUrl`
-is a server-side follow-up target, while `resourceId` is an optional opaque
-identifier your Plugin Server can use. The same Plugin Server must handle the later node
+Use `resolvable` when the folder is intentionally not expanded yet. It must
+carry a `nodeUrl` and/or `resourceId`; `resourceId` is an opaque identifier
+your Plugin Server can use. The same Plugin Server must handle the later node
 request.
 
 ```ts
@@ -523,6 +523,9 @@ Use `PERMANENT_FAILURE` when the source is broken in a non-retryable way.
 
 Use `UNSUPPORTED_URL` only when the URL does not match a supported Source.
 
+Use `UNSUPPORTED_TARGET` when the request uses a target kind that this Plugin
+Server does not resolve.
+
 ## Performance guidance
 
 Custom Plugin Servers may run on Cloudflare free plans. Design with that in mind.
@@ -563,6 +566,11 @@ At minimum, test:
 If you use Cloudflare-native testing, prefer running tests in the Workers runtime rather than only in a generic Node environment.
 
 ## Suggested Hono skeleton
+
+The runtime passes an `ExtractTarget` to the extraction callback. URL targets
+have `kind: "url"` and expose `target.url`; opaque node identities have
+`kind: "resourceId"` and expose `target.resourceId`. Resolve a resource ID in
+the same Plugin Server that emitted it.
 
 ```ts
 import { Hono } from "hono"
@@ -607,7 +615,11 @@ const runtime = createPluginServerRuntime({
     validate: ({ request }) =>
       request.headers.get("Authorization") === "Bearer expected-key",
   },
-  extract: async ({ request, targetUrl }) => {
+  extract: async ({ request, target }) => {
+    if (target.kind === "resourceId") {
+      throw new Error("Resolve target.resourceId in this Plugin.")
+    }
+    const targetUrl = target.url
     if (request.input.kind === "source") {
       return {
         plugin: {

@@ -72,6 +72,9 @@ test("generates a standalone project with a semver protocol dependency", async (
   assert(generatedFiles.includes(".dev.vars.example"))
   assert(generatedFiles.includes(".gitignore"))
   assert(generatedFiles.includes("README.md"))
+  const readme = await readFile(join(destination, "README.md"), "utf8")
+  assert.match(readme, /^# My Plugin Server$/m)
+  assert.doesNotMatch(readme, /PROJECT_DISPLAY_NAME/)
   assert.match(
     await readFile(join(destination, "scripts/optimize-images.mjs"), "utf8"),
     /sharp/

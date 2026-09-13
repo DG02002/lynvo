@@ -16,12 +16,21 @@ The generated route layer looks like this:
 <CodeBlock label="src/index.ts">
 
 ```ts
+import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+
 const runtime = createPluginServerRuntime<Env>({
   manifest,
   auth: { validate: ({ request, env }) => hasValidBearer(request, env) },
   usage: () => validUsageResponseFixture,
-  extract: ({ targetUrl }) =>
-    extractExampleSource(targetUrl, manifest.pluginServerId),
+  extract: ({ target }) => {
+    if (target.kind !== "url") {
+      throw new ProtocolError(
+        "UNSUPPORTED_TARGET",
+        "This example only accepts URL targets."
+      )
+    }
+    return extractExampleSource(target.url, manifest.pluginServerId)
+  },
 })
 
 const app = new Hono<{ Bindings: Env }>()
@@ -42,6 +51,10 @@ app.post("/extract", (context) =>
 </CodeBlock>
 
 Replace the manifest, authentication function, usage provider, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
+
+The extraction callback receives a URL target or an opaque `resourceId` target.
+This starter handles URL targets; add the Source-specific resource-ID branch if
+your Plugin emits Resolvable links with `resourceId`.
 
 The starter returns a finite usage fixture so its contract tests can run without
 a database. Replace that provider with durable accounting before deployment.

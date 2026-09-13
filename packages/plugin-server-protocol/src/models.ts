@@ -67,13 +67,43 @@ export interface GroupNode {
   readonly children: readonly MediaNode[]
 }
 
-export interface ResolvableNode {
+export interface NodeIdentity {
+  readonly nodeUrl?: string
+  readonly resourceId?: string
+}
+
+export type RequiredNodeIdentity =
+  | { readonly nodeUrl: string; readonly resourceId?: string }
+  | { readonly nodeUrl?: never; readonly resourceId: string }
+
+export const NODE_IDENTITY_ERROR = "Node requires nodeUrl or resourceId"
+
+export const hasNodeIdentity = (
+  value: NodeIdentity
+): value is RequiredNodeIdentity =>
+  value.nodeUrl !== undefined || value.resourceId !== undefined
+
+export const requireNodeIdentity = (
+  value: NodeIdentity
+): RequiredNodeIdentity => {
+  if (!hasNodeIdentity(value)) {
+    throw new Error(NODE_IDENTITY_ERROR)
+  }
+
+  if (value.nodeUrl === undefined) {
+    return { resourceId: value.resourceId }
+  }
+  if (value.resourceId === undefined) {
+    return { nodeUrl: value.nodeUrl }
+  }
+  return value
+}
+
+export type ResolvableNode = NodeIdentity & {
   readonly kind: "resolvable"
   readonly extensions?: object
   readonly id?: string
   readonly label: string
-  readonly nodeUrl?: string
-  readonly resourceId?: string
   readonly resolutionKind?: "folder" | "mirrors"
   readonly badge?: string
   readonly size?: string
@@ -102,11 +132,24 @@ export interface SourceInput {
   readonly sourceUrl: string
 }
 
-export interface NodeInput {
+export type NodeInput = NodeIdentity & {
   readonly kind: "node"
-  readonly nodeUrl: string
-  readonly resourceId?: string
 }
+
+export interface UrlExtractTarget {
+  readonly kind: "url"
+  readonly url: string
+}
+
+export interface ResourceIdExtractTarget {
+  readonly kind: "resourceId"
+  readonly resourceId: string
+}
+
+export type ExtractTarget = UrlExtractTarget | ResourceIdExtractTarget
+
+export const describeExtractTarget = (target: ExtractTarget): string =>
+  target.kind === "url" ? target.url : target.resourceId
 
 export interface ExtractRequest {
   readonly input: SourceInput | NodeInput
@@ -263,7 +306,7 @@ export interface PluginServerRuntimeAuth<Env> {
 
 export interface PluginServerRuntimeExtractOptions<Env> {
   readonly request: ExtractRequest
-  readonly targetUrl: string
+  readonly target: ExtractTarget
   readonly env: Env
 }
 
@@ -285,7 +328,7 @@ export interface PluginServerManifestFactory<Env> {
 
 export interface PluginServerRuntimeAcceptedContext<Env> {
   readonly request: ExtractRequest
-  readonly targetUrl: string
+  readonly target: ExtractTarget
   readonly manifest: PluginServerManifest
   readonly matchedPluginId?: string
   readonly runtimeContext: PluginServerRuntimeContext<Env>
@@ -339,6 +382,7 @@ export const PROTOCOL_VERSION = "1.0" as const
 
 export const ERROR_CODES = [
   "UNSUPPORTED_URL",
+  "UNSUPPORTED_TARGET",
   "AUTH_INVALID",
   "AUTH_REQUIRED",
   "RATE_LIMITED",

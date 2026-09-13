@@ -10,7 +10,8 @@ export {
 } from "./requests.js"
 export {
   canPluginServerAttemptUrl,
-  getExtractTargetUrl,
+  canPluginServerAttemptTarget,
+  getExtractTarget,
   getLynvoManifestExtension,
   getMatchedPlugin,
   matchPluginServerUrl,

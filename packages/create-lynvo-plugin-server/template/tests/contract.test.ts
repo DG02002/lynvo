@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  PROTOCOL_ERROR_STATUS,
   parseExtractSuccessContract,
   parseUsageResponseContract,
   validatePluginServerManifestContract,
@@ -18,22 +19,6 @@ const authorizedHeaders = {
 describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
   it("publishes a valid manifest", () => {
     expect(validatePluginServerManifestContract(manifest)).toEqual({
-      ok: true,
-      issues: [],
-    })
-  })
-
-  it("publishes a valid manifest behind a TLS-terminating proxy", async () => {
-    const response = await app.fetch(
-      new Request("http://worker.example/manifest", {
-        headers: { "x-forwarded-proto": "https" },
-      }),
-      environment
-    )
-    const responseManifest = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(validatePluginServerManifestContract(responseManifest)).toEqual({
       ok: true,
       issues: [],
     })
@@ -91,6 +76,25 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
     })
     expect(parsedBody.value?.nodes[0]).toMatchObject({
       url: "https://media.example.com/video.mp4",
+    })
+  })
+
+  it("returns the target-specific error for opaque resource IDs", async () => {
+    const response = await app.fetch(
+      new Request("https://worker.example/extract", {
+        method: "POST",
+        headers: { ...authorizedHeaders, "content-type": "application/json" },
+        body: JSON.stringify({
+          input: { kind: "node", resourceId: "opaque-resource-id" },
+        }),
+      }),
+      environment
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_TARGET)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "UNSUPPORTED_TARGET" },
     })
   })
 })

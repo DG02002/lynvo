@@ -2,6 +2,7 @@ import { exports } from "cloudflare:workers"
 import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
+  PROTOCOL_ERROR_STATUS,
   extractErrorSchema,
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
@@ -134,6 +135,26 @@ describe("Lynvo Plugin Server protocol routes", () => {
     ).toBe(true)
   })
 
+  it("returns a distinct protocol error for unsupported opaque targets", async () => {
+    const response = await fetchRoute("/extract", {
+      method: "POST",
+      headers: authenticatedHeaders,
+      body: JSON.stringify({
+        input: { kind: "node", resourceId: "opaque-resource-id" },
+      }),
+    })
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_TARGET)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: {
+        code: "UNSUPPORTED_TARGET",
+        message:
+          "The managed Plugin Server does not resolve opaque resource IDs.",
+      },
+    })
+  })
+
   it("returns retry guidance when extraction capacity is exhausted", async () => {
     const periodKeys = currentUsagePeriodKeys()
     try {
@@ -167,7 +188,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
 
   it("returns a protocol envelope for unknown routes", async () => {
     const response = await fetchRoute("/unknown")
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.BAD_REQUEST)
     expect(await response.json()).toMatchObject({
       ok: false,
       error: { code: "BAD_REQUEST" },

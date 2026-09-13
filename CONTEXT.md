@@ -104,6 +104,13 @@ Plugin Server.
 
 Avoid: extracted link when referring to the protocol value.
 
+### Node identity
+
+The `nodeUrl` and/or opaque `resourceId` a Plugin Server uses to resolve a
+Resolvable link on a later Extraction request.
+
+Avoid: target URL when the value may be a `resourceId`.
+
 ### Direct Media link
 
 A URL that already points to media and is validated by the Direct Media Plugin

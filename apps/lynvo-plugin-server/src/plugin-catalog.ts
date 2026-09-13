@@ -7,6 +7,7 @@ import {
   type PluginMetadata,
   type ExtractSuccessResponse,
   type ExtractRequest,
+  type ExtractTarget,
   type DiscoverResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { load } from "cheerio"
@@ -238,9 +239,17 @@ export const discoverLynvoPlugin = async (
 
 export const extractWithLynvoPlugin = async (
   request: ExtractRequest,
-  targetUrl: string,
+  target: ExtractTarget,
   publicAssetOrigin?: string
 ): Promise<ExtractSuccessResponse> => {
+  if (target.kind !== "url") {
+    throw new ProtocolError(
+      "UNSUPPORTED_TARGET",
+      "The managed Plugin Server does not resolve opaque resource IDs."
+    )
+  }
+
+  const targetUrl = target.url
   const plugin = findLynvoPlugin(targetUrl, request.pluginId)
   if (!plugin) {
     throw new ProtocolError(

@@ -82,6 +82,8 @@ published package.
   credential. Do not put it in a URL or browser code.
 - `UNSUPPORTED_URL`: update the manifest matcher and Plugin metadata together,
   then rerun contract tests.
+- `UNSUPPORTED_TARGET`: confirm the request target kind is supported by the
+  server, or implement resolution for the emitted opaque resource ID.
 - A generated project installs a local package: inspect `package.json` for
   `workspace:`, `link:`, `file:`, or a relative Lynvo path and regenerate from
   the published creator package.

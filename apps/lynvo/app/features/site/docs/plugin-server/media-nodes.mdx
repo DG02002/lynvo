@@ -15,7 +15,7 @@ them with three `kind` values:
 | Direct media           | `playable`    | `label`, `url`                          |
 | Display-only container | `group`       | `label`, `children`                     |
 | Selectable folder      | `group`       | `label`, `selectable: true`, `children` |
-| Lazy folder            | `resolvable`  | `label`, `nodeUrl`                      |
+| Lazy folder            | `resolvable`  | `label`, `nodeUrl` or `resourceId`      |
 
 ### Return direct media
 
@@ -79,7 +79,7 @@ const selectableFolder = {
 
 ### Return a lazy folder
 
-Use `resolvable` when loading the folder requires another request. Lynvo sends `nodeUrl` back to the same Plugin Server when someone opens the folder.
+Use `resolvable` when loading the folder requires another request. Include a `nodeUrl`, a `resourceId`, or both. Lynvo sends that identity back to the same Plugin Server when someone opens the folder.
 
 <CodeBlock label="Lazy folder node">
 
@@ -96,6 +96,6 @@ const lazyFolder = {
 
 </CodeBlock>
 
-The same Plugin Server must resolve every `nodeUrl` it emits. Never include credentials in `nodeUrl`, `resourceId`, labels, or metadata.
+The same Plugin Server must resolve every node identity it emits. Never include credentials in `nodeUrl`, `resourceId`, labels, or metadata.
 
 </DocSection>

@@ -391,7 +391,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - `input.kind` is required.
 - `input.kind = "source"` requires `sourceUrl`.
 - `input.kind = "node"` requires `nodeUrl` or `resourceId`.
-- `resourceId` is optional in v1.
+- Either node identity field may be omitted when the other is present.
 - `password` is optional and attempt-scoped.
 - `basicAuth` is optional and contains `username` and `password` for source-side HTTP Basic Auth.
 - `proxy` is optional and contains `provider` plus the user's own provider `token`. `provider` is an opaque identifier: Lynvo only sends providers the server's manifest declares support for (v1 declares `extensions.lynvo.proxyProvider: "scrape-do"`), and servers must use the token for that request's upstream proxy calls instead of their own shared proxy credentials, and must never log it.
@@ -600,6 +600,7 @@ Rules:
 ## Standard error codes
 
 - `UNSUPPORTED_URL`
+- `UNSUPPORTED_TARGET`
 - `AUTH_INVALID`
 - `AUTH_REQUIRED`
 - `RATE_LIMITED`
@@ -616,6 +617,9 @@ Rules:
 - Lynvo should map the error code to a user-friendly message.
 - Lynvo may also show the Plugin Server error code and raw Plugin Server message as secondary debug detail.
 - Plugin Server error strings must not be the primary UX contract.
+- `UNSUPPORTED_URL` is for URLs that do not match a supported Source.
+- `UNSUPPORTED_TARGET` is for target kinds that the Plugin Server does not
+  resolve.
 
 ## Validation rules
 
@@ -642,6 +646,7 @@ the response body's `code` over the HTTP status when classifying failures.
 | -------------------- | ---- |
 | `BAD_REQUEST`        | 400  |
 | `UNSUPPORTED_URL`    | 400  |
+| `UNSUPPORTED_TARGET` | 400  |
 | `AUTH_INVALID`       | 401  |
 | `AUTH_REQUIRED`      | 401  |
 | `PASSWORD_REQUIRED`  | 401  |

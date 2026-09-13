@@ -10,27 +10,33 @@ import {
   parseUsageResponseContract,
 } from "./contracts.js"
 import { createProtocolError } from "./requests.js"
-import { isProtocolError, toProtocolErrorResponse } from "./errors.js"
 import {
-  canPluginServerAttemptUrl,
-  getExtractTargetUrl,
+  isProtocolError,
+  PROTOCOL_ERROR_STATUS,
+  toProtocolErrorResponse,
+} from "./errors.js"
+import {
+  canPluginServerAttemptTarget,
+  getExtractTarget,
   getMatchedPlugin,
 } from "./matching.js"
-import type {
-  ExtractRequest,
-  PluginServerManifest,
-  PluginServerManifestFactory,
-  PluginServerRuntime,
-  PluginServerRuntimeManifest,
-  PluginServerRuntimeOptions,
-  VerifySuccessResponse,
+import {
+  describeExtractTarget,
+  type ExtractRequest,
+  type ExtractTarget,
+  type PluginServerManifest,
+  type PluginServerManifestFactory,
+  type PluginServerRuntime,
+  type PluginServerRuntimeManifest,
+  type PluginServerRuntimeOptions,
+  type VerifySuccessResponse,
 } from "./models.js"
 
 interface ExtractExecutionOptions<Env> {
   readonly request: Request
   readonly env: Env
   readonly parsedRequest: ExtractRequest
-  readonly targetUrl: string
+  readonly target: ExtractTarget
 }
 
 const isManifestFactory = <Env>(
@@ -87,12 +93,12 @@ export const createPluginServerRuntime = <Env>(
     request,
     env,
     parsedRequest,
-    targetUrl,
+    target,
   }: ExtractExecutionOptions<Env>): Promise<Response> => {
     try {
       const result = await options.extract({
         request: parsedRequest,
-        targetUrl,
+        target,
         env,
       })
       const parsedResult = parseExtractSuccessContract(result)
@@ -187,7 +193,7 @@ export const createPluginServerRuntime = <Env>(
             "UNSUPPORTED_URL",
             "This Plugin Server does not support source discovery."
           ),
-          404
+          PROTOCOL_ERROR_STATUS.UNSUPPORTED_URL
         )
       }
 
@@ -230,7 +236,7 @@ export const createPluginServerRuntime = <Env>(
         options.onError?.(error, { request, env })
         return jsonResponse(
           createProtocolError("TEMPORARY_FAILURE", "Source discovery failed."),
-          502
+          PROTOCOL_ERROR_STATUS.TEMPORARY_FAILURE
         )
       }
     },
@@ -256,7 +262,7 @@ export const createPluginServerRuntime = <Env>(
         )
       }
       const parsedRequest = parsed.success
-      const targetUrl = getExtractTargetUrl(parsedRequest)
+      const target = getExtractTarget(parsedRequest)
       const manifest = await resolveManifest(request, env)
       if (!manifest) {
         return protocolMismatchResponse(
@@ -264,23 +270,26 @@ export const createPluginServerRuntime = <Env>(
         )
       }
       if (
-        !canPluginServerAttemptUrl(manifest, targetUrl, parsed.success.pluginId)
+        !canPluginServerAttemptTarget(manifest, target, parsed.success.pluginId)
       ) {
         return jsonResponse(
           createProtocolError(
-            "UNSUPPORTED_URL",
-            `Unsupported URL by this Plugin Server: ${targetUrl}`
+            target.kind === "url" ? "UNSUPPORTED_URL" : "UNSUPPORTED_TARGET",
+            `Unsupported extraction target by this Plugin Server: ${describeExtractTarget(target)}`
           ),
           400
         )
       }
 
-      const matchedPluginId = getMatchedPlugin(manifest, targetUrl)?.id
+      const matchedPluginId =
+        target.kind === "url"
+          ? getMatchedPlugin(manifest, target.url)?.id
+          : parsedRequest.pluginId
       await runHook(
         async () => {
           await options.onExtractAccepted?.({
             request: parsedRequest,
-            targetUrl,
+            target,
             manifest,
             matchedPluginId,
             runtimeContext: { request, env },
@@ -289,7 +298,7 @@ export const createPluginServerRuntime = <Env>(
         request,
         env
       )
-      return executeExtract({ request, env, parsedRequest, targetUrl })
+      return executeExtract({ request, env, parsedRequest, target })
     },
   }
 }

@@ -13,6 +13,8 @@ import {
   validPluginServerManifestFixture,
   validUsageResponseFixture,
   createPluginServerRuntime,
+  PROTOCOL_ERROR_STATUS,
+  type ExtractTarget,
 } from "../src/index"
 
 describe("Plugin Server protocol fixtures", () => {
@@ -93,6 +95,87 @@ describe("Plugin Server protocol fixtures", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({
       plugin: { pluginId: "generic-media-probe" },
+    })
+  })
+
+  it("passes opaque resource IDs to extraction without URL matching", async () => {
+    const targets: ExtractTarget[] = []
+    const runtime = createPluginServerRuntime({
+      manifest: {
+        ...validPluginServerManifestFixture,
+        extensions: {},
+      },
+      auth: { validate: () => true },
+      usage: () => validUsageResponseFixture,
+      extract: ({ target }) => {
+        targets.push(target)
+        return validExtractSuccessFixture
+      },
+    })
+
+    const response = await runtime.handleExtract(
+      new Request("https://plugin-server.example/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          input: { kind: "node", resourceId: "opaque-resource-id" },
+        }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(200)
+    expect(targets).toEqual([
+      { kind: "resourceId", resourceId: "opaque-resource-id" },
+    ])
+  })
+
+  it("rejects an unmatched URL when no Plugin can probe it", async () => {
+    const response = await createPluginServerRuntime({
+      manifest: validPluginServerManifestFixture,
+      auth: { validate: () => true },
+      usage: () => validUsageResponseFixture,
+      extract: () => validExtractSuccessFixture,
+    }).handleExtract(
+      new Request("https://plugin-server.example/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          input: {
+            kind: "source",
+            sourceUrl: "https://unmatched.example/video.mp4",
+          },
+        }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_URL)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "UNSUPPORTED_URL" },
+    })
+  })
+
+  it("rejects a resource ID for an unknown selected Plugin", async () => {
+    const response = await createPluginServerRuntime({
+      manifest: validPluginServerManifestFixture,
+      auth: { validate: () => true },
+      usage: () => validUsageResponseFixture,
+      extract: () => validExtractSuccessFixture,
+    }).handleExtract(
+      new Request("https://plugin-server.example/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          pluginId: "missing-plugin",
+          input: { kind: "node", resourceId: "opaque-resource-id" },
+        }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_TARGET)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "UNSUPPORTED_TARGET" },
     })
   })
 
@@ -201,8 +284,7 @@ describe("Plugin Server protocol fixtures", () => {
       issues: [
         {
           path: "plugin.pluginIconUrl",
-          message:
-            "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons.",
+          message: "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons.",
         },
       ],
     })
