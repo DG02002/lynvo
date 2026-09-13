@@ -45,7 +45,6 @@ type RequestQuery = ExtractQuery | MetadataQuery | RemotePollQuery
 export type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly method?: "DELETE" | "GET" | "PATCH" | "POST"
   readonly headers?: Record<string, string>
-  readonly json?: boolean
   readonly payload?: Payload
   readonly query?: RequestQuery
 }
@@ -141,7 +140,20 @@ export const requestJson = async <ResponseBody, Payload = undefined>(
   options: RequestOptions<Payload>,
   schema: Schema.ConstraintDecoder<ResponseBody>
 ): Promise<ResponseBody> => {
-  const response = await requestSameOrigin(path, { ...options, json: true })
+  const { method = "GET", headers, query, ...requestOptions } = options
+  const requestHeaders = { ...headers }
+  if (
+    !Object.keys(requestHeaders).some((key) => key.toLowerCase() === "accept")
+  ) {
+    requestHeaders.Accept = "application/json"
+  }
+  if (method !== "GET") {
+    requestHeaders["X-CSRF-Token"] = getCsrfToken() || ""
+  }
+  const response = await requestSameOrigin(
+    resolveRequestUrl(appendQuery(path, query)),
+    { ...requestOptions, method, headers: requestHeaders }
+  )
   const body = await readJson(response)
   if (!response.ok) {
     throw new ApiClientError({ body: decodeApiErrorBody(body), response })
@@ -154,7 +166,6 @@ export const requestSameOrigin = async <Payload = undefined>(
   {
     method = "GET",
     headers,
-    json = true,
     payload,
     query,
     signal,
@@ -162,19 +173,8 @@ export const requestSameOrigin = async <Payload = undefined>(
 ): Promise<Response> => {
   const requestHeaders = { ...sessionIdentityHeaders(), ...headers }
 
-  if (
-    json &&
-    !Object.keys(requestHeaders).some((key) => key.toLowerCase() === "accept")
-  ) {
-    requestHeaders.Accept = "application/json"
-  }
-
   if (payload !== undefined) {
     requestHeaders["Content-Type"] = "application/json"
-  }
-
-  if (json && method !== "GET") {
-    requestHeaders["X-CSRF-Token"] = getCsrfToken() || ""
   }
 
   const requestInit: RequestInit = {
@@ -191,10 +191,7 @@ export const requestSameOrigin = async <Payload = undefined>(
     requestInit.signal = signal
   }
   const requestPath = appendQuery(path, query)
-  return await fetch(
-    json ? resolveRequestUrl(requestPath) : requestPath,
-    requestInit
-  )
+  return await fetch(requestPath, requestInit)
 }
 
 type MutationOptions<ResponseBody, Payload> = {

@@ -29,7 +29,10 @@ import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 import { LinkDebugLogDialog } from "./link-debug-log-dialog"
 import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
-import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
+import {
+  openInSpecificPlayerForHandoff,
+  PLAYER_DEFINITIONS,
+} from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { cn } from "~/lib/utils"
@@ -172,10 +175,9 @@ const LinkItemMenuContent = ({
                             }
                             openInPlayer(
                               () =>
-                                openInSpecificPlayer(playableUrl, player).then(
-                                  (result) => ({
-                                    accepted: result.expectsNavigation,
-                                  })
+                                openInSpecificPlayerForHandoff(
+                                  playableUrl,
+                                  player
                                 ),
                               {
                                 itemLabel: playableLink.label,

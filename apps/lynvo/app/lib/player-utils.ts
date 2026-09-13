@@ -210,3 +210,11 @@ export const openInSpecificPlayer = async (
 
   return { expectsNavigation: true, player }
 }
+
+export const openInSpecificPlayerForHandoff = async (
+  targetUrl: string,
+  player: PlayerDefinition
+) => {
+  const result = await openInSpecificPlayer(targetUrl, player)
+  return { accepted: result.expectsNavigation }
+}

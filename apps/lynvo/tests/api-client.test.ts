@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { client } from "~/lib/api/client"
+import { client, requestSameOrigin } from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
 
 const fetchMock = vi.fn<typeof globalThis.fetch>()
@@ -31,7 +31,10 @@ describe("browser API client", () => {
     })
 
     const [input, init] = fetchMock.mock.calls[0]!
-    const request = new Request(input, init)
+    const request = new Request(
+      new URL(String(input), window.location.href),
+      init
+    )
     expect(new URL(request.url).pathname).toBe("/api/settings/player")
     expect(request.method).toBe("PATCH")
     expect(request.credentials).toBe("same-origin")
@@ -43,6 +46,26 @@ describe("browser API client", () => {
     await expect(request.json()).resolves.toEqual({
       rangeSupportedPlayerId: "vlc",
     })
+  })
+
+  it("keeps raw same-origin callers on their exact header shape", async () => {
+    fetchMock.mockResolvedValue(Response.json({ status: "pending" }))
+
+    await requestSameOrigin("/api/auth/device/approval?code=abc", {
+      headers: { "Content-Type": "application/json" },
+    })
+
+    const [input, init] = fetchMock.mock.calls[0]!
+    const request = new Request(
+      new URL(String(input), window.location.href),
+      init
+    )
+    expect(request.credentials).toBe("same-origin")
+    expect(request.headers.get("content-type")).toBe("application/json")
+    expect(request.headers.get("accept")).toBeNull()
+    expect(request.headers.get("x-csrf-token")).toBeNull()
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBe("user-1")
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBe("session-1")
   })
 
   it("preserves tagged API errors and response metadata", async () => {

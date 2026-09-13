@@ -20,7 +20,10 @@ import type {
 } from "~/features/links/types"
 import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 import { toLinkViewModel } from "~/features/links/link-view-models"
-import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
+import {
+  openInSpecificPlayerForHandoff,
+  type PlayerDefinition,
+} from "~/lib/player-utils"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
@@ -545,16 +548,10 @@ const FinderBrowserLinkRow = ({
     if (linkTarget === undefined) {
       return
     }
-    openInPlayer(
-      () =>
-        openInSpecificPlayer(linkTarget, player).then((result) => ({
-          accepted: result.expectsNavigation,
-        })),
-      {
-        itemLabel: link.label,
-        markOpened: () => actions.markOpened(item.url, linkTarget),
-      }
-    )
+    openInPlayer(() => openInSpecificPlayerForHandoff(linkTarget, player), {
+      itemLabel: link.label,
+      markOpened: () => actions.markOpened(item.url, linkTarget),
+    })
   }
 
   return (

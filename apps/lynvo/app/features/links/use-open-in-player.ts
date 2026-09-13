@@ -6,6 +6,14 @@ export interface OpenInPlayerOptions {
   readonly markOpened: () => void
 }
 
+export const openInPlayerAndMarkOpened = async (
+  open: () => Promise<PlaybackHandoffResult>,
+  { itemLabel, markOpened }: OpenInPlayerOptions
+): Promise<void> => {
+  const result = await open()
+  markAfterAcceptedHandoff({ ...result, itemLabel, markOpened })
+}
+
 export const useOpenInPlayer = () =>
   useCallback(
     (
@@ -13,11 +21,9 @@ export const useOpenInPlayer = () =>
       { itemLabel, markOpened }: OpenInPlayerOptions
     ): void => {
       try {
-        void open()
-          .then((result) =>
-            markAfterAcceptedHandoff({ ...result, itemLabel, markOpened })
-          )
-          .catch(console.error)
+        void openInPlayerAndMarkOpened(open, { itemLabel, markOpened }).catch(
+          console.error
+        )
       } catch (error) {
         console.error(error)
       }

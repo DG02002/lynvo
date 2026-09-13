@@ -26,7 +26,7 @@ import {
   resolveFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { openInPlayerAndMarkOpened } from "~/features/links/use-open-in-player"
 import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
 import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
@@ -413,9 +413,7 @@ export const useFinderBrowserState = ({
     }
 
     const linkTarget = getMediaNodeTargetOrUndefined(link)
-    const result = await actions.play(link)
-    markAfterAcceptedHandoff({
-      ...result,
+    await openInPlayerAndMarkOpened(() => actions.play(link), {
       itemLabel: link.label,
       markOpened: () => {
         if (linkTarget !== undefined) {

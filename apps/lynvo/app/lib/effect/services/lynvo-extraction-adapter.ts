@@ -28,6 +28,7 @@ import {
 } from "./lynvo-plugin-server-adapter"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
+import { requireDatabaseEffect } from "../require-database"
 import { getD1Database } from "../../../../workers/d1/db"
 import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
 
@@ -187,13 +188,18 @@ export const extractWithLynvoPluginServer = Effect.fn(
   if (!meteredPluginId) {
     return yield* extraction
   }
-  const database = getD1Database(options.environment)
-  if (!database) {
-    return yield* new ExtractionError({
-      message: "Managed extraction metering is unavailable.",
-      url: options.targetUrl,
-    })
-  }
+  const database = yield* requireDatabaseEffect(
+    options.environment,
+    "Managed extraction metering is unavailable."
+  ).pipe(
+    Effect.mapError(
+      (error) =>
+        new ExtractionError({
+          message: error.message,
+          url: options.targetUrl,
+        })
+    )
+  )
   const reservationTime = yield* DateTime.now
   yield* Effect.tryPromise({
     try: () =>

@@ -28,7 +28,7 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { useOpenInPlayer } from "~/features/links/use-open-in-player"
-import { openInSpecificPlayer } from "~/lib/player-utils"
+import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { getLinkKey, getResolvableSourceName } from "./save-list-browser-model"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
@@ -107,11 +107,7 @@ const ResolvedMirrorRows = ({
                   onOpenInPlayer={(player) =>
                     openInPlayer(
                       () =>
-                        openInSpecificPlayer(mirrorTarget, player).then(
-                          (result) => ({
-                            accepted: result.expectsNavigation,
-                          })
-                        ),
+                        openInSpecificPlayerForHandoff(mirrorTarget, player),
                       { itemLabel: mirror.label, markOpened }
                     )
                   }

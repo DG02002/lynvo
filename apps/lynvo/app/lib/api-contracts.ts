@@ -1,5 +1,20 @@
 import { Schema } from "effect"
 import { remoteCommandFieldsSchema } from "./remote-play/wire"
+import {
+  LynvoUsageSnapshotSchema,
+  PluginServerUsageSchema,
+  UsageMetricSchema,
+} from "../../shared/usage-contracts"
+export {
+  LynvoUsageSnapshotSchema,
+  PluginServerUsageSchema,
+  UsageMetricSchema,
+} from "../../shared/usage-contracts"
+export type {
+  LynvoUsageSnapshot,
+  PluginServerUsage,
+  UsageMetric,
+} from "../../shared/usage-contracts"
 
 export const MutationResultSchema = Schema.Struct({
   success: Schema.Boolean,
@@ -117,38 +132,6 @@ export const ClearLinksResponseSchema = Schema.Struct({
   dataVersion: Schema.Number,
 })
 
-export const UsageMetricSchema = Schema.Struct({
-  id: Schema.String,
-  label: Schema.String,
-  used: Schema.Number,
-  limit: Schema.Number,
-  unit: Schema.String,
-  period: Schema.Literals(["daily", "monthly"]),
-  resetsAt: Schema.String,
-  pluginId: Schema.optional(Schema.String),
-})
-
-export const PluginServerUsageSchema = Schema.Struct({
-  pluginServerId: Schema.String,
-  name: Schema.String,
-  iconUrl: Schema.optional(Schema.String),
-  plugins: Schema.optional(
-    Schema.Array(
-      Schema.Struct({
-        id: Schema.String,
-        name: Schema.String,
-        iconUrl: Schema.optional(Schema.String),
-      })
-    )
-  ),
-  metrics: Schema.Array(UsageMetricSchema),
-  error: Schema.optional(Schema.String),
-})
-
-export const LynvoUsageSnapshotSchema = Schema.Struct({
-  metrics: Schema.Array(UsageMetricSchema),
-})
-
 export const RemoteSendPayloadSchema = Schema.Struct({
   target_session_id: Schema.String,
   command: Schema.Literal("play"),
@@ -233,9 +216,6 @@ export type RetentionPreviewResponse =
   typeof RetentionPreviewResponseSchema.Type
 export type UpdateRetentionResponse = typeof UpdateRetentionResponseSchema.Type
 export type ClearLinksResponse = typeof ClearLinksResponseSchema.Type
-export type UsageMetric = typeof UsageMetricSchema.Type
-export type PluginServerUsage = typeof PluginServerUsageSchema.Type
-export type LynvoUsageSnapshot = typeof LynvoUsageSnapshotSchema.Type
 export type RemoteSendPayload = typeof RemoteSendPayloadSchema.Type
 export type ExtractQuery = typeof ExtractQuerySchema.Type
 export type MetadataQuery = typeof MetadataQuerySchema.Type

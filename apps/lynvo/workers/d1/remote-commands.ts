@@ -256,14 +256,13 @@ export const reportRemoteCommandResult = async ({
   success: boolean
   dataVersion: number
 }> => {
-  const row = await requireOwnedRow<RemoteCommandRow>(
+  const row = await requireOwnedRow<RemoteCommandRow>({
     database,
-    "remote_commands",
-    REMOTE_COMMAND_COLUMNS,
+    source: { table: "remote_commands", columns: REMOTE_COMMAND_COLUMNS },
     id,
     userId,
-    "Remote command claim is no longer active"
-  )
+    createError: () => new Error("Remote command claim is no longer active"),
+  })
   if (
     row.target_session_id !== sessionId ||
     row.target_receiver_id !== receiverId ||

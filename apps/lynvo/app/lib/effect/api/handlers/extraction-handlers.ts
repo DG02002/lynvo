@@ -5,7 +5,10 @@ import { Api } from "../api"
 import { ExtractionService } from "../../services/extraction-service"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { RequestEventService } from "../../services/request-event-service"
-import { resolveOptionalSession } from "../../session-context"
+import {
+  resolveOptionalSession,
+  webRequestFromSource,
+} from "../../session-context"
 import { isDevelopmentFreezeUsageEnabled } from "../../../development-settings"
 
 const extractionKind = (
@@ -24,10 +27,8 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           const requestEvent = yield* RequestEventService
           const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
-          const { webRequest, session } = yield* resolveOptionalSession(
-            request.source,
-            environment
-          )
+          const webRequest = yield* webRequestFromSource(request.source)
+          const session = yield* resolveOptionalSession(webRequest, environment)
           const userId = session?.userId
           const inputKind = extractionKind(query.kind) ?? "source"
           const operationId = `${requestEvent.requestId}:${inputKind}`
@@ -74,10 +75,8 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           const requestEvent = yield* RequestEventService
           const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
-          const { session } = yield* resolveOptionalSession(
-            request.source,
-            environment
-          )
+          const webRequest = yield* webRequestFromSource(request.source)
+          const session = yield* resolveOptionalSession(webRequest, environment)
           const userId = session?.userId
 
           requestEvent.add({

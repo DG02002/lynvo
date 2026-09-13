@@ -16,7 +16,10 @@ import {
 } from "../../errors"
 import { PluginCredentialVault } from "../../services/plugin-credential-vault"
 import { CloudflareEnv } from "../../services/cloudflare-env"
-import { requireDatabaseEffect } from "../../require-database"
+import {
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+} from "../../require-database"
 import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
 import {
   beginPluginDomainCredentialChange,
@@ -82,13 +85,13 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           return yield* Effect.tryPromise({
             try: () => listPluginDomains(database, user.id),
             catch: (cause) =>
               new BackendError({
-                message: "Account data is temporarily unavailable",
+                message: ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
                 cause,
               }),
           })
@@ -101,7 +104,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const vault = yield* PluginCredentialVault
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const parsedInput = yield* validateDomainInput(payload.domain)
           const domain = yield* validateDomain(parsedInput.url)
@@ -159,7 +162,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const vault = yield* PluginCredentialVault
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const { password } = payload
           if (!password) {
@@ -217,7 +220,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const dataVersion = yield* Effect.tryPromise({
             try: () =>
@@ -240,7 +243,7 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const dataVersion = yield* Effect.tryPromise({
             try: () =>

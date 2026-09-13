@@ -21,15 +21,13 @@ export const requireOwnedPluginServerRow = async (
   userId: string,
   pluginServerId: string
 ): Promise<PluginServerRow> => {
-  return requireOwnedRow(
+  return requireOwnedRow({
     database,
-    "user_plugin_servers",
-    PLUGIN_SERVER_COLUMNS,
-    pluginServerId,
+    source: { table: "user_plugin_servers", columns: PLUGIN_SERVER_COLUMNS },
+    id: pluginServerId,
     userId,
-    "Plugin server not found or no longer available",
-    () => new PluginServerUnavailableError()
-  )
+    createError: () => new PluginServerUnavailableError(),
+  })
 }
 
 export const requireReadyPluginServerRow = async (

@@ -2,6 +2,7 @@ import { requestSameOrigin } from "~/lib/api/client"
 import { Result, Schema } from "effect"
 
 const authorizeErrorResponseSchema = Schema.Struct({ error: Schema.String })
+const DEVICE_JSON_HEADERS = { "Content-Type": "application/json" }
 
 export interface DeviceCodeApproval {
   code: string
@@ -14,7 +15,8 @@ export const readDeviceCodeApproval = async (
   code: string
 ): Promise<DeviceCodeApproval | null> => {
   const response = await requestSameOrigin(
-    `/api/auth/device/approval?code=${encodeURIComponent(code)}`
+    `/api/auth/device/approval?code=${encodeURIComponent(code)}`,
+    { headers: DEVICE_JSON_HEADERS }
   )
   if (!response.ok) {
     throw new Error("The login code couldn’t be checked. Try again.")
@@ -25,6 +27,7 @@ export const readDeviceCodeApproval = async (
 export const authorizeDeviceCode = async (code: string): Promise<void> => {
   const response = await requestSameOrigin("/api/auth/device/authorize", {
     method: "POST",
+    headers: DEVICE_JSON_HEADERS,
     payload: { code },
   })
   if (!response.ok) {
@@ -56,7 +59,8 @@ export const readDeviceCodeStatus = async (input: {
   pollSecret: string
 }): Promise<DeviceCodeStatus> => {
   const response = await requestSameOrigin(
-    `/api/auth/device/status?code=${encodeURIComponent(input.code)}&pollSecret=${encodeURIComponent(input.pollSecret)}`
+    `/api/auth/device/status?code=${encodeURIComponent(input.code)}&pollSecret=${encodeURIComponent(input.pollSecret)}`,
+    { headers: DEVICE_JSON_HEADERS }
   )
   return await response.json()
 }
@@ -80,7 +84,8 @@ export const claimDeviceExchange = async (input: {
     generation: String(input.generation),
   })
   const response = await requestSameOrigin(
-    `/api/auth/device/exchange?${query.toString()}`
+    `/api/auth/device/exchange?${query.toString()}`,
+    { headers: DEVICE_JSON_HEADERS }
   )
   if (!response.ok) {
     throw new Error("Approve this code on the signed-in device")
@@ -99,6 +104,7 @@ export const finalizeDeviceExchangeOverHttp = async (input: {
     "/api/auth/device/exchange/finalize",
     {
       method: "POST",
+      headers: DEVICE_JSON_HEADERS,
       payload: input,
     }
   )

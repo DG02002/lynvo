@@ -242,15 +242,16 @@ const requireAuthorizedDomainRow = async (
   userId: string,
   domainId: string
 ): Promise<PluginDomainRow> => {
-  return requireOwnedRow(
+  return requireOwnedRow({
     database,
-    "user_plugin_domains",
-    PLUGIN_DOMAIN_COLUMNS,
-    domainId,
+    source: {
+      table: "user_plugin_domains",
+      columns: PLUGIN_DOMAIN_COLUMNS,
+    },
+    id: domainId,
     userId,
-    "Plugin domain not found",
-    () => new PluginDomainNotFoundError()
-  )
+    createError: () => new PluginDomainNotFoundError(),
+  })
 }
 
 const raisePluginDomainWriteConflict = async (

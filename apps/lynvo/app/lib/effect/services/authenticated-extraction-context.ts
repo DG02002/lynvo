@@ -1,6 +1,9 @@
 import { Effect } from "effect"
 import { BackendError, type CredentialVaultError } from "../errors"
-import { requireDatabaseEffect } from "../require-database"
+import {
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+} from "../require-database"
 import { listReadyPluginServersForService } from "../../../../workers/d1/plugin-servers"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import type { RegisteredPluginServer } from "./extraction-types"
@@ -20,7 +23,7 @@ export const loadRegisteredPluginServers = Effect.fn(
 > {
   const database = yield* requireDatabaseEffect(
     environment,
-    "Account data is temporarily unavailable"
+    ACCOUNT_DATA_UNAVAILABLE_MESSAGE
   )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, userId),

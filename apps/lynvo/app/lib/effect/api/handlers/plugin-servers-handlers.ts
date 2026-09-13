@@ -4,7 +4,10 @@ import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
-import { requireDatabaseEffect } from "../../require-database"
+import {
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+} from "../../require-database"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
 import {
@@ -34,7 +37,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
@@ -45,7 +48,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             try: () => listPluginServers(database, user.id),
             catch: (cause) =>
               new BackendError({
-                message: "Account data is temporarily unavailable",
+                message: ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
                 cause,
               }),
           })
@@ -81,7 +84,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
@@ -112,7 +115,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
@@ -194,7 +197,7 @@ export const PluginServersHandlers = HttpApiBuilder.group(
           const environment = yield* CloudflareEnv
           const database = yield* requireDatabaseEffect(
             environment,
-            "Account data is temporarily unavailable"
+            ACCOUNT_DATA_UNAVAILABLE_MESSAGE
           )
           const requestEvent = yield* RequestEventService
           requestEvent.add({

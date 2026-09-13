@@ -1,4 +1,4 @@
-import type { UsageMetric } from "../../app/lib/api-contracts"
+import type { UsageMetric } from "../../shared/usage-contracts"
 import {
   DAY_MS,
   GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,

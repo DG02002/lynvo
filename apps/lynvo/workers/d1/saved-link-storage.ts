@@ -240,13 +240,11 @@ export const requireOwnedSavedLink = async (
   userId: string,
   linkId: string
 ): Promise<LinkRow> => {
-  return requireOwnedRow(
+  return requireOwnedRow({
     database,
-    "links",
-    SAVED_LINK_COLUMNS,
-    linkId,
+    source: { table: "links", columns: SAVED_LINK_COLUMNS },
+    id: linkId,
     userId,
-    "Link not found or no longer available",
-    () => new LinkNotFoundError()
-  )
+    createError: () => new LinkNotFoundError(),
+  })
 }
