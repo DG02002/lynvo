@@ -11,17 +11,13 @@ import { WebAuth, CsrfMiddleware, CurrentUser } from "./middleware"
 import { validateCSRF } from "../../csrf"
 import { CloudflareEnv } from "../services/cloudflare-env"
 import { requireDatabaseEffect } from "../require-database"
+import { webRequestFromSource } from "../session-context"
 import { UnauthorizedError, CsrfError } from "../errors"
 import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
 import { resolveSessionContext } from "../../../../workers/d1/sessions"
-
-const webRequestFromSource = <Source>(source: Source) =>
-  source instanceof Request
-    ? Effect.succeed(source)
-    : Effect.die(new Error("HTTP server request source is not a Web Request"))
 
 // Implement WebAuth middleware
 export const WebAuthLive = Layer.succeed(

@@ -5,14 +5,8 @@ import { Api } from "../api"
 import { ExtractionService } from "../../services/extraction-service"
 import { CloudflareEnv } from "../../services/cloudflare-env"
 import { RequestEventService } from "../../services/request-event-service"
-import { getD1Database } from "../../../../../workers/d1/db"
-import { resolveSessionContext } from "../../../../../workers/d1/sessions"
+import { resolveOptionalSession } from "../../session-context"
 import { isDevelopmentFreezeUsageEnabled } from "../../../development-settings"
-
-const webRequestFromSource = <Source>(source: Source) =>
-  source instanceof Request
-    ? Effect.succeed(source)
-    : Effect.die(new Error("HTTP server request source is not a Web Request"))
 
 const extractionKind = (
   kind: string | undefined
@@ -30,13 +24,10 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           const requestEvent = yield* RequestEventService
           const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
-          const webRequest = yield* webRequestFromSource(request.source)
-          const database = getD1Database(environment)
-          const session = database
-            ? yield* Effect.promise(() =>
-                resolveSessionContext(webRequest, database, Date.now())
-              )
-            : null
+          const { webRequest, session } = yield* resolveOptionalSession(
+            request.source,
+            environment
+          )
           const userId = session?.userId
           const inputKind = extractionKind(query.kind) ?? "source"
           const operationId = `${requestEvent.requestId}:${inputKind}`
@@ -83,13 +74,10 @@ export const ExtractionHandlers = HttpApiBuilder.group(
           const requestEvent = yield* RequestEventService
           const environment = yield* CloudflareEnv
           const request = yield* HttpServerRequest.HttpServerRequest
-          const webRequest = yield* webRequestFromSource(request.source)
-          const database = getD1Database(environment)
-          const session = database
-            ? yield* Effect.promise(() =>
-                resolveSessionContext(webRequest, database, Date.now())
-              )
-            : null
+          const { session } = yield* resolveOptionalSession(
+            request.source,
+            environment
+          )
           const userId = session?.userId
 
           requestEvent.add({
