@@ -204,11 +204,11 @@ export const useFinderBrowserState = ({
     if (!parsedFolderPath.hasSearchParam && !shouldAutoDescendRef.current) {
       const descendedPath = getSingleFolderDescendPath(itemRootLinks)
       if (descendedPath.length > 0) {
+        shouldAutoDescendRef.current = true
         setFolderPath((currentFolderPath) => {
           if (currentFolderPath.length > 0) {
             return currentFolderPath
           }
-          shouldAutoDescendRef.current = true
           return descendedPath
         })
       }
