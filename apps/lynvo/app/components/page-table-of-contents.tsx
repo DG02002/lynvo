@@ -1,21 +1,18 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react"
+import { useEffect, useRef } from "react"
 
-import {
-  DOCS_SCROLL_END_TOLERANCE_PX,
-  DOCS_SCROLL_OFFSET_PX,
-} from "~/lib/constants"
+import { DOCS_SCROLL_OFFSET_PX } from "~/lib/constants"
 import { cn } from "~/lib/utils"
+import {
+  useActiveHeadingTracker,
+  useDocumentHeadings,
+  useHeadingClickHandler,
+  type PageHeading,
+} from "./page-heading-navigation"
 import { getScrollAdjustment } from "./page-table-of-contents-utils"
-
-interface PageTableOfContentsHeading {
-  id: string
-  label: string
-  level?: 3
-}
 
 const getTableOfContentsLinkClassName = (
   variant: "docs" | "policy",
-  heading: PageTableOfContentsHeading,
+  heading: PageHeading,
   isActive: boolean
 ): string => {
   const variantClassName =
@@ -39,6 +36,8 @@ const getTableOfContentsLinkClassName = (
   return cn(variantClassName, levelClassName, activeClassName)
 }
 
+const getDocsScrollOffset = () => DOCS_SCROLL_OFFSET_PX
+
 export function PageTableOfContents({
   className,
   headings: providedHeadings,
@@ -46,111 +45,17 @@ export function PageTableOfContents({
   variant = "docs",
 }: {
   className?: string
-  headings?: readonly PageTableOfContentsHeading[]
+  headings?: readonly PageHeading[]
   targetId?: string
   variant?: "docs" | "policy"
 }) {
   const navigationRef = useRef<HTMLElement>(null)
-  const [headings, setHeadings] = useState<
-    readonly PageTableOfContentsHeading[]
-  >(providedHeadings ?? [])
-  const [activeHeadingId, setActiveHeadingId] = useState(
-    providedHeadings?.[0]?.id ?? ""
+  const headings = useDocumentHeadings(providedHeadings, targetId)
+  const [activeHeadingId, setActiveHeadingId] = useActiveHeadingTracker(
+    headings,
+    getDocsScrollOffset
   )
-
-  useEffect(() => {
-    if (providedHeadings) {
-      setHeadings(providedHeadings)
-      setActiveHeadingId(providedHeadings[0]?.id ?? "")
-      return
-    }
-
-    const target = targetId ? document.getElementById(targetId) : null
-    if (!target) {
-      return
-    }
-
-    const discoverHeadings = () => {
-      const discoveredHeadings = Array.from(
-        target.querySelectorAll<HTMLElement>("h2[id], h3[id]")
-      ).map((heading) => ({
-        id: heading.id,
-        label: heading.textContent?.trim() ?? heading.id,
-        level: heading.tagName === "H3" ? (3 as const) : undefined,
-      }))
-
-      setHeadings(discoveredHeadings)
-      setActiveHeadingId((currentId) =>
-        discoveredHeadings.some((heading) => heading.id === currentId)
-          ? currentId
-          : (discoveredHeadings[0]?.id ?? "")
-      )
-    }
-
-    discoverHeadings()
-    const observer = new MutationObserver(discoverHeadings)
-    observer.observe(target, { childList: true, subtree: true })
-
-    return () => observer.disconnect()
-  }, [providedHeadings, targetId])
-
-  useEffect(() => {
-    let animationFrameId: number | undefined
-
-    const updateActiveHeading = () => {
-      animationFrameId = undefined
-      const headingElements = headings.flatMap((heading) => {
-        const headingElement = document.getElementById(heading.id)
-        return headingElement ? [headingElement] : []
-      })
-
-      if (headingElements.length === 0) {
-        return
-      }
-
-      let nextActiveHeadingId = headingElements[0].id
-      for (const headingElement of headingElements) {
-        if (
-          headingElement.getBoundingClientRect().top <= DOCS_SCROLL_OFFSET_PX
-        ) {
-          nextActiveHeadingId = headingElement.id
-        } else {
-          break
-        }
-      }
-
-      if (
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - DOCS_SCROLL_END_TOLERANCE_PX
-      ) {
-        nextActiveHeadingId = headingElements.at(-1)?.id ?? nextActiveHeadingId
-      }
-
-      setActiveHeadingId((currentHeadingId) =>
-        currentHeadingId === nextActiveHeadingId
-          ? currentHeadingId
-          : nextActiveHeadingId
-      )
-    }
-
-    const requestUpdate = () => {
-      if (animationFrameId === undefined) {
-        animationFrameId = window.requestAnimationFrame(updateActiveHeading)
-      }
-    }
-
-    requestUpdate()
-    window.addEventListener("scroll", requestUpdate, { passive: true })
-    window.addEventListener("resize", requestUpdate)
-
-    return () => {
-      window.removeEventListener("scroll", requestUpdate)
-      window.removeEventListener("resize", requestUpdate)
-      if (animationFrameId !== undefined) {
-        window.cancelAnimationFrame(animationFrameId)
-      }
-    }
-  }, [headings])
+  const handleHeadingClick = useHeadingClickHandler(setActiveHeadingId)
 
   useEffect(() => {
     const navigation = navigationRef.current
@@ -171,26 +76,6 @@ export function PageTableOfContents({
       itemTop: itemRect.top,
     })
   }, [activeHeadingId])
-
-  const handleHeadingClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    headingId: string
-  ) => {
-    const headingElement = document.getElementById(headingId)
-    if (!headingElement) {
-      return
-    }
-
-    event.preventDefault()
-    setActiveHeadingId(headingId)
-    headingElement.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    })
-    window.history.pushState(null, "", `#${headingId}`)
-  }
 
   return (
     <nav
