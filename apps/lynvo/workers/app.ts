@@ -467,7 +467,6 @@ app.use("/api/auth/device/authorize", async (context, next) => {
     )
   }
   if (rateLimitResult === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
     return context.json(
       requestApiError(context, {
         code: "rate_limited",
