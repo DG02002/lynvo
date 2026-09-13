@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { saveLink } from "~/features/links/use-link-actions/save-flow"
+import { resolveSaveIntent } from "~/features/links/save-intent"
 
 describe("Index save flow", () => {
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe("Index save flow", () => {
     const addLink = vi.fn()
     const enqueueLink = vi.fn().mockResolvedValue("queued-id")
 
-    const result = await saveLink({
+    const result = await resolveSaveIntent({
       currentUrl: credentialedUrl,
       links: [],
       addLink,
@@ -30,7 +30,7 @@ describe("Index save flow", () => {
     const addLink = vi.fn()
     const enqueueLink = vi.fn().mockResolvedValue("saved-id")
 
-    const result = await saveLink({
+    const result = await resolveSaveIntent({
       currentUrl: sourceUrl,
       links: [],
       addLink,
@@ -47,7 +47,7 @@ describe("Index save flow", () => {
     const addLink = vi.fn()
     const enqueueLink = vi.fn().mockResolvedValue(undefined)
 
-    const result = await saveLink({
+    const result = await resolveSaveIntent({
       currentUrl: sourceUrl,
       links: [],
       addLink,
