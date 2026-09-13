@@ -19,7 +19,6 @@ import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
 import { resolveSessionContext } from "../../../../workers/d1/sessions"
 
-// Implement WebAuth middleware
 export const WebAuthLive = Layer.succeed(
   WebAuth,
   WebAuth.of((httpEffect) =>
@@ -61,7 +60,6 @@ export const WebAuthLive = Layer.succeed(
   )
 )
 
-// Implement CsrfMiddleware
 export const CsrfLive = Layer.succeed(
   CsrfMiddleware,
   CsrfMiddleware.of((httpEffect) =>
@@ -93,7 +91,6 @@ export const CsrfLive = Layer.succeed(
   )
 )
 
-// Combine all handlers and middlewares into a router layer
 const MiddlewaresLive = Layer.mergeAll(WebAuthLive, CsrfLive)
 
 const HandlersLive = Layer.mergeAll(
