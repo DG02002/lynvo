@@ -20,6 +20,7 @@ import type {
 } from "~/features/links/types"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
+import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { ExpandableFilename } from "~/components/expandable-filename"
@@ -452,12 +453,13 @@ const FinderBrowserLinkRow = ({
   displayTitle,
   onActivate,
 }: FinderBrowserLinkRowProps) => {
+  const currentTimeMs = useMinuteTimeBucket()
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
   const shouldShowEpisodeStillForLink =
     shouldShowEpisodeStills && hasEpisodeMarker(link.label, parentFolderName)
   const isExpired =
-    !isFolder && link.expiry !== undefined && link.expiry <= Date.now()
+    !isFolder && link.expiry !== undefined && link.expiry <= currentTimeMs
   const isResolving =
     linkTarget !== undefined && extractingItems.has(linkTarget)
   const episodeStill = useFinderEpisodeStill(
@@ -957,9 +959,11 @@ export const SaveListBrowser = ({
   extractingItems,
   highlightedId,
   isHydrating,
-  currentTimeMs = Date.now(),
+  currentTimeMs,
   shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
+  const minuteTimeBucket = useMinuteTimeBucket()
+  const rowCurrentTimeMs = currentTimeMs ?? minuteTimeBucket
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
   if (selectedItem?.kind === "saved") {
@@ -983,7 +987,7 @@ export const SaveListBrowser = ({
     return <SaveListEmptyState />
   }
 
-  const groupedItems = groupSaveListItems(items, currentTimeMs)
+  const groupedItems = groupSaveListItems(items, rowCurrentTimeMs)
 
   return (
     <section className={SAVE_LIST_SECTION_STACK_CLASS}>
@@ -995,7 +999,7 @@ export const SaveListBrowser = ({
               const view = toLinkViewModel(item)
               const interactionState = getSavedLinkInteractionState(
                 item,
-                currentTimeMs
+                rowCurrentTimeMs
               )
               const { directLink, isDirectLinkExpired, isResolvableContainer } =
                 interactionState

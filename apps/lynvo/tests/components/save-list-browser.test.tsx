@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -1233,6 +1233,80 @@ describe("SaveListBrowser", () => {
     })
   })
 
+  it("updates cached mirrors from saved link metadata without remounting the row", async () => {
+    const lazyItemUrl = "https://resolver-beta.example/metadata-update"
+    const createItem = (mirrorLabel: string): LinkViewItem => ({
+      id: "resolver-beta-metadata-update",
+      url: "https://source-alpha.example/metadata-update",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "metadata-update",
+              url: lazyItemUrl,
+              label: "Metadata Update Item",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+        playback: {
+          openedUrls: [],
+          resolvedMirrors: {
+            [lazyItemUrl]: [
+              {
+                url: `https://cdn.example/${mirrorLabel}.mp4`,
+                label: mirrorLabel,
+                mediaNodeKind: "playable",
+                type: "file",
+              },
+            ],
+          },
+        },
+      },
+    })
+
+    const Harness = () => {
+      const [item, setItem] = useState(() => createItem("Old cached mirror"))
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setItem(createItem("Fresh cached mirror"))}
+          >
+            Update saved link metadata
+          </button>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={vi.fn()}
+            actions={createActions()}
+            extractingItems={new Set()}
+            highlightedId={null}
+            isHydrating={false}
+          />
+        </>
+      )
+    }
+
+    render(<Harness />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Metadata Update Item" })
+    )
+    expect(await screen.findByText("Old cached mirror")).toBeVisible()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update saved link metadata" })
+    )
+
+    expect(await screen.findByText("Fresh cached mirror")).toBeVisible()
+    expect(screen.queryByText("Old cached mirror")).not.toBeInTheDocument()
+  })
+
   it("shows a red failure state when a resolvable item returns no links", async () => {
     const markOpened = vi.fn()
     const item: LinkViewItem = {
@@ -1285,6 +1359,56 @@ describe("SaveListBrowser", () => {
     })
     expect(failedPlayableItemButton).toHaveClass("bg-destructive/15")
     expect(markOpened).not.toHaveBeenCalled()
+  })
+
+  it("shows a failure state when resolving a playable item throws", async () => {
+    const item: LinkViewItem = {
+      url: "https://source-alpha.example/thrown-resolution",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "thrown-resolution-item",
+              url: "https://resolver-beta.example/thrown-resolution",
+              label: "Thrown Resolution Item",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={item.url}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions({
+          expandMirror: vi.fn().mockRejectedValue(new Error("network failed")),
+        })}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    const itemButton = screen.getByRole("button", {
+      name: "Thrown Resolution Item",
+    })
+    fireEvent.click(itemButton)
+
+    await waitFor(() =>
+      expect(itemButton.parentElement).toHaveAttribute(
+        "data-resolution-state",
+        "failed"
+      )
+    )
+    expect(itemButton).toHaveClass("bg-destructive/15")
   })
 
   it("shows the size of a single playable Example Drive item", () => {
@@ -1457,6 +1581,53 @@ describe("SaveListBrowser", () => {
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     fireEvent.click(itemButton)
     expect(play).not.toHaveBeenCalled()
+  })
+
+  it("disables a playable row when the minute clock reaches its expiry", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-22T10:00:30.000Z"))
+    const directLink: ExtractedLink = {
+      url: "https://cdn.example.com/expiring-video.mp4",
+      label: "expiring-video.mp4",
+      mediaNodeKind: "playable",
+      type: "file",
+      expiry: new Date("2026-07-22T10:01:00.000Z").getTime(),
+    }
+    const item: LinkViewItem = {
+      url: "https://source.example/expiring-video",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Direct Media" },
+        extraction: { extractedLinks: [directLink] },
+        playback: { openedUrls: [] },
+      },
+    }
+
+    render(
+      <SaveListBrowser
+        items={[{ ...item, kind: "saved" }]}
+        selectedItemUrl={null}
+        onSelectedItemUrlChange={vi.fn()}
+        actions={createActions()}
+        extractingItems={new Set()}
+        highlightedId={null}
+        isHydrating={false}
+      />
+    )
+
+    const itemButton = screen.getByRole("button", {
+      name: "Open expiring-video.mp4",
+    })
+    const filename = screen.getByText("expiring-video.mp4")
+    expect(itemButton).toBeEnabled()
+    expect(filename).not.toHaveClass("line-through")
+
+    act(() => vi.advanceTimersByTime(30_000))
+
+    expect(itemButton).toBeDisabled()
+    expect(filename).toHaveClass("line-through")
+    vi.useRealTimers()
   })
 
   it("shows New on a root folder before it is opened and marks it opened on open", () => {
