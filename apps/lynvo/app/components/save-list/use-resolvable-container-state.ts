@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type {
@@ -65,7 +65,7 @@ export const useResolvableContainerState = ({
   const [isResolving, setIsResolving] = useState(false)
   const localResolveInFlight = useRef(false)
   const currentMetadata = useRef(metadata)
-  useEffect(() => {
+  useLayoutEffect(() => {
     currentMetadata.current = metadata
   }, [metadata])
   const didResolutionFail = resolutionFailureMetadata === metadata
@@ -74,6 +74,10 @@ export const useResolvableContainerState = ({
     isExternallyResolving || localResolveInFlight.current
 
   const markResolutionFailed = () => {
+    if (currentMetadata.current !== metadata) {
+      return
+    }
+
     setIsExpanded(false)
     setResolutionFailureMetadata(metadata)
   }
@@ -106,9 +110,7 @@ export const useResolvableContainerState = ({
       }
     } catch (error) {
       console.error("Failed to resolve playable links", error)
-      if (currentMetadata.current === metadata) {
-        markResolutionFailed()
-      }
+      markResolutionFailed()
     } finally {
       localResolveInFlight.current = false
       setIsResolving(false)

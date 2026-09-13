@@ -1454,9 +1454,8 @@ describe("SaveListBrowser", () => {
     let rejectResolution: (() => void) | undefined
     const expandMirror = vi.fn<LinkItemActions["expandMirror"]>(
       () =>
-        new Promise<ExtractedLink[] | null>((resolve) => {
-          rejectResolution = () =>
-            resolve(Promise.reject(new Error("stale resolution")))
+        new Promise<ExtractedLink[] | null>((_resolve, reject) => {
+          rejectResolution = () => reject(new Error("stale resolution"))
         })
     )
     const initialItem = createResolvableItem({
