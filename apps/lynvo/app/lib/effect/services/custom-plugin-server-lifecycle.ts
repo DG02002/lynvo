@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { CloudflareEnv } from "./cloudflare-env"
-import { getD1Database } from "../../../../workers/d1/db"
+import { requireDatabaseEffect } from "../require-database"
 import {
   beginPluginServerRegistration,
   finalizePluginServerCredential,
@@ -60,24 +60,22 @@ const registrationError = (error: {
         : error.message,
   })
 
-const requireDatabase = (environment: Cloudflare.Env) => {
-  const database = getD1Database(environment)
-  if (!database) {
-    return undefined
-  }
-  return database
-}
-
 export const registerCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.register"
 )(function* (input: RegisterCustomPluginServerInput) {
   const environment = yield* CloudflareEnv
-  const database = requireDatabase(environment)
-  if (!database) {
-    return yield* new PluginServerRegistrationError({
-      message: "Account data is temporarily unavailable.",
-    })
-  }
+  const database = yield* requireDatabaseEffect(
+    environment,
+    "Account data is temporarily unavailable."
+  ).pipe(
+    Effect.catchTag("BackendError", () =>
+      Effect.fail(
+        new PluginServerRegistrationError({
+          message: "Account data is temporarily unavailable.",
+        })
+      )
+    )
+  )
   const normalizedBaseUrl = yield* normalizePluginServerBaseUrl(input.baseUrl)
   const reservation = yield* Effect.tryPromise({
     try: () =>
@@ -158,12 +156,18 @@ export const refreshCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.refresh"
 )(function* (input: RefreshCustomPluginServerInput) {
   const environment = yield* CloudflareEnv
-  const database = requireDatabase(environment)
-  if (!database) {
-    return yield* new PluginServerRegistrationError({
-      message: "Account data is temporarily unavailable.",
-    })
-  }
+  const database = yield* requireDatabaseEffect(
+    environment,
+    "Account data is temporarily unavailable."
+  ).pipe(
+    Effect.catchTag("BackendError", () =>
+      Effect.fail(
+        new PluginServerRegistrationError({
+          message: "Account data is temporarily unavailable.",
+        })
+      )
+    )
+  )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, input.user.id),
     catch: (cause) =>
@@ -233,12 +237,10 @@ export const readCustomPluginServerUsage = Effect.fn(
   "CustomPluginServerLifecycle.readUsage"
 )(function* (input: ReadCustomPluginServerUsageInput) {
   const environment = yield* CloudflareEnv
-  const database = requireDatabase(environment)
-  if (!database) {
-    return yield* new BackendError({
-      message: "Account data is temporarily unavailable",
-    })
-  }
+  const database = yield* requireDatabaseEffect(
+    environment,
+    "Account data is temporarily unavailable"
+  )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, input.user.id),
     catch: (cause) =>

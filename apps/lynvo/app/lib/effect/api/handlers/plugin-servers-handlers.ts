@@ -4,9 +4,9 @@ import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
+import { requireDatabaseEffect } from "../../require-database"
 import { BackendError } from "../../errors"
 import { RequestEventService } from "../../services/request-event-service"
-import { getD1Database } from "../../../../../workers/d1/db"
 import {
   deletePluginServerById,
   listPluginServers,
@@ -32,17 +32,15 @@ export const PluginServersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_list",
             user_id: user.id,
           })
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
           return yield* Effect.tryPromise({
             try: () => listPluginServers(database, user.id),
             catch: (cause) =>
@@ -81,7 +79,10 @@ export const PluginServersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_toggle",
@@ -89,11 +90,6 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             plugin_server_id: params.pluginServerId,
             plugin_server_enabled: payload.enabled,
           })
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
           const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               setPluginServerEnabled(database, user.id, {
@@ -114,7 +110,10 @@ export const PluginServersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_proxy_toggle",
@@ -122,11 +121,6 @@ export const PluginServersHandlers = HttpApiBuilder.group(
             plugin_server_id: params.pluginServerId,
             plugin_server_proxy_enabled: payload.enabled,
           })
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
           const result = yield* Effect.tryPromise({
             try: () =>
               setPluginServerProxyEnabled(database, user.id, {
@@ -198,18 +192,16 @@ export const PluginServersHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const requestEvent = yield* RequestEventService
           requestEvent.add({
             operation: "plugin_server_delete",
             user_id: user.id,
             plugin_server_id: params.pluginServerId,
           })
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
           const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               deletePluginServerById(database, user.id, {

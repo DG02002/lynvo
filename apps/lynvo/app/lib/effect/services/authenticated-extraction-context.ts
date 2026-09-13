@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import { BackendError, type CredentialVaultError } from "../errors"
-import { getD1Database } from "../../../../workers/d1/db"
+import { requireDatabaseEffect } from "../require-database"
 import { listReadyPluginServersForService } from "../../../../workers/d1/plugin-servers"
 import { decryptCustomPluginServers } from "./custom-plugin-server-credentials"
 import type { RegisteredPluginServer } from "./extraction-types"
@@ -18,12 +18,10 @@ export const loadRegisteredPluginServers = Effect.fn(
   RegisteredExtractionContext,
   BackendError | CredentialVaultError
 > {
-  const database = getD1Database(environment)
-  if (!database) {
-    return yield* new BackendError({
-      message: "Account data is temporarily unavailable",
-    })
-  }
+  const database = yield* requireDatabaseEffect(
+    environment,
+    "Account data is temporarily unavailable"
+  )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, userId),
     catch: (cause) =>

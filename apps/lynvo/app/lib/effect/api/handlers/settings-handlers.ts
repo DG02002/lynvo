@@ -5,8 +5,8 @@ import { CurrentUser } from "../middleware"
 import { versionedSuccess } from "../versioned-response"
 import { normalizePlayerPreferences } from "../../../player-utils"
 import { CloudflareEnv } from "../../services/cloudflare-env"
+import { requireDatabaseEffect } from "../../require-database"
 import { BackendError, NotFoundError, ValidationError } from "../../errors"
-import { getD1Database } from "../../../../../workers/d1/db"
 import {
   findSessionOwnerById,
   listSessionsForUser,
@@ -28,14 +28,6 @@ import {
   initiateAccountErasure,
 } from "../../../../../workers/d1/account-erasure"
 
-const requireDatabase = (environment: Cloudflare.Env) => {
-  const database = getD1Database(environment)
-  if (!database) {
-    return undefined
-  }
-  return database
-}
-
 export const SettingsHandlers = HttpApiBuilder.group(
   Api,
   "settings",
@@ -45,12 +37,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           yield* Effect.tryPromise({
             try: () =>
               touchSessionActivity(database, user.sid, {
@@ -70,12 +60,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const preferences = yield* Effect.tryPromise({
             try: () => getUserPlayerPreferences(database, user.id),
             catch: (cause) =>
@@ -91,12 +79,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const { dataVersion } = yield* Effect.tryPromise({
             try: () =>
               updateUserPlayerPreferences(database, user.id, {
@@ -119,12 +105,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           return yield* Effect.tryPromise({
             try: () =>
               listSessionsForUser({
@@ -145,12 +129,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const ownerId = yield* Effect.promise(() =>
             findSessionOwnerById(database, params.sessionId)
           )
@@ -175,12 +157,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           yield* Effect.tryPromise({
             try: async () => {
               await revokeAllSessionsForUser(database, user.id, Date.now())
@@ -199,12 +179,10 @@ export const SettingsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = requireDatabase(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const account = yield* Effect.promise(() =>
             getUserById(database, user.id)
           )

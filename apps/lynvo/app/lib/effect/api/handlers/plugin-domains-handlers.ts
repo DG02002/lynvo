@@ -16,8 +16,8 @@ import {
 } from "../../errors"
 import { PluginCredentialVault } from "../../services/plugin-credential-vault"
 import { CloudflareEnv } from "../../services/cloudflare-env"
+import { requireDatabaseEffect } from "../../require-database"
 import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
-import { getD1Database } from "../../../../../workers/d1/db"
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
@@ -80,12 +80,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           return yield* Effect.tryPromise({
             try: () => listPluginDomains(database, user.id),
             catch: (cause) =>
@@ -101,12 +99,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
           const vault = yield* PluginCredentialVault
-          const database = getD1Database(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const parsedInput = yield* validateDomainInput(payload.domain)
           const domain = yield* validateDomain(parsedInput.url)
           const username = payload.username || parsedInput.username
@@ -161,12 +157,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
           const vault = yield* PluginCredentialVault
-          const database = getD1Database(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const { password } = payload
           if (!password) {
             return yield* new ValidationError({
@@ -221,12 +215,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const dataVersion = yield* Effect.tryPromise({
             try: () =>
               deletePluginDomainCredential(database, user.id, {
@@ -246,12 +238,10 @@ export const PluginDomainsHandlers = HttpApiBuilder.group(
         Effect.gen(function* () {
           const user = yield* CurrentUser
           const environment = yield* CloudflareEnv
-          const database = getD1Database(environment)
-          if (!database) {
-            return yield* new BackendError({
-              message: "Account data is temporarily unavailable",
-            })
-          }
+          const database = yield* requireDatabaseEffect(
+            environment,
+            "Account data is temporarily unavailable"
+          )
           const dataVersion = yield* Effect.tryPromise({
             try: () =>
               deletePluginDomainById(database, user.id, {
