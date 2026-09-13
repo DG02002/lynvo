@@ -2,6 +2,7 @@ import {
   DEVICE_APPROVAL_RATE_LIMIT,
   DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
 } from "./constants"
+import { getClientIp } from "./request-client-ip"
 
 export type AuthenticationRateLimitResult =
   | "allowed"
@@ -52,18 +53,20 @@ export const checkRateLimit = async ({
 
 interface CheckDeviceApprovalRateLimitInput {
   readonly environment: AuthenticationRateLimitEnvironment
-  readonly clientIp: string
+  readonly request: Request
   readonly userId: string
 }
 
+// Keep this check on the non-bypassing path: with a limiter binding present,
+// approval reads exercise the production abuse-control path in development.
 export const checkDeviceApprovalRateLimit = ({
   environment,
-  clientIp,
+  request,
   userId,
 }: CheckDeviceApprovalRateLimitInput): Promise<AuthenticationRateLimitResult> =>
   checkRateLimit({
     environment,
-    key: `auth:device-approval:${clientIp}:${userId}`,
+    key: `auth:device-approval:${getClientIp(request)}:${userId}`,
     limit: DEVICE_APPROVAL_RATE_LIMIT,
     windowSeconds: DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
   })

@@ -13,7 +13,7 @@ import { createTestRateLimiter } from "../support/rate-limiter"
 
 const CLIENT_IP = "192.0.2.44"
 
-describe("device approval Worker route", () => {
+describe("device auth Worker routes", () => {
   it("keeps approval lookup available under the limit and returns the sibling 429 shape after it", async () => {
     const user = await insertGoogleUser(env.DB, {
       googleSubject: `subject-${crypto.randomUUID()}`,
@@ -92,8 +92,60 @@ describe("device approval Worker route", () => {
       AUTH_RATE_LIMITER: unavailableLimiter.namespace,
     })
     expect(unavailableResponse.status).toBe(503)
-    await expect(unavailableResponse.text()).resolves.toBe(
-      "Device approval is unavailable. Try again later."
+    await expect(unavailableResponse.json()).resolves.toMatchObject({
+      code: "service_unavailable",
+      error: "Device approval is unavailable. Try again later.",
+      retryable: true,
+    })
+
+    expect(unavailableLimiter.calls.map(({ key }) => key)).toEqual([
+      `auth:device-approval:${CLIENT_IP}:${user.id}`,
+    ])
+  })
+
+  it("returns 503 instead of 429 when the exchange limiter is unavailable", async () => {
+    const limiter = createTestRateLimiter(
+      () => new Response(null, { status: 500 })
     )
+    const response = await app.fetch(
+      new Request("https://lynvo.test/api/auth/device/exchange"),
+      // SAFETY: This route only reads the D1 database and rate-limiter binding supplied here.
+      {
+        DB: env.DB,
+        ENVIRONMENT: "production",
+        AUTH_RATE_LIMITER: limiter.namespace,
+      } as Env
+    )
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toMatchObject({
+      code: "service_unavailable",
+      error: "Device exchange is unavailable. Try again later.",
+      retryable: true,
+    })
+    expect(limiter.calls.map(({ key }) => key)).toEqual([
+      "auth:device-exchange:unknown",
+    ])
+  })
+
+  it("returns a distinct unavailable status when the polling limiter is unavailable", async () => {
+    const limiter = createTestRateLimiter(
+      () => new Response(null, { status: 500 })
+    )
+    const response = await app.fetch(
+      new Request("https://lynvo.test/api/auth/device/status"),
+      // SAFETY: This route only reads the D1 database and rate-limiter binding supplied here.
+      {
+        DB: env.DB,
+        ENVIRONMENT: "production",
+        AUTH_RATE_LIMITER: limiter.namespace,
+      } as Env
+    )
+
+    expect(response.status).toBe(503)
+    await expect(response.json()).resolves.toEqual({ status: "unavailable" })
+    expect(limiter.calls.map(({ key }) => key)).toEqual([
+      "auth:device-poll:unknown",
+    ])
   })
 })

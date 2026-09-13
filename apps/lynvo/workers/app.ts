@@ -10,7 +10,6 @@ import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
 import { handler as apiHandler } from "../app/lib/effect/api/server"
 import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
-import { createApiErrorResponse } from "../app/lib/api-errors"
 import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
 import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
@@ -21,12 +20,14 @@ import {
 } from "./request-logging"
 import { responseSecurityHeaders } from "./response-security-headers"
 import { buildReleaseIdentity } from "./release-identity"
+import { requestApiError } from "./request-api-error"
 import {
   checkAuthenticationRateLimit,
   checkDeviceApprovalRateLimit,
   checkRateLimit,
   type AuthenticationRateLimitResult,
 } from "./authentication-rate-limit"
+import { getClientIp } from "./request-client-ip"
 import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
 import { closeRealtimeSession } from "./realtime-session-revocation"
 import {
@@ -84,26 +85,12 @@ app.use("*", responseSecurityHeaders())
 
 app.use("/api/*", requestLogging({ exclude: ["/api/version"] }))
 
-const requestApiError = (
-  context: HonoContext<RequestLoggingEnvironment>,
-  error: Parameters<typeof createApiErrorResponse>[0]
-) =>
-  createApiErrorResponse({
-    ...error,
-    requestId: context.get("requestId"),
-  })
-
 type AuthEnv = Env & {
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
 const toFailureMessage = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause)
-
-const clientIp = (request: Request): string =>
-  request.headers.get("CF-Connecting-IP") ??
-  request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-  "unknown"
 
 const rateLimit = checkRateLimit
 
@@ -233,7 +220,7 @@ app.post("/api/auth/device/code", async (context) => {
   }
   const rateLimitResult = await checkAuthenticationRateLimit({
     environment: context.env,
-    key: `auth:device-code:${clientIp(context.req.raw)}`,
+    key: `auth:device-code:${getClientIp(context.req.raw)}`,
     limit: DEVICE_CODE_CREATION_RATE_LIMIT,
     windowSeconds: DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
   })
@@ -384,7 +371,7 @@ const createRealtimeHandshakeRejection = async (
   }
   const handshakeRateLimit = await rateLimit({
     environment: context.env,
-    key: `realtime:${clientIp(request)}`,
+    key: `realtime:${getClientIp(request)}`,
     limit: EXTRACTION_ROUTE_RATE_LIMIT,
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
   })
@@ -464,7 +451,7 @@ app.use("/api/auth/device/authorize", async (context, next) => {
   }
   const rateLimitResult = await checkDeviceApprovalRateLimit({
     environment: context.env,
-    clientIp: clientIp(context.req.raw),
+    request: context.req.raw,
     userId: session.userId,
   })
   if (rateLimitResult === "unavailable") {
@@ -498,7 +485,7 @@ app.use("/api/auth/device/authorize", async (context, next) => {
 app.use("/api/extract", async (context, next) => {
   const result = await rateLimit({
     environment: context.env,
-    key: `extraction:${clientIp(context.req.raw)}`,
+    key: `extraction:${getClientIp(context.req.raw)}`,
     limit: EXTRACTION_ROUTE_RATE_LIMIT,
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
   })
@@ -531,7 +518,7 @@ app.use("/api/extract", async (context, next) => {
 app.use("/api/meta", async (context, next) => {
   const result = await rateLimit({
     environment: context.env,
-    key: `metadata:${clientIp(context.req.raw)}`,
+    key: `metadata:${getClientIp(context.req.raw)}`,
     limit: EXTRACTION_ROUTE_RATE_LIMIT,
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
   })
