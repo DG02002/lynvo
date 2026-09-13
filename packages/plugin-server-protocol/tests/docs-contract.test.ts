@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
 import {
+  ERROR_CODES,
   PROTOCOL_ERROR_STATUS,
   parseExtractSuccessContract,
 } from "../src/index"
@@ -11,7 +12,11 @@ const documentedSuccessResponseSchema = Schema.Struct({
   extensions: Schema.Record(Schema.String, Schema.Unknown),
 })
 
-type DocumentationAssertion = "nodeIdentity" | "extractTarget" | "statusTable"
+type DocumentationAssertion =
+  | "nodeIdentity"
+  | "extractTarget"
+  | "statusTable"
+  | "errorCodes"
 
 const documentationExpectations = new Map<
   URL,
@@ -48,6 +53,13 @@ const documentationExpectations = new Map<
   ],
   [
     new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/errors.mdx",
+      import.meta.url
+    ),
+    ["errorCodes"],
+  ],
+  [
+    new URL(
       "../../../apps/lynvo/app/features/site/docs/plugin-server/success-responses.mdx",
       import.meta.url
     ),
@@ -68,6 +80,20 @@ const documentationUrlsFor = (assertion: DocumentationAssertion): URL[] =>
   [...documentationExpectations.entries()]
     .filter(([, assertions]) => assertions.includes(assertion))
     .map(([documentationUrl]) => documentationUrl)
+
+const documentationUrlFor = (assertion: DocumentationAssertion): URL => {
+  const urls = documentationUrlsFor(assertion)
+  if (urls.length !== 1) {
+    throw new Error(
+      `Expected exactly one documentation URL for ${assertion}, found ${urls.length}`
+    )
+  }
+  const [url] = urls
+  if (!url) {
+    throw new Error(`Missing documentation URL for ${assertion}`)
+  }
+  return url
+}
 
 describe("published Plugin Server documentation", () => {
   it("keeps success responses aligned with the runtime schema", async () => {
@@ -91,11 +117,7 @@ describe("published Plugin Server documentation", () => {
   })
 
   it("keeps the documented HTTP status table aligned with the protocol mapping", async () => {
-    const [statusTableUrl] = documentationUrlsFor("statusTable")
-    if (!statusTableUrl) {
-      throw new Error("No documentation URL declares the status table")
-    }
-    const source = await readFile(statusTableUrl, "utf8")
+    const source = await readFile(documentationUrlFor("statusTable"), "utf8")
     const [, statusTable = ""] = source.split("### HTTP status mapping\n")
     const rows = [
       ...(statusTable?.matchAll(/^\| `([^`]+)`\s+\|\s+(\d+)\s+\|$/gm) ?? []),
@@ -105,6 +127,15 @@ describe("published Plugin Server documentation", () => {
     )
 
     expect(documentedStatuses).toEqual(PROTOCOL_ERROR_STATUS)
+  })
+
+  it("keeps the in-app error-code table aligned with the protocol codes", async () => {
+    const source = await readFile(documentationUrlFor("errorCodes"), "utf8")
+    const documentedCodes = [
+      ...source.matchAll(/^\| `([^`]+)`\s+\|[^|]+\|$/gm),
+    ].map(([, code]) => code)
+
+    expect(documentedCodes).toEqual(ERROR_CODES)
   })
 
   it("documents URL and resource ID node identities on every guidance surface", async () => {
