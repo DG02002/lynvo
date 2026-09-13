@@ -46,6 +46,104 @@ describe("outbound HTTP safety boundary", () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
+  it.each([301, 302, 303])(
+    "cancels every intermediate redirect body and converts POST to GET after %s",
+    async (status) => {
+      const firstRedirectResponse = new Response("first redirect body", {
+        status: 307,
+        headers: { Location: "https://public.example/intermediate" },
+      })
+      const secondRedirectResponse = new Response("second redirect body", {
+        status,
+        headers: { Location: "https://public.example/final" },
+      })
+      const firstCancel = vi.spyOn(firstRedirectResponse.body!, "cancel")
+      const secondCancel = vi.spyOn(secondRedirectResponse.body!, "cancel")
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValueOnce(firstRedirectResponse)
+        .mockResolvedValueOnce(secondRedirectResponse)
+        .mockResolvedValueOnce(new Response("final body"))
+      const transport = createOutboundHttpTransport({ fetch })
+
+      await expect(
+        transport.fetch("https://public.example/start", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Request-Id": "request-1",
+          },
+          body: "request body",
+        })
+      ).resolves.toMatchObject({ status: 200 })
+
+      expect(firstCancel).toHaveBeenCalledOnce()
+      expect(secondCancel).toHaveBeenCalledOnce()
+      expect(fetch).toHaveBeenCalledTimes(3)
+      const intermediateRequest = fetch.mock.calls[1]?.[0]
+      expect(intermediateRequest).toBeInstanceOf(Request)
+      expect(intermediateRequest).toMatchObject({ method: "POST" })
+      if (!(intermediateRequest instanceof Request)) {
+        throw new Error("Expected the intermediate fetch input to be a Request")
+      }
+      await expect(intermediateRequest.clone().text()).resolves.toBe(
+        "request body"
+      )
+      const finalRequest = fetch.mock.calls[2]?.[0]
+      expect(finalRequest).toBeInstanceOf(Request)
+      expect(finalRequest).toMatchObject({ method: "GET", body: null })
+      if (!(finalRequest instanceof Request)) {
+        throw new Error("Expected the final fetch input to be a Request")
+      }
+      await expect(finalRequest.clone().text()).resolves.toBe("")
+    }
+  )
+
+  it("keeps the request timeout active while reading the response body", async () => {
+    let pullStarted!: () => void
+    const pullStartedPromise = new Promise<void>((resolve) => {
+      pullStarted = resolve
+    })
+    let releasePull!: () => void
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          pullStarted()
+          return new Promise<void>((resolve) => {
+            releasePull = () => {
+              resolve()
+              controller.error(new Error("test body released"))
+            }
+          })
+        },
+      },
+      { highWaterMark: 0 }
+    )
+    let requestSignal: AbortSignal | undefined
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementationOnce(async (request) => {
+        requestSignal = request instanceof Request ? request.signal : undefined
+        return new Response(body)
+      })
+    const transport = createOutboundHttpTransport({ fetch })
+    const result = transport.fetch("https://public.example/slow", {
+      timeoutMs: 5,
+    })
+    const outcome = expect(result).rejects.toMatchObject({
+      name: "TimeoutError",
+    })
+
+    await pullStartedPromise
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    try {
+      expect(requestSignal?.aborted).toBe(true)
+    } finally {
+      releasePull()
+    }
+    await outcome
+  })
+
   it("never forwards protected credentials across origins", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValueOnce(
       new Response(null, {
