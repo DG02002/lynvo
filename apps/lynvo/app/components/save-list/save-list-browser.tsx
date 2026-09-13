@@ -50,7 +50,7 @@ import {
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { useOpenInPlayer } from "~/features/links/use-open-in-player"
 import { groupSaveListItems } from "./save-list-groups"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
@@ -454,6 +454,7 @@ const FinderBrowserLinkRow = ({
   onActivate,
 }: FinderBrowserLinkRowProps) => {
   const currentTimeMs = useMinuteTimeBucket()
+  const openInPlayer = useOpenInPlayer()
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
   const shouldShowEpisodeStillForLink =
@@ -540,16 +541,20 @@ const FinderBrowserLinkRow = ({
     }
     void navigator.clipboard.writeText(linkTarget)
   }
-  const openLinkInPlayer = async (player: PlayerDefinition) => {
+  const openLinkInPlayer = (player: PlayerDefinition) => {
     if (linkTarget === undefined) {
       return
     }
-    const result = await openInSpecificPlayer(linkTarget, player)
-    markAfterAcceptedHandoff({
-      accepted: result.expectsNavigation,
-      itemLabel: link.label,
-      markOpened: () => actions.markOpened(item.url, linkTarget),
-    })
+    openInPlayer(
+      () =>
+        openInSpecificPlayer(linkTarget, player).then((result) => ({
+          accepted: result.expectsNavigation,
+        })),
+      {
+        itemLabel: link.label,
+        markOpened: () => actions.markOpened(item.url, linkTarget),
+      }
+    )
   }
 
   return (
@@ -961,6 +966,7 @@ export const SaveListBrowser = ({
   shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
   const minuteTimeBucket = useMinuteTimeBucket()
+  const openInPlayer = useOpenInPlayer()
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
   if (selectedItem?.kind === "saved") {
@@ -1068,23 +1074,14 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          void actions
-                            .play(directLink)
-                            .then((result) =>
-                              markAfterAcceptedHandoff({
-                                ...result,
-                                itemLabel: directLink.label,
-                                markOpened: () => {
-                                  if (directLinkTarget !== undefined) {
-                                    actions.markOpened(
-                                      item.url,
-                                      directLinkTarget
-                                    )
-                                  }
-                                },
-                              })
-                            )
-                            .catch(console.error)
+                          openInPlayer(() => actions.play(directLink), {
+                            itemLabel: directLink.label,
+                            markOpened: () => {
+                              if (directLinkTarget !== undefined) {
+                                actions.markOpened(item.url, directLinkTarget)
+                              }
+                            },
+                          })
                           return
                         }
                         actions.markOpened(item.url, item.url)

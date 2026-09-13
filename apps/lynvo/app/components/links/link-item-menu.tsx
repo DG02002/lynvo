@@ -32,9 +32,9 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { openInSpecificPlayer, PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 import { cn } from "~/lib/utils"
 import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
+import { useOpenInPlayer } from "~/features/links/use-open-in-player"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -65,6 +65,7 @@ const LinkItemMenuContent = ({
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
+  const openInPlayer = useOpenInPlayer()
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
@@ -163,22 +164,25 @@ const LinkItemMenuContent = ({
                       {PLAYER_DEFINITIONS.map((player) => (
                         <DropdownMenuItem
                           key={player.id}
-                          onClick={async () => {
+                          onClick={() => {
                             const playableUrl =
                               getMediaNodeTargetOrUndefined(playableLink)
                             if (playableUrl === undefined) {
                               return
                             }
-                            const result = await openInSpecificPlayer(
-                              playableUrl,
-                              player
+                            openInPlayer(
+                              () =>
+                                openInSpecificPlayer(playableUrl, player).then(
+                                  (result) => ({
+                                    accepted: result.expectsNavigation,
+                                  })
+                                ),
+                              {
+                                itemLabel: playableLink.label,
+                                markOpened: () =>
+                                  actions.markOpened(item.url, playableUrl),
+                              }
                             )
-                            markAfterAcceptedHandoff({
-                              accepted: result.expectsNavigation,
-                              itemLabel: playableLink.label,
-                              markOpened: () =>
-                                actions.markOpened(item.url, playableUrl),
-                            })
                           }}
                         >
                           <PlayerOption player={player} />
