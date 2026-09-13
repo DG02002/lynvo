@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type {
@@ -65,7 +65,9 @@ export const useResolvableContainerState = ({
   const [isResolving, setIsResolving] = useState(false)
   const localResolveInFlight = useRef(false)
   const currentMetadata = useRef(metadata)
-  currentMetadata.current = metadata
+  useEffect(() => {
+    currentMetadata.current = metadata
+  }, [metadata])
   const didResolutionFail = resolutionFailureMetadata === metadata
   const displaySize = link.size
   const isResolveInFlight = () =>
