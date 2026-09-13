@@ -19,7 +19,11 @@ import {
   decryptCustomPluginServers,
   encryptCustomPluginServerApiKey,
 } from "./custom-plugin-server-credentials"
-import { BackendError, PluginServerRegistrationError } from "../errors"
+import {
+  BackendError,
+  getErrorMessage,
+  PluginServerRegistrationError,
+} from "../errors"
 import { getCustomPluginServerUsage } from "./custom-plugin-server-adapter"
 
 const CUSTOM_PLUGIN_SERVER_USAGE_CONCURRENCY = 3
@@ -141,10 +145,7 @@ export const registerCustomPluginServer = Effect.fn(
         Effect.catch((cleanupError) =>
           Effect.logError("Plugin Server registration recovery failed", {
             pluginServerId: reservation.id,
-            error:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : String(cleanupError),
+            error: getErrorMessage(cleanupError),
           })
         ),
         Effect.andThen(Effect.fail(primaryError))
@@ -203,10 +204,7 @@ export const refreshCustomPluginServer = Effect.fn(
         Effect.catch((transitionError) =>
           Effect.logError("Plugin Server health transition failed", {
             pluginServerId: pluginServer.id,
-            error:
-              transitionError instanceof Error
-                ? transitionError.message
-                : String(transitionError),
+            error: getErrorMessage(transitionError),
           })
         ),
         Effect.andThen(Effect.fail(primaryError))
@@ -301,10 +299,7 @@ export const readCustomPluginServerUsage = Effect.fn(
                   Effect.catch((transitionError) =>
                     Effect.logError("Plugin Server health transition failed", {
                       pluginServerId: pluginServer.id,
-                      error:
-                        transitionError instanceof Error
-                          ? transitionError.message
-                          : String(transitionError),
+                      error: getErrorMessage(transitionError),
                     })
                   ),
                   Effect.as({

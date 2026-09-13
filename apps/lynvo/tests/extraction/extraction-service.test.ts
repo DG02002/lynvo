@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Fiber, Layer, Logger } from "effect"
 import { ExtractionService } from "~/lib/effect/services/extraction-service"
 import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
@@ -75,6 +75,120 @@ const storedCustomServerRow = (
   created_at: 1,
   updated_at: 1,
 })
+
+const managedManifestResponse = () =>
+  lynvoManifestResponse(
+    [
+      {
+        id: "direct-media",
+        displayName: "Direct Media",
+        status: "active",
+        version: "1.0.0",
+        hosts: ["metered.example"],
+        matchers: [{ hosts: ["metered.example"] }],
+      },
+    ],
+    ["metered.example"]
+  )
+
+const successfulManagedExtractionResponse = () =>
+  Response.json({
+    plugin: {
+      pluginServerId: LYNVO_PLUGIN_SERVER_ID,
+      displayName: "Lynvo Plugin Server",
+      pluginId: "direct-media",
+      pluginName: "Direct Media",
+    },
+    nodes: [
+      {
+        kind: "playable",
+        label: "video.mp4",
+        url: "https://media.example/video.mp4",
+      },
+    ],
+    extensions: {},
+  })
+
+const failedManagedExtractionResponse = () =>
+  Response.json(
+    {
+      ok: false,
+      error: { code: "TEMPORARY_FAILURE", message: "Unavailable" },
+      extensions: {},
+    },
+    { status: 503 }
+  )
+
+const createManagedExtractionEnvironment = (
+  extractResponse: (request: Request) => Response | Promise<Response>,
+  settlementError?: Error
+) => {
+  const settlementOutcomes: string[] = []
+  const operationReadCounts = new Map<string, number>()
+  const database = createFakeD1Database((sql, args) => {
+    if (
+      sql.includes(
+        "FROM managed_extraction_operations WHERE user_id = ?1 AND operation_id = ?2"
+      )
+    ) {
+      const operationId = String(args[1])
+      const readCount = (operationReadCounts.get(operationId) ?? 0) + 1
+      operationReadCounts.set(operationId, readCount)
+      // Reservation performs the first matching read before creating the row;
+      // settlement performs the second read and must find that reservation.
+      if (readCount === 2) {
+        return {
+          row: {
+            user_id: "user-1",
+            operation_id: operationId,
+            plugin_id: "direct-media",
+            state: "reserved",
+            epoch: 0,
+            daily_period_key: "2000-01-01",
+            monthly_period_key: "2000-01",
+            user_limits_applied: 1,
+            reserved_at: 0,
+            lease_expires_at: Number.MAX_SAFE_INTEGER,
+            settled_at: null,
+          },
+        }
+      }
+    }
+    if (sql.includes("UPDATE managed_extraction_operations SET state = ?3")) {
+      if (settlementError) {
+        return { error: settlementError }
+      }
+      settlementOutcomes.push(String(args[2]))
+      return { rows: [{}] }
+    }
+    return undefined
+  })
+  // SAFETY: This fixture supplies the bindings used by the managed extraction tests.
+  const testEnvironment = {
+    ...environment,
+    MANAGED_PLUGIN_SERVER_API_KEY: "lynvo-test-key",
+    LYNVO_PLUGIN_SERVER: {
+      fetch: async (request: Request) => {
+        if (request.url.endsWith("/manifest")) {
+          return managedManifestResponse()
+        }
+        return extractResponse(request)
+      },
+    },
+    DB: database,
+  } as Env
+  return { settlementOutcomes, testEnvironment }
+}
+
+const managedExtraction = (testEnvironment: Env, requestId: string) =>
+  ExtractionService.use((service) =>
+    service.extract({
+      url: "https://metered.example/video",
+      requestId,
+      pluginId: "direct-media",
+      userId: "user-1",
+    })
+  ).pipe(Effect.provide(buildLayer(testEnvironment)))
 
 describe("Extraction interface routing", () => {
   it("routes an assigned Plugin before Direct Media probing", async () => {
@@ -538,6 +652,80 @@ describe("Extraction interface routing", () => {
       message: "Daily quota reached",
     })
     expect(pluginExtractionCount).toBe(0)
+  })
+
+  it("settles managed extractions from success and failure exits", async () => {
+    const successful = createManagedExtractionEnvironment(() =>
+      successfulManagedExtractionResponse()
+    )
+    const result = await Effect.runPromise(
+      managedExtraction(successful.testEnvironment, "settlement-success")
+    )
+    expect(result.links).toEqual([
+      expect.objectContaining({ label: "video.mp4" }),
+    ])
+    expect(successful.settlementOutcomes).toEqual(["consumed"])
+
+    const failed = createManagedExtractionEnvironment(() =>
+      failedManagedExtractionResponse()
+    )
+    await expect(
+      Effect.runPromise(
+        managedExtraction(failed.testEnvironment, "settlement-failure")
+      )
+    ).rejects.toMatchObject({
+      _tag: "ExtractionError",
+      message: "TEMPORARY_FAILURE",
+    })
+    expect(failed.settlementOutcomes).toEqual(["released"])
+  })
+
+  it("logs the underlying managed settlement error", async () => {
+    const settlementError = new Error("D1 settlement boom")
+    const { testEnvironment } = createManagedExtractionEnvironment(
+      () => successfulManagedExtractionResponse(),
+      settlementError
+    )
+    const logs: unknown[] = []
+    const logger = Logger.make(({ message }) => {
+      logs.push(message)
+    })
+
+    await Effect.runPromise(
+      managedExtraction(testEnvironment, "settlement-log").pipe(
+        Effect.provide(Logger.layer([logger]))
+      )
+    )
+
+    expect(logs).toContainEqual([
+      "Managed extraction settlement failed",
+      {
+        operationId: "settlement-log:source",
+        outcome: "consumed",
+        error: "D1 settlement boom",
+      },
+    ])
+  })
+
+  it("releases a managed extraction when its effect is interrupted", async () => {
+    let signalExtractionStarted: () => void = () => undefined
+    const extractionStarted = new Promise<void>((resolve) => {
+      signalExtractionStarted = resolve
+    })
+    const interrupted = createManagedExtractionEnvironment(() => {
+      signalExtractionStarted()
+      return new Promise<Response>(() => undefined)
+    })
+    const fiber = Effect.runFork(
+      managedExtraction(interrupted.testEnvironment, "settlement-interrupted")
+    )
+    await extractionStarted
+
+    const exit = await Effect.runPromise(
+      Fiber.interrupt(fiber).pipe(Effect.flatMap(() => Fiber.await(fiber)))
+    )
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(interrupted.settlementOutcomes).toEqual(["released"])
   })
 
   it("does not invoke a Custom Plugin without its required credential", async () => {

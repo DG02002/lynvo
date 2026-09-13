@@ -1,6 +1,9 @@
 import { Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
 
+export const getErrorMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause)
+
 export class BackendError extends Schema.TaggedError<BackendError>()(
   "BackendError",
   {
