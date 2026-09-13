@@ -3,17 +3,19 @@ import { Result, Schema } from "effect"
 import {
   DEVICE_POLL_RATE_LIMIT,
   DEVICE_POLL_RATE_WINDOW_SECONDS,
+  GOOGLE_SIGN_IN_START_RATE_LIMIT,
+  GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
   GOOGLE_OAUTH_STATE_COOKIE_NAME,
 } from "../constants"
 import {
   checkAuthenticationRateLimit,
   checkDeviceApprovalRateLimit,
   checkRateLimit,
-  type AuthenticationRateLimitResult,
 } from "../authentication-rate-limit"
 import { getClientIp } from "../request-client-ip"
 import {
   addRequestContext,
+  recordRateLimitResult,
   type RequestLoggingEnvironment,
 } from "../request-logging"
 import { requestApiError } from "../request-api-error"
@@ -54,23 +56,6 @@ const resolveGoogleCredentials = (env: Env): GoogleOAuthCredentials | null => {
 }
 
 const unauthorizedResponse = () => new Response("Unauthorized", { status: 401 })
-
-const recordRateLimitResult = (
-  context: Context<RequestLoggingEnvironment>,
-  result: AuthenticationRateLimitResult
-): void => {
-  if (result === "allowed") {
-    addRequestContext(context, { rate_limit: { allowed: true } })
-    return
-  }
-  if (result === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
-    return
-  }
-  addRequestContext(context, {
-    configuration_error: "auth_rate_limiter_unavailable",
-  })
-}
 
 const codeSchema = Schema.Struct({ code: Schema.NonEmptyString })
 
@@ -159,8 +144,8 @@ export const registerD1AuthRoutes = (
     const rateLimitResult = await checkAuthenticationRateLimit({
       environment: env,
       key: `auth:google-start:${getClientIp(context.req.raw)}`,
-      limit: 10,
-      windowSeconds: 600,
+      limit: GOOGLE_SIGN_IN_START_RATE_LIMIT,
+      windowSeconds: GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
     })
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)

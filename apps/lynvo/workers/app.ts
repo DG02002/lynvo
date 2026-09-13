@@ -15,6 +15,7 @@ import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
 import { cloudflareContext } from "../app/lib/router-context"
 import {
   addRequestContext,
+  recordRateLimitResult,
   requestLogging,
   type RequestLoggingEnvironment,
 } from "./request-logging"
@@ -454,10 +455,8 @@ app.use("/api/auth/device/authorize", async (context, next) => {
     request: context.req.raw,
     userId: session.userId,
   })
+  recordRateLimitResult(context, rateLimitResult)
   if (rateLimitResult === "unavailable") {
-    addRequestContext(context, {
-      configuration_error: "auth_rate_limiter_unavailable",
-    })
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
@@ -478,7 +477,6 @@ app.use("/api/auth/device/authorize", async (context, next) => {
       429
     )
   }
-  addRequestContext(context, { rate_limit: { allowed: true } })
   return next()
 })
 
