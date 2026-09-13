@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { fetchValidatedRedirects, ValidatedFetchError } from "../src/index"
+import { fetchValidatedRedirects } from "../src/index"
 
 const validateUrl = (value: string | URL): URL => new URL(value)
 
@@ -14,7 +14,7 @@ const fetchConfiguration = {
 
 describe("validated outbound fetch", () => {
   it.each([301, 302, 303])(
-    "cancels redirect bodies and converts POST to GET after %s",
+    "cancels each intermediate body and converts POST to GET on final %s",
     async (status) => {
       const firstRedirectResponse = new Response("first redirect body", {
         status: 307,
@@ -67,46 +67,48 @@ describe("validated outbound fetch", () => {
   )
 
   it("keeps the timeout active while reading a buffered response body", async () => {
-    let pullStarted!: () => void
-    const pullStartedPromise = new Promise<void>((resolve) => {
-      pullStarted = resolve
-    })
-    let releasePull!: () => void
-    const body = new ReadableStream<Uint8Array>(
-      {
-        pull(controller) {
-          pullStarted()
-          return new Promise<void>((resolve) => {
-            releasePull = () => {
-              resolve()
-              controller.error(new Error("test body released"))
-            }
-          })
-        },
-      },
-      { highWaterMark: 0 }
-    )
-    const fetch = vi
-      .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(new Response(body))
-    const result = fetchValidatedRedirects(
-      "https://media.example/slow",
-      {},
-      { ...fetchConfiguration, fetch, timeoutMs: 5 }
-    )
-    const outcome = expect(result).rejects.toMatchObject({
-      name: "TimeoutError",
-    })
-
-    await pullStartedPromise
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    const requestSignal = fetch.mock.calls[0]?.[1]?.signal
     try {
+      vi.useFakeTimers()
+      let pullStarted!: () => void
+      const pullStartedPromise = new Promise<void>((resolve) => {
+        pullStarted = resolve
+      })
+      let releasePull!: () => void
+      const body = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            pullStarted()
+            return new Promise<void>((resolve) => {
+              releasePull = () => {
+                resolve()
+                controller.error(new Error("test body released"))
+              }
+            })
+          },
+        },
+        { highWaterMark: 0 }
+      )
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValueOnce(new Response(body))
+      const result = fetchValidatedRedirects(
+        "https://media.example/slow",
+        {},
+        { ...fetchConfiguration, fetch, timeoutMs: 5 }
+      )
+      const outcome = expect(result).rejects.toMatchObject({
+        name: "TimeoutError",
+      })
+
+      await pullStartedPromise
+      await vi.advanceTimersByTimeAsync(5)
+      const requestSignal = fetch.mock.calls[0]?.[1]?.signal
       expect(requestSignal?.aborted).toBe(true)
-    } finally {
       releasePull()
+      await outcome
+    } finally {
+      vi.useRealTimers()
     }
-    await outcome
   })
 
   it("stops reading when the cumulative response exceeds its byte limit", async () => {
@@ -152,7 +154,31 @@ describe("validated outbound fetch", () => {
         {},
         { ...fetchConfiguration, fetch, maxRedirects: 0 }
       )
-    ).rejects.toBeInstanceOf(ValidatedFetchError)
+    ).rejects.toMatchObject({
+      name: "ValidatedFetchError",
+      code: "TOO_MANY_REDIRECTS",
+      message: "Redirect limit exceeded.",
+    })
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it("uses a typed error when a redirect omits its destination", async () => {
+    const redirectResponse = new Response(null, { status: 302 })
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(redirectResponse)
+
+    await expect(
+      fetchValidatedRedirects(
+        "https://media.example/start",
+        {},
+        { ...fetchConfiguration, fetch }
+      )
+    ).rejects.toMatchObject({
+      name: "ValidatedFetchError",
+      code: "INVALID_REDIRECT",
+      message: "Redirect is missing a destination.",
+    })
     expect(fetch).toHaveBeenCalledOnce()
   })
 })

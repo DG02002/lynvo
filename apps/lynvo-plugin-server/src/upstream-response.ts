@@ -3,7 +3,6 @@ import {
   readBoundedResponseJson,
   readBoundedResponseText,
   ValidatedFetchError,
-  type ReadBoundedResponseOptions,
   type JsonValue,
   type ValidatedFetchErrorCode,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -74,11 +73,11 @@ export const readBoundedUpstreamText = (response: Response): Promise<string> =>
     })
   )
 
-export const readBoundedUpstreamJson = async (
+export const readBoundedUpstreamJson = (
   response: Response
-): Promise<JsonValue> => {
-  const options: ReadBoundedResponseOptions = {
-    maximumResponseBytes: UPSTREAM_RESPONSE_BYTE_LIMIT,
-  }
-  return withUpstreamErrors(() => readBoundedResponseJson(response, options))
-}
+): Promise<JsonValue> =>
+  withUpstreamErrors(() =>
+    readBoundedResponseJson(response, {
+      maximumResponseBytes: UPSTREAM_RESPONSE_BYTE_LIMIT,
+    })
+  )
