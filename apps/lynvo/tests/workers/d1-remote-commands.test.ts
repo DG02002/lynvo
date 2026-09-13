@@ -98,7 +98,7 @@ describe("d1 remote commands", () => {
     await enqueueRemoteCommand(env.DB, owner.user.id, {
       targetSessionId: pollSession.id,
       command: "play",
-      payload: '{"url":"https://example.com/video"}',
+      payload: "{}",
       targetReceiverId: "receiver",
       now: Date.now(),
     })
