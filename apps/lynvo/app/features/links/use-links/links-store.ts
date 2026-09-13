@@ -70,7 +70,7 @@ const haveSameServerItems = (
     )
   })
 
-export const createTemporaryLinkId = (): string =>
+const createTemporaryLinkId = (): string =>
   `${TEMPORARY_ID_PREFIX}${crypto.randomUUID()}`
 
 export const isTemporaryLinkId = (linkId: string | undefined): boolean =>

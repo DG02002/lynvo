@@ -15,6 +15,7 @@ interface SaveDateGroupHeadingProps {
   readonly className?: string
 }
 
+/** @internal */
 export const SaveDateGroupHeading = ({
   label,
   id,

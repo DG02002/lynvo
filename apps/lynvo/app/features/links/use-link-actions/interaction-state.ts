@@ -138,8 +138,6 @@ export const useExtractingItems = () => {
 
   return {
     extractingItems,
-    addExtractingItem,
-    removeExtractingItem,
     runWithExtractingItem,
   }
 }

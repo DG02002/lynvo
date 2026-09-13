@@ -77,7 +77,6 @@ interface MediaListRowProps {
   readonly titleExtractionStatus?: ExtractionStatusTitleSpec
   readonly meta?: ReactNode
   readonly newBadge?: MediaListRowNewBadge
-  readonly trailing?: ReactNode
   readonly overlay?: ReactNode
   readonly onActivate: () => void
   readonly disabled?: boolean
@@ -85,7 +84,6 @@ interface MediaListRowProps {
   readonly wrapperClassName?: string
   readonly buttonClassName?: string
   readonly contentClassName?: string
-  readonly overlayClassName?: string
   readonly buttonDataAttributes?: Readonly<Record<string, string | undefined>>
   readonly shouldStackIconOnMobile?: boolean
 }
@@ -97,7 +95,6 @@ export const MediaListRow = ({
   titleExtractionStatus,
   meta,
   newBadge,
-  trailing,
   overlay,
   onActivate,
   disabled = false,
@@ -105,7 +102,6 @@ export const MediaListRow = ({
   wrapperClassName,
   buttonClassName,
   contentClassName,
-  overlayClassName,
   buttonDataAttributes,
   shouldStackIconOnMobile = false,
 }: MediaListRowProps) => (
@@ -190,7 +186,6 @@ export const MediaListRow = ({
           </span>
         )}
       </span>
-      {trailing}
       {newBadge && <NewBadge className="hidden md:inline-flex" />}
     </div>
     {overlay && (
@@ -198,8 +193,7 @@ export const MediaListRow = ({
         className={cn(
           "relative z-2 items-center justify-center",
           shouldStackIconOnMobile ? "hidden md:flex" : "flex",
-          MEDIA_LIST_ROW_MENU_CELL_CLASS,
-          overlayClassName
+          MEDIA_LIST_ROW_MENU_CELL_CLASS
         )}
       >
         {overlay}

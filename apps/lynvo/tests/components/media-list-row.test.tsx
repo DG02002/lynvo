@@ -16,14 +16,13 @@ beforeEach(() => {
 })
 
 describe("MediaListRow", () => {
-  it("renders icon, title, meta, and trailing slots beside the activation button", () => {
+  it("renders icon, title, and meta beside the activation button", () => {
     render(
       <MediaListRow
         label="Title text"
         icon={<span data-testid="row-icon" />}
         title={{ value: "Title text" }}
         meta={<span>Meta text</span>}
-        trailing={<span data-testid="row-trailing" />}
         onActivate={() => {}}
       />
     )
@@ -34,7 +33,6 @@ describe("MediaListRow", () => {
     expect(screen.getByText("Title text")).toBeVisible()
     expect(screen.getByText("Meta text")).toBeVisible()
     expect(screen.getByTestId("row-icon")).toBeInTheDocument()
-    expect(screen.getByTestId("row-trailing")).toBeInTheDocument()
   })
 
   it("exposes an accessible label when provided", () => {
