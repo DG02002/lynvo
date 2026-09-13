@@ -3,16 +3,22 @@ import { Result, Schema } from "effect"
 import {
   DEVICE_POLL_RATE_LIMIT,
   DEVICE_POLL_RATE_WINDOW_SECONDS,
+  GOOGLE_SIGN_IN_START_RATE_LIMIT,
+  GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
   GOOGLE_OAUTH_STATE_COOKIE_NAME,
 } from "../constants"
 import {
   checkAuthenticationRateLimit,
+  checkDeviceApprovalRateLimit,
   checkRateLimit,
 } from "../authentication-rate-limit"
+import { getClientIp } from "../request-client-ip"
 import {
   addRequestContext,
+  recordRateLimitResult,
   type RequestLoggingEnvironment,
 } from "../request-logging"
+import { requestApiError } from "../request-api-error"
 import { isSameOriginRequest } from "../same-origin"
 import { getD1Database } from "./db"
 import {
@@ -48,11 +54,6 @@ const resolveGoogleCredentials = (env: Env): GoogleOAuthCredentials | null => {
   const clientSecret = provisionedEnv.GOOGLE_CLIENT_SECRET
   return clientId && clientSecret ? { clientId, clientSecret } : null
 }
-
-const clientIp = (request: Request): string =>
-  request.headers.get("CF-Connecting-IP") ??
-  request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-  "unknown"
 
 const unauthorizedResponse = () => new Response("Unauthorized", { status: 401 })
 
@@ -142,9 +143,9 @@ export const registerD1AuthRoutes = (
     }
     const rateLimitResult = await checkAuthenticationRateLimit({
       environment: env,
-      key: `auth:google-start:${clientIp(context.req.raw)}`,
-      limit: 10,
-      windowSeconds: 600,
+      key: `auth:google-start:${getClientIp(context.req.raw)}`,
+      limit: GOOGLE_SIGN_IN_START_RATE_LIMIT,
+      windowSeconds: GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
     })
     if (rateLimitResult !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
@@ -207,12 +208,16 @@ export const registerD1AuthRoutes = (
     })
     const rateLimitResult = await checkRateLimit({
       environment: context.env,
-      key: `auth:device-poll:${clientIp(context.req.raw)}`,
+      key: `auth:device-poll:${getClientIp(context.req.raw)}`,
       limit: DEVICE_POLL_RATE_LIMIT,
       windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
     })
-    if (rateLimitResult !== "allowed") {
+    recordRateLimitResult(context, rateLimitResult)
+    if (rateLimitResult === "limited") {
       return context.json({ status: "rate_limited" }, 429)
+    }
+    if (rateLimitResult === "unavailable") {
+      return context.json({ status: "unavailable" }, 503)
     }
     const code = context.req.query("code")
     const pollSecret = context.req.query("pollSecret")
@@ -243,6 +248,25 @@ export const registerD1AuthRoutes = (
     const session = await resolveD1Session(context.req.raw, database)
     if (!session) {
       return unauthorizedResponse()
+    }
+    const rateLimitResult = await checkDeviceApprovalRateLimit({
+      environment: context.env,
+      request: context.req.raw,
+      userId: session.userId,
+    })
+    recordRateLimitResult(context, rateLimitResult)
+    if (rateLimitResult === "limited") {
+      return context.text("Too many attempts. Try again later.", 429)
+    }
+    if (rateLimitResult === "unavailable") {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "Device approval is unavailable. Try again later.",
+          retryable: true,
+        }),
+        503
+      )
     }
     const code = context.req.query("code")
     if (!code) {
@@ -297,12 +321,23 @@ export const registerD1AuthRoutes = (
     }
     const rateLimitResult = await checkRateLimit({
       environment: context.env,
-      key: `auth:device-exchange:${clientIp(context.req.raw)}`,
+      key: `auth:device-exchange:${getClientIp(context.req.raw)}`,
       limit: DEVICE_POLL_RATE_LIMIT,
       windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
     })
-    if (rateLimitResult !== "allowed") {
+    recordRateLimitResult(context, rateLimitResult)
+    if (rateLimitResult === "limited") {
       return context.text("Too many attempts. Try again later.", 429)
+    }
+    if (rateLimitResult === "unavailable") {
+      return context.json(
+        requestApiError(context, {
+          code: "service_unavailable",
+          error: "Device exchange is unavailable. Try again later.",
+          retryable: true,
+        }),
+        503
+      )
     }
     const parsed = Schema.decodeUnknownResult(exchangeStartSchema)({
       code: context.req.query("code"),

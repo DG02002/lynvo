@@ -54,7 +54,13 @@ export const authorizeDeviceCode = async (code: string): Promise<void> => {
 }
 
 export interface DeviceCodeStatus {
-  status: "pending" | "authorized" | "consumed" | "invalid" | "rate_limited"
+  status:
+    | "pending"
+    | "authorized"
+    | "consumed"
+    | "invalid"
+    | "rate_limited"
+    | "unavailable"
   deviceName?: string
   expiresAt?: number
 }
