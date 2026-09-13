@@ -1,4 +1,4 @@
-import { Effect, Exit, Fiber, Layer } from "effect"
+import { Effect, Exit, Fiber, Layer, Logger } from "effect"
 import { ExtractionService } from "~/lib/effect/services/extraction-service"
 import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
 import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
@@ -120,7 +120,8 @@ const failedManagedExtractionResponse = () =>
   )
 
 const createManagedExtractionEnvironment = (
-  extractResponse: (request: Request) => Response | Promise<Response>
+  extractResponse: (request: Request) => Response | Promise<Response>,
+  settlementError?: Error
 ) => {
   const settlementOutcomes: string[] = []
   const operationReadCounts = new Map<string, number>()
@@ -154,6 +155,9 @@ const createManagedExtractionEnvironment = (
       }
     }
     if (sql.includes("UPDATE managed_extraction_operations SET state = ?3")) {
+      if (settlementError) {
+        return { error: settlementError }
+      }
       settlementOutcomes.push(String(args[2]))
       return { rows: [{}] }
     }
@@ -674,6 +678,33 @@ describe("Extraction interface routing", () => {
       message: "TEMPORARY_FAILURE",
     })
     expect(failed.settlementOutcomes).toEqual(["released"])
+  })
+
+  it("logs the underlying managed settlement error", async () => {
+    const settlementError = new Error("D1 settlement boom")
+    const { testEnvironment } = createManagedExtractionEnvironment(
+      () => successfulManagedExtractionResponse(),
+      settlementError
+    )
+    const logs: unknown[] = []
+    const logger = Logger.make(({ message }) => {
+      logs.push(message)
+    })
+
+    await Effect.runPromise(
+      managedExtraction(testEnvironment, "settlement-log").pipe(
+        Effect.provide(Logger.layer([logger]))
+      )
+    )
+
+    expect(logs).toContainEqual([
+      "Managed extraction settlement failed",
+      {
+        operationId: "settlement-log:source",
+        outcome: "consumed",
+        error: "D1 settlement boom",
+      },
+    ])
   })
 
   it("releases a managed extraction when its effect is interrupted", async () => {

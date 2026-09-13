@@ -5,7 +5,12 @@ import type {
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { DateTime, Effect, Exit } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
+import {
+  ExtractionError,
+  getErrorMessage,
+  UsageLimitError,
+  ValidationError,
+} from "../errors"
 import {
   MANAGED_PLUGIN_IDS,
   reserveManagedExtraction,
@@ -223,21 +228,22 @@ export const extractWithLynvoPluginServer = Effect.fn(
       Effect.gen(function* () {
         const settlementTime = yield* DateTime.now
         const outcome = Exit.isSuccess(exit) ? "consumed" : "released"
-        yield* Effect.tryPromise(() =>
-          settleManagedExtraction(database, options.userId, {
-            operationId,
-            outcome,
-            now: DateTime.toEpochMillis(settlementTime),
-          })
-        ).pipe(
-          Effect.tapError((cause) =>
+        yield* Effect.tryPromise({
+          try: () =>
+            settleManagedExtraction(database, options.userId, {
+              operationId,
+              outcome,
+              now: DateTime.toEpochMillis(settlementTime),
+            }),
+          catch: (settlementError) => settlementError,
+        }).pipe(
+          Effect.catch((settlementError) =>
             Effect.logError("Managed extraction settlement failed", {
               operationId,
               outcome,
-              error: cause instanceof Error ? cause.message : String(cause),
+              error: getErrorMessage(settlementError),
             })
-          ),
-          Effect.ignore
+          )
         )
       })
     )
