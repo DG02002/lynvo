@@ -27,3 +27,4 @@ export {
 } from "./contracts.js"
 export { createPluginServerRuntime } from "./runtime.js"
 export { isBlockedIpUrl, isLocalUrl } from "./ip-address-policy.js"
+export { validateBearerCredential } from "./auth.js"

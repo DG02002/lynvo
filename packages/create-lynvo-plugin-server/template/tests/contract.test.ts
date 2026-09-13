@@ -29,8 +29,16 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
       new Request("https://worker.example/verify", { method: "POST" }),
       environment
     )
+    const wrongCredential = await app.fetch(
+      new Request("https://worker.example/verify", {
+        method: "POST",
+        headers: { Authorization: "Bearer wrong-secret" },
+      }),
+      environment
+    )
 
     expect(response.status).toBe(401)
+    expect(wrongCredential.status).toBe(401)
     expect(validateVerifyErrorContract(await response.json())).toEqual({
       ok: true,
       issues: [],
