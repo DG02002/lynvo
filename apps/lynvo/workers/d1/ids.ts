@@ -1,15 +1,6 @@
-const ID_BYTES = 16
+import { toBase64Url } from "../base64-url"
 
-const toBase64Url = (bytes: Uint8Array): string => {
-  let binary = ""
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
-  }
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "")
-}
+const ID_BYTES = 16
 
 export const createOpaqueId = (): string =>
   toBase64Url(crypto.getRandomValues(new Uint8Array(ID_BYTES)))

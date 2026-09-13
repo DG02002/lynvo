@@ -11,6 +11,7 @@ import {
   GOOGLE_OAUTH_TOKEN_ENDPOINT,
   GOOGLE_OAUTH_TOKEN_TIMEOUT_MS,
 } from "../constants"
+import { toBase64Url } from "../base64-url"
 
 export interface GoogleOAuthCredentials {
   readonly clientId: string
@@ -52,17 +53,6 @@ const idTokenPayloadSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   picture: Schema.optional(Schema.String),
 })
-
-const toBase64Url = (bytes: Uint8Array): string => {
-  let binary = ""
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
-  }
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "")
-}
 
 const fromBase64Url = (value: string): Uint8Array => {
   const base64 = value.replaceAll("-", "+").replaceAll("_", "/")

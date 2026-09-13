@@ -19,7 +19,10 @@ import {
   requestLogging,
   type RequestLoggingEnvironment,
 } from "./request-logging"
-import { responseSecurityHeaders } from "./response-security-headers"
+import {
+  applyResponseSecurityHeaders,
+  responseSecurityHeaders,
+} from "./response-security-headers"
 import { buildReleaseIdentity } from "./release-identity"
 import { requestApiError } from "./request-api-error"
 import {
@@ -587,16 +590,7 @@ app.all("*", async (context) => {
   })
   const response = await reactRouterHandler(context.req.raw, routerContext)
   const securedResponse = new Response(response.body, response)
-  securedResponse.headers.set("X-Content-Type-Options", "nosniff")
-  securedResponse.headers.set("X-Frame-Options", "DENY")
-  securedResponse.headers.set(
-    "Referrer-Policy",
-    "strict-origin-when-cross-origin"
-  )
-  securedResponse.headers.set(
-    "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=()"
-  )
+  applyResponseSecurityHeaders(securedResponse.headers)
   return securedResponse
 })
 

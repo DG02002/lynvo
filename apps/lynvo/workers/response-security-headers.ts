@@ -1,5 +1,12 @@
 import type { MiddlewareHandler } from "hono"
 
+export const applyResponseSecurityHeaders = (headers: Headers): void => {
+  headers.set("X-Content-Type-Options", "nosniff")
+  headers.set("X-Frame-Options", "DENY")
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+}
+
 export const responseSecurityHeaders =
   (): MiddlewareHandler => async (context, next) => {
     await next()
@@ -7,16 +14,7 @@ export const responseSecurityHeaders =
       return
     }
     context.res.headers.set("Strict-Transport-Security", "max-age=31536000")
-    context.res.headers.set("X-Content-Type-Options", "nosniff")
-    context.res.headers.set("X-Frame-Options", "DENY")
-    context.res.headers.set(
-      "Referrer-Policy",
-      "strict-origin-when-cross-origin"
-    )
-    context.res.headers.set(
-      "Permissions-Policy",
-      "camera=(), microphone=(), geolocation=()"
-    )
+    applyResponseSecurityHeaders(context.res.headers)
     if (context.req.path.startsWith("/api/")) {
       context.res.headers.set("Cache-Control", "no-store")
     }
