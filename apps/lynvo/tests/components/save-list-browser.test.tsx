@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
@@ -63,6 +63,8 @@ describe("SaveListBrowser", () => {
       value: vi.fn().mockReturnValue({ matches: false }),
     })
   })
+
+  afterEach(() => vi.useRealTimers())
 
   it("restores the nested folder in the same tab after refresh", async () => {
     Object.defineProperty(HTMLElement.prototype, "scrollTo", {
@@ -1307,6 +1309,190 @@ describe("SaveListBrowser", () => {
     expect(screen.queryByText("Old cached mirror")).not.toBeInTheDocument()
   })
 
+  it("clears a resolution failure when saved link metadata provides mirrors", async () => {
+    const lazyItemUrl = "https://resolver-beta.example/failure-metadata-update"
+    const createItem = (mirrorLabel?: string): LinkViewItem => ({
+      id: "resolver-beta-failure-metadata-update",
+      url: "https://source-alpha.example/failure-metadata-update",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "failure-metadata-update",
+              url: lazyItemUrl,
+              label: "Failure Metadata Update Item",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+        playback: {
+          openedUrls: [],
+          resolvedMirrors: mirrorLabel
+            ? {
+                [lazyItemUrl]: [
+                  {
+                    url: `https://cdn.example/${mirrorLabel}.mp4`,
+                    label: mirrorLabel,
+                    mediaNodeKind: "playable",
+                    type: "file",
+                  },
+                ],
+              }
+            : undefined,
+        },
+      },
+    })
+
+    const Harness = () => {
+      const [item, setItem] = useState(() => createItem())
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setItem(createItem("Fresh cached mirror"))}
+          >
+            Update saved link metadata
+          </button>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={vi.fn()}
+            actions={createActions({
+              expandMirror: vi.fn().mockResolvedValue(null),
+            })}
+            extractingItems={new Set()}
+            highlightedId={null}
+            isHydrating={false}
+          />
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const itemButton = screen.getByRole("button", {
+      name: "Failure Metadata Update Item",
+    })
+    const itemRow = itemButton.parentElement
+    fireEvent.click(itemButton)
+
+    await waitFor(() => {
+      expect(itemRow).toHaveAttribute("data-resolution-state", "failed")
+    })
+    expect(itemButton).toHaveClass("bg-destructive/15")
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update saved link metadata" })
+    )
+
+    await waitFor(() => {
+      expect(itemRow).toHaveAttribute("data-resolution-state", "collapsed")
+      expect(itemButton).not.toHaveClass("bg-destructive/15")
+    })
+    fireEvent.click(itemButton)
+    expect(await screen.findByText("Fresh cached mirror")).toBeVisible()
+  })
+
+  it("keeps fresh mirrors expanded when an older resolution finishes", async () => {
+    const lazyItemUrl = "https://resolver-beta.example/stale-resolution"
+    let finishResolution:
+      | ((mirrors: ExtractedLink[] | null) => void)
+      | undefined
+    const expandMirror = vi.fn<LinkItemActions["expandMirror"]>(
+      () =>
+        new Promise<ExtractedLink[] | null>((resolve) => {
+          finishResolution = (mirrors) => resolve(mirrors)
+        })
+    )
+    const createItem = (mirrorLabel?: string): LinkViewItem => ({
+      id: "resolver-beta-stale-resolution",
+      url: "https://source-alpha.example/stale-resolution",
+      timestamp: Date.now(),
+      metadata: {
+        schemaVersion: 3,
+        source: { sourceName: "Source Alpha" },
+        extraction: {
+          extractedLinks: [
+            {
+              id: "stale-resolution",
+              url: lazyItemUrl,
+              label: "Stale Resolution Item",
+              type: "folder",
+              mediaNodeKind: "resolvable",
+            },
+          ],
+        },
+        playback: {
+          openedUrls: [],
+          resolvedMirrors: mirrorLabel
+            ? {
+                [lazyItemUrl]: [
+                  {
+                    url: `https://cdn.example/${mirrorLabel}.mp4`,
+                    label: mirrorLabel,
+                    mediaNodeKind: "playable",
+                    type: "file",
+                  },
+                ],
+              }
+            : undefined,
+        },
+      },
+    })
+
+    const Harness = () => {
+      const [item, setItem] = useState(() => createItem())
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setItem(createItem("Fresh cached mirror"))}
+          >
+            Update saved link metadata
+          </button>
+          <SaveListBrowser
+            items={[{ ...item, kind: "saved" }]}
+            selectedItemUrl={item.url}
+            onSelectedItemUrlChange={vi.fn()}
+            actions={createActions({ expandMirror })}
+            extractingItems={new Set()}
+            highlightedId={null}
+            isHydrating={false}
+          />
+        </>
+      )
+    }
+
+    render(<Harness />)
+    const itemButton = screen.getByRole("button", {
+      name: "Stale Resolution Item",
+    })
+    const itemRow = itemButton.parentElement
+    fireEvent.click(itemButton)
+    expect(
+      await screen.findByRole("status", {
+        name: "Loading playable links for Stale Resolution Item…",
+      })
+    ).toBeVisible()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Update saved link metadata" })
+    )
+    expect(await screen.findByText("Fresh cached mirror")).toBeVisible()
+
+    finishResolution?.(null)
+
+    await waitFor(() => {
+      expect(screen.getByText("Fresh cached mirror")).toBeVisible()
+      expect(itemRow).toHaveAttribute("data-resolution-state", "expanded")
+    })
+  })
+
   it("shows a red failure state when a resolvable item returns no links", async () => {
     const markOpened = vi.fn()
     const item: LinkViewItem = {
@@ -1362,6 +1548,7 @@ describe("SaveListBrowser", () => {
   })
 
   it("shows a failure state when resolving a playable item throws", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
     const item: LinkViewItem = {
       url: "https://source-alpha.example/thrown-resolution",
       timestamp: Date.now(),
@@ -1383,32 +1570,42 @@ describe("SaveListBrowser", () => {
       },
     }
 
-    render(
-      <SaveListBrowser
-        items={[{ ...item, kind: "saved" }]}
-        selectedItemUrl={item.url}
-        onSelectedItemUrlChange={vi.fn()}
-        actions={createActions({
-          expandMirror: vi.fn().mockRejectedValue(new Error("network failed")),
-        })}
-        extractingItems={new Set()}
-        highlightedId={null}
-        isHydrating={false}
-      />
-    )
-
-    const itemButton = screen.getByRole("button", {
-      name: "Thrown Resolution Item",
-    })
-    fireEvent.click(itemButton)
-
-    await waitFor(() =>
-      expect(itemButton.parentElement).toHaveAttribute(
-        "data-resolution-state",
-        "failed"
+    try {
+      render(
+        <SaveListBrowser
+          items={[{ ...item, kind: "saved" }]}
+          selectedItemUrl={item.url}
+          onSelectedItemUrlChange={vi.fn()}
+          actions={createActions({
+            expandMirror: vi
+              .fn()
+              .mockRejectedValue(new Error("network failed")),
+          })}
+          extractingItems={new Set()}
+          highlightedId={null}
+          isHydrating={false}
+        />
       )
-    )
-    expect(itemButton).toHaveClass("bg-destructive/15")
+
+      const itemButton = screen.getByRole("button", {
+        name: "Thrown Resolution Item",
+      })
+      fireEvent.click(itemButton)
+
+      await waitFor(() =>
+        expect(itemButton.parentElement).toHaveAttribute(
+          "data-resolution-state",
+          "failed"
+        )
+      )
+      expect(itemButton).toHaveClass("bg-destructive/15")
+      expect(consoleError).toHaveBeenCalledWith(
+        "Failed to resolve playable links",
+        expect.objectContaining({ message: "network failed" })
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 
   it("shows the size of a single playable Example Drive item", () => {
@@ -1627,7 +1824,6 @@ describe("SaveListBrowser", () => {
 
     expect(itemButton).toBeDisabled()
     expect(filename).toHaveClass("line-through")
-    vi.useRealTimers()
   })
 
   it("shows New on a root folder before it is opened and marks it opened on open", () => {
