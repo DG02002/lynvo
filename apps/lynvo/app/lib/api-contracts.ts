@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { remoteCommandFieldsSchema } from "./remote-play/wire"
 
 export const MutationResultSchema = Schema.Struct({
   success: Schema.Boolean,
@@ -171,13 +172,7 @@ export const RemotePollQuerySchema = Schema.Struct({
   receiverId: Schema.String,
 })
 
-export const RemoteCommandSchema = Schema.Struct({
-  id: Schema.String,
-  claimToken: Schema.String,
-  command: Schema.Literal("play"),
-  payload: Schema.String,
-  createdAt: Schema.Number,
-})
+export const RemoteCommandSchema = remoteCommandFieldsSchema
 
 export const RemotePollResponseSchema = Schema.Struct({
   commands: Schema.Array(RemoteCommandSchema),

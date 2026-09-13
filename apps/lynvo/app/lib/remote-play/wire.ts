@@ -1,5 +1,5 @@
 import { Result, Schema } from "effect"
-import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handoff"
+import { parseRemotePlaybackIntent } from "./intent"
 
 declare global {
   interface RemoteCommandWireFields {
