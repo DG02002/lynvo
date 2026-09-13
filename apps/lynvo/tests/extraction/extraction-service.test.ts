@@ -133,6 +133,8 @@ const createManagedExtractionEnvironment = (
       const operationId = String(args[1])
       const readCount = (operationReadCounts.get(operationId) ?? 0) + 1
       operationReadCounts.set(operationId, readCount)
+      // Reservation performs the first matching read before creating the row;
+      // settlement performs the second read and must find that reservation.
       if (readCount === 2) {
         return {
           row: {
@@ -141,8 +143,8 @@ const createManagedExtractionEnvironment = (
             plugin_id: "direct-media",
             state: "reserved",
             epoch: 0,
-            daily_period_key: "2026-09-13",
-            monthly_period_key: "2026-09",
+            daily_period_key: "2000-01-01",
+            monthly_period_key: "2000-01",
             user_limits_applied: 1,
             reserved_at: 0,
             lease_expires_at: Number.MAX_SAFE_INTEGER,

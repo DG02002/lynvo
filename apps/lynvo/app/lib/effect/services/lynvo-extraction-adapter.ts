@@ -222,13 +222,23 @@ export const extractWithLynvoPluginServer = Effect.fn(
     Effect.onExit((exit) =>
       Effect.gen(function* () {
         const settlementTime = yield* DateTime.now
+        const outcome = Exit.isSuccess(exit) ? "consumed" : "released"
         yield* Effect.tryPromise(() =>
           settleManagedExtraction(database, options.userId, {
             operationId,
-            outcome: Exit.isSuccess(exit) ? "consumed" : "released",
+            outcome,
             now: DateTime.toEpochMillis(settlementTime),
           })
-        ).pipe(Effect.ignore)
+        ).pipe(
+          Effect.tapError((cause) =>
+            Effect.logError("Managed extraction settlement failed", {
+              operationId,
+              outcome,
+              error: cause instanceof Error ? cause.message : String(cause),
+            })
+          ),
+          Effect.ignore
+        )
       })
     )
   )
