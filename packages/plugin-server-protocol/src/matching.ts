@@ -92,10 +92,17 @@ export const matchPluginServerUrl = (
   }
 }
 
-export const getExtractTargetUrl = (request: ExtractRequest): string =>
-  request.input.kind === "source"
-    ? request.input.sourceUrl
-    : request.input.nodeUrl
+export const getExtractTargetUrl = (request: ExtractRequest): string => {
+  if (request.input.kind === "source") {
+    return request.input.sourceUrl
+  }
+
+  const target = request.input.nodeUrl ?? request.input.resourceId
+  if (target === undefined) {
+    throw new Error("Node input requires nodeUrl or resourceId")
+  }
+  return target
+}
 
 const extensionsContainerSchema = Schema.Struct({
   extensions: Schema.optional(

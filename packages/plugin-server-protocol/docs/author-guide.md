@@ -358,8 +358,8 @@ Lynvo expects staged extraction.
 Example:
 
 1. `source-alpha` page returns folder and lazy item nodes.
-2. Lazy Item node carries a lazy `nodeUrl`.
-3. Lynvo calls `POST /extract` again with that `nodeUrl`.
+2. Lazy Item node carries a `nodeUrl` and/or `resourceId`.
+3. Lynvo calls `POST /extract` again with that node identity.
 4. The Plugin Server resolves the next step.
 5. If the next step is final, return playable nodes.
 6. If the next step is still intermediate, return more resolvable nodes.
@@ -449,9 +449,9 @@ const selectableFolder = {
 
 ### Lazy folder item
 
-Use `resolvable` when the folder is intentionally not expanded yet. `nodeUrl`
-is a server-side follow-up target, while `resourceId` is an optional opaque
-identifier your Plugin Server can use. The same Plugin Server must handle the later node
+Use `resolvable` when the folder is intentionally not expanded yet. It must
+carry a `nodeUrl` and/or `resourceId`; `resourceId` is an opaque identifier
+your Plugin Server can use. The same Plugin Server must handle the later node
 request.
 
 ```ts

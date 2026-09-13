@@ -211,6 +211,29 @@ const baseNodeFields = {
   extensions: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }
 
+const hasNodeIdentity = <
+  Value extends {
+    readonly nodeUrl?: string
+    readonly resourceId?: string
+  },
+>(
+  node: Value
+): node is Value => node.nodeUrl !== undefined || node.resourceId !== undefined
+
+const withNodeIdentity = <
+  Value extends {
+    readonly nodeUrl?: string
+    readonly resourceId?: string
+  },
+>(
+  schema: Schema.Codec<Value>
+): Schema.Codec<Value> =>
+  schema.pipe(
+    Schema.refine(hasNodeIdentity, {
+      message: "Node requires nodeUrl or resourceId",
+    })
+  )
+
 export const groupNodeSchema: Schema.Codec<GroupNode> = Schema.Struct({
   ...baseNodeFields,
   kind: Schema.Literal("group"),
@@ -222,15 +245,16 @@ export const groupNodeSchema: Schema.Codec<GroupNode> = Schema.Struct({
   ),
 })
 
-export const resolvableNodeSchema: Schema.Codec<ResolvableNode> = Schema.Struct(
-  {
-    ...baseNodeFields,
-    kind: Schema.Literal("resolvable"),
-    nodeUrl: Schema.optional(Schema.String),
-    resourceId: Schema.optional(Schema.String),
-    resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
-  }
-)
+export const resolvableNodeSchema: Schema.Codec<ResolvableNode> =
+  withNodeIdentity(
+    Schema.Struct({
+      ...baseNodeFields,
+      kind: Schema.Literal("resolvable"),
+      nodeUrl: Schema.optional(Schema.String),
+      resourceId: Schema.optional(Schema.String),
+      resolutionKind: Schema.optional(Schema.Literals(["folder", "mirrors"])),
+    })
+  )
 
 export const playableNodeSchema: Schema.Codec<PlayableNode> = Schema.Struct({
   ...baseNodeFields,
@@ -301,11 +325,13 @@ export const sourceInputSchema = Schema.Struct({
   sourceUrl: Schema.String,
 })
 
-export const nodeInputSchema = Schema.Struct({
-  kind: Schema.Literal("node"),
-  nodeUrl: Schema.String,
-  resourceId: Schema.optional(Schema.String),
-})
+export const nodeInputSchema = withNodeIdentity(
+  Schema.Struct({
+    kind: Schema.Literal("node"),
+    nodeUrl: Schema.optional(Schema.String),
+    resourceId: Schema.optional(Schema.String),
+  })
+)
 
 export const extractRequestSchema = Schema.Struct({
   input: Schema.Union([sourceInputSchema, nodeInputSchema]),

@@ -7,6 +7,8 @@ import {
   extractErrorSchema,
   extractRequestSchema,
   extractSuccessSchema,
+  getExtractTargetUrl,
+  PROTOCOL_ERROR_STATUS,
   ProtocolError,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
@@ -157,10 +159,7 @@ app.post("/extract", async (context) => {
   const isRequestValid = Result.isSuccess(parsedRequest)
   let targetUrl: string | undefined
   if (isRequestValid) {
-    targetUrl =
-      parsedRequest.success.input.kind === "source"
-        ? parsedRequest.success.input.sourceUrl
-        : parsedRequest.success.input.nodeUrl
+    targetUrl = getExtractTargetUrl(parsedRequest.success)
   }
   const targetHost = getTargetHost(targetUrl)
   context.get("log").set({
@@ -200,7 +199,7 @@ app.notFound(() =>
       error: { code: "BAD_REQUEST", message: "Route not found." },
       extensions: {},
     },
-    { status: 404 }
+    { status: PROTOCOL_ERROR_STATUS.BAD_REQUEST }
   )
 )
 

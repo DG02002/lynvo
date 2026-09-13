@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises"
 import { describe, expect, it } from "vitest"
-import { parseExtractSuccessContract } from "../src/index"
+import {
+  PROTOCOL_ERROR_STATUS,
+  parseExtractSuccessContract,
+} from "../src/index"
 import { Result, Schema } from "effect"
 
 const documentedSuccessResponseSchema = Schema.Struct({
@@ -40,5 +43,18 @@ describe("published Plugin Server documentation", () => {
         }
       })
     )
+  })
+
+  it("keeps the documented HTTP status table aligned with the protocol mapping", async () => {
+    const source = await readFile(documentationUrls[0], "utf8")
+    const [, statusTable = ""] = source.split("### HTTP status mapping\n")
+    const rows = [
+      ...(statusTable?.matchAll(/^\| `([^`]+)`\s+\|\s+(\d+)\s+\|$/gm) ?? []),
+    ]
+    const documentedStatuses = Object.fromEntries(
+      rows.map(([, code, status]) => [code, Number(status)])
+    )
+
+    expect(documentedStatuses).toEqual(PROTOCOL_ERROR_STATUS)
   })
 })

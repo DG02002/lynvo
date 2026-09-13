@@ -104,7 +104,7 @@ export interface SourceInput {
 
 export interface NodeInput {
   readonly kind: "node"
-  readonly nodeUrl: string
+  readonly nodeUrl?: string
   readonly resourceId?: string
 }
 

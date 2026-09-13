@@ -1,4 +1,4 @@
-# **PROJECT_DISPLAY_NAME**
+# __PROJECT_DISPLAY_NAME__
 
 A standalone Cloudflare Worker for a Lynvo-compatible Custom Plugin Server.
 

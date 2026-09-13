@@ -2,6 +2,7 @@ import { exports } from "cloudflare:workers"
 import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import {
+  PROTOCOL_ERROR_STATUS,
   extractErrorSchema,
   validatePluginServerManifestContract,
   validateExtractSuccessContract,
@@ -167,7 +168,7 @@ describe("Lynvo Plugin Server protocol routes", () => {
 
   it("returns a protocol envelope for unknown routes", async () => {
     const response = await fetchRoute("/unknown")
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.BAD_REQUEST)
     expect(await response.json()).toMatchObject({
       ok: false,
       error: { code: "BAD_REQUEST" },

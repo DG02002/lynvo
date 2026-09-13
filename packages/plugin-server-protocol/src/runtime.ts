@@ -10,7 +10,11 @@ import {
   parseUsageResponseContract,
 } from "./contracts.js"
 import { createProtocolError } from "./requests.js"
-import { isProtocolError, toProtocolErrorResponse } from "./errors.js"
+import {
+  isProtocolError,
+  PROTOCOL_ERROR_STATUS,
+  toProtocolErrorResponse,
+} from "./errors.js"
 import {
   canPluginServerAttemptUrl,
   getExtractTargetUrl,
@@ -187,7 +191,7 @@ export const createPluginServerRuntime = <Env>(
             "UNSUPPORTED_URL",
             "This Plugin Server does not support source discovery."
           ),
-          404
+          PROTOCOL_ERROR_STATUS.UNSUPPORTED_URL
         )
       }
 
@@ -230,7 +234,7 @@ export const createPluginServerRuntime = <Env>(
         options.onError?.(error, { request, env })
         return jsonResponse(
           createProtocolError("TEMPORARY_FAILURE", "Source discovery failed."),
-          502
+          PROTOCOL_ERROR_STATUS.TEMPORARY_FAILURE
         )
       }
     },

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
 import {
   ProtocolError,
+  PROTOCOL_ERROR_STATUS,
   createGroupNode,
   createPlayableNode,
   createResolvableNode,
@@ -16,6 +17,26 @@ import {
   validUsageResponseFixture,
   createPluginServerRuntime,
 } from "../src/index"
+
+const createRuntime = (
+  options: {
+    discover?: (options: { targetUrl: string }) => never
+  } = {}
+) =>
+  createPluginServerRuntime({
+    manifest: validPluginServerManifestFixture,
+    auth: { validate: () => true },
+    usage: () => validUsageResponseFixture,
+    extract: () => ({
+      plugin: {
+        pluginServerId: "example-media",
+        displayName: "Example Media",
+      },
+      nodes: [],
+      extensions: {},
+    }),
+    ...options,
+  })
 
 describe("protocol errors", () => {
   it("serializes typed errors with retry guidance", async () => {
@@ -173,6 +194,40 @@ describe("runtime lifecycle hooks", () => {
     expect(response.status).toBe(200)
     expect(accepted).toEqual(["https://media.example.com/video"])
     expect(results).toEqual(["success"])
+  })
+})
+
+describe("HTTP status mapping", () => {
+  it("uses the documented status for unsupported discovery", async () => {
+    const response = await createRuntime().handleDiscover(
+      new Request("https://server.example/discover"),
+      {}
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_URL)
+    expect(await response.json()).toMatchObject({
+      error: { code: "UNSUPPORTED_URL" },
+    })
+  })
+
+  it("uses the documented status for temporary discovery failures", async () => {
+    const response = await createRuntime({
+      discover: () => {
+        throw new Error("upstream unavailable")
+      },
+    }).handleDiscover(
+      new Request("https://server.example/discover", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com/source" }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.TEMPORARY_FAILURE)
+    expect(await response.json()).toMatchObject({
+      error: { code: "TEMPORARY_FAILURE" },
+    })
   })
 })
 
