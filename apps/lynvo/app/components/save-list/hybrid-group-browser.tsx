@@ -19,7 +19,7 @@ import { getHybridItemLabel } from "~/features/links/media-artwork/hybrid-card-g
 import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
-import { useOpenInPlayer } from "~/features/links/use-open-in-player"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import {
   getExtractionStatusInput,
   getExtractionStatusTitleSpec,
@@ -74,7 +74,6 @@ const HybridGroupItemRow = ({
   titleDisplay,
   shouldShowEpisodeStill,
 }: HybridGroupItemRowProps) => {
-  const openInPlayer = useOpenInPlayer()
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
   const extractionState = item.extractionStatus?.state ?? "complete"
@@ -119,7 +118,7 @@ const HybridGroupItemRow = ({
       return
     }
     if (directLink) {
-      openInPlayer(() => actions.play(directLink), {
+      openInPlayerAndLogError(() => actions.play(directLink), {
         itemLabel: directLink.label,
         markOpened: () => {
           if (directLinkTarget !== undefined) {

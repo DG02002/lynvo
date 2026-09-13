@@ -26,7 +26,7 @@ import {
   resolveFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
-import { openInPlayerAndMarkOpened } from "~/features/links/use-open-in-player"
+import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
 import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
 import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"

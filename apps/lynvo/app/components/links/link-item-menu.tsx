@@ -37,7 +37,7 @@ import { PlayerOption } from "~/components/player-option"
 import { notifyClipboardWrite } from "~/lib/clipboard-events"
 import { cn } from "~/lib/utils"
 import { useShouldAutoSaveAllLinks } from "~/features/site/settings/auto-save-links-preference"
-import { useOpenInPlayer } from "~/features/links/use-open-in-player"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 
 interface LinkItemMenuProps {
   item: LinkViewItem
@@ -68,7 +68,6 @@ const LinkItemMenuContent = ({
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
   const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
-  const openInPlayer = useOpenInPlayer()
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
@@ -173,7 +172,7 @@ const LinkItemMenuContent = ({
                             if (playableUrl === undefined) {
                               return
                             }
-                            openInPlayer(
+                            openInPlayerAndLogError(
                               () =>
                                 openInSpecificPlayerForHandoff(
                                   playableUrl,

@@ -11,7 +11,10 @@ import {
   decryptCustomPluginServerProxyToken,
   encryptCustomPluginServerApiKey,
 } from "./custom-plugin-server-credentials"
-import { PluginServerRegistrationError, type BackendError } from "../errors"
+import {
+  PluginServerRegistrationError,
+  toPluginServerRegistrationError,
+} from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
 import {
   isProxyTokenRemoval,
@@ -42,9 +45,6 @@ const ScrapeDoAccountInfo = Schema.Struct({
 })
 
 export const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
-
-const registrationDatabaseError = ({ message }: BackendError) =>
-  new PluginServerRegistrationError({ message: `${message}.` })
 
 /**
  * Validates a Scrape.do token against the free account-info endpoint. The
@@ -109,7 +109,7 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   const environment = yield* CloudflareEnv
   const database = yield* requireDatabaseEffectAs(
     environment,
-    registrationDatabaseError
+    toPluginServerRegistrationError
   )
   const stored = yield* Effect.tryPromise({
     try: () =>
@@ -220,7 +220,7 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
   const environment = yield* CloudflareEnv
   const database = yield* requireDatabaseEffectAs(
     environment,
-    registrationDatabaseError
+    toPluginServerRegistrationError
   )
 
   const pluginServer = yield* Effect.tryPromise({

@@ -53,7 +53,7 @@ import {
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
-import { useOpenInPlayer } from "~/features/links/use-open-in-player"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import { groupSaveListItems } from "./save-list-groups"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
@@ -457,7 +457,6 @@ const FinderBrowserLinkRow = ({
   onActivate,
 }: FinderBrowserLinkRowProps) => {
   const currentTimeMs = useMinuteTimeBucket()
-  const openInPlayer = useOpenInPlayer()
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
   const shouldShowEpisodeStillForLink =
@@ -548,10 +547,13 @@ const FinderBrowserLinkRow = ({
     if (linkTarget === undefined) {
       return
     }
-    openInPlayer(() => openInSpecificPlayerForHandoff(linkTarget, player), {
-      itemLabel: link.label,
-      markOpened: () => actions.markOpened(item.url, linkTarget),
-    })
+    openInPlayerAndLogError(
+      () => openInSpecificPlayerForHandoff(linkTarget, player),
+      {
+        itemLabel: link.label,
+        markOpened: () => actions.markOpened(item.url, linkTarget),
+      }
+    )
   }
 
   return (
@@ -963,7 +965,6 @@ export const SaveListBrowser = ({
   shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
   const minuteTimeBucket = useMinuteTimeBucket()
-  const openInPlayer = useOpenInPlayer()
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
   if (selectedItem?.kind === "saved") {
@@ -1071,14 +1072,17 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          openInPlayer(() => actions.play(directLink), {
-                            itemLabel: directLink.label,
-                            markOpened: () => {
-                              if (directLinkTarget !== undefined) {
-                                actions.markOpened(item.url, directLinkTarget)
-                              }
-                            },
-                          })
+                          openInPlayerAndLogError(
+                            () => actions.play(directLink),
+                            {
+                              itemLabel: directLink.label,
+                              markOpened: () => {
+                                if (directLinkTarget !== undefined) {
+                                  actions.markOpened(item.url, directLinkTarget)
+                                }
+                              },
+                            }
+                          )
                           return
                         }
                         actions.markOpened(item.url, item.url)

@@ -88,6 +88,13 @@ export class PluginServerRegistrationError extends Schema.TaggedError<PluginServ
   }
 ) {}
 
+export const toPluginServerRegistrationError = (
+  error: Pick<BackendError, "message">
+) =>
+  new PluginServerRegistrationError({
+    message: error.message.endsWith(".") ? error.message : `${error.message}.`,
+  })
+
 export class CredentialVaultError extends Schema.TaggedError<CredentialVaultError>()(
   "CredentialVaultError",
   {

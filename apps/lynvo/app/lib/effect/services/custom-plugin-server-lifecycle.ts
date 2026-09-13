@@ -27,6 +27,7 @@ import {
   BackendError,
   getErrorMessage,
   PluginServerRegistrationError,
+  toPluginServerRegistrationError,
 } from "../errors"
 import { getCustomPluginServerUsage } from "./custom-plugin-server-adapter"
 
@@ -64,16 +65,13 @@ const registrationError = (error: {
         : error.message,
   })
 
-const registrationDatabaseError = ({ message }: BackendError) =>
-  new PluginServerRegistrationError({ message: `${message}.` })
-
 export const registerCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.register"
 )(function* (input: RegisterCustomPluginServerInput) {
   const environment = yield* CloudflareEnv
   const database = yield* requireDatabaseEffectAs(
     environment,
-    registrationDatabaseError
+    toPluginServerRegistrationError
   )
   const normalizedBaseUrl = yield* normalizePluginServerBaseUrl(input.baseUrl)
   const reservation = yield* Effect.tryPromise({
@@ -157,7 +155,7 @@ export const refreshCustomPluginServer = Effect.fn(
   const environment = yield* CloudflareEnv
   const database = yield* requireDatabaseEffectAs(
     environment,
-    registrationDatabaseError
+    toPluginServerRegistrationError
   )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, input.user.id),

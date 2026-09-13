@@ -13,17 +13,9 @@ export const openInPlayerAndMarkOpened = async (
   markAfterAcceptedHandoff({ ...result, itemLabel, markOpened })
 }
 
-export const useOpenInPlayer =
-  () =>
-  (
-    open: () => Promise<PlaybackHandoffResult>,
-    { itemLabel, markOpened }: OpenInPlayerOptions
-  ): void => {
-    try {
-      void openInPlayerAndMarkOpened(open, { itemLabel, markOpened }).catch(
-        console.error
-      )
-    } catch (error) {
-      console.error(error)
-    }
-  }
+export const openInPlayerAndLogError = (
+  open: () => Promise<PlaybackHandoffResult>,
+  options: OpenInPlayerOptions
+): void => {
+  void openInPlayerAndMarkOpened(open, options).catch(console.error)
+}

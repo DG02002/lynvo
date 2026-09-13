@@ -27,7 +27,7 @@ import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { useOpenInPlayer } from "~/features/links/use-open-in-player"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { getLinkKey, getResolvableSourceName } from "./save-list-browser-model"
@@ -62,8 +62,6 @@ const ResolvedMirrorRows = ({
   itemUrl,
   actions,
 }: ResolvedMirrorRowsProps) => {
-  const openInPlayer = useOpenInPlayer()
-
   return (
     <div
       className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
@@ -79,7 +77,7 @@ const ResolvedMirrorRows = ({
         const markOpened = () =>
           actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
         const playMirror = () =>
-          openInPlayer(() => actions.play(mirror), {
+          openInPlayerAndLogError(() => actions.play(mirror), {
             itemLabel: mirror.label,
             markOpened,
           })
@@ -105,7 +103,7 @@ const ResolvedMirrorRows = ({
                     void navigator.clipboard.writeText(mirrorTarget)
                   }
                   onOpenInPlayer={(player) =>
-                    openInPlayer(
+                    openInPlayerAndLogError(
                       () =>
                         openInSpecificPlayerForHandoff(mirrorTarget, player),
                       { itemLabel: mirror.label, markOpened }
