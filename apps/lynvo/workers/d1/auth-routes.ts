@@ -244,6 +244,15 @@ export const registerD1AuthRoutes = (
     if (!session) {
       return unauthorizedResponse()
     }
+    const rateLimitResult = await checkRateLimit({
+      environment: context.env,
+      key: `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
+      limit: 10,
+      windowSeconds: 600,
+    })
+    if (rateLimitResult !== "allowed") {
+      return context.text("Too many attempts. Try again later.", 429)
+    }
     const code = context.req.query("code")
     if (!code) {
       return context.json(null, 400)
