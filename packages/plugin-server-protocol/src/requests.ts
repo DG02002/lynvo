@@ -1,9 +1,11 @@
-import type {
-  ErrorCode,
-  ExtractProtocolError,
-  ExtractRequest,
-  HttpBasicAuth,
-  ProxyCredential,
+import {
+  requireNodeIdentity,
+  type ErrorCode,
+  type ExtractProtocolError,
+  type ExtractRequest,
+  type HttpBasicAuth,
+  type RequiredNodeIdentity,
+  type ProxyCredential,
 } from "./models.js"
 
 export interface ExtractRequestOptions {
@@ -18,16 +20,7 @@ export interface CreateSourceExtractRequestOptions extends ExtractRequestOptions
 }
 
 export type CreateNodeExtractRequestOptions = ExtractRequestOptions &
-  (
-    | { readonly nodeUrl: string; readonly resourceId?: string }
-    | { readonly nodeUrl?: string; readonly resourceId: string }
-  )
-
-interface MutableNodeInput {
-  kind: "node"
-  nodeUrl?: string
-  resourceId?: string
-}
+  RequiredNodeIdentity
 
 export const createProtocolError = (
   code: ErrorCode,
@@ -76,17 +69,8 @@ export const createNodeExtractRequest = ({
   nodeUrl,
   resourceId,
   ...options
-}: CreateNodeExtractRequestOptions): ExtractRequest => {
-  if (nodeUrl === undefined && resourceId === undefined) {
-    throw new Error("Node input requires nodeUrl or resourceId")
-  }
-
-  const input: MutableNodeInput = { kind: "node" }
-  if (nodeUrl !== undefined) {
-    input.nodeUrl = nodeUrl
-  }
-  if (resourceId !== undefined) {
-    input.resourceId = resourceId
-  }
-  return createExtractRequest(input, options)
-}
+}: CreateNodeExtractRequestOptions): ExtractRequest =>
+  createExtractRequest(
+    { kind: "node", ...requireNodeIdentity({ nodeUrl, resourceId }) },
+    options
+  )

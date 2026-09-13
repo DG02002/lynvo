@@ -564,6 +564,11 @@ If you use Cloudflare-native testing, prefer running tests in the Workers runtim
 
 ## Suggested Hono skeleton
 
+The runtime passes an `ExtractTarget` to the extraction callback. URL targets
+have `kind: "url"` and expose `target.url`; opaque node identities have
+`kind: "resourceId"` and expose `target.resourceId`. Resolve a resource ID in
+the same Plugin Server that emitted it.
+
 ```ts
 import { Hono } from "hono"
 import { createPluginServerRuntime } from "@dg02002/lynvo-plugin-server-protocol"
@@ -607,7 +612,11 @@ const runtime = createPluginServerRuntime({
     validate: ({ request }) =>
       request.headers.get("Authorization") === "Bearer expected-key",
   },
-  extract: async ({ request, targetUrl }) => {
+  extract: async ({ request, target }) => {
+    if (target.kind === "resourceId") {
+      throw new Error("Resolve target.resourceId in this Plugin.")
+    }
+    const targetUrl = target.url
     if (request.input.kind === "source") {
       return {
         plugin: {

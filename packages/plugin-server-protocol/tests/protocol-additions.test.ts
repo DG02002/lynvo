@@ -176,7 +176,11 @@ describe("runtime lifecycle hooks", () => {
         extensions: {},
       }),
       onExtractAccepted: (context) => {
-        accepted.push(context.targetUrl)
+        accepted.push(
+          context.target.kind === "url"
+            ? context.target.url
+            : context.target.resourceId
+        )
       },
       onExtractResult: (context) => {
         results.push(

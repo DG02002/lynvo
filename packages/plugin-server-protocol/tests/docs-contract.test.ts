@@ -15,6 +15,18 @@ const documentationUrls = [
   new URL("../docs/spec.md", import.meta.url),
   new URL("../docs/author-guide.md", import.meta.url),
   new URL(
+    "../../../apps/lynvo/app/features/site/docs/plugin-server/extraction-requests.mdx",
+    import.meta.url
+  ),
+  new URL(
+    "../../../apps/lynvo/app/features/site/docs/plugin-server/media-nodes.mdx",
+    import.meta.url
+  ),
+  new URL(
+    "../../../apps/lynvo/app/features/site/docs/plugin-server/hono-routes.mdx",
+    import.meta.url
+  ),
+  new URL(
     "../../../apps/lynvo/app/features/site/docs/plugin-server/success-responses.mdx",
     import.meta.url
   ),
@@ -23,6 +35,20 @@ const documentationUrls = [
     import.meta.url
   ),
 ]
+
+const nodeIdentityDocumentationUrls = documentationUrls.filter(
+  (documentationUrl) =>
+    documentationUrl.pathname.endsWith("/spec.md") ||
+    documentationUrl.pathname.endsWith("/author-guide.md") ||
+    documentationUrl.pathname.endsWith("/extraction-requests.mdx") ||
+    documentationUrl.pathname.endsWith("/media-nodes.mdx")
+)
+
+const extractTargetDocumentationUrls = documentationUrls.filter(
+  (documentationUrl) =>
+    documentationUrl.pathname.endsWith("/author-guide.md") ||
+    documentationUrl.pathname.endsWith("/hono-routes.mdx")
+)
 
 describe("published Plugin Server documentation", () => {
   it("keeps success responses aligned with the runtime schema", async () => {
@@ -56,5 +82,26 @@ describe("published Plugin Server documentation", () => {
     )
 
     expect(documentedStatuses).toEqual(PROTOCOL_ERROR_STATUS)
+  })
+
+  it("documents URL and resource ID node identities on every guidance surface", async () => {
+    await Promise.all(
+      nodeIdentityDocumentationUrls.map(async (documentationUrl) => {
+        const source = await readFile(documentationUrl, "utf8")
+        expect(source).toContain("nodeUrl")
+        expect(source).toContain("resourceId")
+      })
+    )
+  })
+
+  it("documents the discriminated extraction target on runtime guidance surfaces", async () => {
+    await Promise.all(
+      extractTargetDocumentationUrls.map(async (documentationUrl) => {
+        const source = await readFile(documentationUrl, "utf8")
+        expect(source).toContain("target.kind")
+        expect(source).toContain("target.url")
+        expect(source).toContain("resourceId")
+      })
+    )
   })
 })

@@ -13,6 +13,7 @@ import {
   validPluginServerManifestFixture,
   validUsageResponseFixture,
   createPluginServerRuntime,
+  type ExtractTarget,
 } from "../src/index"
 
 describe("Plugin Server protocol fixtures", () => {
@@ -94,6 +95,37 @@ describe("Plugin Server protocol fixtures", () => {
     expect(await response.json()).toMatchObject({
       plugin: { pluginId: "generic-media-probe" },
     })
+  })
+
+  it("passes opaque resource IDs to extraction without URL matching", async () => {
+    const targets: ExtractTarget[] = []
+    const runtime = createPluginServerRuntime({
+      manifest: {
+        ...validPluginServerManifestFixture,
+        extensions: {},
+      },
+      auth: { validate: () => true },
+      usage: () => validUsageResponseFixture,
+      extract: ({ target }) => {
+        targets.push(target)
+        return validExtractSuccessFixture
+      },
+    })
+
+    const response = await runtime.handleExtract(
+      new Request("https://plugin-server.example/extract", {
+        method: "POST",
+        body: JSON.stringify({
+          input: { kind: "node", resourceId: "opaque-resource-id" },
+        }),
+      }),
+      {}
+    )
+
+    expect(response.status).toBe(200)
+    expect(targets).toEqual([
+      { kind: "resourceId", resourceId: "opaque-resource-id" },
+    ])
   })
 
   it("rejects the obsolete source response envelope", () => {
@@ -201,8 +233,7 @@ describe("Plugin Server protocol fixtures", () => {
       issues: [
         {
           path: "plugin.pluginIconUrl",
-          message:
-            "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons.",
+          message: "Use a direct HTTPS WebP, PNG, or SVG URL for Plugin icons.",
         },
       ],
     })

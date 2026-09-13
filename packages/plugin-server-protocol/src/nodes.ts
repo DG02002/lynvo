@@ -5,6 +5,7 @@ import type {
   PlayableNode,
   RangeRequestCapability,
   ResolvableNode,
+  RequiredNodeIdentity,
 } from "./models.js"
 
 export interface PlayableNodeInput {
@@ -25,10 +26,8 @@ export const createPlayableNode = (input: PlayableNodeInput): PlayableNode => ({
   ...input,
 })
 
-export interface ResolvableNodeInput {
+export type ResolvableNodeInput = RequiredNodeIdentity & {
   readonly label: string
-  readonly nodeUrl?: string
-  readonly resourceId?: string
   readonly resolutionKind?: "folder" | "mirrors"
   readonly id?: string
   readonly badge?: string

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
 import {
   createNodeExtractRequest,
-  getExtractTargetUrl,
+  getExtractTarget,
   nodeInputSchema,
   resolvableNodeSchema,
 } from "../src/index"
@@ -62,13 +62,9 @@ describe("node identity", () => {
     expect(request).toEqual({
       input: { kind: "node", resourceId: "opaque-resource-id" },
     })
-    expect(getExtractTargetUrl(request)).toBe("opaque-resource-id")
-  })
-
-  it("rejects an extract request helper without an identity", () => {
-    // SAFETY: This intentionally bypasses the public type to exercise the runtime guard.
-    expect(() => createNodeExtractRequest({} as never)).toThrow(
-      "Node input requires nodeUrl or resourceId"
-    )
+    expect(getExtractTarget(request)).toEqual({
+      kind: "resourceId",
+      resourceId: "opaque-resource-id",
+    })
   })
 })

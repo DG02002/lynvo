@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import {
   createPluginServerRuntime,
+  ProtocolError,
   validPluginServerManifestFixture,
   validUsageResponseFixture,
   type PluginServerManifest,
@@ -64,8 +65,15 @@ const runtime = createPluginServerRuntime<Env>({
     validate: ({ request, env }) => hasValidBearer(request, env),
   },
   usage: () => validUsageResponseFixture,
-  extract: ({ targetUrl }) =>
-    extractExampleSource(targetUrl, manifest.pluginServerId),
+  extract: ({ target }) => {
+    if (target.kind !== "url") {
+      throw new ProtocolError(
+        "UNSUPPORTED_URL",
+        "This example only accepts URL targets."
+      )
+    }
+    return extractExampleSource(target.url, manifest.pluginServerId)
+  },
 })
 
 const app = new Hono<{ Bindings: Env }>()

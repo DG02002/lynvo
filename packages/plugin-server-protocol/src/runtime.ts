@@ -16,12 +16,13 @@ import {
   toProtocolErrorResponse,
 } from "./errors.js"
 import {
-  canPluginServerAttemptUrl,
-  getExtractTargetUrl,
+  canPluginServerAttemptTarget,
+  getExtractTarget,
   getMatchedPlugin,
 } from "./matching.js"
 import type {
   ExtractRequest,
+  ExtractTarget,
   PluginServerManifest,
   PluginServerManifestFactory,
   PluginServerRuntime,
@@ -34,7 +35,7 @@ interface ExtractExecutionOptions<Env> {
   readonly request: Request
   readonly env: Env
   readonly parsedRequest: ExtractRequest
-  readonly targetUrl: string
+  readonly target: ExtractTarget
 }
 
 const isManifestFactory = <Env>(
@@ -91,12 +92,12 @@ export const createPluginServerRuntime = <Env>(
     request,
     env,
     parsedRequest,
-    targetUrl,
+    target,
   }: ExtractExecutionOptions<Env>): Promise<Response> => {
     try {
       const result = await options.extract({
         request: parsedRequest,
-        targetUrl,
+        target,
         env,
       })
       const parsedResult = parseExtractSuccessContract(result)
@@ -260,7 +261,7 @@ export const createPluginServerRuntime = <Env>(
         )
       }
       const parsedRequest = parsed.success
-      const targetUrl = getExtractTargetUrl(parsedRequest)
+      const target = getExtractTarget(parsedRequest)
       const manifest = await resolveManifest(request, env)
       if (!manifest) {
         return protocolMismatchResponse(
@@ -268,23 +269,28 @@ export const createPluginServerRuntime = <Env>(
         )
       }
       if (
-        !canPluginServerAttemptUrl(manifest, targetUrl, parsed.success.pluginId)
+        !canPluginServerAttemptTarget(manifest, target, parsed.success.pluginId)
       ) {
         return jsonResponse(
           createProtocolError(
             "UNSUPPORTED_URL",
-            `Unsupported URL by this Plugin Server: ${targetUrl}`
+            `Unsupported extraction target by this Plugin Server: ${
+              target.kind === "url" ? target.url : target.resourceId
+            }`
           ),
           400
         )
       }
 
-      const matchedPluginId = getMatchedPlugin(manifest, targetUrl)?.id
+      const matchedPluginId =
+        target.kind === "url"
+          ? getMatchedPlugin(manifest, target.url)?.id
+          : parsedRequest.pluginId
       await runHook(
         async () => {
           await options.onExtractAccepted?.({
             request: parsedRequest,
-            targetUrl,
+            target,
             manifest,
             matchedPluginId,
             runtimeContext: { request, env },
@@ -293,7 +299,7 @@ export const createPluginServerRuntime = <Env>(
         request,
         env
       )
-      return executeExtract({ request, env, parsedRequest, targetUrl })
+      return executeExtract({ request, env, parsedRequest, target })
     },
   }
 }

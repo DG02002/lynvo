@@ -1,10 +1,13 @@
 import { Effect, Schema } from "effect"
 import {
   ERROR_CODES,
+  hasNodeIdentity,
   isCompatibleProtocolVersion,
+  NODE_IDENTITY_ERROR,
   PROTOCOL_VERSION,
   type GroupNode,
   type MediaNode,
+  type NodeIdentity,
   type PlayableNode,
   type ResolvableNode,
 } from "./models.js"
@@ -211,26 +214,12 @@ const baseNodeFields = {
   extensions: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
 }
 
-const hasNodeIdentity = <
-  Value extends {
-    readonly nodeUrl?: string
-    readonly resourceId?: string
-  },
->(
-  node: Value
-): node is Value => node.nodeUrl !== undefined || node.resourceId !== undefined
-
-const withNodeIdentity = <
-  Value extends {
-    readonly nodeUrl?: string
-    readonly resourceId?: string
-  },
->(
+const withNodeIdentity = <Value extends NodeIdentity>(
   schema: Schema.Codec<Value>
 ): Schema.Codec<Value> =>
   schema.pipe(
-    Schema.refine(hasNodeIdentity, {
-      message: "Node requires nodeUrl or resourceId",
+    Schema.refine((node): node is Value => hasNodeIdentity(node), {
+      message: NODE_IDENTITY_ERROR,
     })
   )
 

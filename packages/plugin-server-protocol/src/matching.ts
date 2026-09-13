@@ -1,11 +1,13 @@
 import { Result, Schema } from "effect"
 import { lynvoPluginCatalogSchema } from "./schemas.js"
-import type {
-  ExtractRequest,
-  LynvoManifestExtension,
-  PluginMetadata,
-  PluginServerManifest,
-  PluginServerMatcher,
+import {
+  requireNodeIdentity,
+  type ExtractRequest,
+  type ExtractTarget,
+  type LynvoManifestExtension,
+  type PluginMetadata,
+  type PluginServerManifest,
+  type PluginServerMatcher,
 } from "./models.js"
 
 const REGULAR_EXPRESSION_SPECIAL_CHARACTERS = new Set([
@@ -92,16 +94,16 @@ export const matchPluginServerUrl = (
   }
 }
 
-export const getExtractTargetUrl = (request: ExtractRequest): string => {
+export const getExtractTarget = (request: ExtractRequest): ExtractTarget => {
   if (request.input.kind === "source") {
-    return request.input.sourceUrl
+    return { kind: "url", url: request.input.sourceUrl }
   }
 
-  const target = request.input.nodeUrl ?? request.input.resourceId
-  if (target === undefined) {
-    throw new Error("Node input requires nodeUrl or resourceId")
+  const identity = requireNodeIdentity(request.input)
+  if (identity.nodeUrl !== undefined) {
+    return { kind: "url", url: identity.nodeUrl }
   }
-  return target
+  return { kind: "resourceId", resourceId: identity.resourceId }
 }
 
 const extensionsContainerSchema = Schema.Struct({
@@ -158,4 +160,21 @@ export const canPluginServerAttemptUrl = (
   return pluginId
     ? plugins.some((plugin) => plugin.id === pluginId)
     : plugins.some((plugin) => plugin.matchStrategy === "probe")
+}
+
+export const canPluginServerAttemptTarget = (
+  manifest: PluginServerManifest,
+  target: ExtractTarget,
+  pluginId?: string
+): boolean => {
+  if (target.kind === "resourceId") {
+    if (pluginId) {
+      return (getLynvoManifestExtension(manifest).plugins ?? []).some(
+        (plugin) => plugin.id === pluginId
+      )
+    }
+    return true
+  }
+
+  return canPluginServerAttemptUrl(manifest, target.url, pluginId)
 }

@@ -7,9 +7,10 @@ import {
   extractErrorSchema,
   extractRequestSchema,
   extractSuccessSchema,
-  getExtractTargetUrl,
+  getExtractTarget,
   PROTOCOL_ERROR_STATUS,
   ProtocolError,
+  type ExtractTarget,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { validateBearerCredential } from "./auth"
 import {
@@ -47,7 +48,7 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   },
   usage: ({ env }) => readUsage(env),
   discover: ({ targetUrl }) => discoverLynvoPlugin(targetUrl),
-  extract: async ({ request, targetUrl, env }) => {
+  extract: async ({ request, target, env }) => {
     const log = useLogger()
     const reservation = await reserveUsage(env)
     log.set({
@@ -70,7 +71,7 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
     try {
       const result = await extractWithLynvoPlugin(
         request,
-        targetUrl,
+        target,
         env.PUBLIC_ASSET_ORIGIN
       )
       if (reservation.reservationId) {
@@ -118,12 +119,14 @@ const runtime = createPluginServerRuntime<LynvoPluginServerBindings>({
   },
 })
 
-const getTargetHost = (targetUrl: string | undefined): string | undefined => {
-  if (!targetUrl) {
+const getTargetHost = (
+  target: ExtractTarget | undefined
+): string | undefined => {
+  if (!target || target.kind !== "url") {
     return undefined
   }
   try {
-    return new URL(targetUrl).hostname
+    return new URL(target.url).hostname
   } catch {
     return undefined
   }
@@ -157,15 +160,15 @@ app.post("/extract", async (context) => {
   const parsedRequest =
     Schema.decodeUnknownResult(extractRequestSchema)(requestBody)
   const isRequestValid = Result.isSuccess(parsedRequest)
-  let targetUrl: string | undefined
-  if (isRequestValid) {
-    targetUrl = getExtractTargetUrl(parsedRequest.success)
-  }
-  const targetHost = getTargetHost(targetUrl)
+  const target = isRequestValid
+    ? getExtractTarget(parsedRequest.success)
+    : undefined
+  const targetHost = getTargetHost(target)
   context.get("log").set({
     operation: "extract",
     extraction: {
       input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
+      target_kind: target?.kind,
       target_host: targetHost,
     },
   })
@@ -181,6 +184,7 @@ app.post("/extract", async (context) => {
   context.get("log").set({
     extraction: {
       input_kind: isRequestValid ? parsedRequest.success.input.kind : "invalid",
+      target_kind: target?.kind,
       target_host: targetHost,
       node_count: isSuccess ? success.success.nodes.length : undefined,
       plugin_server_id: isSuccess
