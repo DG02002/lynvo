@@ -20,15 +20,16 @@ import {
   getExtractTarget,
   getMatchedPlugin,
 } from "./matching.js"
-import type {
-  ExtractRequest,
-  ExtractTarget,
-  PluginServerManifest,
-  PluginServerManifestFactory,
-  PluginServerRuntime,
-  PluginServerRuntimeManifest,
-  PluginServerRuntimeOptions,
-  VerifySuccessResponse,
+import {
+  describeExtractTarget,
+  type ExtractRequest,
+  type ExtractTarget,
+  type PluginServerManifest,
+  type PluginServerManifestFactory,
+  type PluginServerRuntime,
+  type PluginServerRuntimeManifest,
+  type PluginServerRuntimeOptions,
+  type VerifySuccessResponse,
 } from "./models.js"
 
 interface ExtractExecutionOptions<Env> {
@@ -273,10 +274,8 @@ export const createPluginServerRuntime = <Env>(
       ) {
         return jsonResponse(
           createProtocolError(
-            "UNSUPPORTED_URL",
-            `Unsupported extraction target by this Plugin Server: ${
-              target.kind === "url" ? target.url : target.resourceId
-            }`
+            target.kind === "url" ? "UNSUPPORTED_URL" : "UNSUPPORTED_TARGET",
+            `Unsupported extraction target by this Plugin Server: ${describeExtractTarget(target)}`
           ),
           400
         )

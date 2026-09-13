@@ -11,44 +11,63 @@ const documentedSuccessResponseSchema = Schema.Struct({
   extensions: Schema.Record(Schema.String, Schema.Unknown),
 })
 
-const documentationUrls = [
-  new URL("../docs/spec.md", import.meta.url),
-  new URL("../docs/author-guide.md", import.meta.url),
-  new URL(
-    "../../../apps/lynvo/app/features/site/docs/plugin-server/extraction-requests.mdx",
-    import.meta.url
-  ),
-  new URL(
-    "../../../apps/lynvo/app/features/site/docs/plugin-server/media-nodes.mdx",
-    import.meta.url
-  ),
-  new URL(
-    "../../../apps/lynvo/app/features/site/docs/plugin-server/hono-routes.mdx",
-    import.meta.url
-  ),
-  new URL(
-    "../../../apps/lynvo/app/features/site/docs/plugin-server/success-responses.mdx",
-    import.meta.url
-  ),
-  new URL(
-    "../../../apps/lynvo/app/features/site/docs/plugin-server/agent-prompt.mdx",
-    import.meta.url
-  ),
-]
+type DocumentationAssertion = "nodeIdentity" | "extractTarget" | "statusTable"
 
-const nodeIdentityDocumentationUrls = documentationUrls.filter(
-  (documentationUrl) =>
-    documentationUrl.pathname.endsWith("/spec.md") ||
-    documentationUrl.pathname.endsWith("/author-guide.md") ||
-    documentationUrl.pathname.endsWith("/extraction-requests.mdx") ||
-    documentationUrl.pathname.endsWith("/media-nodes.mdx")
-)
+const documentationExpectations = new Map<
+  URL,
+  readonly DocumentationAssertion[]
+>([
+  [
+    new URL("../docs/spec.md", import.meta.url),
+    ["nodeIdentity", "statusTable"],
+  ],
+  [
+    new URL("../docs/author-guide.md", import.meta.url),
+    ["nodeIdentity", "extractTarget"],
+  ],
+  [
+    new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/extraction-requests.mdx",
+      import.meta.url
+    ),
+    ["nodeIdentity"],
+  ],
+  [
+    new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/media-nodes.mdx",
+      import.meta.url
+    ),
+    ["nodeIdentity"],
+  ],
+  [
+    new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/hono-routes.mdx",
+      import.meta.url
+    ),
+    ["extractTarget"],
+  ],
+  [
+    new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/success-responses.mdx",
+      import.meta.url
+    ),
+    [],
+  ],
+  [
+    new URL(
+      "../../../apps/lynvo/app/features/site/docs/plugin-server/agent-prompt.mdx",
+      import.meta.url
+    ),
+    [],
+  ],
+])
 
-const extractTargetDocumentationUrls = documentationUrls.filter(
-  (documentationUrl) =>
-    documentationUrl.pathname.endsWith("/author-guide.md") ||
-    documentationUrl.pathname.endsWith("/hono-routes.mdx")
-)
+const documentationUrls = [...documentationExpectations.keys()]
+
+const documentationUrlsFor = (assertion: DocumentationAssertion): URL[] =>
+  [...documentationExpectations.entries()]
+    .filter(([, assertions]) => assertions.includes(assertion))
+    .map(([documentationUrl]) => documentationUrl)
 
 describe("published Plugin Server documentation", () => {
   it("keeps success responses aligned with the runtime schema", async () => {
@@ -72,7 +91,11 @@ describe("published Plugin Server documentation", () => {
   })
 
   it("keeps the documented HTTP status table aligned with the protocol mapping", async () => {
-    const source = await readFile(documentationUrls[0], "utf8")
+    const [statusTableUrl] = documentationUrlsFor("statusTable")
+    if (!statusTableUrl) {
+      throw new Error("No documentation URL declares the status table")
+    }
+    const source = await readFile(statusTableUrl, "utf8")
     const [, statusTable = ""] = source.split("### HTTP status mapping\n")
     const rows = [
       ...(statusTable?.matchAll(/^\| `([^`]+)`\s+\|\s+(\d+)\s+\|$/gm) ?? []),
@@ -86,7 +109,7 @@ describe("published Plugin Server documentation", () => {
 
   it("documents URL and resource ID node identities on every guidance surface", async () => {
     await Promise.all(
-      nodeIdentityDocumentationUrls.map(async (documentationUrl) => {
+      documentationUrlsFor("nodeIdentity").map(async (documentationUrl) => {
         const source = await readFile(documentationUrl, "utf8")
         expect(source).toContain("nodeUrl")
         expect(source).toContain("resourceId")
@@ -96,7 +119,7 @@ describe("published Plugin Server documentation", () => {
 
   it("documents the discriminated extraction target on runtime guidance surfaces", async () => {
     await Promise.all(
-      extractTargetDocumentationUrls.map(async (documentationUrl) => {
+      documentationUrlsFor("extractTarget").map(async (documentationUrl) => {
         const source = await readFile(documentationUrl, "utf8")
         expect(source).toContain("target.kind")
         expect(source).toContain("target.url")

@@ -16,6 +16,7 @@ import {
   validPluginServerManifestFixture,
   validUsageResponseFixture,
   createPluginServerRuntime,
+  describeExtractTarget,
 } from "../src/index"
 
 const createRuntime = (
@@ -176,11 +177,7 @@ describe("runtime lifecycle hooks", () => {
         extensions: {},
       }),
       onExtractAccepted: (context) => {
-        accepted.push(
-          context.target.kind === "url"
-            ? context.target.url
-            : context.target.resourceId
-        )
+        accepted.push(describeExtractTarget(context.target))
       },
       onExtractResult: (context) => {
         results.push(

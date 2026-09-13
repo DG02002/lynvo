@@ -26,6 +26,7 @@ export class ProtocolError extends Error {
 /** Documented mapping from protocol error codes to HTTP response statuses. */
 export const PROTOCOL_ERROR_STATUS = {
   UNSUPPORTED_URL: 400,
+  UNSUPPORTED_TARGET: 400,
   BAD_REQUEST: 400,
   AUTH_INVALID: 401,
   AUTH_REQUIRED: 401,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  PROTOCOL_ERROR_STATUS,
   parseExtractSuccessContract,
   parseUsageResponseContract,
   validatePluginServerManifestContract,
@@ -75,6 +76,25 @@ describe("__PROJECT_DISPLAY_NAME__ Plugin Server contract", () => {
     })
     expect(parsedBody.value?.nodes[0]).toMatchObject({
       url: "https://media.example.com/video.mp4",
+    })
+  })
+
+  it("returns the target-specific error for opaque resource IDs", async () => {
+    const response = await app.fetch(
+      new Request("https://worker.example/extract", {
+        method: "POST",
+        headers: { ...authorizedHeaders, "content-type": "application/json" },
+        body: JSON.stringify({
+          input: { kind: "node", resourceId: "opaque-resource-id" },
+        }),
+      }),
+      environment
+    )
+
+    expect(response.status).toBe(PROTOCOL_ERROR_STATUS.UNSUPPORTED_TARGET)
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { code: "UNSUPPORTED_TARGET" },
     })
   })
 })

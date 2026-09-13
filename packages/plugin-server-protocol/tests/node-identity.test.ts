@@ -3,6 +3,7 @@ import { Result, Schema } from "effect"
 import {
   createNodeExtractRequest,
   getExtractTarget,
+  NODE_IDENTITY_ERROR,
   nodeInputSchema,
   resolvableNodeSchema,
 } from "../src/index"
@@ -66,5 +67,15 @@ describe("node identity", () => {
       kind: "resourceId",
       resourceId: "opaque-resource-id",
     })
+  })
+
+  it("rejects a node request without an identity", () => {
+    expect(() =>
+      createNodeExtractRequest(
+        // SAFETY: Bypass the compile-time identity requirement to exercise
+        // the runtime guard for malformed JavaScript callers.
+        {} as Parameters<typeof createNodeExtractRequest>[0]
+      )
+    ).toThrow(NODE_IDENTITY_ERROR)
   })
 })

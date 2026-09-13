@@ -148,6 +148,9 @@ export interface ResourceIdExtractTarget {
 
 export type ExtractTarget = UrlExtractTarget | ResourceIdExtractTarget
 
+export const describeExtractTarget = (target: ExtractTarget): string =>
+  target.kind === "url" ? target.url : target.resourceId
+
 export interface ExtractRequest {
   readonly input: SourceInput | NodeInput
   readonly pluginId?: string
@@ -379,6 +382,7 @@ export const PROTOCOL_VERSION = "1.0" as const
 
 export const ERROR_CODES = [
   "UNSUPPORTED_URL",
+  "UNSUPPORTED_TARGET",
   "AUTH_INVALID",
   "AUTH_REQUIRED",
   "RATE_LIMITED",

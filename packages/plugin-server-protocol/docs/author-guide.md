@@ -523,6 +523,9 @@ Use `PERMANENT_FAILURE` when the source is broken in a non-retryable way.
 
 Use `UNSUPPORTED_URL` only when the URL does not match a supported Source.
 
+Use `UNSUPPORTED_TARGET` when the request uses a target kind that this Plugin
+Server does not resolve.
+
 ## Performance guidance
 
 Custom Plugin Servers may run on Cloudflare free plans. Design with that in mind.

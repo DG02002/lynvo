@@ -244,7 +244,7 @@ export const extractWithLynvoPlugin = async (
 ): Promise<ExtractSuccessResponse> => {
   if (target.kind !== "url") {
     throw new ProtocolError(
-      "UNSUPPORTED_URL",
+      "UNSUPPORTED_TARGET",
       "The managed Plugin Server does not resolve opaque resource IDs."
     )
   }

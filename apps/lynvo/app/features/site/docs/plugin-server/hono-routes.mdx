@@ -25,7 +25,7 @@ const runtime = createPluginServerRuntime<Env>({
   extract: ({ target }) => {
     if (target.kind !== "url") {
       throw new ProtocolError(
-        "UNSUPPORTED_URL",
+        "UNSUPPORTED_TARGET",
         "This example only accepts URL targets."
       )
     }
