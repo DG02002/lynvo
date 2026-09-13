@@ -7,6 +7,7 @@ import {
 } from "../constants"
 import {
   checkAuthenticationRateLimit,
+  checkDeviceApprovalRateLimit,
   checkRateLimit,
 } from "../authentication-rate-limit"
 import {
@@ -244,14 +245,19 @@ export const registerD1AuthRoutes = (
     if (!session) {
       return unauthorizedResponse()
     }
-    const rateLimitResult = await checkRateLimit({
+    const rateLimitResult = await checkDeviceApprovalRateLimit({
       environment: context.env,
-      key: `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
-      limit: 10,
-      windowSeconds: 600,
+      clientIp: clientIp(context.req.raw),
+      userId: session.userId,
     })
-    if (rateLimitResult !== "allowed") {
+    if (rateLimitResult === "limited") {
       return context.text("Too many attempts. Try again later.", 429)
+    }
+    if (rateLimitResult === "unavailable") {
+      return context.text(
+        "Device approval is unavailable. Try again later.",
+        503
+      )
     }
     const code = context.req.query("code")
     if (!code) {

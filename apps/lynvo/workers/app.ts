@@ -23,6 +23,7 @@ import { responseSecurityHeaders } from "./response-security-headers"
 import { buildReleaseIdentity } from "./release-identity"
 import {
   checkAuthenticationRateLimit,
+  checkDeviceApprovalRateLimit,
   checkRateLimit,
   type AuthenticationRateLimitResult,
 } from "./authentication-rate-limit"
@@ -461,11 +462,10 @@ app.use("/api/auth/device/authorize", async (context, next) => {
   if (session.kind === "anonymous") {
     return next()
   }
-  const rateLimitResult = await rateLimit({
+  const rateLimitResult = await checkDeviceApprovalRateLimit({
     environment: context.env,
-    key: `auth:device-approval:${clientIp(context.req.raw)}:${session.userId}`,
-    limit: 10,
-    windowSeconds: 600,
+    clientIp: clientIp(context.req.raw),
+    userId: session.userId,
   })
   if (rateLimitResult === "unavailable") {
     addRequestContext(context, {

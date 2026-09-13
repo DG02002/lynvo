@@ -1,3 +1,8 @@
+import {
+  DEVICE_APPROVAL_RATE_LIMIT,
+  DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
+} from "./constants"
+
 export type AuthenticationRateLimitResult =
   | "allowed"
   | "limited"
@@ -44,6 +49,24 @@ export const checkRateLimit = async ({
     return "unavailable"
   }
 }
+
+interface CheckDeviceApprovalRateLimitInput {
+  readonly environment: AuthenticationRateLimitEnvironment
+  readonly clientIp: string
+  readonly userId: string
+}
+
+export const checkDeviceApprovalRateLimit = ({
+  environment,
+  clientIp,
+  userId,
+}: CheckDeviceApprovalRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+  checkRateLimit({
+    environment,
+    key: `auth:device-approval:${clientIp}:${userId}`,
+    limit: DEVICE_APPROVAL_RATE_LIMIT,
+    windowSeconds: DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
+  })
 
 interface CheckAuthenticationRateLimitInput {
   readonly environment: AuthenticationRateLimitEnvironment

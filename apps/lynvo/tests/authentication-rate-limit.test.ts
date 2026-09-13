@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 import { checkAuthenticationRateLimit } from "../workers/authentication-rate-limit"
+import { createTestRateLimiter } from "./support/rate-limiter"
 
 const createLimiter = (status: number) => {
-  const fetch = vi.fn().mockResolvedValue(new Response(null, { status }))
+  const fetch = vi.fn(() => Promise.resolve(new Response(null, { status })))
+  const limiter = createTestRateLimiter(() => fetch())
   return {
-    // SAFETY: The rate-limit code only calls getByName and fetch on this namespace stub.
-    namespace: {
-      getByName: vi.fn().mockReturnValue({ fetch }),
-    } as DurableObjectNamespace,
+    calls: limiter.calls,
+    namespace: limiter.namespace,
     fetch,
   }
 }
@@ -27,7 +27,7 @@ describe("authentication rate limit environment policy", () => {
     })
 
     expect(result).toBe("allowed")
-    expect(limiter.namespace.getByName).not.toHaveBeenCalled()
+    expect(limiter.calls).toHaveLength(0)
     expect(limiter.fetch).not.toHaveBeenCalled()
   })
 
@@ -45,8 +45,8 @@ describe("authentication rate limit environment policy", () => {
     })
 
     expect(result).toBe("limited")
-    expect(limiter.namespace.getByName).toHaveBeenCalledWith(
-      "auth:device-code:203.0.113.1"
-    )
+    expect(limiter.calls.map(({ key }) => key)).toEqual([
+      "auth:device-code:203.0.113.1",
+    ])
   })
 })

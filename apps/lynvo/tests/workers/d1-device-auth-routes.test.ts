@@ -1,37 +1,17 @@
 import { env } from "cloudflare:workers"
 import { describe, expect, it } from "vitest"
 import app from "../../workers/app"
-import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
+import {
+  D1_SESSION_COOKIE_NAME,
+  DEVICE_APPROVAL_RATE_LIMIT,
+  DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
+} from "../../workers/constants"
 import { createDeviceCode } from "../../workers/d1/device-auth"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
+import { createTestRateLimiter } from "../support/rate-limiter"
 
-const APPROVAL_RATE_LIMIT = 10
 const CLIENT_IP = "192.0.2.44"
-
-const createRateLimiter = (limit: number) => {
-  const attempts = new Map<string, number>()
-  const keys: string[] = []
-  // SAFETY: The route only calls getByName and the returned fetch method on this namespace stub.
-  const namespace = {
-    getByName(key: string) {
-      keys.push(key)
-      return {
-        fetch: async () => {
-          const attempt = attempts.get(key) ?? 0
-          attempts.set(key, attempt + 1)
-          return new Response(null, {
-            status: attempt < limit ? 200 : 429,
-          })
-        },
-      }
-    },
-  } as DurableObjectNamespace
-  return { keys, namespace }
-}
-
-const keysFor = (keys: readonly string[], userId: string): string[] =>
-  keys.filter((key) => key === `auth:device-approval:${CLIENT_IP}:${userId}`)
 
 describe("device approval Worker route", () => {
   it("keeps approval lookup available under the limit and returns the sibling 429 shape after it", async () => {
@@ -48,7 +28,12 @@ describe("device approval Worker route", () => {
       deviceName: "Living room TV",
       now: Date.now(),
     })
-    const limiter = createRateLimiter(APPROVAL_RATE_LIMIT)
+    const limiter = createTestRateLimiter(
+      ({ attempt }) =>
+        new Response(null, {
+          status: attempt < DEVICE_APPROVAL_RATE_LIMIT ? 200 : 429,
+        })
+    )
     // SAFETY: The route only uses the D1 database, environment name, and rate-limiter binding supplied here.
     const environment = {
       DB: env.DB,
@@ -67,7 +52,7 @@ describe("device approval Worker route", () => {
       )
 
     const underLimitResponses = await Promise.all(
-      Array.from({ length: APPROVAL_RATE_LIMIT }, () =>
+      Array.from({ length: DEVICE_APPROVAL_RATE_LIMIT }, () =>
         app.fetch(request(), environment)
       )
     )
@@ -86,6 +71,29 @@ describe("device approval Worker route", () => {
     await expect(limitedResponse.text()).resolves.toBe(
       "Too many attempts. Try again later."
     )
-    expect(keysFor(limiter.keys, user.id)).toHaveLength(APPROVAL_RATE_LIMIT + 1)
+    expect(limiter.calls.map(({ key }) => key)).toEqual(
+      Array.from(
+        { length: DEVICE_APPROVAL_RATE_LIMIT + 1 },
+        () => `auth:device-approval:${CLIENT_IP}:${user.id}`
+      )
+    )
+    for (const { init } of limiter.calls) {
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        limit: DEVICE_APPROVAL_RATE_LIMIT,
+        windowMs: DEVICE_APPROVAL_RATE_WINDOW_SECONDS * 1_000,
+      })
+    }
+
+    const unavailableLimiter = createTestRateLimiter(
+      () => new Response(null, { status: 500 })
+    )
+    const unavailableResponse = await app.fetch(request(), {
+      ...environment,
+      AUTH_RATE_LIMITER: unavailableLimiter.namespace,
+    })
+    expect(unavailableResponse.status).toBe(503)
+    await expect(unavailableResponse.text()).resolves.toBe(
+      "Device approval is unavailable. Try again later."
+    )
   })
 })
