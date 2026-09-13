@@ -5,6 +5,7 @@ import {
   ValidatedFetchError,
   type ReadBoundedResponseOptions,
   type JsonValue,
+  type ValidatedFetchErrorCode,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   UPSTREAM_REDIRECT_LIMIT,
@@ -28,23 +29,35 @@ const validateUpstreamUrl = (targetUrl: string): URL => {
   }
 }
 
-const toUpstreamError = (error: ValidatedFetchError): never => {
-  switch (error.code) {
-    case "TOO_MANY_REDIRECTS":
-      throw new Error("Upstream redirect limit exceeded.")
-    case "INVALID_REDIRECT":
-      throw new Error("Upstream redirect omitted its destination.")
-    case "RESPONSE_TOO_LARGE":
-      throw new Error("Upstream response exceeded its byte limit.")
+const UPSTREAM_ERROR_MESSAGES = {
+  TOO_MANY_REDIRECTS: "Upstream redirect limit exceeded.",
+  INVALID_REDIRECT: "Upstream redirect omitted its destination.",
+  RESPONSE_TOO_LARGE: "Upstream response exceeded its byte limit.",
+} satisfies Readonly<Record<ValidatedFetchErrorCode, string>>
+
+const throwUpstreamError = (error: ValidatedFetchError): never => {
+  throw new Error(UPSTREAM_ERROR_MESSAGES[error.code])
+}
+
+const withUpstreamErrors = async <Value>(
+  operation: () => Promise<Value>
+): Promise<Value> => {
+  try {
+    return await operation()
+  } catch (error) {
+    if (error instanceof ValidatedFetchError) {
+      throwUpstreamError(error)
+    }
+    throw error
   }
 }
 
-export const fetchValidatedUpstream = async (
+export const fetchValidatedUpstream = (
   targetUrl: string | URL,
   options: RequestInit
-): Promise<Response> => {
-  try {
-    return await fetchValidatedRedirects(targetUrl, options, {
+): Promise<Response> =>
+  withUpstreamErrors(() =>
+    fetchValidatedRedirects(targetUrl, options, {
       validateUrl: (value) => validateUpstreamUrl(value.toString()),
       maxRedirects: UPSTREAM_REDIRECT_LIMIT,
       timeoutMs: UPSTREAM_TIMEOUT_MS,
@@ -52,28 +65,14 @@ export const fetchValidatedUpstream = async (
       responseBodyMode: "stream",
       stripHeadersOnCrossOrigin: REDIRECT_CREDENTIAL_HEADERS,
     })
-  } catch (error) {
-    if (error instanceof ValidatedFetchError) {
-      toUpstreamError(error)
-    }
-    throw error
-  }
-}
+  )
 
-export const readBoundedUpstreamText = async (
-  response: Response
-): Promise<string> => {
-  try {
-    return await readBoundedResponseText(response, {
+export const readBoundedUpstreamText = (response: Response): Promise<string> =>
+  withUpstreamErrors(() =>
+    readBoundedResponseText(response, {
       maximumResponseBytes: UPSTREAM_RESPONSE_BYTE_LIMIT,
     })
-  } catch (error) {
-    if (error instanceof ValidatedFetchError) {
-      toUpstreamError(error)
-    }
-    throw error
-  }
-}
+  )
 
 export const readBoundedUpstreamJson = async (
   response: Response
@@ -81,12 +80,5 @@ export const readBoundedUpstreamJson = async (
   const options: ReadBoundedResponseOptions = {
     maximumResponseBytes: UPSTREAM_RESPONSE_BYTE_LIMIT,
   }
-  try {
-    return await readBoundedResponseJson(response, options)
-  } catch (error) {
-    if (error instanceof ValidatedFetchError) {
-      toUpstreamError(error)
-    }
-    throw error
-  }
+  return withUpstreamErrors(() => readBoundedResponseJson(response, options))
 }

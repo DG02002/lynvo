@@ -47,8 +47,10 @@ export const dataChangedRealtimeMessageSchema = Schema.Struct({
   }),
 })
 
-export const isRealtimeHeartbeatResponse = (value: string): boolean =>
-  value === "pong"
+export const isRealtimeHeartbeatResponse = (value: string): boolean => {
+  // The Durable Object's hibernation pair answers bare "ping" with "pong" without waking it.
+  return value === "pong"
+}
 
 const parseFirstMatchingRealtimeMessage = (
   value: string

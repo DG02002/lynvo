@@ -3,6 +3,8 @@ import {
   isBlockedIpUrl,
   isLocalUrl,
   ValidatedFetchError,
+  type ValidatedFetchErrorCode,
+  type ValidatedFetchResponseBodyMode,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   OUTBOUND_HTTP_MAX_REDIRECTS,
@@ -20,7 +22,7 @@ interface OutboundHttpRequestOptions extends RequestInit {
   allowedProtocols?: readonly string[]
   timeoutMs?: number
   maximumResponseBytes?: number
-  responseBodyMode?: "read" | "discard"
+  responseBodyMode?: Exclude<ValidatedFetchResponseBodyMode, "stream">
 }
 
 interface OutboundHttpTransport {
@@ -79,24 +81,14 @@ export const validateOutboundUrl = (
   return destination
 }
 
-const toOutboundHttpError = (error: ValidatedFetchError): never => {
-  switch (error.code) {
-    case "TOO_MANY_REDIRECTS":
-      throw new OutboundHttpError(
-        "TOO_MANY_REDIRECTS",
-        "Outbound redirect limit exceeded"
-      )
-    case "INVALID_REDIRECT":
-      throw new OutboundHttpError(
-        "INVALID_REDIRECT",
-        "Outbound redirect is missing a destination"
-      )
-    case "RESPONSE_TOO_LARGE":
-      throw new OutboundHttpError(
-        "RESPONSE_TOO_LARGE",
-        "Outbound response exceeded the byte limit"
-      )
-  }
+const OUTBOUND_ERROR_MESSAGES = {
+  TOO_MANY_REDIRECTS: "Outbound redirect limit exceeded",
+  INVALID_REDIRECT: "Outbound redirect is missing a destination",
+  RESPONSE_TOO_LARGE: "Outbound response exceeded the byte limit",
+} satisfies Readonly<Record<ValidatedFetchErrorCode, string>>
+
+const throwOutboundHttpError = (error: ValidatedFetchError): never => {
+  throw new OutboundHttpError(error.code, OUTBOUND_ERROR_MESSAGES[error.code])
 }
 
 export const createOutboundHttpTransport = (
@@ -150,7 +142,7 @@ export const createOutboundHttpTransport = (
       })
     } catch (error) {
       if (error instanceof ValidatedFetchError) {
-        toOutboundHttpError(error)
+        throwOutboundHttpError(error)
       }
       throw error
     }

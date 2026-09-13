@@ -35,5 +35,6 @@ export {
   ValidatedFetchError,
   type ReadBoundedResponseOptions,
   type ValidatedFetchErrorCode,
+  type ValidatedFetchResponseBodyMode,
   type ValidatedRedirectFetchOptions,
 } from "./validated-fetch.js"

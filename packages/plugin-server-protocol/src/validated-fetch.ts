@@ -13,6 +13,8 @@ export type ValidatedFetchErrorCode =
   | "INVALID_REDIRECT"
   | "RESPONSE_TOO_LARGE"
 
+export type ValidatedFetchResponseBodyMode = "read" | "stream" | "discard"
+
 export class ValidatedFetchError extends Error {
   readonly code: ValidatedFetchErrorCode
 
@@ -29,7 +31,7 @@ export interface ValidatedRedirectFetchOptions {
   readonly maxRedirects: number
   readonly timeoutMs: number
   readonly maximumResponseBytes: number
-  readonly responseBodyMode?: "read" | "stream" | "discard"
+  readonly responseBodyMode?: ValidatedFetchResponseBodyMode
   readonly stripHeadersOnCrossOrigin?: readonly string[]
   readonly validateRedirect?: (input: {
     readonly status: number
@@ -232,8 +234,15 @@ const createResponseTooLargeError = (): ValidatedFetchError =>
     "Response exceeded its byte limit."
   )
 
-const getDeclaredResponseLength = (response: Response): number =>
-  Number(response.headers.get("Content-Length"))
+const hasDeclaredResponseOverLimit = (
+  response: Response,
+  maximumResponseBytes: number
+): boolean => {
+  const declaredLength = Number(response.headers.get("Content-Length"))
+  return (
+    Number.isFinite(declaredLength) && declaredLength > maximumResponseBytes
+  )
+}
 
 const combineResponseChunks = (
   chunks: readonly Uint8Array[],
@@ -253,11 +262,7 @@ const ensureDeclaredResponseWithinLimit = async (
   maximumResponseBytes: number,
   deadline?: FetchDeadline
 ): Promise<void> => {
-  const declaredLength = getDeclaredResponseLength(response)
-  if (
-    Number.isFinite(declaredLength) &&
-    declaredLength > maximumResponseBytes
-  ) {
+  if (hasDeclaredResponseOverLimit(response, maximumResponseBytes)) {
     const error = createResponseTooLargeError()
     deadline?.abort()
     await response.body?.cancel()
@@ -348,10 +353,8 @@ const readStreamingResponseChunk = async (
 ): Promise<Uint8Array | undefined> => {
   if (!state.checkedDeclaredLength) {
     state.checkedDeclaredLength = true
-    const declaredLength = getDeclaredResponseLength(state.response)
     if (
-      Number.isFinite(declaredLength) &&
-      declaredLength > state.maximumResponseBytes
+      hasDeclaredResponseOverLimit(state.response, state.maximumResponseBytes)
     ) {
       throw createResponseTooLargeError()
     }
@@ -554,27 +557,14 @@ export const fetchValidatedRedirects = (
 
 export interface ReadBoundedResponseOptions {
   readonly maximumResponseBytes: number
-  readonly timeoutMs?: number
 }
 
 export const readBoundedResponseText = async (
   response: Response,
   options: ReadBoundedResponseOptions
 ): Promise<string> => {
-  const deadline =
-    options.timeoutMs === undefined
-      ? undefined
-      : createFetchDeadline(options.timeoutMs)
-  try {
-    const bytes = await readResponseBytes(
-      response,
-      options.maximumResponseBytes,
-      deadline
-    )
-    return new TextDecoder().decode(bytes)
-  } finally {
-    deadline?.dispose()
-  }
+  const bytes = await readResponseBytes(response, options.maximumResponseBytes)
+  return new TextDecoder().decode(bytes)
 }
 
 export const readBoundedResponseJson = async (
