@@ -80,10 +80,6 @@ const validateParsedPluginServerManifestContract = (
       issue("hasIcon", "Set hasIcon to true when iconUrl is present.")
     )
   }
-  if (didDeclareUsage && !manifest.usage) {
-    issues.push(issue("usage", "Declare metrics when usage is provided."))
-  }
-
   if (!extension) {
     return { ok: issues.length === 0, issues }
   }
