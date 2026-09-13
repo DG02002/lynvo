@@ -18,8 +18,10 @@ import type {
   LinkListItem,
   LinkViewItem,
 } from "~/features/links/types"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
+import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
 import { ExpandableFilename } from "~/components/expandable-filename"
@@ -103,7 +105,6 @@ interface SaveListBrowserProps {
   extractingItems: Set<string>
   highlightedId: string | null
   isHydrating: boolean
-  currentTimeMs?: number
   shouldShowRowPosters?: boolean
 }
 
@@ -452,12 +453,12 @@ const FinderBrowserLinkRow = ({
   displayTitle,
   onActivate,
 }: FinderBrowserLinkRowProps) => {
+  const currentTimeMs = useMinuteTimeBucket()
   const linkTarget = getMediaNodeTargetOrUndefined(link)
   const { isFolder } = getMediaNodeInteractionState(link)
   const shouldShowEpisodeStillForLink =
     shouldShowEpisodeStills && hasEpisodeMarker(link.label, parentFolderName)
-  const isExpired =
-    !isFolder && link.expiry !== undefined && link.expiry <= Date.now()
+  const isExpired = !isFolder && !isPlayableLinkFresh(link, currentTimeMs)
   const isResolving =
     linkTarget !== undefined && extractingItems.has(linkTarget)
   const episodeStill = useFinderEpisodeStill(
@@ -957,9 +958,9 @@ export const SaveListBrowser = ({
   extractingItems,
   highlightedId,
   isHydrating,
-  currentTimeMs = Date.now(),
   shouldShowRowPosters = false,
 }: SaveListBrowserProps) => {
+  const minuteTimeBucket = useMinuteTimeBucket()
   const selectedItem = items.find((item) => item.url === selectedItemUrl)
 
   if (selectedItem?.kind === "saved") {
@@ -983,7 +984,7 @@ export const SaveListBrowser = ({
     return <SaveListEmptyState />
   }
 
-  const groupedItems = groupSaveListItems(items, currentTimeMs)
+  const groupedItems = groupSaveListItems(items, minuteTimeBucket)
 
   return (
     <section className={SAVE_LIST_SECTION_STACK_CLASS}>
@@ -995,7 +996,7 @@ export const SaveListBrowser = ({
               const view = toLinkViewModel(item)
               const interactionState = getSavedLinkInteractionState(
                 item,
-                currentTimeMs
+                minuteTimeBucket
               )
               const { directLink, isDirectLinkExpired, isResolvableContainer } =
                 interactionState

@@ -1,7 +1,11 @@
-import { useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import type {
+  ExtractedLink,
+  LinkMetadata,
+  LinkViewItem,
+} from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 
@@ -35,6 +39,8 @@ const getResolvableContainerState = (
 const isMirrorAvailable = (mirror: ExtractedLink): boolean =>
   mirror.status !== "down" && isPlayableLinkFresh(mirror)
 
+const EMPTY_MIRRORS: ExtractedLink[] = []
+
 export const useResolvableContainerState = ({
   item,
   link,
@@ -42,18 +48,39 @@ export const useResolvableContainerState = ({
   isResolving: isExternallyResolving,
 }: UseResolvableContainerStateOptions) => {
   const linkTarget = getMediaNodeTarget(link)
+  const metadata = getLinkViewItemMetadata(item)
   const savedMirrors =
-    getLinkViewItemMetadata(item).playback.resolvedMirrors?.[linkTarget] ?? []
-  const [mirrors, setMirrors] = useState(() =>
-    savedMirrors.filter(isMirrorAvailable)
-  )
+    metadata.playback.resolvedMirrors?.[linkTarget] ?? EMPTY_MIRRORS
+  const [mirrorOverride, setMirrorOverride] = useState<{
+    savedMirrorsAtCapture: ExtractedLink[]
+    mirrors: ExtractedLink[]
+  } | null>(null)
+  const mirrors =
+    mirrorOverride?.savedMirrorsAtCapture === savedMirrors
+      ? mirrorOverride.mirrors
+      : savedMirrors.filter(isMirrorAvailable)
   const [isExpanded, setIsExpanded] = useState(false)
-  const [didResolutionFail, setDidResolutionFail] = useState(false)
+  const [resolutionFailureMetadata, setResolutionFailureMetadata] =
+    useState<LinkMetadata | null>(null)
   const [isResolving, setIsResolving] = useState(false)
   const localResolveInFlight = useRef(false)
+  const currentMetadata = useRef(metadata)
+  useLayoutEffect(() => {
+    currentMetadata.current = metadata
+  }, [metadata])
+  const didResolutionFail = resolutionFailureMetadata === metadata
   const displaySize = link.size
   const isResolveInFlight = () =>
     isExternallyResolving || localResolveInFlight.current
+
+  const markResolutionFailed = () => {
+    if (currentMetadata.current !== metadata) {
+      return
+    }
+
+    setIsExpanded(false)
+    setResolutionFailureMetadata(metadata)
+  }
 
   const resolveLink = async (bypassCache = false) => {
     if (isResolveInFlight()) {
@@ -61,7 +88,7 @@ export const useResolvableContainerState = ({
     }
 
     localResolveInFlight.current = true
-    setDidResolutionFail(false)
+    setResolutionFailureMetadata(null)
     setIsExpanded(true)
     setIsResolving(true)
     try {
@@ -71,11 +98,19 @@ export const useResolvableContainerState = ({
         bypassCache
       )
       const availableMirrors = resolvedLinks?.filter(isMirrorAvailable) ?? []
-      setMirrors(availableMirrors)
-      if (!availableMirrors.length) {
-        setIsExpanded(false)
-        setDidResolutionFail(true)
+      if (currentMetadata.current !== metadata) {
+        return
       }
+      setMirrorOverride({
+        savedMirrorsAtCapture: savedMirrors,
+        mirrors: availableMirrors,
+      })
+      if (!availableMirrors.length) {
+        markResolutionFailed()
+      }
+    } catch (error) {
+      console.error("Failed to resolve playable links", error)
+      markResolutionFailed()
     } finally {
       localResolveInFlight.current = false
       setIsResolving(false)
@@ -95,7 +130,7 @@ export const useResolvableContainerState = ({
       return
     }
 
-    setMirrors([])
+    setMirrorOverride({ savedMirrorsAtCapture: savedMirrors, mirrors: [] })
     void resolveLink(true)
   }
 
