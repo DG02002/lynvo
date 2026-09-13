@@ -3,7 +3,7 @@ import type {
   PluginMetadata,
   PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { Effect } from "effect"
+import { Effect, Exit } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
 import {
@@ -166,6 +166,15 @@ export const extractWithLynvoPluginServer = Effect.fn(
   })
   const meteredPluginId = toMeteredPluginId(route.plugin.id)
   const operationId = `${options.requestId}:${options.kind}`
+  const extraction = extractFromLynvoPluginServer({
+    environment: options.environment,
+    targetUrl: options.targetUrl,
+    kind: options.kind,
+    credentials: { pluginId: route.plugin.id, ...credentials },
+    requestId: options.requestId,
+    operationId,
+    source: route.plugin,
+  })
   if (meteredPluginId) {
     const database = getD1Database(options.environment)
     if (!database) {
@@ -199,42 +208,22 @@ export const extractWithLynvoPluginServer = Effect.fn(
               url: options.targetUrl,
             }),
     })
-  }
-  const extraction = extractFromLynvoPluginServer({
-    environment: options.environment,
-    targetUrl: options.targetUrl,
-    kind: options.kind,
-    credentials: { pluginId: route.plugin.id, ...credentials },
-    requestId: options.requestId,
-    operationId,
-    source: route.plugin,
-  })
-  if (!meteredPluginId) {
-    return yield* extraction
-  }
-  const database = getD1Database(options.environment)
-  // The managed plugin server refunds its own counter when an extraction
-  // fails, so Lynvo mirrors that on the user's side: only completed
-  // extractions are consumed.
-  let didExtractionSucceed = false
-  return yield* extraction.pipe(
-    Effect.tap(() =>
-      Effect.sync(() => {
-        didExtractionSucceed = true
-      })
-    ),
-    Effect.ensuring(
-      database
-        ? Effect.promise(() =>
-            settleManagedExtraction(database, options.userId, {
-              operationId,
-              outcome: didExtractionSucceed ? "consumed" : "released",
-              now: Date.now(),
-            }).catch(() => undefined)
-          )
-        : Effect.succeed(undefined)
+    // The managed plugin server refunds its own counter when an extraction
+    // fails, so Lynvo mirrors that on the user's side: only completed
+    // extractions are consumed.
+    return yield* extraction.pipe(
+      Effect.onExit((exit) =>
+        Effect.promise(() =>
+          settleManagedExtraction(database, options.userId, {
+            operationId,
+            outcome: Exit.isSuccess(exit) ? "consumed" : "released",
+            now: Date.now(),
+          }).catch(() => undefined)
+        )
+      )
     )
-  )
+  }
+  return yield* extraction
 })
 
 export const getLynvoRouteMetadata = Effect.fn(
