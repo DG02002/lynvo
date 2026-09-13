@@ -2,8 +2,8 @@ import { Effect } from "effect"
 import { CloudflareEnv } from "./cloudflare-env"
 import {
   ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
-  ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD,
   requireDatabaseEffect,
+  requireDatabaseEffectAs,
 } from "../require-database"
 import {
   beginPluginServerRegistration,
@@ -64,21 +64,16 @@ const registrationError = (error: {
         : error.message,
   })
 
+const registrationDatabaseError = ({ message }: BackendError) =>
+  new PluginServerRegistrationError({ message: `${message}.` })
+
 export const registerCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.register"
 )(function* (input: RegisterCustomPluginServerInput) {
   const environment = yield* CloudflareEnv
-  const database = yield* requireDatabaseEffect(
+  const database = yield* requireDatabaseEffectAs(
     environment,
-    ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD
-  ).pipe(
-    Effect.catchTag("BackendError", () =>
-      Effect.fail(
-        new PluginServerRegistrationError({
-          message: ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD,
-        })
-      )
-    )
+    registrationDatabaseError
   )
   const normalizedBaseUrl = yield* normalizePluginServerBaseUrl(input.baseUrl)
   const reservation = yield* Effect.tryPromise({
@@ -160,17 +155,9 @@ export const refreshCustomPluginServer = Effect.fn(
   "CustomPluginServerLifecycle.refresh"
 )(function* (input: RefreshCustomPluginServerInput) {
   const environment = yield* CloudflareEnv
-  const database = yield* requireDatabaseEffect(
+  const database = yield* requireDatabaseEffectAs(
     environment,
-    ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD
-  ).pipe(
-    Effect.catchTag("BackendError", () =>
-      Effect.fail(
-        new PluginServerRegistrationError({
-          message: ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD,
-        })
-      )
-    )
+    registrationDatabaseError
   )
   const storedPluginServers = yield* Effect.tryPromise({
     try: () => listReadyPluginServersForService(database, input.user.id),

@@ -4,7 +4,6 @@ import { BackendError } from "./errors"
 
 export const ACCOUNT_DATA_UNAVAILABLE_MESSAGE =
   "Account data is temporarily unavailable"
-export const ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD = `${ACCOUNT_DATA_UNAVAILABLE_MESSAGE}.`
 
 export const requireDatabaseEffect = Effect.fn("requireDatabaseEffect")(
   function* (
@@ -18,3 +17,10 @@ export const requireDatabaseEffect = Effect.fn("requireDatabaseEffect")(
     return database
   }
 )
+
+export const requireDatabaseEffectAs = <ErrorType>(
+  environment: Cloudflare.Env,
+  createError: (error: BackendError) => ErrorType,
+  message = ACCOUNT_DATA_UNAVAILABLE_MESSAGE
+): Effect.Effect<D1Database, ErrorType> =>
+  requireDatabaseEffect(environment, message).pipe(Effect.mapError(createError))

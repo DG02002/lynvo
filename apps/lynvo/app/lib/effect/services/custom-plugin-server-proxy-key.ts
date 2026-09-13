@@ -1,10 +1,7 @@
 import { Effect, Result, Schema } from "effect"
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 import { CloudflareEnv } from "./cloudflare-env"
-import {
-  ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD,
-  requireDatabaseEffect,
-} from "../require-database"
+import { requireDatabaseEffectAs } from "../require-database"
 import {
   findOwnedPluginServerById,
   updatePluginServerProxyBalance,
@@ -14,7 +11,7 @@ import {
   decryptCustomPluginServerProxyToken,
   encryptCustomPluginServerApiKey,
 } from "./custom-plugin-server-credentials"
-import { PluginServerRegistrationError } from "../errors"
+import { PluginServerRegistrationError, type BackendError } from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
 import {
   isProxyTokenRemoval,
@@ -45,6 +42,9 @@ const ScrapeDoAccountInfo = Schema.Struct({
 })
 
 export const SCRAPE_DO_INFO_URL = "https://api.scrape.do/info"
+
+const registrationDatabaseError = ({ message }: BackendError) =>
+  new PluginServerRegistrationError({ message: `${message}.` })
 
 /**
  * Validates a Scrape.do token against the free account-info endpoint. The
@@ -107,13 +107,9 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   CloudflareEnv
 > {
   const environment = yield* CloudflareEnv
-  const database = yield* requireDatabaseEffect(
+  const database = yield* requireDatabaseEffectAs(
     environment,
-    ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD
-  ).pipe(
-    Effect.mapError(
-      (error) => new PluginServerRegistrationError({ message: error.message })
-    )
+    registrationDatabaseError
   )
   const stored = yield* Effect.tryPromise({
     try: () =>
@@ -222,13 +218,9 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
   CloudflareEnv
 > {
   const environment = yield* CloudflareEnv
-  const database = yield* requireDatabaseEffect(
+  const database = yield* requireDatabaseEffectAs(
     environment,
-    ACCOUNT_DATA_UNAVAILABLE_MESSAGE_WITH_PERIOD
-  ).pipe(
-    Effect.mapError(
-      (error) => new PluginServerRegistrationError({ message: error.message })
-    )
+    registrationDatabaseError
   )
 
   const pluginServer = yield* Effect.tryPromise({

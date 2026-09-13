@@ -1,4 +1,3 @@
-import { useCallback } from "react"
 import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
 
 export interface OpenInPlayerOptions {
@@ -14,19 +13,17 @@ export const openInPlayerAndMarkOpened = async (
   markAfterAcceptedHandoff({ ...result, itemLabel, markOpened })
 }
 
-export const useOpenInPlayer = () =>
-  useCallback(
-    (
-      open: () => Promise<PlaybackHandoffResult>,
-      { itemLabel, markOpened }: OpenInPlayerOptions
-    ): void => {
-      try {
-        void openInPlayerAndMarkOpened(open, { itemLabel, markOpened }).catch(
-          console.error
-        )
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    []
-  )
+export const useOpenInPlayer =
+  () =>
+  (
+    open: () => Promise<PlaybackHandoffResult>,
+    { itemLabel, markOpened }: OpenInPlayerOptions
+  ): void => {
+    try {
+      void openInPlayerAndMarkOpened(open, { itemLabel, markOpened }).catch(
+        console.error
+      )
+    } catch (error) {
+      console.error(error)
+    }
+  }

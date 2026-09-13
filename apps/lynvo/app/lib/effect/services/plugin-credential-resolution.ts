@@ -6,7 +6,7 @@ import { Effect } from "effect"
 import { getPluginCredentialByDomainForService } from "../../../../workers/d1/plugin-domains"
 import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { ExtractionError } from "../errors"
-import { requireDatabaseEffect } from "../require-database"
+import { requireDatabaseEffectAs } from "../require-database"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface ResolvedPluginCredential {
@@ -39,17 +39,14 @@ export const resolvePluginCredential = Effect.fn(
     return { basicAuth: options.inlineBasicAuth }
   }
 
-  const database = yield* requireDatabaseEffect(
+  const database = yield* requireDatabaseEffectAs(
     options.environment,
+    (error) =>
+      new ExtractionError({
+        message: error.message,
+        url: options.targetUrl,
+      }),
     "Stored Plugin credentials are unavailable."
-  ).pipe(
-    Effect.mapError(
-      (error) =>
-        new ExtractionError({
-          message: error.message,
-          url: options.targetUrl,
-        })
-    )
   )
 
   const domain = new URL(options.targetUrl).hostname

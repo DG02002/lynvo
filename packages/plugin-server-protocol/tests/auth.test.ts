@@ -34,7 +34,7 @@ describe("validateBearerCredential", () => {
     ).toBe(false)
   })
 
-  it("accepts the standard case-insensitive Bearer scheme and whitespace", () => {
+  it("accepts a case-insensitive Bearer scheme and repeated whitespace", () => {
     expect(
       validateBearerCredential(
         requestWithAuthorization("bEaReR\tsecret-key"),

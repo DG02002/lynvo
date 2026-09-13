@@ -10,26 +10,36 @@ export interface OwnedRowSource {
   readonly columns: string
 }
 
-interface RequireOwnedRowInput {
+interface OwnedRowLookupInput {
   readonly database: D1Database
   readonly source: OwnedRowSource
   readonly id: string
   readonly userId: string
+}
+
+interface RequireOwnedRowInput extends OwnedRowLookupInput {
   readonly createError: OwnedRowErrorFactory
 }
 
-export const requireOwnedRow = async <Row extends OwnedRow>({
+export const findOwnedRow = async <Row extends OwnedRow>({
   database,
   source,
   id,
   userId,
-  createError,
-}: RequireOwnedRowInput): Promise<Row> => {
+}: OwnedRowLookupInput): Promise<Row | null> => {
   const row = await database
     .prepare(`SELECT ${source.columns} FROM ${source.table} WHERE id = ?1`)
     .bind(id)
     .first<Row>()
-  if (!row || row.user_id !== userId) {
+  return row && row.user_id === userId ? row : null
+}
+
+export const requireOwnedRow = async <Row extends OwnedRow>({
+  createError,
+  ...input
+}: RequireOwnedRowInput): Promise<Row> => {
+  const row = await findOwnedRow<Row>(input)
+  if (!row) {
     throw createError()
   }
   return row
