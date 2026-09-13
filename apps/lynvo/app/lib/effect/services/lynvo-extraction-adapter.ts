@@ -3,7 +3,7 @@ import type {
   PluginMetadata,
   PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { Effect, Exit } from "effect"
+import { DateTime, Effect, Exit } from "effect"
 import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
 import { ExtractionError, UsageLimitError, ValidationError } from "../errors"
 import {
@@ -43,6 +43,10 @@ export interface LynvoPluginRoute {
   readonly plugin: PluginMetadata
 }
 
+const getExtractionOperationId = (
+  options: Pick<LynvoExtractionAdapterOptions, "requestId" | "kind">
+): string => `${options.requestId}:${options.kind}`
+
 const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
   function* (
     options: LynvoExtractionAdapterOptions
@@ -56,7 +60,7 @@ const selectLynvoPlugin = Effect.fn("LynvoExtractionAdapter.selectLynvoPlugin")(
     ) {
       return undefined
     }
-    const operationId = `${options.requestId}:${options.kind}`
+    const operationId = getExtractionOperationId(options)
     const manifest = yield* getLynvoPluginServerManifest(
       options.environment,
       options.requestId,
@@ -165,7 +169,7 @@ export const extractWithLynvoPluginServer = Effect.fn(
     inlineBasicAuth: options.inlineBasicAuth,
   })
   const meteredPluginId = toMeteredPluginId(route.plugin.id)
-  const operationId = `${options.requestId}:${options.kind}`
+  const operationId = getExtractionOperationId(options)
   const extraction = extractFromLynvoPluginServer({
     environment: options.environment,
     targetUrl: options.targetUrl,
@@ -175,55 +179,59 @@ export const extractWithLynvoPluginServer = Effect.fn(
     operationId,
     source: route.plugin,
   })
-  if (meteredPluginId) {
-    const database = getD1Database(options.environment)
-    if (!database) {
-      return yield* new ExtractionError({
-        message: "Managed extraction metering is unavailable.",
-        url: options.targetUrl,
-      })
-    }
-    yield* Effect.tryPromise({
-      try: () =>
-        reserveManagedExtraction(database, options.userId, {
-          operationId,
-          pluginId: meteredPluginId,
-          usageLimitsDisabled: isUsageLimitsDisabled(
-            options.environment,
-            options.freezeUsage
-          ),
-          now: Date.now(),
-        }),
-      catch: (cause) =>
-        cause instanceof UsageLimitExhaustedError
-          ? new UsageLimitError({
-              message: cause.message,
-              retryAfterSeconds: cause.retryAfterSeconds,
-            })
-          : new ExtractionError({
-              message:
-                cause instanceof Error
-                  ? cause.message
-                  : "Managed extraction reservation failed.",
-              url: options.targetUrl,
-            }),
+  if (!meteredPluginId) {
+    return yield* extraction
+  }
+  const database = getD1Database(options.environment)
+  if (!database) {
+    return yield* new ExtractionError({
+      message: "Managed extraction metering is unavailable.",
+      url: options.targetUrl,
     })
-    // The managed plugin server refunds its own counter when an extraction
-    // fails, so Lynvo mirrors that on the user's side: only completed
-    // extractions are consumed.
-    return yield* extraction.pipe(
-      Effect.onExit((exit) =>
-        Effect.promise(() =>
+  }
+  const reservationTime = yield* DateTime.now
+  yield* Effect.tryPromise({
+    try: () =>
+      reserveManagedExtraction(database, options.userId, {
+        operationId,
+        pluginId: meteredPluginId,
+        usageLimitsDisabled: isUsageLimitsDisabled(
+          options.environment,
+          options.freezeUsage
+        ),
+        now: DateTime.toEpochMillis(reservationTime),
+      }),
+    catch: (cause) =>
+      cause instanceof UsageLimitExhaustedError
+        ? new UsageLimitError({
+            message: cause.message,
+            retryAfterSeconds: cause.retryAfterSeconds,
+          })
+        : new ExtractionError({
+            message:
+              cause instanceof Error
+                ? cause.message
+                : "Managed extraction reservation failed.",
+            url: options.targetUrl,
+          }),
+  })
+  // The managed plugin server refunds its own counter when an extraction
+  // fails, so Lynvo mirrors that on the user's side: only completed
+  // extractions are consumed.
+  return yield* extraction.pipe(
+    Effect.onExit((exit) =>
+      Effect.gen(function* () {
+        const settlementTime = yield* DateTime.now
+        yield* Effect.tryPromise(() =>
           settleManagedExtraction(database, options.userId, {
             operationId,
             outcome: Exit.isSuccess(exit) ? "consumed" : "released",
-            now: Date.now(),
-          }).catch(() => undefined)
-        )
-      )
+            now: DateTime.toEpochMillis(settlementTime),
+          })
+        ).pipe(Effect.ignore)
+      })
     )
-  }
-  return yield* extraction
+  )
 })
 
 export const getLynvoRouteMetadata = Effect.fn(
