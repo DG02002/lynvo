@@ -1,3 +1,4 @@
+import type { UsageMetric } from "../../app/lib/api-contracts"
 import {
   DAY_MS,
   GLOBAL_DAILY_LYNVO_PLUGIN_EXTRACTION_LIMIT,
@@ -771,21 +772,11 @@ export const releaseExpiredManagedExtractions = async (
   return { released: operations.length }
 }
 
-export interface UsageMetricSnapshot {
-  id: string
-  label: string
-  used: number
-  limit: number
-  unit: string
-  period: string
-  resetsAt: string
-}
-
 export const getUsage = async (
   database: D1Database,
   userId: string,
   timestamp: number
-): Promise<{ metrics: UsageMetricSnapshot[] }> => {
+): Promise<{ metrics: UsageMetric[] }> => {
   const daily = getDailyPeriod(timestamp)
   const monthly = getMonthlyPeriod(timestamp)
   const epoch = await getEpoch(database)
