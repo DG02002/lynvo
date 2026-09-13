@@ -82,6 +82,40 @@ export const PluginDomainSchema = Schema.Struct({
   hasCredential: Schema.Boolean,
 })
 
+export const StorageSettingsSnapshotSchema = Schema.Struct({
+  enforcedBytes: Schema.Number,
+  linkBytes: Schema.Number,
+  pluginServerBytes: Schema.Number,
+  pluginDomainBytes: Schema.Number,
+  profileBytes: Schema.Number,
+  savedLinkCount: Schema.Number,
+  averageLinkBytes: Schema.Number,
+  storageLimitBytes: Schema.Number,
+  storageWarningBytes: Schema.Number,
+  linkLimitBytes: Schema.Number,
+  retentionDays: Schema.Number,
+  retentionDayOptions: Schema.Array(Schema.Number),
+  defaultRetentionDays: Schema.Number,
+  maxRetentionDays: Schema.Number,
+})
+
+export const RetentionPreviewResponseSchema = Schema.Struct({
+  expiredLinkCount: Schema.Number,
+})
+
+export const UpdateRetentionResponseSchema = Schema.Struct({
+  success: Schema.Boolean,
+  deletedLinks: Schema.Number,
+  dataVersion: Schema.Number,
+})
+
+export const ClearLinksResponseSchema = Schema.Struct({
+  success: Schema.Boolean,
+  replayed: Schema.Boolean,
+  deletedLinks: Schema.Number,
+  dataVersion: Schema.Number,
+})
+
 export const UsageMetricSchema = Schema.Struct({
   id: Schema.String,
   label: Schema.String,
@@ -108,6 +142,10 @@ export const PluginServerUsageSchema = Schema.Struct({
   ),
   metrics: Schema.Array(UsageMetricSchema),
   error: Schema.optional(Schema.String),
+})
+
+export const LynvoUsageSnapshotSchema = Schema.Struct({
+  metrics: Schema.Array(UsageMetricSchema),
 })
 
 export const RemoteSendPayloadSchema = Schema.Struct({
@@ -195,8 +233,14 @@ export type CreatePluginDomainPayload =
   typeof CreatePluginDomainPayloadSchema.Type
 export type SetCredentialPayload = typeof SetCredentialPayloadSchema.Type
 export type PluginDomain = typeof PluginDomainSchema.Type
+export type StorageSettingsSnapshot = typeof StorageSettingsSnapshotSchema.Type
+export type RetentionPreviewResponse =
+  typeof RetentionPreviewResponseSchema.Type
+export type UpdateRetentionResponse = typeof UpdateRetentionResponseSchema.Type
+export type ClearLinksResponse = typeof ClearLinksResponseSchema.Type
 export type UsageMetric = typeof UsageMetricSchema.Type
 export type PluginServerUsage = typeof PluginServerUsageSchema.Type
+export type LynvoUsageSnapshot = typeof LynvoUsageSnapshotSchema.Type
 export type RemoteSendPayload = typeof RemoteSendPayloadSchema.Type
 export type ExtractQuery = typeof ExtractQuerySchema.Type
 export type MetadataQuery = typeof MetadataQuerySchema.Type

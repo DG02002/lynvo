@@ -1,21 +1,7 @@
-import { sessionIdentityHeaders } from "~/lib/session-identity"
+import { requestSameOrigin } from "~/lib/api/client"
 import { Result, Schema } from "effect"
 
 const authorizeErrorResponseSchema = Schema.Struct({ error: Schema.String })
-
-const sameOriginJson = async (
-  input: string,
-  init?: RequestInit
-): Promise<Response> =>
-  await fetch(input, {
-    ...init,
-    credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      ...sessionIdentityHeaders(),
-      ...init?.headers,
-    },
-  })
 
 export interface DeviceCodeApproval {
   code: string
@@ -27,7 +13,7 @@ export interface DeviceCodeApproval {
 export const readDeviceCodeApproval = async (
   code: string
 ): Promise<DeviceCodeApproval | null> => {
-  const response = await sameOriginJson(
+  const response = await requestSameOrigin(
     `/api/auth/device/approval?code=${encodeURIComponent(code)}`
   )
   if (!response.ok) {
@@ -37,9 +23,9 @@ export const readDeviceCodeApproval = async (
 }
 
 export const authorizeDeviceCode = async (code: string): Promise<void> => {
-  const response = await sameOriginJson("/api/auth/device/authorize", {
+  const response = await requestSameOrigin("/api/auth/device/authorize", {
     method: "POST",
-    body: JSON.stringify({ code }),
+    payload: { code },
   })
   if (!response.ok) {
     const payload = Schema.decodeUnknownResult(authorizeErrorResponseSchema)(
@@ -69,7 +55,7 @@ export const readDeviceCodeStatus = async (input: {
   code: string
   pollSecret: string
 }): Promise<DeviceCodeStatus> => {
-  const response = await sameOriginJson(
+  const response = await requestSameOrigin(
     `/api/auth/device/status?code=${encodeURIComponent(input.code)}&pollSecret=${encodeURIComponent(input.pollSecret)}`
   )
   return await response.json()
@@ -93,7 +79,7 @@ export const claimDeviceExchange = async (input: {
     attemptId: input.attemptId,
     generation: String(input.generation),
   })
-  const response = await sameOriginJson(
+  const response = await requestSameOrigin(
     `/api/auth/device/exchange?${query.toString()}`
   )
   if (!response.ok) {
@@ -109,10 +95,13 @@ export const finalizeDeviceExchangeOverHttp = async (input: {
   generation: number
   sessionId: string
 }): Promise<void> => {
-  const response = await sameOriginJson("/api/auth/device/exchange/finalize", {
-    method: "POST",
-    body: JSON.stringify(input),
-  })
+  const response = await requestSameOrigin(
+    "/api/auth/device/exchange/finalize",
+    {
+      method: "POST",
+      payload: input,
+    }
+  )
   if (!response.ok) {
     throw new Error(
       "This device couldn’t log in. Generate a new code, then try again."

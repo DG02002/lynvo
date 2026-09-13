@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { client } from "~/lib/api/client"
+import { readLynvoUsage } from "~/lib/settings/storage-http"
 
 const fetchMock = vi.fn<typeof globalThis.fetch>()
 const nativeFetch = globalThis.fetch
@@ -33,7 +34,7 @@ describe("browser API client", () => {
     const request = new Request(input, init)
     expect(new URL(request.url).pathname).toBe("/api/settings/player")
     expect(request.method).toBe("PATCH")
-    expect(request.credentials).toBe("include")
+    expect(request.credentials).toBe("same-origin")
     expect(request.headers.get("accept")).toBe("application/json")
     expect(request.headers.get("content-type")).toBe("application/json")
     expect(request.headers.get("x-csrf-token")).toBe("csrf-token")
@@ -73,5 +74,23 @@ describe("browser API client", () => {
         payload: { rangeSupportedPlayerId: "vlc" },
       })
     ).rejects.toThrow()
+  })
+
+  it("uses the shared JSON transport and validates storage usage responses", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ metrics: [] }))
+
+    await expect(readLynvoUsage()).resolves.toEqual({ metrics: [] })
+
+    const [input, init] = fetchMock.mock.calls[0]!
+    const request = new Request(input, init)
+    expect(new URL(request.url).pathname).toBe("/api/data/usage")
+    expect(request.credentials).toBe("same-origin")
+    expect(request.headers.get("accept")).toBe("application/json")
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBe("user-1")
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBe("session-1")
+
+    fetchMock.mockResolvedValueOnce(Response.json({ metrics: [{ id: "bad" }] }))
+
+    await expect(readLynvoUsage()).rejects.toThrow()
   })
 })

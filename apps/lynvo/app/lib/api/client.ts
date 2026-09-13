@@ -36,15 +36,16 @@ import {
   type VersionedMutationBody,
 } from "../api-contracts"
 
-interface ApiRequestOptions {
+export interface ApiRequestOptions {
   readonly signal?: AbortSignal
 }
 
 type RequestQuery = ExtractQuery | MetadataQuery | RemotePollQuery
 
-type RequestOptions<Payload = undefined> = ApiRequestOptions & {
+export type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly method?: "DELETE" | "GET" | "PATCH" | "POST"
   readonly headers?: Record<string, string>
+  readonly json?: boolean
   readonly payload?: Payload
   readonly query?: RequestQuery
 }
@@ -137,35 +138,63 @@ const readJson = async (
 
 export const requestJson = async <ResponseBody, Payload = undefined>(
   path: string,
-  { method = "GET", headers, payload, query, signal }: RequestOptions<Payload>,
+  options: RequestOptions<Payload>,
   schema: Schema.ConstraintDecoder<ResponseBody>
 ): Promise<ResponseBody> => {
-  const requestHeaders = new Headers({
-    Accept: "application/json",
-    ...sessionIdentityHeaders(),
-    ...headers,
-  })
-
-  if (payload !== undefined) {
-    requestHeaders.set("Content-Type", "application/json")
-  }
-
-  if (method !== "GET") {
-    requestHeaders.set("X-CSRF-Token", getCsrfToken() || "")
-  }
-
-  const response = await fetch(resolveRequestUrl(appendQuery(path, query)), {
-    method,
-    credentials: "include",
-    headers: requestHeaders,
-    body: payload === undefined ? undefined : JSON.stringify(payload),
-    signal,
-  })
+  const response = await requestSameOrigin(path, { ...options, json: true })
   const body = await readJson(response)
   if (!response.ok) {
     throw new ApiClientError({ body: decodeApiErrorBody(body), response })
   }
   return Schema.decodeUnknownSync(schema)(body)
+}
+
+export const requestSameOrigin = async <Payload = undefined>(
+  path: string,
+  {
+    method = "GET",
+    headers,
+    json = true,
+    payload,
+    query,
+    signal,
+  }: RequestOptions<Payload> = {}
+): Promise<Response> => {
+  const requestHeaders = { ...sessionIdentityHeaders(), ...headers }
+
+  if (
+    json &&
+    !Object.keys(requestHeaders).some((key) => key.toLowerCase() === "accept")
+  ) {
+    requestHeaders.Accept = "application/json"
+  }
+
+  if (payload !== undefined) {
+    requestHeaders["Content-Type"] = "application/json"
+  }
+
+  if (json && method !== "GET") {
+    requestHeaders["X-CSRF-Token"] = getCsrfToken() || ""
+  }
+
+  const requestInit: RequestInit = {
+    method,
+    credentials: "same-origin",
+  }
+  if (Object.keys(requestHeaders).length > 0) {
+    requestInit.headers = requestHeaders
+  }
+  if (payload !== undefined) {
+    requestInit.body = JSON.stringify(payload)
+  }
+  if (signal !== undefined) {
+    requestInit.signal = signal
+  }
+  const requestPath = appendQuery(path, query)
+  return await fetch(
+    json ? resolveRequestUrl(requestPath) : requestPath,
+    requestInit
+  )
 }
 
 type MutationOptions<ResponseBody, Payload> = {
