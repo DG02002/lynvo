@@ -1,10 +1,6 @@
 import { Schema } from "effect"
 import { remoteCommandFieldsSchema } from "./remote-play/wire"
-import {
-  LynvoUsageSnapshotSchema,
-  PluginServerUsageSchema,
-  UsageMetricSchema,
-} from "../../shared/usage-contracts"
+import { PluginServerUsageSchema } from "../../shared/usage-contracts"
 export {
   LynvoUsageSnapshotSchema,
   PluginServerUsageSchema,
