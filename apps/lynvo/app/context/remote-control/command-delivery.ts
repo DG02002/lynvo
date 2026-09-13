@@ -4,7 +4,7 @@ import {
   REMOTE_COMMAND_STALE_AFTER_MS,
 } from "./constants"
 import { remoteCommandFieldsSchema } from "~/lib/remote-play/wire"
-import { parseRemotePlaybackIntent } from "~/features/links/playable-link-handoff"
+import { parseRemotePlaybackIntent } from "~/lib/remote-play/intent"
 
 declare global {
   interface RemoteCommandDeliveryInput {

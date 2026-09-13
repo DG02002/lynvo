@@ -1,6 +1,4 @@
-import { Result, Schema } from "effect"
 import { client } from "~/lib/api/client"
-import { remotePollResponseSchema } from "./schemas"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 
 const requireReceiverId = () => {
@@ -24,16 +22,9 @@ export const remoteApi: RemoteControlTransport = {
     })
   },
   poll: async () => {
-    const result = await client.remote.pollInbox({
+    return client.remote.pollInbox({
       query: { receiverId: requireReceiverId() },
     })
-    const parsed = Schema.decodeUnknownResult(remotePollResponseSchema)({
-      commands: [...result.commands],
-    })
-    if (Result.isFailure(parsed)) {
-      throw new Error("Invalid remote poll response")
-    }
-    return parsed.success
   },
   reportResult: async ({
     commandId,

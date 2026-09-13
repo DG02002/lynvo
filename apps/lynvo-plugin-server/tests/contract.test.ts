@@ -39,12 +39,17 @@ describe("Lynvo Plugin Server protocol routes", () => {
     const denied = await fetchRoute("/verify", {
       method: "POST",
     })
+    const wrongCredential = await fetchRoute("/verify", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong-api-key" },
+    })
     const accepted = await fetchRoute("/verify", {
       method: "POST",
       headers: authenticatedHeaders,
     })
 
     expect(denied.status).toBe(401)
+    expect(wrongCredential.status).toBe(401)
     expect(await denied.json()).toMatchObject({
       error: { code: "AUTH_INVALID" },
     })

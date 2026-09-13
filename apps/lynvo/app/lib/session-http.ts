@@ -1,15 +1,9 @@
-import { sessionIdentityHeaders } from "./session-identity"
+import { requestSameOrigin } from "./api/client"
 
 export const signOut = async (): Promise<void> => {
-  const headers = sessionIdentityHeaders()
-  const options: RequestInit = {
+  const response = await requestSameOrigin("/api/auth/session", {
     method: "DELETE",
-    credentials: "same-origin",
-  }
-  if (Object.keys(headers).length > 0) {
-    options.headers = headers
-  }
-  const response = await fetch("/api/auth/session", options)
+  })
   if (!response.ok) {
     throw new Error("Unable to revoke the server session")
   }

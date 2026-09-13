@@ -1,26 +1,13 @@
-import { Effect, Schema } from "effect"
+import { Schema } from "effect"
 import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { openInPlayer, type RangeRequestCapability } from "~/lib/player-utils"
+import {
+  parseRemotePlaybackIntent,
+  remotePlaybackIntentSchema,
+} from "~/lib/remote-play/intent"
 
-export const remotePlaybackIntentSchema = Schema.Struct({
-  url: Schema.String.pipe(
-    Schema.refine(
-      (val): val is string => {
-        try {
-          const parsedUrl = new URL(val)
-          return parsedUrl.protocol.length > 0
-        } catch {
-          return false
-        }
-      },
-      { message: "Invalid URL" }
-    )
-  ),
-  rangeRequest: Schema.Literals(["supported", "unsupported", "unknown"]).pipe(
-    Schema.withDecodingDefault(Effect.succeed("unknown" as const))
-  ),
-})
+export { parseRemotePlaybackIntent, remotePlaybackIntentSchema }
 
 declare global {
   interface PlaybackHandoffResult {
@@ -49,9 +36,6 @@ declare global {
     readonly expectsNavigation: boolean
   }
 }
-
-export const parseRemotePlaybackIntent = <Value>(value: Value) =>
-  Schema.decodeUnknownResult(remotePlaybackIntentSchema)(value)
 
 const isExtractedLink = (
   target: string | ExtractedLink

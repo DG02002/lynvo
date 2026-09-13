@@ -25,6 +25,7 @@ import {
   type StorageLedgerPreparation,
 } from "./storage-ledger"
 import { requireReadyPluginServerRow } from "./plugin-server-ownership"
+import { requireOwnedRow } from "./owned-row"
 
 export interface EncryptedCredentialInput {
   ciphertext: string
@@ -241,11 +242,16 @@ const requireAuthorizedDomainRow = async (
   userId: string,
   domainId: string
 ): Promise<PluginDomainRow> => {
-  const domain = await findDomainRowById(database, domainId)
-  if (!domain || domain.user_id !== userId) {
-    throw new PluginDomainNotFoundError()
-  }
-  return domain
+  return requireOwnedRow({
+    database,
+    source: {
+      table: "user_plugin_domains",
+      columns: PLUGIN_DOMAIN_COLUMNS,
+    },
+    id: domainId,
+    userId,
+    createError: () => new PluginDomainNotFoundError(),
+  })
 }
 
 const raisePluginDomainWriteConflict = async (

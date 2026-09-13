@@ -1,3 +1,5 @@
+import { DAY_MS } from "../../shared/constants"
+
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
 export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000
 export const REALTIME_HEARTBEAT_TIMEOUT_MS = REALTIME_HEARTBEAT_INTERVAL_MS * 2
@@ -22,7 +24,6 @@ export const TMDB_SITE_URL = "https://www.themoviedb.org"
 export const TMDB_LOGO_SHORT_SRC = "/images/tmdb-logo-blue-short.svg"
 export const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 export const MILLISECONDS_PER_SECOND = 1_000
-export const MILLISECONDS_PER_DAY = 24 * 60 * 60 * MILLISECONDS_PER_SECOND
 export const TMDB_IMAGE_CARD_BASE_URL = "https://image.tmdb.org/t/p/w342"
 export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
 export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
@@ -35,8 +36,8 @@ export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
 export const MEDIA_ARTWORK_CACHE_VERSION = 4
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
-export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * MILLISECONDS_PER_DAY
-export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = MILLISECONDS_PER_DAY
+export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
+export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS
 export const CARD_MENU_LONG_PRESS_DURATION_MS = 500
 export const CARD_MENU_LONG_PRESS_MOVEMENT_TOLERANCE_PX = 10
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400

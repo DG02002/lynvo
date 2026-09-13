@@ -3,10 +3,10 @@ import type {
   PluginMetadata,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
-import { getD1Database } from "../../../../workers/d1/db"
 import { getPluginCredentialByDomainForService } from "../../../../workers/d1/plugin-domains"
 import { parseHttpBasicCredential } from "../../plugins/http-basic-credential"
 import { ExtractionError } from "../errors"
+import { requireDatabaseEffectAs } from "../require-database"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
 
 export interface ResolvedPluginCredential {
@@ -39,13 +39,15 @@ export const resolvePluginCredential = Effect.fn(
     return { basicAuth: options.inlineBasicAuth }
   }
 
-  const database = getD1Database(options.environment)
-  if (!database) {
-    return yield* new ExtractionError({
-      message: "Stored Plugin credentials are unavailable.",
-      url: options.targetUrl,
-    })
-  }
+  const database = yield* requireDatabaseEffectAs(
+    options.environment,
+    (error) =>
+      new ExtractionError({
+        message: error.message,
+        url: options.targetUrl,
+      }),
+    "Stored Plugin credentials are unavailable."
+  )
 
   const domain = new URL(options.targetUrl).hostname
   const encryptedCredential = yield* Effect.tryPromise({

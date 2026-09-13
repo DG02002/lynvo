@@ -1,7 +1,5 @@
-import {
-  MILLISECONDS_PER_DAY,
-  SAVE_LIST_OLDER_AFTER_DAY_COUNT,
-} from "~/lib/constants"
+import { SAVE_LIST_OLDER_AFTER_DAY_COUNT } from "~/lib/constants"
+import { DAY_MS } from "../../shared/constants"
 
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(undefined, {
   weekday: "long",
@@ -13,10 +11,7 @@ const getLocalDayNumber = (date: Date): number =>
 const getDateAgeInDays = (timestamp: number, currentTimeMs: number): number => {
   const itemDayNumber = getLocalDayNumber(new Date(timestamp))
   const currentDayNumber = getLocalDayNumber(new Date(currentTimeMs))
-  return Math.max(
-    0,
-    Math.round((currentDayNumber - itemDayNumber) / MILLISECONDS_PER_DAY)
-  )
+  return Math.max(0, Math.round((currentDayNumber - itemDayNumber) / DAY_MS))
 }
 
 export const getSaveDateGroupLabel = (

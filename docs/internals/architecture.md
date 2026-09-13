@@ -128,6 +128,8 @@ Durable Object. Keep its boundary separate from the application Worker.
 
 - `apps/lynvo/app/`: React Router UI, feature modules, typed API client, and
   public in-app docs.
+- `apps/lynvo/shared/`: app/Worker-neutral contracts and constants shared by
+  the browser-facing API and Cloudflare Worker code.
 - `apps/lynvo/workers/`: Worker entry point, D1 modules, Durable Objects, and
   scheduled or queued work.
 - `apps/lynvo-plugin-server/src/`: protocol routes, authentication, usage

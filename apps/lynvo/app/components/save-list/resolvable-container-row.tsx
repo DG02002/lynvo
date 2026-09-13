@@ -27,8 +27,8 @@ import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
-import { openInSpecificPlayer } from "~/lib/player-utils"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
+import { openInSpecificPlayerForHandoff } from "~/lib/player-utils"
 import { cn } from "~/lib/utils"
 import { getLinkKey, getResolvableSourceName } from "./save-list-browser-model"
 import { useResolvableContainerState } from "./use-resolvable-container-state"
@@ -61,73 +61,65 @@ const ResolvedMirrorRows = ({
   sourceLink,
   itemUrl,
   actions,
-}: ResolvedMirrorRowsProps) => (
-  <div
-    className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
-    data-container-children
-  >
-    <span
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 start-9 z-10 w-0.5 bg-sky-500 md:start-11"
-      data-container-connector
-    />
-    {mirrors.map((mirror) => {
-      const mirrorTarget = getMediaNodeTarget(mirror)
-      const playMirror = async () => {
-        const result = await actions.play(mirror)
-        markAfterAcceptedHandoff({
-          ...result,
-          itemLabel: mirror.label,
-          markOpened: () =>
-            actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink)),
-        })
-      }
-      const mirrorIcon = <HugeiconsIcon icon={PlayIcon} className="size-6" />
-      return (
-        <div key={getLinkKey(mirror)} className="relative">
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-sky-500"
-            data-container-connector
-          />
-          <MediaListRow
-            wrapperClassName="border-b-0"
-            buttonClassName="group-hover:bg-muted/80"
-            contentClassName="min-h-20 py-4"
-            label={mirror.label}
-            icon={<SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>}
-            title={{ value: mirror.label }}
-            overlay={
-              <LinkActionsDotMenu
-                itemLabel={mirror.label}
-                onCopyLink={() =>
-                  void navigator.clipboard.writeText(mirrorTarget)
-                }
-                onOpenInPlayer={async (player) => {
-                  const result = await openInSpecificPlayer(
-                    mirrorTarget,
-                    player
-                  )
-                  markAfterAcceptedHandoff({
-                    accepted: result.expectsNavigation,
-                    itemLabel: mirror.label,
-                    markOpened: () =>
-                      actions.markOpened(
-                        itemUrl,
-                        getMediaNodeTarget(sourceLink)
-                      ),
-                  })
-                }}
-                className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
-              />
-            }
-            onActivate={() => void playMirror().catch(console.error)}
-          />
-        </div>
-      )
-    })}
-  </div>
-)
+}: ResolvedMirrorRowsProps) => {
+  return (
+    <div
+      className="stagger-children relative flex flex-col divide-y divide-border/50 border-t border-border/70 bg-muted/60 ps-12 md:ps-14"
+      data-container-children
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 start-9 z-10 w-0.5 bg-sky-500 md:start-11"
+        data-container-connector
+      />
+      {mirrors.map((mirror) => {
+        const mirrorTarget = getMediaNodeTarget(mirror)
+        const markOpened = () =>
+          actions.markOpened(itemUrl, getMediaNodeTarget(sourceLink))
+        const playMirror = () =>
+          openInPlayerAndLogError(() => actions.play(mirror), {
+            itemLabel: mirror.label,
+            markOpened,
+          })
+        const mirrorIcon = <HugeiconsIcon icon={PlayIcon} className="size-6" />
+        return (
+          <div key={getLinkKey(mirror)} className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -start-3 top-1/2 z-10 h-0.5 w-3 -translate-y-1/2 bg-sky-500"
+              data-container-connector
+            />
+            <MediaListRow
+              wrapperClassName="border-b-0"
+              buttonClassName="group-hover:bg-muted/80"
+              contentClassName="min-h-20 py-4"
+              label={mirror.label}
+              icon={<SaveListRowIcon>{mirrorIcon}</SaveListRowIcon>}
+              title={{ value: mirror.label }}
+              overlay={
+                <LinkActionsDotMenu
+                  itemLabel={mirror.label}
+                  onCopyLink={() =>
+                    void navigator.clipboard.writeText(mirrorTarget)
+                  }
+                  onOpenInPlayer={(player) =>
+                    openInPlayerAndLogError(
+                      () =>
+                        openInSpecificPlayerForHandoff(mirrorTarget, player),
+                      { itemLabel: mirror.label, markOpened }
+                    )
+                  }
+                  className={MEDIA_LIST_ROW_MENU_TRIGGER_CLASS}
+                />
+              }
+              onActivate={playMirror}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 const getResolvableContainerIconState = (
   hasMirrors: boolean,

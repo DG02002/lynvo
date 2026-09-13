@@ -10,18 +10,14 @@ import { SettingsHandlers } from "./handlers/settings-handlers"
 import { WebAuth, CsrfMiddleware, CurrentUser } from "./middleware"
 import { validateCSRF } from "../../csrf"
 import { CloudflareEnv } from "../services/cloudflare-env"
-import { UnauthorizedError, CsrfError, BackendError } from "../errors"
+import { requireDatabaseEffect } from "../require-database"
+import { webRequestFromSource } from "../session-context"
+import { UnauthorizedError, CsrfError } from "../errors"
 import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
-import { getD1Database } from "../../../../workers/d1/db"
 import { resolveSessionContext } from "../../../../workers/d1/sessions"
-
-const webRequestFromSource = <Source>(source: Source) =>
-  source instanceof Request
-    ? Effect.succeed(source)
-    : Effect.die(new Error("HTTP server request source is not a Web Request"))
 
 // Implement WebAuth middleware
 export const WebAuthLive = Layer.succeed(
@@ -32,12 +28,10 @@ export const WebAuthLive = Layer.succeed(
       const environment = Option.getOrThrow(environmentOption)
       const request = yield* HttpServerRequest.HttpServerRequest
       const webRequest = yield* webRequestFromSource(request.source)
-      const database = getD1Database(environment)
-      if (!database) {
-        return yield* new BackendError({
-          message: "Authentication is temporarily unavailable",
-        })
-      }
+      const database = yield* requireDatabaseEffect(
+        environment,
+        "Authentication is temporarily unavailable"
+      )
       const session = yield* Effect.promise(() =>
         resolveSessionContext(webRequest, database, Date.now())
       )

@@ -19,7 +19,7 @@ import { getHybridItemLabel } from "~/features/links/media-artwork/hybrid-card-g
 import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type { LinkListItem } from "~/features/links/types"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import {
   getExtractionStatusInput,
   getExtractionStatusTitleSpec,
@@ -118,20 +118,14 @@ const HybridGroupItemRow = ({
       return
     }
     if (directLink) {
-      void actions
-        .play(directLink)
-        .then((result) =>
-          markAfterAcceptedHandoff({
-            ...result,
-            itemLabel: directLink.label,
-            markOpened: () => {
-              if (directLinkTarget !== undefined) {
-                actions.markOpened(item.url, directLinkTarget)
-              }
-            },
-          })
-        )
-        .catch(console.error)
+      openInPlayerAndLogError(() => actions.play(directLink), {
+        itemLabel: directLink.label,
+        markOpened: () => {
+          if (directLinkTarget !== undefined) {
+            actions.markOpened(item.url, directLinkTarget)
+          }
+        },
+      })
       return
     }
     actions.markOpened(item.url, item.url)

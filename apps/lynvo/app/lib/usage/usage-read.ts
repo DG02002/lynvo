@@ -1,6 +1,17 @@
+import type {
+  LynvoUsageSnapshot,
+  PluginServerUsage,
+  UsageMetric,
+} from "../api-contracts"
+
 const LYNVO_DAILY_LIMIT_METRIC_ID = "lynvo-plugin-server-operations"
 const CUSTOM_USAGE_FAILURE =
   "Custom Plugin Server usage couldn’t be loaded. Check the connection, then reload Settings."
+
+interface UsageReadAdapters {
+  readLynvo: () => Promise<LynvoUsageSnapshot>
+  readCustom: () => Promise<readonly PluginServerUsage[]>
+}
 
 const extractionMetrics = (
   metrics: readonly UsageMetric[],
@@ -112,7 +123,7 @@ const remainingPercentOf = (metrics: readonly UsageMetric[]): number => {
 const PERIOD_ORDER = { monthly: 0, daily: 1 } as const
 
 const normalizeCustomSection = (
-  usage: readonly CustomPluginServerUsage[],
+  usage: readonly PluginServerUsage[],
   didAdapterFail: boolean
 ): UsageReadCustomSection => {
   const available = usage.filter((pluginServer) => !pluginServer.error)

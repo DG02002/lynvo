@@ -6,6 +6,7 @@ import {
   SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
   type SavedLinkMetaAppliedLink,
 } from "./saved-link-meta-applied"
+import { requireOwnedRow } from "./owned-row"
 
 const SAVED_LINK_OPERATION_RESERVED_STATE = "reserved"
 const SAVED_LINK_OPERATION_COMPLETED_STATE = "completed"
@@ -239,9 +240,11 @@ export const requireOwnedSavedLink = async (
   userId: string,
   linkId: string
 ): Promise<LinkRow> => {
-  const existing = await findSavedLinkById(database, linkId)
-  if (!existing || existing.user_id !== userId) {
-    throw new LinkNotFoundError()
-  }
-  return existing
+  return requireOwnedRow({
+    database,
+    source: { table: "links", columns: SAVED_LINK_COLUMNS },
+    id: linkId,
+    userId,
+    createError: () => new LinkNotFoundError(),
+  })
 }

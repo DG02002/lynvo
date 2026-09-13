@@ -8,6 +8,10 @@ import {
 } from "../constants"
 import { executeOwnedWrite } from "./data-version"
 import { createOpaqueId } from "./ids"
+import { requireOwnedRow } from "./owned-row"
+
+const REMOTE_COMMAND_COLUMNS =
+  "id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status, available_at, notification_pending, claim_token, claim_expires_at, result_message"
 
 interface RemoteCommandRow {
   id: string
@@ -252,15 +256,14 @@ export const reportRemoteCommandResult = async ({
   success: boolean
   dataVersion: number
 }> => {
-  const row = await database
-    .prepare(
-      "SELECT id, user_id, target_session_id, target_receiver_id, command, payload, created_at, expires_at, status, available_at, notification_pending, claim_token, claim_expires_at, result_message FROM remote_commands WHERE id = ?1"
-    )
-    .bind(id)
-    .first<RemoteCommandRow>()
+  const row = await requireOwnedRow<RemoteCommandRow>({
+    database,
+    source: { table: "remote_commands", columns: REMOTE_COMMAND_COLUMNS },
+    id,
+    userId,
+    createError: () => new Error("Remote command claim is no longer active"),
+  })
   if (
-    !row ||
-    row.user_id !== userId ||
     row.target_session_id !== sessionId ||
     row.target_receiver_id !== receiverId ||
     row.claim_token !== claimToken

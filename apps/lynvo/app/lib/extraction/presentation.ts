@@ -35,15 +35,12 @@ export const decideSavePresentation = (
     }
   }
 
-  const hasFolder = links.some((link) => {
-    const state = getMediaNodeInteractionState(link)
-    return state.isFolder && !isMirrorResolvableMediaNode(link)
-  })
   const directFiles = links.filter(
     (link) =>
       !getMediaNodeInteractionState(link).isFolder ||
       isMirrorResolvableMediaNode(link)
   )
+  const hasFolder = links.length !== directFiles.length
 
   if (hasFolder || directFiles.length > 1) {
     return { kind: "selectionDialog", links: [...links] }

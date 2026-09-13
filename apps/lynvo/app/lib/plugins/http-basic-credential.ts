@@ -10,6 +10,28 @@ const httpBasicCredentialSchema = Schema.Struct({
   password: Schema.String,
 })
 
+export interface ExtractedUrlCredentials {
+  readonly password?: string
+  readonly url: URL
+  readonly username?: string
+}
+
+export const extractUrlCredentials = (
+  sourceUrl: string,
+  options: { readonly defaultProtocol?: string } = {}
+): ExtractedUrlCredentials => {
+  const candidateUrl =
+    options.defaultProtocol && !sourceUrl.includes("://")
+      ? `${options.defaultProtocol}//${sourceUrl}`
+      : sourceUrl
+  const url = new URL(candidateUrl)
+  const username = url.username ? decodeURIComponent(url.username) : undefined
+  const password = url.password ? decodeURIComponent(url.password) : undefined
+  url.username = ""
+  url.password = ""
+  return { url, username, password }
+}
+
 export const serializeHttpBasicCredential = (
   username: string,
   password: string
@@ -28,15 +50,13 @@ export const parseHttpBasicCredential = (
 }
 
 export const extractHttpBasicCredential = (sourceUrl: string) => {
-  const url = new URL(sourceUrl)
-  if (!url.username && !url.password) {
-    return { url: url.toString() }
+  const extracted = extractUrlCredentials(sourceUrl)
+  if (!extracted.username && !extracted.password) {
+    return { url: extracted.url.toString() }
   }
   const credential: HttpBasicCredential = {
-    username: decodeURIComponent(url.username),
-    password: decodeURIComponent(url.password),
+    username: extracted.username ?? "",
+    password: extracted.password ?? "",
   }
-  url.username = ""
-  url.password = ""
-  return { url: url.toString(), basicAuth: credential }
+  return { url: extracted.url.toString(), basicAuth: credential }
 }

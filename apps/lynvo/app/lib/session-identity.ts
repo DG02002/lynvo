@@ -3,7 +3,7 @@ interface SessionIdentity {
   readonly sessionId: string
 }
 
-const readIdentityMeta = (name: string) =>
+export const readIdentityMeta = (name: string) =>
   globalThis.document === undefined
     ? undefined
     : document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content

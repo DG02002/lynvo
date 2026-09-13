@@ -4,9 +4,9 @@ import { Api } from "../api"
 import { CurrentUser } from "../middleware"
 import { versionedSuccess, withDataVersionHeaders } from "../versioned-response"
 import { CloudflareEnv } from "../../services/cloudflare-env"
+import { requireDatabaseEffect } from "../../require-database"
 import { parseRemoteTargetId } from "../../../remote-target"
 import { BackendError, ValidationError } from "../../errors"
-import { getD1Database } from "../../../../../workers/d1/db"
 import {
   claimNextRemoteCommand,
   enqueueRemoteCommand,
@@ -25,12 +25,10 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
       Effect.gen(function* () {
         const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
-        const database = getD1Database(environment)
-        if (!database) {
-          return yield* new BackendError({
-            message: "Remote commands are temporarily unavailable",
-          })
-        }
+        const database = yield* requireDatabaseEffect(
+          environment,
+          "Remote commands are temporarily unavailable"
+        )
         const commandPayload = payload.data
           ? JSON.stringify(payload.data)
           : "{}"
@@ -99,12 +97,10 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
       Effect.gen(function* () {
         const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
-        const database = getD1Database(environment)
-        if (!database) {
-          return yield* new BackendError({
-            message: "Remote commands are temporarily unavailable",
-          })
-        }
+        const database = yield* requireDatabaseEffect(
+          environment,
+          "Remote commands are temporarily unavailable"
+        )
         const claim = yield* Effect.tryPromise({
           try: () =>
             claimNextRemoteCommand({
@@ -145,12 +141,10 @@ export const RemoteHandlers = HttpApiBuilder.group(Api, "remote", (handlers) =>
       Effect.gen(function* () {
         const environment = yield* CloudflareEnv
         const user = yield* CurrentUser
-        const database = getD1Database(environment)
-        if (!database) {
-          return yield* new BackendError({
-            message: "Remote commands are temporarily unavailable",
-          })
-        }
+        const database = yield* requireDatabaseEffect(
+          environment,
+          "Remote commands are temporarily unavailable"
+        )
         const { dataVersion } = yield* Effect.tryPromise({
           try: () =>
             reportRemoteCommandResult({

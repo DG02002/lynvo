@@ -1,18 +1,17 @@
-import { useEffect, useId, useState, type MouseEvent } from "react"
+import { useEffect, useId, useState } from "react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-import { DOCS_SCROLL_END_TOLERANCE_PX } from "~/lib/constants"
 import { cn } from "~/lib/utils"
+import {
+  useActiveHeadingTracker,
+  useDocumentHeadings,
+  useHeadingClickHandler,
+  type PageHeading,
+} from "./page-heading-navigation"
 
 const getHeaderHeight = () => (window.innerWidth >= 768 ? 64 : 56)
 const getOutlineScrollOffset = () => (window.innerWidth >= 768 ? 112 : 96)
-
-interface PageOutlineHeading {
-  id: string
-  label: string
-  level?: 3
-}
 
 export function MobilePageOutline({
   className,
@@ -21,57 +20,21 @@ export function MobilePageOutline({
   targetId,
 }: {
   className?: string
-  headings?: readonly PageOutlineHeading[]
+  headings?: readonly PageHeading[]
   revealAfterSelector?: string
   targetId?: string
 }) {
   const panelId = useId()
   const [open, setOpen] = useState(false)
   const [visible, setVisible] = useState(!revealAfterSelector)
-  const [headings, setHeadings] = useState<readonly PageOutlineHeading[]>(
-    providedHeadings ?? []
+  const headings = useDocumentHeadings(providedHeadings, targetId)
+  const [activeHeadingId, setActiveHeadingId] = useActiveHeadingTracker(
+    headings,
+    getOutlineScrollOffset
   )
-  const [activeHeadingId, setActiveHeadingId] = useState(
-    providedHeadings?.[0]?.id ?? ""
+  const handleHeadingClick = useHeadingClickHandler(setActiveHeadingId, () =>
+    setOpen(false)
   )
-
-  useEffect(() => {
-    if (providedHeadings) {
-      setHeadings(providedHeadings)
-      setActiveHeadingId(
-        (currentId) => currentId || providedHeadings[0]?.id || ""
-      )
-      return
-    }
-
-    const target = targetId ? document.getElementById(targetId) : null
-    if (!target) {
-      return
-    }
-
-    const discoverHeadings = () => {
-      const discoveredHeadings = Array.from(
-        target.querySelectorAll<HTMLElement>("h2[id], h3[id]")
-      ).map((heading) => ({
-        id: heading.id,
-        label: heading.textContent?.trim() ?? heading.id,
-        level: heading.tagName === "H3" ? (3 as const) : undefined,
-      }))
-
-      setHeadings(discoveredHeadings)
-      setActiveHeadingId((currentId) =>
-        discoveredHeadings.some((heading) => heading.id === currentId)
-          ? currentId
-          : (discoveredHeadings[0]?.id ?? "")
-      )
-    }
-
-    discoverHeadings()
-    const observer = new MutationObserver(discoverHeadings)
-    observer.observe(target, { childList: true, subtree: true })
-
-    return () => observer.disconnect()
-  }, [providedHeadings, targetId])
 
   useEffect(() => {
     if (!revealAfterSelector) {
@@ -113,91 +76,12 @@ export function MobilePageOutline({
     }
   }, [revealAfterSelector])
 
-  useEffect(() => {
-    if (headings.length === 0) {
-      return
-    }
-
-    let animationFrameId: number | undefined
-
-    const updateActiveHeading = () => {
-      animationFrameId = undefined
-      const headingElements = headings.flatMap((heading) => {
-        const element = document.getElementById(heading.id)
-        return element ? [element] : []
-      })
-
-      if (headingElements.length === 0) {
-        return
-      }
-
-      let nextId = headingElements[0].id
-      for (const heading of headingElements) {
-        if (heading.getBoundingClientRect().top <= getOutlineScrollOffset()) {
-          nextId = heading.id
-        } else {
-          break
-        }
-      }
-
-      if (
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - DOCS_SCROLL_END_TOLERANCE_PX
-      ) {
-        nextId = headingElements.at(-1)?.id ?? nextId
-      }
-
-      setActiveHeadingId((currentId) =>
-        currentId === nextId ? currentId : nextId
-      )
-    }
-
-    const requestUpdate = () => {
-      if (animationFrameId === undefined) {
-        animationFrameId = window.requestAnimationFrame(updateActiveHeading)
-      }
-    }
-
-    requestUpdate()
-    window.addEventListener("scroll", requestUpdate, { passive: true })
-    window.addEventListener("resize", requestUpdate)
-
-    return () => {
-      window.removeEventListener("scroll", requestUpdate)
-      window.removeEventListener("resize", requestUpdate)
-      if (animationFrameId !== undefined) {
-        window.cancelAnimationFrame(animationFrameId)
-      }
-    }
-  }, [headings])
-
   if (headings.length === 0) {
     return null
   }
 
   const activeHeading =
     headings.find((heading) => heading.id === activeHeadingId) ?? headings[0]
-
-  const handleHeadingClick = (
-    event: MouseEvent<HTMLAnchorElement>,
-    headingId: string
-  ) => {
-    const heading = document.getElementById(headingId)
-    if (!heading) {
-      return
-    }
-
-    event.preventDefault()
-    setActiveHeadingId(headingId)
-    setOpen(false)
-    heading.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    })
-    window.history.pushState(null, "", `#${headingId}`)
-  }
 
   return (
     <nav

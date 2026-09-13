@@ -6,39 +6,6 @@ import type { PluginIconSource } from "./lib/plugin-icons"
 declare global {
   const __BUILD_TIME__: string
 
-  interface UsageMetric {
-    id: string
-    label: string
-    used: number
-    limit: number
-    unit: string
-    period: "daily" | "monthly"
-    resetsAt: string
-    pluginId?: string
-  }
-
-  interface CustomPluginServerUsage {
-    pluginServerId: string
-    name: string
-    iconUrl?: string
-    plugins?: readonly {
-      id: string
-      name: string
-      iconUrl?: string
-    }[]
-    metrics: readonly UsageMetric[]
-    error?: string
-  }
-
-  interface UsageReadLynvoResult {
-    metrics: readonly UsageMetric[]
-  }
-
-  interface UsageReadAdapters {
-    readLynvo: () => Promise<UsageReadLynvoResult>
-    readCustom: () => Promise<readonly CustomPluginServerUsage[]>
-  }
-
   interface UsageReadInput {
     lynvoPlugins: readonly LynvoPlugin[]
   }

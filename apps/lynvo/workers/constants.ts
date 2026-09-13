@@ -1,3 +1,7 @@
+import { DAY_MS } from "../shared/constants"
+
+export { DAY_MS }
+
 export const REALTIME_SESSION_REVALIDATION_INTERVAL_MS = 60 * 1000
 export const AUTH_ACTIVITY_TOUCH_INTERVAL_MS = 7 * 24 * 60 * 60 * 1_000
 
@@ -43,7 +47,6 @@ export const GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS = 10 * 60
 export const EXTRACTION_ROUTE_RATE_LIMIT = 30
 export const EXTRACTION_ROUTE_RATE_WINDOW_SECONDS = 60
 
-export const DAY_MS = 24 * 60 * 60 * 1_000
 export const SECOND_MS = 1_000
 export const USER_STORAGE_LIMIT_BYTES = 3 * 1024 * 1024
 export const USER_STORAGE_WARNING_BYTES = Math.round(

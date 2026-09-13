@@ -20,7 +20,10 @@ import type {
 } from "~/features/links/types"
 import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 import { toLinkViewModel } from "~/features/links/link-view-models"
-import { openInSpecificPlayer, type PlayerDefinition } from "~/lib/player-utils"
+import {
+  openInSpecificPlayerForHandoff,
+  type PlayerDefinition,
+} from "~/lib/player-utils"
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 import { PlayableExpiryBadge } from "~/components/save-list/playable-expiry-badge"
@@ -50,7 +53,7 @@ import {
 } from "./save-list-browser-model"
 import { useFinderBrowserState } from "./use-finder-browser-state"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
-import { markAfterAcceptedHandoff } from "~/lib/opened-confirmation-events"
+import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 import { groupSaveListItems } from "./save-list-groups"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ResolvableContainerRow } from "./resolvable-container-row"
@@ -540,16 +543,17 @@ const FinderBrowserLinkRow = ({
     }
     void navigator.clipboard.writeText(linkTarget)
   }
-  const openLinkInPlayer = async (player: PlayerDefinition) => {
+  const openLinkInPlayer = (player: PlayerDefinition) => {
     if (linkTarget === undefined) {
       return
     }
-    const result = await openInSpecificPlayer(linkTarget, player)
-    markAfterAcceptedHandoff({
-      accepted: result.expectsNavigation,
-      itemLabel: link.label,
-      markOpened: () => actions.markOpened(item.url, linkTarget),
-    })
+    openInPlayerAndLogError(
+      () => openInSpecificPlayerForHandoff(linkTarget, player),
+      {
+        itemLabel: link.label,
+        markOpened: () => actions.markOpened(item.url, linkTarget),
+      }
+    )
   }
 
   return (
@@ -1068,23 +1072,17 @@ export const SaveListBrowser = ({
                           return
                         }
                         if (directLink) {
-                          void actions
-                            .play(directLink)
-                            .then((result) =>
-                              markAfterAcceptedHandoff({
-                                ...result,
-                                itemLabel: directLink.label,
-                                markOpened: () => {
-                                  if (directLinkTarget !== undefined) {
-                                    actions.markOpened(
-                                      item.url,
-                                      directLinkTarget
-                                    )
-                                  }
-                                },
-                              })
-                            )
-                            .catch(console.error)
+                          openInPlayerAndLogError(
+                            () => actions.play(directLink),
+                            {
+                              itemLabel: directLink.label,
+                              markOpened: () => {
+                                if (directLinkTarget !== undefined) {
+                                  actions.markOpened(item.url, directLinkTarget)
+                                }
+                              },
+                            }
+                          )
                           return
                         }
                         actions.markOpened(item.url, item.url)

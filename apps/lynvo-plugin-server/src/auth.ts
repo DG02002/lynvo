@@ -1,13 +1,4 @@
-export const validateBearerCredential = (
-  request: Request,
-  expectedApiKey: string
-): boolean => {
-  if (!expectedApiKey) {
-    return false
-  }
-
-  return request.headers.get("Authorization") === `Bearer ${expectedApiKey}`
-}
+export { validateBearerCredential } from "@dg02002/lynvo-plugin-server-protocol"
 
 export const createBasicAuthorization = (
   username: string,

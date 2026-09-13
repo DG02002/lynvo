@@ -1,3 +1,5 @@
+import { extractUrlCredentials } from "./plugins/http-basic-credential"
+
 export interface ParsedPluginDomainInput {
   password?: string
   url: string
@@ -22,27 +24,18 @@ export const parsePluginDomainInput = (
   value: string
 ): ParsedPluginDomainInput => {
   const trimmedValue = value.trim()
-  const candidateUrl = trimmedValue.includes("://")
-    ? trimmedValue
-    : `https://${trimmedValue}`
-  const parsedUrl = new URL(candidateUrl)
-  const username = parsedUrl.username
-    ? decodeURIComponent(parsedUrl.username)
-    : undefined
-  const password = parsedUrl.password
-    ? decodeURIComponent(parsedUrl.password)
-    : undefined
-  parsedUrl.username = ""
-  parsedUrl.password = ""
+  const extracted = extractUrlCredentials(trimmedValue, {
+    defaultProtocol: "https:",
+  })
 
   const result: ParsedPluginDomainInput = {
-    url: parsedUrl.toString(),
+    url: extracted.url.toString(),
   }
-  if (username) {
-    result.username = username
+  if (extracted.username) {
+    result.username = extracted.username
   }
-  if (password) {
-    result.password = password
+  if (extracted.password) {
+    result.password = extracted.password
   }
   return result
 }
@@ -68,27 +61,19 @@ export const parsePluginDomainCandidate = (
   value: string
 ): PluginDomainCandidate | undefined => {
   try {
-    const parsed = new URL(value)
-    if (parsed.protocol !== "https:") {
+    const extracted = extractUrlCredentials(value)
+    if (extracted.url.protocol !== "https:") {
       return undefined
     }
-    const username = parsed.username
-      ? decodeURIComponent(parsed.username)
-      : undefined
-    const password = parsed.password
-      ? decodeURIComponent(parsed.password)
-      : undefined
-    parsed.username = ""
-    parsed.password = ""
     const candidate: PluginDomainCandidate = {
-      domain: parsed.hostname.toLowerCase().replace(/\.$/, ""),
-      sanitizedUrl: parsed.toString(),
+      domain: extracted.url.hostname.toLowerCase().replace(/\.$/, ""),
+      sanitizedUrl: extracted.url.toString(),
     }
-    if (username) {
-      candidate.username = username
+    if (extracted.username) {
+      candidate.username = extracted.username
     }
-    if (password) {
-      candidate.password = password
+    if (extracted.password) {
+      candidate.password = extracted.password
     }
     return candidate
   } catch {

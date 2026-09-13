@@ -75,9 +75,7 @@ const createDatabase = (row: typeof pluginServerRow) =>
     }
     if (sql.includes("FROM user_plugin_servers")) {
       const ownedById =
-        sql.includes("WHERE id = ?1 AND user_id = ?2") &&
-        args[0] === "plugin-server-1" &&
-        args[1] === "user-1"
+        sql.includes("WHERE id = ?1") && args[0] === "plugin-server-1"
       const ownedByUser =
         sql.includes("WHERE user_id = ?1") && args[0] === "user-1"
       if (!ownedById && !ownedByUser) {

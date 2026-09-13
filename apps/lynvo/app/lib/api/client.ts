@@ -36,13 +36,13 @@ import {
   type VersionedMutationBody,
 } from "../api-contracts"
 
-interface ApiRequestOptions {
+export interface ApiRequestOptions {
   readonly signal?: AbortSignal
 }
 
 type RequestQuery = ExtractQuery | MetadataQuery | RemotePollQuery
 
-type RequestOptions<Payload = undefined> = ApiRequestOptions & {
+export type RequestOptions<Payload = undefined> = ApiRequestOptions & {
   readonly method?: "DELETE" | "GET" | "PATCH" | "POST"
   readonly headers?: Record<string, string>
   readonly payload?: Payload
@@ -137,35 +137,61 @@ const readJson = async (
 
 export const requestJson = async <ResponseBody, Payload = undefined>(
   path: string,
-  { method = "GET", headers, payload, query, signal }: RequestOptions<Payload>,
+  options: RequestOptions<Payload>,
   schema: Schema.ConstraintDecoder<ResponseBody>
 ): Promise<ResponseBody> => {
-  const requestHeaders = new Headers({
-    Accept: "application/json",
-    ...sessionIdentityHeaders(),
-    ...headers,
-  })
-
-  if (payload !== undefined) {
-    requestHeaders.set("Content-Type", "application/json")
+  const { method = "GET", headers, query, ...requestOptions } = options
+  const requestHeaders = { ...headers }
+  if (
+    !Object.keys(requestHeaders).some((key) => key.toLowerCase() === "accept")
+  ) {
+    requestHeaders.Accept = "application/json"
   }
-
   if (method !== "GET") {
-    requestHeaders.set("X-CSRF-Token", getCsrfToken() || "")
+    requestHeaders["X-CSRF-Token"] = getCsrfToken() || ""
   }
-
-  const response = await fetch(resolveRequestUrl(appendQuery(path, query)), {
-    method,
-    credentials: "include",
-    headers: requestHeaders,
-    body: payload === undefined ? undefined : JSON.stringify(payload),
-    signal,
-  })
+  const response = await requestSameOrigin(
+    resolveRequestUrl(appendQuery(path, query)),
+    { ...requestOptions, method, headers: requestHeaders }
+  )
   const body = await readJson(response)
   if (!response.ok) {
     throw new ApiClientError({ body: decodeApiErrorBody(body), response })
   }
   return Schema.decodeUnknownSync(schema)(body)
+}
+
+export const requestSameOrigin = async <Payload = undefined>(
+  path: string,
+  {
+    method = "GET",
+    headers,
+    payload,
+    query,
+    signal,
+  }: RequestOptions<Payload> = {}
+): Promise<Response> => {
+  const requestHeaders = { ...sessionIdentityHeaders(), ...headers }
+
+  if (payload !== undefined) {
+    requestHeaders["Content-Type"] = "application/json"
+  }
+
+  const requestInit: RequestInit = {
+    method,
+    credentials: "same-origin",
+  }
+  if (Object.keys(requestHeaders).length > 0) {
+    requestInit.headers = requestHeaders
+  }
+  if (payload !== undefined) {
+    requestInit.body = JSON.stringify(payload)
+  }
+  if (signal !== undefined) {
+    requestInit.signal = signal
+  }
+  const requestPath = appendQuery(path, query)
+  return await fetch(requestPath, requestInit)
 }
 
 type MutationOptions<ResponseBody, Payload> = {

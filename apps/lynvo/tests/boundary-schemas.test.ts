@@ -1,45 +1,47 @@
 import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
-import {
-  remotePollResponseSchema,
-  remoteRealtimeEventSchema,
-} from "~/context/remote-control/schemas"
+import { RemotePollResponseSchema } from "~/lib/api-contracts"
+import { remoteCommandWirePayloadSchema } from "~/lib/remote-play/wire"
 
 describe("HTTP and realtime boundaries", () => {
-  it("validates remote poll devices", () => {
+  it("uses the canonical remote command fields in HTTP responses", () => {
     expect(
       Result.isSuccess(
-        Schema.decodeUnknownResult(remotePollResponseSchema)({
-          controllingDevices: [{ id: "session-1", name: "Living room" }],
-        })
-      )
-    ).toBe(true)
-    expect(
-      Result.isSuccess(
-        Schema.decodeUnknownResult(remotePollResponseSchema)({
-          controllingDevices: [{ id: "session-1" }],
-        })
-      )
-    ).toBe(false)
-    expect(
-      Result.isSuccess(
-        Schema.decodeUnknownResult(remotePollResponseSchema)({
+        Schema.decodeUnknownResult(RemotePollResponseSchema)({
           commands: [
             {
+              id: "command-1",
+              claimToken: "claim-1",
               command: "play",
               payload: "{}",
               createdAt: 10,
             },
           ],
+          dataVersion: 1,
+        })
+      )
+    ).toBe(true)
+    expect(
+      Result.isSuccess(
+        Schema.decodeUnknownResult(RemotePollResponseSchema)({
+          commands: [
+            {
+              id: "command-1",
+              command: "play",
+              payload: "{}",
+              createdAt: 10,
+            },
+          ],
+          dataVersion: 1,
         })
       )
     ).toBe(false)
   })
 
-  it("uses a discriminated union for remote events", () => {
+  it("uses a discriminated union for remote command events", () => {
     expect(
       Result.isSuccess(
-        Schema.decodeUnknownResult(remoteRealtimeEventSchema)({
+        Schema.decodeUnknownResult(remoteCommandWirePayloadSchema)({
           kind: "command",
           id: "command-1",
           claimToken: "claim-1",
@@ -53,7 +55,7 @@ describe("HTTP and realtime boundaries", () => {
     ).toBe(true)
     expect(
       Result.isSuccess(
-        Schema.decodeUnknownResult(remoteRealtimeEventSchema)({
+        Schema.decodeUnknownResult(remoteCommandWirePayloadSchema)({
           kind: "command",
           command: "play",
         })

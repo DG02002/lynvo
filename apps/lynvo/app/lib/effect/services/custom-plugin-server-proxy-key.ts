@@ -1,7 +1,7 @@
 import { Effect, Result, Schema } from "effect"
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
 import { CloudflareEnv } from "./cloudflare-env"
-import { getD1Database } from "../../../../workers/d1/db"
+import { requireDatabaseEffectAs } from "../require-database"
 import {
   findOwnedPluginServerById,
   updatePluginServerProxyBalance,
@@ -11,7 +11,10 @@ import {
   decryptCustomPluginServerProxyToken,
   encryptCustomPluginServerApiKey,
 } from "./custom-plugin-server-credentials"
-import { PluginServerRegistrationError } from "../errors"
+import {
+  PluginServerRegistrationError,
+  toPluginServerRegistrationError,
+} from "../errors"
 import { decodePluginServerManifest } from "./custom-plugin-server-adapter"
 import {
   isProxyTokenRemoval,
@@ -104,12 +107,10 @@ export const saveCustomPluginServerProxyKey = Effect.fn(
   CloudflareEnv
 > {
   const environment = yield* CloudflareEnv
-  const database = getD1Database(environment)
-  if (!database) {
-    return yield* new PluginServerRegistrationError({
-      message: "Account data is temporarily unavailable.",
-    })
-  }
+  const database = yield* requireDatabaseEffectAs(
+    environment,
+    toPluginServerRegistrationError
+  )
   const stored = yield* Effect.tryPromise({
     try: () =>
       findOwnedPluginServerById(database, input.user.id, input.pluginServerId),
@@ -217,12 +218,10 @@ export const refreshCustomPluginServerProxyBalance = Effect.fn(
   CloudflareEnv
 > {
   const environment = yield* CloudflareEnv
-  const database = getD1Database(environment)
-  if (!database) {
-    return yield* new PluginServerRegistrationError({
-      message: "Account data is temporarily unavailable.",
-    })
-  }
+  const database = yield* requireDatabaseEffectAs(
+    environment,
+    toPluginServerRegistrationError
+  )
 
   const pluginServer = yield* Effect.tryPromise({
     try: () =>
