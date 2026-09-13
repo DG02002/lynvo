@@ -34,6 +34,7 @@ interface Ipv6Prefix {
 const BLOCKED_IPV6_PREFIXES: readonly Ipv6Prefix[] = [
   { groups: [0, 0, 0, 0, 0, 0, 0, 0], bits: 128 },
   { groups: [0, 0, 0, 0, 0, 0, 0, 1], bits: 128 },
+  { groups: [0, 0, 0, 0, 0, 0], bits: 96 },
   { groups: [0, 0, 0, 0, 0, 0xffff], bits: 96 },
   { groups: [0x64, 0xff9b, 0, 0, 0, 0], bits: 96 },
   { groups: [0x64, 0xff9b, 1], bits: 48 },

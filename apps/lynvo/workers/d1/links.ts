@@ -1169,7 +1169,7 @@ const createOrUpdateSavedLinkAttempt = async ({
 }
 
 const isConcurrentCreateConflict = (error: Error): boolean =>
-  error.message.includes("UNIQUE constraint failed: links.url")
+  error.message.includes("UNIQUE constraint failed: links.user_id, links.url")
 
 const executeCreateOrUpdateSavedLinkAttempt = async ({
   database,

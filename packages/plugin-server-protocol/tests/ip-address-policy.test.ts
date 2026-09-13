@@ -26,6 +26,7 @@ describe("outbound URL address policy", () => {
   it.each([
     "::",
     "::1",
+    "::192.0.2.1",
     "::ffff:10.0.0.1",
     "::ffff:127.0.0.1",
     "64:ff9b::7f00:1",

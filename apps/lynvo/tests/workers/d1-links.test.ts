@@ -295,6 +295,74 @@ describe("d1 links", () => {
     })
   })
 
+  it("retries a concurrent same-URL create after SQLite reports its composite unique conflict", async () => {
+    const user = await createUser()
+    const firstInput = {
+      operationId: "concurrent-url:first",
+      url: "https://example.com/concurrent-url",
+      title: "First",
+      meta: emptyMetadataJson(),
+      now: NOW,
+    }
+    const pause = createD1OwnershipReadPause(env.DB, {
+      queryFragment: "FROM links WHERE user_id = ?1 AND url = ?2",
+      rowId: user.id,
+      label: "Concurrent same-URL Saved link create",
+    })
+    const firstPromise = createOrUpdateSavedLink(
+      pause.database,
+      user.id,
+      firstInput
+    )
+
+    let second: Awaited<typeof firstPromise> | undefined
+    try {
+      await pause.waitForRead(firstPromise)
+      second = await createOrUpdateSavedLink(env.DB, user.id, {
+        ...firstInput,
+        operationId: "concurrent-url:second",
+        title: "Second",
+        now: NOW + 1_000,
+      })
+
+      await expect(
+        env.DB.prepare(
+          "INSERT INTO links (id, user_id, url, meta_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)"
+        )
+          .bind(
+            `duplicate-${crypto.randomUUID()}`,
+            user.id,
+            firstInput.url,
+            emptyMetadataJson(),
+            NOW
+          )
+          .run()
+      ).rejects.toMatchObject({
+        message: expect.stringContaining(
+          "UNIQUE constraint failed: links.user_id, links.url"
+        ),
+      })
+    } finally {
+      pause.resume()
+    }
+
+    const first = await firstPromise
+    expect(first.id).toBe(second?.id)
+    expect(first.replayed).toBe(false)
+    expect(second?.replayed).toBe(false)
+    const snapshot = await listSavedLinksWithDataVersion(
+      env.DB,
+      user.id,
+      NOW + 1_000
+    )
+    expect(snapshot.results).toHaveLength(1)
+    expect(snapshot.results[0]).toMatchObject({
+      id: second?.id,
+      title: "First",
+      updatedAt: NOW,
+    })
+  })
+
   it("does not complete an empty clear before a concurrent create", async () => {
     const user = await createUser()
     const clearOperationId = "in-flight:clear"

@@ -594,8 +594,6 @@ app.all("*", async (context) => {
   return securedResponse
 })
 
-const pingMessageSchema = Schema.Struct({ type: Schema.Literal("ping") })
-
 const sweepD1AuthData = async (
   database: D1Database
 ): Promise<{ kind: "swept" } | { kind: "unavailable" }> => {
@@ -749,9 +747,6 @@ const receiverAttachmentSchema = Schema.Struct({
   deviceName: Schema.String,
   connectedAt: Schema.Number,
 })
-
-const isPingMessage = <Value>(value: Value): boolean =>
-  Result.isSuccess(Schema.decodeUnknownResult(pingMessageSchema)(value))
 
 interface RealtimeWebSocketSession {
   sessionId: string
@@ -1032,18 +1027,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     if (Result.isFailure(textMessage)) {
       return
     }
-    try {
-      const parsed = JSON.parse(textMessage.success)
-      if (isPingMessage(parsed)) {
-        socket.send(
-          JSON.stringify({ type: "pong", payload: { at: Date.now() } })
-        )
-        return
-      }
-      socket.close(1003, "Unsupported message")
-    } catch {
-      socket.close(1003, "Invalid message")
-    }
+    socket.close(1003, "Unsupported message")
   }
 
   webSocketClose(): void {}

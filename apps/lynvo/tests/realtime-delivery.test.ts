@@ -2,16 +2,11 @@ import { describe, expect, it, vi } from "vitest"
 import { deliverRealtimeMessage } from "~/context/realtime/socket"
 
 describe("realtime delivery", () => {
-  it("silently consumes heartbeat responses", () => {
+  it("silently consumes the bare heartbeat response", () => {
     const receiveRemoteEvent = vi.fn()
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
 
-    expect(
-      deliverRealtimeMessage(
-        JSON.stringify({ type: "pong", payload: { at: 1_000 } }),
-        receiveRemoteEvent
-      )
-    ).toBe(true)
+    expect(deliverRealtimeMessage("pong", receiveRemoteEvent)).toBe(true)
     expect(receiveRemoteEvent).not.toHaveBeenCalled()
     expect(consoleError).not.toHaveBeenCalled()
     consoleError.mockRestore()
