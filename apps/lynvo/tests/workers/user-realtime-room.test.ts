@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { createFakeD1Database } from "../support/fake-d1"
 
 declare global {
   interface TestRealtimeAttachment {
@@ -9,6 +10,11 @@ declare global {
   }
 }
 
+interface TestRealtimeEnvironment {
+  readonly ENVIRONMENT?: string
+  readonly LYNVO_NO_AUTH?: string
+}
+
 const runAlarm = async <Database>(
   database: Database,
   attachment: TestRealtimeAttachment = {
@@ -16,7 +22,8 @@ const runAlarm = async <Database>(
     receiverId: "receiver-1",
     deviceName: "Living room",
     connectedAt: 1,
-  }
+  },
+  environment: TestRealtimeEnvironment = {}
 ) => {
   const { UserRealtimeRoom } = await import("../../workers/app")
   const close = vi.fn()
@@ -35,7 +42,7 @@ const runAlarm = async <Database>(
       setAlarm,
     },
   })
-  Reflect.set(room, "env", { DB: database })
+  Reflect.set(room, "env", { DB: database, ...environment })
 
   await room.alarm()
   return { close, setAlarm }
@@ -57,6 +64,23 @@ describe("UserRealtimeRoom session revalidation", () => {
   it("keeps the socket connected while the D1 session is active", async () => {
     const database = activeSessionDatabase(["session-1"])
     const { close, setAlarm } = await runAlarm(database)
+
+    expect(close).not.toHaveBeenCalled()
+    expect(setAlarm).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the local development socket connected in no-auth mode", async () => {
+    const database = createFakeD1Database(() => ({ rows: [] }))
+    const { close, setAlarm } = await runAlarm(
+      database,
+      {
+        sessionId: "lynvo-development-session",
+        receiverId: "receiver-1",
+        deviceName: "Living room",
+        connectedAt: 1,
+      },
+      { ENVIRONMENT: "development", LYNVO_NO_AUTH: "true" }
+    )
 
     expect(close).not.toHaveBeenCalled()
     expect(setAlarm).toHaveBeenCalledOnce()
