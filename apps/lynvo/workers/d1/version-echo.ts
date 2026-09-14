@@ -4,7 +4,7 @@ import { DATA_VERSION_RESPONSE_HEADER } from "../constants"
 import type { RequestLoggingEnvironment } from "../request-logging"
 import { getD1Database } from "./db"
 import { getDataVersion } from "./data-version"
-import { resolveD1SessionForEnvironment } from "./development-auth"
+import { resolveD1Session } from "./sessions"
 
 const dataVersionBodySchema = Schema.Struct({
   dataVersion: Schema.Number,
@@ -37,12 +37,11 @@ export const echoDataVersion =
       if (!database) {
         return
       }
-      const session = await resolveD1SessionForEnvironment({
-        request: context.req.raw,
-        environment: context.env,
+      const session = await resolveD1Session(
+        context.req.raw,
         database,
-        now: Date.now(),
-      })
+        context.env
+      )
       if (!session) {
         return
       }

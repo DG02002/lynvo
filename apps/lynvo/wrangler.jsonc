@@ -80,6 +80,7 @@
 	},
 	"vars": {
 		"ENVIRONMENT": "production",
+		"LYNVO_NO_AUTH": "false",
 	},
 	"env": {
 		"local": {
@@ -127,6 +128,7 @@
 			],
 			"vars": {
 				"ENVIRONMENT": "development",
+				"LYNVO_NO_AUTH": "false",
 				"SERVICE_VERSION": "development",
 				"COMMIT_HASH": "development",
 			},

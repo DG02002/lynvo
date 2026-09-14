@@ -151,9 +151,10 @@ pnpm --filter @lynvo/app dev --no-auth
 
 This uses a fixed local development user and session backed by local D1. It
 does not disable CSRF checks, usage limits, Plugin Server limits, or any other
-application behavior. It is available only through the development launcher;
-production builds ignore the bypass. The local session is restored on the next
-request, so this mode cannot test signed-out behavior or the Google OAuth flow.
+application behavior. The development launcher sets the local
+`LYNVO_NO_AUTH` binding; production builds ignore the bypass. Each request
+restores the fixed local user and session in D1, so this mode cannot test
+signed-out behavior or the Google OAuth flow.
 
 The same section contains **Freeze usage** for local extraction testing. It is
 enabled by default in development builds and skips Lynvo's per-account daily

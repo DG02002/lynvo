@@ -30,6 +30,15 @@ export interface UserRecord {
   createdAt: number
 }
 
+export interface GoogleUserInput {
+  readonly id?: string | undefined
+  readonly googleSubject: string
+  readonly email: string
+  readonly displayName?: string | undefined
+  readonly avatarUrl?: string | undefined
+  readonly now: number
+}
+
 interface UserRow {
   id: string
   google_subject: string
@@ -82,16 +91,10 @@ export const getUserById = async (
 
 export const insertGoogleUser = async (
   database: D1Database,
-  input: {
-    readonly googleSubject: string
-    readonly email: string
-    readonly displayName?: string | undefined
-    readonly avatarUrl?: string | undefined
-    readonly now: number
-  }
+  input: GoogleUserInput
 ): Promise<UserRecord> => {
   const record: UserRecord = {
-    id: createOpaqueId(),
+    id: input.id ?? createOpaqueId(),
     googleSubject: input.googleSubject,
     email: input.email,
     displayName: input.displayName ?? null,
@@ -123,13 +126,7 @@ export const insertGoogleUser = async (
 
 export const getOrCreateGoogleUser = async (
   database: D1Database,
-  input: {
-    readonly googleSubject: string
-    readonly email: string
-    readonly displayName?: string | undefined
-    readonly avatarUrl?: string | undefined
-    readonly now: number
-  }
+  input: GoogleUserInput
 ): Promise<{ user: UserRecord; didCreate: boolean }> => {
   const existing = await findUserByGoogleSubject(database, input.googleSubject)
   if (existing) {

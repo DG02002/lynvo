@@ -8,6 +8,7 @@ import {
   SESSION_DEVICE_NAME_MAX_LENGTH,
   SESSION_SWEEP_BATCH_SIZE,
 } from "../constants"
+import { getOrCreateGoogleUser, type UserRecord } from "./users"
 
 export interface SessionRecord {
   id: string
@@ -18,6 +19,40 @@ export interface SessionRecord {
   revokedAt: number | null
   userAgent: string | null
   deviceName: string | null
+}
+
+export interface DevelopmentAuthEnvironment {
+  readonly ENVIRONMENT?: string
+  readonly LYNVO_NO_AUTH?: string
+}
+
+export const DEVELOPMENT_AUTH_USER_ID = "lynvo-development-user"
+export const DEVELOPMENT_AUTH_SESSION_ID = "lynvo-development-session"
+export const DEVELOPMENT_AUTH_EMAIL = "dev@localhost"
+export const DEVELOPMENT_AUTH_DISPLAY_NAME = "Local development user"
+
+const DEVELOPMENT_AUTH_GOOGLE_SUBJECT = "lynvo-development-subject"
+const DEVELOPMENT_AUTH_DEVICE_NAME = "Development browser"
+const DEVELOPMENT_AUTH_USER_AGENT = "lynvo-dev-no-auth"
+
+export const isDevelopmentAuthBypassEnabled = (
+  environment: DevelopmentAuthEnvironment
+): boolean =>
+  import.meta.env.DEV &&
+  environment.ENVIRONMENT === "development" &&
+  environment.LYNVO_NO_AUTH === "true"
+
+interface SessionInput {
+  readonly id?: string | undefined
+  readonly userId: string
+  readonly userAgent?: string | undefined
+  readonly deviceName?: string | undefined
+  readonly now: number
+  readonly ttlMs?: number | undefined
+}
+
+interface EnsureSessionInput extends SessionInput {
+  readonly id: string
 }
 
 interface SessionRow {
@@ -45,29 +80,24 @@ const mapSessionRow = (row: SessionRow): SessionRecord => ({
 const SESSION_COLUMNS =
   "id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name"
 
-export const createSession = async (
+const createSessionRecord = (input: SessionInput): SessionRecord => ({
+  id: input.id ?? createOpaqueId(),
+  userId: input.userId,
+  createdAt: input.now,
+  lastSeenAt: input.now,
+  expiresAt: input.now + (input.ttlMs ?? D1_SESSION_TOTAL_DURATION_MS),
+  revokedAt: null,
+  userAgent: input.userAgent ?? null,
+  deviceName: input.deviceName ?? null,
+})
+
+const createSessionInsertStatement = (
   database: D1Database,
-  input: {
-    readonly userId: string
-    readonly userAgent?: string | undefined
-    readonly deviceName?: string | undefined
-    readonly now: number
-    readonly ttlMs?: number | undefined
-  }
-): Promise<SessionRecord> => {
-  const record: SessionRecord = {
-    id: createOpaqueId(),
-    userId: input.userId,
-    createdAt: input.now,
-    lastSeenAt: input.now,
-    expiresAt: input.now + (input.ttlMs ?? D1_SESSION_TOTAL_DURATION_MS),
-    revokedAt: null,
-    userAgent: input.userAgent ?? null,
-    deviceName: input.deviceName ?? null,
-  }
-  await database
+  record: SessionRecord
+): D1PreparedStatement =>
+  database
     .prepare(
-      "INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, revoked_at, user_agent, device_name) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+      `INSERT INTO sessions (${SESSION_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
     )
     .bind(
       record.id,
@@ -79,7 +109,48 @@ export const createSession = async (
       record.userAgent,
       record.deviceName
     )
-    .run()
+
+const createSessionUpsertStatement = (
+  database: D1Database,
+  record: SessionRecord
+): D1PreparedStatement =>
+  database
+    .prepare(
+      `INSERT INTO sessions (${SESSION_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+       ON CONFLICT(id) DO UPDATE SET
+         user_id = excluded.user_id,
+         last_seen_at = excluded.last_seen_at,
+         expires_at = excluded.expires_at,
+         revoked_at = NULL,
+         user_agent = excluded.user_agent,
+         device_name = excluded.device_name`
+    )
+    .bind(
+      record.id,
+      record.userId,
+      record.createdAt,
+      record.lastSeenAt,
+      record.expiresAt,
+      record.revokedAt,
+      record.userAgent,
+      record.deviceName
+    )
+
+export const createSession = async (
+  database: D1Database,
+  input: SessionInput
+): Promise<SessionRecord> => {
+  const record = createSessionRecord(input)
+  await createSessionInsertStatement(database, record).run()
+  return record
+}
+
+export const ensureSession = async (
+  database: D1Database,
+  input: EnsureSessionInput
+): Promise<SessionRecord> => {
+  const record = createSessionRecord(input)
+  await createSessionUpsertStatement(database, record).run()
   return record
 }
 
@@ -227,15 +298,59 @@ export const createD1SessionCookie = (
 export const expireD1SessionCookie = (): string =>
   `${D1_SESSION_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
 
+interface DevelopmentAuthSession {
+  readonly user: UserRecord
+  readonly session: SessionRecord
+}
+
+const getDevelopmentAuthSession = async (
+  database: D1Database,
+  now: number
+): Promise<DevelopmentAuthSession> => {
+  const { user } = await getOrCreateGoogleUser(database, {
+    id: DEVELOPMENT_AUTH_USER_ID,
+    googleSubject: DEVELOPMENT_AUTH_GOOGLE_SUBJECT,
+    email: DEVELOPMENT_AUTH_EMAIL,
+    displayName: DEVELOPMENT_AUTH_DISPLAY_NAME,
+    now,
+  })
+  const session = await ensureSession(database, {
+    id: DEVELOPMENT_AUTH_SESSION_ID,
+    userId: user.id,
+    userAgent: DEVELOPMENT_AUTH_USER_AGENT,
+    deviceName: DEVELOPMENT_AUTH_DEVICE_NAME,
+    now,
+  })
+  return { user, session }
+}
+
+interface DevelopmentAuthResolution<Result> {
+  readonly environment: DevelopmentAuthEnvironment
+  readonly development: () => Promise<Result>
+  readonly normal: () => Promise<Result>
+}
+
+const resolveWithDevelopmentAuth = <Result>({
+  environment,
+  development,
+  normal,
+}: DevelopmentAuthResolution<Result>): Promise<Result> =>
+  isDevelopmentAuthBypassEnabled(environment) ? development() : normal()
+
 export const resolveD1Session = async (
   request: Request,
-  database: D1Database
+  database: D1Database,
+  environment: DevelopmentAuthEnvironment = {}
 ): Promise<SessionRecord | null> => {
   const sessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)
-  if (!sessionId) {
-    return null
-  }
-  return findActiveSessionById(database, sessionId, Date.now())
+  const now = Date.now()
+  return resolveWithDevelopmentAuth({
+    environment,
+    development: async () =>
+      (await getDevelopmentAuthSession(database, now)).session,
+    normal: async () =>
+      sessionId ? findActiveSessionById(database, sessionId, now) : null,
+  })
 }
 
 export interface ResolvedSessionContext {
@@ -247,6 +362,18 @@ export interface ResolvedSessionContext {
   readonly expiresAt: number
 }
 
+const toResolvedSessionContext = ({
+  user,
+  session,
+}: DevelopmentAuthSession): ResolvedSessionContext => ({
+  sessionId: session.id,
+  userId: user.id,
+  email: user.email,
+  displayName: user.displayName,
+  lastSeenAt: session.lastSeenAt,
+  expiresAt: session.expiresAt,
+})
+
 interface SessionContextRow {
   session_id: string
   user_id: string
@@ -256,35 +383,73 @@ interface SessionContextRow {
   expires_at: number
 }
 
-export const resolveSessionContext = async (
-  request: Request,
-  database: D1Database,
-  now: number
-): Promise<ResolvedSessionContext | null> => {
-  const sessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)
-  if (!sessionId) {
-    return null
-  }
-  const row = await database
-    .prepare(
-      `SELECT s.id AS session_id, s.user_id, s.last_seen_at, s.expires_at, u.email, u.display_name
-       FROM sessions s INNER JOIN users u ON u.id = s.user_id
-       WHERE s.id = ?1 AND s.revoked_at IS NULL AND s.expires_at > ?2`
-    )
-    .bind(sessionId, now)
-    .first<SessionContextRow>()
-  if (!row) {
-    return null
-  }
-  if (now - row.last_seen_at > AUTH_ACTIVITY_TOUCH_INTERVAL_MS) {
-    await touchSessionLastSeen(database, row.session_id, now)
-  }
-  return {
-    sessionId: row.session_id,
-    userId: row.user_id,
-    email: row.email,
-    displayName: row.display_name,
-    lastSeenAt: row.last_seen_at,
-    expiresAt: row.expires_at,
-  }
+interface ResolveSessionContextInput {
+  readonly request: Request
+  readonly database: D1Database
+  readonly now: number
+  readonly environment?: DevelopmentAuthEnvironment
 }
+
+export const resolveSessionContext = async ({
+  request,
+  database,
+  now,
+  environment = {},
+}: ResolveSessionContextInput): Promise<ResolvedSessionContext | null> => {
+  const sessionId = getCookieValue(request, D1_SESSION_COOKIE_NAME)
+  return resolveWithDevelopmentAuth({
+    environment,
+    development: async () => {
+      return toResolvedSessionContext(
+        await getDevelopmentAuthSession(database, now)
+      )
+    },
+    normal: async () => {
+      if (!sessionId) {
+        return null
+      }
+      const row = await database
+        .prepare(
+          `SELECT s.id AS session_id, s.user_id, s.last_seen_at, s.expires_at, u.email, u.display_name
+           FROM sessions s INNER JOIN users u ON u.id = s.user_id
+           WHERE s.id = ?1 AND s.revoked_at IS NULL AND s.expires_at > ?2`
+        )
+        .bind(sessionId, now)
+        .first<SessionContextRow>()
+      if (!row) {
+        return null
+      }
+      if (now - row.last_seen_at > AUTH_ACTIVITY_TOUCH_INTERVAL_MS) {
+        await touchSessionLastSeen(database, row.session_id, now)
+      }
+      return {
+        sessionId: row.session_id,
+        userId: row.user_id,
+        email: row.email,
+        displayName: row.display_name,
+        lastSeenAt: row.last_seen_at,
+        expiresAt: row.expires_at,
+      }
+    },
+  })
+}
+
+export const findActiveSessionForEnvironment = async ({
+  database,
+  sessionId,
+  now,
+  environment,
+}: {
+  readonly database: D1Database
+  readonly sessionId: string
+  readonly now: number
+  readonly environment: DevelopmentAuthEnvironment
+}): Promise<SessionRecord | null> =>
+  resolveWithDevelopmentAuth({
+    environment,
+    development: async () => {
+      const { session } = await getDevelopmentAuthSession(database, now)
+      return session.id === sessionId ? session : null
+    },
+    normal: () => findActiveSessionById(database, sessionId, now),
+  })

@@ -9,8 +9,8 @@ import { getDataVersion } from "../../workers/d1/data-version"
 import {
   DEVELOPMENT_AUTH_EMAIL,
   DEVELOPMENT_AUTH_USER_ID,
-} from "../../workers/d1/development-auth"
-import { createSession } from "../../workers/d1/sessions"
+  createSession,
+} from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
 import {
   decryptSavedLinkExtractionCredential,

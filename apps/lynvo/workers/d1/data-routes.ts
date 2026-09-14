@@ -33,8 +33,7 @@ import {
   updateSavedLinkMeta,
 } from "./links"
 import { enqueueSavedLinkExtraction } from "./link-extraction-queue"
-import type { SessionRecord } from "./sessions"
-import { resolveD1SessionForEnvironment } from "./development-auth"
+import { resolveD1Session, type SessionRecord } from "./sessions"
 import {
   calculateAppOwnedStorageUsage,
   getStorageLedger,
@@ -196,12 +195,7 @@ const beginDataRequest = async (
       }),
     }
   }
-  const session = await resolveD1SessionForEnvironment({
-    request: context.req.raw,
-    environment: context.env,
-    database,
-    now: Date.now(),
-  })
+  const session = await resolveD1Session(context.req.raw, database, context.env)
   if (!session) {
     return {
       kind: "terminated",

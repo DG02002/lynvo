@@ -6,18 +6,18 @@ import {
   DEVELOPMENT_AUTH_SESSION_ID,
   DEVELOPMENT_AUTH_USER_ID,
   isDevelopmentAuthBypassEnabled,
-} from "../workers/d1/development-auth"
+} from "../workers/d1/sessions"
 import { createFakeD1Database } from "./support/fake-d1"
 
 interface TestEnvironmentOptions {
   readonly environment?: "development" | "production"
-  readonly noAuth?: string | boolean
+  readonly noAuth?: string
 }
 
 interface TestEnvironment {
   DB: D1Database
   ENVIRONMENT: "development" | "production"
-  LYNVO_NO_AUTH?: string | boolean
+  LYNVO_NO_AUTH?: string
 }
 
 const createEnvironment = ({
