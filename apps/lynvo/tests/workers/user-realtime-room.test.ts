@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 import { createFakeD1Database } from "../support/fake-d1"
+import {
+  DEVELOPMENT_AUTH_SESSION_ID,
+  type DevelopmentAuthEnvironment,
+} from "../../workers/d1/sessions"
 
 declare global {
   interface TestRealtimeAttachment {
@@ -10,20 +14,17 @@ declare global {
   }
 }
 
-interface TestRealtimeEnvironment {
-  readonly ENVIRONMENT?: string
-  readonly LYNVO_NO_AUTH?: string
+const DEFAULT_REALTIME_ATTACHMENT: TestRealtimeAttachment = {
+  sessionId: "session-1",
+  receiverId: "receiver-1",
+  deviceName: "Living room",
+  connectedAt: 1,
 }
 
 const runAlarm = async <Database>(
   database: Database,
-  attachment: TestRealtimeAttachment = {
-    sessionId: "session-1",
-    receiverId: "receiver-1",
-    deviceName: "Living room",
-    connectedAt: 1,
-  },
-  environment: TestRealtimeEnvironment = {}
+  attachment: TestRealtimeAttachment = DEFAULT_REALTIME_ATTACHMENT,
+  environment: DevelopmentAuthEnvironment = {}
 ) => {
   const { UserRealtimeRoom } = await import("../../workers/app")
   const close = vi.fn()
@@ -74,15 +75,28 @@ describe("UserRealtimeRoom session revalidation", () => {
     const { close, setAlarm } = await runAlarm(
       database,
       {
-        sessionId: "lynvo-development-session",
-        receiverId: "receiver-1",
-        deviceName: "Living room",
-        connectedAt: 1,
+        ...DEFAULT_REALTIME_ATTACHMENT,
+        sessionId: DEVELOPMENT_AUTH_SESSION_ID,
       },
       { ENVIRONMENT: "development", LYNVO_NO_AUTH: "true" }
     )
 
     expect(close).not.toHaveBeenCalled()
+    expect(setAlarm).toHaveBeenCalledOnce()
+  })
+
+  it("revokes the local development socket for another session ID", async () => {
+    const database = createFakeD1Database(() => ({ rows: [] }))
+    const { close, setAlarm } = await runAlarm(
+      database,
+      {
+        ...DEFAULT_REALTIME_ATTACHMENT,
+        sessionId: "another-session",
+      },
+      { ENVIRONMENT: "development", LYNVO_NO_AUTH: "true" }
+    )
+
+    expect(close).toHaveBeenCalledWith(4001, "Session expired")
     expect(setAlarm).toHaveBeenCalledOnce()
   })
 
