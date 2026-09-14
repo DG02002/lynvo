@@ -31,11 +31,8 @@ import {
   type GoogleOAuthCredentials,
   type GoogleProfile,
 } from "./google-auth"
-import {
-  createD1SessionCookie,
-  createSession,
-  resolveD1Session,
-} from "./sessions"
+import { createD1SessionCookie, createSession } from "./sessions"
+import { resolveD1SessionForEnvironment } from "./development-auth"
 import { getOrCreateGoogleUser } from "./users"
 import {
   authorizeDeviceCode,
@@ -245,7 +242,12 @@ export const registerD1AuthRoutes = (
       operation: "device_approval_read",
       backend: "d1",
     })
-    const session = await resolveD1Session(context.req.raw, database)
+    const session = await resolveD1SessionForEnvironment({
+      request: context.req.raw,
+      environment: context.env,
+      database,
+      now: Date.now(),
+    })
     if (!session) {
       return unauthorizedResponse()
     }
@@ -284,7 +286,12 @@ export const registerD1AuthRoutes = (
     if (!isSameOriginRequest(context.req.raw)) {
       return context.text("Forbidden", 403)
     }
-    const session = await resolveD1Session(context.req.raw, database)
+    const session = await resolveD1SessionForEnvironment({
+      request: context.req.raw,
+      environment: context.env,
+      database,
+      now: Date.now(),
+    })
     if (!session) {
       return unauthorizedResponse()
     }

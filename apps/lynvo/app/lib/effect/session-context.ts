@@ -1,9 +1,7 @@
 import { Effect } from "effect"
 import { getD1Database } from "../../../workers/d1/db"
-import {
-  resolveSessionContext,
-  type ResolvedSessionContext,
-} from "../../../workers/d1/sessions"
+import type { ResolvedSessionContext } from "../../../workers/d1/sessions"
+import { resolveSessionContextForEnvironment } from "../../../workers/d1/development-auth"
 
 export const webRequestFromSource = <Source>(source: Source) =>
   source instanceof Request
@@ -17,7 +15,12 @@ export const resolveOptionalSession = (
   const database = getD1Database(environment)
   return database
     ? Effect.promise(() =>
-        resolveSessionContext(webRequest, database, Date.now())
+        resolveSessionContextForEnvironment({
+          request: webRequest,
+          environment,
+          database,
+          now: Date.now(),
+        })
       )
     : Effect.succeed(null)
 }

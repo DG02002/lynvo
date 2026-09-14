@@ -1,10 +1,8 @@
 import { data, redirect } from "react-router"
 import { getCookieValue, normalizeReturnTo } from "./auth-cookie"
 import { getD1Database } from "../../workers/d1/db"
-import {
-  createD1SessionCookie,
-  resolveSessionContext,
-} from "../../workers/d1/sessions"
+import { createD1SessionCookie } from "../../workers/d1/sessions"
+import { resolveSessionContextForEnvironment } from "../../workers/d1/development-auth"
 import { MILLISECONDS_PER_SECOND } from "./constants"
 import { D1_SESSION_COOKIE_NAME } from "../../workers/constants"
 
@@ -96,7 +94,12 @@ export const getSessionContext = async (
   if (!database) {
     return { user: null, available: false }
   }
-  const session = await resolveSessionContext(request, database, Date.now())
+  const session = await resolveSessionContextForEnvironment({
+    request,
+    environment: env,
+    database,
+    now: Date.now(),
+  })
   return {
     user: session
       ? {

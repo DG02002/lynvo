@@ -54,9 +54,9 @@ import {
   deleteStaleSessions,
   expireD1SessionCookie,
   findActiveSessionById,
-  resolveSessionContext,
   revokeSessionById,
 } from "./d1/sessions"
+import { resolveSessionContextForEnvironment } from "./d1/development-auth"
 import {
   cleanupSavedLinkCommandOperations,
   sweepExpiredLinks,
@@ -176,7 +176,12 @@ const resolveRequestSession = async (
   if (!database) {
     return { kind: "unavailable" }
   }
-  const session = await resolveSessionContext(request, database, Date.now())
+  const session = await resolveSessionContextForEnvironment({
+    request,
+    environment: env,
+    database,
+    now: Date.now(),
+  })
   if (!session) {
     return { kind: "anonymous" }
   }

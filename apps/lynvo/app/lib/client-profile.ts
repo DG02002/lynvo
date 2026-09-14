@@ -18,9 +18,17 @@ export const getClientProfile = ({
 const hasTvBroBridge = () =>
   globalThis.window !== undefined && "TVBro" in window
 
+const hasDevelopmentTvBroUserAgent = () =>
+  import.meta.env.DEV &&
+  globalThis.navigator !== undefined &&
+  navigator.userAgent.toLowerCase().includes("tv bro/")
+
 export const getCurrentClientProfile = () =>
   getClientProfile({
-    hasTvBroBridge: hasTvBroBridge() || getDevelopmentTvBroUiEnabled(),
+    hasTvBroBridge:
+      hasTvBroBridge() ||
+      hasDevelopmentTvBroUserAgent() ||
+      getDevelopmentTvBroUiEnabled(),
   })
 
 export const subscribeToClientProfile = (onStoreChange: () => void) =>
@@ -60,7 +68,7 @@ export const syncClientProfileAttribute = (): void => {
 
 // Keep this source static because it is embedded directly in an inline script
 // tag. This avoids interpolating any value into executable JavaScript.
-const DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window)&&!(localStorage.getItem("lynvo:development:tvbro-ui")==="true"))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
+const DEVELOPMENT_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{const userAgent=typeof navigator==="undefined"?"":navigator.userAgent.toLowerCase();if(!("TVBro" in window)&&!userAgent.includes("tv bro/")&&!(localStorage.getItem("lynvo:development:tvbro-ui")==="true"))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
 const PRODUCTION_CLIENT_PROFILE_BOOTSTRAP_SCRIPT = `(()=>{try{if(!("TVBro" in window))return;document.documentElement.setAttribute("data-lynvo-client-profile","tvbro-android-tv")}catch{}})()`
 
 export const createClientProfileBootstrapScript = (isDevelopment: boolean) =>

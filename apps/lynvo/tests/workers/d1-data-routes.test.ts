@@ -6,6 +6,10 @@ import {
   LINK_LIMIT_BYTES,
 } from "../../workers/constants"
 import { getDataVersion } from "../../workers/d1/data-version"
+import {
+  DEVELOPMENT_AUTH_EMAIL,
+  DEVELOPMENT_AUTH_USER_ID,
+} from "../../workers/d1/development-auth"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
 import {
@@ -48,6 +52,28 @@ const emptyMetadataJson = () =>
   })
 
 describe("d1 data routes", () => {
+  it("accepts requests without a cookie in local no-auth mode", async () => {
+    // SAFETY: This fixture provides the local Worker bindings needed by the route.
+    const response = await app.fetch(
+      new Request("https://lynvo.test/api/data/links"),
+      {
+        ...env,
+        ENVIRONMENT: "development",
+        LYNVO_NO_AUTH: "true",
+      } as Env
+    )
+
+    expect(response.status).toBe(200)
+    const body = await readJsonBody<{ links: unknown[] }>(response)
+    expect(body.links).toEqual([])
+    expect(response.headers.get(DATA_VERSION_RESPONSE_HEADER)).toBe("1")
+    await expect(
+      env.DB.prepare("SELECT email FROM users WHERE id = ?1")
+        .bind(DEVELOPMENT_AUTH_USER_ID)
+        .first<{ email: string }>()
+    ).resolves.toEqual({ email: DEVELOPMENT_AUTH_EMAIL })
+  })
+
   it("rejects unauthenticated requests with a session-expired failure", async () => {
     const response = await app.fetch(
       new Request("https://lynvo.test/api/data/links"),

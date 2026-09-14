@@ -136,6 +136,25 @@ Bro-specific UI**, then open the Save page. The setting applies only to the
 current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
+To test the TV Bro layout before signing in, configure a Chrome custom device
+with the desired TV dimensions and prepend `TV Bro/1.0 ` to its user-agent
+string. The development build recognizes that prefix, so the login and device
+sign-in pages can be tested without an authenticated session. Production still
+requires TV Bro's native bridge.
+
+For end-to-end testing without Google OAuth, start the app with a local
+development account:
+
+```sh
+pnpm --filter @lynvo/app dev --no-auth
+```
+
+This uses a fixed local development user and session backed by local D1. It
+does not disable CSRF checks, usage limits, Plugin Server limits, or any other
+application behavior. It is available only through the development launcher;
+production builds ignore the bypass. The local session is restored on the next
+request, so this mode cannot test signed-out behavior or the Google OAuth flow.
+
 The same section contains **Freeze usage** for local extraction testing. It is
 enabled by default in development builds and skips Lynvo's per-account daily
 and monthly usage counters for that browser; global capacity and Plugin Server

@@ -17,7 +17,7 @@ import * as FileSystem from "effect/FileSystem"
 import * as Path from "effect/Path"
 import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
-import { resolveSessionContext } from "../../../../workers/d1/sessions"
+import { resolveSessionContextForEnvironment } from "../../../../workers/d1/development-auth"
 
 export const WebAuthLive = Layer.succeed(
   WebAuth,
@@ -32,7 +32,12 @@ export const WebAuthLive = Layer.succeed(
         "Authentication is temporarily unavailable"
       )
       const session = yield* Effect.promise(() =>
-        resolveSessionContext(webRequest, database, Date.now())
+        resolveSessionContextForEnvironment({
+          request: webRequest,
+          environment,
+          database,
+          now: Date.now(),
+        })
       )
 
       if (!session) {

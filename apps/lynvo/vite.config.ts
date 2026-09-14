@@ -155,5 +155,8 @@ export default defineConfig({
     "process.env.DISABLE_USAGE_LIMITS": JSON.stringify(
       process.env.DISABLE_USAGE_LIMITS ?? ""
     ),
+    "process.env.LYNVO_NO_AUTH": JSON.stringify(
+      process.env.LYNVO_NO_AUTH ?? ""
+    ),
   },
 })
