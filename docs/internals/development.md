@@ -63,6 +63,9 @@ Regenerate Cloudflare bindings after changing Wrangler configuration:
 pnpm --filter @lynvo/app cf-typegen
 ```
 
+The generated `worker-configuration.d.ts` files are gitignored; the apps
+regenerate them inside `check`/`typecheck`. Do not commit them.
+
 ## Inspect local state
 
 [Cloudflare Local Explorer](https://developers.cloudflare.com/workers/local-development/local-explorer/)

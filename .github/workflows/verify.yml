@@ -97,7 +97,7 @@ jobs:
         run: pnpm self-update
       - name: Install the verified dependency graph
         run: pnpm install --frozen-lockfile
-      - name: Verify generated assets are committed
+      - name: Verify optimized images are committed
         run: |
           pnpm images:optimize
           pnpm --filter @lynvo/lynvo-plugin-server images:optimize
