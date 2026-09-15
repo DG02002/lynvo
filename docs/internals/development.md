@@ -160,6 +160,9 @@ without signing in through Google:
 pnpm --filter @lynvo/app dev --no-auth
 ```
 
+From the repository root, `pnpm dev --no-auth` is equivalent; the filtered
+command above also works from any directory in the workspace.
+
 Every request is signed in as a fixed local development user and session
 backed by local D1. The mode is not specific to the TV Bro layout: the account
 can use any authenticated surface, including saving real URLs, running
