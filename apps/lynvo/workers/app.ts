@@ -694,7 +694,6 @@ const drainPendingAccountErasuresJob = async (
 }
 
 const runD1Maintenance = async (
-  database: D1Database,
   maintenance: (now: number) => Promise<D1MaintenanceSummary>
 ): Promise<MaintenanceOutcome> => {
   try {
@@ -716,7 +715,7 @@ const runHourlyD1Maintenance = async (
   database: D1Database
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
-    runD1Maintenance(database, (now) =>
+    runD1Maintenance((now) =>
       expirePluginServerRegistrationsJob(database, now)
     ),
     drainPendingAccountErasuresJob(database),
@@ -725,21 +724,15 @@ const runHourlyD1Maintenance = async (
 const runDailyD1Maintenance = async (
   database: D1Database
 ): Promise<MaintenanceOutcome> =>
-  runD1Maintenance(database, (now) => sweepRetainedLinksJob(database, now))
+  runD1Maintenance((now) => sweepRetainedLinksJob(database, now))
 
 const runHighFrequencyD1Maintenance = async (
   database: D1Database
 ): Promise<MaintenanceOutcome[]> =>
   Promise.all([
-    runD1Maintenance(database, (now) =>
-      releaseExpiredExtractionsJob(database, now)
-    ),
-    runD1Maintenance(database, (now) =>
-      cleanupRemoteCommandsJob(database, now)
-    ),
-    runD1Maintenance(database, (now) =>
-      sweepLinkCommandOperationsJob(database, now)
-    ),
+    runD1Maintenance((now) => releaseExpiredExtractionsJob(database, now)),
+    runD1Maintenance((now) => cleanupRemoteCommandsJob(database, now)),
+    runD1Maintenance((now) => sweepLinkCommandOperationsJob(database, now)),
   ])
 const receiverNotificationSchema = Schema.Struct({ receiverId: Schema.String })
 const sessionRevocationSchema = Schema.Struct({ sessionId: Schema.String })
@@ -958,7 +951,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     )
   }
 
-  async fetch(request: Request): Promise<Response> {
+  override async fetch(request: Request): Promise<Response> {
     const { pathname } = new URL(request.url)
     if (pathname.endsWith("/notify-data-changed")) {
       return handleRealtimeDataChanged(this.ctx, request)
@@ -981,7 +974,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     return acceptRealtimeWebSocket(this.ctx, this.env, request)
   }
 
-  async alarm(): Promise<void> {
+  override async alarm(): Promise<void> {
     const database = getD1Database(this.env)
     try {
       if (database) {
@@ -1025,7 +1018,7 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     }
   }
 
-  async webSocketMessage(
+  override async webSocketMessage(
     socket: WebSocket,
     message: string | ArrayBuffer
   ): Promise<void> {
@@ -1036,9 +1029,9 @@ export class UserRealtimeRoom extends DurableObject<Env> {
     socket.close(1003, "Unsupported message")
   }
 
-  webSocketClose(): void {}
+  override webSocketClose(): void {}
 
-  webSocketError(socket: WebSocket): void {
+  override webSocketError(socket: WebSocket): void {
     socket.close(1011, "WebSocket error")
   }
 }

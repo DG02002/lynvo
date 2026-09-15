@@ -123,7 +123,10 @@ describe("requireGuestOrRedirect", () => {
         authenticatedSession,
         new Request("https://lynvo.test/auth/log-in?redirect=%2Fsave")
       )
-    } catch (response: any) {
+    } catch (response) {
+      if (!(response instanceof Response)) {
+        throw response
+      }
       expect(response.headers.get("Location")).toBe("/save")
     }
   })
@@ -136,7 +139,10 @@ describe("requireGuestOrRedirect", () => {
           "https://lynvo.test/auth/log-in?redirect=https%3A%2F%2Fattacker.test"
         )
       )
-    } catch (response: any) {
+    } catch (response) {
+      if (!(response instanceof Response)) {
+        throw response
+      }
       expect(response.headers.get("Location")).toBe("/save")
     }
   })

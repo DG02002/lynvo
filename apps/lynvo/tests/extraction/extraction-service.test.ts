@@ -714,7 +714,7 @@ describe("Extraction interface routing", () => {
     })
     const interrupted = createManagedExtractionEnvironment(() => {
       signalExtractionStarted()
-      return new Promise<Response>(() => undefined)
+      return new Promise<Response>(() => {})
     })
     const fiber = Effect.runFork(
       managedExtraction(interrupted.testEnvironment, "settlement-interrupted")

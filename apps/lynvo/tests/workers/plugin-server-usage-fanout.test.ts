@@ -69,7 +69,9 @@ describe("Plugin Server usage HTTP fan-out", () => {
       .mockImplementation(async () => {
         activeRequests += 1
         maximumActiveRequests = Math.max(maximumActiveRequests, activeRequests)
-        await new Promise((resolve) => setTimeout(resolve, 10))
+        await new Promise((resolve) => {
+          setTimeout(resolve, 10)
+        })
         activeRequests -= 1
         return Response.json({
           metrics: [
