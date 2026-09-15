@@ -15,6 +15,9 @@ import { statSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 
+// Copy the launcher flag into the Worker binding; app code reads only env.LYNVO_NO_AUTH.
+const developmentAuthBypass = process.env.LYNVO_NO_AUTH === "true"
+
 const docsHighlighter = await createHighlighterCore({
   themes: [
     import("@shikijs/themes/github-light-default"),
@@ -140,6 +143,12 @@ export default defineConfig({
     },
     wranglerTypesWatcher(),
     cloudflare({
+      config: (config) => ({
+        vars: {
+          ...config.vars,
+          LYNVO_NO_AUTH: developmentAuthBypass ? "true" : "false",
+        },
+      }),
       viteEnvironment: { name: "ssr" },
       auxiliaryWorkers: [
         {

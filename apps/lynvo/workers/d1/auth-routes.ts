@@ -245,7 +245,11 @@ export const registerD1AuthRoutes = (
       operation: "device_approval_read",
       backend: "d1",
     })
-    const session = await resolveD1Session(context.req.raw, database)
+    const session = await resolveD1Session(
+      context.req.raw,
+      database,
+      context.env
+    )
     if (!session) {
       return unauthorizedResponse()
     }
@@ -284,7 +288,11 @@ export const registerD1AuthRoutes = (
     if (!isSameOriginRequest(context.req.raw)) {
       return context.text("Forbidden", 403)
     }
-    const session = await resolveD1Session(context.req.raw, database)
+    const session = await resolveD1Session(
+      context.req.raw,
+      database,
+      context.env
+    )
     if (!session) {
       return unauthorizedResponse()
     }

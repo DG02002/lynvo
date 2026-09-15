@@ -96,7 +96,12 @@ export const getSessionContext = async (
   if (!database) {
     return { user: null, available: false }
   }
-  const session = await resolveSessionContext(request, database, Date.now())
+  const session = await resolveSessionContext({
+    request,
+    database,
+    now: Date.now(),
+    environment: env,
+  })
   return {
     user: session
       ? {

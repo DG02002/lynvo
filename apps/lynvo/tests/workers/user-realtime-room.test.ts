@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
+import { createFakeD1Database } from "../support/fake-d1"
+import {
+  DEVELOPMENT_AUTH_SESSION_ID,
+  type DevelopmentAuthEnvironment,
+} from "../../workers/d1/sessions"
 
 declare global {
   interface TestRealtimeAttachment {
@@ -9,14 +14,17 @@ declare global {
   }
 }
 
+const DEFAULT_REALTIME_ATTACHMENT: TestRealtimeAttachment = {
+  sessionId: "session-1",
+  receiverId: "receiver-1",
+  deviceName: "Living room",
+  connectedAt: 1,
+}
+
 const runAlarm = async <Database>(
   database: Database,
-  attachment: TestRealtimeAttachment = {
-    sessionId: "session-1",
-    receiverId: "receiver-1",
-    deviceName: "Living room",
-    connectedAt: 1,
-  }
+  attachment: TestRealtimeAttachment = DEFAULT_REALTIME_ATTACHMENT,
+  environment: DevelopmentAuthEnvironment = {}
 ) => {
   const { UserRealtimeRoom } = await import("../../workers/app")
   const close = vi.fn()
@@ -35,7 +43,7 @@ const runAlarm = async <Database>(
       setAlarm,
     },
   })
-  Reflect.set(room, "env", { DB: database })
+  Reflect.set(room, "env", { DB: database, ...environment })
 
   await room.alarm()
   return { close, setAlarm }
@@ -59,6 +67,36 @@ describe("UserRealtimeRoom session revalidation", () => {
     const { close, setAlarm } = await runAlarm(database)
 
     expect(close).not.toHaveBeenCalled()
+    expect(setAlarm).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the local development socket connected in no-auth mode", async () => {
+    const database = createFakeD1Database(() => ({ rows: [] }))
+    const { close, setAlarm } = await runAlarm(
+      database,
+      {
+        ...DEFAULT_REALTIME_ATTACHMENT,
+        sessionId: DEVELOPMENT_AUTH_SESSION_ID,
+      },
+      { ENVIRONMENT: "development", LYNVO_NO_AUTH: "true" }
+    )
+
+    expect(close).not.toHaveBeenCalled()
+    expect(setAlarm).toHaveBeenCalledOnce()
+  })
+
+  it("revokes the local development socket for another session ID", async () => {
+    const database = createFakeD1Database(() => ({ rows: [] }))
+    const { close, setAlarm } = await runAlarm(
+      database,
+      {
+        ...DEFAULT_REALTIME_ATTACHMENT,
+        sessionId: "another-session",
+      },
+      { ENVIRONMENT: "development", LYNVO_NO_AUTH: "true" }
+    )
+
+    expect(close).toHaveBeenCalledWith(4001, "Session expired")
     expect(setAlarm).toHaveBeenCalledOnce()
   })
 

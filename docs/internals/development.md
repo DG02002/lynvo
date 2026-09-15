@@ -136,13 +136,45 @@ Bro-specific UI**, then open the Save page. The setting applies only to the
 current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
-The same section contains **Freeze usage** for local extraction testing. It is
-enabled by default in development builds and skips Lynvo's per-account daily
-and monthly usage counters for that browser; global capacity and Plugin Server
-limits still apply. Turn it off when you need to test usage accounting.
+To test the TV Bro layout before signing in, configure a Chrome custom device
+with the desired TV dimensions and prepend `TV Bro/1.0 ` to its user-agent
+string. The development build recognizes that prefix, so the login and device
+sign-in pages can be tested without an authenticated session. Production still
+requires TV Bro's native bridge.
+
+The same settings section contains **Freeze usage** for local extraction
+testing. It is enabled by default in development builds and skips Lynvo's
+per-account daily and monthly usage counters for that browser; global capacity
+and Plugin Server limits still apply. Turn it off when you need to test usage
+accounting.
 
 Public builds do not include the Development settings UI. A direct request to
 `/settings/development` redirects to `/settings/general` instead.
+
+## Test without Google OAuth
+
+Start the app with a fixed local development account when you need to test
+without signing in through Google:
+
+```sh
+pnpm --filter @lynvo/app dev --no-auth
+```
+
+From the repository root, `pnpm dev --no-auth` is equivalent; the filtered
+command above also works from any directory in the workspace.
+
+Every request is signed in as a fixed local development user and session
+backed by local D1. The mode is not specific to the TV Bro layout: the account
+can use any authenticated surface, including saving real URLs, running
+extraction through the managed Plugin Server, and changing settings. Combine
+it with the `TV Bro/1.0 ` user-agent prefix above to exercise the TV Bro
+layout while signed in.
+
+The mode does not disable CSRF checks, usage limits, Plugin Server limits, or
+any other application behavior. The development launcher sets the local
+`LYNVO_NO_AUTH` binding; production builds ignore the bypass. Each request
+restores the fixed local user and session in D1, so this mode cannot test
+signed-out behavior or the Google OAuth flow.
 
 ## Quality gates
 

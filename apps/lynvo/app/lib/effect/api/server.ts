@@ -32,7 +32,12 @@ export const WebAuthLive = Layer.succeed(
         "Authentication is temporarily unavailable"
       )
       const session = yield* Effect.promise(() =>
-        resolveSessionContext(webRequest, database, Date.now())
+        resolveSessionContext({
+          request: webRequest,
+          database,
+          now: Date.now(),
+          environment,
+        })
       )
 
       if (!session) {

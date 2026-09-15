@@ -53,7 +53,7 @@ import { cleanupExpiredDeviceCodes, createDeviceCode } from "./d1/device-auth"
 import {
   deleteStaleSessions,
   expireD1SessionCookie,
-  findActiveSessionById,
+  findActiveSessionForEnvironment,
   resolveSessionContext,
   revokeSessionById,
 } from "./d1/sessions"
@@ -176,7 +176,12 @@ const resolveRequestSession = async (
   if (!database) {
     return { kind: "unavailable" }
   }
-  const session = await resolveSessionContext(request, database, Date.now())
+  const session = await resolveSessionContext({
+    request,
+    database,
+    now: Date.now(),
+    environment: env,
+  })
   if (!session) {
     return { kind: "anonymous" }
   }
@@ -993,11 +998,12 @@ export class UserRealtimeRoom extends DurableObject<Env> {
                 )
                 return
               }
-              const activeSession = await findActiveSessionById(
+              const activeSession = await findActiveSessionForEnvironment({
                 database,
-                attachment.success.sessionId,
-                Date.now()
-              )
+                sessionId: attachment.success.sessionId,
+                now: Date.now(),
+                environment: this.env,
+              })
               if (!activeSession) {
                 socket.close(
                   REALTIME_SESSION_REVOKED_CLOSE_CODE,

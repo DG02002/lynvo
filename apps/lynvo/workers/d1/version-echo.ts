@@ -37,7 +37,11 @@ export const echoDataVersion =
       if (!database) {
         return
       }
-      const session = await resolveD1Session(context.req.raw, database)
+      const session = await resolveD1Session(
+        context.req.raw,
+        database,
+        context.env
+      )
       if (!session) {
         return
       }
