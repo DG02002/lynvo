@@ -90,6 +90,7 @@ const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
   return descendedPath
 }
 
+// oxlint-disable-next-line max-statements -- Coordinates URL, history, scroll, extraction, and player handoff.
 export const useFinderBrowserState = ({
   item,
   actions,

@@ -46,12 +46,7 @@ after(async () => {
   )
 })
 
-test("generates a standalone project with a semver protocol dependency", async () => {
-  const root = await makeTemporaryDirectory()
-  const result = await run(["my-plugin-server", "--skip-install"], root)
-  assert.equal(result.code, 0, result.stderr)
-
-  const destination = join(root, "my-plugin-server")
+const assertMyPluginServerProject = async (destination, result) => {
   const packageJson = JSON.parse(
     await readFile(join(destination, "package.json"), "utf8")
   )
@@ -89,6 +84,15 @@ test("generates a standalone project with a semver protocol dependency", async (
   )
   assert.match(result.stdout, /pnpm test/)
   assert.match(result.stdout, /pnpm deploy/)
+}
+
+test("generates a standalone project with a semver protocol dependency", async () => {
+  const root = await makeTemporaryDirectory()
+  const result = await run(["my-plugin-server", "--skip-install"], root)
+  assert.equal(result.code, 0, result.stderr)
+
+  const destination = join(root, "my-plugin-server")
+  await assertMyPluginServerProject(destination, result)
 })
 
 test("refuses an invalid name and a non-empty destination", async () => {
