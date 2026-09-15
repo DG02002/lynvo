@@ -11,10 +11,7 @@ export function meta(_: Route.MetaArgs) {
   return [{ title: "Approve login | Lynvo" }]
 }
 
-export async function loader({
-  request,
-  context,
-}: Route.LoaderArgs): Promise<any> {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getServerEnv(context)
   const sessionResult = await getUserSession(request, env)
 

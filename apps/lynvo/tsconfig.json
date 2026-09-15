@@ -13,6 +13,8 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noEmit": true,
     "paths": {
       "~/*": [
@@ -21,6 +23,8 @@
     },
     "types": [
       "./worker-configuration.d.ts"
-    ]
+    ],
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true
   }
 }

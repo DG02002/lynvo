@@ -104,14 +104,15 @@ const renderSaveListContent = ({
 const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
   const isSaveInputHidden = useIsTvBroAndroidTv()
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
+  const hasInitialItems = initialItems !== undefined
   const resolvedInitialSnapshotMeta = useMemo<InitialSnapshotMeta>(
     () => ({
       hasRouteSnapshot:
-        initialSnapshotMeta?.hasRouteSnapshot ?? initialItems !== undefined,
+        initialSnapshotMeta?.hasRouteSnapshot ?? hasInitialItems,
       dataVersion: initialSnapshotMeta?.dataVersion,
     }),
     [
-      initialItems !== undefined,
+      hasInitialItems,
       initialSnapshotMeta?.dataVersion,
       initialSnapshotMeta?.hasRouteSnapshot,
     ]

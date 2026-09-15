@@ -121,7 +121,9 @@ export const sha256 = async (message: string): Promise<string> => {
 }
 
 const wait = (durationMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, durationMs))
+  new Promise((resolve) => {
+    setTimeout(resolve, durationMs)
+  })
 
 export const fetchOneDrive = async (
   targetUrl: string,

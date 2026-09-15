@@ -365,10 +365,16 @@ export const useLinksWithRuntime = (
   )
   const { user, realtime } = runtime
   const userId = user?.sub
-  const identity = userId ?? "signed-out"
-  const store = useMemo(
-    () =>
-      userId
+  // The snapshot store is created once per signed-in identity; the initial
+  // items and version are seeds, not reactive inputs.
+  const storeRef = useRef<{
+    userId: string | undefined
+    store: ReturnType<typeof createLinksSnapshotStore>
+  } | null>(null)
+  if (storeRef.current === null || storeRef.current.userId !== userId) {
+    storeRef.current = {
+      userId,
+      store: userId
         ? getLinksSnapshotStore(
             userId,
             options.initialItems,
@@ -378,8 +384,9 @@ export const useLinksWithRuntime = (
             options.initialItems,
             options.initialSnapshotMeta?.dataVersion
           ),
-    [identity]
-  )
+    }
+  }
+  const { store } = storeRef.current
   const initialSnapshotMeta = useMemo<InitialSnapshotMeta>(
     () => ({
       hasRouteSnapshot: options.initialSnapshotMeta?.hasRouteSnapshot,
