@@ -9,7 +9,7 @@ import {
 } from "~/lib/player-utils"
 import { createPlayerPreferenceWriteQueue } from "./player-preference-write-queue"
 
-export interface CloudPlayerPreferences {
+interface CloudPlayerPreferences {
   rangeSupportedPlayerId?: PlayerId
   rangeUnsupportedPlayerId?: PlayerId
 }

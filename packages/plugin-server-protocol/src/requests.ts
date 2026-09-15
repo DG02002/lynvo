@@ -8,7 +8,7 @@ import {
   type ProxyCredential,
 } from "./models.js"
 
-export interface ExtractRequestOptions {
+interface ExtractRequestOptions {
   readonly password?: string
   readonly basicAuth?: HttpBasicAuth
   readonly pluginId?: string

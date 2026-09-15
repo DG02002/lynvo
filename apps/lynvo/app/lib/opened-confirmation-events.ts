@@ -1,5 +1,5 @@
 export const OPENED_CONFIRMATION_EVENT = "lynvo:opened-confirmation"
-export const SMALL_SCREEN_MEDIA_QUERY = "(max-width: 639px)"
+const SMALL_SCREEN_MEDIA_QUERY = "(max-width: 639px)"
 
 declare global {
   interface OpenedConfirmationDetail {

@@ -160,13 +160,7 @@ const getCodeCopyStatusMessage = (
   return ""
 }
 
-export function DocSection({
-  id,
-  children,
-}: {
-  id: string
-  children: ReactNode
-}) {
+function DocSection({ id, children }: { id: string; children: ReactNode }) {
   return (
     <section id={id} className="scroll-mt-24">
       {children}
@@ -174,7 +168,7 @@ export function DocSection({
   )
 }
 
-export function CodeBlock({
+function CodeBlock({
   label,
   children,
 }: {
@@ -272,13 +266,7 @@ export function CodeBlock({
   )
 }
 
-export function DocsNote({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function DocsNote({ title, children }: { title: string; children: ReactNode }) {
   return (
     <Alert className="not-typeset mt-[var(--typeset-flow)]">
       <AlertTitle>{title}</AlertTitle>
@@ -287,7 +275,7 @@ export function DocsNote({
   )
 }
 
-export const AndroidTvRemoteTroubleshooting = () => (
+const AndroidTvRemoteTroubleshooting = () => (
   <aside
     aria-labelledby="virtual-remote-troubleshooting-title"
     className="not-typeset my-3 rounded-2xl bg-muted/35 p-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.07)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"

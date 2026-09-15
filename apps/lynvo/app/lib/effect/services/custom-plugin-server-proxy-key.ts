@@ -21,7 +21,7 @@ import {
   isSupportedProxyProvider,
 } from "../../plugin-server-proxy"
 
-export interface CustomPluginServerProxyKeyUser {
+interface CustomPluginServerProxyKeyUser {
   readonly id: string
 }
 

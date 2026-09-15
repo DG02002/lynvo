@@ -1,6 +1,6 @@
 import { getCookieValueFromHeader } from "./auth-cookie"
 
-export const THEME_STORAGE_KEY = "theme"
+const THEME_STORAGE_KEY = "theme"
 export const THEME_COOKIE_NAME = "lynvo-theme"
 export const THEME_COOKIE_MAX_AGE_SECONDS = 31_536_000
 

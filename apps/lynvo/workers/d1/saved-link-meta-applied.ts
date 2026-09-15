@@ -16,10 +16,10 @@ export interface SavedLinkMetaAppliedState extends SavedLinkMetaAppliedLink {
 //   condition bindings ?6–?8
 // - operation link: ?1 user, ?2 operation id, ?3 link id (reused in the
 //   subquery), ?4/?5 applied link
-export const SAVED_LINK_META_APPLIED_GUARD_SQL =
+const SAVED_LINK_META_APPLIED_GUARD_SQL =
   "SELECT 1 FROM links WHERE id = ?2 AND user_id = ?1 AND meta_json IS ?3 AND updated_at = ?4"
 
-export const SAVED_LINK_META_APPLIED_LEDGER_SQL =
+const SAVED_LINK_META_APPLIED_LEDGER_SQL =
   "SELECT 1 FROM links WHERE id = ?6 AND user_id = ?1 AND meta_json IS ?7 AND updated_at = ?8"
 
 export const SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL =

@@ -33,9 +33,7 @@ const sealedRecordSchema = Schema.Struct({
   keyVersion: Schema.Literal(SEALED_RECORD_KEY_VERSION),
 })
 
-export const decodeSealedRecordBase64 = (
-  value: string
-): Uint8Array<ArrayBuffer> => {
+const decodeSealedRecordBase64 = (value: string): Uint8Array<ArrayBuffer> => {
   const decodedValue = atob(value)
   const bytes = new Uint8Array(decodedValue.length)
   for (let index = 0; index < decodedValue.length; index += 1) {

@@ -6,8 +6,6 @@ import {
   TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
   TMDB_IMAGE_DETAIL_BASE_URL,
   TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
-  TMDB_IMAGE_WIDE_CARD_BASE_URL,
-  TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL,
   TMDB_POSTER_SRC_WIDTHS_PX,
   TMDB_STILL_SRC_WIDTHS_PX,
 } from "~/lib/constants"
@@ -41,8 +39,8 @@ const getTmdbImageBaseUrlPair = (
   }
   if (variant === "wide-card") {
     return {
-      full: TMDB_IMAGE_WIDE_CARD_BASE_URL,
-      preview: TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL,
+      full: TMDB_IMAGE_DETAIL_BASE_URL,
+      preview: TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
     }
   }
   return {

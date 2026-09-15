@@ -33,7 +33,7 @@ import {
   type SavedLinkExtractionCredentialWrite,
 } from "./saved-link-extraction-credentials"
 
-export interface SavedLinkExtractionJob {
+interface SavedLinkExtractionJob {
   id: string
   userId: string
   url: string

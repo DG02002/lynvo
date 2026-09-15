@@ -2,12 +2,7 @@ import { Schema } from "effect"
 import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import { openInPlayer, type RangeRequestCapability } from "~/lib/player-utils"
-import {
-  parseRemotePlaybackIntent,
-  remotePlaybackIntentSchema,
-} from "~/lib/remote-play/intent"
-
-export { parseRemotePlaybackIntent, remotePlaybackIntentSchema }
+import { remotePlaybackIntentSchema } from "~/lib/remote-play/intent"
 
 declare global {
   interface PlaybackHandoffResult {

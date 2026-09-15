@@ -2,7 +2,7 @@ import { Button } from "~/components/ui/button"
 import { Spinner } from "~/components/spinner"
 import { cn } from "~/lib/utils"
 
-export interface LoadErrorRetryProps {
+interface LoadErrorRetryProps {
   className?: string
   message: string
   isRetrying: boolean

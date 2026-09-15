@@ -67,7 +67,7 @@ const mapUserRow = (row: UserRow): UserRecord => ({
   createdAt: row.created_at,
 })
 
-export const findUserByGoogleSubject = async (
+const findUserByGoogleSubject = async (
   database: D1Database,
   googleSubject: string
 ): Promise<UserRecord | null> => {
@@ -215,10 +215,10 @@ export interface PlayerPreferences {
   rangeUnsupportedPlayerId?: string | undefined
 }
 
-export const PLAYER_IDS = ["just", "vlc", "mpv", "mx"]
+const PLAYER_IDS = new Set(["just", "vlc", "mpv", "mx"])
 
 export const normalizePlayerId = (playerId: string): string => {
-  if (!PLAYER_IDS.includes(playerId)) {
+  if (!PLAYER_IDS.has(playerId)) {
     throw new Error(
       "Choose Just (Video) Player, VLC for Android, MPV, or MX Player"
     )

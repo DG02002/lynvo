@@ -36,7 +36,7 @@ import {
   type VersionedMutationBody,
 } from "../api-contracts"
 
-export interface ApiRequestOptions {
+interface ApiRequestOptions {
   readonly signal?: AbortSignal
 }
 

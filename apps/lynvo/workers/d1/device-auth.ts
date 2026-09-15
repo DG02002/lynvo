@@ -60,7 +60,7 @@ const mapDeviceCodeRow = (row: DeviceCodeRow): DeviceCodeRecord => ({
 const DEVICE_CODE_COLUMNS =
   "code, poll_secret_digest, status, device_name, user_id, exchange_attempt_id, exchange_generation, exchange_lease_expires_at, exchange_session_id, consumed_session_id, expires_at, created_at"
 
-export const generateDeviceCode = (): string => {
+const generateDeviceCode = (): string => {
   let letters = ""
   while (letters.length < DEVICE_CODE_LETTER_COUNT) {
     const randomValues = new Uint8Array(DEVICE_CODE_LETTER_COUNT)
@@ -83,7 +83,7 @@ export const generateDeviceCode = (): string => {
 const bytesToHex = (bytes: Uint8Array) =>
   Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 
-export const digestPollSecret = async (pollSecret: string) =>
+const digestPollSecret = async (pollSecret: string) =>
   bytesToHex(
     new Uint8Array(
       await crypto.subtle.digest(

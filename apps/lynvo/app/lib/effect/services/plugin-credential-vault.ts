@@ -8,7 +8,7 @@ import {
 } from "~/lib/security/sealed-record"
 import { SEALED_RECORD_KEY_VERSION } from "~/lib/security/constants"
 
-export interface EncryptedPluginCredential extends SealedRecord {}
+interface EncryptedPluginCredential extends SealedRecord {}
 
 export interface PluginCredentialContext {
   readonly userId: string
