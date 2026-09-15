@@ -233,10 +233,10 @@ interface DataRequestInvalid {
 
 type DataRequestBodyResult<Body> = DataRequestBody<Body> | DataRequestInvalid
 
-const readDataJsonBody = async <S extends Schema.Decoder<any>>(
+const readDataJsonBody = async <S extends Schema.ConstraintDecoder<unknown>>(
   context: DataRouteContext,
   schema: S
-): Promise<DataRequestBodyResult<Schema.Schema.Type<S>>> => {
+): Promise<DataRequestBodyResult<S["Type"]>> => {
   let payload: unknown
   try {
     payload = await context.req.json()

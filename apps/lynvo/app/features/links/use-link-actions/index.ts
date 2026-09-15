@@ -116,7 +116,6 @@ export function useLinkActions({
 
   const expandSelectionFolder = useCallback(
     async (linkId: string, linkUrl: string) => {
-      const { originalUrl } = selectionDialogState
       try {
         const resolvedChildren = await runAfterSessionIdentity(
           ensureSessionIdentity,
@@ -131,7 +130,7 @@ export function useLinkActions({
           return null
         }
         setSelectionDialogState((currentState) =>
-          currentState.originalUrl === originalUrl
+          currentState.originalUrl === selectionDialogState.originalUrl
             ? {
                 ...currentState,
                 links: attachResolvedChildren({

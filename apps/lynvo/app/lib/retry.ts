@@ -7,7 +7,9 @@ interface RetryOptions {
 }
 
 const wait = (delayMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, delayMs))
+  new Promise((resolve) => {
+    setTimeout(resolve, delayMs)
+  })
 
 export const runWithRetries = async <Value>(
   execute: () => Promise<Value>,

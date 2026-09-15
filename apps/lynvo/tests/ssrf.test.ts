@@ -135,7 +135,9 @@ describe("outbound HTTP safety boundary", () => {
     })
 
     await pullStartedPromise
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await new Promise((resolve) => {
+      setTimeout(resolve, 20)
+    })
     try {
       expect(requestSignal?.aborted).toBe(true)
     } finally {

@@ -100,7 +100,7 @@ function wranglerTypesWatcher() {
       server.watcher.on("change", (path: string) => {
         if (path.endsWith("wrangler.jsonc")) {
           console.log("wrangler.jsonc changed, running wrangler types...")
-          exec("pnpm run cf-typegen", (err, stdout, stderr) => {
+          exec("pnpm run cf-typegen", (err, _stdout, stderr) => {
             if (err) {
               console.error("Error running wrangler types:", stderr)
             } else {

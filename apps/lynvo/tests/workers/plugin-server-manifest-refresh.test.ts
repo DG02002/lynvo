@@ -82,7 +82,9 @@ describe("plugin server manifest refresh", () => {
           userActiveRefreshes
         )
       )
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise((resolve) => {
+        setTimeout(resolve, 10)
+      })
       activeRefreshes -= 1
       activeRefreshesByUser.set(userId, userActiveRefreshes - 1)
       return url.hostname.startsWith(FAILED_SERVER_ID)

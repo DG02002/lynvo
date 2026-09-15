@@ -316,7 +316,9 @@ export const createTmdbAdapter = (
   const sleep =
     dependencies.sleep ??
     ((delayMs: number) =>
-      new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, delayMs)
+      }))
 
   const requestTmdbEndpointWithRetries = async (
     path: string,
