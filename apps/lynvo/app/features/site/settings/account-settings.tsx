@@ -5,7 +5,7 @@ import {
   SettingsRowInfo,
 } from "./settings-layout"
 
-export interface AccountSettingsUser {
+interface AccountSettingsUser {
   readonly id: string
   readonly email: string
   readonly name?: string | null

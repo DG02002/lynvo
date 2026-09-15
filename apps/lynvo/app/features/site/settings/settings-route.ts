@@ -1,6 +1,6 @@
 import { useOutletContext } from "react-router"
 
-export const SETTINGS_TAB_VALUES = [
+const SETTINGS_TAB_VALUES = [
   "general",
   "account",
   "security",
@@ -34,7 +34,7 @@ export interface SettingsRoute {
   showActiveSessions: boolean
 }
 
-export const isSettingsTab = (value: string): value is SettingsTab =>
+const isSettingsTab = (value: string): value is SettingsTab =>
   SETTINGS_TAB_VALUES.some((tab) => tab === value)
 
 export const getSettingsPath = (

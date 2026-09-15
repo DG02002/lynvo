@@ -38,10 +38,7 @@ import {
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
 
-export type {
-  CustomPluginServer,
-  PluginDomain,
-} from "./plugin-settings-interaction"
+export type { PluginDomain } from "./plugin-settings-interaction"
 
 const EMPTY_DOMAIN_DRAFT = {
   domain: "",

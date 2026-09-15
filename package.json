@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
-    "check": "oxlint scripts --deny-warnings && pnpm -r --if-present run check",
+    "check": "oxlint scripts --deny-warnings && pnpm -r --if-present run check && knip",
     "check:plugin-server-release": "node scripts/verify-plugin-server-release.mjs",
     "dev": "pnpm --filter @lynvo/app dev",
     "test": "pnpm --workspace-concurrency=1 -r --if-present run test --run",
@@ -12,11 +12,13 @@
     "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
     "lint": "oxlint scripts --deny-warnings && pnpm -r --if-present run lint",
     "prepare": "husky",
-    "sync:repos": "tsx scripts/sync-repos.ts"
+    "sync:repos": "tsx scripts/sync-repos.ts",
+    "knip": "knip"
   },
   "devDependencies": {
     "@oxlint/plugins": "catalog:",
     "husky": "catalog:",
+    "knip": "^6.34.0",
     "lint-staged": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

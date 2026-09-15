@@ -2,7 +2,7 @@ import type { MetaData } from "~/features/links/types"
 import { metadataSchema } from "~/features/links/storage-schemas"
 import { Result, Schema } from "effect"
 
-export const FETCH_METADATA_TIMEOUT_MS = 20000
+const FETCH_METADATA_TIMEOUT_MS = 20000
 
 export const fetchMetaInternal = async (
   targetUrl: string

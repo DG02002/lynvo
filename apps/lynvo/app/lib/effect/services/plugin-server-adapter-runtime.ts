@@ -7,7 +7,7 @@ import {
   type PluginServerRequestOptions,
 } from "../../extraction/plugin-server-client"
 
-export const createPluginServerExtractionError = (
+const createPluginServerExtractionError = (
   cause: unknown,
   url: string
 ): ExtractionError => {

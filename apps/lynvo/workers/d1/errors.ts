@@ -5,11 +5,11 @@ export interface StorageRejection {
   readonly limitBytes: number
 }
 
-export const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
-export const PLUGIN_DOMAIN_NOT_FOUND_MESSAGE = "Plugin domain not found"
-export const PLUGIN_SERVER_UNAVAILABLE_MESSAGE =
+const LINK_NOT_FOUND_MESSAGE = "Link not found or no longer available"
+const PLUGIN_DOMAIN_NOT_FOUND_MESSAGE = "Plugin domain not found"
+const PLUGIN_SERVER_UNAVAILABLE_MESSAGE =
   "Plugin server not found or no longer available"
-export const PLUGIN_CREDENTIAL_CHANGE_SUPERSEDED_MESSAGE =
+const PLUGIN_CREDENTIAL_CHANGE_SUPERSEDED_MESSAGE =
   "Plugin credential change was superseded"
 
 export class LinkNotFoundError extends Error {

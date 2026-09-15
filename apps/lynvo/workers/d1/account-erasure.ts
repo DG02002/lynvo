@@ -4,7 +4,7 @@ import {
 } from "../constants"
 import { createOpaqueId } from "./ids"
 
-export const ERASURE_STAGE_ORDER = [
+const ERASURE_STAGE_ORDER = [
   "links",
   "pluginCredentials",
   "pluginDomains",
@@ -18,7 +18,7 @@ export const ERASURE_STAGE_ORDER = [
   "finalize",
 ] as const
 
-export type AccountErasureStage = (typeof ERASURE_STAGE_ORDER)[number]
+type AccountErasureStage = (typeof ERASURE_STAGE_ORDER)[number]
 
 export type AccountErasureTrigger = "manual" | "inactive"
 
@@ -46,7 +46,7 @@ interface AccountErasureDataPresence {
   sessions: number
 }
 
-export interface AccountErasureProgress {
+interface AccountErasureProgress {
   id: string
   userId: string
   stage: AccountErasureStage

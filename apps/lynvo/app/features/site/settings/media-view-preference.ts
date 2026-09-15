@@ -15,16 +15,16 @@ declare global {
 export const MEDIA_VIEW_STORAGE_KEY = "lynvo:settings:media-view"
 export const MEDIA_VIEW_PREFERENCE_EVENT = "lynvo:media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
-export const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
+const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
 export const DEFAULT_MEDIA_VIEW: MediaView = "list"
-export const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "hybrid"
+const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "hybrid"
 
 const mediaViewValues = new Set<string>(["list", "hybrid"])
 
-export const isMediaView = (value: string): value is MediaView =>
+const isMediaView = (value: string): value is MediaView =>
   mediaViewValues.has(value)
 
-export const getDefaultMediaView = (): MediaView =>
+const getDefaultMediaView = (): MediaView =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
     ? TVBRO_DEFAULT_MEDIA_VIEW
     : DEFAULT_MEDIA_VIEW
@@ -51,7 +51,7 @@ export const getMediaView = (): MediaView => {
   return getDefaultMediaView()
 }
 
-export const writeMediaViewCookie = (mediaView: MediaView): void => {
+const writeMediaViewCookie = (mediaView: MediaView): void => {
   if (globalThis.document === undefined) {
     return
   }

@@ -106,7 +106,7 @@ export interface SavedLinkListItem extends LinkViewItem {
   kind: "saved"
 }
 
-export interface LinkListItemMap {
+interface LinkListItemMap {
   saved: SavedLinkListItem
 }
 

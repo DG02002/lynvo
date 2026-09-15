@@ -89,7 +89,7 @@ const mapLinkRow = (row: LinkRow): SavedLinkRecord => ({
   extractionError: row.extraction_error,
 })
 
-export type SavedLinkMetadataOperation =
+type SavedLinkMetadataOperation =
   | { kind: "markOpened"; linkUrl: string }
   | { kind: "cacheMirrors"; lazyItemUrl: string; mirrorsJson: string }
   | { kind: "removeExtractedLink"; linkKey: string; linkUrl: string }
@@ -1260,10 +1260,8 @@ export const getUserRetentionDays = async (
   return row?.storage_retention_days ?? DEFAULT_RETENTION_DAYS
 }
 
-export const getRetentionCutoff = (
-  now: number,
-  retentionDays: number
-): number => now - retentionDays * DAY_MS
+const getRetentionCutoff = (now: number, retentionDays: number): number =>
+  now - retentionDays * DAY_MS
 
 interface CountExpiredLinksForUserInput {
   database: D1Database

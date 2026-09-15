@@ -69,12 +69,12 @@ export interface TmdbSearchResult {
   readonly overview?: string
 }
 
-export interface TmdbSeasonSummary {
+interface TmdbSeasonSummary {
   readonly seasonNumber: number
   readonly name: string
 }
 
-export interface TmdbMediaMetadata {
+interface TmdbMediaMetadata {
   readonly kind: "movie" | "tv" | "season" | "episode"
   readonly providerId: number
   readonly title: string
@@ -88,21 +88,11 @@ export interface TmdbMediaMetadata {
   readonly attribution: "TMDB"
 }
 
-export interface TmdbAdapterSuccess<Value> {
-  readonly kind: "success"
-  readonly value: Value
-}
-
-export interface TmdbAdapterFailure {
+interface TmdbAdapterFailure {
   readonly kind: "failure"
   readonly failureKind: "rate-limited" | "retryable" | "permanent"
   readonly message: string
   readonly retryAt?: number
-}
-
-export interface TmdbAdapterDisabled {
-  readonly kind: "disabled"
-  readonly message: string
 }
 
 export interface TmdbAdapterDependencies {
@@ -143,7 +133,7 @@ export interface TmdbAdapter {
   ) => Promise<TmdbAdapterResult<TmdbMediaMetadata>>
 }
 
-export interface TmdbEpisodeDetailsRequest {
+interface TmdbEpisodeDetailsRequest {
   readonly providerId: number
   readonly seasonNumber: number
   readonly episodeNumber: number
@@ -151,7 +141,7 @@ export interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-export interface TmdbAdapterResult<Value> {
+interface TmdbAdapterResult<Value> {
   readonly kind: "success" | "disabled" | "failure"
   readonly value?: Value
   readonly failureKind?: TmdbAdapterFailure["failureKind"]
