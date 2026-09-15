@@ -33,6 +33,6 @@ export default {
 
     const fileArguments = sourceFilePaths.map(quoteShellArgument).join(" ")
 
-    return [`oxfmt ${fileArguments}`, `oxlint ${fileArguments}`]
+    return [`oxfmt ${fileArguments}`, `oxlint ${fileArguments} --deny-warnings`]
   },
 }

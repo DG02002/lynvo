@@ -12,7 +12,7 @@
     "check": "pnpm run prepare:protocol && pnpm run cf-typegen && pnpm run fmt:check && pnpm run lint && pnpm run typecheck",
     "fmt": "oxfmt src tests scripts vitest.config.ts",
     "fmt:check": "oxfmt src tests scripts vitest.config.ts --check",
-    "lint": "oxlint src tests scripts",
+    "lint": "oxlint src tests scripts --deny-warnings",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepare:protocol": "pnpm --filter @dg02002/lynvo-plugin-server-protocol build",
     "test": "pnpm run prepare:protocol && vitest run",

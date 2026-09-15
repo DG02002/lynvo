@@ -623,26 +623,26 @@ dataApp.patch("/storage-settings", async (context) => {
     preparation.session.userId,
     { days: body.days, now: Date.now() }
   )
-  let deletedLinks = 0
   // The deletion is the last owned write; its version is the response's
   // version, not the retention update's.
-  let dataVersion = result.dataVersion
-  if (body.deleteExpiredLinks) {
-    const deletion = await deleteExpiredLinksForUser({
-      database: preparation.database,
-      userId: preparation.session.userId,
-      retentionDays: body.days,
-      now: Date.now(),
-    })
-    deletedLinks = deletion.deletedCount
-    dataVersion = deletion.dataVersion
-  }
+  const deletion = body.deleteExpiredLinks
+    ? await deleteExpiredLinksForUser({
+        database: preparation.database,
+        userId: preparation.session.userId,
+        retentionDays: body.days,
+        now: Date.now(),
+      })
+    : { deletedCount: 0, dataVersion: result.dataVersion }
   await notifyAccountDataChanged(
     context.env,
     preparation.session.userId,
-    dataVersion
+    deletion.dataVersion
   )
-  return context.json({ success: true, deletedLinks, dataVersion })
+  return context.json({
+    success: true,
+    deletedLinks: deletion.deletedCount,
+    dataVersion: deletion.dataVersion,
+  })
 })
 
 dataApp.get("/usage", async (context) => {
