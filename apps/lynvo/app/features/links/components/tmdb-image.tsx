@@ -37,12 +37,6 @@ const getTmdbImageBaseUrlPair = (
       preview: TMDB_IMAGE_CARD_PREVIEW_BASE_URL,
     }
   }
-  if (variant === "wide-card") {
-    return {
-      full: TMDB_IMAGE_DETAIL_BASE_URL,
-      preview: TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,
-    }
-  }
   return {
     full: TMDB_IMAGE_DETAIL_BASE_URL,
     preview: TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL,

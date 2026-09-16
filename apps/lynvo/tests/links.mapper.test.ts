@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 import {
-  parseLinkMetadata,
-  toLinkViewModel,
-  toLinkViewItem,
   createLinkMetadata,
   mergeDefinedMeta,
+  parseLinkMetadata,
+} from "../app/features/links/link-metadata-normalization"
+import {
+  toLinkViewItem,
+  toLinkViewModel,
   type SavedLink,
-} from "../app/features/links/links.mapper"
+} from "../app/features/links/link-view-models"
 
 const playableLink = (id: string, url: string, label: string) => ({
   nodeKey: `test:${id}`,

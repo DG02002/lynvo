@@ -141,13 +141,16 @@ interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-interface TmdbAdapterResult<Value> {
-  readonly kind: "success" | "disabled" | "failure"
-  readonly value?: Value
-  readonly failureKind?: TmdbAdapterFailure["failureKind"]
-  readonly message?: string
-  readonly retryAt?: number
-}
+type TmdbAdapterResult<Value> =
+  | {
+      readonly kind: "success"
+      readonly value: Value
+    }
+  | {
+      readonly kind: "disabled"
+      readonly message: string
+    }
+  | TmdbAdapterFailure
 
 const searchPayloadSchema = Schema.Struct({
   results: Schema.optional(
@@ -486,13 +489,13 @@ export const createTmdbAdapter = (
       `/tv/${providerId}/episode_groups`,
       episodeGroupListPayloadSchema
     )
-    if (groupList.kind !== "success" || !groupList.value) {
+    if (groupList.kind !== "success") {
       return groupList.kind === "disabled"
         ? { kind: "disabled", message: groupList.message }
         : {
             kind: "failure",
-            failureKind: groupList.failureKind ?? "permanent",
-            message: groupList.message ?? "TMDB episode groups are unavailable",
+            failureKind: groupList.failureKind,
+            message: groupList.message,
             retryAt: groupList.retryAt,
           }
     }
@@ -530,14 +533,13 @@ export const createTmdbAdapter = (
       `/tv/episode_group/${episodeGroup.id}`,
       episodeGroupPayloadSchema
     )
-    if (episodeGroups.kind !== "success" || !episodeGroups.value) {
+    if (episodeGroups.kind !== "success") {
       return episodeGroups.kind === "disabled"
         ? { kind: "disabled", message: episodeGroups.message }
         : {
             kind: "failure",
-            failureKind: episodeGroups.failureKind ?? "permanent",
-            message:
-              episodeGroups.message ?? "TMDB episode group is unavailable",
+            failureKind: episodeGroups.failureKind,
+            message: episodeGroups.message,
             retryAt: episodeGroups.retryAt,
           }
     }

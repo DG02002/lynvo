@@ -1,5 +1,7 @@
-import { createLinkMetadata } from "../../app/features/links/links.mapper"
-import { appendLinkDebugLog } from "../../app/features/links/link-metadata-normalization"
+import {
+  appendLinkDebugLog,
+  createLinkMetadata,
+} from "../../app/features/links/link-metadata-normalization"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,

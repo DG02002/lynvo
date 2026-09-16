@@ -1,11 +1,11 @@
 import { Result, Schema } from "effect"
 import { SavedLinkCommandError } from "../saved-link-command-failure"
 import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
+import { parseLinkMetadata } from "~/features/links/link-metadata-normalization"
 import {
-  parseLinkMetadata,
   toLinkViewItem,
   type SavedLink,
-} from "~/features/links/links.mapper"
+} from "~/features/links/link-view-models"
 import type { LinkExtractionStatus } from "~/features/links/types"
 
 declare global {
