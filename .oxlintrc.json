@@ -85,18 +85,6 @@
     {
       "files": [
         "apps/lynvo/tests/**",
-        "packages/create-lynvo-plugin-server/tests/**"
-      ],
-      "rules": {
-        "consistent-function-scoping": "off",
-        "max-params": "off",
-        "max-statements": "off",
-        "no-await-in-loop": "off"
-      }
-    },
-    {
-      "files": [
-        "apps/lynvo/tests/**",
         "apps/lynvo-plugin-server/tests/**",
         "packages/plugin-server-protocol/tests/**",
         "packages/create-lynvo-plugin-server/tests/**"
@@ -106,6 +94,10 @@
         "vitest"
       ],
       "rules": {
+        "consistent-function-scoping": "off",
+        "max-params": "off",
+        "max-statements": "off",
+        "no-await-in-loop": "off",
         "vitest/no-focused-tests": "error",
         "vitest/no-disabled-tests": "error",
         "vitest/hoisted-apis-on-top": "error",

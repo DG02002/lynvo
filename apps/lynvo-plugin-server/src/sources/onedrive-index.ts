@@ -1,6 +1,7 @@
 import { load } from "cheerio"
 import {
   ProtocolError,
+  sleep,
   type MediaNode,
   type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
@@ -120,11 +121,6 @@ export const sha256 = async (message: string): Promise<string> => {
     .join("")
 }
 
-const wait = (durationMs: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, durationMs)
-  })
-
 export const fetchOneDrive = async (
   targetUrl: string,
   options: RequestInit,
@@ -139,7 +135,7 @@ export const fetchOneDrive = async (
       (response.status === 429 || response.status >= 500) &&
       attempt < ONEDRIVE_FETCH_RETRIES - 1
     ) {
-      await wait(ONEDRIVE_FETCH_RETRY_DELAY_MS)
+      await sleep(ONEDRIVE_FETCH_RETRY_DELAY_MS)
       return fetchOneDrive(targetUrl, options, attempt + 1)
     }
     return response
@@ -150,7 +146,7 @@ export const fetchOneDrive = async (
     if (attempt >= ONEDRIVE_FETCH_RETRIES - 1) {
       throw error
     }
-    await wait(ONEDRIVE_FETCH_RETRY_DELAY_MS)
+    await sleep(ONEDRIVE_FETCH_RETRY_DELAY_MS)
     return fetchOneDrive(targetUrl, options, attempt + 1)
   }
 }
