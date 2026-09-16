@@ -135,6 +135,7 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 - Never make a PR unless the developer explicitly asks you to do so.
 - Conventional commit titles, plain language: `fix(app): saved links no longer lose freshness after reconnect`.
 - Body: the problem in a sentence or two, then how you fixed it. End with the model and harness that did the work.
+- Every claim in the body must be checkable against the diff; never state an intention as a completed result.
 - UI changes need before/after images. Motion or timing needs a short video.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
 - One concern per PR. If the description says "also", split it.
