@@ -17,10 +17,7 @@
         "scripts/**/*.{ts,mjs}"
       ],
       "project": [
-        "tools/**/*.ts"
-      ],
-      "ignore": [
-        "tools/oxlint/anti-slop/**"
+        "scripts/**/*.{ts,mjs}"
       ]
     },
     "apps/lynvo": {
