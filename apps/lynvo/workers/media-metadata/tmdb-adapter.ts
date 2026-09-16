@@ -1,4 +1,5 @@
 import { Result, Schema } from "effect"
+import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   MEDIA_METADATA_REQUEST_ATTEMPTS,
   MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
@@ -316,10 +317,7 @@ export const createTmdbAdapter = (
   const now = dependencies.now ?? Date.now
   const timeoutMs = dependencies.timeoutMs ?? MEDIA_METADATA_REQUEST_TIMEOUT_MS
   const token = dependencies.token?.trim()
-  const sleep =
-    dependencies.sleep ??
-    ((delayMs: number) =>
-      new Promise<void>((resolve) => setTimeout(resolve, delayMs)))
+  const sleepForRequest = dependencies.sleep ?? sleep
 
   const requestTmdbEndpointWithRetries = async (
     path: string,
@@ -338,7 +336,7 @@ export const createTmdbAdapter = (
       if (attemptNumber >= MEDIA_METADATA_REQUEST_ATTEMPTS) {
         throw error
       }
-      await sleep(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
+      await sleepForRequest(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
       return requestTmdbEndpointWithRetries(path, attemptNumber + 1)
     }
   }

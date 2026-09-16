@@ -24,6 +24,12 @@
       "specifier": "./tools/oxlint/anti-slop/effect/index.ts"
     }
   ],
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "react-hooks",
+    "oxc"
+  ],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn",
@@ -31,36 +37,77 @@
   },
   "overrides": [
     {
-      "files": ["apps/lynvo/app/components/save-list/use-finder-browser-state.ts"],
+      "files": [
+        "apps/lynvo-plugin-server/src/**"
+      ],
+      "rules": {
+        "react-hooks/rules-of-hooks": "off",
+        "react-hooks/exhaustive-deps": "off"
+      }
+    },
+    {
+      "files": [
+        "apps/lynvo/app/components/save-list/use-finder-browser-state.ts"
+      ],
       "rules": {
         "max-statements": "off"
       }
     },
     {
-      "files": ["apps/lynvo/app/entry.server.tsx"],
+      "files": [
+        "apps/lynvo/app/entry.server.tsx"
+      ],
       "rules": {
         "max-params": "off"
       }
     },
     {
-      "files": ["apps/lynvo/app/lib/player-utils.ts"],
+      "files": [
+        "apps/lynvo/app/lib/player-utils.ts"
+      ],
       "rules": {
         "consistent-function-scoping": "off"
       }
     },
     {
-      "files": ["packages/plugin-server-protocol/src/runtime.ts"],
+      "files": [
+        "packages/plugin-server-protocol/src/runtime.ts"
+      ],
       "rules": {
-        "anti-slop/no-runtime-typeof": ["error", { "allowInTypeGuards": true }]
+        "anti-slop/no-runtime-typeof": [
+          "error",
+          {
+            "allowInTypeGuards": true
+          }
+        ]
       }
     },
     {
-      "files": ["apps/lynvo/tests/**"],
+      "files": [
+        "apps/lynvo/tests/**",
+        "apps/lynvo-plugin-server/tests/**",
+        "packages/plugin-server-protocol/tests/**",
+        "packages/create-lynvo-plugin-server/tests/**"
+      ],
+      "plugins": [
+        "typescript",
+        "vitest"
+      ],
       "rules": {
         "consistent-function-scoping": "off",
         "max-params": "off",
         "max-statements": "off",
-        "no-await-in-loop": "off"
+        "no-await-in-loop": "off",
+        "vitest/no-focused-tests": "error",
+        "vitest/no-disabled-tests": "error",
+        "vitest/hoisted-apis-on-top": "error",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-to-throw-message": "off",
+        "vitest/no-conditional-expect": "off",
+        "vitest/valid-expect": "off",
+        "react-hooks/rules-of-hooks": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "vitest/expect-expect": "off"
       }
     }
   ],
@@ -81,13 +128,31 @@
     "anti-slop/no-widen-then-assert": "error",
     "anti-slop/require-safety-comment-for-type-assertion": "error",
     "anti-slop-effect/no-service-constructor-imports": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react/react-in-jsx-scope": "off",
+    "react/exhaustive-effect-dependencies": "off",
+    "react/set-state-in-effect": "off",
+    "react/memo-dependencies": "off",
+    "react/purity": "off",
+    "react/refs": "off",
+    "react/no-array-index-key": "off",
+    "react/use-memo": "off",
+    "react/globals": "off",
+    "typescript/no-explicit-any": "error",
+    "no-promise-executor-return": "error",
     "eqeqeq": "warn",
     "no-var": "warn",
     "prefer-const": "warn",
     "curly": "warn",
     "no-eval": "warn",
     "no-implied-eval": "warn",
-    "max-statements": ["warn", { "max": 20 }],
+    "max-statements": [
+      "warn",
+      {
+        "max": 20
+      }
+    ],
     "max-params": "warn",
     "no-nested-ternary": "warn",
     "no-extra-boolean-cast": "warn",
@@ -96,7 +161,15 @@
     "no-duplicate-imports": "warn",
     "no-useless-catch": "warn",
     "consistent-type-imports": "warn",
-    "no-underscore-dangle": ["warn", { "allow": ["_tag", "__BUILD_TIME__"] }],
+    "no-underscore-dangle": [
+      "warn",
+      {
+        "allow": [
+          "_tag",
+          "__BUILD_TIME__"
+        ]
+      }
+    ],
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {

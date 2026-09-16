@@ -1,3 +1,5 @@
+import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
+
 interface RetryOptions {
   readonly maxRetries: number
   readonly getDelayMs: (
@@ -5,9 +7,6 @@ interface RetryOptions {
     retryNumber: number
   ) => number | undefined
 }
-
-const wait = (delayMs: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, delayMs))
 
 export const runWithRetries = async <Value>(
   execute: () => Promise<Value>,
@@ -27,7 +26,7 @@ export const runWithRetries = async <Value>(
     }
 
     if (delayMs > 0) {
-      await wait(delayMs)
+      await sleep(delayMs)
     }
     return await runWithRetries(execute, options, retryNumber + 1)
   }

@@ -189,7 +189,7 @@ const requestDataJson = async <ResponseBody>(
   return await httpResponse.json()
 }
 
-const mutationRequest = (path: string, payloadJson: string): RequestInit => ({
+const mutationRequest = (payloadJson: string): RequestInit => ({
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: payloadJson,
@@ -262,24 +262,21 @@ export const linksDataApi = {
   ): Promise<CreateOrUpdateSavedLinkResponse> =>
     requestDataJson(
       "/api/data/links/create-or-update",
-      mutationRequest("/api/data/links/create-or-update", JSON.stringify(input))
+      mutationRequest(JSON.stringify(input))
     ),
   updateMeta: (
     input: UpdateSavedLinkMetaInput
   ): Promise<SavedLinkMutationResponse> =>
     requestDataJson(
       "/api/data/links/update-meta",
-      mutationRequest("/api/data/links/update-meta", JSON.stringify(input))
+      mutationRequest(JSON.stringify(input))
     ),
   applyMetadataOperation: (
     input: ApplyMetadataOperationInput
   ): Promise<SavedLinkMutationResponse> =>
     requestDataJson(
       "/api/data/links/apply-metadata-operation",
-      mutationRequest(
-        "/api/data/links/apply-metadata-operation",
-        JSON.stringify(input)
-      )
+      mutationRequest(JSON.stringify(input))
     ),
   deleteById: (input: {
     readonly id: string
@@ -287,7 +284,6 @@ export const linksDataApi = {
     requestDataJson(
       "/api/data/links/delete",
       mutationRequest(
-        "/api/data/links/delete",
         JSON.stringify({
           operationId: crypto.randomUUID(),
           id: input.id,

@@ -70,6 +70,9 @@ export const useAsyncResource = <Result>(
   const isMountedReference = useRef(false)
   const loadSequenceReference = useRef(0)
   const previousDependencySignal = useRef<object | undefined>(undefined)
+  // The dependency array is this hook's public parameter, so it cannot be an
+  // array literal at this call site.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   const dependencySignal = useMemo(() => ({}), dependencies)
 
   useEffect(() => {

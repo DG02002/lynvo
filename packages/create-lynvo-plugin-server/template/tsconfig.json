@@ -1,13 +1,25 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
     "skipLibCheck": true,
     "strict": true,
-    "types": ["@cloudflare/workers-types"]
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": [
+      "@cloudflare/workers-types"
+    ],
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "tests"]
+  "include": [
+    "src",
+    "tests"
+  ]
 }

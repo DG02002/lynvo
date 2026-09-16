@@ -1,3 +1,4 @@
+import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { describe, expect, it, vi } from "vitest"
 import {
   createOutboundHttpTransport,
@@ -135,7 +136,7 @@ describe("outbound HTTP safety boundary", () => {
     })
 
     await pullStartedPromise
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await sleep(20)
     try {
       expect(requestSignal?.aborted).toBe(true)
     } finally {
