@@ -136,6 +136,9 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 - Conventional commit titles, plain language: `fix(app): saved links no longer lose freshness after reconnect`.
 - Body: the problem in a sentence or two, then how you fixed it. End with the model and harness that did the work.
 - Every claim in the body must be checkable against the diff; never state an intention as a completed result.
+- Review the premise, not only the diff. Spend at least one sentence of
+  every review asking whether the spec itself is right — especially for
+  docs, where the artifact is the design.
 - UI changes need before/after images. Motion or timing needs a short video.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
 - One concern per PR. If the description says "also", split it.
@@ -188,6 +191,10 @@ Playable links to an external Android player.
 - Put Source-specific complexity at the Plugin boundary. Keep shared
   orchestration and UI state explicit.
 - Measure before adding a cache, queue, or task orchestrator.
+- Every external read has a deadline, a size bound, and a cancellation
+  path. Unbounded `.text()`, `.json()`, or `.arrayBuffer()` on an external
+  response belongs behind the validated-fetch helpers in the protocol
+  package.
 - A lying spinner, stale label, or dropped realtime update is a product bug.
 
 ## Additional tips
