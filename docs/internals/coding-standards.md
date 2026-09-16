@@ -11,9 +11,13 @@ If you can’t get away with removing something, the next step is to try just co
 
 If you’ve exhausted your options and the only choice is to add something new, it’s important to analyse why. Often the need to add something brand new indicates that you’re diverging from established / implicit assumptions about design. This is worth scrutinising.
 
-These standards are enforced rules, not decoration. Each rule below names the
-gate that upholds it — a lint rule, a compiler flag, a test, or the review —
-and when a rule has no mechanical gate yet, the two-axis code review is that
+Style and safety rules that hold every contribution to one standard, as if
+the codebase were written by a single careful person. Inconsistency is
+treated as a bug, not a preference.
+
+A rule is enforced or it is a decoration. Each rule below names the gate
+that upholds it — a lint rule, a compiler flag, a test, or the review — and
+when a rule has no mechanical gate yet, the two-axis code review is that
 gate.
 
 ## Format and shape
@@ -26,9 +30,10 @@ gate.
   line. Prefer smaller functions; deep nesting is a prompt to extract, not
   to indent further.
 - Export only what another module imports. Unused exports, files, and
-  dependencies fail `pnpm check` (knip), and `noUnusedLocals` /
-  `noUnusedParameters` fail the typecheck. A symbol kept "for later" is dead
-  code with a schedule.
+  dependencies fail `pnpm check` (knip). The app, managed Plugin Server, and
+  protocol package typechecks enable `noUnusedLocals` and
+  `noUnusedParameters`; a symbol kept "for later" is dead code with a
+  schedule.
 
 ## Types and boundaries
 
@@ -69,8 +74,8 @@ gate.
 ## The first-pass contract
 
 Use this checklist as a map to the canonical rules above, not as a second
-copy of them. A first draft — from any model, at any size — must satisfy all
-eight items before review:
+copy of them. A first draft — from any model, at any size — must satisfy every
+item below before review:
 
 1. Boundary validation — see **Types and boundaries**.
 2. Bounded, cancellable external reads — see **Async, effects, and external
@@ -79,10 +84,9 @@ eight items before review:
 4. Staleness gating for async results — see **Async, effects, and external
    calls**.
 5. Typed errors with code, status, and cause — see **Types and boundaries**.
-6. One shared helper for shared risky behavior — see **Async, effects, and
-   external calls**.
+6. Shared risky behavior lives in one helper, not pasted per call site — see
+   **Async, effects, and external calls**.
 7. Discriminating coverage for reverse states — see **Data and the write
    path**.
-8. All gates pass: `pnpm check`, `pnpm test`, `pnpm test:workers`,
-   `pnpm build`, and `pnpm check:plugin-server-release`; paste exit codes,
-   do not promise them.
+8. All quality gates pass — see the **Quality gates** section in
+   `docs/internals/development.md`; paste exit codes, do not promise them.
