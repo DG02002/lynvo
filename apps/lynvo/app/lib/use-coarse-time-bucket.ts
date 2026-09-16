@@ -3,7 +3,7 @@ import { DAY_MS } from "../../shared/constants"
 
 export const MINUTE_MS = 60 * 1000
 
-export const getTimeBucket = (timestamp: number, intervalMs: number) =>
+const getTimeBucket = (timestamp: number, intervalMs: number) =>
   Math.floor(timestamp / intervalMs) * intervalMs
 
 const useCoarseTimeBucket = (intervalMs: number) => {

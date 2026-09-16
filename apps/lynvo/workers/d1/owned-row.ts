@@ -4,7 +4,7 @@ interface OwnedRow {
 
 type OwnedRowErrorFactory = () => Error
 
-export interface OwnedRowSource {
+interface OwnedRowSource {
   /** SQL fragments are declared by the caller; neither value contains user input. */
   readonly table: string
   readonly columns: string

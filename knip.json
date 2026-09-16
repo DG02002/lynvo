@@ -1,0 +1,95 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "ignoreFiles": [
+    ".repos/**"
+  ],
+  "ignoreDependencies": [
+    "cloudflare",
+    "oxfmt",
+    "shadcn",
+    "sharp",
+    "tailwindcss",
+    "tw-animate-css"
+  ],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/**/*.{ts,mjs}"
+      ],
+      "project": [
+        "scripts/**/*.{ts,mjs}"
+      ]
+    },
+    "apps/lynvo": {
+      "entry": [
+        "app/routes.ts",
+        "app/root.tsx",
+        "workers/app.ts",
+        "app/features/**/routes/_*.{ts,tsx}",
+        "app/features/site/routes/sitemap.ts",
+        "app/features/site/routes/well-known.devtools.ts",
+        "scripts/*.{mjs,ts}",
+        "tests/**/*.{ts,tsx}"
+      ],
+      "project": [
+        "app/**/*.{ts,tsx,mdx}",
+        "shared/**/*.ts",
+        "workers/**/*.ts",
+        "*.ts"
+      ],
+      "ignoreIssues": {
+        "app/components/ui/**/*.tsx": [
+          "exports"
+        ]
+      }
+    },
+    "apps/lynvo-plugin-server": {
+      "entry": [
+        "src/index.ts",
+        "scripts/*.mjs",
+        "tests/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "*.ts"
+      ]
+    },
+    "packages/plugin-server-protocol": {
+      "entry": [
+        "scripts/*.mjs",
+        "tests/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/create-lynvo-plugin-server": {
+      "entry": [
+        "bin/*.mjs",
+        "scripts/*.mjs",
+        "tests/*.mjs"
+      ],
+      "project": [
+        "bin/**"
+      ]
+    },
+    "packages/create-lynvo-plugin-server/template": {
+      "entry": [
+        "src/index.ts",
+        "scripts/*.mjs",
+        "tests/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "*.ts"
+      ],
+      "ignoreBinaries": [
+        "vitest",
+        "wrangler"
+      ],
+      "ignoreDependencies": [
+        "wrangler"
+      ]
+    }
+  }
+}

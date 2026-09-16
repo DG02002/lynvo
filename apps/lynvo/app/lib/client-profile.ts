@@ -34,7 +34,7 @@ export const getCurrentClientProfile = () =>
 export const subscribeToClientProfile = (onStoreChange: () => void) =>
   subscribeToDevelopmentSettings(onStoreChange)
 
-export const getIsTvBroAndroidTv = () =>
+const getIsTvBroAndroidTv = () =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
 
 export const getViewTransitionEnabled = () => !getIsTvBroAndroidTv()

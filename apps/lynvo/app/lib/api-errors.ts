@@ -1,6 +1,6 @@
 import { Result, Schema } from "effect"
 
-export const apiErrorCodeSchema = Schema.Literals([
+const apiErrorCodeSchema = Schema.Literals([
   "invalid_request",
   "forbidden",
   "invalid_credentials",

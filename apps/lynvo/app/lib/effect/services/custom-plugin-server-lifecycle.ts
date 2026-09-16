@@ -33,7 +33,7 @@ import { getCustomPluginServerUsage } from "./custom-plugin-server-adapter"
 
 const CUSTOM_PLUGIN_SERVER_USAGE_CONCURRENCY = 3
 
-export interface CustomPluginServerLifecycleUser {
+interface CustomPluginServerLifecycleUser {
   readonly id: string
 }
 

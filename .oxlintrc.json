@@ -31,6 +31,12 @@
   },
   "overrides": [
     {
+      "files": ["apps/lynvo/app/components/save-list/use-finder-browser-state.ts"],
+      "rules": {
+        "max-statements": "off"
+      }
+    },
+    {
       "files": ["apps/lynvo/app/entry.server.tsx"],
       "rules": {
         "max-params": "off"

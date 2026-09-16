@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 
-export const UsageMetricSchema = Schema.Struct({
+const UsageMetricSchema = Schema.Struct({
   id: Schema.String,
   label: Schema.String,
   used: Schema.Number,

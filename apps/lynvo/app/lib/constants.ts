@@ -29,9 +29,6 @@ export const TMDB_IMAGE_CARD_PREVIEW_BASE_URL = "https://image.tmdb.org/t/p/w92"
 export const TMDB_IMAGE_DETAIL_BASE_URL = "https://image.tmdb.org/t/p/w780"
 export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
-export const TMDB_IMAGE_WIDE_CARD_BASE_URL = TMDB_IMAGE_DETAIL_BASE_URL
-export const TMDB_IMAGE_WIDE_CARD_PREVIEW_BASE_URL =
-  TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
 export const MEDIA_ARTWORK_CACHE_VERSION = 4

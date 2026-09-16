@@ -1,5 +1,7 @@
-import { createLinkMetadata } from "../../app/features/links/links.mapper"
-import { appendLinkDebugLog } from "../../app/features/links/link-metadata-normalization"
+import {
+  appendLinkDebugLog,
+  createLinkMetadata,
+} from "../../app/features/links/link-metadata-normalization"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
@@ -33,7 +35,7 @@ import {
   type SavedLinkExtractionCredentialWrite,
 } from "./saved-link-extraction-credentials"
 
-export interface SavedLinkExtractionJob {
+interface SavedLinkExtractionJob {
   id: string
   userId: string
   url: string

@@ -135,6 +135,7 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 - Never make a PR unless the developer explicitly asks you to do so.
 - Conventional commit titles, plain language: `fix(app): saved links no longer lose freshness after reconnect`.
 - Body: the problem in a sentence or two, then how you fixed it. End with the model and harness that did the work.
+- Every claim in the body must be checkable against the diff; never state an intention as a completed result.
 - UI changes need before/after images. Motion or timing needs a short video.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
 - One concern per PR. If the description says "also", split it.
@@ -171,7 +172,12 @@ Playable links to an external Android player.
   helpers, and protocol docs.
 - `packages/create-lynvo-plugin-server` - standalone generator and template.
 - `apps/lynvo/app/components/ui/` - generated shadcn primitives. Treat them as
-  read-only and compose them from feature code outside this directory.
+  read-only and compose them from feature code outside this directory. Delete
+  wholly-unused components instead of keeping them; knip flags them and the
+  shadcn CLI can restore them.
+- `tools/oxlint/anti-slop/` - vendored Oxlint plugin installed by the
+  `install-anti-slop` skill. Never edit or reformat it; update it by re-running
+  the skill. Project-specific lint rules live in their own plugin.
 - `.repos/` - vendored read-only references. Prefer their patterns over
   invented ones. Never edit or import from them. Sync with
   `pnpm run sync:repos` when bumping the matching dependency. Read

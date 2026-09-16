@@ -79,7 +79,7 @@ export const requireGuestOrRedirect = (
   }
 }
 
-export const getSessionContext = async (
+const getSessionContext = async (
   request: Request,
   env: Env
 ): Promise<{

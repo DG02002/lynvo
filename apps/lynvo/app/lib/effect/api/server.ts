@@ -19,7 +19,7 @@ import * as Etag from "effect/unstable/http/Etag"
 import * as HttpPlatform from "effect/unstable/http/HttpPlatform"
 import { resolveSessionContext } from "../../../../workers/d1/sessions"
 
-export const WebAuthLive = Layer.succeed(
+const WebAuthLive = Layer.succeed(
   WebAuth,
   WebAuth.of((httpEffect) =>
     Effect.gen(function* () {
@@ -65,7 +65,7 @@ export const WebAuthLive = Layer.succeed(
   )
 )
 
-export const CsrfLive = Layer.succeed(
+const CsrfLive = Layer.succeed(
   CsrfMiddleware,
   CsrfMiddleware.of((httpEffect) =>
     Effect.gen(function* () {

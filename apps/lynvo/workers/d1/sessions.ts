@@ -145,7 +145,7 @@ export const createSession = async (
   return record
 }
 
-export const ensureSession = async (
+const ensureSession = async (
   database: D1Database,
   input: EnsureSessionInput
 ): Promise<SessionRecord> => {

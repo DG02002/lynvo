@@ -3,7 +3,7 @@ import type {
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import { mergeDefinedMeta } from "~/features/links/links.mapper"
+import { mergeDefinedMeta } from "~/features/links/link-metadata-normalization"
 import {
   getLinkViewItemSourceId,
   getLinkViewItemPluginServerId,

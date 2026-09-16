@@ -2,7 +2,11 @@ import { existsSync } from "node:fs"
 import { relative, sep } from "node:path"
 
 const sourceFilePattern = /\.(?:c|m)?[jt]sx?$/
-const ignoredPathPrefixes = ["apps/lynvo/app/components/ui/"]
+const ignoredPathPrefixes = [
+  "apps/lynvo/app/components/ui/",
+  ".repos/",
+  "tools/oxlint/anti-slop/",
+]
 const ignoredFileNames = new Set(["worker-configuration.d.ts"])
 
 const getRelativePath = (absolutePath) =>

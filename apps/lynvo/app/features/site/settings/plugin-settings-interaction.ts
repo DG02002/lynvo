@@ -36,7 +36,7 @@ export interface CustomPluginServer {
   lastManifestRefreshAt?: number | null
 }
 
-export interface CreatePluginDomainInput {
+interface CreatePluginDomainInput {
   readonly domain: string
   readonly pluginId: string
   readonly username?: string

@@ -1,4 +1,4 @@
-import { createLinkMetadata } from "~/features/links/links.mapper"
+import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import {
   getLinkViewItemFlatMeta,
   getLinkViewItemMetadata,

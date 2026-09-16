@@ -28,7 +28,7 @@ export const LEDGER_DOMAIN_COLUMNS = {
   pluginCredentialBytes: "plugin_credential_bytes",
 } as const
 
-export type StorageLedgerDomain = keyof typeof LEDGER_DOMAIN_COLUMNS
+type StorageLedgerDomain = keyof typeof LEDGER_DOMAIN_COLUMNS
 
 export interface AppOwnedStorageUsage {
   readonly profileBytes: number
@@ -220,7 +220,7 @@ export const ensureStorageLedger = async (
   }
 }
 
-export interface LedgerMutationPlan {
+interface LedgerMutationPlan {
   readonly domain: StorageLedgerDomain
   readonly currentBytes: number
   readonly nextBytes: number

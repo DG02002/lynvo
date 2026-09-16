@@ -1,4 +1,4 @@
-import { withOpenedUrl } from "~/features/links/links.mapper"
+import { withOpenedUrl } from "~/features/links/link-playback-metadata"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import type { LinkViewItem } from "~/features/links/types"
 import { createUpdatedItemFromMetadata } from "./link-items"

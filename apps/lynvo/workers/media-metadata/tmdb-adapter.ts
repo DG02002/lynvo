@@ -69,12 +69,12 @@ export interface TmdbSearchResult {
   readonly overview?: string
 }
 
-export interface TmdbSeasonSummary {
+interface TmdbSeasonSummary {
   readonly seasonNumber: number
   readonly name: string
 }
 
-export interface TmdbMediaMetadata {
+interface TmdbMediaMetadata {
   readonly kind: "movie" | "tv" | "season" | "episode"
   readonly providerId: number
   readonly title: string
@@ -88,21 +88,11 @@ export interface TmdbMediaMetadata {
   readonly attribution: "TMDB"
 }
 
-export interface TmdbAdapterSuccess<Value> {
-  readonly kind: "success"
-  readonly value: Value
-}
-
-export interface TmdbAdapterFailure {
+interface TmdbAdapterFailure {
   readonly kind: "failure"
   readonly failureKind: "rate-limited" | "retryable" | "permanent"
   readonly message: string
   readonly retryAt?: number
-}
-
-export interface TmdbAdapterDisabled {
-  readonly kind: "disabled"
-  readonly message: string
 }
 
 export interface TmdbAdapterDependencies {
@@ -143,7 +133,7 @@ export interface TmdbAdapter {
   ) => Promise<TmdbAdapterResult<TmdbMediaMetadata>>
 }
 
-export interface TmdbEpisodeDetailsRequest {
+interface TmdbEpisodeDetailsRequest {
   readonly providerId: number
   readonly seasonNumber: number
   readonly episodeNumber: number
@@ -151,13 +141,16 @@ export interface TmdbEpisodeDetailsRequest {
   readonly episodeGroupNumber?: number
 }
 
-export interface TmdbAdapterResult<Value> {
-  readonly kind: "success" | "disabled" | "failure"
-  readonly value?: Value
-  readonly failureKind?: TmdbAdapterFailure["failureKind"]
-  readonly message?: string
-  readonly retryAt?: number
-}
+type TmdbAdapterResult<Value> =
+  | {
+      readonly kind: "success"
+      readonly value: Value
+    }
+  | {
+      readonly kind: "disabled"
+      readonly message: string
+    }
+  | TmdbAdapterFailure
 
 const searchPayloadSchema = Schema.Struct({
   results: Schema.optional(
@@ -417,23 +410,8 @@ export const createTmdbAdapter = (
       `/search/${endpoint}?${query.toString()}`,
       searchPayloadSchema
     )
-    if (response.kind === "disabled") {
-      return { kind: "disabled", message: response.message }
-    }
-    if (response.kind === "failure") {
-      return {
-        kind: "failure",
-        failureKind: response.failureKind,
-        message: response.message,
-        retryAt: response.retryAt,
-      }
-    }
-    if (!response.value) {
-      return {
-        kind: "failure",
-        failureKind: "permanent",
-        message: "TMDB returned an empty search response",
-      }
+    if (response.kind !== "success") {
+      return response
     }
     return {
       kind: "success",
@@ -453,23 +431,8 @@ export const createTmdbAdapter = (
       path,
       detailsPayloadSchema
     )
-    if (response.kind === "disabled") {
-      return { kind: "disabled", message: response.message }
-    }
-    if (response.kind === "failure") {
-      return {
-        kind: "failure",
-        failureKind: response.failureKind,
-        message: response.message,
-        retryAt: response.retryAt,
-      }
-    }
-    if (!response.value) {
-      return {
-        kind: "failure",
-        failureKind: "permanent",
-        message: "TMDB returned an empty details response",
-      }
+    if (response.kind !== "success") {
+      return response
     }
     const value = toMediaMetadata(response.value, kind, providerId)
     return value
@@ -496,15 +459,8 @@ export const createTmdbAdapter = (
       `/tv/${providerId}/episode_groups`,
       episodeGroupListPayloadSchema
     )
-    if (groupList.kind !== "success" || !groupList.value) {
-      return groupList.kind === "disabled"
-        ? { kind: "disabled", message: groupList.message }
-        : {
-            kind: "failure",
-            failureKind: groupList.failureKind ?? "permanent",
-            message: groupList.message ?? "TMDB episode groups are unavailable",
-            retryAt: groupList.retryAt,
-          }
+    if (groupList.kind !== "success") {
+      return groupList
     }
     const normalizedGroupName = episodeGroupName
       ?.normalize("NFKC")
@@ -540,16 +496,8 @@ export const createTmdbAdapter = (
       `/tv/episode_group/${episodeGroup.id}`,
       episodeGroupPayloadSchema
     )
-    if (episodeGroups.kind !== "success" || !episodeGroups.value) {
-      return episodeGroups.kind === "disabled"
-        ? { kind: "disabled", message: episodeGroups.message }
-        : {
-            kind: "failure",
-            failureKind: episodeGroups.failureKind ?? "permanent",
-            message:
-              episodeGroups.message ?? "TMDB episode group is unavailable",
-            retryAt: episodeGroups.retryAt,
-          }
+    if (episodeGroups.kind !== "success") {
+      return episodeGroups
     }
     const part = (episodeGroups.value.groups ?? []).find(
       (group) =>
@@ -617,23 +565,8 @@ export const createTmdbAdapter = (
         `/tv/${providerId}`,
         tvSeasonListPayloadSchema
       )
-      if (response.kind === "disabled") {
-        return { kind: "disabled", message: response.message }
-      }
-      if (response.kind === "failure") {
-        return {
-          kind: "failure",
-          failureKind: response.failureKind,
-          message: response.message,
-          retryAt: response.retryAt,
-        }
-      }
-      if (!response.value) {
-        return {
-          kind: "failure",
-          failureKind: "permanent",
-          message: "TMDB returned an empty season list response",
-        }
+      if (response.kind !== "success") {
+        return response
       }
       const seasons = (response.value.seasons ?? []).flatMap((season) => {
         const seasonNumber = season.season_number

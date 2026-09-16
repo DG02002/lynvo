@@ -47,7 +47,7 @@ export const mergeDefinedMeta = (
   ),
 })
 
-export const LINK_DEBUG_LOG_ENTRY_LIMIT = 20
+const LINK_DEBUG_LOG_ENTRY_LIMIT = 20
 
 export const appendLinkDebugLog = (
   previous: LinkMetadata | undefined,
