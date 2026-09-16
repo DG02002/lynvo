@@ -38,7 +38,7 @@
   "overrides": [
     {
       "files": [
-        "apps/lynvo-plugin-server/**"
+        "apps/lynvo-plugin-server/src/**"
       ],
       "rules": {
         "react-hooks/rules-of-hooks": "off",
