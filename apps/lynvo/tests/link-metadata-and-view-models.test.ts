@@ -19,7 +19,7 @@ const playableLink = (id: string, url: string, label: string) => ({
   mediaNodeKind: "playable" as const,
 })
 
-describe("links mapper metadata boundary", () => {
+describe("link metadata and view model boundary", () => {
   it("rejects invalid JSON metadata", () => {
     expect(() => parseLinkMetadata("not-json")).toThrow()
   })

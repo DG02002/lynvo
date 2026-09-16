@@ -17,8 +17,10 @@
         "scripts/**/*.{ts,mjs}"
       ],
       "project": [
-        "scripts/**/*.{ts,mjs}",
         "tools/**/*.ts"
+      ],
+      "ignore": [
+        "tools/oxlint/anti-slop/**"
       ]
     },
     "apps/lynvo": {
@@ -36,16 +38,13 @@
         "app/**/*.{ts,tsx,mdx}",
         "shared/**/*.ts",
         "workers/**/*.ts",
-        "tests/**/*.{ts,tsx}",
-        "scripts/*.{mjs,ts}",
         "*.ts"
       ],
-      "ignoreDependencies": [
-        "input-otp"
-      ],
-      "ignore": [
-        "app/components/ui/**"
-      ]
+      "ignoreIssues": {
+        "app/components/ui/**/*.tsx": [
+          "exports"
+        ]
+      }
     },
     "apps/lynvo-plugin-server": {
       "entry": [
@@ -55,8 +54,6 @@
       ],
       "project": [
         "src/**/*.ts",
-        "tests/**/*.ts",
-        "scripts/*.mjs",
         "*.ts"
       ]
     },
@@ -66,9 +63,7 @@
         "tests/**/*.ts"
       ],
       "project": [
-        "src/**/*.ts",
-        "tests/**/*.ts",
-        "scripts/*.mjs"
+        "src/**/*.ts"
       ]
     },
     "packages/create-lynvo-plugin-server": {
@@ -78,9 +73,7 @@
         "tests/*.mjs"
       ],
       "project": [
-        "bin/**",
-        "scripts/**",
-        "tests/**"
+        "bin/**"
       ]
     },
     "packages/create-lynvo-plugin-server/template": {
@@ -91,8 +84,6 @@
       ],
       "project": [
         "src/**/*.{ts,tsx}",
-        "tests/**/*.{ts,tsx}",
-        "scripts/*.mjs",
         "*.ts"
       ],
       "ignoreBinaries": [
