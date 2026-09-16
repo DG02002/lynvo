@@ -189,9 +189,16 @@ pnpm build
 pnpm check:plugin-server-release
 ```
 
-The checks cover formatting, lint, type generation and typechecking, browser
-tests, Worker tests, builds, and the standalone generated Plugin Server smoke
-test. `pnpm build` produces dry-run artifacts; it does not deploy them.
+The checks cover formatting, lint, unused-code detection (knip), type
+generation and typechecking, browser tests, Worker tests, builds, and the
+standalone generated Plugin Server smoke test. `pnpm build` produces dry-run
+artifacts; it does not deploy them.
+
+Knip scans generated shadcn UI files for unused files while ignoring export
+noise inside them. Vendored code stays outside its scope: `.repos/**` is
+ignored and `tools/oxlint/anti-slop/**` belongs to no Knip project. Resolve a
+finding in vendored code by excluding it in configuration, never by editing
+the file.
 
 For a docs-only change, check changed repository links and run the affected
 in-app documentation tests. Do not deploy as a verification step.
