@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import { useCurrentTimeMs } from "~/lib/use-coarse-time-bucket"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AlertCircleIcon,
@@ -214,10 +215,11 @@ export const HybridGroupBrowser = ({
   group,
   actions,
   extractingItems,
-  currentTimeMs = Date.now(),
+  currentTimeMs: currentTimeMsInput,
   onExit,
   onOpenItem,
 }: HybridGroupBrowserProps) => {
+  const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("episode")
   const itemLabels = useMemo(
     () => group.items.map((item) => getHybridItemLabel(item)),

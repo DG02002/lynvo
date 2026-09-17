@@ -26,7 +26,7 @@ export function MobilePageOutline({
 }) {
   const panelId = useId()
   const [open, setOpen] = useState(false)
-  const [visible, setVisible] = useState(!revealAfterSelector)
+  const [revealedByScroll, setRevealedByScroll] = useState(false)
   const headings = useDocumentHeadings(providedHeadings, targetId)
   const [activeHeadingId, setActiveHeadingId] = useActiveHeadingTracker(
     headings,
@@ -35,10 +35,10 @@ export function MobilePageOutline({
   const handleHeadingClick = useHeadingClickHandler(setActiveHeadingId, () =>
     setOpen(false)
   )
+  const visible = !revealAfterSelector || revealedByScroll
 
   useEffect(() => {
     if (!revealAfterSelector) {
-      setVisible(true)
       return
     }
 
@@ -51,7 +51,7 @@ export function MobilePageOutline({
         revealAfter instanceof HTMLElement &&
         revealAfter.getBoundingClientRect().bottom <= getHeaderHeight()
 
-      setVisible(nextVisible)
+      setRevealedByScroll(nextVisible)
       if (!nextVisible) {
         setOpen(false)
       }

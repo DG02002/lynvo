@@ -164,7 +164,7 @@ const renderExtractionStatusChildren = (
       </div>
     )
   }
-  return <>{children}</>
+  return children
 }
 
 export const ExtractionStatusTitle = ({

@@ -52,7 +52,7 @@ const stripMediaExtension = (filename: string): string =>
   filename.replace(MEDIA_EXTENSION_PATTERN, "")
 
 const normalizeSeparators = (value: string): string =>
-  value.replace(/[._]+/g, " ").replace(/\s+/g, " ").trim()
+  value.replaceAll(/[._]+/g, " ").replaceAll(/\s+/g, " ").trim()
 
 const getMatchingText = (filename: string): string =>
   normalizeSeparators(stripMediaExtension(filename))
@@ -112,14 +112,14 @@ const normalizeTitle = (value: string): string | undefined => {
   const withoutReleaseGroups = value.replace(/^\s*(?:\[[^\]]+\]\s*)+/, "")
   const withoutTechnicalTail = withoutReleaseGroups
     .replace(TECHNICAL_TOKEN_PATTERN, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim()
   const withoutDanglingPunctuation = withoutTechnicalTail
-    .replace(/^[\s[({\-_,.]+|[\s\])}({\-_,.]+$/g, "")
+    .replaceAll(/^[\s[({\-_,.]+|[\s\])}({\-_,.]+$/g, "")
     .trim()
   const normalized = withoutDanglingPunctuation
-    .replace(/(?<=\w)-(?=\w)/g, " ")
-    .replace(/\s+/g, " ")
+    .replaceAll(/(?<=\w)-(?=\w)/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim()
   if (!normalized || GENERIC_TITLE_PATTERN.test(normalized)) {
     return undefined
@@ -131,9 +131,9 @@ const getNormalizedTitleIdentity = (title: string): string =>
   title
     .normalize("NFKC")
     .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
 
 const getFilenameEpisodeTitle = (suffix: string): string | undefined => {
   const technicalStart = TECHNICAL_TOKEN_PATTERN.exec(suffix)?.index

@@ -164,6 +164,9 @@ export const useSaveActions = ({
         continue
       }
 
+      // The suggestion state is only set after the awaited availability
+      // check inside offerPluginDomainSuggestion, never synchronously.
+      // oxlint-disable-next-line react/set-state-in-effect
       void offerPluginDomainSuggestion(
         createPluginDomainSuggestion(
           parsePluginDomainCandidate(completedQueuedItem.url),

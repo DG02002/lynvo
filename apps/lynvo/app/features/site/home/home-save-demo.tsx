@@ -40,6 +40,7 @@ import {
 import { useAnimationActivity } from "./use-animation-activity"
 
 interface HomeDemoItem {
+  id: string
   icon: typeof PlayIcon
   title: string
   detail: string
@@ -99,18 +100,21 @@ interface DemoRemoveDialogProps {
 
 const HOME_DEMO_ITEMS: HomeDemoItem[] = [
   {
+    id: "midnight-relay",
     icon: PlayIcon,
     title: "Midnight Relay — Episode 06 · 1080p",
     detail: "Direct Media",
     isOpened: true,
   },
   {
+    id: "glass-frontier",
     icon: PackageSearchIcon,
     title: "The Glass Frontier — Chapter 12 · 1080p",
     detail: "Lynvo Plugin Server",
     meta: "2.4 GB",
   },
   {
+    id: "northstar-files",
     icon: Folder01Icon,
     title: "Northstar Files — Season 01",
     detail: "Open collection",
@@ -120,6 +124,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
 ]
 
 const CREATED_HOME_DEMO_ITEM: HomeDemoItem = {
+  id: "aurora-station",
   icon: PlayIcon,
   title: "Aurora Station — Episode 03 · 1080p",
   detail: "Direct Media",
@@ -484,9 +489,9 @@ export const HomeSaveDemo = () => {
           </div>
 
           <section className="relative border-t">
-            {visibleHomeDemoItems.map((item, itemIndex) => (
+            {visibleHomeDemoItems.map((item) => (
               <DemoLibraryItem
-                key={`home-demo-library-slot-${itemIndex}`}
+                key={`home-demo-library-item-${item.id}`}
                 item={item}
                 menuTriggerRef={item.isNew ? menuTriggerRef : undefined}
                 isMenuTriggerPressed={item.isNew && isMenuTriggerPressed}

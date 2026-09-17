@@ -35,6 +35,9 @@ export const usePlaybackActions = ({
       }
     },
     [
+      // exhaustive-deps requires these inputs, while memo-dependencies
+      // incorrectly treats the context values as removable.
+      // oxlint-disable-next-line react/memo-dependencies
       activeSessionId,
       isOpeningRef,
       playerPreferenceUserId,

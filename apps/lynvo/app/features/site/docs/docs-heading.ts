@@ -35,8 +35,8 @@ export const createHeadingId = (heading: string) =>
   removeHtmlLikeTags(
     heading
       .toLowerCase()
-      .replace(/[`*_~]/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replaceAll(/[`*_~]/g, "")
+      .replaceAll(/\[([^\]]+)\]\([^)]+\)/g, "$1")
   )
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/(^-|-$)/g, "")

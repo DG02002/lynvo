@@ -4,8 +4,8 @@ import {
 } from "@testing-library/react"
 import {
   createContext,
+  useMemo,
   useContext,
-  useState,
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
@@ -24,10 +24,12 @@ export const renderWithMemoryRouter = (
     ? initialEntries
     : [initialEntries]
   const RouterWrapper = ({ children }: PropsWithChildren) => {
-    const [router] = useState(() =>
-      createMemoryRouter([{ path: "*", element: <RenderedContent /> }], {
-        initialEntries: initialEntryList,
-      })
+    const router = useMemo(
+      () =>
+        createMemoryRouter([{ path: "*", element: <RenderedContent /> }], {
+          initialEntries: initialEntryList,
+        }),
+      []
     )
     return (
       <RenderedContentContext.Provider value={children}>

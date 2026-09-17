@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { useAnimationActivity } from "./use-animation-activity"
 
@@ -8,6 +8,8 @@ const PLAYER_PREVIEWS = {
   mpv: "/images/player-previews/mpv-player.webp",
   mx: "/images/player-previews/mx-player.webp",
 } satisfies Partial<Record<(typeof PLAYER_DEFINITIONS)[number]["id"], string>>
+
+const INITIAL_PLAYER_ORDER = PLAYER_DEFINITIONS.map((_, index) => index)
 
 type Slot = {
   depth: number
@@ -150,10 +152,7 @@ export const PlayerCardSwap = () => {
   const { animationContainerRef, isAnimationActive } =
     useAnimationActivity<HTMLUListElement>()
   const cardRefs = useRef<Array<HTMLElement | null>>([])
-  const [initialOrder] = useState(() =>
-    PLAYER_DEFINITIONS.map((_, index) => index)
-  )
-  const orderRef = useRef(initialOrder)
+  const orderRef = useRef(INITIAL_PLAYER_ORDER)
   const timerRef = useRef<number | undefined>(undefined)
   const runningRef = useRef(false)
   const pausedRef = useRef(false)

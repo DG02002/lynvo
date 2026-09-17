@@ -25,7 +25,7 @@ const LinkDebugLogDialog = ({
   open,
   onOpenChange,
 }: LinkDebugLogDialogProps) => {
-  const [highlightedLog, setHighlightedLog] = useState<string | undefined>()
+  const [highlightedResult, setHighlightedResult] = useState<string>()
   const debugLog = item ? getLinkViewItemMetadata(item).debugLog : undefined
   const hasLog = Boolean(debugLog && debugLog.length > 0)
   const serializedLog = JSON.stringify(
@@ -42,19 +42,21 @@ const LinkDebugLogDialog = ({
 
   useEffect(() => {
     if (!open || !hasLog) {
-      setHighlightedLog(undefined)
       return
     }
     let cancelled = false
     void highlightLogJson(serializedLog).then((html) => {
       if (!cancelled) {
-        setHighlightedLog(html)
+        setHighlightedResult(html)
       }
     })
     return () => {
       cancelled = true
     }
   }, [open, hasLog, serializedLog])
+
+  // Stale highlights from a previous log or a closed dialog never render.
+  const highlightedLog = open && hasLog ? highlightedResult : undefined
 
   const handleCopy = async () => {
     try {

@@ -40,6 +40,9 @@ export const PlayerEdgeCarousel = () => {
     }
 
     const elapsed = (Date.now() - trackStartedAt) % LOOP_DURATION
+    // Mount-only animation seed persisted in localStorage; computing it
+    // during render would break server rendering.
+    // oxlint-disable-next-line react/set-state-in-effect
     setAnimationDelay(-elapsed)
   }, [])
 

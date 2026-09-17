@@ -30,16 +30,16 @@ export function ClipboardPermissionDialog({
   onOpenChange,
   onAllow,
 }: ClipboardPermissionDialogProps) {
-  const [step, setStep] = React.useState(0)
+  const [carouselStep, setCarouselStep] = React.useState(0)
   const [isAllowing, setIsAllowing] = React.useState(false)
+  const step = open ? carouselStep : 0
 
   React.useEffect(() => {
     if (!open) {
-      setStep(0)
       return
     }
     const interval = window.setInterval(
-      () => setStep((current) => (current + 1) % 3),
+      () => setCarouselStep((current) => (current + 1) % 3),
       1900
     )
     return () => window.clearInterval(interval)

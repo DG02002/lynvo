@@ -79,6 +79,9 @@ export function RealtimeProvider({
     onSessionRevoked,
     openSocket,
     receiveMessage,
+    // Reopen the socket when the server rotates the session identity, even
+    // though the socket callbacks only need the account identity.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
     sessionId,
     userId,
   ])

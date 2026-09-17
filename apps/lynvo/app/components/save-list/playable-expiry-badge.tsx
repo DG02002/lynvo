@@ -17,15 +17,15 @@ export const PlayableExpiryBadge = ({
   expiresAt,
   expirySource,
 }: PlayableExpiryBadgeProps) => {
-  useMinuteTimeBucket()
+  const currentTimeMs = useMinuteTimeBucket()
 
   const label = formatPlayableExpiry(expiresAt)
-  const isExpired = expiresAt <= Date.now()
+  const isExpired = expiresAt <= currentTimeMs
   const isEstimated =
     expirySource === "cache-control" || expirySource === "expires-header"
   const displayLabel = formatPlayableValidity(
     expiresAt,
-    Date.now(),
+    currentTimeMs,
     isEstimated
   )
   const accessibleLabel = isEstimated ? `Estimated: ${label}` : label

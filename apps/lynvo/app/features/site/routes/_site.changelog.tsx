@@ -115,6 +115,13 @@ const ChangelogDescription = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const descriptionRef = useRef<HTMLDivElement>(null)
+  const paragraphOccurrences = new Map<string, number>()
+
+  const getParagraphKey = (paragraph: string): string => {
+    const occurrence = paragraphOccurrences.get(paragraph) ?? 0
+    paragraphOccurrences.set(paragraph, occurrence + 1)
+    return `${id}-${paragraph}-${occurrence}`
+  }
 
   useLayoutEffect(() => {
     if (isExpanded) {
@@ -140,7 +147,13 @@ const ChangelogDescription = ({
     resizeObserver.observe(element)
 
     return () => resizeObserver.disconnect()
-  }, [description, isExpanded])
+  }, [
+    // Re-measure after the rendered paragraphs change, even though the effect
+    // only reads their layout through the DOM ref.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    description,
+    isExpanded,
+  ])
 
   return (
     <div className="flex flex-col items-start gap-2">
@@ -152,8 +165,8 @@ const ChangelogDescription = ({
           !isExpanded && "line-clamp-3"
         )}
       >
-        {description.map((paragraph, index) => (
-          <p key={`${id}-${index}`}>{paragraph}</p>
+        {description.map((paragraph) => (
+          <p key={getParagraphKey(paragraph)}>{paragraph}</p>
         ))}
       </div>
       {isOverflowing ? (

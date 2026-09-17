@@ -1,4 +1,5 @@
 import React from "react"
+import { useCurrentTimeMs } from "~/lib/use-coarse-time-bucket"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -384,10 +385,11 @@ export const HybridSaveGrid = ({
   extractingItems,
   isHydrating,
   highlightedId,
-  currentTimeMs = Date.now(),
+  currentTimeMs: currentTimeMsInput,
   onOpenItem,
   onOpenGroup,
 }: HybridSaveGridProps) => {
+  const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
     return <SaveListLoadingState label="Loading saved links…" />
   }

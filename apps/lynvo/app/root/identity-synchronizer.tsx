@@ -131,6 +131,9 @@ export const IdentitySynchronizer = ({
 
   return (
     <SessionIdentityContext.Provider value={ensureFreshIdentity}>
+      {/* The render prop consumes this only from event callbacks
+          (onConnectionOpen); no ref is read during render. */}
+      {/* oxlint-disable-next-line react/refs */}
       {children(ensureIdentityIsSafe)}
     </SessionIdentityContext.Provider>
   )

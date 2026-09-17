@@ -5,8 +5,18 @@ import { PageTableOfContents } from "~/components/page-table-of-contents"
 const createPolicySectionId = (title: string) =>
   title
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/(^-|-$)/g, "")
+
+const flattenPolicyChildren = (
+  children: React.ReactNode
+): React.ReactNode[] => {
+  if (!Array.isArray(children)) {
+    return [children]
+  }
+
+  return children.flatMap(flattenPolicyChildren)
+}
 
 interface PolicyLayoutProps {
   title: string
@@ -19,7 +29,8 @@ export function PolicyLayout({
   updatedAt,
   children,
 }: PolicyLayoutProps) {
-  const outlineHeadings = React.Children.toArray(children).flatMap((child) => {
+  const policyChildren = flattenPolicyChildren(children)
+  const outlineHeadings = policyChildren.flatMap((child) => {
     if (
       !React.isValidElement<{ title?: string }>(child) ||
       child.type !== PolicySection ||
