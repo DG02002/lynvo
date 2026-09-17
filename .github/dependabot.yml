@@ -10,6 +10,10 @@ updates:
     cooldown:
       default-days: 8
     open-pull-requests-limit: 5
+    ignore:
+      # @cloudflare/vitest-plugin only supports vitest ^4.1.0; drop this when v5 is supported.
+      - dependency-name: vitest
+        versions: ["5.x"]
     groups:
       npm-dependencies:
         patterns:
