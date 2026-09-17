@@ -7,13 +7,13 @@ const taggedSaveErrorSchema = Schema.Struct({
   message: Schema.optional(Schema.String),
 })
 
-export const getSaveErrorMessage = <Value>(error: Value): string => {
-  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(error)
+export const getSaveErrorMessage = (cause: unknown): string => {
+  const knownExtractionErrorMessage = getKnownExtractionErrorMessage(cause)
   if (knownExtractionErrorMessage) {
     return knownExtractionErrorMessage
   }
 
-  const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(error)
+  const parsedError = Schema.decodeUnknownResult(taggedSaveErrorSchema)(cause)
   if (Result.isFailure(parsedError)) {
     return "The link couldn’t be opened. Check the link, then try again."
   }
@@ -34,7 +34,7 @@ export const getSaveErrorMessage = <Value>(error: Value): string => {
   }
 
   return getUserFacingErrorMessage(
-    error,
+    cause,
     "The link couldn’t be opened. Check the link, then try again."
   )
 }

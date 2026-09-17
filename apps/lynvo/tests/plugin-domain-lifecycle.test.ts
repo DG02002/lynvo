@@ -155,6 +155,7 @@ describe("Plugin Domain lifecycle", () => {
 
   it("decrypts only with the exact owning context", async () => {
     // SAFETY: The credential vault only reads the encryption-key binding supplied here.
+    // oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- false positive: CloudflareEnv's service type is the ambient Env interface, which tsgolint's fallback project cannot resolve for tests/ (no tsconfig includes tests), so the receiver looks like any. In a resolved program the cast is load-bearing: the literal provides one binding of the required Env shape.
     const environmentLayer = Layer.succeed(CloudflareEnv, {
       PLUGIN_CREDENTIAL_ENCRYPTION_KEY: btoa(
         "0123456789abcdef0123456789abcdef"

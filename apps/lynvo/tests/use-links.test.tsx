@@ -5,6 +5,7 @@ import type { RealtimeContextValue } from "~/context/realtime-context"
 import { useLinksWithRuntime } from "~/features/links/use-links"
 import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
 import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+import { requestUrl } from "./support/request-inspection"
 
 const realtime = {
   status: "connected" as const,
@@ -61,7 +62,13 @@ const fetchResponses = vi.fn()
 
 vi.stubGlobal("fetch", vi.fn(fetchResponses))
 
-const respondJson = <Body,>(body: Body, headers: Record<string, string> = {}) =>
+const respondJson = (
+  body:
+    | { links: unknown[] }
+    | { id: string; replayed: boolean; dataVersion: number }
+    | { success: boolean; replayed: boolean; dataVersion: number },
+  headers: Record<string, string> = {}
+) =>
   new Response(JSON.stringify(body), {
     status: 200,
     headers: { "Content-Type": "application/json", ...headers },
@@ -72,7 +79,7 @@ describe("useLinks", () => {
     clearLinksSnapshotStores()
     vi.clearAllMocks()
     fetchResponses.mockImplementation(async (input: RequestInfo | URL) => {
-      const path = String(input)
+      const path = requestUrl(input)
       if (path === "/api/data/links") {
         return respondJson(
           { links: [serverRecord("link-native")] },
@@ -176,7 +183,7 @@ describe("useLinks", () => {
   })
 
   it("refreshes when realtime reports a newer data version", async () => {
-    let notify: Parameters<RealtimeContextValue["subscribe"]>[0] | undefined
+    let notify: ((message: RealtimeMessage) => void) | undefined
     const realtimeWithListener: RealtimeContextValue = {
       ...realtime,
       subscribe: vi.fn((listener) => {

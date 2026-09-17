@@ -83,7 +83,7 @@ const useExtractionStatusLifecycle = ({
 
   useEffect(() => {
     if (!isWaiting || prefersReducedMotion) {
-      return
+      return undefined
     }
 
     const intervalId = window.setInterval(() => {

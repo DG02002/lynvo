@@ -28,7 +28,7 @@ const createUser = async () =>
     now: NOW,
   })
 
-const emptyMetadataJson = <Source>(source?: Source) =>
+const emptyMetadataJson = (source?: { readonly [key: string]: string }) =>
   JSON.stringify({
     schemaVersion: 3,
     source: source ?? {},

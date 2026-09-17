@@ -16,7 +16,12 @@ const TEST_ENCRYPTION_KEY = btoa("0123456789abcdef0123456789abcdef")
 // SAFETY: The vault constructor does not read Durable Object state in these direct fetch tests.
 const createState = (): DurableObjectState => ({}) as DurableObjectState
 
-const request = <Body>(path: string, body: Body) =>
+const request = (
+  path: string,
+  body:
+    | { userId: string; pluginServerId: string; apiKey: string }
+    | { userId: string; pluginServerId: string; credential: unknown }
+) =>
   new Request(`https://credential-vault.internal${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

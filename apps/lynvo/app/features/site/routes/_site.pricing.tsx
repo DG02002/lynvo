@@ -180,7 +180,7 @@ export default function Pricing() {
     const comparisonEnd = comparisonEndRef.current
 
     if (!comparisonTable || !comparisonEnd) {
-      return
+      return undefined
     }
 
     const tableObserver = new IntersectionObserver(([entry]) => {

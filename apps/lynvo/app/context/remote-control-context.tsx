@@ -103,7 +103,7 @@ export const RemoteControlProviderContent = ({
   )
   useEffect(() => {
     if (!user?.sessionId) {
-      return
+      return undefined
     }
     const poll = () => {
       if (navigator.onLine) {

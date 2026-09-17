@@ -5,7 +5,8 @@ import { MobilePageOutline } from "../app/components/mobile-page-outline"
 describe("MobilePageOutline", () => {
   it("expands supplied headings and collapses after navigation", () => {
     document.body.innerHTML = '<h2 id="first-section">First section</h2>'
-    Element.prototype.scrollIntoView = vi.fn()
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
     window.matchMedia = vi.fn().mockReturnValue({ matches: true })
 
     render(
@@ -33,7 +34,7 @@ describe("MobilePageOutline", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false")
     expect(panel).toHaveAttribute("aria-hidden", "true")
     expect(panel).toHaveClass("opacity-0")
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+    expect(scrollIntoView).toHaveBeenCalled()
   })
 
   it("discovers policy headings from the target content", async () => {

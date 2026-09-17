@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Result, Schema } from "effect"
-import type { NavigationType } from "react-router"
+import { NavigationType } from "react-router"
 
 const BROWSER_HISTORY_OFFSET_KEY = "__lynvoHistoryOffset"
 
@@ -93,12 +93,12 @@ export const useFinderFolderHistory = ({
         (entry) => entry.key === previousHistoryKey
       )
 
-      if (navigationType === "PUSH") {
+      if (navigationType === NavigationType.Push) {
         const nextEntries = currentEntries.slice(0, previousIndex + 1)
         nextEntries.push(currentEntry)
         return nextEntries
       }
-      if (navigationType === "REPLACE") {
+      if (navigationType === NavigationType.Replace) {
         if (previousIndex === -1) {
           return [currentEntry]
         }

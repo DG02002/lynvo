@@ -212,6 +212,7 @@ export const useSaveActions = ({
         vibrateSaveSuccess()
         return result.pluginDomainSuggestion
     }
+    return undefined
   }
 
   const applyConfirmSaveIntentResult = (
@@ -237,6 +238,7 @@ export const useSaveActions = ({
         vibrateSaveSuccess()
         return result.pluginDomainSuggestion
     }
+    return undefined
   }
 
   const handleSave = async (overrideUrl?: string) => {

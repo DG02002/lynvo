@@ -157,12 +157,12 @@ const useFilenameMeasurement = (
 
   React.useLayoutEffect(() => {
     if (isExpanded) {
-      return
+      return undefined
     }
 
     const textElement = containerRef.current
     if (!textElement) {
-      return
+      return undefined
     }
 
     const updateOverflowState = () => {

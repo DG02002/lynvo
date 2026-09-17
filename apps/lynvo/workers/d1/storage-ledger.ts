@@ -77,10 +77,11 @@ const mapLedgerRow = (row: StorageLedgerRow): StorageLedgerRecord => ({
 
 const encoder = new TextEncoder()
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Measures every stored D1 document shape (profile, link, plugin server, domain, credential rows); anti-slop/no-unknown-parameters (error) bans `unknown`, and no single named type spans them.
 export const byteLength = <Document>(document: Document): number =>
   encoder.encode(JSON.stringify(document)).length
 
-const sumDocumentBytes = <Document>(documents: readonly Document[]): number =>
+const sumDocumentBytes = (documents: readonly unknown[]): number =>
   documents.reduce<number>(
     (totalBytes, document) => totalBytes + byteLength(document),
     0

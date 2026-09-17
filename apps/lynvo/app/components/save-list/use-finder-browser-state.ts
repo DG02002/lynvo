@@ -11,6 +11,7 @@ import {
   useLocation,
   useNavigate,
   useNavigationType,
+  NavigationType,
   type BlockerFunction,
 } from "react-router"
 import { toLinkViewModel } from "~/features/links/link-view-models"
@@ -326,7 +327,7 @@ export const useFinderBrowserState = ({
 
   const shouldBlockFolderExit = useCallback<BlockerFunction>(
     ({ currentLocation, nextLocation, historyAction }) =>
-      historyAction === "POP" &&
+      historyAction === NavigationType.Pop &&
       visibleFolderPath.length > 0 &&
       currentLocation.pathname.startsWith(savePaths.folderPrefix) &&
       !nextLocation.pathname.startsWith(savePaths.folderPrefix),

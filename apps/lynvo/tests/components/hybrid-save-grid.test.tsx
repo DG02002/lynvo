@@ -223,7 +223,7 @@ describe("HybridSaveGrid", () => {
       clientX: 20,
       clientY: 20,
     })
-    act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
+    void act(() => vi.advanceTimersByTime(CARD_MENU_LONG_PRESS_DURATION_MS))
 
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
   })

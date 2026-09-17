@@ -51,7 +51,7 @@ describe("saved folder routes", () => {
       { wrapper }
     )
 
-    act(() => result.current.folder.openSavedFolder(savedFolder.url))
+    void act(() => result.current.folder.openSavedFolder(savedFolder.url))
 
     await waitFor(() =>
       expect(result.current.pathname).toBe(
@@ -60,7 +60,7 @@ describe("saved folder routes", () => {
     )
     expect(result.current.folder.selectedItemUrl).toBe(savedFolder.url)
 
-    act(() => result.current.folder.closeSavedFolder())
+    void act(() => result.current.folder.closeSavedFolder())
 
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
     expect(result.current.folder.selectedItemUrl).toBeNull()
@@ -87,17 +87,17 @@ describe("saved folder routes", () => {
       { wrapper }
     )
 
-    act(() => result.current.folder.openSavedFolder(savedFolder.url))
+    void act(() => result.current.folder.openSavedFolder(savedFolder.url))
     await waitFor(() =>
       expect(result.current.pathname).toBe(
         "/save/folder/6a7af70a-4fc4-83e8-bd0f-210360e3f50a"
       )
     )
 
-    act(() => result.current.folder.closeSavedFolder())
+    void act(() => result.current.folder.closeSavedFolder())
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
 
-    act(() => result.current.goBack())
+    void act(() => result.current.goBack())
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
   })
 

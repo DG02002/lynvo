@@ -8,7 +8,7 @@ describe("useExpiryClock", () => {
     const { result } = renderHook(() => useExpiryClock(2_000))
 
     expect(result.current).toBe(false)
-    act(() => vi.advanceTimersByTime(1_000))
+    void act(() => vi.advanceTimersByTime(1_000))
     expect(result.current).toBe(true)
     vi.useRealTimers()
   })

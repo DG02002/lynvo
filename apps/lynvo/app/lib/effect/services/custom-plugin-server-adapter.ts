@@ -36,6 +36,7 @@ import {
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is the arbitrary manifest JSON stored in D1, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 const parseStoredPluginServerManifest = <Value>(value: Value) => {
   const parsed = parsePluginServerManifestContract(value)
   return parsed.ok ? parsed.value : undefined

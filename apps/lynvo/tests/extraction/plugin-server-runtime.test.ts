@@ -11,7 +11,10 @@ interface TestEnv {
   validApiKey: string
 }
 
-const createRequest = <Body>(body: Body, apiKey = "secret") =>
+const createRequest = (
+  body: { input: { kind: string; sourceUrl: string } },
+  apiKey = "secret"
+) =>
   new Request("https://pluginServer.example/extract", {
     method: "POST",
     headers: {

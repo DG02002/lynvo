@@ -43,6 +43,7 @@ catalog:
   lint-staged: 17.5.0
   oxfmt: ^0.66.0
   oxlint: ^1.81.0
+  oxlint-tsgolint: 7.0.2001
   sharp: ^0.35.4
   tsx: ^4.23.13
   typescript: ^7.0.2

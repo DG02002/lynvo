@@ -10,6 +10,7 @@ import { createDeviceCode } from "../../workers/d1/device-auth"
 import { createSession } from "../../workers/d1/sessions"
 import { insertGoogleUser } from "../../workers/d1/users"
 import { createTestRateLimiter } from "../support/rate-limiter"
+import { readJsonInitBody } from "../support/request-inspection"
 
 const CLIENT_IP = "192.0.2.44"
 
@@ -78,7 +79,7 @@ describe("device auth Worker routes", () => {
       )
     )
     for (const { init } of limiter.calls) {
-      expect(JSON.parse(String(init?.body))).toMatchObject({
+      expect(readJsonInitBody(init)).toMatchObject({
         limit: DEVICE_APPROVAL_RATE_LIMIT,
         windowMs: DEVICE_APPROVAL_RATE_WINDOW_SECONDS * 1_000,
       })

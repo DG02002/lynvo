@@ -21,8 +21,9 @@ const DEFAULT_REALTIME_ATTACHMENT: TestRealtimeAttachment = {
   connectedAt: 1,
 }
 
-const runAlarm = async <Database>(
-  database: Database,
+const runAlarm = async (
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- false positive: tsgolint's fallback project for tests cannot resolve the ambient D1Database name (tsconfig.cloudflare.json excludes tests/), so the real @cloudflare/workers-types interface looks like an error type. The union is meaningful: runAlarm must accept an absent DB binding ("keeps sockets open when the database binding is absent").
+  database: D1Database | undefined,
   attachment: TestRealtimeAttachment = DEFAULT_REALTIME_ATTACHMENT,
   environment: DevelopmentAuthEnvironment = {}
 ) => {
@@ -49,17 +50,19 @@ const runAlarm = async <Database>(
   return { close, setAlarm }
 }
 
-const activeSessionDatabase = (activeSessionIds: string[]) => ({
-  prepare: (sql: string) => ({
-    bind: (...args: unknown[]) => ({
-      first: async () =>
-        sql.includes("FROM sessions") &&
-        activeSessionIds.includes(String(args[0]))
-          ? { id: args[0] }
-          : null,
+// SAFETY: the room alarm only runs the sessions lookup this double implements.
+const activeSessionDatabase = (activeSessionIds: string[]) =>
+  ({
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        first: async () =>
+          sql.includes("FROM sessions") &&
+          activeSessionIds.includes(String(args[0]))
+            ? { id: args[0] }
+            : null,
+      }),
     }),
-  }),
-})
+  }) as D1Database
 
 describe("UserRealtimeRoom session revalidation", () => {
   it("keeps the socket connected while the D1 session is active", async () => {

@@ -1,4 +1,7 @@
 {
+  "options": {
+    "typeAware": true
+  },
   "ignorePatterns": [
     ".agent/**",
     ".agents/**",
@@ -145,6 +148,7 @@
     "react/no-unescaped-entities": "warn",
     "unicorn/prefer-string-replace-all": "warn",
     "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-type-assertion": "off",
     "no-promise-executor-return": "error",
     "eqeqeq": "warn",
     "no-var": "warn",

@@ -125,12 +125,12 @@ const ChangelogDescription = ({
 
   useLayoutEffect(() => {
     if (isExpanded) {
-      return
+      return undefined
     }
 
     const element = descriptionRef.current
     if (!element) {
-      return
+      return undefined
     }
 
     const measureOverflow = () => {
@@ -140,7 +140,7 @@ const ChangelogDescription = ({
     measureOverflow()
 
     if (globalThis.ResizeObserver === undefined) {
-      return
+      return undefined
     }
 
     const resizeObserver = new ResizeObserver(measureOverflow)

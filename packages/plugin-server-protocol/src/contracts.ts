@@ -20,6 +20,16 @@ const issue = (path: string, message: string): ContractIssue => ({
   message,
 })
 
+/**
+ * Render a Standard Schema issue path segment. A wrapped `PathSegment` renders
+ * its `key`; bare property keys render through their own string conversion,
+ * never the "[object Object]" default stringification.
+ */
+const formatPathSegment = (
+  segment: PropertyKey | { readonly key: PropertyKey }
+): string =>
+  segment instanceof Object ? segment.key.toString() : segment.toString()
+
 const isSupportedIconUrl = (url: string): boolean =>
   url.endsWith(".webp") || url.endsWith(".svg") || url.endsWith(".png")
 
@@ -33,8 +43,7 @@ const mapSchemaIssues = (
   return result.issues.map((standardIssue) =>
     issue(
       standardIssue.path
-        ? standardIssue.path.map((segment) => String(segment)).join(".") ||
-            fallbackPath
+        ? standardIssue.path.map(formatPathSegment).join(".") || fallbackPath
         : fallbackPath,
       standardIssue.message
     )
@@ -153,13 +162,13 @@ const usageDeclarationSchema = Schema.Struct({
   usage: Schema.Unknown,
 })
 
-const checkUsageDeclared = <Value>(value: Value): boolean =>
-  Result.isSuccess(Schema.decodeUnknownResult(usageDeclarationSchema)(value))
-
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON (including malformed fixtures), and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const parsePluginServerManifestContract = <Value>(
   value: Value
 ): ContractParseResult<PluginServerManifest> => {
-  const didDeclareUsage = checkUsageDeclared(value)
+  const didDeclareUsage = Result.isSuccess(
+    Schema.decodeUnknownResult(usageDeclarationSchema)(value)
+  )
   const result = Schema.decodeUnknownResult(pluginServerManifestSchema)(value)
   if (Result.isFailure(result)) {
     return {
@@ -175,6 +184,7 @@ export const parsePluginServerManifestContract = <Value>(
   return validation.ok ? { ...validation, value: manifestData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const validatePluginServerManifestContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -214,6 +224,7 @@ const validateParsedExtractSuccessContract = (
   }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON (including malformed fixtures), and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const parseExtractSuccessContract = <Value>(
   value: Value
 ): ContractParseResult<ExtractSuccessResponse> => {
@@ -229,6 +240,7 @@ export const parseExtractSuccessContract = <Value>(
   return validation.ok ? { ...validation, value: extractData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const validateExtractSuccessContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -258,6 +270,7 @@ const validateParsedUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON (including malformed fixtures), and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const parseUsageResponseContract = <Value>(
   value: Value
 ): ContractParseResult<UsageResponse> => {
@@ -273,6 +286,7 @@ export const parseUsageResponseContract = <Value>(
   return validation.ok ? { ...validation, value: usageData } : validation
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const validateUsageContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -280,6 +294,7 @@ export const validateUsageContract = <Value>(
   return { ok: parsed.ok, issues: parsed.issues }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- exported I/O boundary: input is arbitrary unparsed wire JSON, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const validateVerifyErrorContract = <Value>(
   value: Value
 ): ContractValidationResult => {

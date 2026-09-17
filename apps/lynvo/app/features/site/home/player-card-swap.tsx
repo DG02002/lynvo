@@ -164,7 +164,7 @@ export const PlayerCardSwap = () => {
 
   useEffect(() => {
     if (!isAnimationActive) {
-      return
+      return undefined
     }
 
     let disposed = false

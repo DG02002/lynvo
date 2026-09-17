@@ -83,7 +83,7 @@ export const useClipboardUrl = ({
 
   React.useEffect(() => {
     if (!clipboardApiSupported) {
-      return
+      return undefined
     }
 
     let permissionStatus: PermissionStatus | undefined
@@ -118,7 +118,7 @@ export const useClipboardUrl = ({
 
   React.useEffect(() => {
     if (clipboardPermission !== "granted") {
-      return
+      return undefined
     }
 
     if (skipNextGrantedRead.current) {

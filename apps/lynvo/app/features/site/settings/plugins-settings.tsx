@@ -296,7 +296,7 @@ const AddPluginDomainDialog = ({
                   id={`plugin-http-basic-${plugin.id}`}
                   checked={isPasswordProtected}
                   onCheckedChange={(checked) =>
-                    onPasswordProtectedChange(checked === true)
+                    onPasswordProtectedChange(checked)
                   }
                 />
                 <FieldLabel htmlFor={`plugin-http-basic-${plugin.id}`}>
@@ -337,7 +337,7 @@ const AddPluginDomainDialog = ({
                   id={`plugin-domain-password-${plugin.id}`}
                   checked={isPasswordProtected}
                   onCheckedChange={(checked) =>
-                    onPasswordProtectedChange(checked === true)
+                    onPasswordProtectedChange(checked)
                   }
                 />
                 <FieldLabel htmlFor={`plugin-domain-password-${plugin.id}`}>

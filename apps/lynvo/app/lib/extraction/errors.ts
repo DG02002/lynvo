@@ -17,6 +17,7 @@ export class ExtractionCommandError extends Schema.TaggedError<ExtractionCommand
   { failure: extractionCommandFailureSchema }
 ) {}
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over ExtractionCommandFailure; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 export const presentExtractionFailure = (
   failure: ExtractionCommandFailure
 ): string => {

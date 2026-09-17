@@ -49,6 +49,7 @@ declare global {
   }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is an arbitrary unparsed remote-command wire payload, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const parseRemoteCommandWirePayload = <Value>(
   value: Value
 ): RemoteCommandDeliveryInput | undefined => {

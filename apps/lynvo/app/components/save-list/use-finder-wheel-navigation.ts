@@ -47,7 +47,7 @@ export const useFinderWheelNavigation = ({
   useEffect(() => {
     const contentElement = contentRef.current
     if (!contentElement) {
-      return
+      return undefined
     }
     const handleNativeWheel = (event: WheelEvent) => {
       handleContentWheel(event)

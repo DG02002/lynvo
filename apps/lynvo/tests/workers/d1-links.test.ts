@@ -124,7 +124,7 @@ const createSavedLinkOperationPause = (
   const resumePromise = new Promise<void>((resolve) => {
     resume = resolve
   })
-  const targetStatements = new WeakSet<object>()
+  const targetStatements = new WeakSet()
   const prepare = database.prepare.bind(database)
   const batch = database.batch.bind(database)
   const targetQuery =
@@ -759,7 +759,9 @@ describe("d1 links", () => {
       NOW + 2_000
     )
     const metadata = JSON.parse(snapshot.results[0]?.metaJson ?? "")
-    expect([...metadata.playback.openedUrls].toSorted()).toEqual([
+    expect(
+      [...metadata.playback.openedUrls].toSorted((a, b) => a.localeCompare(b))
+    ).toEqual([
       "https://media.example/one.mp4",
       "https://media.example/two.mp4",
     ])

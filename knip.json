@@ -4,6 +4,7 @@
     ".repos/**"
   ],
   "ignoreDependencies": [
+    "@cloudflare/workers-types",
     "cloudflare",
     "oxfmt",
     "shadcn",

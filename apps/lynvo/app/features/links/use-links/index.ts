@@ -140,7 +140,7 @@ const useInitialLinksLoad = ({
   )
   useEffect(() => {
     if (!userId) {
-      return
+      return undefined
     }
 
     const hasSnapshot = store.hasServerSnapshot()
@@ -157,12 +157,12 @@ const useInitialLinksLoad = ({
         initialSnapshotMeta.hasRouteSnapshot ||
         hasMatchingServerVersion
       ) {
-        return
+        return undefined
       }
       void applyFetchedSnapshot().catch((error) =>
         console.error("Unable to revalidate saved links", error)
       )
-      return
+      return undefined
     }
 
     let didCancel = false
@@ -214,7 +214,7 @@ const useRealtimeLinksRefresh = ({
 }: UseRealtimeLinksRefreshOptions): void => {
   useEffect(() => {
     if (!userId || !realtime) {
-      return
+      return undefined
     }
     return realtime.subscribe((message) => {
       if (message.type === "data-changed") {
@@ -247,7 +247,7 @@ const useOfflineLinksRefresh = ({
 }: UseOfflineLinksRefreshOptions): void => {
   useEffect(() => {
     if (!userId || realtime?.status === "connected") {
-      return
+      return undefined
     }
     const intervalId = window.setInterval(() => {
       refreshLinksSafely(applyFetchedSnapshot, "Unable to refresh saved links")

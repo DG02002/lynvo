@@ -94,8 +94,12 @@ export const buildAuthenticatedWorkerRequest = async (
     "X-CSRF-Token": csrfToken,
     "X-Lynvo-Expected-User-Id": userId,
     "X-Lynvo-Expected-Session-Id": sessionId,
-    ...additionalHeaders,
   })
+  if (additionalHeaders !== undefined) {
+    new Headers(additionalHeaders).forEach((value, key) => {
+      headers.set(key, value)
+    })
+  }
   if (body !== undefined) {
     headers.set("Content-Type", "application/json")
   }

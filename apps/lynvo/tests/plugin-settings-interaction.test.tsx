@@ -59,7 +59,7 @@ describe("Plugin settings interaction", () => {
       usePluginSettingsInteraction({ commands, loadData: false })
     )
 
-    act(() =>
+    void act(() =>
       result.current.updateDomainDraft("plugin", { domain: "example.com" })
     )
     await act(async () => {

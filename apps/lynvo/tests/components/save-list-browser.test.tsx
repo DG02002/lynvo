@@ -254,7 +254,7 @@ describe("SaveListBrowser", () => {
     })
     expect(seasonFolderButton).toHaveAttribute("aria-current", "page")
     expect(seasonFolderButton).toHaveAttribute("data-folder-state", "open")
-    fireEvent.click(seasonFolderButton!)
+    fireEvent.click(seasonFolderButton)
     expect(await screen.findByText("Episode One")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
@@ -1837,7 +1837,7 @@ describe("SaveListBrowser", () => {
     expect(itemButton).toBeEnabled()
     expect(filename).not.toHaveClass("line-through")
 
-    act(() => vi.advanceTimersByTime(30_000))
+    void act(() => vi.advanceTimersByTime(30_000))
 
     expect(itemButton).toBeDisabled()
     expect(filename).toHaveClass("line-through")

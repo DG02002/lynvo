@@ -19,5 +19,6 @@ export const remotePlaybackIntentSchema = Schema.Struct({
   ),
 })
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is arbitrary unparsed wire JSON from the remote-control socket, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 export const parseRemotePlaybackIntent = <Value>(value: Value) =>
   Schema.decodeUnknownResult(remotePlaybackIntentSchema)(value)

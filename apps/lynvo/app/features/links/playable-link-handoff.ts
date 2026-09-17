@@ -34,7 +34,7 @@ declare global {
 
 const isExtractedLink = (
   target: string | ExtractedLink
-): target is ExtractedLink => String(target) !== target
+): target is ExtractedLink => target instanceof Object
 
 const toRemotePlaybackIntent = (
   target: string | ExtractedLink
@@ -63,8 +63,9 @@ export const createPlayableLinkHandoff = ({
       return { accepted: true }
     }
     const launchResult = await open({ ...intent, playerPreferenceUserId })
-    return { accepted: launchResult.expectsNavigation === true }
+    return { accepted: launchResult.expectsNavigation }
   },
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is an arbitrary unparsed remote playback broadcast payload, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
   receive: async <Value>(value: Value, playerPreferenceUserId?: string) => {
     const intent = Schema.decodeUnknownSync(remotePlaybackIntentSchema)(value)
     await open({ ...intent, playerPreferenceUserId })

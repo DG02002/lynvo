@@ -47,7 +47,7 @@ describe("useOpeningState", () => {
     expect(vi.getTimerCount()).toBe(1)
 
     setVisibilityState("visible")
-    act(() => document.dispatchEvent(new Event("visibilitychange")))
+    void act(() => document.dispatchEvent(new Event("visibilitychange")))
 
     expect(result.current.isOpening).toBe(false)
     expect(vi.getTimerCount()).toBe(0)
@@ -65,7 +65,7 @@ describe("useOpeningState", () => {
     startOpeningReset(result.current)
     expect(result.current.isOpening).toBe(true)
 
-    act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS))
+    void act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS))
 
     expect(result.current.isOpening).toBe(false)
     expect(vi.getTimerCount()).toBe(0)
@@ -82,8 +82,8 @@ describe("useOpeningState", () => {
     const { result } = renderHook(() => useOpeningState())
 
     startOpeningReset(result.current)
-    act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
-    act(() => result.current.resetOpeningWhenReady())
+    void act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
+    void act(() => result.current.resetOpeningWhenReady())
 
     const firstVisibilityListener = readVisibilityListener()
     expect(vi.getTimerCount()).toBe(1)
@@ -92,10 +92,10 @@ describe("useOpeningState", () => {
       firstVisibilityListener
     )
 
-    act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
+    void act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
     expect(result.current.isOpening).toBe(true)
 
-    act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
+    void act(() => vi.advanceTimersByTime(OPENING_RESET_DELAY_MS / 2))
     expect(result.current.isOpening).toBe(false)
     expect(vi.getTimerCount()).toBe(0)
   })
