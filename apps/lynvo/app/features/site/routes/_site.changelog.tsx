@@ -140,7 +140,13 @@ const ChangelogDescription = ({
     resizeObserver.observe(element)
 
     return () => resizeObserver.disconnect()
-  }, [description, isExpanded])
+  }, [
+    // Re-measure after the rendered paragraphs change, even though the effect
+    // only reads their layout through the DOM ref.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    description,
+    isExpanded,
+  ])
 
   return (
     <div className="flex flex-col items-start gap-2">

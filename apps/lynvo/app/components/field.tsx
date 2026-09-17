@@ -92,7 +92,7 @@ function ErrorList({
   ]
 
   if (uniqueErrors.length === 1) {
-    return <>{uniqueErrors[0]?.message}</>
+    return uniqueErrors[0]?.message
   }
 
   return (

@@ -180,88 +180,80 @@ export const UsageSettings = ({
 
   return (
     <div className="flex flex-col gap-7">
-      <>
+      <SettingsPanel className="gap-4">
+        <SectionHeading
+          title="Lynvo Plugin Server usage"
+          description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
+        />
+        <UsageSummary
+          label="Lynvo Plugin Server"
+          remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
+          resetsAt={snapshot.lynvo.resetsAt}
+        />
+        <SettingsList>
+          {snapshot.lynvo.entries.map((item) => (
+            <UsageItem
+              {...item}
+              key={item.key}
+              icon={item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon}
+              hideIcon={item.iconKind === "hidden"}
+              fallback="source"
+            />
+          ))}
+        </SettingsList>
+      </SettingsPanel>
+
+      {(snapshot.custom.groups.length > 0 ||
+        snapshot.custom.failures.length > 0) && (
         <SettingsPanel className="gap-4">
           <SectionHeading
-            title="Lynvo Plugin Server usage"
-            description="One monthly allowance shared across all Lynvo Plugins, plus a separate daily limit."
+            title="Custom Plugin Server usage"
+            description="Each Custom Plugin Server keeps its own monthly usage."
           />
-          <UsageSummary
-            label="Lynvo Plugin Server"
-            remainingPercent={remainingPercentOfTotal(snapshot.lynvo.total)}
-            resetsAt={snapshot.lynvo.resetsAt}
-          />
-          <SettingsList>
-            {snapshot.lynvo.entries.map((item) => (
-              <UsageItem
-                {...item}
-                key={item.key}
-                icon={
-                  item.iconKind === "direct" ? DIRECT_MEDIA_ICON : item.icon
-                }
-                hideIcon={item.iconKind === "hidden"}
-                fallback="source"
-              />
-            ))}
-          </SettingsList>
-        </SettingsPanel>
-
-        {(snapshot.custom.groups.length > 0 ||
-          snapshot.custom.failures.length > 0) && (
-          <SettingsPanel className="gap-4">
-            <SectionHeading
-              title="Custom Plugin Server usage"
-              description="Each Custom Plugin Server keeps its own monthly usage."
-            />
-            {snapshot.custom.groups.map((group) => (
-              <div key={group.key} className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <PluginIcon
-                    iconUrl={group.iconUrl}
-                    fallback="plugin-server"
-                    className="size-10 shrink-0 text-foreground"
-                  />
-                  <span className="text-base font-normal text-foreground">
-                    {group.serverName}
-                  </span>
-                </div>
-                <UsageSummary
-                  label={group.serverName}
-                  remainingPercent={group.remainingPercent}
-                  resetsAt={group.resetsAt}
+          {snapshot.custom.groups.map((group) => (
+            <div key={group.key} className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <PluginIcon
+                  iconUrl={group.iconUrl}
+                  fallback="plugin-server"
+                  className="size-10 shrink-0 text-foreground"
                 />
-                <SettingsList>
-                  {group.entries.map((item) => (
-                    <UsageItem
-                      {...item}
-                      key={item.key}
-                      hideIcon={item.iconKind === "hidden"}
-                      fallback="source"
-                    />
-                  ))}
-                </SettingsList>
+                <span className="text-base font-normal text-foreground">
+                  {group.serverName}
+                </span>
               </div>
-            ))}
-            {snapshot.custom.failures.length > 0 && (
+              <UsageSummary
+                label={group.serverName}
+                remainingPercent={group.remainingPercent}
+                resetsAt={group.resetsAt}
+              />
               <SettingsList>
-                {snapshot.custom.failures.map((failure) => (
-                  <SettingsRow key={failure} className="py-2">
-                    <span className="text-sm text-destructive">{failure}</span>
-                  </SettingsRow>
+                {group.entries.map((item) => (
+                  <UsageItem
+                    {...item}
+                    key={item.key}
+                    hideIcon={item.iconKind === "hidden"}
+                    fallback="source"
+                  />
                 ))}
               </SettingsList>
-            )}
-          </SettingsPanel>
-        )}
+            </div>
+          ))}
+          {snapshot.custom.failures.length > 0 && (
+            <SettingsList>
+              {snapshot.custom.failures.map((failure) => (
+                <SettingsRow key={failure} className="py-2">
+                  <span className="text-sm text-destructive">{failure}</span>
+                </SettingsRow>
+              ))}
+            </SettingsList>
+          )}
+        </SettingsPanel>
+      )}
 
-        {error !== undefined && (
-          <UsageLoadError
-            error={error}
-            isRetrying={isLoading}
-            onRetry={retry}
-          />
-        )}
-      </>
+      {error !== undefined && (
+        <UsageLoadError error={error} isRetrying={isLoading} onRetry={retry} />
+      )}
     </div>
   )
 }

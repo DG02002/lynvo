@@ -8,7 +8,6 @@ import {
 interface UseFinderWheelNavigationOptions {
   contentRef: RefObject<HTMLDivElement | null>
   hasForwardFolderPaths: boolean
-  hasNoRootLinks: boolean
   navigateToParentFolder: () => void
   navigateToNextFolder: () => void
 }
@@ -16,7 +15,6 @@ interface UseFinderWheelNavigationOptions {
 export const useFinderWheelNavigation = ({
   contentRef,
   hasForwardFolderPaths,
-  hasNoRootLinks,
   navigateToParentFolder,
   navigateToNextFolder,
 }: UseFinderWheelNavigationOptions) => {
@@ -58,7 +56,7 @@ export const useFinderWheelNavigation = ({
       passive: false,
     })
     return () => contentElement.removeEventListener("wheel", handleNativeWheel)
-  }, [contentRef, hasNoRootLinks])
+  }, [contentRef])
 
   return { resetHorizontalGesture }
 }

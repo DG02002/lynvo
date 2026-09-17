@@ -71,7 +71,7 @@ const seedErasableAccount = async () => {
     .bind(
       `ERASUR${
         suffix
-          .replace(/[^A-Z]/gi, "")
+          .replaceAll(/[^A-Z]/gi, "")
           .toUpperCase()
           .slice(0, 6) || "ABCDEF"
       }`,

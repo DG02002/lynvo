@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
 import { useAnimationActivity } from "./use-animation-activity"
 
@@ -150,8 +150,9 @@ export const PlayerCardSwap = () => {
   const { animationContainerRef, isAnimationActive } =
     useAnimationActivity<HTMLUListElement>()
   const cardRefs = useRef<Array<HTMLElement | null>>([])
-  const [initialOrder] = useState(() =>
-    PLAYER_DEFINITIONS.map((_, index) => index)
+  const initialOrder = useMemo(
+    () => PLAYER_DEFINITIONS.map((_, index) => index),
+    []
   )
   const orderRef = useRef(initialOrder)
   const timerRef = useRef<number | undefined>(undefined)

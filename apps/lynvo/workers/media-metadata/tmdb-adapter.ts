@@ -463,14 +463,14 @@ export const createTmdbAdapter = (
     const normalizedGroupName = episodeGroupName
       ?.normalize("NFKC")
       .toLocaleLowerCase()
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
       .trim()
     const namedSeasonSplitGroup = normalizedGroupName
       ? (groupList.value.results ?? []).find((group) => {
           const normalizedProviderGroupName = group.name
             ?.normalize("NFKC")
             .toLocaleLowerCase()
-            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
             .trim()
           return Boolean(
             group.id &&

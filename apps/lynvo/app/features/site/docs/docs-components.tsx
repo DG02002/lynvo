@@ -333,8 +333,8 @@ const getNodeText = (node: ReactNode): string => {
 const createHeadingId = (children: ReactNode) =>
   getNodeText(children)
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/(^-|-$)/g, "")
 
 const DocsHeadingAnchor = ({
   headingId,

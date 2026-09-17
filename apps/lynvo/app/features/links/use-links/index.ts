@@ -108,6 +108,15 @@ const toSavedLinkListItem = (item: LinkViewItem): SavedLinkListItem => ({
   kind: "saved",
 })
 
+const getLinksStoreForUser = (
+  userId: string | undefined,
+  initialItems: LinkViewItem[] | undefined,
+  initialVersion: number | undefined
+): ReturnType<typeof createLinksSnapshotStore> =>
+  userId
+    ? getLinksSnapshotStore(userId, initialItems, initialVersion)
+    : createLinksSnapshotStore(initialItems, initialVersion)
+
 const refreshLinksSafely = (
   applyFetchedSnapshot: () => Promise<void>,
   message: string
@@ -135,8 +144,8 @@ const useInitialLinksLoad = ({
       initialSnapshotMeta.dataVersion !== undefined &&
       store.getVersion() === initialSnapshotMeta.dataVersion
     if (hasSnapshot) {
-      // Completion state mirrors the client snapshot store (an external
-      // system owned by useSyncExternalStore elsewhere in this hook).
+      // A server snapshot from the external store completes this branch
+      // immediately. The fetch branch below tracks its asynchronous request.
       // oxlint-disable-next-line react/set-state-in-effect
       setIsInitialLoadComplete(true)
       if (
@@ -377,30 +386,20 @@ export const useLinksWithRuntime = (
   // change adjusts the state during render, per the documented pattern.
   const [storeState, setStoreState] = useState(() => ({
     userId,
-    store: userId
-      ? getLinksSnapshotStore(
-          userId,
-          options.initialItems,
-          options.initialSnapshotMeta?.dataVersion
-        )
-      : createLinksSnapshotStore(
-          options.initialItems,
-          options.initialSnapshotMeta?.dataVersion
-        ),
+    store: getLinksStoreForUser(
+      userId,
+      options.initialItems,
+      options.initialSnapshotMeta?.dataVersion
+    ),
   }))
-  const createStoreForUser = () =>
-    userId
-      ? getLinksSnapshotStore(
+  const store =
+    storeState.userId === userId
+      ? storeState.store
+      : getLinksStoreForUser(
           userId,
           options.initialItems,
           options.initialSnapshotMeta?.dataVersion
         )
-      : createLinksSnapshotStore(
-          options.initialItems,
-          options.initialSnapshotMeta?.dataVersion
-        )
-  const store =
-    storeState.userId === userId ? storeState.store : createStoreForUser()
   if (storeState.userId !== userId) {
     setStoreState({ userId, store })
   }

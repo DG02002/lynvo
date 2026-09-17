@@ -90,7 +90,6 @@ const getSingleFolderDescendPath = (links: ExtractedLink[]): FolderLevel[] => {
   return descendedPath
 }
 
-// oxlint-disable-next-line max-statements -- Navigation refs span URL and extraction state, so this coordination stays in one hook.
 export const useFinderBrowserState = ({
   item,
   actions,
@@ -379,14 +378,12 @@ export const useFinderBrowserState = ({
     applyFolderNavigation(nextFolderPath, false)
   }
 
-  const hasNoRootLinks = rootLinks.length === 0
   const { resetHorizontalGesture } = useFinderWheelNavigation({
     contentRef,
     hasForwardFolderPaths:
       forwardFolderPaths.length > 0 ||
       historyForwardFolderIds !== undefined ||
       hasBrowserFolderForward,
-    hasNoRootLinks,
     navigateToParentFolder,
     navigateToNextFolder,
   })

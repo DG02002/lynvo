@@ -240,12 +240,10 @@ export const ResolvableContainerRow = ({
           ),
         }}
         meta={
-          <>
-            <MediaListRowMeta
-              sourceName={getResolvableSourceName(link, item)}
-              size={displaySize}
-            />
-          </>
+          <MediaListRowMeta
+            sourceName={getResolvableSourceName(link, item)}
+            size={displaySize}
+          />
         }
         newBadge={
           !link.opened

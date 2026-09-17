@@ -75,7 +75,12 @@ export function PageTableOfContents({
       itemBottom: itemRect.bottom,
       itemTop: itemRect.top,
     })
-  }, [activeHeadingId])
+  }, [
+    // The active heading changes aria-current and the link position in the
+    // DOM, so the scroll adjustment must run when it changes.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+    activeHeadingId,
+  ])
 
   return (
     <nav
