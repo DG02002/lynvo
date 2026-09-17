@@ -18,7 +18,8 @@
     ".roo/**",
     ".windsurf/**",
     "apps/lynvo/app/components/ui/**",
-    "tools/oxlint/anti-slop/**"
+    "tools/oxlint/anti-slop/**",
+    "**/worker-configuration.d.ts"
   ],
   "jsPlugins": [
     {

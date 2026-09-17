@@ -2,20 +2,14 @@ import { existsSync } from "node:fs"
 import { relative, sep } from "node:path"
 
 const sourceFilePattern = /\.(?:c|m)?[jt]sx?$/
-const ignoredFileNames = new Set(["worker-configuration.d.ts"])
 
 const getRelativePath = (absolutePath) =>
   relative(process.cwd(), absolutePath).split(sep).join("/")
 
 const isLintableSourceFile = (absolutePath) => {
   const relativePath = getRelativePath(absolutePath)
-  const fileName = relativePath.slice(relativePath.lastIndexOf("/") + 1)
 
-  return (
-    existsSync(absolutePath) &&
-    sourceFilePattern.test(relativePath) &&
-    !ignoredFileNames.has(fileName)
-  )
+  return existsSync(absolutePath) && sourceFilePattern.test(relativePath)
 }
 
 const quoteShellArgument = (filePath) =>
@@ -44,7 +38,7 @@ export default {
 
     if (jsonFilePaths.length > 0) {
       const fileArguments = jsonFilePaths.map(quoteShellArgument).join(" ")
-      commands.push(`oxfmt ${fileArguments}`)
+      commands.push(`oxfmt --no-error-on-unmatched-pattern ${fileArguments}`)
     }
 
     return commands

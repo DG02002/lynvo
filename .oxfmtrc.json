@@ -5,9 +5,21 @@
   "trailingComma": "es5",
   "endOfLine": "lf",
   "ignorePatterns": [
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
     ".repos/**",
+    ".roo/**",
+    ".windsurf/**",
     "apps/lynvo/app/components/ui/**",
-    "tools/oxlint/anti-slop/**"
+    "tools/oxlint/anti-slop/**",
+    "**/worker-configuration.d.ts"
   ],
   "tailwindStylesheet": "app/app.css",
   "tailwindFunctions": ["cn", "cva"],
