@@ -18,11 +18,20 @@ interface FilenameSegmentsProps {
 
 const DEFAULT_CLAMP_CLASS_NAME = "line-clamp-2 md:line-clamp-3"
 
+const toKeyedSegments = (segments: readonly string[]) => {
+  const occurrenceCounts = new Map<string, number>()
+  return segments.map((segment) => {
+    const occurrence = occurrenceCounts.get(segment) ?? 0
+    occurrenceCounts.set(segment, occurrence + 1)
+    return { key: `${segment}#${occurrence}`, segment }
+  })
+}
+
 const FilenameSegments = ({ value }: FilenameSegmentsProps) => {
   const segments = getFilenameBreakSegments(value)
 
-  return segments.map((segment, index) => (
-    <React.Fragment key={`${index}-${segment}`}>
+  return toKeyedSegments(segments).map(({ key, segment }, index) => (
+    <React.Fragment key={key}>
       {segment}
       {index < segments.length - 1 && <wbr />}
     </React.Fragment>

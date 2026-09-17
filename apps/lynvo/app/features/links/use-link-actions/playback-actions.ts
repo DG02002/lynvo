@@ -18,6 +18,9 @@ export const usePlaybackActions = ({
 
   const handleLinkClick = useCallback(
     async (target: string | ExtractedLink) => {
+      // The ref blocks a second handoff before the state re-render commits;
+      // exhaustive-deps requires it listed even though its identity is stable.
+      // oxlint-disable-next-line react/memo-dependencies
       if (isOpeningRef.current) {
         return { accepted: false }
       }
@@ -35,6 +38,9 @@ export const usePlaybackActions = ({
       }
     },
     [
+      // exhaustive-deps requires the context values and the ref; the
+      // memo-dependencies heuristic misjudges all three as removable.
+      // oxlint-disable-next-line react/memo-dependencies
       activeSessionId,
       isOpeningRef,
       playerPreferenceUserId,

@@ -152,8 +152,8 @@ const ChangelogDescription = ({
           !isExpanded && "line-clamp-3"
         )}
       >
-        {description.map((paragraph, index) => (
-          <p key={`${id}-${index}`}>{paragraph}</p>
+        {description.map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
         ))}
       </div>
       {isOverflowing ? (

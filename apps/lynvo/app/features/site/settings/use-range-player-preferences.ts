@@ -70,6 +70,9 @@ export const useRangePlayerPreferences = ({
           cloudPreferences.rangeUnsupportedPlayerId ??
           localPreferences.rangeUnsupportedPlayerId,
       })
+      // Mirrors the cloud preference snapshot (external system) into
+      // locally editable state once it arrives.
+      // oxlint-disable-next-line react/set-state-in-effect
       setRangeSupportedPlayerId(preferences.rangeSupportedPlayerId)
       setRangeUnsupportedPlayerId(preferences.rangeUnsupportedPlayerId)
       setRangeSupportedPlayer(

@@ -133,6 +133,9 @@ export const useExtractingItems = () => {
         removeExtractingItem(itemKey)
       }
     },
+    // Both helpers are stable []-deps memoizations; exhaustive-deps requires
+    // them listed, which memo-dependencies reports as extra.
+    // oxlint-disable-next-line react/memo-dependencies
     [addExtractingItem, removeExtractingItem]
   )
 

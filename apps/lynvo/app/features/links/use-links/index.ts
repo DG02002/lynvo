@@ -127,7 +127,6 @@ const useInitialLinksLoad = ({
   )
   useEffect(() => {
     if (!userId) {
-      setIsInitialLoadComplete(false)
       return
     }
 
@@ -136,6 +135,9 @@ const useInitialLinksLoad = ({
       initialSnapshotMeta.dataVersion !== undefined &&
       store.getVersion() === initialSnapshotMeta.dataVersion
     if (hasSnapshot) {
+      // Completion state mirrors the client snapshot store (an external
+      // system owned by useSyncExternalStore elsewhere in this hook).
+      // oxlint-disable-next-line react/set-state-in-effect
       setIsInitialLoadComplete(true)
       if (
         realtime?.status === "connected" ||
@@ -169,7 +171,9 @@ const useInitialLinksLoad = ({
     store,
     userId,
   ])
-  return isInitialLoadComplete
+  // A signed-out runtime never completes an initial load; deriving this
+  // avoids resetting state inside an effect.
+  return userId ? isInitialLoadComplete : false
 }
 
 const useInitialServerSnapshot = ({
@@ -317,6 +321,9 @@ const useLinksMutationActions = ({
   )
   const mutations = useMemo(
     () =>
+      // The store is state adjusted during render per the documented
+      // pattern in useLinksWithRuntime, not a ref.
+      // oxlint-disable-next-line react/refs
       createLinksMutations({
         store,
         runExclusive,
@@ -366,27 +373,37 @@ export const useLinksWithRuntime = (
   const { user, realtime } = runtime
   const userId = user?.sub
   // The snapshot store is created once per signed-in identity; the initial
-  // items and version are seeds, not reactive inputs.
-  const storeRef = useRef<{
-    userId: string | undefined
-    store: ReturnType<typeof createLinksSnapshotStore>
-  } | null>(null)
-  if (storeRef.current === null || storeRef.current.userId !== userId) {
-    storeRef.current = {
-      userId,
-      store: userId
-        ? getLinksSnapshotStore(
-            userId,
-            options.initialItems,
-            options.initialSnapshotMeta?.dataVersion
-          )
-        : createLinksSnapshotStore(
-            options.initialItems,
-            options.initialSnapshotMeta?.dataVersion
-          ),
-    }
+  // items and version are seeds, not reactive inputs. A signed-in identity
+  // change adjusts the state during render, per the documented pattern.
+  const [storeState, setStoreState] = useState(() => ({
+    userId,
+    store: userId
+      ? getLinksSnapshotStore(
+          userId,
+          options.initialItems,
+          options.initialSnapshotMeta?.dataVersion
+        )
+      : createLinksSnapshotStore(
+          options.initialItems,
+          options.initialSnapshotMeta?.dataVersion
+        ),
+  }))
+  const createStoreForUser = () =>
+    userId
+      ? getLinksSnapshotStore(
+          userId,
+          options.initialItems,
+          options.initialSnapshotMeta?.dataVersion
+        )
+      : createLinksSnapshotStore(
+          options.initialItems,
+          options.initialSnapshotMeta?.dataVersion
+        )
+  const store =
+    storeState.userId === userId ? storeState.store : createStoreForUser()
+  if (storeState.userId !== userId) {
+    setStoreState({ userId, store })
   }
-  const { store } = storeRef.current
   const initialSnapshotMeta = useMemo<InitialSnapshotMeta>(
     () => ({
       hasRouteSnapshot: options.initialSnapshotMeta?.hasRouteSnapshot,

@@ -484,9 +484,9 @@ export const HomeSaveDemo = () => {
           </div>
 
           <section className="relative border-t">
-            {visibleHomeDemoItems.map((item, itemIndex) => (
+            {visibleHomeDemoItems.map((item) => (
               <DemoLibraryItem
-                key={`home-demo-library-slot-${itemIndex}`}
+                key={`home-demo-library-item-${item.title}`}
                 item={item}
                 menuTriggerRef={item.isNew ? menuTriggerRef : undefined}
                 isMenuTriggerPressed={item.isNew && isMenuTriggerPressed}

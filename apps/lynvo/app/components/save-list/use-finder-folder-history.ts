@@ -82,6 +82,9 @@ export const useFinderFolderHistory = ({
   useEffect(() => {
     syncBrowserHistoryOffset()
     const nextBrowserForwardEntry = readBrowserForwardEntry()
+    // Reads the browser history external system on each navigation; there
+    // is no render-time source for it.
+    // oxlint-disable-next-line react/set-state-in-effect
     setBrowserForwardEntry(nextBrowserForwardEntry)
     const currentEntry = { key: locationKey, folderIds }
     const previousHistoryKey = currentHistoryKeyRef.current
