@@ -29,6 +29,9 @@
     "LICENSE"
   ],
   "type": "module",
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:"
+  },
   "publishConfig": {
     "access": "public"
   },

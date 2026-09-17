@@ -42,7 +42,7 @@ const LinkDebugLogDialog = ({
 
   useEffect(() => {
     if (!open || !hasLog) {
-      return
+      return undefined
     }
     let cancelled = false
     void highlightLogJson(serializedLog).then((html) => {

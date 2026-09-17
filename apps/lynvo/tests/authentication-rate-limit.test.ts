@@ -8,6 +8,7 @@ import {
   DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
 } from "../workers/constants"
 import { createTestRateLimiter } from "./support/rate-limiter"
+import { readJsonInitBody } from "./support/request-inspection"
 
 const createLimiter = (status: number) => {
   const fetch = vi.fn(() => Promise.resolve(new Response(null, { status })))
@@ -76,7 +77,7 @@ describe("authentication rate limit environment policy", () => {
     expect(limiter.calls.map(({ key }) => key)).toEqual([
       "auth:device-approval:192.0.2.44:user-1",
     ])
-    expect(JSON.parse(String(limiter.calls[0]?.init?.body))).toMatchObject({
+    expect(readJsonInitBody(limiter.calls[0]?.init)).toMatchObject({
       limit: DEVICE_APPROVAL_RATE_LIMIT,
       windowMs: DEVICE_APPROVAL_RATE_WINDOW_SECONDS * 1_000,
     })

@@ -9,10 +9,14 @@ import { Result, Schema } from "effect"
 
 interface EncryptedPluginServerCredential extends SealedRecord {}
 
-interface CredentialContext {
+interface CredentialVaultContext {
   readonly userId: string
   readonly pluginServerId: string
 }
+
+export type CredentialVaultRequest =
+  | (CredentialVaultContext & { readonly apiKey: string })
+  | (CredentialVaultContext & { readonly credential: SealedRecord })
 
 type CredentialVaultEnvironment = Partial<
   Pick<Env, "PLUGIN_CREDENTIAL_ENCRYPTION_KEY">
@@ -29,17 +33,19 @@ const encryptCredentialPayloadSchema = Schema.Struct({
   apiKey: Schema.NonEmptyString,
 })
 
-const additionalData = ({ userId, pluginServerId }: CredentialContext) =>
+const additionalData = ({ userId, pluginServerId }: CredentialVaultContext) =>
   new TextEncoder().encode(
     `plugin-server\u0000v${SEALED_RECORD_KEY_VERSION}\u0000${userId}\u0000${pluginServerId}`
   )
 
-const isContext = <Value>(value: Value): value is Value & CredentialContext =>
+const isContext = <Value>(
+  value: Value
+): value is Value & CredentialVaultContext =>
   Result.isSuccess(Schema.decodeUnknownResult(credentialContextSchema)(value))
 
 const encryptCredential = async (
   encodedKey: string,
-  payload: CredentialContext
+  payload: CredentialVaultContext
 ): Promise<Response> => {
   const encryptPayload = Schema.decodeUnknownResult(
     encryptCredentialPayloadSchema
@@ -61,7 +67,7 @@ const encryptCredential = async (
 
 const decryptCredential = async (
   encodedKey: string,
-  payload: CredentialContext
+  payload: CredentialVaultContext
 ): Promise<Response> => {
   if (!("credential" in payload) || !isSealedRecord(payload.credential)) {
     return new Response(null, { status: 400 })

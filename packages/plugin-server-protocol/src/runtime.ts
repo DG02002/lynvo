@@ -22,13 +22,17 @@ import {
 } from "./matching.js"
 import {
   describeExtractTarget,
+  type DiscoverResponse,
+  type ExtractProtocolError,
   type ExtractRequest,
+  type ExtractSuccessResponse,
   type ExtractTarget,
   type PluginServerManifest,
   type PluginServerManifestFactory,
   type PluginServerRuntime,
   type PluginServerRuntimeManifest,
   type PluginServerRuntimeOptions,
+  type UsageResponse,
   type VerifySuccessResponse,
 } from "./models.js"
 
@@ -44,8 +48,17 @@ const isManifestFactory = <Env>(
 ): manifest is PluginServerManifestFactory<Env> =>
   typeof manifest === "function"
 
-const jsonResponse = <Value>(value: Value, status = 200): Response =>
-  Response.json(value, { status })
+/** Every protocol response body this runtime serializes to JSON. */
+type PluginServerResponseBody =
+  | DiscoverResponse
+  | ExtractProtocolError
+  | ExtractSuccessResponse
+  | PluginServerManifest
+  | UsageResponse
+  | VerifySuccessResponse
+
+const jsonResponse = (body: PluginServerResponseBody, status = 200): Response =>
+  Response.json(body, { status })
 
 export const createPluginServerRuntime = <Env>(
   options: PluginServerRuntimeOptions<Env>

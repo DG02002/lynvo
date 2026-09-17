@@ -57,7 +57,7 @@ export function RealtimeProvider({
   useEffect(() => {
     if (!userId || globalThis.window === undefined) {
       dispatch({ type: "SET_STATUS", status: "disabled" })
-      return
+      return undefined
     }
 
     const realtimeSocket = openSocket({

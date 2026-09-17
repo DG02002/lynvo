@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { client, requestSameOrigin } from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
+import { requestUrl } from "./support/request-inspection"
 
 const fetchMock = vi.fn<typeof globalThis.fetch>()
 const nativeFetch = globalThis.fetch
@@ -30,9 +31,9 @@ describe("browser API client", () => {
       payload: { rangeSupportedPlayerId: "vlc" },
     })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(
-      new URL(String(input), window.location.href),
+      new URL(requestUrl(input), window.location.href),
       init
     )
     expect(new URL(request.url).pathname).toBe("/api/settings/player")
@@ -55,9 +56,9 @@ describe("browser API client", () => {
       headers: { "Content-Type": "application/json" },
     })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(
-      new URL(String(input), window.location.href),
+      new URL(requestUrl(input), window.location.href),
       init
     )
     expect(request.credentials).toBe("same-origin")
@@ -104,7 +105,7 @@ describe("browser API client", () => {
 
     await expect(readLynvoUsage()).resolves.toEqual({ metrics: [] })
 
-    const [input, init] = fetchMock.mock.calls[0]!
+    const [[input, init]] = fetchMock.mock.calls
     const request = new Request(input, init)
     expect(new URL(request.url).pathname).toBe("/api/data/usage")
     expect(request.credentials).toBe("same-origin")

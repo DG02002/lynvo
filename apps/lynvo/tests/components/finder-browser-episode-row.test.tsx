@@ -4,6 +4,7 @@ import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+import { readJsonInitBody } from "../support/request-inspection"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -22,9 +23,7 @@ const localStorageStub = {
 const createMediaArtworkFetch = () =>
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     // SAFETY: the test fetch receives the JSON body produced by the artwork client
-    const requestBody = JSON.parse(
-      String(init?.body)
-    ) as MediaArtworkBatchRequest
+    const requestBody = readJsonInitBody(init) as MediaArtworkBatchRequest
     const results = requestBody.requests.map((request) =>
       request.episodeNumber === undefined
         ? {}
@@ -511,8 +510,8 @@ describe("FinderBrowser episode rows", () => {
       const artworkRequests = artworkFetch.mock.calls.flatMap(
         ([_input, requestInit]) => {
           // SAFETY: the test fetch receives the JSON body produced by the artwork client
-          const requestBody = JSON.parse(
-            String(requestInit?.body)
+          const requestBody = readJsonInitBody(
+            requestInit
           ) as MediaArtworkBatchRequest
           return requestBody.requests
         }

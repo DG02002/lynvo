@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { lookupMediaArtwork } from "../../workers/media-metadata/media-artwork-lookup"
+import { requestUrl } from "../support/request-inspection"
 
 interface TmdbStubResultItem {
   readonly id?: number
@@ -44,12 +45,12 @@ const jsonResponse = (payload: TmdbStubPayload): Response =>
 
 const createUrlRoutingFetch = (routes: readonly TmdbStubRoute[]) =>
   vi.fn(async (input: RequestInfo | URL) => {
-    const requestUrl = String(input)
+    const url = requestUrl(input)
     const route = routes.find((candidate) =>
-      requestUrl.includes(candidate.urlIncludes)
+      url.includes(candidate.urlIncludes)
     )
     if (!route) {
-      return jsonResponse({ status_message: `No route for ${requestUrl}` })
+      return jsonResponse({ status_message: `No route for ${url}` })
     }
     return jsonResponse(route.payload)
   })
@@ -240,7 +241,7 @@ describe("Media artwork lookup", () => {
         identity: { providerId: 42, title: "Picked Movie" },
       },
     ])
-    expect(String(fetch.mock.calls[0]?.[0])).toContain("/movie/42")
+    expect(requestUrl(fetch.mock.calls[0]?.[0])).toContain("/movie/42")
   })
 
   it("resolves anime subtitle titles through the parent show's named season", async () => {

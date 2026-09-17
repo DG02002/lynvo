@@ -1,22 +1,17 @@
 // @vitest-environment edge-runtime
 
-import { PluginServerCredentialVault } from "../workers/plugin-server-credential-vault"
-
-declare global {
-  interface EncryptedCredentialTestResponse {
-    readonly ciphertext: string
-    readonly nonce: string
-    readonly algorithm: string
-    readonly keyVersion: number
-  }
-}
+import {
+  PluginServerCredentialVault,
+  type CredentialVaultRequest,
+} from "../workers/plugin-server-credential-vault"
+import type { SealedRecord } from "../app/lib/security/sealed-record"
 
 const TEST_ENCRYPTION_KEY = btoa("0123456789abcdef0123456789abcdef")
 
 // SAFETY: The vault constructor does not read Durable Object state in these direct fetch tests.
 const createState = (): DurableObjectState => ({}) as DurableObjectState
 
-const request = <Body>(path: string, body: Body) =>
+const request = (path: string, body: CredentialVaultRequest) =>
   new Request(`https://credential-vault.internal${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -38,8 +33,7 @@ describe("PluginServerCredentialVault HTTP behavior", () => {
       })
     )
     expect(encryptedResponse.status).toBe(200)
-    const encrypted =
-      await encryptedResponse.json<EncryptedCredentialTestResponse>()
+    const encrypted = await encryptedResponse.json<SealedRecord>()
     expect(encrypted).not.toHaveProperty("apiKey")
     expect(encrypted.ciphertext).not.toBe("plugin-server-key")
 

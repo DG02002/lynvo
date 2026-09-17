@@ -70,6 +70,7 @@ const toApiOperation = (
         : undefined
     }
   }
+  return undefined
 }
 
 export interface LinksMutationTargets {

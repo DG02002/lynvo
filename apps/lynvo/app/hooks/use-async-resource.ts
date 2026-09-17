@@ -25,6 +25,7 @@ interface AsyncResourceCacheEntry {
 
 const asyncResourceCache = new Map<string, AsyncResourceCacheEntry>()
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Result is pinned explicitly by callers (getCacheEntry<Result>) to type the cached data; it cannot be inferred from the opaque cacheKey parameter.
 const getCacheEntry = <Result>(
   cacheKey: string | undefined
 ): (AsyncResourceCacheEntry & { readonly data: Result }) | undefined => {
@@ -174,7 +175,7 @@ export const useAsyncResource = <Result>(
 
   useEffect(() => {
     if (!options.pollIntervalMs) {
-      return
+      return undefined
     }
     const intervalId = window.setInterval(() => {
       runLoad().catch((loadError) => console.error(loadError))

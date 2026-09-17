@@ -16,7 +16,7 @@ export const AccountSettingsSynchronization = ({
 }) => {
   useEffect(() => {
     if (!userId) {
-      return
+      return undefined
     }
     let didCancel = false
     loadPlayerPreferences()

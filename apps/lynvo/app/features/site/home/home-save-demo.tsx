@@ -255,7 +255,7 @@ const useHomeDemoCursor = (
 
     const demoStage = stage.current
     if (!cursorTarget || !demoStage) {
-      return
+      return undefined
     }
 
     const updateCursorPosition = () => {
@@ -326,7 +326,7 @@ export const HomeSaveDemo = () => {
 
   useEffect(() => {
     if (isReducedMotion || !isAnimationActive) {
-      return
+      return undefined
     }
 
     const delay = HOME_DEMO_STEP_DELAYS_MS[step]

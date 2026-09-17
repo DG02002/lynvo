@@ -24,12 +24,12 @@ export const useDocumentHeadings = (
 
   useEffect(() => {
     if (providedHeadings) {
-      return
+      return undefined
     }
 
     const target = targetId ? document.getElementById(targetId) : null
     if (!target) {
-      return
+      return undefined
     }
 
     const discoverHeadings = () => {
@@ -65,7 +65,7 @@ export const useActiveHeadingTracker = (
 
   useEffect(() => {
     if (headings.length === 0) {
-      return
+      return undefined
     }
 
     let animationFrameId: number | undefined

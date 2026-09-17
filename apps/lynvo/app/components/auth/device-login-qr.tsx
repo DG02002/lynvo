@@ -63,6 +63,7 @@ const INITIAL_DEVICE_LOGIN_STATE: DeviceLoginState = {
   hasSignedIn: false,
 }
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over DeviceLoginAction; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 const reduceDeviceLoginState = (
   state: DeviceLoginState,
   action: DeviceLoginAction

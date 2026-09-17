@@ -35,17 +35,16 @@ describe("LinkInputSection", () => {
       configurable: true,
       value: { readText },
     })
+    const queryPermissions = vi.fn(() =>
+      Promise.resolve({
+        state: "prompt",
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })
+    )
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
-      value: {
-        query: vi.fn(() =>
-          Promise.resolve({
-            state: "prompt",
-            addEventListener: vi.fn(),
-            removeEventListener: vi.fn(),
-          })
-        ),
-      },
+      value: { query: queryPermissions },
     })
 
     render(
@@ -63,7 +62,7 @@ describe("LinkInputSection", () => {
     expect(
       screen.queryByLabelText("Enable clipboard suggestions")
     ).not.toBeInTheDocument()
-    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    await waitFor(() => expect(queryPermissions).toHaveBeenCalled())
     expect(readText).not.toHaveBeenCalled()
 
     fireEvent.focus(screen.getByLabelText("Link"))
@@ -88,11 +87,12 @@ describe("LinkInputSection", () => {
       configurable: true,
       value: { readText: vi.fn() },
     })
+    const queryPermissions = vi.fn(() =>
+      Promise.reject(new TypeError("Unsupported name"))
+    )
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
-      value: {
-        query: vi.fn(() => Promise.reject(new TypeError("Unsupported name"))),
-      },
+      value: { query: queryPermissions },
     })
 
     render(
@@ -107,7 +107,7 @@ describe("LinkInputSection", () => {
       />
     )
 
-    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled())
+    await waitFor(() => expect(queryPermissions).toHaveBeenCalled())
     expect(
       screen.queryByLabelText("Enable clipboard suggestions")
     ).not.toBeInTheDocument()
@@ -115,9 +115,10 @@ describe("LinkInputSection", () => {
 
   it("does not suggest a clipboard URL that is already saved", async () => {
     const savedUrl = "https://example.com/already-saved"
+    const readText = vi.fn(() => Promise.resolve(savedUrl))
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: { readText: vi.fn(() => Promise.resolve(savedUrl)) },
+      value: { readText },
     })
     Object.defineProperty(navigator, "permissions", {
       configurable: true,
@@ -145,7 +146,7 @@ describe("LinkInputSection", () => {
       />
     )
 
-    await waitFor(() => expect(navigator.clipboard.readText).toHaveBeenCalled())
+    await waitFor(() => expect(readText).toHaveBeenCalled())
     expect(screen.queryByText(savedUrl)).not.toBeInTheDocument()
   })
 

@@ -114,6 +114,7 @@ const initialChangeArtworkDialogState: ChangeArtworkDialogState = {
   selectedCandidate: undefined,
 }
 
+// oxlint-disable-next-line typescript/consistent-return -- The switch is exhaustive over ChangeArtworkDialogAction; strictNullChecks (TS2366) proves the fall-through is unreachable, so no path implicitly returns undefined.
 const changeArtworkDialogReducer = (
   state: ChangeArtworkDialogState,
   action: ChangeArtworkDialogAction
@@ -435,7 +436,7 @@ const ChangeArtworkDialog = ({
   useEffect(() => {
     if (!open || !item) {
       abortActiveSearch()
-      return
+      return undefined
     }
     dispatch({ type: "dialog-reset" })
     return () => abortActiveSearch()

@@ -8,10 +8,15 @@ import {
 
 const unknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown)
 
-const findUndefinedPaths = <Value>(value: Value, path = "result"): string[] => {
+interface UndefinedPathVisit {
+  readonly path: string
+  readonly value: unknown
+}
+
+const findUndefinedPaths = ({ path, value }: UndefinedPathVisit): string[] => {
   if (Array.isArray(value)) {
     return value.flatMap((entry, index) =>
-      findUndefinedPaths(entry, `${path}.${index}`)
+      findUndefinedPaths({ path: `${path}.${index}`, value: entry })
     )
   }
   const record = Schema.decodeUnknownOption(unknownRecordSchema)(value)
@@ -21,7 +26,7 @@ const findUndefinedPaths = <Value>(value: Value, path = "result"): string[] => {
   return Object.entries(record.value).flatMap(([key, entry]) =>
     entry === undefined
       ? [`${path}.${key}`]
-      : findUndefinedPaths(entry, `${path}.${key}`)
+      : findUndefinedPaths({ path: `${path}.${key}`, value: entry })
   )
 }
 
@@ -393,7 +398,7 @@ describe("extractFromCustomPluginServer", () => {
       schemaVersion: 3,
       pluginServerId: "pluginServer-one",
     })
-    expect(findUndefinedPaths(result)).toEqual([])
+    expect(findUndefinedPaths({ path: "result", value: result })).toEqual([])
   })
 })
 

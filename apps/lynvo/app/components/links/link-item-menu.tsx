@@ -100,7 +100,7 @@ export const LinkItemMenu = ({
   }
 
   const removeItem = () => {
-    void actions.remove(item.url, item.id)
+    actions.remove(item.url, item.id)
     onRemoved?.()
   }
 

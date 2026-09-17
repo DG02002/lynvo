@@ -186,7 +186,7 @@ const getGroups = (
 const getContext = (slug: string): DocumentationPageContext | undefined => {
   const page = pagesBySlug.get(slug)
   if (!page) {
-    return
+    return undefined
   }
 
   const pageIndex = orderedPages.indexOf(page)
@@ -242,7 +242,7 @@ export const docsCatalog = {
   getMarkdown: (slug: string) => {
     const page = pagesBySlug.get(slug)
     if (!page) {
-      return
+      return undefined
     }
     if (slug !== "plugin-server") {
       return page.rawContent

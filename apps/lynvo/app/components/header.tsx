@@ -20,7 +20,7 @@ export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const handleLogout = async () => {
     try {
       await signOut()
-      navigate("/", { viewTransition })
+      await navigate("/", { viewTransition })
     } catch (error) {
       console.error("Logout failed:", error)
     }

@@ -116,6 +116,7 @@ const parseJson = async (response: Response): Promise<JsonValue> => {
   }
 }
 
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- I/O boundary parser: input is an arbitrary unparsed Plugin Server response body, and anti-slop/no-unknown-parameters (error) bans spelling that parameter as `unknown`.
 const throwResponseFailure = <Value>(value: Value, status: number): never => {
   const extractError = Schema.decodeUnknownResult(extractErrorSchema)(value)
   if (Result.isSuccess(extractError)) {

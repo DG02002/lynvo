@@ -36,7 +36,7 @@ export function ClipboardPermissionDialog({
 
   React.useEffect(() => {
     if (!open) {
-      return
+      return undefined
     }
     const interval = window.setInterval(
       () => setCarouselStep((current) => (current + 1) % 3),

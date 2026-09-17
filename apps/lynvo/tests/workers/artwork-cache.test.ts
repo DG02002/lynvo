@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { MEDIA_ARTWORK_CACHE_VERSION } from "../../app/lib/constants"
 import { lookupMediaArtworkCached } from "../../workers/media-metadata/artwork-cache"
+import { requestUrl } from "../support/request-inspection"
 
 const TMDB_TOKEN = "test-token"
 
@@ -25,8 +26,8 @@ const jsonResponse = (payload: TmdbFixturePayload): Response =>
 
 const createTmdbFetch = () =>
   vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-    const requestUrl = String(input)
-    if (requestUrl.includes("/movie/42")) {
+    const url = requestUrl(input)
+    if (url.includes("/movie/42")) {
       return jsonResponse({
         id: 42,
         title: "Cache Test",
@@ -135,7 +136,9 @@ describe("media artwork cache", () => {
     // title-based entry (with its search candidates) and never hit the
     // details endpoint.
     expect(
-      fetchMock.mock.calls.some((call) => String(call[0]).includes("/movie/42"))
+      fetchMock.mock.calls.some((call) =>
+        requestUrl(call[0]).includes("/movie/42")
+      )
     ).toBe(true)
     expect(byId).toEqual([
       {

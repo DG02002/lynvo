@@ -39,7 +39,7 @@ export function MobilePageOutline({
 
   useEffect(() => {
     if (!revealAfterSelector) {
-      return
+      return undefined
     }
 
     let animationFrameId: number | undefined

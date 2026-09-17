@@ -11,10 +11,10 @@ describe("useMinuteTimeBucket", () => {
     const { result } = renderHook(() => useMinuteTimeBucket())
     const initialBucket = result.current
 
-    act(() => vi.advanceTimersByTime(MINUTE_MS / 2 - 1))
+    void act(() => vi.advanceTimersByTime(MINUTE_MS / 2 - 1))
     expect(result.current).toBe(initialBucket)
 
-    act(() => vi.advanceTimersByTime(1))
+    void act(() => vi.advanceTimersByTime(1))
     expect(result.current).toBe(initialBucket + MINUTE_MS)
     vi.useRealTimers()
   })

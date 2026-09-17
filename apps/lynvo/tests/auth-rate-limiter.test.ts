@@ -10,7 +10,10 @@ class MemoryDurableObjectStorage {
     // SAFETY: Values are read through the same generic Durable Object storage contract used to write them.
     this.values.get(key) as Value | undefined
 
-  put = async <Value>(key: string, value: Value): Promise<void> => {
+  put = async (
+    key: string,
+    value: { count: number; expiresAt: number }
+  ): Promise<void> => {
     this.values.set(key, value)
   }
 

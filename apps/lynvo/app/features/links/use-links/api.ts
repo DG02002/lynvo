@@ -38,6 +38,11 @@ declare global {
   }
 }
 
+export type SavedLinkResponseBody =
+  | Pick<SavedLinkListResponse, "links">
+  | CreateOrUpdateSavedLinkResponse
+  | SavedLinkMutationResponse
+
 const toSavedLink = (record: SavedLinkApiRecord): SavedLink => ({
   id: record.id,
   url: record.url,
@@ -156,16 +161,17 @@ const sendDataRequest = async (
   path: string,
   init?: RequestInit
 ): Promise<globalThis.Response> => {
+  // HeadersInit may be a Headers instance or an entry array; the Headers
+  // constructor merges every form instead of spreading them into indices.
+  const headers = new Headers(init?.headers)
+  headers.set("Accept", headers.get("Accept") ?? "application/json")
   let httpResponse: globalThis.Response
   try {
     httpResponse = await fetch(path, {
       credentials: "same-origin",
       signal: AbortSignal.timeout?.(DATA_API_TIMEOUT_MS),
       ...init,
-      headers: {
-        Accept: "application/json",
-        ...init?.headers,
-      },
+      headers,
     })
   } catch (cause) {
     throw new SavedLinkCommandError({

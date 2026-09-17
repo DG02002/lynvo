@@ -77,14 +77,14 @@ describe("useAnimationActivity", () => {
       configurable: true,
       value: "hidden",
     })
-    act(() => document.dispatchEvent(new Event("visibilitychange")))
+    void act(() => document.dispatchEvent(new Event("visibilitychange")))
     expect(screen.getByTestId("probe")).toHaveTextContent("paused")
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     })
-    act(() => document.dispatchEvent(new Event("visibilitychange")))
+    void act(() => document.dispatchEvent(new Event("visibilitychange")))
     expect(screen.getByTestId("probe")).toHaveTextContent("active")
   })
 })

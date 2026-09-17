@@ -6,8 +6,8 @@ const taggedErrorSchema = Schema.Struct({
   message: Schema.optional(Schema.String),
 })
 
-const taggedErrorMessage = <Value>(error: Value): string | undefined => {
-  const parsed = Schema.decodeUnknownResult(taggedErrorSchema)(error)
+const taggedErrorMessage = (cause: unknown): string | undefined => {
+  const parsed = Schema.decodeUnknownResult(taggedErrorSchema)(cause)
   if (Result.isFailure(parsed)) {
     return undefined
   }
@@ -32,14 +32,14 @@ const taggedErrorMessage = <Value>(error: Value): string | undefined => {
   }
 }
 
-export const getUserFacingErrorMessage = <Value>(
-  error: Value,
+export const getUserFacingErrorMessage = (
+  cause: unknown,
   fallback: string
 ): string => {
-  if (error instanceof ApiResponseError) {
-    const reference = error.requestId ? ` Reference: ${error.requestId}` : ""
-    return `${error.message}${reference}`
+  if (cause instanceof ApiResponseError) {
+    const reference = cause.requestId ? ` Reference: ${cause.requestId}` : ""
+    return `${cause.message}${reference}`
   }
 
-  return taggedErrorMessage(error)?.trim() || fallback
+  return taggedErrorMessage(cause)?.trim() || fallback
 }

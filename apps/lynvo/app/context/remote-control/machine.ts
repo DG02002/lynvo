@@ -379,7 +379,7 @@ export const createRemoteControlMachine = ({
     start: (shouldPoll: () => boolean = () => true) => {
       const poll = () => {
         if (!shouldPoll()) {
-          return
+          return undefined
         }
         return machine
           .poll()

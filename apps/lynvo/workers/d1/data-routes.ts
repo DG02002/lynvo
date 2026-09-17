@@ -83,13 +83,13 @@ const respondDataFailure = async ({
   kind,
   message,
 }: RespondDataFailureInput): Promise<Response> =>
-  await context.json({ failure: { kind, message } }, status)
+  context.json({ failure: { kind, message } }, status)
 
 const dataApp = new Hono<RequestLoggingEnvironment>()
 
 dataApp.onError(async (error, context) => {
   if (error instanceof StorageLimitError) {
-    return await context.json(
+    return context.json(
       {
         failure: {
           kind: "storage-limit",
@@ -101,7 +101,7 @@ dataApp.onError(async (error, context) => {
     )
   }
   if (error instanceof LinkTooLargeError) {
-    return await context.json(
+    return context.json(
       {
         failure: {
           kind: "link-too-large",

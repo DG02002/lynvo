@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
+import { readJsonInitBody } from "../support/request-inspection"
 
 interface MediaArtworkBatchRequest {
   readonly requests: readonly MediaArtworkRequest[]
@@ -27,10 +28,8 @@ const localStorageStub = {
 
 const createMediaArtworkFetch = () =>
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-    // SAFETY: the test fetch receives the JSON body produced by the artwork client
-    const requestBody = JSON.parse(
-      String(init?.body)
-    ) as MediaArtworkBatchRequest
+    // SAFETY: requests are serialized by the real artwork client.
+    const requestBody = readJsonInitBody(init) as MediaArtworkBatchRequest
     const results = requestBody.requests.map((request) =>
       request.episodeNumber === undefined
         ? {

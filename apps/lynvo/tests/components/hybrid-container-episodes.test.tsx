@@ -4,6 +4,7 @@ import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
 import type { LinkListItem } from "~/features/links/types"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
+import { readJsonInitBody } from "../support/request-inspection"
 
 const item: LinkListItem = {
   kind: "saved",
@@ -45,7 +46,7 @@ describe("Hybrid episode containers", () => {
       "fetch",
       vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
         // SAFETY: requests are serialized by the real artwork client.
-        const body = JSON.parse(String(init?.body)) as {
+        const body = readJsonInitBody(init) as {
           requests: MediaArtworkRequest[]
         }
         return new Response(
