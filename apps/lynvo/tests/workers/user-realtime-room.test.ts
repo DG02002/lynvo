@@ -22,7 +22,7 @@ const DEFAULT_REALTIME_ATTACHMENT: TestRealtimeAttachment = {
 }
 
 const runAlarm = async (
-  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- false positive: tsgolint's fallback project for tests cannot resolve the ambient D1Database name (tsconfig.cloudflare.json excludes tests/), so the real @cloudflare/workers-types interface looks like an error type. The union is meaningful: runAlarm must accept an absent DB binding ("keeps sockets open when the database binding is absent").
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- Test fallback cannot resolve D1Database; the undefined branch is required.
   database: D1Database | undefined,
   attachment: TestRealtimeAttachment = DEFAULT_REALTIME_ATTACHMENT,
   environment: DevelopmentAuthEnvironment = {}

@@ -148,6 +148,8 @@
     "react/no-unescaped-entities": "warn",
     "unicorn/prefer-string-replace-all": "warn",
     "typescript/no-explicit-any": "error",
+    // SAFETY comments are the repository's assertion gate; this rule would
+    // repeat those approved assertions.
     "typescript/no-unsafe-type-assertion": "off",
     "no-promise-executor-return": "error",
     "eqeqeq": "warn",

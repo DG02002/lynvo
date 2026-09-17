@@ -36,10 +36,7 @@ afterEach(() => vi.restoreAllMocks())
 
 type FetchCall = Parameters<typeof fetch>
 
-/**
- * The URL a recorded fetch call names. `Request` and `URL` targets have no
- * meaningful default stringification, so read their URL instead of coercing.
- */
+/** Read the URL a recorded fetch call names. */
 const calledUrl = (call: FetchCall | undefined): string => {
   const input = call?.[0]
   if (input === undefined) {
@@ -51,17 +48,15 @@ const calledUrl = (call: FetchCall | undefined): string => {
   return input instanceof URL ? input.href : input
 }
 
-/**
- * Parse the JSON body a recorded fetch call sent through the platform parser.
- * Fails loudly when the body is missing instead of coercing it to
- * "[object Object]".
- */
+/** Parse a JSON string body from a recorded fetch call. */
 const calledJsonBody = (call: FetchCall | undefined) => {
   const body = call?.[1]?.body
   if (body === null || body === undefined) {
     throw new Error("Expected a JSON string fetch body")
   }
-  return new Response(body).json()
+  // SAFETY: source adapters serialize their JSON request bodies as strings.
+  const jsonBody = body as string
+  return JSON.parse(jsonBody)
 }
 
 const createBhadooReverseEnvelope = (
@@ -447,7 +442,7 @@ describe("Bhadoo source adapter", () => {
     expect(calledUrl(calledItemRequest)).toBe(
       "https://index.example/0:fallback"
     )
-    expect(await calledJsonBody(calledItemRequest)).toEqual({
+    expect(calledJsonBody(calledItemRequest)).toEqual({
       id: "encoded-folder-token",
     })
     const [, calledRequest] = fetchSpy.mock.calls
@@ -456,7 +451,7 @@ describe("Bhadoo source adapter", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     })
-    expect(await calledJsonBody(calledRequest)).toEqual({
+    expect(calledJsonBody(calledRequest)).toEqual({
       id: "encoded-folder-token",
       type: "folder",
       password: "",
@@ -503,7 +498,7 @@ describe("Bhadoo source adapter", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     const [calledRequest] = fetchSpy.mock.calls
     expect(calledUrl(calledRequest)).toBe("https://index.example/0:fallback")
-    expect(await calledJsonBody(calledRequest)).toEqual({
+    expect(calledJsonBody(calledRequest)).toEqual({
       id: "encoded-file-token",
     })
     expect(result.nodes).toMatchObject([
