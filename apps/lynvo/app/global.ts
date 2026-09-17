@@ -1,5 +1,6 @@
-import type { ComponentType, LazyExoticComponent } from "react"
 import type { MDXComponents } from "mdx/types.js"
+import type { ComponentType, LazyExoticComponent } from "react"
+
 import type { LynvoPlugin } from "./features/site/settings/plugin-settings-data"
 import type { PluginIconSource } from "./lib/plugin-icons"
 

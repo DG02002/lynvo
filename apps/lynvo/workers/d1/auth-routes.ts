@@ -1,5 +1,11 @@
-import type { Context, Hono } from "hono"
 import { Result, Schema } from "effect"
+import type { Context, Hono } from "hono"
+
+import {
+  checkAuthenticationRateLimit,
+  checkDeviceApprovalRateLimit,
+  checkRateLimit,
+} from "../authentication-rate-limit"
 import {
   DEVICE_POLL_RATE_LIMIT,
   DEVICE_POLL_RATE_WINDOW_SECONDS,
@@ -7,20 +13,22 @@ import {
   GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
   GOOGLE_OAUTH_STATE_COOKIE_NAME,
 } from "../constants"
-import {
-  checkAuthenticationRateLimit,
-  checkDeviceApprovalRateLimit,
-  checkRateLimit,
-} from "../authentication-rate-limit"
+import { requestApiError } from "../request-api-error"
 import { getClientIp } from "../request-client-ip"
 import {
   addRequestContext,
   recordRateLimitResult,
   type RequestLoggingEnvironment,
 } from "../request-logging"
-import { requestApiError } from "../request-api-error"
 import { isSameOriginRequest } from "../same-origin"
 import { getD1Database } from "./db"
+import {
+  authorizeDeviceCode,
+  claimAuthorizedCode,
+  finalizeDeviceExchange,
+  getDeviceCodeForApproval,
+  getDeviceCodeStatus,
+} from "./device-auth"
 import {
   createGoogleSignInStart,
   exchangeGoogleAuthorizationCode,
@@ -37,13 +45,6 @@ import {
   resolveD1Session,
 } from "./sessions"
 import { getOrCreateGoogleUser } from "./users"
-import {
-  authorizeDeviceCode,
-  claimAuthorizedCode,
-  finalizeDeviceExchange,
-  getDeviceCodeForApproval,
-  getDeviceCodeStatus,
-} from "./device-auth"
 
 const resolveGoogleCredentials = (env: Env): GoogleOAuthCredentials | null => {
   // SAFETY: secrets are declared required in wrangler.jsonc but may be absent on unprovisioned runtimes.

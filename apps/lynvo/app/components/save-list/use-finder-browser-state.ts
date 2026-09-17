@@ -14,28 +14,30 @@ import {
   NavigationType,
   type BlockerFunction,
 } from "react-router"
-import { toLinkViewModel } from "~/features/links/link-view-models"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
   getMediaNodeInteractionState,
   getMediaNodeTargetOrUndefined,
 } from "~/features/links/media-node-interaction"
+import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+import { savePaths } from "~/lib/paths"
+
+import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
 import {
   getLinkKey,
   getLinksAtFolderPath,
   resolveFolderPath,
   type FolderLevel,
 } from "./save-list-browser-model"
-import { openInPlayerAndMarkOpened } from "~/features/links/open-in-player"
-import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
-import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
-import { createFolderPathSearch, parseFolderPath } from "./folder-path-url"
-import { savePaths } from "~/lib/paths"
 import {
   areFolderIdsEqual,
   useFinderFolderHistory,
 } from "./use-finder-folder-history"
+import { useFinderScrollRestoration } from "./use-finder-scroll-restoration"
+import { useFinderWheelNavigation } from "./use-finder-wheel-navigation"
 
 interface UseFinderBrowserStateOptions {
   item: LinkViewItem

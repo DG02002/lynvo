@@ -200,5 +200,13 @@ ignored and `tools/oxlint/anti-slop/**` belongs to no Knip project. Resolve a
 finding in vendored code by excluding it in configuration, never by editing
 the file.
 
+Oxlint follows semver, but new rules arrive in minor versions, and warnings
+fail by configuration. A dependency bump can therefore turn CI red with
+findings the previous version could not see — treat that as stronger
+analysis, not a broken upgrade, and fix the new findings in the bump PR.
+Three surfaces Oxlint explicitly exempts from semver entirely are in use
+here: JS plugins (the anti-slop rules), type-aware linting, and nursery
+rules if ever enabled; their behavior may change in any release.
+
 For a docs-only change, check changed repository links and run the affected
 in-app documentation tests. Do not deploy as a verification step.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { getBrowserDeviceName } from "~/lib/device-name"
+
 import { TVBRO_ANDROID_TV_PROFILE } from "~/lib/client-profile"
+import { getBrowserDeviceName } from "~/lib/device-name"
 
 describe("browser device name", () => {
   it.each([

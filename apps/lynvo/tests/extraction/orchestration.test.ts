@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 import { createExtractionOrchestration } from "~/lib/extraction/orchestration"
 import { decideSavePresentation } from "~/lib/extraction/presentation"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 const savedWorkerItem = (): LinkViewItem => ({
   url: "https://example.com/source",

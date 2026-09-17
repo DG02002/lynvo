@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest"
-import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
 import type { MediaNode } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it } from "vitest"
+
+import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
 
 describe("mapNodeToExtractedLink", () => {
   it("maps group nodes to folder links", () => {

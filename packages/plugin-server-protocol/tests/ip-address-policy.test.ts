@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { isBlockedIpUrl, isLocalUrl } from "../src/index"
 
 const ipv4Url = (address: string): URL => new URL(`https://${address}/`)

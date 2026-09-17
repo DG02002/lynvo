@@ -1,37 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
-import type {
-  ExtractedLink,
-  MetaData,
-  LinkViewItem,
-} from "~/features/links/types"
+
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
 import { createPluginDomainSuggestion } from "~/features/links/plugin-domain-suggestion"
-import {
-  parsePluginDomainCandidate,
-  type PluginDomainSuggestion,
-} from "~/lib/plugin-domain"
 import {
   confirmSaveIntent,
   resolveSaveIntent,
   type ConfirmSaveIntentResult,
   type SaveIntentResult,
 } from "~/features/links/save-intent"
-import type { SelectionDialogState } from "./interaction-state"
+import {
+  shouldOfferPluginDomainSuggestion,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
+import type {
+  ExtractedLink,
+  MetaData,
+  LinkViewItem,
+} from "~/features/links/types"
+import { client } from "~/lib/api/client"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
+import { showErrorToast, showSuccessToast } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import type { OpenSelectionDialogOptions } from "./action-types"
+import type { SelectionDialogState } from "./interaction-state"
+import { getSaveErrorMessage } from "./save-error-message"
 import {
   clearHighlightAfterDelay,
   resetSaveView,
   vibrateSaveStart,
   vibrateSaveSuccess,
 } from "./save-feedback"
-import { getSaveErrorMessage } from "./save-error-message"
-import { client } from "~/lib/api/client"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import {
-  shouldOfferPluginDomainSuggestion,
-  type SavedLinkInteractionReporter,
-} from "~/features/links/saved-link-interaction"
 
 export const useSaveActions = ({
   url,

@@ -1,12 +1,12 @@
 import { SAVED_LINK_COMMAND_OPERATION_TTL_MS } from "../constants"
 import type { OwnedWriteGuard } from "./data-version"
 import { LinkNotFoundError } from "./errors"
+import { requireOwnedRow } from "./owned-row"
 import type { LinkRow } from "./rows"
 import {
   SAVED_LINK_META_APPLIED_OPERATION_LINK_SQL,
   type SavedLinkMetaAppliedLink,
 } from "./saved-link-meta-applied"
-import { requireOwnedRow } from "./owned-row"
 
 const SAVED_LINK_OPERATION_RESERVED_STATE = "reserved"
 const SAVED_LINK_OPERATION_COMPLETED_STATE = "completed"

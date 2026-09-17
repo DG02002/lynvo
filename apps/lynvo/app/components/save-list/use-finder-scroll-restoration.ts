@@ -1,5 +1,5 @@
-import { useEffect, useRef, type RefObject } from "react"
 import { Result, Schema } from "effect"
+import { useEffect, useRef, type RefObject } from "react"
 
 const scrollPositionsSchema = Schema.Record(Schema.String, Schema.Number)
 

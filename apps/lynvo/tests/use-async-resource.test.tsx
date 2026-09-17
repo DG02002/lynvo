@@ -1,9 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   clearAsyncResourceCache,
   useAsyncResource,
 } from "~/hooks/use-async-resource"
+
 import { silenceConsoleErrorLogs } from "./support/silence-console-error-logs"
 
 describe("useAsyncResource cache", () => {

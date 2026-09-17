@@ -1,13 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react"
+
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
+import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
 import type {
   ExtractedLink,
   LinkMetadata,
   LinkViewItem,
 } from "~/features/links/types"
-import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
-import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
 
 interface UseResolvableContainerStateOptions {
   item: LinkViewItem

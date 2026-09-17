@@ -1,6 +1,7 @@
-import * as React from "react"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import * as React from "react"
 import { describe, expect, it, vi } from "vitest"
+
 import { CustomPluginServersSection } from "~/features/site/settings/plugins-settings"
 
 const CustomPluginServersHarness = ({

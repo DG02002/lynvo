@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
-import type { ExtractedLink } from "~/features/links/types"
+
 import {
   createFolderPathSearch,
   encodeFolderPath,
   parseFolderPath,
 } from "~/components/save-list/folder-path-url"
 import { resolveFolderPath } from "~/components/save-list/save-list-browser-model"
+import type { ExtractedLink } from "~/features/links/types"
 
 describe("folder path URL helpers", () => {
   it("round-trips opaque ids that contain URL-reserved characters", () => {

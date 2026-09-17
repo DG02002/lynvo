@@ -1,12 +1,14 @@
 import { Effect, Layer } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
+import { registerCustomPluginServer } from "~/lib/effect/services/custom-plugin-server-lifecycle"
 import {
   normalizePluginServerBaseUrl,
   preparePluginServerRefresh,
   preparePluginServerRegistration,
 } from "~/lib/effect/services/plugin-server-registration"
-import { registerCustomPluginServer } from "~/lib/effect/services/custom-plugin-server-lifecycle"
-import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
+
 import { createFakeD1Database } from "../support/fake-d1"
 
 const createManifest = (

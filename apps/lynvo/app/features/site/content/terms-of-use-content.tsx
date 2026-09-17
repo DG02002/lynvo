@@ -1,4 +1,5 @@
 import { Link } from "react-router"
+
 import { PolicyLayout, PolicySection } from "~/components/policy-layout"
 import {
   SupportChannelLinks,

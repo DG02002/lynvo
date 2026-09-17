@@ -1,6 +1,7 @@
+import { Result, Schema } from "effect"
+
 import { readApiResponseError } from "~/lib/api-errors"
 import { deviceCodeResponseSchema } from "~/lib/auth-gateway-schemas"
-import { Result, Schema } from "effect"
 
 export const createDeviceCode = async (deviceName: string) => {
   const response = await fetch("/api/auth/device/code", {

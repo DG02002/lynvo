@@ -4,6 +4,8 @@ import {
   type ExtractSuccessResponse,
   type HttpBasicAuth,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { Schema } from "effect"
+
 import { createBasicAuthorization } from "../auth"
 import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
@@ -18,21 +20,21 @@ import {
 import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
-} from "../plugin-catalog"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
-import { isVideoFile } from "./video-file"
-import { formatFileSize } from "./file-size"
-import { extractDirectMedia } from "./direct-media"
+} from "../plugin-adapter"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
 } from "../upstream-response"
-import { Schema } from "effect"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
+import { extractDirectMedia } from "./direct-media"
+import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
+import { isVideoFile } from "./video-file"
 
 export interface BhadooGoogleDriveItem {
   id: string
@@ -176,14 +178,12 @@ export const createBhadooNodes = (
     playableUrl.username = ""
     playableUrl.password = ""
     const size = formatBhadooFileSize(item.size)
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 

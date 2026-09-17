@@ -1,8 +1,9 @@
-import { useEffect, useId, useState } from "react"
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useId, useState } from "react"
 
 import { cn } from "~/lib/utils"
+
 import {
   useActiveHeadingTracker,
   useDocumentHeadings,

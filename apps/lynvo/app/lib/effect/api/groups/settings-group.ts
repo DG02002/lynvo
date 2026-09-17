@@ -1,13 +1,6 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { CsrfMiddleware, WebAuth } from "../middleware"
-import {
-  BackendApiError,
-  CsrfApiError,
-  NotFoundApiError,
-  UnauthorizedApiError,
-  ValidationApiError,
-} from "../../errors"
+
 import {
   ActivityPayloadSchema,
   DeleteAccountPayloadSchema,
@@ -15,6 +8,14 @@ import {
   PlayerPreferencesSchema,
   UserSessionListSchema,
 } from "../../../api-contracts"
+import {
+  BackendApiError,
+  CsrfApiError,
+  NotFoundApiError,
+  UnauthorizedApiError,
+  ValidationApiError,
+} from "../../errors"
+import { CsrfMiddleware, WebAuth } from "../middleware"
 import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class SettingsGroup extends HttpApiGroup.make("settings")

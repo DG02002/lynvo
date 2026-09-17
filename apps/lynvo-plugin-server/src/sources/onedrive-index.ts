@@ -1,10 +1,12 @@
-import { load } from "cheerio"
 import {
   ProtocolError,
   sleep,
   type MediaNode,
   type ExtractSuccessResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { load } from "cheerio"
+import { Result, Schema } from "effect"
+
 import {
   ONEDRIVE_FETCH_RETRIES,
   ONEDRIVE_FETCH_RETRY_DELAY_MS,
@@ -15,21 +17,21 @@ import {
 import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
-} from "../plugin-catalog"
-import {
-  assertSafeUpstreamUrl,
-  decodeUrlComponent,
-  encodeUrlPathSegment,
-} from "../url-policy"
-import { isVideoFile } from "./video-file"
-import { formatFileSize } from "./file-size"
+} from "../plugin-adapter"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamJson,
   readBoundedUpstreamText,
   UpstreamPolicyError,
 } from "../upstream-response"
-import { Result, Schema } from "effect"
+import {
+  assertSafeUpstreamUrl,
+  decodeUrlComponent,
+  encodeUrlPathSegment,
+} from "../url-policy"
+import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
+import { isVideoFile } from "./video-file"
 
 export interface OneDriveItem {
   readonly name: string
@@ -189,14 +191,12 @@ export const createOneDriveNodes = ({
     if (hashedPassword) {
       playableUrl.searchParams.set("odpt", hashedPassword)
     }
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react"
 import { useNavigate, useParams } from "react-router"
-import { savePaths } from "~/lib/paths"
+
 import type { LinkListItem, SavedLinkListItem } from "~/features/links/types"
+import { savePaths } from "~/lib/paths"
 
 export const useSaveFolderRoute = (
   items: LinkListItem[],

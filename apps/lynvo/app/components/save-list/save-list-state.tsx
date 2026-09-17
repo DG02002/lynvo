@@ -1,6 +1,7 @@
 import { Archive04Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import type { ReactNode } from "react"
+
 import { Spinner } from "~/components/spinner"
 
 interface SaveListStateProps {

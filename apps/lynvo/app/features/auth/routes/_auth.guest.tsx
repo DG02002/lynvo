@@ -1,6 +1,8 @@
 import { Outlet } from "react-router"
+
 import { getUserSession, requireGuestOrRedirect } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
+
 import type { Route } from "./+types/_auth.guest"
 
 export async function loader(args: Route.LoaderArgs) {

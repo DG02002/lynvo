@@ -1,7 +1,8 @@
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { useOpeningState } from "~/features/links/use-link-actions/interaction-state"
+
 import { OPENING_RESET_DELAY_MS } from "~/features/links/use-link-actions/constants"
+import { useOpeningState } from "~/features/links/use-link-actions/interaction-state"
 
 const setVisibilityState = (visibilityState: "hidden" | "visible") => {
   Object.defineProperty(document, "visibilityState", {

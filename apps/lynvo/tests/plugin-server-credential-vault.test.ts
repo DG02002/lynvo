@@ -1,10 +1,10 @@
 // @vitest-environment edge-runtime
 
+import type { SealedRecord } from "../app/lib/security/sealed-record"
 import {
   PluginServerCredentialVault,
   type CredentialVaultRequest,
 } from "../workers/plugin-server-credential-vault"
-import type { SealedRecord } from "../app/lib/security/sealed-record"
 
 const TEST_ENCRYPTION_KEY = btoa("0123456789abcdef0123456789abcdef")
 

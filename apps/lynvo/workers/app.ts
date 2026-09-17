@@ -1,18 +1,62 @@
-import { Hono, type Context as HonoContext } from "hono"
-import { initLogger } from "evlog"
 import { DurableObject } from "cloudflare:workers"
-import { createRequestHandler, RouterContextProvider } from "react-router"
 import { Context, Effect, Result, Schema } from "effect"
+import { initLogger } from "evlog"
+import { Hono, type Context as HonoContext } from "hono"
+import { createRequestHandler, RouterContextProvider } from "react-router"
+
+import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
+import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
+import { handler as apiHandler } from "../app/lib/effect/api/server"
+import { getRuntime } from "../app/lib/effect/runtime"
 import { CloudflareEnv } from "../app/lib/effect/services/cloudflare-env"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
 import { PluginCredentialVault } from "../app/lib/effect/services/plugin-credential-vault"
-import { getRuntime } from "../app/lib/effect/runtime"
 import { RequestEventService } from "../app/lib/effect/services/request-event-service"
-import { handler as apiHandler } from "../app/lib/effect/api/server"
-import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
-import { REALTIME_SESSION_REVOKED_CLOSE_CODE } from "../app/lib/constants"
-import { deviceCodeRequestSchema } from "../app/lib/auth-gateway-schemas"
+import { createRemoteTargetId } from "../app/lib/remote-target"
 import { cloudflareContext } from "../app/lib/router-context"
+import {
+  checkAuthenticationRateLimit,
+  checkDeviceApprovalRateLimit,
+  checkRateLimit,
+  type AuthenticationRateLimitResult,
+} from "./authentication-rate-limit"
+import {
+  CRON_SCHEDULE_DAILY_RETENTION,
+  CRON_SCHEDULE_HOURLY_MAINTENANCE,
+  DEVICE_CODE_CREATION_RATE_LIMIT,
+  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
+  EXTRACTION_ROUTE_RATE_LIMIT,
+  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
+} from "./constants"
+import { drainAccountErasures } from "./d1/account-erasure"
+import { registerD1AuthRoutes } from "./d1/auth-routes"
+import { registerD1DataRoutes } from "./d1/data-routes"
+import { getDataVersion } from "./d1/data-version"
+import { getD1Database } from "./d1/db"
+import { cleanupExpiredDeviceCodes, createDeviceCode } from "./d1/device-auth"
+import {
+  cleanupSavedLinkCommandOperations,
+  sweepExpiredLinks,
+} from "./d1/links"
+import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
+import { cleanupExpiredRemoteCommands } from "./d1/remote-commands"
+import {
+  deleteStaleSessions,
+  expireD1SessionCookie,
+  findActiveSessionForEnvironment,
+  resolveSessionContext,
+  revokeSessionById,
+} from "./d1/sessions"
+import { releaseExpiredManagedExtractions } from "./d1/usage"
+import { echoDataVersion } from "./d1/version-echo"
+import { processQueuedLinkExtractions } from "./link-extraction-runner"
+import { refreshCustomPluginServerManifests } from "./plugin-server-manifest-refresh"
+import { closeRealtimeSession } from "./realtime-session-revocation"
+import { buildReleaseIdentity } from "./release-identity"
+import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
+import { requestApiError } from "./request-api-error"
+import { getClientIp } from "./request-client-ip"
 import {
   addRequestContext,
   recordRateLimitResult,
@@ -23,50 +67,7 @@ import {
   applyResponseSecurityHeaders,
   responseSecurityHeaders,
 } from "./response-security-headers"
-import { buildReleaseIdentity } from "./release-identity"
-import { requestApiError } from "./request-api-error"
-import {
-  checkAuthenticationRateLimit,
-  checkDeviceApprovalRateLimit,
-  checkRateLimit,
-  type AuthenticationRateLimitResult,
-} from "./authentication-rate-limit"
-import { getClientIp } from "./request-client-ip"
-import { createRemoteCommandNotificationDelivery } from "./remote-command-notification-delivery"
-import { closeRealtimeSession } from "./realtime-session-revocation"
-import {
-  CRON_SCHEDULE_DAILY_RETENTION,
-  CRON_SCHEDULE_HOURLY_MAINTENANCE,
-  DEVICE_CODE_CREATION_RATE_LIMIT,
-  DEVICE_CODE_CREATION_RATE_WINDOW_SECONDS,
-  EXTRACTION_ROUTE_RATE_LIMIT,
-  EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-  REALTIME_SESSION_REVALIDATION_INTERVAL_MS,
-} from "./constants"
-import { createRemoteTargetId } from "../app/lib/remote-target"
 import { isSameOriginRequest } from "./same-origin"
-import { registerD1AuthRoutes } from "./d1/auth-routes"
-import { registerD1DataRoutes } from "./d1/data-routes"
-import { getDataVersion } from "./d1/data-version"
-import { getD1Database } from "./d1/db"
-import { cleanupExpiredDeviceCodes, createDeviceCode } from "./d1/device-auth"
-import {
-  deleteStaleSessions,
-  expireD1SessionCookie,
-  findActiveSessionForEnvironment,
-  resolveSessionContext,
-  revokeSessionById,
-} from "./d1/sessions"
-import {
-  cleanupSavedLinkCommandOperations,
-  sweepExpiredLinks,
-} from "./d1/links"
-import { releaseExpiredManagedExtractions } from "./d1/usage"
-import { cleanupExpiredRemoteCommands } from "./d1/remote-commands"
-import { drainAccountErasures } from "./d1/account-erasure"
-import { expireStalePluginServerRegistrations } from "./d1/plugin-servers"
-import { echoDataVersion } from "./d1/version-echo"
-import { processQueuedLinkExtractions } from "./link-extraction-runner"
 export { AuthRateLimiter } from "./auth-rate-limiter"
 export { PluginServerCredentialVault } from "./plugin-server-credential-vault"
 

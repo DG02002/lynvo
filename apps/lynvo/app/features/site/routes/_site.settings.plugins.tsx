@@ -1,7 +1,8 @@
-import { useLoaderData, type LoaderFunctionArgs } from "react-router"
 import { useLogger as getRequestLogger } from "evlog/react-router"
-import { PluginsSettings } from "~/features/site/settings/plugins-settings"
+import { useLoaderData, type LoaderFunctionArgs } from "react-router"
+
 import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
+import { PluginsSettings } from "~/features/site/settings/plugins-settings"
 import { getServerEnv } from "~/lib/env.server"
 
 export const loader = async ({ request, context }: LoaderFunctionArgs) => {

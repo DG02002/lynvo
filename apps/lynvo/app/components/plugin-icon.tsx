@@ -1,7 +1,8 @@
 import { HelpSquareIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { cn } from "~/lib/utils"
+
 import { getPluginIconSource, type PluginIconSource } from "~/lib/plugin-icons"
+import { cn } from "~/lib/utils"
 
 interface PluginIconProps {
   icon?: PluginIconSource

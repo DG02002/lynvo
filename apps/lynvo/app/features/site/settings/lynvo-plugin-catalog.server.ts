@@ -1,8 +1,10 @@
 import { getLynvoManifestExtension } from "@dg02002/lynvo-plugin-server-protocol"
+
 import {
   PluginServerClient,
   ServiceBindingPluginServerTransport,
 } from "~/lib/extraction/plugin-server-client"
+
 import type { LynvoPlugin } from "./plugin-settings-data"
 
 export const resolveLynvoPluginIconUrl = (

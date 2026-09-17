@@ -1,7 +1,8 @@
 import { data } from "react-router"
 
-import type { Route } from "./+types/_site.docs-markdown"
 import { docsCatalog } from "~/features/site/docs/docs-catalog"
+
+import type { Route } from "./+types/_site.docs-markdown"
 
 export const loader = ({ params }: Route.LoaderArgs) => {
   const slug = params["*"]

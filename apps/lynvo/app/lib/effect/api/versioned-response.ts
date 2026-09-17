@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
-import { DATA_VERSION_RESPONSE_HEADER } from "../../constants"
+
 import { VersionedMutationBodySchema } from "../../api-contracts"
+import { DATA_VERSION_RESPONSE_HEADER } from "../../constants"
 
 const dataVersionHeaders = {
   [DATA_VERSION_RESPONSE_HEADER]: Schema.Number,

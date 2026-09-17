@@ -1,4 +1,5 @@
 import * as React from "react"
+
 import { encodeQrCode, type QrCodeModules } from "~/lib/qr-code"
 
 type QrCodeProps = Omit<React.SVGProps<SVGSVGElement>, "title"> & {

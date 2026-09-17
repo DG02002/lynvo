@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { getFilenameBreakSegments } from "~/components/filename-text-segments"
 
 describe("getFilenameBreakSegments", () => {

@@ -4,6 +4,7 @@ import {
   type PluginMetadata,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
+
 import type { SupportedProxyProvider } from "~/lib/plugin-server-proxy"
 
 export interface PluginServerManifestView {

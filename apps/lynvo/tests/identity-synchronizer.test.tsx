@@ -1,10 +1,11 @@
-import { useEffect } from "react"
 import { render, waitFor } from "@testing-library/react"
+import { useEffect } from "react"
+import { vi } from "vitest"
+
 import {
   useEnsureSessionIdentity,
   IdentitySynchronizer,
 } from "~/root/identity-synchronizer"
-import { vi } from "vitest"
 
 describe("identity synchronization", () => {
   it("accepts the successful signed-out session status", async () => {

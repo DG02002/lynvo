@@ -1,5 +1,7 @@
 import { Result, Schema } from "effect"
+
 import { getCookieValue } from "../../app/lib/auth-cookie"
+import { toBase64Url } from "../base64-url"
 import {
   GOOGLE_OAUTH_AUTH_ENDPOINT,
   GOOGLE_OAUTH_CODE_VERIFIER_BYTES,
@@ -11,7 +13,6 @@ import {
   GOOGLE_OAUTH_TOKEN_ENDPOINT,
   GOOGLE_OAUTH_TOKEN_TIMEOUT_MS,
 } from "../constants"
-import { toBase64Url } from "../base64-url"
 
 export interface GoogleOAuthCredentials {
   readonly clientId: string

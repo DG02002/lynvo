@@ -1,4 +1,5 @@
 import { Context } from "effect"
+
 import type { RequestContextFields } from "../../../../workers/request-logging"
 
 export interface RequestEventServiceContract {

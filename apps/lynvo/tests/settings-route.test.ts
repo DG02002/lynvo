@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { loader as developmentRedirectLoader } from "~/features/site/routes/_site.settings.development-redirect"
 import {
   getSettingsPath,

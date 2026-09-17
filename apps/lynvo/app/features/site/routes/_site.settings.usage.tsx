@@ -1,5 +1,5 @@
-import { UsageSettings } from "~/features/site/settings/usage-settings"
 import { useSettingsUser } from "~/features/site/settings/settings-route"
+import { UsageSettings } from "~/features/site/settings/usage-settings"
 
 export default function UsageSettingsRoute() {
   const user = useSettingsUser()

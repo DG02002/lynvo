@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { createLinksSnapshotStore } from "~/features/links/use-links/links-store"
+
 import type { LinkViewItem } from "~/features/links/types"
+import { createLinksSnapshotStore } from "~/features/links/use-links/links-store"
 
 const viewItem = (
   id: string,

@@ -1,4 +1,3 @@
-import { createOpaqueId } from "./ids"
 import {
   DEVICE_CODE_ALPHABET_SIZE,
   DEVICE_CODE_CLEANUP_BATCH_SIZE,
@@ -11,6 +10,7 @@ import {
   DEVICE_CODE_TTL_MS,
   D1_SESSION_TOTAL_DURATION_MS,
 } from "../constants"
+import { createOpaqueId } from "./ids"
 
 export interface DeviceCodeRecord {
   code: string

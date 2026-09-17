@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
+
 import { PLAYER_DEFINITIONS } from "~/lib/player-utils"
+
 import { useAnimationActivity } from "./use-animation-activity"
 
 const PLAYER_PREVIEWS = {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { fetchValidatedRedirects } from "../src/index"
 
 const validateUrl = (value: string | URL): URL => new URL(value)

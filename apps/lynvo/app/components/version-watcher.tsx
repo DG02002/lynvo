@@ -1,5 +1,6 @@
-import * as React from "react"
 import { Result, Schema } from "effect"
+import * as React from "react"
+
 import { VERSION_WATCH_INTERVAL_MS } from "~/lib/constants"
 
 const versionResponseSchema = Schema.Struct({

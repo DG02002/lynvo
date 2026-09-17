@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   AUTO_SAVE_LINKS_PREFERENCE_EVENT,
   AUTO_SAVE_LINKS_STORAGE_KEY,
   getShouldAutoSaveAllLinks,
   setShouldAutoSaveAllLinks,
 } from "~/features/site/settings/auto-save-links-preference"
+
 import { createMemoryStorage } from "./memory-storage"
 
 beforeEach(() => {

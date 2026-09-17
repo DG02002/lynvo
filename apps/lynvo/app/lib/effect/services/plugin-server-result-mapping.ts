@@ -5,11 +5,13 @@ import {
   type PluginMetadata,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { mapNodesToExtractedLinks } from "~/lib/plugin-server-utils"
+
 import {
   decodeExtractionText,
   normalizeExtractionText,
 } from "~/lib/extraction/extraction-text-normalization"
+import { mapNodesToExtractedLinks } from "~/lib/plugin-server-utils"
+
 import type {
   ExtractionMetadata,
   ExtractionResult,

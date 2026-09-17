@@ -1,6 +1,7 @@
-import type { ReactNode } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { InformationCircleIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
+
 import {
   Tooltip,
   TooltipContent,

@@ -1,26 +1,11 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../api"
-import { CurrentUser } from "../middleware"
-import { versionedSuccess } from "../versioned-response"
+
 import {
-  normalizePluginDomain,
-  parsePluginDomainInput,
-} from "../../../plugin-domain"
-import {
-  BackendError,
-  PluginCredentialChangeSupersededError as PluginCredentialChangeSupersededApiError,
-  PluginDomainNotFoundError as PluginDomainNotFoundApiError,
-  PluginServerUnavailableError as PluginServerUnavailableApiError,
-  ValidationError,
-} from "../../errors"
-import { PluginCredentialVault } from "../../services/plugin-credential-vault"
-import { CloudflareEnv } from "../../services/cloudflare-env"
-import {
-  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
-  requireDatabaseEffect,
-} from "../../require-database"
-import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
+  PluginCredentialChangeSupersededError as D1PluginCredentialChangeSupersededError,
+  PluginDomainNotFoundError as D1PluginDomainNotFoundError,
+  PluginServerUnavailableError as D1PluginServerUnavailableError,
+} from "../../../../../workers/d1/errors"
 import {
   beginPluginDomainCredentialChange,
   deletePluginDomainById,
@@ -30,10 +15,26 @@ import {
   upsertPluginDomain,
 } from "../../../../../workers/d1/plugin-domains"
 import {
-  PluginCredentialChangeSupersededError as D1PluginCredentialChangeSupersededError,
-  PluginDomainNotFoundError as D1PluginDomainNotFoundError,
-  PluginServerUnavailableError as D1PluginServerUnavailableError,
-} from "../../../../../workers/d1/errors"
+  normalizePluginDomain,
+  parsePluginDomainInput,
+} from "../../../plugin-domain"
+import { serializeHttpBasicCredential } from "../../../plugins/http-basic-credential"
+import {
+  BackendError,
+  PluginCredentialChangeSupersededError as PluginCredentialChangeSupersededApiError,
+  PluginDomainNotFoundError as PluginDomainNotFoundApiError,
+  PluginServerUnavailableError as PluginServerUnavailableApiError,
+  ValidationError,
+} from "../../errors"
+import {
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+} from "../../require-database"
+import { CloudflareEnv } from "../../services/cloudflare-env"
+import { PluginCredentialVault } from "../../services/plugin-credential-vault"
+import { Api } from "../api"
+import { CurrentUser } from "../middleware"
+import { versionedSuccess } from "../versioned-response"
 
 const mapPluginDomainMutationError = (cause: unknown, fallback: string) => {
   if (cause instanceof D1PluginDomainNotFoundError) {

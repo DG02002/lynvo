@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   MEDIA_VIEW_PREFERENCE_EVENT,
   MEDIA_VIEW_STORAGE_KEY,
@@ -7,6 +8,7 @@ import {
   getMediaViewFromCookieHeader,
   setMediaView,
 } from "~/features/site/settings/media-view-preference"
+
 import { createMemoryStorage } from "./memory-storage"
 
 beforeEach(() => {

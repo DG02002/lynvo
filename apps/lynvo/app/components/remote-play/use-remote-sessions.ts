@@ -1,8 +1,10 @@
+import { Result, Schema } from "effect"
 import { useState } from "react"
-import type { RemoteSession } from "./types"
+
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { Result, Schema } from "effect"
+
+import type { RemoteSession } from "./types"
 
 declare global {
   interface RemoteSessionContract {

@@ -1,11 +1,12 @@
+import { Result, Schema } from "effect"
+
+import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
 import {
   isSealedRecord,
   sealRecord,
   unsealRecord,
   type SealedRecord,
 } from "../app/lib/security/sealed-record"
-import { SEALED_RECORD_KEY_VERSION } from "../app/lib/security/constants"
-import { Result, Schema } from "effect"
 
 interface EncryptedPluginServerCredential extends SealedRecord {}
 

@@ -1,5 +1,3 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
   Folder01Icon,
@@ -7,17 +5,21 @@ import {
   FolderSymlinkIcon,
   Video02Icon,
 } from "@hugeicons/core-free-icons"
-import { Checkbox } from "~/components/ui/checkbox"
-import { Spinner } from "~/components/spinner"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
 import { ExpandableFilename } from "~/components/expandable-filename"
-import type { ExtractedLink } from "~/features/links/types"
+import { Spinner } from "~/components/spinner"
+import { Checkbox } from "~/components/ui/checkbox"
 import {
   getMediaNodeKey,
   getMediaNodeTargetOrUndefined,
   getMediaNodeInteractionState,
 } from "~/features/links/media-node-interaction"
-import { cn } from "~/lib/utils"
+import type { ExtractedLink } from "~/features/links/types"
 import { formatItemCount } from "~/lib/format-item-count"
+import { cn } from "~/lib/utils"
+
 import { getLinkSelectionState } from "./link-selection-state"
 
 interface LinkSelectionTreeItemProps {

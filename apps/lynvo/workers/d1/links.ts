@@ -1,7 +1,17 @@
+import { Schema } from "effect"
+
 import {
   mergeUnique,
   removeLinkFromTree,
 } from "../../app/features/links/link-tree-metadata"
+import {
+  extractedLinkSchema,
+  parseCanonicalLinkMetadataJson,
+} from "../../app/features/links/storage-schemas"
+import type {
+  ExtractedLink,
+  LinkMetadata,
+} from "../../app/features/links/types"
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
@@ -12,15 +22,6 @@ import {
   SAVED_LINK_OPTIMISTIC_RETRY_ATTEMPTS,
 } from "../constants"
 import {
-  extractedLinkSchema,
-  parseCanonicalLinkMetadataJson,
-} from "../../app/features/links/storage-schemas"
-import type {
-  ExtractedLink,
-  LinkMetadata,
-} from "../../app/features/links/types"
-import { Schema } from "effect"
-import {
   CHANGED_ROWS_GUARD,
   createDataVersionBumpStatement,
   executeOwnedWrite,
@@ -28,17 +29,16 @@ import {
   type OwnedWriteGuard,
   type OwnedWriteResult,
 } from "./data-version"
-import {
-  assertLinkSize,
-  applyStorageMutation,
-  byteLength,
-  createClearSavedLinksLedgerStatement,
-  ensureStorageLedger,
-  type StorageLedgerPreparation,
-} from "./storage-ledger"
 import { LinkNotFoundError } from "./errors"
 import { createOpaqueId } from "./ids"
 import type { LinkRow } from "./rows"
+import {
+  createConditionalDeleteSavedLinkExtractionCredentialStatement,
+  createUpsertSavedLinkExtractionCredentialStatement,
+  type SavedLinkExtractionCredentialLinkState,
+  type SavedLinkExtractionCredentialWrite,
+} from "./saved-link-extraction-credentials"
+import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
   completeSavedLinkOperationIfNoSavedLinks,
   createSavedLinkDeleteClaimStatement,
@@ -55,13 +55,14 @@ import {
   type CompletedSavedLinkOperation,
   type SavedLinkCommandOperationKey,
 } from "./saved-link-storage"
-import { savedLinkMetaAppliedConditions } from "./saved-link-meta-applied"
 import {
-  createConditionalDeleteSavedLinkExtractionCredentialStatement,
-  createUpsertSavedLinkExtractionCredentialStatement,
-  type SavedLinkExtractionCredentialLinkState,
-  type SavedLinkExtractionCredentialWrite,
-} from "./saved-link-extraction-credentials"
+  assertLinkSize,
+  applyStorageMutation,
+  byteLength,
+  createClearSavedLinksLedgerStatement,
+  ensureStorageLedger,
+  type StorageLedgerPreparation,
+} from "./storage-ledger"
 
 export interface SavedLinkRecord {
   id: string

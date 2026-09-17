@@ -1,5 +1,6 @@
 import { useTheme } from "next-themes"
-import { Switch } from "~/components/ui/switch"
+
+import { SelectTrigger } from "~/components/select-trigger"
 import {
   Select,
   SelectContent,
@@ -7,7 +8,14 @@ import {
   SelectItem,
   SelectValue,
 } from "~/components/ui/select"
-import { SelectTrigger } from "~/components/select-trigger"
+import { Switch } from "~/components/ui/switch"
+
+import {
+  setShouldAutoSaveAllLinks,
+  useShouldAutoSaveAllLinks,
+} from "./auto-save-links-preference"
+import { setMediaView, useMediaView } from "./media-view-preference"
+import { MediaViewSelector } from "./media-view-selector"
 import {
   SettingsPanel,
   SettingsList,
@@ -18,12 +26,6 @@ import {
   settingsSelectContentClass,
   settingsSelectTriggerClass,
 } from "./settings-layout-classes"
-import { setMediaView, useMediaView } from "./media-view-preference"
-import { MediaViewSelector } from "./media-view-selector"
-import {
-  setShouldAutoSaveAllLinks,
-  useShouldAutoSaveAllLinks,
-} from "./auto-save-links-preference"
 
 const appearanceOptions = [
   { value: "system", label: "System" },

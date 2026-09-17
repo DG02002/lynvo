@@ -1,21 +1,23 @@
+import { Refresh01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import * as React from "react"
+
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Refresh01Icon } from "@hugeicons/core-free-icons"
-import { createDeviceCode } from "./device-code"
+import { useAsyncResource } from "~/hooks/use-async-resource"
+import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
+import { getBrowserDeviceName } from "~/lib/device-name"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import {
   claimDeviceExchange,
   finalizeDeviceExchangeOverHttp,
   readDeviceCodeStatus,
   type DeviceCodeStatus,
 } from "./device-auth-http"
-import { useExpiryClock } from "./use-expiry-clock"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { getBrowserDeviceName } from "~/lib/device-name"
-import { DEVICE_AUTH_STATUS_POLL_INTERVAL_MS } from "~/lib/constants"
-import { useAsyncResource } from "~/hooks/use-async-resource"
+import { createDeviceCode } from "./device-code"
 import { QrCode } from "./qr-code"
+import { useExpiryClock } from "./use-expiry-clock"
 
 type Phase = "loading" | "pending" | "approved" | "expired" | "error"
 

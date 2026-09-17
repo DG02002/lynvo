@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
-import { createFakeD1Database } from "../support/fake-d1"
+
 import {
   DEVELOPMENT_AUTH_SESSION_ID,
   type DevelopmentAuthEnvironment,
 } from "../../workers/d1/sessions"
+import { createFakeD1Database } from "../support/fake-d1"
 
 declare global {
   interface TestRealtimeAttachment {

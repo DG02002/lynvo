@@ -1,10 +1,10 @@
+import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 import {
   lookupMediaArtworkOutcomes,
   mediaArtworkOutcomeToResult,
   type MediaArtworkCandidate,
   type MediaArtworkIdentity,
 } from "./media-artwork-lookup"
-import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 
 interface MediaArtworkRequest {
   readonly title: string

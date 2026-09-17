@@ -1,6 +1,7 @@
-import { Hono } from "hono"
 import { initLogger, type DrainContext } from "evlog"
+import { Hono } from "hono"
 import { beforeAll, describe, expect, it } from "vitest"
+
 import {
   pluginServerRequestLogging,
   type PluginServerRequestLoggingEnvironment,

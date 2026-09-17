@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { sealRecord, unsealRecord } from "~/lib/security/sealed-record"
 
 const ENCODED_KEY = btoa("0123456789abcdef0123456789abcdef")

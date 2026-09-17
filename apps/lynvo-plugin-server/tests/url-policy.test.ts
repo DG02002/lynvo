@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
 import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it } from "vitest"
+
 import { assertSafeUpstreamUrl } from "../src/url-policy"
 
 const expectUnsupportedUrl = (value: string): void => {

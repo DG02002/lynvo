@@ -1,7 +1,7 @@
+import { Result, Schema } from "effect"
 import type { AuditableLogger } from "evlog"
 import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { MiddlewareHandler } from "hono"
-import { Result, Schema } from "effect"
 
 interface PluginServerRequestLoggingVariables {
   readonly log: AuditableLogger

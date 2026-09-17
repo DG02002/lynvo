@@ -5,6 +5,7 @@ import {
   requireUserOrRedirect,
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
+
 import type { Route } from "./+types/_auth.device"
 
 export function meta(_: Route.MetaArgs) {

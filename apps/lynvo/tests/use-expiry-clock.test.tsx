@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react"
+
 import { useExpiryClock } from "~/components/auth/use-expiry-clock"
 
 describe("useExpiryClock", () => {

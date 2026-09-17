@@ -1,6 +1,7 @@
 import { act, render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import Pricing from "~/features/site/routes/_site.pricing"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 

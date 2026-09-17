@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { spawn } from "node:child_process"
 import {
   mkdir,
   mkdtemp,
@@ -9,9 +10,8 @@ import {
 } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { fileURLToPath } from "node:url"
-import { spawn } from "node:child_process"
 import { test, after } from "node:test"
+import { fileURLToPath } from "node:url"
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url))
 const cli = join(packageRoot, "bin/create-lynvo-plugin-server.mjs")

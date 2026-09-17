@@ -1,6 +1,6 @@
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { PluginIcon } from "~/components/plugin-icon"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 
 interface AddPluginDomainAlertDialogProps {
   suggestion: PluginDomainSuggestion | null

@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { expect, it, vi } from "vitest"
+
 import { DocumentLayout } from "~/root/layout"
 
 const EmptyComponent = () => null

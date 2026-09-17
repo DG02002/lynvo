@@ -1,16 +1,17 @@
+import {
+  getLinkViewItemSourceId,
+  getLinkViewItemPluginServerId,
+} from "~/features/links/link-metadata-accessors"
+import { mergeDefinedMeta } from "~/features/links/link-metadata-normalization"
+import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import type {
   ExtractedLink,
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
-import { mergeDefinedMeta } from "~/features/links/link-metadata-normalization"
-import {
-  getLinkViewItemSourceId,
-  getLinkViewItemPluginServerId,
-} from "~/features/links/link-metadata-accessors"
-import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
-import { decideSavePresentation } from "./presentation"
+
 import { defaultExtractionClient } from "./client"
+import { decideSavePresentation } from "./presentation"
 
 declare global {
   interface ExtractionTransport {

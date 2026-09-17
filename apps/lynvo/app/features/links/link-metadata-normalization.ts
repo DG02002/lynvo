@@ -1,13 +1,14 @@
+import { Schema } from "effect"
+
+import { getLinkSourceFields } from "./link-source-fields"
+import { stripOpenedFlags } from "./link-tree-metadata"
+import { linkMetadataSchema } from "./storage-schemas"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
   LinkMetadata,
   MetaData,
 } from "./types"
-import { getLinkSourceFields } from "./link-source-fields"
-import { stripOpenedFlags } from "./link-tree-metadata"
-import { linkMetadataSchema } from "./storage-schemas"
-import { Schema } from "effect"
 
 export const parseLinkMetadata = (metadata: string): LinkMetadata =>
   Schema.decodeUnknownSync(linkMetadataSchema)(JSON.parse(metadata))

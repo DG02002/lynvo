@@ -1,14 +1,15 @@
 import { Schema } from "effect"
 import { describe, expect, it, vi } from "vitest"
+
+import {
+  runSavedLinkCommand,
+  toSavedLinkCommandError,
+} from "~/features/links/saved-link-command-adapter"
 import {
   presentSavedLinkCommandFailure,
   SavedLinkCommandFailureSchema,
   SavedLinkCommandError,
 } from "~/features/links/saved-link-command-failure"
-import {
-  runSavedLinkCommand,
-  toSavedLinkCommandError,
-} from "~/features/links/saved-link-command-adapter"
 
 describe("saved-link command failure presentation", () => {
   it("round-trips every failure variant through the command schema", () => {

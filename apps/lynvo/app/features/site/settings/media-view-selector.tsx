@@ -1,5 +1,6 @@
 import { GridViewIcon, ListViewIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
+
 import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 

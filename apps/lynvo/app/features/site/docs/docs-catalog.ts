@@ -1,13 +1,13 @@
-import { lazy } from "react"
 import { Result, Schema } from "effect"
+import { lazy } from "react"
 
-import pluginServerMeta from "./plugin-server/meta.json"
-import rootMeta from "./meta.json"
+import { createHeadingId } from "./docs-heading"
 import {
   assembleDocumentationMarkdown,
   extractDocumentationSection,
 } from "./docs-markdown"
-import { createHeadingId } from "./docs-heading"
+import rootMeta from "./meta.json"
+import pluginServerMeta from "./plugin-server/meta.json"
 
 const contentModules = import.meta.glob<DocumentationMdxModule>("./**/*.mdx")
 const contentFrontmatter = import.meta.glob<DocumentationFrontmatter>(

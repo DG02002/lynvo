@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+
+import { ExtractQuerySchema, MetadataQuerySchema } from "../../../api-contracts"
 import {
   ExtractionApiError,
   ValidationApiError,
@@ -7,7 +9,6 @@ import {
   BackendApiError,
   UsageLimitApiError,
 } from "../../errors"
-import { ExtractQuerySchema, MetadataQuerySchema } from "../../../api-contracts"
 
 export class ExtractionGroup extends HttpApiGroup.make("extraction")
   .add(

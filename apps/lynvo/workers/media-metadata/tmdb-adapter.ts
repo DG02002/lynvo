@@ -1,5 +1,6 @@
-import { Result, Schema } from "effect"
 import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
+import { Result, Schema } from "effect"
+
 import {
   MEDIA_METADATA_REQUEST_ATTEMPTS,
   MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,

@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react"
+
+import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { useRemoteControl } from "~/context/remote-control-context"
 import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
 import { showErrorToast } from "~/lib/toast-notifications"
-import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 
 export const RemoteCommandListener = () => {
   const { lastCommand, acknowledgeCommand, markCommandApplied, failCommand } =

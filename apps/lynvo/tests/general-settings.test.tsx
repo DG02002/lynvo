@@ -2,8 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { ThemeProvider } from "next-themes"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { GeneralSettings } from "~/features/site/settings/general-settings"
+
 import { AUTO_SAVE_LINKS_STORAGE_KEY } from "~/features/site/settings/auto-save-links-preference"
+import { GeneralSettings } from "~/features/site/settings/general-settings"
+
 import { createMemoryStorage } from "./memory-storage"
 
 beforeEach(() => {

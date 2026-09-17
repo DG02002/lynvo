@@ -1,5 +1,6 @@
-import type { ExtractedLink } from "~/features/links/types"
 import { getMediaNodeKey } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
+
 import { LinkSelectionTreeItem } from "./link-selection-tree-item"
 
 interface LinkSelectionTreeProps {

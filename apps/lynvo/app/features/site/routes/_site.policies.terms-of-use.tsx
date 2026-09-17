@@ -1,5 +1,5 @@
-import type { Route } from "./+types/_site.policies.terms-of-use"
 import { TermsOfUseContent } from "../content/terms-of-use-content"
+import type { Route } from "./+types/_site.policies.terms-of-use"
 
 export function meta(_: Route.MetaArgs) {
   return [

@@ -1,4 +1,5 @@
 import { ProtocolError } from "@dg02002/lynvo-plugin-server-protocol"
+
 import {
   DIRECT_MEDIA_BLOCKED_EXTENSIONS,
   DIRECT_MEDIA_CONTENT_TYPES,
@@ -9,9 +10,9 @@ import {
 import {
   createPluginResponseMetadata,
   type PluginAdapterOptions,
-} from "../plugin-catalog"
-import { decodeUrlComponent } from "../url-policy"
+} from "../plugin-adapter"
 import { fetchValidatedUpstream } from "../upstream-response"
+import { decodeUrlComponent } from "../url-policy"
 import { formatFileSize } from "./file-size"
 
 const CONTENT_DISPOSITION_FILENAME =

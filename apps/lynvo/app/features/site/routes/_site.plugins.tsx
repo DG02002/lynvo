@@ -2,7 +2,6 @@ import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { type LoaderFunctionArgs, useLoaderData } from "react-router"
 
-import type { Route } from "./+types/_site.plugins"
 import { PluginIcon } from "~/components/plugin-icon"
 import {
   Table,
@@ -14,6 +13,8 @@ import {
 } from "~/components/ui/table"
 import { loadLynvoPlugins } from "~/features/site/settings/lynvo-plugin-catalog.server"
 import { getServerEnv } from "~/lib/env.server"
+
+import type { Route } from "./+types/_site.plugins"
 
 export const meta = (_: Route.MetaArgs) => [
   { title: "Lynvo Plugins | Lynvo" },

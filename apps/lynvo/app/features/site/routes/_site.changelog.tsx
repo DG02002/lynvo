@@ -4,9 +4,10 @@ import {
   ArrowRight02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { Result, Schema } from "effect"
 import { Fragment, useLayoutEffect, useRef, useState } from "react"
 import { useSearchParams } from "react-router"
-import type { Route } from "./+types/_site.changelog"
+
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import {
@@ -19,7 +20,8 @@ import {
 import { Separator } from "~/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
-import { Result, Schema } from "effect"
+
+import type { Route } from "./+types/_site.changelog"
 
 export interface ChangelogEntry {
   type: ChangelogType

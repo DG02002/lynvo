@@ -1,8 +1,6 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "ignoreFiles": [
-    ".repos/**"
-  ],
+  "ignoreFiles": [".repos/**"],
   "ignoreDependencies": [
     "@cloudflare/workers-types",
     "cloudflare",
@@ -14,12 +12,8 @@
   ],
   "workspaces": {
     ".": {
-      "entry": [
-        "scripts/**/*.{ts,mjs}"
-      ],
-      "project": [
-        "scripts/**/*.{ts,mjs}"
-      ]
+      "entry": ["scripts/**/*.{ts,mjs}"],
+      "project": ["scripts/**/*.{ts,mjs}"]
     },
     "apps/lynvo": {
       "entry": [
@@ -39,58 +33,26 @@
         "*.ts"
       ],
       "ignoreIssues": {
-        "app/components/ui/**/*.tsx": [
-          "exports"
-        ]
+        "app/components/ui/**/*.tsx": ["exports"]
       }
     },
     "apps/lynvo-plugin-server": {
-      "entry": [
-        "src/index.ts",
-        "scripts/*.mjs",
-        "tests/**/*.ts"
-      ],
-      "project": [
-        "src/**/*.ts",
-        "*.ts"
-      ]
+      "entry": ["src/index.ts", "scripts/*.mjs", "tests/**/*.ts"],
+      "project": ["src/**/*.ts", "*.ts"]
     },
     "packages/plugin-server-protocol": {
-      "entry": [
-        "scripts/*.mjs",
-        "tests/**/*.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["scripts/*.mjs", "tests/**/*.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/create-lynvo-plugin-server": {
-      "entry": [
-        "bin/*.mjs",
-        "scripts/*.mjs",
-        "tests/*.mjs"
-      ],
-      "project": [
-        "bin/**"
-      ]
+      "entry": ["bin/*.mjs", "scripts/*.mjs", "tests/*.mjs"],
+      "project": ["bin/**"]
     },
     "packages/create-lynvo-plugin-server/template": {
-      "entry": [
-        "src/index.ts",
-        "scripts/*.mjs",
-        "tests/**/*.ts"
-      ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "*.ts"
-      ],
-      "ignoreBinaries": [
-        "vitest",
-        "wrangler"
-      ],
-      "ignoreDependencies": [
-        "wrangler"
-      ]
+      "entry": ["src/index.ts", "scripts/*.mjs", "tests/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "*.ts"],
+      "ignoreBinaries": ["vitest", "wrangler"],
+      "ignoreDependencies": ["wrangler"]
     }
   }
 }

@@ -1,9 +1,10 @@
 import { render, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { getPlayerPreferences } from "~/lib/player-utils"
-import { createMemoryStorage } from "./memory-storage"
 
+import { getPlayerPreferences } from "~/lib/player-utils"
 import { AccountSettingsSynchronization } from "~/root/account-settings-synchronization"
+
+import { createMemoryStorage } from "./memory-storage"
 
 describe("account settings synchronization", () => {
   beforeEach(() => vi.clearAllMocks())

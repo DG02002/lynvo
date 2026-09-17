@@ -1,27 +1,29 @@
-import * as React from "react"
-import { Link } from "react-router"
 import { Key01Icon, Refresh01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Button } from "~/components/ui/button"
+import * as React from "react"
+import { Link } from "react-router"
+
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
-import { Dialog, DialogTrigger } from "~/components/ui/dialog"
-import { Badge } from "~/components/ui/badge"
-import { Switch } from "~/components/ui/switch"
 import { PluginIcon } from "~/components/plugin-icon"
+import { Badge } from "~/components/ui/badge"
+import { Button } from "~/components/ui/button"
+import { Dialog, DialogTrigger } from "~/components/ui/dialog"
+import { Switch } from "~/components/ui/switch"
+import { PLUGIN_SERVER_VERIFICATION_STATUS } from "~/lib/effect/services/plugin-server-verification-status"
 import { isSupportedProxyProvider } from "~/lib/plugin-server-proxy"
+
+import { getPluginServerManifestView } from "./plugin-server-manifest"
+import {
+  usePluginSettingsInteraction,
+  type CustomPluginServer,
+} from "./plugin-settings-interaction"
 import {
   SectionHeading,
   SettingsList,
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
-import {
-  usePluginSettingsInteraction,
-  type CustomPluginServer,
-} from "./plugin-settings-interaction"
-import { getPluginServerManifestView } from "./plugin-server-manifest"
-import { PLUGIN_SERVER_VERIFICATION_STATUS } from "~/lib/effect/services/plugin-server-verification-status"
 
 const BALANCE_FORMATTER = new Intl.NumberFormat()
 const CHECKED_AT_FORMATTER = new Intl.DateTimeFormat(undefined, {

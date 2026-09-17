@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 
 describe("attachResolvedChildren", () => {

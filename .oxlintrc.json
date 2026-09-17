@@ -1,6 +1,8 @@
 {
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
   },
   "ignorePatterns": [
     ".agent/**",
@@ -12,12 +14,18 @@
     ".gemini/**",
     ".opencode/**",
     ".pi/**",
+    ".repos/**",
     ".roo/**",
     ".windsurf/**",
     "apps/lynvo/app/components/ui/**",
-    "tools/oxlint/anti-slop/**"
+    "tools/oxlint/anti-slop/**",
+    "**/worker-configuration.d.ts"
   ],
   "jsPlugins": [
+    {
+      "name": "sonarjs",
+      "specifier": "eslint-plugin-sonarjs"
+    },
     {
       "name": "anti-slop",
       "specifier": "./tools/oxlint/anti-slop/index.ts"
@@ -27,12 +35,7 @@
       "specifier": "./tools/oxlint/anti-slop/effect/index.ts"
     }
   ],
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "react-hooks",
-    "oxc"
-  ],
+  "plugins": ["typescript", "unicorn", "react-hooks", "oxc", "import"],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn",
@@ -40,9 +43,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "apps/lynvo-plugin-server/src/**"
-      ],
+      "files": ["apps/lynvo-plugin-server/src/**"],
       "rules": {
         "react-hooks/rules-of-hooks": "off",
         "react-hooks/exhaustive-deps": "off"
@@ -57,25 +58,19 @@
       }
     },
     {
-      "files": [
-        "apps/lynvo/app/entry.server.tsx"
-      ],
+      "files": ["apps/lynvo/app/entry.server.tsx"],
       "rules": {
         "max-params": "off"
       }
     },
     {
-      "files": [
-        "apps/lynvo/app/lib/player-utils.ts"
-      ],
+      "files": ["apps/lynvo/app/lib/player-utils.ts"],
       "rules": {
         "consistent-function-scoping": "off"
       }
     },
     {
-      "files": [
-        "packages/plugin-server-protocol/src/runtime.ts"
-      ],
+      "files": ["packages/plugin-server-protocol/src/runtime.ts"],
       "rules": {
         "anti-slop/no-runtime-typeof": [
           "error",
@@ -92,10 +87,7 @@
         "packages/plugin-server-protocol/tests/**",
         "packages/create-lynvo-plugin-server/tests/**"
       ],
-      "plugins": [
-        "typescript",
-        "vitest"
-      ],
+      "plugins": ["typescript", "vitest"],
       "rules": {
         "consistent-function-scoping": "off",
         "max-params": "off",
@@ -148,6 +140,9 @@
     "react/no-unescaped-entities": "warn",
     "unicorn/prefer-string-replace-all": "warn",
     "typescript/no-explicit-any": "error",
+    "import/no-cycle": "error",
+    "sonarjs/no-identical-functions": "warn",
+    "import/no-unassigned-import": "off",
     // SAFETY comments are the repository's assertion gate; this rule would
     // repeat those approved assertions.
     "typescript/no-unsafe-type-assertion": "off",
@@ -175,10 +170,7 @@
     "no-underscore-dangle": [
       "warn",
       {
-        "allow": [
-          "_tag",
-          "__BUILD_TIME__"
-        ]
+        "allow": ["_tag", "__BUILD_TIME__"]
       }
     ],
     "@typescript-eslint/no-unused-vars": [

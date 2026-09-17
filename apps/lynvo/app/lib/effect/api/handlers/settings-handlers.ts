@@ -1,15 +1,10 @@
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../api"
-import { CurrentUser } from "../middleware"
-import { versionedSuccess } from "../versioned-response"
-import { normalizePlayerPreferences } from "../../../player-utils"
-import { CloudflareEnv } from "../../services/cloudflare-env"
+
 import {
-  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
-  requireDatabaseEffect,
-} from "../../require-database"
-import { BackendError, NotFoundError, ValidationError } from "../../errors"
+  drainAccountErasures,
+  initiateAccountErasure,
+} from "../../../../../workers/d1/account-erasure"
 import {
   findSessionOwnerById,
   listSessionsForUser,
@@ -26,10 +21,16 @@ import {
   closeRealtimeAccount,
   closeRealtimeSession,
 } from "../../../../../workers/realtime-session-revocation"
+import { normalizePlayerPreferences } from "../../../player-utils"
+import { BackendError, NotFoundError, ValidationError } from "../../errors"
 import {
-  drainAccountErasures,
-  initiateAccountErasure,
-} from "../../../../../workers/d1/account-erasure"
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+} from "../../require-database"
+import { CloudflareEnv } from "../../services/cloudflare-env"
+import { Api } from "../api"
+import { CurrentUser } from "../middleware"
+import { versionedSuccess } from "../versioned-response"
 
 export const SettingsHandlers = HttpApiBuilder.group(
   Api,

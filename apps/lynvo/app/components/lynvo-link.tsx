@@ -1,4 +1,5 @@
 import { Link } from "react-router"
+
 import { useViewTransition } from "~/lib/client-profile"
 
 type LynvoLinkProps = {

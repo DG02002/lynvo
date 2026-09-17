@@ -1,10 +1,5 @@
 import { Effect } from "effect"
-import { CloudflareEnv } from "./cloudflare-env"
-import {
-  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
-  requireDatabaseEffect,
-  requireDatabaseEffectAs,
-} from "../require-database"
+
 import {
   beginPluginServerRegistration,
   finalizePluginServerCredential,
@@ -15,21 +10,27 @@ import {
   recordPluginServerRefreshSuccess,
 } from "../../../../workers/d1/plugin-servers"
 import {
-  preparePluginServerRefresh,
-  preparePluginServerRegistration,
-  normalizePluginServerBaseUrl,
-} from "./plugin-server-registration"
-import {
-  decryptCustomPluginServers,
-  encryptCustomPluginServerApiKey,
-} from "./custom-plugin-server-credentials"
-import {
   BackendError,
   getErrorMessage,
   PluginServerRegistrationError,
   toPluginServerRegistrationError,
 } from "../errors"
+import {
+  ACCOUNT_DATA_UNAVAILABLE_MESSAGE,
+  requireDatabaseEffect,
+  requireDatabaseEffectAs,
+} from "../require-database"
+import { CloudflareEnv } from "./cloudflare-env"
 import { getCustomPluginServerUsage } from "./custom-plugin-server-adapter"
+import {
+  decryptCustomPluginServers,
+  encryptCustomPluginServerApiKey,
+} from "./custom-plugin-server-credentials"
+import {
+  preparePluginServerRefresh,
+  preparePluginServerRegistration,
+  normalizePluginServerBaseUrl,
+} from "./plugin-server-registration"
 
 const CUSTOM_PLUGIN_SERVER_USAGE_CONCURRENCY = 3
 

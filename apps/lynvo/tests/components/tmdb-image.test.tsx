@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
+
 import { TmdbImage } from "~/features/links/components/tmdb-image"
 
 const stashImagePrototypeDescriptors = () => {

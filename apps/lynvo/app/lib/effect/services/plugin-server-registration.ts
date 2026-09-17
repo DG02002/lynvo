@@ -1,5 +1,6 @@
-import { Effect } from "effect"
 import type { PluginServerManifest } from "@dg02002/lynvo-plugin-server-protocol"
+import { Effect } from "effect"
+
 import {
   PluginServerClient,
   PluginServerClientError,

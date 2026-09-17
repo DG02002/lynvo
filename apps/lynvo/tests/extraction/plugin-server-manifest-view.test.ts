@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
 import { getMatchedPlugin } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it } from "vitest"
+
 import { getPluginServerManifestView } from "~/features/site/settings/plugin-server-manifest"
 
 describe("getPluginServerManifestView", () => {

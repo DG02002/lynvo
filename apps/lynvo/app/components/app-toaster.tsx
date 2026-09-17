@@ -1,13 +1,13 @@
-import type { ReactNode } from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Alert02Icon,
   CheckmarkCircle02Icon,
   InformationCircleIcon,
   MultiplicationSignCircleIcon,
 } from "@hugeicons/core-free-icons"
-import { cn } from "~/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import type { ReactNode } from "react"
+
 import {
   ToastAction,
   ToastClose,
@@ -20,6 +20,7 @@ import {
   toast,
   useToastManager,
 } from "~/components/ui/toast"
+import { cn } from "~/lib/utils"
 
 const CenteredToast = ({ className, ...props }: ToastPrimitive.Root.Props) => {
   return (

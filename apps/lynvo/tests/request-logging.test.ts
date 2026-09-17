@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it, vi } from "vitest"
-import { Hono } from "hono"
 import { initLogger, type DrainContext } from "evlog"
+import { Hono } from "hono"
+import { beforeAll, describe, expect, it, vi } from "vitest"
+
 import {
   addRequestContext,
   requestLogging,

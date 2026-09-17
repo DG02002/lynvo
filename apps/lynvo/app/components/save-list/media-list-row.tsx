@@ -1,10 +1,11 @@
 import type { ReactNode } from "react"
+
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { formatItemCount } from "~/lib/format-item-count"
 import { cn } from "~/lib/utils"
+
 import { ExtractionStatusTitle } from "./extraction-status"
 import type { ExtractionStatusTitleSpec } from "./extraction-status-utils"
-import { NewBadge } from "./new-badge"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
@@ -13,6 +14,7 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
+import { NewBadge } from "./new-badge"
 
 interface SaveListRowIconProps {
   readonly children: ReactNode

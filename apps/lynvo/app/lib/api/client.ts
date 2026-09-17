@@ -1,6 +1,5 @@
 import { Result, Schema } from "effect"
-import { getCsrfToken } from "../utils"
-import { sessionIdentityHeaders } from "../session-identity"
+
 import {
   MutationResultSchema,
   PluginDomainListSchema,
@@ -35,6 +34,8 @@ import {
   type UserSessionList,
   type VersionedMutationBody,
 } from "../api-contracts"
+import { sessionIdentityHeaders } from "../session-identity"
+import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
   readonly signal?: AbortSignal

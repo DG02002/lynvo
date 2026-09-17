@@ -1,19 +1,20 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   AirplayLineIcon,
   Logout05Icon,
   Settings01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { sitePaths } from "~/lib/paths"
 import { useViewTransition } from "~/lib/client-profile"
+import { sitePaths } from "~/lib/paths"
 
 export const UserMenu = ({
   name,

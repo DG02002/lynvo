@@ -1,8 +1,8 @@
+import type { LinkListItem } from "~/features/links/types"
 import {
   getSaveDateGroupKey,
   getSaveDateGroupLabel,
 } from "~/lib/save-date-groups"
-import type { LinkListItem } from "~/features/links/types"
 
 export interface SaveListDateGroup {
   key: string

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
 import { Result, Schema } from "effect"
-import { PluginIcon } from "~/components/plugin-icon"
+import { useEffect, useState } from "react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { PluginIcon } from "~/components/plugin-icon"
 import {
   PLAYER_LAUNCH_ERROR_EVENT,
   type PlayerLaunchErrorDetail,

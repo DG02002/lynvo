@@ -1,11 +1,12 @@
 import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
-import { ExtractionError } from "../errors"
+
 import {
   PluginServerClientError,
   type PluginServerClient,
   type PluginServerRequestOptions,
 } from "../../extraction/plugin-server-client"
+import { ExtractionError } from "../errors"
 
 const createPluginServerExtractionError = (
   cause: unknown,
