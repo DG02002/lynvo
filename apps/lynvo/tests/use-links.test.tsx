@@ -5,6 +5,7 @@ import type { RealtimeContextValue } from "~/context/realtime-context"
 import { useLinksWithRuntime } from "~/features/links/use-links"
 import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
 import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+import type { SavedLinkResponseBody } from "~/features/links/use-links/api"
 import { requestUrl } from "./support/request-inspection"
 
 const realtime = {
@@ -41,7 +42,7 @@ const serverRecord = (
   overrides: Partial<{
     url: string
     title: string | null
-    metaJson: string | null
+    metaJson: string
     createdAt: number
     updatedAt: number
   }> = {}
@@ -63,10 +64,7 @@ const fetchResponses = vi.fn()
 vi.stubGlobal("fetch", vi.fn(fetchResponses))
 
 const respondJson = (
-  body:
-    | { links: unknown[] }
-    | { id: string; replayed: boolean; dataVersion: number }
-    | { success: boolean; replayed: boolean; dataVersion: number },
+  body: SavedLinkResponseBody,
   headers: Record<string, string> = {}
 ) =>
   new Response(JSON.stringify(body), {

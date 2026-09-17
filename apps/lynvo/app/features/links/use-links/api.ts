@@ -38,6 +38,11 @@ declare global {
   }
 }
 
+export type SavedLinkResponseBody =
+  | Pick<SavedLinkListResponse, "links">
+  | CreateOrUpdateSavedLinkResponse
+  | SavedLinkMutationResponse
+
 const toSavedLink = (record: SavedLinkApiRecord): SavedLink => ({
   id: record.id,
   url: record.url,

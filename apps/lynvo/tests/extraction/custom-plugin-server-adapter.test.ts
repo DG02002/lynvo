@@ -1,6 +1,5 @@
 import { Effect, Option, Schema } from "effect"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { ExtractSuccessResponse } from "@dg02002/lynvo-plugin-server-protocol"
 import {
   extractFromCustomPluginServer,
   getCustomPluginServerMetadata,
@@ -9,42 +8,26 @@ import {
 
 const unknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown)
 
-interface PendingValue {
+interface UndefinedPathVisit {
   readonly path: string
   readonly value: unknown
 }
 
-const findUndefinedPaths = (result: ExtractSuccessResponse): string[] => {
-  const pending: PendingValue[] = [{ path: "result", value: result }]
-  const paths: string[] = []
-
-  for (let index = 0; index < pending.length; index += 1) {
-    const current = pending[index]
-    if (current === undefined) {
-      continue
-    }
-    const { path, value } = current
-    if (Array.isArray(value)) {
-      value.forEach((entry, entryIndex) => {
-        pending.push({ path: `${path}.${entryIndex}`, value: entry })
-      })
-      continue
-    }
-    const record = Schema.decodeUnknownOption(unknownRecordSchema)(value)
-    if (Option.isNone(record)) {
-      continue
-    }
-    Object.entries(record.value).forEach(([key, entry]) => {
-      const entryPath = `${path}.${key}`
-      if (entry === undefined) {
-        paths.push(entryPath)
-      } else {
-        pending.push({ path: entryPath, value: entry })
-      }
-    })
+const findUndefinedPaths = ({ path, value }: UndefinedPathVisit): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry, index) =>
+      findUndefinedPaths({ path: `${path}.${index}`, value: entry })
+    )
   }
-
-  return paths
+  const record = Schema.decodeUnknownOption(unknownRecordSchema)(value)
+  if (Option.isNone(record)) {
+    return []
+  }
+  return Object.entries(record.value).flatMap(([key, entry]) =>
+    entry === undefined
+      ? [`${path}.${key}`]
+      : findUndefinedPaths({ path: `${path}.${key}`, value: entry })
+  )
 }
 
 afterEach(() => {
@@ -415,7 +398,7 @@ describe("extractFromCustomPluginServer", () => {
       schemaVersion: 3,
       pluginServerId: "pluginServer-one",
     })
-    expect(findUndefinedPaths(result)).toEqual([])
+    expect(findUndefinedPaths({ path: "result", value: result })).toEqual([])
   })
 })
 
