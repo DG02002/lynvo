@@ -115,6 +115,13 @@ const ChangelogDescription = ({
   const [isExpanded, setIsExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const descriptionRef = useRef<HTMLDivElement>(null)
+  const paragraphOccurrences = new Map<string, number>()
+
+  const getParagraphKey = (paragraph: string): string => {
+    const occurrence = paragraphOccurrences.get(paragraph) ?? 0
+    paragraphOccurrences.set(paragraph, occurrence + 1)
+    return `${id}-${paragraph}-${occurrence}`
+  }
 
   useLayoutEffect(() => {
     if (isExpanded) {
@@ -159,7 +166,7 @@ const ChangelogDescription = ({
         )}
       >
         {description.map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
+          <p key={getParagraphKey(paragraph)}>{paragraph}</p>
         ))}
       </div>
       {isOverflowing ? (

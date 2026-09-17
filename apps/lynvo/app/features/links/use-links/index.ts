@@ -48,7 +48,7 @@ interface UseLinksRefreshOptions {
   initialSnapshotMeta: InitialSnapshotMeta
   userId: string | undefined
   realtime: RealtimeContextValue | undefined
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
 }
 
 interface UseLinksRefreshResult {
@@ -60,21 +60,21 @@ interface UseInitialLinksLoadOptions {
   initialSnapshotMeta: InitialSnapshotMeta
   userId: string | undefined
   realtime: RealtimeContextValue | undefined
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
   applyFetchedSnapshot: () => Promise<void>
 }
 
 interface UseInitialServerSnapshotOptions {
   initialSnapshotMeta: InitialSnapshotMeta
   initialItems: LinkViewItem[] | undefined
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
   userId: string | undefined
 }
 
 interface UseRealtimeLinksRefreshOptions {
   applyFetchedSnapshot: () => Promise<void>
   realtime: RealtimeContextValue | undefined
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
   userId: string | undefined
 }
 
@@ -90,12 +90,12 @@ interface UseLinksRefetchTimerOptions {
 
 interface UseLinksMutationActionsOptions {
   scheduleRefetch: () => void
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
 }
 
 interface UseLinksSnapshotOptions {
   initialSnapshotMeta: InitialSnapshotMeta
-  store: ReturnType<typeof createLinksSnapshotStore>
+  store: LinksSnapshotStore
 }
 
 interface UseLinksSnapshotResult {
@@ -112,7 +112,7 @@ const getLinksStoreForUser = (
   userId: string | undefined,
   initialItems: LinkViewItem[] | undefined,
   initialVersion: number | undefined
-): ReturnType<typeof createLinksSnapshotStore> =>
+): LinksSnapshotStore =>
   userId
     ? getLinksSnapshotStore(userId, initialItems, initialVersion)
     : createLinksSnapshotStore(initialItems, initialVersion)
@@ -330,8 +330,8 @@ const useLinksMutationActions = ({
   )
   const mutations = useMemo(
     () =>
-      // The store is state adjusted during render per the documented
-      // pattern in useLinksWithRuntime, not a ref.
+      // The memoized mutation factory closes over runExclusive, whose
+      // mutationChainRef intentionally persists across renders.
       // oxlint-disable-next-line react/refs
       createLinksMutations({
         store,

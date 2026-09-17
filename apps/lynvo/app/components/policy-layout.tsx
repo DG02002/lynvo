@@ -8,6 +8,16 @@ const createPolicySectionId = (title: string) =>
     .replaceAll(/[^a-z0-9]+/g, "-")
     .replaceAll(/(^-|-$)/g, "")
 
+const flattenPolicyChildren = (
+  children: React.ReactNode
+): React.ReactNode[] => {
+  if (!Array.isArray(children)) {
+    return [children]
+  }
+
+  return children.flatMap(flattenPolicyChildren)
+}
+
 interface PolicyLayoutProps {
   title: string
   updatedAt: string
@@ -19,7 +29,7 @@ export function PolicyLayout({
   updatedAt,
   children,
 }: PolicyLayoutProps) {
-  const policyChildren = Array.isArray(children) ? children : [children]
+  const policyChildren = flattenPolicyChildren(children)
   const outlineHeadings = policyChildren.flatMap((child) => {
     if (
       !React.isValidElement<{ title?: string }>(child) ||
