@@ -2,7 +2,6 @@ import { existsSync } from "node:fs"
 import { relative, sep } from "node:path"
 
 const sourceFilePattern = /\.(?:c|m)?[jt]sx?$/
-const ignoredPathPrefixes = [".repos/", "tools/oxlint/anti-slop/"]
 const ignoredFileNames = new Set(["worker-configuration.d.ts"])
 
 const getRelativePath = (absolutePath) =>
@@ -15,8 +14,7 @@ const isLintableSourceFile = (absolutePath) => {
   return (
     existsSync(absolutePath) &&
     sourceFilePattern.test(relativePath) &&
-    !ignoredFileNames.has(fileName) &&
-    !ignoredPathPrefixes.some((prefix) => relativePath.startsWith(prefix))
+    !ignoredFileNames.has(fileName)
   )
 }
 
