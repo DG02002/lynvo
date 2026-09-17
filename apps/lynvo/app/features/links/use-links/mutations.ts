@@ -20,7 +20,7 @@ import {
   buildQueuedLinkViewItem,
   showSaveError,
 } from "./link-add"
-import { isTemporaryLinkId } from "./links-store"
+import { isTemporaryLinkId, type LinksSnapshotStore } from "./links-store"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 
 const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>

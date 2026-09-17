@@ -1,5 +1,27 @@
 import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
+export interface LinksSnapshotStore {
+  getSnapshot: () => LinkViewItem[]
+  getVersion: () => number
+  hasServerSnapshot: () => boolean
+  subscribe: (listener: () => void) => () => void
+  applyServerSnapshot: (items: LinkViewItem[], version: number) => boolean
+  beginAdd: (item: LinkViewItem) => LinkViewItem & { readonly id: string }
+  settleAdd: (temporaryId: string, serverId: string, version: number) => void
+  discardPendingAdd: (temporaryId: string) => void
+  findVisibleItemByUrl: (
+    itemUrl: string,
+    itemId?: string
+  ) => LinkViewItem | undefined
+  beginUpdate: (
+    linkId: string,
+    updateItem: (item: LinkViewItem) => LinkViewItem | undefined
+  ) => LinkViewItem | undefined
+  beginRemove: (linkId: string) => boolean
+  beginClear: () => void
+  resetOverlayToServerSnapshot: () => void
+}
+
 declare global {
   interface LinkMetadataOperation {
     kind:
@@ -18,28 +40,6 @@ declare global {
     title?: string
     year?: number
     mediaKind?: "movie" | "tv"
-  }
-
-  interface LinksSnapshotStore {
-    getSnapshot: () => LinkViewItem[]
-    getVersion: () => number
-    hasServerSnapshot: () => boolean
-    subscribe: (listener: () => void) => () => void
-    applyServerSnapshot: (items: LinkViewItem[], version: number) => boolean
-    beginAdd: (item: LinkViewItem) => LinkViewItem & { readonly id: string }
-    settleAdd: (temporaryId: string, serverId: string, version: number) => void
-    discardPendingAdd: (temporaryId: string) => void
-    findVisibleItemByUrl: (
-      itemUrl: string,
-      itemId?: string
-    ) => LinkViewItem | undefined
-    beginUpdate: (
-      linkId: string,
-      updateItem: (item: LinkViewItem) => LinkViewItem | undefined
-    ) => LinkViewItem | undefined
-    beginRemove: (linkId: string) => boolean
-    beginClear: () => void
-    resetOverlayToServerSnapshot: () => void
   }
 }
 

@@ -17,7 +17,11 @@ import {
   type RealtimeContextValue,
 } from "~/context/realtime-context"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
-import { createLinksSnapshotStore, getLinksSnapshotStore } from "./links-store"
+import {
+  createLinksSnapshotStore,
+  getLinksSnapshotStore,
+  type LinksSnapshotStore,
+} from "./links-store"
 import { createLinksMutations } from "./mutations"
 import type { LinksActions } from "./actions"
 import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
