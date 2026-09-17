@@ -186,7 +186,7 @@ export const parsePluginServerManifestContract = <Value>(
   return validation.ok ? { ...validation, value: manifestData } : validation
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validatePluginServerManifestContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -226,7 +226,7 @@ const validateParsedExtractSuccessContract = (
   }
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const parseExtractSuccessContract = <Value>(
   value: Value
 ): ContractParseResult<ExtractSuccessResponse> => {
@@ -242,7 +242,7 @@ export const parseExtractSuccessContract = <Value>(
   return validation.ok ? { ...validation, value: extractData } : validation
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateExtractSuccessContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -272,7 +272,7 @@ const validateParsedUsageContract = (
   return { ok: issues.length === 0, issues }
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const parseUsageResponseContract = <Value>(
   value: Value
 ): ContractParseResult<UsageResponse> => {
@@ -288,7 +288,7 @@ export const parseUsageResponseContract = <Value>(
   return validation.ok ? { ...validation, value: usageData } : validation
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateUsageContract = <Value>(
   value: Value
 ): ContractValidationResult => {
@@ -296,7 +296,7 @@ export const validateUsageContract = <Value>(
   return { ok: parsed.ok, issues: parsed.issues }
 }
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- See the file-level rationale above.
 export const validateVerifyErrorContract = <Value>(
   value: Value
 ): ContractValidationResult => {
