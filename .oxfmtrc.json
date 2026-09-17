@@ -4,6 +4,7 @@
   "printWidth": 80,
   "trailingComma": "es5",
   "endOfLine": "lf",
+  "ignorePatterns": ["apps/lynvo/app/components/ui/**"],
   "tailwindStylesheet": "app/app.css",
   "tailwindFunctions": ["cn", "cva"],
   "sortImports": true

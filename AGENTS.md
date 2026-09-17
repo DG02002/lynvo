@@ -186,9 +186,9 @@ Playable links to an external Android player.
 - `packages/create-lynvo-plugin-server` - standalone generator and template.
 - `apps/lynvo/app/components/ui/` - generated shadcn primitives. Treat them as
   read-only and compose them from feature code outside this directory. The
-  formatter and lint-staged hook exclude this directory; do not reformat or
-  hand-edit its files. Delete wholly-unused components instead of keeping
-  them; knip flags them and the shadcn CLI can restore them.
+  formatter configuration excludes this directory; do not reformat or hand-edit
+  its files. Delete wholly-unused components instead of keeping them; knip
+  flags them and the shadcn CLI can restore them.
 - `tools/oxlint/anti-slop/` - vendored Oxlint plugin installed by the
   `install-anti-slop` skill. Never edit or reformat it; update it by re-running
   the skill. Project-specific lint rules live in their own plugin.

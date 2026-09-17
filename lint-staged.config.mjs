@@ -2,11 +2,7 @@ import { existsSync } from "node:fs"
 import { relative, sep } from "node:path"
 
 const sourceFilePattern = /\.(?:c|m)?[jt]sx?$/
-const ignoredPathPrefixes = [
-  "apps/lynvo/app/components/ui/",
-  ".repos/",
-  "tools/oxlint/anti-slop/",
-]
+const ignoredPathPrefixes = [".repos/", "tools/oxlint/anti-slop/"]
 const ignoredFileNames = new Set(["worker-configuration.d.ts"])
 
 const getRelativePath = (absolutePath) =>
@@ -42,7 +38,10 @@ export default {
 
     if (sourceFilePaths.length > 0) {
       const fileArguments = sourceFilePaths.map(quoteShellArgument).join(" ")
-      commands.push(`oxfmt ${fileArguments}`, `oxlint ${fileArguments}`)
+      commands.push(
+        `oxfmt --no-error-on-unmatched-pattern ${fileArguments}`,
+        `oxlint --no-error-on-unmatched-pattern ${fileArguments}`
+      )
     }
 
     if (jsonFilePaths.length > 0) {
