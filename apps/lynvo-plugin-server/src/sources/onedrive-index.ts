@@ -30,6 +30,7 @@ import {
   encodeUrlPathSegment,
 } from "../url-policy"
 import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
 import { isVideoFile } from "./video-file"
 
 export interface OneDriveItem {
@@ -190,14 +191,12 @@ export const createOneDriveNodes = ({
     if (hashedPassword) {
       playableUrl.searchParams.set("odpt", hashedPassword)
     }
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 

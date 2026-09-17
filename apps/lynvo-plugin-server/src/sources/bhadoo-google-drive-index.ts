@@ -33,6 +33,7 @@ import {
 } from "../url-policy"
 import { extractDirectMedia } from "./direct-media"
 import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
 import { isVideoFile } from "./video-file"
 
 export interface BhadooGoogleDriveItem {
@@ -177,14 +178,12 @@ export const createBhadooNodes = (
     playableUrl.username = ""
     playableUrl.password = ""
     const size = formatBhadooFileSize(item.size)
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: playableUrl.toString(),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 

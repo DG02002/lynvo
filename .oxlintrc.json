@@ -33,13 +33,7 @@
       "specifier": "./tools/oxlint/anti-slop/effect/index.ts"
     }
   ],
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "react-hooks",
-    "oxc",
-    "import"
-  ],
+  "plugins": ["typescript", "unicorn", "react-hooks", "oxc", "import"],
   "categories": {
     "correctness": "warn",
     "suspicious": "warn",
@@ -47,9 +41,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "apps/lynvo-plugin-server/src/**"
-      ],
+      "files": ["apps/lynvo-plugin-server/src/**"],
       "rules": {
         "react-hooks/rules-of-hooks": "off",
         "react-hooks/exhaustive-deps": "off"
@@ -64,25 +56,19 @@
       }
     },
     {
-      "files": [
-        "apps/lynvo/app/entry.server.tsx"
-      ],
+      "files": ["apps/lynvo/app/entry.server.tsx"],
       "rules": {
         "max-params": "off"
       }
     },
     {
-      "files": [
-        "apps/lynvo/app/lib/player-utils.ts"
-      ],
+      "files": ["apps/lynvo/app/lib/player-utils.ts"],
       "rules": {
         "consistent-function-scoping": "off"
       }
     },
     {
-      "files": [
-        "packages/plugin-server-protocol/src/runtime.ts"
-      ],
+      "files": ["packages/plugin-server-protocol/src/runtime.ts"],
       "rules": {
         "anti-slop/no-runtime-typeof": [
           "error",
@@ -99,10 +85,7 @@
         "packages/plugin-server-protocol/tests/**",
         "packages/create-lynvo-plugin-server/tests/**"
       ],
-      "plugins": [
-        "typescript",
-        "vitest"
-      ],
+      "plugins": ["typescript", "vitest"],
       "rules": {
         "consistent-function-scoping": "off",
         "max-params": "off",
@@ -185,10 +168,7 @@
     "no-underscore-dangle": [
       "warn",
       {
-        "allow": [
-          "_tag",
-          "__BUILD_TIME__"
-        ]
+        "allow": ["_tag", "__BUILD_TIME__"]
       }
     ],
     "@typescript-eslint/no-unused-vars": [

@@ -21,6 +21,7 @@ import {
 } from "../upstream-response"
 import { decodeUrlComponent, encodeUrlPathSegment } from "../url-policy"
 import { formatFileSize } from "./file-size"
+import { createSourcePlayableNode } from "./media-node"
 import { isVideoFile } from "./video-file"
 
 const GOOGLE_DRIVE_FILE_PATH_PATTERN = /^\/file\/d\/([^/]+)(?:\/|$)/
@@ -233,14 +234,12 @@ export const createGoogleDrivePublicFolderNodes = (
       return []
     }
     const size = formatFileSize(item.size)
-    const baseNode = {
-      kind: "playable" as const,
+    const node = createSourcePlayableNode({
       id: item.id,
       label: item.name,
       url: createGoogleDriveDownloadUrl(item.id),
-      status: "unknown" as const,
-    }
-    const node: MediaNode = size ? { ...baseNode, size } : baseNode
+      size,
+    })
     return [node]
   })
 
@@ -301,16 +300,12 @@ export const extractGoogleDrivePublicFile = async ({
   const resourceKey = sourceUrl.searchParams.get("resourcekey") ?? undefined
   const downloadUrl = createGoogleDriveDownloadUrl(fileId, resourceKey)
   const metadata = await fetchGoogleDrivePublicFileMetadata(downloadUrl)
-  const baseNode = {
-    kind: "playable" as const,
+  const node = createSourcePlayableNode({
     id: fileId,
     label: metadata.filename,
     url: downloadUrl,
-    status: "unknown" as const,
-  }
-  const node: MediaNode = metadata.size
-    ? { ...baseNode, size: metadata.size }
-    : baseNode
+    size: metadata.size,
+  })
   return {
     plugin: createPluginResponseMetadata(
       plugin,

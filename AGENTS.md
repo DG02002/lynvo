@@ -123,12 +123,13 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 
 ## Linting and formatting
 
-While iterating, apply the touched package's `lint:fix` and `fmt` scripts
-(`apps/lynvo` has both; the other packages lint without a fixer). Warnings
-fail every lint run through `denyWarnings` in the root `.oxlintrc.json`, so
-a warning is a failure everywhere, editors included via the committed
-`.vscode` settings. When feeding lint output back into an agent loop, run
-`oxlint --format=agent <paths>` for one compact line per finding.
+While iterating, apply the touched package's `fmt` script and its `lint:fix`
+script where provided. `apps/lynvo` has the only lint fixer; every workspace
+package and the root workspace expose `fmt`/`fmt:check` for their checked
+files. Warnings fail every lint run through `denyWarnings` in the root
+`.oxlintrc.json`, so a warning is a failure everywhere, editors included via
+the committed `.vscode` settings. When feeding lint output back into an agent
+loop, run `oxlint --format=agent <paths>` for one compact line per finding.
 
 ## Verifying
 
@@ -184,9 +185,10 @@ Playable links to an external Android player.
   helpers, and protocol docs.
 - `packages/create-lynvo-plugin-server` - standalone generator and template.
 - `apps/lynvo/app/components/ui/` - generated shadcn primitives. Treat them as
-  read-only and compose them from feature code outside this directory. Delete
-  wholly-unused components instead of keeping them; knip flags them and the
-  shadcn CLI can restore them.
+  read-only and compose them from feature code outside this directory. The
+  formatter and lint-staged hook exclude this directory; do not reformat or
+  hand-edit its files. Delete wholly-unused components instead of keeping
+  them; knip flags them and the shadcn CLI can restore them.
 - `tools/oxlint/anti-slop/` - vendored Oxlint plugin installed by the
   `install-anti-slop` skill. Never edit or reformat it; update it by re-running
   the skill. Project-specific lint rules live in their own plugin.

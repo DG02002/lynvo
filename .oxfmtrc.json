@@ -5,9 +5,6 @@
   "trailingComma": "es5",
   "endOfLine": "lf",
   "tailwindStylesheet": "app/app.css",
-  "tailwindFunctions": [
-    "cn",
-    "cva"
-  ],
+  "tailwindFunctions": ["cn", "cva"],
   "sortImports": true
 }
