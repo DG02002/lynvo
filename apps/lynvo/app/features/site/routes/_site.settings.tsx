@@ -1,4 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Activity03Icon,
   Globe02Icon,
@@ -10,12 +9,15 @@ import {
   Settings01Icon,
   UserCircleIcon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
   NavLink,
   Outlet,
   useLoaderData,
   type LoaderFunctionArgs,
 } from "react-router"
+
+import type { SettingsOutletContext } from "~/features/site/settings/settings-route"
 import {
   getUserSession,
   responseWithSession,
@@ -23,7 +25,6 @@ import {
 } from "~/lib/auth"
 import { getServerEnv } from "~/lib/env.server"
 import { cn } from "~/lib/utils"
-import type { SettingsOutletContext } from "~/features/site/settings/settings-route"
 export function meta() {
   return [{ title: "Settings | Lynvo" }]
 }

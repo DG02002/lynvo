@@ -1,8 +1,10 @@
 import { Effect, Exit, Fiber, Layer, Logger } from "effect"
-import { ExtractionService } from "~/lib/effect/services/extraction-service"
-import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
-import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
+
 import { LYNVO_PLUGIN_SERVER_ID } from "~/lib/constants"
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
+import { ExtractionService } from "~/lib/effect/services/extraction-service"
+import { PluginCredentialVault } from "~/lib/effect/services/plugin-credential-vault"
+
 import { createFakeD1Database } from "../support/fake-d1"
 
 // SAFETY: The shared test environment is intentionally empty; each test supplies the bindings it exercises.

@@ -1,10 +1,11 @@
+import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 import type { ExtractedLink } from "~/features/links/types"
+
 import {
   collectSelectableLinkIds,
   getSelectableLinkId,
   isAllChildrenSelected,
 } from "./link-selection-utils"
-import { getMediaNodeInteractionState } from "~/features/links/media-node-interaction"
 
 export const getLinkSelectionState = (
   link: ExtractedLink,

@@ -1,4 +1,5 @@
 import { cn } from "~/lib/utils"
+
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 
 export const MEDIA_LIST_ROW_TITLE_CLASS = "block text-sm md:text-lg"

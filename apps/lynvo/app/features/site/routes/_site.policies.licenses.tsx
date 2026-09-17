@@ -1,5 +1,5 @@
-import type { Route } from "./+types/_site.policies.licenses"
 import { LicensesContent } from "../content/licenses-content"
+import type { Route } from "./+types/_site.policies.licenses"
 
 export function meta(_: Route.MetaArgs) {
   return [

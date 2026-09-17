@@ -1,23 +1,8 @@
-import type { LinkMetadata, MetaData, LinkViewItem } from "./types"
-import { toFlatMeta } from "./link-metadata-normalization"
 import { Result, Schema } from "effect"
 
-export const getMetadataPluginServerId = (
-  metadata: LinkMetadata | MetaData | undefined
-) => {
-  if (!metadata) {
-    return undefined
-  }
-
-  if ("source" in metadata) {
-    const pluginServerId = Schema.decodeUnknownResult(Schema.String)(
-      metadata.source.pluginServerId
-    )
-    return Result.isSuccess(pluginServerId) ? pluginServerId.success : undefined
-  }
-
-  return metadata.pluginServerId
-}
+import { toFlatMeta } from "./link-metadata-normalization"
+import { getMetadataPluginServerId } from "./link-source-fields"
+import type { LinkMetadata, MetaData, LinkViewItem } from "./types"
 
 export const getLinkViewItemPluginServerId = (
   item: LinkViewItem | undefined

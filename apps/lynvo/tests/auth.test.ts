@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { getCookieValue, normalizeReturnTo } from "../app/lib/auth-cookie"
-import { D1_SESSION_COOKIE_NAME } from "../workers/constants"
+
 import {
   responseWithSession,
   getUserSession,
   requireGuestOrRedirect,
 } from "../app/lib/auth"
+import { getCookieValue, normalizeReturnTo } from "../app/lib/auth-cookie"
+import { D1_SESSION_COOKIE_NAME } from "../workers/constants"
 import { createFakeD1Database } from "./support/fake-d1"
 
 const authenticatedDatabase = () =>

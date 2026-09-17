@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { toPluginServerRegistrationError } from "~/lib/effect/errors"
 
 describe("toPluginServerRegistrationError", () => {

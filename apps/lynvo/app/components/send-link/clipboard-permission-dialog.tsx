@@ -1,10 +1,11 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
 
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 import { HOME_DEMO_CLIPBOARD_URL } from "~/features/site/home/home-demo-constants"
 import { cn } from "~/lib/utils"
+
 import { ClipboardAccessIcon } from "./clipboard-access-icon"
 
 interface ClipboardPermissionDialogProps {

@@ -8,6 +8,7 @@ import {
   useNavigate,
 } from "react-router"
 import { describe, expect, it } from "vitest"
+
 import { useSaveFolderRoute } from "~/components/save-list/use-save-folder-route"
 import type { SavedLinkListItem } from "~/features/links/types"
 
@@ -33,16 +34,18 @@ const savedFolder: SavedLinkListItem = {
   },
 }
 
+const renderFolderRouteWrapper = ({ children }: PropsWithChildren) => (
+  <MemoryRouter initialEntries={["/save"]}>
+    <Routes>
+      <Route path="/save" element={children} />
+      <Route path="/save/folder/:savedLinkId" element={children} />
+    </Routes>
+  </MemoryRouter>
+)
+
 describe("saved folder routes", () => {
   it("opens and closes a saved folder through browser history", async () => {
-    const wrapper = ({ children }: PropsWithChildren) => (
-      <MemoryRouter initialEntries={["/save"]}>
-        <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
-        </Routes>
-      </MemoryRouter>
-    )
+    const wrapper = renderFolderRouteWrapper
     const { result } = renderHook(
       () => ({
         folder: useSaveFolderRoute([savedFolder], false),
@@ -67,14 +70,7 @@ describe("saved folder routes", () => {
   })
 
   it("does not add a folder entry when the visible Back action closes it", async () => {
-    const wrapper = ({ children }: PropsWithChildren) => (
-      <MemoryRouter initialEntries={["/save"]}>
-        <Routes>
-          <Route path="/save" element={children} />
-          <Route path="/save/folder/:savedLinkId" element={children} />
-        </Routes>
-      </MemoryRouter>
-    )
+    const wrapper = renderFolderRouteWrapper
     const { result } = renderHook(
       () => {
         const navigate = useNavigate()

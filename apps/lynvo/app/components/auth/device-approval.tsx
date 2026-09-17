@@ -1,18 +1,20 @@
 import * as React from "react"
 import { Link } from "react-router"
-import { Button } from "~/components/ui/button"
-import { Spinner } from "~/components/spinner"
-import { LoadErrorRetry } from "~/components/load-error-retry"
-import { showErrorToast } from "~/lib/toast-notifications"
+
 import { FieldSet } from "~/components/field"
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { LynvoLink } from "~/components/lynvo-link"
-import { authPaths } from "~/lib/paths"
-import { AuthPolicyLinks } from "./auth-form-parts"
-import { useExpiryClock } from "./use-expiry-clock"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
+import { Spinner } from "~/components/spinner"
+import { Button } from "~/components/ui/button"
 import { useAsyncResource } from "~/hooks/use-async-resource"
 import { useViewTransition } from "~/lib/client-profile"
+import { authPaths } from "~/lib/paths"
+import { showErrorToast } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
+import { AuthPolicyLinks } from "./auth-form-parts"
+import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
+import { useExpiryClock } from "./use-expiry-clock"
 
 interface DeviceApprovalStatusMessageProps {
   readonly code: string

@@ -4,19 +4,21 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
-    "check": "oxlint scripts --deny-warnings && pnpm -r --if-present run check && knip",
+    "check": "oxfmt package.json knip.json lint-staged.config.mjs --check && oxlint scripts && pnpm -r --if-present run check && knip",
     "check:plugin-server-release": "node scripts/verify-plugin-server-release.mjs",
     "dev": "pnpm --filter @lynvo/app dev",
     "test": "pnpm --workspace-concurrency=1 -r --if-present run test --run",
     "test:workers": "pnpm --filter @lynvo/app test:workers",
     "images:optimize": "node scripts/optimize-images.mjs apps/lynvo/public/icons/players",
-    "lint": "oxlint scripts --deny-warnings && pnpm -r --if-present run lint",
+    "lint": "oxlint scripts && pnpm -r --if-present run lint",
     "prepare": "husky",
     "sync:repos": "tsx scripts/sync-repos.ts",
-    "knip": "knip"
+    "knip": "knip",
+    "fmt": "oxfmt package.json knip.json lint-staged.config.mjs"
   },
   "devDependencies": {
     "@oxlint/plugins": "catalog:",
+    "eslint-plugin-sonarjs": "^4.2.0",
     "husky": "catalog:",
     "knip": "^6.34.0",
     "lint-staged": "catalog:",

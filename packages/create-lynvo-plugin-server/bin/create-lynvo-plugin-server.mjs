@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { spawn } from "node:child_process"
 import { cp, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import {
@@ -12,7 +13,6 @@ import {
   resolve,
 } from "node:path"
 import { fileURLToPath } from "node:url"
-import { spawn } from "node:child_process"
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const templateRoot = join(packageRoot, "template")

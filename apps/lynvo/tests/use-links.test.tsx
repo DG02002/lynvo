@@ -1,11 +1,13 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import type { RealtimeContextValue } from "~/context/realtime-context"
-import { useLinksWithRuntime } from "~/features/links/use-links"
-import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
 import type { LinkMetadata, LinkViewItem } from "~/features/links/types"
+import { useLinksWithRuntime } from "~/features/links/use-links"
 import type { SavedLinkResponseBody } from "~/features/links/use-links/api"
+import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
+
 import { requestUrl } from "./support/request-inspection"
 
 const realtime = {

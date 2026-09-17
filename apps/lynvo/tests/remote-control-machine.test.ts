@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { createRemoteControlMachine } from "~/context/remote-control/machine"
 
 const createHarness = ({

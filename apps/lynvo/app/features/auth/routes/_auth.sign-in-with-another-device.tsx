@@ -1,7 +1,8 @@
 import { Link } from "react-router"
-import { Button } from "~/components/ui/button"
+
 import { DeviceLoginQr } from "~/components/auth/device-login-qr"
 import { LynvoLink } from "~/components/lynvo-link"
+import { Button } from "~/components/ui/button"
 import { useViewTransition } from "~/lib/client-profile"
 import { authPaths, policyPaths } from "~/lib/paths"
 

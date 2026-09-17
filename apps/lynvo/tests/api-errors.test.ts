@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest"
 import { Result, Schema } from "effect"
 import { HttpApiSchema } from "effect/unstable/httpapi"
+import { describe, expect, it } from "vitest"
+
+import {
+  ApiResponseError,
+  apiErrorResponseSchema,
+  readApiResponseError,
+} from "~/lib/api-errors"
+import { ApiClientError } from "~/lib/api/client"
 import {
   BackendApiError,
   CsrfApiError,
@@ -12,12 +19,6 @@ import {
   UsageLimitApiError,
   ValidationApiError,
 } from "~/lib/effect/errors"
-import {
-  ApiResponseError,
-  apiErrorResponseSchema,
-  readApiResponseError,
-} from "~/lib/api-errors"
-import { ApiClientError } from "~/lib/api/client"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 describe("API errors", () => {

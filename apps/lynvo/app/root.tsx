@@ -1,19 +1,22 @@
-import type { Route } from "./+types/root"
-import type { ShouldRevalidateFunction } from "react-router"
+import interLatinFontUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url"
 import { initLogger } from "evlog"
 import { evlog, useLogger as getRequestLogger } from "evlog/react-router"
-import interLatinFontUrl from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url"
-import "./app.css"
-import "~/features/links/media-artwork/media-artwork-types"
-import { csrfCookie } from "~/lib/csrf"
-import { getUserSession, responseWithSession } from "~/lib/auth"
-import "~/global"
-import { getServerEnv } from "~/lib/env.server"
-import { getThemeFromCookieHeader } from "~/lib/theme"
+import type { ShouldRevalidateFunction } from "react-router"
+
 import {
   DEFAULT_MEDIA_VIEW,
   getMediaViewFromCookieHeader,
 } from "~/features/site/settings/media-view-preference"
+
+import "./app.css"
+import "~/features/links/media-artwork/media-artwork-types"
+import { getUserSession, responseWithSession } from "~/lib/auth"
+import { csrfCookie } from "~/lib/csrf"
+import "~/global"
+import { getServerEnv } from "~/lib/env.server"
+import { getThemeFromCookieHeader } from "~/lib/theme"
+
+import type { Route } from "./+types/root"
 import { AppProviders } from "./root/app-providers"
 import { shouldRevalidateRoot } from "./root/root-revalidation"
 export { ErrorBoundary } from "./root/error-boundary"

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router"
+
 import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths, sitePaths } from "~/lib/paths"
 

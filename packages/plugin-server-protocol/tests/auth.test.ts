@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { validateBearerCredential } from "../src/index"
 
 const requestWithAuthorization = (authorization?: string) =>

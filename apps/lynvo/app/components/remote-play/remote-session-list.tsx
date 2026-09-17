@@ -1,8 +1,10 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import { ComputerIcon, Refresh03Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
-import { Button } from "~/components/ui/button"
+
 import { Spinner } from "~/components/spinner"
+import { Button } from "~/components/ui/button"
+
 import type { RemoteSession } from "./types"
 
 export const RemoteSessionList = ({

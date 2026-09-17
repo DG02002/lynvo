@@ -1,11 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { HomeSaveDemo } from "~/features/site/home/home-save-demo"
+
 import {
   HOME_DEMO_FINAL_STEP,
   HOME_DEMO_STEP,
   HOME_DEMO_STEP_DELAYS_MS,
 } from "~/features/site/home/home-demo-constants"
+import { HomeSaveDemo } from "~/features/site/home/home-save-demo"
 
 describe("HomeSaveDemo", () => {
   it("keeps the library height stable without an empty item slot", () => {

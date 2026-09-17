@@ -1,3 +1,4 @@
+import { Result, Schema } from "effect"
 import {
   createContext,
   use,
@@ -6,8 +7,8 @@ import {
   useRef,
   type ReactNode,
 } from "react"
+
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
-import { Result, Schema } from "effect"
 
 const identityStatusSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal("unauthenticated") }),

@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises"
+
+import { Result, Schema } from "effect"
 import { describe, expect, it } from "vitest"
+
 import {
   ERROR_CODES,
   PROTOCOL_ERROR_STATUS,
   parseExtractSuccessContract,
 } from "../src/index"
-import { Result, Schema } from "effect"
 
 const documentedSuccessResponseSchema = Schema.Struct({
   nodes: Schema.Array(Schema.Unknown),

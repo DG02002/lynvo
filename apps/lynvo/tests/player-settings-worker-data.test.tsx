@@ -1,7 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { PlayerSettings } from "~/features/site/settings/player-settings"
+
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
+import { PlayerSettings } from "~/features/site/settings/player-settings"
+
 import { createMemoryStorage } from "./memory-storage"
 
 describe("Player settings browser data", () => {

@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { DevelopmentSettings } from "~/features/site/settings/development-settings"
+import { CLIENT_PROFILE_ATTRIBUTE } from "~/lib/client-profile"
 import {
   DEVELOPMENT_FREEZE_USAGE_COOKIE_NAME,
   DEVELOPMENT_FREEZE_USAGE_BOOTSTRAP_SCRIPT,
@@ -9,7 +11,7 @@ import {
   getDevelopmentFreezeUsageEnabled,
   isDevelopmentFreezeUsageEnabled,
 } from "~/lib/development-settings"
-import { CLIENT_PROFILE_ATTRIBUTE } from "~/lib/client-profile"
+
 import { createMemoryStorage } from "./memory-storage"
 
 beforeEach(() => {

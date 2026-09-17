@@ -1,20 +1,20 @@
-import { createOpaqueId } from "./ids"
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,
   STORAGE_RETENTION_DAY_OPTIONS,
 } from "../constants"
 import { executeOwnedWrite, getDataVersion } from "./data-version"
-import {
-  applyStorageMutation,
-  byteLength,
-  ensureStorageLedger,
-} from "./storage-ledger"
+import { createOpaqueId } from "./ids"
 import {
   profileStorageDocument,
   USER_COLUMNS,
   type ProfileUserRow,
 } from "./rows"
+import {
+  applyStorageMutation,
+  byteLength,
+  ensureStorageLedger,
+} from "./storage-ledger"
 
 export interface UserRecord {
   id: string

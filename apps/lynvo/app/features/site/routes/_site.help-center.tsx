@@ -1,8 +1,9 @@
 import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
-import type { Route } from "./+types/_site.help-center"
 import { GITHUB_ISSUES_URL, TELEGRAM_SUPPORT_URL } from "~/lib/support-links"
+
+import type { Route } from "./+types/_site.help-center"
 
 const TelegramLogo = () => (
   <svg

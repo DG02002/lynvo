@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest"
 import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it, vi } from "vitest"
+
 import { createFakeD1Database } from "../support/fake-d1"
 
 const PLUGIN_SERVER_COUNT = 6

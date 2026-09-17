@@ -1,20 +1,21 @@
-import { showErrorToast } from "~/lib/toast-notifications"
 import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import type {
   ExtractedLink,
   LinkExtractionStatus,
   MetaData,
 } from "~/features/links/types"
+import { showErrorToast } from "~/lib/toast-notifications"
+
+import {
+  presentSavedLinkCommandFailure,
+  SavedLinkCommandError,
+} from "../saved-link-command-failure"
 import {
   createLinkViewItem,
   getFilenameFromUrl,
   getLinkTitle,
 } from "./link-items"
 import { fetchMetaInternal } from "./link-server"
-import {
-  presentSavedLinkCommandFailure,
-  SavedLinkCommandError,
-} from "../saved-link-command-failure"
 
 export const buildLinkViewItem = async ({
   targetUrl,

@@ -1,9 +1,4 @@
-import * as React from "react"
 import { Toast as ToastPrimitive } from "@base-ui/react/toast"
-
-import { cn } from "~/lib/utils"
-import { Button } from "~/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
@@ -12,6 +7,11 @@ import {
   MultiplicationSignCircleIcon,
   Loading03Icon,
 } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
+import { Button } from "~/components/ui/button"
+import { cn } from "~/lib/utils"
 
 const toast = ToastPrimitive.createToastManager()
 

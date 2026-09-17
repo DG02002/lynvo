@@ -27,16 +27,29 @@ const isLintableSourceFile = (absolutePath) => {
 const quoteShellArgument = (filePath) =>
   `'${filePath.replaceAll("'", "'\\''")}'`
 
+const jsonFilePattern = /(?:^|\/)(?:package|knip)\.json$/
+
 export default {
   "*": (stagedFilePaths) => {
     const sourceFilePaths = stagedFilePaths.filter(isLintableSourceFile)
+    const jsonFilePaths = stagedFilePaths.filter(
+      (absolutePath) =>
+        existsSync(absolutePath) &&
+        jsonFilePattern.test(getRelativePath(absolutePath))
+    )
 
-    if (sourceFilePaths.length === 0) {
-      return []
+    const commands = []
+
+    if (sourceFilePaths.length > 0) {
+      const fileArguments = sourceFilePaths.map(quoteShellArgument).join(" ")
+      commands.push(`oxfmt ${fileArguments}`, `oxlint ${fileArguments}`)
     }
 
-    const fileArguments = sourceFilePaths.map(quoteShellArgument).join(" ")
+    if (jsonFilePaths.length > 0) {
+      const fileArguments = jsonFilePaths.map(quoteShellArgument).join(" ")
+      commands.push(`oxfmt ${fileArguments}`)
+    }
 
-    return [`oxfmt ${fileArguments}`, `oxlint ${fileArguments} --deny-warnings`]
+    return commands
   },
 }

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import {
   CLIENT_PROFILE_ATTRIBUTE,
   CLIENT_PROFILE_BOOTSTRAP_SCRIPT,
@@ -9,6 +10,7 @@ import {
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
 import { DEVELOPMENT_TVBRO_UI_STORAGE_KEY } from "~/lib/development-settings"
+
 import { createMemoryStorage } from "./memory-storage"
 
 const defaultUserAgent = navigator.userAgent

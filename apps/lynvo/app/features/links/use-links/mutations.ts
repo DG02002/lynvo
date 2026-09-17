@@ -1,27 +1,29 @@
-import { showErrorToast } from "~/lib/toast-notifications"
+import { Schema } from "effect"
+
+import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import { withResolvedMirrors } from "~/features/links/link-playback-metadata"
+import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
+import { linkMetadataSchema } from "~/features/links/storage-schemas"
 import type {
   ExtractedLink,
   LinkMetadata,
   LinkViewItem,
   MetaData,
 } from "~/features/links/types"
-import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
-import { removeLinkFromTree } from "~/features/links/link-tree-metadata"
-import { withResolvedMirrors } from "~/features/links/link-playback-metadata"
-import { linkMetadataSchema } from "~/features/links/storage-schemas"
-import { Schema } from "effect"
-import {
-  createUpdatedItemFromMetadata,
-  createUpdatedItemWithLinks,
-} from "./link-items"
-import { createOpenedLinkItem } from "./link-playback"
+import { showErrorToast } from "~/lib/toast-notifications"
+
+import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 import {
   buildLinkViewItem,
   buildQueuedLinkViewItem,
   showSaveError,
 } from "./link-add"
+import {
+  createUpdatedItemFromMetadata,
+  createUpdatedItemWithLinks,
+} from "./link-items"
+import { createOpenedLinkItem } from "./link-playback"
 import { isTemporaryLinkId, type LinksSnapshotStore } from "./links-store"
-import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 
 const toJsonMetadata = (metadata: LinkMetadata): LinkMetadata =>
   Schema.decodeUnknownSync(linkMetadataSchema)(

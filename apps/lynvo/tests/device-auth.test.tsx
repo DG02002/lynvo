@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import DeviceApproval from "~/components/auth/device-approval"
+
 import { requestPathname } from "./support/request-pathname"
 import { silenceConsoleErrorLogs } from "./support/silence-console-error-logs"
 

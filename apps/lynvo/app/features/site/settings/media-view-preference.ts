@@ -1,12 +1,13 @@
 import { useEffect, useSyncExternalStore } from "react"
 import { useRouteLoaderData } from "react-router"
-import type { loader as rootLoader } from "~/root"
+
 import { getCookieValueFromHeader } from "~/lib/auth-cookie"
 import {
   getCurrentClientProfile,
   subscribeToClientProfile,
   TVBRO_ANDROID_TV_PROFILE,
 } from "~/lib/client-profile"
+import type { loader as rootLoader } from "~/root"
 
 declare global {
   type MediaView = "list" | "hybrid"

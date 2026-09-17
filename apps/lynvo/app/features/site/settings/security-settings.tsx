@@ -1,25 +1,27 @@
-import * as React from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { Alert01Icon, ChevronRightIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import * as React from "react"
+
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { useAsyncResource } from "~/hooks/use-async-resource"
+import { client } from "~/lib/api/client"
+import { signOut } from "~/lib/session-http"
 import {
   showErrorToast,
   showSuccessToast,
   showWarningToast,
 } from "~/lib/toast-notifications"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
+import { ActiveSessionsView } from "./active-sessions-view"
+import { DeleteAccountDialog } from "./delete-account-dialog"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
   SettingsList,
   SettingsActionRow,
   SettingsRowInfo,
 } from "./settings-layout"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { ActiveSessionsView } from "./active-sessions-view"
-import { DeleteAccountDialog } from "./delete-account-dialog"
-import { signOut } from "~/lib/session-http"
-import { client } from "~/lib/api/client"
-import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { useAsyncResource } from "~/hooks/use-async-resource"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 type SettingsUser = {
   id: string

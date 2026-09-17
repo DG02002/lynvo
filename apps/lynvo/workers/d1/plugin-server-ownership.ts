@@ -1,6 +1,6 @@
-import { PLUGIN_SERVER_COLUMNS, type PluginServerRow } from "./rows"
 import { PluginServerUnavailableError } from "./errors"
 import { findOwnedRow, requireOwnedRow } from "./owned-row"
+import { PLUGIN_SERVER_COLUMNS, type PluginServerRow } from "./rows"
 
 export const PLUGIN_SERVER_SELECT = `SELECT ${PLUGIN_SERVER_COLUMNS} FROM user_plugin_servers`
 

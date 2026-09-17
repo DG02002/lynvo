@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { parseMediaFilename } from "~/features/links/media-artwork/media-filename-parser"
 
 describe("parseMediaFilename", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { resolveLynvoPluginIconUrl } from "~/features/site/settings/lynvo-plugin-catalog.server"
 
 describe("Lynvo plugin catalog icon URLs", () => {

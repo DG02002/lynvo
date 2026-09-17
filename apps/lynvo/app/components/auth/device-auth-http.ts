@@ -1,5 +1,6 @@
-import { requestSameOrigin } from "~/lib/api/client"
 import { Result, Schema } from "effect"
+
+import { requestSameOrigin } from "~/lib/api/client"
 
 const authorizeErrorResponseSchema = Schema.Struct({ error: Schema.String })
 const DEVICE_JSON_HEADERS = { "Content-Type": "application/json" }

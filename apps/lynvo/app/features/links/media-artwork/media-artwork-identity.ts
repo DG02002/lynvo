@@ -1,10 +1,10 @@
+import { getMediaNodeInteractionState } from "../media-node-interaction"
+import type { ExtractedLink } from "../types"
 import {
   getMediaFilenameMatchingText,
   isNonMediaFilename,
   parseMediaFilename,
 } from "./media-filename-parser"
-import { getMediaNodeInteractionState } from "../media-node-interaction"
-import type { ExtractedLink } from "../types"
 
 interface MediaArtworkRequestOptions {
   readonly isContainer?: boolean

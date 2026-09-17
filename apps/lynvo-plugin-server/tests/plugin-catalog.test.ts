@@ -1,16 +1,17 @@
+import {
+  canPluginServerAttemptUrl,
+  getLynvoManifestExtension,
+  validatePluginServerManifestContract,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
+import { BHADOO_FALLBACK_PATH } from "../src/constants"
 import {
   LYNVO_PLUGIN_CATALOG,
   createLynvoPluginServerManifest,
   discoverLynvoPlugin,
   findLynvoPlugin,
 } from "../src/plugin-catalog"
-import { BHADOO_FALLBACK_PATH } from "../src/constants"
-import {
-  canPluginServerAttemptUrl,
-  getLynvoManifestExtension,
-  validatePluginServerManifestContract,
-} from "@dg02002/lynvo-plugin-server-protocol"
 
 describe("Lynvo plugin catalog", () => {
   afterEach(() => {

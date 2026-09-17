@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react"
 
 import { DOCS_SCROLL_OFFSET_PX } from "~/lib/constants"
 import { cn } from "~/lib/utils"
+
 import {
   useActiveHeadingTracker,
   useDocumentHeadings,

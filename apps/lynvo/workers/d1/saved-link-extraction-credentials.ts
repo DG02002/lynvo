@@ -1,14 +1,15 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
+
+import {
+  parseHttpBasicCredential,
+  serializeHttpBasicCredential,
+} from "../../app/lib/plugins/http-basic-credential"
+import { SEALED_RECORD_KEY_VERSION } from "../../app/lib/security/constants"
 import {
   sealRecord,
   unsealRecord,
   type SealedRecord,
 } from "../../app/lib/security/sealed-record"
-import { SEALED_RECORD_KEY_VERSION } from "../../app/lib/security/constants"
-import {
-  parseHttpBasicCredential,
-  serializeHttpBasicCredential,
-} from "../../app/lib/plugins/http-basic-credential"
 
 export interface EncryptedSavedLinkExtractionCredential extends SealedRecord {}
 

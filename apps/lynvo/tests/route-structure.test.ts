@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import routes, { createRoutes } from "~/routes"
 
 type RouteEntry = ReturnType<typeof createRoutes>[number]

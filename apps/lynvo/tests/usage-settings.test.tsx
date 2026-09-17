@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { UsageSettings } from "~/features/site/settings/usage-settings"
 import { clearAsyncResourceCache } from "~/hooks/use-async-resource"
+
 import { requestPathname } from "./support/request-pathname"
 import { silenceConsoleErrorLogs } from "./support/silence-console-error-logs"
 

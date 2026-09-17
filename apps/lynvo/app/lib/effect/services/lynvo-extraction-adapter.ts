@@ -4,13 +4,9 @@ import type {
   PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { DateTime, Effect, Exit } from "effect"
-import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
-import {
-  ExtractionError,
-  getErrorMessage,
-  UsageLimitError,
-  ValidationError,
-} from "../errors"
+
+import { getD1Database } from "../../../../workers/d1/db"
+import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
 import {
   MANAGED_PLUGIN_IDS,
   reserveManagedExtraction,
@@ -18,6 +14,14 @@ import {
   UsageLimitExhaustedError,
   type ManagedPluginId,
 } from "../../../../workers/d1/usage"
+import { LYNVO_PLUGIN_SERVER_ID } from "../../constants"
+import {
+  ExtractionError,
+  getErrorMessage,
+  UsageLimitError,
+  ValidationError,
+} from "../errors"
+import { requireDatabaseEffectAs } from "../require-database"
 import type { ExtractionResult, MetadataResult } from "./extraction-types"
 import {
   discoverLynvoPlugin,
@@ -28,9 +32,6 @@ import {
 } from "./lynvo-plugin-server-adapter"
 import { resolvePluginCredential } from "./plugin-credential-resolution"
 import type { PluginCredentialVaultContract } from "./plugin-credential-vault"
-import { requireDatabaseEffectAs } from "../require-database"
-import { getD1Database } from "../../../../workers/d1/db"
-import { getPluginDomainByDomain } from "../../../../workers/d1/plugin-domains"
 
 export interface LynvoExtractionAdapterOptions {
   readonly environment: Env

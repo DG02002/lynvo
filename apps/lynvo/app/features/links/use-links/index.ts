@@ -7,15 +7,19 @@ import {
   useSyncExternalStore,
 } from "react"
 import { useRouteLoaderData } from "react-router"
-import type { loader as rootLoader } from "~/root"
-import {
-  LINKS_OFFLINE_POLL_INTERVAL_MS,
-  LINKS_REFETCH_DEBOUNCE_MS,
-} from "~/lib/constants"
+
 import {
   useOptionalRealtime,
   type RealtimeContextValue,
 } from "~/context/realtime-context"
+import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
+import {
+  LINKS_OFFLINE_POLL_INTERVAL_MS,
+  LINKS_REFETCH_DEBOUNCE_MS,
+} from "~/lib/constants"
+import type { loader as rootLoader } from "~/root"
+
+import type { LinksActions } from "./actions"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
 import {
   createLinksSnapshotStore,
@@ -23,8 +27,6 @@ import {
   type LinksSnapshotStore,
 } from "./links-store"
 import { createLinksMutations } from "./mutations"
-import type { LinksActions } from "./actions"
-import type { LinkViewItem, SavedLinkListItem } from "~/features/links/types"
 
 const EMPTY_LINKS: LinkViewItem[] = []
 const subscribeToHydration = () => () => undefined

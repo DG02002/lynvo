@@ -1,5 +1,6 @@
 import { Logout05Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+
 import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
 
 export const LogoutDialog = ({

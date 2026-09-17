@@ -1,4 +1,3 @@
-import { createOpaqueId } from "./ids"
 import { getCookieValue } from "../../app/lib/auth-cookie"
 import {
   AUTH_ACTIVITY_TOUCH_INTERVAL_MS,
@@ -8,6 +7,7 @@ import {
   SESSION_DEVICE_NAME_MAX_LENGTH,
   SESSION_SWEEP_BATCH_SIZE,
 } from "../constants"
+import { createOpaqueId } from "./ids"
 import { getOrCreateGoogleUser, type UserRecord } from "./users"
 
 export interface SessionRecord {

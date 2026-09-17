@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Link } from "react-router"
+
 import { useViewTransition } from "~/lib/client-profile"
 
 const documentationCards = [

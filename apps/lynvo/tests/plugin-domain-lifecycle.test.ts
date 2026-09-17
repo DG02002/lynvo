@@ -1,20 +1,22 @@
-import { describe, expect, it } from "vitest"
 import { Effect, Layer } from "effect"
+import { describe, expect, it } from "vitest"
+
+import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
+import {
+  createPluginCredentialAdditionalData,
+  PluginCredentialVault,
+} from "~/lib/effect/services/plugin-credential-vault"
 import {
   normalizePluginDomain,
   parsePluginDomainInput,
   parsePluginDomainCandidate,
 } from "~/lib/plugin-domain"
 import {
-  createPluginCredentialAdditionalData,
-  PluginCredentialVault,
-} from "~/lib/effect/services/plugin-credential-vault"
-import { CloudflareEnv } from "~/lib/effect/services/cloudflare-env"
-import { buildCredentialDocument } from "../workers/d1/plugin-domains"
-import {
   parseHttpBasicCredential,
   serializeHttpBasicCredential,
 } from "~/lib/plugins/http-basic-credential"
+
+import { buildCredentialDocument } from "../workers/d1/plugin-domains"
 
 describe("Plugin Domain lifecycle", () => {
   it("normalizes duplicate domain spellings to one identity", () => {

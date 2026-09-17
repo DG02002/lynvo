@@ -1,6 +1,11 @@
 import { Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { WebAuth, CsrfMiddleware } from "../middleware"
+
+import {
+  CreatePluginDomainPayloadSchema,
+  PluginDomainListSchema,
+  SetCredentialPayloadSchema,
+} from "../../../api-contracts"
 import {
   UnauthorizedApiError,
   CsrfApiError,
@@ -11,11 +16,7 @@ import {
   PluginDomainNotFoundApiError,
   PluginServerUnavailableApiError,
 } from "../../errors"
-import {
-  CreatePluginDomainPayloadSchema,
-  PluginDomainListSchema,
-  SetCredentialPayloadSchema,
-} from "../../../api-contracts"
+import { WebAuth, CsrfMiddleware } from "../middleware"
 import { VersionedMutationResponseSchema } from "../versioned-response"
 
 export class PluginDomainsGroup extends HttpApiGroup.make("pluginDomains")

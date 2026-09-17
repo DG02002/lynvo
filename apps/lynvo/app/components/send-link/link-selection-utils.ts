@@ -1,8 +1,8 @@
-import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
 } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
 
 export const getSelectableLinkId = getMediaNodeKey
 

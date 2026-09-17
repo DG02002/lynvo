@@ -1,8 +1,8 @@
-import type { ExtractedLink } from "~/features/links/types"
 import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
 
 interface DirectSavePresentation {
   readonly kind: "directSave"

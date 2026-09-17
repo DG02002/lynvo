@@ -1,12 +1,14 @@
 import { Result, Schema } from "effect"
-import { SavedLinkCommandError } from "../saved-link-command-failure"
-import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
+
 import { parseLinkMetadata } from "~/features/links/link-metadata-normalization"
 import {
   toLinkViewItem,
   type SavedLink,
 } from "~/features/links/link-view-models"
 import type { LinkExtractionStatus } from "~/features/links/types"
+import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
+
+import { SavedLinkCommandError } from "../saved-link-command-failure"
 
 declare global {
   interface SavedLinkApiRecord {

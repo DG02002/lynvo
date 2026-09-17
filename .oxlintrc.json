@@ -1,6 +1,8 @@
 {
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
   },
   "ignorePatterns": [
     ".agent/**",
@@ -19,6 +21,10 @@
   ],
   "jsPlugins": [
     {
+      "name": "sonarjs",
+      "specifier": "eslint-plugin-sonarjs"
+    },
+    {
       "name": "anti-slop",
       "specifier": "./tools/oxlint/anti-slop/index.ts"
     },
@@ -31,7 +37,8 @@
     "typescript",
     "unicorn",
     "react-hooks",
-    "oxc"
+    "oxc",
+    "import"
   ],
   "categories": {
     "correctness": "warn",
@@ -148,6 +155,9 @@
     "react/no-unescaped-entities": "warn",
     "unicorn/prefer-string-replace-all": "warn",
     "typescript/no-explicit-any": "error",
+    "import/no-cycle": "error",
+    "sonarjs/no-identical-functions": "warn",
+    "import/no-unassigned-import": "off",
     // SAFETY comments are the repository's assertion gate; this rule would
     // repeat those approved assertions.
     "typescript/no-unsafe-type-assertion": "off",

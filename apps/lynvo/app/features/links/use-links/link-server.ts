@@ -1,6 +1,7 @@
-import type { MetaData } from "~/features/links/types"
-import { metadataSchema } from "~/features/links/storage-schemas"
 import { Result, Schema } from "effect"
+
+import { metadataSchema } from "~/features/links/storage-schemas"
+import type { MetaData } from "~/features/links/types"
 
 const FETCH_METADATA_TIMEOUT_MS = 20000
 

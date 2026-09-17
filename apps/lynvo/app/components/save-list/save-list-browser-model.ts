@@ -3,17 +3,18 @@ import {
   Folder02Icon,
   FolderSymlinkIcon,
 } from "@hugeicons/core-free-icons"
+
 import { toLinkViewModel } from "~/features/links/link-view-models"
-import type {
-  ExtractedLink,
-  LinkListItem,
-  LinkViewItem,
-} from "~/features/links/types"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
+import type {
+  ExtractedLink,
+  LinkListItem,
+  LinkViewItem,
+} from "~/features/links/types"
 
 export interface FolderLevel {
   id: string

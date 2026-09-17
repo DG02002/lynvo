@@ -1,13 +1,13 @@
 import {
-  createTmdbAdapter,
-  type TmdbAdapter,
-  type TmdbSearchResult,
-} from "./tmdb-adapter"
-import {
   doesSeasonNameCoverRemainder,
   selectBestSearchResult,
   selectLeadingTitleMatch,
 } from "./search-result-selection"
+import {
+  createTmdbAdapter,
+  type TmdbAdapter,
+  type TmdbSearchResult,
+} from "./tmdb-adapter"
 
 export interface MediaArtworkIdentity {
   readonly providerId: number

@@ -1,5 +1,6 @@
-import { ApiResponseError } from "./api-errors"
 import { Result, Schema } from "effect"
+
+import { ApiResponseError } from "./api-errors"
 
 const taggedErrorSchema = Schema.Struct({
   _tag: Schema.String,

@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
+
 import { ErrorBoundary } from "../app/root/error-boundary"
 
 describe("root error boundary", () => {

@@ -1,6 +1,7 @@
-import { MemoryRouter } from "react-router"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
+
 import { ProxySettings } from "~/features/site/settings/proxy-settings"
 
 describe("ProxySettings", () => {

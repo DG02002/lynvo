@@ -1,3 +1,4 @@
+import type { ComponentType, ReactNode } from "react"
 import {
   Links,
   Meta,
@@ -6,10 +7,10 @@ import {
   useRouteLoaderData,
 } from "react-router"
 
-import type { ComponentType, ReactNode } from "react"
 import { CLIENT_PROFILE_BOOTSTRAP_SCRIPT } from "~/lib/client-profile"
 import { DEVELOPMENT_FREEZE_USAGE_BOOTSTRAP_SCRIPT } from "~/lib/development-settings"
 import { THEME_BOOTSTRAP_SCRIPT } from "~/lib/theme"
+
 import type { loader } from "../root"
 import { RouteSeoMetadata } from "./route-seo-metadata"
 

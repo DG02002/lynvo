@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
 import { client, requestSameOrigin } from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
+
 import { requestUrl } from "./support/request-inspection"
 
 const fetchMock = vi.fn<typeof globalThis.fetch>()

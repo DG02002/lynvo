@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { createTmdbAdapter } from "../../workers/media-metadata/tmdb-adapter"
 
 const createFetch = (response: Response) => vi.fn(async () => response)

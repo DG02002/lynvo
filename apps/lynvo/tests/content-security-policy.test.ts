@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { createContentSecurityPolicy } from "~/lib/content-security-policy"
 
 describe("createContentSecurityPolicy", () => {

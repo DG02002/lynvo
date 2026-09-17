@@ -1,6 +1,3 @@
-import * as React from "react"
-import { useForm } from "@tanstack/react-form"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
   Alert01Icon,
@@ -10,24 +7,23 @@ import {
   Link01Icon,
   PlugSocketIcon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "~/components/ui/button"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useForm } from "@tanstack/react-form"
+import * as React from "react"
+
+import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
+import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
 import { FormDialogContent } from "~/components/form-dialog-content"
 import { FormDialogInput } from "~/components/form-dialog-input"
-import { ConfirmationAlertDialog } from "~/components/confirmation-alert-dialog"
-import { Checkbox } from "~/components/ui/checkbox"
-import { Alert, AlertDescription } from "~/components/ui/alert"
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/field"
-import { Dialog, DialogTrigger } from "~/components/ui/dialog"
-import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginIcon } from "~/components/plugin-icon"
+import { Alert, AlertDescription } from "~/components/ui/alert"
+import { Button } from "~/components/ui/button"
+import { Checkbox } from "~/components/ui/checkbox"
+import { Dialog, DialogTrigger } from "~/components/ui/dialog"
+
+import { CustomPluginServerTable } from "./custom-plugin-server-table"
 import { PluginInfoTooltip } from "./plugin-info-tooltip"
 import type { LynvoPlugin } from "./plugin-settings-data"
-import {
-  SettingsPanel,
-  SettingsList,
-  SettingsRow,
-  SectionHeading,
-} from "./settings-layout"
 import {
   usePluginSettingsInteraction,
   type CustomPluginServer,
@@ -37,6 +33,12 @@ import {
   customPluginServerStandardSchema,
   type CustomPluginServerFormValues,
 } from "./plugin-settings-schemas"
+import {
+  SettingsPanel,
+  SettingsList,
+  SettingsRow,
+  SectionHeading,
+} from "./settings-layout"
 
 export type { PluginDomain } from "./plugin-settings-interaction"
 

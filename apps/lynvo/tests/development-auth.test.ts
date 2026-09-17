@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { getUserSession } from "../app/lib/auth"
 import {
   DEVELOPMENT_AUTH_EMAIL,

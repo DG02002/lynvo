@@ -1,12 +1,13 @@
-import {
-  parsePluginDomainCandidate,
-  type PluginDomainSuggestion,
-} from "~/lib/plugin-domain"
 import type {
   ExtractedLink,
   LinkViewItem,
   MetaData,
 } from "~/features/links/types"
+import {
+  parsePluginDomainCandidate,
+  type PluginDomainSuggestion,
+} from "~/lib/plugin-domain"
+
 import type { SavedLinkSelection } from "./saved-link-interaction"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
 

@@ -121,6 +121,15 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 - Local Explorer's agent API is under `/cdn-cgi/local/explorer/api`. The local
   development guide documents the verified two-Worker workflow.
 
+## Linting and formatting
+
+While iterating, apply the touched package's `lint:fix` and `fmt` scripts
+(`apps/lynvo` has both; the other packages lint without a fixer). Warnings
+fail every lint run through `denyWarnings` in the root `.oxlintrc.json`, so
+a warning is a failure everywhere, editors included via the committed
+`.vscode` settings. When feeding lint output back into an agent loop, run
+`oxlint --format=agent <paths>` for one compact line per finding.
+
 ## Verifying
 
 - Use the smallest proof that demonstrates the change.

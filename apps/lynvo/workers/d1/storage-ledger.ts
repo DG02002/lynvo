@@ -4,8 +4,8 @@ import {
   STORAGE_RECONSTRUCTION_DOCUMENT_LIMIT,
   USER_STORAGE_LIMIT_BYTES,
 } from "../constants"
-import { LinkTooLargeError, StorageLimitError } from "./errors"
 import type { OwnedWriteGuard } from "./data-version"
+import { LinkTooLargeError, StorageLimitError } from "./errors"
 import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,

@@ -1,4 +1,5 @@
 import type { PluginServerManifest } from "@dg02002/lynvo-plugin-server-protocol"
+
 import { findLynvoPlugin } from "~/lib/effect/services/lynvo-plugin-server-adapter"
 
 const manifest: PluginServerManifest = {

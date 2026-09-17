@@ -1,5 +1,6 @@
-import { useEffect } from "react"
 import { useTheme } from "next-themes"
+import { useEffect } from "react"
+
 import { THEME_COOKIE_MAX_AGE_SECONDS, THEME_COOKIE_NAME } from "~/lib/theme"
 
 export const ThemeCookieSync = () => {

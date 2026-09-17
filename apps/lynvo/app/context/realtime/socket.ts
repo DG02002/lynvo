@@ -1,18 +1,20 @@
-import type { RealtimeAction } from "./reducer"
 import { Result, Schema } from "effect"
-import {
-  isRealtimeHeartbeatResponse,
-  parseRealtimeMessage,
-  sessionHelloRealtimeMessageSchema,
-} from "./message-schema"
+
 import {
   REALTIME_HEARTBEAT_INTERVAL_MS,
   REALTIME_HEARTBEAT_TIMEOUT_MS,
   REALTIME_SESSION_REVOKED_CLOSE_CODE,
 } from "~/lib/constants"
-import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { getBrowserDeviceName } from "~/lib/device-name"
+import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+
+import {
+  isRealtimeHeartbeatResponse,
+  parseRealtimeMessage,
+  sessionHelloRealtimeMessageSchema,
+} from "./message-schema"
+import type { RealtimeAction } from "./reducer"
 
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>

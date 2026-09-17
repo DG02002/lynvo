@@ -1,6 +1,7 @@
 import { Schema } from "effect"
-import type { ExtractedLink } from "~/features/links/types"
+
 import { getMediaNodeTarget } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
 import { openInPlayer, type RangeRequestCapability } from "~/lib/player-utils"
 import { remotePlaybackIntentSchema } from "~/lib/remote-play/intent"
 

@@ -1,12 +1,14 @@
-import { useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowUpRight01Icon,
   CopyIcon,
   Delete02Icon,
   EllipsisIcon,
 } from "@hugeicons/core-free-icons"
-import { showLinkCopiedToast } from "~/lib/toast-notifications"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useState } from "react"
+
+import { RemoveLinkAlertDialog } from "~/components/links/remove-link-alert-dialog"
+import { PlayerOption } from "~/components/player-option"
 import { Button } from "~/components/ui/button"
 import {
   DropdownMenu,
@@ -19,8 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { PLAYER_DEFINITIONS, type PlayerDefinition } from "~/lib/player-utils"
-import { PlayerOption } from "~/components/player-option"
-import { RemoveLinkAlertDialog } from "~/components/links/remove-link-alert-dialog"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
 
 interface LinkActionsRemoveRequest {

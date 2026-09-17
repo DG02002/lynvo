@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
+
 import {
   confirmSaveIntent,
   resolveSaveIntent,
 } from "~/features/links/save-intent"
+import type { ExtractedLink, LinkViewItem } from "~/features/links/types"
 
 const createLink = (url: string, id?: string): LinkViewItem => ({
   url,

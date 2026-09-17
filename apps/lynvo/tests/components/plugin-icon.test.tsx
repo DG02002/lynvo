@@ -1,6 +1,7 @@
-import { render } from "@testing-library/react"
 import { GoogleDriveIcon } from "@hugeicons/core-free-icons"
+import { render } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
+
 import { PluginIcon } from "~/components/plugin-icon"
 
 describe("PluginIcon", () => {

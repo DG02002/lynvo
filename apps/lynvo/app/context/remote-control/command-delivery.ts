@@ -1,10 +1,12 @@
 import { Result, Schema } from "effect"
+
+import { parseRemotePlaybackIntent } from "~/lib/remote-play/intent"
+import { remoteCommandFieldsSchema } from "~/lib/remote-play/wire"
+
 import {
   REMOTE_COMMAND_DEDUPLICATION_WINDOW_MS,
   REMOTE_COMMAND_STALE_AFTER_MS,
 } from "./constants"
-import { remoteCommandFieldsSchema } from "~/lib/remote-play/wire"
-import { parseRemotePlaybackIntent } from "~/lib/remote-play/intent"
 
 declare global {
   interface RemoteCommandDeliveryInput {

@@ -10,6 +10,13 @@ import {
   getDataVersion,
 } from "./data-version"
 import { createOpaqueId } from "./ids"
+import { buildPluginDomainDeletion } from "./plugin-domains"
+import {
+  PLUGIN_SERVER_SELECT,
+  findOwnedPluginServerRow,
+  requireReadyPluginServerRow,
+  requireOwnedPluginServerRow,
+} from "./plugin-server-ownership"
 import {
   PLUGIN_CREDENTIAL_COLUMNS,
   PLUGIN_DOMAIN_COLUMNS,
@@ -18,19 +25,12 @@ import {
   type PluginServerRow,
 } from "./rows"
 import {
-  PLUGIN_SERVER_SELECT,
-  findOwnedPluginServerRow,
-  requireReadyPluginServerRow,
-  requireOwnedPluginServerRow,
-} from "./plugin-server-ownership"
-import {
   applyStorageMutation,
   byteLength,
   ensureStorageLedger,
   withAppliedMutation,
   type StorageLedgerPreparation,
 } from "./storage-ledger"
-import { buildPluginDomainDeletion } from "./plugin-domains"
 
 export interface PluginServerRecord {
   id: string

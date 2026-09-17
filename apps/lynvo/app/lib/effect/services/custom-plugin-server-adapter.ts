@@ -1,4 +1,3 @@
-import { Effect } from "effect"
 import {
   getLynvoManifestExtension,
   getMatchedPlugin,
@@ -7,19 +6,24 @@ import {
   type HttpBasicAuth,
   type ProxyCredential,
 } from "@dg02002/lynvo-plugin-server-protocol"
-import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
+import { Effect } from "effect"
+
 import { matchUrl } from "../../../lib/plugin-server-utils"
+import {
+  PluginServerClient,
+  HttpPluginServerTransport,
+} from "../../extraction/plugin-server-client"
+import {
+  isSupportedProxyProvider,
+  SCRAPE_DO_PROXY_PROVIDER,
+} from "../../plugin-server-proxy"
+import { extractHttpBasicCredential } from "../../plugins/http-basic-credential"
 import type { ExtractionError } from "../errors"
 import type {
   ExtractionResult,
   MetadataResult,
   RegisteredPluginServer,
 } from "./extraction-types"
-import { isPluginServerUsable } from "./plugin-server-verification-status"
-import {
-  PluginServerClient,
-  HttpPluginServerTransport,
-} from "../../extraction/plugin-server-client"
 import {
   extractPluginServerResponse,
   requestPluginServer,
@@ -28,10 +32,7 @@ import {
   getPluginServerMetadata,
   mapPluginServerExtractionResult,
 } from "./plugin-server-result-mapping"
-import {
-  isSupportedProxyProvider,
-  SCRAPE_DO_PROXY_PROVIDER,
-} from "../../plugin-server-proxy"
+import { isPluginServerUsable } from "./plugin-server-verification-status"
 
 const createCustomPluginServerClient = (pluginServer: RegisteredPluginServer) =>
   new PluginServerClient(new HttpPluginServerTransport(pluginServer.baseUrl))

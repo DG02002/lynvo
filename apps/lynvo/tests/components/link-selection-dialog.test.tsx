@@ -1,6 +1,7 @@
-import { useState } from "react"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
+
 import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialog"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import type { ExtractedLink } from "~/features/links/types"

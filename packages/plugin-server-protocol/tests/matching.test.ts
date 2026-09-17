@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+
 import { matchPluginServerUrl } from "../src/index"
 
 describe("Plugin Server URL matching", () => {

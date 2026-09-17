@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { CopyIcon } from "@hugeicons/core-free-icons"
-import { showLinkCopiedToast } from "~/lib/toast-notifications"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useState } from "react"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,8 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog"
-import type { LinkViewItem } from "~/features/links/types"
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
+import type { LinkViewItem } from "~/features/links/types"
+import { showLinkCopiedToast } from "~/lib/toast-notifications"
+
 import { highlightLogJson } from "./log-json-highlight"
 
 interface LinkDebugLogDialogProps {

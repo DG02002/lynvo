@@ -1,5 +1,6 @@
 import { waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
 
 describe("openInPlayerAndLogError", () => {

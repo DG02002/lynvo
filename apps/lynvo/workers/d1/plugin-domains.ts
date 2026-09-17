@@ -1,11 +1,4 @@
 import { normalizePluginDomain } from "../../app/lib/plugin-domain"
-import { createOpaqueId } from "./ids"
-import {
-  PLUGIN_CREDENTIAL_COLUMNS,
-  PLUGIN_DOMAIN_COLUMNS,
-  type PluginCredentialRow,
-  type PluginDomainRow,
-} from "./rows"
 import {
   createChangedWriteGuard,
   executeOwnedWrite,
@@ -17,6 +10,15 @@ import {
   PluginDomainNotFoundError,
   PluginServerUnavailableError,
 } from "./errors"
+import { createOpaqueId } from "./ids"
+import { requireOwnedRow } from "./owned-row"
+import { requireReadyPluginServerRow } from "./plugin-server-ownership"
+import {
+  PLUGIN_CREDENTIAL_COLUMNS,
+  PLUGIN_DOMAIN_COLUMNS,
+  type PluginCredentialRow,
+  type PluginDomainRow,
+} from "./rows"
 import {
   applyStorageMutation,
   byteLength,
@@ -24,8 +26,6 @@ import {
   withAppliedMutation,
   type StorageLedgerPreparation,
 } from "./storage-ledger"
-import { requireReadyPluginServerRow } from "./plugin-server-ownership"
-import { requireOwnedRow } from "./owned-row"
 
 export interface EncryptedCredentialInput {
   ciphertext: string

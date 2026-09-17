@@ -1,11 +1,12 @@
-import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
+import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
+
 import { getLinkViewItemMetadata } from "./link-metadata-accessors"
 import { toLinkViewModel } from "./link-view-models"
-import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
 import {
   getMediaNodeInteractionState,
   isMirrorResolvableMediaNode,
 } from "./media-node-interaction"
+import type { ExtractedLink, LinkViewItem, MetaData } from "./types"
 
 export interface SavedLinkInteractionState {
   directLink?: ExtractedLink

@@ -1,8 +1,8 @@
-import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import {
   getLinkViewItemFlatMeta,
   getLinkViewItemMetadata,
 } from "~/features/links/link-metadata-accessors"
+import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
 import type {
   ExtractedLink,
   LinkExtractionStatus,

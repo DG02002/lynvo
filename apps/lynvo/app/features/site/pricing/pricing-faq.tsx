@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "~/components/ui/accordion"
+
 import { pricingFaqs } from "./pricing-content"
 
 export const PricingFaq = () => (

@@ -1,5 +1,5 @@
-import type { Route } from "./+types/_site.policies.cookie-policy"
 import { CookiePolicyContent } from "../content/cookie-policy-content"
+import type { Route } from "./+types/_site.policies.cookie-policy"
 
 export const meta = (_: Route.MetaArgs) => [
   { title: "Cookie policy | Lynvo" },

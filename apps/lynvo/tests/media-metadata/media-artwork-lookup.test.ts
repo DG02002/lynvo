@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { lookupMediaArtwork } from "../../workers/media-metadata/media-artwork-lookup"
 import { requestUrl } from "../support/request-inspection"
 

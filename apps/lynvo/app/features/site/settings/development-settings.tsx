@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react"
+
 import { Switch } from "~/components/ui/switch"
 import { syncClientProfileAttribute } from "~/lib/client-profile"
 import {
@@ -8,6 +9,7 @@ import {
   setDevelopmentTvBroUiEnabled,
   subscribeToDevelopmentSettings,
 } from "~/lib/development-settings"
+
 import {
   SettingsList,
   SettingsPanel,

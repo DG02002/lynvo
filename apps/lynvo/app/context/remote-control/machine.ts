@@ -1,8 +1,8 @@
-import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 import {
   createRemoteCommandDelivery,
   parseRemoteCommandWirePayload,
 } from "./command-delivery"
+import { REMOTE_POLL_INTERVAL_MS } from "./constants"
 
 declare global {
   interface RemoteDevice {

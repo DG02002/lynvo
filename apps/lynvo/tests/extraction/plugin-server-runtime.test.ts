@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest"
 import {
   ProtocolError,
   createPluginServerRuntime,
@@ -7,6 +6,7 @@ import {
   type PluginServerManifest,
   type UsageResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
+import { describe, expect, it, vi } from "vitest"
 
 interface TestEnv {
   validApiKey: string

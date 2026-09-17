@@ -1,4 +1,5 @@
 import { Link } from "react-router"
+
 import { Alert, AlertDescription } from "~/components/ui/alert"
 import { useViewTransition } from "~/lib/client-profile"
 import { policyPaths } from "~/lib/paths"

@@ -1,8 +1,9 @@
 import { useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router"
+
 import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
-import { useMediaView } from "~/features/site/settings/media-view-preference"
 import type { SavedLinkListItem } from "~/features/links/types"
+import { useMediaView } from "~/features/site/settings/media-view-preference"
 
 interface UseHybridGroupRouteOptions {
   links: SavedLinkListItem[]

@@ -1,9 +1,11 @@
 import { Schema } from "effect"
+
+import { runWithRetries } from "~/lib/retry"
+
 import {
   SavedLinkCommandFailureSchema,
   SavedLinkCommandError,
 } from "./saved-link-command-failure"
-import { runWithRetries } from "~/lib/retry"
 
 const dependencyFailureSchema = Schema.Struct({
   data: SavedLinkCommandFailureSchema,

@@ -3,7 +3,6 @@ import {
   ProtocolError,
   type PluginServerManifest,
   type PluginServerMatcher,
-  type PluginCredential,
   type PluginMetadata,
   type ExtractSuccessResponse,
   type ExtractRequest,
@@ -11,6 +10,7 @@ import {
   type DiscoverResponse,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { load } from "cheerio"
+
 import {
   BHADOO_SOURCE_ID,
   BHADOO_SOURCE_IMPLEMENTATION_VERSION,
@@ -22,10 +22,11 @@ import {
   ONEDRIVE_SOURCE_ID,
   SOURCE_IMPLEMENTATION_VERSION,
 } from "./constants"
+import type { LynvoPluginDefinition } from "./plugin-adapter"
 import { extractBhadooGoogleDriveIndex } from "./sources/bhadoo-google-drive-index"
+import { extractDirectMedia } from "./sources/direct-media"
 import { extractGoogleDrivePublicLink } from "./sources/google-drive-public-files"
 import { extractOneDriveIndex } from "./sources/onedrive-index"
-import { extractDirectMedia } from "./sources/direct-media"
 import {
   fetchValidatedUpstream,
   readBoundedUpstreamText,
@@ -33,28 +34,6 @@ import {
 
 const ONEDRIVE_INDEX_REPOSITORY_URL =
   "https://github.com/spencerwooo/onedrive-vercel-index"
-
-export interface PluginAdapterOptions {
-  request: ExtractRequest
-  targetUrl: string
-  plugin: LynvoPluginDefinition
-  publicAssetOrigin?: string
-}
-
-export interface LynvoPluginDefinition {
-  id: string
-  displayName: string
-  description: string
-  homepage: string
-  iconPath?: string
-  status: "active" | "maintenance" | "degraded" | "down"
-  version: string
-  matchStrategy?: "static" | "probe"
-  matchers?: PluginServerMatcher[]
-  credential?: PluginCredential
-  discovery?: { confidence: "pattern" | "verified" }
-  extract: (options: PluginAdapterOptions) => Promise<ExtractSuccessResponse>
-}
 
 const isProbePlugin = (plugin: LynvoPluginDefinition): boolean =>
   plugin.matchStrategy === "probe"
@@ -258,23 +237,4 @@ export const extractWithLynvoPlugin = async (
     )
   }
   return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
-}
-
-export const createPluginResponseMetadata = (
-  plugin: LynvoPluginDefinition,
-  publicAssetOrigin?: string,
-  pageTitle?: string
-): ExtractSuccessResponse["plugin"] => {
-  const base = {
-    pluginServerId: PLUGIN_SERVER_ID,
-    displayName: PLUGIN_SERVER_NAME,
-    pluginId: plugin.id,
-    pluginName: plugin.displayName,
-  }
-  const withIcon =
-    publicAssetOrigin && plugin.iconPath
-      ? { ...base, pluginIconUrl: `${publicAssetOrigin}${plugin.iconPath}` }
-      : base
-  const withTitle = pageTitle ? { ...withIcon, pageTitle } : withIcon
-  return withTitle
 }

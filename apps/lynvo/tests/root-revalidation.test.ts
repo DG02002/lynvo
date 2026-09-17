@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest"
 import { createMemoryRouter } from "react-router"
+import { describe, expect, it, vi } from "vitest"
+
 import { shouldRevalidateRoot } from "~/root/root-revalidation"
 
 const navigation = (

@@ -1,10 +1,10 @@
+import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 import type {
   ExtractedLink,
   MetaData,
   LinkViewItem,
 } from "~/features/links/types"
 import type { PluginDomainSuggestion } from "~/lib/plugin-domain"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
 
 export interface OpenSelectionDialogOptions {
   originalUrl: string

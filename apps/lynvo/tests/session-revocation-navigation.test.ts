@@ -1,5 +1,6 @@
 import { authPaths } from "~/lib/paths"
 import { clearRevokedSessionState } from "~/root/session-revocation"
+
 import { createMemoryStorage } from "./memory-storage"
 
 describe("authoritative session revocation", () => {

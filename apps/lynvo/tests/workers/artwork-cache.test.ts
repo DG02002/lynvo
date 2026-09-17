@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+
 import { MEDIA_ARTWORK_CACHE_VERSION } from "../../app/lib/constants"
 import { lookupMediaArtworkCached } from "../../workers/media-metadata/artwork-cache"
 import { requestUrl } from "../support/request-inspection"

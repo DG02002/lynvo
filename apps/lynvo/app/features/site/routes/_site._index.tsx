@@ -1,4 +1,3 @@
-import type { Route } from "./+types/_site._index"
 import { HomeHero } from "~/features/site/home/home-hero"
 import {
   AndroidScreensSection,
@@ -7,6 +6,8 @@ import {
   PlayerSectionEdgeToEdge,
   PlanSection,
 } from "~/features/site/home/home-sections"
+
+import type { Route } from "./+types/_site._index"
 
 export function meta(_: Route.MetaArgs) {
   return [

@@ -1,11 +1,13 @@
-import { useNavigate, useRouteLoaderData } from "react-router"
-import { LogoLink } from "~/components/logo"
 import { useState } from "react"
+import { useNavigate, useRouteLoaderData } from "react-router"
+
+import { LogoLink } from "~/components/logo"
+import { useViewTransition } from "~/lib/client-profile"
+import { signOut } from "~/lib/session-http"
+
 import { GuestNavActions } from "./header/guest-nav-actions"
 import { LogoutDialog } from "./header/logout-dialog"
 import { UserNavActions } from "./header/user-nav-actions"
-import { signOut } from "~/lib/session-http"
-import { useViewTransition } from "~/lib/client-profile"
 
 export const Header = ({ showSaveAction }: { showSaveAction: boolean }) => {
   const navigate = useNavigate()

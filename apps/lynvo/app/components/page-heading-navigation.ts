@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type SetStateAction,
 } from "react"
+
 import { DOCS_SCROLL_END_TOLERANCE_PX } from "~/lib/constants"
 
 export interface PageHeading {

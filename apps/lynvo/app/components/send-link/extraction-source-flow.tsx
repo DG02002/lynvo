@@ -1,5 +1,6 @@
-import { HugeiconsIcon } from "@hugeicons/react"
 import { Route01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+
 import { PluginIcon } from "~/components/plugin-icon"
 import type { MetaData } from "~/features/links/types"
 

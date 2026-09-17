@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+
 import { Skeleton } from "~/components/ui/skeleton"
 import {
   TMDB_IMAGE_BASE_URL,

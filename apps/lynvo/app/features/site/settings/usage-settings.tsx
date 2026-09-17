@@ -1,20 +1,21 @@
+import { LoadErrorRetry } from "~/components/load-error-retry"
 import { PluginIcon } from "~/components/plugin-icon"
 import { Progress } from "~/components/ui/progress"
 import { Skeleton } from "~/components/ui/skeleton"
-import { LoadErrorRetry } from "~/components/load-error-retry"
-import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
-import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
-import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
-import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { useAsyncResource } from "~/hooks/use-async-resource"
+import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
+import { readUsageSnapshot } from "~/lib/usage/usage-read-adapters"
+import { useDailyTimeBucket } from "~/lib/use-coarse-time-bucket"
+import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
+
 import type { LynvoPlugin } from "./plugin-settings-data"
+import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SectionHeading,
   SettingsList,
   SettingsPanel,
   SettingsRow,
 } from "./settings-layout"
-import { getSettingsDataCacheKey } from "./settings-data-cache"
 
 const COUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,

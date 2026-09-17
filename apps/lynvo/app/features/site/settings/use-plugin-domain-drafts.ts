@@ -1,4 +1,5 @@
 import * as React from "react"
+
 import type { PluginDomainDraft } from "./plugin-settings-interaction"
 
 const EMPTY_DOMAIN_DRAFT: PluginDomainDraft = {

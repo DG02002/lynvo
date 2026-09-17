@@ -1,9 +1,11 @@
 import * as React from "react"
-import { Dialog, DialogClose, DialogContent } from "~/components/ui/dialog"
+
 import { DialogActionButton } from "~/components/dialog-action-button"
 import { Checkbox } from "~/components/ui/checkbox"
-import type { ExtractedLink } from "~/features/links/types"
+import { Dialog, DialogClose, DialogContent } from "~/components/ui/dialog"
 import { getMediaNodeKey } from "~/features/links/media-node-interaction"
+import type { ExtractedLink } from "~/features/links/types"
+
 import { LinkSelectionHeader } from "./link-selection-header"
 import { LinkSelectionTree } from "./link-selection-tree"
 import {

@@ -1,7 +1,9 @@
 import * as React from "react"
 import { Link, type LinkProps } from "react-router"
+
 import { useViewTransition } from "~/lib/client-profile"
 import { cn } from "~/lib/utils"
+
 import {
   settingsActionRowClass,
   settingsListClass,

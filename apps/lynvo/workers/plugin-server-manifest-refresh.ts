@@ -1,16 +1,18 @@
 import {
-  HttpPluginServerTransport,
-  PluginServerClient,
-} from "../app/lib/extraction/plugin-server-client"
-import {
   getLynvoManifestExtension,
   type PluginServerManifest,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect } from "effect"
+
 import {
   decryptCustomPluginServer,
   decryptCustomPluginServerProxyToken,
 } from "../app/lib/effect/services/custom-plugin-server-credentials"
+import { readScrapeDoAccountInfo } from "../app/lib/effect/services/custom-plugin-server-proxy-key"
+import {
+  HttpPluginServerTransport,
+  PluginServerClient,
+} from "../app/lib/extraction/plugin-server-client"
 import {
   PLUGIN_SERVER_MANIFEST_REFRESH_BATCH_SIZE,
   PLUGIN_SERVER_MANIFEST_REFRESH_CONCURRENCY_COUNT,
@@ -18,13 +20,12 @@ import {
   PLUGIN_SERVER_MANIFEST_REFRESH_INTERVAL_MS,
   PLUGIN_SERVER_PROXY_BALANCE_REFRESH_INTERVAL_MS,
 } from "./constants"
+import { notifyAccountDataChanged } from "./d1/data-version-notification"
 import {
   recordPluginServerRefreshSuccess,
   recordPluginServerVerificationFailure,
   updatePluginServerProxyBalance,
 } from "./d1/plugin-servers"
-import { readScrapeDoAccountInfo } from "../app/lib/effect/services/custom-plugin-server-proxy-key"
-import { notifyAccountDataChanged } from "./d1/data-version-notification"
 
 interface RefreshablePluginServer {
   readonly id: string

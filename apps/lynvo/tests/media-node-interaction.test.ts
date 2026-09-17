@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
+
+import { applyOpenedState } from "~/features/links/link-playback-metadata"
 import {
   getMediaNodeInteractionState,
   getMediaNodeKey,
   getMediaNodeTargetOrUndefined,
   isMirrorResolvableMediaNode,
 } from "~/features/links/media-node-interaction"
-import { applyOpenedState } from "~/features/links/link-playback-metadata"
 import { mapNodeToExtractedLink } from "~/lib/plugin-server-utils"
 
 describe("media node interaction", () => {

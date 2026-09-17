@@ -1,9 +1,9 @@
+import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { ArrowUpRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import interLatinExtendedFontUrl from "@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2?url"
 import { useEffect, useRef, useState, type ComponentProps } from "react"
 import { Link } from "react-router"
-import type { Route } from "./+types/_site.pricing"
+
 import { PluginIcon } from "~/components/plugin-icon"
 import { buttonVariants } from "~/components/ui/button"
 import {
@@ -28,6 +28,8 @@ import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 import { authPaths, policyPaths, sitePaths } from "~/lib/paths"
 import { DIRECT_MEDIA_ICON } from "~/lib/plugin-icons"
 import { cn } from "~/lib/utils"
+
+import type { Route } from "./+types/_site.pricing"
 
 const freePlanFeatures = [
   "200 Lynvo Plugin Server requests per month",

@@ -1,6 +1,7 @@
 import { renderToString } from "react-dom/server"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it } from "vitest"
+
 import { LicensesContent } from "../app/features/site/content/licenses-content"
 
 describe("LicensesContent", () => {
