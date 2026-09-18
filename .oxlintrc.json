@@ -115,9 +115,9 @@
     }
   ],
   "rules": {
-    // Feature folders are modules: outside code imports their entry points and
-    // never their internals. `links` and `auth` expose root files and folder
-    // indexes; `site` exposes one module folder and its entry files. Keep the
+    // Feature folders expose entry points at fixed depths. These patterns block
+    // deeper aliased and relative imports, including from within a feature.
+    // `links` and `auth` allow one path segment; `site` allows two. Keep the
     // feature groups explicit when a new feature adopts this boundary.
     "no-restricted-imports": [
       "error",

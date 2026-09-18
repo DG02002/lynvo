@@ -1,4 +1,5 @@
 import { createLinkMetadata } from "~/features/links/link-metadata-normalization"
+import { getFilenameFromUrl, getLinkTitle } from "~/features/links/link-title"
 import type {
   ExtractedLink,
   LinkExtractionStatus,
@@ -10,11 +11,7 @@ import {
   presentSavedLinkCommandFailure,
   SavedLinkCommandError,
 } from "../saved-link-command-failure"
-import {
-  createLinkViewItem,
-  getFilenameFromUrl,
-  getLinkTitle,
-} from "./link-items"
+import { createLinkViewItem } from "./link-items"
 import { fetchMetaInternal } from "./link-server"
 
 export const buildLinkViewItem = async ({

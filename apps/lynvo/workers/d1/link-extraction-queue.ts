@@ -2,6 +2,7 @@ import {
   appendLinkDebugLog,
   createLinkMetadata,
 } from "~/features/links/link-metadata-normalization"
+import { getLinkTitle } from "~/features/links/link-title"
 import { parseCanonicalLinkMetadataJson } from "~/features/links/storage-schemas"
 import type {
   ExtractedLink,
@@ -9,7 +10,6 @@ import type {
   LinkMetadata,
   MetaData,
 } from "~/features/links/types"
-import { getLinkTitle } from "~/features/links/use-links"
 
 import {
   LINK_EXTRACTION_LEASE_MS,
