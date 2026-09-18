@@ -1,7 +1,8 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import type { Effect } from "effect"
 
-import type { ExtractedLink, MetaData } from "../../../features/links/types"
+import type { ExtractedLink, MetaData } from "~/features/links/types"
+
 import type {
   ExtractionError,
   UsageLimitError,

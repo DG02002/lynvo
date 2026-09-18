@@ -1,10 +1,10 @@
 import { useMemo, type ReactNode } from "react"
 
-import { TmdbImage } from "~/features/links/components"
 import {
   getMediaArtworkRequest,
   useMediaArtwork,
 } from "~/features/links/media-artwork"
+import { TmdbImage } from "~/features/links/tmdb-image"
 import { cn } from "~/lib/utils"
 
 import { SaveListRowIcon } from "./media-list-row"

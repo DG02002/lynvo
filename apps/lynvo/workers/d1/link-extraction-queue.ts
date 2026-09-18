@@ -1,15 +1,16 @@
 import {
   appendLinkDebugLog,
   createLinkMetadata,
-} from "../../app/features/links/link-metadata-normalization"
-import { parseCanonicalLinkMetadataJson } from "../../app/features/links/storage-schemas"
+} from "~/features/links/link-metadata-normalization"
+import { parseCanonicalLinkMetadataJson } from "~/features/links/storage-schemas"
 import type {
   ExtractedLink,
   LinkDebugLogEntry,
   LinkMetadata,
   MetaData,
-} from "../../app/features/links/types"
-import { getLinkTitle } from "../../app/features/links/use-links/link-items"
+} from "~/features/links/types"
+import { getLinkTitle } from "~/features/links/use-links"
+
 import {
   LINK_EXTRACTION_LEASE_MS,
   LINK_EXTRACTION_MAX_PENDING_RETRY_SECONDS,

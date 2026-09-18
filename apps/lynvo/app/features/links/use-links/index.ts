@@ -462,4 +462,5 @@ export const useLinks = (options: UseLinksOptions = {}) => {
 }
 
 export { savedLinkApiRecordToViewItem } from "./api"
+export { getLinkTitle } from "./link-items"
 export { clearLinksSnapshotStores } from "./links-store"

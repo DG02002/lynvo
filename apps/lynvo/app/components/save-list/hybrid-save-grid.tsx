@@ -11,7 +11,6 @@ import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
-import { TmdbImage } from "~/features/links/components"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import {
@@ -19,6 +18,7 @@ import {
   useMediaArtwork,
 } from "~/features/links/media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
+import { TmdbImage } from "~/features/links/tmdb-image"
 import type {
   ExtractedLink,
   LinkExtractionStatus,

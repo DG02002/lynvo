@@ -33,7 +33,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { TmdbImage } from "~/features/links/components"
+import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 import { MEDIA_ARTWORK_API_TIMEOUT_MS } from "~/lib/constants"
 
