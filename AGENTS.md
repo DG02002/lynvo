@@ -131,6 +131,12 @@ files. Warnings fail every lint run through `denyWarnings` in the root
 the committed `.vscode` settings. When feeding lint output back into an agent
 loop, run `oxlint --format=agent <paths>` for one compact line per finding.
 
+Knip runs in both modes inside `pnpm check`: the default run and the
+production run (`knip:production`), which ignores test coverage on purpose.
+After removing an export's last consumer, `pnpm exec knip --fix --fix-type
+exports` strips it; repeat lint and knip until both stay green, because each
+removal can expose the next.
+
 ## Verifying
 
 - Use the smallest proof that demonstrates the change.
