@@ -189,10 +189,10 @@ pnpm build
 pnpm check:plugin-server-release
 ```
 
-The checks cover formatting, lint, unused-code detection (knip), type
-generation and typechecking, browser tests, Worker tests, builds, and the
-standalone generated Plugin Server smoke test. `pnpm build` produces dry-run
-artifacts; it does not deploy them.
+The checks cover formatting, lint, unused-code detection in both default and
+production modes (knip), type generation and typechecking, browser tests,
+Worker tests, builds, and the standalone generated Plugin Server smoke test.
+`pnpm build` produces dry-run artifacts; it does not deploy them.
 
 Knip scans generated shadcn UI files for unused files while ignoring export
 noise inside them. Vendored code stays outside its scope: `.repos/**` is
