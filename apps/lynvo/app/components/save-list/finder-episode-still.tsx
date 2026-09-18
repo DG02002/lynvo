@@ -2,12 +2,12 @@ import { useMemo, type ReactNode } from "react"
 
 import { Spinner } from "~/components/spinner"
 import { Skeleton } from "~/components/ui/skeleton"
-import { TmdbImage } from "~/features/links/components/tmdb-image"
 import {
-  getMediaEpisodeDisplayTitle,
   getMediaArtworkRequest,
-} from "~/features/links/media-artwork/media-artwork-identity"
-import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
+  getMediaEpisodeDisplayTitle,
+  useMediaArtwork,
+} from "~/features/links/media-artwork"
+import { TmdbImage } from "~/features/links/tmdb-image"
 import { cn } from "~/lib/utils"
 
 import {

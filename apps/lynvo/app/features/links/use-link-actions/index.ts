@@ -7,11 +7,11 @@ import {
 } from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import type { LinkListItem, LinkViewItem } from "~/features/links/types"
-import type { LinksActions } from "~/features/links/use-links/actions"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { showErrorToast } from "~/lib/toast-notifications"
 import { useEnsureSessionIdentity } from "~/root/identity-synchronizer"
 
+import type { LinksActions } from "../use-links/actions"
 import type { ExtractionPreview } from "./action-types"
 import { getExtractionErrorMessage } from "./extraction-error-message"
 import {
@@ -198,3 +198,5 @@ export function useLinkActions({
     pluginDomainDialog,
   }
 }
+
+export type { ExtractionPreview } from "./action-types"

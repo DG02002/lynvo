@@ -3,15 +3,13 @@ import { Schema } from "effect"
 import {
   mergeUnique,
   removeLinkFromTree,
-} from "../../app/features/links/link-tree-metadata"
+} from "~/features/links/link-tree-metadata"
 import {
   extractedLinkSchema,
   parseCanonicalLinkMetadataJson,
-} from "../../app/features/links/storage-schemas"
-import type {
-  ExtractedLink,
-  LinkMetadata,
-} from "../../app/features/links/types"
+} from "~/features/links/storage-schemas"
+import type { ExtractedLink, LinkMetadata } from "~/features/links/types"
+
 import {
   DAY_MS,
   DEFAULT_RETENTION_DAYS,

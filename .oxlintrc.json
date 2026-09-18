@@ -50,6 +50,14 @@
       }
     },
     {
+      // Unit tests exercise feature internals on purpose; the boundary
+      // guards production imports.
+      "files": ["apps/lynvo/tests/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
       "files": [
         "apps/lynvo/app/components/save-list/use-finder-browser-state.ts"
       ],
@@ -107,6 +115,25 @@
     }
   ],
   "rules": {
+    // Feature folders expose entry points at fixed depths. These patterns block
+    // deep aliased imports and relative paths containing `features/<name>/`.
+    // `links` and `auth` allow one path segment; `site` allows two. Keep the
+    // feature groups explicit when a new feature adopts this boundary.
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "regex": "^(?:~/|(?:\\.\\.?/)+.*)features/(links|auth)/[^/]+/.+$",
+            "message": "Import feature internals through a feature entry point."
+          },
+          {
+            "regex": "^(?:~/|(?:\\.\\.?/)+.*)features/site/[^/]+/[^/]+/.+$",
+            "message": "Import feature internals through a feature entry point."
+          }
+        ]
+      }
+    ],
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
     "anti-slop/no-known-value-widening": "error",

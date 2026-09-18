@@ -11,7 +11,7 @@ import { VersionWatcher } from "~/components/version-watcher"
 import { PlayerPreferenceProvider } from "~/context/player-preference-context"
 import { RealtimeProvider } from "~/context/realtime-context"
 import { RemoteControlProvider } from "~/context/remote-control-context"
-import { clearLinksSnapshotStores } from "~/features/links/use-links/links-store"
+import { clearLinksSnapshotStores } from "~/features/links/use-links"
 import { isSettingsDataCacheKeyForUser } from "~/features/site/settings/settings-data-cache"
 import { clearAsyncResourceCacheWhere } from "~/hooks/use-async-resource"
 

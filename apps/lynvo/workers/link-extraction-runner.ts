@@ -1,7 +1,8 @@
 import type { HttpBasicAuth } from "@dg02002/lynvo-plugin-server-protocol"
 import { Effect, Schema } from "effect"
 
-import { parseCanonicalLinkMetadataJson } from "../app/features/links/storage-schemas"
+import { parseCanonicalLinkMetadataJson } from "~/features/links/storage-schemas"
+
 import { ExtractionError } from "../app/lib/effect/errors"
 import { getRuntime } from "../app/lib/effect/runtime"
 import { ExtractionService } from "../app/lib/effect/services/extraction-service"
