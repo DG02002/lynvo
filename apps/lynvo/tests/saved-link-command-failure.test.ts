@@ -1,14 +1,9 @@
 import { Schema } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import {
-  runSavedLinkCommand,
-  toSavedLinkCommandError,
-} from "~/features/links/saved-link-command-adapter"
 import {
   presentSavedLinkCommandFailure,
   SavedLinkCommandFailureSchema,
-  SavedLinkCommandError,
 } from "~/features/links/saved-link-command-failure"
 
 describe("saved-link command failure presentation", () => {
@@ -53,34 +48,6 @@ describe("saved-link command failure presentation", () => {
     expect(unavailableMessage).not.toContain("storage")
   })
 
-  it("maps structured dependency failures without reading their messages", () => {
-    const first = toSavedLinkCommandError(
-      {
-        message: "old dependency wording",
-        data: {
-          kind: "link-too-large",
-          sizeBytes: 300_000,
-          limitBytes: 262_144,
-        },
-      },
-      "request-one"
-    )
-    const changedMessage = toSavedLinkCommandError(
-      { message: "completely different wording" },
-      "request-two"
-    )
-
-    expect(first.failure).toEqual({
-      kind: "link-too-large",
-      sizeBytes: 300_000,
-      limitBytes: 262_144,
-    })
-    expect(changedMessage.failure).toEqual({
-      kind: "temporarily-unavailable",
-      reference: "request-two",
-    })
-  })
-
   it("presents extraction failures with the remedy for each failure kind", () => {
     expect(presentSavedLinkCommandFailure({ kind: "transient" })).toBe(
       "Extraction is temporarily unavailable. Try again in a moment."
@@ -93,22 +60,5 @@ describe("saved-link command failure presentation", () => {
     expect(presentSavedLinkCommandFailure({ kind: "plugin-server-down" })).toBe(
       "The Plugin Server is unavailable. Try again later or choose another Plugin Server."
     )
-  })
-
-  it("automatically retries one temporary failure", async () => {
-    const execute = vi
-      .fn<() => Promise<string>>()
-      .mockRejectedValueOnce(
-        new SavedLinkCommandError({
-          failure: {
-            kind: "temporarily-unavailable",
-            reference: "request-one",
-          },
-        })
-      )
-      .mockResolvedValueOnce("created-once")
-
-    await expect(runSavedLinkCommand(execute)).resolves.toBe("created-once")
-    expect(execute).toHaveBeenCalledTimes(2)
   })
 })

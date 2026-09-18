@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
-    "check": "pnpm run fmt:check && oxlint scripts && pnpm -r --if-present run check && knip",
+    "check": "pnpm run fmt:check && oxlint scripts && pnpm -r --if-present run check && knip && pnpm run knip:production",
     "check:plugin-server-release": "node scripts/verify-plugin-server-release.mjs",
     "dev": "pnpm --filter @lynvo/app dev",
     "test": "pnpm --workspace-concurrency=1 -r --if-present run test --run",
@@ -15,7 +15,8 @@
     "sync:repos": "tsx scripts/sync-repos.ts",
     "knip": "knip",
     "fmt": "oxfmt package.json knip.json lint-staged.config.mjs .oxlintrc.json .oxfmtrc.json",
-    "fmt:check": "oxfmt package.json knip.json lint-staged.config.mjs .oxlintrc.json .oxfmtrc.json --check"
+    "fmt:check": "oxfmt package.json knip.json lint-staged.config.mjs .oxlintrc.json .oxfmtrc.json --check",
+    "knip:production": "knip --production --include files,dependencies"
   },
   "devDependencies": {
     "@oxlint/plugins": "catalog:",
