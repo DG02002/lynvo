@@ -11,11 +11,13 @@ import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
-import { TmdbImage } from "~/features/links/components/tmdb-image"
+import { TmdbImage } from "~/features/links/components"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
-import { getHybridCardGroupSections } from "~/features/links/media-artwork/hybrid-card-grouping"
-import { useMediaArtwork } from "~/features/links/media-artwork/use-media-artwork"
+import {
+  getHybridCardGroupSections,
+  useMediaArtwork,
+} from "~/features/links/media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
 import type {
   ExtractedLink,

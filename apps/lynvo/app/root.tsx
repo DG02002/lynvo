@@ -9,7 +9,6 @@ import {
 } from "~/features/site/settings/media-view-preference"
 
 import "./app.css"
-import "~/features/links/media-artwork/media-artwork-types"
 import { getUserSession, responseWithSession } from "~/lib/auth"
 import { csrfCookie } from "~/lib/csrf"
 import "~/global"

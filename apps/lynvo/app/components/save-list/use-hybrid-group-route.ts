@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router"
 
-import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { getHybridCardGroups } from "~/features/links/media-artwork"
 import type { SavedLinkListItem } from "~/features/links/types"
 import { useMediaView } from "~/features/site/settings/media-view-preference"
 

@@ -10,7 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import type { ExtractionPreview } from "~/features/links/use-link-actions/action-types"
+import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
 
 import { ClipboardAccessIcon } from "./clipboard-access-icon"

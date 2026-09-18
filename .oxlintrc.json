@@ -50,6 +50,14 @@
       }
     },
     {
+      // Unit tests exercise feature internals on purpose; the boundary
+      // guards production imports.
+      "files": ["apps/lynvo/tests/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
       "files": [
         "apps/lynvo/app/components/save-list/use-finder-browser-state.ts"
       ],
@@ -107,6 +115,25 @@
     }
   ],
   "rules": {
+    // Feature folders are modules: outside code imports their entry points
+    // (root files such as `~/features/links/types`, folder indexes such as
+    // `~/features/links/use-links`) and never their internals. `site` has no
+    // root files, so its subfolders are the modules and their root files are
+    // the entry points.
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          "~/features/links/**",
+          "!~/features/links/*",
+          "~/features/site/**",
+          "!~/features/site/*",
+          "!~/features/site/*/*",
+          "~/features/auth/**",
+          "!~/features/auth/*"
+        ]
+      }
+    ],
     "anti-slop/no-chained-type-assertions": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
     "anti-slop/no-known-value-widening": "error",
