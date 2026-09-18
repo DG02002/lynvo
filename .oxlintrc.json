@@ -116,7 +116,7 @@
   ],
   "rules": {
     // Feature folders expose entry points at fixed depths. These patterns block
-    // deeper aliased and relative imports, including from within a feature.
+    // deep aliased imports and relative paths containing `features/<name>/`.
     // `links` and `auth` allow one path segment; `site` allows two. Keep the
     // feature groups explicit when a new feature adopts this boundary.
     "no-restricted-imports": [
