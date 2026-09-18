@@ -195,10 +195,9 @@ Worker tests, builds, and the standalone generated Plugin Server smoke test.
 `pnpm build` produces dry-run artifacts; it does not deploy them.
 
 Knip scans generated shadcn UI files for unused files while ignoring export
-noise inside them. Vendored code stays outside its scope: `.repos/**` is
-ignored and `tools/oxlint/anti-slop/**` belongs to no Knip project. Resolve a
-finding in vendored code by excluding it in configuration, never by editing
-the file.
+noise inside them. Vendored code stays outside its scope: `.repos/**` and
+`tools/oxlint/anti-slop/**` belong to no Knip project. Resolve a finding in
+vendored code by excluding it in configuration, never by editing the file.
 
 Oxlint follows semver, but new rules arrive in minor versions, and warnings
 fail by configuration. A dependency bump can therefore turn CI red with
