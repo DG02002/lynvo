@@ -1,7 +1,10 @@
 import { useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router"
 
-import { getGalleryGroups } from "~/features/links/media-artwork"
+import {
+  getGalleryGroups,
+  type GalleryGroup,
+} from "~/features/links/media-artwork"
 import type { SavedLinkListItem } from "~/features/links/types"
 import { useMediaView } from "~/features/site/settings/media-view-preference"
 

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
+import type { GalleryGroup } from "~/features/links/media-artwork"
 import { formatItemCount } from "~/lib/format-item-count"
 
 import { MEDIA_LIST_ROW_MENU_TRIGGER_CLASS } from "./media-list-row-constants"

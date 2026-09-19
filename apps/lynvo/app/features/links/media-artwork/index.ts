@@ -1,7 +1,7 @@
-// The side-effect import keeps the ambient artwork interfaces in the
-// program; nothing else imports media-artwork-types directly.
+// The side-effect import keeps the ambient artwork interfaces in the program.
 import "./media-artwork-types"
 
+export type { GalleryGroup } from "./media-artwork-types"
 export {
   getGalleryGroups,
   getGalleryGroupSections,

@@ -16,6 +16,7 @@ import {
   getMediaDisplayTitle,
   isEpisodeOnlyListing,
   parseMediaFilename,
+  type GalleryGroup,
 } from "~/features/links/media-artwork"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"

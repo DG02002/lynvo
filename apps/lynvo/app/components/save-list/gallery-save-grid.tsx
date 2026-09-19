@@ -15,6 +15,7 @@ import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import {
   getGalleryGroupSections,
+  type GalleryGroup,
   useMediaArtwork,
 } from "~/features/links/media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"

@@ -10,6 +10,7 @@ import {
 import { toLinkViewModel } from "../link-view-models"
 import { getSavedLinkInteractionState } from "../saved-link-interaction"
 import type { ExtractedLink, LinkListItem } from "../types"
+import type { GalleryGroup } from "./media-artwork-types"
 import { isNonMediaFilename, parseMediaFilename } from "./media-filename-parser"
 
 interface GalleryIdentity {

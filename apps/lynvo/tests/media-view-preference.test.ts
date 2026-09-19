@@ -59,6 +59,7 @@ describe("Media view preference", () => {
     localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, "hybrid")
 
     expect(getMediaView()).toBe("gallery")
+    expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("gallery")
   })
 
   it("mirrors the preference into the media view cookie", () => {

@@ -55,6 +55,9 @@ export const getMediaView = (): MediaView => {
   if (storedValue !== null) {
     const mediaView = normalizeMediaView(storedValue)
     if (mediaView !== undefined) {
+      if (storedValue === LEGACY_MEDIA_VIEW_VALUE) {
+        localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
+      }
       return mediaView
     }
   }
