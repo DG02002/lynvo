@@ -33,6 +33,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import { linkCopy } from "~/features/links/link-copy"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 import { MEDIA_ARTWORK_API_TIMEOUT_MS } from "~/lib/constants"
@@ -459,7 +460,7 @@ const ArtworkDialog = ({
         <DialogContent className="flex max-h-[90vh] w-full max-w-[calc(100%-2rem)] flex-col gap-5 overflow-hidden p-5 sm:max-w-4xl sm:p-7">
           <DialogHeader className="w-full min-w-0 shrink-0 pr-10">
             <DialogTitle className="text-2xl font-medium text-balance">
-              Change artwork
+              {linkCopy.actions.changeArtwork}
             </DialogTitle>
             <DialogDescription>
               Search TMDB (The Movie Database) and choose the movie or TV show

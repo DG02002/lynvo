@@ -24,6 +24,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
@@ -143,12 +144,12 @@ export const LinkItemMenu = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
                 <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                View log
+                {linkCopy.actions.viewLog}
               </DropdownMenuItem>
               {actions.setArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
                   <HugeiconsIcon icon={Image01Icon} />
-                  Change artwork
+                  {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
               {!playableLink && (

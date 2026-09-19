@@ -12,6 +12,7 @@ import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
 import { Button } from "~/components/ui/button"
+import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import {
@@ -110,7 +111,7 @@ const GallerySaveItemArtwork = ({
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onOpenLog}>
             <HugeiconsIcon icon={SourceCodeSquareIcon} />
-            View log
+            {linkCopy.actions.viewLog}
           </Button>
         </div>
       </div>
