@@ -25,7 +25,7 @@ export const ReceiverOverlay = () => {
             />
           </div>
           <h2 className="text-xl font-semibold tracking-tight">
-            Connected to remote device
+            Connected to a controlling device
           </h2>
         </div>
 

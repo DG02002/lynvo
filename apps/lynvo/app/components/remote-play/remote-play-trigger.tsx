@@ -21,7 +21,7 @@ export const RemotePlayTrigger = ({
     )}
     title={
       activeSessionId
-        ? `Remote Play connected to ${connectedDeviceName || "unnamed device"}`
+        ? `Remote Play connected to ${connectedDeviceName || "Unnamed device"}`
         : "Set up or control Remote Play"
     }
   >

@@ -48,7 +48,7 @@ export function PlayerLaunchErrorDialog() {
       }
       title={<>Couldn’t open {error?.playerName}</>}
       description="Make sure the player is installed on your Android device, then try again."
-      confirmLabel="OK"
+      confirmLabel="Close"
       cancelLabel={null}
       onConfirm={() => setOpen(false)}
     />

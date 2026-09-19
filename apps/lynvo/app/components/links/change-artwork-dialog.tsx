@@ -455,8 +455,8 @@ const ChangeArtworkDialog = ({
               Change artwork
             </DialogTitle>
             <DialogDescription>
-              Search TMDB and choose the movie or TV show that matches this
-              saved link.
+              Search TMDB (The Movie Database) and choose the movie or TV show
+              that matches this saved link.
             </DialogDescription>
           </DialogHeader>
           <form

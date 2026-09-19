@@ -39,22 +39,22 @@ export const CARD_MENU_LONG_PRESS_DURATION_MS = 500
 export const CARD_MENU_LONG_PRESS_MOVEMENT_TOLERANCE_PX = 10
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
 export const EXTRACTION_STATUS_MESSAGES = [
-  "Getting link info…",
-  "Extracting links…",
-  "Finding playable links…",
-  "Getting things ready…",
-  "Following the link trail…",
-  "Asking the internet nicely…",
-  "Checking promising routes…",
+  "Checking the link…",
+  "Opening the source…",
+  "Reading the page…",
   "Looking for playable links…",
-  "Checking whether this link has friends…",
-  "Sorting the useful bits…",
-  "Doing a little link detective work…",
-  "Giving the metadata a gentle nudge…",
-  "Putting the pieces together…",
+  "Reading the file list…",
+  "Checking each link…",
+  "Checking the video links…",
+  "Following redirects…",
+  "Sorting the links…",
+  "Gathering link details…",
+  "Checking playback support…",
+  "Putting the details together…",
   "Finishing link details…",
-  "Polishing the final details…",
-  "Wrapping up link extraction…",
+  "Getting things ready…",
+  "Almost there…",
+  "Wrapping up…",
 ] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160

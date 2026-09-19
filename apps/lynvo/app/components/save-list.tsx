@@ -158,7 +158,7 @@ const SaveList = ({ initialItems, initialSnapshotMeta }: SaveListProps) => {
       <div
         className="fixed inset-0 flex min-h-svh items-center justify-center bg-background"
         role="status"
-        aria-label="Loading saved folder…"
+        aria-label="Loading folder…"
       >
         <Spinner aria-hidden="true" />
       </div>

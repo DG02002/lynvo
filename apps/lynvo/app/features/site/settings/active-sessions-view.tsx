@@ -174,8 +174,8 @@ export const ActiveSessionsView = ({
             Log out of all sessions
           </h3>
           <p className="text-sm text-muted-foreground leading-snug">
-            End every active session, including this one. Session termination
-            may take up to 30 minutes.
+            End every active session, including this one. It can take up to 30
+            minutes for sessions to end.
           </p>
         </div>
         <Button
@@ -187,7 +187,7 @@ export const ActiveSessionsView = ({
           {busy === "revokeAll" && (
             <Spinner data-icon="inline-start" aria-hidden="true" />
           )}
-          Log out all
+          Log out of all sessions
         </Button>
       </div>
 

@@ -7,6 +7,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import React from "react"
 
+import { ChangeArtworkDialog } from "~/components/links/change-artwork-dialog"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
@@ -71,6 +72,7 @@ interface GallerySaveItemArtworkProps {
   readonly isFolderContainer: boolean
   readonly onDelete: () => void
   readonly onOpenLog: () => void
+  readonly onChooseArtwork?: () => void
 }
 
 const GallerySaveItemArtwork = ({
@@ -83,6 +85,7 @@ const GallerySaveItemArtwork = ({
   isFolderContainer,
   onDelete,
   onOpenLog,
+  onChooseArtwork,
 }: GallerySaveItemArtworkProps) => {
   if (isExtractionVisual) {
     if (!isExtractionFailed) {
@@ -107,7 +110,7 @@ const GallerySaveItemArtwork = ({
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onOpenLog}>
             <HugeiconsIcon icon={SourceCodeSquareIcon} />
-            Log
+            View log
           </Button>
         </div>
       </div>
@@ -152,8 +155,22 @@ const GallerySaveItemArtwork = ({
   }
 
   return (
-    <div className="flex size-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/15 text-sm text-muted-foreground">
-      No poster found
+    <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted to-muted-foreground/15 p-4 text-center text-sm text-muted-foreground">
+      <span>No poster found</span>
+      {onChooseArtwork ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="relative z-10"
+          onClick={(event) => {
+            event.stopPropagation()
+            onChooseArtwork()
+          }}
+        >
+          Choose artwork
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -230,6 +247,7 @@ const GallerySaveItem = ({
     group.artworkRequest !== undefined && artwork === undefined
   const isExtractionFailed = extractionState === "failed"
   const [isLogDialogOpen, setIsLogDialogOpen] = React.useState(false)
+  const [isArtworkDialogOpen, setIsArtworkDialogOpen] = React.useState(false)
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const shouldAutoSaveAllLinks = useShouldAutoSaveAllLinks()
   const shouldOfferLinkChoice =
@@ -303,6 +321,11 @@ const GallerySaveItem = ({
             }
           }}
           onOpenLog={() => setIsLogDialogOpen(true)}
+          onChooseArtwork={
+            isSingleItem && item && actions.setArtwork
+              ? () => setIsArtworkDialogOpen(true)
+              : undefined
+          }
         />
         <div className="pointer-events-none absolute inset-0 bg-black/0 shadow-depth-gloss transition-colors duration-150 group-hover:bg-black/20 group-has-[:focus-visible]:bg-black/20 group-has-aria-expanded:bg-black/20 motion-reduce:transition-none" />
         {shouldOfferLinkChoice && item && actions.chooseLinks && (
@@ -368,6 +391,16 @@ const GallerySaveItem = ({
         item={item}
         open={isLogDialogOpen}
         onOpenChange={setIsLogDialogOpen}
+      />
+      <ChangeArtworkDialog
+        item={item}
+        open={isArtworkDialogOpen}
+        onOpenChange={setIsArtworkDialogOpen}
+        onSelect={(identity) => {
+          if (item) {
+            actions.setArtwork?.(item.url, identity)
+          }
+        }}
       />
     </article>
   )

@@ -168,14 +168,15 @@ export const RemoteControlProviderContent = ({
           })
         } else if (outcome.type === "delivery-unavailable") {
           notifications.showErrorToast({
-            title: "Remote Play is temporarily unavailable",
+            title: "Remote Play disconnected",
             description:
-              "Remote Play updates are temporarily unavailable. Check the connection.",
+              "Check this device's internet connection, then reopen Remote Play.",
           })
         } else if (outcome.type === "invalid-command") {
           notifications.showErrorToast({
-            title: "Invalid playback request",
-            description: "Remote Play received an invalid playback request.",
+            title: "Link couldn't be opened",
+            description:
+              "The link sent from the controlling device couldn't be opened. Ask for it to be sent again.",
           })
         }
       }),

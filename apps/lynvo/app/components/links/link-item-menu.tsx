@@ -73,10 +73,10 @@ export const LinkItemMenu = ({
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
-    : "Reload link choices"
+    : "Refresh link choices"
   const refreshingLabel = shouldAutoSaveAllLinks
     ? `Refreshing ${itemLabel}…`
-    : `Reloading link choices for ${itemLabel}…`
+    : `Refreshing link choices for ${itemLabel}…`
   const refreshLink = shouldAutoSaveAllLinks
     ? actions.softRefresh
     : actions.hardRefresh
@@ -143,7 +143,7 @@ export const LinkItemMenu = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
                 <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                Log
+                View log
               </DropdownMenuItem>
               {actions.setArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>

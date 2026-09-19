@@ -159,7 +159,7 @@ describe("GalleryGroupBrowser", () => {
     renderNonEpisodeGroupBrowser()
 
     expect(
-      screen.queryByRole("switch", { name: "Episode names" })
+      screen.queryByRole("switch", { name: "Show episode names" })
     ).not.toBeInTheDocument()
     expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
     expect(screen.getByRole("banner").children).toHaveLength(3)
@@ -225,15 +225,15 @@ describe("GalleryGroupBrowser", () => {
     expect(rowMenus[0]?.parentElement).toHaveClass("md:hidden")
     expect(rowMenus[1]?.parentElement).toHaveClass("hidden", "md:flex")
     const episodeNamesSwitch = screen.getByRole("switch", {
-      name: "Episode names",
+      name: "Show episode names",
     })
     expect(episodeNamesSwitch).toBeInTheDocument()
     expect(episodeNamesSwitch).toHaveAttribute("aria-checked", "true")
-    expect(screen.getByText("Episode names")).toHaveClass(
+    expect(screen.getByText("Show episode names")).toHaveClass(
       "text-base",
       "text-foreground"
     )
-    expect(screen.getByText("Episode names")).not.toHaveClass(
+    expect(screen.getByText("Show episode names")).not.toHaveClass(
       "text-muted-foreground"
     )
   })
@@ -242,7 +242,7 @@ describe("GalleryGroupBrowser", () => {
     renderBrowser()
 
     const episodeNamesSwitch = screen.getByRole("switch", {
-      name: "Episode names",
+      name: "Show episode names",
     })
     fireEvent.click(episodeNamesSwitch)
 

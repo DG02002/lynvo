@@ -127,7 +127,7 @@ const CenteredToastList = () => {
 
 export const AppToaster = ({ ...props }: ToastPrimitive.Provider.Props) => {
   return (
-    <ToastProvider toastManager={toast} {...props}>
+    <ToastProvider toastManager={toast} timeout={8_000} {...props}>
       <ToastPortal>
         <ToastViewport className="top-4 bottom-auto sm:left-4 sm:right-4 sm:mx-auto">
           <CenteredToastList />

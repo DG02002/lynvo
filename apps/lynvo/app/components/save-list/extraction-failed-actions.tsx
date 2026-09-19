@@ -36,7 +36,7 @@ export const ExtractionFailedActions = ({
           onClick={() => setIsLogDialogOpen(true)}
         >
           <HugeiconsIcon icon={SourceCodeSquareIcon} />
-          Log
+          View log
         </Button>
       </span>
       <LinkDebugLogDialog

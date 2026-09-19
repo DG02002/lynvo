@@ -110,4 +110,56 @@ describe("Remote Play reconnect convergence", () => {
       description: "Remote receiver target is invalid",
     })
   })
+
+  it("explains when Remote Play delivery is unavailable", async () => {
+    render(
+      <RemoteControlProviderContent
+        user={{ id: "user-one", sessionId: "session-one" }}
+        realtime={{
+          status: "connected",
+          connectionGeneration: 1,
+          subscribe: mocks.subscribeRealtime,
+        }}
+        createMachine={createMachine}
+        notifications={mocks.notifications}
+      >
+        <div />
+      </RemoteControlProviderContent>
+    )
+
+    await waitFor(() => expect(outcomeListener).toBeDefined())
+    outcomeListener?.({ type: "delivery-unavailable" })
+
+    expect(mocks.notifications.showErrorToast).toHaveBeenCalledWith({
+      title: "Remote Play disconnected",
+      description:
+        "Check this device's internet connection, then reopen Remote Play.",
+    })
+  })
+
+  it("explains when a received link cannot be opened", async () => {
+    render(
+      <RemoteControlProviderContent
+        user={{ id: "user-one", sessionId: "session-one" }}
+        realtime={{
+          status: "connected",
+          connectionGeneration: 1,
+          subscribe: mocks.subscribeRealtime,
+        }}
+        createMachine={createMachine}
+        notifications={mocks.notifications}
+      >
+        <div />
+      </RemoteControlProviderContent>
+    )
+
+    await waitFor(() => expect(outcomeListener).toBeDefined())
+    outcomeListener?.({ type: "invalid-command" })
+
+    expect(mocks.notifications.showErrorToast).toHaveBeenCalledWith({
+      title: "Link couldn't be opened",
+      description:
+        "The link sent from the controlling device couldn't be opened. Ask for it to be sent again.",
+    })
+  })
 })
