@@ -131,9 +131,9 @@ describe("Remote Play reconnect convergence", () => {
     outcomeListener?.({ type: "delivery-unavailable" })
 
     expect(mocks.notifications.showErrorToast).toHaveBeenCalledWith({
-      title: "Remote Play disconnected",
+      title: "Remote Play connection issue",
       description:
-        "Check this device's internet connection, then reopen Remote Play.",
+        "Lynvo couldn’t update Remote Play. Check this device’s internet connection, then try again.",
     })
   })
 
@@ -157,9 +157,9 @@ describe("Remote Play reconnect convergence", () => {
     outcomeListener?.({ type: "invalid-command" })
 
     expect(mocks.notifications.showErrorToast).toHaveBeenCalledWith({
-      title: "Link couldn't be opened",
+      title: "Remote Play request couldn’t be understood",
       description:
-        "The link sent from the controlling device couldn't be opened. Ask for it to be sent again.",
+        "The controlling device sent a request Lynvo couldn’t understand. Try again.",
     })
   })
 })

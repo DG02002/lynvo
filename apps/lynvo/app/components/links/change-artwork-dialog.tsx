@@ -44,6 +44,16 @@ interface ChangeArtworkDialogProps {
   readonly onSelect: (identity: MediaArtworkIdentity) => void
 }
 
+interface LinkArtworkDialogProps {
+  readonly item: LinkViewItem | undefined
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly setArtwork?: (
+    itemUrl: string,
+    identity: MediaArtworkIdentity
+  ) => void
+}
+
 interface ChangeArtworkDialogState {
   readonly query: string
   readonly candidates: readonly MediaArtworkCandidate[]
@@ -565,4 +575,22 @@ const ChangeArtworkDialog = ({
   )
 }
 
-export { ChangeArtworkDialog }
+const LinkArtworkDialog = ({
+  item,
+  open,
+  onOpenChange,
+  setArtwork,
+}: LinkArtworkDialogProps) => (
+  <ChangeArtworkDialog
+    item={item}
+    open={open}
+    onOpenChange={onOpenChange}
+    onSelect={(identity) => {
+      if (item) {
+        setArtwork?.(item.url, identity)
+      }
+    }}
+  />
+)
+
+export { LinkArtworkDialog }

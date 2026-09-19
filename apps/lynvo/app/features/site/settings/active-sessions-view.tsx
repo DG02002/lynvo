@@ -7,6 +7,7 @@ import { Spinner } from "~/components/spinner"
 import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 
+import { settingsCopy } from "./settings-copy"
 import { SettingsList, SettingsRow } from "./settings-layout"
 
 const LaptopMinimalIcon = [
@@ -174,8 +175,8 @@ export const ActiveSessionsView = ({
             Log out of all sessions
           </h3>
           <p className="text-sm text-muted-foreground leading-snug">
-            End every active session, including this one. It can take up to 30
-            minutes for sessions to end.
+            End every active session, including this one.{" "}
+            {settingsCopy.sessions.terminationDelay}
           </p>
         </div>
         <Button

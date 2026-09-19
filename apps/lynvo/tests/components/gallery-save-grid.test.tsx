@@ -299,6 +299,44 @@ describe("GallerySaveGrid", () => {
     ).toBeVisible()
   })
 
+  it("offers artwork selection for a group without a poster", () => {
+    const actions = {
+      ...createActions(),
+      setArtwork: vi.fn(),
+    }
+    const secondItem: LinkListItem = {
+      ...createQueuedItem(undefined),
+      id: "queued-item-2",
+      url: "https://media.example/queued-item-2",
+    }
+
+    render(
+      <GallerySaveGrid
+        groups={[
+          {
+            key: "movie:no-poster-group",
+            displayTitle: "No poster group",
+            artworkRequest: undefined,
+            lastAddedAt: Date.now(),
+            items: [createQueuedItem(undefined), secondItem],
+          },
+        ]}
+        actions={actions}
+        extractingItems={new Set()}
+        isHydrating={false}
+        highlightedId={null}
+        onOpenItem={vi.fn()}
+        onOpenGroup={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose artwork" }))
+
+    expect(
+      screen.getByRole("heading", { name: "Change artwork" })
+    ).toBeVisible()
+  })
+
   it("keeps a merged group openable while one episode is still extracting", () => {
     render(
       <GallerySaveGrid

@@ -15,6 +15,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
+import { settingsCopy } from "./settings-copy"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
@@ -57,7 +58,7 @@ export function SecuritySettings({
       window.location.href = "/"
     } catch (error) {
       showErrorToast({
-        title: "Couldn’t log out all sessions",
+        title: "Couldn’t log out of all sessions",
         description: getUserFacingErrorMessage(
           error,
           "The sessions couldn’t be logged out. Try again."
@@ -135,7 +136,7 @@ export function SecuritySettings({
               className="mx-auto size-16 text-destructive"
             />
           }
-          description="This logs out every device, including this one. Unsaved work on those devices may be lost. It can take up to 30 minutes for sessions to end."
+          description={`This logs out every device, including this one. Unsaved work on those devices may be lost. ${settingsCopy.sessions.terminationDelay}`}
           confirmLabel="Log out of all sessions"
           confirmVariant="destructive"
           pending={busy === "revokeAll"}

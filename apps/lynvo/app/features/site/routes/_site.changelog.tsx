@@ -47,10 +47,10 @@ const changelogEntries: ChangelogEntry[] = [
     type: "general",
     date: "Sep 19, 2026",
     dateTime: "2026-09-19",
-    title: "The Save page's Hybrid view is now Gallery view",
+    title: "The Save page's grouped presentation is now called Gallery",
     category: "Product",
     description: [
-      "The Save page's former Hybrid view is now called Gallery. Existing view preferences carry over automatically.",
+      "The Save page's grouped presentation is now called Gallery. Existing view preferences carry over automatically.",
     ],
   },
   {
@@ -67,11 +67,11 @@ const changelogEntries: ChangelogEntry[] = [
     type: "general",
     date: "Aug 31, 2026",
     dateTime: "2026-08-31",
-    title: "The Save page now has List and Hybrid views",
+    title: "The Save page now has List and Gallery views",
     category: "Product",
     description: [
-      "The Save page now has two views. List gives you row-by-row browsing. Hybrid groups movies and shows into artwork cards.",
-      "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Hybrid view, a folder with one season opens straight into a full-screen season view.",
+      "The Save page now has two views. List gives you row-by-row browsing. Gallery groups movies and shows into artwork cards.",
+      "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Gallery view, a folder with one season opens straight into a full-screen season view.",
       "Nested folders keep their own names, sidecar files do not create false media matches, and mixed folders do not borrow a show or episode name from their children. Folder paths, back buttons, and the Show episode names control stay in sync.",
       'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable mirror directly, and see whether an extraction is queued, loading, or failed. Failed items show the returned error with Delete and View log actions.',
       "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the Save page comfortably on smaller screens.",

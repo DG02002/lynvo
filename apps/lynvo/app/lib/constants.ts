@@ -37,6 +37,7 @@ export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS
 export const CARD_MENU_LONG_PRESS_DURATION_MS = 500
 export const CARD_MENU_LONG_PRESS_MOVEMENT_TOLERANCE_PX = 10
+export const TOAST_AUTO_DISMISS_TIMEOUT_MS = 8_000
 export const EXTRACTION_STATUS_ROTATION_INTERVAL_MS = 2_400
 export const EXTRACTION_STATUS_MESSAGES = [
   "Checking the link…",
@@ -45,11 +46,11 @@ export const EXTRACTION_STATUS_MESSAGES = [
   "Looking for playable links…",
   "Reading the file list…",
   "Checking each link…",
-  "Checking the video links…",
-  "Following redirects…",
+  "Checking the playable links…",
+  "Reviewing the links…",
   "Sorting the links…",
   "Gathering link details…",
-  "Checking playback support…",
+  "Reviewing link details…",
   "Putting the details together…",
   "Finishing link details…",
   "Getting things ready…",
