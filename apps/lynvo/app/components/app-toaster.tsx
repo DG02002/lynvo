@@ -20,6 +20,7 @@ import {
   toast,
   useToastManager,
 } from "~/components/ui/toast"
+import { TOAST_AUTO_DISMISS_TIMEOUT_MS } from "~/lib/constants"
 import { cn } from "~/lib/utils"
 
 const CenteredToast = ({ className, ...props }: ToastPrimitive.Root.Props) => {
@@ -127,7 +128,11 @@ const CenteredToastList = () => {
 
 export const AppToaster = ({ ...props }: ToastPrimitive.Provider.Props) => {
   return (
-    <ToastProvider toastManager={toast} {...props}>
+    <ToastProvider
+      toastManager={toast}
+      timeout={TOAST_AUTO_DISMISS_TIMEOUT_MS}
+      {...props}
+    >
       <ToastPortal>
         <ToastViewport className="top-4 bottom-auto sm:left-4 sm:right-4 sm:mx-auto">
           <CenteredToastList />

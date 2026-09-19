@@ -15,6 +15,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { ActiveSessionsView } from "./active-sessions-view"
 import { DeleteAccountDialog } from "./delete-account-dialog"
+import { settingsCopy } from "./settings-copy"
 import { getSettingsDataCacheKey } from "./settings-data-cache"
 import {
   SettingsPanel,
@@ -57,7 +58,7 @@ export function SecuritySettings({
       window.location.href = "/"
     } catch (error) {
       showErrorToast({
-        title: "Couldn’t log out all sessions",
+        title: "Couldn’t log out of all sessions",
         description: getUserFacingErrorMessage(
           error,
           "The sessions couldn’t be logged out. Try again."
@@ -128,15 +129,15 @@ export function SecuritySettings({
         <ConfirmationAlertDialog
           open={revokeAllDialogOpen}
           onOpenChange={setRevokeAllDialogOpen}
-          title="Log out all sessions?"
+          title="Log out of all sessions?"
           media={
             <HugeiconsIcon
               icon={Alert01Icon}
               className="mx-auto size-16 text-destructive"
             />
           }
-          description="This logs out every device, including this one. Unsaved work on those devices may be lost. Session termination may take up to 30 minutes."
-          confirmLabel="Log out all sessions"
+          description={`This logs out every device, including this one. Unsaved work on those devices may be lost. ${settingsCopy.sessions.terminationDelay}`}
+          confirmLabel="Log out of all sessions"
           confirmVariant="destructive"
           pending={busy === "revokeAll"}
           onConfirm={() => void handleRevokeAllSessions()}
@@ -155,7 +156,7 @@ export function SecuritySettings({
           >
             <SettingsRowInfo
               label="Active sessions"
-              description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Log out all to end all sessions."
+              description="View all devices that have accessed your account. You can review active sessions, remove trusted devices, or use Log out of all sessions to end all sessions."
             />
             <div className="flex items-center gap-1.5 shrink-0 text-foreground">
               <span className="text-sm font-normal tabular-nums">

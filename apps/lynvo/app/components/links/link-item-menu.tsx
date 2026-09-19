@@ -24,6 +24,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { linkCopy } from "~/features/links/link-copy"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
@@ -73,10 +74,10 @@ export const LinkItemMenu = ({
   const itemLabel = item.title || item.url
   const refreshActionLabel = shouldAutoSaveAllLinks
     ? "Refresh"
-    : "Reload link choices"
+    : "Refresh link choices"
   const refreshingLabel = shouldAutoSaveAllLinks
     ? `Refreshing ${itemLabel}…`
-    : `Reloading link choices for ${itemLabel}…`
+    : `Refreshing link choices for ${itemLabel}…`
   const refreshLink = shouldAutoSaveAllLinks
     ? actions.softRefresh
     : actions.hardRefresh
@@ -143,12 +144,12 @@ export const LinkItemMenu = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsLogDialogOpen(true)}>
                 <HugeiconsIcon icon={SourceCodeSquareIcon} />
-                Log
+                {linkCopy.actions.viewLog}
               </DropdownMenuItem>
               {actions.setArtwork && (
                 <DropdownMenuItem onClick={() => setIsArtworkDialogOpen(true)}>
                   <HugeiconsIcon icon={Image01Icon} />
-                  Change artwork
+                  {linkCopy.actions.changeArtwork}
                 </DropdownMenuItem>
               )}
               {!playableLink && (
@@ -228,7 +229,7 @@ export const LinkItemMenu = ({
         item={item}
         open={isArtworkDialogOpen}
         onOpenChange={setIsArtworkDialogOpen}
-        onSelect={(identity) => actions.setArtwork?.(item.url, identity)}
+        setArtwork={actions.setArtwork}
       />
     </>
   )

@@ -36,7 +36,7 @@ describe("root error boundary", () => {
         name: "The page you’re looking for can’t be found.",
       })
     ).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Take me home" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Go home" })).toHaveAttribute(
       "href",
       "/"
     )

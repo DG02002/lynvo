@@ -168,14 +168,15 @@ export const RemoteControlProviderContent = ({
           })
         } else if (outcome.type === "delivery-unavailable") {
           notifications.showErrorToast({
-            title: "Remote Play is temporarily unavailable",
+            title: "Remote Play connection issue",
             description:
-              "Remote Play updates are temporarily unavailable. Check the connection.",
+              "Lynvo couldn’t update Remote Play. Check this device’s internet connection, then try again.",
           })
         } else if (outcome.type === "invalid-command") {
           notifications.showErrorToast({
-            title: "Invalid playback request",
-            description: "Remote Play received an invalid playback request.",
+            title: "Remote Play request couldn’t be understood",
+            description:
+              "The controlling device sent a request Lynvo couldn’t understand. Try again.",
           })
         }
       }),

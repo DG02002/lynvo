@@ -18,7 +18,7 @@ export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) => {
             href="/"
             className="underline underline-offset-4 transition-opacity hover:opacity-70"
           >
-            Take me home
+            Go home
           </a>
         </div>
       </main>

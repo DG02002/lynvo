@@ -419,11 +419,11 @@ const FinderEmptyState = ({
       <div className="flex flex-col gap-1">
         <p className="font-medium">No playable links</p>
         <p className="text-sm text-muted-foreground">
-          Resolve this saved link to load its playable links.
+          Find playable links for this saved link.
         </p>
       </div>
       <Button variant="outline" onClick={() => actions.showLinks(item.url)}>
-        Resolve links
+        Find playable links
       </Button>
     </div>
   </section>

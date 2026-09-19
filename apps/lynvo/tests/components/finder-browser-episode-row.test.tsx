@@ -235,9 +235,8 @@ describe("FinderBrowser episode rows", () => {
     )
 
     expect(
-      screen.queryByRole("switch", { name: "Episode names" })
+      screen.queryByRole("switch", { name: "Show episode names" })
     ).not.toBeInTheDocument()
-    expect(screen.queryByText("Episode names")).not.toBeInTheDocument()
     expect(screen.queryByText("Show episode names")).not.toBeInTheDocument()
 
     const headerMenu = screen.getByRole("button", {
@@ -307,7 +306,7 @@ describe("FinderBrowser episode rows", () => {
     )
     expect(folderHeader?.lastElementChild).toBe(headerMenu.parentElement)
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     await screen.findByText("1. Episode 1")
     const sourceName = screen.getByText("Streambox")
@@ -393,7 +392,7 @@ describe("FinderBrowser episode rows", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("switch", { name: "Episode names" }))
+    fireEvent.click(screen.getByRole("switch", { name: "Show episode names" }))
     await screen.findByText(episodeFilename)
 
     const [mobileNewBadge] = screen.getAllByText("New")
@@ -419,7 +418,7 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Stranger Things S05" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     expect(
       await screen.findByRole("button", { name: "1. Episode 1" })
@@ -476,7 +475,7 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Sample Series Name S01" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
   })
 
@@ -501,7 +500,7 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("heading", { name: "Sample Show (2024) S01" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Featurettes" })).toBeVisible()
     expect(
@@ -585,7 +584,7 @@ describe("FinderBrowser episode rows", () => {
       await screen.findByRole("heading", { name: "Stranger Things S05" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("switch", { name: "Episode names" })
+      screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
   })
 

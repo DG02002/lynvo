@@ -75,7 +75,7 @@ const LinkDebugLogDialog = ({
       <AlertDialogContent className="flex max-h-[85vh] w-full flex-col gap-4 p-6 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-lg">
         <AlertDialogHeader className="w-full min-w-0 shrink-0">
           <AlertDialogTitle className="text-center text-xl font-normal sm:text-2xl">
-            Log
+            Link log
           </AlertDialogTitle>
         </AlertDialogHeader>
         {hasLog ? (
