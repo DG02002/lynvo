@@ -2,7 +2,10 @@ import { useCallback, useMemo } from "react"
 
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import { isPlayableLinkFresh } from "~/features/links/link-playback-metadata"
-import type { SavedLinkInteractionReporter } from "~/features/links/saved-link-interaction"
+import {
+  getSavedLinkRefreshErrorMessage,
+  type SavedLinkInteractionReporter,
+} from "~/features/links/saved-link-interaction"
 import type { ExtractedLink, LinkListItem } from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
 
@@ -52,10 +55,7 @@ export const useRefreshActions = ({
         } else if (outcome.kind === "error") {
           showErrorToast({
             title: "Couldn’t refresh the link",
-            description:
-              outcome.error.kind === "generic"
-                ? outcome.error.message
-                : "The saved link couldn’t be refreshed. Try again.",
+            description: getSavedLinkRefreshErrorMessage(outcome.error),
           })
         }
       },

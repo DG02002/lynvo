@@ -15,8 +15,12 @@ export interface SavedLinkInteractionState {
   isResolvableContainer: boolean
 }
 
+export const SAVED_LINK_REFRESH_ERROR_MESSAGE =
+  "The saved link couldn’t be refreshed. Try again."
+
 export type SavedLinkInteractionError =
   | { kind: "duplicate" }
+  | { kind: "unsupported"; message: string }
   | { kind: "generic"; message: string }
 
 interface SavedLinkClearErrorOutcome {
@@ -91,13 +95,25 @@ export interface SavedLinkInteractionReporter {
 
 export const reportSavedLinkError = (
   reporter: SavedLinkInteractionReporter,
-  message: string
+  error: SavedLinkInteractionError
 ): void => {
   reporter.publish({
     kind: "error",
-    error: { kind: "generic", message },
+    error,
   })
 }
+
+export const reportGenericSavedLinkError = (
+  reporter: SavedLinkInteractionReporter,
+  message: string
+): void => {
+  reportSavedLinkError(reporter, { kind: "generic", message })
+}
+
+export const getSavedLinkRefreshErrorMessage = (
+  error: SavedLinkInteractionError
+): string =>
+  error.kind === "generic" ? error.message : SAVED_LINK_REFRESH_ERROR_MESSAGE
 
 export interface PluginDomainIdentity {
   pluginServerId: string

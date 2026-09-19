@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest"
 
-import { getSaveErrorMessage } from "~/features/links/use-link-actions/save-error-message"
+import {
+  getSaveError,
+  getSaveErrorMessage,
+} from "~/features/links/use-link-actions/save-error-message"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 describe("getSaveErrorMessage", () => {
+  it("classifies validation failures as unsupported link errors", () => {
+    expect(
+      getSaveError({
+        _tag: "ValidationError",
+        message: "Private and local network addresses are not supported.",
+      })
+    ).toEqual({
+      kind: "unsupported",
+      message: "Private and local network addresses are not supported.",
+    })
+  })
+
   it("hides transport and decode implementation details", () => {
     expect(
       getSaveErrorMessage(new Error("Decode error (400 GET /api/extract)"))

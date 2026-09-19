@@ -45,8 +45,14 @@ const sourceStatusLabel = (status: string) => {
   return "Status unavailable"
 }
 
+const errorTitles = {
+  duplicate: "Link already saved",
+  unsupported: "Link not supported",
+  generic: "Link couldn’t be opened",
+} satisfies Record<SavedLinkInteractionError["kind"], string>
+
 const getErrorTitle = (error: SavedLinkInteractionError) =>
-  error.kind === "duplicate" ? "Link already saved" : "Link couldn’t be opened"
+  errorTitles[error.kind]
 
 interface LinkInputSectionProps {
   url: string

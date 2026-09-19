@@ -28,6 +28,23 @@ describe("LinkInputSection", () => {
     )
   })
 
+  it("labels a structured unsupported error", () => {
+    render(
+      <LinkInputSection
+        url="https://example.com/file"
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={{ kind: "unsupported", message: "URL is not supported." }}
+        setError={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText("Link not supported")).toBeVisible()
+    expect(screen.getByText("URL is not supported.")).toBeVisible()
+  })
+
   it("does not request clipboard access until the user allows it", async () => {
     const readText = vi.fn(() =>
       Promise.resolve("https://example.com/new-source")
