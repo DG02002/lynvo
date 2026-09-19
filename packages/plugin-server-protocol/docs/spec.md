@@ -41,8 +41,8 @@ Example:
 
 1. User submits a `source-alpha` URL.
 2. Lynvo selects one matching Plugin Server.
-3. The Plugin Server returns a tree with lazy nodes.
-4. The user selects a lazy item node.
+3. The Plugin Server returns a tree with unresolved items.
+4. The user selects an unresolved item.
 5. Lynvo calls the same Plugin Server again with only that selected node target.
 6. The Plugin Server resolves it further and returns the next result, such as final `FLS` and `Source Route Beta` playable links.
 
@@ -545,7 +545,7 @@ Rules:
 {
   "kind": "resolvable",
   "id": "ep-1",
-  "label": "Lazy Item 1",
+  "label": "Unresolved Item 1",
   "nodeUrl": "https://example.com/intermediate-step",
   "resourceId": "opaque-id-optional",
   "resolutionKind": "folder",
@@ -556,9 +556,9 @@ Rules:
 Rules:
 
 - must contain `nodeUrl` or `resourceId`
-- may represent an lazy item, redirector, container page, or any intermediate target
+- may represent an unresolved item, redirector, group page, or any intermediate target
 - must be resolvable by the same Plugin Server
-- may set `resolutionKind` to `folder` for lazy folder contents or `mirrors`
+- may set `resolutionKind` to `folder` for unresolved folder contents or `mirrors`
   for alternative playable routes; omission remains backward-compatible and is
   interpreted as `mirrors` by Lynvo
 

@@ -107,7 +107,7 @@ export const useFinderBrowserState = ({
   const navigationType = useNavigationType()
   const currentLocationKeyRef = useRef(location.key)
   currentLocationKeyRef.current = location.key
-  // Folder navigation can run after awaits (lazy folder expansion), when the
+  // Folder navigation can run after awaits (unresolved item expansion), when the
   // creating render's location is stale; always read the latest one.
   const locationRef = useRef(location)
   locationRef.current = location
@@ -235,7 +235,7 @@ export const useFinderBrowserState = ({
     setRootLinks(itemRootLinks)
     // Deliberately tracks only itemRootLinks: re-running when the URL folder
     // param appears or disappears would reset rootLinks to the initial items
-    // and discard links resolved by lazy folder expansion.
+    // and discard links resolved by unresolved item expansion.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [itemRootLinks])
 

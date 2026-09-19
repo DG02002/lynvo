@@ -71,7 +71,7 @@ export const GalleryGroupMenu = ({
       <ConfirmationAlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-        title={`Remove ${itemCountLabel} from your list?`}
+        title={`Remove ${itemCountLabel} from your library?`}
         description={`This removes every saved link grouped under ${group.displayTitle}. You can save them again from their source links.`}
         confirmLabel="Delete all"
         confirmVariant="destructive"

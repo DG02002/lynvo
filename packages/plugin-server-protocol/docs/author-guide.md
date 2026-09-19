@@ -357,8 +357,8 @@ Lynvo expects staged extraction.
 
 Example:
 
-1. `source-alpha` page returns folder and lazy item nodes.
-2. Lazy Item node carries a `nodeUrl` and/or `resourceId`.
+1. `source-alpha` page returns folder and unresolved item nodes.
+2. An unresolved item carries a `nodeUrl` and/or `resourceId`.
 3. Lynvo calls `POST /extract` again with that node identity.
 4. The Plugin Server resolves the next step.
 5. If the next step is final, return playable nodes.
@@ -368,7 +368,7 @@ This means:
 
 - your Plugin Server owns the entire source-specific chain
 - Lynvo does not chain between different Plugin Servers
-- any lazy node you emit must be resolvable by the same Plugin Server
+- any unresolved item you emit must be resolvable by the same Plugin Server
 
 ## Normalization rules
 
@@ -385,14 +385,14 @@ Do not return raw implementation details unless you place them under `extensions
 ## Node implementation reference
 
 The protocol has three wire-level node kinds. Lynvo uses the product terms
-"playable link," "container," "folder," and "lazy folder" for them:
+"playable item," "folder," "group," and "unresolved item" for them:
 
 | Product item           | Protocol kind | Important fields                |
 | ---------------------- | ------------- | ------------------------------- |
-| Playable link          | `playable`    | `url`                           |
-| Display-only container | `group`       | `selectable: false`, `children` |
+| Playable item          | `playable`    | `url`                           |
+| Display-only group     | `group`       | `selectable: false`, `children` |
 | Selectable folder      | `group`       | `selectable: true`, `children`  |
-| Lazy folder            | `resolvable`  | `nodeUrl` and/or `resourceId`   |
+| Unresolved item        | `resolvable`  | `nodeUrl` and/or `resourceId`   |
 
 Import `MediaNode` so TypeScript checks copyable implementations against
 the shared contract.
@@ -416,13 +416,13 @@ const playableLink = {
 } satisfies MediaNode
 ```
 
-### Container item
+### Group item
 
-A container is a display-only grouping. Lynvo renders its children, but the
-container itself is not a selectable extraction target.
+A group is a display-only grouping. Lynvo renders its children, but the group
+itself is not a selectable extraction target.
 
 ```ts
-const folderContainer = {
+const folderGroup = {
   kind: "group",
   id: "folder-1",
   label: "Folder 1",
@@ -443,19 +443,19 @@ const selectableFolder = {
   id: "playable-items-folder",
   label: "Collections",
   selectable: true,
-  children: [folderContainer],
+  children: [folderGroup],
 } satisfies MediaNode
 ```
 
-### Lazy folder item
+### Unresolved item
 
-Use `resolvable` when the folder is intentionally not expanded yet. It must
+Use `resolvable` when a folder is intentionally not expanded yet. It must
 carry a `nodeUrl` and/or `resourceId`; `resourceId` is an opaque identifier
 your Plugin Server can use. The same Plugin Server must handle the later node
 request.
 
 ```ts
-const lazyFolder = {
+const unresolvedItem = {
   kind: "resolvable",
   id: "shows-folder",
   label: "Collections",
@@ -466,7 +466,7 @@ const lazyFolder = {
 } satisfies MediaNode
 ```
 
-When the user opens that lazy folder, Lynvo sends another extraction request:
+When the user opens that unresolved item, Lynvo sends another extraction request:
 
 ```json
 {
@@ -515,7 +515,7 @@ Recommended approach:
 
 - use protocol codes as the machine contract
 - keep `message` human-readable
-- include provider-specific diagnostics only as secondary detail
+- include Source-specific diagnostics only as secondary detail
 
 Use `TEMPORARY_FAILURE` when retrying later might succeed.
 

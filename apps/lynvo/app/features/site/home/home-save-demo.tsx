@@ -651,8 +651,8 @@ const DemoRemoveDialog = ({
           Remove this link?
         </h2>
         <p className="w-full text-center text-base text-muted-foreground">
-          This removes the link from your list. You can save it again from the
-          source link.
+          This removes the link from your library. You can save it again from
+          the source link.
         </p>
       </div>
       <div className="mt-4 flex w-full flex-col gap-3">

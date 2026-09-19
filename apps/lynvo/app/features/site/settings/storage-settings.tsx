@@ -231,7 +231,7 @@ export function StorageSettings({ userId }: { userId?: string }) {
             className="mx-auto size-16 text-destructive"
           />
         }
-        description="This permanently removes every saved link and its extracted link data from the account. This cannot be undone."
+        description="This permanently removes every saved link and everything inside it from the account. This cannot be undone."
         confirmLabel="Delete all saved links"
         confirmVariant="destructive"
         pending={isClearingLinks}

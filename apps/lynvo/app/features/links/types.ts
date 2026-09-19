@@ -61,7 +61,7 @@ export interface LinkMetadata {
   }
   playback: {
     openedUrls: string[]
-    resolvedMirrors?: Record<string, ExtractedLink[]> // lazy item URL → mirrors
+    resolvedMirrors?: Record<string, ExtractedLink[]> // unresolved item URL → mirrors
   }
   /** Bounded, newest-last record of Plugin Server communication. */
   debugLog?: LinkDebugLogEntry[]

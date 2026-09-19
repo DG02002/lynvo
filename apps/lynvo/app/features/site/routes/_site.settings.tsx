@@ -51,7 +51,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 const settingsTabs = [
   { value: "general", label: "General", icon: Settings01Icon },
   { value: "account", label: "Account", icon: UserCircleIcon },
-  { value: "security", label: "Security and login", icon: Key01Icon },
+  { value: "security", label: "Security and sign-in", icon: Key01Icon },
   { value: "plugins", label: "Plugins", icon: Plug02Icon },
   { value: "proxy", label: "Proxy", icon: Globe02Icon },
   { value: "usage", label: "Usage", icon: Activity03Icon },

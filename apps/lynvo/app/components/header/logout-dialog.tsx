@@ -17,7 +17,7 @@ export const LogoutDialog = ({
   <ConfirmationAlertDialog
     open={open}
     onOpenChange={onOpenChange}
-    title="Log out of Lynvo?"
+    title="Sign out of Lynvo?"
     media={
       <HugeiconsIcon
         icon={Logout05Icon}
@@ -25,7 +25,7 @@ export const LogoutDialog = ({
       />
     }
     description={<>Logged in as {email}.</>}
-    confirmLabel="Log out"
+    confirmLabel="Sign out"
     confirmVariant="destructive"
     onConfirm={onLogout}
   />

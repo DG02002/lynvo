@@ -60,7 +60,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     id: BHADOO_SOURCE_ID,
     displayName: "Bhadoo’s Google Drive Index",
     description:
-      "Extracts playable files and lazy folders from Bhadoo Google Drive Index deployments.",
+      "Extracts playable files and unresolved items from Bhadoo Google Drive Index deployments.",
     homepage: "https://gitlab.com/GoogleDriveIndex/Google-Drive-Index",
     iconPath: "/icons/sources/bhadoo-cloud.svg",
     status: "active",
@@ -97,7 +97,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
     id: ONEDRIVE_SOURCE_ID,
     displayName: "Spencerwooo's OneDrive Vercel Index",
     description:
-      "Extracts playable files and lazy folders from OneDrive Vercel Index deployments.",
+      "Extracts playable files and unresolved items from OneDrive Vercel Index deployments.",
     homepage: "https://github.com/spencerwooo/onedrive-vercel-index",
     iconPath: "/icons/sources/onedrive-index.webp",
     status: "active",
@@ -231,10 +231,7 @@ export const extractWithLynvoPlugin = async (
   const targetUrl = target.url
   const plugin = findLynvoPlugin(targetUrl, request.pluginId)
   if (!plugin) {
-    throw new ProtocolError(
-      "UNSUPPORTED_URL",
-      "No catalog plugin matches the target URL."
-    )
+    throw new ProtocolError("UNSUPPORTED_URL", "No Plugin matches this link.")
   }
   return plugin.extract({ request, targetUrl, plugin, publicAssetOrigin })
 }

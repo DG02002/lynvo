@@ -20,7 +20,7 @@ export const readDeviceCodeApproval = async (
     { headers: DEVICE_JSON_HEADERS }
   )
   if (!response.ok) {
-    throw new Error("The login code couldn’t be checked. Try again.")
+    throw new Error("The sign-in code couldn’t be checked. Try again.")
   }
   return await response.json()
 }
@@ -38,7 +38,7 @@ export const authorizeDeviceCode = async (code: string): Promise<void> => {
     throw new Error(
       Result.isSuccess(payload)
         ? payload.success.error
-        : "The login couldn’t be approved. Check the code, then try again."
+        : "The sign-in couldn’t be approved. Check the code, then try again."
     )
   }
 }
@@ -111,7 +111,7 @@ export const finalizeDeviceExchangeOverHttp = async (input: {
   )
   if (!response.ok) {
     throw new Error(
-      "This device couldn’t log in. Generate a new code, then try again."
+      "This device couldn’t sign in. Generate a new code, then try again."
     )
   }
 }

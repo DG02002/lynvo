@@ -23,7 +23,7 @@ export const presentExtractionFailure = (
 ): string => {
   switch (failure.kind) {
     case "session-expired":
-      return "The session expired. Log in, then try again."
+      return "The session expired. Sign in, then try again."
     case "transient":
       return "Extraction is temporarily unavailable. Try again in a moment."
     case "rate-limited":

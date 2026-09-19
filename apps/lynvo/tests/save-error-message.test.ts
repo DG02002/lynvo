@@ -28,7 +28,7 @@ describe("getSaveError", () => {
   it("keeps authentication and availability errors generic", () => {
     expect(getSaveError({ _tag: "UnauthorizedError" })).toEqual({
       kind: "generic",
-      message: "The session expired. Log in, then save the link again.",
+      message: "The session expired. Sign in, then save the link again.",
     })
 
     const availabilityMessages = [

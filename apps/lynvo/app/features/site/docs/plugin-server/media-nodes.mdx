@@ -1,6 +1,6 @@
 ---
 title: Return normalized Media Nodes
-description: Represent playable items, folders, groups, and lazy nodes in Lynvo.
+description: Represent playable items, folders, groups, and unresolved items in Lynvo.
 navLabel: Media Nodes
 contentType: Reference
 ---
@@ -10,14 +10,14 @@ contentType: Reference
 Plugins return four product-level node types. Protocol version `1.0` represents
 them with three `kind` values:
 
-| Product item           | Protocol kind | Required fields                         |
-| ---------------------- | ------------- | --------------------------------------- |
-| Direct media           | `playable`    | `label`, `url`                          |
-| Display-only container | `group`       | `label`, `children`                     |
-| Selectable folder      | `group`       | `label`, `selectable: true`, `children` |
-| Lazy folder            | `resolvable`  | `label`, `nodeUrl` or `resourceId`      |
+| Product item       | Protocol kind | Required fields                         |
+| ------------------ | ------------- | --------------------------------------- |
+| Playable item      | `playable`    | `label`, `url`                          |
+| Display-only group | `group`       | `label`, `children`                     |
+| Selectable folder  | `group`       | `label`, `selectable: true`, `children` |
+| Unresolved item    | `resolvable`  | `label`, `nodeUrl` or `resourceId`      |
 
-### Return direct media
+### Return a playable item
 
 Use `playable` when the URL points directly to a video or audio file. Lynvo can send this URL to the selected media player without another extraction request.
 
@@ -40,14 +40,14 @@ const playableItem = {
 
 `status` may be `up`, `down`, or `unknown`. `expiry` is an optional Unix timestamp in milliseconds.
 
-### Return a display-only container
+### Return a display-only group
 
-Use a non-selectable `group` to label and organize child nodes. A container cannot be selected as a playable item or folder.
+Use a non-selectable `group` to label and organize child nodes. A group cannot be selected as a playable item or folder.
 
-<CodeBlock label="Container node">
+<CodeBlock label="Group node">
 
 ```ts {2,6}
-const seasonContainer = {
+const seasonGroup = {
   kind: "group",
   id: "season-1",
   label: "Season 1",
@@ -71,20 +71,20 @@ const selectableFolder = {
   id: "all-seasons",
   label: "All seasons",
   selectable: true,
-  children: [seasonContainer],
+  children: [seasonGroup],
 }
 ```
 
 </CodeBlock>
 
-### Return a lazy folder
+### Return an unresolved item
 
-Use `resolvable` when loading the folder requires another request. Include a `nodeUrl`, a `resourceId`, or both. Lynvo sends that identity back to the same Plugin Server when someone opens the folder.
+Use `resolvable` when loading a folder or playable item requires another request. Include a `nodeUrl`, a `resourceId`, or both. Lynvo sends that identity back to the same Plugin Server when someone opens the item.
 
-<CodeBlock label="Lazy folder node">
+<CodeBlock label="Unresolved item node">
 
 ```ts {2,6}
-const lazyFolder = {
+const unresolvedItem = {
   kind: "resolvable",
   id: "bonus-content",
   label: "Bonus content",

@@ -82,7 +82,7 @@ export const UserMenu = ({
               className="w-full cursor-pointer"
             >
               <HugeiconsIcon icon={Logout05Icon} />
-              <span>Log out</span>
+              <span>Sign out</span>
             </button>
           }
         />

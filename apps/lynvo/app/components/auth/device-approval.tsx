@@ -37,10 +37,10 @@ const useDeviceApprovalAction = (code: string) => {
       setDidApprove(true)
     } catch (error) {
       showErrorToast({
-        title: "Couldn’t approve the login",
+        title: "Couldn’t approve the sign-in",
         description: getUserFacingErrorMessage(
           error,
-          "The login couldn’t be approved. Check the code, then try again."
+          "The sign-in couldn’t be approved. Check the code, then try again."
         ),
       })
     } finally {
@@ -59,9 +59,9 @@ type DeviceApprovalPhase =
   | "invalid"
 
 const approvalPhaseHeadings = {
-  approved: "Login approved",
-  checking: "Approve login",
-  ready: "Approve login",
+  approved: "Sign-in approved",
+  checking: "Approve sign-in",
+  ready: "Approve sign-in",
   failed: "Couldn’t check the code",
   invalid: "Code invalid or expired",
 } satisfies Record<DeviceApprovalPhase, string>
@@ -75,7 +75,7 @@ const DeviceApprovalStatusMessage = ({
   if (didApprove) {
     return (
       <p className="text-balance text-lg text-muted-foreground">
-        The other device is now logged in.
+        Lynvo is now signed in on the other device.
       </p>
     )
   }
@@ -97,11 +97,11 @@ const DeviceApprovalStatusMessage = ({
       <p className="text-balance text-lg text-muted-foreground">
         {canApprove
           ? "Confirm this code is shown on your device."
-          : "Generate a new code on the device you want to log in."}
+          : "Generate a new code on the device you want to sign in."}
       </p>
       {canApprove && (
         <p
-          aria-label="Login verification code"
+          aria-label="Sign-in verification code"
           className="my-8 text-3xl font-normal tracking-[0.16em] text-foreground tabular-nums sm:text-4xl"
         >
           {code}
@@ -159,7 +159,7 @@ const DeviceApproval = () => {
                 isRetrying={isCodeQueryPending}
                 message={getUserFacingErrorMessage(
                   codeQueryError,
-                  "The login code couldn’t be checked. Try again."
+                  "The sign-in code couldn’t be checked. Try again."
                 )}
                 onRetry={retryCodeQuery}
               />
@@ -196,7 +196,7 @@ const DeviceApproval = () => {
                     {isAuthorizing && (
                       <Spinner data-icon="inline-start" aria-hidden="true" />
                     )}
-                    Approve login
+                    Approve sign-in
                   </Button>
                 )}
                 <Button
@@ -205,7 +205,7 @@ const DeviceApproval = () => {
                   nativeButton={false}
                   render={
                     <Link to={authPaths.signIn} viewTransition={viewTransition}>
-                      Back to log in
+                      Back to sign in
                     </Link>
                   }
                 />

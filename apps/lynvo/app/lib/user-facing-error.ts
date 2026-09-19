@@ -15,7 +15,7 @@ const taggedErrorMessage = (cause: unknown): string | undefined => {
 
   switch (parsed.success._tag) {
     case "UnauthorizedError":
-      return "The session expired. Log in, then try again."
+      return "The session expired. Sign in, then try again."
     case "CsrfError":
       return "The security session expired. Refresh the page, then try again."
     case "ValidationError":
