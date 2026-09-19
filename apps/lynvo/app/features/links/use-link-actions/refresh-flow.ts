@@ -31,10 +31,13 @@ export const softRefreshLink = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: getExtractionErrorMessage(
-        error,
-        "The saved link couldn’t be refreshed. Try again."
-      ),
+      error: {
+        kind: "generic",
+        message: getExtractionErrorMessage(
+          error,
+          "The saved link couldn’t be refreshed. Try again."
+        ),
+      },
     })
   }
 }
@@ -81,16 +84,22 @@ export const hardRefreshLink = async ({
 
     reporter.publish({
       kind: "error",
-      message: "No playable links are available. Try another Source page.",
+      error: {
+        kind: "generic",
+        message: "No playable links are available. Try another Source page.",
+      },
     })
   } catch (error) {
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: getExtractionErrorMessage(
-        error,
-        "Link choices couldn’t be loaded. Try again."
-      ),
+      error: {
+        kind: "generic",
+        message: getExtractionErrorMessage(
+          error,
+          "Link choices couldn’t be loaded. Try again."
+        ),
+      },
     })
   }
 }
@@ -108,10 +117,13 @@ export const expandMirrorLinks = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: getExtractionErrorMessage(
-        error,
-        "Playable links couldn’t be loaded. Try again."
-      ),
+      error: {
+        kind: "generic",
+        message: getExtractionErrorMessage(
+          error,
+          "Playable links couldn’t be loaded. Try again."
+        ),
+      },
     })
     return null
   }
@@ -141,10 +153,13 @@ export const expandFolderLink = async ({
     console.error(error)
     reporter.publish({
       kind: "error",
-      message: getExtractionErrorMessage(
-        error,
-        "Playback options couldn’t be loaded. Try again."
-      ),
+      error: {
+        kind: "generic",
+        message: getExtractionErrorMessage(
+          error,
+          "Playback options couldn’t be loaded. Try again."
+        ),
+      },
     })
     return null
   }

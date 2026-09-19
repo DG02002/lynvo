@@ -10,6 +10,7 @@ import {
 } from "~/features/links/save-intent"
 import {
   shouldOfferPluginDomainSuggestion,
+  type LinkInputError,
   type SavedLinkInteractionReporter,
 } from "~/features/links/saved-link-interaction"
 import type {
@@ -65,7 +66,7 @@ export const useSaveActions = ({
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
   closeSelectionDialog: () => void
   selectionDialogState: SelectionDialogState
-  setError: (error: string | null) => void
+  setError: (error: LinkInputError | null) => void
   setCurrentUrl: (url: string) => void
   setHighlightedId: (id: string | null) => void
 }) => {
@@ -83,7 +84,7 @@ export const useSaveActions = ({
             setError(null)
             break
           case "error":
-            setError(outcome.message)
+            setError(outcome.error)
             break
           case "clear-preview":
             setExtractionPreview(null)
@@ -187,11 +188,17 @@ export const useSaveActions = ({
 
     switch (result.kind) {
       case "error":
-        reporter.publish({ kind: "error", message: result.message })
+        reporter.publish({
+          kind: "error",
+          error: { kind: "generic", message: result.message },
+        })
         reporter.publish({ kind: "clear-preview" })
         return undefined
       case "duplicate":
-        reporter.publish({ kind: "error", message: result.message })
+        reporter.publish({
+          kind: "error",
+          error: { kind: "duplicate", message: result.message },
+        })
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         return undefined
       case "selection-required":
@@ -222,7 +229,10 @@ export const useSaveActions = ({
   ): PluginDomainSuggestion | undefined => {
     switch (result.kind) {
       case "error":
-        reporter.publish({ kind: "error", message: result.message })
+        reporter.publish({
+          kind: "error",
+          error: { kind: "generic", message: result.message },
+        })
         return undefined
       case "updated":
         reporter.publish({
@@ -266,7 +276,10 @@ export const useSaveActions = ({
     } catch (error) {
       console.error(error)
       reporter.publish({ kind: "clear-preview" })
-      reporter.publish({ kind: "error", message: getSaveErrorMessage(error) })
+      reporter.publish({
+        kind: "error",
+        error: { kind: "generic", message: getSaveErrorMessage(error) },
+      })
     } finally {
       setIsSaving(false)
     }
@@ -295,7 +308,10 @@ export const useSaveActions = ({
       console.error(error)
       reporter.publish({
         kind: "error",
-        message: "Unable to save the selected links. Try again.",
+        error: {
+          kind: "generic",
+          message: "Unable to save the selected links. Try again.",
+        },
       })
     } finally {
       setIsSaving(false)

@@ -13,7 +13,7 @@ describe("LinkInputSection", () => {
         onSave={vi.fn()}
         isSaving={false}
         extractionPreview={null}
-        error={DUPLICATE_LINK_MESSAGE}
+        error={{ kind: "duplicate", message: DUPLICATE_LINK_MESSAGE }}
         setError={vi.fn()}
       />
     )

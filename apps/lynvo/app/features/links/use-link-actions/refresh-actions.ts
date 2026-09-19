@@ -52,7 +52,7 @@ export const useRefreshActions = ({
         } else if (outcome.kind === "error") {
           showErrorToast({
             title: "Couldn’t refresh the link",
-            description: outcome.message,
+            description: outcome.error.message,
           })
         }
       },

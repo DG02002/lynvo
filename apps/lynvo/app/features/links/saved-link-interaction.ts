@@ -15,13 +15,17 @@ export interface SavedLinkInteractionState {
   isResolvableContainer: boolean
 }
 
+export type LinkInputError =
+  | { kind: "duplicate"; message: string }
+  | { kind: "generic"; message: string }
+
 interface SavedLinkClearErrorOutcome {
   kind: "clear-error"
 }
 
 interface SavedLinkErrorOutcome {
   kind: "error"
-  message: string
+  error: LinkInputError
 }
 
 interface SavedLinkClearPreviewOutcome {

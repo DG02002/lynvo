@@ -10,7 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import { DUPLICATE_LINK_MESSAGE } from "~/features/links/save-intent"
+import type { LinkInputError } from "~/features/links/saved-link-interaction"
 import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
 
@@ -45,11 +45,11 @@ const sourceStatusLabel = (status: string) => {
   return "Status unavailable"
 }
 
-const getErrorTitle = (error: string, isExistingLinkWarning: boolean) => {
-  if (isExistingLinkWarning) {
+const getErrorTitle = (error: LinkInputError) => {
+  if (error.kind === "duplicate") {
     return "Link already saved"
   }
-  if (error.toLowerCase().includes("supported")) {
+  if (error.message.toLowerCase().includes("supported")) {
     return "Link not supported"
   }
   return "Link couldn’t be opened"
@@ -61,8 +61,8 @@ interface LinkInputSectionProps {
   onSave: (url?: string) => void
   isSaving: boolean
   extractionPreview: ExtractionPreview | null
-  error: string | null
-  setError: (err: string | null) => void
+  error: LinkInputError | null
+  setError: (error: LinkInputError | null) => void
   savedUrls?: ReadonlySet<string>
 }
 
@@ -80,7 +80,6 @@ export function LinkInputSection({
 }: LinkInputSectionProps) {
   const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
     React.useState(false)
-  const isExistingLinkWarning = error === DUPLICATE_LINK_MESSAGE
   const {
     clipboardUrl,
     clipboardPermission,
@@ -127,18 +126,16 @@ export function LinkInputSection({
       {error && (
         <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
-            variant={isExistingLinkWarning ? "default" : "destructive"}
+            variant={error.kind === "duplicate" ? "default" : "destructive"}
             className={cn(
-              isExistingLinkWarning &&
+              error.kind === "duplicate" &&
                 "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
             )}
           >
             <HugeiconsIcon icon={AlertCircleIcon} />
-            <AlertTitle>
-              {getErrorTitle(error, isExistingLinkWarning)}
-            </AlertTitle>
-            {!isExistingLinkWarning && (
-              <AlertDescription>{error}</AlertDescription>
+            <AlertTitle>{getErrorTitle(error)}</AlertTitle>
+            {error.kind !== "duplicate" && (
+              <AlertDescription>{error.message}</AlertDescription>
             )}
           </Alert>
         </div>
@@ -169,7 +166,7 @@ export function LinkInputSection({
               onSave()
             }
           }}
-          aria-invalid={Boolean(error && !isExistingLinkWarning)}
+          aria-invalid={Boolean(error && error.kind !== "duplicate")}
         />
         <InputGroupAddon align="inline-end">
           {(clipboardPermission === "prompt" ||
