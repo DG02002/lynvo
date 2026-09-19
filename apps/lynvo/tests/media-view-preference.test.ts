@@ -1,3 +1,6 @@
+import { render, screen, waitFor } from "@testing-library/react"
+import { createElement } from "react"
+import { createMemoryRouter, RouterProvider } from "react-router"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -7,9 +10,15 @@ import {
   getMediaView,
   getMediaViewFromCookieHeader,
   setMediaView,
+  useMediaView,
 } from "~/features/site/settings/media-view-preference"
 
 import { createMemoryStorage } from "./memory-storage"
+
+const MediaViewProbe = () => {
+  const mediaView = useMediaView()
+  return createElement("output", { "data-testid": "media-view" }, mediaView)
+}
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", createMemoryStorage())
@@ -59,7 +68,30 @@ describe("Media view preference", () => {
     localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, "hybrid")
 
     expect(getMediaView()).toBe("gallery")
-    expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("gallery")
+    expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("hybrid")
+  })
+
+  it("migrates the legacy stored value after the preference hook mounts", async () => {
+    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, "hybrid")
+    const router = createMemoryRouter(
+      [
+        {
+          id: "root",
+          path: "/",
+          loader: () => ({ mediaView: "gallery" }),
+          element: createElement(MediaViewProbe),
+        },
+      ],
+      { initialEntries: ["/"] }
+    )
+
+    render(createElement(RouterProvider, { router }))
+
+    await waitFor(() => {
+      expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("gallery")
+      expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=gallery`)
+    })
+    expect(screen.getByTestId("media-view")).toHaveTextContent("gallery")
   })
 
   it("mirrors the preference into the media view cookie", () => {

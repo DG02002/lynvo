@@ -31,6 +31,25 @@ const normalizeMediaView = (value: string): MediaView | undefined => {
   return isMediaView(value) ? value : undefined
 }
 
+const migrateLegacyMediaViewPreference = (): MediaView | undefined => {
+  if (globalThis.localStorage === undefined) {
+    return undefined
+  }
+
+  const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
+  if (storedValue === null) {
+    return undefined
+  }
+
+  const mediaView = normalizeMediaView(storedValue)
+  if (mediaView === undefined || mediaView === storedValue) {
+    return undefined
+  }
+
+  localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
+  return mediaView
+}
+
 const getDefaultMediaView = (): MediaView =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
     ? TVBRO_DEFAULT_MEDIA_VIEW
@@ -55,9 +74,6 @@ export const getMediaView = (): MediaView => {
   if (storedValue !== null) {
     const mediaView = normalizeMediaView(storedValue)
     if (mediaView !== undefined) {
-      if (storedValue === LEGACY_MEDIA_VIEW_VALUE) {
-        localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
-      }
       return mediaView
     }
   }
@@ -101,7 +117,8 @@ export const useMediaView = (): MediaView => {
   )
 
   useEffect(() => {
-    writeMediaViewCookie(mediaView)
+    const migratedMediaView = migrateLegacyMediaViewPreference()
+    writeMediaViewCookie(migratedMediaView ?? mediaView)
   }, [mediaView])
 
   return mediaView

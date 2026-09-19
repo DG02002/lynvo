@@ -21,7 +21,9 @@ describe("Changelog", () => {
 
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("The Save page's artwork view is now Gallery")
+      within(updates).queryByText(
+        "The Save page's Hybrid view is now Gallery view"
+      )
     ).not.toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
       "aria-selected",
@@ -47,7 +49,9 @@ describe("Changelog", () => {
       "?type=general"
     )
     expect(
-      within(updates).getByText("The Save page's artwork view is now Gallery")
+      within(updates).getByText(
+        "The Save page's Hybrid view is now Gallery view"
+      )
     ).toBeVisible()
     expect(
       within(updates).getByText("The Save page now has List and Hybrid views")
@@ -62,13 +66,17 @@ describe("Changelog", () => {
     )
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("The Save page's artwork view is now Gallery")
+      within(updates).queryByText(
+        "The Save page's Hybrid view is now Gallery view"
+      )
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "All" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(
-      within(updates).getByText("The Save page's artwork view is now Gallery")
+      within(updates).getByText(
+        "The Save page's Hybrid view is now Gallery view"
+      )
     ).toBeVisible()
     expect(
       within(updates).getByText("The Save page now has List and Hybrid views")
@@ -87,7 +95,7 @@ describe("Changelog", () => {
 
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
-    ).toHaveTextContent("The Save page's artwork view is now Gallery")
+    ).toHaveTextContent("The Save page's Hybrid view is now Gallery view")
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))
     fireEvent.click(
