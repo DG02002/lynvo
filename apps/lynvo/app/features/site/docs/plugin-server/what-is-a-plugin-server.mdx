@@ -8,8 +8,8 @@ contentType: Conceptual
 <DocSection id="what-is-a-plugin-server">
 
 A Plugin Server is a deployed HTTPS service that turns Source pages into
-normalized Media Nodes. Lynvo sends it a URL, and the server returns files,
-folders, groups, or content that needs later resolution.
+normalized Media Nodes. Lynvo sends it a URL, and the server returns Media
+Nodes: playable items, folders, groups, and unresolved items.
 
 The Plugin Server handles the work shared by every Source integration:
 
@@ -32,9 +32,9 @@ the server once, then publish each Plugin in its manifest.
 
 <DocsNote title="Direct Media links">
 
-Direct Media is a first-party Plugin hosted by the Lynvo Plugin Server. Its
-bounded capability probe runs after explicit, configured-domain, and static
-Plugin matches have been considered.
+Direct Media is a first-party Plugin hosted by the Lynvo Plugin Server. Lynvo
+asks the Plugin whether it can handle a link after checking the domains
+configured for it.
 
 </DocsNote>
 

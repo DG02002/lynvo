@@ -18,7 +18,7 @@ describe("Lynvo manifest source credentials", () => {
     expect(
       Schema.decodeUnknownSync(resolvableNodeSchema)({
         kind: "resolvable",
-        label: "Lazy folder",
+        label: "Unresolved item",
         nodeUrl: "https://example.com/folder/",
         resolutionKind: "folder",
       })

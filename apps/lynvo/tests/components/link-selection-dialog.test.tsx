@@ -6,16 +6,18 @@ import { LinkSelectionDialog } from "~/components/send-link/link-selection-dialo
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
 import type { ExtractedLink } from "~/features/links/types"
 
-interface LazyFolderHarnessProps {
+interface UnresolvedItemHarnessProps {
   resolveFolder: () => Promise<ExtractedLink[]>
 }
 
-const LazyFolderHarness = ({ resolveFolder }: LazyFolderHarnessProps) => {
+const UnresolvedItemHarness = ({
+  resolveFolder,
+}: UnresolvedItemHarnessProps) => {
   const [links, setLinks] = useState<ExtractedLink[]>([
     {
       id: "lazy-folder",
       url: "https://drive.example/0:/lazy-folder/",
-      label: "Lazy folder",
+      label: "Unresolved item",
       mediaNodeKind: "resolvable",
       type: "folder",
       selectable: true,
@@ -338,7 +340,7 @@ describe("LinkSelectionDialog", () => {
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 
-  it("selects children discovered after a selected lazy folder is expanded", async () => {
+  it("selects children discovered after a selected unresolved item is expanded", async () => {
     const resolveFolder = vi.fn().mockResolvedValue([
       {
         id: "video-one",
@@ -348,40 +350,40 @@ describe("LinkSelectionDialog", () => {
         type: "file",
       },
     ])
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     )
-    fireEvent.click(screen.getByText("Lazy folder"))
+    fireEvent.click(screen.getByText("Unresolved item"))
     await screen.findByText("Video One")
 
     expect(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     ).toBeChecked()
     expect(
       screen.getByRole("checkbox", { name: "Select Video One" })
     ).toBeChecked()
   })
 
-  it("selects a lazy folder without expanding it when its checkbox is selected", () => {
+  it("selects an unresolved item without expanding it when its checkbox is selected", () => {
     const resolveFolder = vi.fn().mockResolvedValue([])
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
     fireEvent.click(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     )
 
     expect(
-      screen.getByRole("checkbox", { name: "Select Lazy folder" })
+      screen.getByRole("checkbox", { name: "Select Unresolved item" })
     ).toBeChecked()
     expect(resolveFolder).not.toHaveBeenCalled()
     expect(
-      screen.getByRole("treeitem", { name: /Lazy folder/ })
+      screen.getByRole("treeitem", { name: /Unresolved item/ })
     ).toHaveAttribute("data-folder-state", "lazy-closed")
   })
 
-  it("loads and expands a lazy folder when its row is opened", async () => {
+  it("loads and expands an unresolved item when its row is opened", async () => {
     let finishFolderResolution: ((links: ExtractedLink[]) => void) | undefined
     const resolveFolder = vi.fn(
       () =>
@@ -389,15 +391,15 @@ describe("LinkSelectionDialog", () => {
           finishFolderResolution = resolve
         })
     )
-    render(<LazyFolderHarness resolveFolder={resolveFolder} />)
+    render(<UnresolvedItemHarness resolveFolder={resolveFolder} />)
 
-    fireEvent.click(screen.getByText("Lazy folder"))
+    fireEvent.click(screen.getByText("Unresolved item"))
 
     const folderTreeItem = screen.getByRole("treeitem", {
-      name: /Lazy folder/,
+      name: /Unresolved item/,
     })
     expect(
-      await screen.findByRole("status", { name: "Loading Lazy folder…" })
+      await screen.findByRole("status", { name: "Loading Unresolved item…" })
     ).toBeVisible()
     const resolvingSpinner = folderTreeItem.querySelector(
       '[data-slot="spinner"]'

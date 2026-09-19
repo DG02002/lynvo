@@ -956,7 +956,7 @@ describe("Google Drive public files source adapter", () => {
     ])
   })
 
-  it("parses public folders into lazy folders and playable root files", () => {
+  it("parses public folders into unresolved items and playable root files", () => {
     expect(
       extractGoogleDriveFolderId(
         "https://drive.google.com/drive/folders/folder-id?usp=sharing"

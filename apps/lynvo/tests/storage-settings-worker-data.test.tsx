@@ -49,7 +49,7 @@ describe("Storage settings browser data", () => {
     expect(await screen.findByText("1.00 KB of 3.00 MB used")).toBeVisible()
     expect(
       screen.queryByText(
-        /Saved links and their extracted link data count toward this limit/
+        /Saved links and everything inside them count toward this limit/
       )
     ).not.toBeInTheDocument()
     expect(requestedPaths).toContain("/api/data/storage-settings")

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react"
 import { LogoutDialog } from "../app/components/header/logout-dialog"
 
 describe("LogoutDialog", () => {
-  it("presents logout as a destructive action", () => {
+  it("presents sign-out as a destructive action", () => {
     const rendered = render(
       <LogoutDialog
         open
@@ -13,7 +13,7 @@ describe("LogoutDialog", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: "Log out" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Sign out" })).toHaveClass(
       "text-destructive"
     )
     expect(rendered.baseElement.querySelector("svg")).toHaveClass(

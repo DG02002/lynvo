@@ -32,9 +32,9 @@ export const PrivacyPolicyContent = () => (
   <PolicyLayout title="Privacy policy" updatedAt="August 25, 2026">
     <p className="max-w-3xl text-left text-base leading-7 text-foreground">
       This Privacy Policy describes how Lynvo collects, uses, shares, and
-      retains data when you create an account, save a link, use the media
-      library, connect a device, or configure a Plugin. It also explains the
-      controls available to you.
+      retains data when you create an account, save a link, use your library,
+      connect a device, or configure a Plugin. It also explains the controls
+      available to you.
     </p>
     <p>
       In this policy, <strong>Lynvo</strong> means the website and related
@@ -118,7 +118,7 @@ export const PrivacyPolicyContent = () => (
         </li>
         <li>
           <strong className="text-foreground">Session data:</strong> session
-          identifiers, device names, login and activity times, device pairing
+          identifiers, device names, sign-in and activity times, device pairing
           codes, and short-lived Remote Play commands
         </li>
       </ul>
@@ -135,7 +135,7 @@ export const PrivacyPolicyContent = () => (
       </ul>
       <p>
         Lynvo uses Google OAuth and OpenID Connect only for account creation and
-        login. It requests the <code>openid</code>, <code>email</code>, and{" "}
+        sign-in. It requests the <code>openid</code>, <code>email</code>, and{" "}
         <code>profile</code> authentication scopes. Google returns a verified
         subject identifier, email address, and optional profile name and picture
         fields. Lynvo never sees your Google password and does not request
@@ -146,8 +146,8 @@ export const PrivacyPolicyContent = () => (
 
     <PolicySection title="3. Cookies and browser storage">
       <p>
-        Lynvo uses cookies required for login, request security, and your theme
-        choice. Your browser may also store the following items:
+        Lynvo uses cookies required for sign-in, request security, and your
+        theme choice. Your browser may also store the following items:
       </p>
       <ul className="list-disc pl-6">
         <li>Theme and player preferences</li>
@@ -323,7 +323,7 @@ export const PrivacyPolicyContent = () => (
         </li>
       </ul>
       <p>
-        You may not receive a warning before automatic deletion. Log in and use
+        You may not receive a warning before automatic deletion. Sign in and use
         Lynvo before 90 days pass to keep the account active.
       </p>
     </PolicySection>

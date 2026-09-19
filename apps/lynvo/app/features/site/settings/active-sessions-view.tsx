@@ -161,7 +161,7 @@ export const ActiveSessionsView = ({
                     setRevokeDialogOpen(true)
                   }}
                 >
-                  Log out
+                  Sign out
                 </Button>
               )}
             </SettingsRow>
@@ -172,7 +172,7 @@ export const ActiveSessionsView = ({
       <div className="mt-6 flex flex-col gap-4 pt-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1 pr-4">
           <h3 className="font-normal text-foreground text-sm">
-            Log out of all sessions
+            Sign out of all sessions
           </h3>
           <p className="text-sm text-muted-foreground leading-snug">
             End every active session, including this one.{" "}
@@ -188,7 +188,7 @@ export const ActiveSessionsView = ({
           {busy === "revokeAll" && (
             <Spinner data-icon="inline-start" aria-hidden="true" />
           )}
-          Log out of all sessions
+          Sign out of all sessions
         </Button>
       </div>
 
@@ -199,14 +199,14 @@ export const ActiveSessionsView = ({
             setRevokeDialogOpen(open)
           }
         }}
-        title="Log out this session?"
+        title="Sign out this session?"
         description={
           <>
             This logs <strong>{sessionToRevoke?.deviceName}</strong> out of
             Lynvo.
           </>
         }
-        confirmLabel="Log out"
+        confirmLabel="Sign out"
         confirmVariant="destructive"
         pending={isRevoking}
         onConfirm={() => void handleConfirmRevoke()}

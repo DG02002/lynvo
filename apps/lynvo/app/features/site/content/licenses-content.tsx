@@ -42,7 +42,7 @@ export const LicensesContent = () => (
       Lynvo includes open-source software. This page identifies the licenses for
       the Lynvo core project, the independently licensed packages in the
       repository, and the attribution required for TMDB content used by the
-      media library.
+      library.
     </p>
 
     <PolicySection title="Lynvo core">
@@ -136,8 +136,8 @@ export const LicensesContent = () => (
       <p>
         When the server-side TMDB credential is configured, Lynvo uses the TMDB
         APIs for optional title metadata and artwork. The credential is not
-        required for the media library to work. Lynvo does not claim ownership
-        of TMDB data, images, or trademarks.
+        required for the library to work. Lynvo does not claim ownership of TMDB
+        data, images, or trademarks.
       </p>
       <p>{TMDB_ATTRIBUTION_NOTICE}</p>
       <p>

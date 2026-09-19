@@ -41,7 +41,7 @@ export const getSaveError = (cause: unknown): SaveError => {
 
     if (parsedError.success._tag === "UnauthorizedError") {
       return genericSaveError(
-        "The session expired. Log in, then save the link again."
+        "The session expired. Sign in, then save the link again."
       )
     }
 

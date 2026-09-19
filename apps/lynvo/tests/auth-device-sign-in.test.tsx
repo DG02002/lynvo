@@ -14,7 +14,7 @@ it("renders the back link without native button warnings", () => {
   )
 
   expect(
-    screen.getByRole("button", { name: "Back to log in" })
+    screen.getByRole("button", { name: "Back to sign in" })
   ).toHaveAttribute("href", "/auth/log-in")
   expect(consoleError).not.toHaveBeenCalledWith(
     expect.stringContaining("expected a native <button>")

@@ -299,7 +299,7 @@ export const docsCatalog = {
         {
           title: "Build a Plugin and return Media Nodes",
           content:
-            "A Plugin recognizes one Source and converts its data into 4 product-level node types: direct media, container, folder, and lazy folder.",
+            "A Plugin recognizes one Source and converts its data into four product-level node types: playable item, folder, group, and unresolved item.",
         },
         {
           level: 3,
@@ -307,7 +307,7 @@ export const docsCatalog = {
           content: getPageByFileName("plugins").rawContent,
         },
         {
-          title: "Choose among the 4 node types",
+          title: "Choose among the four node types",
           content: getPageByFileName("media-nodes").rawContent,
         },
         {

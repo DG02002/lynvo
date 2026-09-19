@@ -878,7 +878,7 @@ describe("SaveListBrowser", () => {
             {
               id: "lazy-folder",
               url: "https://media.example/lazy-folder",
-              label: "Lazy Folder",
+              label: "Unresolved item",
               mediaNodeKind: "resolvable",
               resolutionKind: "folder",
               type: "folder",
@@ -907,7 +907,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Lazy Folder" }).at(-1)!
+      screen.getAllByRole("button", { name: "Unresolved item" }).at(-1)!
     )
     await waitFor(() => expect(expandFolder).toHaveBeenCalled())
 
@@ -923,7 +923,7 @@ describe("SaveListBrowser", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/save")
   })
 
-  it("shows a single resolvable container directly on the save page", async () => {
+  it("shows a single unresolved item directly on the save page", async () => {
     const onSelectedItemUrlChange = vi.fn()
     const markOpened = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([

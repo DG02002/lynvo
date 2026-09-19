@@ -72,7 +72,7 @@ export const GeneralSettings = () => {
         <SettingsRow>
           <SettingsRowInfo
             label="Save all links automatically"
-            description="Save every extracted link without a selection step."
+            description="Save every playable link without a selection step."
           />
           <Switch
             checked={shouldAutoSaveAllLinks}
@@ -84,7 +84,7 @@ export const GeneralSettings = () => {
           <SettingsRowInfo
             className="w-full pr-0"
             label="Saved links view"
-            description="Choose how saved links appear on the Save page."
+            description="Choose how saved links appear in your library."
           />
           <MediaViewSelector value={mediaView} onValueChange={setMediaView} />
         </SettingsRow>
