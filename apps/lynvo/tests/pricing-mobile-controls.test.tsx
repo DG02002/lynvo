@@ -5,6 +5,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import Pricing from "~/features/site/routes/_site.pricing"
 import { MOBILE_PRICING_CONTROLS_HEIGHT_PX } from "~/lib/constants"
 
+const getFixedCta = () =>
+  screen
+    .getAllByRole("link", { name: /Create a free account/ })
+    .find((link) => link.parentElement?.classList.contains("fixed"))
+
 describe("Pricing mobile controls", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -56,9 +61,7 @@ describe("Pricing mobile controls", () => {
       )
     })
 
-    const fixedLink = screen
-      .getAllByRole("link", { name: /Create a free account/ })
-      .find((link) => link.parentElement?.classList.contains("fixed"))
+    const fixedLink = getFixedCta()
     expect(fixedLink).toBeDefined()
     const fixedControls = fixedLink?.parentElement
 
@@ -81,10 +84,6 @@ describe("Pricing mobile controls", () => {
       )
     })
 
-    expect(
-      screen
-        .queryAllByRole("link", { name: /Create a free account/ })
-        .some((link) => link.parentElement?.classList.contains("fixed"))
-    ).toBe(false)
+    expect(getFixedCta()).toBeUndefined()
   })
 })

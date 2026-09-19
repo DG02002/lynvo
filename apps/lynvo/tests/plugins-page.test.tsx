@@ -64,7 +64,7 @@ it("offers a retry when the Plugin catalog is unavailable", async () => {
 
   expect(
     await screen.findByText(
-      "Lynvo plugin information is currently unavailable."
+      "Lynvo Plugin information is currently unavailable."
     )
   ).toBeVisible()
   fireEvent.click(await screen.findByRole("button", { name: "Try again" }))

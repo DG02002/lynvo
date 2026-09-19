@@ -76,8 +76,8 @@ const changelogEntries: ChangelogEntry[] = [
       'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable link directly, and see whether an extraction is queued, loading, or failed. Failed items show the error with Delete and View log actions.',
       "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the Save page comfortably on smaller screens.",
       "Remote Play reconnects more reliably after stale connections. The device picker explains when it is searching, has no devices, or needs another try.",
-      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. The Plugin Server Protocol (version 1.0) now reports clearer errors and usage.",
-      "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and artwork metadata.",
+      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. The Plugin Server Protocol release added clearer errors and usage reporting while supporting wire version 1.0.",
+      "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and artwork metadata providers.",
     ],
   },
   {

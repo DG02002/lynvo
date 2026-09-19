@@ -67,7 +67,7 @@ const Plugins = () => {
                   className="px-0 py-8 whitespace-normal text-muted-foreground"
                 >
                   <LoadErrorRetry
-                    message="Lynvo plugin information is currently unavailable."
+                    message="Lynvo Plugin information is currently unavailable."
                     isRetrying={revalidator.state === "loading"}
                     onRetry={() => revalidator.revalidate()}
                   />

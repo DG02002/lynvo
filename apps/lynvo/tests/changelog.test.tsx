@@ -9,6 +9,14 @@ const CurrentLocation = () => {
   return <output aria-label="Current location">{location.search}</output>
 }
 
+const PLUGIN_SERVER_ENTRY_TITLE = "Plugin Server usage is easier to follow"
+
+const getPluginServerEntryHeading = (updates: HTMLElement) =>
+  within(updates).getByRole("heading", {
+    level: 2,
+    name: PLUGIN_SERVER_ENTRY_TITLE,
+  })
+
 describe("Changelog", () => {
   it("reads the selected category from the URL", () => {
     render(
@@ -19,9 +27,7 @@ describe("Changelog", () => {
 
     const updates = screen.getByRole("region", { name: "Changelog updates" })
 
-    expect(
-      within(updates).getByText("Plugin Server usage is easier to follow")
-    ).toBeVisible()
+    expect(getPluginServerEntryHeading(updates)).toBeVisible()
     expect(
       within(updates).queryByText(
         "The Save page’s grouped presentation is now called Gallery"
@@ -59,16 +65,17 @@ describe("Changelog", () => {
       within(updates).getByText("The Save page now has List and Gallery views")
     ).toBeVisible()
     expect(
-      within(updates).queryByText("Plugin Server usage is easier to follow")
+      within(updates).queryByRole("heading", {
+        level: 2,
+        name: PLUGIN_SERVER_ENTRY_TITLE,
+      })
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "Plugin Server" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
       "?type=plugin-server"
     )
-    expect(
-      within(updates).getByText("Plugin Server usage is easier to follow")
-    ).toBeVisible()
+    expect(getPluginServerEntryHeading(updates)).toBeVisible()
     expect(
       within(updates).queryByText(
         "The Save page’s grouped presentation is now called Gallery"
@@ -85,9 +92,7 @@ describe("Changelog", () => {
     expect(
       within(updates).getByText("The Save page now has List and Gallery views")
     ).toBeVisible()
-    expect(
-      within(updates).getByText("Plugin Server usage is easier to follow")
-    ).toBeVisible()
+    expect(getPluginServerEntryHeading(updates)).toBeVisible()
   })
 
   it("shows the current release before older history", () => {
@@ -112,9 +117,7 @@ describe("Changelog", () => {
 
     const sortedHeadings = within(updates).getAllByRole("heading", { level: 2 })
     expect(sortedHeadings[0]).toHaveTextContent("More reliable link management")
-    expect(sortedHeadings[1]).toHaveTextContent(
-      "Plugin Server usage is easier to follow"
-    )
+    expect(sortedHeadings[1]).toHaveTextContent(PLUGIN_SERVER_ENTRY_TITLE)
     expect(sortedHeadings[2]).toHaveTextContent("Product launch")
   })
 })
