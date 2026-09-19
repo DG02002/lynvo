@@ -52,7 +52,10 @@ export const useRefreshActions = ({
         } else if (outcome.kind === "error") {
           showErrorToast({
             title: "Couldn’t refresh the link",
-            description: outcome.error.message,
+            description:
+              outcome.error.kind === "generic"
+                ? outcome.error.message
+                : "The saved link couldn’t be refreshed. Try again.",
           })
         }
       },

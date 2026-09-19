@@ -10,7 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
-import type { LinkInputError } from "~/features/links/saved-link-interaction"
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
 import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
 
@@ -45,15 +45,8 @@ const sourceStatusLabel = (status: string) => {
   return "Status unavailable"
 }
 
-const getErrorTitle = (error: LinkInputError) => {
-  if (error.kind === "duplicate") {
-    return "Link already saved"
-  }
-  if (error.message.toLowerCase().includes("supported")) {
-    return "Link not supported"
-  }
-  return "Link couldn’t be opened"
-}
+const getErrorTitle = (error: SavedLinkInteractionError) =>
+  error.kind === "duplicate" ? "Link already saved" : "Link couldn’t be opened"
 
 interface LinkInputSectionProps {
   url: string
@@ -61,8 +54,8 @@ interface LinkInputSectionProps {
   onSave: (url?: string) => void
   isSaving: boolean
   extractionPreview: ExtractionPreview | null
-  error: LinkInputError | null
-  setError: (error: LinkInputError | null) => void
+  error: SavedLinkInteractionError | null
+  setError: (error: SavedLinkInteractionError | null) => void
   savedUrls?: ReadonlySet<string>
 }
 

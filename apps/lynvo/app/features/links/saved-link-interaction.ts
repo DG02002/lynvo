@@ -15,8 +15,8 @@ export interface SavedLinkInteractionState {
   isResolvableContainer: boolean
 }
 
-export type LinkInputError =
-  | { kind: "duplicate"; message: string }
+export type SavedLinkInteractionError =
+  | { kind: "duplicate" }
   | { kind: "generic"; message: string }
 
 interface SavedLinkClearErrorOutcome {
@@ -25,7 +25,7 @@ interface SavedLinkClearErrorOutcome {
 
 interface SavedLinkErrorOutcome {
   kind: "error"
-  error: LinkInputError
+  error: SavedLinkInteractionError
 }
 
 interface SavedLinkClearPreviewOutcome {
@@ -87,6 +87,16 @@ export interface SavedLinkSelection {
 
 export interface SavedLinkInteractionReporter {
   publish: (outcome: SavedLinkInteractionOutcome) => void
+}
+
+export const reportSavedLinkError = (
+  reporter: SavedLinkInteractionReporter,
+  message: string
+): void => {
+  reporter.publish({
+    kind: "error",
+    error: { kind: "generic", message },
+  })
 }
 
 export interface PluginDomainIdentity {

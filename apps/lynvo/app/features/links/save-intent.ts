@@ -11,8 +11,6 @@ import {
 import type { SavedLinkSelection } from "./saved-link-interaction"
 import { isProbablyValidUrl, normalizeUrl } from "./url-utils"
 
-export const DUPLICATE_LINK_MESSAGE = "Link already exists."
-
 interface SaveIntentOperations {
   addLink: (
     url: string,
@@ -40,7 +38,6 @@ interface SaveIntentErrorResult {
 interface SaveIntentDuplicateResult {
   kind: "duplicate"
   linkId: string
-  message: typeof DUPLICATE_LINK_MESSAGE
 }
 
 interface SaveIntentQueuedResult {
@@ -122,7 +119,6 @@ export const resolveSaveIntent = async ({
     return {
       kind: "duplicate",
       linkId: existingItem.id || existingItem.url,
-      message: DUPLICATE_LINK_MESSAGE,
     }
   }
 

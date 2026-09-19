@@ -1,4 +1,5 @@
 import { getLinkViewItemFlatMeta } from "~/features/links/link-metadata-accessors"
+import { reportSavedLinkError } from "~/features/links/saved-link-interaction"
 import type { ExtractedLink } from "~/features/links/types"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 
@@ -29,16 +30,13 @@ export const softRefreshLink = async ({
     reporter.publish({ kind: "refresh-succeeded" })
   } catch (error) {
     console.error(error)
-    reporter.publish({
-      kind: "error",
-      error: {
-        kind: "generic",
-        message: getExtractionErrorMessage(
-          error,
-          "The saved link couldn’t be refreshed. Try again."
-        ),
-      },
-    })
+    reportSavedLinkError(
+      reporter,
+      getExtractionErrorMessage(
+        error,
+        "The saved link couldn’t be refreshed. Try again."
+      )
+    )
   }
 }
 
@@ -82,25 +80,19 @@ export const hardRefreshLink = async ({
       return
     }
 
-    reporter.publish({
-      kind: "error",
-      error: {
-        kind: "generic",
-        message: "No playable links are available. Try another Source page.",
-      },
-    })
+    reportSavedLinkError(
+      reporter,
+      "No playable links are available. Try another Source page."
+    )
   } catch (error) {
     console.error(error)
-    reporter.publish({
-      kind: "error",
-      error: {
-        kind: "generic",
-        message: getExtractionErrorMessage(
-          error,
-          "Link choices couldn’t be loaded. Try again."
-        ),
-      },
-    })
+    reportSavedLinkError(
+      reporter,
+      getExtractionErrorMessage(
+        error,
+        "Link choices couldn’t be loaded. Try again."
+      )
+    )
   }
 }
 
@@ -115,16 +107,13 @@ export const expandMirrorLinks = async ({
     return await extractionOrchestration.resolveMirror(item, lazyItemUrl)
   } catch (error) {
     console.error(error)
-    reporter.publish({
-      kind: "error",
-      error: {
-        kind: "generic",
-        message: getExtractionErrorMessage(
-          error,
-          "Playable links couldn’t be loaded. Try again."
-        ),
-      },
-    })
+    reportSavedLinkError(
+      reporter,
+      getExtractionErrorMessage(
+        error,
+        "Playable links couldn’t be loaded. Try again."
+      )
+    )
     return null
   }
 }
@@ -151,16 +140,13 @@ export const expandFolderLink = async ({
     return expandedLinks
   } catch (error) {
     console.error(error)
-    reporter.publish({
-      kind: "error",
-      error: {
-        kind: "generic",
-        message: getExtractionErrorMessage(
-          error,
-          "Playback options couldn’t be loaded. Try again."
-        ),
-      },
-    })
+    reportSavedLinkError(
+      reporter,
+      getExtractionErrorMessage(
+        error,
+        "Playback options couldn’t be loaded. Try again."
+      )
+    )
     return null
   }
 }

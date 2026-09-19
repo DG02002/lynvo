@@ -6,7 +6,7 @@ import {
   getLinkViewItemFlatMeta,
 } from "~/features/links/link-metadata-accessors"
 import { attachResolvedChildren } from "~/features/links/link-tree-metadata"
-import type { LinkInputError } from "~/features/links/saved-link-interaction"
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
 import type { LinkListItem, LinkViewItem } from "~/features/links/types"
 import { extractionOrchestration } from "~/lib/extraction/orchestration"
 import { showErrorToast } from "~/lib/toast-notifications"
@@ -37,7 +37,7 @@ export function useLinkActions({
   setHighlightedId,
 }: UseLinkActionsProps) {
   const [url, setUrl] = useState("")
-  const [error, setError] = useState<LinkInputError | null>(null)
+  const [error, setError] = useState<SavedLinkInteractionError | null>(null)
   const [extractionPreview, setExtractionPreview] =
     useState<ExtractionPreview | null>(null)
   const savedLinks = links.filter((item) => item.kind === "saved")

@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { LinkInputSection } from "~/components/send-link/link-input-section"
-import { DUPLICATE_LINK_MESSAGE } from "~/features/links/save-intent"
 
 describe("LinkInputSection", () => {
   it("presents an existing link as a warning", () => {
@@ -13,7 +12,7 @@ describe("LinkInputSection", () => {
         onSave={vi.fn()}
         isSaving={false}
         extractionPreview={null}
-        error={{ kind: "duplicate", message: DUPLICATE_LINK_MESSAGE }}
+        error={{ kind: "duplicate" }}
         setError={vi.fn()}
       />
     )

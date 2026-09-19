@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import type { LinkInputError } from "~/features/links/saved-link-interaction"
+import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
 import { CLIPBOARD_WRITE_EVENT } from "~/lib/clipboard-events"
 
 const isHttpUrl = (value: string) =>
@@ -22,7 +22,7 @@ export const useClipboardUrl = ({
   currentUrl: string
   savedUrls: ReadonlySet<string>
   setUrl: (url: string) => void
-  setError: (error: LinkInputError | null) => void
+  setError: (error: SavedLinkInteractionError | null) => void
   onSave: (url?: string) => void
 }) => {
   const [clipboardUrl, setClipboardUrl] = React.useState<string | null>(null)

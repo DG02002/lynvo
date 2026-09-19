@@ -9,8 +9,9 @@ import {
   type SaveIntentResult,
 } from "~/features/links/save-intent"
 import {
+  reportSavedLinkError,
   shouldOfferPluginDomainSuggestion,
-  type LinkInputError,
+  type SavedLinkInteractionError,
   type SavedLinkInteractionReporter,
 } from "~/features/links/saved-link-interaction"
 import type {
@@ -66,7 +67,7 @@ export const useSaveActions = ({
   setExtractionPreview: (preview: { meta: MetaData } | null) => void
   closeSelectionDialog: () => void
   selectionDialogState: SelectionDialogState
-  setError: (error: LinkInputError | null) => void
+  setError: (error: SavedLinkInteractionError | null) => void
   setCurrentUrl: (url: string) => void
   setHighlightedId: (id: string | null) => void
 }) => {
@@ -188,16 +189,13 @@ export const useSaveActions = ({
 
     switch (result.kind) {
       case "error":
-        reporter.publish({
-          kind: "error",
-          error: { kind: "generic", message: result.message },
-        })
+        reportSavedLinkError(reporter, result.message)
         reporter.publish({ kind: "clear-preview" })
         return undefined
       case "duplicate":
         reporter.publish({
           kind: "error",
-          error: { kind: "duplicate", message: result.message },
+          error: { kind: "duplicate" },
         })
         reporter.publish({ kind: "link-focused", linkId: result.linkId })
         return undefined
@@ -229,10 +227,7 @@ export const useSaveActions = ({
   ): PluginDomainSuggestion | undefined => {
     switch (result.kind) {
       case "error":
-        reporter.publish({
-          kind: "error",
-          error: { kind: "generic", message: result.message },
-        })
+        reportSavedLinkError(reporter, result.message)
         return undefined
       case "updated":
         reporter.publish({
@@ -276,10 +271,7 @@ export const useSaveActions = ({
     } catch (error) {
       console.error(error)
       reporter.publish({ kind: "clear-preview" })
-      reporter.publish({
-        kind: "error",
-        error: { kind: "generic", message: getSaveErrorMessage(error) },
-      })
+      reportSavedLinkError(reporter, getSaveErrorMessage(error))
     } finally {
       setIsSaving(false)
     }
@@ -306,13 +298,10 @@ export const useSaveActions = ({
       await offerPluginDomainSuggestion(applyConfirmSaveIntentResult(result))
     } catch (error) {
       console.error(error)
-      reporter.publish({
-        kind: "error",
-        error: {
-          kind: "generic",
-          message: "Unable to save the selected links. Try again.",
-        },
-      })
+      reportSavedLinkError(
+        reporter,
+        "Unable to save the selected links. Try again."
+      )
     } finally {
       setIsSaving(false)
     }
