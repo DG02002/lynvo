@@ -10,12 +10,16 @@ const CurrentLocation = () => {
 }
 
 const PLUGIN_SERVER_ENTRY_TITLE = "Plugin Server usage is easier to follow"
+const PLUGIN_SERVER_ENTRY_QUERY = {
+  level: 2,
+  name: PLUGIN_SERVER_ENTRY_TITLE,
+} as const
 
 const getPluginServerEntryHeading = (updates: HTMLElement) =>
-  within(updates).getByRole("heading", {
-    level: 2,
-    name: PLUGIN_SERVER_ENTRY_TITLE,
-  })
+  within(updates).getByRole("heading", PLUGIN_SERVER_ENTRY_QUERY)
+
+const queryPluginServerEntryHeading = (updates: HTMLElement) =>
+  within(updates).queryByRole("heading", PLUGIN_SERVER_ENTRY_QUERY)
 
 describe("Changelog", () => {
   it("reads the selected category from the URL", () => {
@@ -64,12 +68,7 @@ describe("Changelog", () => {
     expect(
       within(updates).getByText("The Save page now has List and Gallery views")
     ).toBeVisible()
-    expect(
-      within(updates).queryByRole("heading", {
-        level: 2,
-        name: PLUGIN_SERVER_ENTRY_TITLE,
-      })
-    ).not.toBeInTheDocument()
+    expect(queryPluginServerEntryHeading(updates)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "Plugin Server" }))
     expect(screen.getByLabelText("Current location")).toHaveTextContent(
