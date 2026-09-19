@@ -1,7 +1,7 @@
+import { UNSUPPORTED_URL_CODE } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
 import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
-import { UNSUPPORTED_URL_CODE } from "~/lib/extraction/errors"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { getKnownExtractionErrorMessage } from "./extraction-error-message"
@@ -9,24 +9,12 @@ import { getKnownExtractionErrorMessage } from "./extraction-error-message"
 const taggedSaveErrorSchema = Schema.Struct({
   _tag: Schema.optional(Schema.String),
   message: Schema.optional(Schema.String),
-  code: Schema.optional(Schema.String),
-  detail: Schema.optional(Schema.String),
-  details: Schema.optional(Schema.Unknown),
-  failure: Schema.optional(Schema.Unknown),
 })
 
 type SaveError = Exclude<SavedLinkInteractionError, { kind: "duplicate" }>
 type ParsedSaveError = typeof taggedSaveErrorSchema.Type
 
-const unsupportedUrlDetailsSchema = Schema.Struct({
-  code: Schema.Literal(UNSUPPORTED_URL_CODE),
-})
-
-const unsupportedUrlFailureSchema = Schema.Struct({
-  kind: Schema.Literal("validation"),
-  code: Schema.Literal(UNSUPPORTED_URL_CODE),
-  message: Schema.optional(Schema.String),
-})
+const UNSUPPORTED_URL_FALLBACK_MESSAGE = "The link is not supported."
 
 const genericSaveError = (message: string): SaveError => ({
   kind: "generic",
@@ -36,29 +24,10 @@ const genericSaveError = (message: string): SaveError => ({
 const getUnsupportedUrlMessage = (
   error: ParsedSaveError
 ): string | undefined => {
-  if (error.code === UNSUPPORTED_URL_CODE) {
-    return error.message ?? error.detail ?? "The link is not supported."
-  }
-
-  if (
-    error._tag === "ExtractionError" &&
+  return error._tag === "ExtractionError" &&
+    error.message !== undefined &&
     error.message === UNSUPPORTED_URL_CODE
-  ) {
-    return error.detail ?? "The link is not supported."
-  }
-
-  const details = Schema.decodeUnknownResult(unsupportedUrlDetailsSchema)(
-    error.details
-  )
-  if (Result.isSuccess(details)) {
-    return error.message ?? "The link is not supported."
-  }
-
-  const failure = Schema.decodeUnknownResult(unsupportedUrlFailureSchema)(
-    error.failure
-  )
-  return Result.isSuccess(failure)
-    ? (failure.success.message ?? error.message ?? "The link is not supported.")
+    ? UNSUPPORTED_URL_FALLBACK_MESSAGE
     : undefined
 }
 

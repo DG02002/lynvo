@@ -7,14 +7,8 @@ import {
 } from "~/features/links/link-view-models"
 import type { LinkExtractionStatus } from "~/features/links/types"
 import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
-import { UNSUPPORTED_URL_CODE } from "~/lib/extraction/errors"
 
 import { SavedLinkCommandError } from "../saved-link-command-failure"
-
-type ValidationSavedLinkFailure = Extract<
-  SavedLinkCommandFailure,
-  { kind: "validation" }
->
 
 declare global {
   interface SavedLinkApiRecord {
@@ -99,7 +93,6 @@ const failureBodySchema = Schema.Struct({
   failure: Schema.Struct({
     kind: Schema.String,
     message: Schema.optional(Schema.String),
-    code: Schema.optional(Schema.String),
     usedBytes: Schema.optional(Schema.Number),
     sizeBytes: Schema.optional(Schema.Number),
     limitBytes: Schema.optional(Schema.Number),
@@ -150,16 +143,8 @@ const toCommandError = async (
     case "csrf-expired":
       return new SavedLinkCommandError({ failure: { kind: failure.kind } })
     case "validation":
-      const validationFailure: ValidationSavedLinkFailure =
-        failure.code === UNSUPPORTED_URL_CODE
-          ? {
-              kind: "validation",
-              message: failure.message ?? "",
-              code: UNSUPPORTED_URL_CODE,
-            }
-          : { kind: "validation", message: failure.message ?? "" }
       return new SavedLinkCommandError({
-        failure: validationFailure,
+        failure: { kind: "validation", message: failure.message ?? "" },
       })
     default:
       break

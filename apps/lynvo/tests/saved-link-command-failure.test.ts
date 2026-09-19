@@ -14,11 +14,7 @@ describe("saved-link command failure presentation", () => {
       { kind: "session-expired" },
       { kind: "session-changed" },
       { kind: "csrf-expired" },
-      {
-        kind: "validation",
-        message: "The saved link is invalid.",
-        code: "UNSUPPORTED_URL",
-      },
+      { kind: "validation", message: "The saved link is invalid." },
       { kind: "temporarily-unavailable", reference: "request-one" },
       { kind: "transient" },
       { kind: "rate-limited" },

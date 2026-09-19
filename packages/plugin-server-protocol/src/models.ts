@@ -397,6 +397,8 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
 
+export const UNSUPPORTED_URL_CODE = "UNSUPPORTED_URL" satisfies ErrorCode
+
 /**
  * A manifest version is wire-compatible when its major version matches the
  * protocol major version: minor versions are additive by contract, so a

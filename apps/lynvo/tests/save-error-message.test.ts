@@ -1,46 +1,18 @@
 import { describe, expect, it } from "vitest"
 
-import { SavedLinkCommandError } from "~/features/links/saved-link-command-failure"
 import { getSaveError } from "~/features/links/use-link-actions/save-error-message"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 describe("getSaveError", () => {
-  it("classifies unsupported URL errors by structured code", () => {
+  it("classifies the protocol unsupported URL response", () => {
     expect(
       getSaveError({
         _tag: "ExtractionError",
         message: "UNSUPPORTED_URL",
-        detail: "URL is not supported.",
       })
     ).toEqual({
       kind: "unsupported",
-      message: "URL is not supported.",
-    })
-
-    expect(
-      getSaveError({
-        _tag: "ValidationError",
-        message: "Invalid or unsafe URL",
-        details: { code: "UNSUPPORTED_URL" },
-      })
-    ).toEqual({
-      kind: "unsupported",
-      message: "Invalid or unsafe URL",
-    })
-
-    expect(
-      getSaveError(
-        new SavedLinkCommandError({
-          failure: {
-            kind: "validation",
-            code: "UNSUPPORTED_URL",
-            message: "URL is not supported.",
-          },
-        })
-      )
-    ).toEqual({
-      kind: "unsupported",
-      message: "URL is not supported.",
+      message: "The link is not supported.",
     })
   })
 
