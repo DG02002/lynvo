@@ -37,17 +37,14 @@ import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 import { MEDIA_ARTWORK_API_TIMEOUT_MS } from "~/lib/constants"
 
-interface ChangeArtworkDialogProps {
+interface ArtworkDialogProps {
   readonly item: LinkViewItem | undefined
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
   readonly onSelect: (identity: MediaArtworkIdentity) => void
 }
 
-interface LinkArtworkDialogProps {
-  readonly item: LinkViewItem | undefined
-  readonly open: boolean
-  readonly onOpenChange: (open: boolean) => void
+type ChangeArtworkDialogProps = Omit<ArtworkDialogProps, "onSelect"> & {
   readonly setArtwork?: (
     itemUrl: string,
     identity: MediaArtworkIdentity
@@ -399,12 +396,12 @@ const ArtworkSearchResults = ({
   return null
 }
 
-const ChangeArtworkDialog = ({
+const ArtworkDialog = ({
   item,
   open,
   onOpenChange,
   onSelect,
-}: ChangeArtworkDialogProps) => {
+}: ArtworkDialogProps) => {
   const [state, dispatch] = useReducer(
     changeArtworkDialogReducer,
     initialChangeArtworkDialogState
@@ -575,13 +572,13 @@ const ChangeArtworkDialog = ({
   )
 }
 
-const LinkArtworkDialog = ({
+const ChangeArtworkDialog = ({
   item,
   open,
   onOpenChange,
   setArtwork,
-}: LinkArtworkDialogProps) => (
-  <ChangeArtworkDialog
+}: ChangeArtworkDialogProps) => (
+  <ArtworkDialog
     item={item}
     open={open}
     onOpenChange={onOpenChange}
@@ -593,4 +590,4 @@ const LinkArtworkDialog = ({
   />
 )
 
-export { LinkArtworkDialog }
+export { ChangeArtworkDialog }

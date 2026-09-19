@@ -22,7 +22,7 @@ describe("Changelog", () => {
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
       within(updates).queryByText(
-        "The Save page's grouped presentation is now called Gallery"
+        "The Save page’s grouped presentation is now called Gallery"
       )
     ).not.toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
@@ -50,7 +50,7 @@ describe("Changelog", () => {
     )
     expect(
       within(updates).getByText(
-        "The Save page's grouped presentation is now called Gallery"
+        "The Save page’s grouped presentation is now called Gallery"
       )
     ).toBeVisible()
     expect(
@@ -67,7 +67,7 @@ describe("Changelog", () => {
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
       within(updates).queryByText(
-        "The Save page's grouped presentation is now called Gallery"
+        "The Save page’s grouped presentation is now called Gallery"
       )
     ).not.toBeInTheDocument()
 
@@ -75,7 +75,7 @@ describe("Changelog", () => {
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(
       within(updates).getByText(
-        "The Save page's grouped presentation is now called Gallery"
+        "The Save page’s grouped presentation is now called Gallery"
       )
     ).toBeVisible()
     expect(
@@ -96,7 +96,7 @@ describe("Changelog", () => {
     expect(
       within(updates).getAllByRole("heading", { level: 2 })[0]
     ).toHaveTextContent(
-      "The Save page's grouped presentation is now called Gallery"
+      "The Save page’s grouped presentation is now called Gallery"
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Sort" }))

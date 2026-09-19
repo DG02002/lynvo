@@ -47,10 +47,10 @@ const changelogEntries: ChangelogEntry[] = [
     type: "general",
     date: "Sep 19, 2026",
     dateTime: "2026-09-19",
-    title: "The Save page's grouped presentation is now called Gallery",
+    title: "The Save page’s grouped presentation is now called Gallery",
     category: "Product",
     description: [
-      "The Save page's grouped presentation is now called Gallery. Existing view preferences carry over automatically.",
+      "The Save page’s grouped presentation is now called Gallery. Existing view preferences carry over automatically.",
     ],
   },
   {

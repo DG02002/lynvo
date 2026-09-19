@@ -37,7 +37,7 @@ import {
 import { showErrorToast, showLinkCopiedToast } from "~/lib/toast-notifications"
 import { cn } from "~/lib/utils"
 
-import { LinkArtworkDialog } from "./change-artwork-dialog"
+import { ChangeArtworkDialog } from "./change-artwork-dialog"
 import { LinkDebugLogDialog } from "./link-debug-log-dialog"
 import { RemoveLinkAlertDialog } from "./remove-link-alert-dialog"
 
@@ -224,7 +224,7 @@ export const LinkItemMenu = ({
         open={isLogDialogOpen}
         onOpenChange={setIsLogDialogOpen}
       />
-      <LinkArtworkDialog
+      <ChangeArtworkDialog
         item={item}
         open={isArtworkDialogOpen}
         onOpenChange={setIsArtworkDialogOpen}

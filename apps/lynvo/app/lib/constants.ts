@@ -50,12 +50,12 @@ export const EXTRACTION_STATUS_MESSAGES = [
   "Comparing the results…",
   "Organizing the details…",
   "Putting the details together…",
-  "Preparing the results…",
-  "Finishing the details…",
-  "Getting things ready…",
-  "Making the results easier to use…",
-  "Almost there…",
-  "Wrapping up…",
+  "Reviewing the information…",
+  "Checking the link details…",
+  "Working through the results…",
+  "Reviewing the saved link…",
+  "Sorting through the information…",
+  "Checking the available information…",
 ] as const
 export const FINDER_NAVIGATION_GESTURE_TRIGGER_DISTANCE_PX = 32
 export const FINDER_NAVIGATION_GESTURE_RESET_DELAY_MS = 160

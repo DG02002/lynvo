@@ -7,7 +7,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import React from "react"
 
-import { LinkArtworkDialog } from "~/components/links/change-artwork-dialog"
+import { ChangeArtworkDialog } from "~/components/links/change-artwork-dialog"
 import { LinkDebugLogDialog } from "~/components/links/link-debug-log-dialog"
 import { LinkItemMenu } from "~/components/links/link-item-menu"
 import { Spinner } from "~/components/spinner"
@@ -392,7 +392,7 @@ const GallerySaveItem = ({
         open={isLogDialogOpen}
         onOpenChange={setIsLogDialogOpen}
       />
-      <LinkArtworkDialog
+      <ChangeArtworkDialog
         item={item}
         open={isArtworkDialogOpen}
         onOpenChange={setIsArtworkDialogOpen}
