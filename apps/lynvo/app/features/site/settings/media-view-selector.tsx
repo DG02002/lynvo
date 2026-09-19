@@ -4,6 +4,8 @@ import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react"
 import { Badge } from "~/components/ui/badge"
 import { cn } from "~/lib/utils"
 
+import type { MediaView } from "./media-view-preference"
+
 interface MediaViewOption {
   value: MediaView
   label: string
@@ -30,8 +32,8 @@ const mediaViewOptions: readonly MediaViewOption[] = [
     isBeta: false,
   },
   {
-    value: "hybrid",
-    label: "Hybrid view",
+    value: "gallery",
+    label: "Gallery view",
     description: "Group movies and shows with artwork.",
     icon: GridViewIcon,
     isBeta: true,
@@ -58,7 +60,7 @@ const ListViewPreview = () => (
   </div>
 )
 
-const HybridViewPreview = () => (
+const GalleryViewPreview = () => (
   <div aria-hidden="true" className="flex h-full min-h-0 flex-col gap-2 p-2">
     <span className="h-2 w-16 rounded-full bg-foreground/20" />
     <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
@@ -70,7 +72,7 @@ const HybridViewPreview = () => (
 )
 
 const MediaViewPreview = ({ view }: MediaViewPreviewProps) =>
-  view === "list" ? <ListViewPreview /> : <HybridViewPreview />
+  view === "list" ? <ListViewPreview /> : <GalleryViewPreview />
 
 export const MediaViewSelector = ({
   value,

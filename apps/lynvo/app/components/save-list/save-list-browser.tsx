@@ -92,7 +92,7 @@ import {
 } from "./save-list-header-controls"
 import {
   FINDER_FOLDER_CONTENT_GRID_CLASS,
-  HYBRID_GROUP_CONTENT_CLASS,
+  GALLERY_GROUP_CONTENT_CLASS,
   SAVE_LIST_BROWSER_LAYOUT_CLASS,
   SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
@@ -771,7 +771,7 @@ const FinderBrowser = ({
       <div
         className={
           sharedSeasonIdentity
-            ? HYBRID_GROUP_CONTENT_CLASS
+            ? GALLERY_GROUP_CONTENT_CLASS
             : FINDER_FOLDER_CONTENT_GRID_CLASS
         }
       >

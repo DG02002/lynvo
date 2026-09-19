@@ -14,7 +14,8 @@ import { Button } from "~/components/ui/button"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { getLinkViewItemExtractedLinks } from "~/features/links/link-metadata-accessors"
 import {
-  getHybridCardGroupSections,
+  getGalleryGroupSections,
+  type GalleryGroup,
   useMediaArtwork,
 } from "~/features/links/media-artwork"
 import { getSavedLinkInteractionState } from "~/features/links/saved-link-interaction"
@@ -41,17 +42,17 @@ import {
 } from "./save-date-group-heading"
 import { getItemTitle } from "./save-list-browser-model"
 import {
-  HYBRID_CARD_GRID_CLASS,
-  HYBRID_CARD_IMAGE_SIZES,
+  GALLERY_GRID_CLASS,
+  GALLERY_IMAGE_SIZES,
 } from "./save-list-layout-constants"
 import { TVBRO_FILTER_FREE_ENTER_CLASS } from "./save-list-motion-constants"
 import { SaveListEmptyState, SaveListLoadingState } from "./save-list-state"
 
-const HYBRID_CARD_MENU_TRIGGER_CLASS =
+const GALLERY_MENU_TRIGGER_CLASS =
   "size-10 rounded-full bg-background/80 shadow-none hover:bg-background/80 aria-expanded:bg-background/80 dark:hover:bg-background/80"
 
-interface HybridSaveCardProps {
-  readonly group: HybridCardGroup
+interface GallerySaveItemProps {
+  readonly group: GalleryGroup
   readonly actions: LinkItemActions
   readonly extractingItems: Set<string>
   readonly isHighlighted: boolean
@@ -60,7 +61,7 @@ interface HybridSaveCardProps {
   readonly onOpenGroup: (groupKey: string) => void
 }
 
-interface HybridSaveCardArtworkProps {
+interface GallerySaveItemArtworkProps {
   readonly displayTitle: string
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
@@ -72,7 +73,7 @@ interface HybridSaveCardArtworkProps {
   readonly onOpenLog: () => void
 }
 
-const HybridSaveCardArtwork = ({
+const GallerySaveItemArtwork = ({
   displayTitle,
   imagePath,
   imageType,
@@ -82,7 +83,7 @@ const HybridSaveCardArtwork = ({
   isFolderContainer,
   onDelete,
   onOpenLog,
-}: HybridSaveCardArtworkProps) => {
+}: GallerySaveItemArtworkProps) => {
   if (isExtractionVisual) {
     if (!isExtractionFailed) {
       return (
@@ -119,7 +120,7 @@ const HybridSaveCardArtwork = ({
         path={imagePath}
         variant="card"
         imageType={imageType}
-        sizes={HYBRID_CARD_IMAGE_SIZES}
+        sizes={GALLERY_IMAGE_SIZES}
         alt={`Artwork for ${displayTitle}`}
         width={342}
         height={513}
@@ -157,7 +158,7 @@ const HybridSaveCardArtwork = ({
   )
 }
 
-interface HybridCardSingleItemState {
+interface GallerySingleItemState {
   readonly item: LinkListItem | undefined
   readonly isSingleItem: boolean
   readonly directLink: ExtractedLink | undefined
@@ -168,11 +169,11 @@ interface HybridCardSingleItemState {
   readonly isFolderContainer: boolean
 }
 
-const getHybridCardSingleItemState = (
-  group: HybridCardGroup,
+const getGallerySingleItemState = (
+  group: GalleryGroup,
   extractingItems: Set<string>,
   currentTimeMs: number
-): HybridCardSingleItemState => {
+): GallerySingleItemState => {
   const [item] = group.items
   const isSingleItem = group.items.length === 1 && item !== undefined
   const interactionState = isSingleItem
@@ -203,7 +204,7 @@ const getHybridCardSingleItemState = (
   }
 }
 
-const HybridSaveCard = ({
+const GallerySaveItem = ({
   group,
   actions,
   extractingItems,
@@ -211,7 +212,7 @@ const HybridSaveCard = ({
   currentTimeMs,
   onOpenItem,
   onOpenGroup,
-}: HybridSaveCardProps) => {
+}: GallerySaveItemProps) => {
   const {
     item,
     isSingleItem,
@@ -221,7 +222,7 @@ const HybridSaveCard = ({
     isExtracting,
     isExtractionVisual,
     isFolderContainer,
-  } = getHybridCardSingleItemState(group, extractingItems, currentTimeMs)
+  } = getGallerySingleItemState(group, extractingItems, currentTimeMs)
   const artwork = useMediaArtwork(group.artworkRequest)
   const imagePath = artwork?.stillPath ?? artwork?.posterPath
   const imageType = artwork?.stillPath ? "still" : "poster"
@@ -259,7 +260,7 @@ const HybridSaveCard = ({
 
   return (
     <article
-      data-testid="hybrid-save-card"
+      data-testid="gallery-save-item"
       data-highlighted={isHighlighted ? true : undefined}
       data-extraction-state={extractionState}
       className={cn(
@@ -288,7 +289,7 @@ const HybridSaveCard = ({
           isDirectLinkExpired && isSingleItem && "opacity-60"
         )}
       >
-        <HybridSaveCardArtwork
+        <GallerySaveItemArtwork
           displayTitle={group.displayTitle}
           imagePath={imagePath}
           imageType={imageType}
@@ -327,7 +328,7 @@ const HybridSaveCard = ({
               isPlayableLinkExpired={isDirectLinkExpired}
               showRemove
               isRefreshing={isExtracting}
-              triggerClassName={HYBRID_CARD_MENU_TRIGGER_CLASS}
+              triggerClassName={GALLERY_MENU_TRIGGER_CLASS}
               menuOpen={isMenuOpen}
               onMenuOpenChange={setIsMenuOpen}
             />
@@ -372,8 +373,8 @@ const HybridSaveCard = ({
   )
 }
 
-interface HybridSaveGridProps {
-  readonly groups: readonly HybridCardGroup[]
+interface GallerySaveGridProps {
+  readonly groups: readonly GalleryGroup[]
   readonly actions: LinkItemActions
   readonly extractingItems: Set<string>
   readonly isHydrating: boolean
@@ -383,7 +384,7 @@ interface HybridSaveGridProps {
   readonly onOpenGroup: (groupKey: string) => void
 }
 
-export const HybridSaveGrid = ({
+export const GallerySaveGrid = ({
   groups,
   actions,
   extractingItems,
@@ -392,7 +393,7 @@ export const HybridSaveGrid = ({
   currentTimeMs: currentTimeMsInput,
   onOpenItem,
   onOpenGroup,
-}: HybridSaveGridProps) => {
+}: GallerySaveGridProps) => {
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   if (isHydrating) {
     return <SaveListLoadingState label="Loading saved links…" />
@@ -401,15 +402,15 @@ export const HybridSaveGrid = ({
     return <SaveListEmptyState />
   }
 
-  const groupedSections = getHybridCardGroupSections(groups, currentTimeMs)
+  const groupedSections = getGalleryGroupSections(groups, currentTimeMs)
 
   return (
     <div className={SAVE_LIST_SECTION_STACK_CLASS}>
       {groupedSections.map((section) => (
         <SaveDateGroupSection key={section.key} label={section.label}>
-          <div className={HYBRID_CARD_GRID_CLASS}>
+          <div className={GALLERY_GRID_CLASS}>
             {section.groups.map((group) => (
-              <HybridSaveCard
+              <GallerySaveItem
                 key={group.key}
                 group={group}
                 actions={actions}

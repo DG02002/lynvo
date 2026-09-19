@@ -12,10 +12,11 @@ import { Spinner } from "~/components/spinner"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import { toLinkViewModel } from "~/features/links/link-view-models"
 import {
-  getHybridItemLabel,
+  getGalleryItemLabel,
   getMediaDisplayTitle,
   isEpisodeOnlyListing,
   parseMediaFilename,
+  type GalleryGroup,
 } from "~/features/links/media-artwork"
 import { getMediaNodeTargetOrUndefined } from "~/features/links/media-node-interaction"
 import { openInPlayerAndLogError } from "~/features/links/open-in-player"
@@ -31,7 +32,7 @@ import {
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
 } from "./finder-episode-still"
-import { HybridGroupMenu } from "./hybrid-group-menu"
+import { GalleryGroupMenu } from "./gallery-group-menu"
 import {
   MediaListRow,
   MediaListRowMeta,
@@ -47,14 +48,14 @@ import {
   SaveListBackButton,
 } from "./save-list-header-controls"
 import {
-  HYBRID_GROUP_CONTENT_CLASS,
-  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
+  GALLERY_GROUP_CONTENT_CLASS,
+  GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS,
   SAVE_LIST_IMMERSIVE_HEADER_GRID_CLASS,
 } from "./save-list-layout-constants"
 import { SeasonArtworkPanel } from "./season-artwork-panel"
 import { useFolderTitleDisplay } from "./use-folder-title-display"
 
-interface HybridGroupItemRowProps {
+interface GalleryGroupItemRowProps {
   readonly item: LinkListItem
   readonly actions: LinkItemActions
   readonly isExtracting: boolean
@@ -66,7 +67,7 @@ interface HybridGroupItemRowProps {
   readonly shouldShowEpisodeStill: boolean
 }
 
-const HybridGroupItemRow = ({
+const GalleryGroupItemRow = ({
   item,
   actions,
   isExtracting,
@@ -76,7 +77,7 @@ const HybridGroupItemRow = ({
   displayTitle,
   titleDisplay,
   shouldShowEpisodeStill,
-}: HybridGroupItemRowProps) => {
+}: GalleryGroupItemRowProps) => {
   const interactionState = getSavedLinkInteractionState(item, currentTimeMs)
   const { directLink, isDirectLinkExpired } = interactionState
   const extractionState = item.extractionStatus?.state ?? "complete"
@@ -140,7 +141,7 @@ const HybridGroupItemRow = ({
       label={rowDisplayTitle}
       icon={
         shouldShowEpisodeStill ? (
-          <span className={HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS}>
+          <span className={GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS}>
             <FinderEpisodeStillDisplay
               label={itemLabel}
               fallbackIcon={rowFallbackIcon}
@@ -204,8 +205,8 @@ const HybridGroupItemRow = ({
   )
 }
 
-interface HybridGroupBrowserProps {
-  readonly group: HybridCardGroup
+interface GalleryGroupBrowserProps {
+  readonly group: GalleryGroup
   readonly actions: LinkItemActions
   readonly extractingItems: Set<string>
   readonly currentTimeMs?: number
@@ -213,18 +214,18 @@ interface HybridGroupBrowserProps {
   readonly onOpenItem: (itemUrl: string) => void
 }
 
-export const HybridGroupBrowser = ({
+export const GalleryGroupBrowser = ({
   group,
   actions,
   extractingItems,
   currentTimeMs: currentTimeMsInput,
   onExit,
   onOpenItem,
-}: HybridGroupBrowserProps) => {
+}: GalleryGroupBrowserProps) => {
   const currentTimeMs = useCurrentTimeMs(currentTimeMsInput)
   const [titleDisplay, toggleTitleDisplay] = useFolderTitleDisplay("episode")
   const itemLabels = useMemo(
-    () => group.items.map((item) => getHybridItemLabel(item)),
+    () => group.items.map((item) => getGalleryItemLabel(item)),
     [group.items]
   )
   const shouldShowEpisodeStills =
@@ -275,10 +276,10 @@ export const HybridGroupBrowser = ({
           </div>
         ) : null}
         <div className={MEDIA_LIST_HEADER_MENU_CELL_CLASS}>
-          <HybridGroupMenu group={group} actions={actions} onExit={onExit} />
+          <GalleryGroupMenu group={group} actions={actions} onExit={onExit} />
         </div>
       </header>
-      <div className={HYBRID_GROUP_CONTENT_CLASS}>
+      <div className={GALLERY_GROUP_CONTENT_CLASS}>
         <div className="border-b bg-muted/50 p-4 md:block md:border-b-0 md:border-r md:p-6 dark:bg-transparent">
           <SeasonArtworkPanel
             displayTitle={group.displayTitle}
@@ -288,7 +289,7 @@ export const HybridGroupBrowser = ({
         <div className="min-h-0 md:overflow-x-hidden md:overflow-y-auto md:overscroll-x-none md:overscroll-y-contain">
           <div className="stagger-children flex flex-col divide-y divide-border/70">
             {sortedItemEntries.map(({ item, itemLabel }) => (
-              <HybridGroupItemRow
+              <GalleryGroupItemRow
                 key={item.id ?? item.url}
                 item={item}
                 actions={actions}

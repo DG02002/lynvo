@@ -9,21 +9,56 @@ import {
 } from "~/lib/client-profile"
 import type { loader as rootLoader } from "~/root"
 
-declare global {
-  type MediaView = "list" | "hybrid"
-}
+export type MediaView = "list" | "gallery"
 
 export const MEDIA_VIEW_STORAGE_KEY = "lynvo:settings:media-view"
 export const MEDIA_VIEW_PREFERENCE_EVENT = "lynvo:media-view-preference-changed"
 export const MEDIA_VIEW_COOKIE_NAME = "lynvo-media-view"
 const MEDIA_VIEW_COOKIE_MAX_AGE_SECONDS = 31_536_000
 export const DEFAULT_MEDIA_VIEW: MediaView = "list"
-const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "hybrid"
+const TVBRO_DEFAULT_MEDIA_VIEW: MediaView = "gallery"
+const LEGACY_MEDIA_VIEW_VALUE = "hybrid"
 
-const mediaViewValues = new Set<string>(["list", "hybrid"])
+const mediaViewValues = new Set<string>(["list", "gallery"])
 
 const isMediaView = (value: string): value is MediaView =>
   mediaViewValues.has(value)
+
+const normalizeMediaView = (value: string): MediaView | undefined => {
+  if (value === LEGACY_MEDIA_VIEW_VALUE) {
+    return "gallery"
+  }
+  return isMediaView(value) ? value : undefined
+}
+
+const readStoredMediaView = (
+  onLegacyValue?: (mediaView: MediaView) => void
+): MediaView | undefined => {
+  if (globalThis.localStorage === undefined) {
+    return undefined
+  }
+
+  const rawValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
+  if (rawValue === null) {
+    return undefined
+  }
+
+  const mediaView = normalizeMediaView(rawValue)
+  if (mediaView !== undefined) {
+    if (mediaView !== rawValue) {
+      onLegacyValue?.(mediaView)
+    }
+    return mediaView
+  }
+
+  return undefined
+}
+
+const migrateLegacyMediaViewPreference = (): void => {
+  readStoredMediaView((mediaView) => {
+    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
+  })
+}
 
 const getDefaultMediaView = (): MediaView =>
   getCurrentClientProfile() === TVBRO_ANDROID_TV_PROFILE
@@ -45,9 +80,9 @@ export const getMediaView = (): MediaView => {
     return DEFAULT_MEDIA_VIEW
   }
 
-  const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
-  if (storedValue !== null && isMediaView(storedValue)) {
-    return storedValue
+  const storedMediaView = readStoredMediaView()
+  if (storedMediaView !== undefined) {
+    return storedMediaView
   }
   return getDefaultMediaView()
 }
@@ -67,8 +102,8 @@ export const getMediaViewFromCookieHeader = (
     MEDIA_VIEW_COOKIE_NAME
   )
 
-  if (mediaViewCookieValue !== undefined && isMediaView(mediaViewCookieValue)) {
-    return mediaViewCookieValue
+  if (mediaViewCookieValue !== undefined) {
+    return normalizeMediaView(mediaViewCookieValue)
   }
   return undefined
 }
@@ -89,6 +124,7 @@ export const useMediaView = (): MediaView => {
   )
 
   useEffect(() => {
+    migrateLegacyMediaViewPreference()
     writeMediaViewCookie(mediaView)
   }, [mediaView])
 

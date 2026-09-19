@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { HybridSaveGrid } from "~/components/save-list/hybrid-save-grid"
+import { GallerySaveGrid } from "~/components/save-list/gallery-save-grid"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
 import { CARD_MENU_LONG_PRESS_DURATION_MS } from "~/lib/constants"
@@ -56,7 +56,7 @@ afterEach(() => {
 
 const renderQueuedGrid = (item: LinkListItem) =>
   render(
-    <HybridSaveGrid
+    <GallerySaveGrid
       groups={[
         {
           key: "item:queued-item",
@@ -75,14 +75,14 @@ const renderQueuedGrid = (item: LinkListItem) =>
     />
   )
 
-describe("HybridSaveGrid", () => {
-  it("renders a queued card with a centered spinner and shimmering title only", () => {
+describe("GallerySaveGrid", () => {
+  it("renders a queued item with a centered spinner and shimmering title only", () => {
     renderQueuedGrid(createQueuedItem({ state: "queued" }))
 
-    const queuedCard = screen.getByTestId("hybrid-save-card")
-    expect(queuedCard).toHaveAttribute("data-extraction-state", "queued")
+    const queuedItem = screen.getByTestId("gallery-save-item")
+    expect(queuedItem).toHaveAttribute("data-extraction-state", "queued")
 
-    const posterSpinner = queuedCard.querySelector('[data-slot="spinner"]')
+    const posterSpinner = queuedItem.querySelector('[data-slot="spinner"]')
     expect(posterSpinner).toBeInTheDocument()
     expect(posterSpinner?.closest(".aspect-2\\/3")).toBeInTheDocument()
 
@@ -93,14 +93,14 @@ describe("HybridSaveGrid", () => {
       "text-base",
       "font-normal"
     )
-    expect(queuedCard.className).not.toContain("shimmer")
+    expect(queuedItem.className).not.toContain("shimmer")
   })
 
   it("closes the loading state and restores the real title when extraction ends", () => {
     const view = renderQueuedGrid(createQueuedItem({ state: "running" }))
 
     view.rerender(
-      <HybridSaveGrid
+      <GallerySaveGrid
         groups={[
           {
             key: "item:queued-item",
@@ -119,9 +119,9 @@ describe("HybridSaveGrid", () => {
       />
     )
 
-    const settledCard = screen.getByTestId("hybrid-save-card")
+    const settledItem = screen.getByTestId("gallery-save-item")
     expect(
-      settledCard.querySelector('[data-slot="spinner"]')
+      settledItem.querySelector('[data-slot="spinner"]')
     ).not.toBeInTheDocument()
     expect(screen.queryByText("Waiting to load…")).not.toBeInTheDocument()
 
@@ -129,7 +129,7 @@ describe("HybridSaveGrid", () => {
     expect(settledHeading).toBeVisible()
   })
 
-  it("opens the group page for a single movie and uses mobile card polish", () => {
+  it("opens the group page for a single movie and uses mobile gallery polish", () => {
     const onOpenGroup = vi.fn()
     const movieItem: LinkListItem = {
       kind: "saved",
@@ -159,7 +159,7 @@ describe("HybridSaveGrid", () => {
     }
 
     render(
-      <HybridSaveGrid
+      <GallerySaveGrid
         groups={[
           {
             key: "movie:sample feature:2017",
@@ -183,18 +183,18 @@ describe("HybridSaveGrid", () => {
     )
     expect(onOpenGroup).toHaveBeenCalledWith("movie:sample feature:2017")
 
-    const movieCard = screen.getByTestId("hybrid-save-card")
-    expect(movieCard.querySelector(".aspect-2\\/3")).toHaveClass(
+    const movieElement = screen.getByTestId("gallery-save-item")
+    expect(movieElement.querySelector(".aspect-2\\/3")).toHaveClass(
       "rounded-2xl",
       "sm:rounded-3xl"
     )
-    expect(movieCard.querySelector('[class*="bottom-4"]')).toHaveClass(
+    expect(movieElement.querySelector('[class*="bottom-4"]')).toHaveClass(
       "invisible",
       "pointer-events-none",
       "sm:visible",
       "sm:pointer-events-auto"
     )
-    expect(movieCard.closest(".grid")).toHaveClass(
+    expect(movieElement.closest(".grid")).toHaveClass(
       "grid-cols-2",
       "sm:grid-cols-3",
       "md:grid-cols-5",
@@ -210,15 +210,15 @@ describe("HybridSaveGrid", () => {
     }
     renderQueuedGrid(movieItem)
 
-    const cardButton = screen.getByRole("button", {
+    const itemButton = screen.getByRole("button", {
       name: "View Touch menu item",
     })
-    Object.defineProperties(cardButton, {
+    Object.defineProperties(itemButton, {
       setPointerCapture: { value: vi.fn() },
       hasPointerCapture: { value: vi.fn(() => false) },
     })
 
-    fireEvent.pointerDown(cardButton, {
+    fireEvent.pointerDown(itemButton, {
       pointerId: 1,
       pointerType: "touch",
       clientX: 20,
@@ -236,7 +236,7 @@ describe("HybridSaveGrid", () => {
     )
 
     render(
-      <HybridSaveGrid
+      <GallerySaveGrid
         groups={[
           {
             key: "movie:sample feature:2017",
@@ -259,16 +259,16 @@ describe("HybridSaveGrid", () => {
       />
     )
 
-    const movieCard = screen.getByTestId("hybrid-save-card")
+    const movieItem = screen.getByTestId("gallery-save-item")
     expect(screen.queryByText("No poster found")).not.toBeInTheDocument()
-    expect(movieCard.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
+    expect(movieItem.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
 
     vi.restoreAllMocks()
   })
 
-  it("keeps a merged group card openable while one episode is still extracting", () => {
+  it("keeps a merged group openable while one episode is still extracting", () => {
     render(
-      <HybridSaveGrid
+      <GallerySaveGrid
         groups={[
           {
             key: "tv:sample series::S01",
@@ -295,10 +295,10 @@ describe("HybridSaveGrid", () => {
       />
     )
 
-    const groupCard = screen.getByTestId("hybrid-save-card")
-    expect(groupCard).toHaveAttribute("data-extraction-state", "complete")
+    const groupItem = screen.getByTestId("gallery-save-item")
+    expect(groupItem).toHaveAttribute("data-extraction-state", "complete")
     expect(
-      groupCard.querySelector('[data-slot="spinner"]')
+      groupItem.querySelector('[data-slot="spinner"]')
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: "Open Sample Series S01" })

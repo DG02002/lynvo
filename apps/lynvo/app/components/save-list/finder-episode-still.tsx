@@ -11,7 +11,7 @@ import { TmdbImage } from "~/features/links/tmdb-image"
 import { cn } from "~/lib/utils"
 
 import {
-  HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS,
+  GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS,
   MEDIA_LIST_EPISODE_STILL_SLOT_CLASS,
   MEDIA_LIST_EPISODE_STILL_CLASS,
   MEDIA_LIST_EPISODE_STILL_SIZES,
@@ -148,7 +148,7 @@ export const EpisodeStillSlot = ({
     <span
       className={
         stackOnMobile
-          ? HYBRID_GROUP_EPISODE_STILL_SLOT_CLASS
+          ? GALLERY_GROUP_EPISODE_STILL_SLOT_CLASS
           : MEDIA_LIST_EPISODE_STILL_SLOT_CLASS
       }
     >

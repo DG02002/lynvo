@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SaveListBrowser } from "~/components/save-list/save-list-browser"
-import { getHybridCardGroups } from "~/features/links/media-artwork/hybrid-card-grouping"
+import { getGalleryGroups } from "~/features/links/media-artwork/gallery-grouping"
 import type { LinkListItem } from "~/features/links/types"
 
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
@@ -41,7 +41,7 @@ const item: LinkListItem = {
   },
 }
 
-describe("Hybrid episode containers", () => {
+describe("Gallery episode containers", () => {
   afterEach(() => vi.unstubAllGlobals())
   beforeEach(() => {
     vi.stubGlobal(
@@ -77,7 +77,7 @@ describe("Hybrid episode containers", () => {
     })
   })
   it("retains the saved show name and year when episode filenames omit the article", () => {
-    expect(getHybridCardGroups([item])[0]?.displayTitle).toBe(
+    expect(getGalleryGroups([item])[0]?.displayTitle).toBe(
       "The Legend of Vox Machina (2022) S04"
     )
   })

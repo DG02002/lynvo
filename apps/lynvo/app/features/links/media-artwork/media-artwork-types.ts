@@ -1,5 +1,13 @@
 import type { LinkListItem } from "../types"
 
+export interface GalleryGroup {
+  readonly key: string
+  readonly displayTitle: string
+  readonly artworkRequest?: MediaArtworkRequest
+  readonly lastAddedAt: number
+  readonly items: readonly LinkListItem[]
+}
+
 declare global {
   interface MediaClassificationCandidate {
     readonly kind:
@@ -55,14 +63,6 @@ declare global {
     readonly candidates?: readonly MediaArtworkCandidate[]
     /** Transient provider failure; callers must not negative-cache it. */
     readonly failed?: boolean
-  }
-
-  interface HybridCardGroup {
-    readonly key: string
-    readonly displayTitle: string
-    readonly artworkRequest?: MediaArtworkRequest
-    readonly lastAddedAt: number
-    readonly items: readonly LinkListItem[]
   }
 
   interface SharedSeasonIdentity {

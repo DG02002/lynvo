@@ -45,6 +45,16 @@ const ENTRY_BATCH_SIZE = 5
 const changelogEntries: ChangelogEntry[] = [
   {
     type: "general",
+    date: "Sep 19, 2026",
+    dateTime: "2026-09-19",
+    title: "The Save page's Hybrid view is now Gallery view",
+    category: "Product",
+    description: [
+      "The Save page's former Hybrid view is now called Gallery. Existing view preferences carry over automatically.",
+    ],
+  },
+  {
+    type: "general",
     date: "Sep 10, 2026",
     dateTime: "2026-09-10",
     title: "Proxy keys have their own settings tab",

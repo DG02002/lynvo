@@ -13,6 +13,17 @@ markers.
 
 Avoid: card, history item, saved card, recent link.
 
+### List view
+
+A Save page presentation that shows each Saved link in a row.
+
+### Gallery view
+
+A Save page presentation that groups related Saved links with artwork. It is a
+presentation choice, not a catalogue of media supplied by Lynvo.
+
+Avoid: Hybrid view, artwork view.
+
 ### Save intent
 
 The request to add a Source as a Saved link before Lynvo knows whether
