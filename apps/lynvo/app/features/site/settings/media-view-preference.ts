@@ -31,23 +31,30 @@ const normalizeMediaView = (value: string): MediaView | undefined => {
   return isMediaView(value) ? value : undefined
 }
 
-const migrateLegacyMediaViewPreference = (): MediaView | undefined => {
+const readStoredMediaView = () => {
   if (globalThis.localStorage === undefined) {
     return undefined
   }
 
-  const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
-  if (storedValue === null) {
+  const rawValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
+  if (rawValue === null) {
     return undefined
   }
 
-  const mediaView = normalizeMediaView(storedValue)
-  if (mediaView === undefined || mediaView === storedValue) {
-    return undefined
+  return { mediaView: normalizeMediaView(rawValue), rawValue }
+}
+
+const migrateLegacyMediaViewPreference = (): void => {
+  const storedMediaView = readStoredMediaView()
+  if (storedMediaView?.mediaView === undefined) {
+    return
   }
 
-  localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
-  return mediaView
+  if (storedMediaView.mediaView === storedMediaView.rawValue) {
+    return
+  }
+
+  localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, storedMediaView.mediaView)
 }
 
 const getDefaultMediaView = (): MediaView =>
@@ -70,12 +77,9 @@ export const getMediaView = (): MediaView => {
     return DEFAULT_MEDIA_VIEW
   }
 
-  const storedValue = localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)
-  if (storedValue !== null) {
-    const mediaView = normalizeMediaView(storedValue)
-    if (mediaView !== undefined) {
-      return mediaView
-    }
+  const storedMediaView = readStoredMediaView()
+  if (storedMediaView?.mediaView !== undefined) {
+    return storedMediaView.mediaView
   }
   return getDefaultMediaView()
 }
@@ -117,8 +121,8 @@ export const useMediaView = (): MediaView => {
   )
 
   useEffect(() => {
-    const migratedMediaView = migrateLegacyMediaViewPreference()
-    writeMediaViewCookie(migratedMediaView ?? mediaView)
+    migrateLegacyMediaViewPreference()
+    writeMediaViewCookie(mediaView)
   }, [mediaView])
 
   return mediaView
