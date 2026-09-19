@@ -38,7 +38,7 @@ const freePlanFeatures = [
   "Access to supported Lynvo Plugins",
   "Custom Plugin Server support",
   "Real-time sync",
-  "Android player handoff and Remote Play",
+  "Open links in Android players and use Remote Play",
 ]
 
 const planCardClassName = "self-start rounded-lg"
@@ -59,8 +59,8 @@ const planDetailSections = [
       { feature: "Price", allowance: "₹0 per month" },
       { feature: "Account storage", allowance: "3 MB" },
       { feature: "Saved links", allowance: "Up to 1,000" },
-      { feature: "Maximum saved-link record", allowance: "256 KB" },
-      { feature: "Default saved-link retention", allowance: "30 days" },
+      { feature: "Largest saved link", allowance: "256 KB" },
+      { feature: "How long saved links are kept", allowance: "30 days" },
       { feature: "Inactive account deletion", allowance: "After 90 days" },
     ],
   },
@@ -147,7 +147,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
         <span className="rounded-full bg-background px-3 py-1 shadow-sm">
           Free
         </span>
-        <span className="px-3 py-1 text-foreground">More soon</span>
+        <span className="px-3 py-1 text-foreground">More plans</span>
       </div>
       <Link
         to={authPaths.signIn}
@@ -157,7 +157,7 @@ const MobilePlanControls = ({ className }: MobilePlanControlsProps) => {
           "mx-auto w-full max-w-2xl"
         )}
       >
-        Get Free
+        Create a free account
         <HugeiconsIcon
           icon={ArrowUpRight01Icon}
           strokeWidth={2}

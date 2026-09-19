@@ -105,7 +105,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
     id: "midnight-relay",
     icon: PlayIcon,
     title: "Midnight Relay — Episode 06 · 1080p",
-    detail: "Direct Media",
+    detail: "Direct Media (built in)",
     isOpened: true,
   },
   {
@@ -119,7 +119,7 @@ const HOME_DEMO_ITEMS: HomeDemoItem[] = [
     id: "northstar-files",
     icon: Folder01Icon,
     title: "Northstar Files — Season 01",
-    detail: "Open collection",
+    detail: "Open folder",
     meta: "8 items",
     isFolder: true,
   },
@@ -392,7 +392,7 @@ export const HomeSaveDemo = () => {
         </span>
         <button
           ref={copySourceRef}
-          aria-label="Copy source link"
+          aria-label="Copy Source link"
           className={`pointer-events-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-150 ${isCopySourcePressed ? "scale-[0.96] bg-blue-500 text-white" : "bg-muted/80"}`}
           onClick={handleCopySourceClick}
           tabIndex={isCopySourceVisible ? 0 : -1}

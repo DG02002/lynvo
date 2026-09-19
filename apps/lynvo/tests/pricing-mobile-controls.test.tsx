@@ -56,9 +56,11 @@ describe("Pricing mobile controls", () => {
       )
     })
 
-    const fixedControls = screen.getByRole("link", {
-      name: /Get Free/,
-    }).parentElement
+    const fixedLink = screen
+      .getAllByRole("link", { name: /Create a free account/ })
+      .find((link) => link.parentElement?.classList.contains("fixed"))
+    expect(fixedLink).toBeDefined()
+    const fixedControls = fixedLink?.parentElement
 
     expect(fixedControls).toHaveClass("fixed")
     expect(fixedControls?.parentElement).toHaveStyle({
@@ -80,7 +82,9 @@ describe("Pricing mobile controls", () => {
     })
 
     expect(
-      screen.queryByRole("link", { name: /Get Free/ })
-    ).not.toBeInTheDocument()
+      screen
+        .queryAllByRole("link", { name: /Create a free account/ })
+        .some((link) => link.parentElement?.classList.contains("fixed"))
+    ).toBe(false)
   })
 })
