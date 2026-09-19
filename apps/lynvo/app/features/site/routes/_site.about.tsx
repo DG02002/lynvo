@@ -103,9 +103,10 @@ const About = () => (
             </p>
             <p>
               Plugins made the workflow useful beyond direct media links. Lynvo
-              Plugins resolve supported Bhadoo Google Drive Index and OneDrive
-              Index pages. The Plugin Server Protocol lets developers connect
-              other compatible Sources.
+              Plugins resolve supported Bhadoo&rsquo;s Google Drive Index,
+              Google Drive Public Folders & Files, and Spencerwooo&apos;s
+              OneDrive Vercel Index pages. The Plugin Server Protocol lets
+              developers connect other compatible Sources.
             </p>
             <p>
               The first version worked, but it was still a rough personal tool.

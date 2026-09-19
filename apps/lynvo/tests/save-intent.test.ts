@@ -62,7 +62,6 @@ describe("save intent", () => {
     ).resolves.toEqual({
       kind: "duplicate",
       linkId: "saved-id",
-      message: "Link already exists.",
     })
     expect(enqueueLink).not.toHaveBeenCalled()
   })

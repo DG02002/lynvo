@@ -38,7 +38,6 @@ interface SaveIntentErrorResult {
 interface SaveIntentDuplicateResult {
   kind: "duplicate"
   linkId: string
-  message: "Link already exists."
 }
 
 interface SaveIntentQueuedResult {
@@ -120,7 +119,6 @@ export const resolveSaveIntent = async ({
     return {
       kind: "duplicate",
       linkId: existingItem.id || existingItem.url,
-      message: "Link already exists.",
     }
   }
 

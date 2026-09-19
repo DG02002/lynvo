@@ -12,7 +12,7 @@ describe("LinkInputSection", () => {
         onSave={vi.fn()}
         isSaving={false}
         extractionPreview={null}
-        error="Link already exists on your account."
+        error={{ kind: "duplicate" }}
         setError={vi.fn()}
       />
     )
@@ -25,6 +25,28 @@ describe("LinkInputSection", () => {
     expect(screen.getByLabelText("Link")).toHaveAttribute(
       "placeholder",
       "https://example.com/video"
+    )
+  })
+
+  it("labels a structured unsupported error", () => {
+    render(
+      <LinkInputSection
+        url="https://example.com/file"
+        setUrl={vi.fn()}
+        onSave={vi.fn()}
+        isSaving={false}
+        extractionPreview={null}
+        error={{ kind: "unsupported", message: "URL is not supported." }}
+        setError={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText("Link not supported")).toBeVisible()
+    expect(screen.getByText("URL is not supported.")).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveClass("text-destructive")
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "aria-invalid",
+      "true"
     )
   })
 
