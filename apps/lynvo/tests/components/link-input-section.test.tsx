@@ -43,6 +43,11 @@ describe("LinkInputSection", () => {
 
     expect(screen.getByText("Link not supported")).toBeVisible()
     expect(screen.getByText("URL is not supported.")).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveClass("text-destructive")
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    )
   })
 
   it("does not request clipboard access until the user allows it", async () => {

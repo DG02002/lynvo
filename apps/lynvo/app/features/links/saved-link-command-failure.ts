@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 
 import {
+  UNSUPPORTED_URL_CODE,
   extractionCommandFailureSchema,
   presentExtractionFailure,
   type ExtractionCommandFailure,
@@ -20,7 +21,11 @@ declare global {
       }
     | { readonly kind: "session-changed" }
     | { readonly kind: "csrf-expired" }
-    | { readonly kind: "validation"; readonly message: string }
+    | {
+        readonly kind: "validation"
+        readonly message: string
+        readonly code?: typeof UNSUPPORTED_URL_CODE
+      }
     | { readonly kind: "temporarily-unavailable"; readonly reference: string }
     | ExtractionCommandFailure
 }
@@ -41,6 +46,7 @@ export const SavedLinkCommandFailureSchema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("validation"),
     message: Schema.String,
+    code: Schema.optional(Schema.Literal(UNSUPPORTED_URL_CODE)),
   }),
   Schema.Struct({
     kind: Schema.Literal("temporarily-unavailable"),

@@ -1,46 +1,94 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  getSaveError,
-  getSaveErrorMessage,
-} from "~/features/links/use-link-actions/save-error-message"
+import { SavedLinkCommandError } from "~/features/links/saved-link-command-failure"
+import { getSaveError } from "~/features/links/use-link-actions/save-error-message"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
-describe("getSaveErrorMessage", () => {
-  it("classifies validation failures as unsupported link errors", () => {
+describe("getSaveError", () => {
+  it("classifies unsupported URL errors by structured code", () => {
     expect(
       getSaveError({
-        _tag: "ValidationError",
-        message: "Private and local network addresses are not supported.",
+        _tag: "ExtractionError",
+        message: "UNSUPPORTED_URL",
+        detail: "URL is not supported.",
       })
     ).toEqual({
       kind: "unsupported",
-      message: "Private and local network addresses are not supported.",
+      message: "URL is not supported.",
+    })
+
+    expect(
+      getSaveError({
+        _tag: "ValidationError",
+        message: "Invalid or unsafe URL",
+        details: { code: "UNSUPPORTED_URL" },
+      })
+    ).toEqual({
+      kind: "unsupported",
+      message: "Invalid or unsafe URL",
+    })
+
+    expect(
+      getSaveError(
+        new SavedLinkCommandError({
+          failure: {
+            kind: "validation",
+            code: "UNSUPPORTED_URL",
+            message: "URL is not supported.",
+          },
+        })
+      )
+    ).toEqual({
+      kind: "unsupported",
+      message: "URL is not supported.",
     })
   })
 
   it("hides transport and decode implementation details", () => {
     expect(
-      getSaveErrorMessage(new Error("Decode error (400 GET /api/extract)"))
-    ).toBe("The link couldn’t be opened. Check the link, then try again.")
+      getSaveError(new Error("Decode error (400 GET /api/extract)"))
+    ).toEqual({
+      kind: "generic",
+      message: "The link couldn’t be opened. Check the link, then try again.",
+    })
   })
 
-  it("keeps authentication and validation errors actionable", () => {
-    expect(getSaveErrorMessage({ _tag: "UnauthorizedError" })).toBe(
-      "The session expired. Log in, then save the link again."
-    )
+  it("keeps authentication and availability errors generic", () => {
+    expect(getSaveError({ _tag: "UnauthorizedError" })).toEqual({
+      kind: "generic",
+      message: "The session expired. Log in, then save the link again.",
+    })
+
+    const availabilityMessages = [
+      "The saved Plugin Server is unavailable.",
+      "Sign in to extract links with the Lynvo Plugin Server.",
+      "The saved Plugin is unavailable.",
+    ]
+
+    for (const message of availabilityMessages) {
+      expect(getSaveError({ _tag: "ValidationError", message })).toEqual({
+        kind: "generic",
+        message,
+      })
+    }
+
     expect(
-      getSaveErrorMessage({
+      getSaveError({
         _tag: "ValidationError",
         message: "Please enter a supported URL.",
       })
-    ).toBe("Please enter a supported URL.")
+    ).toEqual({
+      kind: "generic",
+      message: "Please enter a supported URL.",
+    })
   })
 
   it("uses a source-neutral extraction message", () => {
-    expect(getSaveErrorMessage({ _tag: "ExtractionError" })).toBe(
-      "Links couldn’t be loaded from this address. Check the link, then try again."
-    )
+    expect(getSaveError({ _tag: "ExtractionError" })).toEqual({
+      kind: "generic",
+      message:
+        "Links couldn’t be loaded from this address. Check the link, then try again.",
+    })
   })
 
   it("only preserves explicitly trusted errors", () => {

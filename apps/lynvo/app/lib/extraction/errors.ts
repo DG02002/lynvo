@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+export const UNSUPPORTED_URL_CODE = "UNSUPPORTED_URL" as const
+
 export const extractionCommandFailureSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("session-expired") }),
   Schema.Struct({ kind: Schema.Literal("transient") }),
