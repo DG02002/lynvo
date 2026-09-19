@@ -21,7 +21,9 @@ describe("Changelog", () => {
 
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("The Save page now has List and Hybrid views")
+      within(updates).queryByText(
+        "The Save page now has List and Gallery views"
+      )
     ).not.toBeInTheDocument()
     expect(screen.getByRole("tab", { name: "Plugin Server" })).toHaveAttribute(
       "aria-selected",
@@ -47,7 +49,7 @@ describe("Changelog", () => {
       "?type=general"
     )
     expect(
-      within(updates).getByText("The Save page now has List and Hybrid views")
+      within(updates).getByText("The Save page now has List and Gallery views")
     ).toBeVisible()
     expect(
       within(updates).queryByText("Lynvo Plugin Server")
@@ -59,13 +61,15 @@ describe("Changelog", () => {
     )
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
     expect(
-      within(updates).queryByText("The Save page now has List and Hybrid views")
+      within(updates).queryByText(
+        "The Save page now has List and Gallery views"
+      )
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("tab", { name: "All" }))
     expect(screen.getByLabelText("Current location")).toBeEmptyDOMElement()
     expect(
-      within(updates).getByText("The Save page now has List and Hybrid views")
+      within(updates).getByText("The Save page now has List and Gallery views")
     ).toBeVisible()
     expect(within(updates).getByText("Lynvo Plugin Server")).toBeVisible()
   })

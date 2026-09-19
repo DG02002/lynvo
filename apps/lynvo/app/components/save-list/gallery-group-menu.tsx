@@ -16,17 +16,17 @@ import { formatItemCount } from "~/lib/format-item-count"
 
 import { MEDIA_LIST_ROW_MENU_TRIGGER_CLASS } from "./media-list-row-constants"
 
-interface HybridGroupMenuProps {
-  readonly group: HybridCardGroup
+interface GalleryGroupMenuProps {
+  readonly group: GalleryGroup
   readonly actions: LinkItemActions
   readonly onExit: () => void
 }
 
-export const HybridGroupMenu = ({
+export const GalleryGroupMenu = ({
   group,
   actions,
   onExit,
-}: HybridGroupMenuProps) => {
+}: GalleryGroupMenuProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const itemCountLabel = formatItemCount(group.items.length)
 

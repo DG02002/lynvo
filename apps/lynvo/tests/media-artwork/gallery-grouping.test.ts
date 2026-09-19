@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  getHybridCardGroups,
+  getGalleryGroups,
   getSharedSeasonIdentity,
-} from "~/features/links/media-artwork/hybrid-card-grouping"
+} from "~/features/links/media-artwork/gallery-grouping"
 import type { LinkListItem } from "~/features/links/types"
 
 const createItem = (
@@ -39,9 +39,9 @@ const createEpisodeItem = (
   },
 })
 
-describe("getHybridCardGroups", () => {
-  it("merges movie variants of the same title into one card", () => {
-    const groups = getHybridCardGroups([
+describe("getGalleryGroups", () => {
+  it("merges movie variants of the same title into one group", () => {
+    const groups = getGalleryGroups([
       createItem(
         "https://example.com/sample-man-720",
         "Sample.Man.720p.WEB-DL.mkv",
@@ -67,8 +67,8 @@ describe("getHybridCardGroups", () => {
     })
   })
 
-  it("merges episodes of the same show into one tv card", () => {
-    const groups = getHybridCardGroups([
+  it("merges episodes of the same show into one TV group", () => {
+    const groups = getGalleryGroups([
       createItem(
         "https://example.com/st-e01",
         "Sample.Things.S01E01.720p.mkv",
@@ -90,8 +90,8 @@ describe("getHybridCardGroups", () => {
     })
   })
 
-  it("keeps episodes of different seasons in separate cards", () => {
-    const groups = getHybridCardGroups([
+  it("keeps episodes of different seasons in separate groups", () => {
+    const groups = getGalleryGroups([
       createItem(
         "https://example.com/st-s01e01",
         "Show.S01E01.720p.mkv",
@@ -121,7 +121,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("keeps same-title releases with conflicting years apart", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createItem(
         "https://example.com/feature-2021",
         "Feature.2021.1080p.mkv",
@@ -142,7 +142,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("keeps same-title shows with conflicting years apart", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createItem(
         "https://example.com/sample-piece-1999",
         "Sample.Piece.S01E01.1999.mkv",
@@ -160,7 +160,7 @@ describe("getHybridCardGroups", () => {
 
   it("merges a saved show container with a direct episode save", () => {
     const episodeLabel = "Legend.of.Vox.Machina.S04E01.One.Year.Later.1080p.mkv"
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createEpisodeItem(
         "https://example.com/vox-container",
         "The Legend of Vox Machina (2022)",
@@ -207,7 +207,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("uses a compatible saved title for a mirror-resolvable container", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createEpisodeItem(
         "https://example.com/vox-mirror",
         "The Legend of Vox Machina (2022)",
@@ -235,7 +235,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("keeps a movie identity when only the saved article differs", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createEpisodeItem(
         "https://example.com/movie-container",
         "The Sample Movie",
@@ -269,7 +269,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("keeps a movie year when the saved title conflicts", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createEpisodeItem(
         "https://example.com/movie-year-container",
         "Sample Movie (2022)",
@@ -302,8 +302,8 @@ describe("getHybridCardGroups", () => {
     })
   })
 
-  it("keeps unrecognizable labels as single-item cards without artwork", () => {
-    const groups = getHybridCardGroups([
+  it("keeps unrecognizable labels as single-item groups without artwork", () => {
+    const groups = getGalleryGroups([
       createItem("https://example.com/random", "file", 2_000),
     ])
 
@@ -312,8 +312,8 @@ describe("getHybridCardGroups", () => {
     expect(groups[0]?.artworkRequest).toBeUndefined()
   })
 
-  it("ignores quality-tag descendants without a year when identifying a card", () => {
-    const groups = getHybridCardGroups([
+  it("ignores quality-tag descendants without a year when identifying a group", () => {
+    const groups = getGalleryGroups([
       {
         ...createItem(
           "https://mirror.sample-site.cl/feature-2026-hindi-line-v2-hdtc-full-movie/",
@@ -357,8 +357,8 @@ describe("getHybridCardGroups", () => {
     })
   })
 
-  it("ignores resolved mirror descendants when identifying a card", () => {
-    const groups = getHybridCardGroups([
+  it("ignores resolved link descendants when identifying a group", () => {
+    const groups = getGalleryGroups([
       {
         ...createItem(
           "https://mirror.sample-site.cl/feature-2026-hindi-line-v2-hdtc-full-movie/",
@@ -419,7 +419,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("derives a tv identity from extracted children for show containers", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       {
         ...createItem("https://example.com/warden", "Warden (2022)", 2_000),
         metadata: {
@@ -468,8 +468,8 @@ describe("getHybridCardGroups", () => {
     })
   })
 
-  it("keeps a mixed folder as its own card titled by the folder name", () => {
-    const groups = getHybridCardGroups([
+  it("keeps a mixed container as its own group titled by its name", () => {
+    const groups = getGalleryGroups([
       {
         ...createItem(
           "https://example.com/oya-team-2026/",
@@ -534,8 +534,8 @@ describe("getHybridCardGroups", () => {
     expect(groups[0]?.items).toHaveLength(1)
   })
 
-  it("keeps multi-season containers as folder cards", () => {
-    const groups = getHybridCardGroups([
+  it("keeps multi-season containers as groups", () => {
+    const groups = getGalleryGroups([
       {
         ...createItem(
           "https://example.com/mentalist-complete/",
@@ -590,7 +590,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("keeps the saved title year when extracted episodes identify a show", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       {
         ...createItem(
           "https://sample-hd.example/show-series-164/",
@@ -639,7 +639,7 @@ describe("getHybridCardGroups", () => {
   })
 
   it("orders groups by their newest item", () => {
-    const groups = getHybridCardGroups([
+    const groups = getGalleryGroups([
       createItem("https://example.com/old", "Alpha.2017.mkv", 1_000),
       createItem("https://example.com/new", "Beta.2009.mkv", 3_000),
       createItem("https://example.com/mid", "Gamma.1979.mkv", 2_000),

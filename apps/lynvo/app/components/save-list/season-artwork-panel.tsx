@@ -3,7 +3,7 @@ import { useMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
 
-import { HYBRID_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
+import { GALLERY_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
 
 interface SeasonArtworkPanelProps {
   readonly displayTitle: string
@@ -29,7 +29,7 @@ const SeasonArtworkImage = ({
         path={imagePath}
         variant="card"
         imageType={imageType}
-        sizes={HYBRID_GROUP_ARTWORK_SIZES}
+        sizes={GALLERY_GROUP_ARTWORK_SIZES}
         alt={`Artwork for ${displayTitle}`}
         width={342}
         height={513}

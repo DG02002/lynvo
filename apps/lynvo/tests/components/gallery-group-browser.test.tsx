@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { HybridGroupBrowser } from "~/components/save-list/hybrid-group-browser"
+import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browser"
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
 
@@ -96,7 +96,7 @@ const renderBrowser = (
   const actions = overrides.actions ?? createActions()
   const onExit = overrides.onExit ?? vi.fn()
   const view = render(
-    <HybridGroupBrowser
+    <GalleryGroupBrowser
       group={{
         key: "tv:sample series sample arc::S04",
         displayTitle: "Sample Series Sample Arc S04",
@@ -119,7 +119,7 @@ const renderBrowser = (
 
 const renderNonEpisodeGroupBrowser = () =>
   render(
-    <HybridGroupBrowser
+    <GalleryGroupBrowser
       group={{
         key: "folder:ordinary-downloads",
         displayTitle: "Ordinary Downloads",
@@ -154,7 +154,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("HybridGroupBrowser", () => {
+describe("GalleryGroupBrowser", () => {
   it("hides episode names for non-episodic groups", () => {
     renderNonEpisodeGroupBrowser()
 
@@ -238,7 +238,7 @@ describe("HybridGroupBrowser", () => {
     )
   })
 
-  it("lets users switch hybrid rows to filenames", async () => {
+  it("lets users switch gallery rows to filenames", async () => {
     renderBrowser()
 
     const episodeNamesSwitch = screen.getByRole("switch", {
@@ -254,7 +254,7 @@ describe("HybridGroupBrowser", () => {
     expect(mobileNewBadge?.parentElement).not.toHaveClass("self-center")
   })
 
-  it("sorts hybrid episode rows by their numeric episode number", async () => {
+  it("sorts gallery episode rows by their numeric episode number", async () => {
     const view = renderBrowser([
       createEpisodeItem(
         "sample-episode-9",

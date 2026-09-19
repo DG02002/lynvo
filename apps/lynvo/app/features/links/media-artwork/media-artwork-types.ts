@@ -57,7 +57,7 @@ declare global {
     readonly failed?: boolean
   }
 
-  interface HybridCardGroup {
+  interface GalleryGroup {
     readonly key: string
     readonly displayTitle: string
     readonly artworkRequest?: MediaArtworkRequest

@@ -25,13 +25,13 @@ describe("Media view preference", () => {
     expect(getMediaView()).toBe("list")
   })
 
-  it("defaults to the Hybrid view in TV Bro", () => {
+  it("defaults to the Gallery view in TV Bro", () => {
     Object.defineProperty(window, "TVBro", {
       configurable: true,
       value: {},
     })
 
-    expect(getMediaView()).toBe("hybrid")
+    expect(getMediaView()).toBe("gallery")
   })
 
   it("keeps an explicitly selected view in TV Bro", () => {
@@ -51,16 +51,22 @@ describe("Media view preference", () => {
     expect(getMediaView()).toBe("list")
     expect(localStorage.getItem(MEDIA_VIEW_STORAGE_KEY)).toBe("list")
 
-    setMediaView("hybrid")
-    expect(getMediaView()).toBe("hybrid")
+    setMediaView("gallery")
+    expect(getMediaView()).toBe("gallery")
+  })
+
+  it("reads the legacy stored value as Gallery", () => {
+    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, "hybrid")
+
+    expect(getMediaView()).toBe("gallery")
   })
 
   it("mirrors the preference into the media view cookie", () => {
     setMediaView("list")
     expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=list`)
 
-    setMediaView("hybrid")
-    expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=hybrid`)
+    setMediaView("gallery")
+    expect(document.cookie).toContain(`${MEDIA_VIEW_COOKIE_NAME}=gallery`)
   })
 
   it("reads the server-side view from the cookie header", () => {
@@ -68,8 +74,11 @@ describe("Media view preference", () => {
       "list"
     )
     expect(
+      getMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=gallery`)
+    ).toBe("gallery")
+    expect(
       getMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=hybrid`)
-    ).toBe("hybrid")
+    ).toBe("gallery")
     expect(
       getMediaViewFromCookieHeader(`${MEDIA_VIEW_COOKIE_NAME}=legacy`)
     ).toBeUndefined()
@@ -84,7 +93,7 @@ describe("Media view preference", () => {
     const listener = vi.fn()
     window.addEventListener(MEDIA_VIEW_PREFERENCE_EVENT, listener)
 
-    setMediaView("hybrid")
+    setMediaView("gallery")
 
     expect(listener).toHaveBeenCalledOnce()
     window.removeEventListener(MEDIA_VIEW_PREFERENCE_EVENT, listener)

@@ -12,7 +12,7 @@ import { getSavedLinkInteractionState } from "../saved-link-interaction"
 import type { ExtractedLink, LinkListItem } from "../types"
 import { isNonMediaFilename, parseMediaFilename } from "./media-filename-parser"
 
-interface HybridCardIdentity {
+interface GalleryIdentity {
   readonly mediaKind: "movie" | "tv"
   readonly normalizedTitle: string
   readonly requestTitle: string
@@ -21,14 +21,14 @@ interface HybridCardIdentity {
   readonly seasonNumber?: number
 }
 
-interface HybridCardIdentityOptions {
-  // Descendant labels are quality tags ("HQ-Rip 1080p") and mirror names
-  // ("Direct"), so they may only identify a card when the parse is confident:
+interface GalleryIdentityOptions {
+  // Descendant labels are quality tags ("HQ-Rip 1080p") and resolved link names
+  // ("Direct"), so they may only identify a group when the parse is confident:
   // a movie needs a year and a tv label an explicit episode/season marker.
   readonly requireConfidentParse?: boolean
 }
 
-interface MutableHybridCardGroup {
+interface MutableGalleryGroup {
   key: string
   mediaKind: "movie" | "tv" | "unmatched"
   normalizedTitle?: string
@@ -40,13 +40,13 @@ interface MutableHybridCardGroup {
   items: LinkListItem[]
 }
 
-interface HybridCardGroupDateSection {
+interface GalleryGroupDateSection {
   readonly key: string
   readonly label: string
-  readonly groups: readonly HybridCardGroup[]
+  readonly groups: readonly GalleryGroup[]
 }
 
-export const getHybridItemLabel = (item: LinkListItem): string => {
+export const getGalleryItemLabel = (item: LinkListItem): string => {
   const interactionState = getSavedLinkInteractionState(item, Date.now())
   const directLinkLabel = interactionState.directLink?.label
   if (directLinkLabel) {
@@ -71,11 +71,11 @@ const getTvDisplayTitle = (
   return `${title}${yearLabel}${seasonLabel}`
 }
 
-const getHybridCardIdentity = (
+const getGalleryIdentity = (
   label: string,
   parentFolderName?: string,
-  { requireConfidentParse = false }: HybridCardIdentityOptions = {}
-): HybridCardIdentity | undefined => {
+  { requireConfidentParse = false }: GalleryIdentityOptions = {}
+): GalleryIdentity | undefined => {
   const candidate = parseMediaFilename(label, parentFolderName)
   if (!candidate.title || !candidate.normalizedTitle) {
     return undefined
@@ -118,18 +118,18 @@ const getHybridCardIdentity = (
   return undefined
 }
 
-const getHybridCardIdentityKey = (identity: HybridCardIdentity): string =>
+const getGalleryIdentityKey = (identity: GalleryIdentity): string =>
   `${identity.mediaKind}:${identity.normalizedTitle}:${identity.seasonNumber ?? ""}`
 
 // A wrapper may only borrow a descendant identity when every confidently
 // parsed descendant agrees; a listing spanning several titles or seasons is
-// a mixed folder and must keep its own name instead of posing as the first
+// a mixed group and must keep its own name instead of posing as the first
 // descendant it contains.
 const collectConfidentDescendantIdentities = (
   nodes: readonly ExtractedLink[],
   parentFolderName?: string
-): Map<string, HybridCardIdentity> => {
-  const identitiesByKey = new Map<string, HybridCardIdentity>()
+): Map<string, GalleryIdentity> => {
+  const identitiesByKey = new Map<string, GalleryIdentity>()
   const visitNodes = (
     childNodes: readonly ExtractedLink[],
     childParentFolderName?: string
@@ -141,18 +141,14 @@ const collectConfidentDescendantIdentities = (
       const nodeLabel = node.label?.trim()
       const children = node.children ?? []
       if (nodeLabel) {
-        const identity = getHybridCardIdentity(
-          nodeLabel,
-          childParentFolderName,
-          {
-            requireConfidentParse: true,
-          }
-        )
+        const identity = getGalleryIdentity(nodeLabel, childParentFolderName, {
+          requireConfidentParse: true,
+        })
         if (
           identity &&
           (identity.mediaKind === "tv" || children.length === 0)
         ) {
-          identitiesByKey.set(getHybridCardIdentityKey(identity), identity)
+          identitiesByKey.set(getGalleryIdentityKey(identity), identity)
         }
       }
       if (children.length === 0) {
@@ -168,10 +164,10 @@ const collectConfidentDescendantIdentities = (
   return identitiesByKey
 }
 
-const getHybridItemIdentity = (
+const getGalleryItemIdentity = (
   item: LinkListItem,
   itemLabel: string
-): HybridCardIdentity | undefined => {
+): GalleryIdentity | undefined => {
   const extractedLinks = getLinkViewItemExtractedLinks(item)
   if (extractedLinks.length > 0) {
     const descendantIdentities =
@@ -188,7 +184,7 @@ const getHybridItemIdentity = (
       return reconcileSavedTitle(descendantIdentity, savedTitle)
     }
   }
-  return getHybridCardIdentity(itemLabel)
+  return getGalleryIdentity(itemLabel)
 }
 
 // The selection's title may retain an article omitted by release filenames.
@@ -196,10 +192,10 @@ const getHybridItemIdentity = (
 const withoutArticle = (title: string) => title.replace(/^(?:the|an|a) /, "")
 
 const reconcileSavedTitle = (
-  identity: HybridCardIdentity,
+  identity: GalleryIdentity,
   savedTitle?: string
-): HybridCardIdentity => {
-  const saved = savedTitle ? getHybridCardIdentity(savedTitle) : undefined
+): GalleryIdentity => {
+  const saved = savedTitle ? getGalleryIdentity(savedTitle) : undefined
   if (!saved) {
     return identity
   }
@@ -244,7 +240,7 @@ const reconcileSavedTitle = (
 const toUnmatchedGroup = (
   item: LinkListItem,
   label: string
-): MutableHybridCardGroup => ({
+): MutableGalleryGroup => ({
   key: `item:${item.id ?? item.url}`,
   mediaKind: "unmatched",
   displayTitle: label,
@@ -252,7 +248,7 @@ const toUnmatchedGroup = (
   items: [item],
 })
 
-const getHybridGroupKey = (identity: HybridCardIdentity): string => {
+const getGalleryGroupKey = (identity: GalleryIdentity): string => {
   const seasonSegment =
     identity.seasonNumber === undefined
       ? ""
@@ -261,9 +257,9 @@ const getHybridGroupKey = (identity: HybridCardIdentity): string => {
 }
 
 const findOrAdoptYearGroup = (
-  bucket: MutableHybridCardGroup[],
-  identity: HybridCardIdentity
-): MutableHybridCardGroup => {
+  bucket: MutableGalleryGroup[],
+  identity: GalleryIdentity
+): MutableGalleryGroup => {
   if (identity.year === undefined) {
     const mostRecentGroup = bucket.at(-1)
     if (mostRecentGroup) {
@@ -287,8 +283,8 @@ const findOrAdoptYearGroup = (
     }
   }
 
-  const createdGroup: MutableHybridCardGroup = {
-    key: getHybridGroupKey(identity),
+  const createdGroup: MutableGalleryGroup = {
+    key: getGalleryGroupKey(identity),
     mediaKind: identity.mediaKind,
     normalizedTitle: identity.normalizedTitle,
     anchorYear: identity.year,
@@ -303,7 +299,7 @@ const findOrAdoptYearGroup = (
 }
 
 const getGroupArtworkRequest = (
-  group: MutableHybridCardGroup
+  group: MutableGalleryGroup
 ): MediaArtworkRequest | undefined => {
   if (group.mediaKind === "unmatched" || !group.requestTitle) {
     return undefined
@@ -339,7 +335,7 @@ const getGroupArtworkRequest = (
   }
 }
 
-const toImmutableGroup = (group: MutableHybridCardGroup): HybridCardGroup => ({
+const toImmutableGroup = (group: MutableGalleryGroup): GalleryGroup => ({
   key: group.key,
   displayTitle: group.displayTitle,
   artworkRequest: getGroupArtworkRequest(group),
@@ -347,7 +343,7 @@ const toImmutableGroup = (group: MutableHybridCardGroup): HybridCardGroup => ({
   items: group.items,
 })
 
-const sortGroups = (groups: readonly HybridCardGroup[]): HybridCardGroup[] =>
+const sortGroups = (groups: readonly GalleryGroup[]): GalleryGroup[] =>
   groups.toSorted((firstGroup, secondGroup) => {
     if (secondGroup.lastAddedAt !== firstGroup.lastAddedAt) {
       return secondGroup.lastAddedAt - firstGroup.lastAddedAt
@@ -414,18 +410,18 @@ export const getSharedSeasonIdentity = (
   }
 }
 
-export const getHybridCardGroups = (
+export const getGalleryGroups = (
   items: readonly LinkListItem[]
-): readonly HybridCardGroup[] => {
-  const titleBuckets = new Map<string, MutableHybridCardGroup[]>()
-  const unmatchedGroups: MutableHybridCardGroup[] = []
+): readonly GalleryGroup[] => {
+  const titleBuckets = new Map<string, MutableGalleryGroup[]>()
+  const unmatchedGroups: MutableGalleryGroup[] = []
   const sortedItems = items.toSorted(
     (firstItem, secondItem) => secondItem.timestamp - firstItem.timestamp
   )
 
   for (const item of sortedItems) {
-    const itemLabel = getHybridItemLabel(item)
-    const identity = getHybridItemIdentity(item, itemLabel)
+    const itemLabel = getGalleryItemLabel(item)
+    const identity = getGalleryItemIdentity(item, itemLabel)
 
     if (!identity) {
       unmatchedGroups.push(toUnmatchedGroup(item, itemLabel))
@@ -446,11 +442,11 @@ export const getHybridCardGroups = (
   ])
 }
 
-export const getHybridCardGroupSections = (
-  groups: readonly HybridCardGroup[],
+export const getGalleryGroupSections = (
+  groups: readonly GalleryGroup[],
   currentTimeMs = Date.now()
-): readonly HybridCardGroupDateSection[] => {
-  const dateGroups = new Map<string, HybridCardGroupDateSection>()
+): readonly GalleryGroupDateSection[] => {
+  const dateGroups = new Map<string, GalleryGroupDateSection>()
   for (const group of groups) {
     const key = getSaveDateGroupKey(group.lastAddedAt, currentTimeMs)
     const existingDateGroup = dateGroups.get(key)

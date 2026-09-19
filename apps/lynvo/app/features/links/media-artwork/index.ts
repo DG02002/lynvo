@@ -3,11 +3,11 @@
 import "./media-artwork-types"
 
 export {
-  getHybridCardGroups,
-  getHybridCardGroupSections,
-  getHybridItemLabel,
+  getGalleryGroups,
+  getGalleryGroupSections,
+  getGalleryItemLabel,
   getSharedSeasonIdentity,
-} from "./hybrid-card-grouping"
+} from "./gallery-grouping"
 export {
   getEpisodeListingLabels,
   getMediaArtworkRequest,
