@@ -3,13 +3,13 @@ export const pricingFaqs = [
     value: "storage-cap",
     question: "What counts toward the Free plan’s 3 MB storage limit?",
     answer:
-      "Saved links, folders, and opened markers count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 256 KB, and the plan allows up to 1,000 saved links.",
+      "Saved links and everything inside them count toward the 3 MB limit. Linked video files are not stored by Lynvo and do not count toward it. Each saved-link record can use up to 256 KB, and the plan allows up to 1,000 saved links.",
   },
   {
     value: "lynvo-plugin-operation",
     question: "What counts as a Lynvo Plugin Server request?",
     answer:
-      "Lynvo counts one use when the Lynvo Plugin Server accepts a request to open a supported link. The 200-request monthly allowance and 30-request daily limit are shared across all Lynvo Plugins, including Direct Media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
+      "One use means one link opened through the Lynvo Plugin Server. The 200-request monthly allowance and 30-request daily limit are shared across all Lynvo Plugins, including Direct Media. Browsing Lynvo, opening Settings, and using a Custom Plugin Server do not use this allowance.",
   },
   {
     value: "limit-reached",
@@ -19,9 +19,9 @@ export const pricingFaqs = [
   },
   {
     value: "operating-systems",
-    question: "Where can Lynvo hand off links to players?",
+    question: "Where can Lynvo open links in players?",
     answer:
-      "You can open the Lynvo website in any browser to sign in and manage links. Link handoff is designed for Android TV, Android phones, and Android tablets. Lynvo opens links in Just (Video) Player, VLC for Android, MPV, or MX Player.",
+      "You can open the Lynvo website in any browser to sign in and manage links. Lynvo supports opening links in players on Android TV, Android phones, and Android tablets. Lynvo opens links in Just (Video) Player, VLC for Android, MPV, or MX Player.",
   },
   {
     value: "links",

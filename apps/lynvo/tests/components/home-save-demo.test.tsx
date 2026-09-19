@@ -28,7 +28,7 @@ describe("HomeSaveDemo", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "Copy source link" })
+        .getByRole("button", { name: "Copy Source link" })
         .closest("[data-demo-browser]")
     ).toBeNull()
     expect(screen.queryByText("Source link")).not.toBeInTheDocument()
@@ -49,7 +49,7 @@ describe("HomeSaveDemo", () => {
     expect(container.querySelector(".home-demo-copy-source")).not.toHaveClass(
       "transition-[opacity,transform]"
     )
-    expect(screen.getAllByText("Direct Media")[0]).toHaveClass(
+    expect(screen.getByText("Direct Media (built in)")).toHaveClass(
       "text-foreground/80"
     )
     expect(

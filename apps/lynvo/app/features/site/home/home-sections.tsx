@@ -68,17 +68,23 @@ export const PlayerSectionEdgeToEdge = () => (
 export const ExtractionSection = () => (
   <section className="relative overflow-hidden bg-background py-24 md:py-32">
     <div className="grid w-full gap-16 px-6 md:px-8 lg:grid-cols-2 lg:items-center lg:px-10 xl:px-14">
-      <SectionIntro
-        title="Open links from Sources."
-        description="Use Plugins managed by Lynvo, or connect a compatible Custom Plugin Server for additional Sources."
-      />
+      <div className="flex flex-col gap-5">
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          Lynvo reads links through Plugins — small add-ons that understand
+          specific sites.
+        </p>
+        <SectionIntro
+          title="Open links from Sources."
+          description="Use Plugins managed by Lynvo, or connect a compatible Custom Plugin Server for additional Sources."
+        />
+      </div>
 
       <div className="flex flex-col gap-8">
         <div>
           <p className="text-lg">Lynvo Plugin Server</p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Open links from Sources handled by Lynvo-managed Plugins. Current
-            availability appears in Settings.
+            availability appears in Settings → Plugins.
           </p>
         </div>
         <div>
