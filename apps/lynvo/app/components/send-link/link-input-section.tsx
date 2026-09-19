@@ -10,6 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import { DUPLICATE_LINK_MESSAGE } from "~/features/links/save-intent"
 import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
 
@@ -79,7 +80,7 @@ export function LinkInputSection({
 }: LinkInputSectionProps) {
   const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
     React.useState(false)
-  const isExistingLinkWarning = error === "Link already exists on your account."
+  const isExistingLinkWarning = error === DUPLICATE_LINK_MESSAGE
   const {
     clipboardUrl,
     clipboardPermission,
