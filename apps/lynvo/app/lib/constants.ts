@@ -31,7 +31,7 @@ export const TMDB_IMAGE_DETAIL_PREVIEW_BASE_URL =
   "https://image.tmdb.org/t/p/w342"
 export const TMDB_POSTER_SRC_WIDTHS_PX = [342, 500, 780] as const
 export const TMDB_STILL_SRC_WIDTHS_PX = [300, 780, 1280] as const
-export const MEDIA_ARTWORK_CACHE_VERSION = 4
+export const MEDIA_ARTWORK_CACHE_VERSION = 5
 export const MEDIA_ARTWORK_CACHE_STORAGE_PREFIX = `lynvo:media-artwork:v${MEDIA_ARTWORK_CACHE_VERSION}:`
 export const MEDIA_ARTWORK_FOUND_TTL_MS = 30 * DAY_MS
 export const MEDIA_ARTWORK_NOT_FOUND_TTL_MS = DAY_MS

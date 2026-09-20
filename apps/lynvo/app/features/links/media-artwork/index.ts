@@ -18,5 +18,5 @@ export {
   isEpisodeOnlyListing,
 } from "./media-artwork-identity"
 export { parseMediaFilename } from "./media-filename-parser"
-export { fetchMediaArtwork } from "./media-artwork-client"
+export { searchMediaArtwork } from "./media-artwork-client"
 export { useMediaArtwork } from "./use-media-artwork"

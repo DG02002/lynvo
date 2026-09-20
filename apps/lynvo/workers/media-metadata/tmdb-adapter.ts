@@ -300,6 +300,9 @@ const createDisabledResult = <Value>(): TmdbAdapterResult<Value> => ({
   message: "TMDB metadata is disabled",
 })
 
+const isPermanentTmdbFailure = (cause: unknown): boolean =>
+  cause instanceof OutboundHttpError && cause.code === "RESPONSE_TOO_LARGE"
+
 export const createTmdbAdapter = (
   dependencies: TmdbAdapterDependencies
 ): TmdbAdapter => {
@@ -328,10 +331,7 @@ export const createTmdbAdapter = (
           if (outcome._tag === "success") {
             return { retry: false }
           }
-          if (
-            outcome.cause instanceof OutboundHttpError &&
-            outcome.cause.code === "RESPONSE_TOO_LARGE"
-          ) {
+          if (isPermanentTmdbFailure(outcome.cause)) {
             return { retry: false }
           }
           return {
@@ -356,11 +356,7 @@ export const createTmdbAdapter = (
     } catch (error) {
       return {
         kind: "failure",
-        failureKind:
-          error instanceof OutboundHttpError &&
-          error.code === "RESPONSE_TOO_LARGE"
-            ? "permanent"
-            : "retryable",
+        failureKind: isPermanentTmdbFailure(error) ? "permanent" : "retryable",
         message: error instanceof Error ? error.message : "TMDB request failed",
       }
     }

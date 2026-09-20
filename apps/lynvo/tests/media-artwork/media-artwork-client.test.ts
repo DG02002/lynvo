@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   MEDIA_ARTWORK_CACHE_STORAGE_PREFIX,
+  MEDIA_ARTWORK_CACHE_VERSION,
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
 } from "~/lib/constants"
 
@@ -43,6 +44,59 @@ describe("media artwork client cache", () => {
         title: "  ＳAMPLE FEATURE  ",
       })
     ).toBe(client.getMediaArtworkKey(artworkRequest))
+  })
+
+  it("does not reuse entries from the previous artwork cache namespace", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ results: [{ posterPath: "/current.jpg" }] }),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const previousVersion = MEDIA_ARTWORK_CACHE_VERSION - 1
+    const previousKey = [
+      `v${previousVersion}`,
+      artworkRequest.providerId ?? "",
+      artworkRequest.mediaKind,
+      artworkRequest.title.normalize("NFKC").toLocaleLowerCase(),
+      artworkRequest.year ?? "",
+      artworkRequest.seasonNumber ?? "",
+      artworkRequest.episodeNumber ?? "",
+    ].join("|")
+    localStorage.setItem(
+      `lynvo:media-artwork:v${previousVersion}:${previousKey}`,
+      JSON.stringify({
+        value: { posterPath: "/previous.jpg" },
+        expiresAt: Date.now() + 60_000,
+      })
+    )
+
+    const client = await importMediaArtworkClient()
+    const artworkKey = client.getMediaArtworkKey(artworkRequest)
+    client.requestMediaArtwork(artworkKey, artworkRequest)
+    await flushArtworkRequests()
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(client.getMediaArtworkForKey(artworkKey)).toEqual({
+      posterPath: "/current.jpg",
+    })
+  })
+
+  it("keeps the search-specific error message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 500 }))
+    )
+
+    const client = await importMediaArtworkClient()
+
+    await expect(
+      client.searchMediaArtwork([{ title: "Sample Feature" }])
+    ).rejects.toThrow("Media artwork search failed.")
   })
 
   it("serves repeat lookups from local storage after a reload", async () => {
