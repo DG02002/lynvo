@@ -184,7 +184,11 @@ describe("GallerySaveGrid", () => {
     expect(menuTrigger).toHaveAttribute("tabindex", "0")
     menuTrigger.focus()
     expect(menuTrigger).toHaveFocus()
-    fireEvent.click(menuTrigger)
+    act(() => {
+      fireEvent.keyDown(menuTrigger, { key: "Enter" })
+      // jsdom does not synthesize native button activation from Enter.
+      menuTrigger.click()
+    })
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
 
     fireEvent.click(

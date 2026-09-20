@@ -18,7 +18,7 @@ export const ReceiverOverlay = () => {
   const isOpen = controllingDevices.length > 0
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => undefined}>
+    <Dialog open={isOpen}>
       <DialogPortal>
         <DialogOverlay className="bg-background! backdrop-blur-none!" />
         <DialogPrimitive.Popup

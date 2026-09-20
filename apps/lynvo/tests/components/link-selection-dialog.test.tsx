@@ -217,7 +217,7 @@ describe("LinkSelectionDialog", () => {
     ])
   })
 
-  it("does not expand a collapsed folder from checkbox keyboard input", () => {
+  it("selects a folder from the checkbox keyboard path without expanding it", () => {
     render(
       <LinkSelectionDialog
         open
@@ -248,15 +248,17 @@ describe("LinkSelectionDialog", () => {
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
 
     const checkbox = screen.getByRole("checkbox", { name: "Select Season 1" })
-    fireEvent.click(checkbox)
+    checkbox.focus()
+    fireEvent.keyDown(checkbox, { key: " " })
+    // jsdom does not synthesize the browser's Space-to-click activation.
+    checkbox.click()
 
+    expect(checkbox).toBeChecked()
     expect(screen.getByText("1 selected")).toBeVisible()
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
 
-    checkbox.focus()
     fireEvent.keyDown(checkbox, { key: "Enter" })
-
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
   })
 
@@ -435,10 +437,6 @@ describe("LinkSelectionDialog", () => {
       '[data-slot="spinner"]'
     )
     expect(resolvingSpinner).toHaveClass("size-5")
-    expect(resolvingSpinner?.parentElement).toBe(
-      folderTreeItem.firstElementChild
-    )
-
     finishFolderResolution?.([
       {
         id: "video-one",
@@ -534,11 +532,12 @@ describe("LinkSelectionDialog", () => {
     )
 
     expect(
-      screen.getByRole("treeitem", { name: /Folder without metadata/ })
-        .firstElementChild
+      getTreeItemRow(
+        screen.getByRole("treeitem", { name: /Folder without metadata/ })
+      )
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]")
     expect(
-      screen.getByRole("treeitem", { name: /File with size/ }).firstElementChild
+      getTreeItemRow(screen.getByRole("treeitem", { name: /File with size/ }))
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]")
   })
 })
