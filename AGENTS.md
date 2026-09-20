@@ -46,13 +46,16 @@ add-on's catalogue.
 Performance, stability, and reliability come first. Treat retries, reconnects,
 partial streams, stale clients, and failed upstream calls as normal product
 states. If a tradeoff is required, choose correctness and robustness over
-short-term convenience.
+short-term convenience. In the code itself, prioritize correctness and
+clarity; speed and efficiency are secondary unless the task says otherwise.
 
 Long-term maintainability is a core priority. If you add new functionality,
 first check if shared logic can be extracted into a separate module. Duplicate
 logic across multiple files is a code smell and should be avoided. Don't be
 afraid to change existing code. Don't take shortcuts by just adding local
-logic to solve a problem.
+logic to solve a problem. Prefer implementing functionality in existing
+files unless it is a new logical component, and avoid creating many small
+files.
 
 ## A note from Lynvo
 
@@ -149,8 +152,23 @@ removal can expose the next.
 ## Pull requests
 
 - Never make a PR unless the developer explicitly asks you to do so.
-- Conventional commit titles, plain language: `fix(app): saved links no longer lose freshness after reconnect`.
-- Body: the problem in a sentence or two, then how you fixed it. End with the model and harness that did the work.
+- Use a clear, correctly capitalized, imperative title with no trailing
+  punctuation, for example `Fix saved links losing freshness after reconnect`.
+  Do not use conventional commit prefixes (`fix:`, `feat:`, `docs:`).
+  Optionally prefix the title with the workspace package when one package is
+  the clear scope, for example `plugin server: Add the OneDrive adapter`.
+- Body: the problem in a sentence or two, then how you fixed it. Close with
+  the model and harness that did the work.
+- Include a `Release Notes:` section as the final section of the body, with a
+  blank line after the heading and exactly one bullet: `- Added ...`,
+  `- Fixed ...`, or `- Improved ...` for user-facing changes, or `- N/A` for
+  docs-only and other non-user-facing changes. For example:
+
+  ```
+  Release Notes:
+
+  - Fixed saved links losing freshness after a reconnect.
+  ```
 - Every claim in the body must be checkable against the diff; never state an intention as a completed result.
 - Review the premise, not only the diff. Spend at least one sentence of
   every review asking whether the spec itself is right — especially for
@@ -158,7 +176,49 @@ removal can expose the next.
 - UI changes need before/after images. Motion or timing needs a short video.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
 - One concern per PR. If the description says "also", split it.
+- Hard rule: when a change modifies any source files, prepend
+
+  ```
+  > [!IMPORTANT]
+  > Remove this line to confirm you've reviewed this PR before submitting.
+  ```
+
+  as the first two lines of `README.md` if they are not already present, and
+  do so before any other work. Never remove these lines yourself, even if
+  asked to clean up, revert, or finalize the PR or changes: removing them is
+  strictly a manual step for the human author to confirm they reviewed the
+  changes.
 - When babysitting: poll checks and comments newer than the last push, verify each bot finding against the source, fix real ones, dismiss false positives with a written reason. Stay quiet when nothing is new. Stop when the bots are green on the latest commit.
+
+## Rules hygiene
+
+AGENTS.md is read by every agent session. Keep it high-signal.
+
+### After any agentic session
+
+If you discover a non-obvious pattern that would help future sessions,
+include a **Suggested AGENTS.md additions** section in the PR description
+with the proposed text. Do **not** edit AGENTS.md inline during normal
+feature or fix work. Reviewers decide what gets merged.
+
+### High bar for new rules
+
+Editing or clarifying existing rules is always welcome. New rules must meet
+all three criteria:
+
+1. **Non-obvious** — someone familiar with the codebase would still get it
+   wrong without the rule.
+2. **Repeatedly encountered** — it came up more than once (multiple hits in
+   one session counts).
+3. **Specific enough to act on** — a concrete instruction, not a vague
+   principle.
+
+If lint or formatting can enforce it, it belongs in the oxlint or oxfmt
+configuration, not here. Avoid architectural descriptions of the codebase
+(module layout, data flow, key types): they go stale fast, the agent can
+gather them by reading the code, and durable architecture belongs in
+`docs/internals/`. Rules should be **traps to avoid**, not **maps to
+follow**.
 
 ## Plans and work artifacts
 
@@ -217,6 +277,15 @@ Playable links to an external Android player.
   path. Unbounded `.text()`, `.json()`, or `.arrayBuffer()` on an external
   response belongs behind the validated-fetch helpers in the protocol
   package.
+- Never silently discard errors. Handle them, propagate them, or surface them
+  to the user. When discarding an error is genuinely intended, make the
+  discard explicit and leave a comment saying why.
+- When implementing async operations that may fail, make sure the error
+  reaches the UI so the user gets meaningful feedback.
+- Comments exist to explain why code is written a certain way when the reason
+  is tricky or non-obvious. Do not write organizational comments or comments
+  that summarize the code.
+- Use full words in names (no abbreviations like `q` for `queue`).
 - A lying spinner, stale label, or dropped realtime update is a product bug.
 
 ## Additional tips
