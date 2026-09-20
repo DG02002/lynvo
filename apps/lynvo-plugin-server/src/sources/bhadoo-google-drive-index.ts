@@ -11,11 +11,8 @@ import {
   GOOGLE_DRIVE_FOLDER_MIME_TYPE,
   BHADOO_FALLBACK_API_PATH,
   BHADOO_FALLBACK_PATH,
-  EXTRACTION_ELAPSED_TIME_LIMIT_MS,
-  EXTRACTION_NODE_LIMIT,
   BHADOO_REVERSE_ENVELOPE_PREFIX_CHARACTER_COUNT,
   BHADOO_REVERSE_ENVELOPE_SUFFIX_CHARACTER_COUNT,
-  PAGINATION_PAGE_LIMIT,
 } from "../constants"
 import {
   createPluginResponseMetadata,
@@ -34,6 +31,7 @@ import {
 import { extractDirectMedia } from "./direct-media"
 import { formatFileSize } from "./file-size"
 import { createSourcePlayableNode } from "./media-node"
+import { paginateUpstream, type UpstreamPage } from "./pagination"
 import { isVideoFile } from "./video-file"
 
 export interface BhadooGoogleDriveItem {
@@ -360,25 +358,10 @@ const fetchBhadooNodes = async ({
   basicAuth,
   folderUrl,
 }: BhadooPaginationOptions): Promise<MediaNode[]> => {
-  const nodes: MediaNode[] = []
-  const seenTokens = new Set<string>()
-  const startedAtMs = Date.now()
   const fetchPage = async (
     pageToken: string,
     pageIndex: number
-  ): Promise<void> => {
-    if (
-      pageIndex >= PAGINATION_PAGE_LIMIT ||
-      Date.now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
-    ) {
-      throw new Error("Bhadoo Index pagination exceeded its limit.")
-    }
-    if (pageToken && seenTokens.has(pageToken)) {
-      throw new Error("Bhadoo Index repeated a continuation token.")
-    }
-    if (pageToken) {
-      seenTokens.add(pageToken)
-    }
+  ): Promise<UpstreamPage<BhadooGoogleDriveListResponse>> => {
     const result = await requestBhadooPage({
       endpointUrl,
       fallbackId,
@@ -394,17 +377,18 @@ const fetchBhadooNodes = async ({
     if (!Number.isInteger(result.curPageIndex)) {
       throw new Error("Bhadoo Index returned a malformed page.")
     }
-    nodes.push(...createBhadooNodes(result.data?.files ?? [], folderUrl))
-    if (nodes.length > EXTRACTION_NODE_LIMIT) {
-      throw new Error("Bhadoo Index returned too many nodes.")
-    }
-    const nextPageToken = result.nextPageToken ?? ""
-    if (nextPageToken) {
-      await fetchPage(nextPageToken, result.curPageIndex + 1)
+    return {
+      value: result,
+      nextToken: result.nextPageToken ?? undefined,
+      nextPageIndex: result.curPageIndex + 1,
     }
   }
-  await fetchPage("", 0)
-  return nodes
+
+  return paginateUpstream(
+    fetchPage,
+    (result) => createBhadooNodes(result.data?.files ?? [], folderUrl),
+    { sourceName: "Bhadoo Index" }
+  )
 }
 
 export const extractBhadooGoogleDriveIndex = async ({

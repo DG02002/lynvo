@@ -1,6 +1,7 @@
 import { Result, Schema } from "effect"
 import { Hono, type Context as HonoContext } from "hono"
 
+import { MediaArtworkRequestSchema } from "../../app/lib/api-contracts"
 import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
 import {
   DEFAULT_RETENTION_DAYS,
@@ -379,17 +380,8 @@ const retentionDaysSchema = Schema.Struct({
   deleteExpiredLinks: Schema.optional(Schema.Boolean),
 })
 
-const mediaArtworkRequestItemSchema = Schema.Struct({
-  title: Schema.NonEmptyString,
-  mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-  year: Schema.optional(Schema.Number),
-  seasonNumber: Schema.optional(Schema.Number),
-  episodeNumber: Schema.optional(Schema.Number),
-  providerId: Schema.optional(Schema.Number),
-})
-
 const mediaArtworkRequestSchema = Schema.Struct({
-  requests: Schema.Array(mediaArtworkRequestItemSchema),
+  requests: Schema.Array(MediaArtworkRequestSchema),
 })
 
 dataApp.get("/links", async (context) => {

@@ -39,6 +39,7 @@ import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
   readonly signal?: AbortSignal
+  readonly timeoutMs?: number
 }
 
 type RequestQuery = ExtractQuery | MetadataQuery | RemotePollQuery
@@ -166,6 +167,7 @@ export const requestSameOrigin = async <Payload = undefined>(
     payload,
     query,
     signal,
+    timeoutMs,
   }: RequestOptions<Payload> = {}
 ): Promise<Response> => {
   const requestHeaders = { ...sessionIdentityHeaders(), ...headers }
@@ -184,8 +186,14 @@ export const requestSameOrigin = async <Payload = undefined>(
   if (payload !== undefined) {
     requestInit.body = JSON.stringify(payload)
   }
-  if (signal !== undefined) {
-    requestInit.signal = signal
+  const timeoutSignal =
+    timeoutMs === undefined ? undefined : AbortSignal.timeout?.(timeoutMs)
+  const requestSignal =
+    signal && timeoutSignal
+      ? AbortSignal.any([signal, timeoutSignal])
+      : (signal ?? timeoutSignal)
+  if (requestSignal !== undefined) {
+    requestInit.signal = requestSignal
   }
   const requestPath = appendQuery(path, query)
   return await fetch(requestPath, requestInit)

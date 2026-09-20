@@ -2,9 +2,8 @@ import { useCallback } from "react"
 
 import { usePlayerPreferenceIdentity } from "~/context/player-preference-context"
 import { useRemoteControl } from "~/context/remote-control-context"
+import { playableLinkHandoff } from "~/features/links/playable-link-handoff"
 import type { ExtractedLink } from "~/features/links/types"
-
-import { playbackTarget } from "./playback-flow"
 
 export const usePlaybackActions = ({
   isOpeningRef,
@@ -26,7 +25,7 @@ export const usePlaybackActions = ({
       setIsOpening(true)
 
       try {
-        return await playbackTarget.handoff({
+        return await playableLinkHandoff.handoff({
           target,
           activeSessionId,
           sendRemotePlayback,

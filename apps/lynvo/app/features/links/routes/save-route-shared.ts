@@ -1,6 +1,7 @@
 import type { ShouldRevalidateFunction } from "react-router"
 
 import { savedLinkApiRecordToViewItem } from "~/features/links/use-links"
+import type { SavedLinkApiRecord } from "~/lib/api-contracts"
 import { SAVE_FOLDER_PATH_SEARCH_PARAM, savePaths } from "~/lib/paths"
 
 import type { Route } from "./+types/_site.save"

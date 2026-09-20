@@ -1,3 +1,9 @@
+import type {
+  MediaArtworkCandidate,
+  MediaArtworkIdentity,
+  MediaArtworkRequest,
+  MediaArtworkResult,
+} from "../../app/lib/api-contracts"
 import {
   doesSeasonNameCoverRemainder,
   selectBestSearchResult,
@@ -9,42 +15,8 @@ import {
   type TmdbSearchResult,
 } from "./tmdb-adapter"
 
-export interface MediaArtworkIdentity {
-  readonly providerId: number
-  readonly title: string
-  readonly year?: number
-  readonly mediaKind?: "movie" | "tv"
-}
-
-export interface MediaArtworkCandidate {
-  readonly providerId: number
-  readonly title: string
-  readonly year?: number
-  readonly mediaKind?: "movie" | "tv"
-  readonly posterPath?: string
-}
-
-interface MediaArtworkLookupRequest {
-  readonly title: string
-  readonly mediaKind?: "movie" | "tv"
-  readonly year?: number
-  readonly seasonNumber?: number
-  readonly episodeNumber?: number
-  /** When present, artwork resolves by immutable id; no title matching. */
-  readonly providerId?: number
-}
-
-export interface MediaArtworkLookupResult {
-  readonly posterPath?: string
-  readonly stillPath?: string
-  readonly episodeTitle?: string
-  /** The work this artwork belongs to; displayed so mismatches are visible. */
-  readonly identity?: MediaArtworkIdentity
-  /** Raw search candidates for the picker, title-based requests only. */
-  readonly candidates?: readonly MediaArtworkCandidate[]
-  /** Present when the provider attempt failed; callers must not cache it. */
-  readonly failed?: boolean
-}
+type MediaArtworkLookupRequest = MediaArtworkRequest
+export type MediaArtworkLookupResult = MediaArtworkResult
 
 export type MediaArtworkLookupOutcome =
   | { status: "resolved"; result: MediaArtworkLookupResult }

@@ -1,4 +1,3 @@
-import { Result, Schema } from "effect"
 import {
   useCallback,
   useEffect,
@@ -35,9 +34,9 @@ import {
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { linkCopy } from "~/features/links/link-copy"
+import { fetchMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
-import { MEDIA_ARTWORK_API_TIMEOUT_MS } from "~/lib/constants"
 
 interface ArtworkDialogProps {
   readonly item: LinkViewItem | undefined
@@ -161,24 +160,6 @@ const changeArtworkDialogReducer = (
   }
 }
 
-const candidatesSchema = Schema.Struct({
-  results: Schema.Array(
-    Schema.Struct({
-      candidates: Schema.optional(
-        Schema.Array(
-          Schema.Struct({
-            providerId: Schema.Number,
-            title: Schema.String,
-            year: Schema.optional(Schema.Number),
-            mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-            posterPath: Schema.optional(Schema.String),
-          })
-        )
-      ),
-    })
-  ),
-})
-
 const getCandidateKey = (candidate: MediaArtworkCandidate): string =>
   `${candidate.mediaKind ?? "movie"}:${candidate.providerId}`
 
@@ -243,34 +224,14 @@ const fetchArtworkCandidates = async (
   query: string,
   signal: AbortSignal
 ): Promise<readonly MediaArtworkCandidate[]> => {
-  const response = await fetch("/api/data/media-artwork", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      requests: [
-        { title: query, mediaKind: "movie" },
-        { title: query, mediaKind: "tv" },
-      ],
-    }),
-    signal: AbortSignal.any([
-      signal,
-      AbortSignal.timeout(MEDIA_ARTWORK_API_TIMEOUT_MS),
-    ]),
-  })
-  if (!response.ok) {
-    throw new Error("Media artwork search failed.")
-  }
-  const parsed = Schema.decodeUnknownResult(candidatesSchema)(
-    await response.json()
+  const response = await fetchMediaArtwork(
+    [
+      { title: query, mediaKind: "movie" },
+      { title: query, mediaKind: "tv" },
+    ],
+    { signal }
   )
-  if (Result.isFailure(parsed)) {
-    throw new Error("Media artwork response was invalid.")
-  }
-  return getUniqueCandidates(parsed.success.results)
+  return getUniqueCandidates(response.results)
 }
 
 interface CandidateGridProps {
