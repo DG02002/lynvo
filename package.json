@@ -22,7 +22,7 @@
     "@oxlint/plugins": "catalog:",
     "eslint-plugin-sonarjs": "^4.2.0",
     "husky": "catalog:",
-    "knip": "^6.34.0",
+    "knip": "^6.35.1",
     "lint-staged": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
