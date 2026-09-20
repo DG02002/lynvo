@@ -99,7 +99,7 @@ const reduceDeviceLoginState = (
       return {
         ...state,
         hasError: true,
-        errorMessage: action.errorMessage ?? deviceAuthCopy.exchangeFailure,
+        errorMessage: action.errorMessage ?? deviceAuthCopy.qrExchangeFailure,
         isGenerating: false,
         hasSignedIn: false,
       }
@@ -327,7 +327,7 @@ export const DeviceLoginQr = () => {
         <p className="text-destructive">
           {phase === "expired"
             ? "Code expired. Generate a new code."
-            : (errorMessage ?? deviceAuthCopy.exchangeFailure)}
+            : (errorMessage ?? deviceAuthCopy.qrExchangeFailure)}
         </p>
         <Button onClick={() => void fetchCode()} variant="outline" size="sm">
           <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" />
