@@ -34,7 +34,11 @@ import {
   type UserSessionList,
   type VersionedMutationBody,
 } from "../api-contracts"
-import { sessionIdentityHeaders } from "../session-identity"
+import {
+  bindSessionIdentityToUrl,
+  sessionIdentityHeaders,
+  type SessionIdentity,
+} from "../session-identity"
 import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
@@ -208,6 +212,28 @@ export const requestSameOrigin = async <Payload = undefined>(
   }
   const requestPath = appendQuery(path, query)
   return await fetch(requestPath, requestInit)
+}
+
+type SessionIdentityRequestOptions<Payload = undefined> = Omit<
+  RequestOptions<Payload>,
+  "includeSessionIdentityHeaders"
+> & {
+  readonly identity?: SessionIdentity
+}
+
+export const requestSameOriginWithSessionIdentity = <Payload = undefined>(
+  path: string,
+  { identity, ...options }: SessionIdentityRequestOptions<Payload> = {}
+): Promise<Response> => {
+  const url = new URL(
+    path,
+    globalThis.location?.href ?? "https://lynvo.invalid"
+  )
+  bindSessionIdentityToUrl(url, identity)
+  return requestSameOrigin(url.toString(), {
+    ...options,
+    includeSessionIdentityHeaders: false,
+  })
 }
 
 type MutationOptions<ResponseBody, Payload> = {

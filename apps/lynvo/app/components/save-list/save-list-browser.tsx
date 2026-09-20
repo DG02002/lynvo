@@ -58,6 +58,7 @@ import {
   FinderEpisodeStillDisplay,
   useFinderEpisodeStill,
 } from "./finder-episode-still"
+import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MediaListRowMeta,
   MediaListRow,
@@ -72,7 +73,6 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
-import { buildItemAriaLabel } from "./opened-aria-label"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,

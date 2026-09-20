@@ -11,6 +11,7 @@ export const fetchMetaInternal = async (
 ): Promise<MetaData> => {
   try {
     const response = await requestSameOrigin("/api/meta", {
+      includeSessionIdentityHeaders: false,
       query: { url: targetUrl },
       timeoutMs: FETCH_METADATA_TIMEOUT_MS,
     })

@@ -1,4 +1,4 @@
-interface SessionIdentity {
+export interface SessionIdentity {
   readonly userId: string
   readonly sessionId: string
 }

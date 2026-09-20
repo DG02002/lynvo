@@ -8,8 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
-import { requestSameOrigin } from "~/lib/api/client"
-import { bindSessionIdentityToUrl } from "~/lib/session-identity"
+import { requestSameOriginWithSessionIdentity } from "~/lib/api/client"
 
 const identityStatusSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal("unauthenticated") }),
@@ -46,14 +45,13 @@ export const IdentitySynchronizer = ({
     }
     const generation = validationGeneration.current
     const identity = userId && sessionId ? { userId, sessionId } : undefined
-    const url = bindSessionIdentityToUrl(
-      new URL("/api/auth/session/status", window.location.href),
-      identity
+    const request = requestSameOriginWithSessionIdentity(
+      "/api/auth/session/status",
+      {
+        cache: "no-store",
+        identity,
+      }
     )
-    const request = requestSameOrigin(url.toString(), {
-      cache: "no-store",
-      includeSessionIdentityHeaders: false,
-    })
       .then(async (response) => {
         if (
           response.status >= 500 ||
