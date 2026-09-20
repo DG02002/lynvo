@@ -8,9 +8,7 @@
   },
   "globs": [
     "**/*.md",
-    "**/*.mdx",
-    // `**` skips dot-directories, so opt .github in explicitly.
-    ".github/**/*.md"
+    "**/*.mdx"
   ],
   "ignores": [
     "**/node_modules/**",
@@ -26,6 +24,14 @@
     "temp/**"
   ],
   "overrides": [
+    {
+      "filter": ["README.md"],
+      "config": {
+        // The PR review gate precedes the document title.
+        "MD041": false
+      },
+      "combine": "merge"
+    },
     {
       "filter": ["**/*.mdx"],
       "config": {

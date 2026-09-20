@@ -152,10 +152,6 @@ checked files. Warnings fail every lint run through `denyWarnings` in the root
 the committed `.vscode` settings. When feeding lint output back into an agent
 loop, run `oxlint --format=agent <paths>` for one compact line per finding.
 
-Markdown and MDX lint with `markdownlint-cli2` through the root
-`.markdownlint-cli2.jsonc`, which the VS Code extension also reads. Pre-commit
-fixes staged Markdown files with `--fix`.
-
 Knip runs in both modes inside `pnpm check`: the default run and the
 production run (`knip:production`), which ignores test coverage on purpose.
 After removing an export's last consumer, `pnpm exec knip --fix --fix-type
