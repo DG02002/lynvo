@@ -93,6 +93,23 @@ describe("browser API client", () => {
     await expect(request.json()).resolves.toEqual({ operationId: "op-1" })
   })
 
+  it("passes cache policy and timeout settings to raw same-origin requests", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true }))
+
+    await requestSameOrigin("/api/version", {
+      cache: "no-store",
+      timeoutMs: 1000,
+    })
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    expect(request.cache).toBe("no-store")
+    expect(request.signal).toBeDefined()
+  })
+
   it("preserves tagged API errors and response metadata", async () => {
     fetchMock.mockResolvedValue(
       Response.json(

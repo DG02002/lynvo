@@ -72,7 +72,7 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
-import { getOpenedAriaLabel } from "./opened-aria-label"
+import { buildItemAriaLabel } from "./opened-aria-label"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
@@ -235,7 +235,7 @@ const getSaveListItemAriaLabel = ({
     label = `View ${itemTitle}`
   }
 
-  return getOpenedAriaLabel(label, isOpened, isNew)
+  return buildItemAriaLabel({ label, isOpened, isNew })
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>

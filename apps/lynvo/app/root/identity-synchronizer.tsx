@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { requestSameOrigin } from "~/lib/api/client"
 import { bindSessionIdentityToUrl } from "~/lib/session-identity"
 
 const identityStatusSchema = Schema.Union([
@@ -49,9 +50,9 @@ export const IdentitySynchronizer = ({
       new URL("/api/auth/session/status", window.location.href),
       identity
     )
-    const request = fetch(url, {
-      credentials: "same-origin",
+    const request = requestSameOrigin(url.toString(), {
       cache: "no-store",
+      includeSessionIdentityHeaders: false,
     })
       .then(async (response) => {
         if (

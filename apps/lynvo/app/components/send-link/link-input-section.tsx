@@ -48,8 +48,8 @@ const sourceStatusLabel = (status: string) => {
 
 const errorTitles = {
   duplicate: linkCopy.errors.duplicate,
-  unsupported: "Link not supported",
-  generic: "Link couldn’t be opened",
+  generic: linkCopy.errors.generic,
+  unsupported: linkCopy.errors.unsupported,
 } satisfies Record<SavedLinkInteractionError["kind"], string>
 
 const getErrorTitle = (error: SavedLinkInteractionError) =>

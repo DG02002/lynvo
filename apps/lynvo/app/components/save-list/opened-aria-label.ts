@@ -1,8 +1,14 @@
-export const getOpenedAriaLabel = (
-  label: string | undefined,
-  isOpened: boolean,
-  isNew = false
-) =>
+interface ItemAriaLabelOptions {
+  readonly label: string | undefined
+  readonly isOpened: boolean
+  readonly isNew?: boolean
+}
+
+export const buildItemAriaLabel = ({
+  label,
+  isOpened,
+  isNew = false,
+}: ItemAriaLabelOptions) =>
   label
     ? [label, isNew ? "new" : undefined, isOpened ? "opened" : undefined]
         .filter(Boolean)

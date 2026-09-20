@@ -38,6 +38,7 @@ import { sessionIdentityHeaders } from "../session-identity"
 import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
+  readonly cache?: RequestCache
   readonly includeSessionIdentityHeaders?: boolean
   readonly signal?: AbortSignal
   readonly timeoutMs?: number
@@ -163,6 +164,7 @@ export const requestJson = async <ResponseBody, Payload = undefined>(
 export const requestSameOrigin = async <Payload = undefined>(
   path: string,
   {
+    cache,
     method = "GET",
     headers,
     payload,
@@ -185,6 +187,9 @@ export const requestSameOrigin = async <Payload = undefined>(
   const requestInit: RequestInit = {
     method,
     credentials: "same-origin",
+  }
+  if (cache !== undefined) {
+    requestInit.cache = cache
   }
   if (Object.keys(requestHeaders).length > 0) {
     requestInit.headers = requestHeaders
