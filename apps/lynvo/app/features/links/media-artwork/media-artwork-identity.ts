@@ -1,4 +1,5 @@
-import type { MediaArtworkRequest } from "../../../../shared/api-contracts"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
 import { getMediaNodeInteractionState } from "../media-node-interaction"
 import type { ExtractedLink } from "../types"
 import {

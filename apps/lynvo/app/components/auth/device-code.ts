@@ -1,14 +1,15 @@
 import { Result, Schema } from "effect"
 
 import { readApiResponseError } from "~/lib/api-errors"
+import { requestSameOrigin } from "~/lib/api/client"
 import { deviceCodeResponseSchema } from "~/lib/auth-gateway-schemas"
 
 export const createDeviceCode = async (deviceName: string) => {
-  const response = await fetch("/api/auth/device/code", {
+  const response = await requestSameOrigin("/api/auth/device/code", {
+    includeSessionIdentityHeaders: false,
     method: "POST",
-    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ deviceName }),
+    payload: { deviceName },
   })
   if (!response.ok) {
     throw await readApiResponseError(

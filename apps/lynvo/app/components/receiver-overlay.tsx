@@ -12,8 +12,15 @@ import {
 } from "~/components/ui/dialog"
 import { useRemoteControl } from "~/context/remote-control-context"
 
-export const ReceiverOverlay = () => {
-  const { controllingDevices, handleReceiverDisconnect } = useRemoteControl()
+interface ReceiverOverlayViewProps {
+  readonly controllingDevices: readonly RemoteDevice[]
+  readonly handleReceiverDisconnect: () => Promise<void>
+}
+
+export const ReceiverOverlayView = ({
+  controllingDevices,
+  handleReceiverDisconnect,
+}: ReceiverOverlayViewProps) => {
   const disconnectButtonRef = useRef<HTMLButtonElement>(null)
   const isOpen = controllingDevices.length > 0
 
@@ -77,4 +84,9 @@ export const ReceiverOverlay = () => {
       </DialogPortal>
     </Dialog>
   )
+}
+
+export const ReceiverOverlay = () => {
+  const remoteControl = useRemoteControl()
+  return <ReceiverOverlayView {...remoteControl} />
 }

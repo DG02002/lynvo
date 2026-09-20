@@ -7,6 +7,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMemo, useState, type ReactNode, type RefObject } from "react"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
 
 import { ExpandableFilename } from "~/components/expandable-filename"
 import { LinkActionsDotMenu } from "~/components/links/link-actions-context-menu"
@@ -45,7 +46,6 @@ import {
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 
-import type { MediaArtworkRequest } from "../../../shared/api-contracts"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ExtractionStatusTitle } from "./extraction-status"
 import {
@@ -214,6 +214,7 @@ interface SaveListItemAriaLabelOptions {
   readonly isExtractionIncomplete: boolean
   readonly extractionStatusLabel: string
   readonly isOpened: boolean
+  readonly isNew: boolean
 }
 
 const getSaveListItemAriaLabel = ({
@@ -222,6 +223,7 @@ const getSaveListItemAriaLabel = ({
   isExtractionIncomplete,
   extractionStatusLabel,
   isOpened,
+  isNew,
 }: SaveListItemAriaLabelOptions) => {
   let label: string
 
@@ -233,7 +235,7 @@ const getSaveListItemAriaLabel = ({
     label = `View ${itemTitle}`
   }
 
-  return getOpenedAriaLabel(label, isOpened)
+  return getOpenedAriaLabel(label, isOpened, isNew)
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -1067,6 +1069,7 @@ export const SaveListBrowser = ({
                           isExtracting
                         ),
                         isOpened: directLink?.opened === true,
+                        isNew: isRootItemNew,
                       })}
                       className={cn(
                         "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

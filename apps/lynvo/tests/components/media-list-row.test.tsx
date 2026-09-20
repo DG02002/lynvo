@@ -102,6 +102,22 @@ describe("MediaListRow", () => {
     ).toHaveClass("bg-sky-500/15")
   })
 
+  it("announces a new row state", () => {
+    render(
+      <MediaListRow
+        label="Title text"
+        icon={null}
+        title={{ value: "Title text" }}
+        newBadge={{ mobilePlacement: "metadata" }}
+        onActivate={() => {}}
+      />
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Title text, new" })
+    ).toBeInTheDocument()
+  })
+
   it("renders the overlay in a full-height trailing cell beside the button", () => {
     render(
       <MediaListRow

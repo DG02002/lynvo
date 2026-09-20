@@ -31,9 +31,12 @@ const normalizeMediaView = (value: string): MediaView | undefined => {
   return isMediaView(value) ? value : undefined
 }
 
-const readStoredMediaView = (
-  onLegacyValue?: (mediaView: MediaView) => void
-): MediaView | undefined => {
+interface StoredMediaView {
+  readonly rawValue: string
+  readonly mediaView: MediaView
+}
+
+const readStoredMediaView = (): StoredMediaView | undefined => {
   if (globalThis.localStorage === undefined) {
     return undefined
   }
@@ -44,20 +47,17 @@ const readStoredMediaView = (
   }
 
   const mediaView = normalizeMediaView(rawValue)
-  if (mediaView !== undefined) {
-    if (mediaView !== rawValue) {
-      onLegacyValue?.(mediaView)
-    }
-    return mediaView
-  }
-
-  return undefined
+  return mediaView === undefined ? undefined : { rawValue, mediaView }
 }
 
 const migrateLegacyMediaViewPreference = (): void => {
-  readStoredMediaView((mediaView) => {
-    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, mediaView)
-  })
+  const storedMediaView = readStoredMediaView()
+  if (
+    storedMediaView !== undefined &&
+    storedMediaView.mediaView !== storedMediaView.rawValue
+  ) {
+    localStorage.setItem(MEDIA_VIEW_STORAGE_KEY, storedMediaView.mediaView)
+  }
 }
 
 const getDefaultMediaView = (): MediaView =>
@@ -82,7 +82,7 @@ export const getMediaView = (): MediaView => {
 
   const storedMediaView = readStoredMediaView()
   if (storedMediaView !== undefined) {
-    return storedMediaView
+    return storedMediaView.mediaView
   }
   return getDefaultMediaView()
 }

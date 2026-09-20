@@ -1,9 +1,9 @@
 import type { ShouldRevalidateFunction } from "react-router"
+import type { SavedLinkApiRecord } from "~shared/api-contracts"
 
 import { savedLinkApiRecordToViewItem } from "~/features/links/use-links"
 import { SAVE_FOLDER_PATH_SEARCH_PARAM, savePaths } from "~/lib/paths"
 
-import type { SavedLinkApiRecord } from "../../../../shared/api-contracts"
 import type { Route } from "./+types/_site.save"
 
 export const saveRouteMeta = (_: Route.MetaArgs) => [{ title: "Save | Lynvo" }]

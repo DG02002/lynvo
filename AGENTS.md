@@ -185,6 +185,8 @@ Playable links to an external Android player.
 
 - `apps/lynvo` - React Router UI, Hono/Worker, D1, Durable Objects, extraction,
   realtime, and in-app docs.
+- `apps/lynvo/shared` - contracts and utilities imported by both the browser and
+  Worker. Browser imports use the `~shared/*` alias.
 - `apps/lynvo-plugin-server` - managed Worker, protocol routes, and Source
   adapters.
 - `packages/plugin-server-protocol` - Effect/Schema contracts, runtime
@@ -195,6 +197,9 @@ Playable links to an external Android player.
   formatter and linter configurations exclude this directory; do not reformat
   or hand-edit its files. Delete wholly-unused components instead of keeping
   them; knip flags them and the shadcn CLI can restore them.
+- `apps/lynvo/app/lib/api-contracts.ts` contains app-only route and settings
+  contracts. Keep browser/Worker contracts in `apps/lynvo/shared` so Worker
+  code does not import from the app tree.
 - `tools/oxlint/anti-slop/` - vendored Oxlint plugin installed by the
   `install-anti-slop` skill. Never edit or reformat it; update it by re-running
   the skill. Project-specific lint rules live in their own plugin.

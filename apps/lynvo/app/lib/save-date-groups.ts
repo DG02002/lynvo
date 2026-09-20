@@ -1,6 +1,6 @@
-import { SAVE_LIST_OLDER_AFTER_DAY_COUNT } from "~/lib/constants"
+import { DAY_MS } from "~shared/constants"
 
-import { DAY_MS } from "../../shared/constants"
+import { SAVE_LIST_OLDER_AFTER_DAY_COUNT } from "~/lib/constants"
 
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(undefined, {
   weekday: "long",

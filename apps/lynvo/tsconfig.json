@@ -17,9 +17,8 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "paths": {
-      "~/*": [
-        "./app/*"
-      ]
+      "~/*": ["./app/*"],
+      "~shared/*": ["./shared/*"]
     },
     "types": [
       "./worker-configuration.d.ts"

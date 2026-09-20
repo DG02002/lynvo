@@ -3,8 +3,7 @@ import type {
   JsonValue,
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
-
-import type { MediaArtworkIdentity } from "../../../shared/api-contracts"
+import type { MediaArtworkIdentity } from "~shared/api-contracts"
 
 export interface ExtractedLink {
   nodeKey?: string

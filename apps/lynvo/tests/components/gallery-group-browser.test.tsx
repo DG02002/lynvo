@@ -165,7 +165,8 @@ describe("GalleryGroupBrowser", () => {
     expect(screen.getByText("downloaded-video.mkv")).toBeInTheDocument()
     expect(screen.getByRole("banner").children).toHaveLength(3)
     expect(
-      screen.getByRole("button", { name: "downloaded-video.mkv" }).parentElement
+      screen.getByRole("button", { name: "downloaded-video.mkv, new" })
+        .parentElement
     ).not.toHaveClass("flex-col")
   })
 
@@ -217,7 +218,8 @@ describe("GalleryGroupBrowser", () => {
       expect(stillSlot).not.toHaveClass("hidden")
     })
     expect(
-      screen.getByRole("button", { name: "1. The Sample Battle" }).parentElement
+      screen.getByRole("button", { name: "1. The Sample Battle, new" })
+        .parentElement
     ).toHaveClass("relative", "flex-col", "md:flex-row")
     const rowMenus = screen.getAllByRole("button", {
       name: `Open menu for ${episodeFilename}`,
@@ -275,13 +277,13 @@ describe("GalleryGroupBrowser", () => {
         .filter(
           (label): label is string =>
             label?.includes("Episode") === true ||
-            label === "1. The Sample Battle"
+            label === "1. The Sample Battle, new"
         )
 
       expect(episodeRowLabels).toEqual([
-        "1. The Sample Battle",
-        "2. Episode 2",
-        "9. Episode 9",
+        "1. The Sample Battle, new",
+        "2. Episode 2, new",
+        "9. Episode 9, new",
       ])
     })
   })

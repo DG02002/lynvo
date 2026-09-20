@@ -299,7 +299,7 @@ describe("GallerySaveGrid", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose artwork" }))
+    fireEvent.click(screen.getByRole("button", { name: "Change artwork" }))
 
     expect(
       screen.getByRole("heading", { name: "Change artwork" })
@@ -337,7 +337,7 @@ describe("GallerySaveGrid", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose artwork" }))
+    fireEvent.click(screen.getByRole("button", { name: "Change artwork" }))
 
     expect(
       screen.getByRole("heading", { name: "Change artwork" })

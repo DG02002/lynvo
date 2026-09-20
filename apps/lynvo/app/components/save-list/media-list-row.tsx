@@ -119,7 +119,7 @@ export const MediaListRow = ({
   >
     <button
       type="button"
-      aria-label={getOpenedAriaLabel(label, isOpened)}
+      aria-label={getOpenedAriaLabel(label, isOpened, newBadge !== undefined)}
       disabled={disabled}
       className={cn(
         "absolute inset-0 z-1 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

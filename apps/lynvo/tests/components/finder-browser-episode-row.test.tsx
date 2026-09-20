@@ -422,10 +422,10 @@ describe("FinderBrowser episode rows", () => {
       screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("button", { name: "1. Episode 1" })
+      await screen.findByRole("button", { name: "1. Episode 1, new" })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "2. Episode 1" })
+      screen.getByRole("button", { name: "2. Episode 1, new" })
     ).toBeInTheDocument()
   })
 
@@ -503,9 +503,11 @@ describe("FinderBrowser episode rows", () => {
     expect(
       screen.getByRole("switch", { name: "Show episode names" })
     ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Featurettes" })).toBeVisible()
     expect(
-      await screen.findByRole("button", { name: "1. Episode 1" })
+      screen.getByRole("button", { name: "Featurettes, new" })
+    ).toBeVisible()
+    expect(
+      await screen.findByRole("button", { name: "1. Episode 1, new" })
     ).toBeVisible()
 
     await waitFor(() => {

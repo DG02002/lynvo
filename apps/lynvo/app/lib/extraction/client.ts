@@ -3,6 +3,7 @@ import {
   runWithRetries,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
+import { parseRetryAfterMs } from "~shared/retry"
 
 import {
   extractedLinkSchema,
@@ -11,7 +12,6 @@ import {
 import type { MetaData } from "~/features/links/types"
 import { ApiClientError, requestJson } from "~/lib/api/client"
 
-import { parseRetryAfterMs } from "../../../shared/retry"
 import { ExtractionCommandError } from "./errors"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
 

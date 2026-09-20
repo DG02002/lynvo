@@ -1,4 +1,4 @@
-import { DAY_MS } from "../../shared/constants"
+import { DAY_MS } from "~shared/constants"
 
 export const REALTIME_SESSION_REVOKED_CLOSE_CODE = 4001
 export const REALTIME_HEARTBEAT_INTERVAL_MS = 25_000

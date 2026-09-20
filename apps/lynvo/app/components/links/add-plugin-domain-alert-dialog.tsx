@@ -34,9 +34,9 @@ export function AddPluginDomainAlertDialog({
       description={
         <>
           Lynvo recognized <strong>{suggestion?.domain}</strong> as{" "}
-          {suggestion?.pluginName}. A Plugin Domain is a site address Lynvo
-          remembers for this Plugin. Add this Plugin Domain so Lynvo can load
-          its links faster next time.
+          {suggestion?.pluginName}. A Plugin Domain is the site address this
+          Plugin handles. Add it so Lynvo can use this Plugin for the site next
+          time.
         </>
       }
       confirmLabel="Add domain"

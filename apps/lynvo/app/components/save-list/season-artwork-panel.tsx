@@ -1,9 +1,10 @@
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
 import { Spinner } from "~/components/spinner"
 import { useMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import { TMDB_LOGO_SHORT_SRC, TMDB_SITE_URL } from "~/lib/constants"
 
-import type { MediaArtworkRequest } from "../../../shared/api-contracts"
 import { GALLERY_GROUP_ARTWORK_SIZES } from "./save-list-layout-constants"
 
 interface SeasonArtworkPanelProps {
