@@ -178,6 +178,12 @@ describe("GallerySaveGrid", () => {
       />
     )
 
+    const menuTrigger = screen.getByRole("button", {
+      name: "Open menu for Sample Feature",
+    })
+    menuTrigger.focus()
+    expect(menuTrigger).toHaveFocus()
+
     fireEvent.click(
       screen.getByRole("button", { name: "Open Sample Feature (2017)" })
     )

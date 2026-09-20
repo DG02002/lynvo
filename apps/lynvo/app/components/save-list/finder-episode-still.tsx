@@ -64,7 +64,7 @@ const FinderEpisodeStillImage = ({
     return <Skeleton className="absolute inset-0 size-full" />
   }
 
-  return fallbackIcon
+  return <span aria-hidden="true">{fallbackIcon}</span>
 }
 
 export const useFinderEpisodeStill = (
@@ -106,7 +106,11 @@ export const FinderEpisodeStillDisplay = ({
 }: FinderEpisodeStillDisplayProps) => {
   return (
     <span
-      className={cn(MEDIA_LIST_EPISODE_STILL_CLASS, isDimmed && "opacity-60")}
+      className={cn(
+        MEDIA_LIST_EPISODE_STILL_CLASS,
+        "relative",
+        isDimmed && "opacity-60"
+      )}
     >
       <span
         role="img"
@@ -128,16 +132,16 @@ export const FinderEpisodeStillDisplay = ({
           isLookupPending={isLookupPending}
           fallbackIcon={fallbackIcon}
         />
-        {isResolving && (
-          <span className="absolute inset-0 z-1 flex items-center justify-center bg-background/60">
-            <Spinner aria-label={`Loading ${label}…`} className="size-6" />
-          </span>
-        )}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 shadow-depth-gloss"
         />
       </span>
+      {isResolving && (
+        <span className="absolute inset-0 z-1 flex items-center justify-center rounded-xl bg-background/60">
+          <Spinner aria-label={`Loading ${label}…`} className="size-6" />
+        </span>
+      )}
     </span>
   )
 }

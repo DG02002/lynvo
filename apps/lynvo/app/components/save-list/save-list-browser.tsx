@@ -71,12 +71,12 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
+import { getOpenedAriaLabel } from "./opened-aria-label"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
-import { getOpenedAriaLabel } from "./save-list-accessibility"
 import {
   getFolderIcon,
   getFolderVisualState,

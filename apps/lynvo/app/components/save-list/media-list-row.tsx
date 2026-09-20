@@ -15,7 +15,7 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
-import { getOpenedAriaLabel } from "./save-list-accessibility"
+import { getOpenedAriaLabel } from "./opened-aria-label"
 
 interface SaveListRowIconProps {
   readonly children: ReactNode

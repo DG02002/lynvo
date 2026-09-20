@@ -28,7 +28,7 @@ export const ReceiverOverlay = () => {
                 className="size-6 text-primary"
               />
             </div>
-            <DialogTitle className="text-xl font-semibold tracking-tight">
+            <DialogTitle className="text-xl font-semibold leading-normal tracking-tight">
               Connected to a controlling device
             </DialogTitle>
           </div>

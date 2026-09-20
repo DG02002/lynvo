@@ -12,11 +12,13 @@ const EpisodeStillHarness = ({
   fallbackIcon,
   isWatched = false,
   isDimmed = false,
+  isResolving = false,
 }: {
   readonly label: string
   readonly fallbackIcon: ReactNode
   readonly isWatched?: boolean
   readonly isDimmed?: boolean
+  readonly isResolving?: boolean
 }) => {
   const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(label)
 
@@ -24,8 +26,8 @@ const EpisodeStillHarness = ({
     <FinderEpisodeStillDisplay
       label={label}
       fallbackIcon={fallbackIcon}
-      isResolving={false}
-      isDimmed={isDimmed ?? false}
+      isResolving={isResolving}
+      isDimmed={isDimmed}
       isWatched={isWatched}
       imagePath={imagePath}
       imageType={imageType}
@@ -130,5 +132,24 @@ describe("episode still presentation", () => {
     expect(screen.getByRole("img")).toHaveAccessibleName(
       "Warden.S03E01.Episode.2160p.mkv, Expired"
     )
+  })
+
+  it("keeps the resolving announcement outside the still image", () => {
+    render(
+      <EpisodeStillHarness
+        label="Warden.S03E01.Episode.2160p.mkv"
+        fallbackIcon={<span>Fallback</span>}
+        isResolving
+      />
+    )
+
+    expect(
+      screen.getByRole("status", {
+        name: "Loading Warden.S03E01.Episode.2160p.mkv…",
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("img").querySelector('[data-slot="spinner"]')
+    ).not.toBeInTheDocument()
   })
 })

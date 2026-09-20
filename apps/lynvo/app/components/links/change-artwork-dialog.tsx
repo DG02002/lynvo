@@ -339,62 +339,87 @@ const ArtworkSearchResults = ({
   searchFailed,
   onSelectCandidate,
 }: ArtworkSearchResultsProps) => {
+  let searchStatus: string | undefined
+  if (isSearching) {
+    searchStatus = "Searching for artwork…"
+  } else if (searchFailed) {
+    searchStatus = "Artwork search failed."
+  } else if (didSearch && candidates.length === 0) {
+    searchStatus = "No matches found."
+  } else if (didSearch) {
+    searchStatus = `Found ${candidates.length} artwork result${candidates.length === 1 ? "" : "s"}.`
+  }
+  const searchStatusNode = searchStatus ? (
+    <div className="sr-only" role="status" aria-live="polite">
+      {searchStatus}
+    </div>
+  ) : null
+
   if (candidates.length > 0) {
     return (
-      <Tabs defaultValue="tv" className="min-h-0 flex-1 gap-5 overflow-hidden">
-        <TabsList className="w-full shrink-0">
-          <TabsTrigger value="tv">
-            TV shows
-            <Badge variant="secondary">{tvCandidates.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="movies">
-            Movies
-            <Badge variant="secondary">{movieCandidates.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
-        <div role="status" className="min-h-0 flex-1 overflow-y-auto pr-1">
-          <TabsContent value="tv">
-            <CandidateGrid
-              candidates={tvCandidates}
-              onSelectCandidate={onSelectCandidate}
-            />
-          </TabsContent>
-          <TabsContent value="movies">
-            <CandidateGrid
-              candidates={movieCandidates}
-              onSelectCandidate={onSelectCandidate}
-            />
-          </TabsContent>
-          <TabsContent value="all">
-            <CandidateGrid
-              candidates={candidates}
-              onSelectCandidate={onSelectCandidate}
-            />
-          </TabsContent>
-        </div>
-      </Tabs>
+      <>
+        {searchStatusNode}
+        <Tabs
+          defaultValue="tv"
+          className="min-h-0 flex-1 gap-5 overflow-hidden"
+        >
+          <TabsList className="w-full shrink-0">
+            <TabsTrigger value="tv">
+              TV shows
+              <Badge variant="secondary">{tvCandidates.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="movies">
+              Movies
+              <Badge variant="secondary">{movieCandidates.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
+          </TabsList>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <TabsContent value="tv">
+              <CandidateGrid
+                candidates={tvCandidates}
+                onSelectCandidate={onSelectCandidate}
+              />
+            </TabsContent>
+            <TabsContent value="movies">
+              <CandidateGrid
+                candidates={movieCandidates}
+                onSelectCandidate={onSelectCandidate}
+              />
+            </TabsContent>
+            <TabsContent value="all">
+              <CandidateGrid
+                candidates={candidates}
+                onSelectCandidate={onSelectCandidate}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </>
     )
   }
 
   if (!isSearching && didSearch) {
     return (
-      <div role="status" className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-          <p className="font-medium">
-            {searchFailed ? "Search failed" : "No matches found"}
-          </p>
-          <p className="max-w-md text-sm text-muted-foreground text-pretty">
-            {searchFailed
-              ? "Check your connection and try again."
-              : "Try the original title, remove the year, or check the spelling."}
-          </p>
+      <>
+        {searchStatusNode}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
+            <p className="font-medium">
+              {searchFailed ? "Search failed" : "No matches found"}
+            </p>
+            <p className="max-w-md text-sm text-muted-foreground text-pretty">
+              {searchFailed
+                ? "Check your connection and try again."
+                : "Try the original title, remove the year, or check the spelling."}
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
-  return null
+  return searchStatusNode
 }
 
 const ArtworkDialog = ({
