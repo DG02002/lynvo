@@ -137,7 +137,7 @@ current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
 To test the TV Bro layout before signing in, configure a Chrome custom device
-with the desired TV dimensions and prepend `TV Bro/1.0 ` to its user-agent
+with the desired TV dimensions and prepend `TV Bro/1.0` to its user-agent
 string. The development build recognizes that prefix, so the sign-in and device
 sign-in pages can be tested without an authenticated session. Production still
 requires TV Bro's native bridge.
@@ -167,7 +167,7 @@ Every request is signed in as a fixed local development user and session
 backed by local D1. The mode is not specific to the TV Bro layout: the account
 can use any authenticated surface, including saving real URLs, running
 extraction through the managed Plugin Server, and changing settings. Combine
-it with the `TV Bro/1.0 ` user-agent prefix above to exercise the TV Bro
+it with the `TV Bro/1.0` user-agent prefix above to exercise the TV Bro
 layout while signed in.
 
 The mode does not disable CSRF checks, usage limits, Plugin Server limits, or

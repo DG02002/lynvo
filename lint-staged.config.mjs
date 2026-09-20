@@ -17,6 +17,8 @@ const quoteShellArgument = (filePath) =>
 
 const jsonFilePattern = /(?:^|\/)(?:package|knip)\.json$/
 
+const markdownFilePattern = /\.(?:md|mdx)$/
+
 export default {
   "*": (stagedFilePaths) => {
     const sourceFilePaths = stagedFilePaths.filter(isLintableSourceFile)
@@ -24,6 +26,11 @@ export default {
       (absolutePath) =>
         existsSync(absolutePath) &&
         jsonFilePattern.test(getRelativePath(absolutePath))
+    )
+    const markdownFilePaths = stagedFilePaths.filter(
+      (absolutePath) =>
+        existsSync(absolutePath) &&
+        markdownFilePattern.test(getRelativePath(absolutePath))
     )
 
     const commands = []
@@ -39,6 +46,11 @@ export default {
     if (jsonFilePaths.length > 0) {
       const fileArguments = jsonFilePaths.map(quoteShellArgument).join(" ")
       commands.push(`oxfmt --no-error-on-unmatched-pattern ${fileArguments}`)
+    }
+
+    if (markdownFilePaths.length > 0) {
+      const fileArguments = markdownFilePaths.map(quoteShellArgument).join(" ")
+      commands.push(`markdownlint-cli2 --fix ${fileArguments}`)
     }
 
     return commands

@@ -145,12 +145,16 @@ which entries applied. Fixing one path is not fixing the feature.
 ## Linting and formatting
 
 While iterating, apply the touched package's `fmt` script and its `lint:fix`
-script where provided. `apps/lynvo` has the only lint fixer; every workspace
-package and the root workspace expose `fmt`/`fmt:check` for their checked
-files. Warnings fail every lint run through `denyWarnings` in the root
+script where provided. `apps/lynvo` has the only `lint:fix` script; every
+workspace package and the root workspace expose `fmt`/`fmt:check` for their
+checked files. Warnings fail every lint run through `denyWarnings` in the root
 `.oxlintrc.json`, so a warning is a failure everywhere, editors included via
 the committed `.vscode` settings. When feeding lint output back into an agent
 loop, run `oxlint --format=agent <paths>` for one compact line per finding.
+
+Markdown and MDX lint with `markdownlint-cli2` through the root
+`.markdownlint-cli2.jsonc`, which the VS Code extension also reads. Pre-commit
+fixes staged Markdown files with `--fix`.
 
 Knip runs in both modes inside `pnpm check`: the default run and the
 production run (`knip:production`), which ignores test coverage on purpose.
@@ -185,11 +189,12 @@ removal can expose the next.
   `- Fixed ...`, or `- Improved ...` for user-facing changes, or `- N/A` for
   docs-only and other non-user-facing changes. For example:
 
-  ```
+  ```markdown
   Release Notes:
 
   - Fixed saved links losing freshness after a reconnect.
   ```
+
 - Every claim in the body must be checkable against the diff; never state an intention as a completed result.
 - Review the premise, not only the diff. Spend at least one sentence of
   every review asking whether the spec itself is right — especially for
@@ -206,7 +211,7 @@ removal can expose the next.
   the developer, not a mandate to spin up more PRs.
 - Hard rule: when a change modifies any source files, prepend
 
-  ```
+  ```markdown
   > [!IMPORTANT]
   > Remove this line to confirm you've reviewed this PR before submitting.
   ```
