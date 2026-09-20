@@ -33,6 +33,7 @@ export const UserNavActions = ({
           to="/save"
           prefetch="intent"
           viewTransition={viewTransition}
+          aria-label="Save"
           className={cn(
             buttonVariants({ variant: "ghost" }),
             "gap-2 px-2 sm:px-4 text-foreground rounded-full"

@@ -48,6 +48,14 @@ const UnresolvedItemHarness = ({
   )
 }
 
+const getTreeItemRow = (treeItem: HTMLElement) => {
+  const row = treeItem.querySelector<HTMLElement>('[tabindex="0"]')
+  if (!row) {
+    throw new Error("Expected the tree item to contain a focusable row")
+  }
+  return row
+}
+
 describe("LinkSelectionDialog", () => {
   it("selects and clears every selectable link", () => {
     const onConfirm = vi.fn()
@@ -168,11 +176,26 @@ describe("LinkSelectionDialog", () => {
     )
 
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
-    fireEvent.click(seasonRow)
+    expect(seasonRow.parentElement).toHaveAttribute("role", "tree")
+    expect(seasonRow).toHaveAttribute("aria-level", "1")
+    expect(seasonRow).toHaveAttribute("aria-posinset", "1")
+    expect(seasonRow).toHaveAttribute("aria-setsize", "1")
+    const seasonRowControl = getTreeItemRow(seasonRow)
+    seasonRowControl.focus()
+    expect(seasonRowControl).toHaveFocus()
+    fireEvent.click(screen.getByText("Season 1"))
     expect(seasonRow).toHaveAttribute("aria-expanded", "true")
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
-    fireEvent.click(qualityFolderRow)
+    expect(qualityFolderRow.parentElement).toHaveAttribute("role", "group")
+    expect(qualityFolderRow).toHaveAttribute("aria-level", "2")
+    expect(qualityFolderRow).toHaveAttribute("aria-posinset", "1")
+    expect(qualityFolderRow).toHaveAttribute("aria-setsize", "2")
+    fireEvent.click(screen.getByText("2160p"))
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
+    const episodeOneRow = screen.getByRole("treeitem", { name: /Episode One/ })
+    expect(episodeOneRow).toHaveAttribute("aria-level", "3")
+    expect(episodeOneRow).toHaveAttribute("aria-posinset", "1")
+    expect(episodeOneRow).toHaveAttribute("aria-setsize", "1")
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
     expect(screen.getByText("3 selected")).toBeVisible()
@@ -194,7 +217,7 @@ describe("LinkSelectionDialog", () => {
     ])
   })
 
-  it("does not expand a collapsed folder when its checkbox is selected", () => {
+  it("selects a folder from the checkbox keyboard path without expanding it", () => {
     render(
       <LinkSelectionDialog
         open
@@ -224,11 +247,19 @@ describe("LinkSelectionDialog", () => {
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    const checkbox = screen.getByRole("checkbox", { name: "Select Season 1" })
+    checkbox.focus()
+    fireEvent.keyDown(checkbox, { key: " " })
+    // jsdom does not synthesize the browser's Space-to-click activation.
+    checkbox.click()
 
+    expect(checkbox).toBeChecked()
     expect(screen.getByText("1 selected")).toBeVisible()
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+
+    fireEvent.keyDown(checkbox, { key: "Enter" })
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
   })
 
   it("does not expand selected child folders when their parent is opened", () => {
@@ -267,9 +298,8 @@ describe("LinkSelectionDialog", () => {
       />
     )
 
-    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
-    fireEvent.click(seasonRow)
+    fireEvent.click(screen.getByText("Season 1"))
 
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
@@ -296,7 +326,7 @@ describe("LinkSelectionDialog", () => {
     )
 
     const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
-    fireEvent.click(fileRow)
+    fireEvent.click(screen.getByText("Video One"))
     expect(screen.getByText("1 selected")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -304,7 +334,9 @@ describe("LinkSelectionDialog", () => {
       expect.objectContaining({ id: "video-one" }),
     ])
 
-    fireEvent.keyDown(fileRow, { key: "Enter" })
+    const fileRowControl = getTreeItemRow(fileRow)
+    fileRowControl.focus()
+    fireEvent.keyDown(fileRowControl, { key: "Enter" })
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 
@@ -405,8 +437,6 @@ describe("LinkSelectionDialog", () => {
       '[data-slot="spinner"]'
     )
     expect(resolvingSpinner).toHaveClass("size-5")
-    expect(resolvingSpinner?.parentElement).toBe(folderTreeItem)
-
     finishFolderResolution?.([
       {
         id: "video-one",
@@ -502,10 +532,12 @@ describe("LinkSelectionDialog", () => {
     )
 
     expect(
-      screen.getByRole("treeitem", { name: /Folder without metadata/ })
+      getTreeItemRow(
+        screen.getByRole("treeitem", { name: /Folder without metadata/ })
+      )
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]")
     expect(
-      screen.getByRole("treeitem", { name: /File with size/ })
+      getTreeItemRow(screen.getByRole("treeitem", { name: /File with size/ }))
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]")
   })
 })

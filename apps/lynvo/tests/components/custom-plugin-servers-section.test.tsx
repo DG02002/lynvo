@@ -49,6 +49,10 @@ describe("CustomPluginServersSection", () => {
     )
 
     expect(await screen.findByText("Base URL is required.")).toBeVisible()
+    const serverUrlInput = screen.getByLabelText("Server URL")
+    const fieldError = screen.getByRole("alert")
+    expect(serverUrlInput).toHaveAttribute("aria-invalid", "true")
+    expect(serverUrlInput).toHaveAttribute("aria-describedby", fieldError.id)
     expect(onAddPluginServer).not.toHaveBeenCalled()
 
     fireEvent.change(screen.getByLabelText("Server URL"), {

@@ -32,7 +32,7 @@
     --typeset-font-body: var(--font-sans);
     --typeset-font-heading: var(--font-sans);
     --typeset-font-mono: var(--font-mono);
-    --typeset-size: 16px;
+    --typeset-size: 1rem;
     --typeset-leading: 1.75;
     --typeset-flow: 1rem;
     font-size: var(--typeset-size);
@@ -42,7 +42,7 @@
     --typeset-font-body: var(--font-sans);
     --typeset-font-heading: var(--font-sans);
     --typeset-font-mono: var(--font-mono);
-    --typeset-size: 16px;
+    --typeset-size: 1rem;
     --typeset-leading: 1.8;
     --typeset-flow: 1.5em;
   }
@@ -51,7 +51,7 @@
     --typeset-font-body: var(--font-sans);
     --typeset-font-heading: var(--font-sans);
     --typeset-font-mono: var(--font-mono);
-    --typeset-size: 16px;
+    --typeset-size: 1rem;
     --typeset-leading: 1.75;
     --typeset-flow: 1rem;
     font-size: var(--typeset-size);

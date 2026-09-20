@@ -15,6 +15,7 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
+import { getOpenedAriaLabel } from "./opened-aria-label"
 
 interface SaveListRowIconProps {
   readonly children: ReactNode
@@ -118,7 +119,7 @@ export const MediaListRow = ({
   >
     <button
       type="button"
-      aria-label={label}
+      aria-label={getOpenedAriaLabel(label, isOpened)}
       disabled={disabled}
       className={cn(
         "absolute inset-0 z-1 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

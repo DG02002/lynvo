@@ -71,6 +71,7 @@ import {
   MEDIA_LIST_ROW_TITLE_CLASS,
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
+import { getOpenedAriaLabel } from "./opened-aria-label"
 import { ResolvableContainerRow } from "./resolvable-container-row"
 import {
   SAVE_LIST_SECTION_STACK_CLASS,
@@ -211,6 +212,7 @@ interface SaveListItemAriaLabelOptions {
   readonly directLink: ExtractedLink | undefined
   readonly isExtractionIncomplete: boolean
   readonly extractionStatusLabel: string
+  readonly isOpened: boolean
 }
 
 const getSaveListItemAriaLabel = ({
@@ -218,16 +220,19 @@ const getSaveListItemAriaLabel = ({
   directLink,
   isExtractionIncomplete,
   extractionStatusLabel,
+  isOpened,
 }: SaveListItemAriaLabelOptions) => {
+  let label: string
+
   if (isExtractionIncomplete) {
-    return `${extractionStatusLabel} for ${itemTitle}`
+    label = `${extractionStatusLabel} for ${itemTitle}`
+  } else if (directLink) {
+    label = `Open ${directLink.label || itemTitle}`
+  } else {
+    label = `View ${itemTitle}`
   }
 
-  if (directLink) {
-    return `Open ${directLink.label || itemTitle}`
-  }
-
-  return `View ${itemTitle}`
+  return getOpenedAriaLabel(label, isOpened)
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -479,13 +484,16 @@ const FinderBrowserLinkRow = ({
     shouldStackEpisodeStill && shouldShowEpisodeStillForLink
   const shouldCenterMobileNewBadge =
     shouldStackIconOnMobile && titleDisplay === "episode"
-  const rowFallbackIcon = isResolving ? (
-    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
-  ) : (
+  const rowFallbackIcon = (
     <HugeiconsIcon
       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
       className="size-6"
     />
+  )
+  const rowStatusIcon = isResolving ? (
+    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+  ) : (
+    rowFallbackIcon
   )
   const episodeStillElement = (
     <FinderEpisodeStillDisplay
@@ -506,7 +514,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         )
       }
@@ -518,7 +526,7 @@ const FinderBrowserLinkRow = ({
             shouldShowRowPosters,
             isFolder
           )}
-          rowFallbackIcon={rowFallbackIcon}
+          rowFallbackIcon={rowStatusIcon}
           isExpired={isExpired}
         />
       )
@@ -530,7 +538,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         }
       >
@@ -1057,6 +1065,7 @@ export const SaveListBrowser = ({
                           item,
                           isExtracting
                         ),
+                        isOpened: directLink?.opened === true,
                       })}
                       className={cn(
                         "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

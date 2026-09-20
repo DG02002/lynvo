@@ -48,6 +48,11 @@ describe("LinkInputSection", () => {
       "aria-invalid",
       "true"
     )
+    const fieldError = screen.getByRole("alert")
+    expect(screen.getByLabelText("Link")).toHaveAttribute(
+      "aria-describedby",
+      fieldError.id
+    )
   })
 
   it("does not request clipboard access until the user allows it", async () => {

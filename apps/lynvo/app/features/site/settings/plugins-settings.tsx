@@ -524,7 +524,6 @@ export const CustomPluginServersSection = ({
                               setRegistrationError(null)
                               field.handleChange(event.target.value)
                             }}
-                            aria-invalid={isInvalid}
                           />
                           {isInvalid ? (
                             <FieldError errors={field.state.meta.errors} />
@@ -549,7 +548,6 @@ export const CustomPluginServersSection = ({
                               field.handleChange(event.target.value)
                             }}
                             type="password"
-                            aria-invalid={isInvalid}
                           />
                           {isInvalid ? (
                             <FieldError errors={field.state.meta.errors} />

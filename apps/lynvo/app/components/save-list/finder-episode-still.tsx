@@ -21,6 +21,7 @@ interface FinderEpisodeStillImageProps {
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
   readonly isLookupPending: boolean
+  readonly isResolving: boolean
   readonly fallbackIcon: ReactNode
 }
 
@@ -46,6 +47,7 @@ const FinderEpisodeStillImage = ({
   imagePath,
   imageType,
   isLookupPending,
+  isResolving,
   fallbackIcon,
 }: FinderEpisodeStillImageProps) => {
   if (imagePath) {
@@ -62,6 +64,10 @@ const FinderEpisodeStillImage = ({
 
   if (isLookupPending) {
     return <Skeleton className="absolute inset-0 size-full" />
+  }
+
+  if (isResolving) {
+    return null
   }
 
   return fallbackIcon
@@ -106,9 +112,21 @@ export const FinderEpisodeStillDisplay = ({
 }: FinderEpisodeStillDisplayProps) => {
   return (
     <span
-      className={cn(MEDIA_LIST_EPISODE_STILL_CLASS, isDimmed && "opacity-60")}
+      className={cn(
+        MEDIA_LIST_EPISODE_STILL_CLASS,
+        "relative",
+        isDimmed && "opacity-60"
+      )}
     >
       <span
+        role="img"
+        aria-label={[
+          label,
+          isWatched ? "Watched" : undefined,
+          isDimmed ? "Expired" : undefined,
+        ]
+          .filter(Boolean)
+          .join(", ")}
         className={cn(
           "relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60 shadow-depth-s",
           isWatched && "grayscale"
@@ -118,18 +136,19 @@ export const FinderEpisodeStillDisplay = ({
           imagePath={imagePath}
           imageType={imageType}
           isLookupPending={isLookupPending}
+          isResolving={isResolving}
           fallbackIcon={fallbackIcon}
         />
-        {isResolving && (
-          <span className="absolute inset-0 z-1 flex items-center justify-center bg-background/60">
-            <Spinner aria-label={`Loading ${label}…`} className="size-6" />
-          </span>
-        )}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 shadow-depth-gloss"
         />
       </span>
+      {isResolving && (
+        <span className="absolute inset-0 z-1 flex items-center justify-center rounded-xl bg-background/60">
+          <Spinner aria-label={`Loading ${label}…`} className="size-6" />
+        </span>
+      )}
     </span>
   )
 }

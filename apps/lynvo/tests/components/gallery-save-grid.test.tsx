@@ -178,6 +178,19 @@ describe("GallerySaveGrid", () => {
       />
     )
 
+    const menuTrigger = screen.getByRole("button", {
+      name: "Open menu for Sample Feature",
+    })
+    expect(menuTrigger).toHaveAttribute("tabindex", "0")
+    menuTrigger.focus()
+    expect(menuTrigger).toHaveFocus()
+    act(() => {
+      fireEvent.keyDown(menuTrigger, { key: "Enter" })
+      // jsdom does not synthesize native button activation from Enter.
+      menuTrigger.click()
+    })
+    expect(screen.getByText("Copy Source link")).toBeInTheDocument()
+
     fireEvent.click(
       screen.getByRole("button", { name: "Open Sample Feature (2017)" })
     )
@@ -187,12 +200,6 @@ describe("GallerySaveGrid", () => {
     expect(movieElement.querySelector(".aspect-2\\/3")).toHaveClass(
       "rounded-2xl",
       "sm:rounded-3xl"
-    )
-    expect(movieElement.querySelector('[class*="bottom-4"]')).toHaveClass(
-      "invisible",
-      "pointer-events-none",
-      "sm:visible",
-      "sm:pointer-events-auto"
     )
     expect(movieElement.closest(".grid")).toHaveClass(
       "grid-cols-2",

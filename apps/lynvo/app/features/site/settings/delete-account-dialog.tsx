@@ -17,6 +17,8 @@ interface DeleteAccountDialogProps {
   onDeleteAccount: (event: React.FormEvent) => void
 }
 
+const DELETE_ACCOUNT_EMAIL_HINT_ID = "delete-account-email-hint"
+
 export const DeleteAccountDialog = ({
   email,
   busy,
@@ -25,50 +27,62 @@ export const DeleteAccountDialog = ({
   onOpenChange,
   onConfirmEmailChange,
   onDeleteAccount,
-}: DeleteAccountDialogProps) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <FormDialogContent
-      title="Delete account"
-      media={
-        <HugeiconsIcon
-          icon={Alert01Icon}
-          className="mx-auto size-16 text-destructive"
-        />
-      }
-      description={
-        <>
-          This permanently deletes the account, saved links, settings, Plugin
-          Server connections, credentials, and active sessions. This cannot be
-          undone.
-          <span className="mt-3 block font-medium text-foreground">
-            Enter this email address exactly to confirm:{" "}
-            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs select-all">
-              {email}
-            </span>
-          </span>
-        </>
-      }
-      onSubmit={onDeleteAccount}
-      submitLabel="Delete account"
-      submitVariant="destructive"
-      submitPending={busy === "delete"}
-      submitDisabled={confirmEmail.trim() !== email}
-      cancelDisabled={busy === "delete"}
-    >
-      <FieldGroup className="gap-4">
-        <Field className="gap-1.5">
-          <FormDialogInput
-            id="delete-account-email"
-            label="Type your email address to confirm"
-            tone="destructive"
-            type="email"
-            value={confirmEmail}
-            onChange={(event) => onConfirmEmailChange(event.target.value)}
-            required
-            autoComplete="off"
+}: DeleteAccountDialogProps) => {
+  const isConfirmEmailInvalid =
+    confirmEmail.length > 0 && confirmEmail.trim() !== email
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <FormDialogContent
+        title="Delete account"
+        media={
+          <HugeiconsIcon
+            icon={Alert01Icon}
+            className="mx-auto size-16 text-destructive"
           />
-        </Field>
-      </FieldGroup>
-    </FormDialogContent>
-  </Dialog>
-)
+        }
+        description={
+          <>
+            This permanently deletes the account, saved links, settings, Plugin
+            Server connections, credentials, and active sessions. This cannot be
+            undone.
+            <span
+              id={DELETE_ACCOUNT_EMAIL_HINT_ID}
+              className="mt-3 block font-medium text-foreground"
+            >
+              Enter this email address exactly to confirm:{" "}
+              <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs select-all">
+                {email}
+              </span>
+            </span>
+          </>
+        }
+        onSubmit={onDeleteAccount}
+        submitLabel="Delete account"
+        submitVariant="destructive"
+        submitPending={busy === "delete"}
+        submitDisabled={!confirmEmail || isConfirmEmailInvalid}
+        cancelDisabled={busy === "delete"}
+      >
+        <FieldGroup className="gap-4">
+          <Field className="gap-1.5">
+            <FormDialogInput
+              id="delete-account-email"
+              label="Type your email address to confirm"
+              tone="destructive"
+              type="email"
+              value={confirmEmail}
+              onChange={(event) => onConfirmEmailChange(event.target.value)}
+              required
+              autoComplete="off"
+              aria-invalid={isConfirmEmailInvalid}
+              aria-describedby={
+                isConfirmEmailInvalid ? DELETE_ACCOUNT_EMAIL_HINT_ID : undefined
+              }
+            />
+          </Field>
+        </FieldGroup>
+      </FormDialogContent>
+    </Dialog>
+  )
+}

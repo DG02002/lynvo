@@ -5,6 +5,7 @@ import {
   useEffectEvent,
   useReducer,
   useRef,
+  type ReactNode,
 } from "react"
 
 import { Spinner } from "~/components/spinner"
@@ -330,6 +331,14 @@ interface ArtworkSearchResultsProps {
   readonly onSelectCandidate: (candidate: MediaArtworkCandidate) => void
 }
 
+const ARTWORK_SEARCH_COPY = {
+  searching: "Searching for artwork…",
+  failed: "Search failed",
+  empty: "No matches found",
+  found: (count: number) =>
+    `Found ${count} artwork result${count === 1 ? "" : "s"}.`,
+} as const
+
 const ArtworkSearchResults = ({
   candidates,
   tvCandidates,
@@ -339,8 +348,20 @@ const ArtworkSearchResults = ({
   searchFailed,
   onSelectCandidate,
 }: ArtworkSearchResultsProps) => {
+  let searchStatus: string | undefined
+  if (isSearching) {
+    searchStatus = ARTWORK_SEARCH_COPY.searching
+  } else if (searchFailed) {
+    searchStatus = ARTWORK_SEARCH_COPY.failed
+  } else if (didSearch && candidates.length === 0) {
+    searchStatus = ARTWORK_SEARCH_COPY.empty
+  } else if (didSearch) {
+    searchStatus = ARTWORK_SEARCH_COPY.found(candidates.length)
+  }
+
+  let resultsContent: ReactNode = null
   if (candidates.length > 0) {
-    return (
+    resultsContent = (
       <Tabs defaultValue="tv" className="min-h-0 flex-1 gap-5 overflow-hidden">
         <TabsList className="w-full shrink-0">
           <TabsTrigger value="tv">
@@ -375,14 +396,14 @@ const ArtworkSearchResults = ({
         </div>
       </Tabs>
     )
-  }
-
-  if (!isSearching && didSearch) {
-    return (
+  } else if (!isSearching && didSearch) {
+    resultsContent = (
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
           <p className="font-medium">
-            {searchFailed ? "Search failed" : "No matches found"}
+            {searchFailed
+              ? ARTWORK_SEARCH_COPY.failed
+              : ARTWORK_SEARCH_COPY.empty}
           </p>
           <p className="max-w-md text-sm text-muted-foreground text-pretty">
             {searchFailed
@@ -394,7 +415,14 @@ const ArtworkSearchResults = ({
     )
   }
 
-  return null
+  return (
+    <>
+      <div className="sr-only" role="status">
+        {searchStatus}
+      </div>
+      {resultsContent}
+    </>
+  )
 }
 
 const ArtworkDialog = ({

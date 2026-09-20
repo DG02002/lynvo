@@ -189,7 +189,6 @@ export const ResolvableContainerRow = ({
       <HugeiconsIcon icon={containerIconDefinition} className="size-6" />
     </AnimatedStateIcon>
   )
-
   return (
     <div
       className={cn(
