@@ -198,9 +198,6 @@ removal can expose the next.
   developer has agreed to browser or computer use; otherwise ask the
   developer to attach them to the PR. A UI PR with no visual evidence must
   at least carry that request.
-- Motion or timing needs a written description — trigger, duration, easing —
-  and a short video when the developer wants one; the developer records it,
-  not the agent.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
 - One concern per PR, where a concern is a change that can be reviewed and
   reverted on its own. Changes that only make sense together — a contract
