@@ -12,7 +12,7 @@
 
 ## Goal
 
-Lynvo supports user-provided Custom Plugin Servers. A Plugin Server accepts a source URL or a previously emitted lazy node target, resolves it in stages, and returns normalized extraction data that Lynvo can render.
+Lynvo supports user-provided Custom Plugin Servers. A Plugin Server accepts a source URL or a previously emitted unresolved item target, resolves it in stages, and returns normalized extraction data that Lynvo can render.
 
 Lynvo owns:
 
@@ -64,13 +64,13 @@ Example:
 
 - Once a saved link is created, Lynvo must persist the originating Plugin
   Server entry id.
-- Refresh and lazy follow-up must use that same Plugin Server first.
+- Refresh and unresolved item follow-up must use that same Plugin Server first.
 - If the original Plugin Server is unavailable, Lynvo should fail closed and only offer explicit user-triggered re-routing from the original top-level source URL.
 
-### Lazy resolution invariant
+### Unresolved item resolution invariant
 
-- Any lazy node emitted by a Plugin Server must be resolvable by that same Plugin Server.
-- Lynvo must not hand Plugin Server-emitted lazy node targets to another Plugin Server automatically.
+- Any unresolved item emitted by a Plugin Server must be resolvable by that same Plugin Server.
+- Lynvo must not hand Plugin Server-emitted unresolved item targets to another Plugin Server automatically.
 
 ### Data ownership
 
@@ -165,7 +165,7 @@ Auth:
 Purpose:
 
 - initial extraction from a user-submitted URL
-- lazy follow-up resolution from a previously emitted node target
+- unresolved item follow-up resolution from a previously emitted node target
 - password retry when required
 
 Auth:
@@ -255,7 +255,7 @@ Auth:
 - `usage.endpoint`: required and must be `/usage`.
 - `matchers`: required non-empty array.
 - `features.password`: whether the Plugin Server may return `PASSWORD_REQUIRED`.
-- `features.lazyNodes`: whether the Plugin Server may return lazy resolvable nodes.
+- `features.lazyNodes`: whether the Plugin Server may return unresolved items.
 - `features.basicAuth`: whether Lynvo may forward structured HTTP Basic Auth credentials to this Plugin Server.
 - `extensions`: optional vendor namespace for non-core data.
 
@@ -363,7 +363,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 }
 ```
 
-### Lazy node follow-up
+### Unresolved item follow-up
 
 ```json
 {
@@ -397,7 +397,7 @@ v1 does not require any JSON fields in the verify body. The API key in the `Auth
 - `proxy` is optional and contains `provider` plus the user's own provider `token`. `provider` is an opaque identifier: Lynvo only sends providers the server's manifest declares support for (v1 declares `extensions.lynvo.proxyProvider: "scrape-do"`), and servers must use the token for that request's upstream proxy calls instead of their own shared proxy credentials, and must never log it.
 - Lynvo removes URL userinfo before forwarding a target and sends `basicAuth` only when the Plugin Server declares `features.basicAuth`.
 - The Plugin Server bearer token authenticates Lynvo to the Plugin Server; `basicAuth` authenticates the Plugin Server to the source. They are separate credentials.
-- Lynvo should not send the original top-level source URL on lazy follow-up requests.
+- Lynvo should not send the original top-level source URL on unresolved item follow-up requests.
 
 ## Deferred extraction
 
@@ -615,8 +615,11 @@ Rules:
 ### Error handling rules
 
 - Lynvo should map the error code to a user-friendly message.
+- Lynvo maps known protocol errors to Lynvo copy at the application seam. Unknown
+  error text passes through verbatim.
 - Lynvo may also show the Plugin Server error code and raw Plugin Server message as secondary debug detail.
-- Plugin Server error strings must not be the primary UX contract.
+- Plugin Server error strings must not be the primary UX contract for errors with
+  known Lynvo copy.
 - `UNSUPPORTED_URL` is for URLs that do not match a supported Source.
 - `UNSUPPORTED_TARGET` is for target kinds that the Plugin Server does not
   resolve.

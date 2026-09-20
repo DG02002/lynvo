@@ -1,5 +1,5 @@
 ---
-title: Protocol overview | Lynvo docs
+title: Protocol overview
 description: Understand the four required endpoints and optional discovery endpoint that connect a Custom Plugin Server to Lynvo.
 navLabel: Protocol overview
 contentType: Reference
@@ -17,7 +17,7 @@ discovery endpoint:
 | `POST` | `/discover` | Bearer         | Optionally identifies a Plugin for a Source URL    |
 | `POST` | `/verify`   | Bearer         | Verifies the API key and Plugin Server readiness   |
 | `GET`  | `/usage`    | Bearer         | Reports finite enforced usage metrics              |
-| `POST` | `/extract`  | Bearer         | Resolves a Source URL or lazy node                 |
+| `POST` | `/extract`  | Bearer         | Resolves a Source URL or unresolved item           |
 
 Implement `POST /discover` only when the manifest sets `features.discovery` to
 `true`. Use `Content-Type: application/json` for JSON responses. Return protocol

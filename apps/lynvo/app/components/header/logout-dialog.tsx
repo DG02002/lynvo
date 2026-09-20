@@ -24,7 +24,7 @@ export const LogoutDialog = ({
         className="mx-auto size-16 text-destructive"
       />
     }
-    description={<>Logged in as {email}.</>}
+    description={<>Signed in as {email}.</>}
     confirmLabel="Sign out"
     confirmVariant="destructive"
     onConfirm={onLogout}

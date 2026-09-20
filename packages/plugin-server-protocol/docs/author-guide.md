@@ -69,7 +69,7 @@ Your Plugin Server should be:
 Lynvo will send:
 
 - an API key in the `Authorization` header
-- a source URL or lazy node target
+- a source URL or unresolved item target
 - an optional content password
 
 Lynvo will not send:
@@ -334,7 +334,7 @@ Lynvo v1 does not define a live health endpoint. Source status is read from the 
 `POST /extract` handles both:
 
 - top-level source URLs
-- lazy follow-up node targets
+- unresolved item follow-up targets
 
 Your handler should:
 
@@ -558,7 +558,7 @@ At minimum, test:
 - manifest schema
 - verify success and auth failure
 - source extraction success
-- lazy node follow-up success
+- unresolved item follow-up success
 - password-required flow
 - invalid password flow
 - malformed request handling

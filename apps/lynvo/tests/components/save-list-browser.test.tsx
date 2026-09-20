@@ -848,7 +848,7 @@ describe("SaveListBrowser", () => {
     ).toHaveAttribute("data-folder-state", "open")
   })
 
-  it("does not reopen a folder when lazy expansion resolves after browser back", async () => {
+  it("does not reopen a folder when unresolved item expansion resolves after browser back", async () => {
     let finishExpansion: ((links: ExtractedLink[]) => void) | undefined
     const resolvedLinks: ExtractedLink[] = [
       {
@@ -869,7 +869,7 @@ describe("SaveListBrowser", () => {
       id: "lazy-race",
       url: "https://media.example/lazy-race",
       timestamp: 1,
-      title: "Lazy Race",
+      title: "Unresolved item race",
       metadata: {
         schemaVersion: 3,
         source: {},

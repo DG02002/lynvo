@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { StorageSettings } from "~/features/site/settings/storage-settings"
@@ -47,11 +47,12 @@ describe("Storage settings browser data", () => {
     render(<StorageSettings />)
 
     expect(await screen.findByText("1.00 KB of 3.00 MB used")).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Delete all" }))
     expect(
-      screen.queryByText(
-        /Saved links and everything inside them count toward this limit/
+      screen.getByText(
+        "This permanently removes every saved link and everything inside it from the account. This cannot be undone."
       )
-    ).not.toBeInTheDocument()
+    ).toBeVisible()
     expect(requestedPaths).toContain("/api/data/storage-settings")
   })
 })

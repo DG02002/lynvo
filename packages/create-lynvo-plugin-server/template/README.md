@@ -62,7 +62,7 @@ deployment.
 ## Customize the example
 
 Replace the example matcher in `src/index.ts` and the implementation in
-`src/plugins/example.ts`. Keep every lazy node resolvable by this same Worker.
+`src/plugins/example.ts`. Keep every unresolved item resolvable by this same Worker.
 Use the shared runtime for `/manifest`, `/verify`, `/usage`, and `/extract`
 instead of copying protocol validation into local route handlers.
 

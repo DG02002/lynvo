@@ -16,6 +16,7 @@ describe("LogoutDialog", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toHaveClass(
       "text-destructive"
     )
+    expect(screen.getByText("Signed in as user@example.com.")).toBeVisible()
     expect(rendered.baseElement.querySelector("svg")).toHaveClass(
       "text-destructive"
     )
