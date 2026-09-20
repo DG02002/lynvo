@@ -1,14 +1,11 @@
-import {
-  parseRetryAfterMs,
-  runWithRetries,
-  sleep,
-} from "@dg02002/lynvo-plugin-server-protocol"
+import { runWithRetries, sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
 import {
   createOutboundHttpTransport,
   OutboundHttpError,
 } from "../../app/lib/outbound-http"
+import { parseRetryAfterMs } from "../../shared/retry"
 import {
   MEDIA_METADATA_REQUEST_ATTEMPTS,
   MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
@@ -327,10 +324,21 @@ export const createTmdbAdapter = (
         }),
       {
         maxRetries: MEDIA_METADATA_REQUEST_ATTEMPTS - 1,
-        getDelayMs: (cause) =>
-          cause instanceof OutboundHttpError
-            ? undefined
-            : MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
+        decide: (outcome) => {
+          if (outcome._tag === "success") {
+            return { retry: false }
+          }
+          if (
+            outcome.cause instanceof OutboundHttpError &&
+            outcome.cause.code === "RESPONSE_TOO_LARGE"
+          ) {
+            return { retry: false }
+          }
+          return {
+            retry: true,
+            delayMs: MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
+          }
+        },
         sleep: sleepForRequest,
       }
     )
@@ -349,7 +357,10 @@ export const createTmdbAdapter = (
       return {
         kind: "failure",
         failureKind:
-          error instanceof OutboundHttpError ? "permanent" : "retryable",
+          error instanceof OutboundHttpError &&
+          error.code === "RESPONSE_TOO_LARGE"
+            ? "permanent"
+            : "retryable",
         message: error instanceof Error ? error.message : "TMDB request failed",
       }
     }

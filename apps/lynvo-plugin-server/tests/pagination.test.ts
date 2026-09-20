@@ -3,24 +3,21 @@ import { describe, expect, it } from "vitest"
 import { paginateUpstream } from "../src/sources/pagination"
 
 describe("paginateUpstream", () => {
-  it("collects nodes and carries an upstream page index", async () => {
-    const calls: Array<{ token: string; pageIndex: number }> = []
+  it("collects nodes across continuation pages", async () => {
+    const calls: string[] = []
     const result = await paginateUpstream(
-      async (token, pageIndex) => {
-        calls.push({ token, pageIndex })
+      async (token) => {
+        calls.push(token)
         return token
           ? { value: ["second"] }
-          : { value: ["first"], nextToken: "continuation", nextPageIndex: 4 }
+          : { value: ["first"], nextToken: "continuation" }
       },
       (page) => page,
       { sourceName: "Test Index" }
     )
 
     expect(result).toEqual(["first", "second"])
-    expect(calls).toEqual([
-      { token: "", pageIndex: 0 },
-      { token: "continuation", pageIndex: 4 },
-    ])
+    expect(calls).toEqual(["", "continuation"])
   })
 
   it("rejects repeated continuation tokens", async () => {

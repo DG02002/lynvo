@@ -3,7 +3,7 @@ import type {
   MediaArtworkIdentity,
   MediaArtworkRequest,
   MediaArtworkResult,
-} from "../../app/lib/api-contracts"
+} from "../../shared/api-contracts"
 import {
   doesSeasonNameCoverRemainder,
   selectBestSearchResult,

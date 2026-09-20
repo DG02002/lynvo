@@ -1,10 +1,5 @@
 import { Schema } from "effect"
 
-import {
-  canonicalizeMediaArtworkTitle,
-  MediaArtworkResponseSchema,
-  type MediaArtworkResponse,
-} from "~/lib/api-contracts"
 import { requestSameOrigin } from "~/lib/api/client"
 import {
   MEDIA_ARTWORK_API_TIMEOUT_MS,
@@ -15,6 +10,14 @@ import {
   MEDIA_ARTWORK_FOUND_TTL_MS,
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
 } from "~/lib/constants"
+
+import {
+  canonicalizeMediaArtworkTitle,
+  MediaArtworkResponseSchema,
+  type MediaArtworkRequest,
+  type MediaArtworkResponse,
+  type MediaArtworkResult,
+} from "../../../../shared/api-contracts"
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
   [
@@ -186,16 +189,21 @@ export const requestMediaArtwork = (
 
 export const fetchMediaArtwork = async (
   requests: readonly MediaArtworkRequest[],
-  options: { readonly signal?: AbortSignal } = {}
+  options: {
+    readonly signal?: AbortSignal
+    readonly failureMessage?: string
+  } = {}
 ): Promise<MediaArtworkResponse> => {
   const response = await requestSameOrigin("/api/data/media-artwork", {
+    headers: { Accept: "application/json" },
+    includeSessionIdentityHeaders: false,
     method: "POST",
     payload: { requests },
     signal: options.signal,
     timeoutMs: MEDIA_ARTWORK_API_TIMEOUT_MS,
   })
   if (!response.ok) {
-    throw new Error("Media artwork lookup failed.")
+    throw new Error(options.failureMessage ?? "Media artwork lookup failed.")
   }
   try {
     return Schema.decodeUnknownSync(MediaArtworkResponseSchema)(

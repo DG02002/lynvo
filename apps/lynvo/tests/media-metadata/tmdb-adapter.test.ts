@@ -86,6 +86,40 @@ describe("TMDB adapter", () => {
     })
   })
 
+  it("supports HTTP-date and clamped Retry-After values", async () => {
+    const now = Date.parse("2025-06-15T12:00:00Z")
+    const fetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ status_message: "Slow down" }), {
+        status: 429,
+        headers: {
+          "Retry-After": new Date(now + 12_000).toUTCString(),
+        },
+      })
+    )
+    const adapter = createTmdbAdapter({
+      fetch,
+      token: "secret-token",
+      now: () => now,
+    })
+
+    await expect(adapter.getMovieDetails(42)).resolves.toMatchObject({
+      retryAt: now + 12_000,
+    })
+    const clampedAdapter = createTmdbAdapter({
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ status_message: "Slow down" }), {
+          status: 429,
+          headers: { "Retry-After": "-1" },
+        })
+      ),
+      token: "secret-token",
+      now: () => now,
+    })
+    await expect(clampedAdapter.getMovieDetails(42)).resolves.toMatchObject({
+      retryAt: now,
+    })
+  })
+
   it("retries transient connection failures before returning", async () => {
     const fetch = vi
       .fn()

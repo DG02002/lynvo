@@ -2,7 +2,7 @@ import {
   canonicalizeMediaArtworkTitle,
   type MediaArtworkRequest,
   type MediaArtworkResult,
-} from "../../app/lib/api-contracts"
+} from "../../shared/api-contracts"
 import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 import {
   lookupMediaArtworkOutcomes,

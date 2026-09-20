@@ -38,6 +38,7 @@ import { sessionIdentityHeaders } from "../session-identity"
 import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
+  readonly includeSessionIdentityHeaders?: boolean
   readonly signal?: AbortSignal
   readonly timeoutMs?: number
 }
@@ -168,9 +169,14 @@ export const requestSameOrigin = async <Payload = undefined>(
     query,
     signal,
     timeoutMs,
+    includeSessionIdentityHeaders = true,
   }: RequestOptions<Payload> = {}
 ): Promise<Response> => {
-  const requestHeaders = { ...sessionIdentityHeaders(), ...headers }
+  const requestHeaders: Record<string, string> = {}
+  if (includeSessionIdentityHeaders) {
+    Object.assign(requestHeaders, sessionIdentityHeaders())
+  }
+  Object.assign(requestHeaders, headers)
 
   if (payload !== undefined) {
     requestHeaders["Content-Type"] = "application/json"

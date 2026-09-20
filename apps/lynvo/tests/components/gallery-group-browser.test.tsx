@@ -11,6 +11,7 @@ import { GalleryGroupBrowser } from "~/components/save-list/gallery-group-browse
 import type { LinkItemActions } from "~/features/links/link-item-actions"
 import type { LinkListItem } from "~/features/links/types"
 
+import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { readJsonInitBody } from "../support/request-inspection"
 
 interface MediaArtworkBatchRequest {

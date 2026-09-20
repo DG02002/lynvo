@@ -6,14 +6,14 @@ import {
   type SavedLink,
 } from "~/features/links/link-view-models"
 import type { LinkExtractionStatus } from "~/features/links/types"
+import { requestSameOrigin, type RequestOptions } from "~/lib/api/client"
+import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
+
 import {
   SavedLinkListResponseSchema,
   type SavedLinkApiRecord,
   type SavedLinkListResponse,
-} from "~/lib/api-contracts"
-import { requestSameOrigin, type RequestOptions } from "~/lib/api/client"
-import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
-
+} from "../../../../shared/api-contracts"
 import { SavedLinkCommandError } from "../saved-link-command-failure"
 
 declare global {
@@ -140,6 +140,8 @@ const sendDataRequest = async <Payload = undefined>(
   try {
     httpResponse = await requestSameOrigin(path, {
       ...options,
+      headers: { Accept: "application/json", ...options.headers },
+      includeSessionIdentityHeaders: false,
       timeoutMs: DATA_API_TIMEOUT_MS,
     })
   } catch (cause) {

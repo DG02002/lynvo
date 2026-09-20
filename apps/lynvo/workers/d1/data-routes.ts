@@ -1,8 +1,8 @@
 import { Result, Schema } from "effect"
 import { Hono, type Context as HonoContext } from "hono"
 
-import { MediaArtworkRequestSchema } from "../../app/lib/api-contracts"
 import { extractHttpBasicCredential } from "../../app/lib/plugins/http-basic-credential"
+import { MediaArtworkRequestSchema } from "../../shared/api-contracts"
 import {
   DEFAULT_RETENTION_DAYS,
   LINK_LIMIT_BYTES,

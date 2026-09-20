@@ -12,6 +12,7 @@ import type {
 } from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
 
+import type { MediaArtworkIdentity } from "../../../../shared/api-contracts"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 import {
   buildLinkViewItem,

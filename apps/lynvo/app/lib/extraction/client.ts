@@ -1,6 +1,5 @@
 import {
   ERROR_CODES,
-  parseRetryAfterMs,
   runWithRetries,
 } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
@@ -12,6 +11,7 @@ import {
 import type { MetaData } from "~/features/links/types"
 import { ApiClientError, requestJson } from "~/lib/api/client"
 
+import { parseRetryAfterMs } from "../../../shared/retry"
 import { ExtractionCommandError } from "./errors"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
 
@@ -168,11 +168,21 @@ const runWithExtractionResilience = async <Value>(
   try {
     return await runWithRetries(execute, {
       maxRetries: EXTRACTION_MAX_RETRIES,
-      getDelayMs: (cause, retryNumber) => {
-        const retryableFailure = getRetryableFailure(cause)
-        return retryableFailure
-          ? retryableDelayMs(retryableFailure.retryAfterMs, retryNumber)
-          : undefined
+      decide: (outcome, retryNumber) => {
+        if (outcome._tag === "success") {
+          return { retry: false }
+        }
+        const retryableFailure = getRetryableFailure(outcome.cause)
+        if (!retryableFailure) {
+          return { retry: false }
+        }
+        const delayMs = retryableDelayMs(
+          retryableFailure.retryAfterMs,
+          retryNumber
+        )
+        return delayMs === undefined
+          ? { retry: false }
+          : { retry: true, delayMs }
       },
     })
   } catch (cause) {

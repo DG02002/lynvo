@@ -121,46 +121,27 @@ export const sha256 = async (message: string): Promise<string> => {
     .join("")
 }
 
-class RetryableOneDriveResponseError extends Error {
-  constructor(readonly response: Response) {
-    super("OneDrive Index request should be retried.")
-    this.name = "RetryableOneDriveResponseError"
-  }
-}
-
 export const fetchOneDrive = async (
   targetUrl: string,
-  options: RequestInit,
-  attempt = 0
+  options: RequestInit
 ): Promise<Response> => {
   assertSafeUpstreamUrl(targetUrl)
-  try {
-    return await runWithRetries(
-      async () => {
-        const response = await fetchValidatedUpstream(targetUrl, options)
-        if (
-          !response.ok &&
-          response.status !== 401 &&
-          (response.status === 429 || response.status >= 500)
-        ) {
-          throw new RetryableOneDriveResponseError(response)
-        }
-        return response
-      },
-      {
-        maxRetries: Math.max(0, ONEDRIVE_FETCH_RETRIES - attempt - 1),
-        getDelayMs: (cause) =>
-          cause instanceof UpstreamPolicyError
-            ? undefined
-            : ONEDRIVE_FETCH_RETRY_DELAY_MS,
+  return runWithRetries(() => fetchValidatedUpstream(targetUrl, options), {
+    maxRetries: ONEDRIVE_FETCH_RETRIES - 1,
+    decide: (outcome) => {
+      if (outcome._tag === "failure") {
+        return outcome.cause instanceof UpstreamPolicyError
+          ? { retry: false }
+          : { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
       }
-    )
-  } catch (error) {
-    if (error instanceof RetryableOneDriveResponseError) {
-      return error.response
-    }
-    throw error
-  }
+      const { status } = outcome.value
+      return !outcome.value.ok &&
+        status !== 401 &&
+        (status === 429 || status >= 500)
+        ? { retry: true, delayMs: ONEDRIVE_FETCH_RETRY_DELAY_MS }
+        : { retry: false }
+    },
+  })
 }
 
 export const encodeOneDrivePath = (path: string): string =>

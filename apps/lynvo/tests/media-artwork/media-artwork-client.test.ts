@@ -5,6 +5,7 @@ import {
   MEDIA_ARTWORK_FLUSH_DELAY_MS,
 } from "~/lib/constants"
 
+import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { createMemoryStorage } from "../memory-storage"
 
 const importMediaArtworkClient = async () => {
@@ -33,6 +34,17 @@ afterEach(() => {
 })
 
 describe("media artwork client cache", () => {
+  it("canonicalizes artwork titles consistently for cache keys", async () => {
+    const client = await importMediaArtworkClient()
+
+    expect(
+      client.getMediaArtworkKey({
+        ...artworkRequest,
+        title: "  ＳAMPLE FEATURE  ",
+      })
+    ).toBe(client.getMediaArtworkKey(artworkRequest))
+  })
+
   it("serves repeat lookups from local storage after a reload", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

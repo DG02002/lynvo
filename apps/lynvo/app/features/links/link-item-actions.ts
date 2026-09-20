@@ -1,3 +1,4 @@
+import type { MediaArtworkIdentity } from "../../../shared/api-contracts"
 import type { ExtractedLink, LinkViewItem } from "./types"
 
 export interface LinkItemActions {

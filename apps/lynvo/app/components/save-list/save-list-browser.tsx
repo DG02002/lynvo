@@ -45,6 +45,7 @@ import {
 import { useMinuteTimeBucket } from "~/lib/use-coarse-time-bucket"
 import { cn } from "~/lib/utils"
 
+import type { MediaArtworkRequest } from "../../../shared/api-contracts"
 import { ExtractionFailedActions } from "./extraction-failed-actions"
 import { ExtractionStatusTitle } from "./extraction-status"
 import {

@@ -38,6 +38,11 @@ import { fetchMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 
+import type {
+  MediaArtworkCandidate,
+  MediaArtworkIdentity,
+} from "../../../shared/api-contracts"
+
 interface ArtworkDialogProps {
   readonly item: LinkViewItem | undefined
   readonly open: boolean
@@ -229,7 +234,7 @@ const fetchArtworkCandidates = async (
       { title: query, mediaKind: "movie" },
       { title: query, mediaKind: "tv" },
     ],
-    { signal }
+    { failureMessage: "Media artwork search failed.", signal }
   )
   return getUniqueCandidates(response.results)
 }

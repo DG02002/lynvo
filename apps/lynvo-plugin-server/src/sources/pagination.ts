@@ -7,7 +7,6 @@ import {
 export interface UpstreamPage<Page> {
   readonly value: Page
   readonly nextToken?: string
-  readonly nextPageIndex?: number
 }
 
 export interface PaginateUpstreamOptions {
@@ -18,7 +17,7 @@ export interface PaginateUpstreamOptions {
 }
 
 export const paginateUpstream = async <Page, Node>(
-  fetchPage: (token: string, pageIndex: number) => Promise<UpstreamPage<Page>>,
+  fetchPage: (token: string) => Promise<UpstreamPage<Page>>,
   toNodes: (page: Page) => readonly Node[],
   options: PaginateUpstreamOptions
 ): Promise<Node[]> => {
@@ -27,9 +26,9 @@ export const paginateUpstream = async <Page, Node>(
   const startedAtMs = options.startedAtMs ?? Date.now()
   const now = options.now ?? Date.now
 
-  const visitPage = async (token: string, pageIndex: number): Promise<void> => {
+  const visitPage = async (token: string, pageCount: number): Promise<void> => {
     if (
-      pageIndex >= PAGINATION_PAGE_LIMIT ||
+      pageCount >= PAGINATION_PAGE_LIMIT ||
       now() - startedAtMs >= EXTRACTION_ELAPSED_TIME_LIMIT_MS
     ) {
       throw new Error(`${options.sourceName} pagination exceeded its limit.`)
@@ -41,13 +40,13 @@ export const paginateUpstream = async <Page, Node>(
       seenTokens.add(token)
     }
 
-    const result = await fetchPage(token, pageIndex)
+    const result = await fetchPage(token)
     nodes.push(...toNodes(result.value))
     if (nodes.length > EXTRACTION_NODE_LIMIT) {
       throw new Error(`${options.sourceName} returned too many nodes.`)
     }
     if (result.nextToken) {
-      await visitPage(result.nextToken, result.nextPageIndex ?? pageIndex + 1)
+      await visitPage(result.nextToken, pageCount + 1)
     }
   }
 

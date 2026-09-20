@@ -71,6 +71,28 @@ describe("browser API client", () => {
     expect(request.headers.get("x-lynvo-expected-session-id")).toBe("session-1")
   })
 
+  it("lets legacy data callers preserve an identity-free JSON request", async () => {
+    fetchMock.mockResolvedValue(Response.json({ links: [] }))
+
+    await requestSameOrigin("/api/data/links", {
+      includeSessionIdentityHeaders: false,
+      method: "POST",
+      headers: { Accept: "application/json" },
+      payload: { operationId: "op-1" },
+    })
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    expect(request.headers.get("accept")).toBe("application/json")
+    expect(request.headers.get("content-type")).toBe("application/json")
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
+    await expect(request.json()).resolves.toEqual({ operationId: "op-1" })
+  })
+
   it("preserves tagged API errors and response metadata", async () => {
     fetchMock.mockResolvedValue(
       Response.json(

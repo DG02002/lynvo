@@ -5,6 +5,7 @@ import { SaveListBrowser } from "~/components/save-list/save-list-browser"
 import { getGalleryGroups } from "~/features/links/media-artwork/gallery-grouping"
 import type { LinkListItem } from "~/features/links/types"
 
+import type { MediaArtworkRequest } from "../../shared/api-contracts"
 import { renderWithMemoryRouter as render } from "../support/render-with-memory-router"
 import { readJsonInitBody } from "../support/request-inspection"
 

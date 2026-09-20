@@ -358,16 +358,16 @@ const fetchBhadooNodes = async ({
   basicAuth,
   folderUrl,
 }: BhadooPaginationOptions): Promise<MediaNode[]> => {
+  let nextPageIndex = 0
   const fetchPage = async (
-    pageToken: string,
-    pageIndex: number
+    pageToken: string
   ): Promise<UpstreamPage<BhadooGoogleDriveListResponse>> => {
     const result = await requestBhadooPage({
       endpointUrl,
       fallbackId,
       basicAuth,
       pageToken,
-      pageIndex,
+      pageIndex: nextPageIndex,
     })
     if (result.error) {
       throw new Error(
@@ -377,10 +377,10 @@ const fetchBhadooNodes = async ({
     if (!Number.isInteger(result.curPageIndex)) {
       throw new Error("Bhadoo Index returned a malformed page.")
     }
+    nextPageIndex = result.curPageIndex + 1
     return {
       value: result,
       nextToken: result.nextPageToken ?? undefined,
-      nextPageIndex: result.curPageIndex + 1,
     }
   }
 
