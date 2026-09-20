@@ -317,6 +317,10 @@ Playable links to an external Android player.
 - Put Source-specific complexity at the Plugin boundary. Keep shared
   orchestration and UI state explicit.
 - Measure before adding a cache, queue, or task orchestrator.
+- Probe beats speculate. Every rule in this file is compressed experience,
+  and compression loses things — when a rule and reality disagree, run the
+  experiment and believe what you saw. Play all you want while you learn;
+  just keep the mess out of the worktree and the write paths honest.
 - Every external read has a deadline, a size bound, and a cancellation
   path. Unbounded `.text()`, `.json()`, or `.arrayBuffer()` on an external
   response belongs behind the validated-fetch helpers in the protocol
