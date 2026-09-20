@@ -194,9 +194,19 @@ removal can expose the next.
 - Review the premise, not only the diff. Spend at least one sentence of
   every review asking whether the spec itself is right — especially for
   docs, where the artifact is the design.
-- UI changes need before/after images. Motion or timing needs a short video.
+- UI changes need before/after images. Capture them yourself only when the
+  developer has agreed to browser or computer use; otherwise ask the
+  developer to attach them to the PR. A UI PR with no visual evidence must
+  at least carry that request.
+- Motion or timing needs a written description — trigger, duration, easing —
+  and a short video when the developer wants one; the developer records it,
+  not the agent.
 - Upload PR evidence to GitHub. Never commit PR-only screenshots or assets such as `.github/pr-assets/`.
-- One concern per PR. If the description says "also", split it.
+- One concern per PR, where a concern is a change that can be reviewed and
+  reverted on its own. Changes that only make sense together — a contract
+  change and its consumers, a migration and the code that reads it — are one
+  concern. An unrelated "also" in the description is a smell to raise with
+  the developer, not a mandate to spin up more PRs.
 - Hard rule: when a change modifies any source files, prepend
 
   ```
@@ -339,4 +349,6 @@ Playable links to an external Android player.
 ## Additional tips
 
 - Don't verify with browsers or computer use unless the user explicitly agrees
-  or requests it.
+  or requests it. When they do, use a clean browser profile, never the
+  user's personal session. If the tooling fights you, stop and ask the user
+  to check the result instead of grinding.
