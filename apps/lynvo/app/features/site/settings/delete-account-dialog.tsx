@@ -40,7 +40,10 @@ export const DeleteAccountDialog = ({
           This permanently deletes the account, saved links, settings, Plugin
           Server connections, credentials, and active sessions. This cannot be
           undone.
-          <span className="mt-3 block font-medium text-foreground">
+          <span
+            id="delete-account-email-hint"
+            className="mt-3 block font-medium text-foreground"
+          >
             Enter this email address exactly to confirm:{" "}
             <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs select-all">
               {email}
@@ -66,6 +69,12 @@ export const DeleteAccountDialog = ({
             onChange={(event) => onConfirmEmailChange(event.target.value)}
             required
             autoComplete="off"
+            aria-invalid={confirmEmail.trim() !== email}
+            aria-describedby={
+              confirmEmail.trim() !== email
+                ? "delete-account-email-hint"
+                : undefined
+            }
           />
         </Field>
       </FieldGroup>

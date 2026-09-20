@@ -35,6 +35,7 @@ export const UserMenu = ({
         render={
           <button
             type="button"
+            aria-label={name || email || "Account"}
             className="flex h-9 items-center gap-2 rounded-full px-2 hover:bg-accent transition-colors outline-none sm:px-4"
           >
             <HugeiconsIcon icon={UserIcon} className="size-4" />

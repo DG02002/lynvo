@@ -97,9 +97,9 @@ describe("MediaListRow", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: "Title text" })).toHaveClass(
-      "bg-sky-500/15"
-    )
+    expect(
+      screen.getByRole("button", { name: "Title text, opened" })
+    ).toHaveClass("bg-sky-500/15")
   })
 
   it("renders the overlay in a full-height trailing cell beside the button", () => {
@@ -179,6 +179,7 @@ describe("MediaListRow", () => {
     )
 
     const [mobileNewBadge, desktopNewBadge] = screen.getAllByText("New")
+    expect(mobileNewBadge).not.toHaveAttribute("aria-hidden")
     expect(mobileNewBadge?.parentElement).toHaveClass(
       "shrink-0",
       "self-center",

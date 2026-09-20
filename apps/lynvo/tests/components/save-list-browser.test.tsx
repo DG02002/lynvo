@@ -1699,9 +1699,9 @@ describe("SaveListBrowser", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: /video.mp4/ })).toHaveClass(
-      "bg-sky-500/15"
-    )
+    expect(
+      screen.getByRole("button", { name: "Open video.mp4, opened" })
+    ).toHaveClass("bg-sky-500/15")
     expect(screen.queryByText("4K HDR")).not.toBeInTheDocument()
     expect(screen.queryByText("New")).not.toBeInTheDocument()
     const expiryMetadata = screen.getByText("Link valid until Jan 1, 2030")

@@ -16,7 +16,11 @@ export const LinkSelectionTree = ({
   onToggleSelect,
   onExpandFolder,
 }: LinkSelectionTreeProps) => (
-  <div className="flex min-w-0 select-none flex-col gap-1">
+  <div
+    role="tree"
+    aria-label="Choose links to save"
+    className="flex min-w-0 select-none flex-col gap-1"
+  >
     {links.map((link) => (
       <LinkSelectionTreeItem
         key={getMediaNodeKey(link)}

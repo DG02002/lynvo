@@ -211,6 +211,7 @@ interface SaveListItemAriaLabelOptions {
   readonly directLink: ExtractedLink | undefined
   readonly isExtractionIncomplete: boolean
   readonly extractionStatusLabel: string
+  readonly isOpened: boolean
 }
 
 const getSaveListItemAriaLabel = ({
@@ -218,16 +219,19 @@ const getSaveListItemAriaLabel = ({
   directLink,
   isExtractionIncomplete,
   extractionStatusLabel,
+  isOpened,
 }: SaveListItemAriaLabelOptions) => {
+  let label: string
+
   if (isExtractionIncomplete) {
-    return `${extractionStatusLabel} for ${itemTitle}`
+    label = `${extractionStatusLabel} for ${itemTitle}`
+  } else if (directLink) {
+    label = `Open ${directLink.label || itemTitle}`
+  } else {
+    label = `View ${itemTitle}`
   }
 
-  if (directLink) {
-    return `Open ${directLink.label || itemTitle}`
-  }
-
-  return `View ${itemTitle}`
+  return `${label}${isOpened ? ", opened" : ""}`
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>
@@ -1057,6 +1061,7 @@ export const SaveListBrowser = ({
                           item,
                           isExtracting
                         ),
+                        isOpened: directLink?.opened === true,
                       })}
                       className={cn(
                         "absolute inset-0 z-1 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

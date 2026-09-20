@@ -114,6 +114,7 @@ export const FinderEpisodeStillDisplay = ({
           isWatched && "grayscale"
         )}
       >
+        {isWatched && <span className="sr-only">Watched</span>}
         <FinderEpisodeStillImage
           imagePath={imagePath}
           imageType={imageType}

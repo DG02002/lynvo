@@ -353,7 +353,7 @@ const ArtworkSearchResults = ({
           </TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div role="status" className="min-h-0 flex-1 overflow-y-auto pr-1">
           <TabsContent value="tv">
             <CandidateGrid
               candidates={tvCandidates}
@@ -379,7 +379,7 @@ const ArtworkSearchResults = ({
 
   if (!isSearching && didSearch) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div role="status" className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
           <p className="font-medium">
             {searchFailed ? "Search failed" : "No matches found"}

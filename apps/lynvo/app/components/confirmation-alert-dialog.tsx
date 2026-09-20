@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useRef, type ReactNode } from "react"
 
 import { Spinner } from "~/components/spinner"
 import {
@@ -39,9 +39,14 @@ export function ConfirmationAlertDialog({
   disabled = false,
   pending = false,
 }: ConfirmationAlertDialogProps) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="p-10 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md">
+      <AlertDialogContent
+        initialFocus={cancelRef}
+        className="p-10 data-[size=default]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-md"
+      >
         {media}
         <AlertDialogHeader className="w-full min-w-0 place-items-center gap-4 text-center sm:place-items-center sm:text-center">
           <AlertDialogTitle className="w-full px-0 text-center text-2xl font-normal leading-tight sm:px-10 sm:text-3xl">
@@ -64,6 +69,7 @@ export function ConfirmationAlertDialog({
           </AlertDialogAction>
           {cancelLabel !== null && (
             <AlertDialogCancel
+              ref={cancelRef}
               variant="outline"
               size="lg"
               className="h-13.5 w-full border-muted-foreground/20"

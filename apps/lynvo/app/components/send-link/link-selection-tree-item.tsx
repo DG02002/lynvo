@@ -258,7 +258,10 @@ export const LinkSelectionTreeItem = ({
       </div>
 
       {canExpand && isExpanded && link.children && (
-        <div className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5">
+        <div
+          role="group"
+          className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5"
+        >
           {link.children.map((child) => (
             <LinkSelectionTreeItem
               key={getMediaNodeKey(child)}
