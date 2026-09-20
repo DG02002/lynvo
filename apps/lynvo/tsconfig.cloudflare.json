@@ -31,9 +31,8 @@
       "./.react-router/types"
     ],
     "paths": {
-      "~/*": [
-        "./app/*"
-      ]
+      "~/*": ["./app/*"],
+      "~shared/*": ["./shared/*"]
     },
     "esModuleInterop": true,
     "resolveJsonModule": true

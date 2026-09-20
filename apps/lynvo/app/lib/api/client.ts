@@ -34,10 +34,15 @@ import {
   type UserSessionList,
   type VersionedMutationBody,
 } from "../api-contracts"
-import { sessionIdentityHeaders } from "../session-identity"
+import {
+  bindSessionIdentityToUrl,
+  sessionIdentityHeaders,
+  type SessionIdentity,
+} from "../session-identity"
 import { getCsrfToken } from "../utils"
 
 interface ApiRequestOptions {
+  readonly cache?: RequestCache
   readonly includeSessionIdentityHeaders?: boolean
   readonly signal?: AbortSignal
   readonly timeoutMs?: number
@@ -163,6 +168,7 @@ export const requestJson = async <ResponseBody, Payload = undefined>(
 export const requestSameOrigin = async <Payload = undefined>(
   path: string,
   {
+    cache,
     method = "GET",
     headers,
     payload,
@@ -186,6 +192,9 @@ export const requestSameOrigin = async <Payload = undefined>(
     method,
     credentials: "same-origin",
   }
+  if (cache !== undefined) {
+    requestInit.cache = cache
+  }
   if (Object.keys(requestHeaders).length > 0) {
     requestInit.headers = requestHeaders
   }
@@ -203,6 +212,31 @@ export const requestSameOrigin = async <Payload = undefined>(
   }
   const requestPath = appendQuery(path, query)
   return await fetch(requestPath, requestInit)
+}
+
+type NoStoreSessionIdentityRequestOptions<Payload = undefined> = Omit<
+  RequestOptions<Payload>,
+  "cache" | "includeSessionIdentityHeaders" | "query"
+> & {
+  readonly identity?: SessionIdentity
+}
+
+export const requestNoStoreSameOriginWithSessionIdentity = <
+  Payload = undefined,
+>(
+  path: string,
+  { identity, ...options }: NoStoreSessionIdentityRequestOptions<Payload> = {}
+): Promise<Response> => {
+  const resolvedPath = resolveRequestUrl(path)
+  const requestPath =
+    globalThis.location === undefined
+      ? resolvedPath
+      : bindSessionIdentityToUrl(new URL(resolvedPath), identity).toString()
+  return requestSameOrigin(requestPath, {
+    ...options,
+    cache: "no-store",
+    includeSessionIdentityHeaders: false,
+  })
 }
 
 type MutationOptions<ResponseBody, Payload> = {

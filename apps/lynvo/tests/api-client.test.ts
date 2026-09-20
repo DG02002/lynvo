@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { client, requestSameOrigin } from "~/lib/api/client"
+import {
+  client,
+  requestNoStoreSameOriginWithSessionIdentity,
+  requestSameOrigin,
+} from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
 
 import { requestUrl } from "./support/request-inspection"
@@ -91,6 +95,43 @@ describe("browser API client", () => {
     expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
     expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
     await expect(request.json()).resolves.toEqual({ operationId: "op-1" })
+  })
+
+  it("passes cache policy and timeout settings to raw same-origin requests", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true }))
+
+    await requestSameOrigin("/api/version", {
+      cache: "no-store",
+      timeoutMs: 1000,
+    })
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    expect(request.cache).toBe("no-store")
+    expect(request.signal).toBeDefined()
+  })
+
+  it("binds session identity in the URL without duplicating identity headers", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true }))
+
+    await requestNoStoreSameOriginWithSessionIdentity("/api/remote/receivers")
+
+    const [[input, init]] = fetchMock.mock.calls
+    const request = new Request(
+      new URL(requestUrl(input), window.location.href),
+      init
+    )
+    const requestUrlValue = new URL(request.url)
+    expect(requestUrlValue.searchParams.get("expectedUserId")).toBe("user-1")
+    expect(requestUrlValue.searchParams.get("expectedSessionId")).toBe(
+      "session-1"
+    )
+    expect(request.cache).toBe("no-store")
+    expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
+    expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
   })
 
   it("preserves tagged API errors and response metadata", async () => {

@@ -1,9 +1,10 @@
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
 import {
   getSaveDateGroupKey,
   getSaveDateGroupLabel,
 } from "~/lib/save-date-groups"
 
-import type { MediaArtworkRequest } from "../../../../shared/api-contracts"
 import {
   getLinkViewItemExtractedLinks,
   getLinkViewItemMetadata,

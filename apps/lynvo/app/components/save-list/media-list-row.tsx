@@ -6,6 +6,7 @@ import { cn } from "~/lib/utils"
 
 import { ExtractionStatusTitle } from "./extraction-status"
 import type { ExtractionStatusTitleSpec } from "./extraction-status-utils"
+import { buildItemAriaLabel } from "./item-aria-label"
 import {
   MEDIA_LIST_ROW_HOVER_TINT_CLASS,
   MEDIA_LIST_ROW_MENU_CELL_CLASS,
@@ -15,7 +16,6 @@ import {
   SAVE_LIST_ROW_ENTER_ANIMATION_CLASS,
 } from "./media-list-row-constants"
 import { NewBadge } from "./new-badge"
-import { getOpenedAriaLabel } from "./opened-aria-label"
 
 interface SaveListRowIconProps {
   readonly children: ReactNode
@@ -119,7 +119,11 @@ export const MediaListRow = ({
   >
     <button
       type="button"
-      aria-label={getOpenedAriaLabel(label, isOpened)}
+      aria-label={buildItemAriaLabel({
+        label,
+        isOpened,
+        isNew: newBadge !== undefined,
+      })}
       disabled={disabled}
       className={cn(
         "absolute inset-0 z-1 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",

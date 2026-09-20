@@ -380,8 +380,10 @@ export interface PluginServerRuntime<Env> {
 
 export const PROTOCOL_VERSION = "1.0" as const
 
+export const UNSUPPORTED_URL_CODE = "UNSUPPORTED_URL" as const
+
 export const ERROR_CODES = [
-  "UNSUPPORTED_URL",
+  UNSUPPORTED_URL_CODE,
   "UNSUPPORTED_TARGET",
   "AUTH_INVALID",
   "AUTH_REQUIRED",
@@ -396,11 +398,6 @@ export const ERROR_CODES = [
 ] as const
 
 export type ErrorCode = (typeof ERROR_CODES)[number]
-
-export const UNSUPPORTED_URL_CODE = ERROR_CODES[0] satisfies Extract<
-  ErrorCode,
-  "UNSUPPORTED_URL"
->
 
 /**
  * A manifest version is wire-compatible when its major version matches the

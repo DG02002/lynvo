@@ -15,11 +15,8 @@ import {
   type TmdbSearchResult,
 } from "./tmdb-adapter"
 
-type MediaArtworkLookupRequest = MediaArtworkRequest
-export type MediaArtworkLookupResult = MediaArtworkResult
-
 export type MediaArtworkLookupOutcome =
-  | { status: "resolved"; result: MediaArtworkLookupResult }
+  | { status: "resolved"; result: MediaArtworkResult }
   | { status: "empty"; candidates?: readonly MediaArtworkCandidate[] }
   | { status: "failed" }
 
@@ -62,7 +59,7 @@ const toCandidates = (
  */
 const lookupArtworkById = async (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   if (request.providerId === undefined) {
     return emptyOutcome
@@ -216,7 +213,7 @@ const lookupSubtitleSeasonArtwork = async (
 
 const lookupEpisodeArtwork = async (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   if (
     request.seasonNumber === undefined ||
@@ -274,7 +271,7 @@ const lookupEpisodeArtwork = async (
 
 const lookupSeasonArtwork = async (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   if (request.seasonNumber === undefined) {
     return emptyOutcome
@@ -323,7 +320,7 @@ const lookupSeasonArtwork = async (
 
 const lookupTvArtwork = async (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   const search = await searchTvSelectingByTitle(
     adapter,
@@ -363,7 +360,7 @@ const lookupTvArtwork = async (
 
 const lookupMovieArtwork = async (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   const search = await searchMovieSelectingByTitle(
     adapter,
@@ -388,7 +385,7 @@ const lookupMovieArtwork = async (
 
 const lookupOutcome = (
   adapter: TmdbAdapter,
-  request: MediaArtworkLookupRequest
+  request: MediaArtworkRequest
 ): Promise<MediaArtworkLookupOutcome> => {
   if (request.providerId !== undefined) {
     return lookupArtworkById(adapter, request)
@@ -413,7 +410,7 @@ const lookupOutcome = (
  */
 export const mediaArtworkOutcomeToResult = (
   outcome: MediaArtworkLookupOutcome
-): MediaArtworkLookupResult => {
+): MediaArtworkResult => {
   if (outcome.status === "resolved") {
     return outcome.result
   }
@@ -428,7 +425,7 @@ export const mediaArtworkOutcomeToResult = (
 
 export const lookupMediaArtworkOutcomes = async (
   environment: MediaArtworkLookupEnvironment,
-  requests: readonly MediaArtworkLookupRequest[],
+  requests: readonly MediaArtworkRequest[],
   dependencies: MediaArtworkLookupDependencies = {
     fetch: globalThis.fetch.bind(globalThis),
   }
@@ -443,11 +440,11 @@ export const lookupMediaArtworkOutcomes = async (
 
 export const lookupMediaArtwork = async (
   environment: MediaArtworkLookupEnvironment,
-  requests: readonly MediaArtworkLookupRequest[],
+  requests: readonly MediaArtworkRequest[],
   dependencies: MediaArtworkLookupDependencies = {
     fetch: globalThis.fetch.bind(globalThis),
   }
-): Promise<readonly MediaArtworkLookupResult[]> => {
+): Promise<readonly MediaArtworkResult[]> => {
   const outcomes = await lookupMediaArtworkOutcomes(
     environment,
     requests,

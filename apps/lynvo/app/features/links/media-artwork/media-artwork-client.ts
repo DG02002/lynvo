@@ -1,4 +1,11 @@
 import { Schema } from "effect"
+import {
+  canonicalizeMediaArtworkTitle,
+  MediaArtworkResponseSchema,
+  type MediaArtworkRequest,
+  type MediaArtworkResponse,
+  type MediaArtworkResult,
+} from "~shared/api-contracts"
 
 import { requestSameOrigin } from "~/lib/api/client"
 import {
@@ -10,14 +17,6 @@ import {
   MEDIA_ARTWORK_FOUND_TTL_MS,
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
 } from "~/lib/constants"
-
-import {
-  canonicalizeMediaArtworkTitle,
-  MediaArtworkResponseSchema,
-  type MediaArtworkRequest,
-  type MediaArtworkResponse,
-  type MediaArtworkResult,
-} from "../../../../shared/api-contracts"
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
   [

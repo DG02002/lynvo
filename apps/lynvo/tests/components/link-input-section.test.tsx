@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { LinkInputSection } from "~/components/send-link/link-input-section"
+import { linkCopy } from "~/features/links/link-copy"
 
 describe("LinkInputSection", () => {
   it("presents an existing link as a warning", () => {
@@ -17,7 +18,7 @@ describe("LinkInputSection", () => {
       />
     )
 
-    expect(screen.getByText("Link already saved")).toBeVisible()
+    expect(screen.getByText(linkCopy.errors.duplicate)).toBeVisible()
     expect(screen.getByLabelText("Link")).not.toHaveAttribute(
       "aria-invalid",
       "true"

@@ -92,7 +92,7 @@ const planDetailSections = [
         },
       },
       {
-        feature: "Spencerwooo's OneDrive Vercel Index",
+        feature: "Spencerwooo’s OneDrive Vercel Index",
         allowance: "Included",
         icon: {
           url: "/lynvo-plugin-server-assets/icons/sources/onedrive-index.webp",

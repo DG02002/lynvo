@@ -169,7 +169,7 @@ const GallerySaveItemArtwork = ({
             onChooseArtwork()
           }}
         >
-          Choose artwork
+          {linkCopy.actions.changeArtwork}
         </Button>
       ) : null}
     </div>
@@ -344,7 +344,7 @@ const GallerySaveItem = ({
           </Button>
         )}
         {isSingleItem && item && (
-          <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 focus-within:opacity-100 group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
+          <div className="absolute right-4 bottom-4 z-10 opacity-0 transition-opacity duration-150 has-[:focus-visible]:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none [&_svg]:size-7!">
             <LinkItemMenu
               item={item}
               actions={actions}

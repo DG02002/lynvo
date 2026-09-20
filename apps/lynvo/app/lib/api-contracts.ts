@@ -1,13 +1,13 @@
 import { Schema } from "effect"
+import { PluginServerUsageSchema } from "~shared/usage-contracts"
 
-import { PluginServerUsageSchema } from "../../shared/usage-contracts"
 import { remoteCommandFieldsSchema } from "./remote-play/wire"
-export { LynvoUsageSnapshotSchema } from "../../shared/usage-contracts"
+export { LynvoUsageSnapshotSchema } from "~shared/usage-contracts"
 export type {
   LynvoUsageSnapshot,
   PluginServerUsage,
   UsageMetric,
-} from "../../shared/usage-contracts"
+} from "~shared/usage-contracts"
 
 export const MutationResultSchema = Schema.Struct({
   success: Schema.Boolean,

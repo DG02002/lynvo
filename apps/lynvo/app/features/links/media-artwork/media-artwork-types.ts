@@ -1,4 +1,5 @@
-import type { MediaArtworkRequest } from "../../../../shared/api-contracts"
+import type { MediaArtworkRequest } from "~shared/api-contracts"
+
 import type { LinkListItem } from "../types"
 
 export interface GalleryGroup {

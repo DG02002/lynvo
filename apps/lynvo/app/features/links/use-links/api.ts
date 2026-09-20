@@ -1,4 +1,9 @@
 import { Result, Schema } from "effect"
+import {
+  SavedLinkListResponseSchema,
+  type SavedLinkApiRecord,
+  type SavedLinkListResponse,
+} from "~shared/api-contracts"
 
 import { parseLinkMetadata } from "~/features/links/link-metadata-normalization"
 import {
@@ -9,11 +14,6 @@ import type { LinkExtractionStatus } from "~/features/links/types"
 import { requestSameOrigin, type RequestOptions } from "~/lib/api/client"
 import { DATA_VERSION_RESPONSE_HEADER } from "~/lib/constants"
 
-import {
-  SavedLinkListResponseSchema,
-  type SavedLinkApiRecord,
-  type SavedLinkListResponse,
-} from "../../../../shared/api-contracts"
 import { SavedLinkCommandError } from "../saved-link-command-failure"
 
 declare global {

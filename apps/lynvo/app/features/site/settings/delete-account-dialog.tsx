@@ -17,8 +17,6 @@ interface DeleteAccountDialogProps {
   onDeleteAccount: (event: React.FormEvent) => void
 }
 
-const DELETE_ACCOUNT_EMAIL_HINT_ID = "delete-account-email-hint"
-
 export const DeleteAccountDialog = ({
   email,
   busy,
@@ -28,6 +26,7 @@ export const DeleteAccountDialog = ({
   onConfirmEmailChange,
   onDeleteAccount,
 }: DeleteAccountDialogProps) => {
+  const confirmEmailHintId = React.useId()
   const isConfirmEmailInvalid =
     confirmEmail.length > 0 && confirmEmail.trim() !== email
 
@@ -47,7 +46,7 @@ export const DeleteAccountDialog = ({
             Server connections, credentials, and active sessions. This cannot be
             undone.
             <span
-              id={DELETE_ACCOUNT_EMAIL_HINT_ID}
+              id={confirmEmailHintId}
               className="mt-3 block font-medium text-foreground"
             >
               Enter this email address exactly to confirm:{" "}
@@ -77,7 +76,7 @@ export const DeleteAccountDialog = ({
               autoComplete="off"
               aria-invalid={isConfirmEmailInvalid}
               aria-describedby={
-                isConfirmEmailInvalid ? DELETE_ACCOUNT_EMAIL_HINT_ID : undefined
+                isConfirmEmailInvalid ? confirmEmailHintId : undefined
               }
             />
           </Field>

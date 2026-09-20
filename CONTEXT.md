@@ -128,6 +128,25 @@ Plugin Server.
 
 Avoid: extracted link when referring to the protocol value.
 
+### Playable item
+
+A Media Node with a final media URL that Lynvo can send to an Android player.
+
+### Folder
+
+A Media Node that contains child Media Nodes for browsing. A Folder may need
+another Extraction before its children are available.
+
+### Group
+
+A display-only Media Node that groups child Media Nodes without supplying a
+catalogue entry of its own.
+
+### Unresolved item
+
+A Media Node that carries a Node identity and needs another Extraction before
+Lynvo can show its next result.
+
 ### Node identity
 
 The `nodeUrl` and/or opaque `resourceId` a Plugin Server uses to resolve a
@@ -199,6 +218,7 @@ appears only as secondary debug detail.
 
 ## Casing
 
-Use sentence case for all UI element types. Keep CONTEXT.md product terms
-capitalized wherever they appear. Use technical proper nouns in their standard
-forms, such as "QR code", not "QR Code".
+Use sentence case for all UI element types. Capitalize product terms when they
+are named concepts, headings, labels, or definitions. Use lowercase in running
+prose when the term is descriptive rather than a named concept. Use technical
+proper nouns in their standard forms, such as "QR code", not "QR Code".

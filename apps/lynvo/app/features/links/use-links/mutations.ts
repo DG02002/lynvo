@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import type { MediaArtworkIdentity } from "~shared/api-contracts"
 
 import { getLinkViewItemMetadata } from "~/features/links/link-metadata-accessors"
 import { withResolvedMirrors } from "~/features/links/link-playback-metadata"
@@ -12,7 +13,6 @@ import type {
 } from "~/features/links/types"
 import { showErrorToast } from "~/lib/toast-notifications"
 
-import type { MediaArtworkIdentity } from "../../../../shared/api-contracts"
 import { linksDataApi, type SavedLinkApiMetadataOperation } from "./api"
 import {
   buildLinkViewItem,

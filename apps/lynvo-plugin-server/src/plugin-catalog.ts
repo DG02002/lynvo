@@ -95,7 +95,7 @@ export const LYNVO_PLUGIN_CATALOG: LynvoPluginDefinition[] = [
   },
   {
     id: ONEDRIVE_SOURCE_ID,
-    displayName: "Spencerwooo's OneDrive Vercel Index",
+    displayName: "Spencerwooo’s OneDrive Vercel Index",
     description:
       "Extracts playable files and unresolved items from OneDrive Vercel Index deployments.",
     homepage: "https://github.com/spencerwooo/onedrive-vercel-index",

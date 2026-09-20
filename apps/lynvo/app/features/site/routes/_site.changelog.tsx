@@ -72,11 +72,11 @@ const changelogEntries: ChangelogEntry[] = [
     description: [
       "The library now has two views. List gives you row-by-row browsing. Gallery view groups movies and shows into tiles with artwork.",
       "Shows are grouped by season, with posters, season artwork, and episode stills when available. In Gallery view, a folder with one season opens straight into a full-screen season view.",
-      "Nested folders keep their own names. Files that sit beside videos no longer create wrong matches, and mixed folders no longer take a show's name from their contents. Folder paths, back buttons, and the Show episode names control stay in sync.",
+      "Nested folders keep their own names. Sidecar files no longer create false media matches, and mixed folders no longer take a show's name from their contents. Folder paths, back buttons, and the Show episode names control stay in sync.",
       'Saving is easier to follow. You can turn off "Save all links automatically", save a single playable link directly, and see whether an extraction is queued, loading, or failed. Failed items show the error with Delete and View log actions.',
       "You can search TMDB to change artwork, delete every link in a movie or show group, and browse the library comfortably on smaller screens.",
       "Remote Play reconnects more reliably after stale connections. The device picker explains when it is searching, has no devices, or needs another try.",
-      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. The Plugin Server Protocol release added clearer errors and usage reporting while supporting wire version 1.0.",
+      "Plugin Server settings now separate shared Lynvo usage from per-server usage and let supported Scrape.do servers use your own proxy key. Plugin Server Protocol 0.1.5 adds typed errors, deferred extraction, per-extraction usage deltas, node extensions, and additive compatibility across wire version 1.x.",
       "The docs now cover Android TV sign-in, Plugin Server setup, usage limits, and artwork metadata providers.",
     ],
   },

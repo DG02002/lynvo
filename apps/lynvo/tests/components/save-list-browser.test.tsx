@@ -386,7 +386,7 @@ describe("SaveListBrowser", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
     expect(
       screen
         .getAllByRole("button", { name: "Folder Two" })
@@ -422,7 +422,7 @@ describe("SaveListBrowser", () => {
         "/save/folder/nested-navigation?path=folder-one/folder-two"
       )
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
     expect(scrollTo).toHaveBeenCalledWith({ top: 128 })
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
@@ -432,7 +432,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Browser back" }))
-    await screen.findByRole("button", { name: "Root Episode" })
+    await screen.findByRole("button", { name: "Root Episode, new" })
     expect(screen.getByTestId("location")).toHaveTextContent(
       "/save/folder/nested-navigation"
     )
@@ -444,7 +444,7 @@ describe("SaveListBrowser", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: "Folder Two" }).at(-1)!
     )
-    await screen.findByRole("button", { name: "Nested Episode" })
+    await screen.findByRole("button", { name: "Nested Episode, new" })
 
     fireEvent.keyDown(window, { key: "Escape" })
     await screen.findAllByRole("button", { name: "Folder Two" })
@@ -971,7 +971,7 @@ describe("SaveListBrowser", () => {
     )
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Playable Item Alpha.mkv" })
+      screen.getByRole("button", { name: "Playable Item Alpha.mkv, new" })
     )
 
     expect(markOpened).not.toHaveBeenCalled()
@@ -1095,7 +1095,7 @@ describe("SaveListBrowser", () => {
 
     render(<Harness />)
     const playableItemButton = screen.getByRole("button", {
-      name: "Playable Item One",
+      name: "Playable Item One, new",
     })
     fireEvent.click(playableItemButton)
 
@@ -1290,7 +1290,7 @@ describe("SaveListBrowser", () => {
 
     render(<Harness />)
     const cachedItemButton = screen.getByRole("button", {
-      name: "Cached Playable Item",
+      name: "Cached Playable Item, new",
     })
     const cachedItemRow = cachedItemButton.parentElement
     expect(cachedItemRow).toHaveAttribute("data-resolution-state", "resolving")
@@ -1338,7 +1338,7 @@ describe("SaveListBrowser", () => {
       />
     )
     fireEvent.click(
-      screen.getByRole("button", { name: "Metadata Update Item" })
+      screen.getByRole("button", { name: "Metadata Update Item, new" })
     )
     expect(await screen.findByText("Old cached mirror")).toBeVisible()
 
@@ -1374,7 +1374,7 @@ describe("SaveListBrowser", () => {
       />
     )
     const itemButton = screen.getByRole("button", {
-      name: "Failure Metadata Update Item",
+      name: "Failure Metadata Update Item, new",
     })
     const itemRow = itemButton.parentElement
     fireEvent.click(itemButton)
@@ -1427,7 +1427,7 @@ describe("SaveListBrowser", () => {
       />
     )
     const itemButton = screen.getByRole("button", {
-      name: "Stale Resolution Item",
+      name: "Stale Resolution Item, new",
     })
     const itemRow = itemButton.parentElement
     fireEvent.click(itemButton)
@@ -1481,7 +1481,7 @@ describe("SaveListBrowser", () => {
         />
       )
       const itemButton = screen.getByRole("button", {
-        name: "Stale Rejection Item",
+        name: "Stale Rejection Item, new",
       })
       const itemRow = itemButton.parentElement
       fireEvent.click(itemButton)
@@ -1551,7 +1551,7 @@ describe("SaveListBrowser", () => {
     )
 
     const failedPlayableItemButton = screen.getByRole("button", {
-      name: "Playable Item Resolution Failure",
+      name: "Playable Item Resolution Failure, new",
     })
     fireEvent.click(failedPlayableItemButton)
 
@@ -1607,7 +1607,7 @@ describe("SaveListBrowser", () => {
       )
 
       const itemButton = screen.getByRole("button", {
-        name: "Thrown Resolution Item",
+        name: "Thrown Resolution Item, new",
       })
       fireEvent.click(itemButton)
 
@@ -1833,7 +1833,7 @@ describe("SaveListBrowser", () => {
     )
 
     const itemButton = screen.getByRole("button", {
-      name: "Open expiring-video.mp4",
+      name: "Open expiring-video.mp4, new",
     })
     const filename = screen.getByText("expiring-video.mp4")
     expect(itemButton).toBeEnabled()
@@ -1895,7 +1895,7 @@ describe("SaveListBrowser", () => {
       )
     ).toBe(true)
     const folderButton = screen.getByRole("button", {
-      name: "View source.example",
+      name: "View source.example, new",
     })
     expect(folderButton.parentElement?.querySelectorAll("svg")).toHaveLength(1)
     fireEvent.click(folderButton)

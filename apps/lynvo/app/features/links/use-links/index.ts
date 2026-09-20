@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react"
 import { useRouteLoaderData } from "react-router"
+import type { SavedLinkApiRecord } from "~shared/api-contracts"
 
 import {
   useOptionalRealtime,
@@ -19,7 +20,6 @@ import {
 } from "~/lib/constants"
 import type { loader as rootLoader } from "~/root"
 
-import type { SavedLinkApiRecord } from "../../../../shared/api-contracts"
 import type { LinksActions } from "./actions"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
 import {

@@ -10,6 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "~/components/ui/input-group"
+import { linkCopy } from "~/features/links/link-copy"
 import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
 import type { ExtractionPreview } from "~/features/links/use-link-actions"
 import { cn } from "~/lib/utils"
@@ -46,9 +47,9 @@ const sourceStatusLabel = (status: string) => {
 }
 
 const errorTitles = {
-  duplicate: "Link already saved",
-  unsupported: "Link not supported",
-  generic: "Link couldn’t be opened",
+  duplicate: linkCopy.errors.duplicate,
+  generic: linkCopy.errors.generic,
+  unsupported: linkCopy.errors.unsupported,
 } satisfies Record<SavedLinkInteractionError["kind"], string>
 
 const getErrorTitle = (error: SavedLinkInteractionError) =>
@@ -66,8 +67,6 @@ interface LinkInputSectionProps {
 }
 
 const EMPTY_SAVED_URLS = new Set<string>()
-const LINK_INPUT_ERROR_ID = "link-input-error"
-
 export function LinkInputSection({
   url,
   setUrl,
@@ -78,6 +77,7 @@ export function LinkInputSection({
   setError,
   savedUrls = EMPTY_SAVED_URLS,
 }: LinkInputSectionProps) {
+  const linkInputErrorId = React.useId()
   const [isClipboardDialogOpen, setIsClipboardDialogOpen] =
     React.useState(false)
   const {
@@ -126,7 +126,7 @@ export function LinkInputSection({
       {error && (
         <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
-            id={LINK_INPUT_ERROR_ID}
+            id={linkInputErrorId}
             variant={error.kind === "duplicate" ? "default" : "destructive"}
             className={cn(
               error.kind === "duplicate" &&
@@ -168,7 +168,7 @@ export function LinkInputSection({
             }
           }}
           aria-invalid={Boolean(error && error.kind !== "duplicate")}
-          aria-describedby={error ? LINK_INPUT_ERROR_ID : undefined}
+          aria-describedby={error ? linkInputErrorId : undefined}
         />
         <InputGroupAddon align="inline-end">
           {(clipboardPermission === "prompt" ||

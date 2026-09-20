@@ -6,6 +6,10 @@ import {
   useRef,
   type ReactNode,
 } from "react"
+import type {
+  MediaArtworkCandidate,
+  MediaArtworkIdentity,
+} from "~shared/api-contracts"
 
 import { Spinner } from "~/components/spinner"
 import {
@@ -37,11 +41,6 @@ import { linkCopy } from "~/features/links/link-copy"
 import { fetchMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
-
-import type {
-  MediaArtworkCandidate,
-  MediaArtworkIdentity,
-} from "../../../shared/api-contracts"
 
 interface ArtworkDialogProps {
   readonly item: LinkViewItem | undefined
