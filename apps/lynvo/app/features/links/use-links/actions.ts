@@ -1,5 +1,7 @@
 import type { ExtractedLink, MetaData } from "~/features/links/types"
 
+import type { MediaArtworkIdentity } from "../../../../shared/api-contracts"
+
 export interface LinksActions {
   add: (
     url: string,

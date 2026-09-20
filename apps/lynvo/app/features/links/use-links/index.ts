@@ -19,6 +19,7 @@ import {
 } from "~/lib/constants"
 import type { loader as rootLoader } from "~/root"
 
+import type { SavedLinkApiRecord } from "../../../../shared/api-contracts"
 import type { LinksActions } from "./actions"
 import { linksDataApi, savedLinkApiRecordToViewItem } from "./api"
 import {
@@ -296,7 +297,7 @@ const useLinksRefresh = ({
     if (sequence !== fetchSequenceRef.current) {
       return
     }
-    const items = response.links.flatMap((record) => {
+    const items = response.links.flatMap((record: SavedLinkApiRecord) => {
       const viewItem = savedLinkApiRecordToViewItem(record)
       return viewItem ? [viewItem] : []
     })

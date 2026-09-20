@@ -1,5 +1,6 @@
-import { Result, Schema } from "effect"
+import { Schema } from "effect"
 
+import { requestSameOrigin } from "~/lib/api/client"
 import {
   MEDIA_ARTWORK_API_TIMEOUT_MS,
   MEDIA_ARTWORK_BATCH_SIZE,
@@ -10,42 +11,20 @@ import {
   MEDIA_ARTWORK_NOT_FOUND_TTL_MS,
 } from "~/lib/constants"
 
-const mediaArtworkResultSchema = Schema.Struct({
-  posterPath: Schema.optional(Schema.String),
-  stillPath: Schema.optional(Schema.String),
-  episodeTitle: Schema.optional(Schema.String),
-  identity: Schema.optional(
-    Schema.Struct({
-      providerId: Schema.Number,
-      title: Schema.String,
-      year: Schema.optional(Schema.Number),
-      mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-    })
-  ),
-  candidates: Schema.optional(
-    Schema.Array(
-      Schema.Struct({
-        providerId: Schema.Number,
-        title: Schema.String,
-        year: Schema.optional(Schema.Number),
-        mediaKind: Schema.optional(Schema.Literals(["movie", "tv"])),
-        posterPath: Schema.optional(Schema.String),
-      })
-    )
-  ),
-  failed: Schema.optional(Schema.Boolean),
-})
-
-const mediaArtworkResponseSchema = Schema.Struct({
-  results: Schema.Array(mediaArtworkResultSchema),
-})
+import {
+  canonicalizeMediaArtworkTitle,
+  MediaArtworkResponseSchema,
+  type MediaArtworkRequest,
+  type MediaArtworkResponse,
+  type MediaArtworkResult,
+} from "../../../../shared/api-contracts"
 
 export const getMediaArtworkKey = (request: MediaArtworkRequest): string =>
   [
     `v${MEDIA_ARTWORK_CACHE_VERSION}`,
     request.providerId ?? "",
     request.mediaKind,
-    request.title.normalize("NFKC").toLocaleLowerCase(),
+    canonicalizeMediaArtworkTitle(request.title),
     request.year ?? "",
     request.seasonNumber ?? "",
     request.episodeNumber ?? "",
@@ -208,6 +187,30 @@ export const requestMediaArtwork = (
   scheduleMediaArtworkFlush()
 }
 
+export const fetchMediaArtwork = async (
+  requests: readonly MediaArtworkRequest[],
+  signal?: AbortSignal
+): Promise<MediaArtworkResponse> => {
+  const response = await requestSameOrigin("/api/data/media-artwork", {
+    headers: { Accept: "application/json" },
+    includeSessionIdentityHeaders: false,
+    method: "POST",
+    payload: { requests },
+    signal,
+    timeoutMs: MEDIA_ARTWORK_API_TIMEOUT_MS,
+  })
+  if (!response.ok) {
+    throw new Error("Media artwork lookup failed.")
+  }
+  try {
+    return Schema.decodeUnknownSync(MediaArtworkResponseSchema)(
+      await response.json()
+    )
+  } catch {
+    throw new Error("Media artwork response was invalid.")
+  }
+}
+
 const flushPendingMediaArtwork = async (): Promise<void> => {
   const batchEntries = [...pendingMediaArtworkRequests.entries()].slice(
     0,
@@ -224,29 +227,11 @@ const flushPendingMediaArtwork = async (): Promise<void> => {
   }
 
   try {
-    const response = await fetch("/api/data/media-artwork", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        requests: batchEntries.map(([, request]) => request),
-      }),
-      signal: AbortSignal.timeout?.(MEDIA_ARTWORK_API_TIMEOUT_MS),
-    })
-    if (!response.ok) {
-      throw new Error("Media artwork lookup failed")
-    }
-    const parsed = Schema.decodeUnknownResult(mediaArtworkResponseSchema)(
-      await response.json()
+    const parsed = await fetchMediaArtwork(
+      batchEntries.map(([, request]) => request)
     )
-    if (Result.isFailure(parsed)) {
-      throw new Error("Media artwork response was invalid")
-    }
     batchEntries.forEach(([key], index) => {
-      const lookupResult = parsed.success.results[index] ?? null
+      const lookupResult = parsed.results[index] ?? null
       if (lookupResult?.failed) {
         // Provider-transient failures arrive as data with a marker; treat
         // them like transport failures so the next mount retries instead

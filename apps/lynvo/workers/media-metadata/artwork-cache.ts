@@ -1,28 +1,13 @@
+import {
+  canonicalizeMediaArtworkTitle,
+  type MediaArtworkRequest,
+  type MediaArtworkResult,
+} from "../../shared/api-contracts"
 import { MEDIA_ARTWORK_CACHE_VERSION } from "../constants"
 import {
   lookupMediaArtworkOutcomes,
   mediaArtworkOutcomeToResult,
-  type MediaArtworkCandidate,
-  type MediaArtworkIdentity,
 } from "./media-artwork-lookup"
-
-interface MediaArtworkRequest {
-  readonly title: string
-  readonly mediaKind?: "movie" | "tv"
-  readonly providerId?: number
-  readonly year?: number
-  readonly seasonNumber?: number
-  readonly episodeNumber?: number
-}
-
-interface MediaArtworkResult {
-  readonly posterPath?: string
-  readonly stillPath?: string
-  readonly episodeTitle?: string
-  readonly identity?: MediaArtworkIdentity
-  readonly candidates?: readonly MediaArtworkCandidate[]
-  readonly failed?: boolean
-}
 
 interface MediaArtworkLookupEnvironment {
   readonly TMDB_API_READ_ACCESS_TOKEN?: string
@@ -45,7 +30,7 @@ const ARTWORK_CACHE_MISS_TTL_SECONDS = 24 * 60 * 60
 // title-based cache entry, so the id is part of the key's identity.
 const canonicalRequestJson = (request: MediaArtworkRequest): string =>
   JSON.stringify([
-    request.title.normalize("NFKC").trim().toLowerCase(),
+    canonicalizeMediaArtworkTitle(request.title),
     request.mediaKind ?? null,
     request.providerId ?? null,
     request.year ?? null,

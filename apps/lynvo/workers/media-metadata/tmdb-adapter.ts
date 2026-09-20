@@ -1,11 +1,15 @@
-import { sleep } from "@dg02002/lynvo-plugin-server-protocol"
+import { runWithRetries, sleep } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
+import {
+  createOutboundHttpTransport,
+  OutboundHttpError,
+} from "../../app/lib/outbound-http"
+import { parseRetryAfterMs } from "../../shared/retry"
 import {
   MEDIA_METADATA_REQUEST_ATTEMPTS,
   MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
   MEDIA_METADATA_REQUEST_TIMEOUT_MS,
-  SECOND_MS,
 } from "../constants"
 
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3"
@@ -246,22 +250,6 @@ const getErrorMessage = async (response: Response): Promise<string> => {
     : `TMDB request failed with status ${response.status}`
 }
 
-const getRetryAt = (
-  response: Response,
-  now: () => number
-): number | undefined => {
-  const retryAfter = response.headers.get("Retry-After")
-  if (!retryAfter) {
-    return undefined
-  }
-  const seconds = Number(retryAfter)
-  if (Number.isFinite(seconds)) {
-    return now() + Math.max(0, seconds) * SECOND_MS
-  }
-  const retryAt = Date.parse(retryAfter)
-  return Number.isNaN(retryAt) ? undefined : retryAt
-}
-
 const toSearchResult = (
   item: TmdbSearchPayloadItem
 ): TmdbSearchResult | undefined => {
@@ -312,6 +300,9 @@ const createDisabledResult = <Value>(): TmdbAdapterResult<Value> => ({
   message: "TMDB metadata is disabled",
 })
 
+const isPermanentTmdbFailure = (cause: unknown): boolean =>
+  cause instanceof OutboundHttpError && cause.code === "RESPONSE_TOO_LARGE"
+
 export const createTmdbAdapter = (
   dependencies: TmdbAdapterDependencies
 ): TmdbAdapter => {
@@ -319,31 +310,38 @@ export const createTmdbAdapter = (
   const timeoutMs = dependencies.timeoutMs ?? MEDIA_METADATA_REQUEST_TIMEOUT_MS
   const token = dependencies.token?.trim()
   const sleepForRequest = dependencies.sleep ?? sleep
-
-  const requestTmdbEndpointWithRetries = async (
-    path: string,
-    attemptNumber: number
-  ): Promise<Response> => {
-    try {
-      return await dependencies.fetch(`${TMDB_API_BASE_URL}${path}`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token}`,
-          "User-Agent": "Lynvo/1.0",
-        },
-        signal: AbortSignal.timeout?.(timeoutMs),
-      })
-    } catch (error) {
-      if (attemptNumber >= MEDIA_METADATA_REQUEST_ATTEMPTS) {
-        throw error
-      }
-      await sleepForRequest(MEDIA_METADATA_REQUEST_RETRY_DELAY_MS)
-      return requestTmdbEndpointWithRetries(path, attemptNumber + 1)
-    }
-  }
+  const outboundHttp = createOutboundHttpTransport({
+    fetch: dependencies.fetch,
+  })
 
   const fetchWithRetries = (path: string): Promise<Response> =>
-    requestTmdbEndpointWithRetries(path, 1)
+    runWithRetries(
+      () =>
+        outboundHttp.fetch(`${TMDB_API_BASE_URL}${path}`, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+            "User-Agent": "Lynvo/1.0",
+          },
+          timeoutMs,
+        }),
+      {
+        maxRetries: MEDIA_METADATA_REQUEST_ATTEMPTS - 1,
+        decide: (outcome) => {
+          if (outcome._tag === "success") {
+            return { retry: false }
+          }
+          if (isPermanentTmdbFailure(outcome.cause)) {
+            return { retry: false }
+          }
+          return {
+            retry: true,
+            delayMs: MEDIA_METADATA_REQUEST_RETRY_DELAY_MS,
+          }
+        },
+        sleep: sleepForRequest,
+      }
+    )
 
   const requestJson = async <Value>(
     path: string,
@@ -358,18 +356,24 @@ export const createTmdbAdapter = (
     } catch (error) {
       return {
         kind: "failure",
-        failureKind: "retryable",
+        failureKind: isPermanentTmdbFailure(error) ? "permanent" : "retryable",
         message: error instanceof Error ? error.message : "TMDB request failed",
       }
     }
     if (!response.ok) {
       const message = await getErrorMessage(response)
       if (response.status === 429) {
+        const nowMs = now()
+        const retryAfterMs = parseRetryAfterMs(
+          response.headers.get("Retry-After") ?? undefined,
+          nowMs
+        )
         return {
           kind: "failure",
           failureKind: "rate-limited",
           message,
-          retryAt: getRetryAt(response, now),
+          retryAt:
+            retryAfterMs === undefined ? undefined : nowMs + retryAfterMs,
         }
       }
       return {

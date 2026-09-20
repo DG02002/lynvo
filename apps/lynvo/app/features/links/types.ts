@@ -4,6 +4,8 @@ import type {
   RangeRequestCapability,
 } from "@dg02002/lynvo-plugin-server-protocol"
 
+import type { MediaArtworkIdentity } from "../../../shared/api-contracts"
+
 export interface ExtractedLink {
   nodeKey?: string
   url?: string

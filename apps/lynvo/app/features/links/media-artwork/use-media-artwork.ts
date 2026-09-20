@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react"
 
+import type {
+  MediaArtworkRequest,
+  MediaArtworkResult,
+} from "../../../../shared/api-contracts"
 import {
   getMediaArtworkForKey,
   getMediaArtworkKey,

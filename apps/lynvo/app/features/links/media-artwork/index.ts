@@ -1,4 +1,5 @@
-// The side-effect import keeps the ambient artwork interfaces in the program.
+// Keep the media classification and season identity globals available to
+// feature modules that still use those internal UI-only types.
 import "./media-artwork-types"
 
 export type { GalleryGroup } from "./media-artwork-types"
@@ -17,4 +18,5 @@ export {
   isEpisodeOnlyListing,
 } from "./media-artwork-identity"
 export { parseMediaFilename } from "./media-filename-parser"
+export { fetchMediaArtwork } from "./media-artwork-client"
 export { useMediaArtwork } from "./use-media-artwork"

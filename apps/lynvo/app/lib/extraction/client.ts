@@ -1,4 +1,7 @@
-import { ERROR_CODES } from "@dg02002/lynvo-plugin-server-protocol"
+import {
+  ERROR_CODES,
+  runWithRetries,
+} from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
 import {
@@ -7,8 +10,8 @@ import {
 } from "~/features/links/storage-schemas"
 import type { MetaData } from "~/features/links/types"
 import { ApiClientError, requestJson } from "~/lib/api/client"
-import { runWithRetries } from "~/lib/retry"
 
+import { parseRetryAfterMs } from "../../../shared/retry"
 import { ExtractionCommandError } from "./errors"
 import { resolveMetadataIconUrls } from "./metadata-icon-urls"
 
@@ -48,18 +51,6 @@ type RetryableExtractionFailure =
       kind: "rate-limited"
       retryAfterMs?: number
     }
-
-const parseRetryAfterMs = (value: string | undefined): number | undefined => {
-  if (!value) {
-    return undefined
-  }
-  const seconds = Number(value)
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return seconds * 1000
-  }
-  const retryAt = Date.parse(value)
-  return Number.isNaN(retryAt) ? undefined : Math.max(0, retryAt - Date.now())
-}
 
 const getApiResponse = (
   cause: unknown
@@ -177,11 +168,21 @@ const runWithExtractionResilience = async <Value>(
   try {
     return await runWithRetries(execute, {
       maxRetries: EXTRACTION_MAX_RETRIES,
-      getDelayMs: (cause, retryNumber) => {
-        const retryableFailure = getRetryableFailure(cause)
-        return retryableFailure
-          ? retryableDelayMs(retryableFailure.retryAfterMs, retryNumber)
-          : undefined
+      decide: (outcome, retryNumber) => {
+        if (outcome._tag === "success") {
+          return { retry: false }
+        }
+        const retryableFailure = getRetryableFailure(outcome.cause)
+        if (!retryableFailure) {
+          return { retry: false }
+        }
+        const delayMs = retryableDelayMs(
+          retryableFailure.retryAfterMs,
+          retryNumber
+        )
+        return delayMs === undefined
+          ? { retry: false }
+          : { retry: true, delayMs }
       },
     })
   } catch (cause) {
