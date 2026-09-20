@@ -27,6 +27,9 @@ interface LinkSelectionTreeItemProps {
   selectedIds: Set<string>
   onToggleSelect: (id: string) => void
   onExpandFolder?: (linkId: string, linkUrl: string) => Promise<boolean>
+  level: number
+  positionInSet: number
+  setSize: number
 }
 
 const getLinkSelectionFolderState = (
@@ -112,6 +115,9 @@ export const LinkSelectionTreeItem = ({
   selectedIds,
   onToggleSelect,
   onExpandFolder,
+  level,
+  positionInSet,
+  setSize,
 }: LinkSelectionTreeItemProps) => {
   const {
     linkId,
@@ -121,6 +127,7 @@ export const LinkSelectionTreeItem = ({
     canExpand,
     isSelected,
   } = getLinkSelectionState(link, selectedIds)
+  const labelId = React.useId()
   const [isExpanded, setIsExpanded] = React.useState(false)
   const [isResolving, setIsResolving] = React.useState(false)
   const { canResolve, folderState, itemIcon, hasTrailingContent } =
@@ -164,13 +171,35 @@ export const LinkSelectionTreeItem = ({
   }
 
   return (
-    <div className="flex min-w-0 select-none flex-col">
+    <div
+      role="treeitem"
+      aria-labelledby={labelId}
+      aria-level={level}
+      aria-posinset={positionInSet}
+      aria-setsize={setSize}
+      aria-expanded={canExpand || canResolve ? isExpanded : undefined}
+      aria-selected={isSelectionControlAvailable ? isSelected : undefined}
+      data-folder-state={folderState}
+      tabIndex={0}
+      className="flex min-w-0 select-none flex-col rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      onClick={(event) => {
+        if (event.target !== event.currentTarget) {
+          return
+        }
+        void handleRowAction()
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return
+        }
+        if (event.key !== "Enter" && event.key !== " ") {
+          return
+        }
+        event.preventDefault()
+        void handleRowAction()
+      }}
+    >
       <div
-        role="treeitem"
-        aria-expanded={canExpand || canResolve ? isExpanded : undefined}
-        aria-selected={isSelectionControlAvailable ? isSelected : undefined}
-        data-folder-state={folderState}
-        tabIndex={0}
         className={cn(
           "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
           isSelectionControlAvailable &&
@@ -189,15 +218,8 @@ export const LinkSelectionTreeItem = ({
             "cursor-default",
           isSelected && "bg-muted/30"
         )}
-        onClick={() => void handleRowAction()}
-        onKeyDown={(event) => {
-          if (event.target !== event.currentTarget) {
-            return
-          }
-          if (event.key !== "Enter" && event.key !== " ") {
-            return
-          }
-          event.preventDefault()
+        onClick={(event) => {
+          event.stopPropagation()
           void handleRowAction()
         }}
       >
@@ -227,7 +249,7 @@ export const LinkSelectionTreeItem = ({
           />
         )}
 
-        <div className="min-w-0">
+        <div id={labelId} className="min-w-0">
           <ExpandableFilename
             value={link.label}
             className="block text-sm font-normal"
@@ -262,13 +284,16 @@ export const LinkSelectionTreeItem = ({
           role="group"
           className="ml-3 mt-1 flex min-w-0 flex-col gap-1 border-l border-border/40 pl-1.5"
         >
-          {link.children.map((child) => (
+          {link.children.map((child, index) => (
             <LinkSelectionTreeItem
               key={getMediaNodeKey(child)}
               link={child}
               selectedIds={selectedIds}
               onToggleSelect={onToggleSelect}
               onExpandFolder={onExpandFolder}
+              level={level + 1}
+              positionInSet={index + 1}
+              setSize={link.children?.length ?? 0}
             />
           ))}
         </div>

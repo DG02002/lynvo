@@ -21,6 +21,7 @@ interface FinderEpisodeStillImageProps {
   readonly imagePath: string | undefined
   readonly imageType: "poster" | "still"
   readonly isLookupPending: boolean
+  readonly isResolving: boolean
   readonly fallbackIcon: ReactNode
 }
 
@@ -46,6 +47,7 @@ const FinderEpisodeStillImage = ({
   imagePath,
   imageType,
   isLookupPending,
+  isResolving,
   fallbackIcon,
 }: FinderEpisodeStillImageProps) => {
   if (imagePath) {
@@ -62,6 +64,10 @@ const FinderEpisodeStillImage = ({
 
   if (isLookupPending) {
     return <Skeleton className="absolute inset-0 size-full" />
+  }
+
+  if (isResolving) {
+    return null
   }
 
   return fallbackIcon
@@ -130,6 +136,7 @@ export const FinderEpisodeStillDisplay = ({
           imagePath={imagePath}
           imageType={imageType}
           isLookupPending={isLookupPending}
+          isResolving={isResolving}
           fallbackIcon={fallbackIcon}
         />
         <span

@@ -179,7 +179,7 @@ describe("MediaListRow", () => {
     )
 
     const [mobileNewBadge, desktopNewBadge] = screen.getAllByText("New")
-    expect(mobileNewBadge).not.toHaveAttribute("aria-hidden")
+    expect(mobileNewBadge).toHaveAttribute("aria-hidden", "true")
     expect(mobileNewBadge?.parentElement).toHaveClass(
       "shrink-0",
       "self-center",

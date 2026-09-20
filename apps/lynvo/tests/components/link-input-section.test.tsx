@@ -48,9 +48,10 @@ describe("LinkInputSection", () => {
       "aria-invalid",
       "true"
     )
+    const fieldError = screen.getByRole("alert")
     expect(screen.getByLabelText("Link")).toHaveAttribute(
       "aria-describedby",
-      "link-input-error"
+      fieldError.id
     )
   })
 

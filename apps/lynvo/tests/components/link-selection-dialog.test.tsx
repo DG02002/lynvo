@@ -168,11 +168,23 @@ describe("LinkSelectionDialog", () => {
     )
 
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
+    expect(seasonRow.parentElement).toHaveAttribute("role", "tree")
+    expect(seasonRow).toHaveAttribute("aria-level", "1")
+    expect(seasonRow).toHaveAttribute("aria-posinset", "1")
+    expect(seasonRow).toHaveAttribute("aria-setsize", "1")
     fireEvent.click(seasonRow)
     expect(seasonRow).toHaveAttribute("aria-expanded", "true")
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
+    expect(qualityFolderRow.parentElement).toHaveAttribute("role", "group")
+    expect(qualityFolderRow).toHaveAttribute("aria-level", "2")
+    expect(qualityFolderRow).toHaveAttribute("aria-posinset", "1")
+    expect(qualityFolderRow).toHaveAttribute("aria-setsize", "2")
     fireEvent.click(qualityFolderRow)
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
+    const episodeOneRow = screen.getByRole("treeitem", { name: /Episode One/ })
+    expect(episodeOneRow).toHaveAttribute("aria-level", "3")
+    expect(episodeOneRow).toHaveAttribute("aria-posinset", "1")
+    expect(episodeOneRow).toHaveAttribute("aria-setsize", "1")
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
     expect(screen.getByText("3 selected")).toBeVisible()
@@ -405,7 +417,9 @@ describe("LinkSelectionDialog", () => {
       '[data-slot="spinner"]'
     )
     expect(resolvingSpinner).toHaveClass("size-5")
-    expect(resolvingSpinner?.parentElement).toBe(folderTreeItem)
+    expect(resolvingSpinner?.parentElement).toBe(
+      folderTreeItem.firstElementChild
+    )
 
     finishFolderResolution?.([
       {
@@ -503,9 +517,10 @@ describe("LinkSelectionDialog", () => {
 
     expect(
       screen.getByRole("treeitem", { name: /Folder without metadata/ })
+        .firstElementChild
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)]")
     expect(
-      screen.getByRole("treeitem", { name: /File with size/ })
+      screen.getByRole("treeitem", { name: /File with size/ }).firstElementChild
     ).toHaveClass("grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]")
   })
 })

@@ -73,6 +73,7 @@ function Field({
     "data-invalid"?: boolean
   }) {
   const errorId = `field-error-${React.useId()}`
+  // Keep omitted data-invalid distinct from an explicit false for consumers.
   const isInvalid =
     "data-invalid" in props ? props["data-invalid"] === true : undefined
   const contextValue = React.useMemo(

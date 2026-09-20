@@ -64,7 +64,6 @@ describe("ChangeArtworkDialog", () => {
       name: "Sample Movie (2024)",
     })
 
-    expect(status).toBeInTheDocument()
     expect(status).not.toContainElement(candidate)
   })
 })

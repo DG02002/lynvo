@@ -335,6 +335,8 @@ const ARTWORK_SEARCH_COPY = {
   searching: "Searching for artwork…",
   failed: "Search failed",
   empty: "No matches found",
+  found: (count: number) =>
+    `Found ${count} artwork result${count === 1 ? "" : "s"}.`,
 } as const
 
 const ArtworkSearchResults = ({
@@ -354,7 +356,7 @@ const ArtworkSearchResults = ({
   } else if (didSearch && candidates.length === 0) {
     searchStatus = ARTWORK_SEARCH_COPY.empty
   } else if (didSearch) {
-    searchStatus = `Found ${candidates.length} artwork result${candidates.length === 1 ? "" : "s"}.`
+    searchStatus = ARTWORK_SEARCH_COPY.found(candidates.length)
   }
 
   let resultsContent: ReactNode = null

@@ -18,7 +18,7 @@ export const ReceiverOverlay = () => {
         initialFocus={disconnectButtonRef}
         finalFocus={true}
         showCloseButton={false}
-        className="fixed inset-0 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center rounded-none bg-background/95 p-6 opacity-100 shadow-none ring-0 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0"
+        className="fixed inset-0 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center rounded-none bg-background p-6 opacity-100 shadow-none ring-0 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0"
       >
         <div className="max-w-md w-full flex flex-col gap-6 rounded-xl border bg-card p-8 shadow-2xl">
           <div className="flex items-center gap-4">

@@ -189,12 +189,6 @@ export const ResolvableContainerRow = ({
       <HugeiconsIcon icon={containerIconDefinition} className="size-6" />
     </AnimatedStateIcon>
   )
-  const episodeStillFallbackIcon = shouldShowResolving ? (
-    <Spinner aria-hidden="true" role="presentation" className="size-6" />
-  ) : (
-    containerIcon
-  )
-
   return (
     <div
       className={cn(
@@ -226,7 +220,7 @@ export const ResolvableContainerRow = ({
             >
               <FinderEpisodeStillDisplay
                 label={link.label}
-                fallbackIcon={episodeStillFallbackIcon}
+                fallbackIcon={containerIcon}
                 isResolving={shouldShowResolving}
                 isDimmed={false}
                 isWatched={link.opened === true}

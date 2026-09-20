@@ -21,13 +21,16 @@ export const LinkSelectionTree = ({
     aria-label="Choose links to save"
     className="flex min-w-0 select-none flex-col gap-1"
   >
-    {links.map((link) => (
+    {links.map((link, index) => (
       <LinkSelectionTreeItem
         key={getMediaNodeKey(link)}
         link={link}
         selectedIds={selectedIds}
         onToggleSelect={onToggleSelect}
         onExpandFolder={onExpandFolder}
+        level={1}
+        positionInSet={index + 1}
+        setSize={links.length}
       />
     ))}
     {links.length === 0 && (
