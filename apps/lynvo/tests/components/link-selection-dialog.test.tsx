@@ -48,6 +48,14 @@ const UnresolvedItemHarness = ({
   )
 }
 
+const getTreeItemRow = (treeItem: HTMLElement) => {
+  const row = treeItem.querySelector<HTMLElement>('[tabindex="0"]')
+  if (!row) {
+    throw new Error("Expected the tree item to contain a focusable row")
+  }
+  return row
+}
+
 describe("LinkSelectionDialog", () => {
   it("selects and clears every selectable link", () => {
     const onConfirm = vi.fn()
@@ -172,17 +180,17 @@ describe("LinkSelectionDialog", () => {
     expect(seasonRow).toHaveAttribute("aria-level", "1")
     expect(seasonRow).toHaveAttribute("aria-posinset", "1")
     expect(seasonRow).toHaveAttribute("aria-setsize", "1")
-    expect(seasonRow).not.toHaveAttribute("tabindex")
-    expect(seasonRow.firstElementChild).toHaveAttribute("tabindex", "0")
-    expect(seasonRow.firstElementChild).toHaveClass("focus-visible:ring-2")
-    fireEvent.click(seasonRow.firstElementChild!)
+    const seasonRowControl = getTreeItemRow(seasonRow)
+    seasonRowControl.focus()
+    expect(seasonRowControl).toHaveFocus()
+    fireEvent.click(screen.getByText("Season 1"))
     expect(seasonRow).toHaveAttribute("aria-expanded", "true")
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow.parentElement).toHaveAttribute("role", "group")
     expect(qualityFolderRow).toHaveAttribute("aria-level", "2")
     expect(qualityFolderRow).toHaveAttribute("aria-posinset", "1")
     expect(qualityFolderRow).toHaveAttribute("aria-setsize", "2")
-    fireEvent.click(qualityFolderRow.firstElementChild!)
+    fireEvent.click(screen.getByText("2160p"))
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
     const episodeOneRow = screen.getByRole("treeitem", { name: /Episode One/ })
     expect(episodeOneRow).toHaveAttribute("aria-level", "3")
@@ -209,7 +217,7 @@ describe("LinkSelectionDialog", () => {
     ])
   })
 
-  it("does not expand a collapsed folder when its checkbox is selected", () => {
+  it("does not expand a collapsed folder from checkbox keyboard input", () => {
     render(
       <LinkSelectionDialog
         open
@@ -239,11 +247,17 @@ describe("LinkSelectionDialog", () => {
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
+    const checkbox = screen.getByRole("checkbox", { name: "Select Season 1" })
+    fireEvent.click(checkbox)
 
     expect(screen.getByText("1 selected")).toBeVisible()
     expect(seasonRow).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Episode One")).not.toBeInTheDocument()
+
+    checkbox.focus()
+    fireEvent.keyDown(checkbox, { key: "Enter" })
+
+    expect(seasonRow).toHaveAttribute("aria-expanded", "false")
   })
 
   it("does not expand selected child folders when their parent is opened", () => {
@@ -282,9 +296,8 @@ describe("LinkSelectionDialog", () => {
       />
     )
 
-    const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
-    fireEvent.click(seasonRow.firstElementChild!)
+    fireEvent.click(screen.getByText("Season 1"))
 
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
@@ -311,7 +324,7 @@ describe("LinkSelectionDialog", () => {
     )
 
     const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
-    fireEvent.click(fileRow.firstElementChild!)
+    fireEvent.click(screen.getByText("Video One"))
     expect(screen.getByText("1 selected")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -319,7 +332,9 @@ describe("LinkSelectionDialog", () => {
       expect.objectContaining({ id: "video-one" }),
     ])
 
-    fireEvent.keyDown(fileRow.firstElementChild!, { key: "Enter" })
+    const fileRowControl = getTreeItemRow(fileRow)
+    fileRowControl.focus()
+    fireEvent.keyDown(fileRowControl, { key: "Enter" })
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 

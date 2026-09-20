@@ -206,6 +206,9 @@ export const LinkSelectionTreeItem = ({
           void handleRowAction()
         }}
         onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) {
+            return
+          }
           if (event.key !== "Enter" && event.key !== " ") {
             return
           }

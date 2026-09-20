@@ -22,11 +22,10 @@ export const ReceiverOverlay = () => {
       <DialogPortal>
         <DialogOverlay className="bg-background! backdrop-blur-none!" />
         <DialogPrimitive.Popup
-          data-slot="dialog-content"
           data-receiver-overlay="true"
           initialFocus={disconnectButtonRef}
           finalFocus={true}
-          className="fixed inset-0 z-50 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center rounded-none bg-background p-6 text-sm text-foreground opacity-100 shadow-none ring-0 outline-none transition-opacity duration-300 starting:opacity-0"
+          className="fixed inset-0 z-50 flex h-svh w-screen flex-col items-center justify-center bg-background p-6 opacity-100 outline-none transition-opacity duration-300 starting:opacity-0"
         >
           <div className="max-w-md w-full flex flex-col gap-6 rounded-xl border bg-card p-8 shadow-2xl">
             <div className="flex items-center gap-4">
