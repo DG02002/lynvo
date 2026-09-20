@@ -63,7 +63,7 @@ I like ambitious ideas, simple systems, and software that feels obvious. Do not 
 
 Channel both "measure twice, cut once" and "yagni". Fight scope creep. Try to honor the dev's intent in both a minimal and realistic fashion.
 
-The rest of this document is meant to help you navigate the codebase and make changes effectively. Think of these instructions less as "hard rules", more as "good defaults". The developer's preferences should be able to override anything here.
+The rest of this document is meant to help you navigate the codebase and make changes effectively. Think of these instructions less as "hard rules", more as "good defaults". The developer's preferences should be able to override anything here. If a rule in this file fights the task in front of you, say so loudly and get a human sign-off before breaking it.
 
 ## A small glossary
 
@@ -103,8 +103,14 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
 
 ## Hit every surface
 
+The most common defect is a change that works on the path you tested and is
+missing everywhere else. Before calling work done, walk this list and say
+which entries applied. Fixing one path is not fixing the feature.
+
 - **Entry points.** Save, settings, Plugin configuration, link selection,
   Remote Play, and in-app docs.
+- **Sources.** Changes that touch link resolution need a decision per Source
+  adapter, even if the decision is that it does not apply here.
 - **Contracts.** Browser and Worker APIs, D1, Durable Objects, realtime
   messages, the Plugin Server Protocol, public packages, and generated
   projects.
@@ -112,6 +118,18 @@ Use the product terms in `CONTEXT.md` instead of inventing synonyms.
   sign out.
 - **Docs.** User-visible behavior belongs in the in-app MDX. Architecture and
   maintainer procedures belong in `docs/internals/` or `docs/operations/`.
+
+## Ways to hurt yourself
+
+1. **Pointing wrangler at production.** D1 is the only Lynvo application
+   database, and a logged-in wrangler can reach the real one. Never run
+   `wrangler deploy` or any `--remote` D1 command from a development shell;
+   CI owns production migrations and deploys.
+2. **Killing processes by pattern.** Never `pkill -f`, pipe `pgrep` to
+   `kill`, or kill a PID found by matching a name, path, or worktree
+   string; the pattern can match your own session or an unrelated dev
+   server. Stop only a process you captured at spawn, or the owner of your
+   port after confirming it is yours.
 
 ## Dev servers
 
@@ -145,6 +163,9 @@ removal can expose the next.
 - Use the smallest proof that demonstrates the change.
 - Test meaningful logic and observable behavior through the public interface.
 - Backend behavior changes need focused tests for the behavior they change.
+- Wait on the real completion signal — a response, a delivered realtime
+  message, a version change — never on sleeps or polling. A test that needs
+  a timeout to pass is wrong.
 - Docs-only changes need a changed-link check and tests for affected in-app
   documentation.
 - Before handoff, use the repository gates in the local development guide.
@@ -232,6 +253,29 @@ follow**.
   `docs/operations/`.
 - A merged PR is the implementation record. Update the tracking item when the
   work lands; do not preserve a second checklist in the repository.
+
+## Documentation
+
+Most code changes do not need a documentation change. Agents can read the
+code.
+
+- The in-app MDX is for user-visible behavior. Give each major feature a
+  concise section covering what it does, how to start, and anything
+  unintuitive. A settings path is useful; descriptions of every button,
+  icon, or UI state are not. Before adding text, ask what task or decision
+  it helps the user with.
+- `docs/internals/` is for architectural decisions and their reasons,
+  constraints that span components, and implementation traps that are hard
+  to discover from the source. Before adding a paragraph, ask what a
+  maintainer would get wrong without it. If reading the relevant code
+  answers the question, leave it out.
+- `docs/operations/` is for maintainer setup, release, and debugging
+  procedures.
+- Do not enumerate fields or methods, narrate control flow, maintain file
+  catalogs, or append PR summaries. Types, tests, and code already record
+  the implementation.
+- When a documented decision or constraint changes, rewrite or remove the
+  affected text. Do not append another account of the new behavior.
 
 ## How it works
 
