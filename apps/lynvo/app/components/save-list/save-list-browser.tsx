@@ -492,10 +492,15 @@ const FinderBrowserLinkRow = ({
       className="size-6"
     />
   )
+  const episodeStillFallbackIcon = isResolving ? (
+    <Spinner aria-hidden="true" role="presentation" className="size-6" />
+  ) : (
+    rowFallbackIcon
+  )
   const episodeStillElement = (
     <FinderEpisodeStillDisplay
       label={link.label}
-      fallbackIcon={rowFallbackIcon}
+      fallbackIcon={episodeStillFallbackIcon}
       isResolving={isResolving}
       isDimmed={isExpired}
       isWatched={link.opened === true}

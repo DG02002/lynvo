@@ -92,7 +92,7 @@ const GalleryGroupItemRow = ({
       {extractionState === "failed" ? (
         <HugeiconsIcon icon={AlertCircleIcon} className="size-6" />
       ) : (
-        <Spinner aria-hidden="true" className="size-6" />
+        <Spinner aria-hidden="true" role="presentation" className="size-6" />
       )}
     </SaveListRowIcon>
   ) : (

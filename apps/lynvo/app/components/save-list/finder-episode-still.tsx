@@ -64,7 +64,7 @@ const FinderEpisodeStillImage = ({
     return <Skeleton className="absolute inset-0 size-full" />
   }
 
-  return <span aria-hidden="true">{fallbackIcon}</span>
+  return fallbackIcon
 }
 
 export const useFinderEpisodeStill = (

@@ -5,6 +5,7 @@ import {
   useEffectEvent,
   useReducer,
   useRef,
+  type ReactNode,
 } from "react"
 
 import { Spinner } from "~/components/spinner"
@@ -330,6 +331,12 @@ interface ArtworkSearchResultsProps {
   readonly onSelectCandidate: (candidate: MediaArtworkCandidate) => void
 }
 
+const ARTWORK_SEARCH_COPY = {
+  searching: "Searching for artwork…",
+  failed: "Search failed",
+  empty: "No matches found",
+} as const
+
 const ArtworkSearchResults = ({
   candidates,
   tvCandidates,
@@ -341,85 +348,79 @@ const ArtworkSearchResults = ({
 }: ArtworkSearchResultsProps) => {
   let searchStatus: string | undefined
   if (isSearching) {
-    searchStatus = "Searching for artwork…"
+    searchStatus = ARTWORK_SEARCH_COPY.searching
   } else if (searchFailed) {
-    searchStatus = "Artwork search failed."
+    searchStatus = ARTWORK_SEARCH_COPY.failed
   } else if (didSearch && candidates.length === 0) {
-    searchStatus = "No matches found."
+    searchStatus = ARTWORK_SEARCH_COPY.empty
   } else if (didSearch) {
     searchStatus = `Found ${candidates.length} artwork result${candidates.length === 1 ? "" : "s"}.`
   }
-  const searchStatusNode = searchStatus ? (
-    <div className="sr-only" role="status" aria-live="polite">
-      {searchStatus}
-    </div>
-  ) : null
 
+  let resultsContent: ReactNode = null
   if (candidates.length > 0) {
-    return (
-      <>
-        {searchStatusNode}
-        <Tabs
-          defaultValue="tv"
-          className="min-h-0 flex-1 gap-5 overflow-hidden"
-        >
-          <TabsList className="w-full shrink-0">
-            <TabsTrigger value="tv">
-              TV shows
-              <Badge variant="secondary">{tvCandidates.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="movies">
-              Movies
-              <Badge variant="secondary">{movieCandidates.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <TabsContent value="tv">
-              <CandidateGrid
-                candidates={tvCandidates}
-                onSelectCandidate={onSelectCandidate}
-              />
-            </TabsContent>
-            <TabsContent value="movies">
-              <CandidateGrid
-                candidates={movieCandidates}
-                onSelectCandidate={onSelectCandidate}
-              />
-            </TabsContent>
-            <TabsContent value="all">
-              <CandidateGrid
-                candidates={candidates}
-                onSelectCandidate={onSelectCandidate}
-              />
-            </TabsContent>
-          </div>
-        </Tabs>
-      </>
-    )
-  }
-
-  if (!isSearching && didSearch) {
-    return (
-      <>
-        {searchStatusNode}
+    resultsContent = (
+      <Tabs defaultValue="tv" className="min-h-0 flex-1 gap-5 overflow-hidden">
+        <TabsList className="w-full shrink-0">
+          <TabsTrigger value="tv">
+            TV shows
+            <Badge variant="secondary">{tvCandidates.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="movies">
+            Movies
+            <Badge variant="secondary">{movieCandidates.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="font-medium">
-              {searchFailed ? "Search failed" : "No matches found"}
-            </p>
-            <p className="max-w-md text-sm text-muted-foreground text-pretty">
-              {searchFailed
-                ? "Check your connection and try again."
-                : "Try the original title, remove the year, or check the spelling."}
-            </p>
-          </div>
+          <TabsContent value="tv">
+            <CandidateGrid
+              candidates={tvCandidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
+          <TabsContent value="movies">
+            <CandidateGrid
+              candidates={movieCandidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
+          <TabsContent value="all">
+            <CandidateGrid
+              candidates={candidates}
+              onSelectCandidate={onSelectCandidate}
+            />
+          </TabsContent>
         </div>
-      </>
+      </Tabs>
+    )
+  } else if (!isSearching && didSearch) {
+    resultsContent = (
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
+          <p className="font-medium">
+            {searchFailed
+              ? ARTWORK_SEARCH_COPY.failed
+              : ARTWORK_SEARCH_COPY.empty}
+          </p>
+          <p className="max-w-md text-sm text-muted-foreground text-pretty">
+            {searchFailed
+              ? "Check your connection and try again."
+              : "Try the original title, remove the year, or check the spelling."}
+          </p>
+        </div>
+      </div>
     )
   }
 
-  return searchStatusNode
+  return (
+    <>
+      <div className="sr-only" role="status">
+        {searchStatus}
+      </div>
+      {resultsContent}
+    </>
+  )
 }
 
 const ArtworkDialog = ({
