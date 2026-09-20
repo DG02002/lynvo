@@ -1,7 +1,7 @@
 import { Result, Schema } from "effect"
 import { useState } from "react"
 
-import { requestSameOriginWithSessionIdentity } from "~/lib/api/client"
+import { requestNoStoreSameOriginWithSessionIdentity } from "~/lib/api/client"
 import { getRemoteReceiverId } from "~/lib/remote-receiver-identity"
 
 import type { RemoteSession } from "./types"
@@ -31,11 +31,8 @@ const remoteSessionsResponseSchema = Schema.Struct({
 
 export const loadRemoteSessions = async (
   listSessions: () => Promise<readonly RemoteSessionContract[]> = async () => {
-    const response = await requestSameOriginWithSessionIdentity(
-      "/api/remote/receivers",
-      {
-        cache: "no-store",
-      }
+    const response = await requestNoStoreSameOriginWithSessionIdentity(
+      "/api/remote/receivers"
     )
     if (!response.ok) {
       throw new Error("Remote receiver presence is unavailable")

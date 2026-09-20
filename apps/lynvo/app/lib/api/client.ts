@@ -214,24 +214,27 @@ export const requestSameOrigin = async <Payload = undefined>(
   return await fetch(requestPath, requestInit)
 }
 
-type SessionIdentityRequestOptions<Payload = undefined> = Omit<
+type NoStoreSessionIdentityRequestOptions<Payload = undefined> = Omit<
   RequestOptions<Payload>,
-  "includeSessionIdentityHeaders"
+  "cache" | "includeSessionIdentityHeaders" | "query"
 > & {
   readonly identity?: SessionIdentity
 }
 
-export const requestSameOriginWithSessionIdentity = <Payload = undefined>(
+export const requestNoStoreSameOriginWithSessionIdentity = <
+  Payload = undefined,
+>(
   path: string,
-  { identity, ...options }: SessionIdentityRequestOptions<Payload> = {}
+  { identity, ...options }: NoStoreSessionIdentityRequestOptions<Payload> = {}
 ): Promise<Response> => {
-  const url = new URL(
-    path,
-    globalThis.location?.href ?? "https://lynvo.invalid"
-  )
-  bindSessionIdentityToUrl(url, identity)
-  return requestSameOrigin(url.toString(), {
+  const resolvedPath = resolveRequestUrl(path)
+  const requestPath =
+    globalThis.location === undefined
+      ? resolvedPath
+      : bindSessionIdentityToUrl(new URL(resolvedPath), identity).toString()
+  return requestSameOrigin(requestPath, {
     ...options,
+    cache: "no-store",
     includeSessionIdentityHeaders: false,
   })
 }

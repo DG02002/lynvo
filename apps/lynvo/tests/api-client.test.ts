@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   client,
+  requestNoStoreSameOriginWithSessionIdentity,
   requestSameOrigin,
-  requestSameOriginWithSessionIdentity,
 } from "~/lib/api/client"
 import { readLynvoUsage } from "~/lib/settings/storage-http"
 
@@ -117,9 +117,7 @@ describe("browser API client", () => {
   it("binds session identity in the URL without duplicating identity headers", async () => {
     fetchMock.mockResolvedValue(Response.json({ ok: true }))
 
-    await requestSameOriginWithSessionIdentity("/api/remote/receivers", {
-      cache: "no-store",
-    })
+    await requestNoStoreSameOriginWithSessionIdentity("/api/remote/receivers")
 
     const [[input, init]] = fetchMock.mock.calls
     const request = new Request(
@@ -131,6 +129,7 @@ describe("browser API client", () => {
     expect(requestUrlValue.searchParams.get("expectedSessionId")).toBe(
       "session-1"
     )
+    expect(request.cache).toBe("no-store")
     expect(request.headers.get("x-lynvo-expected-user-id")).toBeNull()
     expect(request.headers.get("x-lynvo-expected-session-id")).toBeNull()
   })
