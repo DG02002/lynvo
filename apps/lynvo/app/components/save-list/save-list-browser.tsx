@@ -76,6 +76,7 @@ import {
   SAVE_LIST_SECTION_STACK_CLASS,
   SaveDateGroupSection,
 } from "./save-date-group-heading"
+import { getOpenedAriaLabel } from "./save-list-accessibility"
 import {
   getFolderIcon,
   getFolderVisualState,
@@ -231,7 +232,7 @@ const getSaveListItemAriaLabel = ({
     label = `View ${itemTitle}`
   }
 
-  return `${label}${isOpened ? ", opened" : ""}`
+  return getOpenedAriaLabel(label, isOpened)
 }
 
 const isVisibleTreeFolder = (link: ExtractedLink) =>

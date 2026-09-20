@@ -66,6 +66,7 @@ interface LinkInputSectionProps {
 }
 
 const EMPTY_SAVED_URLS = new Set<string>()
+const LINK_INPUT_ERROR_ID = "link-input-error"
 
 export function LinkInputSection({
   url,
@@ -125,7 +126,7 @@ export function LinkInputSection({
       {error && (
         <div className="mb-4 translate-y-0 opacity-100 transition-[opacity,transform] duration-200 starting:-translate-y-2 starting:opacity-0">
           <Alert
-            id="link-input-error"
+            id={LINK_INPUT_ERROR_ID}
             variant={error.kind === "duplicate" ? "default" : "destructive"}
             className={cn(
               error.kind === "duplicate" &&
@@ -167,7 +168,7 @@ export function LinkInputSection({
             }
           }}
           aria-invalid={Boolean(error && error.kind !== "duplicate")}
-          aria-describedby={error ? "link-input-error" : undefined}
+          aria-describedby={error ? LINK_INPUT_ERROR_ID : undefined}
         />
         <InputGroupAddon align="inline-end">
           {(clipboardPermission === "prompt" ||

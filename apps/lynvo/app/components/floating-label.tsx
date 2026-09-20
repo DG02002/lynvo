@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { useFieldErrorId } from "~/components/field"
+import { useFieldContext, useFieldErrorId } from "~/components/field"
 import { cn } from "~/lib/utils"
 
 type FloatingLabelProps = React.ComponentProps<"input"> & {
@@ -26,11 +26,13 @@ function FloatingLabel({
 }: FloatingLabelProps) {
   const generatedId = React.useId()
   const inputId = id ?? generatedId
+  const fieldContext = useFieldContext()
   const fieldErrorId = useFieldErrorId()
-  const isInvalid =
-    props["aria-invalid"] === true || props["aria-invalid"] === "true"
+  const fieldIsInvalid = fieldContext?.isInvalid
+  const ariaInvalid =
+    fieldIsInvalid === undefined ? props["aria-invalid"] : fieldIsInvalid
   const describedBy =
-    isInvalid && fieldErrorId
+    fieldIsInvalid === true && fieldErrorId
       ? [props["aria-describedby"], fieldErrorId].filter(Boolean).join(" ")
       : props["aria-describedby"]
 
@@ -45,6 +47,7 @@ function FloatingLabel({
           className
         )}
         {...props}
+        aria-invalid={ariaInvalid}
         aria-describedby={describedBy}
       />
       {endAdornment ? (

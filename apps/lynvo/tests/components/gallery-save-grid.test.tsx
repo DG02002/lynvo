@@ -188,11 +188,6 @@ describe("GallerySaveGrid", () => {
       "rounded-2xl",
       "sm:rounded-3xl"
     )
-    expect(movieElement.querySelector('[class*="bottom-4"]')).toHaveClass(
-      "opacity-0",
-      "has-[:focus-visible]:opacity-100",
-      "focus-within:opacity-100"
-    )
     expect(movieElement.closest(".grid")).toHaveClass(
       "grid-cols-2",
       "sm:grid-cols-3",

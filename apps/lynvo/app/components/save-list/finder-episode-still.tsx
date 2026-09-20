@@ -109,12 +109,19 @@ export const FinderEpisodeStillDisplay = ({
       className={cn(MEDIA_LIST_EPISODE_STILL_CLASS, isDimmed && "opacity-60")}
     >
       <span
+        role="img"
+        aria-label={[
+          label,
+          isWatched ? "Watched" : undefined,
+          isDimmed ? "Expired" : undefined,
+        ]
+          .filter(Boolean)
+          .join(", ")}
         className={cn(
           "relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-foreground/15 bg-muted/60 shadow-depth-s",
           isWatched && "grayscale"
         )}
       >
-        {isWatched && <span className="sr-only">Watched</span>}
         <FinderEpisodeStillImage
           imagePath={imagePath}
           imageType={imageType}

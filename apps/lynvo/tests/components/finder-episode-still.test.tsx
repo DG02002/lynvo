@@ -11,10 +11,12 @@ const EpisodeStillHarness = ({
   label,
   fallbackIcon,
   isWatched = false,
+  isDimmed = false,
 }: {
   readonly label: string
   readonly fallbackIcon: ReactNode
   readonly isWatched?: boolean
+  readonly isDimmed?: boolean
 }) => {
   const { imagePath, imageType, isLookupPending } = useFinderEpisodeStill(label)
 
@@ -23,7 +25,7 @@ const EpisodeStillHarness = ({
       label={label}
       fallbackIcon={fallbackIcon}
       isResolving={false}
-      isDimmed={false}
+      isDimmed={isDimmed ?? false}
       isWatched={isWatched}
       imagePath={imagePath}
       imageType={imageType}
@@ -111,5 +113,22 @@ describe("episode still presentation", () => {
     })
     const stillFrame = container.querySelector(".aspect-video")
     expect(stillFrame).toHaveClass("grayscale")
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      "Warden.S03E01.Episode.2160p.mkv, Watched"
+    )
+  })
+
+  it("announces expired episode stills when they are dimmed", () => {
+    render(
+      <EpisodeStillHarness
+        label="Warden.S03E01.Episode.2160p.mkv"
+        fallbackIcon={<span>Fallback</span>}
+        isDimmed
+      />
+    )
+
+    expect(screen.getByRole("img")).toHaveAccessibleName(
+      "Warden.S03E01.Episode.2160p.mkv, Expired"
+    )
   })
 })

@@ -52,14 +52,16 @@ const fieldVariants = cva(
 
 interface FieldContextValue {
   readonly errorId: string
-  readonly isInvalid: boolean
+  readonly isInvalid: boolean | undefined
 }
 
 const FieldContext = React.createContext<FieldContextValue | null>(null)
 
+export const useFieldContext = () => React.useContext(FieldContext)
+
 export const useFieldErrorId = () => {
-  const context = React.useContext(FieldContext)
-  return context?.isInvalid ? context.errorId : undefined
+  const context = useFieldContext()
+  return context?.isInvalid === true ? context.errorId : undefined
 }
 
 function Field({
@@ -71,7 +73,8 @@ function Field({
     "data-invalid"?: boolean
   }) {
   const errorId = `field-error-${React.useId()}`
-  const isInvalid = props["data-invalid"] === true
+  const isInvalid =
+    "data-invalid" in props ? props["data-invalid"] === true : undefined
   const contextValue = React.useMemo(
     () => ({
       errorId,
@@ -137,13 +140,11 @@ function FieldError({
   className,
   children,
   errors,
-  id,
   ...props
-}: React.ComponentProps<"div"> & {
+}: Omit<React.ComponentProps<"div">, "id"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
-  const fieldContext = React.useContext(FieldContext)
-  const generatedId = React.useId()
+  const fieldContext = useFieldContext()
 
   if (!children && (!errors || errors.length === 0)) {
     return null
@@ -151,7 +152,7 @@ function FieldError({
 
   return (
     <div
-      id={id ?? fieldContext?.errorId ?? `field-error-${generatedId}`}
+      id={fieldContext?.errorId}
       role="alert"
       data-slot="field-error"
       className={cn("text-sm font-normal text-destructive", className)}

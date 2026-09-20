@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useRef } from "react"
 
 import { Button } from "~/components/ui/button"
-import { Dialog, DialogContent } from "~/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "~/components/ui/dialog"
 import { useRemoteControl } from "~/context/remote-control-context"
 
 export const ReceiverOverlay = () => {
@@ -18,12 +18,9 @@ export const ReceiverOverlay = () => {
         initialFocus={disconnectButtonRef}
         finalFocus={true}
         showCloseButton={false}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Connected to a controlling device"
-        className="fixed inset-0 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center rounded-none bg-background/95 p-6 shadow-none ring-0 backdrop-blur-sm"
+        className="fixed inset-0 flex h-svh w-screen max-w-none translate-x-0 translate-y-0 flex-col items-center justify-center rounded-none bg-background/95 p-6 opacity-100 shadow-none ring-0 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0"
       >
-        <div className="flex w-full max-w-md flex-col gap-6 rounded-xl border bg-card p-8 shadow-2xl">
+        <div className="max-w-md w-full flex flex-col gap-6 rounded-xl border bg-card p-8 shadow-2xl">
           <div className="flex items-center gap-4">
             <div className="shrink-0 rounded-full bg-primary/10 p-3">
               <HugeiconsIcon
@@ -31,9 +28,9 @@ export const ReceiverOverlay = () => {
                 className="size-6 text-primary"
               />
             </div>
-            <h2 className="text-xl font-semibold tracking-tight">
+            <DialogTitle className="text-xl font-semibold tracking-tight">
               Connected to a controlling device
-            </h2>
+            </DialogTitle>
           </div>
 
           <div className="flex flex-col gap-4">
