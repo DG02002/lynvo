@@ -58,7 +58,7 @@ Manifest fields follow these rules:
 | `auth.type`       | Yes      | Must equal `"bearer"`                                            |
 | `usage.endpoint`  | No       | Defaults to `"/usage"`                                           |
 | `matchers`        | Yes      | Non-empty array                                                  |
-| `features`        | Yes      | Declares password, lazy node, and Basic Auth support             |
+| `features`        | Yes      | Declares password, unresolved item, and Basic Auth support       |
 | `extensions`      | No       | Namespaced non-core metadata                                     |
 
 Keep `matchers` and `extensions.lynvo.plugins` aligned with the Source code. Lynvo uses the manifest to select the Worker before it sends an Extraction request.

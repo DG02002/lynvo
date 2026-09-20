@@ -15,7 +15,7 @@ const cookieRows = [
   {
     source: "Lynvo",
     name: "lynvo_session",
-    duration: "Up to 1 year; cleared when you log out or revoke the session",
+    duration: "Up to 1 year; cleared when you sign out or revoke the session",
     purpose: "Authentication and session continuity",
     domain: "Lynvo host",
   },
@@ -109,7 +109,7 @@ export const CookiePolicyContent = () => (
 
     <PolicySection title="Necessary cookies used by Lynvo">
       <p>
-        Necessary cookies are required to operate Lynvo. They support login,
+        Necessary cookies are required to operate Lynvo. They support sign-in,
         session continuity, request security, fraud and abuse prevention, and
         user-selected functionality. Lynvo does not provide a separate
         preference control for these cookies because disabling them would stop
@@ -206,7 +206,7 @@ export const CookiePolicyContent = () => (
       </p>
       <p>
         Your browser settings can block or delete cookies and local storage.
-        Blocking necessary storage may prevent login, security checks,
+        Blocking necessary storage may prevent sign-in, security checks,
         appearance settings, or other features from working correctly.
       </p>
       <p>

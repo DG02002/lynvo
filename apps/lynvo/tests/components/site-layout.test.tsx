@@ -35,8 +35,8 @@ describe("SiteLayout", () => {
     vi.unstubAllGlobals()
   })
 
-  it("hides the header Save action on the Save page", () => {
-    renderLayout("/save", <div>Save page</div>)
+  it("hides the header Save action in the library", () => {
+    renderLayout("/save", <div>Library</div>)
 
     expect(screen.getByTestId("site-header")).toHaveAttribute(
       "data-show-save-action",

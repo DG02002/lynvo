@@ -526,8 +526,8 @@ describe("FinderBrowser episode rows", () => {
     })
   })
 
-  it("descends once a lazy wrapper resolves after the page opens", async () => {
-    const lazyWrapperItem: LinkViewItem = {
+  it("descends once an unresolved item resolves after the page opens", async () => {
+    const unresolvedItem: LinkViewItem = {
       ...wrappedSeasonItem,
       metadata: {
         ...wrappedSeasonItem.metadata,
@@ -549,12 +549,12 @@ describe("FinderBrowser episode rows", () => {
         },
       },
     }
-    const resolvedWrapperItem = wrappedSeasonItem
+    const resolvedItem = wrappedSeasonItem
 
     const view = render(
       <SaveListBrowser
-        items={[lazyWrapperItem]}
-        selectedItemUrl={lazyWrapperItem.url}
+        items={[unresolvedItem]}
+        selectedItemUrl={unresolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions()}
         extractingItems={new Set()}
@@ -569,8 +569,8 @@ describe("FinderBrowser episode rows", () => {
 
     view.rerender(
       <SaveListBrowser
-        items={[resolvedWrapperItem]}
-        selectedItemUrl={resolvedWrapperItem.url}
+        items={[resolvedItem]}
+        selectedItemUrl={resolvedItem.url}
         onSelectedItemUrlChange={vi.fn()}
         actions={createActions()}
         extractingItems={new Set()}

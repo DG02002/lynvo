@@ -8,10 +8,10 @@ import { authPaths, policyPaths } from "~/lib/paths"
 
 export function meta() {
   return [
-    { title: "Log in on this device | Lynvo" },
+    { title: "Sign in on this device | Lynvo" },
     {
       name: "description",
-      content: "Scan a QR code to log in to Lynvo from another device.",
+      content: "Scan a QR code to sign in to Lynvo from another device.",
     },
   ]
 }
@@ -35,10 +35,10 @@ export default function SignInWithAnotherDevice() {
           >
             <LynvoLink className="text-lg font-medium text-foreground no-underline hover:text-foreground hover:no-underline focus-visible:no-underline" />
             <h1 className="text-4xl font-normal tracking-tight">
-              Log in on this device
+              Sign in on this device
             </h1>
             <p className="text-balance text-lg text-muted-foreground">
-              On a device where you’re already logged in to Lynvo, scan the QR
+              On a device where you’re already signed in to Lynvo, scan the QR
               code below.
             </p>
           </div>
@@ -57,7 +57,7 @@ export default function SignInWithAnotherDevice() {
               nativeButton={false}
               render={
                 <Link to={authPaths.signIn} viewTransition={viewTransition}>
-                  Back to log in
+                  Back to sign in
                 </Link>
               }
             />

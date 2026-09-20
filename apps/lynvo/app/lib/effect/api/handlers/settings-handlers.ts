@@ -150,7 +150,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
             },
             catch: (cause) =>
               new BackendError({
-                message: "The session couldn’t be logged out",
+                message: "The session couldn’t be signed out",
                 cause,
               }),
           })
@@ -172,7 +172,7 @@ export const SettingsHandlers = HttpApiBuilder.group(
             },
             catch: (cause) =>
               new BackendError({
-                message: "The sessions couldn’t be logged out",
+                message: "The sessions couldn’t be signed out",
                 cause,
               }),
           })

@@ -1,13 +1,13 @@
 ---
 title: Validate Extraction requests
-description: Validate Source URLs, lazy nodes, Plugin selection, and credentials.
+description: Validate Source URLs, unresolved items, Plugin selection, and credentials.
 navLabel: Extraction requests
 contentType: Reference
 ---
 
 <DocSection id="request-schema">
 
-`POST /extract` accepts a Source URL or a lazy-node follow-up request. Reject malformed bodies before the Plugin runs.
+`POST /extract` accepts a Source URL or a follow-up request for an unresolved item. Reject malformed bodies before the Plugin runs.
 
 <CodeBlock label="src/protocol.ts">
 
@@ -65,7 +65,7 @@ A Source Extraction request uses `sourceUrl`:
 
 </CodeBlock>
 
-A lazy follow-up uses the `nodeUrl` and/or `resourceId` returned by the same Plugin Server:
+An unresolved item follow-up uses the `nodeUrl` and/or `resourceId` returned by the same Plugin Server:
 
 <CodeBlock label="POST /extract">
 

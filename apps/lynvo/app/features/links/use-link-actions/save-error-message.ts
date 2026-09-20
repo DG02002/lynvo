@@ -2,6 +2,7 @@ import { UNSUPPORTED_URL_CODE } from "@dg02002/lynvo-plugin-server-protocol"
 import { Result, Schema } from "effect"
 
 import type { SavedLinkInteractionError } from "~/features/links/saved-link-interaction"
+import { sessionExpiredCopy } from "~/lib/session-copy"
 import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { getKnownExtractionErrorMessage } from "./extraction-error-message"
@@ -40,9 +41,7 @@ export const getSaveError = (cause: unknown): SaveError => {
     }
 
     if (parsedError.success._tag === "UnauthorizedError") {
-      return genericSaveError(
-        "The session expired. Log in, then save the link again."
-      )
+      return genericSaveError(sessionExpiredCopy.saveLink)
     }
 
     if (parsedError.success._tag === "ExtractionError") {

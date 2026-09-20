@@ -50,13 +50,13 @@ app.post("/extract", (context) =>
 
 </CodeBlock>
 
-Replace the manifest, authentication function, usage provider, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
+Replace the manifest, authentication function, usage accounting, and Source implementation. Keep the four route handlers unchanged unless you need a protocol-level extension.
 
 The extraction callback receives a URL target or an opaque `resourceId` target.
 This starter handles URL targets; add the Source-specific resource-ID branch if
 your Plugin emits Resolvable links with `resourceId`.
 
 The starter returns a finite usage fixture so its contract tests can run without
-a database. Replace that provider with durable accounting before deployment.
+a database. Replace that fixture with durable accounting before deployment.
 
 </DocSection>

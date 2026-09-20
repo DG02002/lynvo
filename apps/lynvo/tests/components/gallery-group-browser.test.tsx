@@ -308,7 +308,7 @@ describe("GalleryGroupBrowser", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Delete all" }))
 
     const confirmDialog = await screen.findByRole("alertdialog")
-    expect(confirmDialog).toHaveTextContent("Remove 2 items from your list?")
+    expect(confirmDialog).toHaveTextContent("Remove 2 items from your library?")
     fireEvent.click(
       within(confirmDialog).getByRole("button", { name: "Delete all" })
     )

@@ -153,7 +153,7 @@ const createDeviceCodeRateLimitResponse = (
   return context.json(
     requestApiError(context, {
       code: "service_unavailable",
-      error: "Device login is unavailable. Try again later.",
+      error: "Device sign-in is unavailable. Try again later.",
       retryable: true,
     }),
     503
@@ -246,7 +246,7 @@ app.post("/api/auth/device/code", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Device login is unavailable. Try again later.",
+        error: "Device sign-in is unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -269,7 +269,7 @@ app.post("/api/auth/device/code", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Device login is temporarily unavailable. Try again later.",
+        error: "Device sign-in is temporarily unavailable. Try again later.",
         retryable: true,
       }),
       503
@@ -294,7 +294,7 @@ app.delete("/api/auth/session", async (context) => {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
-        error: "Logout is temporarily unavailable. Try again later.",
+        error: "Sign-out is temporarily unavailable. Try again later.",
         retryable: true,
       }),
       503

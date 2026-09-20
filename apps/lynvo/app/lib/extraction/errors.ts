@@ -1,5 +1,7 @@
 import { Schema } from "effect"
 
+import { sessionExpiredCopy } from "~/lib/session-copy"
+
 export const extractionCommandFailureSchema = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("session-expired") }),
   Schema.Struct({ kind: Schema.Literal("transient") }),
@@ -23,7 +25,7 @@ export const presentExtractionFailure = (
 ): string => {
   switch (failure.kind) {
     case "session-expired":
-      return "The session expired. Log in, then try again."
+      return sessionExpiredCopy.retry
     case "transient":
       return "Extraction is temporarily unavailable. Try again in a moment."
     case "rate-limited":

@@ -22,8 +22,8 @@ const TermsOfUseServiceContent = () => (
     </p>
     <p>
       When enabled, Lynvo may use TMDB to add title metadata and artwork to your
-      media library. TMDB is an independent service and does not supply the
-      videos that your links reference. TMDB data and images are governed by
+      library. TMDB is an independent service and does not supply the videos
+      that your links reference. TMDB data and images are governed by
       TMDB&apos;s{" "}
       <a
         href={TMDB_API_TERMS_URL}
@@ -60,7 +60,7 @@ const TermsOfUseEligibilityContent = () => (
 const TermsOfUseAccountContent = () => (
   <>
     <p>
-      Lynvo uses Google OAuth only for account creation and login. Keep your
+      Lynvo uses Google OAuth only for account creation and sign-in. Keep your
       Google account secure; you can&apos;t use Lynvo without access to the
       Google account you used to sign in. You&apos;re responsible for activity
       performed through your account and sessions.
@@ -81,7 +81,7 @@ const TermsOfUseRetentionContent = () => (
       does not currently send a separate warning before this deletion.
     </p>
     <p>
-      Log in and use Lynvo before the 90-day limit to keep the account active.
+      Sign in and use Lynvo before the 90-day limit to keep the account active.
       An automatically deleted account and its saved links, credentials, and
       settings can&apos;t be recovered.
     </p>

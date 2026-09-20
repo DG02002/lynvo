@@ -36,13 +36,13 @@ export default function SecuritySettingsRoute() {
             onClick={() =>
               navigate(getSettingsPath("security"), { replace: true })
             }
-            aria-label="Back to Security and login"
+            aria-label="Back to Security and sign-in"
           >
             <HugeiconsIcon icon={ArrowLeft01Icon} className="size-5" />
           </Button>
         )}
         <h1 className="text-2xl font-normal tracking-tight">
-          {showActiveSessions ? "Active sessions" : "Security and login"}
+          {showActiveSessions ? "Active sessions" : "Security and sign-in"}
         </h1>
       </header>
       <SecuritySettings

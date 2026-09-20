@@ -13,7 +13,7 @@ Lynvo Media Nodes.
 
 For example, a Plugin may support a self-hosted file index. It matches that
 index's domain, handles its authentication rules, reads its folders and files,
-and returns playable or lazy Media Nodes. The Plugin Server handles the shared
+and returns Media Nodes such as playable items and unresolved items. The Plugin Server handles the shared
 protocol around that work.
 
 A Plugin should own:
@@ -22,7 +22,7 @@ A Plugin should own:
 - Host and path matchers
 - Source-specific credentials
 - Upstream requests and response parsing
-- Playable, group, folder, and lazy-node creation
+- Playable item, folder, group, and unresolved item creation
 - Source-specific errors and test fixtures
 
 A Plugin should not implement bearer authentication, protocol routes, global

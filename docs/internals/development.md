@@ -132,13 +132,13 @@ This React Router app depends on Vite's generated
 ## Test TV Bro-specific UI
 
 Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV
-Bro-specific UI**, then open the Save page. The setting applies only to the
+Bro-specific UI**, then open the library. The setting applies only to the
 current browser and is available only in the development build. Turn it off to
 return to the standard browser UI.
 
 To test the TV Bro layout before signing in, configure a Chrome custom device
 with the desired TV dimensions and prepend `TV Bro/1.0 ` to its user-agent
-string. The development build recognizes that prefix, so the login and device
+string. The development build recognizes that prefix, so the sign-in and device
 sign-in pages can be tested without an authenticated session. Production still
 requires TV Bro's native bridge.
 

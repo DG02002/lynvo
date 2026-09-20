@@ -1,6 +1,7 @@
 import { Result, Schema } from "effect"
 
 import { ApiResponseError } from "./api-errors"
+import { sessionExpiredCopy } from "./session-copy"
 
 const taggedErrorSchema = Schema.Struct({
   _tag: Schema.String,
@@ -15,7 +16,7 @@ const taggedErrorMessage = (cause: unknown): string | undefined => {
 
   switch (parsed.success._tag) {
     case "UnauthorizedError":
-      return "The session expired. Log in, then try again."
+      return sessionExpiredCopy.retry
     case "CsrfError":
       return "The security session expired. Refresh the page, then try again."
     case "ValidationError":

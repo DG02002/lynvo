@@ -11,18 +11,44 @@ for implementation plans.
 A saved source URL with its extracted Media Nodes, metadata, and opened
 markers.
 
+Saved links sync across signed-in sessions for one account without a manual
+refresh.
+
 Avoid: card, history item, saved card, recent link.
+
+### Library
+
+The signed-in user's full set of Saved links.
+
+Avoid: your list, Save page, media library.
 
 ### List view
 
-A Save page presentation that shows each Saved link in a row.
+A Library presentation that shows each Saved link in a row.
 
 ### Gallery view
 
-A Save page presentation that groups related Saved links with artwork. It is a
+A Library presentation that groups related Saved links with Artwork. It is a
 presentation choice, not a catalogue of media supplied by Lynvo.
 
 Avoid: Hybrid view, artwork view.
+
+### Artwork
+
+Posters, season artwork, and episode stills shown for Saved links. Use "Change
+artwork" for the action that lets a user choose Artwork.
+
+### Season / Episode
+
+Season and Episode describe TV groupings. A Season contains Episodes.
+
+### TMDB
+
+The third-party source Lynvo uses for title metadata and Artwork.
+
+### Device picker
+
+The Remote Play control for choosing a connected device.
 
 ### Save intent
 
@@ -35,17 +61,7 @@ Avoid: save request, background task.
 
 Links chosen in the link-selection dialog and saved as part of a Saved link.
 
-### Account-synchronized Saved links
-
-Saved links that sync across active sessions for one signed-in account without
-a manual refresh.
-
-### Draft
-
-A browser-local snapshot of unfinished save input. Drafts are separate from
-account-synchronized Saved links and expire after 7 days.
-
-### Opened item
+### Opened marker
 
 A boolean marker set when an item is opened. It is not a playback position or
 resume state.
@@ -61,13 +77,10 @@ The final URL Lynvo sends to an Android player.
 A link that must be resolved before Lynvo can send a final URL to an Android
 player.
 
-### Media container
+Avoid: mirror.
 
-A Resolvable link representing one media item that resolves into one or more
-Playable links, such as 1080p and 2160p variants. A Media container is not a
-Folder.
-
-Avoid: folder, lazy folder, mirror.
+Existing compatibility identifiers such as `resolvedMirrors` and `lazyItemUrl`
+keep their internal names. Do not expose those names in product copy.
 
 ### HTTP byte-range support
 
@@ -95,7 +108,7 @@ A Source-specific implementation hosted by a Plugin Server.
 
 ### Extraction
 
-The process of converting a Source URL or unresolved Media Node into
+The process of converting a Source URL or unresolved item into
 normalized Media Nodes.
 
 Avoid: scraping when referring to the complete Lynvo operation.
@@ -144,7 +157,8 @@ The Plugin Server managed by Lynvo for Lynvo Plugins.
 
 ### Lynvo Plugin Server binding
 
-The private connection Lynvo uses to call the Lynvo Plugin Server.
+The private connection Lynvo uses to call the Lynvo Plugin Server. Its
+implementation is `ServiceBindingPluginServerTransport`.
 
 ### Plugin Domain
 
@@ -178,3 +192,13 @@ abandoned reservation is released after its lease expires.
 
 The versioned contract every Plugin Server follows when identifying Plugins,
 reporting usage, and returning Media Nodes.
+
+Lynvo maps known protocol errors to Lynvo copy at the application seam. Errors
+without Lynvo-specific copy get generic Lynvo copy, and raw Plugin Server text
+appears only as secondary debug detail.
+
+## Casing
+
+Use sentence case for all UI element types. Keep CONTEXT.md product terms
+capitalized wherever they appear. Use technical proper nouns in their standard
+forms, such as "QR code", not "QR Code".
