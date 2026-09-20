@@ -34,7 +34,7 @@ import {
 } from "~/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { linkCopy } from "~/features/links/link-copy"
-import { searchMediaArtwork } from "~/features/links/media-artwork"
+import { fetchMediaArtwork } from "~/features/links/media-artwork"
 import { TmdbImage } from "~/features/links/tmdb-image"
 import type { LinkViewItem } from "~/features/links/types"
 
@@ -229,7 +229,7 @@ const fetchArtworkCandidates = async (
   query: string,
   signal: AbortSignal
 ): Promise<readonly MediaArtworkCandidate[]> => {
-  const response = await searchMediaArtwork(
+  const response = await fetchMediaArtwork(
     [
       { title: query, mediaKind: "movie" },
       { title: query, mediaKind: "tv" },

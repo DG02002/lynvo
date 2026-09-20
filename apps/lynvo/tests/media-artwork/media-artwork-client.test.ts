@@ -57,25 +57,27 @@ describe("media artwork client cache", () => {
     )
     vi.stubGlobal("fetch", fetchMock)
 
+    const client = await importMediaArtworkClient()
+    const currentArtworkKey = client.getMediaArtworkKey(artworkRequest)
     const previousVersion = MEDIA_ARTWORK_CACHE_VERSION - 1
-    const previousKey = [
-      `v${previousVersion}`,
-      artworkRequest.providerId ?? "",
-      artworkRequest.mediaKind,
-      artworkRequest.title.normalize("NFKC").toLocaleLowerCase(),
-      artworkRequest.year ?? "",
-      artworkRequest.seasonNumber ?? "",
-      artworkRequest.episodeNumber ?? "",
-    ].join("|")
+    const previousArtworkKey = currentArtworkKey.replace(
+      `v${MEDIA_ARTWORK_CACHE_VERSION}|`,
+      `v${previousVersion}|`
+    )
+    expect(previousArtworkKey).not.toBe(currentArtworkKey)
+    const previousStoragePrefix = MEDIA_ARTWORK_CACHE_STORAGE_PREFIX.replace(
+      `v${MEDIA_ARTWORK_CACHE_VERSION}:`,
+      `v${previousVersion}:`
+    )
+    expect(previousStoragePrefix).not.toBe(MEDIA_ARTWORK_CACHE_STORAGE_PREFIX)
     localStorage.setItem(
-      `lynvo:media-artwork:v${previousVersion}:${previousKey}`,
+      previousStoragePrefix + previousArtworkKey,
       JSON.stringify({
         value: { posterPath: "/previous.jpg" },
         expiresAt: Date.now() + 60_000,
       })
     )
 
-    const client = await importMediaArtworkClient()
     const artworkKey = client.getMediaArtworkKey(artworkRequest)
     client.requestMediaArtwork(artworkKey, artworkRequest)
     await flushArtworkRequests()
@@ -84,19 +86,6 @@ describe("media artwork client cache", () => {
     expect(client.getMediaArtworkForKey(artworkKey)).toEqual({
       posterPath: "/current.jpg",
     })
-  })
-
-  it("keeps the search-specific error message", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(new Response(null, { status: 500 }))
-    )
-
-    const client = await importMediaArtworkClient()
-
-    await expect(
-      client.searchMediaArtwork([{ title: "Sample Feature" }])
-    ).rejects.toThrow("Media artwork search failed.")
   })
 
   it("serves repeat lookups from local storage after a reload", async () => {

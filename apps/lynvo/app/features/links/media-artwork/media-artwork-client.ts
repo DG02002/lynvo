@@ -187,10 +187,9 @@ export const requestMediaArtwork = (
   scheduleMediaArtworkFlush()
 }
 
-const fetchMediaArtworkResponse = async (
+export const fetchMediaArtwork = async (
   requests: readonly MediaArtworkRequest[],
-  signal: AbortSignal | undefined,
-  failureMessage: string
+  signal?: AbortSignal
 ): Promise<MediaArtworkResponse> => {
   const response = await requestSameOrigin("/api/data/media-artwork", {
     headers: { Accept: "application/json" },
@@ -201,7 +200,7 @@ const fetchMediaArtworkResponse = async (
     timeoutMs: MEDIA_ARTWORK_API_TIMEOUT_MS,
   })
   if (!response.ok) {
-    throw new Error(failureMessage)
+    throw new Error("Media artwork lookup failed.")
   }
   try {
     return Schema.decodeUnknownSync(MediaArtworkResponseSchema)(
@@ -211,18 +210,6 @@ const fetchMediaArtworkResponse = async (
     throw new Error("Media artwork response was invalid.")
   }
 }
-
-const fetchMediaArtwork = (
-  requests: readonly MediaArtworkRequest[],
-  signal?: AbortSignal
-): Promise<MediaArtworkResponse> =>
-  fetchMediaArtworkResponse(requests, signal, "Media artwork lookup failed.")
-
-export const searchMediaArtwork = (
-  requests: readonly MediaArtworkRequest[],
-  signal?: AbortSignal
-): Promise<MediaArtworkResponse> =>
-  fetchMediaArtworkResponse(requests, signal, "Media artwork search failed.")
 
 const flushPendingMediaArtwork = async (): Promise<void> => {
   const batchEntries = [...pendingMediaArtworkRequests.entries()].slice(
