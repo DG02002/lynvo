@@ -16,6 +16,7 @@ import {
   type DeviceCodeStatus,
 } from "./device-auth-http"
 import { createDeviceCode } from "./device-code"
+import { deviceAuthCopy } from "./device-copy"
 import { QrCode } from "./qr-code"
 import { useExpiryClock } from "./use-expiry-clock"
 
@@ -98,9 +99,7 @@ const reduceDeviceLoginState = (
       return {
         ...state,
         hasError: true,
-        errorMessage:
-          action.errorMessage ??
-          "The device couldn’t sign in. Generate a new code, then try again.",
+        errorMessage: action.errorMessage ?? deviceAuthCopy.exchangeFailure,
         isGenerating: false,
         hasSignedIn: false,
       }
@@ -237,7 +236,7 @@ const useDeviceLoginCode = (): DeviceLoginCodeController => {
         handleExchangeFailure(
           getUserFacingErrorMessage(
             error,
-            "This device couldn’t sign in. Retrying the approved code…"
+            deviceAuthCopy.retryApprovedCodeFailure
           )
         )
       }
@@ -328,8 +327,7 @@ export const DeviceLoginQr = () => {
         <p className="text-destructive">
           {phase === "expired"
             ? "Code expired. Generate a new code."
-            : (errorMessage ??
-              "The device couldn’t sign in. Generate a new code, then try again.")}
+            : (errorMessage ?? deviceAuthCopy.exchangeFailure)}
         </p>
         <Button onClick={() => void fetchCode()} variant="outline" size="sm">
           <HugeiconsIcon icon={Refresh01Icon} className="mr-2 size-4" />

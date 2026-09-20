@@ -615,11 +615,10 @@ Rules:
 ### Error handling rules
 
 - Lynvo should map the error code to a user-friendly message.
-- Lynvo maps known protocol errors to Lynvo copy at the application seam. Unknown
-  error text passes through verbatim.
-- Lynvo may also show the Plugin Server error code and raw Plugin Server message as secondary debug detail.
-- Plugin Server error strings must not be the primary UX contract for errors with
-  known Lynvo copy.
+- Lynvo maps known protocol errors to Lynvo copy at the application seam. Errors
+  without Lynvo-specific copy get generic Lynvo copy.
+- The raw Plugin Server message appears only as secondary debug detail.
+- Plugin Server error strings must not be the primary UX contract.
 - `UNSUPPORTED_URL` is for URLs that do not match a supported Source.
 - `UNSUPPORTED_TARGET` is for target kinds that the Plugin Server does not
   resolve.

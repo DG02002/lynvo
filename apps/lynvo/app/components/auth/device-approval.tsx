@@ -14,6 +14,7 @@ import { getUserFacingErrorMessage } from "~/lib/user-facing-error"
 
 import { AuthPolicyLinks } from "./auth-form-parts"
 import { authorizeDeviceCode, readDeviceCodeApproval } from "./device-auth-http"
+import { deviceAuthCopy } from "./device-copy"
 import { useExpiryClock } from "./use-expiry-clock"
 
 interface DeviceApprovalStatusMessageProps {
@@ -40,7 +41,7 @@ const useDeviceApprovalAction = (code: string) => {
         title: "Couldn’t approve the sign-in",
         description: getUserFacingErrorMessage(
           error,
-          "The sign-in couldn’t be approved. Check the code, then try again."
+          deviceAuthCopy.approvalFailure
         ),
       })
     } finally {
@@ -159,7 +160,7 @@ const DeviceApproval = () => {
                 isRetrying={isCodeQueryPending}
                 message={getUserFacingErrorMessage(
                   codeQueryError,
-                  "The sign-in code couldn’t be checked. Try again."
+                  deviceAuthCopy.codeCheckFailure
                 )}
                 onRetry={retryCodeQuery}
               />

@@ -95,7 +95,7 @@ describe("saved folder routes", () => {
     await waitFor(() => expect(result.current.pathname).toBe("/save"))
   })
 
-  it("returns an invalid saved-link ID to the save page after hydration", async () => {
+  it("returns an invalid saved-link ID to the library after hydration", async () => {
     const wrapper = ({ children }: PropsWithChildren) => (
       <MemoryRouter initialEntries={["/save/folder/missing-id"]}>
         <Routes>

@@ -79,6 +79,9 @@ player.
 
 Avoid: mirror.
 
+Existing compatibility identifiers such as `resolvedMirrors` and `lazyItemUrl`
+keep their internal names. Do not expose those names in product copy.
+
 ### HTTP byte-range support
 
 Support for a partial request such as `Range: bytes=0-1` that returns a
@@ -105,7 +108,7 @@ A Source-specific implementation hosted by a Plugin Server.
 
 ### Extraction
 
-The process of converting a Source URL or unresolved Media Node into
+The process of converting a Source URL or unresolved item into
 normalized Media Nodes.
 
 Avoid: scraping when referring to the complete Lynvo operation.
@@ -190,8 +193,9 @@ abandoned reservation is released after its lease expires.
 The versioned contract every Plugin Server follows when identifying Plugins,
 reporting usage, and returning Media Nodes.
 
-Lynvo maps known protocol errors to Lynvo copy at the application seam. Unknown
-error text passes through verbatim.
+Lynvo maps known protocol errors to Lynvo copy at the application seam. Errors
+without Lynvo-specific copy get generic Lynvo copy, and raw Plugin Server text
+appears only as secondary debug detail.
 
 ## Casing
 

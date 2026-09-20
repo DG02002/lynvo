@@ -923,7 +923,7 @@ describe("SaveListBrowser", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/save")
   })
 
-  it("shows a single unresolved item directly on the save page", async () => {
+  it("shows a single unresolved item directly in the library", async () => {
     const onSelectedItemUrlChange = vi.fn()
     const markOpened = vi.fn()
     const expandMirror = vi.fn().mockResolvedValue([
