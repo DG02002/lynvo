@@ -31,10 +31,9 @@ function FloatingLabel({
   const fieldIsInvalid = fieldContext?.isInvalid
   const ariaInvalid =
     fieldIsInvalid === undefined ? props["aria-invalid"] : fieldIsInvalid
-  const describedBy =
-    fieldIsInvalid === true && fieldErrorId
-      ? [props["aria-describedby"], fieldErrorId].filter(Boolean).join(" ")
-      : props["aria-describedby"]
+  const describedBy = fieldErrorId
+    ? [props["aria-describedby"], fieldErrorId].filter(Boolean).join(" ")
+    : props["aria-describedby"]
 
   return (
     <div className={cn("relative", wrapperClassName)}>

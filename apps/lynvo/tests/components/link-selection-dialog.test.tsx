@@ -172,14 +172,17 @@ describe("LinkSelectionDialog", () => {
     expect(seasonRow).toHaveAttribute("aria-level", "1")
     expect(seasonRow).toHaveAttribute("aria-posinset", "1")
     expect(seasonRow).toHaveAttribute("aria-setsize", "1")
-    fireEvent.click(seasonRow)
+    expect(seasonRow).not.toHaveAttribute("tabindex")
+    expect(seasonRow.firstElementChild).toHaveAttribute("tabindex", "0")
+    expect(seasonRow.firstElementChild).toHaveClass("focus-visible:ring-2")
+    fireEvent.click(seasonRow.firstElementChild!)
     expect(seasonRow).toHaveAttribute("aria-expanded", "true")
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow.parentElement).toHaveAttribute("role", "group")
     expect(qualityFolderRow).toHaveAttribute("aria-level", "2")
     expect(qualityFolderRow).toHaveAttribute("aria-posinset", "1")
     expect(qualityFolderRow).toHaveAttribute("aria-setsize", "2")
-    fireEvent.click(qualityFolderRow)
+    fireEvent.click(qualityFolderRow.firstElementChild!)
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "true")
     const episodeOneRow = screen.getByRole("treeitem", { name: /Episode One/ })
     expect(episodeOneRow).toHaveAttribute("aria-level", "3")
@@ -281,7 +284,7 @@ describe("LinkSelectionDialog", () => {
 
     const seasonRow = screen.getByRole("treeitem", { name: /Season 1/ })
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Season 1" }))
-    fireEvent.click(seasonRow)
+    fireEvent.click(seasonRow.firstElementChild!)
 
     const qualityFolderRow = screen.getByRole("treeitem", { name: /2160p/ })
     expect(qualityFolderRow).toHaveAttribute("aria-expanded", "false")
@@ -308,7 +311,7 @@ describe("LinkSelectionDialog", () => {
     )
 
     const fileRow = screen.getByRole("treeitem", { name: /Video One/ })
-    fireEvent.click(fileRow)
+    fireEvent.click(fileRow.firstElementChild!)
     expect(screen.getByText("1 selected")).toBeVisible()
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }))
@@ -316,7 +319,7 @@ describe("LinkSelectionDialog", () => {
       expect.objectContaining({ id: "video-one" }),
     ])
 
-    fireEvent.keyDown(fileRow, { key: "Enter" })
+    fireEvent.keyDown(fileRow.firstElementChild!, { key: "Enter" })
     expect(screen.getByText("0 selected")).toBeVisible()
   })
 

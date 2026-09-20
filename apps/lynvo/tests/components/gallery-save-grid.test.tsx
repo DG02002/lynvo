@@ -181,6 +181,9 @@ describe("GallerySaveGrid", () => {
     const menuTrigger = screen.getByRole("button", {
       name: "Open menu for Sample Feature",
     })
+    expect(menuTrigger).toHaveAttribute("tabindex", "0")
+    menuTrigger.focus()
+    expect(menuTrigger).toHaveFocus()
     fireEvent.click(menuTrigger)
     expect(screen.getByText("Copy Source link")).toBeInTheDocument()
 

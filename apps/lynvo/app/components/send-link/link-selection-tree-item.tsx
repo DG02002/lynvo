@@ -180,28 +180,11 @@ export const LinkSelectionTreeItem = ({
       aria-expanded={canExpand || canResolve ? isExpanded : undefined}
       aria-selected={isSelectionControlAvailable ? isSelected : undefined}
       data-folder-state={folderState}
-      tabIndex={0}
-      className="flex min-w-0 select-none flex-col rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-      onClick={(event) => {
-        if (event.target !== event.currentTarget) {
-          return
-        }
-        void handleRowAction()
-      }}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) {
-          return
-        }
-        if (event.key !== "Enter" && event.key !== " ") {
-          return
-        }
-        event.preventDefault()
-        void handleRowAction()
-      }}
+      className="flex min-w-0 select-none flex-col"
     >
       <div
         className={cn(
-          "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors",
+          "grid min-w-0 items-center gap-x-3 rounded-lg p-2 text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           isSelectionControlAvailable &&
             (hasTrailingContent
               ? "grid-cols-[1.25rem_1.5rem_minmax(0,1fr)_4rem]"
@@ -218,8 +201,15 @@ export const LinkSelectionTreeItem = ({
             "cursor-default",
           isSelected && "bg-muted/30"
         )}
-        onClick={(event) => {
-          event.stopPropagation()
+        tabIndex={0}
+        onClick={() => {
+          void handleRowAction()
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") {
+            return
+          }
+          event.preventDefault()
           void handleRowAction()
         }}
       >

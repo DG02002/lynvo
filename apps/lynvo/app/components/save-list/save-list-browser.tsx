@@ -484,13 +484,16 @@ const FinderBrowserLinkRow = ({
     shouldStackEpisodeStill && shouldShowEpisodeStillForLink
   const shouldCenterMobileNewBadge =
     shouldStackIconOnMobile && titleDisplay === "episode"
-  const rowFallbackIcon = isResolving ? (
-    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
-  ) : (
+  const rowFallbackIcon = (
     <HugeiconsIcon
       icon={isFolder ? getFolderIcon(link, false) : PlayIcon}
       className="size-6"
     />
+  )
+  const rowStatusIcon = isResolving ? (
+    <Spinner aria-label={`Loading ${link.label}…`} className="size-6" />
+  ) : (
+    rowFallbackIcon
   )
   const episodeStillElement = (
     <FinderEpisodeStillDisplay
@@ -511,7 +514,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         )
       }
@@ -523,7 +526,7 @@ const FinderBrowserLinkRow = ({
             shouldShowRowPosters,
             isFolder
           )}
-          rowFallbackIcon={rowFallbackIcon}
+          rowFallbackIcon={rowStatusIcon}
           isExpired={isExpired}
         />
       )
@@ -535,7 +538,7 @@ const FinderBrowserLinkRow = ({
           <SaveListRowIcon
             className={isExpired ? "text-muted-foreground" : undefined}
           >
-            {rowFallbackIcon}
+            {rowStatusIcon}
           </SaveListRowIcon>
         }
       >
