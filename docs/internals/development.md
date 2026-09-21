@@ -129,6 +129,42 @@ This React Router app depends on Vite's generated
 `virtual:react-router/server-build`, so replacing the current command with raw
 `wrangler dev` would be a migration, not a script rename.
 
+## Runtime testing in a real browser
+
+Coding agents can drive a real Chrome against the local app through the
+[chrome-devtools MCP server](https://github.com/ChromeDevTools/chrome-devtools-mcp).
+This lets agents verify runtime behavior instead of only reading code.
+
+`.agents/mcp.json` registers the server for agent apps that read workspace
+MCP configuration, using the portable `pnpm dlx` form. Clients with their own
+MCP registry can use the same command, for example Codex:
+
+```sh
+codex mcp add chrome-devtools -- pnpm dlx chrome-devtools-mcp@latest
+```
+
+Clients launched from the macOS GUI may not resolve `pnpm` when spawning
+servers; on such machines, override the command with the absolute path to the
+globally installed `chrome-devtools-mcp` binary (install it with `pnpm add -g
+chrome-devtools-mcp`) in user-level MCP configuration, which takes precedence
+over the workspace entry.
+
+Start the app for agent-driven testing with the fixed local development
+account so no Google sign-in is needed:
+
+```sh
+pnpm dev --no-auth
+```
+
+Then ask the agent to test against `http://localhost:5173`, for example "open
+the library and report console errors and failed network requests" or "run a
+Lighthouse audit of the sign-in page". Combine the browser's device emulation
+with the `TV Bro/1.0` user-agent prefix to exercise the TV layout.
+
+The MCP server launches Chrome with a dedicated persistent profile, separate
+from your personal Chrome profile. State in that profile persists between runs,
+and it never attaches to a personal browser session.
+
 ## Test TV Bro-specific UI
 
 Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV
