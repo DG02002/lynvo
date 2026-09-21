@@ -338,3 +338,6 @@ Playable links to an external Android player.
   or requests it. When they do, use a clean browser profile, never the
   user's personal session. If the tooling fights you, stop and ask the user
   to check the result instead of grinding.
+- When the developer asks for browser verification, drive the chrome-devtools
+  MCP server (dedicated persistent profile) against `pnpm dev --no-auth`
+  instead of automating a personal browser session.
