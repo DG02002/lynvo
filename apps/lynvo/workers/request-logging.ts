@@ -3,11 +3,16 @@ import type { AuditableLogger } from "evlog"
 import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { Context, MiddlewareHandler } from "hono"
 
-import type { AuthenticationRateLimitStatus } from "./authentication-rate-limit"
+import type { RateLimitResult } from "./authentication-rate-limit"
 
 interface RequestLoggingVariables {
   log: AuditableLogger
   requestId: string
+}
+
+interface RateLimitLogContext {
+  allowed: boolean
+  retry_after_seconds?: number
 }
 
 export type RequestContextFields = Parameters<AuditableLogger["set"]>[0]
@@ -59,14 +64,21 @@ export const addRequestContext = (
 
 export const recordRateLimitResult = (
   context: Context<RequestLoggingEnvironment>,
-  result: AuthenticationRateLimitStatus
+  result: RateLimitResult,
+  retryAfterSeconds?: number
 ): void => {
-  if (result === "allowed") {
+  if (result.status === "allowed") {
     addRequestContext(context, { rate_limit: { allowed: true } })
     return
   }
-  if (result === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
+  if (result.status === "limited") {
+    const rateLimitContext: RateLimitLogContext = { allowed: false }
+    if (retryAfterSeconds !== undefined) {
+      rateLimitContext.retry_after_seconds = retryAfterSeconds
+    }
+    addRequestContext(context, {
+      rate_limit: rateLimitContext,
+    })
     return
   }
   addRequestContext(context, {

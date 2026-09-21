@@ -18,8 +18,7 @@ import {
   checkAuthenticationRateLimit,
   checkDeviceApprovalRateLimit,
   checkRateLimit,
-  getAuthenticationRateLimitExpiresAt,
-  type AuthenticationRateLimitStatus,
+  type RateLimitResult,
 } from "./authentication-rate-limit"
 import {
   CRON_SCHEDULE_DAILY_RETENTION,
@@ -132,13 +131,13 @@ const readDeviceCodeRequestName = async (
 
 const createDeviceCodeRateLimitResponse = (
   context: HonoContext<RequestLoggingEnvironment>,
-  rateLimitResult: AuthenticationRateLimitStatus
+  rateLimitResult: RateLimitResult
 ): Response | undefined => {
-  if (rateLimitResult === "allowed") {
+  if (rateLimitResult.status === "allowed") {
     return undefined
   }
-  if (rateLimitResult === "limited") {
-    addRequestContext(context, { rate_limit: { allowed: false } })
+  if (rateLimitResult.status === "limited") {
+    recordRateLimitResult(context, rateLimitResult)
     return context.json(
       requestApiError(context, {
         code: "rate_limited",
@@ -385,19 +384,23 @@ const createRealtimeHandshakeRejection = async (
     key: `realtime:${getClientIp(request)}`,
     limit: EXTRACTION_ROUTE_RATE_LIMIT,
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
-    includeExpiresAt: true,
   })
-  const limitedExpiresAt =
-    getAuthenticationRateLimitExpiresAt(handshakeRateLimit)
-  if (handshakeRateLimit === "limited" || limitedExpiresAt !== undefined) {
-    addRequestContext(context, { rate_limit: { allowed: false } })
-    if (limitedExpiresAt !== undefined) {
-      context.header(
-        "Retry-After",
-        String(Math.max(0, Math.ceil((limitedExpiresAt - Date.now()) / 1_000)))
-      )
+  if (handshakeRateLimit.status === "limited") {
+    const retryAfterSeconds =
+      handshakeRateLimit.expiresAt === undefined
+        ? undefined
+        : Math.max(
+            0,
+            Math.ceil((handshakeRateLimit.expiresAt - Date.now()) / 1_000)
+          )
+    recordRateLimitResult(context, handshakeRateLimit, retryAfterSeconds)
+    if (retryAfterSeconds !== undefined) {
+      context.header("Retry-After", String(retryAfterSeconds))
     }
     return context.text("Too many connection attempts", 429)
+  }
+  if (handshakeRateLimit.status === "unavailable") {
+    recordRateLimitResult(context, handshakeRateLimit)
   }
   return undefined
 }
@@ -475,7 +478,7 @@ app.use("/api/auth/device/authorize", async (context, next) => {
     userId: session.userId,
   })
   recordRateLimitResult(context, rateLimitResult)
-  if (rateLimitResult === "unavailable") {
+  if (rateLimitResult.status === "unavailable") {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
@@ -485,7 +488,7 @@ app.use("/api/auth/device/authorize", async (context, next) => {
       503
     )
   }
-  if (rateLimitResult === "limited") {
+  if (rateLimitResult.status === "limited") {
     return context.json(
       requestApiError(context, {
         code: "rate_limited",
@@ -506,9 +509,9 @@ app.use("/api/extract", async (context, next) => {
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
   })
   addRequestContext(context, {
-    extraction_rate_limit: { outcome: result },
+    extraction_rate_limit: { outcome: result.status },
   })
-  if (result === "limited") {
+  if (result.status === "limited") {
     return context.json(
       requestApiError(context, {
         code: "rate_limited",
@@ -518,7 +521,7 @@ app.use("/api/extract", async (context, next) => {
       429
     )
   }
-  if (result === "unavailable") {
+  if (result.status === "unavailable") {
     return context.json(
       requestApiError(context, {
         code: "service_unavailable",
@@ -539,19 +542,20 @@ app.use("/api/meta", async (context, next) => {
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
   })
   addRequestContext(context, {
-    extraction_rate_limit: { outcome: result },
+    extraction_rate_limit: { outcome: result.status },
   })
-  if (result !== "allowed") {
+  if (result.status !== "allowed") {
     return context.json(
       requestApiError(context, {
-        code: result === "limited" ? "rate_limited" : "service_unavailable",
+        code:
+          result.status === "limited" ? "rate_limited" : "service_unavailable",
         error:
-          result === "limited"
+          result.status === "limited"
             ? "Too many metadata requests. Try again later."
             : "Metadata is temporarily unavailable.",
         retryable: true,
       }),
-      result === "limited" ? 429 : 503
+      result.status === "limited" ? 429 : 503
     )
   }
   return next()

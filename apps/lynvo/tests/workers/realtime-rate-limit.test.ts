@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { RATE_LIMIT_EXPIRES_AT_HEADER } from "../../workers/auth-rate-limiter"
 import { createTestRateLimiter } from "../support/rate-limiter"
 
 describe("realtime handshake abuse control", () => {
   it("returns the remaining rate-limit window in Retry-After", async () => {
     const now = 1_700_000_000_000
     const expiresAt = now + 7_500
-    const limiter = createTestRateLimiter(() =>
-      Response.json({ allowed: false, expiresAt }, { status: 429 })
+    const limiter = createTestRateLimiter(
+      () =>
+        new Response(null, {
+          status: 429,
+          headers: { [RATE_LIMIT_EXPIRES_AT_HEADER]: String(expiresAt) },
+        })
     )
     const { default: worker } = await import("../../workers/app")
     // SAFETY: The route only reads the rate-limiter binding and environment name from this fixture.

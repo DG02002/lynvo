@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import {
   addRequestContext,
+  recordRateLimitResult,
   requestLogging,
   type RequestLoggingEnvironment,
 } from "../workers/request-logging"
@@ -161,6 +162,35 @@ describe("request logging", () => {
       failure_stage: "response",
       error_code: "rate_limited",
       duration_ms: expect.any(Number),
+    })
+  })
+
+  it("records the retry-after duration for limited requests", async () => {
+    const drained: DrainContext[] = []
+    const app = new Hono<RequestLoggingEnvironment>()
+    app.use(
+      "*",
+      requestLogging({
+        drain: (context) => drained.push(context),
+      })
+    )
+    app.get("/limited", (context) => {
+      recordRateLimitResult(
+        context,
+        { status: "limited", expiresAt: Date.now() + 7_000 },
+        7
+      )
+      return context.text("Too many requests", 429)
+    })
+
+    await app.request(
+      new Request("https://lynvo.example/limited"),
+      undefined,
+      environment
+    )
+
+    expect(drained[0]?.event).toMatchObject({
+      rate_limit: { allowed: false, retry_after_seconds: 7 },
     })
   })
 

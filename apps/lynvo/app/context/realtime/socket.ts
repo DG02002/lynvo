@@ -19,6 +19,8 @@ import type { RealtimeAction } from "./reducer"
 export const REALTIME_RECONNECT_FAILURE_STORAGE_KEY =
   "lynvo:realtime:failed-connection-attempts"
 
+// The browser WebSocket API does not expose handshake response headers, so
+// sessionStorage carries the server-side 429 recovery history across reloads.
 const REALTIME_RECONNECT_FAILURE_WINDOW_MS = 60 * 1_000
 
 const reconnectFailureHistorySchema = Schema.Array(

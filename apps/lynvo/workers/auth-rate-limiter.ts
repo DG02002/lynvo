@@ -1,5 +1,7 @@
 import { Result, Schema } from "effect"
 
+export const RATE_LIMIT_EXPIRES_AT_HEADER = "X-Lynvo-Rate-Limit-Expires-At"
+
 const rateLimitPayloadSchema = Schema.Struct({
   limit: Schema.Int.pipe(Schema.check(Schema.isGreaterThan(0))),
   nowMs: Schema.Int.pipe(Schema.check(Schema.isGreaterThanOrEqualTo(0))),
@@ -37,6 +39,9 @@ export class AuthRateLimiter implements DurableObject {
       return { allowed: true, expiresAt: window.expiresAt }
     })
 
-    return Response.json(result, { status: result.allowed ? 200 : 429 })
+    return Response.json(result, {
+      status: result.allowed ? 200 : 429,
+      headers: { [RATE_LIMIT_EXPIRES_AT_HEADER]: String(result.expiresAt) },
+    })
   }
 }
