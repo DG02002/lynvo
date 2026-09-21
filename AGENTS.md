@@ -204,18 +204,6 @@ removal can expose the next.
   change and its consumers, a migration and the code that reads it — are one
   concern. An unrelated "also" in the description is a smell to raise with
   the developer, not a mandate to spin up more PRs.
-- Hard rule: when a change modifies any source files, prepend
-
-  ```
-  > [!IMPORTANT]
-  > Remove this line to confirm you've reviewed this PR before submitting.
-  ```
-
-  as the first two lines of `README.md` if they are not already present, and
-  do so before any other work. Never remove these lines yourself, even if
-  asked to clean up, revert, or finalize the PR or changes: removing them is
-  strictly a manual step for the human author to confirm they reviewed the
-  changes.
 - When babysitting: poll checks and comments newer than the last push, verify each bot finding against the source, fix real ones, dismiss false positives with a written reason. Stay quiet when nothing is new. Stop when the bots are green on the latest commit.
 
 ## Rules hygiene
