@@ -1,13 +1,37 @@
+import { Result, Schema } from "effect"
+
 import {
   DEVICE_APPROVAL_RATE_LIMIT,
   DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
 } from "./constants"
 import { getClientIp } from "./request-client-ip"
 
-export type AuthenticationRateLimitResult =
+export type AuthenticationRateLimitStatus =
   | "allowed"
   | "limited"
   | "unavailable"
+
+interface AuthenticationRateLimitLimitedResult {
+  readonly status: "limited"
+  readonly expiresAt: number
+}
+
+export type AuthenticationRateLimitResult =
+  | AuthenticationRateLimitStatus
+  | AuthenticationRateLimitLimitedResult
+
+export const getAuthenticationRateLimitExpiresAt = (
+  result: AuthenticationRateLimitResult
+): number | undefined => {
+  if (
+    result === "allowed" ||
+    result === "limited" ||
+    result === "unavailable"
+  ) {
+    return undefined
+  }
+  return result.expiresAt
+}
 
 interface AuthenticationRateLimitEnvironment {
   readonly ENVIRONMENT?: string
@@ -19,14 +43,39 @@ interface CheckRateLimitInput {
   readonly key: string
   readonly limit: number
   readonly windowSeconds: number
+  readonly includeExpiresAt?: boolean
 }
 
-export const checkRateLimit = async ({
+const rateLimitResponseSchema = Schema.Struct({
+  allowed: Schema.Boolean,
+  expiresAt: Schema.Number,
+})
+
+const readRateLimitExpiresAt = async (
+  response: Response
+): Promise<number | undefined> => {
+  // A malformed limiter response keeps the existing limited outcome without a header.
+  const payload = await response.json().catch(() => null)
+  const result = Schema.decodeUnknownResult(rateLimitResponseSchema)(payload)
+  if (Result.isFailure(result) || !Number.isFinite(result.success.expiresAt)) {
+    return undefined
+  }
+  return result.success.expiresAt
+}
+
+export function checkRateLimit(
+  input: CheckRateLimitInput & { readonly includeExpiresAt: true }
+): Promise<AuthenticationRateLimitResult>
+export function checkRateLimit(
+  input: CheckRateLimitInput
+): Promise<AuthenticationRateLimitStatus>
+export async function checkRateLimit({
   environment,
   key,
   limit,
   windowSeconds,
-}: CheckRateLimitInput): Promise<AuthenticationRateLimitResult> => {
+  includeExpiresAt = false,
+}: CheckRateLimitInput): Promise<AuthenticationRateLimitResult> {
   const limiter = environment.AUTH_RATE_LIMITER
   if (!limiter) {
     return environment.ENVIRONMENT === "production" ? "unavailable" : "allowed"
@@ -45,7 +94,16 @@ export const checkRateLimit = async ({
     if (response.status === 200) {
       return "allowed"
     }
-    return response.status === 429 ? "limited" : "unavailable"
+    if (response.status !== 429) {
+      return "unavailable"
+    }
+    if (!includeExpiresAt) {
+      return "limited"
+    }
+    const expiresAt = await readRateLimitExpiresAt(response)
+    return expiresAt === undefined
+      ? "limited"
+      : { status: "limited", expiresAt }
   } catch {
     return "unavailable"
   }
@@ -63,7 +121,7 @@ export const checkDeviceApprovalRateLimit = ({
   environment,
   request,
   userId,
-}: CheckDeviceApprovalRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+}: CheckDeviceApprovalRateLimitInput): Promise<AuthenticationRateLimitStatus> =>
   checkRateLimit({
     environment,
     key: `auth:device-approval:${getClientIp(request)}:${userId}`,
@@ -83,7 +141,7 @@ export const checkAuthenticationRateLimit = ({
   key,
   limit,
   windowSeconds,
-}: CheckAuthenticationRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+}: CheckAuthenticationRateLimitInput): Promise<AuthenticationRateLimitStatus> =>
   environment.ENVIRONMENT === "development"
     ? Promise.resolve("allowed")
     : checkRateLimit({

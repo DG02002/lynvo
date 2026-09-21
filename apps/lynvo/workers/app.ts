@@ -18,7 +18,8 @@ import {
   checkAuthenticationRateLimit,
   checkDeviceApprovalRateLimit,
   checkRateLimit,
-  type AuthenticationRateLimitResult,
+  getAuthenticationRateLimitExpiresAt,
+  type AuthenticationRateLimitStatus,
 } from "./authentication-rate-limit"
 import {
   CRON_SCHEDULE_DAILY_RETENTION,
@@ -131,7 +132,7 @@ const readDeviceCodeRequestName = async (
 
 const createDeviceCodeRateLimitResponse = (
   context: HonoContext<RequestLoggingEnvironment>,
-  rateLimitResult: AuthenticationRateLimitResult
+  rateLimitResult: AuthenticationRateLimitStatus
 ): Response | undefined => {
   if (rateLimitResult === "allowed") {
     return undefined
@@ -384,9 +385,18 @@ const createRealtimeHandshakeRejection = async (
     key: `realtime:${getClientIp(request)}`,
     limit: EXTRACTION_ROUTE_RATE_LIMIT,
     windowSeconds: EXTRACTION_ROUTE_RATE_WINDOW_SECONDS,
+    includeExpiresAt: true,
   })
-  if (handshakeRateLimit === "limited") {
+  const limitedExpiresAt =
+    getAuthenticationRateLimitExpiresAt(handshakeRateLimit)
+  if (handshakeRateLimit === "limited" || limitedExpiresAt !== undefined) {
     addRequestContext(context, { rate_limit: { allowed: false } })
+    if (limitedExpiresAt !== undefined) {
+      context.header(
+        "Retry-After",
+        String(Math.max(0, Math.ceil((limitedExpiresAt - Date.now()) / 1_000)))
+      )
+    }
     return context.text("Too many connection attempts", 429)
   }
   return undefined

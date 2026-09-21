@@ -3,7 +3,7 @@ import type { AuditableLogger } from "evlog"
 import { evlog, type EvlogHonoOptions } from "evlog/hono"
 import type { Context, MiddlewareHandler } from "hono"
 
-import type { AuthenticationRateLimitResult } from "./authentication-rate-limit"
+import type { AuthenticationRateLimitStatus } from "./authentication-rate-limit"
 
 interface RequestLoggingVariables {
   log: AuditableLogger
@@ -59,7 +59,7 @@ export const addRequestContext = (
 
 export const recordRateLimitResult = (
   context: Context<RequestLoggingEnvironment>,
-  result: AuthenticationRateLimitResult
+  result: AuthenticationRateLimitStatus
 ): void => {
   if (result === "allowed") {
     addRequestContext(context, { rate_limit: { allowed: true } })
