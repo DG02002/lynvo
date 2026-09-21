@@ -25,14 +25,6 @@
   ],
   "overrides": [
     {
-      "filter": ["README.md"],
-      "config": {
-        // The PR review gate precedes the document title.
-        "MD041": false
-      },
-      "combine": "merge"
-    },
-    {
       "filter": ["**/*.mdx"],
       "config": {
         // MDX component tags are JSX, not inline HTML.

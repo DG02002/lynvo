@@ -1,6 +1,3 @@
-> [!IMPORTANT]
-> Remove this line to confirm you've reviewed this PR before submitting.
-
 # Lynvo
 
 Lynvo is a link library, not a media catalogue. Save supported source URLs,
