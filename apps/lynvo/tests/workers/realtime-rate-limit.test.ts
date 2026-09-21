@@ -4,6 +4,35 @@ import { RATE_LIMIT_EXPIRES_AT_HEADER } from "../../workers/auth-rate-limiter"
 import { createTestRateLimiter } from "../support/rate-limiter"
 
 describe("realtime handshake abuse control", () => {
+  it("keeps the 429 without Retry-After when the limiter omits the expiry", async () => {
+    const limiter = createTestRateLimiter(
+      () => new Response(null, { status: 429 })
+    )
+    const { default: worker } = await import("../../workers/app")
+    // SAFETY: The route only reads the rate-limiter binding and environment name from this fixture.
+    const environment = {
+      ENVIRONMENT: "production",
+      AUTH_RATE_LIMITER: limiter.namespace,
+    } as Env
+    // SAFETY: The route only calls waitUntil on this test execution context.
+    const executionContext = { waitUntil: () => undefined } as ExecutionContext
+
+    const response = await worker.fetch(
+      new Request("https://lynvo.test/api/realtime", {
+        headers: {
+          Upgrade: "websocket",
+          "CF-Connecting-IP": "192.0.2.12",
+        },
+      }),
+      environment,
+      executionContext
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get("Retry-After")).toBeNull()
+    await expect(response.text()).resolves.toBe("Too many connection attempts")
+  })
+
   it("returns the remaining rate-limit window in Retry-After", async () => {
     const now = 1_700_000_000_000
     const expiresAt = now + 7_500
