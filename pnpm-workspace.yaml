@@ -30,6 +30,9 @@ minimumReleaseAgeStrict: true
 
 strictDepBuilds: true
 
+overrides:
+  smol-toml: ^1.8.0
+
 catalog:
   "@oxlint/plugins": ^1.81.0
   "@cloudflare/vitest-plugin": 1.1.8
