@@ -1,24 +1,40 @@
+import { RATE_LIMIT_EXPIRES_AT_HEADER } from "./auth-rate-limiter"
 import {
   DEVICE_APPROVAL_RATE_LIMIT,
   DEVICE_APPROVAL_RATE_WINDOW_SECONDS,
 } from "./constants"
 import { getClientIp } from "./request-client-ip"
 
-export type AuthenticationRateLimitResult =
-  | "allowed"
-  | "limited"
-  | "unavailable"
+type RateLimitStatus = "allowed" | "limited" | "unavailable"
 
-interface AuthenticationRateLimitEnvironment {
+export interface RateLimitResult {
+  readonly status: RateLimitStatus
+  readonly expiresAt?: number
+}
+
+interface RateLimitEnvironment {
   readonly ENVIRONMENT?: string
   readonly AUTH_RATE_LIMITER?: DurableObjectNamespace
 }
 
 interface CheckRateLimitInput {
-  readonly environment: AuthenticationRateLimitEnvironment
+  readonly environment: RateLimitEnvironment
   readonly key: string
   readonly limit: number
   readonly windowSeconds: number
+}
+
+const MAX_RATE_LIMIT_EXPIRES_AT_LENGTH = 32
+
+const readRateLimitExpiresAt = (response: Response): number | undefined => {
+  const value = response.headers.get(RATE_LIMIT_EXPIRES_AT_HEADER)
+  if (!value || value.length > MAX_RATE_LIMIT_EXPIRES_AT_LENGTH) {
+    return undefined
+  }
+  const expiresAt = Number(value)
+  return Number.isSafeInteger(expiresAt) && expiresAt >= 0
+    ? expiresAt
+    : undefined
 }
 
 export const checkRateLimit = async ({
@@ -26,10 +42,13 @@ export const checkRateLimit = async ({
   key,
   limit,
   windowSeconds,
-}: CheckRateLimitInput): Promise<AuthenticationRateLimitResult> => {
+}: CheckRateLimitInput): Promise<RateLimitResult> => {
   const limiter = environment.AUTH_RATE_LIMITER
   if (!limiter) {
-    return environment.ENVIRONMENT === "production" ? "unavailable" : "allowed"
+    return {
+      status:
+        environment.ENVIRONMENT === "production" ? "unavailable" : "allowed",
+    }
   }
   try {
     const response = await limiter
@@ -43,16 +62,22 @@ export const checkRateLimit = async ({
         }),
       })
     if (response.status === 200) {
-      return "allowed"
+      return { status: "allowed" }
     }
-    return response.status === 429 ? "limited" : "unavailable"
+    if (response.status !== 429) {
+      return { status: "unavailable" }
+    }
+    const expiresAt = readRateLimitExpiresAt(response)
+    return expiresAt === undefined
+      ? { status: "limited" }
+      : { status: "limited", expiresAt }
   } catch {
-    return "unavailable"
+    return { status: "unavailable" }
   }
 }
 
 interface CheckDeviceApprovalRateLimitInput {
-  readonly environment: AuthenticationRateLimitEnvironment
+  readonly environment: RateLimitEnvironment
   readonly request: Request
   readonly userId: string
 }
@@ -63,7 +88,7 @@ export const checkDeviceApprovalRateLimit = ({
   environment,
   request,
   userId,
-}: CheckDeviceApprovalRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+}: CheckDeviceApprovalRateLimitInput): Promise<RateLimitResult> =>
   checkRateLimit({
     environment,
     key: `auth:device-approval:${getClientIp(request)}:${userId}`,
@@ -72,7 +97,7 @@ export const checkDeviceApprovalRateLimit = ({
   })
 
 interface CheckAuthenticationRateLimitInput {
-  readonly environment: AuthenticationRateLimitEnvironment
+  readonly environment: RateLimitEnvironment
   readonly key: string
   readonly limit: number
   readonly windowSeconds: number
@@ -83,9 +108,9 @@ export const checkAuthenticationRateLimit = ({
   key,
   limit,
   windowSeconds,
-}: CheckAuthenticationRateLimitInput): Promise<AuthenticationRateLimitResult> =>
+}: CheckAuthenticationRateLimitInput): Promise<RateLimitResult> =>
   environment.ENVIRONMENT === "development"
-    ? Promise.resolve("allowed")
+    ? Promise.resolve({ status: "allowed" })
     : checkRateLimit({
         environment,
         key,

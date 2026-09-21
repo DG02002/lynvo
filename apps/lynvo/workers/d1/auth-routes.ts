@@ -148,7 +148,7 @@ export const registerD1AuthRoutes = (
       limit: GOOGLE_SIGN_IN_START_RATE_LIMIT,
       windowSeconds: GOOGLE_SIGN_IN_START_RATE_WINDOW_SECONDS,
     })
-    if (rateLimitResult !== "allowed") {
+    if (rateLimitResult.status !== "allowed") {
       return context.text("Too many attempts. Try again later.", 429)
     }
     const returnTo = getSafeGoogleReturnTo(
@@ -214,10 +214,10 @@ export const registerD1AuthRoutes = (
       windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
     })
     recordRateLimitResult(context, rateLimitResult)
-    if (rateLimitResult === "limited") {
+    if (rateLimitResult.status === "limited") {
       return context.json({ status: "rate_limited" }, 429)
     }
-    if (rateLimitResult === "unavailable") {
+    if (rateLimitResult.status === "unavailable") {
       return context.json({ status: "unavailable" }, 503)
     }
     const code = context.req.query("code")
@@ -260,10 +260,10 @@ export const registerD1AuthRoutes = (
       userId: session.userId,
     })
     recordRateLimitResult(context, rateLimitResult)
-    if (rateLimitResult === "limited") {
+    if (rateLimitResult.status === "limited") {
       return context.text("Too many attempts. Try again later.", 429)
     }
-    if (rateLimitResult === "unavailable") {
+    if (rateLimitResult.status === "unavailable") {
       return context.json(
         requestApiError(context, {
           code: "service_unavailable",
@@ -335,10 +335,10 @@ export const registerD1AuthRoutes = (
       windowSeconds: DEVICE_POLL_RATE_WINDOW_SECONDS,
     })
     recordRateLimitResult(context, rateLimitResult)
-    if (rateLimitResult === "limited") {
+    if (rateLimitResult.status === "limited") {
       return context.text("Too many attempts. Try again later.", 429)
     }
-    if (rateLimitResult === "unavailable") {
+    if (rateLimitResult.status === "unavailable") {
       return context.json(
         requestApiError(context, {
           code: "service_unavailable",

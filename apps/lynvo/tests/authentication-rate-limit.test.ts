@@ -35,7 +35,7 @@ describe("authentication rate limit environment policy", () => {
       windowSeconds: 600,
     })
 
-    expect(result).toBe("allowed")
+    expect(result).toEqual({ status: "allowed" })
     expect(limiter.calls).toHaveLength(0)
     expect(limiter.fetch).not.toHaveBeenCalled()
   })
@@ -53,7 +53,7 @@ describe("authentication rate limit environment policy", () => {
       windowSeconds: 600,
     })
 
-    expect(result).toBe("limited")
+    expect(result).toEqual({ status: "limited" })
     expect(limiter.calls.map(({ key }) => key)).toEqual([
       "auth:device-code:203.0.113.1",
     ])
@@ -74,7 +74,7 @@ describe("authentication rate limit environment policy", () => {
       userId: "user-1",
     })
 
-    expect(result).toBe("limited")
+    expect(result).toEqual({ status: "limited" })
     expect(limiter.calls.map(({ key }) => key)).toEqual([
       "auth:device-approval:192.0.2.44:user-1",
     ])

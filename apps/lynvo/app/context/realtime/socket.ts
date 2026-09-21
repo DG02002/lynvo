@@ -16,6 +16,17 @@ import {
 } from "./message-schema"
 import type { RealtimeAction } from "./reducer"
 
+export const REALTIME_RECONNECT_FAILURE_STORAGE_KEY =
+  "lynvo:realtime:failed-connection-attempts"
+
+// The browser WebSocket API does not expose handshake response headers, so
+// sessionStorage carries the server-side 429 recovery history across reloads.
+const REALTIME_RECONNECT_FAILURE_WINDOW_MS = 60 * 1_000
+
+const reconnectFailureHistorySchema = Schema.Array(
+  Schema.Number.pipe(Schema.check(Schema.isFinite()))
+)
+
 interface OpenRealtimeSocketOptions {
   dispatch: React.Dispatch<RealtimeAction>
   receiveMessage: (message: RealtimeMessage) => void
@@ -43,6 +54,52 @@ const websocketUrl = () => {
   }
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
   return url.toString()
+}
+
+const readRecentReconnectFailures = (now: number): number[] => {
+  try {
+    const stored = window.sessionStorage.getItem(
+      REALTIME_RECONNECT_FAILURE_STORAGE_KEY
+    )
+    if (!stored) {
+      return []
+    }
+    const parsed = Schema.decodeUnknownResult(reconnectFailureHistorySchema)(
+      JSON.parse(stored)
+    )
+    if (Result.isFailure(parsed)) {
+      return []
+    }
+    return parsed.success.filter(
+      (timestamp): timestamp is number =>
+        timestamp > now - REALTIME_RECONNECT_FAILURE_WINDOW_MS &&
+        timestamp <= now
+    )
+  } catch {
+    // Invalid or unavailable session storage should not stop reconnecting.
+    return []
+  }
+}
+
+const recordReconnectFailure = (now: number): number => {
+  const failures = [...readRecentReconnectFailures(now), now]
+  try {
+    window.sessionStorage.setItem(
+      REALTIME_RECONNECT_FAILURE_STORAGE_KEY,
+      JSON.stringify(failures)
+    )
+  } catch {
+    // Private browsing can reject writes; the in-memory attempt still backs off.
+  }
+  return failures.length
+}
+
+const clearReconnectFailures = (): void => {
+  try {
+    window.sessionStorage.removeItem(REALTIME_RECONNECT_FAILURE_STORAGE_KEY)
+  } catch {
+    // Clearing persisted failures is best effort after a successful connection.
+  }
 }
 
 export const deliverRealtimeMessage = (
@@ -74,11 +131,12 @@ export const openRealtimeSocket = ({
   let closed = false
   let reconnectTimer: number | undefined
   let heartbeatTimer: number | undefined
-  let attempt = 0
+  let attempt = readRecentReconnectFailures(Date.now()).length
   let lastServerContactAt = Date.now()
 
   const handleOpen = () => {
     attempt = 0
+    clearReconnectFailures()
     lastServerContactAt = Date.now()
     dispatch({ type: "SET_STATUS", status: "connected" })
     onOpen()
@@ -154,10 +212,11 @@ export const openRealtimeSocket = ({
     }
 
     dispatch({ type: "SET_STATUS", status: "disconnected" })
+    const failedAttempts = recordReconnectFailure(Date.now())
     const baseDelay = Math.min(30_000, 1_000 * 2 ** attempt)
     // Jitter prevents every client from reconnecting in lockstep after a deploy.
     const delay = Math.round(baseDelay * (0.75 + Math.random() * 0.5))
-    attempt += 1
+    attempt = Math.max(attempt + 1, failedAttempts)
     reconnectTimer = window.setTimeout(connect, delay)
   }
 
