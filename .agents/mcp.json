@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "pnpm",
+      "args": ["dlx", "chrome-devtools-mcp@latest"],
+      "timeoutMs": 60000
+    }
+  }
+}

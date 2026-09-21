@@ -129,6 +129,47 @@ This React Router app depends on Vite's generated
 `virtual:react-router/server-build`, so replacing the current command with raw
 `wrangler dev` would be a migration, not a script rename.
 
+## Runtime testing in a real browser
+
+Coding agents can drive a real Chrome against the local app through the
+[chrome-devtools MCP server](https://github.com/ChromeDevTools/chrome-devtools-mcp).
+It exposes console messages, network requests, performance traces, heap
+snapshots, device emulation, and Lighthouse audits, so agents can verify
+runtime behavior instead of only reading code.
+
+`.agents/mcp.json` registers the server for agent apps that read workspace
+MCP configuration, using the portable `pnpm dlx` form. Clients with their own
+MCP registry run the same package through pnpm, for example Codex:
+
+```sh
+codex mcp add chrome-devtools -- pnpm dlx chrome-devtools-mcp@latest
+```
+
+Other MCP clients take the standard `mcpServers` block from the
+[chrome-devtools-mcp README](https://github.com/ChromeDevTools/chrome-devtools-mcp).
+Clients launched from the macOS GUI may not resolve `pnpm` when spawning
+servers; on such machines, override the command with the absolute path of the
+globally installed binary (`pnpm add -g chrome-devtools-mcp`, then
+`pnpm update -g chrome-devtools-mcp` to upgrade) in user-level MCP
+configuration, which takes precedence over the workspace entry.
+
+Start the app for agent-driven testing with the fixed local development
+account so no Google sign-in is needed:
+
+```sh
+pnpm dev --no-auth
+```
+
+Then ask the agent to test against `http://localhost:5173`, for example "open
+the library and report console errors and failed network requests" or "run a
+Lighthouse audit of the sign-in page". Combine the browser's device emulation
+with the `TV Bro/1.0` user-agent prefix documented in "Test TV Bro-specific
+UI" to exercise the TV layout.
+
+The MCP server launches its own isolated Chrome profile. It never attaches to
+a personal browser session, so keep it pointed at the local development
+environment rather than production.
+
 ## Test TV Bro-specific UI
 
 Run `pnpm dev`, sign in, and open Settings > Development. Turn on **Use TV
