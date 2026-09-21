@@ -31,7 +31,7 @@ import { createSourcePlayableNode } from "./media-node"
 import { paginateUpstream, type UpstreamPage } from "./pagination"
 import { isVideoFile } from "./video-file"
 
-export interface OneDriveItem {
+interface OneDriveItem {
   readonly name: string
   readonly id: string
   readonly folder?: unknown
@@ -39,7 +39,7 @@ export interface OneDriveItem {
   readonly size?: string | number
 }
 
-export interface OneDriveApiResponse {
+interface OneDriveApiResponse {
   readonly folder?: { readonly value: readonly OneDriveItem[] }
   readonly file?: OneDriveItem
   readonly next?: string
@@ -111,7 +111,7 @@ const passwordRequiredResponseSchema = Schema.Struct({
   error: Schema.Literal("Password required."),
 })
 
-export const sha256 = async (message: string): Promise<string> => {
+const sha256 = async (message: string): Promise<string> => {
   const hashBuffer = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(message)
@@ -121,7 +121,7 @@ export const sha256 = async (message: string): Promise<string> => {
     .join("")
 }
 
-export const fetchOneDrive = async (
+const fetchOneDrive = async (
   targetUrl: string,
   options: RequestInit
 ): Promise<Response> => {
@@ -144,7 +144,7 @@ export const fetchOneDrive = async (
   })
 }
 
-export const encodeOneDrivePath = (path: string): string =>
+const encodeOneDrivePath = (path: string): string =>
   path.split("/").map(encodeUrlPathSegment).join("/")
 
 export const createOneDriveNodes = ({
@@ -191,7 +191,7 @@ export const createOneDriveNodes = ({
     return [node]
   })
 
-export const extractOneDriveNextData = (
+const extractOneDriveNextData = (
   html: string
 ): OneDriveApiResponse | undefined => {
   const document = load(html)

@@ -94,7 +94,7 @@ export interface GoogleDrivePublicFileMetadata {
   size?: string
 }
 
-export const isHtmlResponse = (response: Response): boolean =>
+const isHtmlResponse = (response: Response): boolean =>
   response.headers.get("content-type")?.toLowerCase().includes("text/html") ??
   false
 
