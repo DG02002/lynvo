@@ -93,6 +93,38 @@ describe("ProxySettings", () => {
     ).toHaveAttribute("href", "/docs/proxy-keys")
   })
 
+  it("renders the empty-state navigation as a link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://lynvo.test"
+        )
+        if (url.pathname === "/api/plugin-servers") {
+          return Response.json([])
+        }
+        if (url.pathname === "/api/plugin-domains") {
+          return Response.json([])
+        }
+        return new Response(null, { status: 404 })
+      })
+    )
+
+    render(
+      <MemoryRouter>
+        <ProxySettings requestOrigin="https://lynvo.test" />
+      </MemoryRouter>
+    )
+
+    const openPlugins = await screen.findByText("Open Plugins")
+    expect(openPlugins.closest("a")).not.toBeNull()
+    expect(openPlugins.closest("a")).toHaveAttribute(
+      "href",
+      "/settings/plugins"
+    )
+  })
+
   it("shows the refreshed balance and checked time after a refresh", async () => {
     const initialCheckedAt = Date.now()
     const refreshedCheckedAt = initialCheckedAt + 60_000

@@ -117,6 +117,7 @@ export function ProxySettings({ requestOrigin }: ProxySettingsProps) {
             <Button
               variant="outline"
               size="sm"
+              nativeButton={false}
               render={<Link to="/settings/plugins" />}
             >
               Open Plugins
