@@ -185,7 +185,7 @@ export const createBhadooNodes = (
     return [node]
   })
 
-export const decodeBhadooReverseEnvelope = (
+const decodeBhadooReverseEnvelope = (
   encodedResponse: string
 ): BhadooGoogleDriveListResponse => {
   const reversedResponse = encodedResponse.split("").toReversed().join("")

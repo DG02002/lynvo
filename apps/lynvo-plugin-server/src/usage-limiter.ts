@@ -10,7 +10,7 @@ import {
   MILLISECONDS_PER_SECOND,
 } from "./constants"
 
-export interface UsageCounterRow {
+interface UsageCounterRow {
   [column: string]: SqlStorageValue
   used: number
 }
@@ -22,7 +22,7 @@ export interface UsageReservationResult {
   retryAfterSeconds?: number
 }
 
-export interface UsageReservationRow {
+interface UsageReservationRow {
   [column: string]: SqlStorageValue
   reservation_id: string
   period_key: string
@@ -30,7 +30,7 @@ export interface UsageReservationRow {
   expires_at: number
 }
 
-export interface UsagePendingCountRow {
+interface UsagePendingCountRow {
   [column: string]: SqlStorageValue
   pending: number
 }
